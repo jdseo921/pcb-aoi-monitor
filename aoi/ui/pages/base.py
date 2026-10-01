@@ -75,7 +75,7 @@ class Page(QWidget):
         t.setObjectName("h1")
         head.addWidget(t)
         if self.subtitle:
-            s = QLabel(page_text(self.subtitle))
+            s = QLabel(self.subtitle_text())
             s.setObjectName("muted")
             head.addWidget(s, 1, Qt.AlignBottom)
         else:
@@ -86,6 +86,17 @@ class Page(QWidget):
     @property
     def board_model(self) -> str | None:
         return self.shell.board_model
+
+    def subtitle_text(self) -> str:
+        """The subtitle in the UI language; a page whose subtitle carries a value overrides this."""
+        return page_text(self.subtitle)
+
+    def no_board_model(self) -> tuple[str, str]:
+        """Heading and sentence of the empty state every page shows until a board model is chosen (REQ-SET-019)."""
+        return (
+            QCoreApplication.translate("Page", "No board model yet"),
+            QCoreApplication.translate("Page", "Pick a board model in the header first."),
+        )
 
     # Hooks called by the shell.
     def on_show(self) -> None: ...
