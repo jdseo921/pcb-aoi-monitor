@@ -9,7 +9,7 @@ boards and compare any board side by side with the learned golden board.
 ## Install (Windows 10/11)
 
 ```powershell
-# Python 3.10–3.12 from python.org, then in this folder:
+# Python 3.11 from python.org, then in this folder:
 python -m venv .venv
 .venv\Scripts\activate
 pip install -r requirements.txt
@@ -41,12 +41,20 @@ The first launch opens as `admin`; use **Switch User** to see the Operator view.
   and lighting, into `ok\`. Defective examples go into `ng\` (optionally `ng\solder_bridge\` etc. to label the type).
 * Train, then tune thresholds on **Compare** (what-if) or in **Recipe Editor**, and validate on a separate test folder.
 
-## Tests
+## Checks
+
+GitHub Actions runs these on every pull request ([.github/workflows/ci.yml](.github/workflows/ci.yml)), with the
+tests on both Windows and Linux. Run them locally before pushing:
 
 ```powershell
-pip install pytest
-pytest -q tests
+pip install -r requirements-dev.txt
+ruff check .            # lint
+ruff format --check .   # formatting
+pytest -q               # tests
 ```
+
+CI also runs three security scans: Bandit (a High finding fails the build), pip-audit (any known vulnerability in
+a dependency fails it) and gitleaks (a secret in any commit fails it).
 
 ## Layout
 
@@ -59,5 +67,5 @@ aoi/core/               engine: imaging, anomaly (self-training), compare, inspe
 aoi/hal/                camera / lighting / robot / MES interfaces (Stage 2–4 stubs)
 aoi/ui/                 PySide6 shell, pages, widgets, theme
 tools/                  synthetic dataset generator
-tests/                  headless end-to-end test
+tests/                  headless end-to-end test, engine-has-no-Qt rule
 ```

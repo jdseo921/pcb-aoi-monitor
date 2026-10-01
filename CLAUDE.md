@@ -62,7 +62,14 @@ The full list of v0.1 gaps against these rules is in the Engineering standard, u
 ```powershell
 python -m venv .venv
 .venv\Scripts\activate
-pip install -r requirements.txt
+pip install -r requirements.txt -r requirements-dev.txt
 python main.py
-pytest -q tests
+```
+
+Before pushing, run the checks CI runs on every pull request; all must pass:
+
+```powershell
+ruff check .
+ruff format --check .
+pytest -q
 ```
