@@ -8,6 +8,8 @@ from PySide6.QtCore import QPointF, QRectF, Qt, Signal
 from PySide6.QtGui import QBrush, QColor, QImage, QPainter, QPen, QPixmap
 from PySide6.QtWidgets import QGraphicsRectItem, QGraphicsScene, QGraphicsSimpleTextItem, QGraphicsView
 
+from .. import theme
+
 
 def to_qpixmap(img: np.ndarray) -> QPixmap:
     if img.ndim == 2:
@@ -28,8 +30,8 @@ class ImageView(QGraphicsView):
         self.setRenderHints(QPainter.Antialiasing | QPainter.SmoothPixmapTransform)
         self.setDragMode(QGraphicsView.ScrollHandDrag)
         self.setTransformationAnchor(QGraphicsView.AnchorUnderMouse)
-        self.setBackgroundBrush(QColor("#0f161d"))
-        self.setMinimumSize(320, 240)
+        self.setBackgroundBrush(QColor(theme.BG_IMAGE))
+        self.setMinimumSize(theme.IMAGE_MIN_W, theme.IMAGE_MIN_H)
         self._pix = None
         self._overlay_items = []
         self._draw_mode = False
@@ -38,7 +40,7 @@ class ImageView(QGraphicsView):
         self._peers: list[ImageView] = []
         self._syncing = False
         self._placeholder = self.scene().addSimpleText(placeholder)
-        self._placeholder.setBrush(QColor("#6c7c8c"))
+        self._placeholder.setBrush(QColor(theme.TEXT_DISABLED))
         self.horizontalScrollBar().valueChanged.connect(self._emit_changed)
         self.verticalScrollBar().valueChanged.connect(self._emit_changed)
 
@@ -68,7 +70,7 @@ class ImageView(QGraphicsView):
         self._overlay_items.clear()
 
     def add_box(
-        self, x, y, w, h, color: str = "#e53935", label: str = "", width: float = 2.0, dashed: bool = False
+        self, x, y, w, h, color: str = theme.NG_COLOR, label: str = "", width: float = 2.0, dashed: bool = False
     ) -> None:
         pen = QPen(QColor(color), width)
         pen.setCosmetic(True)
@@ -105,7 +107,7 @@ class ImageView(QGraphicsView):
     def mousePressEvent(self, e):
         if self._draw_mode and e.button() == Qt.LeftButton and self._pix is not None:
             self._drag_start = self.mapToScene(e.position().toPoint())
-            pen = QPen(QColor("#fdd835"), 2)
+            pen = QPen(QColor(theme.ROI_SELECTED), 2)
             pen.setCosmetic(True)
             pen.setStyle(Qt.DashLine)
             self._rubber = self.scene().addRect(QRectF(self._drag_start, self._drag_start), pen)

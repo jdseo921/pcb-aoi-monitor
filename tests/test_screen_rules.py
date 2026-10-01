@@ -1,0 +1,87 @@
+"""Screen rules of the Engineering standard, "Look" and "Sizes" (REQ-SET-004, REQ-SET-018; stage S18a).
+
+Static scans keep every colour and point size in aoi/ui/theme.py; a widget check opens the shell offscreen and looks
+at the one frame every page sits in. The verdict shapes and the button rules follow in S18b.
+"""
+
+from __future__ import annotations
+
+import ast
+import re
+from pathlib import Path
+
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QFrame
+
+from aoi.ui import theme
+from tests.test_req_done_in_v01 import BOARD, _window
+
+ROOT = Path(__file__).resolve().parents[1]
+UI_DIR = ROOT / "aoi" / "ui"
+THEME = UI_DIR / "theme.py"
+COLOUR_LITERAL = re.compile(r"#[0-9a-fA-F]{3,8}\b|\brgba?\(")
+POINT_SIZE = re.compile(r"font-size:\s*(\d+)\s*pt")
+QT_COLOURS = {"white", "black", "red", "green", "blue", "yellow", "gray", "darkGray", "lightGray", "cyan", "magenta"}
+COLOUR_CALLS = {"QColor", "QBrush", "QPen"}
+
+
+def _docstrings(tree: ast.AST) -> set[ast.AST]:
+    out: set[ast.AST] = set()
+    for node in ast.walk(tree):
+        body = getattr(node, "body", None)
+        if isinstance(node, (ast.Module, ast.ClassDef, ast.FunctionDef)) and body and isinstance(body[0], ast.Expr):
+            out.add(body[0].value)
+    return out
+
+
+def test_req_set_004_no_colour_literals_outside_theme() -> None:
+    """Pages and widgets take colours from the theme tokens: no hex or rgb() string, Qt colour name or QColor("…")."""
+    found: list[str] = []
+    for path in sorted(UI_DIR.rglob("*.py")):
+        if path == THEME:
+            continue
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+        docstrings = _docstrings(tree)
+        for node in ast.walk(tree):
+            where = f"{path.relative_to(ROOT)}:{getattr(node, 'lineno', 0)}"
+            if isinstance(node, ast.Constant) and isinstance(node.value, str) and node not in docstrings:
+                if COLOUR_LITERAL.search(node.value):
+                    found.append(f"{where} {node.value!r}")
+            elif isinstance(node, ast.Attribute) and node.attr in QT_COLOURS:
+                if isinstance(node.value, ast.Name) and node.value.id == "Qt":
+                    found.append(f"{where} Qt.{node.attr}")
+            elif isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id in COLOUR_CALLS:
+                if node.args and isinstance(node.args[0], ast.Constant):
+                    found.append(f"{where} {node.func.id}({node.args[0].value!r})")
+    assert not found, "colour literals outside aoi/ui/theme.py: " + ", ".join(found)
+
+
+def test_req_set_004_text_is_14pt_or_more_and_the_verdict_40pt() -> None:
+    """Every point size written anywhere under aoi/ui, in the built stylesheet and in the tokens is 14 pt or more."""
+    sources = [p.read_text(encoding="utf-8") for p in UI_DIR.rglob("*.py")]
+    styles = [theme.QSS, theme.verdict_style("NG"), theme.verdict_style("OK", big=False)]
+    sizes = [int(m) for text in sources + styles for m in POINT_SIZE.findall(text)]
+    tokens = {k: v for k, v in vars(theme).items() if k.startswith("FONT_") and k.endswith("_PT")}
+    assert sizes and min(sizes) >= theme.FONT_PT >= 14, sorted(set(sizes))
+    assert min(tokens.values()) >= 14, tokens
+    assert theme.FONT_VERDICT_PT == 40 and "font-size:40pt" in theme.verdict_style("NG")
+    assert f"font-size: {theme.FONT_PT}pt" in theme.QSS and "12pt" not in theme.QSS
+    assert theme.BUTTON_W >= 120 and theme.BUTTON_H >= 40 and theme.TARGET_H >= 48 and theme.FIELD_H >= 40
+    assert f"min-width: {theme.BUTTON_W}px; min-height: {theme.BUTTON_H}px" in theme.QSS
+
+
+def test_req_set_018_frame_header_and_sidebar_groups(qtbot, trained_ctx) -> None:
+    """Every page sits in the one frame: header with board model, user and role; the four sidebar groups; status bar."""
+    win = _window(qtbot, trained_ctx, "Admin")
+    header = win.findChild(QFrame, "header")
+    assert header is not None and header.height() == theme.HEADER_H
+    assert win.bm_combo.currentText() == BOARD and win.user_label.text() == "admin  ·  Admin"
+    items = [win.nav.item(i) for i in range(win.nav.count())]
+    assert [it.text() for it in items if not it.data(Qt.UserRole)] == ["PRODUCTION", "ENGINEERING", "DATA", "SYSTEM"]
+    for it in items:
+        if it.data(Qt.UserRole):
+            assert win.nav.visualItemRect(it).height() >= theme.TARGET_H, f"{it.text()}: not an operator target"
+    assert win.nav.width() == theme.NAV_W
+    for title in win.pages:
+        win.navigate(title)
+        assert header.isVisible() and win.nav.isVisible() and win.statusBar().isVisible(), title

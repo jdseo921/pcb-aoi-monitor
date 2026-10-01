@@ -4,7 +4,7 @@ from collections.abc import Callable
 from typing import Any
 
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QColor
+from PySide6.QtGui import QColor, QFont
 from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
@@ -17,6 +17,7 @@ from PySide6.QtWidgets import (
 )
 
 from ...core.services import AppContext
+from .. import theme
 from ..errors import show_error
 from ..widgets.busy import BusyOverlay
 from ..workers import Worker, start
@@ -132,6 +133,9 @@ def fill_table(t: QTableWidget, rows: list[list], colors: list[str | None] | Non
     sortable = t.isSortingEnabled()
     t.setSortingEnabled(False)
     t.setRowCount(len(rows))
+    t.ensurePolished()  # the theme's font, so a coloured cell keeps its 14 pt
+    bold = QFont(t.font())
+    bold.setBold(True)  # white on green or red reads at 3:1 only as large text, and bold 14 pt counts (WCAG 1.4.3)
     for i, row in enumerate(rows):
         for j, v in enumerate(row):
             it = QTableWidgetItem()
@@ -143,7 +147,8 @@ def fill_table(t: QTableWidget, rows: list[list], colors: list[str | None] | Non
                 it.setText("" if v is None else str(v))
             if colors and colors[i]:
                 it.setBackground(QColor(colors[i]))
-                it.setForeground(QColor("#1f2a36" if colors[i] in ("#fdd835",) else "white"))
+                it.setForeground(QColor(theme.on_color(colors[i])))
+                it.setFont(bold)
             t.setItem(i, j, it)
     t.resizeColumnsToContents()
     t.setSortingEnabled(sortable)

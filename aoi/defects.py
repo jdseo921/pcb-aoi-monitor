@@ -91,8 +91,6 @@ REQUIRES_3D_OR_SIDE = {
     "Insufficient Solder",
 }
 
-SEVERITY_COLOR = {"Critical": "#e53935", "Major": "#fb8c00", "Minor": "#fdd835"}
-
 
 def names() -> list[str]:
     return [d.name for d in DEFECT_TYPES]

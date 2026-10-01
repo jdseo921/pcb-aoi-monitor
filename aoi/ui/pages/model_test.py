@@ -11,6 +11,7 @@ from PySide6.QtGui import QPageLayout, QPageSize, QPdfWriter, QTextDocument
 from PySide6.QtWidgets import QFileDialog, QGridLayout, QHBoxLayout, QLabel, QMessageBox, QProgressBar, QSplitter
 
 from ... import defects as taxonomy
+from .. import theme
 from ..widgets.busy import BusyOverlay
 from ..widgets.image_view import ImageView
 from ..workers import Worker, start
@@ -22,15 +23,15 @@ class MetricTile(QLabel):
         super().__init__()
         self.name = name
         self.setAlignment(Qt.AlignCenter)
-        self.setMinimumHeight(90)
-        self.setStyleSheet("background:#26323f; border-radius:8px; padding:8px;")
+        self.setObjectName("tile")
+        self.setMinimumHeight(theme.BANNER_H)
         self.set(None)
 
     def set(self, v: float | None):
         val = "—" if v is None else f"{v * 100:.1f}%"
         self.setText(
-            f"<div style='font-size:12pt;color:#9fb0c0'>{self.name}</div>"
-            f"<div style='font-size:26pt;font-weight:700'>{val}</div>"
+            f"<div style='font-size:{theme.FONT_PT}pt;color:{theme.TEXT_MUTED}'>{self.name}</div>"
+            f"<div style='font-size:{theme.FONT_TILE_PT}pt;font-weight:700'>{val}</div>"
         )
 
 
@@ -125,7 +126,7 @@ class ModelTestPage(Page):
         fill_table(
             self.table,
             [[Path(r["image"]).name, r["gt"], r["ai_result"], r["score"], r["pass_fail"]] for r in self.rows],
-            ["#c62828" if r["pass_fail"] == "FAIL" else None for r in self.rows],
+            [theme.NG_COLOR if r["pass_fail"] == "FAIL" else None for r in self.rows],
         )
         for i, r in enumerate(self.rows):
             self.table.item(i, 0).setToolTip(r["image"])
@@ -144,7 +145,7 @@ class ModelTestPage(Page):
         self.view.set_image(res.image)
         for d in res.defects:
             sev = taxonomy.BY_NAME.get(d.type, taxonomy.ANOMALY).severity
-            self.view.add_box(d.x, d.y, d.w, d.h, taxonomy.SEVERITY_COLOR.get(sev, "#e53935"), f"{d.no} {d.type}")
+            self.view.add_box(d.x, d.y, d.w, d.h, theme.SEVERITY_COLORS.get(sev, theme.NG_COLOR), f"{d.no} {d.type}")
         self.shell.last_inspected = (path, res)
 
     def export_csv(self):
@@ -167,7 +168,7 @@ class ModelTestPage(Page):
         m = self.metrics
         active = self.ctx.active_model(self.board_model)
         rows = "".join(
-            f"<tr style='color:{'#c62828' if r['pass_fail'] == 'FAIL' else '#000'}'>"
+            f"<tr style='color:{theme.NG_COLOR if r['pass_fail'] == 'FAIL' else theme.PRINT_TEXT}'>"
             f"<td>{html.escape(Path(r['image']).name)}</td><td>{r['gt']}</td><td>{r['ai_result']}</td><td>{r['score']}</td><td>{r['pass_fail']}</td></tr>"
             for r in self.rows
         )

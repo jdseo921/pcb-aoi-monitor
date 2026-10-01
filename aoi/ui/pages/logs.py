@@ -9,7 +9,7 @@ from PySide6.QtWidgets import QCheckBox, QComboBox, QDateEdit, QFileDialog, QHBo
 
 from ...core.imaging import load_image
 from ...times import to_local
-from ..theme import VERDICT_COLORS
+from .. import theme
 from ..widgets.image_view import ImageView
 from .base import Page, button, fill_table, make_table
 
@@ -79,7 +79,7 @@ class LogsPage(Page):
                 ]
                 for r in self.rows
             ],
-            [VERDICT_COLORS[r["result"]] if r["result"] != "OK" else None for r in self.rows],
+            [theme.VERDICT_COLORS[r["result"]] if r["result"] != "OK" else None for r in self.rows],
         )
         n = len(self.rows)
         ng = sum(r["result"] == "NG" for r in self.rows)
