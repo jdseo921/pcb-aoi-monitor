@@ -84,6 +84,14 @@ image area shows an `EmptyState` (`aoi/ui/widgets/empty_state.py`): what is miss
 button to the page where it is done; `Page.empty_step` turns "do this on <page>" into that link, or into "Ask an
 Engineer …" for a role that cannot open the page (REQ-SET-019, since S18c).
 
+Every page is rendered offscreen for every role that may open it and compared with an approved image (REQ-SET-004,
+since S21): `tools/render_screens.py` builds the synthetic workspace with pinned ids, times, inspection time and fonts
+(DejaVu Sans without hinting on Linux), and `tests/screens/test_screens.py` compares the 1920×1080 renders with
+`tests/screens/approved/` on Linux; a page fails when more than 0.5 % of its pixels move by more than 40 levels, and
+the new images with a diff per failing page stay in `tests/screens/actual/`, which CI uploads. An intended screen
+change is approved with `python tools/render_screens.py --approve`; the images are generated files that Jay approves by
+merging.
+
 ### Workspace on disk
 
 ```

@@ -5,9 +5,12 @@ presenter theme, REQ-SET-008) is one file, and `tests/test_screen_rules.py` fail
 anywhere else under aoi/ui. The verdict and severity colours are the standard's, and a verdict is always shown as
 its colour with a word and a shape (REQ-INSP-002), never as colour alone.
 
-Contrast, by the WCAG 2.1 formula: every text colour on its surface measures 4.5:1 or more, except white on OK
-green (3.3:1) and on NG red (4.2:1). Those two fills carry only large text, the 40 pt banner and 14 pt bold cells
-and buttons, for which WCAG AA asks 3:1; whether the standard's "4.5:1" allows that reading is open with Jay.
+Contrast, by the WCAG 2.1 formula (tests/screens measures it on every rendered page): every text colour on its
+surface reads at 4.5:1 or more, except white on the standard's OK green (3.3:1), NG red (4.2:1) and accent blue
+(3.7:1). Those three fills carry only bold or 40 pt text (the verdict banner, coloured cells, the primary, Start and
+Stop buttons), for which WCAG AA asks 3:1; whether the standard's "4.5:1" allows that reading is open with Jay. The
+selected sidebar entry and tab, whose text is not bold, sit on BG_SELECTED instead (5.8:1). A disabled control is
+exempt (WCAG 1.4.3).
 """
 
 from string import Template
@@ -18,7 +21,7 @@ NG_COLOR = "#e53935"
 WARN_COLOR = "#fdd835"
 INFO_COLOR = "#90a4ae"
 MAJOR_COLOR = "#fb8c00"  # severity Major, between Critical (NG red) and Minor (WARN amber)
-ACCENT = "#1e88e5"  # the one primary button on a page, the selected entry, progress
+ACCENT = "#1e88e5"  # the one primary button on a page, progress
 VERDICT_COLORS = {"OK": OK_COLOR, "NG": NG_COLOR, "WARN": WARN_COLOR, "INFO": INFO_COLOR}
 VERDICT_SHAPES = {"OK": "✓", "NG": "✗", "WARN": "▲", "INFO": "·"}
 SEVERITY_COLORS = {"Critical": NG_COLOR, "Major": MAJOR_COLOR, "Minor": WARN_COLOR}
@@ -32,6 +35,7 @@ BG_ALT = "#1a2633"  # alternate table rows
 BG_RAISED = "#26323f"  # cards, tiles, table headers, disabled buttons
 BG_IMAGE = "#0f161d"  # behind board images
 BG_BUTTON, BG_BUTTON_HOVER, BG_NAV_HOVER = "#2d4257", "#36506a", "#24394f"
+BG_SELECTED = "#1565c0"  # the selected sidebar entry and tab: 14 pt white reads at 5.8:1 here, 3.7:1 on ACCENT
 BG_BUSY = "rgba(15, 22, 29, 200)"
 LINE, LINE_STRONG = "#2f3e4e", "#3f5a75"
 TEXT, TEXT_MUTED, TEXT_DISABLED = "#e6edf3", "#9fb0c0", "#6c7c8c"
@@ -40,6 +44,7 @@ ON_DARK = "#ffffff"  # text on green, red and blue fills
 PRINT_TEXT = "#000000"  # text in a PDF report, on paper
 
 # Point sizes, never below FONT_PT, and pixel sizes (Engineering standard, "Sizes"; the sketches' size classes)
+FONT_FAMILY = '"Segoe UI", "Malgun Gothic", "Noto Sans", sans-serif'  # the screenshot tests pin one font instead
 FONT_PT = 14  # body, tables, headers, muted labels
 FONT_LARGE_PT = 16  # card titles, the logo, busy text
 FONT_H1_PT = 20
@@ -59,22 +64,20 @@ RADIUS, RADIUS_L = 6, 10
 TOKENS = {k: v for k, v in dict(globals()).items() if k.isupper()}
 
 _QSS = Template("""
-* { font-family: "Segoe UI", "Malgun Gothic", "Noto Sans", sans-serif; font-size: ${FONT_PT}pt; }
+* { font-family: ${FONT_FAMILY}; font-size: ${FONT_PT}pt; }
 QMainWindow, QWidget#page, QDialog { background: $BG; color: $TEXT; }
 QWidget { color: $TEXT; }
 QLabel#h1 { font-size: ${FONT_H1_PT}pt; font-weight: 600; }
 QLabel#muted { color: $TEXT_MUTED; }
 QLabel#logo, QLabel#busyText { font-size: ${FONT_LARGE_PT}pt; font-weight: 600; }
 QLabel#tile { background: $BG_RAISED; border-radius: ${RADIUS_L}px; padding: ${SPACE_S}px; }
-QLabel#canvas { background: $BG_IMAGE; border: 1px dashed $LINE_STRONG; color: $TEXT_DISABLED;
-                border-radius: ${RADIUS_L}px; }
 QFrame#header { background: $BG_DEEP; border-bottom: 1px solid $LINE; }
 QFrame#card { background: $BG_RAISED; border-radius: ${RADIUS_L}px; }
 QWidget#empty { background: $BG_DEEP; border: 1px dashed $LINE_STRONG; border-radius: ${RADIUS_L}px; }
 QLabel#emptyHeading { font-size: ${FONT_LARGE_PT}pt; font-weight: 600; }
 QListWidget#nav { background: $BG_DEEP; border: none; padding-top: ${SPACE_S}px; }
 QListWidget#nav::item { padding: ${SPACE}px 18px; margin: 2px ${SPACE_S}px; border-radius: ${RADIUS}px; }
-QListWidget#nav::item:selected { background: $ACCENT; color: $ON_DARK; }
+QListWidget#nav::item:selected { background: $BG_SELECTED; color: $ON_DARK; }
 QListWidget#nav::item:hover:!selected { background: $BG_NAV_HOVER; }
 QListWidget#nav::item:disabled { color: $TEXT_DISABLED; }
 QPushButton { background: $BG_BUTTON; border: 1px solid $LINE_STRONG; border-radius: ${RADIUS}px;
@@ -100,7 +103,7 @@ QTabWidget > QWidget, QStackedWidget > QWidget#qt_tabwidget_stackedwidget { back
 QHeaderView { background: $BG_RAISED; }
 QTableCornerButton::section { background: $BG_RAISED; border: none; }
 QTabBar::tab { background: $BG_RAISED; padding: ${SPACE_S}px 18px; min-width: ${BUTTON_W}px; }
-QTabBar::tab:selected { background: $ACCENT; }
+QTabBar::tab:selected { background: $BG_SELECTED; color: $ON_DARK; }
 QStatusBar { background: $BG_DEEP; color: $TEXT_MUTED; }
 QWidget#busy { background: $BG_BUSY; }
 """)
@@ -120,8 +123,9 @@ def verdict_label(verdict: str) -> str:
 
 
 def on_color(fill: str) -> str:
-    """The text colour that reads on `fill`: dark on amber, white on green, red and blue."""
-    return ON_LIGHT if fill == WARN_COLOR else ON_DARK
+    """The text colour that reads on `fill`: dark on amber, grey and orange (5.6:1 or more), white on green, red and
+    blue (where white measures 3.3:1 to 4.2:1, so the text there is bold or 40 pt; see the module docstring)."""
+    return ON_LIGHT if fill in (WARN_COLOR, INFO_COLOR, MAJOR_COLOR) else ON_DARK
 
 
 def verdict_style(verdict: str, big: bool = True) -> str:
