@@ -74,7 +74,8 @@ class HomePage(Page):
             cl.addWidget(d)
             cl.addStretch(1)
             cl.addWidget(st)
-            cl.addWidget(button(f"Open {target} ›", slot=lambda _=False, t=target: shell.navigate(t)))
+            kind = "primary" if target == "Inspection" else ""  # the page's one blue primary: the Inspect card
+            cl.addWidget(button(f"Open {target} ›", kind, lambda _=False, t=target: shell.navigate(t)))
             grid.addWidget(card, i // 3, i % 3)
         self.root.addLayout(grid)
         self.root.addStretch(1)

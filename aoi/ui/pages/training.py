@@ -86,8 +86,8 @@ class TrainingPage(Page):
         ll = QVBoxLayout(left)
         ll.setContentsMargins(0, 0, 8, 0)
         up = QHBoxLayout()
-        up.addWidget(button("+ OK Images", "start", self.add_ok))
-        up.addWidget(button("+ NG Images", "stop", self.add_ng))
+        up.addWidget(button("+ OK Images", slot=self.add_ok))  # verdict colours mean verdicts, not add buttons
+        up.addWidget(button("+ NG Images", slot=self.add_ng))
         up.addWidget(button("Import Folder…", slot=self.import_folder))
         ll.addLayout(up)
         self.counts = QLabel("")
@@ -101,7 +101,7 @@ class TrainingPage(Page):
         act.addWidget(button("Mark OK", slot=lambda: self._relabel("OK")))
         act.addWidget(button("Mark NG…", slot=lambda: self._relabel("NG")))
         act.addWidget(button("Set Reference", slot=self._set_reference))
-        act.addWidget(button("Remove", slot=self._remove))
+        act.addWidget(button("Remove", "danger", self._remove))  # red, last in its row, never the default
         ll.addLayout(act)
         split.addWidget(left)
 

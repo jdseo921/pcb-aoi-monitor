@@ -71,7 +71,7 @@ class LogsPage(Page):
                     r["id"],
                     to_local(r["time"]),
                     r["board_model"],
-                    r["result"],
+                    theme.verdict_label(r["result"]),
                     r["defect_count"],
                     r["score"] or 0.0,
                     r["operator"],

@@ -171,7 +171,7 @@ class InspectionPage(Page):
             self.view.add_box(
                 d.x, d.y, d.w, d.h, theme.SEVERITY_COLORS.get(sev, theme.NG_COLOR), f"{d.no} {d.type} {d.score:.2f}"
             )
-        self.verdict.setText(res.verdict)
+        self.verdict.setText(theme.verdict_label(res.verdict))
         self.verdict.setStyleSheet(theme.verdict_style(res.verdict))
         self.summary.setText(
             f"{path.name}  ·  score {res.score:.2f}× threshold  ·  "

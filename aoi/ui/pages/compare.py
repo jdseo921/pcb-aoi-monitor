@@ -126,8 +126,8 @@ class ComparePage(Page):
         f.addRow("SSIM minimum", self.ssim_min)
         f.addRow("Allowed difference regions", self.max_regions)
         row = QHBoxLayout()
-        row.addWidget(button("Re-evaluate", "primary", self.run))
-        self.btn_save = button("Save to Recipe", slot=self.save_recipe)
+        row.addWidget(button("Re-evaluate", slot=self.run))
+        self.btn_save = button("Save to Recipe", "primary", self.save_recipe)  # the page's one blue primary
         row.addWidget(self.btn_save)
         f.addRow(row)
         pl.addWidget(g)
@@ -217,7 +217,7 @@ class ComparePage(Page):
         if res is None:
             return
         self.res = r = res
-        self.verdict.setText(r.verdict)
+        self.verdict.setText(theme.verdict_label(r.verdict))
         self.verdict.setStyleSheet(theme.verdict_style(r.verdict))
         rows, colors = [], []
         for c in r.checks:

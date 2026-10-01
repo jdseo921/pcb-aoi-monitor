@@ -8,7 +8,17 @@ from pathlib import Path
 
 from PySide6.QtCore import QMarginsF, Qt
 from PySide6.QtGui import QPageLayout, QPageSize, QPdfWriter, QTextDocument
-from PySide6.QtWidgets import QFileDialog, QGridLayout, QHBoxLayout, QLabel, QMessageBox, QProgressBar, QSplitter
+from PySide6.QtWidgets import (
+    QFileDialog,
+    QGridLayout,
+    QHBoxLayout,
+    QLabel,
+    QMessageBox,
+    QProgressBar,
+    QSplitter,
+    QVBoxLayout,
+    QWidget,
+)
 
 from ... import defects as taxonomy
 from .. import theme
@@ -81,9 +91,16 @@ class ModelTestPage(Page):
         self.table = make_table(["Image", "GT", "AI Result", "Score", "Pass/Fail"])
         self.table.itemSelectionChanged.connect(self._preview)
         split.addWidget(self.table)
+        preview = QWidget()
+        pl = QVBoxLayout(preview)
+        pl.setContentsMargins(0, 0, 0, 0)
+        self.preview_verdict = QLabel("—")  # the previewed board's verdict: colour, shape and word (REQ-INSP-002)
+        self.preview_verdict.setStyleSheet(theme.verdict_style("INFO", big=False))
         self.view = ImageView(placeholder="Select a row to preview")
         self.busy = BusyOverlay(self.view, self.tr("Inspecting…"))
-        split.addWidget(self.view)
+        pl.addWidget(self.preview_verdict)
+        pl.addWidget(self.view, 1)
+        split.addWidget(preview)
         split.setSizes([800, 800])
         self.root.addWidget(split, 1)
 
@@ -123,11 +140,11 @@ class ModelTestPage(Page):
             f"{m['labelled']} labelled of {m['samples']} images  ·  TP {m['TP']}  FN {m['FN']}  "
             f"FP {m['FP']}  TN {m['TN']}  ·  WARN counts as flagged (NG)"
         )
-        fill_table(
-            self.table,
-            [[Path(r["image"]).name, r["gt"], r["ai_result"], r["score"], r["pass_fail"]] for r in self.rows],
-            [theme.NG_COLOR if r["pass_fail"] == "FAIL" else None for r in self.rows],
-        )
+        rows = [
+            [Path(r["image"]).name, r["gt"], theme.verdict_label(r["ai_result"]), r["score"], r["pass_fail"]]
+            for r in self.rows
+        ]
+        fill_table(self.table, rows, [theme.NG_COLOR if r["pass_fail"] == "FAIL" else None for r in self.rows])
         for i, r in enumerate(self.rows):
             self.table.item(i, 0).setToolTip(r["image"])
 
@@ -142,6 +159,8 @@ class ModelTestPage(Page):
         )  # fmt: skip
 
     def _show_preview(self, path: str, res):
+        self.preview_verdict.setText(theme.verdict_label(res.verdict))
+        self.preview_verdict.setStyleSheet(theme.verdict_style(res.verdict, big=False))
         self.view.set_image(res.image)
         for d in res.defects:
             sev = taxonomy.BY_NAME.get(d.type, taxonomy.ANOMALY).severity

@@ -77,7 +77,9 @@ thread every 50 ms through each page's 5 MP action and fails on a gap over 2 s.
 Colours, point sizes and size classes are tokens in `aoi/ui/theme.py` (REQ-SET-004, since S18): the stylesheet is
 built from them with `theme.stylesheet()`, so another theme is a set of overrides (REQ-SET-008); a page never writes a
 colour or a point size of its own, nothing is below 14 pt, and `tests/test_screen_rules.py` scans aoi/ui for a
-literal and checks that every page sits in the one frame (REQ-SET-018).
+literal and checks that every page sits in the one frame (REQ-SET-018). A verdict is shown as its colour with a shape and the word
+(`theme.verdict_label`: ✓ OK, ✗ NG, ▲ WARN; REQ-INSP-002), each page has one blue `primary` button, and a button that
+removes data is a red `danger` button, last in its row and never the default.
 
 ### Workspace on disk
 
