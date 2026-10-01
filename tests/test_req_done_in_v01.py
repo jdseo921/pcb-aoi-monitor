@@ -15,16 +15,19 @@ import pytest
 from PySide6.QtCore import QPoint, QPointF, QRectF, Qt
 from PySide6.QtGui import QWheelEvent
 from PySide6.QtWidgets import QGraphicsRectItem, QPushButton
+from pytestqt.qtbot import QtBot
 
 from aoi.config import resolve_device
 from aoi.core.recipe import ROI, ROI_TYPES, Recipe
 from aoi.core.services import AppContext
 from aoi.ui.main_window import MainWindow
+from aoi.ui.pages.inspection import InspectionPage
+from tests.conftest import TrainedModel
 
 BOARD = "TINY"
 
 
-def _window(qtbot, ctx: AppContext, role: str = "Engineer") -> MainWindow:
+def _window(qtbot: QtBot, ctx: AppContext, role: str = "Engineer") -> MainWindow:
     win = MainWindow(ctx)
     qtbot.addWidget(win)
     win.resize(1600, 900)
@@ -35,7 +38,7 @@ def _window(qtbot, ctx: AppContext, role: str = "Engineer") -> MainWindow:
     return win
 
 
-def _inspect_one(qtbot, win: MainWindow, path: Path):
+def _inspect_one(qtbot: QtBot, win: MainWindow, path: Path) -> InspectionPage:
     page = win.pages["Inspection"]
     win.navigate("Inspection")
     page._set_queue([path])
@@ -44,7 +47,9 @@ def _inspect_one(qtbot, win: MainWindow, path: Path):
     return page
 
 
-def test_req_insp_003_one_box_per_defect_and_the_file_is_unchanged(qtbot, trained_ctx, ng_board) -> None:
+def test_req_insp_003_one_box_per_defect_and_the_file_is_unchanged(
+    qtbot: QtBot, trained_ctx: AppContext, ng_board: Path
+) -> None:
     before = hashlib.sha256(ng_board.read_bytes()).hexdigest()
     page = _inspect_one(qtbot, _window(qtbot, trained_ctx, "Operator"), ng_board)
     assert page.last.defects, "a board with a missing component yields at least one defect"
@@ -53,7 +58,9 @@ def test_req_insp_003_one_box_per_defect_and_the_file_is_unchanged(qtbot, traine
     assert hashlib.sha256(ng_board.read_bytes()).hexdigest() == before
 
 
-def test_req_insp_004_columns_in_order_and_selecting_a_row_centres_its_box(qtbot, trained_ctx, ng_board) -> None:
+def test_req_insp_004_columns_in_order_and_selecting_a_row_centres_its_box(
+    qtbot: QtBot, trained_ctx: AppContext, ng_board: Path
+) -> None:
     page = _inspect_one(qtbot, _window(qtbot, trained_ctx, "Operator"), ng_board)
     headers = [page.table.horizontalHeaderItem(i).text() for i in range(page.table.columnCount())]
     assert headers == ["No", "Type", "Score", "Side", "X", "Y"]
@@ -69,7 +76,7 @@ def test_req_insp_004_columns_in_order_and_selecting_a_row_centres_its_box(qtbot
     assert elapsed < 0.3, f"centring took {elapsed * 1000:.0f} ms"
 
 
-def test_req_insp_016_six_step_cards_open_their_pages_and_show_status(qtbot, trained_ctx) -> None:
+def test_req_insp_016_six_step_cards_open_their_pages_and_show_status(qtbot: QtBot, trained_ctx: AppContext) -> None:
     win = _window(qtbot, trained_ctx)
     home = win.pages["Home"]
     buttons = [b for b in home.findChildren(QPushButton) if b.text().startswith("Open ")]
@@ -90,7 +97,9 @@ def test_req_insp_016_six_step_cards_open_their_pages_and_show_status(qtbot, tra
     assert median(opens) < 0.3, f"Home status took {median(opens) * 1000:.0f} ms (median of 5 openings)"
 
 
-def test_req_cmp_001_linked_views_zoom_and_pan_together_within_1px(qtbot, trained_ctx, tiny_model) -> None:
+def test_req_cmp_001_linked_views_zoom_and_pan_together_within_1px(
+    qtbot: QtBot, trained_ctx: AppContext, tiny_model: TrainedModel
+) -> None:
     page = _window(qtbot, trained_ctx).pages["Compare"]
     page.ref_view.set_image(tiny_model.reference)
     page.test_view.set_image(tiny_model.reference)
@@ -115,7 +124,9 @@ def test_req_cmp_001_linked_views_zoom_and_pan_together_within_1px(qtbot, traine
     assert abs(a.x() - b.x()) <= 1 and abs(a.y() - b.y()) <= 1
 
 
-def test_req_cmp_006_any_stored_ok_sample_can_be_the_reference_and_metrics_recompute(qtbot, trained_ctx, ng_board):
+def test_req_cmp_006_any_stored_ok_sample_can_be_the_reference_and_metrics_recompute(
+    qtbot: QtBot, trained_ctx: AppContext, ng_board: Path
+) -> None:
     page = _window(qtbot, trained_ctx).pages["Compare"]
     page.set_test(str(ng_board))
     qtbot.waitUntil(lambda: page.res is not None, timeout=30000)  # the inspection runs on a pool thread (S17b)
@@ -136,7 +147,7 @@ def test_req_cmp_006_any_stored_ok_sample_can_be_the_reference_and_metrics_recom
     assert rows["Similarity (SSIM)"] == pytest.approx(against_sample["ssim"], abs=1e-4)
 
 
-def test_req_rcp_002_five_roi_types_and_five_fields_save_and_reload(qtbot, trained_ctx) -> None:
+def test_req_rcp_002_five_roi_types_and_five_fields_save_and_reload(qtbot: QtBot, trained_ctx: AppContext) -> None:
     rois = [
         ROI(
             f"R{i}",
@@ -165,7 +176,7 @@ def test_req_rcp_002_five_roi_types_and_five_fields_save_and_reload(qtbot, train
     assert (page.r_type.currentText(), page.r_hmin.value(), page.r_vmax.value()) == ("Height", 0.3, 6.0)
 
 
-def test_req_set_002_auto_picks_cuda_when_present_and_cpu_otherwise(monkeypatch) -> None:
+def test_req_set_002_auto_picks_cuda_when_present_and_cpu_otherwise(monkeypatch: pytest.MonkeyPatch) -> None:
     import torch
 
     monkeypatch.setattr(torch.cuda, "is_available", lambda: True)

@@ -68,7 +68,7 @@ def _from_safe(meta: dict[str, Any]) -> dict[str, Any]:
 
 
 class ConvAutoencoder(nn.Module):
-    def __init__(self, ch: int = 32, latent: int = 128):
+    def __init__(self, ch: int = 32, latent: int = 128) -> None:
         super().__init__()
 
         def down(i: int, o: int) -> nn.Sequential:
@@ -117,7 +117,7 @@ ProgressFn = Callable[[int, int, float, str], None]  # epoch, total, loss, messa
 class AnomalyModel:
     """Wraps the network with its calibration so callers only see scores."""
 
-    def __init__(self, net: ConvAutoencoder, meta: dict[str, Any], device: str = "cpu"):
+    def __init__(self, net: ConvAutoencoder, meta: dict[str, Any], device: str = "cpu") -> None:
         self.net = net.to(device).eval()
         self.meta = meta
         self.device = device

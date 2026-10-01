@@ -91,7 +91,7 @@ def requires(
 
 
 class AppContext:
-    def __init__(self, settings: Settings | None = None):
+    def __init__(self, settings: Settings | None = None) -> None:
         self.settings = settings or Settings.load()
         self.settings.ensure_dirs()
         self.log = logging_setup.setup(self.settings.root)

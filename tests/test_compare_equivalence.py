@@ -49,7 +49,9 @@ def regression_boards(tmp_path_factory: pytest.TempPathFactory) -> tuple[Path, l
     return out, rs.generate(out), cv2.imread(str(out / "golden.png"))
 
 
-def test_req_insp_007_rewritten_compare_matches_v01_on_every_regression_board(regression_boards) -> None:
+def test_req_insp_007_rewritten_compare_matches_v01_on_every_regression_board(
+    regression_boards: tuple[Path, list[rs.Board], np.ndarray],
+) -> None:
     out, boards, golden = regression_boards
     gaps = [assert_equivalent(cv2.imread(str(out / b.name)), golden, b.name) for b in boards]
     assert len(gaps) == rs.N_OK + rs.N_NG

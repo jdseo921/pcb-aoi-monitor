@@ -48,7 +48,7 @@ class Job(Generic[T]):
     function raised `JobCancelled`; then `on_finished`. A listener that raises is logged and dropped, never the job.
     """
 
-    def __init__(self, name: str, fn: Callable[..., T], *args: Any, with_progress: bool = False, **kwargs: Any):
+    def __init__(self, name: str, fn: Callable[..., T], *args: Any, with_progress: bool = False, **kwargs: Any) -> None:
         self.name = name
         self._fn, self._args, self._kwargs = fn, args, dict(kwargs)
         if with_progress:
@@ -143,7 +143,7 @@ class Jobs:
     """The pool `AppContext` owns. `submit` runs a job on a pool thread; `shutdown` cancels and waits, so a workspace
     folder is removed only once nothing in it is still being written (`AppContext.close`)."""
 
-    def __init__(self, max_workers: int = MAX_WORKERS):
+    def __init__(self, max_workers: int = MAX_WORKERS) -> None:
         self._pool = ThreadPoolExecutor(max_workers, thread_name_prefix="aoi-job")
         self._jobs: weakref.WeakSet[Job[Any]] = weakref.WeakSet()  # the pool never keeps a finished job's result alive
         self._lock = threading.Lock()

@@ -54,7 +54,8 @@ State the result of each line in the change note; mark a line that does not appl
 - A control's height comes from the stylesheet: `size_class(widget, "T")` for a 48 px operator target, `"T+"` for a
   56 px run control; `setMinimumHeight()` is undone when the stylesheet is applied, and the size walk in
   `tests/screens/test_sizes_and_contrast.py` fails on the result.
-- `aoi/ui` and `aoi/hal` are type-checked (`mypy` strict, every function annotated): write PySide6 enums in full
+- `aoi/ui` and `aoi/hal` are type-checked (`mypy` strict), and ruff asks for a type hint on every function argument and
+  return value everywhere else too (`tools/`, `main.py`, `tests/`): write PySide6 enums in full
   (`Qt.AlignmentFlag.AlignCenter`), import `QT_TRANSLATE_NOOP` from `aoi/ui/pages/base.py`, and never give a widget
   attribute a QWidget method's name (`size`, `pos`, `render`); `tests/test_screen_rules.py` fails on one.
 - Text is at least 14 pt, colours and sizes come only from `aoi/ui/theme.py`, and every visible string

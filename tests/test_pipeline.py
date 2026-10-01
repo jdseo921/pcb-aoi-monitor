@@ -16,7 +16,7 @@ from aoi.core.services import AppContext  # noqa: E402
 from tests.conftest import engineer  # noqa: E402
 
 
-def test_train_and_detect(tmp_path):
+def test_train_and_detect(tmp_path: Path) -> None:
     data = tmp_path / "data"
     subprocess.run(
         [

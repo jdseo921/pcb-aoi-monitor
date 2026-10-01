@@ -15,13 +15,16 @@ from pathlib import Path
 
 from PySide6.QtCore import QCoreApplication, QTranslator
 from PySide6.QtWidgets import QPushButton
+from pytestqt.qtbot import QtBot
 
 from aoi.core.inspector import Inspector
 from aoi.core.recipe import Recipe
+from aoi.core.services import AppContext
 from aoi.hal import VIEWS
 from aoi.ui.main_window import MainWindow
 from aoi.ui.pages.base import VIEW_NAMES
 from aoi.ui.pages.compare import CHECK_NAMES, MODE_AI, MODES, RULES, SOURCES
+from tests.conftest import TrainedModel
 from tools.update_translations import ROOT, TS_FILE, qt_tool, update
 
 PLACEHOLDER = re.compile(r"\{(\w+)(?::[^}]*)?\}")
@@ -82,7 +85,7 @@ def test_req_set_005_translation_file_is_generated_from_the_sources(tmp_path: Pa
     assert ("SettingsPage", "Version {version}") in committed and ("NgDialog", "Label NG images") in committed
 
 
-def test_req_set_005_engine_names_and_camera_views_have_display_strings(tiny_model) -> None:  # type: ignore[no-untyped-def]
+def test_req_set_005_engine_names_and_camera_views_have_display_strings(tiny_model: TrainedModel) -> None:
     """The engine names checks, their sources, rules and camera views in English and stores them; the pages show
     each through a marked display string in the translation file, so a translation never changes a stored name."""
     assert set(VIEW_NAMES) == set(VIEWS)
@@ -94,7 +97,9 @@ def test_req_set_005_engine_names_and_camera_views_have_display_strings(tiny_mod
     assert set(CHECK_NAMES.values()) | set(SOURCES.values()) | set(RULES.values()) | set(MODES) <= listed
 
 
-def test_req_set_005_a_translation_changes_titles_sections_roles_and_page_strings(qtbot, ctx, tmp_path: Path) -> None:
+def test_req_set_005_a_translation_changes_titles_sections_roles_and_page_strings(
+    qtbot: QtBot, ctx: AppContext, tmp_path: Path
+) -> None:
     """A .qm built from the generated file translates a page title (context Page), a sidebar section (MainWindow),
     a role name (Role), a page's own string (LogsPage), a Compare mode and a camera view; the English titles stay the
     navigation keys, the mode is still chosen by index and the view combo keeps the English key as its data."""
