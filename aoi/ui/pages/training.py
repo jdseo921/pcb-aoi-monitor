@@ -166,7 +166,7 @@ class TrainingPage(Page):
         mrow.addWidget(button(self.tr("Export AI Model…"), slot=self.export_model))
         rl.addLayout(mrow)
         split.addWidget(right)
-        split.setSizes([620, 520, 560])
+        split.setSizes([760, 380, 560])  # room for the four dataset buttons with their text; the preview keeps 320 px
         self.root.addWidget(split, 1)
 
     # --- dataset ----------------------------------------------------------------

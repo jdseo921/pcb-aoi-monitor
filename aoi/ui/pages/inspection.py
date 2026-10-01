@@ -27,7 +27,7 @@ from .. import theme
 from ..widgets.empty_state import EmptyState
 from ..widgets.image_view import ImageView
 from ..workers import Worker, start
-from .base import Page, button, fill_table, make_table, view_text
+from .base import Page, button, fill_table, make_table, size_class, view_text
 
 
 def alarm_line(time_iso: str, level: str, code: str | None, msg: str) -> str:
@@ -108,8 +108,7 @@ class InspectionPage(Page):
         self.btn_next = button(self.tr("Next Board"), "primary", self.next_board)
         self.btn_save = button(self.tr("Save Result"), slot=self.save_result)
         for i, b in enumerate((self.btn_start, self.btn_stop, self.btn_next, self.btn_save)):
-            b.setMinimumHeight(theme.RUN_CONTROL_H)
-            ctl.addWidget(b, 0, i)
+            ctl.addWidget(size_class(b, "T+"), 0, i)  # 56 px tall through the stylesheet
         self.root.addLayout(ctl)
 
         # Alarm log

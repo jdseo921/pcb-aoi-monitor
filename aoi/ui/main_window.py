@@ -25,7 +25,7 @@ from ..core.services import AppContext
 from ..errors import AoiError
 from . import theme
 from .errors import show_error
-from .pages.base import Page, button, page_text, role_text
+from .pages.base import Page, button, page_text, role_text, size_class
 from .pages.compare import ComparePage
 from .pages.inspection import InspectionPage
 from .pages.logs import LogsPage
@@ -246,11 +246,15 @@ class MainWindow(QMainWindow):
         self.bm_combo.setMinimumWidth(theme.FIELD_W)
         self.bm_combo.currentTextChanged.connect(self._on_board_model)
         layout.addWidget(self.bm_combo)
-        layout.addWidget(button(self.tr("+ New"), slot=self.new_board_model))
+        new = button(self.tr("+ New"), slot=self.new_board_model)
+        layout.addWidget(new)
         layout.addStretch(1)
         self.user_label = QLabel("")
         layout.addWidget(self.user_label)
-        layout.addWidget(button(self.tr("Switch User"), slot=self.switch_user))
+        switch = button(self.tr("Switch User"), slot=self.switch_user)
+        layout.addWidget(switch)
+        for control in (self.bm_combo, new, switch):
+            size_class(control, "T")  # header controls are operator targets (frame sketch, size class T)
         return h
 
     def _reload_board_models(self, select: str | None = None):

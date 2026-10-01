@@ -94,7 +94,13 @@ tolerance), and `tests/screens/test_screens.py` compares the 1920×1080 renders 
 `tests/screens/approved/` on Linux; a page fails when more than 0.5 % of its pixels move by more than 40 levels, and
 the new images with a diff per failing page stay in `tests/screens/actual/`, which CI uploads. An intended screen
 change is approved with `python tools/render_screens.py --approve`; the images are generated files that Jay approves by
-merging.
+merging. `tests/screens/test_sizes_and_contrast.py` walks the same pages on Linux and Windows and measures every visible
+widget against the standard's "Sizes": 14 pt text (QGraphics text on an image takes `label_font()`), 120×40 buttons whose
+text fits, 48 px operator targets (sidebar entries, header controls, defect and history rows), 56 px run controls, and
+WCAG 2.1 contrast of 4.5:1 between a widget's pixels and its background (3:1 for bold or 18 pt text; disabled controls
+exempt).
+A control's size class is set with `size_class(widget, "T")` (48 px) or `"T+"` (56 px), which the stylesheet sizes
+through `[sizeClass=…]` rules; `setMinimumHeight()` on a styled widget is undone when the stylesheet is applied.
 
 ### Workspace on disk
 
