@@ -65,19 +65,73 @@ def imported_names(node: ast.AST, package: str) -> list[str]:
     return []
 
 
+def callee_name(func: ast.expr) -> str:
+    """The name a call is made through: `Inspector(...)` or `inspector.Inspector(...)` both give "Inspector"."""
+    if isinstance(func, ast.Attribute):
+        return func.attr
+    return func.id if isinstance(func, ast.Name) else ""
+
+
+def appcontext_violations(path: Path, package: str) -> list[str]:
+    """What a screen module does outside AppContext, each as "file:line what": a sqlite3 or aoi.data import, an
+    `Inspector` imported outside `if TYPE_CHECKING:` or built by its bare or dotted name, `.db`, or SQL `.execute(`."""
+    found: list[str] = []
+    tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+    type_only = {
+        inner
+        for node in ast.walk(tree)
+        if isinstance(node, ast.If) and isinstance(node.test, ast.Name) and node.test.id == "TYPE_CHECKING"
+        for stmt in node.body
+        for inner in ast.walk(stmt)
+    }
+    shown = path.relative_to(ROOT) if path.is_relative_to(ROOT) else path.name
+    for node in ast.walk(tree):
+        where = f"{shown}:{getattr(node, 'lineno', 0)}"
+        for name in imported_names(node, package):
+            forbidden = name in FORBIDDEN_IN_UI or name.startswith("aoi.data.") or name.endswith(".Inspector")
+            if forbidden and not (name.endswith(".Inspector") and node in type_only):
+                found.append(f"{where} imports {name}")
+        if isinstance(node, ast.Call) and callee_name(node.func) == "Inspector":
+            found.append(f"{where} builds an Inspector")
+        if isinstance(node, ast.Attribute) and node.attr == "db":
+            found.append(f"{where} reaches .db")
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute) and node.func.attr == "execute":
+            found.append(f"{where} calls .execute(")
+    return found
+
+
 def test_req_usr_001_pages_use_appcontext_only() -> None:
     """Screens reach data and the engine only through AppContext (stage S15): no sqlite3 or aoi.data import, no `.db`
-    on the context, no SQL `.execute(` and no Inspector built in a page."""
+    on the context, no SQL `.execute(` and no Inspector built in a page (the `Inspector` name may be imported under
+    `if TYPE_CHECKING:` for a type hint, since S22b)."""
     found: list[str] = []
     for path in sorted(UI_DIR.rglob("*.py")):
         package = module_name(path) if path.name == "__init__.py" else module_name(path).rpartition(".")[0]
-        for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"), filename=str(path))):
-            where = f"{path.relative_to(ROOT)}:{getattr(node, 'lineno', 0)}"
-            for name in imported_names(node, package):
-                if name in FORBIDDEN_IN_UI or name.startswith("aoi.data.") or name.endswith(".Inspector"):
-                    found.append(f"{where} imports {name}")
-            if isinstance(node, ast.Attribute) and node.attr == "db":
-                found.append(f"{where} reaches .db")
-            if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute) and node.func.attr == "execute":
-                found.append(f"{where} calls .execute(")
+        found += appcontext_violations(path, package)
     assert not found, "screens must go through AppContext: " + ", ".join(found)
+
+
+def test_req_usr_001_the_scan_catches_a_built_inspector(tmp_path: Path) -> None:
+    """The scan itself: a runtime import of Inspector, an Inspector built by its bare or dotted name, `.db` and
+    `.execute(` are flagged, and the import under `if TYPE_CHECKING:` is not."""
+    sample = tmp_path / "sample.py"
+    sample.write_text(
+        "from typing import TYPE_CHECKING\n"
+        "from ...core.inspector import Inspector\n"
+        "from ...core import inspector\n"
+        "if TYPE_CHECKING:\n"
+        "    from ...core.inspector import Inspector\n"
+        "def f(ctx, recipe):\n"
+        "    a = Inspector(recipe)\n"
+        "    b = inspector.Inspector(recipe)\n"
+        "    ctx.db.execute('DELETE FROM inspections')\n"
+        "    return a, b\n",
+        encoding="utf-8",
+    )
+    assert sorted(appcontext_violations(sample, "aoi.ui.pages")) == [
+        "sample.py:2 imports aoi.core.inspector.Inspector",
+        "sample.py:7 builds an Inspector",
+        "sample.py:8 builds an Inspector",
+        "sample.py:9 calls .execute(",
+        "sample.py:9 reaches .db",
+    ]

@@ -97,13 +97,24 @@ def _overlap(r: Region, x: int, y: int, w: int, h: int) -> bool:
 
 
 class Inspector:
+    """The engine for one board model. `model_version` and `recipe_rev` name the AI model and recipe revision a saved
+    record carries (REQ-INSP-008): `AppContext.inspector()` fills them; an Inspector built bare has none."""
+
     def __init__(
-        self, recipe: Recipe, model: AnomalyModel | None = None, reference: np.ndarray | None = None, side: str = "Top"
-    ):
+        self,
+        recipe: Recipe,
+        model: AnomalyModel | None = None,
+        reference: np.ndarray | None = None,
+        side: str = "Top",
+        model_version: str | None = None,
+        recipe_rev: int | None = None,
+    ) -> None:
         self.recipe = recipe
         self.model = model
         self.reference = reference
         self.side = side
+        self.model_version = model_version
+        self.recipe_rev = recipe_rev
 
     def inspect(self, img: np.ndarray) -> InspectionResult:
         t0 = time.perf_counter()
