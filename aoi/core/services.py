@@ -15,6 +15,7 @@ from typing import Any
 
 import numpy as np
 
+from .. import logging_setup
 from ..config import Settings, resolve_device
 from ..data import atomic
 from ..data.db import Database
@@ -31,9 +32,11 @@ class AppContext:
     def __init__(self, settings: Settings | None = None):
         self.settings = settings or Settings.load()
         self.settings.ensure_dirs()
+        self.log = logging_setup.setup(self.settings.root)
         self.db = Database(self.settings.db_path, self.settings.root)
-        atomic.sweep_temp_files(self.settings.root)  # a crash mid-write leaves only a temp file; drop it
+        swept = atomic.sweep_temp_files(self.settings.root)  # a crash mid-write leaves only a temp file; drop it
         self.device = resolve_device(self.settings.device)
+        self.log.info("app.start", extra={"workspace": str(self.settings.root), "device": self.device, "swept": swept})
         self.user = "operator"
         self.role = "Operator"
         self._model_cache: dict[str, tuple[str, anomaly.AnomalyModel]] = {}
@@ -99,6 +102,7 @@ class AppContext:
         summary = {k: v for k, v in model.meta.items() if k not in ("loss_history", "err_mean", "err_std")}
         self.db.register_model(board_model, version, str(path), summary, activate=True)
         self._model_cache.pop(board_model, None)
+        self.log.info("training.finished", extra={"board_model": board_model, "model_version": version})
         return model.meta
 
     def load_model(self, board_model: str) -> tuple[str, anomaly.AnomalyModel] | None:
@@ -163,6 +167,18 @@ class AppContext:
         )
         if res.verdict == NG:
             self.db.alarm("NG", f"{Path(path).name}: {len(res.defects)} defect(s)")
+        self.log.info(
+            "inspection.saved",
+            extra={
+                "inspection_id": iid,
+                "board_model": board_model,
+                "verdict": res.verdict,
+                "defects": len(res.defects),
+                "model_version": getattr(insp, "model_version", None),
+                "recipe_rev": getattr(insp, "recipe_rev", None),
+                "elapsed_ms": round(res.elapsed_ms, 1),
+            },
+        )
         return iid
 
     # --- batch test (AI Model Test screen) -----------------------------------

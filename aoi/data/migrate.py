@@ -9,6 +9,7 @@ refused with a plain message instead of being changed in place.
 from __future__ import annotations
 
 import hashlib
+import logging
 import re
 import sqlite3
 from dataclasses import dataclass
@@ -17,6 +18,7 @@ from pathlib import Path
 
 from .errors import WorkspaceError
 
+log = logging.getLogger(__name__)
 MIGRATIONS_DIR = Path(__file__).resolve().parent / "migrations"
 FILE_NAME = re.compile(r"^(\d{4})_([a-z0-9_]+)\.sql$")
 OWN_TRANSACTION = re.compile(r"^\s*(BEGIN|COMMIT|ROLLBACK|END)\b", re.IGNORECASE | re.MULTILINE)
@@ -113,4 +115,5 @@ def migrate(conn: sqlite3.Connection, migrations: list[Migration] | None = None)
             conn.rollback()
             raise MigrationError("AOI-SET-004", file=m.file, error=str(e)) from e
         applied.append(m)
+        log.info("schema.migrated", extra={"migration": m.file, "checksum": m.checksum[:12]})
     return applied
