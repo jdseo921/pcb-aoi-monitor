@@ -23,9 +23,10 @@ class LogsPage(Page):
         self.rows: list[dict] = []
         f = QHBoxLayout()
         self.d_from = QDateEdit(QDate.currentDate().addDays(-7))
-        self.d_from.setCalendarPopup(True)
         self.d_to = QDateEdit(QDate.currentDate())
-        self.d_to.setCalendarPopup(True)
+        for d in (self.d_from, self.d_to):
+            d.setCalendarPopup(True)
+            d.setDisplayFormat("yyyy-MM-dd")  # ISO dates everywhere (REQ-SET-017), not the locale's short form
         self.model = QComboBox()
         self.operator = QComboBox()
         self.archived = QCheckBox(self.tr("Include archived"))
@@ -56,6 +57,7 @@ class LogsPage(Page):
                 self.tr("Image"),
             ]
         )
+        self.table.verticalHeader().setDefaultSectionSize(theme.TARGET_H)  # a history row is an operator target
         self.table.itemSelectionChanged.connect(self._preview)
         self.empty = EmptyState(self.table)
         split.addWidget(self.table)

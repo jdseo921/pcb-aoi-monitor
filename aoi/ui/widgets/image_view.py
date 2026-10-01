@@ -5,10 +5,17 @@ from __future__ import annotations
 import cv2
 import numpy as np
 from PySide6.QtCore import QPointF, QRectF, Qt, Signal
-from PySide6.QtGui import QBrush, QColor, QImage, QPainter, QPen, QPixmap
+from PySide6.QtGui import QBrush, QColor, QFont, QImage, QPainter, QPen, QPixmap, QTransform
 from PySide6.QtWidgets import QGraphicsRectItem, QGraphicsScene, QGraphicsSimpleTextItem, QGraphicsView
 
 from .. import theme
+
+
+def label_font() -> QFont:
+    """14 pt for text drawn on an image: a QGraphics item takes the application font, not the stylesheet's."""
+    font = QFont()
+    font.setPointSize(theme.FONT_PT)
+    return font
 
 
 def to_qpixmap(img: np.ndarray) -> QPixmap:
@@ -39,8 +46,8 @@ class ImageView(QGraphicsView):
         self._rubber: QGraphicsRectItem | None = None
         self._peers: list[ImageView] = []
         self._syncing = False
-        self._placeholder = self.scene().addSimpleText(placeholder)
-        self._placeholder.setBrush(QColor(theme.TEXT_DISABLED))
+        self._placeholder = self.scene().addSimpleText(placeholder, label_font())
+        self._placeholder.setBrush(QColor(theme.TEXT_MUTED))  # 8:1 on BG_IMAGE; it is a hint, not a disabled control
         self.horizontalScrollBar().valueChanged.connect(self._emit_changed)
         self.verticalScrollBar().valueChanged.connect(self._emit_changed)
 
@@ -78,11 +85,17 @@ class ImageView(QGraphicsView):
             pen.setStyle(Qt.DashLine)
         r = self.scene().addRect(QRectF(x, y, w, h), pen)
         self._overlay_items.append(r)
-        if label:
+        if label:  # 14 pt text on a dark backing above the box's corner, the same size at every zoom (REQ-SET-004)
             t = QGraphicsSimpleTextItem(label)
-            t.setBrush(QBrush(QColor(color)))
-            t.setPos(x, y - 18)
+            t.setFont(label_font())
+            t.setBrush(QBrush(QColor(theme.TEXT)))  # 15:1 on the backing, whatever the board behind it looks like
             t.setFlag(QGraphicsSimpleTextItem.ItemIgnoresTransformations)
+            t.setPos(x, y)
+            t.setTransform(QTransform.fromTranslate(4, -t.boundingRect().height() - 6))  # above the corner, in pixels
+            backing = QGraphicsRectItem(t.boundingRect().adjusted(-4, -3, 4, 3), t)
+            backing.setPen(QPen(Qt.NoPen))
+            backing.setBrush(QBrush(QColor(theme.BG_IMAGE)))
+            backing.setFlag(QGraphicsRectItem.ItemStacksBehindParent)
             self.scene().addItem(t)
             self._overlay_items.append(t)
 

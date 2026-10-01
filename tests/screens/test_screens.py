@@ -16,7 +16,6 @@ from __future__ import annotations
 import json
 import shutil
 import sys
-from collections.abc import Iterator
 from pathlib import Path
 
 import numpy as np
@@ -35,17 +34,6 @@ LEVELS = 40  # a pixel differs when one of its channels moves by more than this,
 PIXEL_SHARE = 0.005  # a page fails when more than this share of its pixels differ
 APPROVE = "python tools/render_screens.py --approve"
 LINUX = sys.platform == "linux"
-
-
-@pytest.fixture(scope="module")
-def screens(tmp_path_factory: pytest.TempPathFactory) -> Iterator[tuple[AppContext, Path]]:
-    """The synthetic workspace the pages are rendered on, built once for this module; stored times are shown as UTC."""
-    restore_zone = render_screens.pin_time_zone()
-    root = tmp_path_factory.mktemp("screens")
-    ctx = render_screens.build_workspace(root)
-    yield ctx, root / "dataset"
-    ctx.close()
-    restore_zone()
 
 
 def _differing(approved: np.ndarray, actual: np.ndarray) -> tuple[float, np.ndarray]:

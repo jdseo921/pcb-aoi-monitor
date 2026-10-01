@@ -165,6 +165,14 @@ class Page(QWidget):
         return start(w, self.ctx.jobs)
 
 
+def size_class(w: QWidget, cls: str) -> QWidget:
+    """Mark a control with a sketch size class, "T" (operator target, 48 px) or "T+" (run control, 56 px), which the
+    stylesheet sizes (`[sizeClass="T+"]`). `setMinimumHeight()` is undone when the stylesheet is applied, since
+    QStyleSheetStyle sets the minimum from its own min-height rule: that is how the run controls shipped at 42 px."""
+    w.setProperty("sizeClass", cls)  # not "size": that is QWidget's own QSize property
+    return w
+
+
 def button(text: str, kind: str = "", slot=None) -> QPushButton:
     """A theme button. `kind` is "primary" (the one blue button on a page), "start", or the red "stop" and
     "danger" (removes data): red buttons sit last in their row and are never the default (REQ-SET-018)."""

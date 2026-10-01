@@ -184,8 +184,8 @@ def pin_time_zone() -> Callable[[], None]:
 
 @contextmanager
 def pinned_rendering(app: QApplication, font: str) -> Iterator[None]:
-    """The stylesheet with ``font`` as the family (none: the theme's own list) and hinting off, so a render does not
-    depend on the machine's fonts; the application's stylesheet and font are put back afterwards."""
+    """The stylesheet with ``font`` as the family (none: the theme's own list), hinting off and grey anti-aliasing, so
+    a render does not depend on the machine's fonts or screen; the application's stylesheet and font are put back."""
     from PySide6.QtGui import QFont
 
     from aoi.ui import theme
@@ -193,6 +193,9 @@ def pinned_rendering(app: QApplication, font: str) -> Iterator[None]:
     before_sheet, before_font = app.styleSheet(), QFont(app.font())
     pinned = QFont(before_font)
     pinned.setHintingPreference(QFont.HintingPreference.PreferNoHinting)
+    pinned.setStyleStrategy(QFont.StyleStrategy.NoSubpixelAntialias)  # grey edges, not the screen's RGB fringes
+    if font:
+        pinned.setFamily(font.strip('"'))  # text drawn on the image (QGraphics items) takes the application font
     app.setFont(pinned)
     app.setStyleSheet(theme.stylesheet(FONT_FAMILY=font) if font else theme.QSS)
     try:
