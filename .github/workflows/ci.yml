@@ -1,5 +1,6 @@
-# Checks every pull request and every push to main, as the Engineering standard requires once the
-# code is on GitHub ("CI", "Code style", "Scans and SBOM"). Any failing job blocks the merge.
+# Checks every pull request (whatever branch it targets, so stacked stage PRs are checked too) and every
+# push to main, as the Engineering standard requires once the code is on GitHub ("CI", "Code style",
+# "Scans and SBOM"). Any failing job blocks the merge.
 name: CI
 
 on:
