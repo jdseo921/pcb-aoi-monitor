@@ -92,13 +92,21 @@ class Database:
                 self.execute("INSERT INTO users(name, role) VALUES(?,?)", (n, r))
 
     # --- primitives --------------------------------------------------------
-    def execute(self, sql: str, params: Iterable[Any] = ()) -> int:
+    def execute(self, sql: str, params: Iterable[Any] = ()) -> int | None:
+        """Run one statement and commit. Returns the new row id after an INSERT, otherwise None."""
         with self._lock:
             cur = self._conn.execute(sql, tuple(params))
             self._conn.commit()
             return cur.lastrowid
 
-    def query(self, sql: str, params: Iterable[Any] = ()) -> list[dict]:
+    def _insert(self, sql: str, params: Iterable[Any] = ()) -> int:
+        """Run one INSERT and return the new row's id."""
+        rowid = self.execute(sql, params)
+        if rowid is None:
+            raise sqlite3.DatabaseError(f"INSERT returned no row id: {sql}")
+        return rowid
+
+    def query(self, sql: str, params: Iterable[Any] = ()) -> list[dict[str, Any]]:
         with self._lock:
             return [dict(r) for r in self._conn.execute(sql, tuple(params)).fetchall()]
 
@@ -122,12 +130,12 @@ class Database:
         self, board_model: str, path: str, label: str, defect_type: str | None = None, side: str = "Top"
     ) -> int:
         self.ensure_board_model(board_model)
-        return self.execute(
+        return self._insert(
             "INSERT INTO samples(board_model, path, label, defect_type, side, added_at) VALUES(?,?,?,?,?,?)",
             (board_model, path, label, defect_type, side, now()),
         )
 
-    def samples(self, board_model: str, label: str | None = None) -> list[dict]:
+    def samples(self, board_model: str, label: str | None = None) -> list[dict[str, Any]]:
         if label:
             return self.query("SELECT * FROM samples WHERE board_model=? AND label=? ORDER BY id", (board_model, label))
         return self.query("SELECT * FROM samples WHERE board_model=? ORDER BY id", (board_model,))
@@ -139,18 +147,20 @@ class Database:
         self.execute("DELETE FROM samples WHERE id=?", (sample_id,))
 
     # --- model registry ----------------------------------------------------
-    def register_model(self, board_model: str, version: str, path: str, metrics: dict, activate: bool = True) -> int:
+    def register_model(
+        self, board_model: str, version: str, path: str, metrics: dict[str, Any], activate: bool = True
+    ) -> int:
         if activate:
             self.execute("UPDATE models SET active=0 WHERE board_model=?", (board_model,))
-        return self.execute(
+        return self._insert(
             "INSERT INTO models(board_model, version, path, created_at, metrics, active) VALUES(?,?,?,?,?,?)",
             (board_model, version, path, now(), json.dumps(metrics), int(activate)),
         )
 
-    def models(self, board_model: str) -> list[dict]:
+    def models(self, board_model: str) -> list[dict[str, Any]]:
         return self.query("SELECT * FROM models WHERE board_model=? ORDER BY id DESC", (board_model,))
 
-    def active_model(self, board_model: str) -> dict | None:
+    def active_model(self, board_model: str) -> dict[str, Any] | None:
         r = self.query("SELECT * FROM models WHERE board_model=? AND active=1", (board_model,))
         return r[0] if r else None
 
@@ -164,7 +174,7 @@ class Database:
         return f"v1.{n - 1}" if n > 1 else "v1.0"
 
     # --- recipes -----------------------------------------------------------
-    def save_recipe(self, board_model: str, body: dict, user: str) -> int:
+    def save_recipe(self, board_model: str, body: dict[str, Any], user: str) -> int:
         rev = (self.query("SELECT MAX(revision) m FROM recipes WHERE board_model=?", (board_model,))[0]["m"] or 0) + 1
         self.execute(
             "INSERT INTO recipes(board_model, revision, body, user, created_at) VALUES(?,?,?,?,?)",
@@ -172,20 +182,20 @@ class Database:
         )
         return rev
 
-    def latest_recipe(self, board_model: str) -> tuple[int, dict] | None:
+    def latest_recipe(self, board_model: str) -> tuple[int, dict[str, Any]] | None:
         r = self.query(
             "SELECT revision, body FROM recipes WHERE board_model=? ORDER BY revision DESC LIMIT 1", (board_model,)
         )
         return (r[0]["revision"], json.loads(r[0]["body"])) if r else None
 
-    def recipe_history(self, board_model: str) -> list[dict]:
+    def recipe_history(self, board_model: str) -> list[dict[str, Any]]:
         return self.query(
             "SELECT revision, user, created_at FROM recipes WHERE board_model=? ORDER BY revision DESC", (board_model,)
         )
 
     # --- inspections -------------------------------------------------------
-    def add_inspection(self, rec: dict, defects: list[dict]) -> int:
-        iid = self.execute(
+    def add_inspection(self, rec: dict[str, Any], defects: list[dict[str, Any]]) -> int:
+        iid = self._insert(
             "INSERT INTO inspections(time, board_model, model_version, recipe_rev, image_path, overlay_path,"
             " result, score, metrics, operator) VALUES(?,?,?,?,?,?,?,?,?,?)",
             (
@@ -215,7 +225,7 @@ class Database:
         board_model: str | None = None,
         operator: str | None = None,
         include_archived: bool = False,
-    ) -> list[dict]:
+    ) -> list[dict[str, Any]]:
         sql = (
             "SELECT i.*, (SELECT COUNT(*) FROM defects d WHERE d.inspection_id=i.id) AS defect_count "
             "FROM inspections i WHERE 1=1"
@@ -237,20 +247,25 @@ class Database:
             p.append(operator)
         return self.query(sql + " ORDER BY id DESC", p)
 
-    def defects_for(self, inspection_id: int) -> list[dict]:
+    def defects_for(self, inspection_id: int) -> list[dict[str, Any]]:
         return self.query("SELECT * FROM defects WHERE inspection_id=? ORDER BY no", (inspection_id,))
 
     def archive_old(self, days: int) -> int:
         cutoff = (datetime.now() - timedelta(days=days)).isoformat(timespec="seconds")
-        n = self.query("SELECT COUNT(*) c FROM inspections WHERE archived=0 AND time < ?", (cutoff,))[0]["c"]
+        n: int = self.query("SELECT COUNT(*) c FROM inspections WHERE archived=0 AND time < ?", (cutoff,))[0]["c"]
         self.execute("UPDATE inspections SET archived=1 WHERE time < ?", (cutoff,))
         return n
 
     # --- test runs / alarms ------------------------------------------------
     def add_test_run(
-        self, board_model: str, model_version: str, folder: str, metrics: dict, results: list[dict]
+        self,
+        board_model: str,
+        model_version: str,
+        folder: str,
+        metrics: dict[str, Any],
+        results: list[dict[str, Any]],
     ) -> int:
-        return self.execute(
+        return self._insert(
             "INSERT INTO test_runs(time, board_model, model_version, folder, metrics, results) VALUES(?,?,?,?,?,?)",
             (now(), board_model, model_version, folder, json.dumps(metrics), json.dumps(results)),
         )
@@ -258,7 +273,7 @@ class Database:
     def alarm(self, level: str, message: str) -> None:
         self.execute("INSERT INTO alarms(time, level, message) VALUES(?,?,?)", (now(), level, message))
 
-    def users(self) -> list[dict]:
+    def users(self) -> list[dict[str, Any]]:
         return self.query("SELECT * FROM users ORDER BY id")
 
     def add_user(self, name: str, role: str) -> None:

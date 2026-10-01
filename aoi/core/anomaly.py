@@ -19,6 +19,7 @@ import time
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 import cv2
 import numpy as np
@@ -30,10 +31,10 @@ class ConvAutoencoder(nn.Module):
     def __init__(self, ch: int = 32, latent: int = 128):
         super().__init__()
 
-        def down(i, o):
+        def down(i: int, o: int) -> nn.Sequential:
             return nn.Sequential(nn.Conv2d(i, o, 4, 2, 1), nn.BatchNorm2d(o), nn.LeakyReLU(0.2, True))
 
-        def up(i, o):
+        def up(i: int, o: int) -> nn.Sequential:
             return nn.Sequential(nn.ConvTranspose2d(i, o, 4, 2, 1), nn.BatchNorm2d(o), nn.ReLU(True))
 
         self.encoder = nn.Sequential(down(3, ch), down(ch, ch * 2), down(ch * 2, ch * 4), down(ch * 4, latent))
@@ -41,8 +42,9 @@ class ConvAutoencoder(nn.Module):
             up(latent, ch * 4), up(ch * 4, ch * 2), up(ch * 2, ch), nn.ConvTranspose2d(ch, 3, 4, 2, 1), nn.Sigmoid()
         )
 
-    def forward(self, x):
-        return self.decoder(self.encoder(x))
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        out: torch.Tensor = self.decoder(self.encoder(x))
+        return out
 
 
 def to_tensor(img_bgr: np.ndarray, size: int) -> torch.Tensor:
@@ -75,7 +77,7 @@ ProgressFn = Callable[[int, int, float, str], None]  # epoch, total, loss, messa
 class AnomalyModel:
     """Wraps the network with its calibration so callers only see scores."""
 
-    def __init__(self, net: ConvAutoencoder, meta: dict, device: str = "cpu"):
+    def __init__(self, net: ConvAutoencoder, meta: dict[str, Any], device: str = "cpu"):
         self.net = net.to(device).eval()
         self.meta = meta
         self.device = device
@@ -98,7 +100,8 @@ class AnomalyModel:
         x = to_tensor(img_bgr, self.size).unsqueeze(0).to(self.device)
         rec = self.net(x)
         err = (x - rec).abs().mean(dim=1)[0].cpu().numpy()
-        return cv2.GaussianBlur(err, (0, 0), sigmaX=1.5)
+        blurred: np.ndarray = cv2.GaussianBlur(err, (0, 0), sigmaX=1.5)
+        return blurred
 
     def anomaly_map(self, img_bgr: np.ndarray) -> np.ndarray:
         """Per-pixel anomaly at the input image's resolution.

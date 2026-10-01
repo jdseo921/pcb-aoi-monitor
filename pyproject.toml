@@ -12,5 +12,14 @@ select = ["E", "F", "W", "I", "UP", "B"]
 [tool.ruff.lint.isort]
 known-first-party = ["aoi"]
 
+[tool.mypy]
+python_version = "3.11"
+# Strict on the engine and data layers, as the standard requires; the UI is not type-checked yet.
+files = ["aoi/core", "aoi/data"]
+strict = true
+warn_unreachable = true
+# scikit-image functions carry no annotations, so calling them is allowed.
+untyped_calls_exclude = ["skimage"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
