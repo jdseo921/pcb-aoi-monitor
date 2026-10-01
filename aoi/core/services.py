@@ -28,6 +28,7 @@ from ..times import local_date, now_utc
 from . import anomaly
 from .imaging import align_to_reference, list_images, load_image, save_image
 from .inspector import NG, OK, WARN, InspectionResult, Inspector, draw_overlay
+from .jobs import Jobs
 from .recipe import Recipe
 
 ALARM_LIMIT = 1000  # REQ-INSP-006: the alarms a screen shows and that survive a restart
@@ -102,12 +103,14 @@ class AppContext:
         archived = self.db.archive_old(self.settings.log_retention_days)  # retention is a system action, not a user's
         self.log.info("retention.archived", extra={"days": self.settings.log_retention_days, "archived": archived})
         self._model_cache: dict[str, tuple[str, anomaly.AnomalyModel]] = {}
+        self.jobs = Jobs()  # background work (REQ-SET-021): screens submit through aoi/ui/workers, tests directly
 
     # --- dataset -------------------------------------------------------------
 
     def close(self) -> None:
         """Release the database and the log file, as a restart or a change of workspace does; a workspace folder
         can be moved only once nothing holds a file in it open."""
+        self.jobs.shutdown()  # a running job may still read the database or write a file
         self.db.close()
         logging_setup.close(self.log)
 
