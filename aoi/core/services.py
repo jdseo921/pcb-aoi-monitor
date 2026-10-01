@@ -11,6 +11,7 @@ import shutil
 import uuid
 from collections.abc import Callable
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 
@@ -60,7 +61,7 @@ class AppContext:
         image_size: int | None = None,
         progress: anomaly.ProgressFn | None = None,
         should_stop: Callable[[], bool] | None = None,
-    ) -> dict:
+    ) -> dict[str, Any]:
         say = progress or (lambda *a: None)
         ok = [load_image(s["path"]) for s in self.db.samples(board_model, "OK")]
         ng = [load_image(s["path"]) for s in self.db.samples(board_model, "NG")]
@@ -162,7 +163,7 @@ class AppContext:
     # --- batch test (AI Model Test screen) -----------------------------------
     def batch_test(
         self, board_model: str, folder: str, progress: Callable[[int, int], None] | None = None
-    ) -> tuple[dict, list[dict]]:
+    ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
         """Ground truth comes from sub-folder names: anything under an `ng`/`defect`
         folder is NG, under `ok`/`good` is OK."""
         insp = self.inspector(board_model)
@@ -190,7 +191,7 @@ class AppContext:
         return metrics, rows
 
 
-def classification_metrics(rows: list[dict]) -> dict:
+def classification_metrics(rows: list[dict[str, Any]]) -> dict[str, Any]:
     """NG is the positive class. WARN counts as a call (flagged for review)."""
     lab = [r for r in rows if r["gt"] in (OK, NG)]
     tp = sum(r["gt"] == NG and r["ai_result"] != OK for r in lab)
@@ -212,7 +213,7 @@ def classification_metrics(rows: list[dict]) -> dict:
     }
 
 
-def export_csv(path: str | Path, rows: list[dict]) -> None:
+def export_csv(path: str | Path, rows: list[dict[str, Any]]) -> None:
     if not rows:
         Path(path).write_text("", encoding="utf-8")
         return

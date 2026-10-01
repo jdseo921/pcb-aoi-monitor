@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
+from typing import Any
 
 ROI_TYPES = ["Presence", "Polarity", "Solder Bridge", "Height", "Anomaly"]
 
@@ -49,11 +50,11 @@ class Recipe:
     max_diff_regions: int = 0  # NG when more difference blobs than this
     rois: list[ROI] = field(default_factory=list)
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         return asdict(self)
 
     @classmethod
-    def from_dict(cls, d: dict) -> Recipe:
+    def from_dict(cls, d: dict[str, Any]) -> Recipe:
         d = dict(d)
         rois = [ROI(**r) for r in d.pop("rois", [])]
         known = {k: v for k, v in d.items() if k in cls.__dataclass_fields__}

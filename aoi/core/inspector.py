@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import time
 from dataclasses import dataclass, field
+from typing import Any
 
 import cv2
 import numpy as np
@@ -47,7 +48,7 @@ class Defect:
     source: str
     severity: str = "Major"
 
-    def as_row(self) -> dict:
+    def as_row(self) -> dict[str, Any]:
         return dict(
             no=self.no,
             type=self.type,
@@ -73,7 +74,7 @@ class InspectionResult:
     elapsed_ms: float = 0.0
     notes: list[str] = field(default_factory=list)
 
-    def metrics_dict(self) -> dict:
+    def metrics_dict(self) -> dict[str, Any]:
         d = {c.name: c.value for c in self.checks}
         d["elapsed_ms"] = round(self.elapsed_ms, 1)
         if self.compare:
@@ -91,7 +92,7 @@ def _grade(value: float, threshold: float, warn_ratio: float, higher_is_bad: boo
     return WARN if value < threshold + (1 - warn_ratio) * (1 - threshold) else OK
 
 
-def _overlap(r: Region, x, y, w, h) -> bool:
+def _overlap(r: Region, x: int, y: int, w: int, h: int) -> bool:
     return not (r.x + r.w <= x or x + w <= r.x or r.y + r.h <= y or y + h <= r.y)
 
 
@@ -188,7 +189,7 @@ class Inspector:
                 )
             )
             pix_thr = self.model.pixel_threshold
-            mask = (amap >= pix_thr).astype(np.uint8) * 255
+            mask: np.ndarray = (amap >= pix_thr).astype(np.uint8) * 255
             mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, np.ones((5, 5), np.uint8))
             regions += regions_from_mask(mask, amap / thr, r.min_defect_area, "ai")
         elif r.use_ai:
@@ -197,7 +198,7 @@ class Inspector:
 
         # 3) ROI checks ----------------------------------------------------------
         for roi in (x for x in r.rois if x.enabled):
-            if res.anomaly_map is None:
+            if res.anomaly_map is None or self.model is None:
                 break
             thr = r.anomaly_threshold or self.model.image_threshold
             patch = res.anomaly_map[roi.y : roi.y + roi.h, roi.x : roi.x + roi.w]
@@ -248,6 +249,8 @@ class Inspector:
 
 def draw_overlay(res: InspectionResult) -> np.ndarray:
     """Annotated image: bounding boxes + labels, colour by severity (spec 4.1)."""
+    if res.image is None:
+        raise ValueError("draw_overlay needs an inspected image")
     img = res.image.copy()
     colors = {"Critical": (53, 57, 229), "Major": (0, 140, 251), "Minor": (53, 216, 253)}
     th = max(2, img.shape[1] // 400)
