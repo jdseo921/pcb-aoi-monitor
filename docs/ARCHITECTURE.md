@@ -100,7 +100,8 @@ merging. On Linux, CI also renders every page at 1366×768 and at 3840×2160 wit
 widget against the standard's "Sizes": 14 pt text (QGraphics text on an image takes `label_font()`), 120×40 buttons whose
 text fits, 48 px operator targets (sidebar entries, header controls, defect and history rows), 56 px run controls, and
 WCAG 2.1 contrast of 4.5:1 between a widget's pixels and its background (3:1 for bold or 18 pt text; disabled controls
-exempt).
+exempt). On Windows, CI points `QT_QPA_FONTDIR` at the system font folder: Qt's offscreen platform ships no fonts
+there, and without fonts every text is a box that reads as -0.8 pt, so the walk asserts first that fonts loaded.
 A control's size class is set with `size_class(widget, "T")` (48 px) or `"T+"` (56 px), which the stylesheet sizes
 through `[sizeClass=…]` rules; `setMinimumHeight()` on a styled widget is undone when the stylesheet is applied.
 
