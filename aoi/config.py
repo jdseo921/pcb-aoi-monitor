@@ -82,8 +82,9 @@ class Settings:
 
     def save(self) -> None:
         f = self._file()
-        f.parent.mkdir(parents=True, exist_ok=True)
-        f.write_text(json.dumps(asdict(self), indent=2), encoding="utf-8")
+        from .data import atomic  # settings.json is read at start-up: never leave it half-written
+
+        atomic.write_text(f, json.dumps(asdict(self), indent=2))
 
 
 def resolve_device(pref: str) -> str:

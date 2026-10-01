@@ -7,7 +7,7 @@ and later a Stage 3 robot cycle or Stage 4 MES hook).
 from __future__ import annotations
 
 import csv
-import shutil
+import io
 import uuid
 from collections.abc import Callable
 from pathlib import Path
@@ -16,6 +16,7 @@ from typing import Any
 import numpy as np
 
 from ..config import Settings, resolve_device
+from ..data import atomic
 from ..data.db import Database
 from ..data.paths import to_stored
 from ..data.times import local_date, now_utc
@@ -30,6 +31,7 @@ class AppContext:
         self.settings = settings or Settings.load()
         self.settings.ensure_dirs()
         self.db = Database(self.settings.db_path, self.settings.root)
+        atomic.sweep_temp_files(self.settings.root)  # a crash mid-write leaves only a temp file; drop it
         self.device = resolve_device(self.settings.device)
         self.user = "operator"
         self.role = "Operator"
@@ -46,7 +48,7 @@ class AppContext:
         for p in paths:
             src = Path(p)
             target = dest / f"{src.stem}_{uuid.uuid4().hex[:6]}{src.suffix.lower()}"
-            shutil.copy2(src, target)
+            atomic.copy_file(src, target)
             self.db.add_sample(board_model, str(target), label, defect_type, side)
             n += 1
         if not self.db.reference(board_model):
@@ -216,10 +218,9 @@ def classification_metrics(rows: list[dict[str, Any]]) -> dict[str, Any]:
 
 
 def export_csv(path: str | Path, rows: list[dict[str, Any]]) -> None:
-    if not rows:
-        Path(path).write_text("", encoding="utf-8")
-        return
-    with open(path, "w", newline="", encoding="utf-8-sig") as f:  # BOM so Excel opens Korean text
-        w = csv.DictWriter(f, fieldnames=list(rows[0].keys()))
+    buf = io.StringIO(newline="")
+    if rows:
+        w = csv.DictWriter(buf, fieldnames=list(rows[0].keys()))
         w.writeheader()
         w.writerows(rows)
+    atomic.write_text(path, buf.getvalue(), encoding="utf-8-sig" if rows else "utf-8")  # BOM: Excel opens Korean

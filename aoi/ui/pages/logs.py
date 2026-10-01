@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import shutil
 from pathlib import Path
 
 from PySide6.QtCore import QDate, Qt
@@ -10,6 +9,7 @@ from PySide6.QtWidgets import QCheckBox, QComboBox, QDateEdit, QFileDialog, QHBo
 
 from ...core.imaging import load_image
 from ...core.services import export_csv
+from ...data import atomic
 from ...data.times import to_local
 from ..theme import VERDICT_COLORS
 from ..widgets.image_view import ImageView
@@ -140,7 +140,7 @@ class LogsPage(Page):
         n = 0
         for r in self.rows:
             if r["overlay_path"] and Path(r["overlay_path"]).exists():
-                shutil.copy2(r["overlay_path"], d)
+                atomic.copy_file(r["overlay_path"], Path(d) / Path(r["overlay_path"]).name)
                 n += 1
         self.shell.status(f"Copied {n} overlay image(s) to {d}")
 
