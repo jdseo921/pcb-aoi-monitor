@@ -13,7 +13,7 @@ None. / 없음.
 
 ## New / 신규 (draft)
 
-- (none yet)
+- [REQ-LOG-004] The app writes a JSON-lines log in the workspace's logs folder, one file per day (UTC), with time, level, module, event, record ids and the app version; it never holds images or personal data beyond a user's UUID (#4, part). / 앱이 작업 폴더의 logs 폴더에 하루(UTC) 한 파일씩 JSON 라인 로그를 기록합니다. 시각, 수준, 모듈, 이벤트, 기록 ID, 앱 버전을 담고 이미지나 사용자 UUID 외의 개인 정보는 담지 않습니다 (#4, 일부).
 
 ## Improved / 개선 (draft)
 

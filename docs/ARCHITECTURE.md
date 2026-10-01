@@ -65,6 +65,7 @@ Rules: pages call **only** `AppContext`; the engine has **no Qt imports**, so th
 ```
 AOI_Workspace/                 (default ~/AOI_Workspace, set in Settings or AOI_WORKSPACE env var)
   aoi.sqlite                   database
+  logs/aoi-YYYY-MM-DD.jsonl    JSON-lines log, one file per UTC day (REQ-LOG-004)
   settings.json
   images/<board>/<OK|NG>/      uploaded training samples (copied in, so source folders can move)
   models/<board>/<board>_vX.Y.pt            trained model + calibration
@@ -201,7 +202,9 @@ Every file the app writes (images, overlays, AI models, exports, settings) goes 
 a temporary name in the same folder, flush and fsync, then an atomic rename, and an inspection's row and defects
 commit in one transaction, so a crash leaves a whole result or none (REQ-INSP-008). Every error a user can see is
 an `AoiError` from the catalogue in `aoi/errors.py`, with a code `AOI-<AREA>-<NNN>`, what happened and what to do;
-`docs/error-codes.md` is generated from it (REQ-LOG-004, REQ-SET-019).
+`docs/error-codes.md` is generated from it (REQ-LOG-004, REQ-SET-019). `aoi/logging_setup.py` writes the JSON-lines
+log in `<workspace>/logs/`, one file per UTC day, with time, level, module, event, ids and the app version, and never
+an image or a password.
 
 `inspections` already carries everything Stage 4 uploads (lot/model/result/timestamp + images); a `lot_id` column is
 the only addition expected.

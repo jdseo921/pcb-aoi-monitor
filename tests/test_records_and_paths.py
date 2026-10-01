@@ -86,7 +86,7 @@ def test_req_set_001_moved_workspace_opens_everything(tmp_path: Path, tiny_model
     for table, column in STORED_PATHS:
         for r in old.db.query(f"SELECT {column} p FROM {table}"):
             assert r["p"] and not Path(r["p"]).is_absolute(), (table, r["p"])
-    old.db.close()
+    old.close()  # the database and the log file; an open file keeps the folder from moving on Windows
     new_root = tmp_path / "new_place"
     shutil.move(str(old_root), str(new_root))
 
