@@ -5,6 +5,8 @@ boards and compare any board side by side with the learned golden board.
 
 * Architecture, navigation and requirement traceability: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
 * Screenshots: [docs/screenshots/](docs/screenshots/)
+* Release notes, one file per build from 0.2.0 on: [docs/release-notes/](docs/release-notes/)
+* Threat model, one page per product area, reviewed at every minor release: [docs/security/threat-model.md](docs/security/threat-model.md)
 
 ## Install (Windows 10/11)
 
@@ -57,7 +59,7 @@ pip install -r requirements-dev.txt
 ruff check .            # lint
 ruff format --check .   # formatting
 mypy                    # strict types on aoi/core, aoi/data, aoi/hal and aoi/ui
-pytest -q               # tests; add --cov for the line coverage of aoi/core and aoi/data
+pytest -q --cov         # tests; the line coverage of aoi/core and aoi/data must stay at 80 % or more
 ```
 
 The tests draw their boards with `tools/make_synthetic_dataset.py` from a fixed seed, and the Qt pages are
@@ -68,7 +70,9 @@ note says so. On every CI run `tools/trace_matrix.py` writes the trace matrix (e
 artifact; its G1 gate reports the rows still unproven and becomes blocking at the release candidate (S59).
 
 CI also runs three security scans: Bandit (a High finding fails the build), pip-audit (any known vulnerability in
-a dependency fails it) and gitleaks (a secret in any commit fails it).
+a dependency fails it) and gitleaks (a secret in any commit fails it). The threat model in
+[docs/security/threat-model.md](docs/security/threat-model.md) is reviewed against STRIDE at every minor release;
+its review log says which build it was last checked for.
 
 ## Layout
 

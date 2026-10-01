@@ -33,10 +33,12 @@ pythonpath = ["."]
 qt_api = "pyside6"
 
 [tool.coverage.run]
-# Line coverage of the engine and data layers (Engineering standard, "Tests": 80 % target). CI reports it on
-# every run; the gate is not enforced until the Stage 1 suite has grown (ADR 0003).
+# Line coverage of the engine and data layers (Engineering standard, "Tests": 80 % target), measured on every CI run.
 source = ["aoi/core", "aoi/data"]
 
 [tool.coverage.report]
 show_missing = true
 precision = 1
+# The gate: a run under 80 % fails (pytest-cov honours fail_under). Turned on at 0.2.0, when the suite measured
+# 97.4 % (ADR 0003, item 6; #114).
+fail_under = 80

@@ -14,7 +14,7 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
 APP_NAME = "AOI PoC Inspector"
-APP_VERSION = "0.1.0"
+APP_VERSION = "0.2.0"
 
 
 def default_workspace() -> Path:
@@ -27,7 +27,7 @@ class Settings:
     device: str = "auto"  # auto | cpu | cuda
     image_size: int = 256  # network input size (square)
     default_epochs: int = 60
-    log_retention_days: int = 30  # spec 4.4: auto-archive logs older than 30 days
+    log_retention_days: int = 30  # spec 4.4: inspection records older than this are archived at start-up (REQ-LOG-003)
     language: str = "en"  # en | ko (localization planned for 2H 2027)
     last_page: str = "Home"  # the page to reopen after a restart (REQ-LOG-005)
 
