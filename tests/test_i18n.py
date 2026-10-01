@@ -182,12 +182,17 @@ def _scan(path: Path) -> set[tuple[int, str]]:
     scopes = (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda, ast.Module)
     assigned: dict[ast.AST, dict[str, ast.AST]] = {}  # scope -> {name: literal it was assigned}
     for node in ast.walk(tree):
-        if isinstance(node, ast.Assign) and len(node.targets) == 1 and isinstance(node.targets[0], ast.Name):
-            if _literal_text(node.value) is not None and not _is_translated(node.value):
-                scope = node
-                while not isinstance(scope, scopes):
-                    scope = parents[scope]
-                assigned.setdefault(scope, {})[node.targets[0].id] = node.value
+        if isinstance(node, ast.Assign) and len(node.targets) == 1:
+            target, value = node.targets[0], node.value
+        elif isinstance(node, ast.AnnAssign) and node.value is not None:  # `what: str = "…"` counts like `what = "…"`
+            target, value = node.target, node.value
+        else:
+            continue
+        if isinstance(target, ast.Name) and _literal_text(value) is not None and not _is_translated(value):
+            scope = node
+            while not isinstance(scope, scopes):
+                scope = parents[scope]
+            assigned.setdefault(scope, {})[target.id] = value
     found: set[tuple[int, str]] = set()
 
     def check(arg: ast.AST, scope: ast.AST) -> None:
@@ -243,9 +248,9 @@ def test_req_set_005_no_untranslated_literals() -> None:
 
 
 def test_req_set_005_the_scan_catches_a_literal(tmp_path: Path) -> None:
-    """The scan itself: it flags a literal, an f-string, a `.format()` on a literal, a name assigned a literal, a
-    title (annotated or not) and a dialog's words, and lets through tr(), markup-only text, a file name and a logger's
-    warning."""
+    """The scan itself: it flags a literal, an f-string, a `.format()` on a literal, a name assigned a literal (with or
+    without an annotation), a title (annotated or not) and a dialog's words, and lets through tr(), markup-only text, a
+    file name and a logger's warning."""
     sample = tmp_path / "sample.py"
     sample.write_text(
         "class P(Page):\n"
@@ -253,10 +258,12 @@ def test_req_set_005_the_scan_catches_a_literal(tmp_path: Path) -> None:
         '    subtitle: str = "Annotated subtitle"\n'
         "    def f(self):\n"
         '        what = "Assigned text"\n'
+        '        hint: str = "Annotated text"\n'
         '        self.label.setText("Plain text")\n'
         '        self.label.setText(f"{self.n} items")\n'
         '        self.label.setText("{count} rows".format(count=3))\n'
         '        self.empty.show_state(self.tr("Heading"), what)\n'
+        "        self.label.setToolTip(hint)\n"
         '        QMessageBox.warning(self, "Title", "Body")\n'
         '        self.log.warning("settings.save_failed")\n'
         '        self.label.setText(f"<b>{self.n}</b>")\n'
@@ -272,6 +279,7 @@ def test_req_set_005_the_scan_catches_a_literal(tmp_path: Path) -> None:
         "0 items",
         "{count} rows",
         "Assigned text",
+        "Annotated text",
         "Title",
         "Body",
     }

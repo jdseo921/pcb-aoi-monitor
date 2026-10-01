@@ -256,10 +256,7 @@ class AppContext:
         if reference is None:
             ref_path = self.db.reference(board_model)
             reference = load_image(ref_path) if ref_path and Path(ref_path).exists() else None
-        insp = Inspector(recipe or rcp, mv[1] if mv else None, reference, side)
-        insp.model_version = mv[0] if mv else None  # type: ignore[attr-defined]
-        insp.recipe_rev = rev  # type: ignore[attr-defined]
-        return insp
+        return Inspector(recipe or rcp, mv[1] if mv else None, reference, side, mv[0] if mv else None, rev)
 
     def inspect(
         self,
@@ -290,8 +287,8 @@ class AppContext:
         iid = self.db.add_inspection(
             {
                 "board_model": board_model,
-                "model_version": getattr(insp, "model_version", None),
-                "recipe_rev": getattr(insp, "recipe_rev", None),
+                "model_version": insp.model_version,
+                "recipe_rev": insp.recipe_rev,
                 "image_path": path,
                 "overlay_path": str(overlay),
                 "result": res.verdict,
@@ -310,8 +307,8 @@ class AppContext:
                 "board_model": board_model,
                 "verdict": res.verdict,
                 "defects": len(res.defects),
-                "model_version": getattr(insp, "model_version", None),
-                "recipe_rev": getattr(insp, "recipe_rev", None),
+                "model_version": insp.model_version,
+                "recipe_rev": insp.recipe_rev,
                 "elapsed_ms": round(res.elapsed_ms, 1),
             },
         )
@@ -368,7 +365,7 @@ class AppContext:
             if progress:
                 progress(i, len(files))
         metrics = classification_metrics(rows)
-        model_version = getattr(insp, "model_version", None) or "-"
+        model_version = insp.model_version or "-"
         self.db.add_test_run(board_model, model_version, folder, metrics, rows)
         after = {"folder": folder, "model_version": model_version, **metrics}
         self.audit("test.run", "board_model", board_model, None, after)

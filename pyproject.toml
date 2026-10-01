@@ -14,18 +14,13 @@ known-first-party = ["aoi", "tests", "tools"]
 
 [tool.mypy]
 python_version = "3.11"
-# Strict on the engine and data layers, as the standard requires, and since S22a on the screens (aoi/ui) and aoi/hal
-# too, with no flag relaxed; the two pages below are typed in the second half of S22b.
+# Strict on the engine and data layers, as the standard requires, and since S22 on the screens (aoi/ui) and aoi/hal
+# too, with no flag relaxed.
 files = ["aoi/core", "aoi/data", "aoi/times.py", "aoi/hal", "aoi/ui"]
 strict = true
 warn_unreachable = true
 # scikit-image functions carry no annotations, so calling them is allowed.
 untyped_calls_exclude = ["skimage"]
-
-[[tool.mypy.overrides]]
-# Typed in the second half of S22b; until then their errors are ignored, not fixed.
-module = ["aoi.ui.pages.compare", "aoi.ui.pages.inspection"]
-ignore_errors = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

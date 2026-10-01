@@ -9,9 +9,10 @@ from __future__ import annotations
 
 import copy
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import numpy as np
-from PySide6.QtCore import QT_TRANSLATE_NOOP, Qt
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QComboBox,
     QDoubleSpinBox,
@@ -30,13 +31,18 @@ from PySide6.QtWidgets import (
 
 from ... import defects as taxonomy
 from ...core.imaging import IMAGE_EXTS, heat_overlay, load_image
-from ...core.inspector import Check
+from ...core.inspector import Check, InspectionResult
+from ...core.recipe import Recipe
+from ...core.services import AppContext
 from ...errors import AoiError
 from .. import theme
 from ..widgets.busy import BusyOverlay
 from ..widgets.empty_state import EmptyState
 from ..widgets.image_view import ImageView
-from .base import Page, button, fill_table, make_table
+from .base import QT_TRANSLATE_NOOP, Page, button, fill_table, make_table
+
+if TYPE_CHECKING:
+    from ..main_window import MainWindow
 
 MODES = [  # the Show combo, in this order; shown through tr()
     QT_TRANSLATE_NOOP("ComparePage", "Side by side"),
@@ -72,11 +78,11 @@ class ComparePage(Page):
     title = QT_TRANSLATE_NOOP("Page", "Compare")
     subtitle = QT_TRANSLATE_NOOP("Page", "Golden board vs. test board, with the metrics behind the verdict")
 
-    def __init__(self, ctx, shell):
+    def __init__(self, ctx: AppContext, shell: MainWindow) -> None:
         super().__init__(ctx, shell)
         self.test_path: str | None = None
         self.ref_override: str | None = None
-        self.res = None
+        self.res: InspectionResult | None = None
         self._fitted = False
 
         bar = QHBoxLayout()
@@ -92,7 +98,7 @@ class ComparePage(Page):
         bar.addStretch(1)
         self.root.addLayout(bar)
 
-        split = QSplitter(Qt.Horizontal)
+        split = QSplitter(Qt.Orientation.Horizontal)
         views = QWidget()
         vl = QHBoxLayout(views)
         vl.setContentsMargins(0, 0, 0, 0)
@@ -135,8 +141,8 @@ class ComparePage(Page):
         )
         hh = self.metrics.horizontalHeader()
         hh.setStretchLastSection(False)
-        hh.setSectionResizeMode(QHeaderView.ResizeToContents)
-        hh.setSectionResizeMode(0, QHeaderView.Stretch)
+        hh.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
+        hh.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
         self.metrics.setWordWrap(True)
         pl.addWidget(self.metrics, 2)
         self.why = QTextEdit()
@@ -176,13 +182,13 @@ class ComparePage(Page):
         self.root.addWidget(split, 1)
 
     # --- inputs ------------------------------------------------------------------
-    def set_test(self, path: str):
+    def set_test(self, path: str) -> None:
         self.test_path = path
         self.test_empty.hide()
         self._fitted = False
         self.run()
 
-    def pick_test(self):
+    def pick_test(self) -> None:
         exts = " ".join(f"*{e}" for e in sorted(IMAGE_EXTS))
         f, _ = QFileDialog.getOpenFileName(
             self, self.tr("Test image"), "", self.tr("Images ({extensions})").format(extensions=exts)
@@ -190,11 +196,11 @@ class ComparePage(Page):
         if f:
             self.set_test(f)
 
-    def use_last(self):
+    def use_last(self) -> None:
         if self.shell.last_inspected:
             self.set_test(self.shell.last_inspected[0])
 
-    def pick_ref(self):
+    def pick_ref(self) -> None:
         exts = " ".join(f"*{e}" for e in sorted(IMAGE_EXTS))
         f, _ = QFileDialog.getOpenFileName(
             self, self.tr("Reference image"), "", self.tr("Images ({extensions})").format(extensions=exts)
@@ -203,11 +209,11 @@ class ComparePage(Page):
             self.ref_override = f
             self.run()
 
-    def use_golden(self):
+    def use_golden(self) -> None:
         self.ref_override = None
         self.run()
 
-    def _load_recipe_into_form(self):
+    def _load_recipe_into_form(self) -> None:
         if not self.board_model:
             return
         _, r = self.ctx.recipe(self.board_model)
@@ -217,8 +223,9 @@ class ComparePage(Page):
         self.ssim_min.setValue(r.ssim_min)
         self.max_regions.setValue(r.max_diff_regions)
 
-    def _form_recipe(self):
-        _, r = self.ctx.recipe(self.board_model)
+    def _form_recipe(self, board_model: str) -> Recipe:
+        """The board model's recipe with the what-if thresholds from the form."""
+        _, r = self.ctx.recipe(board_model)
         r = copy.deepcopy(r)
         r.anomaly_threshold = self.ai_thr.value() or None
         r.diff_threshold = self.diff_thr.value()
@@ -228,25 +235,28 @@ class ComparePage(Page):
         return r
 
     # --- evaluate ----------------------------------------------------------------
-    def run(self):
+    def run(self) -> None:
         """Load the reference and inspect the test image on a pool thread (REQ-SET-021); the form is read here."""
-        if not self.board_model:
+        bm = self.board_model
+        if not bm:
             return
         if self.test_path:
             self.test_label.setText(self.tr("Test board: {file}").format(file=Path(self.test_path).name))
-        recipe = self._form_recipe() if self.test_path else None
+        recipe = self._form_recipe(bm) if self.test_path else None
         self.run_in_background(
-            self._evaluate, self.board_model, self.test_path, self.ref_override, recipe,
+            self._evaluate, bm, self.test_path, self.ref_override, recipe,
             on_result=self._on_evaluated, busy=self.busy if self.test_path else None,
         )  # fmt: skip
 
-    def _evaluate(self, board_model, test_path, ref_path, recipe):
+    def _evaluate(
+        self, board_model: str, test_path: str | None, ref_path: str | None, recipe: Recipe | None
+    ) -> tuple[np.ndarray | None, InspectionResult | None]:
         """Pool thread: files and the engine only, never a widget."""
         ref = load_image(ref_path) if ref_path else self.ctx.inspector(board_model).reference
         res = self.ctx.inspect(board_model, load_image(test_path), recipe, reference=ref) if test_path else None
         return ref, res
 
-    def _on_evaluated(self, out):
+    def _on_evaluated(self, out: tuple[np.ndarray | None, InspectionResult | None]) -> None:
         ref, res = out
         if self.ref_override:
             self.ref_label.setText(self.tr("Reference: {file}").format(file=Path(self.ref_override).name))
@@ -283,7 +293,7 @@ class ComparePage(Page):
         )
         colors.append(None)
         fill_table(self.metrics, rows, colors)
-        self.why.setHtml(self._explain())
+        self.why.setHtml(self._explain(r))
         self.redraw()
 
     def _check_text(self, c: Check) -> tuple[str, str, str]:
@@ -291,8 +301,7 @@ class ComparePage(Page):
         name = self.tr(CHECK_NAMES[c.name]) if c.name in CHECK_NAMES else c.name
         return name, self.tr(SOURCES.get(c.source, c.source)), self.tr(RULES.get(c.rule, c.rule))
 
-    def _explain(self) -> str:
-        r = self.res
+    def _explain(self, r: InspectionResult) -> str:
         failing = [c for c in r.checks if c.verdict in ("NG", "WARN")]
         if not failing:
             lines = [
@@ -321,17 +330,17 @@ class ComparePage(Page):
             lines.append(f"<br><i>{n}</i>")
         return "".join(lines)
 
-    def redraw(self):
+    def redraw(self) -> None:
         r = self.res
         if r is None:
             return
         mode = self.mode.currentIndex()
-        img = r.image
-        if mode == MODE_DIFF and r.compare is not None:
-            img = heat_overlay(r.image, r.compare.diff_map, vmax=max(1, 1.5 * self.diff_thr.value()))
-        elif mode == MODE_AI and r.anomaly_map is not None:
-            thr = r.checks and next((c.threshold for c in r.checks if c.source == "AI"), None)
-            img = heat_overlay(r.image, r.anomaly_map, vmax=(thr or float(np.max(r.anomaly_map))) * 1.5)
+        img = r.image  # typed Optional; the engine always sets it, so the guards below narrow for mypy only
+        if img is not None and mode == MODE_DIFF and r.compare is not None:
+            img = heat_overlay(img, r.compare.diff_map, vmax=max(1, 1.5 * self.diff_thr.value()))
+        elif img is not None and mode == MODE_AI and r.anomaly_map is not None:
+            thr = next((c.threshold for c in r.checks if c.source == "AI"), None)
+            img = heat_overlay(img, r.anomaly_map, vmax=(thr or float(np.max(r.anomaly_map))) * 1.5)
         self.test_view.set_image(img, keep_view=self._fitted)
         self._fitted = True
         for d in r.defects:
@@ -340,19 +349,22 @@ class ComparePage(Page):
             self.test_view.add_box(d.x, d.y, d.w, d.h, color, f"{d.no} {d.type}")
             self.ref_view.add_box(d.x, d.y, d.w, d.h, color, f"{d.no}", dashed=True)
 
-    def save_recipe(self):
+    def save_recipe(self) -> None:
         if self.ctx.role == "Operator":
-            return self.error(AoiError("AOI-USR-001", what="Changing recipes", roles="Engineer or Admin"))
-        rev = self.ctx.save_recipe(self._form_recipe())
+            self.error(AoiError("AOI-USR-001", what="Changing recipes", roles="Engineer or Admin"))
+            return
+        if (bm := self.checked_board_model()) is None:
+            return
+        rev = self.ctx.save_recipe(self._form_recipe(bm))
         self.shell.status(self.tr("Recipe saved as revision {revision}").format(revision=rev))
 
-    def on_board_model_changed(self, name):
+    def on_board_model_changed(self, name: str | None) -> None:
         self.res = None
         self._load_recipe_into_form()
         if name:
             self.run()
 
-    def on_show(self):
+    def on_show(self) -> None:
         self.btn_save.setEnabled(self.ctx.role != "Operator")
         if self.res is None and self.test_path is None:
             step = self.empty_step(self.tr("Inspect a board on Inspection, or pick a test image."), "Inspection")
