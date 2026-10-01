@@ -61,7 +61,8 @@ def test_register_rows_and_matrix_columns(register: Path, tmp_path: Path) -> Non
     assert by_id["REQ-USR-002"].result == "not run (1 of 1)"  # skipped counts as not run
     assert unknown == ["commit '[REQ-ZZZ-999] fix: cites an unknown row' cites REQ-ZZZ-999"]
     md, csv_path = tm.write(rows, tmp_path / "out")
-    assert "| REQ-INSP-001 | MUST G1 | Partial | — | test_a.py::test_req_insp_001_bmp_opens; " in md.read_text()
+    matrix = md.read_text(encoding="utf-8")
+    assert "| REQ-INSP-001 | MUST G1 | Partial | — | test_a.py::test_req_insp_001_bmp_opens; " in matrix
     assert csv_path.read_text(encoding="utf-8").splitlines()[0] == "id,priority,v01,commits,tests,last_result"
 
 
