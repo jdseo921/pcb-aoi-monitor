@@ -189,6 +189,8 @@ User switching is a local picker for the PoC; Stage 4 replaces it with MES authe
 | `defects` | inspection_id, no, type, score, side, x, y, w, h |
 | `test_runs` | time, board_model, model_version, folder, metrics JSON, results JSON |
 | `alarms`, `users` | — |
+| `audit` | uuid, at_utc, user_uuid, role, action, object_type, object_uuid, before_json, after_json, reason; append only (triggers refuse UPDATE and DELETE) |
+| `schema_version` | number, name, applied_at, checksum (migration runner) |
 
 The schema is created and changed only by the numbered migrations in `aoi/data/migrations/`, which
 `aoi/data/migrate.py` applies at start-up and records in `schema_version` with a checksum (ADR 0004). The
