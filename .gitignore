@@ -36,3 +36,6 @@ test-results.xml
 trace-matrix/
 trace-matrix.md
 trace-matrix.csv
+
+# Written by tests/perf/test_timing.py (S08)
+perf.json
