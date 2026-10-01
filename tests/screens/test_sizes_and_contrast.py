@@ -18,7 +18,7 @@ from pathlib import Path
 
 import numpy as np
 from PySide6.QtCore import QRect, Qt
-from PySide6.QtGui import QColor, QFont, QFontInfo, QImage
+from PySide6.QtGui import QColor, QFont, QFontDatabase, QFontInfo, QImage
 from PySide6.QtWidgets import (
     QAbstractButton,
     QAbstractItemView,
@@ -220,6 +220,7 @@ def _check_targets(where: str, win: MainWindow, title: str, seen: Counter) -> li
 
 def test_req_set_004_sizes_and_contrast_on_every_page(screens: tuple[AppContext, Path], qtbot, qapp) -> None:
     """Every visible widget of every page, for every role: the font, the size and the contrast rules above."""
+    assert QFontDatabase.families(), "no fonts loaded, so no text to measure (Windows offscreen: set QT_QPA_FONTDIR)"
     ctx, dataset = screens
     findings: list[str] = []
     seen: Counter = Counter()
