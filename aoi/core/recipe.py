@@ -53,7 +53,7 @@ class Recipe:
         return asdict(self)
 
     @classmethod
-    def from_dict(cls, d: dict) -> "Recipe":
+    def from_dict(cls, d: dict) -> Recipe:
         d = dict(d)
         rois = [ROI(**r) for r in d.pop("rois", [])]
         known = {k: v for k, v in d.items() if k in cls.__dataclass_fields__}

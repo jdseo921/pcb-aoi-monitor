@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import traceback
-from typing import Callable
+from collections.abc import Callable
 
 from PySide6.QtCore import QObject, QRunnable, QThreadPool, Signal
 

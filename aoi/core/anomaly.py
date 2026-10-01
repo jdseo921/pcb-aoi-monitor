@@ -16,9 +16,9 @@ from __future__ import annotations
 
 import random
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable
 
 import cv2
 import numpy as np
@@ -125,7 +125,7 @@ class AnomalyModel:
         torch.save({"state_dict": self.net.state_dict(), "meta": self.meta}, path)
 
     @classmethod
-    def load(cls, path: str | Path, device: str = "cpu") -> "AnomalyModel":
+    def load(cls, path: str | Path, device: str = "cpu") -> AnomalyModel:
         ckpt = torch.load(path, map_location=device, weights_only=False)
         net = ConvAutoencoder()
         net.load_state_dict(ckpt["state_dict"])

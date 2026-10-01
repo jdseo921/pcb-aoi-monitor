@@ -9,8 +9,8 @@ from __future__ import annotations
 import csv
 import shutil
 import uuid
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable
 
 import numpy as np
 

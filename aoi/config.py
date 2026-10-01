@@ -69,7 +69,7 @@ class Settings:
         return default_workspace() / "settings.json"
 
     @classmethod
-    def load(cls) -> "Settings":
+    def load(cls) -> Settings:
         f = cls._file()
         if f.exists():
             data = json.loads(f.read_text(encoding="utf-8"))

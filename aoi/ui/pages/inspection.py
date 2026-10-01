@@ -5,6 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 from pathlib import Path
 
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -17,12 +18,10 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-from PySide6.QtCore import Qt
 
 from ... import defects as taxonomy
-from ...core.imaging import IMAGE_EXTS, list_images, load_image
+from ...core.imaging import IMAGE_EXTS, list_images, load_image, save_image
 from ...core.inspector import InspectionResult, draw_overlay
-from ...core.imaging import save_image
 from ...hal import VIEWS
 from ..theme import verdict_style
 from ..widgets.image_view import ImageView

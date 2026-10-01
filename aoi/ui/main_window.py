@@ -81,8 +81,8 @@ class HomePage(Page):
         bm = self.board_model
         db = self.ctx.db
         if not bm:
-            for l in self.status_labels.values():
-                l.setText("Create a board model in the top bar to begin.")
+            for label in self.status_labels.values():
+                label.setText("Create a board model in the top bar to begin.")
             return
         ok = len(db.samples(bm, "OK"))
         ng = len(db.samples(bm, "NG"))
@@ -173,22 +173,22 @@ class MainWindow(QMainWindow):
         h = QFrame()
         h.setObjectName("header")
         h.setFixedHeight(64)
-        l = QHBoxLayout(h)
-        l.setContentsMargins(18, 0, 18, 0)
+        layout = QHBoxLayout(h)
+        layout.setContentsMargins(18, 0, 18, 0)
         logo = QLabel(f"<b>{APP_NAME}</b>")
         logo.setStyleSheet("font-size:16pt;")
-        l.addWidget(logo)
-        l.addSpacing(30)
-        l.addWidget(QLabel("Board model:"))
+        layout.addWidget(logo)
+        layout.addSpacing(30)
+        layout.addWidget(QLabel("Board model:"))
         self.bm_combo = QComboBox()
         self.bm_combo.setMinimumWidth(240)
         self.bm_combo.currentTextChanged.connect(self._on_board_model)
-        l.addWidget(self.bm_combo)
-        l.addWidget(button("+ New", slot=self.new_board_model))
-        l.addStretch(1)
+        layout.addWidget(self.bm_combo)
+        layout.addWidget(button("+ New", slot=self.new_board_model))
+        layout.addStretch(1)
         self.user_label = QLabel("")
-        l.addWidget(self.user_label)
-        l.addWidget(button("Switch User", slot=self.switch_user))
+        layout.addWidget(self.user_label)
+        layout.addWidget(button("Switch User", slot=self.switch_user))
         return h
 
     def _reload_board_models(self, select: str | None = None):

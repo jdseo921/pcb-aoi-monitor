@@ -174,10 +174,10 @@ class RecipeEditorPage(Page):
     @staticmethod
     def _pair(a, b):
         w = QWidget()
-        l = QHBoxLayout(w)
-        l.setContentsMargins(0, 0, 0, 0)
-        l.addWidget(a)
-        l.addWidget(b)
+        layout = QHBoxLayout(w)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.addWidget(a)
+        layout.addWidget(b)
         return w
 
     # --- load / show ------------------------------------------------------------
@@ -286,7 +286,10 @@ class RecipeEditorPage(Page):
             self.r_ai.value(),
             self.r_enabled.isChecked(),
         )
-        opt = lambda w: None if w.value() < 0 else w.value()
+
+        def opt(w):
+            return None if w.value() < 0 else w.value()
+
         x.height_min, x.height_max, x.volume_min, x.volume_max = (
             opt(self.r_hmin),
             opt(self.r_hmax),

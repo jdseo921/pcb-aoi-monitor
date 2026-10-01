@@ -35,7 +35,7 @@ class ImageView(QGraphicsView):
         self._draw_mode = False
         self._drag_start: QPointF | None = None
         self._rubber: QGraphicsRectItem | None = None
-        self._peers: list["ImageView"] = []
+        self._peers: list[ImageView] = []
         self._syncing = False
         self._placeholder = self.scene().addSimpleText(placeholder)
         self._placeholder.setBrush(QColor("#6c7c8c"))
@@ -130,7 +130,7 @@ class ImageView(QGraphicsView):
         super().mouseReleaseEvent(e)
 
     # --- synchronised views (Compare page) ---------------------------------------
-    def link(self, other: "ImageView") -> None:
+    def link(self, other: ImageView) -> None:
         self._peers.append(other)
         other._peers.append(self)
 

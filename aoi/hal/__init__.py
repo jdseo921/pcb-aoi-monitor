@@ -32,8 +32,8 @@ class Camera(ABC):
     def grab(self, view: str = "Top") -> np.ndarray | None:
         """Return one BGR frame for the requested view, or None when exhausted."""
 
-    def close(self) -> None:
-        pass
+    def close(self) -> None:  # noqa: B027
+        """Release the device. Optional, so a no-op here: image-file cameras hold nothing open."""
 
 
 class FolderCamera(Camera):
@@ -46,7 +46,7 @@ class FolderCamera(Camera):
         self.index = -1
 
     @classmethod
-    def from_folder(cls, folder: str | Path) -> "FolderCamera":
+    def from_folder(cls, folder: str | Path) -> FolderCamera:
         return cls(list_images(folder))
 
     def open(self) -> None:
