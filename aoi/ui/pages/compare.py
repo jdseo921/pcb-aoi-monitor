@@ -4,6 +4,7 @@ Optional page (reachable from the sidebar or "Compare with Golden" on the
 Inspection screen) that shows the golden reference next to a test board and
 every metric that decided OK / WARN / NG, with what-if thresholds.
 """
+
 from __future__ import annotations
 
 import copy
@@ -11,8 +12,21 @@ from pathlib import Path
 
 import numpy as np
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import (QComboBox, QDoubleSpinBox, QFileDialog, QFormLayout, QGroupBox, QHeaderView,
-                               QHBoxLayout, QLabel, QSpinBox, QSplitter, QTextEdit, QVBoxLayout, QWidget)
+from PySide6.QtWidgets import (
+    QComboBox,
+    QDoubleSpinBox,
+    QFileDialog,
+    QFormLayout,
+    QGroupBox,
+    QHBoxLayout,
+    QHeaderView,
+    QLabel,
+    QSpinBox,
+    QSplitter,
+    QTextEdit,
+    QVBoxLayout,
+    QWidget,
+)
 
 from ... import defects as taxonomy
 from ...core.imaging import IMAGE_EXTS, heat_overlay, load_image
@@ -41,27 +55,40 @@ class ComparePage(Page):
         bar.addWidget(button("Reference…", slot=self.pick_ref))
         bar.addWidget(button("Golden Template", slot=self.use_golden))
         bar.addWidget(QLabel("Show:"))
-        self.mode = QComboBox(); self.mode.addItems(MODES)
+        self.mode = QComboBox()
+        self.mode.addItems(MODES)
         self.mode.currentIndexChanged.connect(self.render)
         bar.addWidget(self.mode)
         bar.addStretch(1)
         self.root.addLayout(bar)
 
         split = QSplitter(Qt.Horizontal)
-        views = QWidget(); vl = QHBoxLayout(views); vl.setContentsMargins(0, 0, 0, 0)
-        left = QVBoxLayout(); right = QVBoxLayout()
-        self.ref_label = QLabel("Reference (golden)"); self.ref_label.setObjectName("muted")
-        self.test_label = QLabel("Test board"); self.test_label.setObjectName("muted")
+        views = QWidget()
+        vl = QHBoxLayout(views)
+        vl.setContentsMargins(0, 0, 0, 0)
+        left = QVBoxLayout()
+        right = QVBoxLayout()
+        self.ref_label = QLabel("Reference (golden)")
+        self.ref_label.setObjectName("muted")
+        self.test_label = QLabel("Test board")
+        self.test_label.setObjectName("muted")
         self.ref_view = ImageView(placeholder="Golden reference")
         self.test_view = ImageView(placeholder="Pick a test image")
-        self.ref_view.link(self.test_view)              # zoom/pan stay in sync
-        left.addWidget(self.ref_label); left.addWidget(self.ref_view, 1)
-        right.addWidget(self.test_label); right.addWidget(self.test_view, 1)
-        vl.addLayout(left, 1); vl.addLayout(right, 1)
+        self.ref_view.link(self.test_view)  # zoom/pan stay in sync
+        left.addWidget(self.ref_label)
+        left.addWidget(self.ref_view, 1)
+        right.addWidget(self.test_label)
+        right.addWidget(self.test_view, 1)
+        vl.addLayout(left, 1)
+        vl.addLayout(right, 1)
         split.addWidget(views)
 
-        panel = QWidget(); pl = QVBoxLayout(panel); pl.setContentsMargins(8, 0, 0, 0)
-        self.verdict = QLabel("—"); self.verdict.setStyleSheet(verdict_style("INFO")); self.verdict.setMinimumHeight(80)
+        panel = QWidget()
+        pl = QVBoxLayout(panel)
+        pl.setContentsMargins(8, 0, 0, 0)
+        self.verdict = QLabel("—")
+        self.verdict.setStyleSheet(verdict_style("INFO"))
+        self.verdict.setMinimumHeight(80)
         pl.addWidget(self.verdict)
         self.metrics = make_table(["Check", "Source", "Value", "Thr.", "Rule", "Result"], sortable=False)
         hh = self.metrics.horizontalHeader()
@@ -70,17 +97,27 @@ class ComparePage(Page):
         hh.setSectionResizeMode(0, QHeaderView.Stretch)
         self.metrics.setWordWrap(True)
         pl.addWidget(self.metrics, 2)
-        self.why = QTextEdit(); self.why.setReadOnly(True); self.why.setMaximumHeight(150)
+        self.why = QTextEdit()
+        self.why.setReadOnly(True)
+        self.why.setMaximumHeight(150)
         pl.addWidget(self.why)
 
         g = QGroupBox("What-if thresholds (not saved until you press Save to Recipe)")
         f = QFormLayout(g)
-        self.ai_thr = QDoubleSpinBox(); self.ai_thr.setDecimals(3); self.ai_thr.setRange(0, 1e4)
-        self.ai_thr.setSpecialValueText("model default"); self.ai_thr.setSingleStep(0.1)
-        self.diff_thr = QSpinBox(); self.diff_thr.setRange(1, 255)
-        self.min_area = QSpinBox(); self.min_area.setRange(1, 100000)
-        self.ssim_min = QDoubleSpinBox(); self.ssim_min.setRange(0, 1); self.ssim_min.setSingleStep(0.01)
-        self.max_regions = QSpinBox(); self.max_regions.setRange(0, 1000)
+        self.ai_thr = QDoubleSpinBox()
+        self.ai_thr.setDecimals(3)
+        self.ai_thr.setRange(0, 1e4)
+        self.ai_thr.setSpecialValueText("model default")
+        self.ai_thr.setSingleStep(0.1)
+        self.diff_thr = QSpinBox()
+        self.diff_thr.setRange(1, 255)
+        self.min_area = QSpinBox()
+        self.min_area.setRange(1, 100000)
+        self.ssim_min = QDoubleSpinBox()
+        self.ssim_min.setRange(0, 1)
+        self.ssim_min.setSingleStep(0.01)
+        self.max_regions = QSpinBox()
+        self.max_regions.setRange(0, 1000)
         f.addRow("AI anomaly threshold", self.ai_thr)
         f.addRow("Pixel difference (0-255)", self.diff_thr)
         f.addRow("Min defect area (px)", self.min_area)
@@ -149,8 +186,16 @@ class ComparePage(Page):
             return
         base = self.ctx.inspector(self.board_model)
         ref = load_image(self.ref_override) if self.ref_override else base.reference
-        self.ref_label.setText("Reference: " + (Path(self.ref_override).name if self.ref_override
-                                                else "golden template" if ref is not None else "none set"))
+        self.ref_label.setText(
+            "Reference: "
+            + (
+                Path(self.ref_override).name
+                if self.ref_override
+                else "golden template"
+                if ref is not None
+                else "none set"
+            )
+        )
         self.ref_view.set_image(ref)
         if not self.test_path:
             return
@@ -167,8 +212,16 @@ class ComparePage(Page):
         for c in r.checks:
             rows.append([c.name, c.source, float(c.value), float(c.threshold), c.rule, c.verdict])
             colors.append(None if c.verdict in ("OK", "INFO") else VERDICT_COLORS[c.verdict])
-        rows.append(["Inspection time (ms)", "System", float(r.elapsed_ms), 1000.0, "spec < 1 s",
-                     "OK" if r.elapsed_ms < 1000 else "WARN"])
+        rows.append(
+            [
+                "Inspection time (ms)",
+                "System",
+                float(r.elapsed_ms),
+                1000.0,
+                "spec < 1 s",
+                "OK" if r.elapsed_ms < 1000 else "WARN",
+            ]
+        )
         colors.append(None)
         fill_table(self.metrics, rows, colors)
         self.why.setHtml(self._explain())
@@ -181,12 +234,18 @@ class ComparePage(Page):
         if not failing:
             lines.append("every check is inside its threshold.")
         else:
-            lines.append("decided by " + "; ".join(
-                f"<b>{c.name}</b> = {c.value:.3g} (threshold {c.threshold:.3g}, rule {c.rule})"
-                for c in failing) + ".")
+            lines.append(
+                "decided by "
+                + "; ".join(
+                    f"<b>{c.name}</b> = {c.value:.3g} (threshold {c.threshold:.3g}, rule {c.rule})" for c in failing
+                )
+                + "."
+            )
         if r.defects:
-            lines.append("<br>Regions: " + ", ".join(
-                f"#{d.no} {d.type} at ({d.x},{d.y}) {d.w}×{d.h}px [{d.source}]" for d in r.defects))
+            lines.append(
+                "<br>Regions: "
+                + ", ".join(f"#{d.no} {d.type} at ({d.x},{d.y}) {d.w}×{d.h}px [{d.source}]" for d in r.defects)
+            )
         for n in r.notes:
             lines.append(f"<br><i>{n}</i>")
         return "".join(lines)

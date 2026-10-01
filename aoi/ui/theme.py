@@ -50,5 +50,7 @@ def verdict_style(verdict: str, big: bool = True) -> str:
     c = VERDICT_COLORS.get(verdict, INFO_COLOR)
     fg = "#1f2a36" if verdict == "WARN" else "white"
     size = "40pt" if big else "14pt"
-    return (f"background:{c}; color:{fg}; font-size:{size}; font-weight:700; "
-            f"border-radius:8px; padding:6px; qproperty-alignment: AlignCenter;")
+    return (
+        f"background:{c}; color:{fg}; font-size:{size}; font-weight:700; "
+        f"border-radius:8px; padding:6px; qproperty-alignment: AlignCenter;"
+    )
