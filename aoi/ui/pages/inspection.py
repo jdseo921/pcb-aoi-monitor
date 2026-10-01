@@ -24,6 +24,7 @@ from ...core.inspector import InspectionResult, draw_overlay
 from ...hal import VIEWS
 from ...times import to_local
 from .. import theme
+from ..widgets.empty_state import EmptyState
 from ..widgets.image_view import ImageView
 from ..workers import Worker, start
 from .base import Page, button, fill_table, make_table
@@ -66,7 +67,8 @@ class InspectionPage(Page):
 
         # Center: image | results
         split = QSplitter(Qt.Horizontal)
-        self.view = ImageView(placeholder="Load PCB images to start inspection")
+        self.view = ImageView(placeholder="")
+        self.empty = EmptyState(self.view)
         split.addWidget(self.view)
 
         side = QWidget()
@@ -106,6 +108,17 @@ class InspectionPage(Page):
         self.root.addWidget(self.alarms)
         self._update_buttons()
 
+    def _show_empty(self) -> None:
+        if self.last is not None:
+            self.empty.hide()
+        elif not self.board_model:
+            self.empty.show_state("No board model yet", "Pick a board model in the header first.")
+        elif not self.queue:
+            what = "Load Images… or Load Folder… to queue boards. In Stage 2 the camera fills this view."
+            self.empty.show_state("No images loaded", what, "Load Images…", self.load_files)
+        else:
+            self.empty.hide()
+
     # --- sources ---------------------------------------------------------------
     def load_files(self):
         exts = " ".join(f"*{e}" for e in sorted(IMAGE_EXTS))
@@ -123,6 +136,7 @@ class InspectionPage(Page):
         self.queue_label.setText(f"{len(paths)} image(s) queued")
         self.shell.status(f"Loaded {len(paths)} image(s)")
         self._update_buttons()
+        self._show_empty()
 
     # --- run control -------------------------------------------------------------
     def start_run(self):
@@ -165,6 +179,7 @@ class InspectionPage(Page):
     def _on_result(self, out):
         path, res = out
         self.last, self.last_path = res, path
+        self.empty.hide()
         self.view.set_image(res.image, keep_view=self.pos > 0)
         for d in res.defects:
             sev = taxonomy.BY_NAME.get(d.type, taxonomy.ANOMALY).severity
@@ -231,7 +246,9 @@ class InspectionPage(Page):
 
     def on_board_model_changed(self, name):
         self.inspector = None  # rebuilt lazily with the new model/recipe/reference
+        self._show_empty()
 
     def on_show(self):
         self.inspector = None  # pick up newly trained models or saved recipes
         self._refresh_alarms()
+        self._show_empty()

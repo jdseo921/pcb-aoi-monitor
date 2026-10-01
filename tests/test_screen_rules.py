@@ -1,8 +1,9 @@
-"""Screen rules of the Engineering standard, "Look" and "Sizes" (REQ-SET-004, REQ-SET-018, REQ-INSP-002; S18a, S18b).
+"""Screen rules of the Engineering standard, "Look", "Sizes" and "Empty state" (REQ-SET-004, REQ-SET-018, REQ-INSP-002,
+REQ-SET-019, REQ-P3D-001; S18a, S18b, S18c).
 
 Static scans keep every colour and point size in aoi/ui/theme.py. Widget checks open the shell offscreen and look at
-the one frame every page sits in, the one blue primary button per page, the red destructive buttons and the verdict
-banner with its shape and word.
+the one frame every page sits in, the one blue primary button per page, the red destructive buttons, the verdict
+banner with its shape and word, and the empty state of every page, list and image area with its next step.
 """
 
 from __future__ import annotations
@@ -12,9 +13,11 @@ import re
 from pathlib import Path
 
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QApplication, QBoxLayout, QFrame, QPushButton, QWidget
+from PySide6.QtWidgets import QApplication, QBoxLayout, QFrame, QPushButton, QTableWidget, QWidget
 
 from aoi.ui import theme
+from aoi.ui.main_window import MainWindow
+from aoi.ui.widgets.empty_state import EmptyState
 from tests.test_req_done_in_v01 import BOARD, _inspect_one, _window
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -24,8 +27,7 @@ COLOUR_LITERAL = re.compile(r"#[0-9a-fA-F]{3,8}\b|\brgba?\(")
 POINT_SIZE = re.compile(r"font-size:\s*(\d+)\s*pt")
 QT_COLOURS = {"white", "black", "red", "green", "blue", "yellow", "gray", "darkGray", "lightGray", "cyan", "magenta"}
 COLOUR_CALLS = {"QColor", "QBrush", "QPen"}
-DESTRUCTIVE = re.compile(r"^(Delete|Remove|Reset|Clear)\b")
-PRIMARY_PENDING = {"3D Profile"}  # its card and one link button arrive with the empty states (S18c, REQ-SET-019)
+DESTRUCTIVE = re.compile(r"^(Delete|Remove|Reset Demo|Clear)\b")  # Reset Filters only changes a view
 
 
 def _docstrings(tree: ast.AST) -> set[ast.AST]:
@@ -115,7 +117,7 @@ def test_req_set_018_one_primary_button(qtbot, trained_ctx) -> None:
     win = _window(qtbot, trained_ctx, "Admin")
     for title, page in win.pages.items():
         primaries = [b for b in page.findChildren(QPushButton) if b.objectName() == "primary"]
-        assert len(primaries) == (0 if title in PRIMARY_PENDING else 1), (title, [b.text() for b in primaries])
+        assert len(primaries) == 1, (title, [b.text() for b in primaries])
         assert not any(b.isCheckable() for b in primaries), title
     assert f"QPushButton#primary {{ background: {theme.ACCENT};" in theme.QSS
 
@@ -146,3 +148,91 @@ def test_req_set_018_destructive_buttons_red_not_default(qtbot, trained_ctx) -> 
             if b.objectName() == "danger":
                 assert _row_of(page, b)[-1] is b, f"{red[-1]} is not the last button in its row"
     assert {"Training: Remove", "Recipe Editor: Delete", "Inspection: ■  Stop"} <= set(red), red
+
+
+def _empties(page: QWidget) -> list[EmptyState]:
+    return [e for e in page.findChildren(EmptyState) if e.isVisibleTo(page)]
+
+
+def test_req_set_019_empty_states_link_next_step(qtbot, ctx, trained_ctx, ng_board) -> None:
+    """Every empty page, list and image area says what is missing, what to do and links there; a role that cannot
+    open the linked page is told to ask an Engineer; a filtered-out history offers Reset Filters."""
+    win = MainWindow(ctx)  # an empty workspace, opened as Admin
+    qtbot.addWidget(win)
+    win.resize(1600, 900)
+    win.show()
+    qtbot.waitExposed(win)
+    seen: dict[str, EmptyState] = {}
+    for title in (
+        "Home",
+        "Inspection",
+        "Compare",
+        "Training",
+        "AI Model Test",
+        "Recipe Editor",
+        "3D Profile",
+        "Logs & Export",
+    ):
+        win.navigate(title)
+        empties = _empties(win.pages[title])
+        assert empties, f"{title}: nothing says what to do in an empty workspace"
+        for e in empties:
+            assert e.heading.text() and e.sentence.text().endswith("."), (title, e.heading.text(), e.sentence.text())
+        seen[title] = empties[0]
+    assert seen["Home"].link.isVisibleTo(win.pages["Home"]) and seen["Home"].link.text() == "+ New board model"
+    assert seen["3D Profile"].link.objectName() == "primary"
+    seen["3D Profile"].link.click()
+    assert win.stack.currentWidget() is win.pages["Recipe Editor"]
+    assert (
+        seen["Logs & Export"].heading.text() == "No inspections yet"
+        and seen["Logs & Export"].link.text() == "Open Inspection ›"
+    )
+    seen["Logs & Export"].link.click()
+    assert win.stack.currentWidget() is win.pages["Inspection"]
+    # An Operator is told to ask an Engineer, with no link, when the next step is on a page that is not theirs.
+    win.set_role("Operator", "operator")
+    win.navigate("Home")
+    assert seen["Home"].sentence.text() == "Ask an Engineer to create one." and not seen["Home"].link.isVisibleTo(
+        win.pages["Home"]
+    )
+    win.set_role("Admin", "admin")  # creating a board model is Engineer or Admin work (REQ-USR-001)
+    ctx.ensure_board_model("TBOX-X")
+    win._reload_board_models("TBOX-X")
+    win.set_role("Operator", "operator")
+    win.navigate("Compare")
+    compare = win.pages["Compare"]
+    compare.on_board_model_changed("TBOX-X")  # evaluate again as the Operator; the newest run wins
+    ask = "Ask an Engineer to do this on Training."
+    qtbot.waitUntil(lambda: compare.ref_empty.sentence.text() == ask, timeout=30000)
+    assert compare.ref_empty.isVisibleTo(compare)
+    assert compare.ref_empty.heading.text() == "No Golden board for TBOX-X yet"
+    assert not compare.ref_empty.link.isVisibleTo(compare)
+    # A history with records but a filter that matches none offers Reset Filters, which brings the rows back.
+    win2 = _window(qtbot, trained_ctx, "Engineer")
+    _inspect_one(qtbot, win2, ng_board)
+    logs = win2.pages["Logs & Export"]
+    win2.navigate("Logs & Export")
+    assert logs.table.rowCount() == 1 and not _empties(logs)
+    logs.d_to.setDate(logs.d_from.date().addDays(-1))
+    logs.refresh()
+    assert logs.table.rowCount() == 0 and logs.empty.heading.text() == "No records match"
+    logs.empty.link.click()
+    assert logs.table.rowCount() == 1 and not _empties(logs)
+
+
+def test_req_p3d_001_profile_page_is_a_stage_2_card(qtbot, trained_ctx) -> None:
+    """Until 3D data exists the 3D Profile page is one card that says so and leads to the Recipe Editor, where the
+    height and volume limits already live; nothing on it looks like a working 3D control (sketch profile3d-card.md)."""
+    win = _window(qtbot, trained_ctx, "Engineer")
+    win.navigate("3D Profile")
+    page = win.pages["3D Profile"]
+    assert page.card.isVisibleTo(page) and "Stage 2" in page.card.heading.text()
+    assert not page.findChildren(QTableWidget), "no empty height table"
+    buttons = [b for b in page.findChildren(QPushButton) if b.isVisibleTo(page)]
+    assert sorted(b.text() for b in buttons) == ["Back to Home", "Open Recipe Editor ›"]
+    assert all(b.isEnabled() for b in buttons)
+    page.card.link.click()
+    assert win.stack.currentWidget() is win.pages["Recipe Editor"]
+    win.navigate("3D Profile")
+    next(b for b in buttons if b.text() == "Back to Home").click()
+    assert win.stack.currentWidget() is win.pages["Home"]

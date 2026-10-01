@@ -30,6 +30,7 @@ from ...core.recipe import ROI, ROI_TYPES, Recipe
 from ...times import to_local
 from .. import theme
 from ..widgets.busy import BusyOverlay
+from ..widgets.empty_state import EmptyState
 from ..widgets.image_view import ImageView
 from .base import Page, button, fill_table, make_table
 
@@ -68,7 +69,8 @@ class RecipeEditorPage(Page):
         tools.addWidget(self.roi_type)
         tools.addStretch(1)
         ll.addLayout(tools)
-        self.view = ImageView(placeholder="Train a model or set a reference image first")
+        self.view = ImageView(placeholder="")
+        self.view_empty = EmptyState(self.view)
         self.view.roiDrawn.connect(self.add_roi)
         self.busy = BusyOverlay(self.view, self.tr("Test run…"))
         ll.addWidget(self.view, 1)
@@ -81,6 +83,7 @@ class RecipeEditorPage(Page):
         rl = QVBoxLayout(roi_tab)
         self.roi_table = make_table(["Name", "Type", "X", "Y", "W", "H", "AI Score"], sortable=False)
         self.roi_table.itemSelectionChanged.connect(self._select_roi)
+        self.roi_empty = EmptyState(self.roi_table)
         rl.addWidget(self.roi_table, 1)
         g = QGroupBox("Selected ROI")
         f = QFormLayout(g)
@@ -188,11 +191,17 @@ class RecipeEditorPage(Page):
     # --- load / show ------------------------------------------------------------
     def load(self):
         if not self.board_model:
+            self.view_empty.show_state("No board model yet", "Pick a board model in the header first.")
             return
         self.rev, self.recipe = self.ctx.recipe(self.board_model)
         ref_path = self.ctx.reference_image(self.board_model)
         self.ref = load_image(ref_path) if ref_path else None
         self.view.set_image(self.ref)
+        if self.ref is None:
+            step = self.empty_step("Train an AI model or set a reference image on Training.", "Training")
+            self.view_empty.show_state(f"No Golden board for {self.board_model} yet", *step)
+        else:
+            self.view_empty.hide()
         r = self.recipe
         self.use_ai.setChecked(r.use_ai)
         self.use_cmp.setChecked(r.use_compare)
@@ -212,6 +221,10 @@ class RecipeEditorPage(Page):
     def _refresh_rois(self):
         r = self.recipe
         fill_table(self.roi_table, [[x.name, x.type, x.x, x.y, x.w, x.h, x.ai_score] for x in r.rois])
+        if r.rois:
+            self.roi_empty.hide()
+        else:
+            self.roi_empty.show_state("No ROIs yet", "Press Draw ROI and drag on the Golden board.")
         self.view.clear_overlays()
         sel = self._sel_index()
         for i, x in enumerate(r.rois):

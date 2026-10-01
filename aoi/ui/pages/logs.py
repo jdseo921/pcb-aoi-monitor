@@ -10,6 +10,7 @@ from PySide6.QtWidgets import QCheckBox, QComboBox, QDateEdit, QFileDialog, QHBo
 from ...core.imaging import load_image
 from ...times import to_local
 from .. import theme
+from ..widgets.empty_state import EmptyState
 from ..widgets.image_view import ImageView
 from .base import Page, button, fill_table, make_table
 
@@ -39,6 +40,7 @@ class LogsPage(Page):
         split = QSplitter(Qt.Horizontal)
         self.table = make_table(["ID", "Time", "Model", "Result", "Defects", "Score", "Operator", "Image"])
         self.table.itemSelectionChanged.connect(self._preview)
+        self.empty = EmptyState(self.table)
         split.addWidget(self.table)
         self.view = ImageView(placeholder="Select a log row to see its overlay")
         split.addWidget(self.view)
@@ -84,6 +86,22 @@ class LogsPage(Page):
         n = len(self.rows)
         ng = sum(r["result"] == "NG" for r in self.rows)
         self.summary.setText(f"{n} inspections · {ng} NG · yield {(n - ng) / n:.1%}" if n else "No records")
+        if n:
+            self.empty.hide()
+        elif self.ctx.inspections(include_archived=True):
+            self.empty.show_state(
+                "No records match", "Widen the dates or the filters.", "Reset Filters", self.reset_filters
+            )
+        else:
+            self.empty.show_state("No inspections yet", *self.empty_step("Run boards on Inspection.", "Inspection"))
+
+    def reset_filters(self):
+        self.d_from.setDate(QDate.currentDate().addDays(-7))
+        self.d_to.setDate(QDate.currentDate())
+        self.model.setCurrentIndex(0)
+        self.operator.setCurrentIndex(0)
+        self.archived.setChecked(False)
+        self.refresh()
 
     def _preview(self):
         rows = self.table.selectionModel().selectedRows()
