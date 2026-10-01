@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import os
 import shutil
+from collections.abc import Iterator
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -19,6 +20,8 @@ import pytest
 
 # Qt pages render offscreen in tests (CI runners have no display). Set before any Qt import.
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+
+from PySide6.QtWidgets import QMessageBox  # noqa: E402
 
 from aoi.config import Settings  # noqa: E402
 from aoi.core import anomaly  # noqa: E402
@@ -89,3 +92,31 @@ def trained_ctx(tmp_path: Path, tiny_model: TrainedModel) -> AppContext:
     ws = tmp_path / "trained_workspace"
     shutil.copytree(tiny_model.ctx.settings.root, ws)
     return AppContext(Settings(workspace=str(ws), device="cpu"))
+
+
+@pytest.fixture(autouse=True)
+def _settings_file_in_tmp(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """settings.json is read and written in the default workspace (Settings.load and save, REQ-LOG-005); point
+    it at a folder of this test so that no test touches ~/AOI_Workspace."""
+    monkeypatch.setenv("AOI_WORKSPACE", str(tmp_path / "default_workspace"))
+
+
+@pytest.fixture(autouse=True)
+def dialogs(monkeypatch: pytest.MonkeyPatch) -> Iterator[list[tuple[str, str]]]:
+    """Error dialogs shown during a test, as (title, text), in place of a modal box that would block offscreen.
+    At the end every title must start with an error code: no error reaches a user without one (REQ-SET-019)."""
+    shown: list[tuple[str, str]] = []
+
+    def record(parent: object, title: str, text: str, *buttons: object) -> QMessageBox.StandardButton:
+        shown.append((title, text))
+        return QMessageBox.StandardButton.Ok
+
+    monkeypatch.setattr(QMessageBox, "critical", staticmethod(record))
+    yield shown
+    assert all(title.startswith("AOI-") for title, _ in shown), f"an error dialog without a code: {shown}"
+
+
+@pytest.fixture
+def ng_board(synthetic_dataset: Path) -> Path:
+    """A test-split board with a missing component: the largest defect, found by the compare step alone."""
+    return next(synthetic_dataset.glob("test/ng/*missing_component*.png"))

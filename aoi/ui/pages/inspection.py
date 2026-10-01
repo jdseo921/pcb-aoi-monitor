@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from datetime import datetime
 from pathlib import Path
 
 from PySide6.QtCore import Qt
@@ -22,11 +21,17 @@ from PySide6.QtWidgets import (
 from ... import defects as taxonomy
 from ...core.imaging import IMAGE_EXTS, list_images, load_image, save_image
 from ...core.inspector import InspectionResult, draw_overlay
+from ...data.times import to_local
 from ...hal import VIEWS
 from ..theme import verdict_style
 from ..widgets.image_view import ImageView
 from ..workers import Worker, start
 from .base import Page, button, fill_table, make_table
+
+
+def alarm_line(time_iso: str, level: str, code: str | None, msg: str) -> str:
+    """ISO date, 24-hour local time, level, code and message, as REQ-INSP-006 asks."""
+    return "  ".join(part for part in (to_local(time_iso), f"[{level}]", code or "", msg) if part)
 
 
 class InspectionPage(Page):
@@ -115,7 +120,7 @@ class InspectionPage(Page):
     def _set_queue(self, paths: list[Path]):
         self.queue, self.pos = paths, -1
         self.queue_label.setText(f"{len(paths)} image(s) queued")
-        self._alarm("INFO", f"Loaded {len(paths)} image(s)")
+        self.shell.status(f"Loaded {len(paths)} image(s)")
         self._update_buttons()
 
     # --- run control -------------------------------------------------------------
@@ -135,7 +140,7 @@ class InspectionPage(Page):
             return
         if self.pos + 1 >= len(self.queue):
             self.running = False
-            self._alarm("INFO", "End of queue")
+            self.shell.status("End of queue")
             self._update_buttons()
             return
         self.pos += 1
@@ -144,14 +149,15 @@ class InspectionPage(Page):
             try:
                 self.inspector = self.ctx.inspector(self.board_model, side=self.view_combo.currentText())
             except Exception as e:
-                return self.error(str(e))
+                return self.error(e)
             if self.inspector.model is None:
-                self._alarm("WARN", "No trained model for this board: only golden comparison runs")
+                msg = f"No trained model for {self.board_model}: only golden comparison runs"
+                self._alarm("WARN", msg, "AOI-TRN-003")
         self.inspector.side = self.view_combo.currentText()
         self.btn_next.setEnabled(False)
         w = Worker(lambda: (path, self.inspector.inspect(load_image(path))))
         w.signals.result.connect(self._on_result)
-        w.signals.error.connect(lambda m: (self._alarm("NG", m.splitlines()[0]), self.stop_run()))
+        w.signals.error.connect(lambda e: (self.error(e), self.stop_run(), self._refresh_alarms()))
         w.signals.finished.connect(self._update_buttons)
         start(w)
 
@@ -172,10 +178,10 @@ class InspectionPage(Page):
             + ("\n" + "\n".join(res.notes) if res.notes else "")
         )
         fill_table(self.table, [[d.no, d.type, d.score, d.side, d.x, d.y] for d in res.defects])
-        self._alarm(res.verdict, f"{path.name}: {res.verdict} ({len(res.defects)} defect(s))")
         self.shell.last_inspected = (str(path), res)
         if self.autosave.isChecked():
-            self.ctx.log_result(self.board_model, str(path), res, self.inspector)
+            self.ctx.log_result(self.board_model, str(path), res, self.inspector)  # an NG result stores an alarm
+            self._refresh_alarms()
         if self.running:
             self.next_board()
 
@@ -189,7 +195,8 @@ class InspectionPage(Page):
             save_image(f, draw_overlay(self.last))
             if not self.autosave.isChecked():
                 self.ctx.log_result(self.board_model, str(self.last_path), self.last, self.inspector)
-            self._alarm("INFO", f"Saved {Path(f).name}")
+                self._refresh_alarms()
+            self.shell.status(f"Saved {Path(f).name}")
 
     def open_compare(self):
         if self.last_path:
@@ -204,8 +211,15 @@ class InspectionPage(Page):
             if d:
                 self.view.center_on_box(d.x, d.y, d.w, d.h)
 
-    def _alarm(self, level: str, msg: str):
-        self.alarms.insertItem(0, f"{datetime.now():%H:%M:%S}  [{level}]  {msg}")
+    def _alarm(self, level: str, msg: str, code: str):
+        """Store an alarm with its code, so it survives a restart, and show the list again (REQ-INSP-006)."""
+        self.ctx.alarm(level, msg, code)
+        self._refresh_alarms()
+
+    def _refresh_alarms(self):
+        self.alarms.clear()
+        for a in self.ctx.alarms():
+            self.alarms.addItem(alarm_line(a["time"], a["level"], a["code"], a["message"]))
 
     def _update_buttons(self):
         has = bool(self.queue)
@@ -219,3 +233,4 @@ class InspectionPage(Page):
 
     def on_show(self):
         self.inspector = None  # pick up newly trained models or saved recipes
+        self._refresh_alarms()

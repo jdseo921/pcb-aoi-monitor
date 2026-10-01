@@ -29,6 +29,7 @@ from ... import defects as taxonomy
 from ...core.imaging import IMAGE_EXTS, list_images, load_image
 from ...data import atomic
 from ...data.times import to_local
+from ...errors import AoiError
 from ...hal import VIEWS
 from ..widgets.image_view import ImageView
 from ..workers import Worker, start
@@ -236,7 +237,7 @@ class TrainingPage(Page):
             return
         n_ok = len(self.ctx.db.samples(self.board_model, "OK"))
         if n_ok < 2:
-            return self.error("Upload at least 2 OK images (20+ recommended) before training.")
+            return self.error(AoiError("AOI-TRN-002", found=n_ok))
         self.log.clear()
         self.bar.setRange(0, self.epochs.value())
         self.bar.setValue(0)

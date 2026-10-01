@@ -31,6 +31,7 @@ from PySide6.QtWidgets import (
 from ... import defects as taxonomy
 from ...core.imaging import IMAGE_EXTS, heat_overlay, load_image
 from ...core.inspector import Inspector
+from ...errors import AoiError
 from ..theme import VERDICT_COLORS, verdict_style
 from ..widgets.image_view import ImageView
 from .base import Page, button, fill_table, make_table
@@ -204,7 +205,7 @@ class ComparePage(Page):
         try:
             self.res = insp.inspect(load_image(self.test_path))
         except Exception as e:
-            return self.error(str(e))
+            return self.error(e)
         r = self.res
         self.verdict.setText(r.verdict)
         self.verdict.setStyleSheet(verdict_style(r.verdict))
@@ -271,7 +272,7 @@ class ComparePage(Page):
 
     def save_recipe(self):
         if self.ctx.role == "Operator":
-            return self.error("Only Engineer or Admin can change recipes.")
+            return self.error(AoiError("AOI-USR-001", what="Changing recipes", roles="Engineer or Admin"))
         rev = self.ctx.save_recipe(self._form_recipe())
         self.shell.status(f"Recipe saved as revision {rev}")
 

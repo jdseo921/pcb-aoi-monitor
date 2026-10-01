@@ -165,7 +165,8 @@ class MainWindow(QMainWindow):
         self.set_role(
             "Admin" if not ctx.db.board_models() else "Operator", "admin" if not ctx.db.board_models() else "operator"
         )
-        self.navigate("Home")
+        if not self.navigate(ctx.settings.last_page):  # reopen where the last session was (REQ-LOG-005)
+            self.navigate("Home")
         ctx.db.archive_old(ctx.settings.log_retention_days)
 
     # --- header -------------------------------------------------------------------
@@ -235,12 +236,14 @@ class MainWindow(QMainWindow):
             self.navigate("Home")
 
     # --- navigation -----------------------------------------------------------------
-    def navigate(self, title: str):
+    def navigate(self, title: str) -> bool:
         it = self._items.get(title)
         if it and it.flags() & Qt.ItemIsEnabled:
             self.nav.setCurrentItem(it)
-        else:
+            return True
+        if title in self.pages:
             self.status(f"{title} requires role: {', '.join(self.pages[title].roles)}")
+        return False
 
     def _on_nav(self, cur: QListWidgetItem, _prev):
         if cur is None or not cur.data(Qt.UserRole):
@@ -248,6 +251,12 @@ class MainWindow(QMainWindow):
         page = self.pages[cur.data(Qt.UserRole)]
         self.stack.setCurrentWidget(page)
         page.on_show()
+        if self.ctx.settings.last_page != page.title:
+            self.ctx.settings.last_page = page.title
+            try:
+                self.ctx.settings.save()
+            except OSError:
+                self.ctx.log.warning("settings.save_failed", exc_info=True)
 
     def open_compare(self, path: str):
         self.navigate("Compare")

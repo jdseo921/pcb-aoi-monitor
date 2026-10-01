@@ -43,12 +43,6 @@ def _inspect_one(qtbot, win: MainWindow, path: Path):
     return page
 
 
-@pytest.fixture
-def ng_board(synthetic_dataset: Path) -> Path:
-    """A test-split board with a missing component: the largest defect, found by the compare step alone."""
-    return next(synthetic_dataset.glob("test/ng/*missing_component*.png"))
-
-
 def test_req_insp_003_one_box_per_defect_and_the_file_is_unchanged(qtbot, trained_ctx, ng_board) -> None:
     before = hashlib.sha256(ng_board.read_bytes()).hexdigest()
     page = _inspect_one(qtbot, _window(qtbot, trained_ctx, "Operator"), ng_board)

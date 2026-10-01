@@ -10,6 +10,7 @@ import csv
 import io
 import uuid
 from collections.abc import Callable
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -26,6 +27,25 @@ from . import anomaly
 from .imaging import align_to_reference, list_images, load_image, save_image
 from .inspector import NG, OK, WARN, InspectionResult, Inspector, draw_overlay
 from .recipe import Recipe
+
+ALARM_LIMIT = 1000  # REQ-INSP-006: the alarms a screen shows and that survive a restart
+
+
+@dataclass(frozen=True)
+class ErrorReport:
+    """What a user sees of an error: the code, a title, what happened and what to do. Never a stack trace."""
+
+    code: str
+    title: str
+    what: str
+    action: str
+
+    @classmethod
+    def of(cls, exc: BaseException, context: str = "") -> ErrorReport:
+        """The report for any exception: an AoiError's own code, else AOI-SET-007 naming the exception type."""
+        if not isinstance(exc, AoiError):
+            exc = AoiError("AOI-SET-007", error_type=type(exc).__name__, context=f" ({context})" if context else "")
+        return cls(exc.code, exc.entry.title, exc.what, exc.action)
 
 
 class AppContext:
@@ -204,7 +224,7 @@ class AppContext:
             [d.as_row() for d in res.defects],
         )
         if res.verdict == NG:
-            self.db.alarm("NG", f"{Path(path).name}: {len(res.defects)} defect(s)")
+            self.alarm("NG", f"{Path(path).name}: {len(res.defects)} defect(s)", "AOI-INSP-003")
         self.log.info(
             "inspection.saved",
             extra={
@@ -218,6 +238,29 @@ class AppContext:
             },
         )
         return iid
+
+    # --- alarms and errors (REQ-INSP-006, REQ-LOG-005, REQ-SET-019) -----------
+    def alarm(self, level: str, message: str, code: str | None = None) -> None:
+        """Store an alarm (NG, WARN or ERROR) with its code; it survives a restart and reaches the log."""
+        self.db.alarm(level, message, code)
+        self.log.info("alarm", extra={"alarm_level": level, "code": code, "text": message})
+
+    def alarms(self, limit: int = ALARM_LIMIT) -> list[dict[str, Any]]:
+        """The newest alarms first: time (UTC), level, code and message."""
+        return self.db.alarms(limit)
+
+    def report_error(self, exc: BaseException, context: str = "") -> ErrorReport:
+        """The one handler for an error a user will see: log it with the build version and the stack trace,
+        store an alarm with its code, and return the plain report the dialog shows. A plain exception becomes
+        AOI-SET-007 (unexpected error); its text stays in the log."""
+        report = ErrorReport.of(exc, context)
+        self.log.error(
+            "error.shown",
+            exc_info=(type(exc), exc, exc.__traceback__),
+            extra={"code": report.code, "context": context, "detail": getattr(exc, "detail", None) or str(exc)},
+        )
+        self.alarm("ERROR", report.what, report.code)
+        return report
 
     # --- batch test (AI Model Test screen) -----------------------------------
     def batch_test(
