@@ -30,6 +30,7 @@ from ...core.imaging import IMAGE_EXTS, list_images, load_image
 from ...errors import AoiError
 from ...hal import VIEWS
 from ...times import to_local
+from ..widgets.busy import BusyOverlay
 from ..widgets.image_view import ImageView
 from ..workers import Worker, start
 from .base import Page, button, fill_table, make_table
@@ -93,6 +94,7 @@ class TrainingPage(Page):
         ll.addWidget(self.counts)
         self.samples = make_table(["ID", "Label", "Defect type", "View", "File"])
         self.samples.itemSelectionChanged.connect(self._preview)
+        self.busy = BusyOverlay(self.samples, self.tr("Importing…"))
         ll.addWidget(self.samples, 1)
         act = QHBoxLayout()
         act.addWidget(button("Mark OK", slot=lambda: self._relabel("OK")))
@@ -172,18 +174,36 @@ class TrainingPage(Page):
         if not self.need_board_model():
             return
         d = QFileDialog.getExistingDirectory(self, "Folder containing ok/ and ng/ sub-folders")
-        if not d:
-            return
+        if d:
+            self.import_from(d)
+
+    def import_from(self, folder: str) -> None:
+        """Import on a pool thread (REQ-SET-021): the table shows the result; Cancel keeps what was imported so far."""
+        self.run_in_background(
+            self._import, self.board_model, folder, with_progress=True,
+            on_result=self._imported, busy=self.busy, on_cancel=self.refresh,
+        )  # fmt: skip
+
+    def _import(self, board_model, folder, progress, should_stop):
+        """Pool thread: files and the service layer only, never a widget."""
         n_ok = n_ng = 0
-        for p in list_images(d):
-            parts = [x.lower() for x in p.relative_to(d).parts[:-1]]
+        files = list_images(folder)
+        for i, p in enumerate(files, 1):
+            if should_stop():
+                break
+            parts = [x.lower() for x in p.relative_to(folder).parts[:-1]]
             if any(x in ("ok", "good") for x in parts):
-                n_ok += self.ctx.import_samples(self.board_model, [str(p)], "OK")
+                n_ok += self.ctx.import_samples(board_model, [str(p)], "OK")
             elif any(x in ("ng", "bad", "defect", "defects") for x in parts):
                 sub = p.parent.name.replace("_", " ").title()
                 dtype = sub if sub in taxonomy.BY_NAME else None
-                n_ng += self.ctx.import_samples(self.board_model, [str(p)], "NG", dtype)
-        QMessageBox.information(self, "Import", f"Imported {n_ok} OK and {n_ng} NG images.")
+                n_ng += self.ctx.import_samples(board_model, [str(p)], "NG", dtype)
+            progress(i, len(files))
+        return n_ok, n_ng
+
+    def _imported(self, counts):
+        n_ok, n_ng = counts
+        self.shell.status(f"Imported {n_ok} OK and {n_ng} NG images")
         self.refresh()
 
     def _selected_ids(self) -> list[int]:

@@ -32,6 +32,7 @@ from ... import defects as taxonomy
 from ...core.imaging import IMAGE_EXTS, heat_overlay, load_image
 from ...errors import AoiError
 from ..theme import VERDICT_COLORS, verdict_style
+from ..widgets.busy import BusyOverlay
 from ..widgets.image_view import ImageView
 from .base import Page, button, fill_table, make_table
 
@@ -75,6 +76,7 @@ class ComparePage(Page):
         self.ref_view = ImageView(placeholder="Golden reference")
         self.test_view = ImageView(placeholder="Pick a test image")
         self.ref_view.link(self.test_view)  # zoom/pan stay in sync
+        self.busy = BusyOverlay(self.test_view, self.tr("Inspecting…"))  # where the result will appear
         left.addWidget(self.ref_label)
         left.addWidget(self.ref_view, 1)
         right.addWidget(self.test_label)
@@ -182,10 +184,25 @@ class ComparePage(Page):
 
     # --- evaluate ----------------------------------------------------------------
     def run(self):
+        """Load the reference and inspect the test image on a pool thread (REQ-SET-021); the form is read here."""
         if not self.board_model:
             return
-        base = self.ctx.inspector(self.board_model)
-        ref = load_image(self.ref_override) if self.ref_override else base.reference
+        if self.test_path:
+            self.test_label.setText(f"Test: {Path(self.test_path).name}")
+        recipe = self._form_recipe() if self.test_path else None
+        self.run_in_background(
+            self._evaluate, self.board_model, self.test_path, self.ref_override, recipe,
+            on_result=self._on_evaluated, busy=self.busy if self.test_path else None,
+        )  # fmt: skip
+
+    def _evaluate(self, board_model, test_path, ref_path, recipe):
+        """Pool thread: files and the engine only, never a widget."""
+        ref = load_image(ref_path) if ref_path else self.ctx.inspector(board_model).reference
+        res = self.ctx.inspect(board_model, load_image(test_path), recipe, reference=ref) if test_path else None
+        return ref, res
+
+    def _on_evaluated(self, out):
+        ref, res = out
         self.ref_label.setText(
             "Reference: "
             + (
@@ -197,15 +214,9 @@ class ComparePage(Page):
             )
         )
         self.ref_view.set_image(ref)
-        if not self.test_path:
+        if res is None:
             return
-        self.test_label.setText(f"Test: {Path(self.test_path).name}")
-        try:
-            test = load_image(self.test_path)
-            self.res = self.ctx.inspect(self.board_model, test, self._form_recipe(), reference=ref)
-        except Exception as e:
-            return self.error(e)
-        r = self.res
+        self.res = r = res
         self.verdict.setText(r.verdict)
         self.verdict.setStyleSheet(verdict_style(r.verdict))
         rows, colors = [], []
