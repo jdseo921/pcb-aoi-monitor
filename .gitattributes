@@ -1,0 +1,2 @@
+# Migrations are checksummed on their text; keep one line ending everywhere (ADR 0004).
+*.sql text eol=lf

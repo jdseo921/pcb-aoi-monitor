@@ -1,7 +1,9 @@
 """Local SQLite store (spec 6: "Local SQLite or PostgreSQL database").
 
 All SQL lives here so the rest of the app talks to plain Python methods, and a
-PostgreSQL backend can be swapped in for Stage 4 / multi-station use.
+PostgreSQL backend can be swapped in for Stage 4 / multi-station use. The schema
+is created and changed only by the numbered migrations in ``migrations/``
+(REQ-SET-016, ADR 0004).
 """
 
 from __future__ import annotations
@@ -14,64 +16,13 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
-SCHEMA = """
-CREATE TABLE IF NOT EXISTS users (
-    id INTEGER PRIMARY KEY, name TEXT UNIQUE NOT NULL,
-    role TEXT NOT NULL CHECK(role IN ('Operator','Engineer','Admin'))
-);
-CREATE TABLE IF NOT EXISTS board_models (
-    id INTEGER PRIMARY KEY, name TEXT UNIQUE NOT NULL,
-    reference_image TEXT,               -- golden sample used by Compare
-    created_at TEXT NOT NULL
-);
-CREATE TABLE IF NOT EXISTS samples (     -- uploaded training / validation images
-    id INTEGER PRIMARY KEY,
-    board_model TEXT NOT NULL,
-    path TEXT NOT NULL,
-    label TEXT NOT NULL CHECK(label IN ('OK','NG')),
-    defect_type TEXT,                    -- from aoi.defects when label = NG
-    side TEXT DEFAULT 'Top',             -- Top | Side | Bottom
-    added_at TEXT NOT NULL
-);
-CREATE TABLE IF NOT EXISTS models (      -- trained model registry (version control)
-    id INTEGER PRIMARY KEY,
-    board_model TEXT NOT NULL,
-    version TEXT NOT NULL,
-    path TEXT NOT NULL,
-    created_at TEXT NOT NULL,
-    metrics TEXT,                        -- JSON: loss, calibrated thresholds, val scores
-    active INTEGER NOT NULL DEFAULT 0
-);
-CREATE TABLE IF NOT EXISTS recipes (
-    id INTEGER PRIMARY KEY,
-    board_model TEXT NOT NULL,
-    revision INTEGER NOT NULL,
-    body TEXT NOT NULL,                  -- JSON (aoi.core.recipe.Recipe)
-    user TEXT, created_at TEXT NOT NULL
-);
-CREATE TABLE IF NOT EXISTS inspections (
-    id INTEGER PRIMARY KEY,
-    time TEXT NOT NULL,
-    board_model TEXT, model_version TEXT, recipe_rev INTEGER,
-    image_path TEXT, overlay_path TEXT,
-    result TEXT NOT NULL,                -- OK | NG | WARN
-    score REAL, metrics TEXT, operator TEXT,
-    archived INTEGER NOT NULL DEFAULT 0
-);
-CREATE TABLE IF NOT EXISTS defects (
-    id INTEGER PRIMARY KEY,
-    inspection_id INTEGER NOT NULL REFERENCES inspections(id) ON DELETE CASCADE,
-    no INTEGER, type TEXT, score REAL, side TEXT,
-    x INTEGER, y INTEGER, w INTEGER, h INTEGER
-);
-CREATE TABLE IF NOT EXISTS test_runs (   -- AI Model Test screen history
-    id INTEGER PRIMARY KEY, time TEXT NOT NULL, board_model TEXT,
-    model_version TEXT, folder TEXT, metrics TEXT, results TEXT
-);
-CREATE TABLE IF NOT EXISTS alarms (
-    id INTEGER PRIMARY KEY, time TEXT NOT NULL, level TEXT, message TEXT
-);
-"""
+from .errors import WorkspaceError
+from .migrate import migrate
+
+NO_WAL = (
+    "The workspace folder does not support the database's write-ahead log (is it on a network drive?). "
+    "Choose a folder on this computer in Settings."
+)
 
 
 def now() -> str:
@@ -85,8 +36,13 @@ class Database:
         self._lock = threading.Lock()
         self._conn = sqlite3.connect(self.path, check_same_thread=False)
         self._conn.row_factory = sqlite3.Row
+        # Write-ahead log with a full sync on every commit: a finished write survives a power cut (ADR 0004).
+        mode = str(self._conn.execute("PRAGMA journal_mode = WAL").fetchone()[0])
+        if mode.lower() != "wal":
+            raise WorkspaceError(NO_WAL)
+        self._conn.execute("PRAGMA synchronous = FULL")
         self._conn.execute("PRAGMA foreign_keys = ON")
-        self._conn.executescript(SCHEMA)
+        migrate(self._conn)
         if not self.query("SELECT 1 FROM users LIMIT 1"):
             for n, r in (("operator", "Operator"), ("engineer", "Engineer"), ("admin", "Admin")):
                 self.execute("INSERT INTO users(name, role) VALUES(?,?)", (n, r))
