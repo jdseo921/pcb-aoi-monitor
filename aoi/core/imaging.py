@@ -8,6 +8,8 @@ from typing import Any
 import cv2
 import numpy as np
 
+from ..data import atomic
+
 IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".bmp", ".tif", ".tiff"}
 
 
@@ -25,8 +27,7 @@ def save_image(path: str | Path, img: np.ndarray) -> None:
     ok, buf = cv2.imencode(ext, img)
     if not ok:
         raise ValueError(f"Cannot encode image: {path}")
-    Path(path).parent.mkdir(parents=True, exist_ok=True)
-    buf.tofile(str(path))
+    atomic.write_bytes(path, buf.tobytes())  # whole file or nothing, and non-ASCII Windows paths work
 
 
 def list_images(folder: str | Path) -> list[Path]:

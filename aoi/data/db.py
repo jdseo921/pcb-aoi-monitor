@@ -179,28 +179,41 @@ class Database:
 
     # --- inspections -------------------------------------------------------
     def add_inspection(self, rec: dict[str, Any], defects: list[dict[str, Any]]) -> int:
-        iid = self._insert(
-            "INSERT INTO inspections(uuid, time, board_model, model_version, recipe_rev, image_path, overlay_path,"
-            " result, score, metrics, operator) VALUES(?,?,?,?,?,?,?,?,?,?,?)",
-            (
-                new_uuid(),
-                now_utc(),
-                rec.get("board_model"),
-                rec.get("model_version"),
-                rec.get("recipe_rev"),
-                self._stored(rec["image_path"]) if rec.get("image_path") else None,
-                self._stored(rec["overlay_path"]) if rec.get("overlay_path") else None,
-                rec["result"],
-                rec.get("score"),
-                json.dumps(rec.get("metrics", {})),
-                rec.get("operator"),
-            ),
+        """The inspection row and its defects commit together: a crash leaves both or neither (REQ-INSP-008)."""
+        row = (
+            new_uuid(),
+            now_utc(),
+            rec.get("board_model"),
+            rec.get("model_version"),
+            rec.get("recipe_rev"),
+            self._stored(rec["image_path"]) if rec.get("image_path") else None,
+            self._stored(rec["overlay_path"]) if rec.get("overlay_path") else None,
+            rec["result"],
+            rec.get("score"),
+            json.dumps(rec.get("metrics", {})),
+            rec.get("operator"),
         )
-        for d in defects:
-            self.execute(
-                "INSERT INTO defects(inspection_id, no, type, score, side, x, y, w, h) VALUES(?,?,?,?,?,?,?,?,?)",
-                (iid, d["no"], d["type"], d["score"], d.get("side", "Top"), d["x"], d["y"], d["w"], d["h"]),
-            )
+        with self._lock:
+            try:
+                cur = self._conn.execute(
+                    "INSERT INTO inspections(uuid, time, board_model, model_version, recipe_rev, image_path,"
+                    " overlay_path, result, score, metrics, operator) VALUES(?,?,?,?,?,?,?,?,?,?,?)",
+                    row,
+                )
+                iid = cur.lastrowid
+                if iid is None:
+                    raise sqlite3.DatabaseError("INSERT INTO inspections returned no row id")
+                self._conn.executemany(
+                    "INSERT INTO defects(inspection_id, no, type, score, side, x, y, w, h) VALUES(?,?,?,?,?,?,?,?,?)",
+                    [
+                        (iid, d["no"], d["type"], d["score"], d.get("side", "Top"), d["x"], d["y"], d["w"], d["h"])
+                        for d in defects
+                    ],
+                )
+                self._conn.commit()
+            except sqlite3.Error:
+                self._conn.rollback()
+                raise
         return iid
 
     def inspections(

@@ -27,6 +27,7 @@ from PySide6.QtWidgets import (
 
 from ... import defects as taxonomy
 from ...core.imaging import IMAGE_EXTS, list_images, load_image
+from ...data import atomic
 from ...data.times import to_local
 from ...hal import VIEWS
 from ..widgets.image_view import ImageView
@@ -290,7 +291,7 @@ class TrainingPage(Page):
         src = Path(self.ctx.db.resolve_path(rec["path"]))
         f, _ = QFileDialog.getSaveFileName(self, "Export model", src.name, "PyTorch model (*.pt)")
         if f:
-            Path(f).write_bytes(src.read_bytes())
+            atomic.copy_file(src, f)
 
     def refresh(self):
         if not self.board_model:

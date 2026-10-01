@@ -30,6 +30,8 @@ import numpy as np
 import torch
 from torch import nn
 
+from ..data import atomic
+
 
 class ModelFileError(ValueError):
     """An AI model file was refused: not a weights-only model file this app wrote."""
@@ -162,7 +164,8 @@ class AnomalyModel:
         return float(np.percentile(amap, 99.9))
 
     def save(self, path: Path) -> None:
-        torch.save({"state_dict": self.net.state_dict(), "meta": _to_safe(self.meta)}, path)
+        payload = {"state_dict": self.net.state_dict(), "meta": _to_safe(self.meta)}
+        atomic.write_with(path, lambda f: torch.save(payload, f))
 
     @classmethod
     def load(cls, path: str | Path, device: str = "cpu") -> AnomalyModel:
