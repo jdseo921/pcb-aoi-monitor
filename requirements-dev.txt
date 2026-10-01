@@ -1,7 +1,9 @@
 # Development and CI tools, pinned. Not shipped with the app.
-#   pip install -r requirements.txt -r requirements-dev.txt
+#   pip install -r requirements-dev.lock   (runtime + dev, transitive pins; see tools/make_lock.py)
 ruff==0.16.9        # lint and format (MIT)
 mypy==2.3.1         # type checks (MIT)
 pytest==9.1.1       # tests (MIT)
 bandit==1.9.4       # Python security lint (Apache-2.0)
 pip-audit==2.10.1   # known-vulnerability check of dependencies (Apache-2.0)
+pip-tools==7.6.1    # resolves requirements*.lock (BSD-3-Clause)
+pip-licenses==5.5.5 # lists installed licenses for tools/check_licenses.py (MIT)
