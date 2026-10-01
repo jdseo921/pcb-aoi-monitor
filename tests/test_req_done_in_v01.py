@@ -115,11 +115,14 @@ def test_req_cmp_001_linked_views_zoom_and_pan_together_within_1px(qtbot, traine
 def test_req_cmp_006_any_stored_ok_sample_can_be_the_reference_and_metrics_recompute(qtbot, trained_ctx, ng_board):
     page = _window(qtbot, trained_ctx).pages["Compare"]
     page.set_test(str(ng_board))
+    qtbot.waitUntil(lambda: page.res is not None, timeout=30000)  # the inspection runs on a pool thread (S17b)
     against_golden = dict(page.res.compare.metrics)
     assert page.ref_label.text() == "Reference: golden template"
     sample = trained_ctx.db.samples(BOARD, "OK")[0]["path"]
+    first = page.res
     page.ref_override = sample  # what Reference… does after the file dialog
     page.run()
+    qtbot.waitUntil(lambda: page.res is not first, timeout=30000)
     against_sample = page.res.compare.metrics
     assert page.ref_label.text() == f"Reference: {Path(sample).name}"
     assert against_sample["ssim"] != against_golden["ssim"]

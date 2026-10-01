@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from collections.abc import Callable
+from typing import Any
+
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor
 from PySide6.QtWidgets import (
@@ -15,6 +18,8 @@ from PySide6.QtWidgets import (
 
 from ...core.services import AppContext
 from ..errors import show_error
+from ..widgets.busy import BusyOverlay
+from ..workers import Worker, start
 
 
 class Page(QWidget):
@@ -29,6 +34,7 @@ class Page(QWidget):
         self.setObjectName("page")
         self.ctx = ctx
         self.shell = shell  # MainWindow: navigation + shared state
+        self._bg: Worker | None = None  # the page's background action, if one is running (REQ-SET-021)
         self.root = QVBoxLayout(self)
         self.root.setContentsMargins(20, 14, 20, 14)
         head = QHBoxLayout()
@@ -61,6 +67,44 @@ class Page(QWidget):
     def error(self, exc: BaseException) -> None:
         """Show an error the way the standard asks: its code, what happened and what to do (REQ-SET-019)."""
         show_error(self, self.ctx.report_error(exc, self.title))
+
+    def run_in_background(
+        self,
+        fn: Callable[..., Any],
+        *args: Any,
+        on_result: Callable[[Any], None],
+        busy: BusyOverlay | None = None,
+        on_cancel: Callable[[], None] | None = None,
+        **kwargs: Any,
+    ) -> Worker:
+        """Run `fn(*args, **kwargs)` on a pool thread (REQ-SET-021); `on_result` gets its return value on the UI thread
+        and an error becomes the coded dialog. The newest call wins: an earlier run is stopped and its result dropped.
+        `busy` covers where the result will appear; Cancel drops the result and calls `on_cancel` when the job stops."""
+        if self._bg is not None:
+            self._bg.stop()
+        w = self._bg = Worker(fn, *args, **kwargs)
+
+        def current(slot: Callable[..., None]) -> Callable[..., None]:
+            def guarded(*a: Any) -> None:
+                if w is self._bg and not w.job.cancelled:
+                    slot(*a)
+
+            return guarded
+
+        def finished() -> None:
+            if w is self._bg:
+                self._bg = None
+                if busy is not None:
+                    busy.finish()
+            if w.job.cancelled and on_cancel is not None:
+                on_cancel()
+
+        w.signals.result.connect(current(on_result))
+        w.signals.error.connect(current(self.error))
+        w.signals.finished.connect(finished)
+        if busy is not None:
+            busy.watch(w.job)
+        return start(w, self.ctx.jobs)
 
 
 def button(text: str, kind: str = "", slot=None) -> QPushButton:
