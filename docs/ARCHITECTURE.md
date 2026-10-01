@@ -193,6 +193,10 @@ The schema is created and changed only by the numbered migrations in `aoi/data/m
 `aoi/data/migrate.py` applies at start-up and records in `schema_version` with a checksum (ADR 0004). The
 connection runs in write-ahead-log mode with a full sync on every commit, and a v0.1 workspace (no
 `schema_version` table) is refused rather than upgraded.
+Records that can leave the station (`users`, `samples`, `models`, `recipes`, `inspections`) carry a `uuid`
+beside their integer key; every stored time is ISO 8601 UTC with an offset and is shown in local time
+(`aoi/data/times.py`); image, overlay and model paths inside the workspace are stored relative to it and resolved
+by `aoi/data/paths.py`, so a workspace folder can move (REQ-SET-017, REQ-SET-001).
 
 `inspections` already carries everything Stage 4 uploads (lot/model/result/timestamp + images); a `lot_id` column is
 the only addition expected.

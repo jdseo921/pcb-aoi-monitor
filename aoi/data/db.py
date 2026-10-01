@@ -11,13 +11,16 @@ from __future__ import annotations
 import json
 import sqlite3
 import threading
+import uuid
 from collections.abc import Iterable
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
 from .errors import WorkspaceError
 from .migrate import migrate
+from .paths import resolve, to_stored
+from .times import local_day_bounds_utc, now_utc
 
 NO_WAL = (
     "The workspace folder does not support the database's write-ahead log (is it on a network drive?). "
@@ -25,13 +28,17 @@ NO_WAL = (
 )
 
 
-def now() -> str:
-    return datetime.now().isoformat(timespec="seconds")
+def new_uuid() -> str:
+    return str(uuid.uuid4())
 
 
 class Database:
-    def __init__(self, path: Path):
+    """One SQLite file per workspace. Paths inside the workspace are stored relative to it (REQ-SET-001), every
+    time in UTC with an offset (REQ-SET-017), and records that can leave the station carry a UUID."""
+
+    def __init__(self, path: Path, workspace: Path | None = None):
         self.path = Path(path)
+        self.workspace = Path(workspace) if workspace else self.path.parent
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self._lock = threading.Lock()
         self._conn = sqlite3.connect(self.path, check_same_thread=False)
@@ -45,7 +52,11 @@ class Database:
         migrate(self._conn)
         if not self.query("SELECT 1 FROM users LIMIT 1"):
             for n, r in (("operator", "Operator"), ("engineer", "Engineer"), ("admin", "Admin")):
-                self.execute("INSERT INTO users(name, role) VALUES(?,?)", (n, r))
+                self.execute("INSERT INTO users(uuid, name, role) VALUES(?,?,?)", (new_uuid(), n, r))
+
+    def close(self) -> None:
+        with self._lock:
+            self._conn.close()
 
     # --- primitives --------------------------------------------------------
     def execute(self, sql: str, params: Iterable[Any] = ()) -> int | None:
@@ -66,20 +77,34 @@ class Database:
         with self._lock:
             return [dict(r) for r in self._conn.execute(sql, tuple(params)).fetchall()]
 
+    # --- paths (REQ-SET-001) -----------------------------------------------
+    def resolve_path(self, stored: str) -> str:
+        """A path as the database stores it, made absolute for this workspace."""
+        return str(resolve(stored, self.workspace))
+
+    def _stored(self, path: str) -> str:
+        return to_stored(path, self.workspace)
+
+    def _resolved(self, row: dict[str, Any], *keys: str) -> dict[str, Any]:
+        for k in keys:
+            if row.get(k):
+                row[k] = self.resolve_path(row[k])
+        return row
+
     # --- board models ------------------------------------------------------
     def board_models(self) -> list[str]:
         return [r["name"] for r in self.query("SELECT name FROM board_models ORDER BY name")]
 
     def ensure_board_model(self, name: str) -> None:
-        self.execute("INSERT OR IGNORE INTO board_models(name, created_at) VALUES(?,?)", (name, now()))
+        self.execute("INSERT OR IGNORE INTO board_models(name, created_at) VALUES(?,?)", (name, now_utc()))
 
     def set_reference(self, board_model: str, path: str) -> None:
         self.ensure_board_model(board_model)
-        self.execute("UPDATE board_models SET reference_image=? WHERE name=?", (path, board_model))
+        self.execute("UPDATE board_models SET reference_image=? WHERE name=?", (self._stored(path), board_model))
 
     def reference(self, board_model: str) -> str | None:
         r = self.query("SELECT reference_image FROM board_models WHERE name=?", (board_model,))
-        return r[0]["reference_image"] if r else None
+        return self.resolve_path(r[0]["reference_image"]) if r and r[0]["reference_image"] else None
 
     # --- samples -----------------------------------------------------------
     def add_sample(
@@ -87,14 +112,16 @@ class Database:
     ) -> int:
         self.ensure_board_model(board_model)
         return self._insert(
-            "INSERT INTO samples(board_model, path, label, defect_type, side, added_at) VALUES(?,?,?,?,?,?)",
-            (board_model, path, label, defect_type, side, now()),
+            "INSERT INTO samples(uuid, board_model, path, label, defect_type, side, added_at) VALUES(?,?,?,?,?,?,?)",
+            (new_uuid(), board_model, self._stored(path), label, defect_type, side, now_utc()),
         )
 
     def samples(self, board_model: str, label: str | None = None) -> list[dict[str, Any]]:
         if label:
-            return self.query("SELECT * FROM samples WHERE board_model=? AND label=? ORDER BY id", (board_model, label))
-        return self.query("SELECT * FROM samples WHERE board_model=? ORDER BY id", (board_model,))
+            rows = self.query("SELECT * FROM samples WHERE board_model=? AND label=? ORDER BY id", (board_model, label))
+        else:
+            rows = self.query("SELECT * FROM samples WHERE board_model=? ORDER BY id", (board_model,))
+        return [self._resolved(r, "path") for r in rows]
 
     def update_sample(self, sample_id: int, label: str, defect_type: str | None) -> None:
         self.execute("UPDATE samples SET label=?, defect_type=? WHERE id=?", (label, defect_type, sample_id))
@@ -109,16 +136,17 @@ class Database:
         if activate:
             self.execute("UPDATE models SET active=0 WHERE board_model=?", (board_model,))
         return self._insert(
-            "INSERT INTO models(board_model, version, path, created_at, metrics, active) VALUES(?,?,?,?,?,?)",
-            (board_model, version, path, now(), json.dumps(metrics), int(activate)),
+            "INSERT INTO models(uuid, board_model, version, path, created_at, metrics, active) VALUES(?,?,?,?,?,?,?)",
+            (new_uuid(), board_model, version, self._stored(path), now_utc(), json.dumps(metrics), int(activate)),
         )
 
     def models(self, board_model: str) -> list[dict[str, Any]]:
-        return self.query("SELECT * FROM models WHERE board_model=? ORDER BY id DESC", (board_model,))
+        rows = self.query("SELECT * FROM models WHERE board_model=? ORDER BY id DESC", (board_model,))
+        return [self._resolved(r, "path") for r in rows]
 
     def active_model(self, board_model: str) -> dict[str, Any] | None:
         r = self.query("SELECT * FROM models WHERE board_model=? AND active=1", (board_model,))
-        return r[0] if r else None
+        return self._resolved(r[0], "path") if r else None
 
     def activate_model(self, model_id: int) -> None:
         bm = self.query("SELECT board_model FROM models WHERE id=?", (model_id,))[0]["board_model"]
@@ -133,8 +161,8 @@ class Database:
     def save_recipe(self, board_model: str, body: dict[str, Any], user: str) -> int:
         rev = (self.query("SELECT MAX(revision) m FROM recipes WHERE board_model=?", (board_model,))[0]["m"] or 0) + 1
         self.execute(
-            "INSERT INTO recipes(board_model, revision, body, user, created_at) VALUES(?,?,?,?,?)",
-            (board_model, rev, json.dumps(body), user, now()),
+            "INSERT INTO recipes(uuid, board_model, revision, body, user, created_at) VALUES(?,?,?,?,?,?)",
+            (new_uuid(), board_model, rev, json.dumps(body), user, now_utc()),
         )
         return rev
 
@@ -152,15 +180,16 @@ class Database:
     # --- inspections -------------------------------------------------------
     def add_inspection(self, rec: dict[str, Any], defects: list[dict[str, Any]]) -> int:
         iid = self._insert(
-            "INSERT INTO inspections(time, board_model, model_version, recipe_rev, image_path, overlay_path,"
-            " result, score, metrics, operator) VALUES(?,?,?,?,?,?,?,?,?,?)",
+            "INSERT INTO inspections(uuid, time, board_model, model_version, recipe_rev, image_path, overlay_path,"
+            " result, score, metrics, operator) VALUES(?,?,?,?,?,?,?,?,?,?,?)",
             (
-                now(),
+                new_uuid(),
+                now_utc(),
                 rec.get("board_model"),
                 rec.get("model_version"),
                 rec.get("recipe_rev"),
-                rec.get("image_path"),
-                rec.get("overlay_path"),
+                self._stored(rec["image_path"]) if rec.get("image_path") else None,
+                self._stored(rec["overlay_path"]) if rec.get("overlay_path") else None,
                 rec["result"],
                 rec.get("score"),
                 json.dumps(rec.get("metrics", {})),
@@ -189,25 +218,26 @@ class Database:
         p: list[Any] = []
         if not include_archived:
             sql += " AND archived=0"
-        if date_from:
+        start, end = local_day_bounds_utc(date_from, date_to)  # the filter takes local calendar days
+        if start:
             sql += " AND time >= ?"
-            p.append(date_from)
-        if date_to:
-            sql += " AND time <= ?"
-            p.append(date_to + "T23:59:59")
+            p.append(start)
+        if end:
+            sql += " AND time < ?"
+            p.append(end)
         if board_model:
             sql += " AND board_model = ?"
             p.append(board_model)
         if operator:
             sql += " AND operator = ?"
             p.append(operator)
-        return self.query(sql + " ORDER BY id DESC", p)
+        return [self._resolved(r, "image_path", "overlay_path") for r in self.query(sql + " ORDER BY id DESC", p)]
 
     def defects_for(self, inspection_id: int) -> list[dict[str, Any]]:
         return self.query("SELECT * FROM defects WHERE inspection_id=? ORDER BY no", (inspection_id,))
 
     def archive_old(self, days: int) -> int:
-        cutoff = (datetime.now() - timedelta(days=days)).isoformat(timespec="seconds")
+        cutoff = (datetime.now(UTC) - timedelta(days=days)).isoformat(timespec="seconds")
         n: int = self.query("SELECT COUNT(*) c FROM inspections WHERE archived=0 AND time < ?", (cutoff,))[0]["c"]
         self.execute("UPDATE inspections SET archived=1 WHERE time < ?", (cutoff,))
         return n
@@ -223,14 +253,17 @@ class Database:
     ) -> int:
         return self._insert(
             "INSERT INTO test_runs(time, board_model, model_version, folder, metrics, results) VALUES(?,?,?,?,?,?)",
-            (now(), board_model, model_version, folder, json.dumps(metrics), json.dumps(results)),
+            (now_utc(), board_model, model_version, folder, json.dumps(metrics), json.dumps(results)),
         )
 
     def alarm(self, level: str, message: str) -> None:
-        self.execute("INSERT INTO alarms(time, level, message) VALUES(?,?,?)", (now(), level, message))
+        self.execute("INSERT INTO alarms(time, level, message) VALUES(?,?,?)", (now_utc(), level, message))
 
     def users(self) -> list[dict[str, Any]]:
         return self.query("SELECT * FROM users ORDER BY id")
 
     def add_user(self, name: str, role: str) -> None:
-        self.execute("INSERT OR REPLACE INTO users(name, role) VALUES(?,?)", (name, role))
+        self.execute(
+            "INSERT INTO users(uuid, name, role) VALUES(?,?,?) ON CONFLICT(name) DO UPDATE SET role=excluded.role",
+            (new_uuid(), name, role),
+        )
