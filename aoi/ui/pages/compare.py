@@ -87,7 +87,7 @@ class ComparePage(Page):
         bar.addWidget(QLabel(self.tr("Show:")))
         self.mode = QComboBox()
         self.mode.addItems([self.tr(m) for m in MODES])
-        self.mode.currentIndexChanged.connect(self.render)
+        self.mode.currentIndexChanged.connect(self.redraw)
         bar.addWidget(self.mode)
         bar.addStretch(1)
         self.root.addLayout(bar)
@@ -284,7 +284,7 @@ class ComparePage(Page):
         colors.append(None)
         fill_table(self.metrics, rows, colors)
         self.why.setHtml(self._explain())
-        self.render()
+        self.redraw()
 
     def _check_text(self, c: Check) -> tuple[str, str, str]:
         """A check's name, source and rule in the UI language (CHECK_NAMES, SOURCES, RULES)."""
@@ -321,7 +321,7 @@ class ComparePage(Page):
             lines.append(f"<br><i>{n}</i>")
         return "".join(lines)
 
-    def render(self):
+    def redraw(self):
         r = self.res
         if r is None:
             return

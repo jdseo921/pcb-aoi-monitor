@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from PySide6.QtCore import QT_TRANSLATE_NOOP
+from typing import TYPE_CHECKING
+
 from PySide6.QtWidgets import (
     QComboBox,
     QFileDialog,
@@ -18,7 +19,11 @@ from PySide6.QtWidgets import (
 )
 
 from ...config import APP_VERSION
-from .base import ROLES, Page, button, fill_table, make_table, role_text
+from ...core.services import AppContext
+from .base import QT_TRANSLATE_NOOP, ROLES, Page, button, fill_table, make_table, role_text
+
+if TYPE_CHECKING:
+    from ..main_window import MainWindow
 
 _S1, _S2, _S3, _S4 = (QT_TRANSLATE_NOOP("SettingsPage", s) for s in ("Stage 1", "Stage 2", "Stage 3", "Stage 4"))
 _NOT_CONNECTED = QT_TRANSLATE_NOOP("SettingsPage", "Not connected")
@@ -40,7 +45,7 @@ class SettingsPage(Page):
     def subtitle_text(self) -> str:
         return self.tr(self.subtitle).format(version=APP_VERSION)
 
-    def __init__(self, ctx, shell):
+    def __init__(self, ctx: AppContext, shell: MainWindow) -> None:
         super().__init__(ctx, shell)
         body = QHBoxLayout()
         g = QGroupBox(self.tr("System"))
@@ -55,9 +60,9 @@ class SettingsPage(Page):
         self.device = QComboBox()
         self.device.addItems(["auto", "cpu", "cuda"])
         self.device.setCurrentText(s.device)
-        self.size = QComboBox()
-        self.size.addItems(["128", "256", "384", "512"])
-        self.size.setCurrentText(str(s.image_size))
+        self.input_size = QComboBox()
+        self.input_size.addItems(["128", "256", "384", "512"])
+        self.input_size.setCurrentText(str(s.image_size))
         self.epochs = QSpinBox()
         self.epochs.setRange(5, 1000)
         self.epochs.setValue(s.default_epochs)
@@ -70,7 +75,7 @@ class SettingsPage(Page):
         self.lang.setCurrentIndex(max(0, self.lang.findData(s.language)))
         f.addRow(self.tr("Workspace (images, AI models, database)"), ws_row)
         f.addRow(self.tr("AI device"), self.device)
-        f.addRow(self.tr("Default input size"), self.size)
+        f.addRow(self.tr("Default input size"), self.input_size)
         f.addRow(self.tr("Default epochs"), self.epochs)
         f.addRow(self.tr("Log retention (days)"), self.ret)
         f.addRow(self.tr("Language"), self.lang)
@@ -92,22 +97,22 @@ class SettingsPage(Page):
         body.addLayout(right, 1)
         self.root.addLayout(body, 1)
 
-    def _browse(self):
+    def _browse(self) -> None:
         d = QFileDialog.getExistingDirectory(self, self.tr("Workspace folder"), self.ws.text())
         if d:
             self.ws.setText(d)
 
-    def save(self):
+    def save(self) -> None:
         s = self.ctx.settings
         moved = s.workspace != self.ws.text()
         s.workspace, s.device = self.ws.text(), self.device.currentText()
-        s.image_size, s.default_epochs = int(self.size.currentText()), self.epochs.value()
+        s.image_size, s.default_epochs = int(self.input_size.currentText()), self.epochs.value()
         s.log_retention_days, s.language = self.ret.value(), self.lang.currentData()
         s.save()
         saved = self.tr("Saved. Restart the app to switch the workspace.") if moved else self.tr("Saved.")
         QMessageBox.information(self, self.tr("Settings"), saved)
 
-    def add_user(self):
+    def add_user(self) -> None:
         name, ok = QInputDialog.getText(self, self.tr("User"), self.tr("User name"))
         if ok and name:
             names = [role_text(r) for r in ROLES]
@@ -116,6 +121,6 @@ class SettingsPage(Page):
                 self.ctx.add_user(name, ROLES[names.index(role)])
                 self.on_show()
 
-    def on_show(self):
+    def on_show(self) -> None:
         fill_table(self.users, [[u["name"], role_text(u["role"])] for u in self.ctx.users()])
         fill_table(self.hw, [[self.tr(cell) for cell in row] for row in HARDWARE])

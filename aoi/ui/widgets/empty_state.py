@@ -15,32 +15,32 @@ from PySide6.QtWidgets import QLabel, QPushButton, QVBoxLayout, QWidget
 
 
 class EmptyState(QWidget):
-    def __init__(self, over: QWidget | None = None, kind: str = ""):
+    def __init__(self, over: QWidget | None = None, kind: str = "") -> None:
         super().__init__(over)
         self._over = over
-        self._go: Callable[[], None] | None = None
+        self._go: Callable[[], object] | None = None
         self.setObjectName("empty")
-        self.setAttribute(Qt.WA_StyledBackground, True)
+        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         layout = QVBoxLayout(self)
-        layout.setAlignment(Qt.AlignCenter)
+        layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.heading = QLabel()
         self.heading.setObjectName("emptyHeading")
         self.sentence = QLabel()
         self.sentence.setObjectName("muted")
         for label in (self.heading, self.sentence):
-            label.setAlignment(Qt.AlignCenter)
+            label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             label.setWordWrap(True)
             layout.addWidget(label)
         self.link = QPushButton()
         if kind:
             self.link.setObjectName(kind)
         self.link.clicked.connect(self._follow)
-        layout.addWidget(self.link, 0, Qt.AlignHCenter)
+        layout.addWidget(self.link, 0, Qt.AlignmentFlag.AlignHCenter)
         if over is not None:
             over.installEventFilter(self)
         self.hide()
 
-    def show_state(self, heading: str, sentence: str, link: str = "", go: Callable[[], None] | None = None) -> None:
+    def show_state(self, heading: str, sentence: str, link: str = "", go: Callable[[], object] | None = None) -> None:
         """Show what is missing and what to do; with `link` and `go`, also the one button that leads there."""
         self.heading.setText(heading)
         self.sentence.setText(sentence)

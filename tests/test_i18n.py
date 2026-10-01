@@ -214,7 +214,13 @@ def _scan(path: Path) -> set[tuple[int, str]]:
         if isinstance(node, ast.ClassDef):
             for stmt in node.body:
                 targets = [t.id for t in getattr(stmt, "targets", []) if isinstance(t, ast.Name)]
-                if isinstance(stmt, ast.Assign) and set(targets) & {"title", "subtitle"}:
+                if isinstance(stmt, ast.AnnAssign) and isinstance(stmt.target, ast.Name):
+                    targets = [stmt.target.id]  # `title: str = "…"` counts like `title = "…"`
+                if (
+                    isinstance(stmt, (ast.Assign, ast.AnnAssign))
+                    and stmt.value
+                    and set(targets) & {"title", "subtitle"}
+                ):
                     check(stmt.value, tree)
     return found
 
@@ -238,11 +244,13 @@ def test_req_set_005_no_untranslated_literals() -> None:
 
 def test_req_set_005_the_scan_catches_a_literal(tmp_path: Path) -> None:
     """The scan itself: it flags a literal, an f-string, a `.format()` on a literal, a name assigned a literal, a
-    title and a dialog's words, and lets through tr(), markup-only text, a file name and a logger's warning."""
+    title (annotated or not) and a dialog's words, and lets through tr(), markup-only text, a file name and a logger's
+    warning."""
     sample = tmp_path / "sample.py"
     sample.write_text(
         "class P(Page):\n"
         '    title = "Untitled page"\n'
+        '    subtitle: str = "Annotated subtitle"\n'
         "    def f(self):\n"
         '        what = "Assigned text"\n'
         '        self.label.setText("Plain text")\n'
@@ -259,6 +267,7 @@ def test_req_set_005_the_scan_catches_a_literal(tmp_path: Path) -> None:
     )
     assert {text for _, text in _scan(sample)} == {
         "Untitled page",
+        "Annotated subtitle",
         "Plain text",
         "0 items",
         "{count} rows",

@@ -42,7 +42,7 @@ class InspectionPage(Page):
     def __init__(self, ctx, shell):
         super().__init__(ctx, shell)
         self.queue: list[Path] = []
-        self.pos = -1
+        self.queue_pos = -1
         self.running = False
         self.last: InspectionResult | None = None
         self.last_path: Path | None = None
@@ -143,7 +143,7 @@ class InspectionPage(Page):
             self._set_queue(list_images(d))
 
     def _set_queue(self, paths: list[Path]):
-        self.queue, self.pos = paths, -1
+        self.queue, self.queue_pos = paths, -1
         self.queue_label.setText(self.tr("{count} image(s) queued").format(count=len(paths)))
         self.shell.status(self.tr("Loaded {count} image(s)").format(count=len(paths)))
         self._update_buttons()
@@ -164,13 +164,13 @@ class InspectionPage(Page):
     def next_board(self):
         if not self.need_board_model():
             return
-        if self.pos + 1 >= len(self.queue):
+        if self.queue_pos + 1 >= len(self.queue):
             self.running = False
             self.shell.status(self.tr("End of queue"))
             self._update_buttons()
             return
-        self.pos += 1
-        path = self.queue[self.pos]
+        self.queue_pos += 1
+        path = self.queue[self.queue_pos]
         if self.inspector is None:
             try:
                 self.inspector = self.ctx.inspector(self.board_model, side=self.view_combo.currentData())
@@ -193,7 +193,7 @@ class InspectionPage(Page):
         path, res = out
         self.last, self.last_path = res, path
         self.empty.hide()
-        self.view.set_image(res.image, keep_view=self.pos > 0)
+        self.view.set_image(res.image, keep_view=self.queue_pos > 0)
         for d in res.defects:
             sev = taxonomy.BY_NAME.get(d.type, taxonomy.ANOMALY).severity
             self.view.add_box(

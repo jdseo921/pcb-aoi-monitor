@@ -13,6 +13,7 @@ Inspection page and the inspection cycle do not change when hardware arrives:
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from collections.abc import Sequence
 from pathlib import Path
 
 import numpy as np
@@ -41,7 +42,7 @@ class FolderCamera(Camera):
 
     name = "Image files (Stage 1)"
 
-    def __init__(self, paths: list[str | Path]):
+    def __init__(self, paths: Sequence[str | Path]) -> None:
         self.paths = [Path(p) for p in paths]
         self.index = -1
 
