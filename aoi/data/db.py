@@ -153,13 +153,15 @@ class Database:
         return f"v1.{n - 1}" if n > 1 else "v1.0"
 
     # --- recipes -----------------------------------------------------------
-    def save_recipe(self, board_model: str, body: dict[str, Any], user: str) -> int:
+    def save_recipe(self, board_model: str, body: dict[str, Any], user: str) -> tuple[int, str]:
+        """Store the next revision; returns (revision, uuid)."""
         rev = (self.query("SELECT MAX(revision) m FROM recipes WHERE board_model=?", (board_model,))[0]["m"] or 0) + 1
+        uid = new_uuid()
         self.execute(
             "INSERT INTO recipes(uuid, board_model, revision, body, user, created_at) VALUES(?,?,?,?,?,?)",
-            (new_uuid(), board_model, rev, json.dumps(body), user, now_utc()),
+            (uid, board_model, rev, json.dumps(body), user, now_utc()),
         )
-        return rev
+        return rev, uid
 
     def latest_recipe(self, board_model: str) -> tuple[int, dict[str, Any]] | None:
         r = self.query(
@@ -269,6 +271,65 @@ class Database:
 
     def users(self) -> list[dict[str, Any]]:
         return self.query("SELECT * FROM users ORDER BY id")
+
+    def user_uuid(self, name: str) -> str | None:
+        r = self.query("SELECT uuid FROM users WHERE name=?", (name,))
+        return str(r[0]["uuid"]) if r else None
+
+    # --- audit trail (REQ-LOG-004): append only, enforced by triggers in migration 0003 ----
+    def add_audit(
+        self,
+        user_uuid: str | None,
+        role: str | None,
+        action: str,
+        object_type: str,
+        object_uuid: str | None,
+        before: dict[str, Any] | None,
+        after: dict[str, Any] | None,
+        reason: str | None = None,
+    ) -> str:
+        """Append one entry and return its UUID. There is no method to change or remove one."""
+        uid = new_uuid()
+        self.execute(
+            "INSERT INTO audit(uuid, at_utc, user_uuid, role, action, object_type, object_uuid, before_json,"
+            " after_json, reason) VALUES(?,?,?,?,?,?,?,?,?,?)",
+            (
+                uid,
+                now_utc(),
+                user_uuid,
+                role,
+                action,
+                object_type,
+                object_uuid,
+                None if before is None else json.dumps(before, sort_keys=True),
+                None if after is None else json.dumps(after, sort_keys=True),
+                reason,
+            ),
+        )
+        return uid
+
+    def audit_entries(
+        self,
+        object_type: str | None = None,
+        object_uuid: str | None = None,
+        action: str | None = None,
+        since: str | None = None,
+        limit: int = 1000,
+    ) -> list[dict[str, Any]]:
+        """Entries newest first, with before and after decoded from JSON."""
+        sql, p = "SELECT * FROM audit WHERE 1=1", []
+        for column, value in (("object_type", object_type), ("object_uuid", object_uuid), ("action", action)):
+            if value is not None:
+                sql += f" AND {column}=?"
+                p.append(value)
+        if since:
+            sql += " AND at_utc >= ?"
+            p.append(since)
+        rows = self.query(sql + " ORDER BY id DESC LIMIT ?", [*p, int(limit)])
+        for r in rows:
+            r["before"] = json.loads(r.pop("before_json")) if r["before_json"] else None
+            r["after"] = json.loads(r.pop("after_json")) if r["after_json"] else None
+        return rows
 
     def add_user(self, name: str, role: str) -> None:
         self.execute(

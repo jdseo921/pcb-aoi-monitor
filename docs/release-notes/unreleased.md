@@ -14,6 +14,7 @@ None. / 없음.
 ## New / 신규 (draft)
 
 - [REQ-LOG-004] The app writes a JSON-lines log in the workspace's logs folder, one file per day (UTC), with time, level, module, event, record ids and the app version; it never holds images or personal data beyond a user's UUID (#4, part). / 앱이 작업 폴더의 logs 폴더에 하루(UTC) 한 파일씩 JSON 라인 로그를 기록합니다. 시각, 수준, 모듈, 이벤트, 기록 ID, 앱 버전을 담고 이미지나 사용자 UUID 외의 개인 정보는 담지 않습니다 (#4, 일부).
+- [REQ-LOG-004] An append-only audit trail records who changed what and when, with the record before and after and a reason; the database refuses any change or deletion of an entry. Recipe saves are the first entries; the other writes are wired in S16 (#4, part). / 누가 무엇을 언제 바꿨는지를 변경 전후 기록과 사유와 함께 남기는 추가 전용 감사 기록이 생겼습니다. 데이터베이스가 항목의 수정과 삭제를 거부합니다. 레시피 저장이 첫 항목이며 나머지 쓰기는 S16에서 연결됩니다 (#4, 일부).
 
 ## Improved / 개선 (draft)
 
