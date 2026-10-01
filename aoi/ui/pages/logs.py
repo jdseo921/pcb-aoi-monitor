@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from PySide6.QtCore import QDate, Qt
+from PySide6.QtCore import QT_TRANSLATE_NOOP, QDate, Qt
 from PySide6.QtWidgets import QCheckBox, QComboBox, QDateEdit, QFileDialog, QHBoxLayout, QLabel, QMessageBox, QSplitter
 
 from ...core.imaging import load_image
@@ -16,7 +16,7 @@ from .base import Page, button, fill_table, make_table
 
 
 class LogsPage(Page):
-    title = "Logs & Export"
+    title = QT_TRANSLATE_NOOP("Page", "Logs & Export")
 
     def __init__(self, ctx, shell):
         super().__init__(ctx, shell)
@@ -28,21 +28,38 @@ class LogsPage(Page):
         self.d_to.setCalendarPopup(True)
         self.model = QComboBox()
         self.operator = QComboBox()
-        self.archived = QCheckBox("Include archived")
-        for label, w in (("From", self.d_from), ("To", self.d_to), ("Model", self.model), ("Operator", self.operator)):
+        self.archived = QCheckBox(self.tr("Include archived"))
+        fields = (
+            (self.tr("From"), self.d_from),
+            (self.tr("To"), self.d_to),
+            (self.tr("Board model"), self.model),
+            (self.tr("Operator"), self.operator),
+        )
+        for label, w in fields:
             f.addWidget(QLabel(label))
             f.addWidget(w)
         f.addWidget(self.archived)
-        f.addWidget(button("Filter", "primary", self.refresh))
+        f.addWidget(button(self.tr("Filter"), "primary", self.refresh))
         f.addStretch(1)
         self.root.addLayout(f)
 
         split = QSplitter(Qt.Horizontal)
-        self.table = make_table(["ID", "Time", "Model", "Result", "Defects", "Score", "Operator", "Image"])
+        self.table = make_table(
+            [
+                self.tr("ID"),
+                self.tr("Time"),
+                self.tr("Board model"),
+                self.tr("Result"),
+                self.tr("Defects"),
+                self.tr("Score"),
+                self.tr("Operator"),
+                self.tr("Image"),
+            ]
+        )
         self.table.itemSelectionChanged.connect(self._preview)
         self.empty = EmptyState(self.table)
         split.addWidget(self.table)
-        self.view = ImageView(placeholder="Select a log row to see its overlay")
+        self.view = ImageView(placeholder=self.tr("Select a row to see its overlay"))
         split.addWidget(self.view)
         split.setSizes([1000, 600])
         self.root.addWidget(split, 1)
@@ -51,9 +68,10 @@ class LogsPage(Page):
         self.summary = QLabel("")
         self.summary.setObjectName("muted")
         b.addWidget(self.summary, 1)
-        self.btn_csv = button("Export CSV", slot=self.export_csv)
-        self.btn_img = button("Export Image Overlays", slot=self.export_overlays)
-        self.btn_arch = button(f"Archive > {ctx.settings.log_retention_days} days", slot=self.archive)
+        self.btn_csv = button(self.tr("Export CSV"), slot=self.export_csv)
+        self.btn_img = button(self.tr("Export Image Overlays"), slot=self.export_overlays)
+        archive = self.tr("Archive older than {days} days").format(days=ctx.settings.log_retention_days)
+        self.btn_arch = button(archive, slot=self.archive)
         for x in (self.btn_csv, self.btn_img, self.btn_arch):
             b.addWidget(x)
         self.root.addLayout(b)
@@ -85,15 +103,23 @@ class LogsPage(Page):
         )
         n = len(self.rows)
         ng = sum(r["result"] == "NG" for r in self.rows)
-        self.summary.setText(f"{n} inspections · {ng} NG · yield {(n - ng) / n:.1%}" if n else "No records")
+        self.summary.setText(
+            self.tr("{count} inspections · {ng} NG · yield {rate:.1%}").format(count=n, ng=ng, rate=(n - ng) / n)
+            if n
+            else self.tr("No records")
+        )
         if n:
             self.empty.hide()
         elif self.ctx.inspections(include_archived=True):
             self.empty.show_state(
-                "No records match", "Widen the dates or the filters.", "Reset Filters", self.reset_filters
+                self.tr("No records match"),
+                self.tr("Widen the dates or the filters."),
+                self.tr("Reset Filters"),
+                self.reset_filters,
             )
         else:
-            self.empty.show_state("No inspections yet", *self.empty_step("Run boards on Inspection.", "Inspection"))
+            step = self.empty_step(self.tr("Run boards on Inspection."), "Inspection")
+            self.empty.show_state(self.tr("No inspections yet"), *step)
 
     def reset_filters(self):
         self.d_from.setDate(QDate.currentDate().addDays(-7))
@@ -111,17 +137,16 @@ class LogsPage(Page):
             if r["overlay_path"] and Path(r["overlay_path"]).exists():
                 self.view.set_image(load_image(r["overlay_path"]))
 
-    def _confirm(self, what: str) -> bool:
-        return (
-            QMessageBox.question(self, "Confirm export", f"Export {what} for {len(self.rows)} record(s)?")
-            == QMessageBox.Yes
-        )
+    def _confirm(self, question: str) -> bool:
+        return QMessageBox.question(self, self.tr("Confirm export"), question) == QMessageBox.Yes
 
     def export_csv(self):
-        if not self.rows or not self._confirm("CSV"):
+        if not self.rows or not self._confirm(
+            self.tr("Export CSV for {count} record(s)?").format(count=len(self.rows))
+        ):
             return
         f, _ = QFileDialog.getSaveFileName(
-            self, "Export CSV", str(self.ctx.settings.exports_dir / "inspections.csv"), "CSV (*.csv)"
+            self, self.tr("Export CSV"), str(self.ctx.settings.exports_dir / "inspections.csv"), self.tr("CSV (*.csv)")
         )
         if not f:
             return
@@ -145,20 +170,21 @@ class LogsPage(Page):
                 }
             )
         self.ctx.export_csv(f, out)
-        self.shell.status(f"Exported {len(out)} rows to {f}")
+        self.shell.status(self.tr("Exported {count} rows to {file}").format(count=len(out), file=f))
 
     def export_overlays(self):
-        if not self.rows or not self._confirm("overlay images"):
+        question = self.tr("Export overlay images for {count} record(s)?").format(count=len(self.rows))
+        if not self.rows or not self._confirm(question):
             return
-        d = QFileDialog.getExistingDirectory(self, "Export overlays to", str(self.ctx.settings.exports_dir))
+        d = QFileDialog.getExistingDirectory(self, self.tr("Export overlays to"), str(self.ctx.settings.exports_dir))
         if not d:
             return
         n = self.ctx.export_overlays(self.rows, d)
-        self.shell.status(f"Copied {n} overlay image(s) to {d}")
+        self.shell.status(self.tr("Copied {count} overlay image(s) to {folder}").format(count=n, folder=d))
 
     def archive(self):
         n = self.ctx.archive_old()
-        self.shell.status(f"Archived {n} record(s)")
+        self.shell.status(self.tr("Archived {count} record(s)").format(count=n))
         self.refresh()
 
     def on_show(self):
@@ -171,7 +197,7 @@ class LogsPage(Page):
         ):
             cur = combo.currentData()
             combo.clear()
-            combo.addItem("All", None)
+            combo.addItem(self.tr("All"), None)
             for v in values:
                 combo.addItem(v, v)
             i = combo.findData(cur)

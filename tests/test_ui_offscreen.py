@@ -38,4 +38,4 @@ def test_operator_cannot_open_an_admin_page(qtbot, ctx: AppContext) -> None:
     win.set_role("Operator", "operator")
     win.navigate("Settings")
     assert win.stack.currentWidget() is win.pages["Home"]
-    assert "Settings requires role" in win.statusBar().currentMessage()
+    assert win.statusBar().currentMessage() == "Settings needs the Admin role"
