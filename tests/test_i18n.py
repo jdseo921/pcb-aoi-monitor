@@ -1,7 +1,8 @@
 """Every visible string goes through tr() and the translation file is current (REQ-SET-005; S19, S20).
 
-S19 covers the Page base, Home, the frame (header, sidebar, dialogs) and Logs & Export; S20 the other pages and
-the scan for untranslated literals. Korean translations themselves are a later stage: the file lists the strings.
+S19 covers the Page base, Home, the frame (header, sidebar, dialogs), Inspection, Compare and Logs & Export; S20
+the other pages and the scan for untranslated literals. Korean translations themselves are a later stage: the file
+lists the strings.
 """
 
 from __future__ import annotations
@@ -14,11 +15,16 @@ from pathlib import Path
 from PySide6.QtCore import QCoreApplication, QTranslator
 from PySide6.QtWidgets import QPushButton
 
+from aoi.core.inspector import Inspector
+from aoi.core.recipe import Recipe
+from aoi.hal import VIEWS
 from aoi.ui.main_window import MainWindow
+from aoi.ui.pages.base import VIEW_NAMES
+from aoi.ui.pages.compare import CHECK_NAMES, MODE_AI, MODES, RULES, SOURCES
 from tools.update_translations import TS_FILE, qt_tool, update
 
 PLACEHOLDER = re.compile(r"\{(\w+)(?::[^}]*)?\}")
-S19_CONTEXTS = {"Page", "Role", "HomePage", "MainWindow", "LogsPage"}
+S19_CONTEXTS = {"Page", "Role", "View", "HomePage", "MainWindow", "InspectionPage", "ComparePage", "LogsPage"}
 
 
 def _messages(ts: Path) -> dict[tuple[str, str], str]:
@@ -44,14 +50,29 @@ def test_req_set_005_translation_file_is_generated_from_the_sources(tmp_path: Pa
     assert ("Page", "Home") in committed and ("LogsPage", "Filter") in committed and ("Role", "Admin") in committed
 
 
+def test_req_set_005_engine_names_and_camera_views_have_display_strings(tiny_model) -> None:  # type: ignore[no-untyped-def]
+    """The engine names checks, their sources, rules and camera views in English and stores them; the pages show
+    each through a marked display string in the translation file, so a translation never changes a stored name."""
+    assert set(VIEW_NAMES) == set(VIEWS)
+    recipe = Recipe(board_model=tiny_model.board_model)  # Golden board comparison and the AI check, no ROI
+    res = Inspector(recipe, tiny_model.model, tiny_model.reference).inspect(tiny_model.reference)
+    assert {c.name for c in res.checks} == set(CHECK_NAMES)
+    assert {c.source for c in res.checks} <= set(SOURCES) and {c.rule for c in res.checks} <= set(RULES)
+    listed = {source for context, source in _messages(TS_FILE) if context == "ComparePage"}
+    assert set(CHECK_NAMES.values()) | set(SOURCES.values()) | set(RULES.values()) | set(MODES) <= listed
+
+
 def test_req_set_005_a_translation_changes_titles_sections_roles_and_page_strings(qtbot, ctx, tmp_path: Path) -> None:
     """A .qm built from the generated file translates a page title (context Page), a sidebar section (MainWindow),
-    a role name (Role) and a page's own string (LogsPage); the English titles stay the navigation keys."""
+    a role name (Role), a page's own string (LogsPage), a Compare mode and a camera view; the English titles stay the
+    navigation keys, the mode is still chosen by index and the view combo keeps the English key as its data."""
     wanted = {
         ("Page", "Home"): "홈",
         ("MainWindow", "DATA"): "데이터",
         ("Role", "Admin"): "관리자",
         ("LogsPage", "Filter"): "필터",
+        ("ComparePage", "AI score heatmap"): "AI 점수 히트맵",
+        ("View", "Top"): "상면",
     }
     tree = ET.parse(TS_FILE)
     for context in tree.getroot().findall("context"):
@@ -75,5 +96,9 @@ def test_req_set_005_a_translation_changes_titles_sections_roles_and_page_string
         assert win.user_label.text() == "admin  ·  관리자"
         assert win.pages["Logs & Export"].findChild(QPushButton, "primary").text() == "필터"
         assert win.navigate("Logs & Export") and win.stack.currentWidget() is win.pages["Logs & Export"]
+        mode = win.pages["Compare"].mode
+        assert mode.itemText(MODE_AI) == "AI 점수 히트맵" and mode.count() == len(MODES)
+        views = win.pages["Inspection"].view_combo
+        assert views.itemText(0) == "상면" and views.itemData(0) == "Top" == VIEWS[0]
     finally:
         QCoreApplication.removeTranslator(translator)
