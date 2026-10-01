@@ -39,3 +39,7 @@ trace-matrix.csv
 
 # Written by tests/perf/test_timing.py (S08)
 perf.json
+
+# Written by tests/screens and tools/render_screens.py (S21): the pages of a failed comparison, review renders
+tests/screens/actual/
+screens-review/
