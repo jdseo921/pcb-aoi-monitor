@@ -8,7 +8,6 @@ from PySide6.QtCore import QDate, Qt
 from PySide6.QtWidgets import QCheckBox, QComboBox, QDateEdit, QFileDialog, QHBoxLayout, QLabel, QMessageBox, QSplitter
 
 from ...core.imaging import load_image
-from ...core.services import export_csv
 from ...times import to_local
 from ..theme import VERDICT_COLORS
 from ..widgets.image_view import ImageView
@@ -127,7 +126,7 @@ class LogsPage(Page):
                     "overlay": r["overlay_path"],
                 }
             )
-        export_csv(f, out)
+        self.ctx.export_csv(f, out)
         self.shell.status(f"Exported {len(out)} rows to {f}")
 
     def export_overlays(self):

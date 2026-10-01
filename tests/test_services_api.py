@@ -36,6 +36,7 @@ def test_req_usr_001_appcontext_reads_and_writes_what_the_screens_need(trained_c
     assert ctx.inspections(board_model="OTHER") == [] and ctx.archive_old() == 0
     assert ctx.archive_old(-1) == 1  # a cutoff in the future, so the record saved this second counts
     assert ctx.inspections() == [] and len(ctx.inspections(include_archived=True)) == 1
+    ctx.set_user("admin", "Admin")  # users are an Admin's to change
     ctx.add_user("kim", "Engineer")
     assert ("kim", "Engineer") in [(u["name"], u["role"]) for u in ctx.users()]
     assert ctx.recipe_history("TINY") == [] and ctx.save_recipe(ctx.recipe("TINY")[1]) == 1

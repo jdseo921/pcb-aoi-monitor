@@ -13,8 +13,8 @@ from aoi.core.services import AppContext
 def test_req_log_004_audit_is_append_only(ctx: AppContext) -> None:
     uid = ctx.audit("test.change", "recipe", "11111111-1111-4111-8111-111111111111", {"a": 1}, {"a": 2}, "why")
     (row,) = ctx.audit_entries(object_type="recipe")
-    assert row["uuid"] == uid and row["at_utc"].endswith("+00:00") and row["role"] == "Operator"
-    assert row["user_uuid"] == ctx.db.user_uuid("operator") and (row["before"], row["after"]) == ({"a": 1}, {"a": 2})
+    assert row["uuid"] == uid and row["at_utc"].endswith("+00:00") and row["role"] == "Engineer"
+    assert row["user_uuid"] == ctx.db.user_uuid("engineer") and (row["before"], row["after"]) == ({"a": 1}, {"a": 2})
     with pytest.raises(sqlite3.DatabaseError, match="never changed"):
         ctx.db.execute("UPDATE audit SET reason='edited' WHERE uuid=?", (uid,))
     with pytest.raises(sqlite3.DatabaseError, match="never deleted"):
@@ -32,7 +32,7 @@ def test_req_log_004_recipe_save_writes_before_and_after(ctx: AppContext) -> Non
     assert [e["before"] for e in entries] == [first.to_dict(), None]  # newest first
     assert entries[0]["after"] == second.to_dict() and entries[0]["reason"] == "looser SSIM for the new lighting"
     assert entries[0]["object_uuid"] == ctx.db.query("SELECT uuid FROM recipes WHERE revision=2")[0]["uuid"]
-    assert entries[0]["user_uuid"] == ctx.db.user_uuid("operator")
+    assert entries[0]["user_uuid"] == ctx.db.user_uuid("engineer")
 
 
 def test_req_log_004_audit_entries_filter(ctx: AppContext) -> None:

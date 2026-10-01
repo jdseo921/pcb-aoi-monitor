@@ -13,6 +13,7 @@ sys.path.insert(0, str(ROOT))
 from aoi.config import Settings  # noqa: E402
 from aoi.core.imaging import list_images  # noqa: E402
 from aoi.core.services import AppContext  # noqa: E402
+from tests.conftest import engineer  # noqa: E402
 
 
 def test_train_and_detect(tmp_path):
@@ -30,7 +31,7 @@ def test_train_and_detect(tmp_path):
         ],
         check=True,
     )
-    ctx = AppContext(Settings(workspace=str(tmp_path / "ws")))
+    ctx = engineer(AppContext(Settings(workspace=str(tmp_path / "ws"))))
     ctx.import_samples("TEST", [str(p) for p in list_images(data / "train" / "ok")], "OK")
     ctx.import_samples("TEST", [str(p) for p in list_images(data / "train" / "ng")], "NG")
     meta = ctx.train("TEST", epochs=15, image_size=128)

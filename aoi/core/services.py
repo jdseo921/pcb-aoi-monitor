@@ -7,13 +7,14 @@ and later a Stage 3 robot cycle or Stage 4 MES hook).
 from __future__ import annotations
 
 import csv
+import functools
 import io
 import json
 import uuid
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Concatenate, ParamSpec, TypeVar, cast
 
 import numpy as np
 
@@ -62,6 +63,32 @@ class BoardStatus:
     ng: int
 
 
+ROLES = ("Operator", "Engineer", "Admin")  # lowest to highest (GUI §8, docs/ARCHITECTURE.md §5)
+REQUIRED_ROLE: dict[str, str] = {}  # AppContext write -> the lowest role allowed to call it
+P = ParamSpec("P")
+R = TypeVar("R")
+
+
+def requires(
+    role: str, what: str
+) -> Callable[[Callable[Concatenate[AppContext, P], R]], Callable[Concatenate[AppContext, P], R]]:
+    """The one role check for every write (ADR 0002, decision 5): refuse with AOI-USR-001 when the current role is
+    below `role`. `what` names the action in the message: "Saving a recipe needs the Engineer or Admin role."."""
+
+    def wrap(fn: Callable[Concatenate[AppContext, P], R]) -> Callable[Concatenate[AppContext, P], R]:
+        REQUIRED_ROLE[fn.__name__] = role
+
+        @functools.wraps(fn)
+        def checked(self: AppContext, *args: P.args, **kwargs: P.kwargs) -> R:
+            if self.role not in ROLES or ROLES.index(self.role) < ROLES.index(role):
+                raise AoiError("AOI-USR-001", what=what, roles=" or ".join(ROLES[ROLES.index(role) :]))
+            return fn(self, *args, **kwargs)
+
+        return cast("Callable[Concatenate[AppContext, P], R]", checked)
+
+    return wrap
+
+
 class AppContext:
     def __init__(self, settings: Settings | None = None):
         self.settings = settings or Settings.load()
@@ -71,8 +98,9 @@ class AppContext:
         swept = atomic.sweep_temp_files(self.settings.root)  # a crash mid-write leaves only a temp file; drop it
         self.device = resolve_device(self.settings.device)
         self.log.info("app.start", extra={"workspace": str(self.settings.root), "device": self.device, "swept": swept})
-        self.user = "operator"
-        self.role = "Operator"
+        self.user, self.role, self.user_uuid = "operator", "Operator", self.db.user_uuid("operator")
+        archived = self.db.archive_old(self.settings.log_retention_days)  # retention is a system action, not a user's
+        self.log.info("retention.archived", extra={"days": self.settings.log_retention_days, "archived": archived})
         self._model_cache: dict[str, tuple[str, anomaly.AnomalyModel]] = {}
 
     # --- dataset -------------------------------------------------------------
@@ -83,6 +111,12 @@ class AppContext:
         self.db.close()
         logging_setup.close(self.log)
 
+    def set_user(self, name: str, role: str) -> None:
+        """Make `name` with `role` the current user; the UUID comes from the users table. G1 keeps v0.1's user picker
+        (ADR 0002), so this records who was picked, not who proved it."""
+        self.user, self.role, self.user_uuid = name, role, self.db.user_uuid(name)
+
+    @requires("Engineer", "Importing samples")
     def import_samples(
         self, board_model: str, paths: list[str], label: str, defect_type: str | None = None, side: str = "Top"
     ) -> int:
@@ -100,9 +134,12 @@ class AppContext:
             oks = self.db.samples(board_model, "OK")
             if oks:
                 self.db.set_reference(board_model, oks[0]["path"])
+        after = {"label": label, "defect_type": defect_type, "side": side, "added": n}
+        self.audit("sample.import", "board_model", board_model, None, after)
         return n
 
     # --- training ------------------------------------------------------------
+    @requires("Engineer", "Training a model")
     def train(
         self,
         board_model: str,
@@ -130,6 +167,7 @@ class AppContext:
             device=self.device,
         )
         model = anomaly.train(ok, ng, cfg, progress, should_stop)
+        previous = self.db.active_model(board_model)
         version = self.db.next_model_version(board_model)
         model.meta.update(board_model=board_model, version=version, created_at=now_utc())
         out = self.settings.models_dir / board_model
@@ -141,8 +179,15 @@ class AppContext:
         self.db.set_reference(board_model, str(golden_path))
         model.meta["golden_image"] = to_stored(golden_path, self.settings.root)
         summary = {k: v for k, v in model.meta.items() if k not in ("loss_history", "err_mean", "err_std")}
-        self.db.register_model(board_model, version, str(path), summary, activate=True)
+        model_id = self.db.register_model(board_model, version, str(path), summary, activate=True)
         self._model_cache.pop(board_model, None)
+        self.audit(
+            "model.train",
+            "model",
+            self.db.model(model_id)["uuid"],
+            {"active_version": previous["version"] if previous else None},
+            {"version": version, "metrics": summary},
+        )
         self.log.info("training.finished", extra={"board_model": board_model, "model_version": version})
         return model.meta
 
@@ -164,6 +209,7 @@ class AppContext:
             return latest[0], Recipe.from_dict(latest[1])
         return 0, Recipe(board_model=board_model)
 
+    @requires("Engineer", "Saving a recipe")
     def save_recipe(self, recipe: Recipe, reason: str | None = None) -> int:
         """Store the next recipe revision and audit it with the revision before (a recipe decides verdicts)."""
         latest = self.db.latest_recipe(recipe.board_model)
@@ -183,9 +229,7 @@ class AppContext:
     ) -> str:
         """Append an audit entry as the current user: who did `action` to which object, with the object before and
         after, and why. Returns the entry's UUID. Entries can never be changed or removed (migration 0003)."""
-        return self.db.add_audit(
-            self.db.user_uuid(self.user), self.role, action, object_type, object_uuid, before, after, reason
-        )
+        return self.db.add_audit(self.user_uuid, self.role, action, object_type, object_uuid, before, after, reason)
 
     def audit_entries(
         self,
@@ -294,6 +338,7 @@ class AppContext:
         return report
 
     # --- batch test (AI Model Test screen) -----------------------------------
+    @requires("Engineer", "Running an AI model test")
     def batch_test(
         self, board_model: str, folder: str, progress: Callable[[int, int], None] | None = None
     ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
@@ -320,7 +365,10 @@ class AppContext:
             if progress:
                 progress(i, len(files))
         metrics = classification_metrics(rows)
-        self.db.add_test_run(board_model, getattr(insp, "model_version", None) or "-", folder, metrics, rows)
+        model_version = getattr(insp, "model_version", None) or "-"
+        self.db.add_test_run(board_model, model_version, folder, metrics, rows)
+        after = {"folder": folder, "model_version": model_version, **metrics}
+        self.audit("test.run", "board_model", board_model, None, after)
         return metrics, rows
 
     # --- what the screens read (REQ-USR-001: pages call only AppContext, never the database) ---
@@ -392,40 +440,74 @@ class AppContext:
             ng=ng,
         )
 
-    # --- what the screens change (S16 adds the role check and the audit entry to each) ---
+    # --- what the screens change: each checks the role and appends an audit entry (REQ-USR-001, REQ-LOG-004) ---
+    @requires("Engineer", "Creating a board model")
     def ensure_board_model(self, name: str) -> None:
         """Create a board model unless it exists."""
+        if name in self.db.board_models():
+            return
         self.db.ensure_board_model(name)
+        self.audit("board_model.create", "board_model", name, None, {"name": name})
 
+    @requires("Engineer", "Changing the reference image")
     def set_reference(self, board_model: str, sample_id: int) -> None:
         """Make a stored sample the reference image; the next training run learns the golden template from it."""
-        self.db.set_reference(board_model, self.sample_path(sample_id))
+        before, path = self.db.reference(board_model), self.sample_path(sample_id)
+        self.db.set_reference(board_model, path)
+        root = self.settings.root
+        old = {"reference": to_stored(Path(before), root) if before else None}
+        self.audit("board_model.reference", "board_model", board_model, old, {"reference": to_stored(Path(path), root)})
 
+    @requires("Engineer", "Relabelling a sample")
     def update_sample(self, sample_id: int, label: str, defect_type: str | None) -> None:
         """Relabel a sample OK or NG and set its defect type."""
+        before = self.db.sample(sample_id)
         self.db.update_sample(sample_id, label, defect_type)
+        old = {"label": before["label"], "defect_type": before["defect_type"]}
+        self.audit("sample.update", "sample", before["uuid"], old, {"label": label, "defect_type": defect_type})
 
+    @requires("Engineer", "Removing a sample")
     def delete_sample(self, sample_id: int) -> None:
         """Remove a sample's record; its image file stays in the workspace."""
+        before = self.db.sample(sample_id)
         self.db.delete_sample(sample_id)
+        old = {"label": before["label"], "path": to_stored(Path(before["path"]), self.settings.root)}
+        self.audit("sample.delete", "sample", before["uuid"], old, None)
 
+    @requires("Engineer", "Activating a model version")
     def activate_model(self, model_id: int) -> None:
-        """Make a model version the one inspections use."""
+        """Make a model version the one inspections use (an older version: a rollback)."""
+        target = self.db.model(model_id)
+        previous = self.db.active_model(target["board_model"])
         self.db.activate_model(model_id)
+        old = {"active_version": previous["version"] if previous else None}
+        self.audit("model.activate", "model", target["uuid"], old, {"active_version": target["version"]})
 
+    @requires("Admin", "Changing users")
     def add_user(self, name: str, role: str) -> None:
         """Add a user, or change the role of an existing one."""
+        before = next((u for u in self.db.users() if u["name"] == name), None)
         self.db.add_user(name, role)
+        old = {"role": before["role"]} if before else None
+        self.audit("user.change", "user", self.db.user_uuid(name), old, {"name": name, "role": role})
 
+    @requires("Engineer", "Archiving records")
     def archive_old(self, days: int | None = None) -> int:
         """Archive inspections older than `days` (default: the retention setting); returns how many were archived."""
-        return self.db.archive_old(self.settings.log_retention_days if days is None else days)
+        days = self.settings.log_retention_days if days is None else days
+        n = self.db.archive_old(days)
+        self.audit("inspection.archive", "inspections", None, None, {"days": days, "archived": n})
+        return n
 
+    @requires("Engineer", "Exporting a model")
     def export_model(self, model_id: int, dest: str | Path) -> Path:
         """Copy a model version's file to `dest`, whole or not at all."""
-        atomic.copy_file(self.model(model_id)["path"], dest)
+        model = self.model(model_id)
+        atomic.copy_file(model["path"], dest)
+        self.audit("export.model", "model", model["uuid"], None, {"version": model["version"], "dest": str(dest)})
         return Path(dest)
 
+    @requires("Engineer", "Exporting overlay images")
     def export_overlays(self, inspections: list[dict[str, Any]], folder: str | Path) -> int:
         """Copy the overlay images of `inspections` (records from `inspections()`) into `folder`; returns how many."""
         n = 0
@@ -433,7 +515,16 @@ class AppContext:
             if r.get("overlay_path") and Path(r["overlay_path"]).exists():
                 atomic.copy_file(r["overlay_path"], Path(folder) / Path(r["overlay_path"]).name)
                 n += 1
+        after = {"folder": str(folder), "records": len(inspections), "copied": n}
+        self.audit("export.overlays", "inspections", None, None, after)
         return n
+
+    @requires("Engineer", "Exporting CSV")
+    def export_csv(self, path: str | Path, rows: list[dict[str, Any]], what: str = "inspections") -> int:
+        """Write `rows` as CSV to `path`, whole or not at all, and audit the export; returns the row count."""
+        export_csv(path, rows)
+        self.audit("export.csv", what, None, None, {"path": str(path), "rows": len(rows)})
+        return len(rows)
 
 
 def classification_metrics(rows: list[dict[str, Any]]) -> dict[str, Any]:

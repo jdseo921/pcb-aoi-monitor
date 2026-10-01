@@ -40,10 +40,17 @@ def workspace(tmp_path: Path) -> Settings:
     return Settings(workspace=str(tmp_path / "workspace"), device="cpu")
 
 
+def engineer(ctx: AppContext) -> AppContext:
+    """Sign the context in as the seeded Engineer, so a test writes through it as an Engineer would; the role check
+    itself is tested in tests/test_roles_and_audit.py."""
+    ctx.set_user("engineer", "Engineer")
+    return ctx
+
+
 @pytest.fixture
 def ctx(workspace: Settings) -> AppContext:
     """An AppContext on the temporary workspace: the layer the screens call, with an empty database."""
-    return AppContext(workspace)
+    return engineer(AppContext(workspace))
 
 
 @pytest.fixture(scope="session")
@@ -73,7 +80,7 @@ class TrainedModel:
 @pytest.fixture(scope="session")
 def tiny_model(tmp_path_factory: pytest.TempPathFactory, synthetic_dataset: Path) -> TrainedModel:
     settings = Settings(workspace=str(tmp_path_factory.mktemp("model_workspace")), device="cpu")
-    ctx = AppContext(settings)
+    ctx = engineer(AppContext(settings))
     board_model = "TINY"
     ctx.import_samples(board_model, [str(p) for p in list_images(synthetic_dataset / "train" / "ok")], "OK")
     ctx.import_samples(board_model, [str(p) for p in list_images(synthetic_dataset / "train" / "ng")], "NG")
@@ -91,7 +98,7 @@ def trained_ctx(tmp_path: Path, tiny_model: TrainedModel) -> AppContext:
     no inspection has run yet. Tests that inspect, save recipes or log results use this one."""
     ws = tmp_path / "trained_workspace"
     shutil.copytree(tiny_model.ctx.settings.root, ws)
-    return AppContext(Settings(workspace=str(ws), device="cpu"))
+    return engineer(AppContext(Settings(workspace=str(ws), device="cpu")))
 
 
 @pytest.fixture(autouse=True)
