@@ -30,3 +30,9 @@ Thumbs.db
 .coverage
 .coverage.*
 coverage.xml
+
+# Written by pytest --junitxml and tools/trace_matrix.py (S07)
+test-results.xml
+trace-matrix/
+trace-matrix.md
+trace-matrix.csv
