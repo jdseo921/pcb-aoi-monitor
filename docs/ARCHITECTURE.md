@@ -163,6 +163,24 @@ threshold) or a non-minor defect region exists; else **OK**. Colours follow GUI 
 | Compare → Save to Recipe | | ✓ | ✓ |
 | Settings (users, workspace, device, hardware) | | | ✓ |
 
+Since S16 the check lives in the service layer (ADR 0002, decision 5): every `AppContext` write is decorated with
+`@requires(role, what)` in `aoi/core/services.py` and raises `AOI-USR-001` when the current user's role is lower, so
+hiding a page or disabling a button is only a convenience. Every write also appends an audit entry (REQ-LOG-004):
+
+| Write | Role | Audit action and object (before → after) |
+|---|---|---|
+| `ensure_board_model`, `set_reference`, `import_samples` | Engineer | `board_model.create`, `board_model.reference` (reference path), `sample.import`; object = board model name |
+| `update_sample`, `delete_sample` | Engineer | `sample.update` (label, defect type), `sample.delete`; object = sample UUID |
+| `train`, `activate_model` | Engineer | `model.train`, `model.activate` (active version; an older one is a rollback); object = model UUID |
+| `save_recipe` | Engineer | `recipe.save` (recipe body); object = recipe UUID |
+| `batch_test` | Engineer | `test.run` (folder, model version, metrics); object = board model name |
+| `export_model`, `export_overlays`, `export_csv` | Engineer | `export.model`, `export.overlays`, `export.csv` (destination, counts) |
+| `archive_old` | Engineer | `inspection.archive` (days, count); the retention run at start-up is a system action: logged, not audited |
+| `add_user` | Admin | `user.change` (role); object = user UUID |
+
+Reads, inspections (`inspect_file`, `log_result`), alarms and error reports need no role: an Operator inspects boards.
+Until sign-in ships (REQ-USR-002, 1.0) the user is the one picked in the header, so an entry names who was picked.
+
 User switching is a local picker for the PoC; Stage 4 replaces it with MES authentication (`MesClient.authenticate`).
 
 ### Pages

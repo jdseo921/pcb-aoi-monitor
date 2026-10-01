@@ -21,6 +21,8 @@ from PySide6.QtWidgets import (
 
 from ..config import APP_NAME, APP_VERSION
 from ..core.services import AppContext
+from ..errors import AoiError
+from .errors import show_error
 from .pages.base import Page, button
 from .pages.compare import ComparePage
 from .pages.inspection import InspectionPage
@@ -162,7 +164,6 @@ class MainWindow(QMainWindow):
         self.set_role("Admin" if first_run else "Operator", "admin" if first_run else "operator")
         if not self.navigate(ctx.settings.last_page):  # reopen where the last session was (REQ-LOG-005)
             self.navigate("Home")
-        ctx.archive_old()
 
     # --- header -------------------------------------------------------------------
     def _header(self) -> QWidget:
@@ -199,7 +200,10 @@ class MainWindow(QMainWindow):
     def new_board_model(self):
         name, ok = QInputDialog.getText(self, "New board model", "Board model name (e.g. TBOX-A1 Rev2)")
         if ok and name.strip():
-            self.ctx.ensure_board_model(name.strip())
+            try:
+                self.ctx.ensure_board_model(name.strip())
+            except AoiError as e:  # the service layer refuses an Operator; the dialog names the role it needs
+                return show_error(self, self.ctx.report_error(e, "Board model"))
             self._reload_board_models(name.strip())
 
     def _on_board_model(self, name: str):
@@ -220,7 +224,7 @@ class MainWindow(QMainWindow):
             self.set_role(u["role"], u["name"])
 
     def set_role(self, role: str, user: str):
-        self.ctx.role, self.ctx.user = role, user
+        self.ctx.set_user(user, role)
         self.user_label.setText(f"{user}  ·  {role}")
         for title, it in self._items.items():
             allowed = role in self.pages[title].roles
