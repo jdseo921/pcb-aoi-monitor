@@ -109,9 +109,13 @@ class Page(QWidget):
 
 
 def button(text: str, kind: str = "", slot=None) -> QPushButton:
+    """A theme button. `kind` is "primary" (the one blue button on a page), "start", or the red "stop" and
+    "danger" (removes data): red buttons sit last in their row and are never the default (REQ-SET-018)."""
     b = QPushButton(text.replace("&", "&&"))
     if kind:
         b.setObjectName(kind)
+    if kind in ("stop", "danger"):
+        b.setAutoDefault(False)  # Enter in a dialog never fires a red button
     if slot:
         b.clicked.connect(slot)
     return b
