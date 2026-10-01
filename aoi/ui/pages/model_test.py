@@ -5,8 +5,9 @@ from __future__ import annotations
 import html
 from datetime import datetime
 from pathlib import Path
+from typing import TYPE_CHECKING, Any
 
-from PySide6.QtCore import QT_TRANSLATE_NOOP, QMarginsF, Qt
+from PySide6.QtCore import QMarginsF, Qt
 from PySide6.QtGui import QPageLayout, QPageSize, QPdfWriter, QTextDocument
 from PySide6.QtWidgets import (
     QFileDialog,
@@ -21,24 +22,29 @@ from PySide6.QtWidgets import (
 )
 
 from ... import defects as taxonomy
+from ...core.inspector import InspectionResult
+from ...core.services import AppContext
 from .. import theme
 from ..widgets.busy import BusyOverlay
 from ..widgets.empty_state import EmptyState
 from ..widgets.image_view import ImageView
 from ..workers import Worker, start
-from .base import Page, button, fill_table, make_table
+from .base import QT_TRANSLATE_NOOP, Page, button, cell_item, fill_table, make_table
+
+if TYPE_CHECKING:
+    from ..main_window import MainWindow
 
 
 class MetricTile(QLabel):
-    def __init__(self, name: str):
+    def __init__(self, name: str) -> None:
         super().__init__()
         self.name = name
-        self.setAlignment(Qt.AlignCenter)
+        self.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.setObjectName("tile")
         self.setMinimumHeight(theme.BANNER_H)
         self.set(None)
 
-    def set(self, v: float | None):
+    def set(self, v: float | None) -> None:
         val = "—" if v is None else f"{v * 100:.1f}%"
         self.setText(
             f"<div style='font-size:{theme.FONT_PT}pt;color:{theme.TEXT_MUTED}'>{self.name}</div>"
@@ -51,11 +57,11 @@ class ModelTestPage(Page):
     subtitle = QT_TRANSLATE_NOOP("Page", "Labels come from the sub-folder names: ok/ and ng/")
     roles = ("Engineer", "Admin")
 
-    def __init__(self, ctx, shell):
+    def __init__(self, ctx: AppContext, shell: MainWindow) -> None:
         super().__init__(ctx, shell)
         self.folder: str | None = None
-        self.rows: list[dict] = []
-        self.metrics: dict = {}
+        self.rows: list[dict[str, Any]] = []
+        self.metrics: dict[str, Any] = {}
 
         bar = QHBoxLayout()
         bar.addWidget(button(self.tr("Select Test Folder…"), slot=self.pick))
@@ -88,7 +94,7 @@ class ModelTestPage(Page):
         self.bar.setVisible(False)
         self.root.addWidget(self.bar)
 
-        split = QSplitter(Qt.Horizontal)
+        split = QSplitter(Qt.Orientation.Horizontal)
         self.headers = [
             self.tr("Image"),
             self.tr("Label"),
@@ -113,18 +119,22 @@ class ModelTestPage(Page):
         split.setSizes([800, 800])
         self.root.addWidget(split, 1)
 
-    def pick(self):
+    def pick(self) -> None:
         d = QFileDialog.getExistingDirectory(self, self.tr("Validation folder (with ok/ and ng/ sub-folders)"))
         if d:
             self.folder = d
             self.folder_label.setText(d)
 
-    def run(self):
-        if not self.need_board_model():
+    def run(self) -> None:
+        if (bm := self.checked_board_model()) is None:
             return
-        if not self.folder:
-            return self.pick() or (self.folder and self.run())
-        if not self.ctx.active_model(self.board_model):
+        folder = self.folder
+        if not folder:
+            self.pick()
+            folder = self.folder
+            if not folder:
+                return
+        if not self.ctx.active_model(bm):
             QMessageBox.information(
                 self,
                 self.tr("No AI model"),
@@ -133,22 +143,24 @@ class ModelTestPage(Page):
         self.btn_run.setEnabled(False)
         self.bar.setVisible(True)
         self.bar.setValue(0)
-        w = Worker(
-            self.ctx.batch_test, self.board_model, self.folder, progress=lambda i, n: w.signals.progress.emit((i, n))
-        )
-        w.signals.progress.connect(lambda a: (self.bar.setMaximum(a[1]), self.bar.setValue(a[0])))
+        w: Worker = Worker(self.ctx.batch_test, bm, folder, progress=lambda i, n: w.signals.progress.emit((i, n)))
+
+        def on_progress(a: tuple[int, int]) -> None:
+            self.bar.setMaximum(a[1])
+            self.bar.setValue(a[0])
+
+        def finished() -> None:
+            self.btn_run.setEnabled(True)
+            self.btn_run.setText(self.tr("Run Test Again"))
+            self.bar.setVisible(False)
+
+        w.signals.progress.connect(on_progress)
         w.signals.result.connect(self._show)
         w.signals.error.connect(self.error)
-        w.signals.finished.connect(
-            lambda: (
-                self.btn_run.setEnabled(True),
-                self.btn_run.setText(self.tr("Run Test Again")),
-                self.bar.setVisible(False),
-            )
-        )
+        w.signals.finished.connect(finished)
         start(w, self.ctx.jobs)
 
-    def _show(self, out):
+    def _show(self, out: tuple[dict[str, Any], list[dict[str, Any]]]) -> None:
         self.metrics, self.rows = out
         self.empty.hide()
         m = self.metrics
@@ -164,21 +176,20 @@ class ModelTestPage(Page):
             [Path(r["image"]).name, r["gt"], theme.verdict_label(r["ai_result"]), r["score"], r["pass_fail"]]
             for r in self.rows
         ]
-        fill_table(self.table, rows, [theme.NG_COLOR if r["pass_fail"] == "FAIL" else None for r in self.rows])
-        for i, r in enumerate(self.rows):
-            self.table.item(i, 0).setToolTip(r["image"])
+        colors = [theme.NG_COLOR if r["pass_fail"] == "FAIL" else None for r in self.rows]
+        fill_table(self.table, rows, colors, [r["image"] for r in self.rows])
 
-    def _preview(self):
+    def _preview(self) -> None:
         rows = self.table.selectionModel().selectedRows()
-        if not rows:
-            return
-        path = self.table.item(rows[0].row(), 0).toolTip()
+        if not rows or (bm := self.board_model) is None:
+            return  # the rows come from a run, which needed a board model (#110: a switch after the run)
+        path = cell_item(self.table, rows[0].row(), 0).toolTip()
         self.run_in_background(
-            self.ctx.inspect_file, self.board_model, path, save=False,
+            self.ctx.inspect_file, bm, path, save=False,
             on_result=lambda res: self._show_preview(path, res), busy=self.busy,
         )  # fmt: skip
 
-    def _show_preview(self, path: str, res):
+    def _show_preview(self, path: str, res: InspectionResult) -> None:
         self.preview_verdict.setText(theme.verdict_label(res.verdict))
         self.preview_verdict.setStyleSheet(theme.verdict_style(res.verdict, big=False))
         self.view.set_image(res.image)
@@ -187,7 +198,7 @@ class ModelTestPage(Page):
             self.view.add_box(d.x, d.y, d.w, d.h, theme.SEVERITY_COLORS.get(sev, theme.NG_COLOR), f"{d.no} {d.type}")
         self.shell.last_inspected = (path, res)
 
-    def on_show(self):
+    def on_show(self) -> None:
         bm = self.board_model
         if self.rows:
             self.empty.hide()
@@ -201,7 +212,7 @@ class ModelTestPage(Page):
             heading = self.tr("No validation run for {board_model} yet").format(board_model=bm)
             self.empty.show_state(heading, what, self.tr("Select Test Folder…"), self.pick)
 
-    def export_csv(self):
+    def export_csv(self) -> None:
         if not self.rows:
             return
         f, _ = QFileDialog.getSaveFileName(
@@ -210,7 +221,7 @@ class ModelTestPage(Page):
         if f:
             self.ctx.export_csv(f, self.rows, "test results")
 
-    def export_report(self):
+    def export_report(self) -> None:
         if not self.rows:
             return
         f, _ = QFileDialog.getSaveFileName(
@@ -224,20 +235,24 @@ class ModelTestPage(Page):
         doc = QTextDocument()
         doc.setHtml(self._report_html())
         w = QPdfWriter(f)
-        w.setPageLayout(QPageLayout(QPageSize(QPageSize.A4), QPageLayout.Portrait, QMarginsF(15, 15, 15, 15)))
+        page = QPageLayout(
+            QPageSize(QPageSize.PageSizeId.A4), QPageLayout.Orientation.Portrait, QMarginsF(15, 15, 15, 15)
+        )
+        w.setPageLayout(page)
         doc.print_(w)
         self.shell.status(self.tr("Report saved: {file}").format(file=f))
 
     def _report_html(self) -> str:
         """The validation report: every sentence through tr(), the markup and the numbers from the code."""
         m = self.metrics
-        active = self.ctx.active_model(self.board_model)
+        bm = self.board_model or ""  # the rows come from a run, which needs a board model
+        active = self.ctx.active_model(bm) if bm else None
         title = self.tr("AI Model Validation Report")
         head = self.tr(
             "Board model: <b>{board_model}</b> · AI model: {version} · Date: {date}<br>Validation folder: {folder}"
         )
         head = head.format(
-            board_model=html.escape(self.board_model),
+            board_model=html.escape(bm),
             version=active["version"] if active else self.tr("none"),
             date=f"{datetime.now():%Y-%m-%d %H:%M}",
             folder=html.escape(self.folder or ""),

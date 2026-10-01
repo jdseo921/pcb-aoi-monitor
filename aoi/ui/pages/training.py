@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from pathlib import Path
+from typing import TYPE_CHECKING, Any
 
-from PySide6.QtCore import QT_TRANSLATE_NOOP, Qt
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QComboBox,
     QDialog,
@@ -27,6 +29,7 @@ from PySide6.QtWidgets import (
 
 from ... import defects as taxonomy
 from ...core.imaging import IMAGE_EXTS, list_images, load_image
+from ...core.services import AppContext
 from ...errors import AoiError
 from ...hal import VIEWS
 from ...times import to_local
@@ -35,13 +38,16 @@ from ..widgets.busy import BusyOverlay
 from ..widgets.empty_state import EmptyState
 from ..widgets.image_view import ImageView
 from ..workers import Worker, start
-from .base import Page, button, fill_table, make_table, view_text
+from .base import QT_TRANSLATE_NOOP, Page, button, cell_item, cell_text, fill_table, make_table, view_text
+
+if TYPE_CHECKING:
+    from ..main_window import MainWindow
 
 
 class NgDialog(QDialog):
     """Ask which defect type an uploaded NG batch shows (taxonomy from the classification table)."""
 
-    def __init__(self, parent=None):
+    def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.setWindowTitle(self.tr("Label NG images"))
         f = QFormLayout(self)
@@ -58,12 +64,12 @@ class NgDialog(QDialog):
         f.addRow(self.tr("Category"), self.cat)
         f.addRow(self.tr("Defect type"), self.type)
         f.addRow(self.tr("View"), self.side)
-        bb = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        bb = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
         bb.accepted.connect(self.accept)
         bb.rejected.connect(self.reject)
         f.addRow(bb)
 
-    def _fill(self, _index: int = 0):
+    def _fill(self, _index: int = 0) -> None:
         cat = self.cat.currentData()
         self.type.clear()
         self.type.addItem(self.tr("Unknown / mixed"))
@@ -71,7 +77,8 @@ class NgDialog(QDialog):
             if cat is None or d.category == cat:
                 self.type.addItem(self.tr("{type}  [{severity}]").format(type=d.name, severity=d.severity), d.name)
 
-    def value(self):
+    def value(self) -> tuple[str | None, str]:
+        """The defect type (None for "Unknown / mixed") and the camera view, as the services store them."""
         return self.type.currentData(), self.side.currentData()
 
 
@@ -82,11 +89,11 @@ class TrainingPage(Page):
     )
     roles = ("Engineer", "Admin")
 
-    def __init__(self, ctx, shell):
+    def __init__(self, ctx: AppContext, shell: MainWindow) -> None:
         super().__init__(ctx, shell)
         self.worker: Worker | None = None
 
-        split = QSplitter(Qt.Horizontal)
+        split = QSplitter(Qt.Orientation.Horizontal)
 
         # Left: dataset ------------------------------------------------------------
         left = QWidget()
@@ -177,25 +184,25 @@ class TrainingPage(Page):
         )
         return files
 
-    def add_ok(self):
-        if self.need_board_model() and (files := self._pick()):
+    def add_ok(self) -> None:
+        if (bm := self.checked_board_model()) and (files := self._pick()):
             names = [view_text(v) for v in VIEWS]
             side, ok = QInputDialog.getItem(
                 self, self.tr("View"), self.tr("Camera view of these images"), names, 0, False
             )
             if ok:
-                self.ctx.import_samples(self.board_model, files, "OK", side=VIEWS[names.index(side)])
+                self.ctx.import_samples(bm, files, "OK", side=VIEWS[names.index(side)])
                 self.refresh()
 
-    def add_ng(self):
-        if self.need_board_model() and (files := self._pick()):
+    def add_ng(self) -> None:
+        if (bm := self.checked_board_model()) and (files := self._pick()):
             dlg = NgDialog(self)
             if dlg.exec():
                 dtype, side = dlg.value()
-                self.ctx.import_samples(self.board_model, files, "NG", dtype, side)
+                self.ctx.import_samples(bm, files, "NG", dtype, side)
                 self.refresh()
 
-    def import_folder(self):
+    def import_folder(self) -> None:
         """Folder with ok/ and ng/ sub-folders (ng/<defect type>/ also accepted)."""
         if not self.need_board_model():
             return
@@ -205,12 +212,16 @@ class TrainingPage(Page):
 
     def import_from(self, folder: str) -> None:
         """Import on a pool thread (REQ-SET-021): the table shows the result; Cancel keeps what was imported so far."""
+        if (bm := self.checked_board_model()) is None:
+            return
         self.run_in_background(
-            self._import, self.board_model, folder, with_progress=True,
+            self._import, bm, folder, with_progress=True,
             on_result=self._imported, busy=self.busy, on_cancel=self.refresh,
         )  # fmt: skip
 
-    def _import(self, board_model, folder, progress, should_stop):
+    def _import(
+        self, board_model: str, folder: str, progress: Callable[[int, int], None], should_stop: Callable[[], bool]
+    ) -> tuple[int, int]:
         """Pool thread: files and the service layer only, never a widget."""
         n_ok = n_ng = 0
         files = list_images(folder)
@@ -227,19 +238,19 @@ class TrainingPage(Page):
             progress(i, len(files))
         return n_ok, n_ng
 
-    def _imported(self, counts):
+    def _imported(self, counts: tuple[int, int]) -> None:
         n_ok, n_ng = counts
         self.shell.status(self.tr("Imported {ok} OK and {ng} NG images").format(ok=n_ok, ng=n_ng))
         self.refresh()
 
     def _selected_ids(self) -> list[int]:
-        return [int(self.samples.item(i.row(), 0).text()) for i in self.samples.selectionModel().selectedRows()]
+        return [int(cell_text(self.samples, i.row(), 0)) for i in self.samples.selectionModel().selectedRows()]
 
-    def _relabel(self, label):
+    def _relabel(self, label: str) -> None:
         ids = self._selected_ids()
         if not ids:
             return
-        dtype = None
+        dtype: str | None = None
         if label == "NG":
             dlg = NgDialog(self)
             if not dlg.exec():
@@ -249,54 +260,55 @@ class TrainingPage(Page):
             self.ctx.update_sample(i, label, dtype)
         self.refresh()
 
-    def _set_reference(self):
+    def _set_reference(self) -> None:
         ids = self._selected_ids()
-        if ids:
-            self.ctx.set_reference(self.board_model, ids[0])
+        if ids and (bm := self.board_model):  # a selected sample implies a board model: the table is empty without one
+            self.ctx.set_reference(bm, ids[0])
             self.shell.status(self.tr("Reference image set; the next training run re-learns the Golden board from it"))
 
-    def _remove(self):
+    def _remove(self) -> None:
         ids = self._selected_ids()
         if not ids:
             return
         question = self.tr("Remove {count} sample(s) from the dataset?").format(count=len(ids))
-        if QMessageBox.question(self, self.tr("Remove"), question) == QMessageBox.Yes:
+        if QMessageBox.question(self, self.tr("Remove"), question) == QMessageBox.StandardButton.Yes:
             for i in ids:
                 self.ctx.delete_sample(i)
             self.refresh()
 
-    def _preview(self):
+    def _preview(self) -> None:
         rows = self.samples.selectionModel().selectedRows()
         if rows:
-            p = self.samples.item(rows[0].row(), 4).toolTip()
+            p = cell_item(self.samples, rows[0].row(), 4).toolTip()
             if Path(p).exists():
                 self.preview.set_image(load_image(p))
 
     # --- training ---------------------------------------------------------------
-    def train(self):
-        if not self.need_board_model():
+    def train(self) -> None:
+        if (bm := self.checked_board_model()) is None:
             return
-        n_ok = len(self.ctx.samples(self.board_model, "OK"))
+        n_ok = len(self.ctx.samples(bm, "OK"))
         if n_ok < 2:
-            return self.error(AoiError("AOI-TRN-002", found=n_ok))
+            self.error(AoiError("AOI-TRN-002", found=n_ok))
+            return
         self.log.clear()
         self.bar.setRange(0, self.epochs.value())
         self.bar.setValue(0)
         self.btn_train.setEnabled(False)
         self.btn_stop.setEnabled(True)
         size = int(self.input_size.currentText())
-        self.worker = Worker(self.ctx.train, self.board_model, self.epochs.value(), size, with_progress=True)
+        self.worker = Worker(self.ctx.train, bm, self.epochs.value(), size, with_progress=True)
         self.worker.signals.progress.connect(self._on_progress)
         self.worker.signals.result.connect(self._on_done)
         self.worker.signals.error.connect(self.error)
         self.worker.signals.finished.connect(self._finished)
         start(self.worker, self.ctx.jobs)
 
-    def stop(self):
+    def stop(self) -> None:
         if self.worker:
             self.worker.stop()
 
-    def _on_progress(self, a):
+    def _on_progress(self, a: tuple[int, int, float, str]) -> None:
         ep, total, loss, msg = a
         if total > 1:
             self.bar.setMaximum(total)
@@ -308,35 +320,35 @@ class TrainingPage(Page):
                 self.tr("epoch {epoch}/{total}  loss {loss:.4f}").format(epoch=ep, total=total, loss=loss)
             )
 
-    def _on_done(self, meta):
+    def _on_done(self, meta: dict[str, Any]) -> None:
         saved = self.tr("Saved AI model {version} ({seconds} s). Golden board updated.")
         self.log.appendPlainText(saved.format(version=meta["version"], seconds=meta["train_seconds"]))
         self.shell.status(self.tr("AI model {version} trained and activated").format(version=meta["version"]))
         self.refresh()
 
-    def _finished(self):
+    def _finished(self) -> None:
         self.btn_train.setEnabled(True)
         self.btn_stop.setEnabled(False)
         self.worker = None
 
     # --- model registry ---------------------------------------------------------
-    def activate(self):
+    def activate(self) -> None:
         rows = self.models.selectionModel().selectedRows()
         if rows:
-            self.ctx.activate_model(int(self.models.item(rows[0].row(), 0).text()))
+            self.ctx.activate_model(int(cell_text(self.models, rows[0].row(), 0)))
             self.refresh()
 
-    def export_model(self):
+    def export_model(self) -> None:
         rows = self.models.selectionModel().selectedRows()
         if not rows:
             return
-        mid = int(self.models.item(rows[0].row(), 0).text())
+        mid = int(cell_text(self.models, rows[0].row(), 0))
         src = Path(self.ctx.model(mid)["path"])
         f, _ = QFileDialog.getSaveFileName(self, self.tr("Export AI model"), src.name, self.tr("PyTorch model (*.pt)"))
         if f:
             self.ctx.export_model(mid, f)
 
-    def refresh(self):
+    def refresh(self) -> None:
         if not self.board_model:
             self.samples.setRowCount(0)
             self.models.setRowCount(0)
@@ -349,9 +361,8 @@ class TrainingPage(Page):
             self.samples,
             [[r["id"], r["label"], r["defect_type"] or "", r["side"], Path(r["path"]).name] for r in s],
             [None if r["label"] == "OK" else theme.NG_TINT for r in s],
+            [r["path"] for r in s],
         )
-        for i, r in enumerate(s):
-            self.samples.item(i, 4).setToolTip(r["path"])
         if s:
             self.samples_empty.hide()
         else:
@@ -389,9 +400,9 @@ class TrainingPage(Page):
                 self.tr("No AI model yet"), self.tr("Start Training once 20 OK boards are in.")
             )
 
-    def on_board_model_changed(self, name):
+    def on_board_model_changed(self, name: str | None) -> None:
         self.preview.set_image(None)
         self.refresh()
 
-    def on_show(self):
+    def on_show(self) -> None:
         self.refresh()

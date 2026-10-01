@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import copy
+from typing import TYPE_CHECKING
 
-from PySide6.QtCore import QT_TRANSLATE_NOOP, Qt
+import numpy as np
+from PySide6.QtCore import QRectF, Qt
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -26,13 +28,18 @@ from PySide6.QtWidgets import (
 
 from ... import defects as taxonomy
 from ...core.imaging import IMAGE_EXTS, load_image
+from ...core.inspector import InspectionResult
 from ...core.recipe import ROI, ROI_TYPES, Recipe
+from ...core.services import AppContext
 from ...times import to_local
 from .. import theme
 from ..widgets.busy import BusyOverlay
 from ..widgets.empty_state import EmptyState
 from ..widgets.image_view import ImageView
-from .base import Page, button, fill_table, make_table
+from .base import QT_TRANSLATE_NOOP, Page, button, fill_table, make_table
+
+if TYPE_CHECKING:
+    from ..main_window import MainWindow
 
 ROI_TYPE_NAMES = {  # the recipe stores the English type (ROI_TYPES); the editor shows it in the UI language
     "Presence": QT_TRANSLATE_NOOP("RecipeEditorPage", "Presence"),
@@ -43,7 +50,7 @@ ROI_TYPE_NAMES = {  # the recipe stores the English type (ROI_TYPES); the editor
 }
 
 
-def _opt_spin(maxv=1e4):
+def _opt_spin(maxv: float = 1e4) -> QDoubleSpinBox:
     s = QDoubleSpinBox()
     s.setRange(-1, maxv)
     s.setDecimals(3)
@@ -57,13 +64,13 @@ class RecipeEditorPage(Page):
     subtitle = QT_TRANSLATE_NOOP("Page", "Draw ROIs on the Golden board · zoom with the wheel · double-click to fit")
     roles = ("Engineer", "Admin")
 
-    def __init__(self, ctx, shell):
+    def __init__(self, ctx: AppContext, shell: MainWindow) -> None:
         super().__init__(ctx, shell)
         self.recipe: Recipe | None = None
         self.rev = 0
-        self.ref = None
+        self.ref: np.ndarray | None = None
 
-        split = QSplitter(Qt.Horizontal)
+        split = QSplitter(Qt.Orientation.Horizontal)
         left = QWidget()
         ll = QVBoxLayout(left)
         ll.setContentsMargins(0, 0, 0, 0)
@@ -196,7 +203,7 @@ class RecipeEditorPage(Page):
         return self.tr(ROI_TYPE_NAMES[roi_type]) if roi_type in ROI_TYPE_NAMES else roi_type
 
     @staticmethod
-    def _pair(a, b):
+    def _pair(a: QWidget, b: QWidget) -> QWidget:
         w = QWidget()
         layout = QHBoxLayout(w)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -204,12 +211,23 @@ class RecipeEditorPage(Page):
         layout.addWidget(b)
         return w
 
+    @property
+    def edited_recipe(self) -> Recipe:
+        """The recipe being edited: `load()` sets it with the board model and the ROI and threshold controls act on it,
+        so a call without one is a programming error, not a state to handle. It belongs to the board model `load()`
+        last found: when the board model is cleared, `load()` shows the empty state and keeps the old recipe (Save
+        asks for a board model first), and `on_show()` reloads it as soon as a board model is picked again."""
+        if self.recipe is None:
+            raise RuntimeError("the Recipe Editor has no recipe loaded")
+        return self.recipe
+
     # --- load / show ------------------------------------------------------------
-    def load(self):
+    def load(self) -> None:
         if not self.board_model:
             self.view_empty.show_state(*self.no_board_model())
             return
-        self.rev, self.recipe = self.ctx.recipe(self.board_model)
+        self.rev, r = self.ctx.recipe(self.board_model)
+        self.recipe = r
         ref_path = self.ctx.reference_image(self.board_model)
         self.ref = load_image(ref_path) if ref_path else None
         self.view.set_image(self.ref)
@@ -219,7 +237,6 @@ class RecipeEditorPage(Page):
             self.view_empty.show_state(heading, *step)
         else:
             self.view_empty.hide()
-        r = self.recipe
         self.use_ai.setChecked(r.use_ai)
         self.use_cmp.setChecked(r.use_compare)
         self.ai_thr.setValue(r.anomaly_threshold or 0)
@@ -235,8 +252,8 @@ class RecipeEditorPage(Page):
         )
         self._refresh_rois()
 
-    def _refresh_rois(self):
-        r = self.recipe
+    def _refresh_rois(self) -> None:
+        r = self.edited_recipe
         fill_table(self.roi_table, [[x.name, x.type, x.x, x.y, x.w, x.h, x.ai_score] for x in r.rois])
         if r.rois:
             self.roi_empty.hide()
@@ -272,12 +289,13 @@ class RecipeEditorPage(Page):
         return rows[0].row() if rows else -1
 
     # --- ROI editing ------------------------------------------------------------
-    def toggle_draw(self):
+    def toggle_draw(self) -> None:
         self.view.set_draw_mode(self.draw_btn.isChecked())
 
-    def add_roi(self, rect):
-        n = len(self.recipe.rois) + 1
-        self.recipe.rois.append(
+    def add_roi(self, rect: QRectF) -> None:
+        rois = self.edited_recipe.rois
+        n = len(rois) + 1
+        rois.append(
             ROI(
                 f"R{n}",
                 self.roi_type.currentData(),
@@ -288,13 +306,14 @@ class RecipeEditorPage(Page):
             )
         )
         self._refresh_rois()
-        self.roi_table.selectRow(len(self.recipe.rois) - 1)
+        self.roi_table.selectRow(len(rois) - 1)
 
-    def _select_roi(self):
+    def _select_roi(self) -> None:
         i = self._sel_index()
         if i < 0:
             return
-        x = self.recipe.rois[i]
+        rois = self.edited_recipe.rois
+        x = rois[i]
         self.r_name.setText(x.name)
         self.r_type.setCurrentIndex(self.r_type.findData(x.type))
         self.r_ai.setValue(x.ai_score)
@@ -307,15 +326,15 @@ class RecipeEditorPage(Page):
             w.setValue(-1 if v is None else v)
         self.r_enabled.setChecked(x.enabled)
         self.view.clear_overlays()
-        for j, r in enumerate(self.recipe.rois):
+        for j, r in enumerate(rois):
             color = theme.ROI_SELECTED if j == i else theme.ROI_COLOR
             self.view.add_box(r.x, r.y, r.w, r.h, color, f"{r.name} [{self._type_text(r.type)}]")
 
-    def apply_roi(self):
+    def apply_roi(self) -> None:
         i = self._sel_index()
         if i < 0:
             return
-        x = self.recipe.rois[i]
+        x = self.edited_recipe.rois[i]
         x.name, x.type, x.ai_score, x.enabled = (
             self.r_name.text(),
             self.r_type.currentData(),
@@ -323,7 +342,7 @@ class RecipeEditorPage(Page):
             self.r_enabled.isChecked(),
         )
 
-        def opt(w):
+        def opt(w: QDoubleSpinBox) -> float | None:
             return None if w.value() < 0 else w.value()
 
         x.height_min, x.height_max, x.volume_min, x.volume_max = (
@@ -334,14 +353,14 @@ class RecipeEditorPage(Page):
         )
         self._refresh_rois()
 
-    def delete_roi(self):
+    def delete_roi(self) -> None:
         i = self._sel_index()
         if i >= 0:
-            del self.recipe.rois[i]
+            del self.edited_recipe.rois[i]
             self._refresh_rois()
 
     def _collect(self) -> Recipe:
-        r = self.recipe
+        r = self.edited_recipe
         r.use_ai, r.use_compare = self.use_ai.isChecked(), self.use_cmp.isChecked()
         r.anomaly_threshold = self.ai_thr.value() or None
         r.warn_ratio, r.diff_threshold, r.min_defect_area = self.warn.value(), self.diff.value(), self.area.value()
@@ -349,7 +368,7 @@ class RecipeEditorPage(Page):
         return r
 
     # --- actions ----------------------------------------------------------------
-    def test_run(self):
+    def test_run(self) -> None:
         if not self.need_board_model():
             return
         exts = " ".join(f"*{e}" for e in sorted(IMAGE_EXTS))
@@ -361,19 +380,20 @@ class RecipeEditorPage(Page):
 
     def run_test(self, path: str) -> None:
         """Inspect `path` with the recipe as edited, on a pool thread (REQ-SET-021); the editor stays usable."""
+        if (bm := self.checked_board_model()) is None:
+            return
         recipe = copy.deepcopy(self._collect())  # the user may keep editing while the test runs
-        bm = self.board_model
         self.run_in_background(self._inspect_with, bm, path, recipe, on_result=self._show_test, busy=self.busy)
 
-    def _inspect_with(self, board_model, path, recipe):
+    def _inspect_with(self, board_model: str, path: str, recipe: Recipe) -> InspectionResult:
         """Pool thread: the engine only, never a widget."""
         return self.ctx.inspector(board_model, recipe=recipe).inspect(load_image(path))
 
-    def _show_test(self, res):
+    def _show_test(self, res: InspectionResult) -> None:
         self.view.set_image(res.image, keep_view=True)
         for d in res.defects:
             self.view.add_box(d.x, d.y, d.w, d.h, theme.NG_COLOR, f"{d.no} {d.type}")
-        for x in self.recipe.rois:
+        for x in self.edited_recipe.rois:
             self.view.add_box(x.x, x.y, x.w, x.h, theme.ROI_COLOR, dashed=True)
         result = self.tr("Try result: {verdict}  ·  {defects} defect(s)  ·  {ms:.0f} ms")
         self.test_verdict.setText(
@@ -381,7 +401,7 @@ class RecipeEditorPage(Page):
         )
         self.test_verdict.setStyleSheet(theme.verdict_style(res.verdict, big=False))
 
-    def save(self):
+    def save(self) -> None:
         if not self.need_board_model():
             return
         rev = self.ctx.save_recipe(self._collect())
@@ -389,9 +409,9 @@ class RecipeEditorPage(Page):
         QMessageBox.information(self, self.tr("Recipe"), saved)
         self.load()
 
-    def on_board_model_changed(self, name):
+    def on_board_model_changed(self, name: str | None) -> None:
         self.load()
 
-    def on_show(self):
+    def on_show(self) -> None:
         if self.recipe is None or self.recipe.board_model != self.board_model:
             self.load()
