@@ -14,6 +14,7 @@ from PySide6.QtWidgets import (
 )
 
 from ...core.services import AppContext
+from ..errors import show_error
 
 
 class Page(QWidget):
@@ -57,8 +58,9 @@ class Page(QWidget):
             return False
         return True
 
-    def error(self, msg: str) -> None:
-        QMessageBox.critical(self, "Error", msg[:2000])
+    def error(self, exc: BaseException) -> None:
+        """Show an error the way the standard asks: its code, what happened and what to do (REQ-SET-019)."""
+        show_error(self, self.ctx.report_error(exc, self.title))
 
 
 def button(text: str, kind: str = "", slot=None) -> QPushButton:

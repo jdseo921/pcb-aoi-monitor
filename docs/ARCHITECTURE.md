@@ -166,7 +166,7 @@ User switching is a local picker for the PoC; Stage 4 replaces it with MES authe
 | Page | Main functions | Spec |
 |---|---|---|
 | **Home** | Six step cards (Upload → Self-train → Tune recipe → Validate → Inspect → Export) with live status for the selected board model | RM Stage 1 flow |
-| **Inspection** | Load images/folder (Stage 1 "camera"); Top/Side/Bottom view tag; **Start / Stop / Next Board / Save Result**; image with defect boxes coloured by severity; defect list **No, Type, Score, Side, X, Y** (click to zoom); big OK/NG/WARN banner; timestamped alarm log; auto-save each board | GUI §4.1 |
+| **Inspection** | Load images/folder (Stage 1 "camera"); Top/Side/Bottom view tag; **Start / Stop / Next Board / Save Result**; image with defect boxes coloured by severity; defect list **No, Type, Score, Side, X, Y** (click to zoom); big OK/NG/WARN banner; alarm log with time, level, code and message, kept across restarts; auto-save each board | GUI §4.1 |
 | **Compare** (optional) | Golden reference and test board **side by side** with **synchronised zoom/pan**; views: side-by-side, difference heatmap, AI anomaly heatmap, boxes only; **metrics table** (check, source, value, threshold, rule, result) with failing rows highlighted; plain-language "why" explanation; **what-if thresholds** with Re-evaluate and Save to Recipe; pick any reference image instead of the golden template | Jay's request |
 | **Training** | **+OK / +NG upload** (NG labelled with DCT category, type and view), import folder with `ok/` `ng/` sub-folders; dataset table with relabel / set reference / remove; preview; epochs, input size, device; Start/Stop with progress and log; **model version registry** with activate and export `.pt` | GUI §4.3, Stage 1, §6 model version control |
 | **AI Model Test** | Select labelled folder; Run Test / Run Test Again; **Accuracy, Precision, Recall, False Call Rate** tiles; confusion counts; results table **Image, GT, AI Result, Score, Pass/Fail** with failures in red; preview; **Export CSV / Export Report (PDF)**; runs stored in DB | GUI §4.3 |
@@ -188,7 +188,8 @@ User switching is a local picker for the PoC; Stage 4 replaces it with MES authe
 | `inspections` | time, board_model, model_version, recipe_rev, image/overlay paths, result, score, metrics JSON, operator, archived |
 | `defects` | inspection_id, no, type, score, side, x, y, w, h |
 | `test_runs` | time, board_model, model_version, folder, metrics JSON, results JSON |
-| `alarms`, `users` | — |
+| `alarms` | time, level NG/WARN/ERROR, code AOI-<AREA>-<NNN>, message; the newest 1,000 are shown and survive a restart |
+| `users` | — |
 | `audit` | uuid, at_utc, user_uuid, role, action, object_type, object_uuid, before_json, after_json, reason; append only (triggers refuse UPDATE and DELETE) |
 | `schema_version` | number, name, applied_at, checksum (migration runner) |
 
@@ -206,7 +207,11 @@ commit in one transaction, so a crash leaves a whole result or none (REQ-INSP-00
 an `AoiError` from the catalogue in `aoi/errors.py`, with a code `AOI-<AREA>-<NNN>`, what happened and what to do;
 `docs/error-codes.md` is generated from it (REQ-LOG-004, REQ-SET-019). `aoi/logging_setup.py` writes the JSON-lines
 log in `<workspace>/logs/`, one file per UTC day, with time, level, module, event, ids and the app version, and never
-an image or a password.
+an image or a password. Alarms (an NG verdict, a missing AI model, every error shown) are stored in `alarms` with
+their code through `AppContext.alarm`, and `AppContext.report_error` is the one path for an error a user sees: it
+logs the stack trace with the build version, stores an ERROR alarm and returns the plain report that
+`aoi/ui/errors.py` shows (code, title, what happened, what to do), also for unhandled errors through
+`sys.excepthook`. The page in use is kept in `settings.json` and reopened at start-up (REQ-INSP-006, REQ-LOG-005).
 
 `inspections` already carries everything Stage 4 uploads (lot/model/result/timestamp + images); a `lot_id` column is
 the only addition expected.

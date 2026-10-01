@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import traceback
 from collections.abc import Callable
 
 from PySide6.QtCore import QObject, QRunnable, QThreadPool, Signal
@@ -11,7 +10,7 @@ from PySide6.QtCore import QObject, QRunnable, QThreadPool, Signal
 class WorkerSignals(QObject):
     progress = Signal(object)
     result = Signal(object)
-    error = Signal(str)
+    error = Signal(object)  # the exception itself; Page.error turns it into a coded dialog and a log line
     finished = Signal()
 
 
@@ -34,8 +33,8 @@ class Worker(QRunnable):
     def run(self) -> None:
         try:
             self.signals.result.emit(self.fn(*self.args, **self.kwargs))
-        except Exception as e:  # surfaced to the user as a dialog
-            self.signals.error.emit(f"{e}\n\n{traceback.format_exc()}")
+        except Exception as e:  # surfaced to the user as a dialog, with the trace in the log
+            self.signals.error.emit(e)
         finally:
             self.signals.finished.emit()
 
