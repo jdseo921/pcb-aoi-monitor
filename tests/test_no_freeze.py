@@ -110,7 +110,7 @@ def test_req_set_021_recipe_editor_test_run_does_not_freeze(qtbot, trained_ctx: 
     with gap_meter(qtbot) as g:
         page.run_test(str(board_5mp))
         assert page.test_verdict.text() == "", "the test run is on a pool thread: no verdict before the action returns"
-        qtbot.waitUntil(lambda: page.test_verdict.text().startswith("Test run:"), timeout=60000)
+        qtbot.waitUntil(lambda: page.test_verdict.text().startswith("Try result:"), timeout=60000)
     assert g["longest_s"] < BUDGET_S, g
 
 

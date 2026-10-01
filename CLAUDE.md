@@ -54,7 +54,9 @@ State the result of each line in the change note; mark a line that does not appl
 - Text is at least 14 pt, colours and sizes come only from `aoi/ui/theme.py`, and every visible string
   goes through `self.tr()` (`QCoreApplication.translate("Page", …)` in the `Page` base class) with named
   `{placeholders}` and `.format()`; after changing a string run `python tools/update_translations.py` and commit
-  `aoi/i18n/aoi_ko.ts`, or a test fails.
+  `aoi/i18n/aoi_ko.ts`, or a test fails. A second test scans `aoi/ui` for a string literal passed to a Qt text setter,
+  widget, dialog or table header outside `tr()`; a literal that must stay goes in `ALLOWED_LITERALS` in
+  `tests/test_i18n.py` with its reason.
 - No GPL, AGPL, non-commercial or unlicensed code, weights or data; only LGPL Qt modules (no Qt Charts).
 - Results on synthetic boards are never quoted as accuracy; every accuracy claim carries counts.
 - Every error a user can see is an `AoiError` with a code from `aoi/errors.py` (what happened, what to do);

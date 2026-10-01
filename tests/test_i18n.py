@@ -7,6 +7,7 @@ translations themselves are a later stage: the file lists the strings.
 
 from __future__ import annotations
 
+import ast
 import re
 import subprocess
 import xml.etree.ElementTree as ET
@@ -21,11 +22,40 @@ from aoi.hal import VIEWS
 from aoi.ui.main_window import MainWindow
 from aoi.ui.pages.base import VIEW_NAMES
 from aoi.ui.pages.compare import CHECK_NAMES, MODE_AI, MODES, RULES, SOURCES
-from tools.update_translations import TS_FILE, qt_tool, update
+from tools.update_translations import ROOT, TS_FILE, qt_tool, update
 
 PLACEHOLDER = re.compile(r"\{(\w+)(?::[^}]*)?\}")
 S19_CONTEXTS = {"Page", "Role", "View", "HomePage", "MainWindow", "InspectionPage", "ComparePage", "LogsPage"}
-S20_CONTEXTS = {"TrainingPage", "NgDialog", "ModelTestPage", "SettingsPage", "Profile3DPage"}
+S20_CONTEXTS = {"TrainingPage", "NgDialog", "ModelTestPage", "SettingsPage", "Profile3DPage", "RecipeEditorPage"}
+
+# The scan for untranslated literals (test_req_set_005_no_untranslated_literals).
+TRANSLATORS = {"tr", "translate", "QT_TRANSLATE_NOOP", "page_text", "role_text", "view_text"}
+TEXT_SETTERS = {  # Qt methods whose string arguments appear on screen, and this code's own helpers that show text
+    "setText", "setWindowTitle", "setToolTip", "setStatusTip", "setWhatsThis", "setPlaceholderText", "setTitle",
+    "setSpecialValueText", "setPrefix", "setSuffix", "addItem", "addItems", "insertItem", "addTab", "addRow",
+    "setHtml", "setPlainText", "appendPlainText", "setHorizontalHeaderLabels", "setVerticalHeaderLabels",
+    "showMessage", "setLabelText", "setInformativeText", "setDetailedText", "setTabText", "setItemText",
+    "show_state", "status",
+}  # fmt: skip
+OWNED_SETTERS = {  # static methods that show text when called on these classes (QMessageBox.warning, not log.warning)
+    "QMessageBox": {"information", "warning", "critical", "question", "about"},
+    "QInputDialog": {"getItem", "getText", "getInt", "getDouble", "getMultiLineText"},
+    "QFileDialog": {"getOpenFileName", "getOpenFileNames", "getSaveFileName", "getExistingDirectory"},
+}
+TEXT_CONSTRUCTORS = {
+    "QLabel", "QPushButton", "QCheckBox", "QRadioButton", "QGroupBox", "QAction", "QMenu", "QListWidgetItem",
+    "QTableWidgetItem", "QMessageBox", "button", "make_table", "BusyOverlay", "ImageView", "MetricTile", "EmptyState",
+}  # fmt: skip
+TEXT_POSITIONS = {"button": 1}  # button(text, kind, slot): only the first argument is text
+SKIP_KEYWORDS = {"kind", "slot", "parent", "over"}
+ALLOWED_LITERALS = {  # (file, literal): why it is not translated; a stale entry fails the test
+    ("aoi/ui/pages/base.py", "Page"): "placeholder title of the base class; every page overrides it",
+    ("aoi/ui/pages/settings.py", "auto"): "a torch device name, shown as the value the engine takes",
+    ("aoi/ui/pages/settings.py", "cpu"): "a torch device name",
+    ("aoi/ui/pages/settings.py", "cuda"): "a torch device name",
+}
+TAG_OR_ENTITY = re.compile(r"<[^>]*>|&\w+;")
+FILE_NAME = re.compile(r"\S+\.[A-Za-z0-9]{1,5}")
 
 
 def _messages(ts: Path) -> dict[tuple[str, str], str]:
@@ -104,3 +134,135 @@ def test_req_set_005_a_translation_changes_titles_sections_roles_and_page_string
         assert views.itemText(0) == "상면" and views.itemData(0) == "Top" == VIEWS[0]
     finally:
         QCoreApplication.removeTranslator(translator)
+
+
+def _visible(text: str) -> bool:
+    """A literal a person would read: letters remain once markup and entities are gone, and it is not a file name."""
+    plain = TAG_OR_ENTITY.sub("", text)
+    return any(ch.isalpha() for ch in plain) and not FILE_NAME.fullmatch(plain)
+
+
+def _literal_text(node: ast.AST) -> str | None:
+    """The text of a string literal, of an f-string (its constant parts, 0 for each value) or of `literal.format()`."""
+    if isinstance(node, ast.Constant) and isinstance(node.value, str):
+        return node.value
+    if isinstance(node, ast.JoinedStr):
+        return "".join(v.value if isinstance(v, ast.Constant) else "0" for v in node.values)
+    if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute) and node.func.attr == "format":
+        return _literal_text(node.func.value)
+    return None
+
+
+def _callee(node: ast.Call) -> tuple[str, str]:
+    """(owner, name) of the call: ("QMessageBox", "warning"), ("", "button"), ("self.label", "setText")."""
+    f = node.func
+    if isinstance(f, ast.Attribute):
+        return (f.value.id if isinstance(f.value, ast.Name) else ast.unparse(f.value)), f.attr
+    return "", f.id if isinstance(f, ast.Name) else ""
+
+
+def _is_translated(node: ast.AST) -> bool:
+    if isinstance(node, ast.Call):
+        _, name = _callee(node)
+        return name in TRANSLATORS or (name == "format" and _is_translated(node.func.value))
+    return False
+
+
+def _shows_text(node: ast.Call) -> bool:
+    owner, name = _callee(node)
+    if name in OWNED_SETTERS.get(owner, ()):
+        return True
+    return name in TEXT_SETTERS or (owner == "" and name in TEXT_CONSTRUCTORS)
+
+
+def _scan(path: Path) -> set[tuple[int, str]]:
+    """(line, text) of every visible literal passed to something that shows text, outside tr(); page titles too."""
+    tree = ast.parse(path.read_text(encoding="utf-8"))
+    parents = {child: node for node in ast.walk(tree) for child in ast.iter_child_nodes(node)}
+    scopes = (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda, ast.Module)
+    assigned: dict[ast.AST, dict[str, ast.AST]] = {}  # scope -> {name: literal it was assigned}
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Assign) and len(node.targets) == 1 and isinstance(node.targets[0], ast.Name):
+            if _literal_text(node.value) is not None and not _is_translated(node.value):
+                scope = node
+                while not isinstance(scope, scopes):
+                    scope = parents[scope]
+                assigned.setdefault(scope, {})[node.targets[0].id] = node.value
+    found: set[tuple[int, str]] = set()
+
+    def check(arg: ast.AST, scope: ast.AST) -> None:
+        if isinstance(arg, ast.Name) and arg.id in assigned.get(scope, {}):
+            arg = assigned[scope][arg.id]
+        if _is_translated(arg):
+            return
+        if isinstance(arg, (ast.List, ast.Tuple)):
+            for elt in arg.elts:
+                check(elt, scope)
+            return
+        text = _literal_text(arg)
+        if text is not None and _visible(text):
+            found.add((arg.lineno, text))
+
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Call) and _shows_text(node):
+            scope = node
+            while not isinstance(scope, scopes):
+                scope = parents[scope]
+            limit = TEXT_POSITIONS.get(_callee(node)[1], len(node.args))
+            for arg in node.args[:limit] + [kw.value for kw in node.keywords if kw.arg not in SKIP_KEYWORDS]:
+                check(arg, scope)
+        if isinstance(node, ast.ClassDef):
+            for stmt in node.body:
+                targets = [t.id for t in getattr(stmt, "targets", []) if isinstance(t, ast.Name)]
+                if isinstance(stmt, ast.Assign) and set(targets) & {"title", "subtitle"}:
+                    check(stmt.value, tree)
+    return found
+
+
+def test_req_set_005_no_untranslated_literals() -> None:
+    """An AST scan of aoi/ui and main.py: a string literal (an f-string, `literal.format()` or a name assigned one in
+    the same function count too) passed to a Qt text setter, a text widget constructor, a message box, an input or
+    file dialog, a table header, a tooltip or one of this code's own helpers (`button`, `make_table`, `show_state`,
+    `status`) is wrapped in tr(), QT_TRANSLATE_NOOP or a *_text helper, and every page title and subtitle is marked.
+    Names the engine or the taxonomy supplies arrive as variables, so they are outside this scan (they stay English
+    until a word list exists). ALLOWED_LITERALS lists what may stay a literal, each with its reason."""
+    files = [*sorted((ROOT / "aoi" / "ui").rglob("*.py")), ROOT / "main.py"]
+    hits = {(path.relative_to(ROOT).as_posix(), line, text) for path in files for line, text in _scan(path)}
+    untranslated = sorted(hit for hit in hits if (hit[0], hit[2]) not in ALLOWED_LITERALS)
+    assert not untranslated, "\n".join(
+        f"{file}:{line}: {text!r} is not wrapped in tr()" for file, line, text in untranslated
+    )
+    stale = set(ALLOWED_LITERALS) - {(file, text) for file, _, text in hits}
+    assert not stale, f"allow-list entries no longer needed: {sorted(stale)}"
+
+
+def test_req_set_005_the_scan_catches_a_literal(tmp_path: Path) -> None:
+    """The scan itself: it flags a literal, an f-string, a `.format()` on a literal, a name assigned a literal, a
+    title and a dialog's words, and lets through tr(), markup-only text, a file name and a logger's warning."""
+    sample = tmp_path / "sample.py"
+    sample.write_text(
+        "class P(Page):\n"
+        '    title = "Untitled page"\n'
+        "    def f(self):\n"
+        '        what = "Assigned text"\n'
+        '        self.label.setText("Plain text")\n'
+        '        self.label.setText(f"{self.n} items")\n'
+        '        self.label.setText("{count} rows".format(count=3))\n'
+        '        self.empty.show_state(self.tr("Heading"), what)\n'
+        '        QMessageBox.warning(self, "Title", "Body")\n'
+        '        self.log.warning("settings.save_failed")\n'
+        '        self.label.setText(f"<b>{self.n}</b>")\n'
+        '        self.label.setText(self.tr("Fine {n}").format(n=1))\n'
+        '        QFileDialog.getSaveFileName(self, self.tr("Save"), "board_0.png", self.tr("PNG (*.png)"))\n'
+        '        bar.addWidget(button(self.tr("Go"), "primary"))\n',
+        encoding="utf-8",
+    )
+    assert {text for _, text in _scan(sample)} == {
+        "Untitled page",
+        "Plain text",
+        "0 items",
+        "{count} rows",
+        "Assigned text",
+        "Title",
+        "Body",
+    }
