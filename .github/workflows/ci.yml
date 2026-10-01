@@ -83,7 +83,7 @@ jobs:
         run: |
           pip install "$(grep -E '^torch==' requirements.lock)" --index-url "$TORCH_INDEX_URL"
           pip install -r requirements-dev.lock
-      - name: Tests, with line coverage of aoi/core and aoi/data (target 80 %, reported only for now)
+      - name: Tests, with line coverage of aoi/core and aoi/data (fails under 80 %, ADR 0003)
         env:
           QT_QPA_PLATFORM: offscreen
           QT_QPA_FONTDIR: ${{ runner.os == 'Windows' && 'C:\Windows\Fonts' || '' }}
