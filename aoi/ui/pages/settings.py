@@ -103,9 +103,9 @@ class SettingsPage(Page):
         if ok and name:
             role, ok = QInputDialog.getItem(self, "Role", "Role", ["Operator", "Engineer", "Admin"], 0, False)
             if ok:
-                self.ctx.db.add_user(name, role)
+                self.ctx.add_user(name, role)
                 self.on_show()
 
     def on_show(self):
-        fill_table(self.users, [[u["name"], u["role"]] for u in self.ctx.db.users()])
+        fill_table(self.users, [[u["name"], u["role"]] for u in self.ctx.users()])
         fill_table(self.hw, HARDWARE)

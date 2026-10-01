@@ -96,7 +96,7 @@ class ModelTestPage(Page):
             return
         if not self.folder:
             return self.pick() or (self.folder and self.run())
-        if not self.ctx.db.active_model(self.board_model):
+        if not self.ctx.active_model(self.board_model):
             QMessageBox.information(self, "No model", "No trained model yet: results use golden comparison only.")
         self.btn_run.setEnabled(False)
         self.bar.setVisible(True)
@@ -159,7 +159,7 @@ class ModelTestPage(Page):
         if not f:
             return
         m = self.metrics
-        active = self.ctx.db.active_model(self.board_model)
+        active = self.ctx.active_model(self.board_model)
         rows = "".join(
             f"<tr style='color:{'#c62828' if r['pass_fail'] == 'FAIL' else '#000'}'>"
             f"<td>{html.escape(Path(r['image']).name)}</td><td>{r['gt']}</td><td>{r['ai_result']}</td><td>{r['score']}</td><td>{r['pass_fail']}</td></tr>"

@@ -17,10 +17,10 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
+from ..times import local_day_bounds_utc, now_utc
 from .errors import WorkspaceError
 from .migrate import migrate
 from .paths import resolve, to_stored
-from .times import local_day_bounds_utc, now_utc
 
 
 def new_uuid() -> str:
@@ -118,6 +118,10 @@ class Database:
             rows = self.query("SELECT * FROM samples WHERE board_model=? ORDER BY id", (board_model,))
         return [self._resolved(r, "path") for r in rows]
 
+    def sample(self, sample_id: int) -> dict[str, Any]:
+        """One sample by id, with its absolute path."""
+        return self._resolved(self.query("SELECT * FROM samples WHERE id=?", (sample_id,))[0], "path")
+
     def update_sample(self, sample_id: int, label: str, defect_type: str | None) -> None:
         self.execute("UPDATE samples SET label=?, defect_type=? WHERE id=?", (label, defect_type, sample_id))
 
@@ -138,6 +142,10 @@ class Database:
     def models(self, board_model: str) -> list[dict[str, Any]]:
         rows = self.query("SELECT * FROM models WHERE board_model=? ORDER BY id DESC", (board_model,))
         return [self._resolved(r, "path") for r in rows]
+
+    def model(self, model_id: int) -> dict[str, Any]:
+        """One model version by id, with its absolute path."""
+        return self._resolved(self.query("SELECT * FROM models WHERE id=?", (model_id,))[0], "path")
 
     def active_model(self, board_model: str) -> dict[str, Any] | None:
         r = self.query("SELECT * FROM models WHERE board_model=? AND active=1", (board_model,))
@@ -265,6 +273,16 @@ class Database:
             "INSERT INTO test_runs(time, board_model, model_version, folder, metrics, results) VALUES(?,?,?,?,?,?)",
             (now_utc(), board_model, model_version, folder, json.dumps(metrics), json.dumps(results)),
         )
+
+    def latest_test_run(self, board_model: str) -> dict[str, Any] | None:
+        r = self.query("SELECT * FROM test_runs WHERE board_model=? ORDER BY id DESC LIMIT 1", (board_model,))
+        return r[0] if r else None
+
+    def inspection_counts(self, board_model: str) -> tuple[int, int]:
+        """(inspections, NG inspections) of a board model, archived ones included."""
+        sql = "SELECT COUNT(*) n, COALESCE(SUM(result='NG'), 0) ng FROM inspections WHERE board_model=?"
+        r = self.query(sql, (board_model,))[0]
+        return int(r["n"]), int(r["ng"])
 
     def alarm(self, level: str, message: str, code: str | None = None) -> None:
         self.execute(

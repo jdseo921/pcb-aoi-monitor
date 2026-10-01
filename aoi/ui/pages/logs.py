@@ -9,8 +9,7 @@ from PySide6.QtWidgets import QCheckBox, QComboBox, QDateEdit, QFileDialog, QHBo
 
 from ...core.imaging import load_image
 from ...core.services import export_csv
-from ...data import atomic
-from ...data.times import to_local
+from ...times import to_local
 from ..theme import VERDICT_COLORS
 from ..widgets.image_view import ImageView
 from .base import Page, button, fill_table, make_table
@@ -59,7 +58,7 @@ class LogsPage(Page):
         self.root.addLayout(b)
 
     def refresh(self):
-        self.rows = self.ctx.db.inspections(
+        self.rows = self.ctx.inspections(
             self.d_from.date().toString("yyyy-MM-dd"),
             self.d_to.date().toString("yyyy-MM-dd"),
             self.model.currentData(),
@@ -111,7 +110,7 @@ class LogsPage(Page):
             return
         out = []
         for r in self.rows:
-            ds = self.ctx.db.defects_for(r["id"])
+            ds = self.ctx.defects_for(r["id"])
             out.append(
                 {
                     "id": r["id"],
@@ -137,15 +136,11 @@ class LogsPage(Page):
         d = QFileDialog.getExistingDirectory(self, "Export overlays to", str(self.ctx.settings.exports_dir))
         if not d:
             return
-        n = 0
-        for r in self.rows:
-            if r["overlay_path"] and Path(r["overlay_path"]).exists():
-                atomic.copy_file(r["overlay_path"], Path(d) / Path(r["overlay_path"]).name)
-                n += 1
+        n = self.ctx.export_overlays(self.rows, d)
         self.shell.status(f"Copied {n} overlay image(s) to {d}")
 
     def archive(self):
-        n = self.ctx.db.archive_old(self.ctx.settings.log_retention_days)
+        n = self.ctx.archive_old()
         self.shell.status(f"Archived {n} record(s)")
         self.refresh()
 
@@ -154,8 +149,8 @@ class LogsPage(Page):
         for b in (self.btn_csv, self.btn_img, self.btn_arch):
             b.setEnabled(admin_or_eng)  # spec 8: Admin exports logs (Engineer allowed for PoC)
         for combo, values in (
-            (self.model, self.ctx.db.board_models()),
-            (self.operator, [u["name"] for u in self.ctx.db.users()]),
+            (self.model, self.ctx.board_models()),
+            (self.operator, [u["name"] for u in self.ctx.users()]),
         ):
             cur = combo.currentData()
             combo.clear()

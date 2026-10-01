@@ -30,7 +30,6 @@ from PySide6.QtWidgets import (
 
 from ... import defects as taxonomy
 from ...core.imaging import IMAGE_EXTS, heat_overlay, load_image
-from ...core.inspector import Inspector
 from ...errors import AoiError
 from ..theme import VERDICT_COLORS, verdict_style
 from ..widgets.image_view import ImageView
@@ -201,9 +200,9 @@ class ComparePage(Page):
         if not self.test_path:
             return
         self.test_label.setText(f"Test: {Path(self.test_path).name}")
-        insp = Inspector(self._form_recipe(), base.model, ref, base.side)
         try:
-            self.res = insp.inspect(load_image(self.test_path))
+            test = load_image(self.test_path)
+            self.res = self.ctx.inspect(self.board_model, test, self._form_recipe(), reference=ref)
         except Exception as e:
             return self.error(e)
         r = self.res

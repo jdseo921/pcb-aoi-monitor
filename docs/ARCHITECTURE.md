@@ -37,9 +37,10 @@ interfaces that Stages 2–4 (cameras, robot, MES/ERP) plug into without changin
 │  Widgets: ImageView (zoom/pan, overlays, ROI drawing, linked views)          │
 │  Workers: QThreadPool runners so training / batch tests never freeze the UI  │
 ├──────────────────────────────────────────────────────────────────────────────┤
-│ Application services  (aoi/core/services.py → AppContext)                    │
-│  import_samples · train · load_model · recipe/save_recipe · inspector ·      │
-│  inspect_file · log_result · batch_test · export_csv                          │
+│ Application services  (aoi/core/services.py → AppContext): the only door     │
+│  reads   board_models · samples · models · recipe · inspections · users      │
+│  writes  import_samples · train · save_recipe · set_reference · add_user     │
+│  engine  inspector · inspect · inspect_file · log_result · batch_test        │
 ├──────────────────────────────────────────────────────────────────────────────┤
 │ Inspection engine  (aoi/core)                                                │
 │  imaging.py   I/O (Unicode paths), ORB+RANSAC registration, heatmaps         │
@@ -58,7 +59,10 @@ interfaces that Stages 2–4 (cameras, robot, MES/ERP) plug into without changin
 ```
 
 Rules: pages call **only** `AppContext`; the engine has **no Qt imports**, so the same code runs headless
-(tests, a future CLI, the Stage 3 robot cycle, or a Stage 4 MES service).
+(tests, a future CLI, the Stage 3 robot cycle, or a Stage 4 MES service). `tests/test_layers.py` enforces both:
+no Qt import under `aoi/core` or `aoi/data`, and under `aoi/ui` no `sqlite3` or `aoi.data` import, no `.db`, no SQL
+and no `Inspector` built by a page (REQ-USR-001, since S15). `aoi/times.py`, `aoi/errors.py`, `aoi/config.py` and
+`aoi/defects.py` are shared by every layer.
 
 ### Workspace on disk
 
@@ -199,7 +203,7 @@ connection runs in write-ahead-log mode with a full sync on every commit, and a 
 `schema_version` table) is refused rather than upgraded.
 Records that can leave the station (`users`, `samples`, `models`, `recipes`, `inspections`) carry a `uuid`
 beside their integer key; every stored time is ISO 8601 UTC with an offset and is shown in local time
-(`aoi/data/times.py`); image, overlay and model paths inside the workspace are stored relative to it and resolved
+(`aoi/times.py`); image, overlay and model paths inside the workspace are stored relative to it and resolved
 by `aoi/data/paths.py`, so a workspace folder can move (REQ-SET-017, REQ-SET-001).
 Every file the app writes (images, overlays, AI models, exports, settings) goes through `aoi/data/atomic.py`:
 a temporary name in the same folder, flush and fsync, then an atomic rename, and an inspection's row and defects
