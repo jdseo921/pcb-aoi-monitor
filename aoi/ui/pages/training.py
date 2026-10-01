@@ -32,6 +32,7 @@ from ...hal import VIEWS
 from ...times import to_local
 from .. import theme
 from ..widgets.busy import BusyOverlay
+from ..widgets.empty_state import EmptyState
 from ..widgets.image_view import ImageView
 from ..workers import Worker, start
 from .base import Page, button, fill_table, make_table
@@ -95,6 +96,7 @@ class TrainingPage(Page):
         ll.addWidget(self.counts)
         self.samples = make_table(["ID", "Label", "Defect type", "View", "File"])
         self.samples.itemSelectionChanged.connect(self._preview)
+        self.samples_empty = EmptyState(self.samples)
         self.busy = BusyOverlay(self.samples, self.tr("Importing…"))
         ll.addWidget(self.samples, 1)
         act = QHBoxLayout()
@@ -140,6 +142,7 @@ class TrainingPage(Page):
         rl.addWidget(self.log)
         rl.addWidget(QLabel("Model versions"))
         self.models = make_table(["ID", "Version", "Created", "Threshold", "OK/NG", "Active"])
+        self.models_empty = EmptyState(self.models)
         rl.addWidget(self.models, 1)
         mrow = QHBoxLayout()
         mrow.addWidget(button("Activate Selected", slot=self.activate))
@@ -315,6 +318,8 @@ class TrainingPage(Page):
             self.samples.setRowCount(0)
             self.models.setRowCount(0)
             self.counts.setText("")
+            self.samples_empty.show_state("No board model yet", "Pick a board model in the header first.")
+            self.models_empty.hide()
             return
         s = self.ctx.samples(self.board_model)
         fill_table(
@@ -324,6 +329,13 @@ class TrainingPage(Page):
         )
         for i, r in enumerate(s):
             self.samples.item(i, 4).setToolTip(r["path"])
+        if s:
+            self.samples_empty.hide()
+        else:
+            what = "Add at least 20 OK boards with + OK Images or Import Folder…"
+            self.samples_empty.show_state(
+                f"No samples for {self.board_model} yet", what, "Import Folder…", self.import_folder
+            )
         n_ok = sum(r["label"] == "OK" for r in s)
         ref = self.ctx.reference_image(self.board_model)
         self.counts.setText(
@@ -345,6 +357,10 @@ class TrainingPage(Page):
                 ]
             )
         fill_table(self.models, rows)
+        if ms:
+            self.models_empty.hide()
+        else:
+            self.models_empty.show_state("No AI model yet", "Start Training once 20 OK boards are in.")
 
     def on_board_model_changed(self, name):
         self.preview.set_image(None)

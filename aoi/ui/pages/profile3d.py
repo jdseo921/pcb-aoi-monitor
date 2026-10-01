@@ -1,12 +1,13 @@
-"""3D Profile Viewer (spec 4.5). Needs Stage 2 3D camera data; laid out now so
-the navigation and the Accept/Reject review flow are fixed early."""
+"""3D Profile Viewer (spec 4.5). Needs Stage 2 3D camera data: until then the page is one card that says so and
+leads to the Recipe Editor, where height and volume limits are already entered per ROI (sketch profile3d-card.md)."""
 
 from __future__ import annotations
 
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QHBoxLayout, QLabel, QVBoxLayout, QWidget
 
-from .base import Page, button, make_table
+from .. import theme
+from ..widgets.empty_state import EmptyState
+from .base import Page, button
 
 
 class Profile3DPage(Page):
@@ -16,25 +17,20 @@ class Profile3DPage(Page):
 
     def __init__(self, ctx, shell):
         super().__init__(ctx, shell)
-        body = QHBoxLayout()
-        canvas = QLabel(
-            "3D height map\n\nConnect a 3D camera (Stage 2) to view\n"
-            "colour-coded height maps, rotate / zoom / pan,\nand height-slice graphs with peak markers."
+        self.card = EmptyState(kind="primary")  # the page's one button is its primary
+        self.card.setMaximumWidth(theme.CARD_W)
+        self.root.addWidget(self.card, 0, Qt.AlignHCenter)
+        self.root.addWidget(button("Back to Home", slot=lambda: shell.navigate("Home")), 0, Qt.AlignHCenter)
+        self.root.addStretch(1)
+
+    def on_show(self):
+        what = (
+            "Height and coplanarity need the 3D camera. Height and volume limits can be entered per ROI in the "
+            "Recipe Editor; they are stored now and checked from Stage 2."
         )
-        canvas.setAlignment(Qt.AlignCenter)
-        canvas.setObjectName("canvas")
-        body.addWidget(canvas, 3)
-        side = QWidget()
-        sl = QVBoxLayout(side)
-        t = make_table(["Type", "Height", "Volume"])
-        sl.addWidget(t, 1)
-        row = QHBoxLayout()
-        a = button("Accept Defect", "start")
-        r = button("Reject Defect", "stop")
-        a.setEnabled(False)
-        r.setEnabled(False)
-        row.addWidget(a)
-        row.addWidget(r)
-        sl.addLayout(row)
-        body.addWidget(side, 1)
-        self.root.addLayout(body, 1)
+        self.card.show_state(
+            "3D Profile arrives with Stage 2",
+            what,
+            "Open Recipe Editor ›",
+            lambda: self.shell.navigate("Recipe Editor"),
+        )

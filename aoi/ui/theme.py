@@ -51,7 +51,7 @@ TARGET_H = 48  # T: an operator target, such as a defect row or a sidebar entry
 RUN_CONTROL_H = 56  # T+: Start, Stop, Next Board, Save Result
 FIELD_H = 40  # F
 BANNER_H = 90  # the verdict banner and a metric tile
-NAV_W, HEADER_H, FIELD_W = 250, 64, 240
+NAV_W, HEADER_H, FIELD_W, CARD_W = 250, 64, 240, 720
 IMAGE_MIN_W, IMAGE_MIN_H, PROGRESS_W = 320, 240, 360
 SPACE, SPACE_S = 14, 8  # between blocks; inside a block
 RADIUS, RADIUS_L = 6, 10
@@ -70,6 +70,8 @@ QLabel#canvas { background: $BG_IMAGE; border: 1px dashed $LINE_STRONG; color: $
                 border-radius: ${RADIUS_L}px; }
 QFrame#header { background: $BG_DEEP; border-bottom: 1px solid $LINE; }
 QFrame#card { background: $BG_RAISED; border-radius: ${RADIUS_L}px; }
+QWidget#empty { background: $BG_DEEP; border: 1px dashed $LINE_STRONG; border-radius: ${RADIUS_L}px; }
+QLabel#emptyHeading { font-size: ${FONT_LARGE_PT}pt; font-weight: 600; }
 QListWidget#nav { background: $BG_DEEP; border: none; padding-top: ${SPACE_S}px; }
 QListWidget#nav::item { padding: ${SPACE}px 18px; margin: 2px ${SPACE_S}px; border-radius: ${RADIUS}px; }
 QListWidget#nav::item:selected { background: $ACCENT; color: $ON_DARK; }

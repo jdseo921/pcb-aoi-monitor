@@ -23,6 +23,7 @@ from PySide6.QtWidgets import (
 from ... import defects as taxonomy
 from .. import theme
 from ..widgets.busy import BusyOverlay
+from ..widgets.empty_state import EmptyState
 from ..widgets.image_view import ImageView
 from ..workers import Worker, start
 from .base import Page, button, fill_table, make_table
@@ -90,6 +91,7 @@ class ModelTestPage(Page):
         split = QSplitter(Qt.Horizontal)
         self.table = make_table(["Image", "GT", "AI Result", "Score", "Pass/Fail"])
         self.table.itemSelectionChanged.connect(self._preview)
+        self.empty = EmptyState(self.table)
         split.addWidget(self.table)
         preview = QWidget()
         pl = QVBoxLayout(preview)
@@ -133,6 +135,7 @@ class ModelTestPage(Page):
 
     def _show(self, out):
         self.metrics, self.rows = out
+        self.empty.hide()
         m = self.metrics
         for k, t in self.tiles.items():
             t.set(m[k])
@@ -166,6 +169,18 @@ class ModelTestPage(Page):
             sev = taxonomy.BY_NAME.get(d.type, taxonomy.ANOMALY).severity
             self.view.add_box(d.x, d.y, d.w, d.h, theme.SEVERITY_COLORS.get(sev, theme.NG_COLOR), f"{d.no} {d.type}")
         self.shell.last_inspected = (path, res)
+
+    def on_show(self):
+        bm = self.board_model
+        if self.rows:
+            self.empty.hide()
+        elif not bm:
+            self.empty.show_state("No board model yet", "Pick a board model in the header first.")
+        elif not self.ctx.active_model(bm):
+            self.empty.show_state(f"No AI model for {bm} yet", *self.empty_step("Train one on Training.", "Training"))
+        else:
+            what = "Select a test folder with ok/ and ng/ sub-folders, then Run Test."
+            self.empty.show_state(f"No test run for {bm} yet", what, "Select Test Folder…", self.pick)
 
     def export_csv(self):
         if not self.rows:
