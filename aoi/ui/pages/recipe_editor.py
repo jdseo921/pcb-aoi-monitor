@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import copy
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import QT_TRANSLATE_NOOP, Qt
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -34,6 +34,14 @@ from ..widgets.empty_state import EmptyState
 from ..widgets.image_view import ImageView
 from .base import Page, button, fill_table, make_table
 
+ROI_TYPE_NAMES = {  # the recipe stores the English type (ROI_TYPES); the editor shows it in the UI language
+    "Presence": QT_TRANSLATE_NOOP("RecipeEditorPage", "Presence"),
+    "Polarity": QT_TRANSLATE_NOOP("RecipeEditorPage", "Polarity"),
+    "Solder Bridge": QT_TRANSLATE_NOOP("RecipeEditorPage", "Solder Bridge"),
+    "Height": QT_TRANSLATE_NOOP("RecipeEditorPage", "Height"),
+    "Anomaly": QT_TRANSLATE_NOOP("RecipeEditorPage", "Anomaly"),
+}
+
 
 def _opt_spin(maxv=1e4):
     s = QDoubleSpinBox()
@@ -45,8 +53,8 @@ def _opt_spin(maxv=1e4):
 
 
 class RecipeEditorPage(Page):
-    title = "Recipe Editor"
-    subtitle = "Draw ROIs on the golden board · zoom with the wheel · double-click to fit"
+    title = QT_TRANSLATE_NOOP("Page", "Recipe Editor")
+    subtitle = QT_TRANSLATE_NOOP("Page", "Draw ROIs on the Golden board · zoom with the wheel · double-click to fit")
     roles = ("Engineer", "Admin")
 
     def __init__(self, ctx, shell):
@@ -60,19 +68,19 @@ class RecipeEditorPage(Page):
         ll = QVBoxLayout(left)
         ll.setContentsMargins(0, 0, 0, 0)
         tools = QHBoxLayout()
-        self.draw_btn = button("Draw ROI", slot=self.toggle_draw)  # Save Recipe is the page's one blue primary
+        self.draw_btn = button(self.tr("Draw ROI"), slot=self.toggle_draw)  # Save Recipe is the page's one blue primary
         self.draw_btn.setCheckable(True)
         tools.addWidget(self.draw_btn)
-        tools.addWidget(QLabel("Type:"))
+        tools.addWidget(QLabel(self.tr("Type:")))
         self.roi_type = QComboBox()
-        self.roi_type.addItems(ROI_TYPES)
+        self._fill_types(self.roi_type)
         tools.addWidget(self.roi_type)
         tools.addStretch(1)
         ll.addLayout(tools)
         self.view = ImageView(placeholder="")
         self.view_empty = EmptyState(self.view)
         self.view.roiDrawn.connect(self.add_roi)
-        self.busy = BusyOverlay(self.view, self.tr("Test run…"))
+        self.busy = BusyOverlay(self.view, self.tr("Trying the recipe…"))
         ll.addWidget(self.view, 1)
         split.addWidget(left)
 
@@ -81,43 +89,44 @@ class RecipeEditorPage(Page):
         roi_tab = QWidget()
         roi_tab.setObjectName("page")
         rl = QVBoxLayout(roi_tab)
-        self.roi_table = make_table(["Name", "Type", "X", "Y", "W", "H", "AI Score"], sortable=False)
+        headers = ["Name", "Type", "X", "Y", "W", "H"]
+        self.roi_table = make_table([*(self.tr(h) for h in headers), self.tr("AI score")], sortable=False)
         self.roi_table.itemSelectionChanged.connect(self._select_roi)
         self.roi_empty = EmptyState(self.roi_table)
         rl.addWidget(self.roi_table, 1)
-        g = QGroupBox("Selected ROI")
+        g = QGroupBox(self.tr("Selected ROI"))
         f = QFormLayout(g)
         self.r_name = QLineEdit()
         self.r_type = QComboBox()
-        self.r_type.addItems(ROI_TYPES)
+        self._fill_types(self.r_type)
         self.r_ai = QDoubleSpinBox()
         self.r_ai.setRange(0.05, 100)
         self.r_ai.setSingleStep(0.1)
         self.r_hmin, self.r_hmax, self.r_vmin, self.r_vmax = (_opt_spin() for _ in range(4))
-        self.r_enabled = QCheckBox("Enabled")
-        f.addRow("Name", self.r_name)
-        f.addRow("ROI type", self.r_type)
-        f.addRow("AI Score (× model threshold)", self.r_ai)
-        f.addRow("Height Min / Max (Stage 2)", self._pair(self.r_hmin, self.r_hmax))
-        f.addRow("Volume Min / Max (Stage 2)", self._pair(self.r_vmin, self.r_vmax))
+        self.r_enabled = QCheckBox(self.tr("Enabled"))
+        f.addRow(self.tr("Name"), self.r_name)
+        f.addRow(self.tr("ROI type"), self.r_type)
+        f.addRow(self.tr("AI score (× AI model threshold)"), self.r_ai)
+        f.addRow(self.tr("Height min / max (Stage 2)"), self._pair(self.r_hmin, self.r_hmax))
+        f.addRow(self.tr("Volume min / max (Stage 2)"), self._pair(self.r_vmin, self.r_vmax))
         f.addRow(self.r_enabled)
         row = QHBoxLayout()
-        row.addWidget(button("Apply", slot=self.apply_roi))
-        row.addWidget(button("Delete", "danger", self.delete_roi))  # red, last in its row, never the default
+        row.addWidget(button(self.tr("Apply"), slot=self.apply_roi))
+        row.addWidget(button(self.tr("Delete"), "danger", self.delete_roi))  # red, last in its row, never the default
         f.addRow(row)
         rl.addWidget(g)
-        tabs.addTab(roi_tab, "ROIs")
+        tabs.addTab(roi_tab, self.tr("ROIs"))
 
         # Global thresholds tab
         thr_tab = QWidget()
         thr_tab.setObjectName("page")
         tf = QFormLayout(thr_tab)
-        self.use_ai = QCheckBox("Use self-trained AI model")
-        self.use_cmp = QCheckBox("Use golden comparison")
+        self.use_ai = QCheckBox(self.tr("Use the self-trained AI model"))
+        self.use_cmp = QCheckBox(self.tr("Use the Golden board comparison"))
         self.ai_thr = QDoubleSpinBox()
         self.ai_thr.setRange(0, 1e4)
         self.ai_thr.setDecimals(3)
-        self.ai_thr.setSpecialValueText("model default")
+        self.ai_thr.setSpecialValueText(self.tr("AI model default"))
         self.warn = QDoubleSpinBox()
         self.warn.setRange(0.1, 1)
         self.warn.setSingleStep(0.05)
@@ -135,34 +144,34 @@ class RecipeEditorPage(Page):
         self.maxreg.setRange(0, 1000)
         for w, label in (
             (self.use_ai, None),
-            (self.ai_thr, "AI anomaly threshold"),
-            (self.warn, "Warning band (fraction of threshold)"),
+            (self.ai_thr, self.tr("AI score threshold")),
+            (self.warn, self.tr("WARN band (fraction of the threshold)")),
             (self.use_cmp, None),
-            (self.diff, "Pixel difference (0-255)"),
-            (self.area, "Min defect area (px)"),
-            (self.ssim, "SSIM minimum"),
-            (self.chg, "Max changed area %"),
-            (self.maxreg, "Allowed difference regions"),
+            (self.diff, self.tr("Pixel difference (0-255)")),
+            (self.area, self.tr("Minimum defect area (px)")),
+            (self.ssim, self.tr("Similarity minimum (SSIM)")),
+            (self.chg, self.tr("Maximum changed area %")),
+            (self.maxreg, self.tr("Allowed difference regions")),
         ):
             tf.addRow(label, w) if label else tf.addRow(w)
-        tabs.addTab(thr_tab, "Thresholds")
+        tabs.addTab(thr_tab, self.tr("Thresholds"))
 
         # Mandatory defect set tab (classification table §4)
         mand = QWidget()
         mand.setObjectName("page")
         ml = QVBoxLayout(mand)
-        ml.addWidget(QLabel("Mandatory AOI defect set (must be covered by every recipe):"))
+        ml.addWidget(QLabel(self.tr("Mandatory AOI defect set (every recipe must cover it):")))
         self.mand_list = QListWidget()
         ml.addWidget(self.mand_list, 1)
-        tabs.addTab(mand, "Mandatory Set")
+        tabs.addTab(mand, self.tr("Mandatory Set"))
 
         # History tab
         hist = QWidget()
         hist.setObjectName("page")
         hl = QVBoxLayout(hist)
-        self.history = make_table(["Revision", "User", "Saved"])
+        self.history = make_table([self.tr("Revision"), self.tr("User"), self.tr("Saved")])
         hl.addWidget(self.history)
-        tabs.addTab(hist, "Revisions")
+        tabs.addTab(hist, self.tr("Revisions"))
 
         right = QWidget()
         rv = QVBoxLayout(right)
@@ -172,12 +181,19 @@ class RecipeEditorPage(Page):
         self.test_verdict.setMinimumHeight(theme.FIELD_H)
         rv.addWidget(self.test_verdict)
         b = QHBoxLayout()
-        b.addWidget(button("Test Run…", slot=self.test_run))
-        b.addWidget(button("Save Recipe", "primary", self.save))
+        b.addWidget(button(self.tr("Try Recipe…"), slot=self.test_run))
+        b.addWidget(button(self.tr("Save Recipe"), "primary", self.save))
         rv.addLayout(b)
         split.addWidget(right)
         split.setSizes([1000, 640])
         self.root.addWidget(split, 1)
+
+    def _fill_types(self, combo: QComboBox) -> None:
+        for roi_type in ROI_TYPES:
+            combo.addItem(self._type_text(roi_type), roi_type)  # the English type is the key the recipe stores
+
+    def _type_text(self, roi_type: str) -> str:
+        return self.tr(ROI_TYPE_NAMES[roi_type]) if roi_type in ROI_TYPE_NAMES else roi_type
 
     @staticmethod
     def _pair(a, b):
@@ -191,15 +207,16 @@ class RecipeEditorPage(Page):
     # --- load / show ------------------------------------------------------------
     def load(self):
         if not self.board_model:
-            self.view_empty.show_state("No board model yet", "Pick a board model in the header first.")
+            self.view_empty.show_state(*self.no_board_model())
             return
         self.rev, self.recipe = self.ctx.recipe(self.board_model)
         ref_path = self.ctx.reference_image(self.board_model)
         self.ref = load_image(ref_path) if ref_path else None
         self.view.set_image(self.ref)
         if self.ref is None:
-            step = self.empty_step("Train an AI model or set a reference image on Training.", "Training")
-            self.view_empty.show_state(f"No Golden board for {self.board_model} yet", *step)
+            step = self.empty_step(self.tr("Train an AI model or set a reference image on Training."), "Training")
+            heading = self.tr("No Golden board for {board_model} yet").format(board_model=self.board_model)
+            self.view_empty.show_state(heading, *step)
         else:
             self.view_empty.hide()
         r = self.recipe
@@ -224,13 +241,13 @@ class RecipeEditorPage(Page):
         if r.rois:
             self.roi_empty.hide()
         else:
-            self.roi_empty.show_state("No ROIs yet", "Press Draw ROI and drag on the Golden board.")
+            self.roi_empty.show_state(self.tr("No ROIs yet"), self.tr("Press Draw ROI and drag on the Golden board."))
         self.view.clear_overlays()
         sel = self._sel_index()
         for i, x in enumerate(r.rois):
             # spec: yellow = active (being edited), green = saved
             color = theme.ROI_SELECTED if i == sel else theme.ROI_COLOR if x.enabled else theme.ROI_DISABLED
-            self.view.add_box(x.x, x.y, x.w, x.h, color, f"{x.name} [{x.type}]")
+            self.view.add_box(x.x, x.y, x.w, x.h, color, f"{x.name} [{self._type_text(x.type)}]")
         covered = {x.type for x in r.rois}
         self.mand_list.clear()
         roi_for = {
@@ -243,12 +260,12 @@ class RecipeEditorPage(Page):
         }
         for name in taxonomy.MANDATORY_AOI_SET:
             if name in taxonomy.REQUIRES_3D_OR_SIDE:
-                mark = "◌  needs Stage 2 (3D / side camera)"
+                mark = self.tr("◌  needs Stage 2 (3D / side camera)")
             elif roi_for.get(name) in covered:
-                mark = "✓  ROI defined"
+                mark = self.tr("✓  ROI defined")
             else:
-                mark = "•  covered by whole-board AI + compare"
-            self.mand_list.addItem(f"{name:<24}  {mark}")
+                mark = self.tr("•  covered by the whole-board AI model and the Golden board comparison")
+            self.mand_list.addItem(self.tr("{defect:<24}  {mark}").format(defect=name, mark=mark))
 
     def _sel_index(self) -> int:
         rows = self.roi_table.selectionModel().selectedRows() if self.roi_table.selectionModel() else []
@@ -263,7 +280,7 @@ class RecipeEditorPage(Page):
         self.recipe.rois.append(
             ROI(
                 f"R{n}",
-                self.roi_type.currentText(),
+                self.roi_type.currentData(),
                 int(rect.x()),
                 int(rect.y()),
                 int(rect.width()),
@@ -279,7 +296,7 @@ class RecipeEditorPage(Page):
             return
         x = self.recipe.rois[i]
         self.r_name.setText(x.name)
-        self.r_type.setCurrentText(x.type)
+        self.r_type.setCurrentIndex(self.r_type.findData(x.type))
         self.r_ai.setValue(x.ai_score)
         for w, v in (
             (self.r_hmin, x.height_min),
@@ -292,7 +309,7 @@ class RecipeEditorPage(Page):
         self.view.clear_overlays()
         for j, r in enumerate(self.recipe.rois):
             color = theme.ROI_SELECTED if j == i else theme.ROI_COLOR
-            self.view.add_box(r.x, r.y, r.w, r.h, color, f"{r.name} [{r.type}]")
+            self.view.add_box(r.x, r.y, r.w, r.h, color, f"{r.name} [{self._type_text(r.type)}]")
 
     def apply_roi(self):
         i = self._sel_index()
@@ -301,7 +318,7 @@ class RecipeEditorPage(Page):
         x = self.recipe.rois[i]
         x.name, x.type, x.ai_score, x.enabled = (
             self.r_name.text(),
-            self.r_type.currentText(),
+            self.r_type.currentData(),
             self.r_ai.value(),
             self.r_enabled.isChecked(),
         )
@@ -336,7 +353,9 @@ class RecipeEditorPage(Page):
         if not self.need_board_model():
             return
         exts = " ".join(f"*{e}" for e in sorted(IMAGE_EXTS))
-        f, _ = QFileDialog.getOpenFileName(self, "Test image", "", f"Images ({exts})")
+        f, _ = QFileDialog.getOpenFileName(
+            self, self.tr("Image to try the recipe on"), "", self.tr("Images ({extensions})").format(extensions=exts)
+        )
         if f:
             self.run_test(f)
 
@@ -356,8 +375,9 @@ class RecipeEditorPage(Page):
             self.view.add_box(d.x, d.y, d.w, d.h, theme.NG_COLOR, f"{d.no} {d.type}")
         for x in self.recipe.rois:
             self.view.add_box(x.x, x.y, x.w, x.h, theme.ROI_COLOR, dashed=True)
+        result = self.tr("Try result: {verdict}  ·  {defects} defect(s)  ·  {ms:.0f} ms")
         self.test_verdict.setText(
-            f"Test run: {theme.verdict_label(res.verdict)}  ·  {len(res.defects)} defect(s)  ·  {res.elapsed_ms:.0f} ms"
+            result.format(verdict=theme.verdict_label(res.verdict), defects=len(res.defects), ms=res.elapsed_ms)
         )
         self.test_verdict.setStyleSheet(theme.verdict_style(res.verdict, big=False))
 
@@ -365,7 +385,8 @@ class RecipeEditorPage(Page):
         if not self.need_board_model():
             return
         rev = self.ctx.save_recipe(self._collect())
-        QMessageBox.information(self, "Recipe", f"Saved revision {rev} by {self.ctx.user}.")
+        saved = self.tr("Saved revision {revision} by {user}.").format(revision=rev, user=self.ctx.user)
+        QMessageBox.information(self, self.tr("Recipe"), saved)
         self.load()
 
     def on_board_model_changed(self, name):
