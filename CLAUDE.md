@@ -52,7 +52,9 @@ State the result of each line in the change note; mark a line that does not appl
 - Times are stored in UTC as ISO 8601 with an offset, paths relative to the workspace, records with a
   UUID, and every schema change as a numbered migration.
 - Text is at least 14 pt, colours and sizes come only from `aoi/ui/theme.py`, and every visible string
-  goes through `self.tr()`.
+  goes through `self.tr()` (`QCoreApplication.translate("Page", …)` in the `Page` base class) with named
+  `{placeholders}` and `.format()`; after changing a string run `python tools/update_translations.py` and commit
+  `aoi/i18n/aoi_ko.ts`, or a test fails.
 - No GPL, AGPL, non-commercial or unlicensed code, weights or data; only LGPL Qt modules (no Qt Charts).
 - Results on synthetic boards are never quoted as accuracy; every accuracy claim carries counts.
 - Every error a user can see is an `AoiError` with a code from `aoi/errors.py` (what happened, what to do);

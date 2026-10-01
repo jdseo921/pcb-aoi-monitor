@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Any
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import QT_TRANSLATE_NOOP, QCoreApplication, Qt
 from PySide6.QtGui import QColor, QFont
 from PySide6.QtWidgets import (
     QHBoxLayout,
@@ -23,12 +23,36 @@ from ..widgets.busy import BusyOverlay
 from ..workers import Worker, start
 
 
+def page_text(text: str) -> str:
+    """A page title or subtitle, marked in its class with QT_TRANSLATE_NOOP("Page", …), in the UI language."""
+    return QCoreApplication.translate("Page", text)
+
+
+def role_text(role: str) -> str:
+    """A role name in the UI language; the English name stays the key the services check (REQ-USR-001)."""
+    return QCoreApplication.translate("Role", role)
+
+
+ROLES = (
+    QT_TRANSLATE_NOOP("Role", "Operator"),
+    QT_TRANSLATE_NOOP("Role", "Engineer"),
+    QT_TRANSLATE_NOOP("Role", "Admin"),
+)
+
+
 class Page(QWidget):
-    """Base for every navigation page."""
+    """Base for every navigation page.
+
+    Visible strings go through `self.tr()` in a page class and through `QCoreApplication.translate("Page", …)` here:
+    `self.tr()` takes the most-derived class name as its context, so a string wrapped in this base class would be
+    looked up under the subclass name and never found (REQ-SET-005). Titles are marked with
+    `QT_TRANSLATE_NOOP("Page", …)` and translated by `page_text()` where they are shown; the English title stays
+    the navigation key.
+    """
 
     title = "Page"
     subtitle = ""
-    roles = ("Operator", "Engineer", "Admin")  # who may open it (spec 8)
+    roles = ROLES  # who may open it (spec 8)
 
     def __init__(self, ctx: AppContext, shell):
         super().__init__()
@@ -39,11 +63,11 @@ class Page(QWidget):
         self.root = QVBoxLayout(self)
         self.root.setContentsMargins(20, 14, 20, 14)
         head = QHBoxLayout()
-        t = QLabel(self.title)
+        t = QLabel(page_text(self.title))
         t.setObjectName("h1")
         head.addWidget(t)
         if self.subtitle:
-            s = QLabel(self.subtitle)
+            s = QLabel(page_text(self.subtitle))
             s.setObjectName("muted")
             head.addWidget(s, 1, Qt.AlignBottom)
         else:
@@ -61,16 +85,23 @@ class Page(QWidget):
 
     def need_board_model(self) -> bool:
         if not self.board_model:
-            QMessageBox.information(self, "Board model", "Create or select a board model in the top bar first.")
+            QMessageBox.information(
+                self,
+                QCoreApplication.translate("Page", "Board model"),
+                QCoreApplication.translate("Page", "Create or select a board model in the top bar first."),
+            )
             return False
         return True
 
     def empty_step(self, sentence: str, target: str) -> tuple[str, str, Callable[[], None] | None]:
         """What to do and where, for an `EmptyState`: `sentence` with the link "Open <target> ›", or, for a role that
         cannot open that page, "Ask an Engineer to do this on <target>." with no link (REQ-SET-019)."""
+        page = page_text(target)
         if self.ctx.role in self.shell.pages[target].roles:
-            return sentence, f"Open {target} ›", lambda: self.shell.navigate(target)
-        return f"Ask an Engineer to do this on {target}.", "", None
+            link = QCoreApplication.translate("Page", "Open {page} ›").format(page=page)
+            return sentence, link, lambda: self.shell.navigate(target)
+        ask = QCoreApplication.translate("Page", "Ask an Engineer to do this on {page}.").format(page=page)
+        return ask, "", None
 
     def error(self, exc: BaseException) -> None:
         """Show an error the way the standard asks: its code, what happened and what to do (REQ-SET-019)."""
