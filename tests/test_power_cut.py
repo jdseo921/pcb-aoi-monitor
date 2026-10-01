@@ -75,11 +75,11 @@ def test_req_insp_008_no_finished_result_lost(tmp_path: Path, tiny_model: Traine
             assert r["defect_count"] == len(db.defects_for(r["id"]))
         db.close()
         for p in (ws / "results").rglob("*"):
-            if p.is_file():
+            if p.is_file() and not p.name.endswith(atomic.TEMP_SUFFIX):  # a temp file: an interrupted write
                 assert p.suffix in IMAGE_EXTS, f"left half-written: {p}"
                 load_image(p)
         assert len(rows) >= finished  # nothing recorded earlier disappeared
         finished = len(rows)
     assert finished >= KILLS, f"only {finished} inspections finished over {KILLS} runs"
-    ctx = AppContext(Settings(workspace=str(ws), device="cpu"))  # the sweep leaves no temp files either
+    ctx = AppContext(Settings(workspace=str(ws), device="cpu"))  # the next start sweeps the temp files away
     assert not list(ws.rglob(f".*{atomic.TEMP_SUFFIX}")) and ctx.load_model("TINY") is not None
