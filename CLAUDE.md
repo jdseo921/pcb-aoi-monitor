@@ -46,8 +46,9 @@ State the result of each line in the change note; mark a line that does not appl
 ## Rules that are easy to break in this code
 
 - `aoi/core` and `aoi/data` never import PySide6; screens reach the engine only through `AppContext`.
-- Models load with `torch.load(weights_only=True)` on PyTorch 2.6 or later. v0.1 still loads with
-  `weights_only=False` and allows `torch>=2.2`; that is the first fix.
+- Models load with `torch.load(weights_only=True)` on PyTorch 2.6 or later (`aoi/core/anomaly.py`, since
+  REQ-TRN-014); model metadata holds only tensors and plain values, and a test fails the build on
+  `weights_only=False` anywhere in `aoi/`.
 - Times are stored in UTC as ISO 8601 with an offset, paths relative to the workspace, records with a
   UUID, and every schema change as a numbered migration.
 - Text is at least 14 pt, colours and sizes come only from `aoi/ui/theme.py`, and every visible string

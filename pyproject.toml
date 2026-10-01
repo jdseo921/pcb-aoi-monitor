@@ -23,3 +23,5 @@ untyped_calls_exclude = ["skimage"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# Tests import the app as a package from the repository root.
+pythonpath = ["."]

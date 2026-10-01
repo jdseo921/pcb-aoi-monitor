@@ -9,11 +9,15 @@ high reconstruction error. Labelled NG uploads, when present, are used to
 calibrate the decision threshold, not required for training.
 
 Saved as a .pt file (spec Stage 1 deliverable) containing weights plus the
-calibration metadata needed to score new images.
+calibration metadata needed to score new images. The file holds only tensors and
+plain Python values, so it loads with ``torch.load(weights_only=True)`` and a file
+that would need code to unpickle is refused (Engineering standard, "Untrusted
+inputs"; REQ-TRN-014).
 """
 
 from __future__ import annotations
 
+import pickle
 import random
 import time
 from collections.abc import Callable
@@ -25,6 +29,39 @@ import cv2
 import numpy as np
 import torch
 from torch import nn
+
+
+class ModelFileError(ValueError):
+    """An AI model file was refused: not a weights-only model file this app wrote."""
+
+
+# Metadata arrays that travel in the file as tensors and are used as NumPy arrays in memory.
+_ARRAY_META_KEYS = ("err_mean", "err_std")
+
+
+def _to_safe(value: Any) -> Any:
+    """Convert metadata to what the weights-only unpickler accepts: tensors and plain Python values."""
+    if isinstance(value, torch.Tensor):
+        return value
+    if isinstance(value, np.ndarray):
+        return torch.from_numpy(np.ascontiguousarray(value))
+    if isinstance(value, np.generic):
+        return value.item()
+    if isinstance(value, dict):
+        return {str(k): _to_safe(v) for k, v in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_to_safe(v) for v in value]
+    if value is None or isinstance(value, (str, int, float, bool)):
+        return value
+    raise TypeError(f"Model metadata of type {type(value).__name__} cannot be stored in a weights-only file")
+
+
+def _from_safe(meta: dict[str, Any]) -> dict[str, Any]:
+    out = dict(meta)
+    for key in _ARRAY_META_KEYS:
+        if isinstance(out.get(key), torch.Tensor):
+            out[key] = out[key].cpu().numpy()
+    return out
 
 
 class ConvAutoencoder(nn.Module):
@@ -125,14 +162,22 @@ class AnomalyModel:
         return float(np.percentile(amap, 99.9))
 
     def save(self, path: Path) -> None:
-        torch.save({"state_dict": self.net.state_dict(), "meta": self.meta}, path)
+        torch.save({"state_dict": self.net.state_dict(), "meta": _to_safe(self.meta)}, path)
 
     @classmethod
     def load(cls, path: str | Path, device: str = "cpu") -> AnomalyModel:
-        ckpt = torch.load(path, map_location=device, weights_only=False)
+        """Load a model file as weights only; any file that needs code to unpickle is refused."""
+        try:
+            ckpt = torch.load(path, map_location=device, weights_only=True)
+        except (pickle.UnpicklingError, RuntimeError, ValueError, EOFError) as e:
+            raise ModelFileError(
+                f"AI model file refused: {path} is not a weights-only model file this app wrote ({type(e).__name__})."
+            ) from e
+        if not isinstance(ckpt, dict) or not isinstance(ckpt.get("meta"), dict) or "state_dict" not in ckpt:
+            raise ModelFileError(f"AI model file refused: {path} does not hold a state_dict and metadata.")
         net = ConvAutoencoder()
         net.load_state_dict(ckpt["state_dict"])
-        return cls(net, ckpt["meta"], device)
+        return cls(net, _from_safe(ckpt["meta"]), device)
 
 
 def calibrate(ok_scores: list[float], ng_scores: list[float]) -> tuple[float, str]:
