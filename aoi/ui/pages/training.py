@@ -30,6 +30,7 @@ from ...core.imaging import IMAGE_EXTS, list_images, load_image
 from ...errors import AoiError
 from ...hal import VIEWS
 from ...times import to_local
+from .. import theme
 from ..widgets.busy import BusyOverlay
 from ..widgets.image_view import ImageView
 from ..workers import Worker, start
@@ -319,7 +320,7 @@ class TrainingPage(Page):
         fill_table(
             self.samples,
             [[r["id"], r["label"], r["defect_type"] or "", r["side"], Path(r["path"]).name] for r in s],
-            [None if r["label"] == "OK" else "#5d2a2a" for r in s],
+            [None if r["label"] == "OK" else theme.NG_TINT for r in s],
         )
         for i, r in enumerate(s):
             self.samples.item(i, 4).setToolTip(r["path"])

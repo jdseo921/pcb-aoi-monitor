@@ -23,7 +23,7 @@ from ...core.imaging import IMAGE_EXTS, list_images, load_image, save_image
 from ...core.inspector import InspectionResult, draw_overlay
 from ...hal import VIEWS
 from ...times import to_local
-from ..theme import verdict_style
+from .. import theme
 from ..widgets.image_view import ImageView
 from ..workers import Worker, start
 from .base import Page, button, fill_table, make_table
@@ -73,14 +73,15 @@ class InspectionPage(Page):
         sl = QVBoxLayout(side)
         sl.setContentsMargins(8, 0, 0, 0)
         self.verdict = QLabel("—")
-        self.verdict.setStyleSheet(verdict_style("INFO"))
-        self.verdict.setMinimumHeight(90)
+        self.verdict.setStyleSheet(theme.verdict_style("INFO"))
+        self.verdict.setMinimumHeight(theme.BANNER_H)
         sl.addWidget(self.verdict)
         self.summary = QLabel("")
         self.summary.setObjectName("muted")
         self.summary.setWordWrap(True)
         sl.addWidget(self.summary)
         self.table = make_table(["No", "Type", "Score", "Side", "X", "Y"])
+        self.table.verticalHeader().setDefaultSectionSize(theme.TARGET_H)  # a defect row is an operator target
         self.table.itemSelectionChanged.connect(self._focus_defect)
         sl.addWidget(self.table, 1)
         sl.addWidget(button("Compare with Golden ›", slot=self.open_compare))
@@ -95,7 +96,7 @@ class InspectionPage(Page):
         self.btn_next = button("Next Board", "primary", self.next_board)
         self.btn_save = button("Save Result", slot=self.save_result)
         for i, b in enumerate((self.btn_start, self.btn_stop, self.btn_next, self.btn_save)):
-            b.setMinimumHeight(54)
+            b.setMinimumHeight(theme.RUN_CONTROL_H)
             ctl.addWidget(b, 0, i)
         self.root.addLayout(ctl)
 
@@ -168,10 +169,10 @@ class InspectionPage(Page):
         for d in res.defects:
             sev = taxonomy.BY_NAME.get(d.type, taxonomy.ANOMALY).severity
             self.view.add_box(
-                d.x, d.y, d.w, d.h, taxonomy.SEVERITY_COLOR.get(sev, "#e53935"), f"{d.no} {d.type} {d.score:.2f}"
+                d.x, d.y, d.w, d.h, theme.SEVERITY_COLORS.get(sev, theme.NG_COLOR), f"{d.no} {d.type} {d.score:.2f}"
             )
         self.verdict.setText(res.verdict)
-        self.verdict.setStyleSheet(verdict_style(res.verdict))
+        self.verdict.setStyleSheet(theme.verdict_style(res.verdict))
         self.summary.setText(
             f"{path.name}  ·  score {res.score:.2f}× threshold  ·  "
             f"{len(res.defects)} defect(s)  ·  {res.elapsed_ms:.0f} ms"

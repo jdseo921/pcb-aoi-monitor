@@ -31,7 +31,7 @@ from PySide6.QtWidgets import (
 from ... import defects as taxonomy
 from ...core.imaging import IMAGE_EXTS, heat_overlay, load_image
 from ...errors import AoiError
-from ..theme import VERDICT_COLORS, verdict_style
+from .. import theme
 from ..widgets.busy import BusyOverlay
 from ..widgets.image_view import ImageView
 from .base import Page, button, fill_table, make_table
@@ -89,8 +89,8 @@ class ComparePage(Page):
         pl = QVBoxLayout(panel)
         pl.setContentsMargins(8, 0, 0, 0)
         self.verdict = QLabel("—")
-        self.verdict.setStyleSheet(verdict_style("INFO"))
-        self.verdict.setMinimumHeight(80)
+        self.verdict.setStyleSheet(theme.verdict_style("INFO"))
+        self.verdict.setMinimumHeight(theme.BANNER_H)
         pl.addWidget(self.verdict)
         self.metrics = make_table(["Check", "Source", "Value", "Thr.", "Rule", "Result"], sortable=False)
         hh = self.metrics.horizontalHeader()
@@ -218,11 +218,11 @@ class ComparePage(Page):
             return
         self.res = r = res
         self.verdict.setText(r.verdict)
-        self.verdict.setStyleSheet(verdict_style(r.verdict))
+        self.verdict.setStyleSheet(theme.verdict_style(r.verdict))
         rows, colors = [], []
         for c in r.checks:
             rows.append([c.name, c.source, float(c.value), float(c.threshold), c.rule, c.verdict])
-            colors.append(None if c.verdict in ("OK", "INFO") else VERDICT_COLORS[c.verdict])
+            colors.append(None if c.verdict in ("OK", "INFO") else theme.VERDICT_COLORS[c.verdict])
         rows.append(
             [
                 "Inspection time (ms)",
@@ -276,7 +276,7 @@ class ComparePage(Page):
         self._fitted = True
         for d in r.defects:
             sev = taxonomy.BY_NAME.get(d.type, taxonomy.ANOMALY).severity
-            color = taxonomy.SEVERITY_COLOR.get(sev, "#e53935")
+            color = theme.SEVERITY_COLORS.get(sev, theme.NG_COLOR)
             self.test_view.add_box(d.x, d.y, d.w, d.h, color, f"{d.no} {d.type}")
             self.ref_view.add_box(d.x, d.y, d.w, d.h, color, f"{d.no}", dashed=True)
 

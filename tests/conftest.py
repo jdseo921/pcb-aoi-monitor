@@ -27,6 +27,7 @@ from aoi.config import Settings  # noqa: E402
 from aoi.core import anomaly  # noqa: E402
 from aoi.core.imaging import list_images, load_image  # noqa: E402
 from aoi.core.services import AppContext  # noqa: E402
+from aoi.ui.theme import QSS  # noqa: E402
 from tools.make_synthetic_dataset import write_dataset  # noqa: E402
 
 DATASET_SEED = 7  # the generator's default seed, so the fixture matches `python tools/make_synthetic_dataset.py`
@@ -127,3 +128,9 @@ def dialogs(monkeypatch: pytest.MonkeyPatch) -> Iterator[list[tuple[str, str]]]:
 def ng_board(synthetic_dataset: Path) -> Path:
     """A test-split board with a missing component: the largest defect, found by the compare step alone."""
     return next(synthetic_dataset.glob("test/ng/*missing_component*.png"))
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _theme(qapp: Any) -> None:
+    """The shell's stylesheet, as main.py applies it, so page tests see the app's fonts and sizes (REQ-SET-004)."""
+    qapp.setStyleSheet(QSS)

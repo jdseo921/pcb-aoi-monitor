@@ -28,7 +28,7 @@ from ... import defects as taxonomy
 from ...core.imaging import IMAGE_EXTS, load_image
 from ...core.recipe import ROI, ROI_TYPES, Recipe
 from ...times import to_local
-from ..theme import verdict_style
+from .. import theme
 from ..widgets.busy import BusyOverlay
 from ..widgets.image_view import ImageView
 from .base import Page, button, fill_table, make_table
@@ -166,7 +166,7 @@ class RecipeEditorPage(Page):
         rv.setContentsMargins(8, 0, 0, 0)
         rv.addWidget(tabs, 1)
         self.test_verdict = QLabel("")
-        self.test_verdict.setMinimumHeight(40)
+        self.test_verdict.setMinimumHeight(theme.FIELD_H)
         rv.addWidget(self.test_verdict)
         b = QHBoxLayout()
         b.addWidget(button("Test Run…", slot=self.test_run))
@@ -216,7 +216,7 @@ class RecipeEditorPage(Page):
         sel = self._sel_index()
         for i, x in enumerate(r.rois):
             # spec: yellow = active (being edited), green = saved
-            color = "#fdd835" if i == sel else "#43a047" if x.enabled else "#6c7c8c"
+            color = theme.ROI_SELECTED if i == sel else theme.ROI_COLOR if x.enabled else theme.ROI_DISABLED
             self.view.add_box(x.x, x.y, x.w, x.h, color, f"{x.name} [{x.type}]")
         covered = {x.type for x in r.rois}
         self.mand_list.clear()
@@ -278,7 +278,8 @@ class RecipeEditorPage(Page):
         self.r_enabled.setChecked(x.enabled)
         self.view.clear_overlays()
         for j, r in enumerate(self.recipe.rois):
-            self.view.add_box(r.x, r.y, r.w, r.h, "#fdd835" if j == i else "#43a047", f"{r.name} [{r.type}]")
+            color = theme.ROI_SELECTED if j == i else theme.ROI_COLOR
+            self.view.add_box(r.x, r.y, r.w, r.h, color, f"{r.name} [{r.type}]")
 
     def apply_roi(self):
         i = self._sel_index()
@@ -339,13 +340,13 @@ class RecipeEditorPage(Page):
     def _show_test(self, res):
         self.view.set_image(res.image, keep_view=True)
         for d in res.defects:
-            self.view.add_box(d.x, d.y, d.w, d.h, "#e53935", f"{d.no} {d.type}")
+            self.view.add_box(d.x, d.y, d.w, d.h, theme.NG_COLOR, f"{d.no} {d.type}")
         for x in self.recipe.rois:
-            self.view.add_box(x.x, x.y, x.w, x.h, "#43a047", dashed=True)
+            self.view.add_box(x.x, x.y, x.w, x.h, theme.ROI_COLOR, dashed=True)
         self.test_verdict.setText(
             f"Test run: {res.verdict}  ·  {len(res.defects)} defect(s)  ·  {res.elapsed_ms:.0f} ms"
         )
-        self.test_verdict.setStyleSheet(verdict_style(res.verdict, big=False))
+        self.test_verdict.setStyleSheet(theme.verdict_style(res.verdict, big=False))
 
     def save(self):
         if not self.need_board_model():
