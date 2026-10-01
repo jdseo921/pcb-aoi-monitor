@@ -25,3 +25,8 @@ sample_data/
 Thumbs.db
 .idea/
 .vscode/
+
+# Coverage data written by pytest --cov (S05)
+.coverage
+.coverage.*
+coverage.xml

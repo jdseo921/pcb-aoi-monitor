@@ -124,28 +124,23 @@ DEFECTS = [
 ]
 
 
-def main() -> None:
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--out", default="sample_data")
-    ap.add_argument("--ok", type=int, default=60)
-    ap.add_argument("--ng", type=int, default=14)
-    ap.add_argument("--seed", type=int, default=7)
-    a = ap.parse_args()
-    rng = random.Random(a.seed)
-    out = Path(a.out)
-    rows = []
+def write_dataset(out: Path, ok: int = 60, ng: int = 14, seed: int = 7) -> list[dict[str, str]]:
+    """Write the dataset under `out` and return the label rows. Same seed, same images, on every machine."""
+    rng = random.Random(seed)
+    rows: list[dict[str, str]] = []
 
-    def write(split: str, label: str, name: str, img: np.ndarray, dtype: str = ""):
+    def write(split: str, label: str, name: str, img: np.ndarray, dtype: str = "") -> None:
         p = out / split / label.lower() / name
         p.parent.mkdir(parents=True, exist_ok=True)
         cv2.imwrite(str(p), img)
         rows.append({"file": str(p.relative_to(out)), "label": label, "defect_type": dtype})
 
-    cv2.imwrite(str(out.mkdir(parents=True, exist_ok=True) or out / "golden.png"), draw_board(rng))
-    n_test_ok = max(4, a.ok // 3)
-    for i in range(a.ok):
+    out.mkdir(parents=True, exist_ok=True)
+    cv2.imwrite(str(out / "golden.png"), draw_board(rng))
+    n_test_ok = max(4, ok // 3)
+    for i in range(ok):
         write("train" if i >= n_test_ok else "test", "OK", f"ok_{i:03d}.png", capture(draw_board(rng), rng))
-    for i in range(a.ng):
+    for i in range(ng):
         d = DEFECTS[i % len(DEFECTS)]
         split = "train" if i < len(DEFECTS) // 2 else "test"
         write(split, "NG", f"ng_{i:03d}_{d.replace(' ', '_').lower()}.png", capture(draw_board(rng, d), rng), d)
@@ -153,7 +148,18 @@ def main() -> None:
         w = csv.DictWriter(f, fieldnames=["file", "label", "defect_type"])
         w.writeheader()
         w.writerows(rows)
-    print(f"Wrote {len(rows)} images to {out.resolve()}")
+    return rows
+
+
+def main() -> None:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--out", default="sample_data")
+    ap.add_argument("--ok", type=int, default=60)
+    ap.add_argument("--ng", type=int, default=14)
+    ap.add_argument("--seed", type=int, default=7)
+    a = ap.parse_args()
+    rows = write_dataset(Path(a.out), a.ok, a.ng, a.seed)
+    print(f"Wrote {len(rows)} images to {Path(a.out).resolve()}")
 
 
 if __name__ == "__main__":

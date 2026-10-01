@@ -57,8 +57,11 @@ pip install -r requirements-dev.txt
 ruff check .            # lint
 ruff format --check .   # formatting
 mypy                    # strict types on aoi/core and aoi/data
-pytest -q               # tests
+pytest -q               # tests; add --cov for the line coverage of aoi/core and aoi/data
 ```
+
+The tests draw their boards with `tools/make_synthetic_dataset.py` from a fixed seed, and the Qt pages are
+tested offscreen (`QT_QPA_PLATFORM=offscreen`), so no display is needed.
 
 CI also runs three security scans: Bandit (a High finding fails the build), pip-audit (any known vulnerability in
 a dependency fails it) and gitleaks (a secret in any commit fails it).
