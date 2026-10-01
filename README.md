@@ -12,12 +12,18 @@ boards and compare any board side by side with the learned golden board.
 # Python 3.11 from python.org, then in this folder:
 python -m venv .venv
 .venv\Scripts\activate
-pip install -r requirements.txt
-# NVIDIA GPU station: replace torch with the CUDA build from https://pytorch.org/get-started/locally/
+# CPU station or laptop: the CPU build of PyTorch, then every other package at its locked version
+pip install "torch==2.14.1" --index-url https://download.pytorch.org/whl/cpu
+pip install -r requirements.lock
+# NVIDIA GPU station instead: the CUDA build of the same version, from https://pytorch.org/get-started/locally/
+#   pip install "torch==2.14.1" --index-url https://download.pytorch.org/whl/cu130
+#   pip install -r requirements.lock
 python main.py
 ```
 
-Linux/macOS: same steps with `source .venv/bin/activate`.
+Linux/macOS: same steps with `source .venv/bin/activate`. Developers add `pip install -r requirements-dev.lock`
+and run `ruff check .`, `ruff format --check .`, `mypy` and `pytest -q` before pushing. `requirements.txt` holds the
+direct pins and `tools/make_lock.py` regenerates both lock files after a change.
 
 ## Try it in 5 minutes with synthetic boards
 

@@ -1,0 +1,35 @@
+# Licenses a dependency may carry (Legal & Compliance standard, "Licenses"), one per line, checked by
+# tools/check_licenses.py in CI. Lines are SPDX identifiers or the classifier text pip reports.
+# A "package:<name>" line allows one package whatever its metadata says, with the reason after "#".
+#
+# Allowed by the standard: permissive MIT, BSD and Apache 2.0; LGPL only for Qt (PySide6/shiboken6)
+# as separate libraries; SIL Open Font License for Noto Sans KR.
+MIT
+MIT License
+MIT-CMU
+BSD
+BSD License
+BSD-2-Clause
+BSD-3-Clause
+0BSD
+Apache-2.0
+Apache Software License
+Apache-2.0 WITH LLVM-exception
+OFL-1.1
+package:PySide6              # LGPL-3.0-only, allowed as separate libraries (Legal standard)
+package:PySide6_Essentials   # LGPL-3.0-only, part of PySide6
+package:PySide6_Addons       # LGPL-3.0-only, part of PySide6
+package:shiboken6            # LGPL-3.0-only, part of PySide6
+#
+# Exceptions pending Jay's written decision (Stage 1 plan, item J8). The standard does not name
+# these; each is permissive or public-domain-like and comes with a dependency we cannot avoid.
+# CI reports every exception in use so the decision stays visible.
+exception:Zlib               # inside numpy's notice (zlib-licensed parts)
+exception:CC0-1.0            # inside numpy's notice (public-domain dedication)
+exception:BSL-1.0            # Boost parts bundled in torch
+exception:PSF-2.0            # typing_extensions (Python Software Foundation license)
+exception:Python Software Foundation License
+exception:MPL-2.0            # certifi, pathspec: file-level copyleft only; used unmodified
+exception:Mozilla Public License 2.0 (MPL 2.0)
+exception:Unlicense          # filelock (public-domain dedication), a PyTorch dependency
+exception:The Unlicense (Unlicense)
