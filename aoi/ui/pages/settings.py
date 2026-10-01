@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from PySide6.QtCore import QT_TRANSLATE_NOOP
 from PySide6.QtWidgets import (
     QComboBox,
     QFileDialog,
@@ -17,26 +18,32 @@ from PySide6.QtWidgets import (
 )
 
 from ...config import APP_VERSION
-from .base import Page, button, fill_table, make_table
+from .base import ROLES, Page, button, fill_table, make_table, role_text
 
-HARDWARE = [
-    ["Image files (folder camera)", "Stage 1", "Ready"],
-    ["GigE / USB3 Vision camera", "Stage 2", "Not connected"],
-    ["Lighting controller (serial / Ethernet)", "Stage 2", "Not connected"],
-    ["Robot controller (Ethernet / RS-485)", "Stage 3", "Not connected"],
-    ["MES / ERP (REST / OPC UA)", "Stage 4", "Not connected"],
+_S1, _S2, _S3, _S4 = (QT_TRANSLATE_NOOP("SettingsPage", s) for s in ("Stage 1", "Stage 2", "Stage 3", "Stage 4"))
+_NOT_CONNECTED = QT_TRANSLATE_NOOP("SettingsPage", "Not connected")
+HARDWARE = [  # (interface, stage, status), shown through tr()
+    (QT_TRANSLATE_NOOP("SettingsPage", "Image files (folder camera)"), _S1, QT_TRANSLATE_NOOP("SettingsPage", "Ready")),
+    (QT_TRANSLATE_NOOP("SettingsPage", "GigE / USB3 Vision camera"), _S2, _NOT_CONNECTED),
+    (QT_TRANSLATE_NOOP("SettingsPage", "Lighting controller (serial / Ethernet)"), _S2, _NOT_CONNECTED),
+    (QT_TRANSLATE_NOOP("SettingsPage", "Robot controller (Ethernet / RS-485)"), _S3, _NOT_CONNECTED),
+    (QT_TRANSLATE_NOOP("SettingsPage", "MES / ERP (REST / OPC UA)"), _S4, _NOT_CONNECTED),
 ]
+LANGUAGES = (("en", "English"), ("ko", "한국어"))  # a language is named in its own language, so these stay as they are
 
 
 class SettingsPage(Page):
-    title = "Settings"
-    subtitle = f"Version {APP_VERSION}"
+    title = QT_TRANSLATE_NOOP("Page", "Settings")
+    subtitle = QT_TRANSLATE_NOOP("SettingsPage", "Version {version}")
     roles = ("Admin",)
+
+    def subtitle_text(self) -> str:
+        return self.tr(self.subtitle).format(version=APP_VERSION)
 
     def __init__(self, ctx, shell):
         super().__init__(ctx, shell)
         body = QHBoxLayout()
-        g = QGroupBox("System")
+        g = QGroupBox(self.tr("System"))
         f = QFormLayout(g)
         s = ctx.settings
         self.ws = QLineEdit(s.workspace)
@@ -44,7 +51,7 @@ class SettingsPage(Page):
         wl = QHBoxLayout(ws_row)
         wl.setContentsMargins(0, 0, 0, 0)
         wl.addWidget(self.ws)
-        wl.addWidget(button("Browse…", slot=self._browse))
+        wl.addWidget(button(self.tr("Browse…"), slot=self._browse))
         self.device = QComboBox()
         self.device.addItems(["auto", "cpu", "cuda"])
         self.device.setCurrentText(s.device)
@@ -58,34 +65,35 @@ class SettingsPage(Page):
         self.ret.setRange(1, 3650)
         self.ret.setValue(s.log_retention_days)
         self.lang = QComboBox()
-        self.lang.addItems(["en", "ko"])
-        self.lang.setCurrentText(s.language)
-        f.addRow("Workspace (images, models, DB)", ws_row)
-        f.addRow("AI device", self.device)
-        f.addRow("Default input size", self.size)
-        f.addRow("Default epochs", self.epochs)
-        f.addRow("Log retention (days)", self.ret)
-        f.addRow("Language", self.lang)
-        f.addRow(button("Save Settings", "primary", self.save))
+        for code, name in LANGUAGES:
+            self.lang.addItem(name, code)
+        self.lang.setCurrentIndex(max(0, self.lang.findData(s.language)))
+        f.addRow(self.tr("Workspace (images, AI models, database)"), ws_row)
+        f.addRow(self.tr("AI device"), self.device)
+        f.addRow(self.tr("Default input size"), self.size)
+        f.addRow(self.tr("Default epochs"), self.epochs)
+        f.addRow(self.tr("Log retention (days)"), self.ret)
+        f.addRow(self.tr("Language"), self.lang)
+        f.addRow(button(self.tr("Save Settings"), "primary", self.save))
         body.addWidget(g, 1)
 
         right = QVBoxLayout()
-        ug = QGroupBox("Users & roles")
+        ug = QGroupBox(self.tr("Users & roles"))
         ul = QVBoxLayout(ug)
-        self.users = make_table(["Name", "Role"])
+        self.users = make_table([self.tr("Name"), self.tr("Role")])
         ul.addWidget(self.users)
-        ul.addWidget(button("Add / Change User", slot=self.add_user))
+        ul.addWidget(button(self.tr("Add / Change User"), slot=self.add_user))
         right.addWidget(ug, 1)
-        hg = QGroupBox("Hardware interfaces")
+        hg = QGroupBox(self.tr("Hardware interfaces"))
         hl = QVBoxLayout(hg)
-        self.hw = make_table(["Interface", "Stage", "Status"])
+        self.hw = make_table([self.tr("Interface"), self.tr("Stage"), self.tr("Status")])
         hl.addWidget(self.hw)
         right.addWidget(hg, 1)
         body.addLayout(right, 1)
         self.root.addLayout(body, 1)
 
     def _browse(self):
-        d = QFileDialog.getExistingDirectory(self, "Workspace folder", self.ws.text())
+        d = QFileDialog.getExistingDirectory(self, self.tr("Workspace folder"), self.ws.text())
         if d:
             self.ws.setText(d)
 
@@ -94,18 +102,20 @@ class SettingsPage(Page):
         moved = s.workspace != self.ws.text()
         s.workspace, s.device = self.ws.text(), self.device.currentText()
         s.image_size, s.default_epochs = int(self.size.currentText()), self.epochs.value()
-        s.log_retention_days, s.language = self.ret.value(), self.lang.currentText()
+        s.log_retention_days, s.language = self.ret.value(), self.lang.currentData()
         s.save()
-        QMessageBox.information(self, "Settings", "Saved." + (" Restart the app to switch workspace." if moved else ""))
+        saved = self.tr("Saved. Restart the app to switch the workspace.") if moved else self.tr("Saved.")
+        QMessageBox.information(self, self.tr("Settings"), saved)
 
     def add_user(self):
-        name, ok = QInputDialog.getText(self, "User", "User name")
+        name, ok = QInputDialog.getText(self, self.tr("User"), self.tr("User name"))
         if ok and name:
-            role, ok = QInputDialog.getItem(self, "Role", "Role", ["Operator", "Engineer", "Admin"], 0, False)
+            names = [role_text(r) for r in ROLES]
+            role, ok = QInputDialog.getItem(self, self.tr("Role"), self.tr("Role"), names, 0, False)
             if ok:
-                self.ctx.add_user(name, role)
+                self.ctx.add_user(name, ROLES[names.index(role)])
                 self.on_show()
 
     def on_show(self):
-        fill_table(self.users, [[u["name"], u["role"]] for u in self.ctx.users()])
-        fill_table(self.hw, HARDWARE)
+        fill_table(self.users, [[u["name"], role_text(u["role"])] for u in self.ctx.users()])
+        fill_table(self.hw, [[self.tr(cell) for cell in row] for row in HARDWARE])

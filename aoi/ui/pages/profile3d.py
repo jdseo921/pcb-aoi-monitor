@@ -3,7 +3,7 @@ leads to the Recipe Editor, where height and volume limits are already entered p
 
 from __future__ import annotations
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import QT_TRANSLATE_NOOP, Qt
 
 from .. import theme
 from ..widgets.empty_state import EmptyState
@@ -11,8 +11,8 @@ from .base import Page, button
 
 
 class Profile3DPage(Page):
-    title = "3D Profile"
-    subtitle = "Height & coplanarity · available after Stage 2 (3D camera integration)"
+    title = QT_TRANSLATE_NOOP("Page", "3D Profile")
+    subtitle = QT_TRANSLATE_NOOP("Page", "Height and coplanarity · available after Stage 2 (3D camera integration)")
     roles = ("Engineer", "Admin")
 
     def __init__(self, ctx, shell):
@@ -20,17 +20,12 @@ class Profile3DPage(Page):
         self.card = EmptyState(kind="primary")  # the page's one button is its primary
         self.card.setMaximumWidth(theme.CARD_W)
         self.root.addWidget(self.card, 0, Qt.AlignHCenter)
-        self.root.addWidget(button("Back to Home", slot=lambda: shell.navigate("Home")), 0, Qt.AlignHCenter)
+        self.root.addWidget(button(self.tr("Back to Home"), slot=lambda: shell.navigate("Home")), 0, Qt.AlignHCenter)
         self.root.addStretch(1)
 
     def on_show(self):
-        what = (
+        what = self.tr(
             "Height and coplanarity need the 3D camera. Height and volume limits can be entered per ROI in the "
             "Recipe Editor; they are stored now and checked from Stage 2."
         )
-        self.card.show_state(
-            "3D Profile arrives with Stage 2",
-            what,
-            "Open Recipe Editor ›",
-            lambda: self.shell.navigate("Recipe Editor"),
-        )
+        self.card.show_state(self.tr("3D Profile arrives with Stage 2"), *self.empty_step(what, "Recipe Editor"))

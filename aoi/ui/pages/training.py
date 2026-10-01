@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import QT_TRANSLATE_NOOP, Qt
 from PySide6.QtWidgets import (
     QComboBox,
     QDialog,
@@ -35,7 +35,7 @@ from ..widgets.busy import BusyOverlay
 from ..widgets.empty_state import EmptyState
 from ..widgets.image_view import ImageView
 from ..workers import Worker, start
-from .base import Page, button, fill_table, make_table
+from .base import Page, button, fill_table, make_table, view_text
 
 
 class NgDialog(QDialog):
@@ -43,37 +43,43 @@ class NgDialog(QDialog):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("Label NG images")
+        self.setWindowTitle(self.tr("Label NG images"))
         f = QFormLayout(self)
         self.cat = QComboBox()
-        self.cat.addItems(["(any)"] + taxonomy.categories())
+        self.cat.addItem(self.tr("(any)"), None)
+        for category in taxonomy.categories():  # names from the classification table, English until it is translated
+            self.cat.addItem(category, category)
         self.type = QComboBox()
         self.side = QComboBox()
-        self.side.addItems(VIEWS)
-        self.cat.currentTextChanged.connect(self._fill)
-        self._fill("(any)")
-        f.addRow("Category", self.cat)
-        f.addRow("Defect type", self.type)
-        f.addRow("View", self.side)
+        for view in VIEWS:
+            self.side.addItem(view_text(view), view)  # the English name is the key the services store
+        self.cat.currentIndexChanged.connect(self._fill)
+        self._fill()
+        f.addRow(self.tr("Category"), self.cat)
+        f.addRow(self.tr("Defect type"), self.type)
+        f.addRow(self.tr("View"), self.side)
         bb = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
         bb.accepted.connect(self.accept)
         bb.rejected.connect(self.reject)
         f.addRow(bb)
 
-    def _fill(self, cat):
+    def _fill(self, _index: int = 0):
+        cat = self.cat.currentData()
         self.type.clear()
-        self.type.addItem("Unknown / mixed")
+        self.type.addItem(self.tr("Unknown / mixed"))
         for d in taxonomy.DEFECT_TYPES:
-            if cat == "(any)" or d.category == cat:
-                self.type.addItem(f"{d.name}  [{d.severity}]", d.name)
+            if cat is None or d.category == cat:
+                self.type.addItem(self.tr("{type}  [{severity}]").format(type=d.name, severity=d.severity), d.name)
 
     def value(self):
-        return self.type.currentData(), self.side.currentText()
+        return self.type.currentData(), self.side.currentData()
 
 
 class TrainingPage(Page):
-    title = "Training"
-    subtitle = "Upload good (OK) and defective (NG) boards; the model trains itself on this board model"
+    title = QT_TRANSLATE_NOOP("Page", "Training")
+    subtitle = QT_TRANSLATE_NOOP(
+        "Page", "Upload good (OK) and defective (NG) boards; the AI model trains itself on them"
+    )
     roles = ("Engineer", "Admin")
 
     def __init__(self, ctx, shell):
@@ -87,35 +93,37 @@ class TrainingPage(Page):
         ll = QVBoxLayout(left)
         ll.setContentsMargins(0, 0, 8, 0)
         up = QHBoxLayout()
-        up.addWidget(button("+ OK Images", slot=self.add_ok))  # verdict colours mean verdicts, not add buttons
-        up.addWidget(button("+ NG Images", slot=self.add_ng))
-        up.addWidget(button("Import Folder…", slot=self.import_folder))
+        up.addWidget(button(self.tr("+ OK Images"), slot=self.add_ok))  # verdict colours mean verdicts, not add buttons
+        up.addWidget(button(self.tr("+ NG Images"), slot=self.add_ng))
+        up.addWidget(button(self.tr("Import Folder…"), slot=self.import_folder))
         ll.addLayout(up)
         self.counts = QLabel("")
         self.counts.setObjectName("muted")
         ll.addWidget(self.counts)
-        self.samples = make_table(["ID", "Label", "Defect type", "View", "File"])
+        self.samples = make_table(
+            [self.tr("ID"), self.tr("Label"), self.tr("Defect type"), self.tr("View"), self.tr("File")]
+        )
         self.samples.itemSelectionChanged.connect(self._preview)
         self.samples_empty = EmptyState(self.samples)
         self.busy = BusyOverlay(self.samples, self.tr("Importing…"))
         ll.addWidget(self.samples, 1)
         act = QHBoxLayout()
-        act.addWidget(button("Mark OK", slot=lambda: self._relabel("OK")))
-        act.addWidget(button("Mark NG…", slot=lambda: self._relabel("NG")))
-        act.addWidget(button("Set Reference", slot=self._set_reference))
-        act.addWidget(button("Remove", "danger", self._remove))  # red, last in its row, never the default
+        act.addWidget(button(self.tr("Mark OK"), slot=lambda: self._relabel("OK")))
+        act.addWidget(button(self.tr("Mark NG…"), slot=lambda: self._relabel("NG")))
+        act.addWidget(button(self.tr("Set Reference"), slot=self._set_reference))
+        act.addWidget(button(self.tr("Remove"), "danger", self._remove))  # red, last in its row, never the default
         ll.addLayout(act)
         split.addWidget(left)
 
         # Middle: preview ----------------------------------------------------------
-        self.preview = ImageView(placeholder="Select a sample to preview")
+        self.preview = ImageView(placeholder=self.tr("Select a sample to preview"))
         split.addWidget(self.preview)
 
         # Right: training + model versions ----------------------------------------
         right = QWidget()
         rl = QVBoxLayout(right)
         rl.setContentsMargins(8, 0, 0, 0)
-        g = QGroupBox("Self-training")
+        g = QGroupBox(self.tr("Self-training"))
         f = QFormLayout(g)
         self.epochs = QSpinBox()
         self.epochs.setRange(5, 1000)
@@ -123,12 +131,12 @@ class TrainingPage(Page):
         self.size = QComboBox()
         self.size.addItems(["128", "256", "384", "512"])
         self.size.setCurrentText(str(ctx.settings.image_size))
-        f.addRow("Epochs", self.epochs)
-        f.addRow("Network input size", self.size)
-        f.addRow("Device", QLabel(ctx.device.upper()))
+        f.addRow(self.tr("Epochs"), self.epochs)
+        f.addRow(self.tr("Network input size"), self.size)
+        f.addRow(self.tr("Device"), QLabel(ctx.device.upper()))
         row = QHBoxLayout()
-        self.btn_train = button("Start Training", "primary", self.train)
-        self.btn_stop = button("Stop", slot=self.stop)
+        self.btn_train = button(self.tr("Start Training"), "primary", self.train)
+        self.btn_stop = button(self.tr("Stop"), slot=self.stop)
         self.btn_stop.setEnabled(False)
         row.addWidget(self.btn_train)
         row.addWidget(self.btn_stop)
@@ -140,13 +148,22 @@ class TrainingPage(Page):
         self.log.setReadOnly(True)
         self.log.setMaximumHeight(170)
         rl.addWidget(self.log)
-        rl.addWidget(QLabel("Model versions"))
-        self.models = make_table(["ID", "Version", "Created", "Threshold", "OK/NG", "Active"])
+        rl.addWidget(QLabel(self.tr("AI model versions")))
+        self.models = make_table(
+            [
+                self.tr("ID"),
+                self.tr("Version"),
+                self.tr("Created"),
+                self.tr("Threshold"),
+                self.tr("OK/NG"),
+                self.tr("Active"),
+            ]
+        )
         self.models_empty = EmptyState(self.models)
         rl.addWidget(self.models, 1)
         mrow = QHBoxLayout()
-        mrow.addWidget(button("Activate Selected", slot=self.activate))
-        mrow.addWidget(button("Export Model…", slot=self.export_model))
+        mrow.addWidget(button(self.tr("Activate Selected"), slot=self.activate))
+        mrow.addWidget(button(self.tr("Export AI Model…"), slot=self.export_model))
         rl.addLayout(mrow)
         split.addWidget(right)
         split.setSizes([620, 520, 560])
@@ -155,14 +172,19 @@ class TrainingPage(Page):
     # --- dataset ----------------------------------------------------------------
     def _pick(self) -> list[str]:
         exts = " ".join(f"*{e}" for e in sorted(IMAGE_EXTS))
-        files, _ = QFileDialog.getOpenFileNames(self, "Select PCB images", "", f"Images ({exts})")
+        files, _ = QFileDialog.getOpenFileNames(
+            self, self.tr("Select PCB images"), "", self.tr("Images ({extensions})").format(extensions=exts)
+        )
         return files
 
     def add_ok(self):
         if self.need_board_model() and (files := self._pick()):
-            side, ok = QInputDialog.getItem(self, "View", "Camera view of these images", list(VIEWS), 0, False)
+            names = [view_text(v) for v in VIEWS]
+            side, ok = QInputDialog.getItem(
+                self, self.tr("View"), self.tr("Camera view of these images"), names, 0, False
+            )
             if ok:
-                self.ctx.import_samples(self.board_model, files, "OK", side=side)
+                self.ctx.import_samples(self.board_model, files, "OK", side=VIEWS[names.index(side)])
                 self.refresh()
 
     def add_ng(self):
@@ -177,7 +199,7 @@ class TrainingPage(Page):
         """Folder with ok/ and ng/ sub-folders (ng/<defect type>/ also accepted)."""
         if not self.need_board_model():
             return
-        d = QFileDialog.getExistingDirectory(self, "Folder containing ok/ and ng/ sub-folders")
+        d = QFileDialog.getExistingDirectory(self, self.tr("Folder containing ok/ and ng/ sub-folders"))
         if d:
             self.import_from(d)
 
@@ -207,7 +229,7 @@ class TrainingPage(Page):
 
     def _imported(self, counts):
         n_ok, n_ng = counts
-        self.shell.status(f"Imported {n_ok} OK and {n_ng} NG images")
+        self.shell.status(self.tr("Imported {ok} OK and {ng} NG images").format(ok=n_ok, ng=n_ng))
         self.refresh()
 
     def _selected_ids(self) -> list[int]:
@@ -231,15 +253,14 @@ class TrainingPage(Page):
         ids = self._selected_ids()
         if ids:
             self.ctx.set_reference(self.board_model, ids[0])
-            self.shell.status("Reference image set; the next training run re-learns the golden template from it")
+            self.shell.status(self.tr("Reference image set; the next training run re-learns the Golden board from it"))
 
     def _remove(self):
         ids = self._selected_ids()
-        if (
-            ids
-            and QMessageBox.question(self, "Remove", f"Remove {len(ids)} sample(s) from the dataset?")
-            == QMessageBox.Yes
-        ):
+        if not ids:
+            return
+        question = self.tr("Remove {count} sample(s) from the dataset?").format(count=len(ids))
+        if QMessageBox.question(self, self.tr("Remove"), question) == QMessageBox.Yes:
             for i in ids:
                 self.ctx.delete_sample(i)
             self.refresh()
@@ -284,11 +305,14 @@ class TrainingPage(Page):
         if msg:
             self.log.appendPlainText(msg)
         elif ep % 5 == 0 or ep == 1:
-            self.log.appendPlainText(f"epoch {ep}/{total}  loss {loss:.4f}")
+            self.log.appendPlainText(
+                self.tr("epoch {epoch}/{total}  loss {loss:.4f}").format(epoch=ep, total=total, loss=loss)
+            )
 
     def _on_done(self, meta):
-        self.log.appendPlainText(f"Saved model {meta['version']} ({meta['train_seconds']} s). Golden template updated.")
-        self.shell.status(f"Model {meta['version']} trained and activated")
+        saved = self.tr("Saved AI model {version} ({seconds} s). Golden board updated.")
+        self.log.appendPlainText(saved.format(version=meta["version"], seconds=meta["train_seconds"]))
+        self.shell.status(self.tr("AI model {version} trained and activated").format(version=meta["version"]))
         self.refresh()
 
     def _finished(self):
@@ -309,7 +333,7 @@ class TrainingPage(Page):
             return
         mid = int(self.models.item(rows[0].row(), 0).text())
         src = Path(self.ctx.model(mid)["path"])
-        f, _ = QFileDialog.getSaveFileName(self, "Export model", src.name, "PyTorch model (*.pt)")
+        f, _ = QFileDialog.getSaveFileName(self, self.tr("Export AI model"), src.name, self.tr("PyTorch model (*.pt)"))
         if f:
             self.ctx.export_model(mid, f)
 
@@ -318,7 +342,7 @@ class TrainingPage(Page):
             self.samples.setRowCount(0)
             self.models.setRowCount(0)
             self.counts.setText("")
-            self.samples_empty.show_state("No board model yet", "Pick a board model in the header first.")
+            self.samples_empty.show_state(*self.no_board_model())
             self.models_empty.hide()
             return
         s = self.ctx.samples(self.board_model)
@@ -332,16 +356,18 @@ class TrainingPage(Page):
         if s:
             self.samples_empty.hide()
         else:
-            what = "Add at least 20 OK boards with + OK Images or Import Folder…"
-            self.samples_empty.show_state(
-                f"No samples for {self.board_model} yet", what, "Import Folder…", self.import_folder
-            )
+            what = self.tr("Add at least 20 OK boards with + OK Images or Import Folder…")
+            heading = self.tr("No samples for {board_model} yet").format(board_model=self.board_model)
+            self.samples_empty.show_state(heading, what, self.tr("Import Folder…"), self.import_folder)
         n_ok = sum(r["label"] == "OK" for r in s)
         ref = self.ctx.reference_image(self.board_model)
-        self.counts.setText(
-            f"{n_ok} OK · {len(s) - n_ok} NG · reference: {Path(ref).name if ref else 'none'}"
-            + ("" if n_ok >= 20 else "  ·  tip: 20+ OK images give a steadier threshold")
+        reference = Path(ref).name if ref else self.tr("none")
+        counts = self.tr("{ok} OK · {ng} NG · reference: {reference}").format(
+            ok=n_ok, ng=len(s) - n_ok, reference=reference
         )
+        if n_ok < 20:
+            counts += "  ·  " + self.tr("tip: 20+ OK images give a steadier threshold")
+        self.counts.setText(counts)
         ms = self.ctx.models(self.board_model)
         rows = []
         for m in ms:
@@ -360,7 +386,9 @@ class TrainingPage(Page):
         if ms:
             self.models_empty.hide()
         else:
-            self.models_empty.show_state("No AI model yet", "Start Training once 20 OK boards are in.")
+            self.models_empty.show_state(
+                self.tr("No AI model yet"), self.tr("Start Training once 20 OK boards are in.")
+            )
 
     def on_board_model_changed(self, name):
         self.preview.set_image(None)

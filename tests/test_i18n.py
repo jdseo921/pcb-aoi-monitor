@@ -1,8 +1,8 @@
 """Every visible string goes through tr() and the translation file is current (REQ-SET-005; S19, S20).
 
 S19 covers the Page base, Home, the frame (header, sidebar, dialogs), Inspection, Compare and Logs & Export; S20
-the other pages and the scan for untranslated literals. Korean translations themselves are a later stage: the file
-lists the strings.
+Training, AI Model Test, Settings, 3D Profile, the Recipe Editor and the scan for untranslated literals. Korean
+translations themselves are a later stage: the file lists the strings.
 """
 
 from __future__ import annotations
@@ -25,6 +25,7 @@ from tools.update_translations import TS_FILE, qt_tool, update
 
 PLACEHOLDER = re.compile(r"\{(\w+)(?::[^}]*)?\}")
 S19_CONTEXTS = {"Page", "Role", "View", "HomePage", "MainWindow", "InspectionPage", "ComparePage", "LogsPage"}
+S20_CONTEXTS = {"TrainingPage", "NgDialog", "ModelTestPage", "SettingsPage", "Profile3DPage"}
 
 
 def _messages(ts: Path) -> dict[tuple[str, str], str]:
@@ -43,11 +44,12 @@ def test_req_set_005_translation_file_is_generated_from_the_sources(tmp_path: Pa
     fresh = _messages(update(tmp_path / "fresh.ts"))
     committed = _messages(TS_FILE)
     assert set(fresh) == set(committed), "the file is stale: python tools/update_translations.py"
-    assert S19_CONTEXTS <= {context for context, _ in committed}
+    assert S19_CONTEXTS | S20_CONTEXTS <= {context for context, _ in committed}
     for context, source in committed:
         assert "{self." not in source and "{len(" not in source, (context, source)
         assert all(name.isidentifier() for name in PLACEHOLDER.findall(source)), (context, source)
     assert ("Page", "Home") in committed and ("LogsPage", "Filter") in committed and ("Role", "Admin") in committed
+    assert ("SettingsPage", "Version {version}") in committed and ("NgDialog", "Label NG images") in committed
 
 
 def test_req_set_005_engine_names_and_camera_views_have_display_strings(tiny_model) -> None:  # type: ignore[no-untyped-def]
