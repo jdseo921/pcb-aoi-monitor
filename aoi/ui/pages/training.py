@@ -246,7 +246,7 @@ class TrainingPage(Page):
         self.worker.signals.result.connect(self._on_done)
         self.worker.signals.error.connect(self.error)
         self.worker.signals.finished.connect(self._finished)
-        start(self.worker)
+        start(self.worker, self.ctx.jobs)
 
     def stop(self):
         if self.worker:
