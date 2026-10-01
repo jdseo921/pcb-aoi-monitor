@@ -4,6 +4,7 @@
 Used for labeling uploaded NG samples, for the defect-type column in result
 tables, and for severity-based verdicts (Critical/Major -> NG, Minor -> Warning).
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -13,8 +14,8 @@ from dataclasses import dataclass
 class DefectType:
     name: str
     category: str
-    severity: str        # Critical | Major | Minor
-    detection: str       # detection method in the source table
+    severity: str  # Critical | Major | Minor
+    detection: str  # detection method in the source table
     description: str
 
 
@@ -68,14 +69,27 @@ BY_NAME = {d.name: d for d in DEFECT_TYPES + [ANOMALY]}
 
 # Section 4: must be present in every AOI recipe.
 MANDATORY_AOI_SET = [
-    "Missing Component", "Misalignment", "Polarity Error", "Solder Bridge",
-    "Tombstone", "Cold Joint", "Shield Can Gap", "Connector Pin Height",
-    "3D Coplanarity", "Solder Volume",
+    "Missing Component",
+    "Misalignment",
+    "Polarity Error",
+    "Solder Bridge",
+    "Tombstone",
+    "Cold Joint",
+    "Shield Can Gap",
+    "Connector Pin Height",
+    "3D Coplanarity",
+    "Solder Volume",
 ]
 
 # Checks that need Stage 2 hardware (3D / side-view cameras).
-REQUIRES_3D_OR_SIDE = {"Shield Can Gap", "Connector Pin Height", "3D Coplanarity",
-                       "Solder Volume", "Pin Height Error", "Insufficient Solder"}
+REQUIRES_3D_OR_SIDE = {
+    "Shield Can Gap",
+    "Connector Pin Height",
+    "3D Coplanarity",
+    "Solder Volume",
+    "Pin Height Error",
+    "Insufficient Solder",
+}
 
 SEVERITY_COLOR = {"Critical": "#e53935", "Major": "#fb8c00", "Minor": "#fdd835"}
 

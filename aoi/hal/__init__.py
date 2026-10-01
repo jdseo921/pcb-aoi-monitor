@@ -9,6 +9,7 @@ Inspection page and the inspection cycle do not change when hardware arrives:
   Stage 3  Robot    -> Ethernet / RS-485 controller: load, inspect, unload, e-stop
   Stage 4  MES      -> REST API or OPC UA: lot id, model, result, timestamp, images
 """
+
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
@@ -37,6 +38,7 @@ class Camera(ABC):
 
 class FolderCamera(Camera):
     """Stage 1 'camera': iterates over uploaded image files."""
+
     name = "Image files (Stage 1)"
 
     def __init__(self, paths: list[str | Path]):
@@ -96,8 +98,9 @@ class MesClient(ABC):
     """Stage 4: push results for traceability and authenticate operators."""
 
     @abstractmethod
-    def upload_result(self, lot_id: str, board_model: str, result: str, timestamp: str,
-                      image_paths: list[str]) -> None: ...
+    def upload_result(
+        self, lot_id: str, board_model: str, result: str, timestamp: str, image_paths: list[str]
+    ) -> None: ...
 
     @abstractmethod
     def authenticate(self, user: str, password: str) -> str | None:

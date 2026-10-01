@@ -1,12 +1,12 @@
 """Log & Export Screen (spec 4.4)."""
+
 from __future__ import annotations
 
 import shutil
 from pathlib import Path
 
 from PySide6.QtCore import QDate, Qt
-from PySide6.QtWidgets import (QCheckBox, QComboBox, QDateEdit, QFileDialog, QHBoxLayout, QLabel,
-                               QMessageBox, QSplitter)
+from PySide6.QtWidgets import QCheckBox, QComboBox, QDateEdit, QFileDialog, QHBoxLayout, QLabel, QMessageBox, QSplitter
 
 from ...core.imaging import load_image
 from ...core.services import export_csv
@@ -22,13 +22,16 @@ class LogsPage(Page):
         super().__init__(ctx, shell)
         self.rows: list[dict] = []
         f = QHBoxLayout()
-        self.d_from = QDateEdit(QDate.currentDate().addDays(-7)); self.d_from.setCalendarPopup(True)
-        self.d_to = QDateEdit(QDate.currentDate()); self.d_to.setCalendarPopup(True)
-        self.model = QComboBox(); self.operator = QComboBox()
+        self.d_from = QDateEdit(QDate.currentDate().addDays(-7))
+        self.d_from.setCalendarPopup(True)
+        self.d_to = QDateEdit(QDate.currentDate())
+        self.d_to.setCalendarPopup(True)
+        self.model = QComboBox()
+        self.operator = QComboBox()
         self.archived = QCheckBox("Include archived")
-        for label, w in (("From", self.d_from), ("To", self.d_to), ("Model", self.model),
-                         ("Operator", self.operator)):
-            f.addWidget(QLabel(label)); f.addWidget(w)
+        for label, w in (("From", self.d_from), ("To", self.d_to), ("Model", self.model), ("Operator", self.operator)):
+            f.addWidget(QLabel(label))
+            f.addWidget(w)
         f.addWidget(self.archived)
         f.addWidget(button("Filter", "primary", self.refresh))
         f.addStretch(1)
@@ -44,7 +47,8 @@ class LogsPage(Page):
         self.root.addWidget(split, 1)
 
         b = QHBoxLayout()
-        self.summary = QLabel(""); self.summary.setObjectName("muted")
+        self.summary = QLabel("")
+        self.summary.setObjectName("muted")
         b.addWidget(self.summary, 1)
         self.btn_csv = button("Export CSV", slot=self.export_csv)
         self.btn_img = button("Export Image Overlays", slot=self.export_overlays)
@@ -54,15 +58,32 @@ class LogsPage(Page):
         self.root.addLayout(b)
 
     def refresh(self):
-        self.rows = self.ctx.db.inspections(self.d_from.date().toString("yyyy-MM-dd"),
-                                            self.d_to.date().toString("yyyy-MM-dd"),
-                                            self.model.currentData(), self.operator.currentData(),
-                                            self.archived.isChecked())
-        fill_table(self.table, [[r["id"], r["time"].replace("T", " "), r["board_model"], r["result"],
-                                 r["defect_count"], r["score"] or 0.0, r["operator"], Path(r["image_path"]).name]
-                                for r in self.rows],
-                   [VERDICT_COLORS[r["result"]] if r["result"] != "OK" else None for r in self.rows])
-        n = len(self.rows); ng = sum(r["result"] == "NG" for r in self.rows)
+        self.rows = self.ctx.db.inspections(
+            self.d_from.date().toString("yyyy-MM-dd"),
+            self.d_to.date().toString("yyyy-MM-dd"),
+            self.model.currentData(),
+            self.operator.currentData(),
+            self.archived.isChecked(),
+        )
+        fill_table(
+            self.table,
+            [
+                [
+                    r["id"],
+                    r["time"].replace("T", " "),
+                    r["board_model"],
+                    r["result"],
+                    r["defect_count"],
+                    r["score"] or 0.0,
+                    r["operator"],
+                    Path(r["image_path"]).name,
+                ]
+                for r in self.rows
+            ],
+            [VERDICT_COLORS[r["result"]] if r["result"] != "OK" else None for r in self.rows],
+        )
+        n = len(self.rows)
+        ng = sum(r["result"] == "NG" for r in self.rows)
         self.summary.setText(f"{n} inspections · {ng} NG · yield {(n - ng) / n:.1%}" if n else "No records")
 
     def _preview(self):
@@ -74,24 +95,38 @@ class LogsPage(Page):
                 self.view.set_image(load_image(r["overlay_path"]))
 
     def _confirm(self, what: str) -> bool:
-        return QMessageBox.question(self, "Confirm export", f"Export {what} for {len(self.rows)} record(s)?") \
+        return (
+            QMessageBox.question(self, "Confirm export", f"Export {what} for {len(self.rows)} record(s)?")
             == QMessageBox.Yes
+        )
 
     def export_csv(self):
         if not self.rows or not self._confirm("CSV"):
             return
-        f, _ = QFileDialog.getSaveFileName(self, "Export CSV", str(self.ctx.settings.exports_dir / "inspections.csv"),
-                                           "CSV (*.csv)")
+        f, _ = QFileDialog.getSaveFileName(
+            self, "Export CSV", str(self.ctx.settings.exports_dir / "inspections.csv"), "CSV (*.csv)"
+        )
         if not f:
             return
         out = []
         for r in self.rows:
             ds = self.ctx.db.defects_for(r["id"])
-            out.append({"id": r["id"], "time": r["time"], "board_model": r["board_model"],
-                        "model_version": r["model_version"], "recipe_rev": r["recipe_rev"], "result": r["result"],
-                        "score": r["score"], "defects": len(ds),
-                        "defect_types": ";".join(sorted({d["type"] for d in ds})),
-                        "operator": r["operator"], "image": r["image_path"], "overlay": r["overlay_path"]})
+            out.append(
+                {
+                    "id": r["id"],
+                    "time": r["time"],
+                    "board_model": r["board_model"],
+                    "model_version": r["model_version"],
+                    "recipe_rev": r["recipe_rev"],
+                    "result": r["result"],
+                    "score": r["score"],
+                    "defects": len(ds),
+                    "defect_types": ";".join(sorted({d["type"] for d in ds})),
+                    "operator": r["operator"],
+                    "image": r["image_path"],
+                    "overlay": r["overlay_path"],
+                }
+            )
         export_csv(f, out)
         self.shell.status(f"Exported {len(out)} rows to {f}")
 
@@ -104,7 +139,8 @@ class LogsPage(Page):
         n = 0
         for r in self.rows:
             if r["overlay_path"] and Path(r["overlay_path"]).exists():
-                shutil.copy2(r["overlay_path"], d); n += 1
+                shutil.copy2(r["overlay_path"], d)
+                n += 1
         self.shell.status(f"Copied {n} overlay image(s) to {d}")
 
     def archive(self):
@@ -115,11 +151,14 @@ class LogsPage(Page):
     def on_show(self):
         admin_or_eng = self.ctx.role in ("Engineer", "Admin")
         for b in (self.btn_csv, self.btn_img, self.btn_arch):
-            b.setEnabled(admin_or_eng)       # spec 8: Admin exports logs (Engineer allowed for PoC)
-        for combo, values in ((self.model, self.ctx.db.board_models()),
-                              (self.operator, [u["name"] for u in self.ctx.db.users()])):
+            b.setEnabled(admin_or_eng)  # spec 8: Admin exports logs (Engineer allowed for PoC)
+        for combo, values in (
+            (self.model, self.ctx.db.board_models()),
+            (self.operator, [u["name"] for u in self.ctx.db.users()]),
+        ):
             cur = combo.currentData()
-            combo.clear(); combo.addItem("All", None)
+            combo.clear()
+            combo.addItem("All", None)
             for v in values:
                 combo.addItem(v, v)
             i = combo.findData(cur)

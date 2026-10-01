@@ -2,30 +2,41 @@ from __future__ import annotations
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor
-from PySide6.QtWidgets import (QHBoxLayout, QLabel, QMessageBox, QPushButton, QTableWidget,
-                               QTableWidgetItem, QVBoxLayout, QWidget)
+from PySide6.QtWidgets import (
+    QHBoxLayout,
+    QLabel,
+    QMessageBox,
+    QPushButton,
+    QTableWidget,
+    QTableWidgetItem,
+    QVBoxLayout,
+    QWidget,
+)
 
 from ...core.services import AppContext
 
 
 class Page(QWidget):
     """Base for every navigation page."""
+
     title = "Page"
     subtitle = ""
-    roles = ("Operator", "Engineer", "Admin")   # who may open it (spec 8)
+    roles = ("Operator", "Engineer", "Admin")  # who may open it (spec 8)
 
     def __init__(self, ctx: AppContext, shell):
         super().__init__()
         self.setObjectName("page")
         self.ctx = ctx
-        self.shell = shell                       # MainWindow: navigation + shared state
+        self.shell = shell  # MainWindow: navigation + shared state
         self.root = QVBoxLayout(self)
         self.root.setContentsMargins(20, 14, 20, 14)
         head = QHBoxLayout()
-        t = QLabel(self.title); t.setObjectName("h1")
+        t = QLabel(self.title)
+        t.setObjectName("h1")
         head.addWidget(t)
         if self.subtitle:
-            s = QLabel(self.subtitle); s.setObjectName("muted")
+            s = QLabel(self.subtitle)
+            s.setObjectName("muted")
             head.addWidget(s, 1, Qt.AlignBottom)
         else:
             head.addStretch(1)
