@@ -1,7 +1,8 @@
 """Headless end-to-end check: synthetic data -> self-train -> batch test.
 
-    pytest -q tests
+pytest -q tests
 """
+
 import subprocess
 import sys
 from pathlib import Path
@@ -16,8 +17,19 @@ from aoi.core.services import AppContext  # noqa: E402
 
 def test_train_and_detect(tmp_path):
     data = tmp_path / "data"
-    subprocess.run([sys.executable, str(ROOT / "tools" / "make_synthetic_dataset.py"), "--out", str(data),
-                    "--ok", "30", "--ng", "14"], check=True)
+    subprocess.run(
+        [
+            sys.executable,
+            str(ROOT / "tools" / "make_synthetic_dataset.py"),
+            "--out",
+            str(data),
+            "--ok",
+            "30",
+            "--ng",
+            "14",
+        ],
+        check=True,
+    )
     ctx = AppContext(Settings(workspace=str(tmp_path / "ws")))
     ctx.import_samples("TEST", [str(p) for p in list_images(data / "train" / "ok")], "OK")
     ctx.import_samples("TEST", [str(p) for p in list_images(data / "train" / "ng")], "NG")
@@ -27,7 +39,7 @@ def test_train_and_detect(tmp_path):
 
     metrics, rows = ctx.batch_test("TEST", str(data / "test"))
     assert metrics["labelled"] == len(rows) > 0
-    assert metrics["recall"] >= 0.8          # defects must be caught
+    assert metrics["recall"] >= 0.8  # defects must be caught
     assert metrics["false_call_rate"] <= 0.5  # loose bound: tiny CPU training run
 
     res = ctx.inspect_file("TEST", rows[0]["image"])

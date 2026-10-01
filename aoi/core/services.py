@@ -3,13 +3,15 @@
 Keeps the Qt pages thin and lets the same workflows run headless (tests, CLI,
 and later a Stage 3 robot cycle or Stage 4 MES hook).
 """
+
 from __future__ import annotations
 
 import csv
 import shutil
 import uuid
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable
+from typing import Any
 
 import numpy as np
 
@@ -32,8 +34,9 @@ class AppContext:
         self._model_cache: dict[str, tuple[str, anomaly.AnomalyModel]] = {}
 
     # --- dataset -------------------------------------------------------------
-    def import_samples(self, board_model: str, paths: list[str], label: str,
-                       defect_type: str | None = None, side: str = "Top") -> int:
+    def import_samples(
+        self, board_model: str, paths: list[str], label: str, defect_type: str | None = None, side: str = "Top"
+    ) -> int:
         """Copy uploads into the workspace so training data survives the source folder moving."""
         dest = self.settings.images_dir / board_model / label
         dest.mkdir(parents=True, exist_ok=True)
@@ -51,9 +54,14 @@ class AppContext:
         return n
 
     # --- training ------------------------------------------------------------
-    def train(self, board_model: str, epochs: int | None = None, image_size: int | None = None,
-              progress: anomaly.ProgressFn | None = None,
-              should_stop: Callable[[], bool] | None = None) -> dict:
+    def train(
+        self,
+        board_model: str,
+        epochs: int | None = None,
+        image_size: int | None = None,
+        progress: anomaly.ProgressFn | None = None,
+        should_stop: Callable[[], bool] | None = None,
+    ) -> dict[str, Any]:
         say = progress or (lambda *a: None)
         ok = [load_image(s["path"]) for s in self.db.samples(board_model, "OK")]
         ng = [load_image(s["path"]) for s in self.db.samples(board_model, "NG")]
@@ -67,8 +75,11 @@ class AppContext:
         ok = [align_to_reference(im, anchor)[0] for im in ok]
         ng = [align_to_reference(im, anchor)[0] for im in ng]
         golden = np.median(np.stack(ok), axis=0).astype(np.uint8)
-        cfg = anomaly.TrainConfig(image_size=image_size or self.settings.image_size,
-                                  epochs=epochs or self.settings.default_epochs, device=self.device)
+        cfg = anomaly.TrainConfig(
+            image_size=image_size or self.settings.image_size,
+            epochs=epochs or self.settings.default_epochs,
+            device=self.device,
+        )
         model = anomaly.train(ok, ng, cfg, progress, should_stop)
         version = self.db.next_model_version(board_model)
         model.meta.update(board_model=board_model, version=version, created_at=now())
@@ -113,12 +124,13 @@ class AppContext:
         ref_path = self.db.reference(board_model)
         ref = load_image(ref_path) if ref_path and Path(ref_path).exists() else None
         insp = Inspector(recipe or rcp, mv[1] if mv else None, ref, side)
-        insp.model_version = mv[0] if mv else None      # type: ignore[attr-defined]
-        insp.recipe_rev = rev                           # type: ignore[attr-defined]
+        insp.model_version = mv[0] if mv else None  # type: ignore[attr-defined]
+        insp.recipe_rev = rev  # type: ignore[attr-defined]
         return insp
 
-    def inspect_file(self, board_model: str, path: str, inspector: Inspector | None = None,
-                     save: bool = True) -> InspectionResult:
+    def inspect_file(
+        self, board_model: str, path: str, inspector: Inspector | None = None, save: bool = True
+    ) -> InspectionResult:
         insp = inspector or self.inspector(board_model)
         res = insp.inspect(load_image(path))
         if save:
@@ -131,18 +143,27 @@ class AppContext:
         overlay = self.settings.results_dir / day / f"{Path(path).stem}_{uuid.uuid4().hex[:6]}_{res.verdict}.png"
         save_image(overlay, draw_overlay(res))
         iid = self.db.add_inspection(
-            {"board_model": board_model, "model_version": getattr(insp, "model_version", None),
-             "recipe_rev": getattr(insp, "recipe_rev", None), "image_path": path,
-             "overlay_path": str(overlay), "result": res.verdict, "score": res.score,
-             "metrics": res.metrics_dict(), "operator": self.user},
-            [d.as_row() for d in res.defects])
+            {
+                "board_model": board_model,
+                "model_version": getattr(insp, "model_version", None),
+                "recipe_rev": getattr(insp, "recipe_rev", None),
+                "image_path": path,
+                "overlay_path": str(overlay),
+                "result": res.verdict,
+                "score": res.score,
+                "metrics": res.metrics_dict(),
+                "operator": self.user,
+            },
+            [d.as_row() for d in res.defects],
+        )
         if res.verdict == NG:
             self.db.alarm("NG", f"{Path(path).name}: {len(res.defects)} defect(s)")
         return iid
 
     # --- batch test (AI Model Test screen) -----------------------------------
-    def batch_test(self, board_model: str, folder: str,
-                   progress: Callable[[int, int], None] | None = None) -> tuple[dict, list[dict]]:
+    def batch_test(
+        self, board_model: str, folder: str, progress: Callable[[int, int], None] | None = None
+    ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
         """Ground truth comes from sub-folder names: anything under an `ng`/`defect`
         folder is NG, under `ok`/`good` is OK."""
         insp = self.inspector(board_model)
@@ -153,9 +174,16 @@ class AppContext:
             gt = NG if parts & {"ng", "defect", "defects", "bad"} else OK if parts & {"ok", "good"} else None
             res = insp.inspect(load_image(f))
             pred = NG if res.verdict in (NG, WARN) else OK
-            rows.append({"image": str(f), "gt": gt or "?", "ai_result": res.verdict, "score": round(res.score, 3),
-                         "defects": len(res.defects),
-                         "pass_fail": "PASS" if gt is None or gt == pred else "FAIL"})
+            rows.append(
+                {
+                    "image": str(f),
+                    "gt": gt or "?",
+                    "ai_result": res.verdict,
+                    "score": round(res.score, 3),
+                    "defects": len(res.defects),
+                    "pass_fail": "PASS" if gt is None or gt == pred else "FAIL",
+                }
+            )
             if progress:
                 progress(i, len(files))
         metrics = classification_metrics(rows)
@@ -163,7 +191,7 @@ class AppContext:
         return metrics, rows
 
 
-def classification_metrics(rows: list[dict]) -> dict:
+def classification_metrics(rows: list[dict[str, Any]]) -> dict[str, Any]:
     """NG is the positive class. WARN counts as a call (flagged for review)."""
     lab = [r for r in rows if r["gt"] in (OK, NG)]
     tp = sum(r["gt"] == NG and r["ai_result"] != OK for r in lab)
@@ -172,19 +200,24 @@ def classification_metrics(rows: list[dict]) -> dict:
     tn = sum(r["gt"] == OK and r["ai_result"] == OK for r in lab)
     n = max(1, len(lab))
     return {
-        "samples": len(rows), "labelled": len(lab), "TP": tp, "FN": fn, "FP": fp, "TN": tn,
+        "samples": len(rows),
+        "labelled": len(lab),
+        "TP": tp,
+        "FN": fn,
+        "FP": fp,
+        "TN": tn,
         "accuracy": (tp + tn) / n,
         "precision": tp / (tp + fp) if tp + fp else 0.0,
         "recall": tp / (tp + fn) if tp + fn else 0.0,
-        "false_call_rate": fp / (fp + tn) if fp + tn else 0.0,   # OK boards wrongly flagged
+        "false_call_rate": fp / (fp + tn) if fp + tn else 0.0,  # OK boards wrongly flagged
     }
 
 
-def export_csv(path: str | Path, rows: list[dict]) -> None:
+def export_csv(path: str | Path, rows: list[dict[str, Any]]) -> None:
     if not rows:
         Path(path).write_text("", encoding="utf-8")
         return
-    with open(path, "w", newline="", encoding="utf-8-sig") as f:   # BOM so Excel opens Korean text
+    with open(path, "w", newline="", encoding="utf-8-sig") as f:  # BOM so Excel opens Korean text
         w = csv.DictWriter(f, fieldnames=list(rows[0].keys()))
         w.writeheader()
         w.writerows(rows)

@@ -1,13 +1,29 @@
 """Dataset & Training page: upload sample boards, self-train, manage model versions."""
+
 from __future__ import annotations
 
 import json
 from pathlib import Path
 
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import (QComboBox, QDialog, QDialogButtonBox, QFileDialog, QFormLayout,
-                               QGroupBox, QHBoxLayout, QInputDialog, QLabel, QMessageBox,
-                               QPlainTextEdit, QProgressBar, QSpinBox, QSplitter, QVBoxLayout, QWidget)
+from PySide6.QtWidgets import (
+    QComboBox,
+    QDialog,
+    QDialogButtonBox,
+    QFileDialog,
+    QFormLayout,
+    QGroupBox,
+    QHBoxLayout,
+    QInputDialog,
+    QLabel,
+    QMessageBox,
+    QPlainTextEdit,
+    QProgressBar,
+    QSpinBox,
+    QSplitter,
+    QVBoxLayout,
+    QWidget,
+)
 
 from ... import defects as taxonomy
 from ...core.imaging import IMAGE_EXTS, list_images, load_image
@@ -24,16 +40,19 @@ class NgDialog(QDialog):
         super().__init__(parent)
         self.setWindowTitle("Label NG images")
         f = QFormLayout(self)
-        self.cat = QComboBox(); self.cat.addItems(["(any)"] + taxonomy.categories())
+        self.cat = QComboBox()
+        self.cat.addItems(["(any)"] + taxonomy.categories())
         self.type = QComboBox()
-        self.side = QComboBox(); self.side.addItems(VIEWS)
+        self.side = QComboBox()
+        self.side.addItems(VIEWS)
         self.cat.currentTextChanged.connect(self._fill)
         self._fill("(any)")
         f.addRow("Category", self.cat)
         f.addRow("Defect type", self.type)
         f.addRow("View", self.side)
         bb = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
-        bb.accepted.connect(self.accept); bb.rejected.connect(self.reject)
+        bb.accepted.connect(self.accept)
+        bb.rejected.connect(self.reject)
         f.addRow(bb)
 
     def _fill(self, cat):
@@ -59,13 +78,16 @@ class TrainingPage(Page):
         split = QSplitter(Qt.Horizontal)
 
         # Left: dataset ------------------------------------------------------------
-        left = QWidget(); ll = QVBoxLayout(left); ll.setContentsMargins(0, 0, 8, 0)
+        left = QWidget()
+        ll = QVBoxLayout(left)
+        ll.setContentsMargins(0, 0, 8, 0)
         up = QHBoxLayout()
         up.addWidget(button("+ OK Images", "start", self.add_ok))
         up.addWidget(button("+ NG Images", "stop", self.add_ng))
         up.addWidget(button("Import Folder…", slot=self.import_folder))
         ll.addLayout(up)
-        self.counts = QLabel(""); self.counts.setObjectName("muted")
+        self.counts = QLabel("")
+        self.counts.setObjectName("muted")
         ll.addWidget(self.counts)
         self.samples = make_table(["ID", "Label", "Defect type", "View", "File"])
         self.samples.itemSelectionChanged.connect(self._preview)
@@ -83,23 +105,33 @@ class TrainingPage(Page):
         split.addWidget(self.preview)
 
         # Right: training + model versions ----------------------------------------
-        right = QWidget(); rl = QVBoxLayout(right); rl.setContentsMargins(8, 0, 0, 0)
+        right = QWidget()
+        rl = QVBoxLayout(right)
+        rl.setContentsMargins(8, 0, 0, 0)
         g = QGroupBox("Self-training")
         f = QFormLayout(g)
-        self.epochs = QSpinBox(); self.epochs.setRange(5, 1000); self.epochs.setValue(ctx.settings.default_epochs)
-        self.size = QComboBox(); self.size.addItems(["128", "256", "384", "512"])
+        self.epochs = QSpinBox()
+        self.epochs.setRange(5, 1000)
+        self.epochs.setValue(ctx.settings.default_epochs)
+        self.size = QComboBox()
+        self.size.addItems(["128", "256", "384", "512"])
         self.size.setCurrentText(str(ctx.settings.image_size))
         f.addRow("Epochs", self.epochs)
         f.addRow("Network input size", self.size)
         f.addRow("Device", QLabel(ctx.device.upper()))
         row = QHBoxLayout()
         self.btn_train = button("Start Training", "primary", self.train)
-        self.btn_stop = button("Stop", slot=self.stop); self.btn_stop.setEnabled(False)
-        row.addWidget(self.btn_train); row.addWidget(self.btn_stop)
+        self.btn_stop = button("Stop", slot=self.stop)
+        self.btn_stop.setEnabled(False)
+        row.addWidget(self.btn_train)
+        row.addWidget(self.btn_stop)
         f.addRow(row)
-        self.bar = QProgressBar(); f.addRow(self.bar)
+        self.bar = QProgressBar()
+        f.addRow(self.bar)
         rl.addWidget(g)
-        self.log = QPlainTextEdit(); self.log.setReadOnly(True); self.log.setMaximumHeight(170)
+        self.log = QPlainTextEdit()
+        self.log.setReadOnly(True)
+        self.log.setMaximumHeight(170)
         rl.addWidget(self.log)
         rl.addWidget(QLabel("Model versions"))
         self.models = make_table(["ID", "Version", "Created", "Threshold", "OK/NG", "Active"])
@@ -178,8 +210,11 @@ class TrainingPage(Page):
 
     def _remove(self):
         ids = self._selected_ids()
-        if ids and QMessageBox.question(self, "Remove", f"Remove {len(ids)} sample(s) from the dataset?") \
-                == QMessageBox.Yes:
+        if (
+            ids
+            and QMessageBox.question(self, "Remove", f"Remove {len(ids)} sample(s) from the dataset?")
+            == QMessageBox.Yes
+        ):
             for i in ids:
                 self.ctx.db.delete_sample(i)
             self.refresh()
@@ -199,10 +234,13 @@ class TrainingPage(Page):
         if n_ok < 2:
             return self.error("Upload at least 2 OK images (20+ recommended) before training.")
         self.log.clear()
-        self.bar.setRange(0, self.epochs.value()); self.bar.setValue(0)
-        self.btn_train.setEnabled(False); self.btn_stop.setEnabled(True)
-        self.worker = Worker(self.ctx.train, self.board_model, self.epochs.value(), int(self.size.currentText()),
-                             with_progress=True)
+        self.bar.setRange(0, self.epochs.value())
+        self.bar.setValue(0)
+        self.btn_train.setEnabled(False)
+        self.btn_stop.setEnabled(True)
+        self.worker = Worker(
+            self.ctx.train, self.board_model, self.epochs.value(), int(self.size.currentText()), with_progress=True
+        )
         self.worker.signals.progress.connect(self._on_progress)
         self.worker.signals.result.connect(self._on_done)
         self.worker.signals.error.connect(self.error)
@@ -216,20 +254,21 @@ class TrainingPage(Page):
     def _on_progress(self, a):
         ep, total, loss, msg = a
         if total > 1:
-            self.bar.setMaximum(total); self.bar.setValue(ep)
+            self.bar.setMaximum(total)
+            self.bar.setValue(ep)
         if msg:
             self.log.appendPlainText(msg)
         elif ep % 5 == 0 or ep == 1:
             self.log.appendPlainText(f"epoch {ep}/{total}  loss {loss:.4f}")
 
     def _on_done(self, meta):
-        self.log.appendPlainText(f"Saved model {meta['version']} ({meta['train_seconds']} s). "
-                                 f"Golden template updated.")
+        self.log.appendPlainText(f"Saved model {meta['version']} ({meta['train_seconds']} s). Golden template updated.")
         self.shell.status(f"Model {meta['version']} trained and activated")
         self.refresh()
 
     def _finished(self):
-        self.btn_train.setEnabled(True); self.btn_stop.setEnabled(False)
+        self.btn_train.setEnabled(True)
+        self.btn_stop.setEnabled(False)
         self.worker = None
 
     # --- model registry ---------------------------------------------------------
@@ -251,26 +290,38 @@ class TrainingPage(Page):
 
     def refresh(self):
         if not self.board_model:
-            self.samples.setRowCount(0); self.models.setRowCount(0); self.counts.setText("")
+            self.samples.setRowCount(0)
+            self.models.setRowCount(0)
+            self.counts.setText("")
             return
         s = self.ctx.db.samples(self.board_model)
-        fill_table(self.samples, [[r["id"], r["label"], r["defect_type"] or "", r["side"], Path(r["path"]).name]
-                                  for r in s],
-                   [None if r["label"] == "OK" else "#5d2a2a" for r in s])
+        fill_table(
+            self.samples,
+            [[r["id"], r["label"], r["defect_type"] or "", r["side"], Path(r["path"]).name] for r in s],
+            [None if r["label"] == "OK" else "#5d2a2a" for r in s],
+        )
         for i, r in enumerate(s):
             self.samples.item(i, 4).setToolTip(r["path"])
         n_ok = sum(r["label"] == "OK" for r in s)
         ref = self.ctx.db.reference(self.board_model)
-        self.counts.setText(f"{n_ok} OK · {len(s) - n_ok} NG · reference: {Path(ref).name if ref else 'none'}"
-                            + ("" if n_ok >= 20 else "  ·  tip: 20+ OK images give a steadier threshold"))
+        self.counts.setText(
+            f"{n_ok} OK · {len(s) - n_ok} NG · reference: {Path(ref).name if ref else 'none'}"
+            + ("" if n_ok >= 20 else "  ·  tip: 20+ OK images give a steadier threshold")
+        )
         ms = self.ctx.db.models(self.board_model)
         rows = []
         for m in ms:
             meta = json.loads(m["metrics"] or "{}")
-            rows.append([m["id"], m["version"], m["created_at"].replace("T", " "),
-                         float(meta.get("image_threshold", 0)),
-                         f"{meta.get('n_ok_train', 0) + meta.get('n_ok_val', 0)}/{meta.get('n_ng', 0)}",
-                         "●" if m["active"] else ""])
+            rows.append(
+                [
+                    m["id"],
+                    m["version"],
+                    m["created_at"].replace("T", " "),
+                    float(meta.get("image_threshold", 0)),
+                    f"{meta.get('n_ok_train', 0) + meta.get('n_ok_val', 0)}/{meta.get('n_ng', 0)}",
+                    "●" if m["active"] else "",
+                ]
+            )
         fill_table(self.models, rows)
 
     def on_board_model_changed(self, name):

@@ -1,12 +1,12 @@
 """Zoom/pan image viewer with defect boxes, ROI drawing and view syncing."""
+
 from __future__ import annotations
 
 import cv2
 import numpy as np
 from PySide6.QtCore import QPointF, QRectF, Qt, Signal
 from PySide6.QtGui import QBrush, QColor, QImage, QPainter, QPen, QPixmap
-from PySide6.QtWidgets import (QGraphicsRectItem, QGraphicsScene, QGraphicsSimpleTextItem,
-                               QGraphicsView)
+from PySide6.QtWidgets import QGraphicsRectItem, QGraphicsScene, QGraphicsSimpleTextItem, QGraphicsView
 
 
 def to_qpixmap(img: np.ndarray) -> QPixmap:
@@ -19,7 +19,7 @@ def to_qpixmap(img: np.ndarray) -> QPixmap:
 
 
 class ImageView(QGraphicsView):
-    roiDrawn = Signal(QRectF)          # image coordinates
+    roiDrawn = Signal(QRectF)  # image coordinates
     viewChanged = Signal()
 
     def __init__(self, parent=None, placeholder: str = "No image"):
@@ -35,7 +35,7 @@ class ImageView(QGraphicsView):
         self._draw_mode = False
         self._drag_start: QPointF | None = None
         self._rubber: QGraphicsRectItem | None = None
-        self._peers: list["ImageView"] = []
+        self._peers: list[ImageView] = []
         self._syncing = False
         self._placeholder = self.scene().addSimpleText(placeholder)
         self._placeholder.setBrush(QColor("#6c7c8c"))
@@ -67,8 +67,9 @@ class ImageView(QGraphicsView):
             self.scene().removeItem(it)
         self._overlay_items.clear()
 
-    def add_box(self, x, y, w, h, color: str = "#e53935", label: str = "", width: float = 2.0,
-                dashed: bool = False) -> None:
+    def add_box(
+        self, x, y, w, h, color: str = "#e53935", label: str = "", width: float = 2.0, dashed: bool = False
+    ) -> None:
         pen = QPen(QColor(color), width)
         pen.setCosmetic(True)
         if dashed:
@@ -104,7 +105,9 @@ class ImageView(QGraphicsView):
     def mousePressEvent(self, e):
         if self._draw_mode and e.button() == Qt.LeftButton and self._pix is not None:
             self._drag_start = self.mapToScene(e.position().toPoint())
-            pen = QPen(QColor("#fdd835"), 2); pen.setCosmetic(True); pen.setStyle(Qt.DashLine)
+            pen = QPen(QColor("#fdd835"), 2)
+            pen.setCosmetic(True)
+            pen.setStyle(Qt.DashLine)
             self._rubber = self.scene().addRect(QRectF(self._drag_start, self._drag_start), pen)
             return
         super().mousePressEvent(e)
@@ -127,7 +130,7 @@ class ImageView(QGraphicsView):
         super().mouseReleaseEvent(e)
 
     # --- synchronised views (Compare page) ---------------------------------------
-    def link(self, other: "ImageView") -> None:
+    def link(self, other: ImageView) -> None:
         self._peers.append(other)
         other._peers.append(self)
 

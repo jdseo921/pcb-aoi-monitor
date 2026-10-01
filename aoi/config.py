@@ -5,6 +5,7 @@ workspace folder so a PoC station can be backed up or moved by copying it.
 The default is ~/AOI_Workspace; override with the AOI_WORKSPACE env variable
 or from the Settings page.
 """
+
 from __future__ import annotations
 
 import json
@@ -23,11 +24,11 @@ def default_workspace() -> Path:
 @dataclass
 class Settings:
     workspace: str = field(default_factory=lambda: str(default_workspace()))
-    device: str = "auto"              # auto | cpu | cuda
-    image_size: int = 256             # network input size (square)
+    device: str = "auto"  # auto | cpu | cuda
+    image_size: int = 256  # network input size (square)
     default_epochs: int = 60
-    log_retention_days: int = 30      # spec 4.4: auto-archive logs older than 30 days
-    language: str = "en"              # en | ko (localization planned for 2H 2027)
+    log_retention_days: int = 30  # spec 4.4: auto-archive logs older than 30 days
+    language: str = "en"  # en | ko (localization planned for 2H 2027)
 
     # --- paths derived from workspace ------------------------------------
     @property
@@ -59,8 +60,7 @@ class Settings:
         return self.root / "exports"
 
     def ensure_dirs(self) -> None:
-        for p in (self.root, self.images_dir, self.models_dir, self.recipes_dir,
-                  self.results_dir, self.exports_dir):
+        for p in (self.root, self.images_dir, self.models_dir, self.recipes_dir, self.results_dir, self.exports_dir):
             p.mkdir(parents=True, exist_ok=True)
 
     # --- persistence -------------------------------------------------------
@@ -69,7 +69,7 @@ class Settings:
         return default_workspace() / "settings.json"
 
     @classmethod
-    def load(cls) -> "Settings":
+    def load(cls) -> Settings:
         f = cls._file()
         if f.exists():
             data = json.loads(f.read_text(encoding="utf-8"))
@@ -88,6 +88,7 @@ class Settings:
 
 def resolve_device(pref: str) -> str:
     import torch
+
     if pref == "cuda" or (pref == "auto" and torch.cuda.is_available()):
         return "cuda" if torch.cuda.is_available() else "cpu"
     return "cpu"

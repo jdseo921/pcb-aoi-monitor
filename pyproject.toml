@@ -1,0 +1,25 @@
+# Tool settings for the checks CI runs on every pull request (Engineering standard, "Code style").
+# The app itself is not packaged from here yet; see README.md for install steps.
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+
+[tool.ruff.lint]
+# pycodestyle, pyflakes, import order, modern syntax, likely bugs.
+select = ["E", "F", "W", "I", "UP", "B"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["aoi"]
+
+[tool.mypy]
+python_version = "3.11"
+# Strict on the engine and data layers, as the standard requires; the UI is not type-checked yet.
+files = ["aoi/core", "aoi/data"]
+strict = true
+warn_unreachable = true
+# scikit-image functions carry no annotations, so calling them is allowed.
+untyped_calls_exclude = ["skimage"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

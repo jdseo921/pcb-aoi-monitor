@@ -11,13 +11,15 @@ calibrate the decision threshold, not required for training.
 Saved as a .pt file (spec Stage 1 deliverable) containing weights plus the
 calibration metadata needed to score new images.
 """
+
 from __future__ import annotations
 
 import random
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable
+from typing import Any
 
 import cv2
 import numpy as np
@@ -29,19 +31,20 @@ class ConvAutoencoder(nn.Module):
     def __init__(self, ch: int = 32, latent: int = 128):
         super().__init__()
 
-        def down(i, o):
+        def down(i: int, o: int) -> nn.Sequential:
             return nn.Sequential(nn.Conv2d(i, o, 4, 2, 1), nn.BatchNorm2d(o), nn.LeakyReLU(0.2, True))
 
-        def up(i, o):
+        def up(i: int, o: int) -> nn.Sequential:
             return nn.Sequential(nn.ConvTranspose2d(i, o, 4, 2, 1), nn.BatchNorm2d(o), nn.ReLU(True))
 
-        self.encoder = nn.Sequential(down(3, ch), down(ch, ch * 2), down(ch * 2, ch * 4),
-                                     down(ch * 4, latent))
-        self.decoder = nn.Sequential(up(latent, ch * 4), up(ch * 4, ch * 2), up(ch * 2, ch),
-                                     nn.ConvTranspose2d(ch, 3, 4, 2, 1), nn.Sigmoid())
+        self.encoder = nn.Sequential(down(3, ch), down(ch, ch * 2), down(ch * 2, ch * 4), down(ch * 4, latent))
+        self.decoder = nn.Sequential(
+            up(latent, ch * 4), up(ch * 4, ch * 2), up(ch * 2, ch), nn.ConvTranspose2d(ch, 3, 4, 2, 1), nn.Sigmoid()
+        )
 
-    def forward(self, x):
-        return self.decoder(self.encoder(x))
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        out: torch.Tensor = self.decoder(self.encoder(x))
+        return out
 
 
 def to_tensor(img_bgr: np.ndarray, size: int) -> torch.Tensor:
@@ -68,13 +71,13 @@ class TrainConfig:
     seed: int = 0
 
 
-ProgressFn = Callable[[int, int, float, str], None]   # epoch, total, loss, message
+ProgressFn = Callable[[int, int, float, str], None]  # epoch, total, loss, message
 
 
 class AnomalyModel:
     """Wraps the network with its calibration so callers only see scores."""
 
-    def __init__(self, net: ConvAutoencoder, meta: dict, device: str = "cpu"):
+    def __init__(self, net: ConvAutoencoder, meta: dict[str, Any], device: str = "cpu"):
         self.net = net.to(device).eval()
         self.meta = meta
         self.device = device
@@ -97,7 +100,8 @@ class AnomalyModel:
         x = to_tensor(img_bgr, self.size).unsqueeze(0).to(self.device)
         rec = self.net(x)
         err = (x - rec).abs().mean(dim=1)[0].cpu().numpy()
-        return cv2.GaussianBlur(err, (0, 0), sigmaX=1.5)
+        blurred: np.ndarray = cv2.GaussianBlur(err, (0, 0), sigmaX=1.5)
+        return blurred
 
     def anomaly_map(self, img_bgr: np.ndarray) -> np.ndarray:
         """Per-pixel anomaly at the input image's resolution.
@@ -107,7 +111,7 @@ class AnomalyModel:
         off), so the map reads as "standard deviations above normal".
         """
         err = self.raw_error(img_bgr)
-        m = max(2, self.size // 64)          # warped borders are never meaningful
+        m = max(2, self.size // 64)  # warped borders are never meaningful
         err[:m, :] = err[-m:, :] = 0
         err[:, :m] = err[:, -m:] = 0
         mu, sd = self.meta.get("err_mean"), self.meta.get("err_std")
@@ -124,7 +128,7 @@ class AnomalyModel:
         torch.save({"state_dict": self.net.state_dict(), "meta": self.meta}, path)
 
     @classmethod
-    def load(cls, path: str | Path, device: str = "cpu") -> "AnomalyModel":
+    def load(cls, path: str | Path, device: str = "cpu") -> AnomalyModel:
         ckpt = torch.load(path, map_location=device, weights_only=False)
         net = ConvAutoencoder()
         net.load_state_dict(ckpt["state_dict"])
@@ -147,15 +151,23 @@ def calibrate(ok_scores: list[float], ng_scores: list[float]) -> tuple[float, st
     return base, f"overlap: OK-based cut, {missed}/{len(ng)} labelled NG below it"
 
 
-def train(ok_images: list[np.ndarray], ng_images: list[np.ndarray], cfg: TrainConfig,
-          progress: ProgressFn | None = None, should_stop: Callable[[], bool] | None = None) -> AnomalyModel:
+def train(
+    ok_images: list[np.ndarray],
+    ng_images: list[np.ndarray],
+    cfg: TrainConfig,
+    progress: ProgressFn | None = None,
+    should_stop: Callable[[], bool] | None = None,
+) -> AnomalyModel:
     if len(ok_images) < 2:
         raise ValueError("Need at least 2 OK images to train.")
-    random.seed(cfg.seed); np.random.seed(cfg.seed); torch.manual_seed(cfg.seed)
+    random.seed(cfg.seed)
+    np.random.seed(cfg.seed)
+    torch.manual_seed(cfg.seed)
     say = progress or (lambda *a: None)
 
     tensors = [to_tensor(im, cfg.image_size) for im in ok_images]
-    idx = list(range(len(tensors))); random.shuffle(idx)
+    idx = list(range(len(tensors)))
+    random.shuffle(idx)
     n_val = max(1, int(round(len(idx) * cfg.val_fraction))) if len(idx) >= 5 else 0
     val_idx, train_idx = idx[:n_val], idx[n_val:]
     train_set = [tensors[i] for i in train_idx]
@@ -165,16 +177,24 @@ def train(ok_images: list[np.ndarray], ng_images: list[np.ndarray], cfg: TrainCo
     sched = torch.optim.lr_scheduler.CosineAnnealingLR(opt, T_max=cfg.epochs)
     l1 = nn.L1Loss()
     t0 = time.time()
-    say(0, cfg.epochs, 0.0, f"Training on {len(train_set)} OK images "
-                            f"({n_val} held out, {len(ng_images)} NG for calibration) on {cfg.device}")
+    say(
+        0,
+        cfg.epochs,
+        0.0,
+        f"Training on {len(train_set)} OK images "
+        f"({n_val} held out, {len(ng_images)} NG for calibration) on {cfg.device}",
+    )
     loss_hist = []
     for ep in range(1, cfg.epochs + 1):
-        net.train(); running = 0.0
+        net.train()
+        running = 0.0
         for _ in range(cfg.steps_per_epoch):
             batch = torch.stack([augment(random.choice(train_set)) for _ in range(cfg.batch_size)]).to(cfg.device)
             rec = net(batch)
             loss = l1(rec, batch) + 0.5 * ((rec - batch) ** 2).mean()
-            opt.zero_grad(); loss.backward(); opt.step()
+            opt.zero_grad()
+            loss.backward()
+            opt.step()
             running += loss.item()
         sched.step()
         loss_hist.append(running / cfg.steps_per_epoch)
@@ -183,8 +203,9 @@ def train(ok_images: list[np.ndarray], ng_images: list[np.ndarray], cfg: TrainCo
             say(ep, cfg.epochs, loss_hist[-1], "Stopped by user; calibrating current weights")
             break
 
-    model = AnomalyModel(net, {"image_size": cfg.image_size, "image_threshold": 1.0, "pixel_threshold": 1.0},
-                         cfg.device)
+    model = AnomalyModel(
+        net, {"image_size": cfg.image_size, "image_threshold": 1.0, "pixel_threshold": 1.0}, cfg.device
+    )
     # Per-pixel error statistics of good boards (the learned "normal variation").
     errs = np.stack([model.raw_error(ok_images[i]) for i in train_idx])
     sd = errs.std(axis=0)
@@ -198,11 +219,23 @@ def train(ok_images: list[np.ndarray], ng_images: list[np.ndarray], cfg: TrainCo
     thr, rule = calibrate(ok_scores, ng_scores)
     pix = max(float(np.percentile(np.concatenate([m.ravel() for m in ok_maps]), 99.95)) * 1.15, thr * 0.6)
     model.meta.update(
-        image_threshold=thr, pixel_threshold=max(pix, 1e-4), threshold_rule=rule,
-        ok_scores=ok_scores, ng_scores=ng_scores, n_ok_train=len(train_set), n_ok_val=n_val,
-        n_ng=len(ng_images), epochs_run=len(loss_hist), final_loss=loss_hist[-1],
-        loss_history=loss_hist, train_seconds=round(time.time() - t0, 1),
+        image_threshold=thr,
+        pixel_threshold=max(pix, 1e-4),
+        threshold_rule=rule,
+        ok_scores=ok_scores,
+        ng_scores=ng_scores,
+        n_ok_train=len(train_set),
+        n_ok_val=n_val,
+        n_ng=len(ng_images),
+        epochs_run=len(loss_hist),
+        final_loss=loss_hist[-1],
+        loss_history=loss_hist,
+        train_seconds=round(time.time() - t0, 1),
     )
-    say(len(loss_hist), cfg.epochs, loss_hist[-1],
-        f"Calibrated image threshold {thr:.4f} ({rule}); pixel threshold {pix:.4f}")
+    say(
+        len(loss_hist),
+        cfg.epochs,
+        loss_hist[-1],
+        f"Calibrated image threshold {thr:.4f} ({rule}); pixel threshold {pix:.4f}",
+    )
     return model
