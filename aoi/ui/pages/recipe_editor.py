@@ -25,6 +25,7 @@ from PySide6.QtWidgets import (
 from ... import defects as taxonomy
 from ...core.imaging import IMAGE_EXTS, load_image
 from ...core.recipe import ROI, ROI_TYPES, Recipe
+from ...data.times import to_local
 from ..theme import verdict_style
 from ..widgets.image_view import ImageView
 from .base import Page, button, fill_table, make_table
@@ -200,7 +201,10 @@ class RecipeEditorPage(Page):
         self.maxreg.setValue(r.max_diff_regions)
         fill_table(
             self.history,
-            [[h["revision"], h["user"], h["created_at"]] for h in self.ctx.db.recipe_history(self.board_model)],
+            [
+                [h["revision"], h["user"], to_local(h["created_at"])]
+                for h in self.ctx.db.recipe_history(self.board_model)
+            ],
         )
         self._refresh_rois()
 

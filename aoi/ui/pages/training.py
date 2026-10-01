@@ -27,6 +27,7 @@ from PySide6.QtWidgets import (
 
 from ... import defects as taxonomy
 from ...core.imaging import IMAGE_EXTS, list_images, load_image
+from ...data.times import to_local
 from ...hal import VIEWS
 from ..widgets.image_view import ImageView
 from ..workers import Worker, start
@@ -204,7 +205,9 @@ class TrainingPage(Page):
     def _set_reference(self):
         ids = self._selected_ids()
         if ids:
-            path = self.ctx.db.query("SELECT path FROM samples WHERE id=?", (ids[0],))[0]["path"]
+            path = self.ctx.db.resolve_path(
+                self.ctx.db.query("SELECT path FROM samples WHERE id=?", (ids[0],))[0]["path"]
+            )
             self.ctx.db.set_reference(self.board_model, path)
             self.shell.status("Reference image set; the next training run re-learns the golden template from it")
 
@@ -284,9 +287,10 @@ class TrainingPage(Page):
             return
         mid = int(self.models.item(rows[0].row(), 0).text())
         rec = self.ctx.db.query("SELECT * FROM models WHERE id=?", (mid,))[0]
-        f, _ = QFileDialog.getSaveFileName(self, "Export model", Path(rec["path"]).name, "PyTorch model (*.pt)")
+        src = Path(self.ctx.db.resolve_path(rec["path"]))
+        f, _ = QFileDialog.getSaveFileName(self, "Export model", src.name, "PyTorch model (*.pt)")
         if f:
-            Path(f).write_bytes(Path(rec["path"]).read_bytes())
+            Path(f).write_bytes(src.read_bytes())
 
     def refresh(self):
         if not self.board_model:
@@ -316,7 +320,7 @@ class TrainingPage(Page):
                 [
                     m["id"],
                     m["version"],
-                    m["created_at"].replace("T", " "),
+                    to_local(m["created_at"]),
                     float(meta.get("image_threshold", 0)),
                     f"{meta.get('n_ok_train', 0) + meta.get('n_ok_val', 0)}/{meta.get('n_ng', 0)}",
                     "●" if m["active"] else "",

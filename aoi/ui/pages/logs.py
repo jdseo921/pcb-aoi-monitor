@@ -10,6 +10,7 @@ from PySide6.QtWidgets import QCheckBox, QComboBox, QDateEdit, QFileDialog, QHBo
 
 from ...core.imaging import load_image
 from ...core.services import export_csv
+from ...data.times import to_local
 from ..theme import VERDICT_COLORS
 from ..widgets.image_view import ImageView
 from .base import Page, button, fill_table, make_table
@@ -70,7 +71,7 @@ class LogsPage(Page):
             [
                 [
                     r["id"],
-                    r["time"].replace("T", " "),
+                    to_local(r["time"]),
                     r["board_model"],
                     r["result"],
                     r["defect_count"],

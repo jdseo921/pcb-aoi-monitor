@@ -16,7 +16,9 @@ from typing import Any
 import numpy as np
 
 from ..config import Settings, resolve_device
-from ..data.db import Database, now
+from ..data.db import Database
+from ..data.paths import to_stored
+from ..data.times import local_date, now_utc
 from . import anomaly
 from .imaging import align_to_reference, list_images, load_image, save_image
 from .inspector import NG, OK, WARN, InspectionResult, Inspector, draw_overlay
@@ -27,7 +29,7 @@ class AppContext:
     def __init__(self, settings: Settings | None = None):
         self.settings = settings or Settings.load()
         self.settings.ensure_dirs()
-        self.db = Database(self.settings.db_path)
+        self.db = Database(self.settings.db_path, self.settings.root)
         self.device = resolve_device(self.settings.device)
         self.user = "operator"
         self.role = "Operator"
@@ -82,7 +84,7 @@ class AppContext:
         )
         model = anomaly.train(ok, ng, cfg, progress, should_stop)
         version = self.db.next_model_version(board_model)
-        model.meta.update(board_model=board_model, version=version, created_at=now())
+        model.meta.update(board_model=board_model, version=version, created_at=now_utc())
         out = self.settings.models_dir / board_model
         out.mkdir(parents=True, exist_ok=True)
         path = out / f"{board_model}_{version}.pt"
@@ -90,7 +92,7 @@ class AppContext:
         golden_path = out / f"{board_model}_{version}_golden.png"
         save_image(golden_path, golden)
         self.db.set_reference(board_model, str(golden_path))
-        model.meta["golden_image"] = str(golden_path)
+        model.meta["golden_image"] = to_stored(golden_path, self.settings.root)
         summary = {k: v for k, v in model.meta.items() if k not in ("loss_history", "err_mean", "err_std")}
         self.db.register_model(board_model, version, str(path), summary, activate=True)
         self._model_cache.pop(board_model, None)
@@ -139,7 +141,7 @@ class AppContext:
 
     def log_result(self, board_model: str, path: str, res: InspectionResult, insp: Inspector) -> int:
         """Auto-save after each board (spec 4.1): overlay PNG + DB row."""
-        day = now()[:10]
+        day = local_date()  # the folder is named for the operator's shift date; the stored time is UTC
         overlay = self.settings.results_dir / day / f"{Path(path).stem}_{uuid.uuid4().hex[:6]}_{res.verdict}.png"
         save_image(overlay, draw_overlay(res))
         iid = self.db.add_inspection(
