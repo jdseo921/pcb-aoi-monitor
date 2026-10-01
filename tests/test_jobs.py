@@ -148,8 +148,9 @@ def test_req_set_021_worker_stop_keeps_partial_work_and_an_error_arrives_as_the_
     qtbot.waitUntil(lambda: bool(results), timeout=10000)
     assert 3 <= results[0] < 1000
     errors: list[BaseException] = []
-    failing = start(Worker(lambda: 1 / 0), jobs)
-    failing.signals.error.connect(errors.append)
+    failing = Worker(lambda: 1 / 0)
+    failing.signals.error.connect(errors.append)  # before start(): a warm pool thread can finish before start() returns
+    start(failing, jobs)
     qtbot.waitUntil(lambda: bool(errors), timeout=10000)
     assert isinstance(errors[0], ZeroDivisionError)
 
