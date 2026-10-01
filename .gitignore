@@ -1,0 +1,27 @@
+# Python and tool caches
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+build/
+dist/
+
+# Station data never goes in git: workspaces, generated sample data, trained models, databases
+AOI_Workspace/
+sample_data/
+*.pt
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+
+# Delivery archives
+*.zip
+
+# OS and editor files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
