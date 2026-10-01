@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-from collections.abc import Callable
-from typing import Any
+from collections.abc import Callable, Sequence
+from typing import TYPE_CHECKING, Any
 
-from PySide6.QtCore import QT_TRANSLATE_NOOP, QCoreApplication, Qt
+from PySide6.QtCore import QCoreApplication, Qt
 from PySide6.QtGui import QColor, QFont
 from PySide6.QtWidgets import (
+    QAbstractItemView,
     QHBoxLayout,
     QLabel,
     QMessageBox,
@@ -21,6 +22,16 @@ from .. import theme
 from ..errors import show_error
 from ..widgets.busy import BusyOverlay
 from ..workers import Worker, start
+
+if TYPE_CHECKING:
+    from ..main_window import MainWindow
+
+
+def QT_TRANSLATE_NOOP(context: str, text: str) -> str:
+    """Mark `text` for pyside6-lupdate under `context` and hand it back unchanged. Qt's own QT_TRANSLATE_NOOP does the
+    same but is typed as returning object, which a `title: str` class attribute refuses; lupdate finds the call by its
+    name, so pages import this one."""
+    return text
 
 
 def page_text(text: str) -> str:
@@ -58,11 +69,11 @@ class Page(QWidget):
     the navigation key.
     """
 
-    title = "Page"
-    subtitle = ""
-    roles = ROLES  # who may open it (spec 8)
+    title: str = "Page"
+    subtitle: str = ""
+    roles: tuple[str, ...] = ROLES  # who may open it (spec 8)
 
-    def __init__(self, ctx: AppContext, shell):
+    def __init__(self, ctx: AppContext, shell: MainWindow) -> None:
         super().__init__()
         self.setObjectName("page")
         self.ctx = ctx
@@ -77,7 +88,7 @@ class Page(QWidget):
         if self.subtitle:
             s = QLabel(self.subtitle_text())
             s.setObjectName("muted")
-            head.addWidget(s, 1, Qt.AlignBottom)
+            head.addWidget(s, 1, Qt.AlignmentFlag.AlignBottom)
         else:
             head.addStretch(1)
         self.head = head
@@ -112,7 +123,7 @@ class Page(QWidget):
             return False
         return True
 
-    def empty_step(self, sentence: str, target: str) -> tuple[str, str, Callable[[], None] | None]:
+    def empty_step(self, sentence: str, target: str) -> tuple[str, str, Callable[[], object] | None]:
         """What to do and where, for an `EmptyState`: `sentence` with the link "Open <target> ›", or, for a role that
         cannot open that page, "Ask an Engineer to do this on <target>." with no link (REQ-SET-019)."""
         page = page_text(target)
@@ -173,7 +184,7 @@ def size_class(w: QWidget, cls: str) -> QWidget:
     return w
 
 
-def button(text: str, kind: str = "", slot=None) -> QPushButton:
+def button(text: str, kind: str = "", slot: Callable[..., object] | None = None) -> QPushButton:
     """A theme button. `kind` is "primary" (the one blue button on a page), "start", or the red "stop" and
     "danger" (removes data): red buttons sit last in their row and are never the default (REQ-SET-018)."""
     b = QPushButton(text.replace("&", "&&"))
@@ -190,15 +201,15 @@ def make_table(headers: list[str], sortable: bool = True) -> QTableWidget:
     t = QTableWidget(0, len(headers))
     t.setHorizontalHeaderLabels(headers)
     t.setAlternatingRowColors(True)
-    t.setSelectionBehavior(QTableWidget.SelectRows)
-    t.setEditTriggers(QTableWidget.NoEditTriggers)
+    t.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+    t.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
     t.verticalHeader().setVisible(False)
     t.horizontalHeader().setStretchLastSection(True)
     t.setSortingEnabled(sortable)
     return t
 
 
-def fill_table(t: QTableWidget, rows: list[list], colors: list[str | None] | None = None) -> None:
+def fill_table(t: QTableWidget, rows: Sequence[Sequence[object]], colors: Sequence[str | None] | None = None) -> None:
     sortable = t.isSortingEnabled()
     t.setSortingEnabled(False)
     t.setRowCount(len(rows))
@@ -206,18 +217,25 @@ def fill_table(t: QTableWidget, rows: list[list], colors: list[str | None] | Non
     bold = QFont(t.font())
     bold.setBold(True)  # white on green or red reads at 3:1 only as large text, and bold 14 pt counts (WCAG 1.4.3)
     for i, row in enumerate(rows):
+        color = colors[i] if colors else None
         for j, v in enumerate(row):
             it = QTableWidgetItem()
             if isinstance(v, float):
-                it.setData(Qt.DisplayRole, round(v, 4))
+                it.setData(Qt.ItemDataRole.DisplayRole, round(v, 4))
             elif isinstance(v, int):
-                it.setData(Qt.DisplayRole, v)
+                it.setData(Qt.ItemDataRole.DisplayRole, v)
             else:
                 it.setText("" if v is None else str(v))
-            if colors and colors[i]:
-                it.setBackground(QColor(colors[i]))
-                it.setForeground(QColor(theme.on_color(colors[i])))
+            if color:
+                it.setBackground(QColor(color))
+                it.setForeground(QColor(theme.on_color(color)))
                 it.setFont(bold)
             t.setItem(i, j, it)
     t.resizeColumnsToContents()
     t.setSortingEnabled(sortable)
+
+
+def cell_text(t: QTableWidget, row: int, column: int) -> str:
+    """The text of a cell, or "" where the table holds no item there (`QTableWidget.item()` returns None then)."""
+    item = t.item(row, column)
+    return item.text() if item is not None else ""

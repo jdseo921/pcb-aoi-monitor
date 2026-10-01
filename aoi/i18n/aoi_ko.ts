@@ -4,7 +4,7 @@
 <context>
     <name>BusyOverlay</name>
     <message>
-        <location filename="../ui/widgets/busy.py" line="+27"/>
+        <location filename="../ui/widgets/busy.py" line="+28"/>
         <source>Working…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -322,7 +322,7 @@
 <context>
     <name>HomePage</name>
     <message>
-        <location filename="../ui/main_window.py" line="+50"/>
+        <location filename="../ui/main_window.py" line="+55"/>
         <source>Upload samples</source>
         <translation type="unfinished"></translation>
     </message>
@@ -472,12 +472,12 @@
     <name>InspectionPage</name>
     <message>
         <location filename="../ui/pages/inspection.py" line="+53"/>
-        <location line="+75"/>
+        <location line="+74"/>
         <source>Load Images…</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-74"/>
+        <location line="-73"/>
         <source>Load Folder…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -493,12 +493,12 @@
     </message>
     <message>
         <location line="+4"/>
-        <location line="+64"/>
+        <location line="+63"/>
         <source>No images loaded</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-40"/>
+        <location line="-39"/>
         <source>No</source>
         <comment>defect number</comment>
         <translation type="unfinished"></translation>
@@ -554,7 +554,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+18"/>
+        <location line="+17"/>
         <source>Load Images… or Load Folder… to queue boards. In Stage 2 the camera fills this view.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -617,7 +617,7 @@
 <context>
     <name>LogsPage</name>
     <message>
-        <location filename="../ui/pages/logs.py" line="+31"/>
+        <location filename="../ui/pages/logs.py" line="+37"/>
         <source>Include archived</source>
         <translation type="unfinished"></translation>
     </message>
@@ -679,7 +679,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+6"/>
+        <location line="+7"/>
         <source>Select a row to see its overlay</source>
         <translation type="unfinished"></translation>
     </message>
@@ -813,12 +813,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+4"/>
+        <location line="+5"/>
         <source>Switch User</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+14"/>
+        <location line="+17"/>
         <source>New board model</source>
         <translation type="unfinished"></translation>
     </message>
@@ -828,7 +828,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+20"/>
+        <location line="+21"/>
         <source>{user} ({role})</source>
         <translation type="unfinished"></translation>
     </message>
@@ -848,7 +848,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+12"/>
+        <location line="+14"/>
         <source>{page} needs the {roles} role</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1065,7 +1065,7 @@
 <context>
     <name>Page</name>
     <message>
-        <location filename="../ui/main_window.py" line="-264"/>
+        <location filename="../ui/main_window.py" line="-271"/>
         <source>Home</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1075,7 +1075,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/base.py" line="+97"/>
+        <location filename="../ui/pages/base.py" line="+108"/>
         <source>No board model yet</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1105,7 +1105,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/logs.py" line="-181"/>
+        <location filename="../ui/pages/logs.py" line="-183"/>
         <source>Logs &amp; Export</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1120,7 +1120,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/inspection.py" line="-192"/>
+        <location filename="../ui/pages/inspection.py" line="-191"/>
         <source>Inspection</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1140,7 +1140,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/profile3d.py" line="+14"/>
+        <location filename="../ui/pages/profile3d.py" line="+20"/>
         <source>3D Profile</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1150,7 +1150,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/settings.py" line="+36"/>
+        <location filename="../ui/pages/settings.py" line="+41"/>
         <source>Settings</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1165,7 +1165,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/recipe_editor.py" line="+57"/>
+        <location filename="../ui/pages/recipe_editor.py" line="+56"/>
         <source>Recipe Editor</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1178,12 +1178,12 @@
 <context>
     <name>Profile3DPage</name>
     <message>
-        <location filename="../ui/pages/profile3d.py" line="+8"/>
+        <location filename="../ui/pages/profile3d.py" line="+9"/>
         <source>Back to Home</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+5"/>
+        <location line="+6"/>
         <source>Height and coplanarity need the 3D camera. Height and volume limits can be entered per ROI in the Recipe Editor; they are stored now and checked from Stage 2.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1642,12 +1642,12 @@
     </message>
     <message>
         <location line="+1"/>
-        <location line="+263"/>
+        <location line="+262"/>
         <source>Import Folder…</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-257"/>
+        <location line="-256"/>
         <location line="+50"/>
         <source>ID</source>
         <translation type="unfinished"></translation>
@@ -1810,7 +1810,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+47"/>
+        <location line="+46"/>
         <source>epoch {epoch}/{total}  loss {loss:.4f}</source>
         <translation type="unfinished"></translation>
     </message>
