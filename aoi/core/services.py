@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import csv
 import io
+import json
 import uuid
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -21,8 +22,8 @@ from ..config import Settings, resolve_device
 from ..data import atomic
 from ..data.db import Database
 from ..data.paths import to_stored
-from ..data.times import local_date, now_utc
 from ..errors import AoiError
+from ..times import local_date, now_utc
 from . import anomaly
 from .imaging import align_to_reference, list_images, load_image, save_image
 from .inspector import NG, OK, WARN, InspectionResult, Inspector, draw_overlay
@@ -46,6 +47,19 @@ class ErrorReport:
         if not isinstance(exc, AoiError):
             exc = AoiError("AOI-SET-007", error_type=type(exc).__name__, context=f" ({context})" if context else "")
         return cls(exc.code, exc.entry.title, exc.what, exc.action)
+
+
+@dataclass(frozen=True)
+class BoardStatus:
+    """Where the six-step workflow stands for a board model (the Home page's cards)."""
+
+    ok_samples: int
+    ng_samples: int
+    model_version: str | None  # the active AI model, or None while none is trained
+    recipe_revision: int  # 0 while the defaults are in use
+    last_test: dict[str, Any] | None  # metrics of the latest AI model test run
+    inspected: int
+    ng: int
 
 
 class AppContext:
@@ -185,15 +199,32 @@ class AppContext:
         return self.db.audit_entries(object_type, object_uuid, action, since, limit)
 
     # --- inspection ----------------------------------------------------------
-    def inspector(self, board_model: str, recipe: Recipe | None = None, side: str = "Top") -> Inspector:
+    def inspector(
+        self, board_model: str, recipe: Recipe | None = None, side: str = "Top", reference: np.ndarray | None = None
+    ) -> Inspector:
+        """The engine for a board model: its latest recipe (or `recipe`), its active AI model and its reference image
+        (or `reference`, such as another stored OK board on the Compare page). Screens never build an Inspector."""
         rev, rcp = self.recipe(board_model)
         mv = self.load_model(board_model)
-        ref_path = self.db.reference(board_model)
-        ref = load_image(ref_path) if ref_path and Path(ref_path).exists() else None
-        insp = Inspector(recipe or rcp, mv[1] if mv else None, ref, side)
+        if reference is None:
+            ref_path = self.db.reference(board_model)
+            reference = load_image(ref_path) if ref_path and Path(ref_path).exists() else None
+        insp = Inspector(recipe or rcp, mv[1] if mv else None, reference, side)
         insp.model_version = mv[0] if mv else None  # type: ignore[attr-defined]
         insp.recipe_rev = rev  # type: ignore[attr-defined]
         return insp
+
+    def inspect(
+        self,
+        board_model: str,
+        image: np.ndarray,
+        recipe: Recipe | None = None,
+        side: str = "Top",
+        reference: np.ndarray | None = None,
+    ) -> InspectionResult:
+        """Inspect one image in memory without saving a record (the Compare page; re-evaluation without re-running the
+        AI model arrives in S28)."""
+        return self.inspector(board_model, recipe, side, reference).inspect(image)
 
     def inspect_file(
         self, board_model: str, path: str, inspector: Inspector | None = None, save: bool = True
@@ -291,6 +322,118 @@ class AppContext:
         metrics = classification_metrics(rows)
         self.db.add_test_run(board_model, getattr(insp, "model_version", None) or "-", folder, metrics, rows)
         return metrics, rows
+
+    # --- what the screens read (REQ-USR-001: pages call only AppContext, never the database) ---
+    def board_models(self) -> list[str]:
+        """Board model names, sorted."""
+        return self.db.board_models()
+
+    def reference_image(self, board_model: str) -> str | None:
+        """Absolute path of the board model's reference (golden) image, or None when none is set."""
+        return self.db.reference(board_model)
+
+    def samples(self, board_model: str, label: str | None = None) -> list[dict[str, Any]]:
+        """Training samples (id, label, defect_type, side, path, added_at), oldest first; `label` filters OK or NG."""
+        return self.db.samples(board_model, label)
+
+    def sample_path(self, sample_id: int) -> str:
+        """Absolute path of one sample image."""
+        return str(self.db.sample(sample_id)["path"])
+
+    def models(self, board_model: str) -> list[dict[str, Any]]:
+        """Trained model versions (id, version, path, metrics JSON, active, created_at), newest first."""
+        return self.db.models(board_model)
+
+    def model(self, model_id: int) -> dict[str, Any]:
+        """One model version by id, with its absolute path."""
+        return self.db.model(model_id)
+
+    def active_model(self, board_model: str) -> dict[str, Any] | None:
+        """The model version inspections use, or None when none is trained."""
+        return self.db.active_model(board_model)
+
+    def recipe_history(self, board_model: str) -> list[dict[str, Any]]:
+        """Recipe revisions (revision, user, created_at), newest first."""
+        return self.db.recipe_history(board_model)
+
+    def inspections(
+        self,
+        date_from: str | None = None,
+        date_to: str | None = None,
+        board_model: str | None = None,
+        operator: str | None = None,
+        include_archived: bool = False,
+    ) -> list[dict[str, Any]]:
+        """Inspection records, newest first, filtered by local calendar dates (YYYY-MM-DD), board model and operator,
+        each with its defect_count and absolute image and overlay paths."""
+        return self.db.inspections(date_from, date_to, board_model, operator, include_archived)
+
+    def defects_for(self, inspection_id: int) -> list[dict[str, Any]]:
+        """The defects of one inspection (no, type, score, side, x, y, w, h), in order."""
+        return self.db.defects_for(inspection_id)
+
+    def users(self) -> list[dict[str, Any]]:
+        """Users (uuid, name, role), oldest first."""
+        return self.db.users()
+
+    def board_status(self, board_model: str) -> BoardStatus:
+        """Sample counts, active model, recipe revision, last test metrics and inspection counts of a board model."""
+        model = self.db.active_model(board_model)
+        latest = self.db.latest_recipe(board_model)
+        run = self.db.latest_test_run(board_model)
+        inspected, ng = self.db.inspection_counts(board_model)
+        return BoardStatus(
+            ok_samples=len(self.db.samples(board_model, "OK")),
+            ng_samples=len(self.db.samples(board_model, "NG")),
+            model_version=model["version"] if model else None,
+            recipe_revision=latest[0] if latest else 0,
+            last_test=json.loads(run["metrics"]) if run else None,
+            inspected=inspected,
+            ng=ng,
+        )
+
+    # --- what the screens change (S16 adds the role check and the audit entry to each) ---
+    def ensure_board_model(self, name: str) -> None:
+        """Create a board model unless it exists."""
+        self.db.ensure_board_model(name)
+
+    def set_reference(self, board_model: str, sample_id: int) -> None:
+        """Make a stored sample the reference image; the next training run learns the golden template from it."""
+        self.db.set_reference(board_model, self.sample_path(sample_id))
+
+    def update_sample(self, sample_id: int, label: str, defect_type: str | None) -> None:
+        """Relabel a sample OK or NG and set its defect type."""
+        self.db.update_sample(sample_id, label, defect_type)
+
+    def delete_sample(self, sample_id: int) -> None:
+        """Remove a sample's record; its image file stays in the workspace."""
+        self.db.delete_sample(sample_id)
+
+    def activate_model(self, model_id: int) -> None:
+        """Make a model version the one inspections use."""
+        self.db.activate_model(model_id)
+
+    def add_user(self, name: str, role: str) -> None:
+        """Add a user, or change the role of an existing one."""
+        self.db.add_user(name, role)
+
+    def archive_old(self, days: int | None = None) -> int:
+        """Archive inspections older than `days` (default: the retention setting); returns how many were archived."""
+        return self.db.archive_old(self.settings.log_retention_days if days is None else days)
+
+    def export_model(self, model_id: int, dest: str | Path) -> Path:
+        """Copy a model version's file to `dest`, whole or not at all."""
+        atomic.copy_file(self.model(model_id)["path"], dest)
+        return Path(dest)
+
+    def export_overlays(self, inspections: list[dict[str, Any]], folder: str | Path) -> int:
+        """Copy the overlay images of `inspections` (records from `inspections()`) into `folder`; returns how many."""
+        n = 0
+        for r in inspections:
+            if r.get("overlay_path") and Path(r["overlay_path"]).exists():
+                atomic.copy_file(r["overlay_path"], Path(folder) / Path(r["overlay_path"]).name)
+                n += 1
+        return n
 
 
 def classification_metrics(rows: list[dict[str, Any]]) -> dict[str, Any]:

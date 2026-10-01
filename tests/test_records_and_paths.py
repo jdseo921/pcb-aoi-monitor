@@ -11,11 +11,11 @@ from pathlib import Path
 
 import pytest
 
+from aoi import times
 from aoi.config import Settings
 from aoi.core.recipe import Recipe
 from aoi.core.services import AppContext
 from aoi.data import migrate as mg
-from aoi.data import times
 from tests.conftest import TrainedModel
 
 UUID4 = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$")
