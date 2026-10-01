@@ -31,10 +31,11 @@ import torch
 from torch import nn
 
 from ..data import atomic
+from ..errors import AoiError
 
 
-class ModelFileError(ValueError):
-    """An AI model file was refused: not a weights-only model file this app wrote."""
+class ModelFileError(AoiError):
+    """An AI model file was refused: not a weights-only model file this app wrote (AOI-TRN-001)."""
 
 
 # Metadata arrays that travel in the file as tensors and are used as NumPy arrays in memory.
@@ -173,11 +174,9 @@ class AnomalyModel:
         try:
             ckpt = torch.load(path, map_location=device, weights_only=True)
         except (pickle.UnpicklingError, RuntimeError, ValueError, EOFError) as e:
-            raise ModelFileError(
-                f"AI model file refused: {path} is not a weights-only model file this app wrote ({type(e).__name__})."
-            ) from e
+            raise ModelFileError("AOI-TRN-001", path=str(path), reason=type(e).__name__) from e
         if not isinstance(ckpt, dict) or not isinstance(ckpt.get("meta"), dict) or "state_dict" not in ckpt:
-            raise ModelFileError(f"AI model file refused: {path} does not hold a state_dict and metadata.")
+            raise ModelFileError("AOI-TRN-001", path=str(path), reason="it holds no state_dict and metadata")
         net = ConvAutoencoder()
         net.load_state_dict(ckpt["state_dict"])
         return cls(net, _from_safe(ckpt["meta"]), device)
@@ -207,7 +206,7 @@ def train(
     should_stop: Callable[[], bool] | None = None,
 ) -> AnomalyModel:
     if len(ok_images) < 2:
-        raise ValueError("Need at least 2 OK images to train.")
+        raise AoiError("AOI-TRN-002", found=len(ok_images))
     random.seed(cfg.seed)
     np.random.seed(cfg.seed)
     torch.manual_seed(cfg.seed)

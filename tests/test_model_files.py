@@ -55,10 +55,11 @@ def test_req_trn_014_crafted_pickle_is_refused(tmp_path: Path) -> None:
     crafted = tmp_path / "crafted.pt"
     torch.save({"state_dict": {}, "meta": {"evil": _RunsCodeWhenUnpickled(str(marker))}}, crafted)
 
-    with pytest.raises(anomaly.ModelFileError, match="refused"):
+    with pytest.raises(anomaly.ModelFileError, match="refused") as refused:
         anomaly.AnomalyModel.load(crafted)
 
     assert not marker.exists(), "the crafted file's code ran"
+    assert refused.value.code == "AOI-TRN-001" and "Train the board model again" in refused.value.action
 
 
 def test_req_trn_014_non_model_file_is_refused(tmp_path: Path) -> None:
