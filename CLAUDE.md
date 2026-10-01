@@ -71,5 +71,6 @@ Before pushing, run the checks CI runs on every pull request; all must pass:
 ```powershell
 ruff check .
 ruff format --check .
+mypy
 pytest -q
 ```
