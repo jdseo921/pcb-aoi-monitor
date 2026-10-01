@@ -6,6 +6,7 @@ with ``torch.load(weights_only=True)`` and its own files hold only tensors and p
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 import numpy as np
@@ -63,7 +64,7 @@ def test_req_trn_014_crafted_pickle_is_refused(tmp_path: Path) -> None:
 def test_req_trn_014_non_model_file_is_refused(tmp_path: Path) -> None:
     bad = tmp_path / "not-a-model.pt"
     bad.write_bytes(b"\x89PNG not a torch file")
-    with pytest.raises(anomaly.ModelFileError, match=str(bad)):
+    with pytest.raises(anomaly.ModelFileError, match=re.escape(str(bad))):
         anomaly.AnomalyModel.load(bad)
 
     wrong_shape = tmp_path / "wrong-shape.pt"
