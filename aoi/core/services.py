@@ -42,6 +42,13 @@ class AppContext:
         self._model_cache: dict[str, tuple[str, anomaly.AnomalyModel]] = {}
 
     # --- dataset -------------------------------------------------------------
+
+    def close(self) -> None:
+        """Release the database and the log file, as a restart or a change of workspace does; a workspace folder
+        can be moved only once nothing holds a file in it open."""
+        self.db.close()
+        logging_setup.close(self.log)
+
     def import_samples(
         self, board_model: str, paths: list[str], label: str, defect_type: str | None = None, side: str = "Top"
     ) -> int:

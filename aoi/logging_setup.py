@@ -92,13 +92,20 @@ def _scrub_value(value: Any) -> Any:
     return str(value)
 
 
-def setup(workspace: Path, level: int = logging.INFO, clock: Callable[[], datetime] | None = None) -> logging.Logger:
-    """Point the "aoi" logger at `<workspace>/logs/`, replacing an earlier handler, and return it."""
-    log = logging.getLogger(LOGGER)
+def close(log: logging.Logger | None = None) -> None:
+    """Close the log file and detach its handler; the workspace folder can then be moved or deleted (Windows keeps
+    an open file locked)."""
+    log = log or logging.getLogger(LOGGER)
     for h in list(log.handlers):
         if isinstance(h, JsonLinesHandler):
             log.removeHandler(h)
             h.close()
+
+
+def setup(workspace: Path, level: int = logging.INFO, clock: Callable[[], datetime] | None = None) -> logging.Logger:
+    """Point the "aoi" logger at `<workspace>/logs/`, replacing an earlier handler, and return it."""
+    log = logging.getLogger(LOGGER)
+    close(log)
     log.addHandler(JsonLinesHandler(Path(workspace) / "logs", clock))
     log.setLevel(level)
     log.propagate = False  # the file is the record; nothing goes to the console the operator never sees
