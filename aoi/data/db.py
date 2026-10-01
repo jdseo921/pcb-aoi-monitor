@@ -22,11 +22,6 @@ from .migrate import migrate
 from .paths import resolve, to_stored
 from .times import local_day_bounds_utc, now_utc
 
-NO_WAL = (
-    "The workspace folder does not support the database's write-ahead log (is it on a network drive?). "
-    "Choose a folder on this computer in Settings."
-)
-
 
 def new_uuid() -> str:
     return str(uuid.uuid4())
@@ -46,7 +41,7 @@ class Database:
         # Write-ahead log with a full sync on every commit: a finished write survives a power cut (ADR 0004).
         mode = str(self._conn.execute("PRAGMA journal_mode = WAL").fetchone()[0])
         if mode.lower() != "wal":
-            raise WorkspaceError(NO_WAL)
+            raise WorkspaceError("AOI-SET-005")
         self._conn.execute("PRAGMA synchronous = FULL")
         self._conn.execute("PRAGMA foreign_keys = ON")
         migrate(self._conn)

@@ -1,8 +1,7 @@
-"""Errors the data layer raises with a message written for the user.
+"""Errors the data layer raises; each carries a code from the catalogue in aoi/errors.py."""
 
-S12 adds the error-code catalogue; until then the message itself is what the user sees.
-"""
+from ..errors import AoiError
 
 
-class WorkspaceError(RuntimeError):
+class WorkspaceError(AoiError):
     """The workspace cannot be opened as it is; the message says what the user can do about it."""

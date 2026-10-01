@@ -20,6 +20,7 @@ from ..data import atomic
 from ..data.db import Database
 from ..data.paths import to_stored
 from ..data.times import local_date, now_utc
+from ..errors import AoiError
 from . import anomaly
 from .imaging import align_to_reference, list_images, load_image, save_image
 from .inspector import NG, OK, WARN, InspectionResult, Inspector, draw_overlay
@@ -69,8 +70,8 @@ class AppContext:
         say = progress or (lambda *a: None)
         ok = [load_image(s["path"]) for s in self.db.samples(board_model, "OK")]
         ng = [load_image(s["path"]) for s in self.db.samples(board_model, "NG")]
-        if not ok:
-            raise ValueError("Upload OK (good board) images before training.")
+        if len(ok) < 2:
+            raise AoiError("AOI-TRN-002", found=len(ok))
         # Register every sample onto one board, then learn a golden template as the
         # per-pixel median of good boards: less noise than any single photo.
         ref_path = self.db.reference(board_model)

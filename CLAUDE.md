@@ -55,6 +55,8 @@ State the result of each line in the change note; mark a line that does not appl
   goes through `self.tr()`.
 - No GPL, AGPL, non-commercial or unlicensed code, weights or data; only LGPL Qt modules (no Qt Charts).
 - Results on synthetic boards are never quoted as accuracy; every accuracy claim carries counts.
+- Every error a user can see is an `AoiError` with a code from `aoi/errors.py` (what happened, what to do);
+  `docs/error-codes.md` is generated from it with `python -m aoi.errors`, and a test fails when they differ.
 - A change that alters a verdict on the synthetic regression set (`tests/regression/`) is re-baselined only
   with an entry in the first section of the release note and Jay's approval of the new `expected.json`.
 

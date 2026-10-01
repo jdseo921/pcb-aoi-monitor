@@ -24,10 +24,6 @@ SCHEMA_VERSION_TABLE = (
     "CREATE TABLE IF NOT EXISTS schema_version ("
     " number INTEGER PRIMARY KEY, name TEXT NOT NULL, applied_at TEXT NOT NULL, checksum TEXT NOT NULL)"
 )
-V01_WORKSPACE = (
-    "This workspace was created by AOI PoC Inspector 0.1 and cannot be upgraded. "
-    "Choose a new workspace folder in Settings."
-)
 
 
 class MigrationError(WorkspaceError):
@@ -61,14 +57,16 @@ def load_migrations(folder: Path = MIGRATIONS_DIR) -> list[Migration]:
     for path in sorted(folder.glob("*.sql")):
         m = FILE_NAME.match(path.name)
         if not m:
-            raise MigrationError(f"Migration file name is not NNNN_name.sql: {path.name}")
+            raise MigrationError("AOI-SET-006", problem=f"file name is not NNNN_name.sql: {path.name}")
         sql = path.read_text(encoding="utf-8")
         if OWN_TRANSACTION.search(sql):
-            raise MigrationError(f"Migration {path.name} manages its own transaction; the runner does that")
+            raise MigrationError(
+                "AOI-SET-006", problem=f"{path.name} manages its own transaction; the runner does that"
+            )
         found.append(Migration(int(m.group(1)), m.group(2), sql, checksum(sql)))
     for expected, mig in enumerate(found, 1):
         if mig.number != expected:
-            raise MigrationError(f"Migration numbers must run 1, 2, 3 ... without gaps: found {mig.file}")
+            raise MigrationError("AOI-SET-006", problem=f"numbers must run 1, 2, 3 ... without gaps: found {mig.file}")
     return found
 
 
@@ -89,22 +87,16 @@ def migrate(conn: sqlite3.Connection, migrations: list[Migration] | None = None)
     files = load_migrations() if migrations is None else migrations
     tables = {str(r[0]) for r in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")}
     if tables and "schema_version" not in tables:
-        raise MigrationError(V01_WORKSPACE)
+        raise MigrationError("AOI-SET-001")
     conn.execute(SCHEMA_VERSION_TABLE)
     conn.commit()
     by_number = {m.number: m for m in files}
     for number, (name, digest) in recorded(conn).items():
         known = by_number.get(number)
         if known is None:
-            raise MigrationError(
-                f"The workspace database was written by a newer build of the app (it records migration "
-                f"{number:04d}_{name}, which this build does not have). Update the app or choose another workspace."
-            )
+            raise MigrationError("AOI-SET-002", migration=f"{number:04d}_{name}")
         if known.checksum != digest:
-            raise MigrationError(
-                f"Migration {known.file} differs from the one recorded in the workspace database. A shipped "
-                "migration is never edited: restore the file, or choose another workspace folder."
-            )
+            raise MigrationError("AOI-SET-003", file=known.file)
     done = recorded(conn)
     applied: list[Migration] = []
     for m in files:
@@ -119,6 +111,6 @@ def migrate(conn: sqlite3.Connection, migrations: list[Migration] | None = None)
             conn.commit()
         except sqlite3.Error as e:
             conn.rollback()
-            raise MigrationError(f"Migration {m.file} failed and was rolled back: {e}") from e
+            raise MigrationError("AOI-SET-004", file=m.file, error=str(e)) from e
         applied.append(m)
     return applied
