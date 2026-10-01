@@ -22,7 +22,7 @@ class _RunsCodeWhenUnpickled:
     def __init__(self, marker: str) -> None:
         self.marker = marker
 
-    def __reduce__(self):  # type: ignore[no-untyped-def]
+    def __reduce__(self) -> tuple[object, ...]:
         return (open, (self.marker, "w"))
 
 

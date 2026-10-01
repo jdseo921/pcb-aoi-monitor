@@ -14,7 +14,9 @@ from pathlib import Path
 
 from PySide6.QtCore import QMetaObject, Qt, Signal, SignalInstance
 from PySide6.QtWidgets import QApplication, QBoxLayout, QFrame, QPushButton, QTableWidget, QWidget
+from pytestqt.qtbot import QtBot
 
+from aoi.core.services import AppContext
 from aoi.ui import theme
 from aoi.ui.main_window import MainWindow
 from aoi.ui.pages.compare import MODE_DIFF
@@ -78,7 +80,7 @@ def test_req_set_004_text_is_14pt_or_more_and_the_verdict_40pt() -> None:
     assert f"min-width: {theme.BUTTON_W}px; min-height: {theme.BUTTON_H}px" in theme.QSS
 
 
-def test_req_set_018_frame_header_and_sidebar_groups(qtbot, trained_ctx) -> None:
+def test_req_set_018_frame_header_and_sidebar_groups(qtbot: QtBot, trained_ctx: AppContext) -> None:
     """Every page sits in the one frame: header with board model, user and role; the four sidebar groups; status bar."""
     win = _window(qtbot, trained_ctx, "Admin")
     header = win.findChild(QFrame, "header")
@@ -95,7 +97,7 @@ def test_req_set_018_frame_header_and_sidebar_groups(qtbot, trained_ctx) -> None
         assert header.isVisible() and win.nav.isVisible() and win.statusBar().isVisible(), title
 
 
-def test_req_insp_002_verdict_has_shape_and_word(qtbot, trained_ctx, ng_board) -> None:
+def test_req_insp_002_verdict_has_shape_and_word(qtbot: QtBot, trained_ctx: AppContext, ng_board: Path) -> None:
     """A verdict is its colour with a shape and the word: Inspection (40 pt), Compare, the AI Model Test preview."""
     assert [theme.verdict_label(v) for v in ("OK", "NG", "WARN")] == ["✓ OK", "✗ NG", "▲ WARN"]
     assert len(set(theme.VERDICT_SHAPES.values())) == len(theme.VERDICT_SHAPES), "each verdict has its own shape"
@@ -118,7 +120,7 @@ def test_req_insp_002_verdict_has_shape_and_word(qtbot, trained_ctx, ng_board) -
     assert test_page.preview_verdict.text() == "✗ NG" and theme.NG_COLOR in test_page.preview_verdict.styleSheet()
 
 
-def test_req_set_018_one_primary_button(qtbot, trained_ctx) -> None:
+def test_req_set_018_one_primary_button(qtbot: QtBot, trained_ctx: AppContext) -> None:
     """Exactly one blue primary button per page, the action the page is for; none of them is checkable."""
     win = _window(qtbot, trained_ctx, "Admin")
     for title, page in win.pages.items():
@@ -136,7 +138,7 @@ def _row_of(page: QWidget, b: QPushButton) -> list[QWidget]:
     raise AssertionError(f"{b.text()} is not in a box layout")
 
 
-def test_req_set_018_destructive_buttons_red_not_default(qtbot, trained_ctx) -> None:
+def test_req_set_018_destructive_buttons_red_not_default(qtbot: QtBot, trained_ctx: AppContext) -> None:
     """Delete and Remove are red "danger" buttons, last in their row, never the default and never focused on open."""
     assert re.search(r"QPushButton#danger \{ background: " + theme.NG_COLOR, theme.QSS)
     win = _window(qtbot, trained_ctx, "Admin")
@@ -160,7 +162,9 @@ def _empties(page: QWidget) -> list[EmptyState]:
     return [e for e in page.findChildren(EmptyState) if e.isVisibleTo(page)]
 
 
-def test_req_set_019_empty_states_link_next_step(qtbot, ctx, trained_ctx, ng_board) -> None:
+def test_req_set_019_empty_states_link_next_step(
+    qtbot: QtBot, ctx: AppContext, trained_ctx: AppContext, ng_board: Path
+) -> None:
     """Every empty page, list and image area says what is missing, what to do and links there; a role that cannot
     open the linked page is told to ask an Engineer; a filtered-out history offers Reset Filters."""
     win = MainWindow(ctx)  # an empty workspace, opened as Admin
@@ -226,7 +230,7 @@ def test_req_set_019_empty_states_link_next_step(qtbot, ctx, trained_ctx, ng_boa
     assert logs.table.rowCount() == 1 and not _empties(logs)
 
 
-def test_req_p3d_001_profile_page_is_a_stage_2_card(qtbot, trained_ctx) -> None:
+def test_req_p3d_001_profile_page_is_a_stage_2_card(qtbot: QtBot, trained_ctx: AppContext) -> None:
     """Until 3D data exists the 3D Profile page is one card that says so and leads to the Recipe Editor, where the
     height and volume limits already live; nothing on it looks like a working 3D control (sketch profile3d-card.md)."""
     win = _window(qtbot, trained_ctx, "Engineer")
@@ -244,7 +248,7 @@ def test_req_p3d_001_profile_page_is_a_stage_2_card(qtbot, trained_ctx) -> None:
     assert win.stack.currentWidget() is win.pages["Home"]
 
 
-def test_issue_5_no_page_attribute_shadows_a_qt_member(qtbot, trained_ctx) -> None:
+def test_issue_5_no_page_attribute_shadows_a_qt_member(qtbot: QtBot, trained_ctx: AppContext) -> None:
     """An attribute or method named after a Qt member (`size`, `pos`, `render`) hides it from every caller and from the
     type checker: `self.size = QComboBox()` shipped on two pages and `self.pos = -1` on one until S22a (#5). Checked on
     the shell, every page and every widget of ours in the window, against each one's own Qt base class."""

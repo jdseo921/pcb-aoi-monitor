@@ -5,6 +5,8 @@ pytest-qt supplies `qtbot`; conftest.py sets QT_QPA_PLATFORM=offscreen before Qt
 
 from __future__ import annotations
 
+from pytestqt.qtbot import QtBot
+
 from aoi.core.services import AppContext
 from aoi.ui.main_window import MainWindow
 
@@ -21,7 +23,7 @@ PAGES = [
 ]
 
 
-def test_main_window_shows_every_page_offscreen(qtbot, ctx: AppContext) -> None:
+def test_main_window_shows_every_page_offscreen(qtbot: QtBot, ctx: AppContext) -> None:
     win = MainWindow(ctx)
     qtbot.addWidget(win)
     win.show()
@@ -32,7 +34,7 @@ def test_main_window_shows_every_page_offscreen(qtbot, ctx: AppContext) -> None:
         assert win.stack.currentWidget() is win.pages[title], title
 
 
-def test_operator_cannot_open_an_admin_page(qtbot, ctx: AppContext) -> None:
+def test_operator_cannot_open_an_admin_page(qtbot: QtBot, ctx: AppContext) -> None:
     win = MainWindow(ctx)
     qtbot.addWidget(win)
     win.set_role("Operator", "operator")

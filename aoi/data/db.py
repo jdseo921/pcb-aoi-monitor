@@ -31,7 +31,7 @@ class Database:
     """One SQLite file per workspace. Paths inside the workspace are stored relative to it (REQ-SET-001), every
     time in UTC with an offset (REQ-SET-017), and records that can leave the station carry a UUID."""
 
-    def __init__(self, path: Path, workspace: Path | None = None):
+    def __init__(self, path: Path, workspace: Path | None = None) -> None:
         self.path = Path(path)
         self.workspace = Path(workspace) if workspace else self.path.parent
         self.path.parent.mkdir(parents=True, exist_ok=True)

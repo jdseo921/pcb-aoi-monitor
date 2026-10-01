@@ -18,6 +18,7 @@ import cv2
 import pytest
 from PySide6.QtCore import Qt, QTimer, qInstallMessageHandler
 from PySide6.QtWidgets import QWidget
+from pytestqt.qtbot import QtBot
 
 from aoi.core.services import AppContext, classification_metrics
 from aoi.ui import theme
@@ -40,7 +41,7 @@ def board_5mp(synthetic_dataset: Path, tmp_path_factory: pytest.TempPathFactory)
 
 
 @contextmanager
-def gap_meter(qtbot) -> Iterator[dict[str, float]]:
+def gap_meter(qtbot: QtBot) -> Iterator[dict[str, float]]:
     """The longest UI-thread stall during the block, as `stats["longest_s"]`; Qt thread warnings fail the block."""
     ticks = [perf_counter()]
     warnings: list[str] = []
@@ -61,14 +62,14 @@ def gap_meter(qtbot) -> Iterator[dict[str, float]]:
     assert not warnings, warnings
 
 
-def test_req_set_021_gap_meter_sees_a_blocked_ui_thread(qtbot) -> None:
+def test_req_set_021_gap_meter_sees_a_blocked_ui_thread(qtbot: QtBot) -> None:
     with gap_meter(qtbot) as g:
         sleep(0.3)  # work on the UI thread: what no page test may show
         qtbot.wait(TICK_MS * 2)
     assert 0.3 <= g["longest_s"] < BUDGET_S
 
 
-def test_req_set_021_inspection_does_not_freeze(qtbot, trained_ctx: AppContext, board_5mp: Path) -> None:
+def test_req_set_021_inspection_does_not_freeze(qtbot: QtBot, trained_ctx: AppContext, board_5mp: Path) -> None:
     win = _window(qtbot, trained_ctx, "Operator")
     page = win.pages["Inspection"]
     page._set_queue([board_5mp])
@@ -79,7 +80,7 @@ def test_req_set_021_inspection_does_not_freeze(qtbot, trained_ctx: AppContext, 
     assert g["longest_s"] < BUDGET_S, g
 
 
-def test_req_set_021_compare_does_not_freeze(qtbot, trained_ctx: AppContext, board_5mp: Path) -> None:
+def test_req_set_021_compare_does_not_freeze(qtbot: QtBot, trained_ctx: AppContext, board_5mp: Path) -> None:
     win = _window(qtbot, trained_ctx)
     page = win.pages["Compare"]
     with gap_meter(qtbot) as g:
@@ -91,7 +92,7 @@ def test_req_set_021_compare_does_not_freeze(qtbot, trained_ctx: AppContext, boa
     assert page.metrics.rowCount() == len(page.res.checks) + 1
 
 
-def test_req_set_021_model_test_preview_does_not_freeze(qtbot, trained_ctx: AppContext, board_5mp: Path) -> None:
+def test_req_set_021_model_test_preview_does_not_freeze(qtbot: QtBot, trained_ctx: AppContext, board_5mp: Path) -> None:
     win = _window(qtbot, trained_ctx)
     page = win.pages["AI Model Test"]
     rows = [{"image": str(board_5mp), "gt": "NG", "ai_result": "NG", "score": 1.0, "defects": 1, "pass_fail": "PASS"}]
@@ -104,7 +105,9 @@ def test_req_set_021_model_test_preview_does_not_freeze(qtbot, trained_ctx: AppC
     assert win.last_inspected[0] == str(board_5mp) and page.view._pix is not None
 
 
-def test_req_set_021_recipe_editor_test_run_does_not_freeze(qtbot, trained_ctx: AppContext, board_5mp: Path) -> None:
+def test_req_set_021_recipe_editor_test_run_does_not_freeze(
+    qtbot: QtBot, trained_ctx: AppContext, board_5mp: Path
+) -> None:
     win = _window(qtbot, trained_ctx)
     page = win.pages["Recipe Editor"]
     with gap_meter(qtbot) as g:
@@ -114,7 +117,9 @@ def test_req_set_021_recipe_editor_test_run_does_not_freeze(qtbot, trained_ctx: 
     assert g["longest_s"] < BUDGET_S, g
 
 
-def test_req_set_021_training_folder_import_does_not_freeze(qtbot, trained_ctx, board_5mp: Path, tmp_path) -> None:
+def test_req_set_021_training_folder_import_does_not_freeze(
+    qtbot: QtBot, trained_ctx: AppContext, board_5mp: Path, tmp_path: Path
+) -> None:
     for name in ("ok/a.png", "ok/b.png", "ng/c.png"):
         (tmp_path / "import" / name).parent.mkdir(parents=True, exist_ok=True)
         shutil.copy(board_5mp, tmp_path / "import" / name)
@@ -129,7 +134,9 @@ def test_req_set_021_training_folder_import_does_not_freeze(qtbot, trained_ctx, 
     assert win.statusBar().currentMessage() == "Imported 2 OK and 1 NG images"
 
 
-def test_req_set_021_busy_indicator_waits_a_second_then_shows_progress_time_left_and_cancel(qtbot, ctx) -> None:
+def test_req_set_021_busy_indicator_waits_a_second_then_shows_progress_time_left_and_cancel(
+    qtbot: QtBot, ctx: AppContext
+) -> None:
     host = QWidget()
     qtbot.addWidget(host)
     host.resize(400, 300)

@@ -15,6 +15,7 @@ from collections.abc import Callable, Iterator
 from pathlib import Path
 
 import pytest
+from pytestqt.qtbot import QtBot
 
 from aoi.core.jobs import Job, Jobs
 from aoi.core.services import AppContext
@@ -116,7 +117,9 @@ def test_req_set_021_a_failing_listener_is_logged_and_the_job_still_finishes(job
     assert (record.job, record.event) == ("count", "result")  # type: ignore[attr-defined]
 
 
-def test_req_set_021_worker_signals_arrive_on_the_ui_thread_even_when_nothing_references_it(qtbot, jobs: Jobs):
+def test_req_set_021_worker_signals_arrive_on_the_ui_thread_even_when_nothing_references_it(
+    qtbot: QtBot, jobs: Jobs
+) -> None:
     ui = threading.get_ident()
     seen: dict[str, list] = {"progress": [], "result": [], "finished": []}
 
@@ -138,7 +141,9 @@ def test_req_set_021_worker_signals_arrive_on_the_ui_thread_even_when_nothing_re
     assert ref() is None, "a finished worker, its signals and its job (which may hold an image) are released"
 
 
-def test_req_set_021_worker_stop_keeps_partial_work_and_an_error_arrives_as_the_exception(qtbot, jobs: Jobs) -> None:
+def test_req_set_021_worker_stop_keeps_partial_work_and_an_error_arrives_as_the_exception(
+    qtbot: QtBot, jobs: Jobs
+) -> None:
     w = Worker(count_to, 1000, with_progress=True)
     results: list[int] = []
     w.signals.result.connect(results.append)

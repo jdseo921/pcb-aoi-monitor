@@ -6,13 +6,14 @@ from pathlib import Path
 
 import pytest
 from PySide6.QtWidgets import QFileDialog
+from pytestqt.qtbot import QtBot
 
 from aoi.core.services import AppContext
 from tests.test_req_done_in_v01 import BOARD, _inspect_one, _window
 
 
 def test_req_insp_008_a_saved_result_names_the_model_version_and_recipe_revision_that_produced_it(
-    qtbot, trained_ctx: AppContext, ng_board: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    qtbot: QtBot, trained_ctx: AppContext, ng_board: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Save Result after the page was left and reopened: reopening drops the page's cached engine, and before S22b the
     record was then written without the model version and recipe revision, under whatever board model was current."""
