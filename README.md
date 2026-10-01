@@ -56,7 +56,7 @@ tests on both Windows and Linux. Run them locally before pushing:
 pip install -r requirements-dev.txt
 ruff check .            # lint
 ruff format --check .   # formatting
-mypy                    # strict types on aoi/core, aoi/data, aoi/hal and aoi/ui (five large pages: S22b)
+mypy                    # strict types on aoi/core, aoi/data, aoi/hal and aoi/ui (Inspection and Compare: S22b, part 2)
 pytest -q               # tests; add --cov for the line coverage of aoi/core and aoi/data
 ```
 
