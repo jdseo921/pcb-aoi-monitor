@@ -6,19 +6,28 @@ intended change of a screen: the images are generated files, and Jay approves th
 3840x2160 --scale 2`` renders a review set at another screen size and scale.
 
 The pages are rendered on the synthetic workspace: the board model TINY with the seeded dataset's samples, a tiny AI
-model trained for a few epochs (seeded, so its threshold is the same in every run), one inspected NG board, one
-recipe revision with one ROI. Everything else that would change from run to run is pinned: record ids and the suffix
-of every sample's file name come from a counter instead of uuid4(), every stored time is FIXED_TIME and is shown as
-UTC, the inspection time is FIXED_MS, the Logs filter covers that week, the Settings page shows FIXED_WORKSPACE, and
-the Inspection page is rendered with auto-save off so the render adds no record. On Linux the pages are drawn with
-DejaVu Sans without hinting, so every Linux machine draws the same pixels; Windows draws Segoe UI, so there the tests
-check sizes and contrast only.
+model trained for a few epochs, one inspected NG board (its first IC missing), one recipe revision with one Presence
+ROI around that IC. Everything that would change from run to run is pinned, and what would change with the machine's
+CPU is pinned or kept within the comparison's tolerance: record ids and the suffix of every sample's file name come from
+a counter instead of uuid4(), every stored time is FIXED_TIME and is shown as UTC, the Logs filter covers that week, the
+Settings page shows FIXED_WORKSPACE, and the Inspection page is rendered with auto-save off so the render adds no
+record. The inspections shown run with PinnedModel in place of the trained model and report FIXED_MS: the training is
+seeded, but PyTorch's float rounding differs by CPU type (the same seed and data gave thresholds of 3.06 and 2.01 with
+its vectorised and its default CPU kernels), so a trained model's score, boxes and verdict differ between machines.
+PinnedModel takes the model out of that equation: its map is 8-bit OpenCV arithmetic from the golden board, and the
+Training page lists its threshold. The ORB alignment stays a float pipeline, so the golden board and the aligned test
+board can still differ by a level or a sub-pixel between machines; the shift-tolerant difference, the quantised map and
+the wide margins between the shown values and their thresholds keep the verdict, the boxes and the scores identical,
+and only the last digits of SSIM and the inlier count move (about 0.02 % of a page, against the test's 0.5 %). On Linux
+the pages are drawn with DejaVu Sans without hinting, so every Linux machine draws the same pixels; Windows draws Segoe
+UI, so there the tests check sizes and contrast only.
 """
 
 from __future__ import annotations
 
 import argparse
 import itertools
+import json
 import os
 import re
 import sys
@@ -30,6 +39,9 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 from unittest import mock
+
+import cv2
+import numpy as np
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:  # run as a script: the repository root holds the ``aoi`` and ``tools`` packages
@@ -43,6 +55,12 @@ FIXED_WORKSPACE = "C:/AOI_Workspace"  # what the Settings page shows instead of 
 TEST_FONT = '"DejaVu Sans"'  # the font the approved images are drawn with (Linux)
 DATASET_OK, DATASET_NG, DATASET_SEED = 30, 14, 7  # as tests/conftest.py
 TINY_EPOCHS, TINY_IMAGE_SIZE = 6, 64
+PINNED_SCALE = 16.0  # grey levels of difference from the golden board per unit of PinnedModel's anomaly score
+PINNED_IMAGE_THRESHOLD = 3.0  # PinnedModel's NG threshold on the 99.9th-percentile score (48 levels)
+PINNED_PIXEL_THRESHOLD = 2.0  # PinnedModel's threshold for a pixel to belong to a defect region (32 levels)
+# The map is quantised to multiples of PINNED_STEP levels; the NG board's values (104 to 108) sit mid-bin, so the level
+# or two of rounding the float alignment can add changes no shown number.
+PINNED_STEP = 16
 
 if TYPE_CHECKING:
     from PySide6.QtWidgets import QApplication
@@ -63,6 +81,45 @@ def counted_uuids() -> Iterator[uuid.UUID]:
         yield uuid.UUID(int=(n << 104) | n, version=4)
 
 
+class PinnedModel:
+    """What the renders inspect with in place of the trained AnomalyModel: the interface Inspector uses (anomaly_map,
+    score, image_threshold, pixel_threshold, meta), computed from pixels only.
+
+    The map is the compare pipeline's own 8-bit difference from the golden board (5x5 blur, Lab, the shift-tolerant
+    difference, a 3x3 opening against specks), quantised to PINNED_STEP levels and divided by PINNED_SCALE; the
+    thresholds are constants. Every step is integer OpenCV arithmetic (bit-exact with OpenCV's SIMD and IPP paths
+    disabled), so the map depends on its two input images alone. Those still come through the float ORB alignment; the
+    shift-tolerant difference, the quantisation and the margins to the thresholds are what keep the shown verdict, boxes
+    and scores identical between machines, where a trained model's are not (module docstring). The model is still
+    trained, saved and listed; only what the inspected board shows on Inspection, Compare, Logs and Home comes from it.
+    """
+
+    def __init__(self, reference: np.ndarray, meta: dict[str, Any]) -> None:
+        self.reference = reference
+        self.meta = {
+            **meta,
+            "image_threshold": PINNED_IMAGE_THRESHOLD,
+            "pixel_threshold": PINNED_PIXEL_THRESHOLD,
+            "threshold_rule": "fixed for the screenshots",
+        }
+        self.image_threshold = PINNED_IMAGE_THRESHOLD
+        self.pixel_threshold = PINNED_PIXEL_THRESHOLD
+
+    def anomaly_map(self, img: np.ndarray) -> np.ndarray:
+        from aoi.core.compare import shift_tolerant_diff
+
+        if img.shape != self.reference.shape:  # Inspector aligns the board onto the reference before this call
+            raise ValueError(f"the image {img.shape} is not aligned to the reference {self.reference.shape}")
+        a = cv2.cvtColor(cv2.GaussianBlur(img, (5, 5), 0), cv2.COLOR_BGR2LAB)
+        b = cv2.cvtColor(cv2.GaussianBlur(self.reference, (5, 5), 0), cv2.COLOR_BGR2LAB)
+        speck = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
+        diff = cv2.morphologyEx(shift_tolerant_diff(a, b), cv2.MORPH_OPEN, speck)
+        return (diff // PINNED_STEP * PINNED_STEP).astype(np.float32) / PINNED_SCALE
+
+    def score(self, amap: np.ndarray) -> float:
+        return float(np.percentile(amap, 99.9))  # as AnomalyModel.score
+
+
 def build_workspace(root: Path) -> AppContext:
     """The synthetic workspace the pages are rendered on; see the module docstring."""
     from aoi.config import Settings
@@ -81,9 +138,10 @@ def build_workspace(root: Path) -> AppContext:
         ctx.import_samples(BOARD_MODEL, [str(p) for p in list_images(dataset / "train" / "ng")], "NG")
         ctx.train(BOARD_MODEL, epochs=TINY_EPOCHS, image_size=TINY_IMAGE_SIZE)
         recipe = ctx.recipe(BOARD_MODEL)[1]
-        recipe.rois.append(ROI("R1", "Presence", 40, 40, 120, 80))
+        recipe.rois.append(ROI("R1", "Presence", 110, 110, 110, 110))  # around the IC the NG board lacks (LAYOUT[0])
         ctx.save_recipe(recipe)
-        ctx.inspect_file(BOARD_MODEL, str(ng_board(dataset)))  # one record for Logs, one alarm for Inspection
+        with pinned_engine():
+            ctx.inspect_file(BOARD_MODEL, str(ng_board(dataset)))  # one record for Logs, one alarm for Inspection
     for table, column in (
         ("board_models", "created_at"),
         ("samples", "added_at"),
@@ -93,6 +151,10 @@ def build_workspace(root: Path) -> AppContext:
         ("alarms", "time"),
     ):  # the audit trail keeps its real times: it is append-only and no page shows it
         ctx.db.execute(f"UPDATE {table} SET {column}=?", (FIXED_TIME,))  # noqa: S608 - fixed table names above
+    # The Training page lists the model's threshold: PinnedModel's, the one the Compare table applies.
+    for m in ctx.models(BOARD_MODEL):
+        metrics = {**json.loads(m["metrics"] or "{}"), "image_threshold": PINNED_IMAGE_THRESHOLD}
+        ctx.db.execute("UPDATE models SET metrics=? WHERE id=?", (json.dumps(metrics), m["id"]))
     return ctx
 
 
@@ -141,14 +203,23 @@ def pinned_rendering(app: QApplication, font: str) -> Iterator[None]:
 
 
 @contextmanager
-def fixed_inspection_time() -> Iterator[None]:
-    """Every inspection reports FIXED_MS, so the time Inspection and Compare show does not change the pixels."""
+def pinned_engine() -> Iterator[None]:
+    """Every inspection runs with PinnedModel in place of the trained model and reports FIXED_MS, so the verdict, the
+    score, the boxes and the time that Inspection, Compare, Logs and Home show are the same on every machine."""
     from aoi.core.inspector import Inspector
 
     real = Inspector.inspect
 
     def inspect(self: Inspector, *args: Any, **kwargs: Any) -> Any:
-        res = real(self, *args, **kwargs)
+        model = self.model
+        if model is not None:
+            if self.reference is None:
+                raise RuntimeError("the render workspace has no reference image, so its inspections cannot be pinned")
+            self.model = PinnedModel(self.reference, model.meta)  # duck-typed; the Inspector is shared, so put back
+        try:
+            res = real(self, *args, **kwargs)
+        finally:
+            self.model = model
         res.elapsed_ms = FIXED_MS
         return res
 
@@ -175,12 +246,16 @@ def prepare(win: MainWindow, title: str, dataset: Path) -> None:
     page: Any = win.pages[title]
     if title == "Inspection" and page.last is None:
         page.autosave.setChecked(False)  # the render adds no record and no alarm
-        page._set_queue([ng_board(dataset)])
-        page.next_board()
-        wait_until(lambda: page.last is not None)
+        with pinned_engine():
+            page._set_queue([ng_board(dataset)])
+            page.next_board()
+            wait_until(lambda: page.last is not None)
+            assert page.last.elapsed_ms == FIXED_MS, "the Inspection run was not pinned"  # no real run reports 480.0
     elif title == "Compare" and page.res is None:
-        page.set_test(str(ng_board(dataset)))
-        wait_until(lambda: page.res is not None)
+        with pinned_engine():
+            page.set_test(str(ng_board(dataset)))
+            wait_until(lambda: page.res is not None)
+            assert page.res.elapsed_ms == FIXED_MS, "the Compare run was not pinned"
     elif title == "Logs & Export":
         page.d_from.setDate(QDate(2025, 12, 25))
         page.d_to.setDate(QDate(2026, 1, 8))
@@ -207,18 +282,17 @@ def render_pages(
     win.show()
     QTest.qWaitForWindowExposed(win)
     files: dict[str, Path] = {}
-    with fixed_inspection_time():
-        for role in ROLES:
-            win.set_role(role, role.lower())
-            for title, page in win.pages.items():
-                if role not in page.roles:
-                    continue
-                assert win.navigate(title), title
-                prepare(win, title, dataset)
-                QApplication.processEvents()
-                name = f"{slug(title)}-{role.lower()}"
-                files[name] = out / f"{name}.png"
-                assert win.grab().save(str(files[name])), files[name]
+    for role in ROLES:
+        win.set_role(role, role.lower())
+        for title, page in win.pages.items():
+            if role not in page.roles:
+                continue
+            assert win.navigate(title), title
+            prepare(win, title, dataset)
+            QApplication.processEvents()
+            name = f"{slug(title)}-{role.lower()}"
+            files[name] = out / f"{name}.png"
+            assert win.grab().save(str(files[name])), files[name]
     win.close()
     return files
 

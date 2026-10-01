@@ -1,7 +1,8 @@
 """Offscreen screenshots of every page for every role, compared with the approved images (REQ-SET-004; S21a).
 
 `tools/render_screens.py` draws the pages on the synthetic workspace at 1920x1080 (Engineering standard, "Screen
-code"), with DejaVu Sans and no hinting, so every Linux machine draws the same pixels; the comparison runs on Linux
+code"), with DejaVu Sans and no hinting and a pixel-based stand-in for the trained AI model (`PinnedModel`, whose
+verdict and boxes do not depend on the CPU), so every Linux machine draws the same pixels; the comparison runs on Linux
 only, since Windows draws Segoe UI. A page fails when more than PIXEL_SHARE of its pixels differ from the approved
 image by more than LEVELS in any channel: anti-aliasing can move a few pixels by a few levels between FreeType builds,
 while a changed word, a moved control or a changed colour moves many pixels by many levels (a changed digit in one
@@ -12,6 +13,7 @@ failing page, stay in tests/screens/actual/ for CI to upload; an intended change
 
 from __future__ import annotations
 
+import json
 import shutil
 import sys
 from collections.abc import Iterator
@@ -58,6 +60,16 @@ def _diff_image(actual: np.ndarray, mask: np.ndarray) -> np.ndarray:
     red = [int(theme.NG_COLOR[i : i + 2], 16) for i in (1, 3, 5)]
     out[mask] = red[::-1]  # load_image and save_image work in BGR
     return out
+
+
+def test_req_set_004_the_render_workspace_inspects_with_the_pinned_model(screens: tuple[AppContext, Path]) -> None:
+    """The stored inspection came from `PinnedModel`: its time is FIXED_MS, which no real run reports, and its score is
+    the pinned one (6 against the threshold 3); `prepare()` asserts the same for the Inspection and Compare pages. So a
+    render whose pin was dropped fails here and in the renders, on both platforms, not only by the pixels it changes."""
+    ctx, _ = screens
+    record = ctx.inspections(board_model=render_screens.BOARD_MODEL)[0]
+    assert json.loads(record["metrics"])["elapsed_ms"] == render_screens.FIXED_MS
+    assert record["result"] == "NG" and record["score"] == pytest.approx(2.0)  # 96 levels / PINNED_SCALE / threshold
 
 
 @pytest.mark.skipif(not LINUX, reason="the approved images are drawn with DejaVu Sans on Linux; Windows draws Segoe UI")
