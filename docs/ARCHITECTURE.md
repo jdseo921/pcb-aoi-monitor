@@ -189,6 +189,11 @@ User switching is a local picker for the PoC; Stage 4 replaces it with MES authe
 | `test_runs` | time, board_model, model_version, folder, metrics JSON, results JSON |
 | `alarms`, `users` | — |
 
+The schema is created and changed only by the numbered migrations in `aoi/data/migrations/`, which
+`aoi/data/migrate.py` applies at start-up and records in `schema_version` with a checksum (ADR 0004). The
+connection runs in write-ahead-log mode with a full sync on every commit, and a v0.1 workspace (no
+`schema_version` table) is refused rather than upgraded.
+
 `inspections` already carries everything Stage 4 uploads (lot/model/result/timestamp + images); a `lot_id` column is
 the only addition expected.
 
