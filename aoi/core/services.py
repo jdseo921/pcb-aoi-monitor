@@ -22,7 +22,7 @@ import numpy as np
 from .. import logging_setup
 from ..config import Settings, resolve_device
 from ..data import atomic
-from ..data.db import Database
+from ..data.db import Database, new_uuid
 from ..data.paths import to_stored
 from ..errors import AoiError
 from ..times import local_date, now_utc
@@ -187,7 +187,8 @@ class AppContext:
         model = anomaly.train(ok, ng, cfg, progress, should_stop)
         previous = self.db.active_model(board_model)
         version = self.db.next_model_version(board_model)
-        model.meta.update(board_model=board_model, version=version, created_at=now_utc())
+        model_uuid = new_uuid()  # in the file's metadata and in the registry row, so an exported .pt names its record
+        model.meta.update(board_model=board_model, version=version, uuid=model_uuid, created_at=now_utc())
         out = self.settings.models_dir / board_model
         out.mkdir(parents=True, exist_ok=True)
         path = out / f"{board_model}_{version}.pt"
@@ -197,12 +198,12 @@ class AppContext:
         self.db.set_reference(board_model, str(golden_path))
         model.meta["golden_image"] = to_stored(golden_path, self.settings.root)
         summary = {k: v for k, v in model.meta.items() if k not in ("loss_history", "err_mean", "err_std")}
-        model_id = self.db.register_model(board_model, version, str(path), summary, activate=True)
+        self.db.register_model(board_model, version, str(path), summary, activate=True, uid=model_uuid)
         self._model_cache.pop(board_model, None)
         self.audit(
             "model.train",
             "model",
-            self.db.model(model_id)["uuid"],
+            model_uuid,
             {"active_version": previous["version"] if previous else None},
             {"version": version, "metrics": summary},
         )
@@ -413,8 +414,10 @@ class AppContext:
     def batch_test(
         self, board_model: str, folder: str, progress: Callable[[int, int], None] | None = None
     ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
-        """Ground truth comes from sub-folder names: anything under an `ng`/`defect`
-        folder is NG, under `ok`/`good` is OK."""
+        """Validate the active AI model on a folder and store the run: (metrics, rows), one row per image. Ground truth
+        comes from sub-folder names: anything under an `ng`/`defect` folder is NG, under `ok`/`good` is OK. Each row
+        ends with the run's UUID, the AI model version and its UUID (run_uuid, model_version, model_uuid; None without
+        an AI model), as the CSV export writes them (REQ-SET-017)."""
         insp = self.inspector(board_model)
         files = list_images(folder)
         rows = []
@@ -437,10 +440,11 @@ class AppContext:
                 progress(i, len(files))
         metrics = classification_metrics(rows)
         model_version = insp.model_version or "-"
-        self.db.add_test_run(board_model, model_version, folder, metrics, rows)
-        after = {"folder": folder, "model_version": model_version, **metrics}
+        run_uuid = self.db.add_test_run(board_model, model_version, folder, metrics, rows, insp.model_uuid)
+        ids = {"run_uuid": run_uuid, "model_version": insp.model_version, "model_uuid": insp.model_uuid}
+        after = {"folder": to_stored(Path(folder).absolute(), self.settings.root), **ids, **metrics}
         self.audit("test.run", "board_model", board_model, None, after)
-        return metrics, rows
+        return metrics, [{**r, **ids} for r in rows]
 
     # --- what the screens read (REQ-USR-001: pages call only AppContext, never the database) ---
     def board_models(self) -> list[str]:
@@ -602,7 +606,7 @@ class AppContext:
             model_version=model["version"] if model else None,
             recipe_revision=history[0]["revision"] if history else 0,
             recipe_is_default=not history or history[0]["user"] == "system",
-            last_test=json.loads(run["metrics"]) if run else None,
+            last_test=run["metrics"] if run else None,
             inspected=inspected,
             ng=ng,
         )

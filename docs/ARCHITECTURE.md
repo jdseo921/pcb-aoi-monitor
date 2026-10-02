@@ -346,13 +346,13 @@ User switching is a local picker for the PoC; Stage 4 replaces it with MES authe
 |---|---|
 | `board_models` | name, reference_image (golden) |
 | `samples` | board_model, path, label OK/NG, defect_type (DCT), side |
-| `models` | board_model, version, path (.pt), metrics JSON (thresholds, scores, timing), active |
+| `models` | board_model, version, uuid (also in the `.pt` file's metadata, written there before the file is saved, so an exported file names its record), path (.pt), metrics JSON (thresholds, scores, timing), active |
 | `recipes` | board_model, revision (1 is the default recipe, stored when the board model is created, so every result names a stored revision), uuid, body JSON, user, created_at |
 | `inspections` | time, board_model, model_version, model_uuid, recipe_rev, recipe_uuid, image/overlay paths, diff_map_path and ai_map_path (the difference and AI score maps as PNG files beside the overlay, 8-bit exact, and 16-bit within one step: `_ai2.png` since S28a, 0.001 σ steps to 32.767 σ, then 1/8192 of the value to 1789 σ, or `_ai.png` before, 0.001 σ steps to 65.535 σ; NULL for rows from before migration 0007, and for OK results once the retention sweep deleted them), reference_path and reference_sha256 (the golden board file the result was judged against and the SHA-256 of its bytes; NULL for rows from before migration 0008 and for results judged without a golden board), view (Top, Side or Bottom; NULL for rows from before migration 0005), result, score, metrics JSON, result_json (the whole result as `InspectionResult.to_dict` writes it, read back by `from_dict` without the images; NULL before migration 0006), operator, archived |
 | `defects` | inspection_id, no, type, score, side, x, y, w, h |
 | `checks` | inspection_id, no, region (Board, or the ROI's name and box), metric, source, value, threshold, rule, result, explain: one row per decision variable of a result (REQ-INSP-012; none for rows from before migration 0006) |
-| `test_runs` | time, board_model, model_version, folder, metrics JSON, results JSON |
-| `alarms` | time, level NG/WARN/ERROR, code AOI-<AREA>-<NNN>, message; the newest 1,000 are shown and survive a restart |
+| `test_runs` | uuid, time, board_model, model_version, model_uuid (NULL for runs from before migration 0009), folder, metrics JSON, results JSON (one row per image; its `image` path stored like `folder`); the AI Model Test CSV and report name the run and the AI model by UUID |
+| `alarms` | uuid, time, level NG/WARN/ERROR, code AOI-<AREA>-<NNN>, message; the newest 1,000 are shown and survive a restart |
 | `users` | — |
 | `audit` | uuid, at_utc, user_uuid, role, action, object_type, object_uuid, before_json, after_json, reason; append only (triggers refuse UPDATE and DELETE) |
 | `schema_version` | number, name, applied_at, checksum (migration runner) |
@@ -372,10 +372,14 @@ only in the replaced file. The app never deletes the copies (nothing is deleted 
 restore belongs to the installer. A refused workspace (`AOI-SET-001`, `-002`, `-003`, `-005`) is reported before any
 window opens, so `open_workspace` in `aoi/ui/errors.py` follows the message with a folder picker: the folder chosen is
 saved to `settings.json` as the Settings page saves it and opened, and Cancel closes the app (REQ-SET-016).
-Records that can leave the station (`users`, `samples`, `models`, `recipes`, `inspections`) carry a `uuid`
-beside their integer key; every stored time is ISO 8601 UTC with an offset and is shown in local time
-(`aoi/times.py`); image, overlay and model paths inside the workspace are stored relative to it and resolved
-by `aoi/data/paths.py`, so a workspace folder can move (REQ-SET-017, REQ-SET-001).
+Records that can leave the station (`users`, `samples`, `models`, `recipes`, `inspections`, and since migration 0009
+`test_runs` and `alarms`) carry a `uuid` beside their integer key; `defects` and `checks` are rows of one inspection and
+are named by its UUID and their `no`. The dataset record, with its UUID, arrives with frozen dataset versions (stage
+S35, REQ-TRN-005). Every stored time is ISO 8601 UTC with an offset and is shown in local time
+(`aoi/times.py`); image, overlay, map, golden board, model and validation folder paths inside the workspace are stored
+relative to it and resolved by `aoi/data/paths.py`, so a workspace folder can move (REQ-SET-017, REQ-SET-001). A path
+outside the workspace (a validation folder on a USB drive) is stored absolute and read as written, as are the paths of
+validation runs stored before migration 0009.
 Every file the app writes (images, overlays, AI models, exports, settings) goes through `aoi/data/atomic.py`:
 a temporary name in the same folder, flush and fsync, then an atomic rename, and an inspection's row, checks and
 defects commit in one transaction, so a crash leaves a whole result or none (REQ-INSP-008). Every error a user can see is
