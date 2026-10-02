@@ -29,7 +29,10 @@ Linux: same steps with `source .venv/bin/activate` (macOS is not a target: PyTor
 build for it). Developers install `requirements-dev.lock` in place of `requirements.lock` and run `ruff check .`,
 `ruff format --check .`, `mypy` and `pytest -q` before pushing. `requirements.txt` and `requirements-dev.txt` hold
 the direct pins; after changing one, `python tools/make_lock.py` regenerates the four lock files with the hash of
-every file pip may install, and CI fails while a lock file does not match its inputs.
+every file pip may install, and CI fails while a lock file does not match its inputs. Qt comes from
+`PySide6-Essentials`, not `PySide6` (whose Addons hold GPL-only modules such as Qt Charts; ADR 0003): in an
+environment installed before that change, run `python -m pip uninstall -y PySide6 PySide6-Addons PySide6-Essentials`
+first, then the steps above.
 
 ## Try it in 5 minutes with synthetic boards
 

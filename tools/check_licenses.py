@@ -1,14 +1,18 @@
 #!/usr/bin/env python
-"""Fail when an installed dependency carries a license the Legal & Compliance standard does not allow.
+"""Check the license of every shipped dependency against the Legal & Compliance standard, and print the record.
 
-    pip-licenses --format=json | python tools/check_licenses.py [--packages requirements.lock ...]
+    pip-licenses --with-system --format=json | python tools/check_licenses.py [--packages requirements.lock ...]
 
-Reads pip-licenses' JSON from stdin, compares every package against tools/allowed_licenses.txt
-and exits 1 on the first package whose license is not allowed, listed by name. With --packages
-only the packages named in those requirements files (the shipped set: requirements.lock and the
-PyTorch lock file installed with it) are checked; the rest are reported. Licenses marked
-"exception:" count as allowed but are printed, so the pending decision (Stage 1 plan, J8) stays
-visible in every CI run.
+Reads pip-licenses' JSON from stdin and prints one line per installed package: its verdict from
+tools/allowed_licenses.txt (allowed, exception pending J8, allowed as named package, or NOT ALLOWED), name, version
+and the license text pip-licenses reports, so the CI log is the record of what was checked. With --packages, the
+shipped set is the packages those requirements files name (CI: requirements.lock and the PyTorch lock installed with
+it), and only they can fail the check; the other installed packages (development and CI tools) are listed apart with
+their verdicts. A requirement whose environment marker is false here (`; sys_platform == "win32"` on Linux) is not
+installed on this platform and is skipped. Exit 1, after listing every problem, when a shipped package's license is
+not allowed or a package named in a --packages file is not installed, since the check cannot vouch for a package it
+did not see. Exceptions in use are printed, so the pending decision (Stage 1 plan, J8) stays visible in every run.
+pip-licenses needs --with-system: without it, it leaves out setuptools, which requirements.lock ships.
 """
 
 from __future__ import annotations
@@ -19,8 +23,11 @@ import re
 import sys
 from pathlib import Path
 
+from packaging.requirements import InvalidRequirement, Requirement
+
 ROOT = Path(__file__).resolve().parents[1]
 ALLOW_FILE = ROOT / "tools" / "allowed_licenses.txt"
+ALLOWED, EXCEPTION, NAMED, NOT_ALLOWED = "allowed", "exception pending J8", "allowed as named package", "NOT ALLOWED"
 
 
 def load_allow_list(path: Path = ALLOW_FILE) -> tuple[set[str], set[str], set[str]]:
@@ -45,16 +52,25 @@ def _norm_name(name: str) -> str:
     return re.sub(r"[-_.]+", "-", name.strip()).lower()
 
 
-def requirement_names(path: Path) -> set[str]:
-    names: set[str] = set()
+def requirements(path: Path) -> tuple[dict[str, str], list[str]]:
+    """The packages a requirements or lock file names for this platform, as {normalised name: "requirement (file)"},
+    and the requirements it skips here because their environment marker is false. Option and hash lines are skipped
+    without a word, since they name no package."""
+    names: dict[str, str] = {}
+    skipped: list[str] = []
     for raw in path.read_text(encoding="utf-8").splitlines():
-        line = raw.split("#", 1)[0].strip()
+        line = raw.split("#", 1)[0].strip().removesuffix("\\").strip()
         if not line or line.startswith("-"):
             continue
-        m = re.match(r"([A-Za-z0-9][A-Za-z0-9._-]*)", line)
-        if m:
-            names.add(_norm_name(m.group(1)))
-    return names
+        try:
+            req = Requirement(line)
+        except InvalidRequirement as e:
+            raise SystemExit(f"{path.name}: cannot read the requirement {line!r}: {e}") from e
+        if req.marker is None or req.marker.evaluate():
+            names[_norm_name(req.name)] = f"{req} ({path.name})"
+        else:
+            skipped.append(f"{req} ({path.name})")
+    return names, skipped
 
 
 def terms(expression: str) -> list[list[str]]:
@@ -90,32 +106,53 @@ def main() -> int:
         "--packages", type=Path, nargs="+", help="requirements files naming the packages to check (the shipped set)"
     )
     args = ap.parse_args()
-    rows = json.load(sys.stdin)
+    rows = sorted(json.load(sys.stdin), key=lambda r: str(r["Name"]).lower())
     allowed, exceptions, allowed_packages = load_allow_list()
-    shipped = set().union(*(requirement_names(path) for path in args.packages)) if args.packages else None
+    shipped: dict[str, str] | None = None  # None: no --packages, so every installed package is checked
+    skipped: list[str] = []
+    for path in args.packages or ():
+        names, skips = requirements(path)
+        shipped, skipped = (shipped or {}) | names, skipped + skips
 
+    lines: dict[bool, list[str]] = {True: [], False: []}  # shipped or not: one line per package
     failures: list[str] = []
     used_exceptions: dict[str, list[str]] = {}
-    for row in sorted(rows, key=lambda r: str(r["Name"]).lower()):
-        name = _norm_name(str(row["Name"]))
-        if shipped is not None and name not in shipped:
-            continue
-        if name in allowed_packages:
-            continue
-        ok, used = verdict(str(row["License"]), allowed, exceptions)
-        if not ok:
-            failures.append(f"{row['Name']} {row['Version']}: {row['License']}")
-        for term in used:
-            used_exceptions.setdefault(term, []).append(str(row["Name"]))
+    for row in rows:
+        name, version, license_text = str(row["Name"]), str(row["Version"]), str(row["License"])
+        is_shipped = shipped is None or _norm_name(name) in shipped
+        if _norm_name(name) in allowed_packages:
+            ok, used, label = True, set(), NAMED
+        else:
+            ok, used = verdict(license_text, allowed, exceptions)
+            label = EXCEPTION if ok and used else ALLOWED if ok else NOT_ALLOWED
+        note = f" [{', '.join(sorted(used))}]" if used else ""
+        lines[is_shipped].append(f"  {label:<24} {name} {version}: {license_text}{note}")
+        if is_shipped and not ok:
+            failures.append(f"{name} {version}: {license_text}")
+        for term in used if is_shipped else ():
+            used_exceptions.setdefault(term, []).append(name)
+    installed = {_norm_name(str(row["Name"])) for row in rows}
+    missing = [req for name, req in sorted((shipped or {}).items()) if name not in installed]
 
-    for term, names in sorted(used_exceptions.items()):
-        print(f"exception in use (pending Jay, J8): {term} <- {', '.join(sorted(names))}")
+    files = ", ".join(path.name for path in args.packages or ())
+    print(f"Shipped packages ({files or 'no --packages: every installed package'}), {len(lines[True])} checked:")
+    print(*lines[True], sep="\n")
+    if lines[False]:
+        print(f"Development and CI packages, not shipped, {len(lines[False])} reported (they cannot fail the check):")
+        print(*lines[False], sep="\n")
+    for item in skipped:
+        print(f"Skipped, its environment marker is false here: {item}")
+    for term, users in sorted(used_exceptions.items()):
+        print(f"exception in use (pending Jay, J8): {term} <- {', '.join(sorted(users))}")
+    if missing:
+        print("Named in --packages but not installed here, so the check cannot vouch for them:")
+        print(*(f"  {req}" for req in missing), sep="\n")
     if failures:
         print("Licenses not allowed by the Legal & Compliance standard:")
-        for f in failures:
-            print("  " + f)
+        print(*(f"  {f}" for f in failures), sep="\n")
+    if missing or failures:
         return 1
-    print(f"License check passed for {len(rows) if shipped is None else len(shipped)} packages.")
+    print(f"License check passed for {len(lines[True])} shipped packages.")
     return 0
 
 
