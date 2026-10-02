@@ -30,6 +30,7 @@ class Settings:
     image_size: int = 256  # network input size (square)
     default_epochs: int = 60
     log_retention_days: int = 30  # spec 4.4: inspection records older than this are archived at start-up (REQ-LOG-003)
+    map_retention_days_ok: int = 7  # REQ-INSP-012: the map files of OK results older than this go at start-up (0: next)
     max_image_megapixels: int = 50  # REQ-INSP-001: an image over either limit is refused before it is decoded
     max_image_megabytes: int = 200  # (the register's proposed values; an Admin edits them in settings.json)
     language: str = "en"  # en | ko (localization planned for 2H 2027)
@@ -89,14 +90,16 @@ class Settings:
 
     @classmethod
     def check(cls, name: str, value: object) -> None:
-        """Refuse a value of the wrong JSON type for a known setting, and an image limit that is not above 0, with
-        AOI-SET-008 before the app starts (REQ-INSP-001, S23c: a typo there used to fail every image load with
-        AOI-SET-007). An unknown key is still ignored, so an old or a newer settings.json loads."""
+        """Refuse a value of the wrong JSON type for a known setting, an image limit that is not above 0 and a retention
+        below 0, with AOI-SET-008 before the app starts (REQ-INSP-001, S23c: a typo there used to fail every image load
+        with AOI-SET-007). An unknown key is still ignored, so an old or a newer settings.json loads."""
         want = type(getattr(cls(), name))
-        positive = name in ("max_image_megapixels", "max_image_megabytes")
+        least = {"max_image_megapixels": 1, "max_image_megabytes": 1, "map_retention_days_ok": 0}.get(name)
         typed = isinstance(value, want) and not (want is int and isinstance(value, bool))
-        if not typed or (positive and isinstance(value, int) and value <= 0):
-            expected = {int: "a whole number", str: "text"}.get(want, want.__name__) + (" above 0" if positive else "")
+        if not typed or (least is not None and isinstance(value, int) and value < least):
+            expected = {int: "a whole number", str: "text"}.get(want, want.__name__)
+            if least is not None:
+                expected += " above 0" if least else " of 0 or more"
             raise AoiError("AOI-SET-008", name=name, value=json.dumps(value), expected=expected)
 
     def save(self) -> None:

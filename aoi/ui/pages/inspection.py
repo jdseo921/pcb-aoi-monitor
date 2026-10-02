@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, TypeAlias
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QKeySequence
@@ -46,6 +46,8 @@ if TYPE_CHECKING:
     from ...core.inspector import Inspector  # a type hint only: a page never builds one (REQ-USR-001)
     from ..main_window import MainWindow
 
+
+Outcome: TypeAlias = "tuple[Path, InspectionResult, Inspector, Exception | None]"  # board, result, engine, save error
 
 NO_VERDICT = "—"  # the banner before the first board
 
@@ -217,16 +219,22 @@ class InspectionPage(Page):
         insp = self.inspector  # None on the first board: built on the pool thread, so no key waits for a model load
         gen = self._engine_gen  # the engine this board builds is kept only while nothing has dropped it meanwhile
 
-        def inspect() -> tuple[Path, InspectionResult, Inspector]:
+        def inspect() -> Outcome:
             engine = insp if insp is not None else self.ctx.inspector(bm, side=view)
             engine.side = view  # one worker at a time per page, so nothing else reads it meanwhile
-            return path, engine.inspect(self.ctx.load_image(path)), engine
+            res = engine.inspect(self.ctx.load_image(path))
+            w.signals.progress.emit(res)  # the verdict first, while the save runs; w is bound before the job starts
+            try:  # saved here, on the pool thread, before the result slot can start the next board (REQ-INSP-008)
+                self.ctx.log_result(bm, str(path), res, engine)
+            except Exception as e:  # the verdict is still shown; the missing record stops the run (_not_saved)
+                return path, res, engine, e
+            return path, res, engine, None
 
         w = self.worker = Worker(inspect)
         self._show_busy(path)  # the response to the action, before the pool thread has started (REQ-INSP-005)
         self._update_buttons()
 
-        def result(out: tuple[Path, InspectionResult, Inspector]) -> None:
+        def result(out: Outcome) -> None:
             if self.worker is w:
                 self.worker = None  # before _on_result, which may start the next board of a run
                 self._update_buttons()  # the controls follow the worker at once, not at the finished signal
@@ -244,6 +252,7 @@ class InspectionPage(Page):
                 self.worker = None
             self._update_buttons()
 
+        w.signals.progress.connect(self._show_verdict)  # painted within 100 ms of the engine's result (REQ-INSP-002)
         w.signals.result.connect(result)
         w.signals.error.connect(lambda e: self._not_inspected(path, e))
         w.signals.finished.connect(done)
@@ -277,8 +286,8 @@ class InspectionPage(Page):
         self.verdict.setStyleSheet(theme.verdict_style(res.verdict if res is not None else "INFO"))
         self.verdict.repaint()
 
-    def _on_result(self, out: tuple[Path, InspectionResult, Inspector]) -> None:
-        path, res, insp = out
+    def _on_result(self, out: Outcome) -> None:
+        path, res, _engine, save_error = out
         self.last, self.last_path = res, path
         self._show_verdict(res)  # painted before the image and the table are built: the verdict first (REQ-INSP-002)
         self.empty.hide()
@@ -295,11 +304,9 @@ class InspectionPage(Page):
         self.shell.status(summary)  # in place of "Inspecting …"
         fill_table(self.table, [[d.no, d.type, d.score, view_text(d.side), d.x, d.y] for d in res.defects])
         self.shell.last_inspected = (str(path), res)
-        # Every result is saved with its evidence before the next board starts (REQ-INSP-008); an NG stores an alarm.
-        try:
-            self.ctx.log_result(insp.recipe.board_model, str(path), res, insp)
-        except Exception as e:
-            self._not_saved(path, e)
+        # Saved with its evidence on the pool thread (REQ-INSP-008, REQ-SET-021); a failed save stops the run here.
+        if save_error is not None:
+            self._not_saved(path, save_error)
             return
         if res.verdict == NG:
             self._refresh_alarms()

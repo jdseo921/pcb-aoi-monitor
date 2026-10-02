@@ -29,6 +29,7 @@ from . import anomaly
 from .imaging import align_to_reference, list_images, load_image, save_image
 from .inspector import NG, OK, WARN, InspectionResult, Inspector, draw_overlay
 from .jobs import Jobs
+from .maps import load_maps, save_maps
 from .recipe import Recipe
 
 ALARM_LIMIT = 1000  # REQ-INSP-006: the alarms a screen shows and that survive a restart
@@ -103,6 +104,7 @@ class AppContext:
         self.user, self.role, self.user_uuid = "operator", "Operator", self.db.user_uuid("operator")
         archived = self.db.archive_old(self.settings.log_retention_days)  # retention is a system action, not a user's
         self.log.info("retention.archived", extra={"days": self.settings.log_retention_days, "archived": archived})
+        self._sweep_ok_maps()  # the map files of OK results past their retention go too (REQ-INSP-012, S25c)
         for board_model in self.db.board_models():
             self._ensure_recipe(board_model)  # a workspace from before S25: its results name a stored revision too
         self._model_cache: dict[str, tuple[str, anomaly.AnomalyModel, str]] = {}
@@ -318,12 +320,13 @@ class AppContext:
         return res
 
     def log_result(self, board_model: str, path: str, res: InspectionResult, insp: Inspector) -> int:
-        """Save a result with its evidence (REQ-INSP-008, spec 4.1): the overlay PNG, then one transaction with the row,
-        the whole result as JSON, its checks (region, metric, value, threshold, rule, result) and its defects, naming
-        the AI model version and recipe revision that decided it by version and UUID (REQ-INSP-012)."""
+        """Save a result with its evidence (REQ-INSP-008, spec 4.1): the overlay PNG and the two maps beside it, then
+        one transaction with the row, the whole result as JSON, its checks and its defects, naming the AI model version
+        and recipe revision that decided it (REQ-INSP-012). Called on the pool thread by the Inspection page."""
         day = local_date()  # the folder is named for the operator's shift date; the stored time is UTC
         overlay = self.settings.results_dir / day / f"{Path(path).stem}_{uuid.uuid4().hex[:6]}_{res.verdict}.png"
         save_image(overlay, draw_overlay(res))
+        diff_map_path, ai_map_path = save_maps(res, overlay.with_suffix(""))  # beside the overlay, whole or not at all
         doc = res.to_dict()
         iid = self.db.add_inspection(
             {
@@ -334,6 +337,8 @@ class AppContext:
                 "recipe_uuid": insp.recipe_uuid,
                 "image_path": path,
                 "overlay_path": str(overlay),
+                "diff_map_path": diff_map_path,
+                "ai_map_path": ai_map_path,
                 "view": res.view,
                 "result": res.verdict,
                 "score": res.score,
@@ -477,11 +482,13 @@ class AppContext:
         them; an id without checks maps to []."""
         return self.db.checks_for_many(inspection_ids)
 
-    def inspection_result(self, inspection_id: int) -> InspectionResult | None:
-        """One stored result read back without its images: the verdict, checks, defects, compare metrics and regions
-        as they were decided, for Compare to show (REQ-INSP-008); None for a record from before migration 0006."""
+    def inspection_result(self, inspection_id: int, with_maps: bool = False) -> InspectionResult | None:
+        """One stored result read back without its images (verdict, checks, defects, compare metrics and regions, as
+        decided) for Compare (REQ-INSP-008); with `with_maps`, the stored maps too, where their files exist
+        (REQ-INSP-012). None for a record from before migration 0006."""
         doc = self.db.inspection_result(inspection_id)
-        return InspectionResult.from_dict(doc) if doc is not None else None
+        res = InspectionResult.from_dict(doc) if doc is not None else None
+        return load_maps(res, *self.db.map_paths(inspection_id)) if res is not None and with_maps else res
 
     def users(self) -> list[dict[str, Any]]:
         """Users (uuid, name, role), oldest first."""
@@ -563,6 +570,31 @@ class AppContext:
         n = self.db.archive_old(days)
         self.audit("inspection.archive", "inspections", None, None, {"days": days, "archived": n})
         return n
+
+    def _sweep_ok_maps(self, days: int | None = None) -> int:
+        """Delete the map files of OK results older than `days` (default: `map_retention_days_ok`) and forget their
+        paths; NG and WARN maps stay, a disputed verdict needs its evidence (REQ-INSP-012). A system action at start-up,
+        audited as `maps.sweep`; a file that cannot be deleted, or lies outside results/, keeps its row for later."""
+        days = self.settings.map_retention_days_ok if days is None else days
+        results = self.settings.results_dir.resolve()
+        swept, skipped = [], 0  # ids whose maps went; rows kept, with their paths, for the next start
+        for r in self.db.ok_maps_older_than(days):
+            try:
+                for p in (Path(r[k]).resolve() for k in ("diff_map_path", "ai_map_path") if r[k]):
+                    if not p.is_relative_to(results):  # only a row edited on disk names a file elsewhere (#112)
+                        raise ValueError(f"{p} is outside the results folder")
+                    p.unlink(missing_ok=True)
+            except (OSError, ValueError) as e:
+                skipped += 1
+                self.log.warning("maps.sweep_skipped", extra={"inspection_id": r["id"], "reason": str(e)})
+                continue
+            swept.append(r["id"])
+        if swept:
+            self.db.clear_map_paths(swept)
+            after = {"days": days, "swept": len(swept), "skipped": skipped}
+            self.db.add_audit(None, None, "maps.sweep", "inspections", None, None, after, "OK maps past retention")
+        self.log.info("maps.swept", extra={"days": days, "swept": len(swept), "skipped": skipped})
+        return len(swept)
 
     @requires("Engineer", "Exporting a model")
     def export_model(self, model_id: int, dest: str | Path) -> Path:
