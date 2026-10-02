@@ -31,7 +31,8 @@ WHAT_IF = [  # other thresholds, one change at a time and all at once, and check
     ({"ssim_min": 0.99}, {"SSIM similarity"}), ({"max_diff_regions": 3}, {REGIONS}),
     ({"changed_pct_max": 0.01}, {AREA}), ({"warn_ratio": 0.3}, {AI, IN_R1, "SSIM similarity"}),
     (
-        {"anomaly_threshold": 3.0, "diff_threshold": 30, "min_defect_area": 20, "ssim_min": 0.9, "max_diff_regions": 1},
+        {"anomaly_threshold": 50.0, "diff_threshold": 30, "min_defect_area": 20, "ssim_min": 0.9,
+         "max_diff_regions": 1},  # an AI threshold far above the calibrated one, so a grade changes on any platform
         {AI, REGIONS},
     ),
 ]  # fmt: skip
