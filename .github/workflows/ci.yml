@@ -95,7 +95,9 @@ jobs:
         if: runner.os == 'Linux' && always()
         with:
           name: trace-matrix
-          path: trace-matrix/
+          path: |
+            trace-matrix/
+            perf.json
 
   security:
     name: Security scans

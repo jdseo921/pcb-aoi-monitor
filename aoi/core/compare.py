@@ -7,9 +7,12 @@ from typing import Any
 
 import cv2
 import numpy as np
-from skimage.metrics import structural_similarity
 
 from .imaging import align_to_reference
+
+# SSIM as scikit-image's structural_similarity computes it with its defaults: 7 px uniform window, sample
+# covariance, K1 = 0.01, K2 = 0.03, data range 255, "reflect" border, mean over the map without the border.
+SSIM_WINDOW, SSIM_K1, SSIM_K2, SSIM_RANGE = 7, 0.01, 0.03, 255.0
 
 
 @dataclass
@@ -50,17 +53,49 @@ def shift_tolerant_diff(a: np.ndarray, b: np.ndarray, tol: int = 2) -> np.ndarra
 
     Registration is never perfect to the pixel; without this every component
     edge lights up. Max over Lab channels keeps colour-only defects visible.
+
+    Channel-split OpenCV operations on the 8-bit Lab images (S08, #12): the same values as the float32
+    NumPy version it replaces, about 100 times faster at 5 MP. Returns the input dtype (uint8 for Lab images).
     """
-    best: np.ndarray | None = None
-    bp = cv2.copyMakeBorder(b, tol, tol, tol, tol, cv2.BORDER_REPLICATE)
+    if tol < 0:
+        raise ValueError(f"tol must be >= 0, got {tol}")
     h, w = a.shape[:2]
+    ap = cv2.split(a)
+    bp = cv2.split(cv2.copyMakeBorder(b, tol, tol, tol, tol, cv2.BORDER_REPLICATE))
+    best: np.ndarray | None = None
     for dy in range(2 * tol + 1):
         for dx in range(2 * tol + 1):
-            d = np.abs(a - bp[dy : dy + h, dx : dx + w]).max(axis=2)
-            best = d if best is None else np.minimum(best, d)
-    if best is None:  # only when tol < 0 leaves no offsets to try
-        raise ValueError(f"tol must be >= 0, got {tol}")
+            d = cv2.absdiff(ap[0], bp[0][dy : dy + h, dx : dx + w])
+            for c in range(1, len(ap)):
+                d = cv2.max(d, cv2.absdiff(ap[c], bp[c][dy : dy + h, dx : dx + w]))
+            best = d if best is None else cv2.min(best, d)
+    assert best is not None  # tol >= 0 always runs the (0, 0) offset
     return best
+
+
+def ssim(g1: np.ndarray, g2: np.ndarray) -> tuple[float, np.ndarray]:
+    """Structural similarity of two 8-bit grey images: the score and the per-pixel map.
+
+    OpenCV box filters in float32 instead of scikit-image in float64 (S08, #12): the score agrees with
+    scikit-image within 1e-6 and the map within 5e-4, which tests/test_compare_equivalence.py checks; the
+    whole-board score is what the recipe thresholds.
+    """
+    x, y = g1.astype(np.float32), g2.astype(np.float32)
+    win = SSIM_WINDOW
+
+    def mean(img: np.ndarray) -> np.ndarray:
+        out: np.ndarray = cv2.boxFilter(img, cv2.CV_32F, (win, win), normalize=True, borderType=cv2.BORDER_REFLECT)
+        return out
+
+    ux, uy = mean(x), mean(y)
+    unbias = win * win / (win * win - 1.0)  # sample covariance, as scikit-image uses
+    vx = unbias * (mean(x * x) - ux * ux)
+    vy = unbias * (mean(y * y) - uy * uy)
+    vxy = unbias * (mean(x * y) - ux * uy)
+    c1, c2 = (SSIM_K1 * SSIM_RANGE) ** 2, (SSIM_K2 * SSIM_RANGE) ** 2
+    s = ((2 * ux * uy + c1) * (2 * vxy + c2)) / ((ux * ux + uy * uy + c1) * (vx + vy + c2))
+    pad = (win - 1) // 2
+    return float(s[pad:-pad, pad:-pad].astype(np.float64).mean()), s
 
 
 def compare(
@@ -76,16 +111,16 @@ def compare(
     elif align_info is None:
         raise ValueError("align_info is required when a pre-aligned image is passed")
 
-    a = cv2.cvtColor(cv2.GaussianBlur(aligned, (5, 5), 0), cv2.COLOR_BGR2LAB).astype(np.float32)
-    b = cv2.cvtColor(cv2.GaussianBlur(reference, (5, 5), 0), cv2.COLOR_BGR2LAB).astype(np.float32)
-    diff = shift_tolerant_diff(a, b)
+    a = cv2.cvtColor(cv2.GaussianBlur(aligned, (5, 5), 0), cv2.COLOR_BGR2LAB)
+    b = cv2.cvtColor(cv2.GaussianBlur(reference, (5, 5), 0), cv2.COLOR_BGR2LAB)
+    diff = shift_tolerant_diff(a, b).astype(np.float32)
     m = max(4, min(diff.shape) // 60)  # ignore warped borders
     diff[:m, :] = diff[-m:, :] = 0
     diff[:, :m] = diff[:, -m:] = 0
 
     g1 = cv2.cvtColor(aligned, cv2.COLOR_BGR2GRAY)
     g2 = cv2.cvtColor(reference, cv2.COLOR_BGR2GRAY)
-    ssim, ssim_map = structural_similarity(g1, g2, full=True, data_range=255)
+    score, ssim_map = ssim(g1, g2)
 
     mask: np.ndarray = (diff >= diff_threshold).astype(np.uint8) * 255
     k = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
@@ -96,11 +131,11 @@ def compare(
     metrics = {
         "alignment_method": align_info["method"],
         "alignment_inliers": align_info["inliers"],
-        "ssim": float(ssim),
+        "ssim": score,
         "mean_abs_diff": float(diff.mean()),
         "max_diff": float(diff.max()),
         "changed_pct": float((mask > 0).mean() * 100.0),
         "compare_regions": len(regions),
         "largest_region_px": max((r.area for r in regions), default=0),
     }
-    return CompareResult(aligned, diff.astype(np.float32), ssim_map.astype(np.float32), mask, regions, metrics)
+    return CompareResult(aligned, diff, ssim_map, mask, regions, metrics)

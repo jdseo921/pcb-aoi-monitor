@@ -1,0 +1,16 @@
+{
+ "Linux-x86_64-4cpu-Intel(R) Xeon(R) Processor @ 2.10GHz": {
+  "0.3MP": {
+   "boards": 40,
+   "median_ms": 37.3,
+   "p95_ms": 45.8
+  },
+  "5MP": {
+   "boards": 8,
+   "median_ms": 475.7,
+   "p95_ms": 801.2
+  },
+  "platform": "Linux-6.18.44-fc-v50-x86_64-with-glibc2.39",
+  "recorded": "2026-10-01T15:26:32+00:00"
+ }
+}
