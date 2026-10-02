@@ -21,13 +21,15 @@ or cycle it with Alt+V; the view is stored with every result.
 | ▶ Start | F5 | Inspects the queue board after board, until Stop or the end of the queue |
 | ■ Stop | F6 | Stops after the board in hand; nothing is deleted, so there is no confirmation |
 | Next Board | F8 | Inspects one board |
-| Save Result | F9 | Writes the board image with its defect boxes to a file you choose |
+| Save Image… | F9 | Writes the board image with its defect boxes to a picture file you choose; the result itself is already recorded |
 
 A button and its key do the same. The key works whichever control on the Inspection page is selected (the defect
 list, the View box, a button), and only while that page is shown. Both go grey while the action is not possible:
 Start and Next Board until images are queued, while a run is on and while a board is being inspected; Stop while no
-run is on; Save Result before the first result. With **Auto-save each board** ticked (the default) every result is
-recorded as it arrives; Save Result records it too when the box is not ticked.
+run is on; Save Image… before the first result. Every result is recorded as it arrives, with the checks that decided
+it, before the next board starts; the records are on Logs & Export. If a result cannot be recorded (the disk is full,
+the workspace folder cannot be written) the run stops with AOI-INSP-008: press Next Board to carry on, and inspect that
+board again later.
 
 Reading the verdict: while a board is being inspected the banner turns grey and reads "Inspecting…", and the status
 bar at the bottom names the board and its place in the queue, such as "Inspecting board_07.png (3 of 12)…". The

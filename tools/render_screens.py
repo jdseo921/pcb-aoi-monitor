@@ -10,7 +10,7 @@ model trained for a few epochs, one inspected NG board (its first IC missing), o
 ROI around that IC. Everything that would change from run to run is pinned, and what would change with the machine's
 CPU is pinned or kept within the comparison's tolerance: record ids and the suffix of every sample's file name come from
 a counter instead of uuid4(), every stored time is FIXED_TIME and is shown as UTC, the Logs filter covers that week, the
-Settings page shows FIXED_WORKSPACE, and the Inspection page is rendered with auto-save off so the render adds no
+Settings page shows FIXED_WORKSPACE, and the Inspection page is rendered with `log_result` patched out, so it adds no
 record. The inspections shown run with PinnedModel in place of the trained model and report FIXED_MS: the training is
 seeded, but PyTorch's float rounding differs by CPU type (the same seed and data gave thresholds of 3.06 and 2.01 with
 its vectorised and its default CPU kernels), so a trained model's score, boxes and verdict differ between machines.
@@ -248,8 +248,8 @@ def prepare(win: MainWindow, title: str, dataset: Path) -> None:
 
     page: Any = win.pages[title]
     if title == "Inspection" and page.last is None:
-        page.autosave.setChecked(False)  # the render adds no record and no alarm
-        with pinned_engine():
+        no_record = mock.patch.object(type(page.ctx), "log_result", lambda *a, **k: 0)  # no record and no alarm
+        with pinned_engine(), no_record:
             page._set_queue([ng_board(dataset)])
             page.next_board()
             wait_until(lambda: page.last is not None)

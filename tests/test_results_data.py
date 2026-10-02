@@ -1,24 +1,28 @@
-"""REQ-INSP-012 (stage S25a): a saved result names the region, metric and threshold of every check and the AI model
-version and recipe revision that decided it, by version and by UUID, and reads back as it was decided (the evidence
-REQ-INSP-008 asks to save with every result; S25b saves every result)."""
+"""REQ-INSP-012 (stage S25a) and REQ-INSP-008 (S25b): a saved result names the region, metric and threshold of every
+check and the AI model version and recipe revision that decided it, by version and by UUID, reads back as it was
+decided, and every result is saved with that evidence before the next board starts."""
 
 from __future__ import annotations
 
+import csv
 import json
 from pathlib import Path
 
 import numpy as np
 import pytest
+from PySide6.QtWidgets import QFileDialog, QMessageBox
+from pytestqt.qtbot import QtBot
 
 from aoi.config import Settings
 from aoi.core.imaging import list_images
 from aoi.core.inspector import NG, Check, InspectionResult, Inspector
 from aoi.core.recipe import ROI, Recipe
-from aoi.core.services import AppContext
+from aoi.core.services import AppContext, export_csv
 from aoi.data.db import Database
+from aoi.ui import theme
 from tests.conftest import TrainedModel
 from tests.regression import make_regression_set as rs
-from tests.test_req_done_in_v01 import BOARD
+from tests.test_req_done_in_v01 import BOARD, _window
 
 CHECKS = ["SSIM similarity", "Changed area %", "Difference regions", "Alignment inliers", "AI anomaly score"]
 ROI_CHECK, ROI_REGION = "ROI R1 [Presence]", "R1 @ 110,110 110x110"
@@ -128,3 +132,127 @@ def test_req_insp_012_a_workspace_from_before_gets_revision_1_at_the_first_start
         app.close()
     ctx.import_samples("FRESH", [str(p) for p in list_images(synthetic_dataset / "train" / "ok")[:2]], "OK")
     assert [h["revision"] for h in ctx.recipe_history("FRESH")] == [1]
+
+
+def test_req_insp_008_saved_before_next_board(
+    qtbot: QtBot, trained_ctx: AppContext, synthetic_dataset: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """In a run, each board's record, with its checks, is in the database before the next board's inspection starts;
+    there is no Auto-save switch to leave off, and Save Image… (F9) writes a picture, never a second record. (The read
+    on the pool thread is exact: the save commits under the database lock before the next board is submitted; a save
+    moved after `next_board()` is caught because the pool starts the next board within the save's time, almost always.)
+    """
+    boards = list_images(synthetic_dataset / "test" / "ng")[:3]
+    win = _window(qtbot, trained_ctx, "Operator")
+    page = win.pages["Inspection"]
+    win.navigate("Inspection")
+    qtbot.waitUntil(trained_ctx.jobs.idle, timeout=10000)  # the Compare page's start-up load of the golden board
+    saved_at_start: list[int] = []
+    without_checks: list[int] = []
+    real = Inspector.inspect
+
+    def inspect(engine: Inspector, image: np.ndarray) -> InspectionResult:
+        rows = trained_ctx.inspections(board_model=BOARD)  # read on the pool thread, as this board starts
+        without_checks.extend(r["id"] for r in rows if not trained_ctx.checks_for(r["id"]))
+        saved_at_start.append(len(rows))
+        return real(engine, image)
+
+    monkeypatch.setattr(Inspector, "inspect", inspect)
+    assert not hasattr(page, "autosave") and page.act_save.text() == "Save Image…"
+    page._set_queue(boards)
+    page.start_run()
+    qtbot.waitUntil(lambda: not page.running and page.worker is None, timeout=60000)
+    assert saved_at_start == [0, 1, 2], "each record was written before the next board started"
+    assert without_checks == [], "a record without its checks"
+    rows = trained_ctx.inspections(board_model=BOARD)
+    assert [Path(r["image_path"]).name for r in rows] == [b.name for b in reversed(boards)]  # newest first
+    out = tmp_path / "picture.png"
+    monkeypatch.setattr(QFileDialog, "getSaveFileName", staticmethod(lambda *a, **k: (str(out), "PNG (*.png)")))
+    page.act_save.trigger()
+    assert out.exists() and len(trained_ctx.inspections(board_model=BOARD)) == 3, "Save Image… adds no record"
+
+
+def test_req_insp_012_all_five_present_in_csv(
+    qtbot: QtBot,
+    trained_ctx: AppContext,
+    regression_boards: list[Path],
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The Logs & Export CSV carries the evidence too: a second file beside the records with one row per check (region,
+    metric, source, value, threshold, rule, result) and the UUIDs of the AI model version and recipe revision, equal to
+    the checks table row for row; the records file keeps its columns and gains the UUIDs after them."""
+    ctx = trained_ctx
+    for path in regression_boards[:3]:
+        ctx.inspect_file(BOARD, str(path))
+    older = {"board_model": BOARD, "result": "OK", "view": "Top", "image_path": str(regression_boards[3])}
+    ctx.db.add_inspection(older, [], None)  # as a record from before migration 0006: no checks stored
+    win = _window(qtbot, ctx)  # an Engineer, since exports need the role
+    logs = win.pages["Logs & Export"]
+    win.navigate("Logs & Export")
+    out = tmp_path / "inspections.csv"
+    monkeypatch.setattr(QFileDialog, "getSaveFileName", staticmethod(lambda *a, **k: (str(out), "CSV (*.csv)")))
+    monkeypatch.setattr(QMessageBox, "question", staticmethod(lambda *a, **k: QMessageBox.StandardButton.Yes))
+    logs.export_csv()
+    with out.open(encoding="utf-8-sig", newline="") as f:
+        records = list(csv.DictReader(f))
+    with (tmp_path / "inspections_checks.csv").open(encoding="utf-8-sig", newline="") as f:
+        exported = list(csv.DictReader(f))
+    rows = ctx.inspections(board_model=BOARD)
+    active = ctx.active_model(BOARD)
+    assert active is not None and [int(r["id"]) for r in records] == [r["id"] for r in rows] and len(rows) == 4
+    assert list(records[0])[:4] == ["id", "time", "board_model", "view"] and list(records[0])[-3:] == [
+        "uuid", "model_uuid", "recipe_uuid",
+    ]  # fmt: skip
+    for rec, r in zip(records, rows, strict=True):
+        assert (rec["uuid"], rec["model_uuid"], rec["recipe_uuid"]) == tuple(
+            r[k] or "" for k in ("uuid", "model_uuid", "recipe_uuid")
+        )
+    assert records[0]["model_uuid"] == "" and ctx.checks_for(rows[0]["id"]) == [], "the older record, newest first"
+    expected = [(r, c) for r in rows for c in ctx.checks_for(r["id"])]
+    assert len(exported) == len(expected) == 3 * len(CHECKS)  # the default recipe: no ROI check; the older record: none
+    for row, (r, c) in zip(exported, expected, strict=True):
+        assert (int(row["inspection_id"]), row["inspection_uuid"], int(row["no"])) == (r["id"], r["uuid"], c["no"])
+        assert (row["region"], row["metric"], row["source"], row["rule"], row["result"]) == (
+            c["region"], c["metric"], c["source"], c["rule"], c["result"],
+        )  # fmt: skip
+        assert (float(row["value"]), float(row["threshold"])) == (c["value"], c["threshold"])
+        assert (row["model_version"], row["model_uuid"]) == (active["version"], active["uuid"])
+        assert (int(row["recipe_rev"]), row["recipe_uuid"]) == (r["recipe_rev"], r["recipe_uuid"]) and row[
+            "recipe_uuid"
+        ]
+        assert (row["time"], row["board_model"], row["view"]) == (r["time"], BOARD, "Top")
+    tail = f"{len(exported)} check rows to {tmp_path}: inspections.csv, inspections_checks.csv"
+    assert win.statusBar().currentMessage().endswith(tail)
+    export_csv(tmp_path / "none.csv", [], ["a", "b"])  # no record has checks: the file still names its columns
+    assert (tmp_path / "none.csv").read_bytes() == b"\xef\xbb\xbfa,b\r\n"
+
+
+def test_req_insp_008_a_result_that_cannot_be_saved_stops_the_run_with_its_code(
+    qtbot: QtBot,
+    trained_ctx: AppContext,
+    synthetic_dataset: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    dialogs: list[tuple[str, str]],
+) -> None:
+    """The disk is full (or the workspace cannot be written, or the database fails) while a result is saved: the verdict
+    stays on screen, the run stops before the next board, the dialog carries AOI-INSP-008 with the file name, the
+    alarm is listed, nothing half-written is in the database, and Next Board carries on with the queue."""
+    boards = list_images(synthetic_dataset / "test" / "ng")[:2]
+    win = _window(qtbot, trained_ctx, "Operator")
+    page = win.pages["Inspection"]
+    win.navigate("Inspection")
+    qtbot.waitUntil(trained_ctx.jobs.idle, timeout=10000)
+
+    def no_space(*args: object, **kwargs: object) -> int:
+        raise OSError(28, "No space left on device")
+
+    monkeypatch.setattr(Database, "add_inspection", no_space)
+    page._set_queue(boards)
+    page.start_run()
+    qtbot.waitUntil(lambda: len(dialogs) == 1, timeout=30000)
+    assert dialogs[-1][0] == "AOI-INSP-008 Result not saved" and boards[0].name in dialogs[-1][1]
+    assert not page.running and page.worker is None and page.queue_pos == 0, "the run stopped before the next board"
+    assert page.last is not None and page.verdict.text() == theme.verdict_label(page.last.verdict)
+    assert "AOI-INSP-008" in page.alarms.item(0).text() and trained_ctx.inspections(board_model=BOARD) == []
+    assert page.act_next.isEnabled() and not page.act_stop.isEnabled()
