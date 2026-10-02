@@ -82,6 +82,21 @@ CODES: dict[str, ErrorCode] = {
             " and inspect {file} again later.",
         ),
         ErrorCode(
+            "AOI-CMP-001",
+            "Result has no stored heatmaps",
+            "The result of {file} was saved without its difference and AI maps, or they were deleted after the"
+            " retention period of {days} days.",
+            "The decision table is the stored one; use Side by side or Boxes only, or inspect the board again on"
+            " Inspection to see its heatmaps.",
+        ),
+        ErrorCode(
+            "AOI-CMP-002",
+            "Result has no stored decision table",
+            "Record {id} ({file}) has no stored decision table: it was saved before migration 0006, or no record has"
+            " that number.",
+            "Inspect the board again on Inspection; Compare then opens the new result.",
+        ),
+        ErrorCode(
             "AOI-TRN-001",
             "AI model file refused",
             "AI model file refused: {path} is not a weights-only model file this app wrote ({reason}).",

@@ -79,6 +79,7 @@ class Page(QWidget):
         self.ctx = ctx
         self.shell = shell  # MainWindow: navigation + shared state
         self._bg: Worker | None = None  # the page's background action, if one is running (REQ-SET-021)
+        self._bg_busy: BusyOverlay | None = None  # the overlay that action covers, if any
         self.root = QVBoxLayout(self)
         self.root.setContentsMargins(20, 14, 20, 14)
         head = QHBoxLayout()
@@ -166,7 +167,10 @@ class Page(QWidget):
         `busy` covers where the result will appear; Cancel drops the result and calls `on_cancel` when the job stops."""
         if self._bg is not None:
             self._bg.stop()
+            if self._bg_busy is not None and self._bg_busy is not busy:  # its finished slot will not finish it
+                self._bg_busy.finish()
         w = self._bg = Worker(fn, *args, **kwargs)
+        self._bg_busy = busy
 
         def current(slot: Callable[..., None]) -> Callable[..., None]:
             def guarded(*a: Any) -> None:

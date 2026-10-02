@@ -47,7 +47,8 @@ if TYPE_CHECKING:
     from ..main_window import MainWindow
 
 
-Outcome: TypeAlias = "tuple[Path, InspectionResult, Inspector, Exception | None]"  # board, result, engine, save error
+# A board's pool job hands the result slot: board, result, engine, record id, save error (one of the last two is None).
+Outcome: TypeAlias = "tuple[Path, InspectionResult, Inspector, int | None, Exception | None]"
 
 NO_VERDICT = "—"  # the banner before the first board
 
@@ -68,6 +69,7 @@ class InspectionPage(Page):
         self.running = False
         self.last: InspectionResult | None = None
         self.last_path: Path | None = None
+        self.last_id: int | None = None  # the record of the last result, for Compare (REQ-INSP-009)
         self.inspector: Inspector | None = None  # built on the first board for the board model, recipe and reference
         self._engine_gen = 0  # counts the times the engine was dropped, so a board's engine from before is not kept
         # The board being inspected, if one is: Start and Next Board wait for it (#120).
@@ -225,10 +227,10 @@ class InspectionPage(Page):
             res = engine.inspect(self.ctx.load_image(path))
             w.signals.progress.emit(res)  # the verdict first, while the save runs; w is bound before the job starts
             try:  # saved here, on the pool thread, before the result slot can start the next board (REQ-INSP-008)
-                self.ctx.log_result(bm, str(path), res, engine)
+                iid = self.ctx.log_result(bm, str(path), res, engine)
             except Exception as e:  # the verdict is still shown; the missing record stops the run (_not_saved)
-                return path, res, engine, e
-            return path, res, engine, None
+                return path, res, engine, None, e
+            return path, res, engine, iid, None
 
         w = self.worker = Worker(inspect)
         self._show_busy(path)  # the response to the action, before the pool thread has started (REQ-INSP-005)
@@ -287,8 +289,8 @@ class InspectionPage(Page):
         self.verdict.repaint()
 
     def _on_result(self, out: Outcome) -> None:
-        path, res, _engine, save_error = out
-        self.last, self.last_path = res, path
+        path, res, _engine, iid, save_error = out
+        self.last, self.last_path, self.last_id = res, path, iid
         self._show_verdict(res)  # painted before the image and the table are built: the verdict first (REQ-INSP-002)
         self.empty.hide()
         self.view.set_image(res.image, keep_view=self.queue_pos > 0)
@@ -303,7 +305,7 @@ class InspectionPage(Page):
         self.summary.setText("\n".join([summary, *res.notes]))
         self.shell.status(summary)  # in place of "Inspecting …"
         fill_table(self.table, [[d.no, d.type, d.score, view_text(d.side), d.x, d.y] for d in res.defects])
-        self.shell.last_inspected = (str(path), res)
+        self.shell.last_inspected = (str(path), res, iid)
         # Saved with its evidence on the pool thread (REQ-INSP-008, REQ-SET-021); a failed save stops the run here.
         if save_error is not None:
             self._not_saved(path, save_error)
@@ -337,7 +339,10 @@ class InspectionPage(Page):
             self.shell.status(self.tr("Saved {file}").format(file=Path(f).name))
 
     def open_compare(self) -> None:
-        if self.last_path:
+        """Compare on the last result in one click: its record as decided (REQ-INSP-009), or its file when not saved."""
+        if self.last_id is not None:
+            self.shell.open_stored(self.last_id)
+        elif self.last_path:
             self.shell.open_compare(str(self.last_path))
 
     # --- helpers -------------------------------------------------------------------

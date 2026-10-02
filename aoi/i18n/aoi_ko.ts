@@ -27,7 +27,7 @@
 <context>
     <name>ComparePage</name>
     <message>
-        <location filename="../ui/pages/compare.py" line="+48"/>
+        <location filename="../ui/pages/compare.py" line="+50"/>
         <source>Side by side</source>
         <translation type="unfinished"></translation>
     </message>
@@ -73,12 +73,12 @@
     </message>
     <message>
         <location line="+3"/>
-        <location line="+42"/>
+        <location line="+43"/>
         <source>Golden board</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-41"/>
+        <location line="-42"/>
         <source>AI model</source>
         <translation type="unfinished"></translation>
     </message>
@@ -108,7 +108,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+16"/>
+        <location line="+17"/>
         <source>Test Image…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -143,7 +143,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+18"/>
+        <location line="+23"/>
         <source>Check</source>
         <translation type="unfinished"></translation>
     </message>
@@ -224,7 +224,7 @@
     </message>
     <message>
         <location line="+0"/>
-        <location line="+12"/>
+        <location line="+14"/>
         <source>Images ({extensions})</source>
         <translation type="unfinished"></translation>
     </message>
@@ -234,12 +234,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+38"/>
+        <location line="+40"/>
         <source>Test board: {file}</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+19"/>
+        <location line="+25"/>
         <source>Reference: {file}</source>
         <translation type="unfinished"></translation>
     </message>
@@ -264,7 +264,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+16"/>
+        <location line="+17"/>
         <source>Inspection time (ms)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -276,6 +276,37 @@
     <message>
         <location line="+3"/>
         <source>spec &lt; 1 s</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+20"/>
+        <source>Test board: {file} (stored result)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+24"/>
+        <source>The verdict and the decision table are the stored ones.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Board picture no longer stored</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+7"/>
+        <source>Stored result of {time}: AI model {model}, recipe revision {revision}, view {view}.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <location line="+6"/>
+        <source>none</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="-1"/>
+        <source>Since then the board model moved to AI model {model} and recipe revision {revision}.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -309,7 +340,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+11"/>
+        <location line="+12"/>
         <source>Inspect a board on Inspection, or pick a test image.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -471,7 +502,7 @@
 <context>
     <name>InspectionPage</name>
     <message>
-        <location filename="../ui/pages/inspection.py" line="+76"/>
+        <location filename="../ui/pages/inspection.py" line="+80"/>
         <location line="+81"/>
         <source>Load Images…</source>
         <translation type="unfinished"></translation>
@@ -604,12 +635,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+25"/>
+        <location line="+31"/>
         <source>No AI model for {board_model} yet: only the Golden board comparison runs</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+21"/>
+        <location line="+22"/>
         <source>{file}  ·  not inspected</source>
         <translation type="unfinished"></translation>
     </message>
@@ -634,7 +665,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+35"/>
+        <location line="+33"/>
         <source>Save annotated image</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1120,7 +1151,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/base.py" line="+108"/>
+        <location filename="../ui/pages/base.py" line="+109"/>
         <source>No board model yet</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1150,7 +1181,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+86"/>
+        <location line="+89"/>
         <source>{action}  {key}</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1160,7 +1191,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/compare.py" line="-294"/>
+        <location filename="../ui/pages/compare.py" line="-370"/>
         <source>Compare</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1170,7 +1201,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/inspection.py" line="-271"/>
+        <location filename="../ui/pages/inspection.py" line="-277"/>
         <source>Inspection</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1504,7 +1535,7 @@
 <context>
     <name>Role</name>
     <message>
-        <location filename="../ui/pages/base.py" line="-175"/>
+        <location filename="../ui/pages/base.py" line="-179"/>
         <source>Operator</source>
         <translation type="unfinished"></translation>
     </message>

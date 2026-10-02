@@ -196,7 +196,7 @@ class ModelTestPage(Page):
         for d in res.defects:
             sev = taxonomy.BY_NAME.get(d.type, taxonomy.ANOMALY).severity
             self.view.add_box(d.x, d.y, d.w, d.h, theme.SEVERITY_COLORS.get(sev, theme.NG_COLOR), f"{d.no} {d.type}")
-        self.shell.last_inspected = (path, res)
+        self.shell.last_inspected = (path, res, None)  # a preview is not recorded
 
     def on_show(self) -> None:
         bm = self.board_model

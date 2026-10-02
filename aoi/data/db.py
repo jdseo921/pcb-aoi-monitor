@@ -315,6 +315,13 @@ class Database:
         r = self.query("SELECT result_json FROM inspections WHERE id=?", (inspection_id,))
         return json.loads(r[0]["result_json"]) if r and r[0]["result_json"] else None
 
+    def inspection(self, inspection_id: int) -> dict[str, Any] | None:
+        """One inspection record by id with its paths absolute, or None for an unknown id (REQ-INSP-009)."""
+        paths = ("image_path", "overlay_path", "diff_map_path", "ai_map_path")
+        cols = "id, time, board_model, model_version, model_uuid, recipe_rev, recipe_uuid, view, result, score"
+        r = self.query(f"SELECT {cols}, {', '.join(paths)} FROM inspections WHERE id=?", (inspection_id,))
+        return self._resolved(r[0], *paths) if r else None
+
     def map_paths(self, inspection_id: int) -> tuple[str | None, str | None]:
         """The stored map files of one inspection, absolute; None where none was stored or the sweep deleted it."""
         rows = self.query("SELECT diff_map_path, ai_map_path FROM inspections WHERE id=?", (inspection_id,))
