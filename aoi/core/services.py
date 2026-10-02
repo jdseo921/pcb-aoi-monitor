@@ -336,7 +336,8 @@ class AppContext:
         day = local_date()  # the folder is named for the operator's shift date; the stored time is UTC
         overlay = self.settings.results_dir / day / f"{Path(path).stem}_{uuid.uuid4().hex[:6]}_{res.verdict}.png"
         save_image(overlay, draw_overlay(res))
-        diff_map_path, ai_map_path = save_maps(res, overlay.with_suffix(""))  # beside the overlay, whole or not at all
+        pixel_threshold = insp.model.pixel_threshold if insp.model is not None else None  # the AI map's, kept (S28a)
+        diff_map_path, ai_map_path = save_maps(res, overlay.with_suffix(""), pixel_threshold=pixel_threshold)
         doc = res.to_dict()
         iid = self.db.add_inspection(
             {

@@ -191,6 +191,12 @@ def test_req_cmp_003_note_names_the_versions_and_missing_maps(
     qtbot.waitUntil(lambda: compare.test_view._pix is not None, timeout=10000)
     assert "AOI-CMP-001" not in compare.note.text() and compare.res.compare and compare.res.compare.diff_map is None
     assert compare.res.anomaly_map is not None
+    Path(str(ai_path)).write_bytes(b"damaged")  # the other damaged: its code and name, while the table stands
+    compare.show_stored(iid)
+    qtbot.waitUntil(lambda: bool(dialogs), timeout=10000)
+    title, text = dialogs.pop()
+    assert title.startswith("AOI-CMP-003") and Path(str(ai_path)).name in text
+    assert _table(compare)[:-1] == _expected(compare, ctx.checks_for(iid))
     Path(str(ai_path)).unlink()
     for clear in (False, True):  # the files deleted by hand, then the paths cleared as the retention sweep leaves them
         if clear:

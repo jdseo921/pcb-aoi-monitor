@@ -16,35 +16,40 @@ from pytestqt.qtbot import QtBot
 from aoi.config import Settings
 from aoi.core import maps
 from aoi.core.imaging import list_images, save_image
+from aoi.core.inspector import InspectionResult
 from aoi.core.services import AppContext
+from aoi.errors import AoiError
 from tests.conftest import TrainedModel
 from tests.test_no_freeze import gap_meter
 from tests.test_req_done_in_v01 import BOARD, _window
 
 
-def test_maps_encode_the_difference_exactly_and_the_ai_score_to_a_thousandth() -> None:
-    """8 bits hold the difference map (whole values 0-255) exactly; the AI map is kept in 0.001 sigma steps."""
+def test_maps_encode_the_difference_exactly_and_the_ai_score_within_a_step() -> None:
+    """8 bits hold the difference map (whole values 0-255) exactly; the AI map is kept in 0.001 sigma steps up to
+    32.767 sigma and in steps of 1/8192 of the value above (format 2, since S28a)."""
     diff = np.array([[0.0, 1.0, 254.0, 255.0]], dtype=np.float32)
     assert maps.encode_diff(diff).dtype == np.uint8 and np.array_equal(maps.encode_diff(diff), diff)
-    amap = np.array([[0.0, 0.0004, 1.2346, 70.0, np.nan]], dtype=np.float32)  # NaN, which no model makes, stores as 0
-    with np.errstate(invalid="raise"):  # and without NumPy's cast warning for the NaN
+    amap = np.array([[0.0, 0.0004, 1.2346, 70.0, 800.0, np.inf, np.nan, -1.0, -np.inf]], np.float32)  # no model
+    with np.errstate(all="raise"):  # makes the last four, stored without NumPy's warnings as the top code and as 0
         back = maps.decode_ai(maps.encode_ai(amap))
-    assert maps.encode_ai(amap).dtype == np.uint16 and back.dtype == np.float32
-    assert back[0].tolist() == pytest.approx([0.0, 0.0, 1.235, 65.535, 0.0], abs=1e-5)  # float32 holds 65.535004
+    assert maps.encode_ai(amap).dtype == np.uint16 and back.dtype == np.float32 and back[0, 5] == maps.AI_MAX
+    assert back[0, :3].tolist() == pytest.approx([0.0, 0.0, 1.235], abs=1e-6) and back[0, 6:].tolist() == [0.0] * 3
+    assert back[0, 3:5].tolist() == pytest.approx([70.0, 800.0], rel=0.5 / maps.AI_LOG_STEPS)
 
 
 def test_req_insp_012_maps_are_stored_beside_the_overlay_and_read_back_with_the_result(
     trained_ctx: AppContext, ng_board: Path
 ) -> None:
     """A saved result names its two map files, stored relative to the workspace beside the overlay; read back with
-    `with_maps`, the difference map equals the live one exactly and the AI map to its stored precision."""
+    `with_maps`, the difference map equals the live one exactly and the AI map within one step, each pixel on the side
+    of the AI model's pixel threshold it is on live (S28a)."""
     ctx = trained_ctx
     ctx.inspect_file(BOARD, str(ng_board))
     (row,) = ctx.inspections(board_model=BOARD)
     iid = row["id"]
     overlay = Path(row["overlay_path"])
     assert row["diff_map_path"] == str(overlay.with_name(overlay.stem + "_diff.png"))
-    assert row["ai_map_path"] == str(overlay.with_name(overlay.stem + "_ai.png"))
+    assert row["ai_map_path"] == str(overlay.with_name(overlay.stem + maps.AI_FILE))
     assert Path(row["diff_map_path"]).is_file() and Path(row["ai_map_path"]).is_file()
     raw = ctx.db.query("SELECT diff_map_path, ai_map_path FROM inspections WHERE id=?", (iid,))[0]
     assert all(not Path(p).is_absolute() for p in raw.values()), raw
@@ -54,10 +59,35 @@ def test_req_insp_012_maps_are_stored_beside_the_overlay_and_read_back_with_the_
     assert stored is not None and stored.compare is not None and stored.compare.diff_map is not None
     assert stored.compare.diff_map.dtype == np.float32 and (stored.compare.diff_map == live.compare.diff_map).all()
     assert stored.anomaly_map is not None and stored.anomaly_map.shape == live.anomaly_map.shape
-    step, rounding = 0.5 / maps.AI_SCALE, float(live.anomaly_map.max()) * np.finfo(np.float32).eps
-    assert float(np.abs(stored.anomaly_map - live.anomaly_map).max()) <= step + rounding
+    step = np.maximum(1 / maps.AI_SCALE, live.anomaly_map / maps.AI_LOG_STEPS) * 1.001  # one step at each value
+    rounding = float(live.anomaly_map.max()) * np.finfo(np.float32).eps
+    assert float((np.abs(stored.anomaly_map - live.anomaly_map) - step).max()) < rounding
+    model = ctx.inspector(BOARD).model
+    assert model is not None
+    assert np.array_equal(stored.anomaly_map >= model.pixel_threshold, live.anomaly_map >= model.pixel_threshold)
     plain = ctx.inspection_result(iid)  # without with_maps: no maps, as before
     assert plain and plain.compare and plain.anomaly_map is None and plain.compare.diff_map is None
+
+
+def test_req_insp_012_a_map_that_cannot_be_read_says_which_and_why(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A map whose file is gone reads as None (the sweep or a hand deleted it, maybe while it was being read); one that
+    is there but damaged, or held by another program, raises AOI-CMP-003 naming the file and why (S28a review B2)."""
+    path = tmp_path / ("board" + maps.AI_FILE)
+    assert maps.read_map(path) is None
+    path.write_bytes(b"not a PNG")
+    with pytest.raises(AoiError, match="board_ai2.png could not be read: the file is damaged") as bad:
+        maps.load_maps(InspectionResult("OK", 0.0), None, str(path))
+    save_image(path, np.zeros((2, 2), np.uint16))
+
+    def held(self: Path) -> bytes:
+        raise PermissionError(13, "Permission denied", str(self))
+
+    monkeypatch.setattr(Path, "read_bytes", held)
+    with pytest.raises(AoiError, match="board_ai2.png could not be read: Permission denied") as locked:
+        maps.load_maps(InspectionResult("OK", 0.0), None, str(path))
+    assert bad.value.code == locked.value.code == "AOI-CMP-003" and str(path) in str(locked.value.detail)
 
 
 def _backdate(ctx: AppContext, days: int, *ids: int) -> None:
