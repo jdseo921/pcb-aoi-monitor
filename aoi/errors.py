@@ -170,7 +170,9 @@ CODES: dict[str, ErrorCode] = {
             "AOI-SET-004",
             "Migration failed",
             "Migration {file} failed and was rolled back: {error}.",
-            "Restart the app; if it happens again, report it with the log file.",
+            "Restart the app; if it happens again, report it with the log file. To go back to the version you "
+            "upgraded from, close the app and copy the backup aoi.sqlite.bak-… in the workspace folder over aoi.sqlite "
+            "(engineer manual, chapter 1).",
         ),
         ErrorCode(
             "AOI-SET-005",
