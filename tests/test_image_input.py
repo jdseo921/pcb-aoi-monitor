@@ -220,6 +220,7 @@ def test_req_insp_001_a_setting_of_the_wrong_type_is_refused_at_start_up(
     cases = (
         ("max_image_megapixels", '"50"', "a whole number above 0"),
         ("max_image_megabytes", "0", "a whole number above 0"),
+        ("map_retention_days_ok", "-1", "a whole number of 0 or more"),
         ("image_size", "1.5", "a whole number"),
         ("default_epochs", "true", "a whole number"),
         ("language", "1", "text"),

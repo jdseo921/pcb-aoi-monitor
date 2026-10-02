@@ -74,6 +74,7 @@ def test_req_insp_008_no_finished_result_lost(tmp_path: Path, tiny_model: Traine
             load_image(overlay)  # decodes, so the whole file is there
             assert r["defect_count"] == len(db.defects_for(r["id"]))
             assert db.checks_for(r["id"]) and db.inspection_result(r["id"]), "a row without its checks or result"
+            assert all(r[k] and Path(r[k]).is_file() for k in ("diff_map_path", "ai_map_path")), r  # maps, then the row
         db.close()
         for p in (ws / "results").rglob("*"):
             if p.is_file() and not p.name.endswith(atomic.TEMP_SUFFIX):  # a temp file: an interrupted write

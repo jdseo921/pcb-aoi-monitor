@@ -139,6 +139,28 @@ def test_req_insp_012_rows_from_before_the_evidence_columns_keep_none(tmp_path: 
     assert (new["model_uuid"], new["recipe_uuid"]) == ("m-1", "r-1") and "result_json" not in new
 
 
+def test_req_insp_012_rows_from_before_the_map_columns_keep_none(tmp_path: Path) -> None:
+    """Migration 0007 adds `diff_map_path` and `ai_map_path`: a record from before it names no maps; a new record's
+    paths are stored relative to the workspace and come back absolute."""
+    path = tmp_path / "aoi.sqlite"
+    files = mg.load_migrations()
+    old = sqlite3.connect(path)
+    assert [m.number for m in mg.migrate(old, files[:6])] == list(range(1, 7))
+    old.execute("INSERT INTO inspections(uuid, time, result) VALUES('old', '2026-09-30T01:00:00+00:00', 'OK')")
+    old.commit()
+    old.close()
+    db = Database(path, tmp_path)
+    (before,) = db.inspections(include_archived=True)
+    assert (before["diff_map_path"], before["ai_map_path"]) == (None, None)
+    assert db.map_paths(before["id"]) == (None, None) and db.ok_maps_older_than(0) == []
+    diff, ai = tmp_path / "results" / "a_diff.png", tmp_path / "results" / "a_ai.png"
+    iid = db.add_inspection({"result": "NG", "diff_map_path": str(diff), "ai_map_path": str(ai)}, [], None)
+    stored = db.query("SELECT diff_map_path, ai_map_path FROM inspections WHERE id=?", (iid,))[0]
+    assert stored == {"diff_map_path": "results/a_diff.png", "ai_map_path": "results/a_ai.png"}
+    assert db.map_paths(iid) == (str(diff), str(ai)) and db.map_paths(iid + 1) == (None, None)
+    db.close()
+
+
 def test_req_insp_008_a_record_the_database_refuses_leaves_nothing_behind(tmp_path: Path) -> None:
     """The row, its defects and its checks commit together: a check the database refuses (a NULL value) after the
     inspection row is inserted rolls that row back, and a check dict without a field fails before anything is written;

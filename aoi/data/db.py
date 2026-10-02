@@ -193,8 +193,9 @@ class Database:
     ) -> int:
         """The inspection row, its defects and its checks commit together: a crash leaves all or none (REQ-INSP-008).
         `rec["result_json"]` is the whole result as `InspectionResult.to_dict` gives it, `model_uuid` and `recipe_uuid`
-        name the AI model version and recipe revision that decided it, and each check is a dict with the fields of
-        `Check` (name, value, threshold, rule, verdict, source, explain, region) (REQ-INSP-012)."""
+        name the AI model version and recipe revision that decided it, `diff_map_path` and `ai_map_path` the map files
+        beside the overlay (every path is stored relative to the workspace), and each check is a dict with the fields
+        of `Check` (name, value, threshold, rule, verdict, source, explain, region) (REQ-INSP-012)."""
         result_json = rec.get("result_json")
         row = (
             new_uuid(),
@@ -206,6 +207,8 @@ class Database:
             rec.get("recipe_uuid"),
             self._stored(rec["image_path"]) if rec.get("image_path") else None,
             self._stored(rec["overlay_path"]) if rec.get("overlay_path") else None,
+            self._stored(rec["diff_map_path"]) if rec.get("diff_map_path") else None,
+            self._stored(rec["ai_map_path"]) if rec.get("ai_map_path") else None,
             rec.get("view"),
             rec["result"],
             rec.get("score"),
@@ -224,8 +227,8 @@ class Database:
             try:
                 cur = self._conn.execute(
                     "INSERT INTO inspections(uuid, time, board_model, model_version, model_uuid, recipe_rev,"
-                    " recipe_uuid, image_path, overlay_path, view, result, score, metrics, result_json, operator)"
-                    " VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                    " recipe_uuid, image_path, overlay_path, diff_map_path, ai_map_path, view, result, score, metrics,"
+                    " result_json, operator) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                     row,
                 )
                 iid = cur.lastrowid
@@ -256,7 +259,8 @@ class Database:
     ) -> list[dict[str, Any]]:
         sql = (  # every column but result_json, which `inspection_result` reads for one record at a time
             "SELECT i.id, i.uuid, i.time, i.board_model, i.model_version, i.model_uuid, i.recipe_rev, i.recipe_uuid,"
-            " i.image_path, i.overlay_path, i.view, i.result, i.score, i.metrics, i.operator, i.archived,"
+            " i.image_path, i.overlay_path, i.diff_map_path, i.ai_map_path, i.view, i.result, i.score, i.metrics,"
+            " i.operator, i.archived,"
             " (SELECT COUNT(*) FROM defects d WHERE d.inspection_id=i.id) AS defect_count FROM inspections i WHERE 1=1"
         )
         p: list[Any] = []
@@ -275,7 +279,8 @@ class Database:
         if operator:
             sql += " AND operator = ?"
             p.append(operator)
-        return [self._resolved(r, "image_path", "overlay_path") for r in self.query(sql + " ORDER BY id DESC", p)]
+        rows = self.query(sql + " ORDER BY id DESC", p)
+        return [self._resolved(r, "image_path", "overlay_path", "diff_map_path", "ai_map_path") for r in rows]
 
     def defects_for(self, inspection_id: int) -> list[dict[str, Any]]:
         return self.query("SELECT * FROM defects WHERE inspection_id=? ORDER BY no", (inspection_id,))
@@ -309,6 +314,29 @@ class Database:
         before migration 0006 or an unknown id."""
         r = self.query("SELECT result_json FROM inspections WHERE id=?", (inspection_id,))
         return json.loads(r[0]["result_json"]) if r and r[0]["result_json"] else None
+
+    def map_paths(self, inspection_id: int) -> tuple[str | None, str | None]:
+        """The stored map files of one inspection, absolute; None where none was stored or the sweep deleted it."""
+        rows = self.query("SELECT diff_map_path, ai_map_path FROM inspections WHERE id=?", (inspection_id,))
+        row = self._resolved(rows[0], "diff_map_path", "ai_map_path") if rows else {}
+        return row.get("diff_map_path"), row.get("ai_map_path")
+
+    def ok_maps_older_than(self, days: int) -> list[dict[str, Any]]:
+        """OK inspections older than `days` that still name a map file: id and the two paths, absolute."""
+        cutoff = (datetime.now(UTC) - timedelta(days=days)).isoformat(timespec="seconds")
+        rows = self.query(
+            "SELECT id, diff_map_path, ai_map_path FROM inspections WHERE result='OK' AND time < ?"
+            " AND (diff_map_path IS NOT NULL OR ai_map_path IS NOT NULL) ORDER BY id",
+            (cutoff,),
+        )
+        return [self._resolved(r, "diff_map_path", "ai_map_path") for r in rows]
+
+    def clear_map_paths(self, inspection_ids: list[int]) -> None:
+        """Forget the map files of these inspections (deleted by the retention sweep), IN_CHUNK ids at a time."""
+        for start in range(0, len(inspection_ids), IN_CHUNK):
+            chunk = inspection_ids[start : start + IN_CHUNK]
+            marks = ",".join("?" * len(chunk))
+            self.execute(f"UPDATE inspections SET diff_map_path=NULL, ai_map_path=NULL WHERE id IN ({marks})", chunk)
 
     def archive_old(self, days: int) -> int:
         cutoff = (datetime.now(UTC) - timedelta(days=days)).isoformat(timespec="seconds")
