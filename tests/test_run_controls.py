@@ -254,7 +254,7 @@ def test_req_insp_002_verdict_shown_within_100_ms_of_result(
 ) -> None:
     """The verdict banner, colour and word, is painted within 100 ms of the engine's result and before the image and
     the defect table are built from it: here the image takes 150 ms to build, as a large board on a slow station might,
-    and the verdict is on screen before that starts."""
+    and the verdict is on screen before that starts and before the result's save, which takes 150 ms here too."""
     engine.release()
     win, page = inspection
     watch = PaintWatch(page.verdict)
@@ -268,6 +268,7 @@ def test_req_insp_002_verdict_shown_within_100_ms_of_result(
         real(view, img, keep_view=keep_view)
 
     monkeypatch.setattr(ImageView, "set_image", slow)
+    monkeypatch.setattr(AppContext, "log_result", lambda *a, _r=AppContext.log_result: (sleep(0.15), _r(*a))[1])
     page._set_queue([ng_board])
     press(qtbot, win, page.act_next)
     qtbot.waitUntil(lambda: page.worker is None, timeout=60000)

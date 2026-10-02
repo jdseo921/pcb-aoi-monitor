@@ -1,10 +1,8 @@
-"""The two maps a result is judged on, stored as PNG files beside the overlay (REQ-INSP-012, S25c).
-The difference map holds whole values 0-255 (`compare.shift_tolerant_diff` on 8-bit Lab images), so an 8-bit PNG
-keeps it exactly. The AI score map, "standard deviations above normal" per pixel as float32, is kept as 16-bit in steps
-of 1/AI_SCALE (0.001 sigma), clipped at 65.535 sigma: enough for the heat view and for re-evaluating thresholds on the
-stored map (REQ-CMP-005), while the values that decided the verdict are the stored checks. Both files are written whole
-or not at all (`save_image`). A change of AI_SCALE needs a migration, since a stored map carries no scale of its own.
-"""
+"""The two maps a result is judged on, as PNG files beside the overlay (REQ-INSP-012, S25c): the difference map
+(whole values 0-255 from `compare.shift_tolerant_diff`) exactly, as 8-bit; the AI score map ("standard deviations
+above normal" per pixel, float32) as 16-bit in steps of 1/AI_SCALE (0.001 sigma), clipped at 65.535 sigma: enough for
+the heat view and for re-evaluating thresholds on the stored map (REQ-CMP-005); the values that decided the verdict
+are the stored checks. Both are written whole or not at all (`save_image`); a change of AI_SCALE needs a migration."""
 
 from __future__ import annotations
 

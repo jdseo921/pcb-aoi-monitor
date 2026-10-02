@@ -69,10 +69,9 @@ def _backdate(ctx: AppContext, days: int, *ids: int) -> None:
 def test_req_insp_012_ok_maps_are_swept_after_retention_and_ng_maps_stay(
     tmp_path: Path, tiny_model: TrainedModel, ng_board: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """The sweep at start-up (and `_sweep_ok_maps`) deletes the map files of OK results older than
-    `map_retention_days_ok` days and forgets their paths, audited as the system's `maps.sweep`; NG and WARN maps, and
-    every record, stay; a result whose maps are gone still reads back without them; a file that cannot be deleted, or
-    one outside results/ (a row edited on disk), keeps its row's paths for the next start."""
+    """The start-up sweep (and `_sweep_ok_maps`) deletes the map files of OK results older than `map_retention_days_ok`
+    days and forgets their paths, audited as the system's `maps.sweep`; NG and WARN maps and every record stay; a result
+    whose maps are gone reads back without them; a locked file, or one outside results/, keeps its row's paths."""
     ws = tmp_path / "ws"
     shutil.copytree(tiny_model.ctx.settings.root, ws)
     app = AppContext(Settings(workspace=str(ws), device="cpu", map_retention_days_ok=7))
@@ -130,9 +129,8 @@ def test_req_insp_012_ok_maps_are_swept_after_retention_and_ng_maps_stay(
 def test_req_set_021_the_save_runs_on_the_pool_thread(
     qtbot: QtBot, trained_ctx: AppContext, synthetic_dataset: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """The overlay, the maps and the database row are written in the board's pool job, not in the result slot: a save
-    that takes 1.2 s leaves the window's thread free (the S25b review's S1; REQ-SET-021), and each record is still
-    there before the next board starts (test_req_insp_008_saved_before_next_board)."""
+    """The overlay, the maps and the row are written in the board's pool job, not in the result slot: a 1.2 s save
+    leaves the window's thread free (S25b review S1; REQ-SET-021) and each record is there before the next board."""
     boards = list_images(synthetic_dataset / "test" / "ng")[:2]
     win = _window(qtbot, trained_ctx, "Operator")
     page = win.pages["Inspection"]

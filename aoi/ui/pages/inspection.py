@@ -223,6 +223,7 @@ class InspectionPage(Page):
             engine = insp if insp is not None else self.ctx.inspector(bm, side=view)
             engine.side = view  # one worker at a time per page, so nothing else reads it meanwhile
             res = engine.inspect(self.ctx.load_image(path))
+            w.signals.progress.emit(res)  # the verdict first, while the save runs; w is bound before the job starts
             try:  # saved here, on the pool thread, before the result slot can start the next board (REQ-INSP-008)
                 self.ctx.log_result(bm, str(path), res, engine)
             except Exception as e:  # the verdict is still shown; the missing record stops the run (_not_saved)
@@ -251,6 +252,7 @@ class InspectionPage(Page):
                 self.worker = None
             self._update_buttons()
 
+        w.signals.progress.connect(self._show_verdict)  # painted within 100 ms of the engine's result (REQ-INSP-002)
         w.signals.result.connect(result)
         w.signals.error.connect(lambda e: self._not_inspected(path, e))
         w.signals.finished.connect(done)

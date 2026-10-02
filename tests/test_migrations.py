@@ -140,8 +140,7 @@ def test_req_insp_012_rows_from_before_the_evidence_columns_keep_none(tmp_path: 
 
 
 def test_req_insp_012_rows_from_before_the_map_columns_keep_none(tmp_path: Path) -> None:
-    """Migration 0007 adds `diff_map_path` and `ai_map_path`: a record from before it names no maps; a new record's
-    paths are stored relative to the workspace and come back absolute."""
+    """Migration 0007: a record from before it names no maps; new paths are stored relative and come back absolute."""
     path = tmp_path / "aoi.sqlite"
     files = mg.load_migrations()
     old = sqlite3.connect(path)
