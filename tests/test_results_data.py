@@ -10,9 +10,12 @@ from pathlib import Path
 import numpy as np
 import pytest
 
+from aoi.config import Settings
+from aoi.core.imaging import list_images
 from aoi.core.inspector import NG, Check, InspectionResult, Inspector
 from aoi.core.recipe import ROI, Recipe
 from aoi.core.services import AppContext
+from aoi.data.db import Database
 from tests.conftest import TrainedModel
 from tests.regression import make_regression_set as rs
 from tests.test_req_done_in_v01 import BOARD
@@ -75,7 +78,7 @@ def test_req_insp_012_all_five_present_in_db(
     rev = ctx.save_recipe(recipe)
     latest = next(h for h in ctx.recipe_history(BOARD) if h["revision"] == rev)
     active = ctx.active_model(BOARD)
-    assert active is not None
+    assert active is not None and rev == 2, "revision 1 is the stored default, this is the saved one"
     for path in regression_boards:
         ctx.inspect_file(BOARD, str(path))
     rows = ctx.inspections(board_model=BOARD)
@@ -103,3 +106,25 @@ def test_req_insp_012_all_five_present_in_db(
     assert ctx.inspector(BOARD, recipe=ctx.recipe(BOARD)[1]).recipe_uuid == latest["uuid"]
     unsaved = ctx.inspector(BOARD, recipe=Recipe(board_model=BOARD, ssim_min=0.5))
     assert (unsaved.recipe_rev, unsaved.recipe_uuid, unsaved.model_uuid) == (None, None, active["uuid"])
+
+
+def test_req_insp_012_a_workspace_from_before_gets_revision_1_at_the_first_start(
+    tmp_path: Path, ctx: AppContext, synthetic_dataset: Path
+) -> None:
+    """A board model made before S25 has no stored recipe revision: the first start stores the default as revision 1 by
+    the system, with one audit entry, and a second start adds nothing; importing a board model's first samples stores
+    it too, as creating the board model does (tested in test_services_api)."""
+    ws = tmp_path / "old_workspace"
+    old = Database(ws / "aoi.sqlite", ws)  # the data layer alone, as a workspace from before this stage
+    old.ensure_board_model("OLD")
+    old.close()
+    for start in (1, 2):
+        app = AppContext(Settings(workspace=str(ws), device="cpu"))
+        history = app.recipe_history("OLD")
+        assert [(h["revision"], h["user"]) for h in history] == [(1, "system")], f"start {start}"
+        entries = app.audit_entries(object_type="recipe", action="recipe.default")
+        assert len(entries) == 1 and (entries[0]["user_uuid"], entries[0]["role"]) == (None, None)
+        assert entries[0]["object_uuid"] == history[0]["uuid"] and entries[0]["after"] == app.recipe("OLD")[1].to_dict()
+        app.close()
+    ctx.import_samples("FRESH", [str(p) for p in list_images(synthetic_dataset / "train" / "ok")[:2]], "OK")
+    assert [h["revision"] for h in ctx.recipe_history("FRESH")] == [1]

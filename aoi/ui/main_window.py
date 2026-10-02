@@ -152,7 +152,7 @@ class HomePage(Page):
         )
         self.status_labels["Tune recipe"].setText(
             self.tr("Recipe revision {revision}").format(revision=st.recipe_revision)
-            if st.recipe_revision
+            if st.recipe_revision and not st.recipe_is_default
             else self.tr("Recipe uses defaults. Draw ROIs on the Golden board.")
         )
         self.status_labels["Validate"].setText(

@@ -289,7 +289,7 @@ User switching is a local picker for the PoC; Stage 4 replaces it with MES authe
 | `board_models` | name, reference_image (golden) |
 | `samples` | board_model, path, label OK/NG, defect_type (DCT), side |
 | `models` | board_model, version, path (.pt), metrics JSON (thresholds, scores, timing), active |
-| `recipes` | board_model, revision, uuid, body JSON, user, created_at |
+| `recipes` | board_model, revision (1 is the default recipe, stored when the board model is created, so every result names a stored revision), uuid, body JSON, user, created_at |
 | `inspections` | time, board_model, model_version, model_uuid, recipe_rev, recipe_uuid, image/overlay paths, view (Top, Side or Bottom; NULL for rows from before migration 0005), result, score, metrics JSON, result_json (the whole result as `InspectionResult.to_dict` writes it, read back by `from_dict` without the images; NULL before migration 0006), operator, archived |
 | `defects` | inspection_id, no, type, score, side, x, y, w, h |
 | `checks` | inspection_id, no, region (Board, or the ROI's name and box), metric, source, value, threshold, rule, result, explain: one row per decision variable of a result (REQ-INSP-012; none for rows from before migration 0006) |
