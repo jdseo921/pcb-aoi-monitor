@@ -63,7 +63,9 @@ pytest -q               # tests; add --cov for the line coverage of aoi/core and
 The tests draw their boards with `tools/make_synthetic_dataset.py` from a fixed seed, and the Qt pages are
 tested offscreen (`QT_QPA_PLATFORM=offscreen`), so no display is needed. [`tests/regression/`](tests/regression/README.md)
 holds the synthetic regression set: forty boards whose verdicts and metrics must not change unless a release
-note says so.
+note says so. On every CI run `tools/trace_matrix.py` writes the trace matrix (each requirement in
+`docs/requirements/` with the commits and tests that cite it and the last test result) as the `trace-matrix`
+artifact; its G1 gate reports the rows still unproven and becomes blocking at the release candidate (S59).
 
 CI also runs three security scans: Bandit (a High finding fails the build), pip-audit (any known vulnerability in
 a dependency fails it) and gitleaks (a secret in any commit fails it).
