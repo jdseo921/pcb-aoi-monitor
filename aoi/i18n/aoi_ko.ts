@@ -27,7 +27,7 @@
 <context>
     <name>ComparePage</name>
     <message>
-        <location filename="../ui/pages/compare.py" line="+50"/>
+        <location filename="../ui/pages/compare.py" line="+51"/>
         <source>Side by side</source>
         <translation type="unfinished"></translation>
     </message>
@@ -47,7 +47,32 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+7"/>
+        <location line="+5"/>
+        <source>This result was judged without a Golden board.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>This result was saved before results named their Golden board.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>The Golden board this result was judged against, {file}, is gone.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>The Golden board this result was judged against, {file}, cannot be read.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>The Golden board this result was judged against, {file}, has changed since.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+8"/>
         <source>Similarity (SSIM)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -73,12 +98,12 @@
     </message>
     <message>
         <location line="+3"/>
-        <location line="+43"/>
+        <location line="+42"/>
         <source>Golden board</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-42"/>
+        <location line="-41"/>
         <source>AI model</source>
         <translation type="unfinished"></translation>
     </message>
@@ -108,7 +133,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+17"/>
+        <location line="+18"/>
         <source>Test Image…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -133,7 +158,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+16"/>
+        <location line="+14"/>
         <source>Test board</source>
         <translation type="unfinished"></translation>
     </message>
@@ -143,7 +168,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+23"/>
+        <location line="+24"/>
         <source>Check</source>
         <translation type="unfinished"></translation>
     </message>
@@ -173,7 +198,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+15"/>
+        <location line="+14"/>
         <source>What-if thresholds (not saved until you press Save to Recipe)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -239,8 +264,13 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+25"/>
+        <location line="+37"/>
         <source>Reference: {file}</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>Golden board as judged: {file}</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -254,7 +284,23 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+3"/>
+        <location line="+5"/>
+        <source>The verdict and the decision table are the stored ones; press Re-evaluate to inspect the board again with today&apos;s Golden board.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+4"/>
+        <source>Golden board not available</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+0"/>
+        <location line="+74"/>
+        <source>Re-evaluate ›</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="-71"/>
         <source>Train an AI model on Training.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -279,38 +325,44 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+20"/>
+        <location line="+21"/>
         <source>Test board: {file} (stored result)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location line="+24"/>
-        <source>The verdict and the decision table are the stored ones.</source>
+        <source>The verdict and the decision table are the stored ones; press Re-evaluate to inspect the board again from its image file.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1"/>
+        <location line="+3"/>
         <source>Board picture no longer stored</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+7"/>
+        <location line="+8"/>
         <source>Stored result of {time}: AI model {model}, recipe revision {revision}, view {view}.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location line="+1"/>
         <location line="+6"/>
+        <location line="+4"/>
         <source>none</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1"/>
+        <location line="-5"/>
         <source>Since then the board model moved to AI model {model} and recipe revision {revision}.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+18"/>
+        <location line="+6"/>
+        <source>The board model&apos;s Golden board is now {file}.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+16"/>
         <source>&lt;b&gt;Verdict {verdict}&lt;/b&gt;: every check is inside its threshold.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1191,7 +1243,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/compare.py" line="-370"/>
+        <location filename="../ui/pages/compare.py" line="-400"/>
         <source>Compare</source>
         <translation type="unfinished"></translation>
     </message>

@@ -194,7 +194,8 @@ class Database:
         """The inspection row, its defects and its checks commit together: a crash leaves all or none (REQ-INSP-008).
         `rec["result_json"]` is the whole result as `InspectionResult.to_dict` gives it, `model_uuid` and `recipe_uuid`
         name the AI model version and recipe revision that decided it, `diff_map_path` and `ai_map_path` the map files
-        beside the overlay (every path is stored relative to the workspace), and each check is a dict with the fields
+        beside the overlay, `reference_path` and `reference_sha256` the golden board file it was judged against and the
+        SHA-256 of its bytes (every path is stored relative to the workspace), and each check is a dict with the fields
         of `Check` (name, value, threshold, rule, verdict, source, explain, region) (REQ-INSP-012)."""
         result_json = rec.get("result_json")
         row = (
@@ -209,6 +210,8 @@ class Database:
             self._stored(rec["overlay_path"]) if rec.get("overlay_path") else None,
             self._stored(rec["diff_map_path"]) if rec.get("diff_map_path") else None,
             self._stored(rec["ai_map_path"]) if rec.get("ai_map_path") else None,
+            self._stored(rec["reference_path"]) if rec.get("reference_path") else None,
+            rec.get("reference_sha256"),
             rec.get("view"),
             rec["result"],
             rec.get("score"),
@@ -227,8 +230,9 @@ class Database:
             try:
                 cur = self._conn.execute(
                     "INSERT INTO inspections(uuid, time, board_model, model_version, model_uuid, recipe_rev,"
-                    " recipe_uuid, image_path, overlay_path, diff_map_path, ai_map_path, view, result, score, metrics,"
-                    " result_json, operator) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                    " recipe_uuid, image_path, overlay_path, diff_map_path, ai_map_path, reference_path,"
+                    " reference_sha256, view, result, score, metrics, result_json, operator)"
+                    " VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                     row,
                 )
                 iid = cur.lastrowid
@@ -257,7 +261,8 @@ class Database:
         operator: str | None = None,
         include_archived: bool = False,
     ) -> list[dict[str, Any]]:
-        sql = (  # every column but result_json, which `inspection_result` reads for one record at a time
+        sql = (  # every column but result_json and the golden board's, which `inspection_result` and `inspection`
+            # read for one record at a time
             "SELECT i.id, i.uuid, i.time, i.board_model, i.model_version, i.model_uuid, i.recipe_rev, i.recipe_uuid,"
             " i.image_path, i.overlay_path, i.diff_map_path, i.ai_map_path, i.view, i.result, i.score, i.metrics,"
             " i.operator, i.archived,"
@@ -317,9 +322,10 @@ class Database:
 
     def inspection(self, inspection_id: int) -> dict[str, Any] | None:
         """One inspection record by id with its paths absolute, or None for an unknown id (REQ-INSP-009)."""
-        paths = ("image_path", "overlay_path", "diff_map_path", "ai_map_path")
+        paths = ("image_path", "overlay_path", "diff_map_path", "ai_map_path", "reference_path")
         cols = "id, time, board_model, model_version, model_uuid, recipe_rev, recipe_uuid, view, result, score"
-        r = self.query(f"SELECT {cols}, {', '.join(paths)} FROM inspections WHERE id=?", (inspection_id,))
+        sql = f"SELECT {cols}, reference_sha256, {', '.join(paths)} FROM inspections WHERE id=?"
+        r = self.query(sql, (inspection_id,))
         return self._resolved(r[0], *paths) if r else None
 
     def map_paths(self, inspection_id: int) -> tuple[str | None, str | None]:

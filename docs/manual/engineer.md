@@ -33,9 +33,12 @@ locking the validation set)
 
 Opened from Inspection, or with Use Last Inspected, Compare shows the stored result as it was decided: the table's
 thresholds are the ones that applied then, and the line under the verdict names the AI model version and recipe
-revision that judged it and what the board model has moved to since. Re-evaluate inspects the board again with the
-form's thresholds and the current AI model and shows that fresh result instead; Save to Recipe saves the form's
-thresholds as a new revision. (to be written: trying thresholds, picking another reference)
+revision that judged it and what the board model has moved to since. The Golden board pane shows the golden board
+the result was judged against, named over the pane: each record keeps that file's path and the SHA-256 of the bytes
+the engine read, and the pane gives the reason instead when the file has changed, cannot be read or is gone, or none
+was recorded. Re-evaluate inspects the board again with the form's thresholds and the current AI model, against
+that same golden board while it is shown (press Golden Board for today's), and shows that fresh result instead;
+Save to Recipe saves the form's thresholds as a new revision. (to be written: trying thresholds, picking another reference)
 
 ## 8. Logs and audit
 
