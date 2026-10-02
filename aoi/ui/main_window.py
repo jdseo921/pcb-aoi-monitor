@@ -191,7 +191,7 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.ctx = ctx
         self.board_model: str | None = None
-        self.last_inspected: tuple[str, InspectionResult] | None = None  # shared by Inspection -> Compare
+        self.last_inspected: tuple[str, InspectionResult, int | None] | None = None  # path, result, record id
         self.setWindowTitle(f"{APP_NAME} {APP_VERSION}")
         self.resize(1920, 1080)
 
@@ -344,6 +344,11 @@ class MainWindow(QMainWindow):
     def open_compare(self, path: str) -> None:
         self.navigate("Compare")
         cast(ComparePage, self.pages["Compare"]).set_test(path)
+
+    def open_stored(self, inspection_id: int) -> None:
+        """Compare on a stored result in one click, as it was decided (REQ-INSP-009)."""
+        self.navigate("Compare")
+        cast(ComparePage, self.pages["Compare"]).show_stored(inspection_id)
 
     def status(self, msg: str, ms: int = 8000) -> None:
         """A message in the status bar, for 8 s by default; `ms=0` keeps it until the next message replaces it."""
