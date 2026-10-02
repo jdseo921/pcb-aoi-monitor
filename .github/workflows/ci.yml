@@ -95,6 +95,20 @@ jobs:
           name: screens-actual
           path: tests/screens/actual/
           if-no-files-found: ignore
+      - name: Review renders at 1366x768 and 4K at 150 % and 200 %, for Jay's review of the layouts (REQ-SET-004)
+        if: runner.os == 'Linux'
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: |
+          python tools/render_screens.py --out screens-review/1366x768 --size 1366x768
+          python tools/render_screens.py --out screens-review/3840x2160-at-150 --size 3840x2160 --scale 1.5
+          python tools/render_screens.py --out screens-review/3840x2160-at-200 --size 3840x2160 --scale 2
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        if: runner.os == 'Linux'
+        with:
+          name: screens-review
+          path: screens-review/
+          retention-days: 30
       - name: Trace matrix (requirement to commits and tests; the G1 gate only reports until S59)
         if: runner.os == 'Linux' && always()
         continue-on-error: true

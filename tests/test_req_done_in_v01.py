@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import hashlib
 from pathlib import Path
+from statistics import median
 from time import perf_counter
 
 import pytest
@@ -77,14 +78,16 @@ def test_req_insp_016_six_step_cards_open_their_pages_and_show_status(qtbot, tra
         win.navigate("Home")
         qtbot.mouseClick(b, Qt.LeftButton)
         assert win.stack.currentWidget() is win.pages[target], name
-    win.navigate("Inspection")
-    t0 = perf_counter()
-    win.navigate("Home")
-    elapsed = perf_counter() - t0
+    opens = []
+    for _ in range(5):  # the median: a CI machine's hiccup is not the page's cost, and a slow page is slow every time
+        win.navigate("Inspection")
+        t0 = perf_counter()
+        win.navigate("Home")
+        opens.append(perf_counter() - t0)
     status = {name: label.text() for name, label in home.status_labels.items()}
     assert all(status.values()), status
     assert status["Upload samples"].endswith("uploaded") and "Active AI model" in status["Self-train"]
-    assert elapsed < 0.3, f"Home status took {elapsed * 1000:.0f} ms"
+    assert median(opens) < 0.3, f"Home status took {median(opens) * 1000:.0f} ms (median of 5 openings)"
 
 
 def test_req_cmp_001_linked_views_zoom_and_pan_together_within_1px(qtbot, trained_ctx, tiny_model) -> None:
