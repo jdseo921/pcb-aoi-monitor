@@ -6,30 +6,36 @@
 # as separate libraries; SIL Open Font License for Noto Sans KR.
 MIT
 MIT License
-MIT-CMU
 BSD
 BSD License
 BSD-2-Clause
 BSD-3-Clause
-0BSD
 Apache-2.0
 Apache Software License
-Apache-2.0 WITH LLVM-exception
 OFL-1.1
-package:PySide6              # LGPL-3.0-only, allowed as separate libraries (Legal standard)
-package:PySide6_Essentials   # LGPL-3.0-only, part of PySide6
-package:PySide6_Addons       # LGPL-3.0-only, part of PySide6
-package:shiboken6            # LGPL-3.0-only, part of PySide6
+package:PySide6_Essentials   # LGPL-3.0-only, allowed as separate libraries (Legal standard); Qt's LGPL modules only
+package:shiboken6            # LGPL-3.0-only, PySide6's runtime, a separate library like Qt's
+# Not PySide6 or PySide6_Addons: the Addons wheel holds Qt Charts, Qt Graphs and Qt Data Visualization, which Qt
+# offers under the GPL only (Legal standard, "Packaging"), so the app installs PySide6-Essentials (ADR 0003).
 #
 # Exceptions pending Jay's written decision (Stage 1 plan, item J8). The standard does not name
 # these; each is permissive or public-domain-like and comes with a dependency we cannot avoid.
 # CI reports every exception in use so the decision stays visible.
+exception:MIT-CMU            # pillow (development only: tests write image files with it); MIT with CMU's wording
+exception:0BSD               # inside numpy's notice; BSD with no conditions at all
+exception:Apache-2.0 WITH LLVM-exception  # inside torch's notice (LLVM-derived parts); Apache 2.0 plus a waiver
 exception:Zlib               # inside numpy's notice (zlib-licensed parts)
 exception:CC0-1.0            # inside numpy's notice (public-domain dedication)
 exception:BSL-1.0            # Boost parts bundled in torch
 exception:PSF-2.0            # typing_extensions (Python Software Foundation license)
-exception:Python Software Foundation License
-exception:MPL-2.0            # certifi, pathspec: file-level copyleft only; used unmodified
+exception:Python Software Foundation License  # defusedxml (development only)
+# certifi and pathspec (both development only today): MPL-2.0's copyleft covers only the files it applies to, and
+# both are used unmodified (certifi is Mozilla's CA bundle, read as data), so nothing of ours falls under it.
+exception:MPL-2.0
 exception:Mozilla Public License 2.0 (MPL 2.0)
-exception:Unlicense          # filelock (public-domain dedication), a PyTorch dependency
-exception:The Unlicense (Unlicense)
+#
+# The GPU build (requirements-torch-cuda.lock) is not allowed by this file: its NVIDIA libraries carry NVIDIA's own
+# licenses (pip-licenses reports "LicenseRef-NVIDIA-Proprietary", "Other/Proprietary License" or "NVIDIA Proprietary
+# Software") and cuda-toolkit declares none, so its check fails until Jay decides them, package by package (J8; the
+# GPU build is stage S56). CI installs and checks the CPU build only. No line is added for them here, because a
+# generic one such as "Other/Proprietary License" would pass any proprietary package in the CPU build as well.
