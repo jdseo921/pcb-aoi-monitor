@@ -154,6 +154,12 @@ class Jobs:
         self._pool.submit(job.run)
         return job
 
+    def idle(self) -> bool:
+        """True while no submitted job is queued or running; a test waits on it before it takes hold of the pool's work,
+        a window may wait on it before it closes."""
+        with self._lock:
+            return all(job.done for job in self._jobs)
+
     def shutdown(self, wait: bool = True) -> None:
         """Cancel every job, drop the ones still queued and, with `wait`, block until the running ones return."""
         with self._lock:

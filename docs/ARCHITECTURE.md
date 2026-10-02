@@ -106,12 +106,13 @@ its background action through `Page.run_in_background` (the newest call wins) un
 will appear (after 1 s the time so far; after 10 s progress, time left, Cancel); `tests/test_no_freeze.py` ticks the UI
 thread every 50 ms through each page's 5 MP action and fails on a gap over 2 s.
 
-A control an operator uses by key and by touch is one `QAction` (`Page.action`, since S24a): a window shortcut owned
-by the page, so the key works wherever the focus is on the page and only while the page is shown, behind an
+A control an operator uses by key and by touch is one `QAction` (`Page.action`, since S24): a window shortcut owned by
+the page, so the key works wherever the focus is on the page and only while the page is shown, behind an
 `action_button` whose label carries the key ("Next Board  F8") and whose enabled state follows the action's, so the
-button and the key never disagree (REQ-INSP-005). The Inspection page keeps the worker of the board in hand and
-enables Start and Next Board only when there is none, so one inspection runs at a time per page (#120;
-`tests/test_run_controls.py`).
+button and the key never disagree (REQ-INSP-005). The Inspection page answers within the action itself: the banner is
+repainted grey with "Inspecting…" before the pool thread starts, and the verdict is painted before the image and the
+defect table are built from the result (REQ-INSP-002); the first board's engine is built on the pool thread and one
+worker runs at a time per page (#120). `tests/test_run_controls.py` measures both budgets.
 
 Colours, point sizes and size classes are tokens in `aoi/ui/theme.py` (REQ-SET-004, since S18): the stylesheet is
 built from them with `theme.stylesheet()`, so another theme is a set of overrides (REQ-SET-008); a page never writes a

@@ -166,3 +166,16 @@ def test_req_set_021_appcontext_owns_the_pool_and_close_shuts_it_down(ctx: AppCo
     ctx.close()
     with pytest.raises(RuntimeError):
         ctx.jobs.submit(Job("late", count_to, 1, with_progress=True))
+
+
+def test_req_set_021_idle_is_false_while_a_job_is_queued_or_running() -> None:
+    """`Jobs.idle()` tells a test, or a closing window, that nothing submitted is still queued or running."""
+    pool = Jobs(max_workers=1)
+    assert pool.idle()
+    gate = threading.Event()
+    running = pool.submit(Job("held", gate.wait, 10))
+    queued = pool.submit(Job("queued", count_to, 1, with_progress=True))
+    assert not pool.idle()
+    gate.set()
+    assert running.wait(10) and queued.wait(10) and pool.idle()
+    pool.shutdown()
