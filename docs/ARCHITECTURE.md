@@ -44,7 +44,7 @@ interfaces that Stages 2–4 (cameras, robot, MES/ERP) plug into without changin
 │  jobs    the thread pool every slow call runs on (REQ-SET-021)               │
 ├──────────────────────────────────────────────────────────────────────────────┤
 │ Inspection engine  (aoi/core)                                                │
-│  imaging.py   I/O (Unicode paths), ORB+RANSAC registration, heatmaps         │
+│  imaging.py   checked I/O (type, caps, Unicode paths), align, heatmaps       │
 │  anomaly.py   self-training conv. autoencoder + calibration (.pt)            │
 │  compare.py   golden-sample diff (shift-tolerant Lab ΔE), SSIM, blobs        │
 │  inspector.py pipeline → Checks (decision variables) + Defects + verdict     │
@@ -74,6 +74,17 @@ object), and no widget attribute carries a QWidget method's name: `size`, `pos` 
 page is typed and no module is exempt, and ruff's annotation rules (all but ANN401) require a type hint on every
 function argument and return value across the repository, `tools/`, `main.py` and `tests/` included; mypy does not run
 there, so those hints are present, not verified.
+
+An image file from outside is checked before it is decoded (REQ-INSP-001, since S23): `aoi/core/imaging.load_image` reads
+the format and the size from the file's bytes, never from its name, and refuses a file over the byte limit or an image
+over the pixel limit with `AOI-INSP-005` before a pixel is decoded, a file that holds no PNG, JPG, BMP or TIFF image with
+`AOI-INSP-004`, and a recognised format whose header gives no size, or that the decoder rejects (cut short, damaged, a
+variant OpenCV does not read), with `AOI-INSP-006`. Wherever a file can be read in two ways the header readers follow the
+decoders (stray bytes between JPEG segments are skipped as libjpeg skips them, a TIFF size tag of any integer type
+counts, classic or BigTIFF, a bitmap is known by its header size), so no file measures small here and decodes large;
+`tests/test_image_input.py` holds the crafted files. The limits are the module's `MAX_MEGAPIXELS` 50 and `MAX_MEGABYTES`
+200 (200,000,000 bytes), the register's proposed values (a 50 MP 24-bit BMP is 150 MB); S23c makes them settings applied
+through `AppContext`, and `import_samples` still copies sample files without a check (threat model, page 2).
 
 Slow work never runs on the UI thread (REQ-SET-021, since S17): a page wraps it in a `Worker` (`aoi/ui/workers.py`),
 which runs it as a `Job` on the pool `AppContext.jobs` owns (`aoi/core/jobs.py`: progress, cancel and finished callbacks,
