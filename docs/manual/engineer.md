@@ -20,7 +20,13 @@ replaced file, so keep a copy of it if they matter. The app never deletes the ba
 database's write-ahead log, such as a network drive (AOI-SET-005), is refused at start-up, before the main window opens.
 After the message a window asks for another workspace folder: the folder you choose is saved in `settings.json`, in the
 default workspace folder, as the Settings page saves it, and opened; Cancel closes the app. The refused folder is left
-as it is.
+as it is. The same window follows AOI-SET-011: the workspace folder cannot be created or opened (a USB or network drive
+that is not connected) or its `aoi.sqlite` is not a database the app can open (restore the backup, as above).
+
+**Settings the app cannot read.** A `settings.json` that is not valid JSON, not UTF-8 text or not a JSON object stops
+the start with AOI-SET-010, naming the file and, for JSON, the line and column; correct it, or rename it to start with
+the default settings. An error at start-up that has no code of its own shows AOI-SET-007; its details are written to
+the log in the default workspace folder (`logs/aoi-<date>.jsonl`, event `app.start_failed`) for support.
 
 (to be written: the workspace folder, device, limits, demo workspace)
 

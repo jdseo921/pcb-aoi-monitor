@@ -1848,7 +1848,7 @@
 <context>
     <name>Startup</name>
     <message>
-        <location filename="../ui/errors.py" line="+64"/>
+        <location filename="../ui/errors.py" line="+92"/>
         <source>Choose another workspace folder</source>
         <translation type="unfinished"></translation>
     </message>
