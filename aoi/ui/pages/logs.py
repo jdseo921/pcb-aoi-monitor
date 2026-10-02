@@ -13,7 +13,7 @@ from ...times import to_local
 from .. import theme
 from ..widgets.empty_state import EmptyState
 from ..widgets.image_view import ImageView
-from .base import QT_TRANSLATE_NOOP, Page, button, cell_text, fill_table, make_table
+from .base import QT_TRANSLATE_NOOP, Page, button, cell_text, fill_table, make_table, view_text
 
 if TYPE_CHECKING:
     from ..main_window import MainWindow
@@ -58,6 +58,7 @@ class LogsPage(Page):
                 self.tr("Defects"),
                 self.tr("Score"),
                 self.tr("Operator"),
+                self.tr("View"),
                 self.tr("Image"),
             ]
         )
@@ -101,6 +102,7 @@ class LogsPage(Page):
                     r["defect_count"],
                     r["score"] or 0.0,
                     r["operator"],
+                    view_text(r["view"]) if r["view"] else "",  # rows from before migration 0005 recorded no view
                     Path(r["image_path"]).name,
                 ]
                 for r in self.rows
@@ -164,6 +166,7 @@ class LogsPage(Page):
                     "id": r["id"],
                     "time": r["time"],
                     "board_model": r["board_model"],
+                    "view": r["view"],
                     "model_version": r["model_version"],
                     "recipe_rev": r["recipe_rev"],
                     "result": r["result"],

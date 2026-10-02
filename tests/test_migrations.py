@@ -1,4 +1,5 @@
-"""REQ-SET-016: the database is created and changed only through numbered migrations (ADR 0004)."""
+"""REQ-SET-016: the database is created and changed only through numbered migrations (ADR 0004); REQ-INSP-010 for the
+view column migration 0005 adds."""
 
 from __future__ import annotations
 
@@ -89,3 +90,21 @@ def test_req_set_016_migration_files_are_checked(tmp_path: Path) -> None:
     with pytest.raises(mg.MigrationError, match="NNNN_name.sql"):
         mg.load_migrations(tmp_path)
     assert mg.checksum("a\r\nb\n") == mg.checksum("a\nb\n")  # the same file checked out on Windows
+
+
+def test_req_insp_010_rows_from_before_the_view_column_keep_no_view(tmp_path: Path) -> None:
+    """Migration 0005 adds `inspections.view`: a record written before it stays without a view rather than being given
+    one, and the column refuses a view outside Top, Side and Bottom."""
+    path = tmp_path / "aoi.sqlite"
+    files = mg.load_migrations()
+    old = sqlite3.connect(path)
+    assert [m.number for m in mg.migrate(old, files[:4])] == [1, 2, 3, 4]
+    old.execute("INSERT INTO inspections(uuid, time, result) VALUES('old', '2026-09-30T01:00:00+00:00', 'OK')")
+    old.commit()
+    old.close()
+    db = Database(path)
+    assert [r["number"] for r in db.query("SELECT number FROM schema_version ORDER BY number")] == [1, 2, 3, 4, 5]
+    db.add_inspection({"result": "NG", "view": "Bottom", "image_path": "x.png"}, [])
+    assert [r["view"] for r in db.inspections(include_archived=True)] == ["Bottom", None]  # newest first
+    with pytest.raises(sqlite3.IntegrityError, match="CHECK constraint failed"):  # SQLite 3.37 or later names it
+        db.add_inspection({"result": "OK", "view": "Left"}, [])

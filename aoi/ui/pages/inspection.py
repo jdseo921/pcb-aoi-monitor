@@ -221,7 +221,7 @@ class InspectionPage(Page):
             file=path.name, score=res.score, defects=len(res.defects), ms=res.elapsed_ms
         )
         self.summary.setText("\n".join([summary, *res.notes]))
-        fill_table(self.table, [[d.no, d.type, d.score, d.side, d.x, d.y] for d in res.defects])
+        fill_table(self.table, [[d.no, d.type, d.score, view_text(d.side), d.x, d.y] for d in res.defects])
         self.shell.last_inspected = (str(path), res)
         if self.autosave.isChecked():
             self.ctx.log_result(insp.recipe.board_model, str(path), res, insp)  # an NG result stores an alarm

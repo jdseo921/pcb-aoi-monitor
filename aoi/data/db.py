@@ -193,6 +193,7 @@ class Database:
             rec.get("recipe_rev"),
             self._stored(rec["image_path"]) if rec.get("image_path") else None,
             self._stored(rec["overlay_path"]) if rec.get("overlay_path") else None,
+            rec.get("view"),
             rec["result"],
             rec.get("score"),
             json.dumps(rec.get("metrics", {})),
@@ -202,7 +203,7 @@ class Database:
             try:
                 cur = self._conn.execute(
                     "INSERT INTO inspections(uuid, time, board_model, model_version, recipe_rev, image_path,"
-                    " overlay_path, result, score, metrics, operator) VALUES(?,?,?,?,?,?,?,?,?,?,?)",
+                    " overlay_path, view, result, score, metrics, operator) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",
                     row,
                 )
                 iid = cur.lastrowid

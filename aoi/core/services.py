@@ -277,9 +277,11 @@ class AppContext:
         return self.inspector(board_model, recipe, side, reference).inspect(image)
 
     def inspect_file(
-        self, board_model: str, path: str, inspector: Inspector | None = None, save: bool = True
+        self, board_model: str, path: str, inspector: Inspector | None = None, save: bool = True, side: str = "Top"
     ) -> InspectionResult:
-        insp = inspector or self.inspector(board_model)
+        """Inspect an image file and, by default, save the record (the headless path: tools, a future CLI or robot
+        cycle). `side` is the view the record carries (REQ-INSP-010) when no `inspector` is given."""
+        insp = inspector or self.inspector(board_model, side=side)
         res = insp.inspect(self.load_image(path))
         if save:
             self.log_result(board_model, path, res, insp)
@@ -297,6 +299,7 @@ class AppContext:
                 "recipe_rev": insp.recipe_rev,
                 "image_path": path,
                 "overlay_path": str(overlay),
+                "view": res.view,
                 "result": res.verdict,
                 "score": res.score,
                 "metrics": res.metrics_dict(),
@@ -312,6 +315,7 @@ class AppContext:
                 "inspection_id": iid,
                 "board_model": board_model,
                 "verdict": res.verdict,
+                "view": res.view,
                 "defects": len(res.defects),
                 "model_version": insp.model_version,
                 "recipe_rev": insp.recipe_rev,
