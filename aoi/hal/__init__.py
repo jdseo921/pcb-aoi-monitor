@@ -18,7 +18,7 @@ from pathlib import Path
 
 import numpy as np
 
-from ..core.imaging import list_images, load_image
+from ..core.imaging import MAX_MEGABYTES, MAX_MEGAPIXELS, list_images, load_image
 
 VIEWS = ("Top", "Side", "Bottom")
 
@@ -42,13 +42,16 @@ class FolderCamera(Camera):
 
     name = "Image files (Stage 1)"
 
-    def __init__(self, paths: Sequence[str | Path]) -> None:
+    def __init__(
+        self, paths: Sequence[str | Path], max_megapixels: float = MAX_MEGAPIXELS, max_megabytes: float = MAX_MEGABYTES
+    ) -> None:
         self.paths = [Path(p) for p in paths]
         self.index = -1
+        self.limits = (max_megapixels, max_megabytes)  # the station's settings, once a camera is wired (Stage 2)
 
     @classmethod
-    def from_folder(cls, folder: str | Path) -> FolderCamera:
-        return cls(list_images(folder))
+    def from_folder(cls, folder: str | Path, **limits: float) -> FolderCamera:
+        return cls(list_images(folder), **limits)
 
     def open(self) -> None:
         self.index = -1
@@ -57,7 +60,7 @@ class FolderCamera(Camera):
         self.index += 1
         if self.index >= len(self.paths):
             return None
-        return load_image(self.paths[self.index])
+        return load_image(self.paths[self.index], *self.limits)  # the same checks as a file the operator loads
 
     @property
     def current_path(self) -> Path | None:

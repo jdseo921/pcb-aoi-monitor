@@ -57,7 +57,8 @@ CODES: dict[str, ErrorCode] = {
             "AOI-INSP-005",
             "Image over the size limit",
             "The image {path} is {size}, over the limit of {limit}.",
-            "Use a smaller image, or ask an Admin whether the limit can be raised.",
+            "Use a smaller image, or ask an Admin to raise the limit: max_image_megapixels or max_image_megabytes in "
+            "settings.json, in the default workspace folder.",
         ),
         ErrorCode(
             "AOI-INSP-006",
@@ -65,6 +66,13 @@ CODES: dict[str, ErrorCode] = {
             "The {kind} image {path} could not be decoded: {reason}.",
             "Copy the file again from the camera or its source; if it fails again, save it as PNG or JPG with an image "
             "tool and load that file.",
+        ),
+        ErrorCode(
+            "AOI-INSP-007",
+            "Image side too long",
+            "The image {path} is {width} × {height} px; a side over {limit} px is beyond what this app decodes.",
+            "Crop or scale the image so that no side is over {limit} px; this limit is the decoder's and cannot be "
+            "raised.",
         ),
         ErrorCode(
             "AOI-TRN-001",
@@ -134,6 +142,12 @@ CODES: dict[str, ErrorCode] = {
             "An unexpected error ({error_type}) stopped the last action{context}.",
             "Try again; if it happens again, restart the app and send the log file (the workspace's logs folder) to "
             "support.",
+        ),
+        ErrorCode(
+            "AOI-SET-008",
+            "Setting invalid",
+            "The setting {name} in settings.json is {value}; it must be {expected}.",
+            "Fix or remove that line in settings.json, in the default workspace folder, and start the app again.",
         ),
     )
 }

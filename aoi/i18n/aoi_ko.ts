@@ -239,7 +239,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+18"/>
+        <location line="+19"/>
         <source>Reference: {file}</source>
         <translation type="unfinished"></translation>
     </message>
@@ -617,7 +617,7 @@
 <context>
     <name>LogsPage</name>
     <message>
-        <location filename="../ui/pages/logs.py" line="+37"/>
+        <location filename="../ui/pages/logs.py" line="+36"/>
         <source>Include archived</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1110,7 +1110,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/compare.py" line="-293"/>
+        <location filename="../ui/pages/compare.py" line="-294"/>
         <source>Compare</source>
         <translation type="unfinished"></translation>
     </message>

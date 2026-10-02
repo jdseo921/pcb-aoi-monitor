@@ -8,11 +8,15 @@ from pathlib import Path
 import cv2
 import numpy as np
 import pytest
+import tifffile
+from PIL import Image
 from pytestqt.qtbot import QtBot
 
+from aoi.config import Settings
 from aoi.core.imaging import image_header, load_image
 from aoi.core.services import AppContext
 from aoi.errors import AoiError
+from aoi.hal import FolderCamera
 from tests.test_req_done_in_v01 import _window
 
 FORMATS = (".png", ".jpg", ".bmp", ".tif")
@@ -187,6 +191,96 @@ def test_req_insp_001_truncated_file_refused(tmp_path: Path, ext: str) -> None:
     with pytest.raises(AoiError) as e:
         load_image(cut)
     assert e.value.code == "AOI-INSP-006" and cut.name in e.value.what
+
+
+def test_req_insp_001_limits_come_from_settings(ctx: AppContext, tmp_path: Path) -> None:
+    assert (Settings().max_image_megapixels, Settings().max_image_megabytes) == (50, 200)
+    small, mid = tmp_path / "small.png", tmp_path / "mid.png"
+    assert cv2.imwrite(str(small), board(640, 480)) and cv2.imwrite(str(mid), board(1280, 1024))
+    ctx.settings.max_image_megapixels = 1
+    assert ctx.load_image(small).shape == (480, 640, 3)
+    with pytest.raises(AoiError) as e:
+        ctx.load_image(mid)
+    assert e.value.code == "AOI-INSP-005" and "limit of 1 MP" in e.value.what
+    assert "1.31 MP (1280 × 1024)" in e.value.what
+    ctx.settings.max_image_megabytes = 0
+    with pytest.raises(AoiError) as by_size:
+        ctx.load_image(small)
+    assert by_size.value.code == "AOI-INSP-005" and "limit of 0 MB" in by_size.value.what
+
+
+def test_req_insp_001_a_setting_of_the_wrong_type_is_refused_at_start_up(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A typo in settings.json used to fail every image load with AOI-SET-007 (the S23a review, finding 5); now
+    `Settings.load` refuses the file with AOI-SET-008, naming the setting and what it must be, before the app starts,
+    and an unknown key is still ignored."""
+    monkeypatch.setenv("AOI_WORKSPACE", str(tmp_path))
+    f = tmp_path / "settings.json"
+    cases = (
+        ("max_image_megapixels", '"50"', "a whole number above 0"),
+        ("max_image_megabytes", "0", "a whole number above 0"),
+        ("image_size", "1.5", "a whole number"),
+        ("default_epochs", "true", "a whole number"),
+        ("language", "1", "text"),
+    )
+    for name, value, expected in cases:
+        f.write_text("{" + f'"{name}": {value}' + "}", encoding="utf-8")
+        with pytest.raises(AoiError) as e:
+            Settings.load()
+        assert e.value.code == "AOI-SET-008" and f"{name} in settings.json is {value}" in e.value.what, name
+        assert f"must be {expected}" in e.value.what, name
+    f.write_text('{"max_image_megapixels": 80, "unknown_key": true}', encoding="utf-8")
+    assert Settings.load().max_image_megapixels == 80
+
+
+def test_req_insp_001_the_decoder_limits_are_refused_with_a_code(tmp_path: Path) -> None:
+    """A side over the decoder's 1,048,576 px is refused by the header (AOI-INSP-007), whatever the pixel limit says,
+    and should the decoder refuse a file by its own limits the operator reads a coded message, not an unexpected
+    error."""
+    strip = tmp_path / "strip.bmp"
+    strip.write_bytes(forged(".bmp", 1_100_000, 1))  # 1.1 MP, within the pixel limit
+    with pytest.raises(AoiError) as side:
+        load_image(strip)
+    assert side.value.code == "AOI-INSP-007" and "1100000 × 1 px" in side.value.what and "1,048,576" in side.value.what
+    huge = tmp_path / "huge.bmp"  # a complete 54-byte header for 1,600 MP, over the decoder's own 2^30 pixel limit
+    dib = struct.pack("<IiiHHIIiiII", 40, 40000, -40000, 1, 24, *[0] * 6)
+    huge.write_bytes(b"BM" + struct.pack("<IHHI", 54, 0, 0, 54) + dib)
+    with pytest.raises(AoiError) as refused:
+        load_image(huge, max_megapixels=2000)
+    assert refused.value.code == "AOI-INSP-006" and "the decoder refused it" in refused.value.what
+
+
+def test_req_insp_001_files_from_other_writers_are_measured(tmp_path: Path) -> None:
+    """Files as cameras and image tools write them, not only as OpenCV does: a JPEG with an EXIF segment ahead of the
+    frame, a bitmap from Pillow, a big-endian TIFF and a BigTIFF from tifffile all measure 640 × 480 and open (Pillow
+    and tifffile are development dependencies only)."""
+    rgb = np.ascontiguousarray(board(640, 480)[:, :, ::-1])
+    exif = Image.Exif()
+    exif[0x010F] = "AOI test camera"  # the Make tag: an APP1 segment before the frame, as cameras write
+    Image.fromarray(rgb).save(tmp_path / "exif.jpg", exif=exif.tobytes(), quality=90)
+    Image.fromarray(rgb).save(tmp_path / "pil.bmp")
+    tifffile.imwrite(tmp_path / "be.tif", rgb, byteorder=">")
+    tifffile.imwrite(tmp_path / "big.tif", rgb, bigtiff=True)
+    for name, fmt in (("exif.jpg", "JPEG"), ("pil.bmp", "BMP"), ("be.tif", "TIFF"), ("big.tif", "TIFF")):
+        p = tmp_path / name
+        assert image_header(p.read_bytes()) == (fmt, 640, 480), name
+        assert load_image(p).shape == (480, 640, 3), name
+
+
+def test_req_insp_001_the_folder_camera_grabs_under_the_same_limits(tmp_path: Path) -> None:
+    """The Stage 1 camera reads a file with the limits it is given, so a wired camera cannot skip the settings."""
+    p = tmp_path / "board.png"
+    assert cv2.imwrite(str(p), board(640, 480))
+    cam = FolderCamera.from_folder(tmp_path, max_megapixels=0.1)
+    cam.open()
+    with pytest.raises(AoiError) as e:
+        cam.grab()
+    assert e.value.code == "AOI-INSP-005" and "limit of 0.1 MP" in e.value.what
+    plain = FolderCamera([p])
+    plain.open()
+    frame = plain.grab()
+    assert frame is not None and frame.shape == (480, 640, 3) and plain.grab() is None
 
 
 def test_req_insp_001_a_bad_file_in_the_queue_shows_its_code_and_the_run_goes_on(

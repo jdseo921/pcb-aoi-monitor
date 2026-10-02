@@ -49,7 +49,7 @@ WRITES: dict[str, tuple[str, Callable[[AppContext, Path, Path], Any]]] = {
 # every public AppContext call that is not a checked write: reads, what an Operator does, and the lifecycle
 UNCHECKED = {
     "alarm", "alarms", "audit", "audit_entries", "report_error", "close", "set_user", "load_model", "recipe",
-    "inspector", "inspect", "inspect_file", "log_result", "board_models", "reference_image", "samples",
+    "inspector", "inspect", "inspect_file", "load_image", "log_result", "board_models", "reference_image", "samples",
     "sample_path", "models", "model", "active_model", "recipe_history", "inspections", "defects_for", "users",
     "board_status",
 }  # fmt: skip
