@@ -45,8 +45,14 @@ The defect list under the banner names each defect with its number, type, score,
 zoom the picture to it. Press "Compare with Golden board ›" (or open Compare from the sidebar and press Use Last
 Inspected) to see the board as it was judged, lined up with the Golden board it was judged against, and the decision table that
 produced the verdict: every check with its source, value, threshold, rule and result, the failing rows in red or amber,
-exactly as they were decided and stored; the board is not inspected again. The "why" box says, one sentence per failing check, which value crossed
-which threshold. A line under the verdict says when the result was judged and with which AI model version and recipe
+exactly as they were decided and stored; the board is not inspected again. The "why" box under the table explains
+the verdict in plain words, under the heading "Why this board is NG:": one sentence per failing check, the NG ones
+first, naming the check, its value and its threshold with their unit ("The changed area is 2.35 % of the board, at or
+above its threshold of 0.50 %."; an ROI's value is a multiple of the AI model's threshold, "2.00 ×"). With no failing
+check it says that every check that decides the verdict is inside its threshold or, for a WARN, that defects above
+Minor severity are marked on the board, so a person needs to look. A sentence for each check that did not run (no
+Golden board set, or no AI model trained) says what to do; the Inspection page shows it under its summary too. A line
+under the verdict says when the result was judged and with which AI model version and recipe
 revision; when an Engineer has changed either since, it says so, and the table still shows the thresholds that applied
 at the time. When the result's heatmaps are no longer stored (OK results lose them after the retention period), the
 line says so with the code AOI-CMP-001, and the Side by side and Boxes only views still work. When the stored picture

@@ -17,6 +17,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from ...core.explain import Sentence
 from ...core.services import AppContext
 from .. import theme
 from ..errors import show_error
@@ -32,6 +33,12 @@ def QT_TRANSLATE_NOOP(context: str, text: str) -> str:
     same but is typed as returning object, which a `title: str` class attribute refuses; lupdate finds the call by its
     name, so pages import this one."""
     return text
+
+
+def sentence_text(s: Sentence) -> str:
+    """A plain-word sentence of aoi/core/explain.py in the UI language: its template translated under the context
+    "Explain", then filled in, so a translation can put the values in its own order (REQ-CMP-004)."""
+    return QCoreApplication.translate("Explain", s.template).format(**s.values)
 
 
 def page_text(text: str) -> str:

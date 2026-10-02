@@ -126,7 +126,9 @@ literal and checks that every page sits in the one frame (REQ-SET-018). A verdic
 removes data is a red `danger` button, last in its row and never the default. Every empty page, list and
 image area shows an `EmptyState` (`aoi/ui/widgets/empty_state.py`): what is missing, what to do next and one link
 button to the page where it is done; `Page.empty_step` turns "do this on <page>" into that link, or into "Ask an
-Engineer …" for a role that cannot open the page (REQ-SET-019, since S18c).
+Engineer …" for a role that cannot open the page (REQ-SET-019, since S18c). The block is as wide as its text would
+like within the area and as tall as its text wraps to at that width; a word wider than the area runs past the edge,
+and every line shows while the area is tall enough (since S27a-2).
 
 Every page is rendered offscreen for every role that may open it and compared with an approved image (REQ-SET-004,
 since S21): `tools/render_screens.py` builds the synthetic workspace with pinned ids, times, inspection time and fonts
@@ -203,10 +205,18 @@ a board failed. All thresholds live in the recipe and can be tried out live on t
 | SSIM similarity | Compare | NG if < 0.80 | Whole-board structural similarity to the golden template (1 = identical) |
 | Changed area % | Compare | NG if ≥ 0.50 % | Share of pixels whose colour differs by ≥ *Pixel difference* (45/255) after a ±2 px tolerance |
 | Difference regions | Compare | NG if > 0 | Number of difference blobs ≥ *Min defect area* (40 px) |
-| Alignment inliers | Compare | info; WARN if < 12 | Confidence that the board was registered correctly |
+| Alignment inliers (shown as "Alignment points") | Compare | info; WARN if < 12 | Confidence that the board was registered correctly |
 | AI anomaly score | AI | NG if ≥ model threshold | 99.9th percentile of the anomaly map (σ above normal variation) |
 | ROI *name* [type] | ROI | NG if ≥ ROI AI Score | Strongest anomaly inside the ROI, as a multiple of the model threshold |
 | Inspection time | System | spec < 1 s | GUI §11 acceptance criterion |
+
+The Compare page's "why" box explains the verdict in plain words (`aoi/core/explain.py`, REQ-CMP-004): under the heading
+"Why this board is NG:", a bulleted sentence per NG check, then per WARN check, naming the check, its value and its
+threshold with their unit (an ROI's value as a multiple, ×, of the AI model's threshold); with no failing check, that
+every check that decides the verdict is inside its threshold, or that defects above Minor severity make the board a
+WARN; then one sentence per check that did not run, with what to do, which the Inspection page shows under its summary
+too. Each sentence is an English template with named values, which a screen translates under the context "Explain"
+before filling it in, so the engine stays free of Qt and a translation can put the values in its own order.
 
 Verdict: **NG** if any check is NG; else **WARN** if any check is within the warning band (default 80 % of a
 threshold) or a non-minor defect region exists; else **OK**. Colours follow GUI §4.1: green OK, red NG, yellow WARN.
@@ -275,7 +285,7 @@ User switching is a local picker for the PoC; Stage 4 replaces it with MES authe
 |---|---|---|
 | **Home** | Six step cards (Upload → Self-train → Tune recipe → Validate → Inspect → Export) with live status for the selected board model | RM Stage 1 flow |
 | **Inspection** | Load images/folder (Stage 1 "camera"); Top/Side/Bottom view tag; **Start / Stop / Next Board / Save Image…**; image with defect boxes coloured by severity; defect list **No, Type, Score, Side, X, Y** (click to zoom); big OK/NG/WARN banner; alarm log with time, level, code and message, kept across restarts; every result saved with its evidence on the pool thread, before the next board (REQ-INSP-008, REQ-SET-021; a failed save stops the run with AOI-INSP-008) | GUI §4.1 |
-| **Compare** (optional) | Golden reference and test board **side by side** with **synchronised zoom/pan**; views: side-by-side, difference heatmap, AI anomaly heatmap, boxes only; **decision table** (check, source, value, threshold, rule, result) with failing rows highlighted, from the **stored result** when the page opens on a record (row for row the stored checks, never a new inspection: REQ-CMP-003; one click from Inspection, REQ-INSP-009) beside the golden board it was judged against, which Re-evaluate keeps (not shown, with the reason and Re-evaluate as the next step, when that file has changed, cannot be read or is gone, or none was recorded), with a note naming the versions that judged it and what changed since; plain-language "why" explanation; **what-if thresholds** with Re-evaluate and Save to Recipe; pick any reference image instead of the golden template | Jay's request |
+| **Compare** (optional) | Golden reference and test board **side by side** with **synchronised zoom/pan**; views: side-by-side, difference heatmap, AI anomaly heatmap, boxes only; **decision table** (check, source, value, threshold, rule, result) with failing rows highlighted, from the **stored result** when the page opens on a record (row for row the stored checks, never a new inspection: REQ-CMP-003; one click from Inspection, REQ-INSP-009) beside the golden board it was judged against, which Re-evaluate keeps (not shown, with the reason and Re-evaluate as the next step, when that file has changed, cannot be read or is gone, or none was recorded), with a note naming the versions that judged it and what changed since; plain-word "why" box, one sentence per failing check, NG first (REQ-CMP-004); **what-if thresholds** with Re-evaluate and Save to Recipe; pick any reference image instead of the golden template | Jay's request |
 | **Training** | **+OK / +NG upload** (NG labelled with DCT category, type and view), import folder with `ok/` `ng/` sub-folders; dataset table with relabel / set reference / remove; preview; epochs, input size, device; Start/Stop with progress and log; **model version registry** with activate and export `.pt` | GUI §4.3, Stage 1, §6 model version control |
 | **AI Model Test** | Select labelled folder; Run Test / Run Test Again; **Accuracy, Precision, Recall, False Call Rate** tiles; confusion counts; results table **Image, GT, AI Result, Score, Pass/Fail** with failures in red; preview; **Export CSV / Export Report (PDF)**; runs stored in DB | GUI §4.3 |
 | **Recipe Editor** | Draw ROIs on the golden board (zoom/pan); ROI types **Presence, Polarity, Solder Bridge, Height, Anomaly**; parameters **AI Score, Height Min/Max, Volume Min/Max**; yellow = selected, green = saved; global thresholds; **mandatory AOI set** checklist (DCT §4) marking checks that need Stage 2 3D/side cameras; Test Run; Save Recipe → revision with user + timestamp | GUI §4.2, DCT §4 |

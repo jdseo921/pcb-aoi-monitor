@@ -27,7 +27,7 @@
 <context>
     <name>ComparePage</name>
     <message>
-        <location filename="../ui/pages/compare.py" line="+51"/>
+        <location filename="../ui/pages/compare.py" line="+53"/>
         <source>Side by side</source>
         <translation type="unfinished"></translation>
     </message>
@@ -88,7 +88,7 @@
     </message>
     <message>
         <location line="+1"/>
-        <source>Alignment inliers</source>
+        <source>Alignment points</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -363,27 +363,7 @@
     </message>
     <message>
         <location line="+16"/>
-        <source>&lt;b&gt;Verdict {verdict}&lt;/b&gt;: every check is inside its threshold.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+7"/>
-        <source>&lt;b&gt;{check}&lt;/b&gt; = {value:.3g} (threshold {threshold:.3g}, rule {rule})</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+5"/>
-        <source>&lt;b&gt;Verdict {verdict}&lt;/b&gt;: decided by {checks}.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+3"/>
-        <source>#{no} {type} at ({x},{y}) {w}×{h} px [{source}]</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+5"/>
-        <source>&lt;br&gt;Regions: {regions}</source>
+        <source>Why this board is {verdict}:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -435,17 +415,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+5"/>
-        <source>The AI score is {value}, at or above its threshold of {threshold}.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+3"/>
-        <source>The AI score is {value}, close to its threshold of {threshold}.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+5"/>
+        <location line="+13"/>
         <source>In ROI {roi}, the AI score is {value} the AI model&apos;s threshold, at or above the ROI&apos;s threshold of {threshold}.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -455,12 +425,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+5"/>
-        <source>{check} is {value}, against its threshold of {threshold}.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+1"/>
+        <location line="+6"/>
         <source>Every check that decides the verdict is inside its threshold.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -490,7 +455,22 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+5"/>
+        <location line="-34"/>
+        <source>The AI score is {value}, at or above its threshold of {threshold}.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>The AI score is {value}, close to its threshold of {threshold}.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+15"/>
+        <source>{check} is {value}, against its threshold of {threshold}.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+21"/>
         <source>Note: {note}</source>
         <translation type="unfinished"></translation>
     </message>
@@ -647,7 +627,7 @@
 <context>
     <name>InspectionPage</name>
     <message>
-        <location filename="../ui/pages/inspection.py" line="+80"/>
+        <location filename="../ui/pages/inspection.py" line="+82"/>
         <location line="+81"/>
         <source>Load Images…</source>
         <translation type="unfinished"></translation>
@@ -1296,7 +1276,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/base.py" line="+109"/>
+        <location filename="../ui/pages/base.py" line="+116"/>
         <source>No board model yet</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1336,7 +1316,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/compare.py" line="-400"/>
+        <location filename="../ui/pages/compare.py" line="-380"/>
         <source>Compare</source>
         <translation type="unfinished"></translation>
     </message>

@@ -9,6 +9,7 @@ result is shown as it was decided and never inspected again (REQ-CMP-003).
 from __future__ import annotations
 
 import copy
+import html
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, TypeAlias
 
@@ -32,6 +33,7 @@ from PySide6.QtWidgets import (
 )
 
 from ... import defects as taxonomy
+from ...core.explain import explain
 from ...core.imaging import IMAGE_EXTS, heat_overlay
 from ...core.inspector import Check, InspectionResult
 from ...core.recipe import Recipe
@@ -42,7 +44,7 @@ from .. import theme
 from ..widgets.busy import BusyOverlay
 from ..widgets.empty_state import EmptyState
 from ..widgets.image_view import ImageView
-from .base import QT_TRANSLATE_NOOP, Page, button, fill_table, make_table, view_text
+from .base import QT_TRANSLATE_NOOP, Page, button, fill_table, make_table, sentence_text, view_text
 
 if TYPE_CHECKING:
     from ..main_window import MainWindow
@@ -73,7 +75,7 @@ CHECK_NAMES = {
     "SSIM similarity": QT_TRANSLATE_NOOP("ComparePage", "Similarity (SSIM)"),
     "Changed area %": QT_TRANSLATE_NOOP("ComparePage", "Changed area %"),
     "Difference regions": QT_TRANSLATE_NOOP("ComparePage", "Difference regions"),
-    "Alignment inliers": QT_TRANSLATE_NOOP("ComparePage", "Alignment inliers"),
+    "Alignment inliers": QT_TRANSLATE_NOOP("ComparePage", "Alignment points"),
     "AI anomaly score": QT_TRANSLATE_NOOP("ComparePage", "AI score"),
 }
 SOURCES = {
@@ -198,7 +200,7 @@ class ComparePage(Page):
         f.addRow(row)
         pl.addWidget(g)
         split.addWidget(panel)
-        split.setSizes([980, 740])
+        split.setSizes([800, 920])  # the decision table shows all six columns at 1920 x 1080
         self.root.addWidget(split, 1)
 
     # --- inputs ------------------------------------------------------------------
@@ -423,33 +425,13 @@ class ComparePage(Page):
         return name, self.tr(SOURCES.get(c.source, c.source)), self.tr(RULES.get(c.rule, c.rule))
 
     def _explain(self, r: InspectionResult) -> str:
-        failing = [c for c in r.checks if c.verdict in ("NG", "WARN")]
-        if not failing:
-            lines = [
-                self.tr("<b>Verdict {verdict}</b>: every check is inside its threshold.").format(verdict=r.verdict)
-            ]
-        else:
-            parts = []
-            for c in failing:
-                name, _, rule = self._check_text(c)
-                parts.append(
-                    self.tr("<b>{check}</b> = {value:.3g} (threshold {threshold:.3g}, rule {rule})").format(
-                        check=name, value=c.value, threshold=c.threshold, rule=rule
-                    )
-                )
-            checks = "; ".join(parts)
-            lines = [self.tr("<b>Verdict {verdict}</b>: decided by {checks}.").format(verdict=r.verdict, checks=checks)]
-        if r.defects:
-            regions = ", ".join(
-                self.tr("#{no} {type} at ({x},{y}) {w}×{h} px [{source}]").format(
-                    no=d.no, type=d.type, x=d.x, y=d.y, w=d.w, h=d.h, source=d.source
-                )
-                for d in r.defects
-            )
-            lines.append(self.tr("<br>Regions: {regions}").format(regions=regions))
-        for n in r.notes:
-            lines.append(f"<br><i>{n}</i>")
-        return "".join(lines)
+        """The "why" box (REQ-CMP-004; sketch docs/sketches/compare-decision-table.md of PR #79): a heading with the
+        verdict, then the plain-word sentences of `explain` as bullets, the deciding checks first, each in the UI
+        language; every value is escaped, so none is read as markup."""
+        heading = self.tr("Why this board is {verdict}:").format(verdict=r.verdict)
+        return "<br>".join(
+            [f"<b>{html.escape(heading)}</b>", *(f"• {html.escape(sentence_text(s))}" for s in explain(r))]
+        )
 
     def redraw(self) -> None:
         r = self.res

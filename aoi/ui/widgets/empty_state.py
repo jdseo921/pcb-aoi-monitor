@@ -10,8 +10,36 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
-from PySide6.QtCore import QEvent, QObject, Qt
+from PySide6.QtCore import QEvent, QObject, QRect, QSize, Qt
 from PySide6.QtWidgets import QLabel, QPushButton, QVBoxLayout, QWidget
+
+
+class _Text(QLabel):
+    """A wrapped label that a layout may narrow below its longest word, such as a golden board's file name: the word
+    then runs past the edge and every line still shows. With that word's width as its minimum, the layout worked the
+    label's height out at the word's width, and the label showed fewer lines than its text wraps to."""
+
+    def minimumSizeHint(self) -> QSize:
+        return QSize(0, super().minimumSizeHint().height())
+
+
+class _Block(QVBoxLayout):
+    """Centres its items as one block, as wide as they would like within the area and as tall as its text wraps to at
+    that width. Qt's centring (`setAlignment(AlignCenter)`) works the height out at the width the block would like
+    before it narrows the block to the area, so in an area narrower than that (Compare's two panes side by side) the
+    text got the height of fewer lines than it wraps to and was cut off at the top and bottom."""
+
+    def heightForWidth(self, width: int) -> int:
+        """The height at the width `setGeometry` narrows the block to, so a layout that holds the empty state, such as
+        the 3D Profile card's, gives it the height its text needs there."""
+        return super().heightForWidth(min(width, self.sizeHint().width()))
+
+    def setGeometry(self, rect: QRect) -> None:
+        hint = self.sizeHint()
+        width = min(hint.width(), rect.width())
+        height = min(self.heightForWidth(width) if self.hasHeightForWidth() else hint.height(), rect.height())
+        x, y = rect.x() + (rect.width() - width) // 2, rect.y() + (rect.height() - height) // 2
+        super().setGeometry(QRect(x, y, width, height))
 
 
 class EmptyState(QWidget):
@@ -21,11 +49,10 @@ class EmptyState(QWidget):
         self._go: Callable[[], object] | None = None
         self.setObjectName("empty")
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
-        layout = QVBoxLayout(self)
-        layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.heading = QLabel()
+        layout = _Block(self)
+        self.heading = _Text()
         self.heading.setObjectName("emptyHeading")
-        self.sentence = QLabel()
+        self.sentence = _Text()
         self.sentence.setObjectName("muted")
         for label in (self.heading, self.sentence):
             label.setAlignment(Qt.AlignmentFlag.AlignCenter)
