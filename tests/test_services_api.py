@@ -12,6 +12,8 @@ def test_req_usr_001_appcontext_reads_and_writes_what_the_screens_need(trained_c
     assert ctx.board_models() == ["TINY"]
     ctx.ensure_board_model("NEW")
     assert ctx.board_models() == ["NEW", "TINY"]
+    new = ctx.board_status("NEW")  # the default recipe is stored as revision 1 with the board model (S25a-2)
+    assert (new.recipe_revision, new.recipe_is_default) == (1, True)
     samples, ok = ctx.samples("TINY"), ctx.samples("TINY", "OK")
     assert ok and len(ok) < len(samples) and all(Path(s["path"]).is_absolute() for s in samples)
     ctx.set_reference("TINY", ok[1]["id"])
@@ -30,7 +32,8 @@ def test_req_usr_001_appcontext_reads_and_writes_what_the_screens_need(trained_c
     status = ctx.board_status("TINY")
     # one OK sample was relabelled NG and then removed
     assert (status.ok_samples, status.ng_samples) == (len(ok) - 1, len(samples) - len(ok))
-    assert status.model_version == model["version"] and status.recipe_revision == 0 and status.last_test is None
+    assert status.model_version == model["version"] and status.recipe_revision == 1 and status.last_test is None
+    assert status.recipe_is_default, "the Home card still says the recipe uses defaults"
     assert (status.inspected, status.ng) == (1, int(row["result"] == "NG"))
     assert ctx.export_overlays(ctx.inspections(), tmp_path / "overlays") == 1
     assert ctx.inspections(board_model="OTHER") == [] and ctx.archive_old() == 0
@@ -39,5 +42,7 @@ def test_req_usr_001_appcontext_reads_and_writes_what_the_screens_need(trained_c
     ctx.set_user("admin", "Admin")  # users are an Admin's to change
     ctx.add_user("kim", "Engineer")
     assert ("kim", "Engineer") in [(u["name"], u["role"]) for u in ctx.users()]
-    assert ctx.recipe_history("TINY") == [] and ctx.save_recipe(ctx.recipe("TINY")[1]) == 1
-    assert [h["revision"] for h in ctx.recipe_history("TINY")] == [1] and ctx.board_status("TINY").recipe_revision == 1
+    assert [h["revision"] for h in ctx.recipe_history("TINY")] == [1]  # revision 1: the stored default (S25a-2)
+    assert ctx.save_recipe(ctx.recipe("TINY")[1]) == 2
+    assert [h["revision"] for h in ctx.recipe_history("TINY")] == [2, 1]
+    assert (ctx.board_status("TINY").recipe_revision, ctx.board_status("TINY").recipe_is_default) == (2, False)

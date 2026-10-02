@@ -86,7 +86,9 @@ def test_req_log_004_writes_are_audited(trained_ctx: AppContext, synthetic_datas
         entry = ctx.audit_entries(action=action)[0]
         assert entry["role"] == "Admin" and entry["user_uuid"] == ctx.user_uuid == ctx.db.user_uuid("admin"), name
     by_action = {e["action"]: e for e in ctx.audit_entries() if e["uuid"] not in earlier}
-    assert set(by_action) == {action for action, _ in WRITES.values()}
+    # Creating a board model also stores its default recipe as revision 1, the system's entry, not a user's (S25a-2).
+    assert set(by_action) == {action for action, _ in WRITES.values()} | {"recipe.default"}
+    assert (by_action["recipe.default"]["user_uuid"], by_action["recipe.default"]["role"]) == (None, None)
     versions = [m["version"] for m in ctx.models("TINY")]  # newest first: the version trained above, then v1.0
     assert by_action["model.train"]["before"] == {"active_version": versions[1]}
     assert by_action["model.train"]["after"]["version"] == versions[0]
@@ -99,7 +101,7 @@ def test_req_log_004_writes_are_audited(trained_ctx: AppContext, synthetic_datas
     assert not Path(by_action["board_model.reference"]["after"]["reference"]).is_absolute()
     assert by_action["user.change"]["before"] is None and by_action["user.change"]["after"]["role"] == "Engineer"
     assert by_action["inspection.archive"]["after"]["archived"] == 1 and by_action["export.csv"]["after"]["rows"] == 1
-    assert by_action["recipe.save"]["before"] is None
+    assert by_action["recipe.save"]["before"] == Recipe(board_model="TINY").to_dict()  # revision 1, the default
     assert by_action["test.run"]["after"]["model_version"] == versions[1]  # the test ran after the rollback
 
 
