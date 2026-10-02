@@ -1,7 +1,7 @@
-# ADR 0003: Exact pins, two lock files, and a license gate in CI
+# ADR 0003: Exact pins, hashed lock files, and a license gate in CI
 
 - Status: Proposed. Jay's merge of this record accepts it.
-- Date: 2026-10-01
+- Date: 2026-10-01; revised 2026-10-02 for hashed lock files (#17, S04 follow-up)
 - Decides: the product owner (Jay), until a tech lead joins
 - Related: #5, stage S04 of the Stage 1 plan; Engineering standard "Code style" and "Scans and SBOM";
   Legal & Compliance standard "Licenses"; Charter checklist line 8
@@ -18,17 +18,26 @@ PyPI's Linux wheel pulls in NVIDIA CUDA packages that neither needs in that form
 
 1. `requirements.txt` and `requirements-dev.txt` hold exact `==` pins of the direct dependencies, with the
    license of each in a comment.
-2. `tools/make_lock.py` runs pip-tools (`pip-compile`, BSD-3-Clause) to write `requirements.lock` (runtime,
-   transitive) and `requirements-dev.lock` (runtime plus development tools, constrained to the runtime lock).
-   Both resolve against PyPI for Python 3.11. NVIDIA CUDA packages and triton are left out of the lock on purpose:
-   the CPU build does not need them and the CUDA build brings its own. `torch==X` is satisfied by both `X+cpu`
-   and `X+cuNNN`, so one pin serves every station type.
-3. Hashes are not recorded. pip's hash mode needs a hash set per index, and torch comes from two. The lock pins
-   exact versions, which is what the standard requires; the SBOM at release (S59) records what shipped.
-4. CI installs torch from the CPU index at the locked version, then `requirements-dev.lock`, and runs
-   `pip-audit --no-deps` over the lock.
+2. `tools/make_lock.py` runs pip-tools (`pip-compile`, BSD-3-Clause) to write four lock files for Python 3.11 on
+   Windows and Linux: `requirements.lock` (runtime, transitive, from PyPI), `requirements-dev.lock` (the same
+   versions plus the development tools), `requirements-torch-cpu.lock` (PyTorch's CPU build, `2.14.1+cpu`, from
+   download.pytorch.org/whl/cpu) and `requirements-torch-cuda.lock` (the CUDA build, `2.14.1+cu130`, from
+   download.pytorch.org/whl/cu130, with the NVIDIA libraries it needs on Linux, marked `platform_system ==
+   "Linux"`). torch and its NVIDIA packages are kept out of the PyPI locks; torch's other dependencies (filelock,
+   sympy, setuptools and so on) stay in `requirements.lock`, so they have one version and one hash set whichever
+   build is installed. A Windows-only requirement (`colorama`, which pytest, bandit and build need on Windows) is
+   locked with its platform marker, so the output does not depend on the platform that runs the tool.
+3. Every lock file records the sha256 of every file of each pinned version, as PyPI and PyTorch's index publish them
+   (the tool reads them from the index rather than letting `pip-compile --generate-hashes` download every wheel,
+   which for the CUDA build is tens of gigabytes). Every install uses pip's hash mode: the PyTorch lock first with
+   `--require-hashes --no-deps`, then `requirements.lock` (stations) or `requirements-dev.lock` (developers and CI)
+   with `--require-hashes`, then `pip check`. pip refuses any file whose hash is not in the lock.
+4. CI installs that way (the CPU build), runs `pip-audit --no-deps` over the dev lock and over both PyTorch locks
+   (by public version, since the vulnerability database does not know `+cpu`), and a "Lock files match their
+   inputs" job regenerates the four files with `tools/make_lock.py --check` and fails while any differs.
 5. A license gate runs in CI: `pip-licenses` (MIT) lists the installed packages and `tools/check_licenses.py`
-   checks the packages named in `requirements.lock`, the shipped set, against `tools/allowed_licenses.txt`.
+   checks the packages named in `requirements.lock` and in the PyTorch lock installed with it (CI:
+   `requirements-torch-cpu.lock`), the shipped set, against `tools/allowed_licenses.txt`.
    The allow-list has two parts: what the Legal standard names (MIT, BSD, Apache-2.0; LGPL for PySide6 as
    separate libraries; OFL for the font), and exceptions the standard does not name that our dependency tree
    carries (Zlib and CC0-1.0 parts of numpy, Boost parts of torch, PSF-2.0 for typing_extensions, MPL-2.0 for
@@ -43,16 +52,20 @@ PyPI's Linux wheel pulls in NVIDIA CUDA packages that neither needs in that form
 
 ## Alternatives considered
 
-- **Hashes for everything.** Reproducibility would be stronger, but every CPU/GPU split would need its own lock
-  and hash set, and PyTorch's index does not publish metadata pip-tools can resolve from this build machine.
-  Revisit when the installer (S56) fixes one torch build per edition.
+- **No hashes, exact pins only** (this record's first draft). Simpler, but pip would install whatever file an index
+  serves under a pinned version, and stage S04 asks for hashes; one PyTorch lock per build keeps hash mode workable.
+- **`pip-compile --generate-hashes` as is.** It downloads every file it hashes; for the CUDA build that is tens of
+  gigabytes per run, more than a CI runner's disk.
 - **One lock including the CUDA packages.** CI would download several gigabytes of CUDA libraries it never uses.
 - **Checking dev tools' licenses as strictly as runtime.** They are not shipped; they are listed and pinned, and the
   gate reports them, but only the shipped set can fail the build.
 
 ## Consequences
 
-- Upgrades are deliberate: change a pin, run `tools/make_lock.py`, review the diff, open a PR.
+- Upgrades are deliberate: change a pin, run `tools/make_lock.py`, review the diff, open a PR. A pin changed without
+  regenerating the locks fails CI (the lock check job, and `tests/test_locks.py` offline).
+- `tools/make_lock.py` needs PyPI and download.pytorch.org; where the second is unreachable, `--pypi-only` rewrites
+  the two PyPI locks and CI's lock check prints the PyTorch locks as they should be.
 - The exception list is a standing item for Jay; when the Legal standard is amended, the entries move from
   `exception:` to plain allowed lines.
 - GPU stations install under the NVIDIA CUDA runtime EULA, which the Legal standard does not cover yet; that
