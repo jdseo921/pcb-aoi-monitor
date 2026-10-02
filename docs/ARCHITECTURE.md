@@ -48,6 +48,8 @@ interfaces that Stages 2–4 (cameras, robot, MES/ERP) plug into without changin
 │  anomaly.py   self-training conv. autoencoder + calibration (.pt)            │
 │  compare.py   golden-sample diff (shift-tolerant Lab ΔE), SSIM, blobs        │
 │  inspector.py pipeline → Checks (decision variables) + Defects + verdict     │
+│  explain.py   a verdict in plain words, one sentence per failing check       │
+│  views.py     Compare's heat views: the board under a difference or AI map   │
 │  recipe.py    ROIs + thresholds per board model                              │
 │  jobs.py      background jobs: progress, cancel, finished callbacks; no Qt   │
 │  defects.py   DCT taxonomy, severities, mandatory AOI set                    │
@@ -117,6 +119,13 @@ defect table are built from the result (REQ-INSP-002); the first board's engine 
 for the rest of the queue unless the page dropped it meanwhile (a board model change or a revisit raises a generation
 counter, so a stale engine is never kept), and one worker runs at a time per page (#120).
 `tests/test_run_controls.py` measures both budgets.
+
+Compare shows each view within 300 ms at 5 MP (REQ-CMP-002, since S27b). `aoi/core/views.py` draws the two heat views,
+the board under its difference map or its AI score map, and `heat_overlay` blends the colours in with OpenCV
+(`cv2.blendLinear`): about 25 ms at 5 MP against 130 ms for the NumPy blend before, on the 4-core cloud VM the tests run
+on (not the reference PC). The page keeps the views it drew for the result shown, one per view and pixel difference, so
+switching back only shows the picture again, and drops them when another result is shown; `tests/test_compare_views.py`
+times each view until both panes are painted, the median of five openings of a stored 5 MP result.
 
 Colours, point sizes and size classes are tokens in `aoi/ui/theme.py` (REQ-SET-004, since S18): the stylesheet is
 built from them with `theme.stylesheet()`, so another theme is a set of overrides (REQ-SET-008); a page never writes a
