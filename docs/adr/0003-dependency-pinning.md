@@ -36,7 +36,8 @@ PyPI's Linux wheel pulls in NVIDIA CUDA packages that neither needs in that form
    (by public version, since the vulnerability database does not know `+cpu`), and a "Lock files match their
    inputs" job regenerates the four files with `tools/make_lock.py --check` and fails while any differs.
 5. A license gate runs in CI: `pip-licenses` (MIT) lists the installed packages and `tools/check_licenses.py`
-   checks the packages named in `requirements.lock`, the shipped set, against `tools/allowed_licenses.txt`.
+   checks the packages named in `requirements.lock` and in the PyTorch lock installed with it (CI:
+   `requirements-torch-cpu.lock`), the shipped set, against `tools/allowed_licenses.txt`.
    The allow-list has two parts: what the Legal standard names (MIT, BSD, Apache-2.0; LGPL for PySide6 as
    separate libraries; OFL for the font), and exceptions the standard does not name that our dependency tree
    carries (Zlib and CC0-1.0 parts of numpy, Boost parts of torch, PSF-2.0 for typing_extensions, MPL-2.0 for
