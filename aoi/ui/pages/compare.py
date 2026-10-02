@@ -337,7 +337,7 @@ class ComparePage(Page):
             return
         mode = self.mode.currentIndex()
         img = r.image  # typed Optional; the engine always sets it, so the guards below narrow for mypy only
-        if img is not None and mode == MODE_DIFF and r.compare is not None:
+        if img is not None and mode == MODE_DIFF and r.compare is not None and r.compare.diff_map is not None:
             img = heat_overlay(img, r.compare.diff_map, vmax=max(1, 1.5 * self.diff_thr.value()))
         elif img is not None and mode == MODE_AI and r.anomaly_map is not None:
             thr = next((c.threshold for c in r.checks if c.source == "AI"), None)

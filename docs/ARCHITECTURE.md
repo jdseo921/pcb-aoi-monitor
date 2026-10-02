@@ -289,9 +289,10 @@ User switching is a local picker for the PoC; Stage 4 replaces it with MES authe
 | `board_models` | name, reference_image (golden) |
 | `samples` | board_model, path, label OK/NG, defect_type (DCT), side |
 | `models` | board_model, version, path (.pt), metrics JSON (thresholds, scores, timing), active |
-| `recipes` | board_model, revision, body JSON, user, created_at |
-| `inspections` | time, board_model, model_version, recipe_rev, image/overlay paths, view (Top, Side or Bottom; NULL for rows from before migration 0005), result, score, metrics JSON, operator, archived |
+| `recipes` | board_model, revision, uuid, body JSON, user, created_at |
+| `inspections` | time, board_model, model_version, model_uuid, recipe_rev, recipe_uuid, image/overlay paths, view (Top, Side or Bottom; NULL for rows from before migration 0005), result, score, metrics JSON, result_json (the whole result as `InspectionResult.to_dict` writes it, read back by `from_dict` without the images; NULL before migration 0006), operator, archived |
 | `defects` | inspection_id, no, type, score, side, x, y, w, h |
+| `checks` | inspection_id, no, region (Board, or the ROI's name and box), metric, source, value, threshold, rule, result, explain: one row per decision variable of a result (REQ-INSP-012; none for rows from before migration 0006) |
 | `test_runs` | time, board_model, model_version, folder, metrics JSON, results JSON |
 | `alarms` | time, level NG/WARN/ERROR, code AOI-<AREA>-<NNN>, message; the newest 1,000 are shown and survive a restart |
 | `users` | — |
@@ -307,8 +308,8 @@ beside their integer key; every stored time is ISO 8601 UTC with an offset and i
 (`aoi/times.py`); image, overlay and model paths inside the workspace are stored relative to it and resolved
 by `aoi/data/paths.py`, so a workspace folder can move (REQ-SET-017, REQ-SET-001).
 Every file the app writes (images, overlays, AI models, exports, settings) goes through `aoi/data/atomic.py`:
-a temporary name in the same folder, flush and fsync, then an atomic rename, and an inspection's row and defects
-commit in one transaction, so a crash leaves a whole result or none (REQ-INSP-008). Every error a user can see is
+a temporary name in the same folder, flush and fsync, then an atomic rename, and an inspection's row, checks and
+defects commit in one transaction, so a crash leaves a whole result or none (REQ-INSP-008). Every error a user can see is
 an `AoiError` from the catalogue in `aoi/errors.py`, with a code `AOI-<AREA>-<NNN>`, what happened and what to do;
 `docs/error-codes.md` is generated from it (REQ-LOG-004, REQ-SET-019). `aoi/logging_setup.py` writes the JSON-lines
 log in `<workspace>/logs/`, one file per UTC day, with time, level, module, event, ids and the app version, and never

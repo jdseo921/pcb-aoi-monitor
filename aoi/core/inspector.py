@@ -7,7 +7,7 @@ metrics shown side-by-side are exactly the ones that produced the OK/NG result.
 from __future__ import annotations
 
 import time
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from typing import Any
 
 import cv2
@@ -33,6 +33,7 @@ class Check:
     verdict: str  # OK | WARN | NG | INFO
     source: str  # AI | Compare | ROI
     explain: str = ""
+    region: str = "Board"  # where the check looked: the whole board, or an ROI's name and box (REQ-INSP-012)
 
 
 @dataclass
@@ -82,6 +83,60 @@ class InspectionResult:
             d.update({k: v for k, v in self.compare.metrics.items() if k not in d})
         return d
 
+    def to_dict(self) -> dict[str, Any]:
+        """The result without its images, as plain values `json.dumps` writes and `from_dict` reads back unchanged:
+        verdict, score, every check and defect, the compare metrics and regions, notes, view and elapsed time
+        (REQ-INSP-008). The images (board, reference, maps) are files, not JSON."""
+        compare = None
+        if self.compare is not None:
+            regions = [_plain(asdict(r)) for r in self.compare.regions]
+            compare = {"metrics": _plain(self.compare.metrics), "regions": regions}
+        return {
+            "verdict": self.verdict,
+            "score": _plain(self.score),
+            "checks": [_plain(asdict(c)) for c in self.checks],
+            "defects": [_plain(asdict(d)) for d in self.defects],
+            "compare": compare,
+            "elapsed_ms": _plain(self.elapsed_ms),
+            "notes": list(self.notes),
+            "view": self.view,
+        }
+
+    @classmethod
+    def from_dict(cls, d: dict[str, Any]) -> InspectionResult:
+        """A stored result read back from `to_dict`: the same checks, defects, metrics and regions; no images. A field
+        a later build added is left out, so a result written by that build still reads."""
+        compare = None
+        if d.get("compare") is not None:
+            regions = [Region(**_known(Region, r)) for r in d["compare"].get("regions", [])]
+            compare = CompareResult(regions=regions, metrics=dict(d["compare"].get("metrics", {})))
+        return cls(
+            verdict=d["verdict"],
+            score=float(d["score"]),
+            checks=[Check(**_known(Check, c)) for c in d.get("checks", [])],
+            defects=[Defect(**_known(Defect, x)) for x in d.get("defects", [])],
+            compare=compare,
+            elapsed_ms=float(d.get("elapsed_ms", 0.0)),
+            notes=list(d.get("notes", [])),
+            view=str(d.get("view", "Top")),
+        )
+
+
+def _known(cls: type[Any], d: dict[str, Any]) -> dict[str, Any]:
+    """`d` without the keys the dataclass `cls` has no field for."""
+    return {k: v for k, v in d.items() if k in cls.__dataclass_fields__}
+
+
+def _plain(v: Any) -> Any:
+    """`v` with every NumPy scalar made the Python value it holds, so JSON and SQLite take it and give it back equal."""
+    if isinstance(v, np.generic):
+        return v.item()
+    if isinstance(v, dict):
+        return {k: _plain(x) for k, x in v.items()}
+    if isinstance(v, (list, tuple)):
+        return [_plain(x) for x in v]
+    return v
+
 
 def _grade(value: float, threshold: float, warn_ratio: float, higher_is_bad: bool = True) -> str:
     if higher_is_bad:
@@ -98,8 +153,9 @@ def _overlap(r: Region, x: int, y: int, w: int, h: int) -> bool:
 
 
 class Inspector:
-    """The engine for one board model. `model_version` and `recipe_rev` name the AI model and recipe revision a saved
-    record carries (REQ-INSP-008): `AppContext.inspector()` fills them; an Inspector built bare has none."""
+    """The engine for one board model. `model_version`, `recipe_rev` and their UUIDs name the AI model version and the
+    recipe revision a saved record carries (REQ-INSP-008, REQ-INSP-012): `AppContext.inspector()` fills them; an
+    Inspector built bare has none."""
 
     def __init__(
         self,
@@ -109,6 +165,8 @@ class Inspector:
         side: str = "Top",
         model_version: str | None = None,
         recipe_rev: int | None = None,
+        model_uuid: str | None = None,
+        recipe_uuid: str | None = None,
     ) -> None:
         self.recipe = recipe
         self.model = model
@@ -116,6 +174,8 @@ class Inspector:
         self.side = side
         self.model_version = model_version
         self.recipe_rev = recipe_rev
+        self.model_uuid = model_uuid
+        self.recipe_uuid = recipe_uuid
 
     def inspect(self, img: np.ndarray) -> InspectionResult:
         t0 = time.perf_counter()
@@ -226,6 +286,7 @@ class Inspector:
                     _grade(val, roi.ai_score, r.warn_ratio),
                     "ROI",
                     f"fails as {ROI_DEFECT.get(roi.type, 'Anomaly')}",
+                    region=f"{roi.name} @ {roi.x},{roi.y} {roi.w}x{roi.h}",
                 )
             )
 

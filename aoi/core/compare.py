@@ -28,10 +28,13 @@ class Region:
 
 @dataclass
 class CompareResult:
-    aligned: np.ndarray  # test image registered onto the reference
-    diff_map: np.ndarray  # float32 0-255 colour difference
-    ssim_map: np.ndarray  # float32 -1..1 (1 = identical)
-    mask: np.ndarray  # uint8 0/255 changed pixels after clean-up
+    """What `compare()` found. The four maps are None on a result read back from the database (REQ-INSP-008), which
+    keeps the regions and metrics only; `InspectionResult.from_dict` builds that one."""
+
+    aligned: np.ndarray | None = None  # test image registered onto the reference
+    diff_map: np.ndarray | None = None  # float32 0-255 colour difference
+    ssim_map: np.ndarray | None = None  # float32 -1..1 (1 = identical)
+    mask: np.ndarray | None = None  # uint8 0/255 changed pixels after clean-up
     regions: list[Region] = field(default_factory=list)
     metrics: dict[str, Any] = field(default_factory=dict)
 

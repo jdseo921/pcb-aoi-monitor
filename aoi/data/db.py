@@ -171,39 +171,59 @@ class Database:
         )
         return rev, uid
 
-    def latest_recipe(self, board_model: str) -> tuple[int, dict[str, Any]] | None:
+    def latest_recipe(self, board_model: str) -> tuple[int, dict[str, Any], str] | None:
+        """(revision, body, uuid) of the newest recipe revision, or None while none is stored."""
         r = self.query(
-            "SELECT revision, body FROM recipes WHERE board_model=? ORDER BY revision DESC LIMIT 1", (board_model,)
+            "SELECT revision, body, uuid FROM recipes WHERE board_model=? ORDER BY revision DESC LIMIT 1",
+            (board_model,),
         )
-        return (r[0]["revision"], json.loads(r[0]["body"])) if r else None
+        return (r[0]["revision"], json.loads(r[0]["body"]), str(r[0]["uuid"])) if r else None
 
     def recipe_history(self, board_model: str) -> list[dict[str, Any]]:
         return self.query(
-            "SELECT revision, user, created_at FROM recipes WHERE board_model=? ORDER BY revision DESC", (board_model,)
+            "SELECT revision, uuid, user, created_at FROM recipes WHERE board_model=? ORDER BY revision DESC",
+            (board_model,),
         )
 
     # --- inspections -------------------------------------------------------
-    def add_inspection(self, rec: dict[str, Any], defects: list[dict[str, Any]]) -> int:
-        """The inspection row and its defects commit together: a crash leaves both or neither (REQ-INSP-008)."""
+    def add_inspection(
+        self, rec: dict[str, Any], defects: list[dict[str, Any]], checks: list[dict[str, Any]] | None = None
+    ) -> int:
+        """The inspection row, its defects and its checks commit together: a crash leaves all or none (REQ-INSP-008).
+        `rec["result_json"]` is the whole result as `InspectionResult.to_dict` gives it, `model_uuid` and `recipe_uuid`
+        name the AI model version and recipe revision that decided it, and each check is a dict with the fields of
+        `Check` (name, value, threshold, rule, verdict, source, explain, region) (REQ-INSP-012)."""
+        result_json = rec.get("result_json")
         row = (
             new_uuid(),
             now_utc(),
             rec.get("board_model"),
             rec.get("model_version"),
+            rec.get("model_uuid"),
             rec.get("recipe_rev"),
+            rec.get("recipe_uuid"),
             self._stored(rec["image_path"]) if rec.get("image_path") else None,
             self._stored(rec["overlay_path"]) if rec.get("overlay_path") else None,
             rec.get("view"),
             rec["result"],
             rec.get("score"),
-            json.dumps(rec.get("metrics", {})),
+            json.dumps(rec.get("metrics", {}), allow_nan=False),
+            None if result_json is None else json.dumps(result_json, allow_nan=False),
             rec.get("operator"),
-        )
+        )  # every parameter is built before the transaction opens, so a bad value fails it before the first INSERT
+        defect_rows = [
+            (d["no"], d["type"], d["score"], d.get("side", "Top"), d["x"], d["y"], d["w"], d["h"]) for d in defects
+        ]
+        check_rows = [
+            (n, c["region"], c["name"], c["source"], c["value"], c["threshold"], c["rule"], c["verdict"], c["explain"])
+            for n, c in enumerate(checks or (), 1)
+        ]
         with self._lock:
             try:
                 cur = self._conn.execute(
-                    "INSERT INTO inspections(uuid, time, board_model, model_version, recipe_rev, image_path,"
-                    " overlay_path, view, result, score, metrics, operator) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",
+                    "INSERT INTO inspections(uuid, time, board_model, model_version, model_uuid, recipe_rev,"
+                    " recipe_uuid, image_path, overlay_path, view, result, score, metrics, result_json, operator)"
+                    " VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                     row,
                 )
                 iid = cur.lastrowid
@@ -211,13 +231,15 @@ class Database:
                     raise sqlite3.DatabaseError("INSERT INTO inspections returned no row id")
                 self._conn.executemany(
                     "INSERT INTO defects(inspection_id, no, type, score, side, x, y, w, h) VALUES(?,?,?,?,?,?,?,?,?)",
-                    [
-                        (iid, d["no"], d["type"], d["score"], d.get("side", "Top"), d["x"], d["y"], d["w"], d["h"])
-                        for d in defects
-                    ],
+                    [(iid, *d) for d in defect_rows],
+                )
+                self._conn.executemany(
+                    "INSERT INTO checks(inspection_id, no, region, metric, source, value, threshold, rule, result,"
+                    " explain) VALUES(?,?,?,?,?,?,?,?,?,?)",
+                    [(iid, *c) for c in check_rows],
                 )
                 self._conn.commit()
-            except sqlite3.Error:
+            except BaseException:  # a database error or anything else: the record is whole or absent
                 self._conn.rollback()
                 raise
         return iid
@@ -230,9 +252,10 @@ class Database:
         operator: str | None = None,
         include_archived: bool = False,
     ) -> list[dict[str, Any]]:
-        sql = (
-            "SELECT i.*, (SELECT COUNT(*) FROM defects d WHERE d.inspection_id=i.id) AS defect_count "
-            "FROM inspections i WHERE 1=1"
+        sql = (  # every column but result_json, which `inspection_result` reads for one record at a time
+            "SELECT i.id, i.uuid, i.time, i.board_model, i.model_version, i.model_uuid, i.recipe_rev, i.recipe_uuid,"
+            " i.image_path, i.overlay_path, i.view, i.result, i.score, i.metrics, i.operator, i.archived,"
+            " (SELECT COUNT(*) FROM defects d WHERE d.inspection_id=i.id) AS defect_count FROM inspections i WHERE 1=1"
         )
         p: list[Any] = []
         if not include_archived:
@@ -254,6 +277,20 @@ class Database:
 
     def defects_for(self, inspection_id: int) -> list[dict[str, Any]]:
         return self.query("SELECT * FROM defects WHERE inspection_id=? ORDER BY no", (inspection_id,))
+
+    def checks_for(self, inspection_id: int) -> list[dict[str, Any]]:
+        """The checks that decided one inspection, in order; [] for a record from before migration 0006."""
+        return self.query(
+            "SELECT no, region, metric, source, value, threshold, rule, result, explain FROM checks"
+            " WHERE inspection_id=? ORDER BY no",
+            (inspection_id,),
+        )
+
+    def inspection_result(self, inspection_id: int) -> dict[str, Any] | None:
+        """The whole stored result of one inspection, as `InspectionResult.to_dict` wrote it; None for a record from
+        before migration 0006 or an unknown id."""
+        r = self.query("SELECT result_json FROM inspections WHERE id=?", (inspection_id,))
+        return json.loads(r[0]["result_json"]) if r and r[0]["result_json"] else None
 
     def archive_old(self, days: int) -> int:
         cutoff = (datetime.now(UTC) - timedelta(days=days)).isoformat(timespec="seconds")
