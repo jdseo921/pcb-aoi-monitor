@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QKeySequence
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -29,7 +30,17 @@ from .. import theme
 from ..widgets.empty_state import EmptyState
 from ..widgets.image_view import ImageView
 from ..workers import Worker, start
-from .base import QT_TRANSLATE_NOOP, Page, button, cell_text, fill_table, make_table, size_class, view_text
+from .base import (
+    QT_TRANSLATE_NOOP,
+    Page,
+    action_button,
+    button,
+    cell_text,
+    fill_table,
+    make_table,
+    size_class,
+    view_text,
+)
 
 if TYPE_CHECKING:
     from ...core.inspector import Inspector  # a type hint only: a page never builds one (REQ-USR-001)
@@ -54,16 +65,24 @@ class InspectionPage(Page):
         self.last_path: Path | None = None
         self.last_inspector: Inspector | None = None  # produced `last`; a saved result records its model version
         self.inspector: Inspector | None = None  # built on the first board for the board model, recipe and reference
+        # The board being inspected, if one is: Start and Next Board wait for it (#120).
+        self.worker: Worker | None = None
 
-        # Source bar
+        # Source bar. Every control is an action with a key (REQ-INSP-005); the keys work wherever the focus is on
+        # this page, and only while this page is shown.
+        self.act_load = self.action(self.tr("Load Images…"), QKeySequence.StandardKey.Open, self.load_files)
+        self.act_folder = self.action(self.tr("Load Folder…"), "Ctrl+Shift+O", self.load_folder)
+        self.act_view = self.action(self.tr("Next view"), "Alt+V", self.next_view)
         bar = QHBoxLayout()
-        bar.addWidget(button(self.tr("Load Images…"), slot=self.load_files))
-        bar.addWidget(button(self.tr("Load Folder…"), slot=self.load_folder))
+        self.btn_load = size_class(action_button(self.act_load, show_key=False), "T")  # 48 px: the sketch's size T
+        self.btn_folder = size_class(action_button(self.act_folder, show_key=False), "T")
+        bar.addWidget(self.btn_load)
+        bar.addWidget(self.btn_folder)
         bar.addWidget(QLabel(self.tr("View:")))
         self.view_combo = QComboBox()
         for view in VIEWS:
             self.view_combo.addItem(view_text(view), view)  # the English name is the key the engine stores
-        bar.addWidget(self.view_combo)
+        bar.addWidget(size_class(self.view_combo, "T"))
         self.autosave = QCheckBox(self.tr("Auto-save each board"))
         self.autosave.setChecked(True)
         bar.addWidget(self.autosave)
@@ -108,12 +127,16 @@ class InspectionPage(Page):
         split.setSizes([1100, 520])
         self.root.addWidget(split, 1)
 
-        # Controls (large buttons)
+        # Run controls (sketch: inspection-run-controls.md): F5, F6, F8, F9 and the large buttons do the same
+        self.act_start = self.action(self.tr("▶  Start"), "F5", self.start_run)
+        self.act_stop = self.action(self.tr("■  Stop"), "F6", self.stop_run)
+        self.act_next = self.action(self.tr("Next Board"), "F8", self.next_board)
+        self.act_save = self.action(self.tr("Save Result"), "F9", self.save_result)
         ctl = QGridLayout()
-        self.btn_start = button(self.tr("▶  Start"), "start", self.start_run)
-        self.btn_stop = button(self.tr("■  Stop"), "stop", self.stop_run)
-        self.btn_next = button(self.tr("Next Board"), "primary", self.next_board)
-        self.btn_save = button(self.tr("Save Result"), slot=self.save_result)
+        self.btn_start = action_button(self.act_start, "start")
+        self.btn_stop = action_button(self.act_stop, "stop")
+        self.btn_next = action_button(self.act_next, "primary")
+        self.btn_save = action_button(self.act_save)
         for i, b in enumerate((self.btn_start, self.btn_stop, self.btn_next, self.btn_save)):
             ctl.addWidget(size_class(b, "T+"), 0, i)  # 56 px tall through the stylesheet
         self.root.addLayout(ctl)
@@ -158,6 +181,7 @@ class InspectionPage(Page):
 
     # --- run control -------------------------------------------------------------
     def start_run(self) -> None:
+        """F5: inspect the queue board after board until Stop or the end of the queue."""
         if not self.need_board_model():
             return
         self.running = True
@@ -165,11 +189,17 @@ class InspectionPage(Page):
         self.next_board()
 
     def stop_run(self) -> None:
+        """F6: stop after the board being inspected; nothing is deleted, so no confirmation."""
         self.running = False
         self._update_buttons()
 
+    def next_view(self) -> None:
+        """Alt+V: cycle the View box (Top, Side, Bottom); the next board carries the new view (REQ-INSP-010)."""
+        self.view_combo.setCurrentIndex((self.view_combo.currentIndex() + 1) % self.view_combo.count())
+
     def next_board(self) -> None:
-        if (bm := self.checked_board_model()) is None:
+        """F8: inspect the next board of the queue on the pool thread; one board at a time per page (#120)."""
+        if self.worker is not None or (bm := self.checked_board_model()) is None:
             return
         if self.queue_pos + 1 >= len(self.queue):
             self.running = False
@@ -192,17 +222,28 @@ class InspectionPage(Page):
                 )
                 self._alarm("WARN", msg, "AOI-TRN-003")
         insp.side = str(self.view_combo.currentData())  # the English key the engine stores on every defect
-        self.btn_next.setEnabled(False)
-        w = Worker(lambda: (path, insp.inspect(self.ctx.load_image(path)), insp))
+        w = self.worker = Worker(lambda: (path, insp.inspect(self.ctx.load_image(path)), insp))
+        self._update_buttons()
+
+        def result(out: tuple[Path, InspectionResult, Inspector]) -> None:
+            if self.worker is w:
+                self.worker = None  # before _on_result, which may start the next board of a run
+                self._update_buttons()  # the controls follow the worker at once, not at the finished signal
+            self._on_result(out)
 
         def failed(e: BaseException) -> None:
             self.error(e)
             self.stop_run()
             self._refresh_alarms()
 
-        w.signals.result.connect(self._on_result)
+        def done() -> None:
+            if self.worker is w:
+                self.worker = None
+            self._update_buttons()
+
+        w.signals.result.connect(result)
         w.signals.error.connect(failed)
-        w.signals.finished.connect(self._update_buttons)
+        w.signals.finished.connect(done)
         start(w, self.ctx.jobs)
 
     def _on_result(self, out: tuple[Path, InspectionResult, Inspector]) -> None:
@@ -267,11 +308,13 @@ class InspectionPage(Page):
             self.alarms.addItem(alarm_line(a["time"], a["level"], a["code"], a["message"]))
 
     def _update_buttons(self) -> None:
-        has = bool(self.queue)
-        self.btn_start.setEnabled(has and not self.running)
-        self.btn_stop.setEnabled(self.running)
-        self.btn_next.setEnabled(has and not self.running)
-        self.btn_save.setEnabled(self.last is not None)
+        """Enable the actions, and with them the buttons and the keys, for the state: Start and Next Board wait while a
+        board is being inspected (#120), Stop acts while a run is on, Save Result once there is a result."""
+        has, busy = bool(self.queue), self.worker is not None
+        self.act_start.setEnabled(has and not self.running and not busy)
+        self.act_stop.setEnabled(self.running)
+        self.act_next.setEnabled(has and not self.running and not busy)
+        self.act_save.setEnabled(self.last is not None)
 
     def on_board_model_changed(self, name: str | None) -> None:
         self.inspector = None  # rebuilt lazily with the new model/recipe/reference

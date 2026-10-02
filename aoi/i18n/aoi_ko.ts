@@ -471,18 +471,23 @@
 <context>
     <name>InspectionPage</name>
     <message>
-        <location filename="../ui/pages/inspection.py" line="+60"/>
-        <location line="+74"/>
+        <location filename="../ui/pages/inspection.py" line="+73"/>
+        <location line="+84"/>
         <source>Load Images…</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-73"/>
+        <location line="-83"/>
         <source>Load Folder…</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location line="+1"/>
+        <source>Next view</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+6"/>
         <source>View:</source>
         <translation type="unfinished"></translation>
     </message>
@@ -493,12 +498,12 @@
     </message>
     <message>
         <location line="+4"/>
-        <location line="+63"/>
+        <location line="+67"/>
         <source>No images loaded</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-39"/>
+        <location line="-43"/>
         <source>No</source>
         <comment>defect number</comment>
         <translation type="unfinished"></translation>
@@ -534,7 +539,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+7"/>
+        <location line="+6"/>
         <source>▶  Start</source>
         <translation type="unfinished"></translation>
     </message>
@@ -554,7 +559,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+17"/>
+        <location line="+22"/>
         <source>Load Images… or Load Folder… to queue boards. In Stage 2 the camera fills this view.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -584,7 +589,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+21"/>
+        <location line="+28"/>
         <source>End of queue</source>
         <translation type="unfinished"></translation>
     </message>
@@ -594,7 +599,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+30"/>
+        <location line="+41"/>
         <source>{file}  ·  AI score {score:.2f}× threshold  ·  {defects} defect(s)  ·  {ms:.0f} ms</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1110,6 +1115,11 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <location line="+86"/>
+        <source>{action}  {key}</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <location filename="../ui/pages/logs.py" line="-186"/>
         <source>Logs &amp; Export</source>
         <translation type="unfinished"></translation>
@@ -1125,7 +1135,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/inspection.py" line="-199"/>
+        <location filename="../ui/pages/inspection.py" line="-229"/>
         <source>Inspection</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1459,7 +1469,7 @@
 <context>
     <name>Role</name>
     <message>
-        <location filename="../ui/pages/base.py" line="-89"/>
+        <location filename="../ui/pages/base.py" line="-175"/>
         <source>Operator</source>
         <translation type="unfinished"></translation>
     </message>

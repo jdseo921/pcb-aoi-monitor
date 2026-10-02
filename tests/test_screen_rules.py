@@ -155,7 +155,7 @@ def test_req_set_018_destructive_buttons_red_not_default(qtbot: QtBot, trained_c
                 assert QApplication.focusWidget() is not b, f"{red[-1]} has the focus when the page opens"
             if b.objectName() == "danger":
                 assert _row_of(page, b)[-1] is b, f"{red[-1]} is not the last button in its row"
-    assert {"Training: Remove", "Recipe Editor: Delete", "Inspection: ■  Stop"} <= set(red), red
+    assert {"Training: Remove", "Recipe Editor: Delete", "Inspection: ■  Stop  F6"} <= set(red), red
 
 
 def _empties(page: QWidget) -> list[EmptyState]:
