@@ -14,18 +14,22 @@ boards and compare any board side by side with the learned golden board.
 # Python 3.11 from python.org, then in this folder:
 python -m venv .venv
 .venv\Scripts\activate
-# CPU station or laptop: the CPU build of PyTorch, then every other package at its locked version
-pip install "torch==2.14.1" --index-url https://download.pytorch.org/whl/cpu
-pip install -r requirements.lock
-# NVIDIA GPU station instead: the CUDA build of the same version, from https://pytorch.org/get-started/locally/
-#   pip install "torch==2.14.1" --index-url https://download.pytorch.org/whl/cu130
-#   pip install -r requirements.lock
+# CPU station or laptop: the CPU build of PyTorch, then every other package; pip checks each file's hash
+python -m pip install --require-hashes --no-deps -r requirements-torch-cpu.lock
+python -m pip install --require-hashes -r requirements.lock
+python -m pip check
+# NVIDIA GPU station instead: the CUDA build of the same version
+#   python -m pip install --require-hashes --no-deps -r requirements-torch-cuda.lock
+#   python -m pip install --require-hashes -r requirements.lock
+#   python -m pip check
 python main.py
 ```
 
-Linux/macOS: same steps with `source .venv/bin/activate`. Developers add `pip install -r requirements-dev.lock`
-and run `ruff check .`, `ruff format --check .`, `mypy` and `pytest -q` before pushing. `requirements.txt` holds the
-direct pins and `tools/make_lock.py` regenerates both lock files after a change.
+Linux: same steps with `source .venv/bin/activate` (macOS is not a target: PyTorch's index has no 2.14.1+cpu
+build for it). Developers install `requirements-dev.lock` in place of `requirements.lock` and run `ruff check .`,
+`ruff format --check .`, `mypy` and `pytest -q` before pushing. `requirements.txt` and `requirements-dev.txt` hold
+the direct pins; after changing one, `python tools/make_lock.py` regenerates the four lock files with the hash of
+every file pip may install, and CI fails while a lock file does not match its inputs.
 
 ## Try it in 5 minutes with synthetic boards
 
@@ -55,7 +59,8 @@ GitHub Actions runs these on every pull request ([.github/workflows/ci.yml](.git
 tests on both Windows and Linux. Run them locally before pushing:
 
 ```powershell
-pip install -r requirements-dev.txt
+python -m pip install --require-hashes --no-deps -r requirements-torch-cpu.lock
+python -m pip install --require-hashes -r requirements-dev.lock
 ruff check .            # lint
 ruff format --check .   # formatting
 mypy                    # strict types on aoi/core, aoi/data, aoi/hal and aoi/ui
