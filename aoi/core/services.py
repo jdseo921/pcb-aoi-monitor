@@ -152,14 +152,14 @@ class AppContext:
         should_stop: Callable[[], bool] | None = None,
     ) -> dict[str, Any]:
         say = progress or (lambda *a: None)
-        ok = [load_image(s["path"]) for s in self.db.samples(board_model, "OK")]
-        ng = [load_image(s["path"]) for s in self.db.samples(board_model, "NG")]
+        ok = [self.load_image(s["path"]) for s in self.db.samples(board_model, "OK")]
+        ng = [self.load_image(s["path"]) for s in self.db.samples(board_model, "NG")]
         if len(ok) < 2:
             raise AoiError("AOI-TRN-002", found=len(ok))
         # Register every sample onto one board, then learn a golden template as the
         # per-pixel median of good boards: less noise than any single photo.
         ref_path = self.db.reference(board_model)
-        anchor = load_image(ref_path) if ref_path and Path(ref_path).exists() else ok[0]
+        anchor = self.load_image(ref_path) if ref_path and Path(ref_path).exists() else ok[0]
         say(0, 1, 0.0, f"Aligning {len(ok) + len(ng)} images to the reference board")
         ok = [align_to_reference(im, anchor)[0] for im in ok]
         ng = [align_to_reference(im, anchor)[0] for im in ng]
@@ -246,6 +246,12 @@ class AppContext:
         return self.db.audit_entries(object_type, object_uuid, action, since, limit)
 
     # --- inspection ----------------------------------------------------------
+    def load_image(self, path: str | Path) -> np.ndarray:
+        """Read an image under the settings' size limits (REQ-INSP-001). Every image a screen or a service opens comes
+        through here, so one pair of settings governs them all; `tests/test_layers.py` fails a page that reads one
+        itself."""
+        return load_image(path, self.settings.max_image_megapixels, self.settings.max_image_megabytes)
+
     def inspector(
         self, board_model: str, recipe: Recipe | None = None, side: str = "Top", reference: np.ndarray | None = None
     ) -> Inspector:
@@ -255,7 +261,7 @@ class AppContext:
         mv = self.load_model(board_model)
         if reference is None:
             ref_path = self.db.reference(board_model)
-            reference = load_image(ref_path) if ref_path and Path(ref_path).exists() else None
+            reference = self.load_image(ref_path) if ref_path and Path(ref_path).exists() else None
         return Inspector(recipe or rcp, mv[1] if mv else None, reference, side, mv[0] if mv else None, rev)
 
     def inspect(
@@ -274,7 +280,7 @@ class AppContext:
         self, board_model: str, path: str, inspector: Inspector | None = None, save: bool = True
     ) -> InspectionResult:
         insp = inspector or self.inspector(board_model)
-        res = insp.inspect(load_image(path))
+        res = insp.inspect(self.load_image(path))
         if save:
             self.log_result(board_model, path, res, insp)
         return res
@@ -350,7 +356,7 @@ class AppContext:
         for i, f in enumerate(files, 1):
             parts = {p.lower() for p in f.relative_to(folder).parts[:-1]}
             gt = NG if parts & {"ng", "defect", "defects", "bad"} else OK if parts & {"ok", "good"} else None
-            res = insp.inspect(load_image(f))
+            res = insp.inspect(self.load_image(f))
             pred = NG if res.verdict in (NG, WARN) else OK
             rows.append(
                 {

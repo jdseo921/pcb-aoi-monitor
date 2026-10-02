@@ -6,7 +6,7 @@ from PySide6.QtWidgets import QApplication
 
 from aoi.config import APP_NAME, Settings
 from aoi.core.services import AppContext, ErrorReport
-from aoi.data.errors import WorkspaceError
+from aoi.errors import AoiError
 from aoi.ui.errors import install_excepthook, show_error
 from aoi.ui.main_window import MainWindow
 from aoi.ui.theme import QSS
@@ -18,7 +18,7 @@ def main() -> int:
     app.setStyleSheet(QSS)
     try:
         ctx = AppContext(Settings.load())
-    except WorkspaceError as e:  # a v0.1 or unusable workspace: say so and stop, never change it (ADR 0004)
+    except AoiError as e:  # a v0.1 or unusable workspace (ADR 0004), or a bad settings.json: say so and stop
         show_error(None, ErrorReport.of(e))  # no workspace yet, so no log: the dialog carries the code
         return 2
     win = MainWindow(ctx)

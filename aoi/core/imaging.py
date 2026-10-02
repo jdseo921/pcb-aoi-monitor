@@ -14,10 +14,11 @@ from ..data import atomic
 from ..errors import AoiError
 
 IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".bmp", ".tif", ".tiff"}
-# Limits an image must stay within to be decoded (REQ-INSP-001), at the register's proposed values (S23c makes them
-# settings).
+# Limits an image must stay within to be decoded (REQ-INSP-001), at the register's proposed values; a station's own
+# values live in Settings and reach here through AppContext.load_image.
 MAX_MEGAPIXELS = 50
 MAX_MEGABYTES = 200
+MAX_SIDE = 1 << 20  # a side longer than this is beyond the decoder (OpenCV's CV_IO_MAX_IMAGE_WIDTH and _HEIGHT)
 BMP_HEADER_SIZES = {12, 16, 40, 52, 56, 64, 108, 124}  # BITMAPCOREHEADER to BITMAPV5HEADER: how a bitmap is known
 JPEG_FRAME_MARKERS = {0xC0, 0xC1, 0xC2, 0xC3, 0xC5, 0xC6, 0xC7, 0xC9, 0xCA, 0xCB, 0xCD, 0xCE, 0xCF}
 JPEG_BARE_MARKERS = {0x00, 0x01, 0xD8, *range(0xD0, 0xD8)}  # no length field follows: a stuffed byte, TEM, SOI, RSTn
@@ -119,10 +120,10 @@ def load_image(
     path: str | Path, max_megapixels: float = MAX_MEGAPIXELS, max_megabytes: float = MAX_MEGABYTES
 ) -> np.ndarray:
     """Read as BGR uint8 after checking the file (REQ-INSP-001): it must hold a PNG, JPEG, BMP or TIFF image by its
-    content, whatever its name, and stay within `max_megabytes` on disk and `max_megapixels` by its header; both are
-    checked before a pixel is decoded, so a huge or forged file costs nothing, and a recognised format whose header
-    gives no size is refused, never decoded. Decoding the bytes with `imdecode` keeps non-ASCII (Korean) Windows paths
-    working."""
+    content, whatever its name, and stay within `max_megabytes` on disk, `max_megapixels` by its header and `MAX_SIDE`
+    on either side; all three are checked before a pixel is decoded, so a huge or forged file costs nothing, and a
+    recognised format whose header gives no size is refused, never decoded. Decoding the bytes with `imdecode` keeps
+    non-ASCII (Korean) Windows paths working."""
     p = Path(path)
     try:
         size = p.stat().st_size
@@ -141,7 +142,12 @@ def load_image(
     if w * h > max_megapixels * 1e6:
         found = f"{w * h / 1e6:.2f} MP ({w} × {h})"
         raise AoiError("AOI-INSP-005", path=str(p), size=found, limit=f"{max_megapixels:g} MP")
-    img = cv2.imdecode(np.frombuffer(data, dtype=np.uint8), cv2.IMREAD_COLOR)
+    if max(w, h) > MAX_SIDE:
+        raise AoiError("AOI-INSP-007", path=str(p), width=w, height=h, limit=f"{MAX_SIDE:,}")
+    try:
+        img = cv2.imdecode(np.frombuffer(data, dtype=np.uint8), cv2.IMREAD_COLOR)
+    except cv2.error as e:  # the decoder's own limits, which hold whatever the settings say
+        raise AoiError("AOI-INSP-006", detail=str(e), path=str(p), kind=kind, reason="the decoder refused it") from e
     if img is None:
         reason = "it is cut short, damaged, or a variant this app does not read"
         raise AoiError("AOI-INSP-006", path=str(p), kind=kind, reason=reason)

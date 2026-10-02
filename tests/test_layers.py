@@ -13,7 +13,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 ENGINE_DIRS = (ROOT / "aoi" / "core", ROOT / "aoi" / "data")
 UI_DIR = ROOT / "aoi" / "ui"
-FORBIDDEN_IN_UI = ("sqlite3", "aoi.data")  # the data layer is reached only through AppContext (REQ-USR-001)
+# The data layer is reached only through AppContext (REQ-USR-001), and so is an image file: `AppContext.load_image`
+# applies the size limits from Settings, which a page reading the file itself would skip (REQ-INSP-001).
+FORBIDDEN_IN_UI = ("sqlite3", "aoi.data", "aoi.core.imaging.load_image")
 QT_PACKAGES = {"PySide6", "PySide2", "PyQt5", "PyQt6", "shiboken6", "shiboken2"}
 
 
@@ -72,9 +74,17 @@ def callee_name(func: ast.expr) -> str:
     return func.id if isinstance(func, ast.Name) else ""
 
 
+def through_context(value: ast.expr) -> bool:
+    """`ctx.load_image` or `self.ctx.load_image`: the context's own reader, the one place the size limits apply."""
+    if isinstance(value, ast.Name):
+        return value.id == "ctx"
+    return isinstance(value, ast.Attribute) and value.attr == "ctx"
+
+
 def appcontext_violations(path: Path, package: str) -> list[str]:
-    """What a screen module does outside AppContext, each as "file:line what": a sqlite3 or aoi.data import, an
-    `Inspector` imported outside `if TYPE_CHECKING:` or built by its bare or dotted name, `.db`, or SQL `.execute(`."""
+    """What a screen module does outside AppContext, each as "file:line what": a sqlite3, aoi.data or `load_image`
+    import, `load_image` called on anything but the context, an `Inspector` imported outside `if TYPE_CHECKING:` or
+    built by its bare or dotted name, `.db`, or SQL `.execute(`."""
     found: list[str] = []
     tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
     type_only = {
@@ -95,6 +105,8 @@ def appcontext_violations(path: Path, package: str) -> list[str]:
             found.append(f"{where} builds an Inspector")
         if isinstance(node, ast.Attribute) and node.attr == "db":
             found.append(f"{where} reaches .db")
+        if isinstance(node, ast.Attribute) and node.attr == "load_image" and not through_context(node.value):
+            found.append(f"{where} reads an image outside AppContext")
         if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute) and node.func.attr == "execute":
             found.append(f"{where} calls .execute(")
     return found
@@ -103,7 +115,8 @@ def appcontext_violations(path: Path, package: str) -> list[str]:
 def test_req_usr_001_pages_use_appcontext_only() -> None:
     """Screens reach data and the engine only through AppContext (stage S15): no sqlite3 or aoi.data import, no `.db`
     on the context, no SQL `.execute(` and no Inspector built in a page (the `Inspector` name may be imported under
-    `if TYPE_CHECKING:` for a type hint, since S22b)."""
+    `if TYPE_CHECKING:` for a type hint, since S22b), and no `load_image` imported or called on a module: the settings'
+    size limits apply only through `AppContext.load_image` (REQ-INSP-001, since S23c)."""
     found: list[str] = []
     for path in sorted(UI_DIR.rglob("*.py")):
         package = module_name(path) if path.name == "__init__.py" else module_name(path).rpartition(".")[0]
@@ -112,26 +125,30 @@ def test_req_usr_001_pages_use_appcontext_only() -> None:
 
 
 def test_req_usr_001_the_scan_catches_a_built_inspector(tmp_path: Path) -> None:
-    """The scan itself: a runtime import of Inspector, an Inspector built by its bare or dotted name, `.db` and
-    `.execute(` are flagged, and the import under `if TYPE_CHECKING:` is not."""
+    """The scan itself: a runtime import of Inspector, an Inspector built by its bare or dotted name, `.db`,
+    `.execute(` and `load_image` imported or called on a module are flagged; the import under `if TYPE_CHECKING:` and
+    `load_image` on the context are not."""
     sample = tmp_path / "sample.py"
     sample.write_text(
         "from typing import TYPE_CHECKING\n"
         "from ...core.inspector import Inspector\n"
-        "from ...core import inspector\n"
+        "from ...core import imaging, inspector\n"
+        "from ...core.imaging import IMAGE_EXTS, load_image\n"
         "if TYPE_CHECKING:\n"
         "    from ...core.inspector import Inspector\n"
-        "def f(ctx, recipe):\n"
+        "def f(ctx, recipe, path):\n"
         "    a = Inspector(recipe)\n"
         "    b = inspector.Inspector(recipe)\n"
         "    ctx.db.execute('DELETE FROM inspections')\n"
-        "    return a, b\n",
+        "    return a, b, imaging.load_image(path), ctx.load_image(path), self.ctx.load_image(path)\n",
         encoding="utf-8",
     )
     assert sorted(appcontext_violations(sample, "aoi.ui.pages")) == [
+        "sample.py:10 calls .execute(",
+        "sample.py:10 reaches .db",
+        "sample.py:11 reads an image outside AppContext",
         "sample.py:2 imports aoi.core.inspector.Inspector",
-        "sample.py:7 builds an Inspector",
+        "sample.py:4 imports aoi.core.imaging.load_image",
         "sample.py:8 builds an Inspector",
-        "sample.py:9 calls .execute(",
-        "sample.py:9 reaches .db",
+        "sample.py:9 builds an Inspector",
     ]
