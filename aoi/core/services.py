@@ -101,7 +101,11 @@ class AppContext:
         self.settings = settings or Settings.load()
         self.settings.ensure_dirs()
         self.log = logging_setup.setup(self.settings.root)
-        self.db = Database(self.settings.db_path, self.settings.root)
+        try:
+            self.db = Database(self.settings.db_path, self.settings.root)
+        except BaseException:
+            logging_setup.close(self.log)  # nor is the refused workspace's log file (REQ-SET-016)
+            raise
         swept = atomic.sweep_temp_files(self.settings.root)  # a crash mid-write leaves only a temp file; drop it
         self.device = resolve_device(self.settings.device)
         self.log.info("app.start", extra={"workspace": str(self.settings.root), "device": self.device, "swept": swept})

@@ -6,6 +6,22 @@ get their own chapter at release 1.0.
 
 ## 1. Workspace and settings
 
+**Upgrades and rollback.** When a new version of the app changes the database, it first copies the workspace database
+beside it, in the workspace folder, as `aoi.sqlite.bak-<from>-to-<to>-<UTC time>`, for example
+`aoi.sqlite.bak-0004-to-0009-20261002T051500Z`: the database's schema version before and after, and when the copy was
+made. If the copy cannot be made (the disk is full, the folder cannot be written) the app stops with AOI-SET-009 and
+changes nothing. To roll back, close the app and copy the backup over `aoi.sqlite`; if `aoi.sqlite-wal` or
+`aoi.sqlite-shm` are there (after a crash), delete them, since they belong to the replaced file. Then start the version
+you upgraded from: this one would upgrade the database again. Results recorded since the upgrade are only in the
+replaced file, so keep a copy of it if they matter. The app never deletes the backups; remove old ones by hand.
+
+**A workspace the app refuses.** A workspace created by version 0.1 (AOI-SET-001), written by a newer version
+(AOI-SET-002), recorded with a migration file that has changed since (AOI-SET-003), or on a drive without the
+database's write-ahead log, such as a network drive (AOI-SET-005), is refused at start-up, before the main window opens.
+After the message a window asks for another workspace folder: the folder you choose is saved in `settings.json`, in the
+default workspace folder, as the Settings page saves it, and opened; Cancel closes the app. The refused folder is left
+as it is.
+
 (to be written: the workspace folder, device, limits, demo workspace)
 
 ## 2. Board models and scale
