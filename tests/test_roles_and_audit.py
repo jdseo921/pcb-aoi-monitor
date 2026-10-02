@@ -1,5 +1,6 @@
 """REQ-USR-001 (role check) and the audit wiring of REQ-LOG-004 (stage S16): every AppContext write checks the current
-role and appends an audit entry, with no screen involved."""
+role and appends an audit entry, with no screen involved; so does what only an Engineer does without writing, minus
+the entry (re-evaluating a result, since S28a)."""
 
 from __future__ import annotations
 
@@ -46,20 +47,26 @@ WRITES: dict[str, tuple[str, Callable[[AppContext, Path, Path], Any]]] = {
     "archive_old": ("inspection.archive", lambda ctx, data, tmp: ctx.archive_old(-1)),
     "add_user": ("user.change", lambda ctx, data, tmp: ctx.add_user("kim", "Engineer")),
 }
-# every public AppContext call that is not a checked write: reads, what an Operator does, and the lifecycle
+# what only an Engineer does that writes nothing, so no audit entry: re-evaluating a result (REQ-CMP-005, since S28a)
+CHECKED_READS: dict[str, Callable[[AppContext, Path, Path], Any]] = {
+    "re_evaluate": lambda ctx, data, tmp: ctx.re_evaluate("a-result-uuid", Recipe(board_model="TINY")),
+}
+# every public AppContext call that is not role-checked: reads, what an Operator does, and the lifecycle
 UNCHECKED = {
     "alarm", "alarms", "audit", "audit_entries", "report_error", "close", "set_user", "load_model", "recipe",
     "inspector", "inspect", "inspect_file", "load_image", "log_result", "board_models", "reference_image", "samples",
     "sample_path", "models", "model", "active_model", "recipe_history", "inspections", "defects_for", "checks_for",
     "checks_for_many", "inspection_result", "inspection", "judged_reference", "users", "board_status",
 }  # fmt: skip
-REFUSED = [(name, role) for name in WRITES for role in ROLES[: ROLES.index(REQUIRED_ROLE[name])]]
+CALLS = {**{name: call for name, (_, call) in WRITES.items()}, **CHECKED_READS}
+REFUSED = [(name, role) for name in CALLS for role in ROLES[: ROLES.index(REQUIRED_ROLE[name])]]
 
 
 def test_req_usr_001_every_appcontext_call_is_classified() -> None:
     public = {name for name, _ in inspect.getmembers(AppContext, inspect.isfunction) if not name.startswith("_")}
-    assert public == UNCHECKED | set(WRITES), public ^ (UNCHECKED | set(WRITES))
-    assert set(REQUIRED_ROLE) == set(WRITES) and all(role in ROLES for role in REQUIRED_ROLE.values())
+    assert public == UNCHECKED | set(CALLS), public ^ (UNCHECKED | set(CALLS))
+    assert set(REQUIRED_ROLE) == set(CALLS) and all(role in ROLES for role in REQUIRED_ROLE.values())
+    assert REQUIRED_ROLE["re_evaluate"] == "Engineer"  # REQ-CMP-005: trying other thresholds is for an Engineer
 
 
 @pytest.mark.parametrize(("method", "role"), REFUSED, ids=[f"{m}-{r}" for m, r in REFUSED])
@@ -69,7 +76,7 @@ def test_req_usr_001_lower_role_is_refused(
     trained_ctx.set_user("someone", role)
     before = trained_ctx.audit_entries()  # the fixture's own imports and training
     with pytest.raises(AoiError) as refused:
-        WRITES[method][1](trained_ctx, synthetic_dataset, tmp_path)
+        CALLS[method](trained_ctx, synthetic_dataset, tmp_path)
     allowed = " or ".join(ROLES[ROLES.index(REQUIRED_ROLE[method]) :])
     assert refused.value.code == "AOI-USR-001" and refused.value.what.endswith(f"needs the {allowed} role.")
     assert trained_ctx.audit_entries() == before  # refused before anything was written

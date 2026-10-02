@@ -41,6 +41,7 @@ interfaces that Stages 2–4 (cameras, robot, MES/ERP) plug into without changin
 │  reads   board_models · samples · models · recipe · inspections · users      │
 │  writes  import_samples · train · save_recipe · set_reference · add_user     │
 │  engine  inspector · inspect · inspect_file · log_result · batch_test        │
+│          re_evaluate (a stored result under other thresholds, Engineer)      │
 │  jobs    the thread pool every slow call runs on (REQ-SET-021)               │
 ├──────────────────────────────────────────────────────────────────────────────┤
 │ Inspection engine  (aoi/core)                                                │
@@ -253,8 +254,13 @@ it was judged on; a map file that is there but cannot be read raises AOI-CMP-003
 the live one would be, but for what is read from its AI map, within one step over the AI threshold: an AI defect's
 score, so two AI defects of equal area whose peaks are that close may swap numbers or, where they overlap, keep the
 other one, and the value of an ROI added, moved or renamed since, which that close to its threshold may grade the other
-way. AI maps stored before S28a (format 1) are clipped at 65.535 σ and not kept on their side of the pixel threshold.
-`tests/test_re_evaluate.py` checks this.
+way. AI maps stored before S28a (format 1) are clipped at 65.535 σ and not kept on their side of the pixel threshold. An
+Engineer judges a stored result again through `AppContext.re_evaluate(result_uuid, thresholds)` ([ADR
+0006](adr/0006-judging-a-stored-result-again.md)): it reads only the maps the thresholds use, the AI score from the
+result's stored AI check and the AI model's calibration from the model registry row the result names by UUID; it refuses
+with AOI-CMP-004 a result whose map or AI model calibration is gone when a check the thresholds use needs it, and with
+AOI-CMP-005 thresholds of another board model; it stores nothing, and takes about 130 ms at 5 MP on the 4-core cloud
+VM the tests run on. `tests/test_re_evaluate.py` checks this.
 
 ---
 
@@ -310,6 +316,8 @@ hiding a page or disabling a button is only a convenience. Every write also appe
 | `add_user` | Admin | `user.change` (role); object = user UUID |
 
 Reads, inspections (`inspect_file`, `log_result`), alarms and error reports need no role: an Operator inspects boards.
+One call that writes nothing needs a role: `re_evaluate`, judging a stored result with other thresholds (REQ-CMP-005),
+is for an Engineer, through the same check; it stores nothing, so it writes no audit entry.
 Until sign-in ships (REQ-USR-002, 1.0) the user is the one picked in the header, so an entry names who was picked.
 
 User switching is a local picker for the PoC; Stage 4 replaces it with MES authentication (`MesClient.authenticate`).

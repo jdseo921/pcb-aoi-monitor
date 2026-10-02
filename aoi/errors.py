@@ -93,7 +93,7 @@ CODES: dict[str, ErrorCode] = {
             "AOI-CMP-002",
             "Result has no stored decision table",
             "Record {id} ({file}) has no stored decision table: it was saved before migration 0006, or no record has"
-            " that number.",
+            " that number or UUID.",
             "Inspect the board again on Inspection; Compare then opens the new result.",
         ),
         ErrorCode(
@@ -102,6 +102,23 @@ CODES: dict[str, ErrorCode] = {
             "The stored map {file} could not be read: {reason}.",
             "The stored verdict and decision table still stand. Close any program that has the file open and open the"
             " result again; if the file is damaged, inspect the board again on Inspection.",
+        ),
+        ErrorCode(
+            "AOI-CMP-004",
+            "Result cannot be judged again",
+            "The result of {file} cannot be judged again with other thresholds: what it was judged on is no longer"
+            " stored ({missing}).",
+            "Its stored verdict and decision table still stand. Inspect the board again on Inspection, then try the"
+            " thresholds on the new result. The maps of OK results are deleted {days} days after inspection; NG and"
+            " WARN maps are kept.",
+        ),
+        ErrorCode(
+            "AOI-CMP-005",
+            "Thresholds of another board model",
+            "The thresholds tried are board model {tried}'s, but the result of {file} was judged for board model"
+            " {judged}.",
+            "Nothing was judged. Open the result on Compare with its own board model picked, then try the thresholds"
+            " again.",
         ),
         ErrorCode(
             "AOI-TRN-001",
