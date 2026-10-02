@@ -472,12 +472,12 @@
     <name>InspectionPage</name>
     <message>
         <location filename="../ui/pages/inspection.py" line="+60"/>
-        <location line="+79"/>
+        <location line="+74"/>
         <source>Load Images…</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-78"/>
+        <location line="-73"/>
         <source>Load Folder…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -493,12 +493,12 @@
     </message>
     <message>
         <location line="+4"/>
-        <location line="+68"/>
+        <location line="+63"/>
         <source>No images loaded</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-44"/>
+        <location line="-39"/>
         <source>No</source>
         <comment>defect number</comment>
         <translation type="unfinished"></translation>
@@ -554,7 +554,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+22"/>
+        <location line="+17"/>
         <source>Load Images… or Load Folder… to queue boards. In Stage 2 the camera fills this view.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1120,7 +1120,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/inspection.py" line="-204"/>
+        <location filename="../ui/pages/inspection.py" line="-199"/>
         <source>Inspection</source>
         <translation type="unfinished"></translation>
     </message>
