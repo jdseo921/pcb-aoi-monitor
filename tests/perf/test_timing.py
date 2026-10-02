@@ -1,8 +1,10 @@
 """Timing of Inspector.inspect over the synthetic regression set at 0.3 MP and 5 MP (stage S08, REQ-INSP-007 part).
 
-Writes perf.json (median and 95th percentile per size, with the machine) and compares the medians with the entry
-for the same machine in tests/perf/baseline.json: a slowdown over 10 % fails. A machine without an entry records
-only. On any machine the 0.3 MP 95th percentile must stay under 1 s, the REQ-INSP-007 budget, as a smoke test.
+Times all 40 boards at each size, writes perf.json (median and 95th percentile per size, with the machine) and
+compares the medians with the entry for the same machine in tests/perf/baseline.json: a slowdown over 10 % fails. A
+machine without an entry, a CI runner among them, records only: CI's gate is the job "Performance (base vs head)",
+which times the base commit beside the head (tools/perf_compare.py, with the same warm-up and resize as here). On any
+machine the 0.3 MP 95th percentile must stay under 1 s, the REQ-INSP-007 budget, as a smoke test.
 CI runners are not the reference PC: these numbers are never quoted as the product's speed
 (docs/tests/2026-10-01-resolution-test.md).
 
@@ -30,7 +32,7 @@ from tests.regression import make_regression_set as rs
 BASELINE = Path(__file__).with_name("baseline.json")
 SLOWDOWN_ALLOWED = 1.10
 BUDGET_MS = 1000.0  # REQ-INSP-007: verdict within 1 s, checked at 0.3 MP on every machine
-SIZES = {"0.3MP": ((640, 480), rs.N_OK + rs.N_NG), "5MP": ((2592, 1944), 8)}  # 5 MP: 4 OK and 4 NG boards
+SIZES = {"0.3MP": ((640, 480), rs.N_OK + rs.N_NG), "5MP": ((2592, 1944), rs.N_OK + rs.N_NG)}
 
 
 def cpu_model() -> str:
@@ -105,7 +107,7 @@ def test_req_insp_007_inspect_timing_against_the_baseline(
     smoke = report["0.3MP"]["p95_ms"]
     assert smoke < BUDGET_MS, f"0.3 MP 95th percentile {smoke} ms is over the {BUDGET_MS:.0f} ms budget"
     if key not in baselines:
-        print(f"perf: no baseline for {key}; recorded only")
+        print(f"perf: no baseline for {key}; recorded only (CI compares base and head: tools/perf_compare.py)")
         return
     for label in SIZES:
         base, now = baselines[key][label]["median_ms"], report[label]["median_ms"]
