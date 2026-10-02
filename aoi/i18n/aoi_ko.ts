@@ -27,7 +27,7 @@
 <context>
     <name>ComparePage</name>
     <message>
-        <location filename="../ui/pages/compare.py" line="+53"/>
+        <location filename="../ui/pages/compare.py" line="+54"/>
         <source>Side by side</source>
         <translation type="unfinished"></translation>
     </message>
@@ -98,12 +98,12 @@
     </message>
     <message>
         <location line="+3"/>
-        <location line="+42"/>
+        <location line="+43"/>
         <source>Golden board</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-41"/>
+        <location line="-42"/>
         <source>AI model</source>
         <translation type="unfinished"></translation>
     </message>
@@ -133,7 +133,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+18"/>
+        <location line="+19"/>
         <source>Test Image…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -367,7 +367,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+31"/>
+        <location line="+48"/>
         <source>Recipe saved as revision {revision}</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1316,7 +1316,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/compare.py" line="-380"/>
+        <location filename="../ui/pages/compare.py" line="-398"/>
         <source>Compare</source>
         <translation type="unfinished"></translation>
     </message>

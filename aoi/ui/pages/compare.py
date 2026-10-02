@@ -34,10 +34,11 @@ from PySide6.QtWidgets import (
 
 from ... import defects as taxonomy
 from ...core.explain import explain
-from ...core.imaging import IMAGE_EXTS, heat_overlay
+from ...core.imaging import IMAGE_EXTS
 from ...core.inspector import Check, InspectionResult
 from ...core.recipe import Recipe
 from ...core.services import AppContext, Judged
+from ...core.views import ai_view, difference_view
 from ...errors import AoiError
 from ...times import to_local
 from .. import theme
@@ -55,7 +56,7 @@ MODES = [  # the Show combo, in this order; shown through tr()
     QT_TRANSLATE_NOOP("ComparePage", "AI score heatmap"),
     QT_TRANSLATE_NOOP("ComparePage", "Defect boxes only"),
 ]
-MODE_DIFF, MODE_AI = 1, 2
+MODE_SIDE, MODE_DIFF, MODE_AI, MODE_BOXES = range(4)
 Stored: TypeAlias = "tuple[np.ndarray | None, Judged, InspectionResult | None]"  # golden board, why not, result
 JUDGED: dict[Judged, str] = {  # why a stored result's golden board is not shown; today's would mislead
     "none": QT_TRANSLATE_NOOP("ComparePage", "This result was judged without a Golden board."),
@@ -99,7 +100,8 @@ class ComparePage(Page):
         super().__init__(ctx, shell)
         self.test_path: str | None = None
         self.ref_override: str | None = None
-        self.res: InspectionResult | None = None
+        self._views: dict[tuple[int, int], np.ndarray | None] = {}  # (view, pixel difference) -> its picture
+        self._res: InspectionResult | None = None
         self.stored: dict[str, Any] | None = None  # the record of the stored result shown; None for a fresh inspection
         self.as_judged: tuple[str, np.ndarray] | None = None  # its golden board, which Re-evaluate keeps (REQ-CMP-003)
         self._fitted = False
@@ -437,20 +439,37 @@ class ComparePage(Page):
         r = self.res
         if r is None or r.image is None:  # a stored result whose picture is gone: no boxes in the air
             return
-        mode = self.mode.currentIndex()
-        img = r.image  # typed Optional; the engine always sets it, so the guards below narrow for mypy only
-        if img is not None and mode == MODE_DIFF and r.compare is not None and r.compare.diff_map is not None:
-            img = heat_overlay(img, r.compare.diff_map, vmax=max(1, 1.5 * self.diff_thr.value()))
-        elif img is not None and mode == MODE_AI and r.anomaly_map is not None:
-            thr = next((c.threshold for c in r.checks if c.source == "AI"), None)
-            img = heat_overlay(img, r.anomaly_map, vmax=(thr or float(np.max(r.anomaly_map))) * 1.5)
-        self.test_view.set_image(img, keep_view=self._fitted)
+        self.test_view.set_image(self._view_image(r, self.mode.currentIndex()), keep_view=self._fitted)
         self._fitted = True
+        self.ref_view.clear_overlays()  # the Golden board's dashed boxes, drawn anew with the test board's
         for d in r.defects:
             sev = taxonomy.BY_NAME.get(d.type, taxonomy.ANOMALY).severity
             color = theme.SEVERITY_COLORS.get(sev, theme.NG_COLOR)
             self.test_view.add_box(d.x, d.y, d.w, d.h, color, f"{d.no} {d.type}")
             self.ref_view.add_box(d.x, d.y, d.w, d.h, color, f"{d.no}", dashed=True)
+
+    @property
+    def res(self) -> InspectionResult | None:
+        """The result shown; showing another drops the heat views drawn for this one."""
+        return self._res
+
+    @res.setter
+    def res(self, r: InspectionResult | None) -> None:
+        if r is not self._res:
+            self._views = {}
+        self._res = r
+
+    def _view_image(self, r: InspectionResult, mode: int) -> np.ndarray | None:
+        """The picture of a view: the board, or the board under a heat map (aoi/core/views.py), drawn once per view and
+        pixel difference for the result shown, so that switching back to a view only shows it again (REQ-CMP-002)."""
+        if mode not in (MODE_DIFF, MODE_AI):
+            return r.image
+        key = (mode, self.diff_thr.value() if mode == MODE_DIFF else 0)
+        if key not in self._views:  # one picture per view: one drawn at another pixel difference goes
+            self._views = {k: v for k, v in self._views.items() if k[0] != mode}
+            self._views[key] = difference_view(r, key[1]) if mode == MODE_DIFF else ai_view(r)
+        view = self._views[key]
+        return r.image if view is None else view
 
     def save_recipe(self) -> None:
         if self.ctx.role == "Operator":
@@ -462,7 +481,7 @@ class ComparePage(Page):
         self.shell.status(self.tr("Recipe saved as revision {revision}").format(revision=rev))
 
     def on_board_model_changed(self, name: str | None) -> None:
-        self.res = self.stored = self.as_judged = None
+        self.res = self.stored = self.as_judged = None  # the last board model's heat views go with its result
         self.note.hide()
         self._load_recipe_into_form()
         if name:
