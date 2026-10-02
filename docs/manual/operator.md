@@ -29,9 +29,13 @@ Start and Next Board until images are queued, while a run is on and while a boar
 run is on; Save Result before the first result. With **Auto-save each board** ticked (the default) every result is
 recorded as it arrives; Save Result records it too when the box is not ticked.
 
-Reading the verdict: it fills the banner, ✓ OK on green, ✗ NG on red, ▲ WARN on amber, with the defect list under
-it (section 3). A board the app cannot read stops the run with a message that says what happened and what to do;
-press Next Board to go on with the queue. At the end of the queue the status bar reads "End of queue".
+Reading the verdict: while a board is being inspected the banner turns grey and reads "Inspecting…", and the status
+bar at the bottom names the board and its place in the queue, such as "Inspecting board_07.png (3 of 12)…". The
+verdict then fills the banner: ✓ OK on green, ✗ NG on red, ▲ WARN on amber, with the defect list under it (section 3),
+and the status bar shows the board's summary line: file, AI score, defects and time.
+A board the app cannot read stops the run with a message that says what happened and what to do, and the banner keeps
+the last verdict; press Next Board to go on with the queue. At the end of the queue the status bar reads "End of
+queue".
 
 ## 3. When a board is NG or WARN
 

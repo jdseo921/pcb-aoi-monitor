@@ -47,6 +47,9 @@ if TYPE_CHECKING:
     from ..main_window import MainWindow
 
 
+NO_VERDICT = "—"  # the banner before the first board
+
+
 def alarm_line(time_iso: str, level: str, code: str | None, msg: str) -> str:
     """ISO date, 24-hour local time, level, code and message, as REQ-INSP-006 asks."""
     return "  ".join(part for part in (to_local(time_iso), f"[{level}]", code or "", msg) if part)
@@ -65,6 +68,7 @@ class InspectionPage(Page):
         self.last_path: Path | None = None
         self.last_inspector: Inspector | None = None  # produced `last`; a saved result records its model version
         self.inspector: Inspector | None = None  # built on the first board for the board model, recipe and reference
+        self._engine_gen = 0  # counts the times the engine was dropped, so a board's engine from before is not kept
         # The board being inspected, if one is: Start and Next Board wait for it (#120).
         self.worker: Worker | None = None
 
@@ -101,7 +105,7 @@ class InspectionPage(Page):
         side = QWidget()
         sl = QVBoxLayout(side)
         sl.setContentsMargins(8, 0, 0, 0)
-        self.verdict = QLabel("—")
+        self.verdict = QLabel(NO_VERDICT)
         self.verdict.setStyleSheet(theme.verdict_style("INFO"))
         self.verdict.setMinimumHeight(theme.BANNER_H)
         sl.addWidget(self.verdict)
@@ -191,11 +195,16 @@ class InspectionPage(Page):
     def stop_run(self) -> None:
         """F6: stop after the board being inspected; nothing is deleted, so no confirmation."""
         self.running = False
+        if self.worker is not None:
+            self.shell.status(self.tr("Stopping after this board…"), ms=0)  # until the board's result replaces it
+        else:
+            self.shell.status(self.tr("Stopped"))
         self._update_buttons()
 
     def next_view(self) -> None:
         """Alt+V: cycle the View box (Top, Side, Bottom); the next board carries the new view (REQ-INSP-010)."""
         self.view_combo.setCurrentIndex((self.view_combo.currentIndex() + 1) % self.view_combo.count())
+        self.shell.status(self.tr("View: {view}").format(view=self.view_combo.currentText()))
 
     def next_board(self) -> None:
         """F8: inspect the next board of the queue on the pool thread; one board at a time per page (#120)."""
@@ -208,33 +217,31 @@ class InspectionPage(Page):
             return
         self.queue_pos += 1
         path = self.queue[self.queue_pos]
-        insp = self.inspector
-        if insp is None:
-            try:
-                insp = self.ctx.inspector(bm, side=str(self.view_combo.currentData()))
-            except Exception as e:
-                self.error(e)
-                return
-            self.inspector = insp
-            if insp.model is None:
-                msg = self.tr("No AI model for {board_model} yet: only the Golden board comparison runs").format(
-                    board_model=bm
-                )
-                self._alarm("WARN", msg, "AOI-TRN-003")
-        insp.side = str(self.view_combo.currentData())  # the English key the engine stores on every defect
-        w = self.worker = Worker(lambda: (path, insp.inspect(self.ctx.load_image(path)), insp))
+        view = str(self.view_combo.currentData())  # the English key the engine stores on every defect
+        insp = self.inspector  # None on the first board: built on the pool thread, so no key waits for a model load
+        gen = self._engine_gen  # the engine this board builds is kept only while nothing has dropped it meanwhile
+
+        def inspect() -> tuple[Path, InspectionResult, Inspector]:
+            engine = insp if insp is not None else self.ctx.inspector(bm, side=view)
+            engine.side = view  # one worker at a time per page, so nothing else reads it meanwhile
+            return path, engine.inspect(self.ctx.load_image(path)), engine
+
+        w = self.worker = Worker(inspect)
+        self._show_busy(path)  # the response to the action, before the pool thread has started (REQ-INSP-005)
         self._update_buttons()
 
         def result(out: tuple[Path, InspectionResult, Inspector]) -> None:
             if self.worker is w:
                 self.worker = None  # before _on_result, which may start the next board of a run
                 self._update_buttons()  # the controls follow the worker at once, not at the finished signal
+            if insp is None and self.inspector is None and gen == self._engine_gen and bm == self.board_model:
+                self.inspector = out[2]  # the engine this board built serves the rest of the queue
+                if out[2].model is None:
+                    msg = self.tr("No AI model for {board_model} yet: only the Golden board comparison runs").format(
+                        board_model=bm
+                    )
+                    self._alarm("WARN", msg, "AOI-TRN-003")
             self._on_result(out)
-
-        def failed(e: BaseException) -> None:
-            self.error(e)
-            self.stop_run()
-            self._refresh_alarms()
 
         def done() -> None:
             if self.worker is w:
@@ -242,13 +249,42 @@ class InspectionPage(Page):
             self._update_buttons()
 
         w.signals.result.connect(result)
-        w.signals.error.connect(failed)
+        w.signals.error.connect(lambda e: self._not_inspected(path, e))
         w.signals.finished.connect(done)
         start(w, self.ctx.jobs)
+
+    def _not_inspected(self, path: Path, e: BaseException) -> None:
+        """The board was not inspected: the run stops, the banner goes back to the last verdict, and the coded dialog
+        says what happened and what to do (REQ-SET-019); Next Board carries on with the queue."""
+        self.running = False
+        self._show_verdict(self.last)
+        summary = self.tr("{file}  ·  not inspected").format(file=path.name)
+        self.summary.setText(summary)
+        self.shell.status(summary)
+        self.error(e)
+        self._refresh_alarms()
+
+    def _show_busy(self, path: Path) -> None:
+        """The banner turns grey with "Inspecting…" the moment a board starts (sketch: the busy pattern), painted at
+        once so the response to Start or Next Board is on screen within the action itself (REQ-INSP-005)."""
+        self.verdict.setText(self.tr("Inspecting…"))
+        self.verdict.setStyleSheet(theme.verdict_style("INFO"))
+        self.verdict.repaint()
+        self.summary.setText(self.tr("Inspecting {file}…").format(file=path.name))
+        status = self.tr("Inspecting {file} ({n} of {total})…")
+        busy = status.format(file=path.name, n=self.queue_pos + 1, total=len(self.queue))
+        self.shell.status(busy, ms=0)  # stays until the result or the error replaces it, however long the board takes
+
+    def _show_verdict(self, res: InspectionResult | None) -> None:
+        """The verdict banner: colour, shape and word (REQ-INSP-002), painted at once; the idle banner without one."""
+        self.verdict.setText(theme.verdict_label(res.verdict) if res is not None else NO_VERDICT)
+        self.verdict.setStyleSheet(theme.verdict_style(res.verdict if res is not None else "INFO"))
+        self.verdict.repaint()
 
     def _on_result(self, out: tuple[Path, InspectionResult, Inspector]) -> None:
         path, res, insp = out
         self.last, self.last_path, self.last_inspector = res, path, insp
+        self._show_verdict(res)  # painted before the image and the table are built: the verdict first (REQ-INSP-002)
         self.empty.hide()
         self.view.set_image(res.image, keep_view=self.queue_pos > 0)
         for d in res.defects:
@@ -256,12 +292,11 @@ class InspectionPage(Page):
             self.view.add_box(
                 d.x, d.y, d.w, d.h, theme.SEVERITY_COLORS.get(sev, theme.NG_COLOR), f"{d.no} {d.type} {d.score:.2f}"
             )
-        self.verdict.setText(theme.verdict_label(res.verdict))
-        self.verdict.setStyleSheet(theme.verdict_style(res.verdict))
         summary = self.tr("{file}  ·  AI score {score:.2f}× threshold  ·  {defects} defect(s)  ·  {ms:.0f} ms").format(
             file=path.name, score=res.score, defects=len(res.defects), ms=res.elapsed_ms
         )
         self.summary.setText("\n".join([summary, *res.notes]))
+        self.shell.status(summary)  # in place of "Inspecting …"
         fill_table(self.table, [[d.no, d.type, d.score, view_text(d.side), d.x, d.y] for d in res.defects])
         self.shell.last_inspected = (str(path), res)
         if self.autosave.isChecked():
@@ -316,11 +351,17 @@ class InspectionPage(Page):
         self.act_next.setEnabled(has and not self.running and not busy)
         self.act_save.setEnabled(self.last is not None)
 
+    def _drop_engine(self) -> None:
+        """The next board builds the engine again, and an engine a board is building at this moment is not kept when
+        it arrives: a board model change or a page revisit during the first board must not leave a stale engine."""
+        self.inspector = None
+        self._engine_gen += 1
+
     def on_board_model_changed(self, name: str | None) -> None:
-        self.inspector = None  # rebuilt lazily with the new model/recipe/reference
+        self._drop_engine()  # rebuilt lazily with the new model/recipe/reference
         self._show_empty()
 
     def on_show(self) -> None:
-        self.inspector = None  # pick up newly trained models or saved recipes
+        self._drop_engine()  # pick up newly trained models or saved recipes
         self._refresh_alarms()
         self._show_empty()
