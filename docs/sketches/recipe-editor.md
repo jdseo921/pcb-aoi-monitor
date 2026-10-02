@@ -17,17 +17,17 @@ Recipe Editor    TBOX-A1 · revision 4 (unsaved changes ●) · scale 47.6 px/mm
 │   Golden board; saved ROIs green #43A047,    │ │ R1    │ Presence │ 5.3  │ 5.3  │ 2.7  │ 1.5  │ 1.0    │
 │   the selected ROI yellow #FDD835 with       │ │ R2 ●  │ Polarity │ 2.3  │ 2.3  │ 2.3  │ 2.3  │ 1.0    │
 │   8 drag handles; drag inside to move        │ └───────┴──────────┴──────┴──────┴──────┴──────┴────────┘
-│                                              │ Selected ROI R2
+│   Zoom 200 % [Fit]  (wheel, Space+drag, Home)│ Selected ROI R2
 │         ┌─ R2 [Polarity] ─┐                  │ Name [R2]  Type [Polarity ▾]  AI Score (× threshold) [1.00]
-│         │ ◻     ◻      ◻  │                  │ Height Min / Max mm [—] [—] (Stage 2)  Volume Min / Max mm³ [—] [—] (Stage 2)
+│         │ ◻     ◻      ◻  │                  │ Height Min/Max mm [—] [—]  Volume Min/Max mm³ [—] [—]  (Stage 2)
 │         │ ◻            ◻  │                  │ [▣ Enabled]   [Apply]
 │         └─────────────────┘                  │
-│                                              │ Test Run: ✗ NG · 2 defects · 578 ms   (checks table below, 5 rows)
+│                                              │ Try result: ✗ NG · 2 defects · 578 ms   (checks table below, 5 rows)
 └──────────────────────────────────────────────┘
-                                                 [Test Run…]                 [■ Save Recipe]  blue primary
+                                                 [Try Recipe…]               [■ Save Recipe]  blue primary
 ```
 
-Thresholds tab: Use AI model ▣ · AI threshold [▢ override 5.69] · Warning band [0.80] · Use Golden board ▣ ·
+Thresholds tab: Use AI model ▣ · AI threshold [▢ override 5.69] · WARN band [0.80] · Use Golden board ▣ ·
 Pixel difference [45] · Min defect size [0.80 mm] = 38 px ✓ · Similarity minimum [0.80] · Max changed area [0.50 %]
 · Allowed difference regions [0]. A size under 4 px shows an amber badge: "0.05 mm is 2.4 px at 47.6 px/mm; the
 smallest size the camera resolves is 4 px = 0.08 mm" (REQ-INSP-014, REQ-RCP-006).
@@ -49,17 +49,18 @@ one; [Restore as New Revision] copies it into a new revision after the usual con
 | Move / resize | — | drag; ← ↑ → ↓ 1 px, Shift 10 px | handles 16 px | Selected ROI yellow, saved green; a changed ROI is yellow-dashed until saved (REQ-RCP-001) |
 | Delete ROI | Delete ROI | Delete | B | Red; undoable with Ctrl+Z, so no confirmation |
 | Undo / Redo | — | Ctrl+Z / Ctrl+Y | — | Every edit before Save is undoable |
+| Zoom and pan | Zoom, Fit | wheel zooms at the pointer; Space+drag or middle-drag pans; Home fits | B (Fit) | REQ-RCP-001, GUI §4.2; ROIs and handles keep their screen size at any zoom |
 | Selected ROI form | Name, Type, AI Score, Height Min/Max, Volume Min/Max, Enabled, Apply | — | F, B | Height and Volume stored now, checked from Stage 2 |
 | Calibrate scale | Calibrate Scale… | — | B | Inline sheet: click two points on the Golden board, enter the distance in mm; stores px per mm per board model (REQ-RCP-006) |
 | Thresholds | as listed above | — | F | mm fields show their px value at this scale beside them |
-| Test Run | Test Run… | Ctrl+T | B | Picks an image (default: last inspected board); runs off the UI thread with a busy indicator; shows verdict, defects and the checks table; stores nothing (REQ-RCP-003) |
+| Try Recipe | Try Recipe… | Ctrl+T | B | Named in #103 (Charter: "test run" is not used); picks an image (default: last inspected board); runs off the UI thread with a busy indicator; shows verdict, defects and the checks table; stores nothing (REQ-RCP-003) |
 | Save Recipe | Save Recipe | Ctrl+S | B | The one blue primary; confirmation sheet lists before → after and asks for a reason when a Stage 1 AOI check is uncovered; creates revision n+1 with user, time and audit entry (REQ-RCP-004, -005) |
 | Revisions | Open, Restore as New Revision | — | B | Never overwrites |
 
 ## Empty state
 
 Image area without a Golden board: "No Golden board for TBOX-A1 yet. Train an AI model on Training, or set a
-Master sample there." with [Open Training ›]. No ROI yet: the ROI table shows "No ROIs yet. Press Draw ROI and
+Golden board there." with [Open Training ›]. No ROI yet: the ROI table shows "No ROIs yet. Press Draw ROI and
 drag on the board; the AOI checks tab shows what each ROI covers." No scale: the header reads "scale not set,
 sizes in px" with [Calibrate Scale…].
 
@@ -72,7 +73,7 @@ sizes in px" with [Calibrate Scale…].
 | AOI-RCP-003 | The recipe was not saved | Role is not Engineer or Admin | Switch User |
 | AOI-RCP-004 | The recipe was not saved | A newer revision was saved meanwhile | Reload; your changes are kept as unsaved |
 | AOI-RCP-005 | Sizes are shown in px | The board model has no scale yet | Calibrate Scale… |
-| AOI-RCP-006 | The Test Run image was refused | Same limits as AOI-INSP-001 to -003 | Pick another image |
+| AOI-RCP-006 | The Try Recipe image was refused | Same limits as AOI-INSP-001 to -003 | Pick another image |
 | AOI-RCP-007 | Warning: the minimum defect size is under 4 px | Below what the camera resolves | Raise the size or use a higher resolution; saving is allowed, the warning is kept with the revision |
 
 ## Requirements served
@@ -83,12 +84,12 @@ REQ-RCP-001, -002, -003, -004, -005, -006, REQ-INSP-014, REQ-TRN-015, REQ-SET-02
 
 Role first; one blue primary (Save Recipe); destructive Delete ROI red, never default focus, undoable; confirmation
 before overwriting a recipe (a save is a new revision, confirmed with before → after); no dialog over a dialog
-(calibration and confirmation are inline sheets); busy indicator for Test Run; glossary (Recipe, ROI, Golden board,
-Master sample, Threshold, AI model); sizes; every string through `self.tr()`.
+(calibration and confirmation are inline sheets); busy indicator for Try Recipe…; glossary (Recipe, ROI, Golden board,
+WARN, Threshold, AI model); sizes; every string through `self.tr()`.
 
-## Questions for Jay
+## Decisions (2026-10-02)
 
-- Save without a scale: allow with sizes in px and an amber badge (proposed), or block until calibrated?
-- Minimum defect size per customer: one value per board model in the recipe (proposed) or per ROI as well?
-- Test Run on the last inspected board by default (proposed) or always ask for a file?
-- "Restore as New Revision" for old revisions: wanted at G1, or view-only until 1.0?
+- Q21: A recipe saves without a scale, sizes in px with the amber badge (AOI-RCP-005). Reason: A recipe stays usable before calibration; sizes turn to mm once the scale is set (S29).
+- Q22: Minimum defect size is one value per board model, in the recipe. Reason: S29 and REQ-INSP-014 set it per board model; a per-ROI value has no requirement behind it.
+- Q23: Try Recipe… uses the last inspected board by default; its sheet can pick another image. Reason: The board just inspected is the one being tuned for; the name follows #103 (Q54 in model-test.md).
+- Q24: Restore as New Revision ships at G1. Reason: It never overwrites (a new revision, confirmed and audited) and gives a bad save an undo (Short paths: make everything undoable); REQ-RCP-004 asks at least for viewing.

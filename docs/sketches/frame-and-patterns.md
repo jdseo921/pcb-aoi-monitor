@@ -39,8 +39,19 @@ greyed, with the tooltip "Requires Engineer" or "Requires Admin"; the service la
 
 Size classes used by every sketch: **B** button ≥ 120 × 40 px; **T** operator touch target ≥ 48 px tall and
 ≥ 120 px wide; **T+** run control 56 px tall, ≥ 240 px wide (proposed); **F** field ≥ 40 px tall; **V** verdict
-banner, 40 pt. All text ≥ 14 pt, tables included (v0.1 tables are 12 pt and change). Contrast ≥ 4.5:1: white on
-green #43A047 and on red #E53935, dark #1F2A36 on amber #FDD835.
+banner, 40 pt. All text ≥ 14 pt, tables included (v0.1 tables are 12 pt and change). Contrast ≥ 4.5:1 for every
+text pair (Engineering, Sizes), by the WCAG 2.1 formula: text on green #43A047, red #E53935 and blue #1E88E5 is
+black #000000 (6.36, 4.97 and 5.71:1), and dark #1F2A36 on amber #FDD835 (10.43:1). White on those three fills
+reads only 3.30, 4.23 and 3.68:1, so it is not used (Q53 below).
+
+Key column: a named key works wherever the focus is on the page. "—" means no key of its own: Tab reaches the
+control in reading order and Enter or Space presses it; Tab skips a text row without an action. Single-letter
+keys (C, D, L, N, O, R, U, 1 to 4) act only while no text field has focus; in a field they type.
+
+Grid and background (GUI §7): the 12-column grid is a layout guide (12 equal columns at 1920 px with the theme's
+14 px SPACE as gutter), not an enforced pixel grid; tests check sizes and contrast, not columns. The production
+background is the theme's dark blue-grey: #1F2A36 for pages, #15202B for header, sidebar, fields and tables,
+#26323F for cards and tiles (`aoi/ui/theme.py` BG, BG_DEEP, BG_RAISED).
 
 | Control | Label | Key | Size | Notes |
 |---|---|---|---|---|
@@ -49,7 +60,7 @@ green #43A047 and on red #E53935, dark #1F2A36 on amber #FDD835.
 | Training indicator | Training 42 % · 3 min left | — | text | Shown on every page while training runs; click opens Training (S40) |
 | User and role | Kim · Engineer | — | text | Name and role, never an email |
 | Switch user | Switch User | Alt+U | T | Operator picks a name; Engineer and Admin sign in (ADR 0002, own sketch later) |
-| Sidebar entry | page name | Alt+1 … Alt+9 | T | 48 px tall so an operator in gloves can hit it |
+| Sidebar entry | page name | Ctrl+1 … Ctrl+9 | T | 48 px tall so an operator in gloves can hit it; Alt+1 to Alt+6 are the Home cards |
 | Primary button | names the action, e.g. Next Board, Save Recipe | per page | B or T | Exactly one blue #1E88E5 button per page |
 | Destructive button | Delete …, Remove …, Reset Demo | — | B | Red #E53935, placed last, never the default focus; confirmation before deleting data |
 | Dialog buttons | Close, Copy Details, one action | Esc closes | B | A dialog never opens over a dialog; longer forms are inline sheets |
@@ -92,8 +103,9 @@ code AOI-SET-0xx, is logged with the build version, and the app reopens on the s
 
 ## Busy, progress and Cancel pattern (REQ-SET-021, REQ-TRN-008)
 
-- Work over 1 s: a busy indicator (spinner and a verb, "Inspecting…") **where the result will appear**: in the
-  verdict banner, the table or the image area, never in a dialog. Controls that would start a second job disable.
+- Work over 1 s: a busy indicator (a verb, "Inspecting…", then the seconds so far; no spinner, #125) **where the
+  result will appear**: in the verdict banner, the table or the image area, never in a dialog. Controls that would
+  start a second job disable.
 - Work over 10 s: a progress bar with the step name, "n of N", percent, time left updated at least every 10 s, and
   a Cancel button (B) beside it. Cancel stops within 10 s and leaves what was active before (the active AI model
   stays active, a half-finished import keeps the files already copied and lists the rest).
@@ -121,10 +133,12 @@ Home (Home card → page → action), no dialog over a dialog, confirmation only
 recipe or exporting, every empty state and error says what to do, sizes as above, touch and keyboard for every
 operator action, glossary words only, every string translatable.
 
-## Questions for Jay
+## Decisions (2026-10-02)
 
-- Is "AOI PoC Inspector" the name to show in the header for the G1 build, or the product name from the Customers &
-  Launch standard?
-- Presenter theme text at 18 pt (proposed): is 20 pt better for a projector at 1366 × 768?
-- At 1366 × 768 the sidebar narrows to 200 px and the subtitle hides; should it collapse to icons instead?
-- Should the header show the station name (Station) beside the user for sites with several stations?
+- Q2: Presenter text 18 pt, verdict 48 pt. Reason: REQ-SET-008 names 18 pt.
+- Q3: At 1366 × 768 the sidebar narrows to 200 px with its labels; no icon-only sidebar. Reason: Labels need no learning; the pages' own minimum width (1640 × 781 today) is tracked in #104.
+- Q4: No station name in the Stage 1 header; the Settings subtitle names the station. Reason: One frame (MUST) adds station state to the header once hardware is connected (Stage 2); until then the subtitle is enough.
+- Q53: Black text on the green, red and blue fills; the fills keep the standard's colours. Changing `ON_DARK` in `aoi/ui/theme.py` is a follow-up issue. Reason: Sizes (MUST) asks 4.5:1 with no exception, and Look (MUST) names the four colours: black text meets both. Darker fills (#2E7D32 5.13:1, #C62828 5.62:1, #1565C0 5.75:1 with white) would change Look's colours.
+
+Still for Jay: Q1, the name in the header. "AOI PoC Inspector" stays until the product name is chosen, an open
+business question in the Charter (cleared and filed as a trademark in Korea before launch).

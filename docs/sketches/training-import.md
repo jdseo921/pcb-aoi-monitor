@@ -80,10 +80,9 @@ dialog over a dialog (file picker, then an inline sheet); progress with time lef
 ends (refused files listed with codes); glossary (Defect, Severity, Board model, Workspace); sizes; every string
 through `self.tr()`.
 
-## Questions for Jay
+## Decisions (2026-10-02)
 
-- A NG image with several defect types: import with the main type and add the others as boxes later (proposed), or
-  require boxes at import?
-- Should the limits for training images equal the inspection limits (50 MP, 200 MB, proposed)?
-- Duplicate images (same SHA-256): skip silently with a count (proposed) or refuse the whole batch?
-- Is a view other than Top expected in G1 at all, or can the View picker default to Top and hide?
+- Q29: An NG image with several defect types is imported with its main type; the others are added as boxes later. Reason: REQ-TRN-001 asks for one type at import; S33's box editor adds the rest.
+- Q30: Training images take the inspection limits from Settings, 50 MP and 200 MB. Reason: Built as settings in #121 and #122; one limit and one refusal everywhere.
+- Q31: Duplicates (same SHA-256) are skipped with a count; the batch goes on. Reason: AOI-TRN-003 lists them; refusing a 200-file batch for one duplicate helps nobody.
+- Q32: The View picker stays, default Top. Reason: Every image keeps its view tag (REQ-INSP-010) and dataset names carry the view, so Stage 2's Side and Bottom need no relabelling.

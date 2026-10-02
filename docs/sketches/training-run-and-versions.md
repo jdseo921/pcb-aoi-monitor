@@ -21,10 +21,10 @@ Training   TBOX-A1                                              │ Samples │ 
 │ log: 13:41:02 aligned 38 of 38 · 13:41:50 Golden board built · 13:42:10 epoch 1 loss 0.0412 …       │
 └───────────────────────────────────────────────────────────────────────────────────────────────────┘
 ┌ AI models ────────────────────────────────────────────────────────────────────────────────────────┐
-│ Version │ Created          │ Dataset              │Threshold│ Missed defects │ False calls │ Card │ State  │
-│ v1.3    │ 2026-10-01 13:48 │ DS-TBOXA1-R3-TOP-v4  │ 5.41    │ 0 of 1 (95 %)  │ 1 of 50     │ ✓    │ ready  │
-│ v1.2 ●  │ 2026-09-28 10:30 │ DS-TBOXA1-R3-TOP-v3  │ 5.69    │ 0 of 1 (95 %)  │ 2 of 50     │ ✓    │ active │
-│ v1.1    │ 2026-09-20 17:05 │ DS-TBOXA1-R3-TOP-v2  │ 6.02    │ 1 of 1         │ 4 of 50     │ ✓    │ —      │
+│ Version │ Created          │ Dataset              │Threshold│ Missed defects           │ False calls │ Card │ State  │
+│ v1.3    │ 2026-10-01 13:48 │ DS-TBOXA1-R3-TOP-v4  │ 5.41    │ 0 of 1, upper bound 95 % │ 1 of 50     │ ✓    │ ready  │
+│ v1.2 ●  │ 2026-09-28 10:30 │ DS-TBOXA1-R3-TOP-v3  │ 5.69    │ 0 of 1, upper bound 95 % │ 2 of 50     │ ✓    │ active │
+│ v1.1    │ 2026-09-20 17:05 │ DS-TBOXA1-R3-TOP-v2  │ 6.02    │ 1 of 1, upper bound 100 %│ 4 of 50     │ ✓    │ —      │
 │ [Activate] [Roll Back to v1.1] [Model Card] [Export…]                                                 │
 └───────────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -38,7 +38,9 @@ records seed, code commit, settings and dataset version (REQ-TRN-009).
 Model Card view (inline panel, printable): identity (version, board model, dataset version, seed, commit,
 settings, who trained it and when), set-up (camera, resolution, scale), rates with counts and 95 % upper bounds
 (missed defects, false calls), recall per defect type, time per image on this station, thresholds, known limits,
-sign-off lines (AI lead, customer). A version without a card cannot be activated (REQ-TRN-011).
+sign-off lines for the AI lead and the quality lead (Engineering, Model card). The card is generated as Markdown
+and JSON; a card from synthetic boards says so in its first line (S43). A version without a card cannot be
+activated (REQ-TRN-011).
 
 ## Controls
 
@@ -52,7 +54,7 @@ sign-off lines (AI lead, customer). A version without a card cannot be activated
 | Activate | Activate | — | B | Blue primary on the AI models tab; refused without a card; at 1.0 it runs the go-live gate (REQ-TRN-012) |
 | Roll back | Roll Back to v1.1 | — | B | One click: activates the previous active version and restores its Golden board (REQ-TRN-010); audit entry |
 | Model Card | Model Card | — | B | Opens the card panel; [Print…] and [Copy] inside it |
-| Export | Export… | — | B | Weights-only .pt plus the model card (JSON and PDF) into one folder; confirmation names the version (REQ-TRN-013) |
+| Export | Export… | — | B | `<version>.pt` (weights only) and `<version>.card.md` side by side, with the card's JSON, into one folder (S43); confirmation names the version (REQ-TRN-013) |
 
 ## Empty state
 
@@ -84,9 +86,9 @@ Role first; one blue primary per tab (Start Training; Activate); progress, time 
 confirmation only before exporting; no dialog over a dialog; no dead ends; glossary (AI model, Golden board,
 Training, Validation, Missed defect, False call, Threshold); sizes; every string through `self.tr()`.
 
-## Questions for Jay
+## Decisions (2026-10-02)
 
-- Roll back: only to the previously active version in one click (proposed), with Activate for any other?
-- Should Engineers set epochs, input size and seed (proposed) or only Admins in Settings?
-- Export the model card as JSON and PDF beside the .pt (proposed), or only the PDF?
-- Time left before the first epoch: show "estimating…" (proposed) or an estimate from the last run?
+- Q41: Roll Back goes to the previously active version in one click; Activate serves any other. Reason: REQ-TRN-010 and S42.
+- Q42: Engineers set epochs, input size and seed per run; Settings holds the defaults. Reason: Training is the Engineer's work; every run records its seed and settings (REQ-TRN-009).
+- Q43: The card is Markdown and JSON, exported as `<version>.card.md` beside `<version>.pt`; printing uses the Markdown. Reason: S43 and Engineering, Model card (MUST), which also name the AI and quality leads as signers.
+- Q44: Before the first epoch the time left reads "estimating…". Reason: An estimate from another run's data size would mislead; the first epoch gives a real one within the 10 s update rule.
