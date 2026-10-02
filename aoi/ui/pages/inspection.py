@@ -20,6 +20,7 @@ from PySide6.QtWidgets import (
 )
 
 from ... import defects as taxonomy
+from ...core.explain import notes
 from ...core.imaging import IMAGE_EXTS, list_images, save_image
 from ...core.inspector import NG, InspectionResult, draw_overlay
 from ...core.services import AppContext
@@ -38,6 +39,7 @@ from .base import (
     cell_text,
     fill_table,
     make_table,
+    sentence_text,
     size_class,
     view_text,
 )
@@ -302,7 +304,7 @@ class InspectionPage(Page):
         summary = self.tr("{file}  ·  AI score {score:.2f}× threshold  ·  {defects} defect(s)  ·  {ms:.0f} ms").format(
             file=path.name, score=res.score, defects=len(res.defects), ms=res.elapsed_ms
         )
-        self.summary.setText("\n".join([summary, *res.notes]))
+        self.summary.setText("\n".join([summary, *(sentence_text(s) for s in notes(res))]))  # checks that did not run
         self.shell.status(summary)  # in place of "Inspecting …"
         fill_table(self.table, [[d.no, d.type, d.score, view_text(d.side), d.x, d.y] for d in res.defects])
         self.shell.last_inspected = (str(path), res, iid)

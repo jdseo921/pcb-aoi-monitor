@@ -230,6 +230,41 @@ def test_req_set_019_empty_states_link_next_step(
     assert logs.table.rowCount() == 1 and not _empties(logs)
 
 
+def test_req_set_019_empty_state_shows_every_line_in_a_narrow_area(qtbot: QtBot) -> None:
+    """In an area narrower than its text would like (Compare's two panes side by side), the empty state wraps its text
+    to the area and shows every line, at every width as the area narrows to 120 px and widens again, also when a word
+    is wider than the area (a long golden board file name runs past the edge): each label is as tall as its text at
+    its width and inside the area, and so is the link wherever the area has room for it. In an area too short for
+    every line, the sentence gives way: the heading and the link still show whole."""
+    host = QWidget()
+    qtbot.addWidget(host)
+    host.resize(400, 800)
+    empty = EmptyState(host)
+    sentence = (
+        "The Golden board this result was judged against{name} has changed since; press Re-evaluate to inspect the"
+        " board again with today's Golden board."
+    )
+    host.show()
+    qtbot.waitExposed(host)
+    layout = empty.layout()
+    assert layout is not None
+    margins = layout.contentsMargins()
+    for name in ("", ", MAINBOARD_REV_C_TOP_v1.0_golden.png,"):
+        empty.show_state("Golden board not available", sentence.format(name=name), "Re-evaluate ›", lambda: None)
+        for width in [*range(400, 119, -3), *range(120, 401, 3)]:
+            host.resize(width, 800)
+            QApplication.sendPostedEvents()  # every layout request the resize set off
+            for label in (empty.heading, empty.sentence):
+                assert label.height() >= label.heightForWidth(label.width()), (width, label.text())
+                assert host.rect().contains(label.geometry()), (width, label.text())
+            if width >= empty.link.width() + margins.left() + margins.right():
+                assert host.rect().contains(empty.link.geometry()), width
+    host.resize(400, 160)
+    QApplication.sendPostedEvents()
+    assert empty.heading.height() >= empty.heading.heightForWidth(empty.heading.width())
+    assert host.rect().contains(empty.heading.geometry()) and host.rect().contains(empty.link.geometry())
+
+
 def test_req_p3d_001_profile_page_is_a_stage_2_card(qtbot: QtBot, trained_ctx: AppContext) -> None:
     """Until 3D data exists the 3D Profile page is one card that says so and leads to the Recipe Editor, where the
     height and volume limits already live; nothing on it looks like a working 3D control (sketch profile3d-card.md)."""
@@ -237,6 +272,9 @@ def test_req_p3d_001_profile_page_is_a_stage_2_card(qtbot: QtBot, trained_ctx: A
     win.navigate("3D Profile")
     page = win.pages["3D Profile"]
     assert page.card.isVisibleTo(page) and "Stage 2" in page.card.heading.text()
+    QApplication.sendPostedEvents()
+    for label in (page.card.heading, page.card.sentence):  # the card is as tall as its text at the card's width
+        assert label.height() >= label.heightForWidth(label.width()), label.text()
     assert not page.findChildren(QTableWidget), "no empty height table"
     buttons = [b for b in page.findChildren(QPushButton) if b.isVisibleTo(page)]
     assert sorted(b.text() for b in buttons) == ["Back to Home", "Open Recipe Editor ›"]

@@ -14,6 +14,7 @@ from PySide6.QtCore import Qt
 from pytestqt.qtbot import QtBot
 
 from aoi.core import anomaly
+from aoi.core.explain import explain
 from aoi.core.inspector import Check, Inspector, draw_overlay
 from aoi.core.services import AppContext
 from aoi.times import to_local
@@ -165,7 +166,8 @@ def test_req_cmp_003_note_names_the_versions_and_missing_maps(
     note = compare.note.text()
     assert to_local(rec["time"]) in note and f"recipe revision {rec['recipe_rev']}," in note and "moved" not in note
     assert compare.test_label.text().endswith("(stored result)")
-    assert compare.why.toPlainText().startswith(f"Verdict {rec['result']}: decided by"), compare.why.toPlainText()
+    why = compare.why.toPlainText()  # the heading with the verdict, then the deciding checks first (REQ-CMP-004)
+    assert why.startswith(f"Why this board is {rec['result']}:\n• {explain(res)[0].text()}"), why
     assert compare.res is not None and np.array_equal(compare.res.image, draw_overlay(res)), "the picture judged"
     _refuse_inspection(monkeypatch)
     first = ctx.active_model(BOARD)
