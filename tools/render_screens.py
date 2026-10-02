@@ -51,6 +51,7 @@ APPROVED_DIR = ROOT / "tests" / "screens" / "approved"
 BOARD_MODEL = "TINY"
 FIXED_TIME = "2026-01-01T09:00:00+00:00"  # every stored time, so a render does not change with the clock
 FIXED_MS = 480.0  # the inspection time Inspection and Compare show
+STORED_STATES = ("compare-stored-operator", "compare-golden-changed-operator")  # see render_stored
 FIXED_WORKSPACE = "C:/AOI_Workspace"  # what the Settings page shows instead of the temporary folder
 TEST_FONT = '"DejaVu Sans"'  # the font the approved images are drawn with (Linux)
 DATASET_OK, DATASET_NG, DATASET_SEED = 30, 14, 7  # as tests/conftest.py
@@ -267,6 +268,31 @@ def prepare(win: MainWindow, title: str, dataset: Path) -> None:
         page.ws.setText(FIXED_WORKSPACE)
 
 
+def render_stored(win: Any, ctx: AppContext, out: Path) -> dict[str, Path]:
+    """Compare on the record `build_workspace` saved, as an Operator opens it from Inspection: beside the golden board
+    it was judged against, then with that file changed, which the pane explains (REQ-CMP-003); the file is put back."""
+    from PySide6.QtWidgets import QApplication
+
+    page, files = win.pages["Compare"], {}
+    record = ctx.inspections(board_model=BOARD_MODEL)[0]["id"]
+    golden = Path(str(ctx.reference_image(BOARD_MODEL)))
+    kept = golden.read_bytes()
+    win.set_role("Operator", "operator")
+    try:
+        for name in STORED_STATES:
+            golden.write_bytes(kept if name == STORED_STATES[0] else kept + b"\0")
+            win.statusBar().clearMessage()
+            assert win.navigate("Compare")
+            page.show_stored(record)
+            wait_until(lambda: page._bg is None)
+            QApplication.processEvents()
+            files[name] = out / f"{name}.png"
+            assert win.grab().save(str(files[name])), files[name]
+    finally:
+        golden.write_bytes(kept)
+    return files
+
+
 def render_pages(
     ctx: AppContext, dataset: Path, out: Path, size: tuple[int, int] = (1920, 1080), scale: float = 1.0
 ) -> dict[str, Path]:
@@ -297,6 +323,7 @@ def render_pages(
             name = f"{slug(title)}-{role.lower()}"
             files[name] = out / f"{name}.png"
             assert win.grab().save(str(files[name])), files[name]
+    files.update(render_stored(win, ctx, out))
     win.close()
     return files
 

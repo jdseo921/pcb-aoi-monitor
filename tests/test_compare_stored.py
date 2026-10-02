@@ -4,6 +4,7 @@ Inspection opens it within 300 ms at 5 MP with the failing rows highlighted, and
 
 from __future__ import annotations
 
+import hashlib
 from pathlib import Path
 from time import perf_counter
 
@@ -18,8 +19,9 @@ from aoi.core.services import AppContext
 from aoi.times import to_local
 from aoi.ui import theme
 from aoi.ui.pages.base import cell_item
-from aoi.ui.pages.compare import ComparePage
+from aoi.ui.pages.compare import JUDGED, ComparePage
 from tests.regression import make_regression_set as rs
+from tests.test_alarms_and_errors import _log_rows
 from tests.test_no_freeze import board_5mp  # noqa: F401  # the 5 MP fixture
 from tests.test_req_done_in_v01 import BOARD, _window
 
@@ -201,6 +203,9 @@ def test_req_cmp_003_note_names_the_versions_and_missing_maps(
     compare.show_stored(iid)
     qtbot.waitUntil(compare.test_empty.isVisible, timeout=10000)
     assert compare.test_view._pix is None and not compare.test_view._overlay_items and compare.note.isVisible()
+    assert "Re-evaluate" in compare.test_empty.sentence.text() and compare.test_empty.link.isVisibleTo(
+        compare.test_empty
+    )
     win.last_inspected = (str(ng_board), res, iid)
     compare.use_last()
     assert compare.stored is not None and compare.stored["id"] == iid
@@ -215,3 +220,68 @@ def test_req_cmp_003_note_names_the_versions_and_missing_maps(
     win._on_board_model("")
     qtbot.waitUntil(lambda: ctx.jobs.idle() and compare._bg is None, timeout=10000)
     assert compare.res is None and compare.stored is None and compare.note.isHidden()
+
+
+def test_req_cmp_003_golden_board_as_judged(
+    qtbot: QtBot, trained_ctx: AppContext, ng_board: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Each record names the golden board its engine judged against, with the SHA-256 of its bytes (migration 0008):
+    Compare shows that board after an Engineer set another, and Re-evaluate keeps it until Golden Board is pressed;
+    when its file has other bytes, cannot be read or is gone, or none was recorded, the pane says so and what to do,
+    one click from Re-evaluate; nothing is inspected again."""
+    ctx, golden = trained_ctx, Path(str(trained_ctx.reference_image(BOARD)))
+    engine = ctx.inspector(BOARD)  # an Inspection run keeps one engine while an Engineer sets another golden board
+    other = next(s for s in ctx.samples(BOARD, "OK") if Path(s["path"]) != golden)
+    ctx.set_reference(BOARD, other["id"])
+    ctx.inspect_file(BOARD, str(ng_board), inspector=engine)
+    iid = ctx.inspections(board_model=BOARD)[0]["id"]
+    rec = ctx.inspection(iid)
+    assert rec is not None and rec["reference_path"] == str(golden) and ctx.judged_reference(iid + 1000)[1] == "none"
+    assert rec["reference_sha256"] == hashlib.sha256(golden.read_bytes()).hexdigest()
+    assert ctx.inspector(BOARD, reference=engine.reference).reference_path is None, "a reference passed in names none"
+    win = _window(qtbot, ctx, "Operator")
+    compare = win.pages["Compare"]
+    assert isinstance(compare, ComparePage)
+    win.navigate("Compare")
+    qtbot.waitUntil(lambda: ctx.jobs.idle() and compare._bg is None, timeout=10000)
+    shown: list[np.ndarray | None] = []
+    monkeypatch.setattr(compare.ref_view, "set_image", lambda img, *a: shown.append(img))
+    as_judged = f"Golden board as judged: {golden.name}"
+    for press in (lambda: compare.show_stored(iid), compare.run):  # the stored result, then Re-evaluate
+        press()
+        qtbot.waitUntil(lambda: compare._bg is None, timeout=10000)
+        assert np.array_equal(shown[-1], ctx.load_image(golden)) and compare.ref_label.text() == as_judged
+        assert compare.ref_empty.isHidden()
+    compare.use_golden()
+    qtbot.waitUntil(lambda: compare._bg is None, timeout=10000)
+    assert np.array_equal(shown[-1], ctx.load_image(other["path"])), "Golden Board compares with today's"
+    _refuse_inspection(monkeypatch)
+    compare.show_stored(iid)
+    qtbot.waitUntil(lambda: compare._bg is None, timeout=10000)
+    assert f"Golden board is now {Path(other['path']).name}." in compare.note.text(), compare.note.text()
+    compare.on_board_model_changed(None)
+    assert compare.as_judged is None, "another board model drops the golden board as judged"
+    sql = "UPDATE inspections SET {} = NULL WHERE id=?"
+    changes = {  # other bytes, cut short, a folder at the path; then no hash, then judged without one, as decided
+        "changed": lambda: golden.write_bytes(golden.read_bytes() + b"\0"),
+        "unreadable": lambda: golden.write_bytes(golden.read_bytes()[:64]),
+        "missing": lambda: (golden.unlink(), golden.mkdir()),
+        "unrecorded": lambda: ctx.db.execute(sql.format("reference_sha256"), (iid,)),
+        "none": lambda: (
+            ctx.db.execute(sql.format("reference_path"), (iid,)),
+            ctx.db.execute("DELETE FROM checks WHERE inspection_id=? AND source='Compare'", (iid,)),
+        ),
+    }
+    for why, change in changes.items():
+        change()
+        compare.show_stored(iid)
+        qtbot.waitUntil(lambda: compare._bg is None, timeout=10000)
+        named = why in ("changed", "unreadable", "missing")
+        assert shown[-1] is None and compare.ref_empty.isVisible(), why
+        assert compare.ref_label.text() == (as_judged if named else "Reference: Golden board"), why
+        sentence = compare.ref_empty.sentence.text()
+        assert sentence.startswith(compare.tr(JUDGED[why]).format(file=golden.name)) and "Re-evaluate" in sentence
+        assert compare.ref_empty.link.isVisibleTo(compare.ref_empty), "the next step is one click away"
+    assert "Golden board is now" not in compare.note.text(), "a record that names none says nothing of a change"
+    logged = [r["reason"] for r in _log_rows(ctx, "compare.golden_board_not_as_judged")]
+    assert logged == ["changed", "unreadable", "missing"], logged

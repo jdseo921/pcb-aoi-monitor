@@ -29,6 +29,7 @@ STORED_PATHS = (
     ("inspections", "overlay_path"),
     ("inspections", "diff_map_path"),
     ("inspections", "ai_map_path"),
+    ("inspections", "reference_path"),
     ("board_models", "reference_image"),
 )
 
