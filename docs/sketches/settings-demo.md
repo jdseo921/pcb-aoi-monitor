@@ -16,22 +16,22 @@ Settings   v0.3.0 · schema 3 · station AOI-01
 ┌ Workspace ───────────────────────────────────┐ ┌ Demo ──────────────────────────────────────────────┐
 │ Folder  [D:\AOI_Workspace          ] [Browse…]│ │ Demo workspace: not loaded                          │
 │ 2.1 GB used · 41 % of disk · paths relative   │ │ [Load Demo Workspace]  loads TBOX-A1 with its       │
-│ [Move Workspace…] (copies, then switches)     │ │   AI model, recipe and 12 test boards; production   │
-├ AI ───────────────────────────────────────────┤ │   data is not touched                                │
+│ [Move Workspace…] (copies, then switches)     │ │   AI model, recipe and 10 mixed boards, one NG;     │
+├ AI ───────────────────────────────────────────┤ │   production data is not touched                     │
 │ Device (● Auto: CUDA found, GeForce RTX 3060) │ │ [Reset Demo] red · under 10 s · confirmation         │
 │        ( CPU) ( CUDA)                         │ │ Scripted run pace  1 s [───●──────] 10 s  = 3 s     │
 │ Input size [256 ▾]  Epochs [60]               │ │ [Play Scripted Run ›] opens Inspection on the demo   │
 ├ Input limits ─────────────────────────────────┤ ├ Presenter theme ────────────────────────────────────┤
 │ Max image [50] MP   Max file [200] MB         │ │ [▢ Presenter theme] light, text 18 pt, Admin pages  │
 ├ Logs ─────────────────────────────────────────┤ │   hidden; leave it from the header                   │
-│ Retention [30] days   Language [English ▾]    │ ├ Users & roles (own sketch, ADR 0002) ───────────────┤
-│                                               │ │ Name │ Role │ Status                               │
+│ Log retention [30] days  OK maps kept [7] days│ ├ Users & roles (own sketch, ADR 0002) ───────────────┤
+│ Language [English ▾]                          │ │ Name │ Role │ Status                               │
 │ [■ Save Settings]  blue primary               │ │ [Add User…] [Disable] [Reset Password…]             │
 └───────────────────────────────────────────────┘ └─────────────────────────────────────────────────────┘
 ```
 
-The demo workspace is a second workspace folder beside production (`<workspace>\demo`), loaded in one click and
-reset in under 10 s by copying the bundled files back; production hashes are unchanged (REQ-SET-007). The
+The demo workspace has its own folder beside the production workspace, never inside it (S53), loaded in one click
+and reset in under 10 s by copying the bundled files back; production hashes are unchanged (REQ-SET-007). The
 scripted run plays mixed OK and NG boards at the set pace from the demo workspace (REQ-SET-009); the same run at
 3 s per board for 8 h is the stability test (REQ-INSP-011).
 
@@ -44,7 +44,8 @@ scripted run plays mixed OK and NG boards at the set pace from the demo workspac
 | AI device | Auto / CPU / CUDA | — | T (radio) | Auto shows what it found; CUDA without a GPU is refused (REQ-SET-002) |
 | Input size, Epochs | as named | — | F | Training defaults |
 | Input limits | Max image MP, Max file MB | — | F | Used by Inspection, Training and AI Model Test refusals (REQ-INSP-001) |
-| Retention | Retention days | — | F | Archive threshold for Logs & Export |
+| Retention | Log retention (days) | — | F | Archive threshold for Logs & Export |
+| Map retention | OK maps kept (days) | — | F | Difference and AI maps of OK results are deleted at start-up after this many days; NG and WARN maps stay (#129); 0 or more |
 | Language | Language | — | F | English; Korean at 1.0 (REQ-SET-006) |
 | Save Settings | Save Settings | Ctrl+S | B | The page's one blue primary; a changed workspace takes effect at once, no restart |
 | Load demo workspace | Load Demo Workspace | — | B | One click; busy indicator; the header's board model switches to the demo board model with a "Demo" badge |
@@ -57,7 +58,8 @@ scripted run plays mixed OK and NG boards at the set pace from the demo workspac
 ## Empty state
 
 Demo group before the first load: "Demo workspace not loaded. Load Demo Workspace to show TBOX-A1 with its AI
-model, recipe and 12 test boards." with the button. No GPU: the Auto line reads "Auto: no GPU found, using CPU".
+model, recipe and 10 mixed boards, one NG." with the button. No GPU: the Auto line reads "Auto: no GPU found,
+using CPU".
 
 ## Errors
 
@@ -81,11 +83,10 @@ Role first (Admin only); one blue primary (Save Settings); destructive Reset Dem
 focus, with confirmation; progress with Cancel for the move; no dialog over a dialog; no dead ends; glossary
 (Workspace, Station, Board model, AI model, Recipe); sizes; every string through `self.tr()`.
 
-## Questions for Jay
+## Decisions (2026-10-02)
 
-- Presenter theme for an Engineer presenting without an Admin: a header switch for Engineers too, or Admin only
-  (proposed)?
-- Demo workspace location: beside production inside the workspace (proposed) or a separate folder chosen at
-  install?
-- Default limits 50 MP and 200 MB are proposed; do the customer's cameras ever exceed them?
-- Should changing the language take effect at once (proposed) or at the next start?
+- Q49: The presenter theme stays Admin only. Reason: It hides pages and changes every screen, so it belongs with Settings (Admin).
+- Q50: The demo workspace has its own folder beside the production workspace, not inside it. Reason: S53 ("its own folder"), and a test hashes the production workspace before and after.
+- Q51: Default limits 50 MP and 200 MB. Reason: Built as settings with these values in #121 and #122; an Admin can raise them.
+- Q52: A language change takes effect at once. Reason: The sketch's proposal; it binds when the Korean UI ships (an open question in the Charter).
+- Q56: Settings shows the map retention and the two image limits. Reason: #129 left them in `settings.json` only; the page change is a follow-up issue.

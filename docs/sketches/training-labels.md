@@ -16,7 +16,7 @@ Training   TBOX-A1 · 40 OK · 3 NG · 1 UNSURE · 2 NG unchecked · 4 of 40 OK 
 │ ID│Label │Defect types     │View│Labelled│Checked│ │ [Draw Box] Type [Polarity Error ▾] Severity Critical │
 │ 43│NG    │Polarity Error ×1│Top │ kim    │  —    │ │ ┌────────────────────────────────────────────────┐ │
 │ 42│NG    │Solder Bridge ×2 │Top │ kim    │ lee ✓ │ │ │   image with boxes: selected yellow, saved     │ │
-│ 41│UNSURE│—                │Top │ kim    │  —    │ │ │   green; label "1 Polarity Error · Critical"   │ │
+│ 41│UNSURE│—                │Top │ kim    │  —    │ │ │   green; label "1 Polarity Error ◆ Critical"   │ │
 │ 40│OK    │—                │Top │ park   │ lee ✓ │ │ │                                                │ │
 │ 39│OK    │—                │Top │ park   │  —    │ │ └────────────────────────────────────────────────┘ │
 └────────────────────────────────────────────────┘ │ Boxes: 1 Polarity Error (Critical) 183,187 40×32 px  │
@@ -25,7 +25,8 @@ Training   TBOX-A1 · 40 OK · 3 NG · 1 UNSURE · 2 NG unchecked · 4 of 40 OK 
 ┌ Labeller agreement ────────────────────────────┐ │          12:58 park OK                               │
 │ Set [Calibration 100 ▾]  Labellers [kim ▾][lee ▾]│ └──────────────────────────────────────────────────────┘
 │ OK/NG agreement 99 of 100 (99 %) ✓ target 98 % │
-│ Defect type agreement 27 of 30 (90 %) ✓ target 90 %   [Run Agreement Check]   stored with the dataset version │
+│ Defect type 27 of 30 (90 %) ✓ target 90 %      │
+│ [Label Blind…]  [Run Agreement Check]          │
 └────────────────────────────────────────────────┘
 ```
 
@@ -48,11 +49,15 @@ type (REQ-TRN-003). Relabelling writes a history line and keeps the old boxes in
 | Type | Type | — | F | 33 DCT types by category; Severity fills from the table and is read-only |
 | Delete box | Delete Box | Delete | B | Red, undoable with Ctrl+Z, no confirmation |
 | Box list | Boxes | ↑ ↓ | rows 14 pt | Selecting a row selects its box |
+| Next / previous image | — | PgDn / PgUp | — | Moves the editor to the next or previous image of the filtered list (S33) |
 | History | History | — | text | Who, when, before → after, per image |
 | Export UNSURE list | Export List… | — | B | Confirmation names the count (export rule) |
 | Agreement set | Set | — | F | A labelled set of 100 images (proposed) |
-| Labellers | Labellers | — | F | Two users with labels on every image of the set |
+| Labellers | Labellers | — | F | Two users who each labelled every image of the set blind |
+| Blind labelling | Label Blind… | — | B | Shows the set's images one by one with every label, box and history line hidden, and records the user's own labels; the agreement check counts only these (S34) |
 | Run agreement check | Run Agreement Check | — | B | Busy indicator; result with counts against 98 % and 90 % (proposed); stored with the next dataset version (REQ-TRN-016) |
+
+O, N, U and D act only while no text field has focus (frame-and-patterns.md).
 
 ## Empty state
 
@@ -81,9 +86,9 @@ Role first; one blue primary per tab (Check Label); destructive Delete Box red, 
 confirmation only before exporting; no dialog over a dialog (the editor is a panel); glossary (Defect, Severity
 Critical/Major/Minor, Validation); sizes; every string through `self.tr()`.
 
-## Questions for Jay
+## Decisions (2026-10-02)
 
-- May a box carry "Anomaly" when the type is unknown, or must every box be one of the 33 types (proposed)?
-- Who counts as the second person: any other Engineer or Admin (proposed), or a named quality engineer?
-- The UNSURE list for the customer's quality engineer: a CSV export (proposed) or a page they can open?
-- Agreement targets 98 % and 90 % on 100 images are proposed; are they the customer's numbers?
+- Q33: Every box is one of the 33 DCT types; no "Anomaly". Reason: REQ-TRN-003 and Engineering, Labels (MUST).
+- Q34: Any other Engineer or Admin checks a label. Reason: S34: a different user, enforced in AppContext; labelling is the Engineer role (S32).
+- Q35: The UNSURE list is a CSV (Export List…), exported by an Admin like every export (Q58 in logs-history.md). Reason: A CSV opens on the customer's PC with no station login; the export rule keeps customer data on the station otherwise.
+- Q36: Targets 98 % and 90 % on 100 images until a customer names its own. Reason: S34 and the Engineering standard's proposed values.

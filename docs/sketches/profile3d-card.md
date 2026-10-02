@@ -64,10 +64,8 @@ Role first; one blue primary; short paths (Home → sidebar → Recipe Editor st
 glossary (ROI, Recipe, the four AOI check names from DCT §4); sizes (card text 14 pt, heading 20 pt, buttons B);
 every string through `self.tr()`.
 
-## Questions for Jay
+## Decisions (2026-10-02)
 
-- Keep the page in the sidebar with a "Stage 2" badge (proposed) or hide it until Stage 2, as REQ-P3D-001 also
-  allows?
-- Should the card name the Stage 2 date from the roadmap (RM §3, 1Q 2027), or no date?
-- In the presenter theme the entry is hidden (proposed); should it also be hidden for Engineers at the customer
-  validation?
+- Q9: Keep the entry in the sidebar with a "Stage 2" badge. Reason: The sketch's proposal; #99 built the card, and the badge follows with S54.
+- Q10: No date on the card. Reason: The Charter's open question on re-baselining the schedule means a date on screen could become wrong.
+- Q11: Hidden in the presenter theme only; Engineers see it at a customer validation. Reason: The card offers no 3D control and claims nothing (REQ-P3D-001), so it cannot mislead.
