@@ -242,18 +242,18 @@ threshold) or a non-minor defect region exists; else **OK**. Colours follow GUI 
 A result is judged again with other thresholds without aligning, comparing or running the AI model (REQ-CMP-005, the
 engine since S28a): `Inspector.judge` grades the evidence a result holds, a board's just inspected or a stored one's,
 and `inspector.re_grade` finds the difference regions again on the result's difference map, reads the AI defects from
-its AI map and takes each ROI's peak from the ROI check it was judged with (an ROI added or moved since is read from the
-AI map), with the AI score and the AI model's calibration given as `AiEvidence`. On the evidence a board was inspected
-with, the thresholds it was judged by give back its checks, defects and verdict, and other thresholds what inspecting it
-with them gives. A check the recipe turns on that did not run on the board is not judged, with a note saying so. A
-stored result holds that evidence in its record and its two map files (`aoi/core/maps.py`, format 2 since S28a, [ADR
-0005](adr/0005-stored-ai-map-format-2.md)): the difference map exactly, and the AI map within one step (0.001 σ up to
-32.767 σ, then 1/8192 of the value, up to 1789 σ) with each pixel on the side of the AI model's pixel threshold it was
-judged on; a map file that is there but cannot be read raises AOI-CMP-003. So a stored result is judged again as the
-live one would be, but for what is read from its AI map, within one step over the AI threshold: an AI defect's score, so
-two AI defects of equal area whose peaks are that close may swap numbers or, where they overlap, keep the other one, and
-the value of an ROI added or moved since, which that close to its threshold may grade the other way. AI maps stored
-before S28a (format 1) are clipped at 65.535 σ and not kept on their side of the pixel threshold.
+its AI map and takes each ROI's peak from the ROI check it was judged with (an ROI added, moved or renamed since is read
+from the AI map), with the AI score and the AI model's calibration given as `AiEvidence`. On the evidence a board was
+inspected with, the thresholds it was judged by give back its checks, defects and verdict, and other thresholds what
+inspecting it with them gives. A check the recipe turns on that did not run on the board is not judged, with a note
+saying so. A stored result holds that evidence in its record and its two map files (`aoi/core/maps.py`, format 2 since
+S28a, [ADR 0005](adr/0005-stored-ai-map-format-2.md)): the difference map exactly, and the AI map within one step (0.001
+σ up to 32.767 σ, then 1/8192 of the value, up to 1789 σ) with each pixel on the side of the AI model's pixel threshold
+it was judged on; a map file that is there but cannot be read raises AOI-CMP-003. So a stored result is judged again as
+the live one would be, but for what is read from its AI map, within one step over the AI threshold: an AI defect's
+score, so two AI defects of equal area whose peaks are that close may swap numbers or, where they overlap, keep the
+other one, and the value of an ROI added, moved or renamed since, which that close to its threshold may grade the other
+way. AI maps stored before S28a (format 1) are clipped at 65.535 σ and not kept on their side of the pixel threshold.
 `tests/test_re_evaluate.py` checks this.
 
 ---

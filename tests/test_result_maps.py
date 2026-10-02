@@ -5,10 +5,13 @@ from __future__ import annotations
 
 import os
 import shutil
+import struct
 import time
+import zlib
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
+import cv2
 import numpy as np
 import pytest
 from pytestqt.qtbot import QtBot
@@ -73,12 +76,17 @@ def test_req_insp_012_a_map_that_cannot_be_read_says_which_and_why(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """A map whose file is gone reads as None (the sweep or a hand deleted it, maybe while it was being read); one that
-    is there but damaged, or held by another program, raises AOI-CMP-003 naming the file and why (S28a review B2)."""
+    is there but damaged (no PNG, or a header claiming 10^10 pixels, which OpenCV refuses with an exception), or held by
+    another program, raises AOI-CMP-003 naming the file and why (S28a reviews B, B2, and C, N3)."""
     path = tmp_path / ("board" + maps.AI_FILE)
     assert maps.read_map(path) is None
-    path.write_bytes(b"not a PNG")
-    with pytest.raises(AoiError, match="board_ai2.png could not be read: the file is damaged") as bad:
-        maps.load_maps(InspectionResult("OK", 0.0), None, str(path))
+    huge = bytearray(cv2.imencode(".png", np.zeros((2, 2), np.uint16))[1].tobytes())
+    huge[16:24] = struct.pack(">II", 100000, 100000)  # the IHDR's width and height, with a valid CRC after them
+    huge[29:33] = struct.pack(">I", zlib.crc32(bytes(huge[12:29])))
+    for damaged in (b"not a PNG", bytes(huge)):
+        path.write_bytes(damaged)
+        with pytest.raises(AoiError, match="board_ai2.png could not be read: the file is damaged") as bad:
+            maps.load_maps(InspectionResult("OK", 0.0), None, str(path))
     save_image(path, np.zeros((2, 2), np.uint16))
 
     def held(self: Path) -> bytes:
@@ -87,7 +95,7 @@ def test_req_insp_012_a_map_that_cannot_be_read_says_which_and_why(
     monkeypatch.setattr(Path, "read_bytes", held)
     with pytest.raises(AoiError, match="board_ai2.png could not be read: Permission denied") as locked:
         maps.load_maps(InspectionResult("OK", 0.0), None, str(path))
-    assert bad.value.code == locked.value.code == "AOI-CMP-003" and str(path) in str(locked.value.detail)
+    assert bad.value.code == locked.value.code == "AOI-CMP-003" and path.name in str(locked.value.detail)
 
 
 def _backdate(ctx: AppContext, days: int, *ids: int) -> None:

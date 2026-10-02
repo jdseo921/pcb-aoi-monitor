@@ -89,7 +89,10 @@ def read_map(path: str | Path) -> np.ndarray | None:
         return None
     except OSError as e:
         raise AoiError("AOI-CMP-003", detail=str(e), file=Path(path).name, reason=e.strerror or type(e).__name__) from e
-    img = cv2.imdecode(np.frombuffer(data, dtype=np.uint8), cv2.IMREAD_UNCHANGED)
+    try:
+        img = cv2.imdecode(np.frombuffer(data, dtype=np.uint8), cv2.IMREAD_UNCHANGED)
+    except cv2.error:  # a header claiming more pixels than OpenCV decodes
+        img = None
     if img is None:
         raise AoiError("AOI-CMP-003", file=Path(path).name, reason="the file is damaged")
     return img

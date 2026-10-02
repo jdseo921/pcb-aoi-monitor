@@ -504,7 +504,8 @@ class AppContext:
     def inspection_result(self, inspection_id: int, with_maps: bool = False) -> InspectionResult | None:
         """One stored result read back without its images (verdict, checks, defects, compare metrics and regions, as
         decided) for Compare (REQ-INSP-008); with `with_maps`, the stored maps too, where their files exist
-        (REQ-INSP-012). None for a record from before migration 0006."""
+        (REQ-INSP-012), and AOI-CMP-003 for one there that cannot be read. None for a record from before migration
+        0006."""
         doc = self.db.inspection_result(inspection_id)
         res = InspectionResult.from_dict(doc) if doc is not None else None
         return load_maps(res, *self.db.map_paths(inspection_id)) if res is not None and with_maps else res

@@ -365,13 +365,13 @@ def re_grade(judged: InspectionResult, recipe: Recipe, ai: AiEvidence | None) ->
     without aligning, comparing or running the AI model (REQ-CMP-005): the difference regions are found again on its
     difference map with the recipe's pixel difference and minimum area, the AI score in `ai` is graded against the
     recipe's threshold, and the AI defects are read from its AI map. An ROI it was judged on keeps the peak it was
-    judged by; an ROI added or moved since is read from the AI map. `judged` is a result as inspected or stored, not one
-    this function made; `ai` is its AI evidence (the score of its AI check, the AI model's calibration) when its AI
-    check ran, else None. Similarity, alignment and the AI score keep the values `judged` holds, since no threshold
-    changes them, and so do the inspection time, the view and the picture. A check the recipe turns on that did not run
-    on the board is not judged, with a note saying so, as inspecting with the recipe notes a check it cannot run.
-    `judged` is not changed; the result shares its maps. ValueError when a check the recipe uses ran on the board but
-    its map, or its AI evidence, is not given."""
+    judged by; an ROI added, moved or renamed since is read from the AI map. `judged` is a result as inspected or
+    stored, not one this function made; `ai` is its AI evidence (the score of its AI check, the AI model's calibration)
+    when its AI check ran, else None. Similarity, alignment and the AI score keep the values `judged` holds, since no
+    threshold changes them, and so do the inspection time, the view and the picture. A check the recipe turns on that
+    did not run on the board is not judged, with a note saying so, as inspecting with the recipe notes a check it cannot
+    run. `judged` is not changed; the result shares its maps. ValueError when a check the recipe uses ran on the board
+    but its map, or its AI evidence, is not given."""
     cr, ran_ai = judged.compare, any(c.source == "AI" for c in judged.checks)
     if (recipe.use_compare and cr is not None and cr.diff_map is None) or (
         recipe.use_ai and ran_ai and (ai is None or judged.anomaly_map is None)

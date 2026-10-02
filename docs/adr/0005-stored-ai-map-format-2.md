@@ -10,7 +10,7 @@
 
 Since S25c each result's AI score map is stored beside its overlay as a 16-bit PNG, `<base>_ai.png`, holding the score
 in 0.001 σ steps clipped at 65.535 σ (format 1). REQ-CMP-005 judges a stored result again from its maps without the AI
-model, and format 1 gets two things wrong there. A pixel above 65.535 σ reads back lower, so a stricter AI threshold
+model, and format 1 gets two things wrong there. A pixel above 65.535 σ reads back lower, so a higher AI threshold
 judges it otherwise; a model this app trains can score up to 1000 σ (`anomaly.SPREAD_FLOOR`). And rounding to the
 nearest step can take a pixel across the AI model's pixel threshold, so the AI defect found again is a pixel wider or
 narrower than the one judged, and an ROI peak just under its threshold can read as on it.
@@ -24,7 +24,7 @@ narrower than the one judged, and an ROI peak just under its threshold can read 
    rounding took across it back one code, so the stored map marks the AI defect pixels the live one did, each value
    still within one step.
 3. **An ROI keeps the peak it was judged by.** Judging again takes an ROI's peak from its stored check (its value
-   times the AI threshold, exact in float32), not from the map; an ROI added or moved since reads the map.
+   times the AI threshold, exact in float32), not from the map; an ROI added, moved or renamed since reads the map.
 4. **Formats are told apart by file name.** Format 1 files keep their name and read as before; a later format takes
    a new name and decoder beside the old, so no record or migration changes.
 5. **Unreadable maps say so.** A map file that is gone reads as missing (AOI-CMP-001 once both are); one that is there
@@ -41,7 +41,7 @@ narrower than the one judged, and an ROI peak just under its threshold can read 
 
 ## Consequences
 
-- A result stored from S28a on is judged again as the live one would be, except an AI defect's score and an ROI added
-  or moved since, each within one step over the AI threshold (`tests/test_re_evaluate.py`).
+- A result stored from S28a on is judged again as the live one would be, except an AI defect's score and an ROI added,
+  moved or renamed since, each within one step over the AI threshold (`tests/test_re_evaluate.py`).
 - A result stored between S25c and S27 is judged again with format 1's limits. Stage 1 has no customer stations yet,
   so none hold such files outside test workspaces.

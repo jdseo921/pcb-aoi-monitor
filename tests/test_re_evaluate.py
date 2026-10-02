@@ -214,7 +214,8 @@ def test_req_cmp_005_a_stored_ai_map_holds_scores_far_above_65_sigma(tmp_path: P
 def test_req_cmp_005_an_roi_keeps_the_peak_it_was_judged_by(tmp_path: Path) -> None:
     """An ROI's peak of 1.9995 sigma, 0.7998 of the AI threshold 2.5 and so WARN under the ROI's 0.8, stores as 2.000
     sigma, the nearest step, which the ROI would read as NG: judged again, the ROI keeps the peak it was judged by, so
-    its value and the verdict are the live ones. An ROI moved or added since reads the stored map, within a step."""
+    its value and the verdict are the live ones. An ROI moved, renamed or added since reads the stored map, a step from
+    the live value."""
     amap = np.zeros((300, 400), np.float32)
     amap[150:158, 200:208] = 1.9995
     recipe = Recipe(board_model="X", use_compare=False, rois=[ROI("R1", "Presence", 190, 140, 30, 30, ai_score=0.8)])
@@ -228,8 +229,10 @@ def test_req_cmp_005_an_roi_keeps_the_peak_it_was_judged_by(tmp_path: Path) -> N
     _assert_close(again, live, "the ROI as judged")
     moved = copy.deepcopy(recipe)
     moved.rois = [ROI("R1", "Presence", 191, 140, 30, 30, ai_score=0.8), ROI("R2", "Polarity", 205, 152, 9, 9)]
+    moved.rois.append(ROI("R3", "Presence", 190, 140, 30, 30, ai_score=0.8))  # R1's box under another name
     got, want = re_grade(stored, moved, ai), re_grade(live, moved, ai)
-    assert [c.value for c in got.checks[1:]] == pytest.approx([c.value for c in want.checks[1:]], abs=0.0005 / 2.5)
+    assert [c.value for c in got.checks[1:]] == pytest.approx([2.0 / 2.5] * 3), "read from the stored map"
+    assert [c.value for c in want.checks[1:]] == pytest.approx([1.9995 / 2.5] * 3), "and from the live one"
 
 
 def test_req_cmp_005_the_stored_ai_map_keeps_each_pixel_on_its_side_of_the_pixel_threshold(tmp_path: Path) -> None:
