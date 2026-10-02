@@ -143,7 +143,12 @@ class ModelTestPage(Page):
         self.btn_run.setEnabled(False)
         self.bar.setVisible(True)
         self.bar.setValue(0)
-        w: Worker = Worker(self.ctx.batch_test, bm, folder, progress=lambda i, n: w.signals.progress.emit((i, n)))
+
+        def progress(done: int, total: int) -> None:
+            report((done, total))  # the worker's emit, bound below before the job starts
+
+        w = Worker(self.ctx.batch_test, bm, folder, progress=progress)
+        report = w.signals.progress.emit  # the job holds this emit, never the worker or its signals (#132)
 
         def on_progress(a: tuple[int, int]) -> None:
             self.bar.setMaximum(a[1])
