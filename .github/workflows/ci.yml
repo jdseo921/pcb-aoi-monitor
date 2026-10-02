@@ -57,7 +57,10 @@ jobs:
         # fails on a shipped package it cannot see.
         run: |
           pip-licenses --with-system --format=json > licenses.json
-          python tools/check_licenses.py --packages requirements.lock requirements-torch-cpu.lock < licenses.json
+          # TEMPORARY demonstration for #17, reverted by the next commit: a shipped package under the GPL fails the check.
+          echo "fake-gpl-demo==1.0.0" > demo-shipped.txt
+          python -c "import json; rows = json.load(open('licenses.json')); rows.append({'Name': 'fake-gpl-demo', 'Version': '1.0.0', 'License': 'GPL-3.0-only'}); json.dump(rows, open('licenses.json', 'w'))"
+          python tools/check_licenses.py --packages requirements.lock requirements-torch-cpu.lock demo-shipped.txt < licenses.json
 
   test:
     name: Tests (${{ matrix.os }})
