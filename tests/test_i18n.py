@@ -73,14 +73,18 @@ def _messages(ts: Path) -> dict[tuple[str, str], str]:
 
 def test_req_set_005_translation_file_is_generated_from_the_sources(tmp_path: Path) -> None:
     """aoi/i18n/aoi_ko.ts holds exactly the strings pyside6-lupdate finds today, so a changed string without a rerun
-    of tools/update_translations.py fails the build; every placeholder is a named {field}, never an f-string."""
+    of tools/update_translations.py fails the build; every placeholder is a named {field}, never an f-string, and a
+    translation names the same placeholders as its source, since a misspelt one would stop the screen with a
+    KeyError."""
     fresh = _messages(update(tmp_path / "fresh.ts"))
     committed = _messages(TS_FILE)
     assert set(fresh) == set(committed), "the file is stale: python tools/update_translations.py"
     assert S19_CONTEXTS | S20_CONTEXTS <= {context for context, _ in committed}
-    for context, source in committed:
+    for (context, source), translation in committed.items():
         assert "{self." not in source and "{len(" not in source, (context, source)
         assert all(name.isidentifier() for name in PLACEHOLDER.findall(source)), (context, source)
+        named = set(PLACEHOLDER.findall(translation))
+        assert not translation or named == set(PLACEHOLDER.findall(source)), (context, source, translation)
     assert ("Page", "Home") in committed and ("LogsPage", "Filter") in committed and ("Role", "Admin") in committed
     assert ("SettingsPage", "Version {version}") in committed and ("NgDialog", "Label NG images") in committed
 
