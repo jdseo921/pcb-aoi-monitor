@@ -41,7 +41,7 @@ None. / 없음.
 
 ## Security / 보안 (draft)
 
-None. / 없음.
+- [#17] Installing the app checks the sha256 hash of every package file against the lock files, so pip refuses a file that differs from the one locked; PyTorch's CPU and CUDA builds have lock files of their own. / 앱을 설치할 때 모든 패키지 파일의 sha256 해시를 잠금 파일과 대조하므로, 잠금 시점과 다른 파일은 pip가 설치를 거부합니다. PyTorch의 CPU 빌드와 CUDA 빌드는 각각 별도의 잠금 파일을 사용합니다.
 
 ## Known issues / 알려진 문제 (draft)
 
@@ -49,6 +49,7 @@ None. / 없음.
 
 ## Upgrade notes / 업그레이드 안내 (draft)
 
+- [#17] The install commands changed: install `requirements-torch-cpu.lock` (or `requirements-torch-cuda.lock` on a GPU station) with `--require-hashes --no-deps`, then `requirements.lock` with `--require-hashes`, then run `pip check` (README, "Install"). / 설치 명령이 바뀌었습니다. 먼저 `requirements-torch-cpu.lock`(GPU 스테이션은 `requirements-torch-cuda.lock`)을 `--require-hashes --no-deps`로, 이어서 `requirements.lock`을 `--require-hashes`로 설치한 뒤 `pip check`를 실행하십시오(README의 "Install").
 - [REQ-INSP-010] Migration 0005 adds the view column to inspection records; records from before it show an empty view in Logs & Export and in the CSV, since their view was never recorded. / 마이그레이션 0005가 검사 기록에 뷰 열을 추가합니다. 그 이전 기록은 뷰가 기록된 적이 없으므로 로그 및 내보내기와 CSV에서 빈 뷰로 표시됩니다.
 - [REQ-INSP-012] Migration 0006 adds model_uuid, recipe_uuid and result_json to inspection records and the checks table; records from before it show no checks and no UUIDs, since their thresholds were never stored. A board model that had no recipe revision gets the default recipe stored as revision 1 at the first start, with an audit entry; a board model that already had revisions is unchanged, and no verdict changes. / 마이그레이션 0006이 검사 기록에 model_uuid, recipe_uuid, result_json을 추가하고 checks 테이블을 만듭니다. 그 이전 기록은 임계값이 저장된 적이 없으므로 검사 항목과 UUID가 비어 있습니다. 레시피 리비전이 없던 보드 모델은 첫 실행 시 기본 레시피가 리비전 1로 저장되며 감사 항목이 남습니다. 이미 리비전이 있는 보드 모델은 바뀌지 않고, 판정도 바뀌지 않습니다.
 - [REQ-INSP-012] Migration 0007 adds diff_map_path and ai_map_path to inspection records; records from before it name no maps. The new setting map_retention_days_ok (7 days) is read from settings.json; a value below 0 or of the wrong type is refused with AOI-SET-008. / 마이그레이션 0007이 검사 기록에 diff_map_path와 ai_map_path를 추가합니다. 그 이전 기록에는 맵이 없습니다. 새 설정 map_retention_days_ok(7일)는 settings.json에서 읽으며, 0보다 작거나 형식이 틀린 값은 AOI-SET-008로 거부됩니다.

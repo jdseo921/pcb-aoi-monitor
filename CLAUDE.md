@@ -81,7 +81,8 @@ The full list of v0.1 gaps against these rules is in the Engineering standard, u
 ```powershell
 python -m venv .venv
 .venv\Scripts\activate
-pip install -r requirements.txt -r requirements-dev.txt
+python -m pip install --require-hashes --no-deps -r requirements-torch-cpu.lock
+python -m pip install --require-hashes -r requirements-dev.lock
 python main.py
 ```
 

@@ -1,5 +1,6 @@
-# Development and CI tools, pinned. Not shipped with the app.
-#   pip install -r requirements-dev.lock   (runtime + dev, transitive pins; see tools/make_lock.py)
+# Development and CI tools, pinned. Not shipped with the app. Install from the hashed lock files, not from this file:
+#   python -m pip install --require-hashes --no-deps -r requirements-torch-cpu.lock
+#   python -m pip install --require-hashes -r requirements-dev.lock   (runtime + dev; see tools/make_lock.py)
 ruff==0.16.9        # lint and format (MIT)
 mypy==2.3.1         # type checks (MIT)
 pytest==9.1.1       # tests (MIT)
@@ -11,3 +12,4 @@ defusedxml==0.7.1   # safe XML parsing in tools/trace_matrix.py (PSF-2.0)
 pytest-qt==4.5.0    # drives the Qt pages in tests, offscreen in CI (MIT)
 pytest-cov==7.1.0   # line coverage report of aoi/core and aoi/data (MIT)
 scikit-image==0.26.0 # v0.1's SSIM, kept as the compare oracle in tests/ (BSD-3-Clause)
+colorama==0.4.6 ; sys_platform == "win32"  # pytest, bandit and build need it on Windows; locked with its marker (BSD-3-Clause)

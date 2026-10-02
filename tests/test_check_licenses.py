@@ -45,3 +45,22 @@ def test_license_gate_checks_only_shipped_packages(tmp_path: Path) -> None:
     ]
     res = _run(rows, "--packages", str(lock))
     assert res.returncode == 0, res.stdout + res.stderr
+
+
+def test_license_gate_reads_every_package_file(tmp_path: Path) -> None:
+    """CI names requirements.lock and the PyTorch lock: a package in the second file is checked too."""
+    lock = tmp_path / "requirements.lock"
+    lock.write_text("numpy==2.4.6 \\\n    --hash=sha256:00\n", encoding="utf-8")
+    torch_lock = tmp_path / "requirements-torch-cpu.lock"
+    torch_lock.write_text(
+        "--index-url https://example.invalid/cpu\ntorch==2.14.1+cpu \\\n    --hash=sha256:11\n", encoding="utf-8"
+    )
+    rows = [
+        {"Name": "numpy", "Version": "2.4.6", "License": "BSD-3-Clause"},
+        {"Name": "torch", "Version": "2.14.1+cpu", "License": "GPL-3.0-only"},
+    ]
+    res = _run(rows, "--packages", str(lock))
+    assert res.returncode == 0, res.stdout + res.stderr
+    res = _run(rows, "--packages", str(lock), str(torch_lock))
+    assert res.returncode == 1
+    assert "torch 2.14.1+cpu: GPL-3.0-only" in res.stdout
