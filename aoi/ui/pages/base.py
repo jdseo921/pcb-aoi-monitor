@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Sequence
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, TypeVar
 
 from PySide6.QtCore import QCoreApplication, Qt
-from PySide6.QtGui import QColor, QFont
+from PySide6.QtGui import QAction, QColor, QFont, QKeySequence
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QHBoxLayout,
@@ -141,6 +141,17 @@ class Page(QWidget):
         """Show an error the way the standard asks: its code, what happened and what to do (REQ-SET-019)."""
         show_error(self, self.ctx.report_error(exc, self.title))
 
+    def action(self, text: str, key: str | QKeySequence.StandardKey, slot: Callable[[], object]) -> QAction:
+        """An action a button and a key share (REQ-INSP-005): `action_button()` makes the button, and the key works
+        wherever the focus is on this page, while this page is the one shown (a window shortcut owned by the page
+        widget is active only while the widget is visible). Enabling or disabling the action does both at once."""
+        a = QAction(text, self)
+        a.setShortcut(QKeySequence(key))
+        a.setShortcutContext(Qt.ShortcutContext.WindowShortcut)
+        a.triggered.connect(slot)
+        self.addAction(a)
+        return a
+
     def run_in_background(
         self,
         fn: Callable[..., Any],
@@ -180,7 +191,10 @@ class Page(QWidget):
         return start(w, self.ctx.jobs)
 
 
-def size_class(w: QWidget, cls: str) -> QWidget:
+W = TypeVar("W", bound=QWidget)
+
+
+def size_class(w: W, cls: str) -> W:
     """Mark a control with a sketch size class, "T" (operator target, 48 px) or "T+" (run control, 56 px), which the
     stylesheet sizes (`[sizeClass="T+"]`). `setMinimumHeight()` is undone when the stylesheet is applied, since
     QStyleSheetStyle sets the minimum from its own min-height rule: that is how the run controls shipped at 42 px."""
@@ -198,6 +212,20 @@ def button(text: str, kind: str = "", slot: Callable[..., object] | None = None)
         b.setAutoDefault(False)  # Enter in a dialog never fires a red button
     if slot:
         b.clicked.connect(slot)
+    return b
+
+
+def action_button(action: QAction, kind: str = "", show_key: bool = True) -> QPushButton:
+    """A theme button that triggers `action`, enabled exactly when the action is, so that button and key do the same
+    (REQ-INSP-005). The key is in the label ("Next Board  F8", the sketch's run controls) or, with `show_key` off, in
+    the tooltip. `kind` as for `button()`."""
+    key = action.shortcut().toString(QKeySequence.SequenceFormat.NativeText)
+    label = QCoreApplication.translate("Page", "{action}  {key}").format(action=action.text(), key=key)
+    b = button(label if show_key else action.text(), kind, action.trigger)
+    if not show_key:
+        b.setToolTip(key)
+    b.setEnabled(action.isEnabled())
+    action.enabledChanged.connect(b.setEnabled)
     return b
 
 

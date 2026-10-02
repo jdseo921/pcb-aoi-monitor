@@ -38,7 +38,7 @@ TEXT_SETTERS = {  # Qt methods whose string arguments appear on screen, and this
     "setSpecialValueText", "setPrefix", "setSuffix", "addItem", "addItems", "insertItem", "addTab", "addRow",
     "setHtml", "setPlainText", "appendPlainText", "setHorizontalHeaderLabels", "setVerticalHeaderLabels",
     "showMessage", "setLabelText", "setInformativeText", "setDetailedText", "setTabText", "setItemText",
-    "show_state", "status",
+    "show_state", "status", "action",
 }  # fmt: skip
 OWNED_SETTERS = {  # static methods that show text when called on these classes (QMessageBox.warning, not log.warning)
     "QMessageBox": {"information", "warning", "critical", "question", "about"},
@@ -49,7 +49,7 @@ TEXT_CONSTRUCTORS = {
     "QLabel", "QPushButton", "QCheckBox", "QRadioButton", "QGroupBox", "QAction", "QMenu", "QListWidgetItem",
     "QTableWidgetItem", "QMessageBox", "button", "make_table", "BusyOverlay", "ImageView", "MetricTile", "EmptyState",
 }  # fmt: skip
-TEXT_POSITIONS = {"button": 1}  # button(text, kind, slot): only the first argument is text
+TEXT_POSITIONS = {"button": 1, "action": 1}  # button(text, kind, slot), action(text, key, slot): text first
 SKIP_KEYWORDS = {"kind", "slot", "parent", "over"}
 ALLOWED_LITERALS = {  # (file, literal): why it is not translated; a stale entry fails the test
     ("aoi/ui/pages/base.py", "Page"): "placeholder title of the base class; every page overrides it",
@@ -274,7 +274,9 @@ def test_req_set_005_the_scan_catches_a_literal(tmp_path: Path) -> None:
         '        self.label.setText(f"<b>{self.n}</b>")\n'
         '        self.label.setText(self.tr("Fine {n}").format(n=1))\n'
         '        QFileDialog.getSaveFileName(self, self.tr("Save"), "board_0.png", self.tr("PNG (*.png)"))\n'
-        '        bar.addWidget(button(self.tr("Go"), "primary"))\n',
+        '        bar.addWidget(button(self.tr("Go"), "primary"))\n'
+        '        self.action(self.tr("Go"), "F5", self.go)\n'  # the key is not text
+        '        self.action("Run", "F6", self.go)\n',
         encoding="utf-8",
     )
     assert {text for _, text in _scan(sample)} == {
@@ -287,4 +289,5 @@ def test_req_set_005_the_scan_catches_a_literal(tmp_path: Path) -> None:
         "Annotated text",
         "Title",
         "Body",
+        "Run",
     }
