@@ -237,6 +237,14 @@ before filling it in, so the engine stays free of Qt and a translation can put t
 Verdict: **NG** if any check is NG; else **WARN** if any check is within the warning band (default 80 % of a
 threshold) or a non-minor defect region exists; else **OK**. Colours follow GUI §4.1: green OK, red NG, yellow WARN.
 
+A result is judged again with other thresholds without aligning, comparing or running the AI model (REQ-CMP-005, the
+engine since S28a): `Inspector.judge` grades the evidence a result holds, a board's just inspected or a stored one's,
+and `inspector.re_grade` finds the difference regions again on the result's difference map and reads the AI defects and
+the ROI values from its AI map, with the AI score and the AI model's calibration given as `AiEvidence`. On the evidence
+a board was inspected with, the thresholds it was judged by give back its checks, defects and verdict, and other
+thresholds what inspecting it with them gives. A check the recipe turns on that did not run on the board is not judged,
+with a note saying so. `tests/test_re_evaluate.py` checks this.
+
 ---
 
 ## 5. Navigation

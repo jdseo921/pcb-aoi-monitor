@@ -385,7 +385,7 @@
 <context>
     <name>Explain</name>
     <message>
-        <location filename="../core/explain.py" line="+21"/>
+        <location filename="../core/explain.py" line="+31"/>
         <source>Similarity to the Golden board is {value}, below its threshold of {threshold}.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -455,7 +455,17 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-34"/>
+        <location line="+4"/>
+        <source>The board was not compared with the Golden board when it was inspected, so the comparison is not judged again here: inspect the board again with the Golden board comparison in use.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>The AI check did not run when the board was inspected, so it is not judged again here: inspect the board again with the AI model in use.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="-43"/>
         <source>The AI score is {value}, at or above its threshold of {threshold}.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -470,7 +480,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+21"/>
+        <location line="+31"/>
         <source>Note: {note}</source>
         <translation type="unfinished"></translation>
     </message>
