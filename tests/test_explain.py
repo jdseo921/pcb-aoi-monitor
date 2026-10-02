@@ -85,9 +85,10 @@ def _sentences(res: InspectionResult) -> list[str]:
 
 
 def test_req_cmp_004_sentence_per_failing_check(tmp_path: Path) -> None:
-    """Every kind of NG and WARN check gets its own sentence, word for word, naming it with its value and threshold
-    and their unit, and passing checks get none; NG sentences come before WARN ones; then, over the 40 boards of the
-    regression set as the engine judged them, exactly one sentence per failing check, each with that check's numbers."""
+    """Every kind of NG and WARN check gets its own sentence, word for word, naming it with its value and threshold and
+    their unit, and passing checks get none; NG sentences come before WARN ones; then, over the 40 boards of the
+    synthetic regression set as the engine judged them, exactly one sentence per failing check, each with that check's
+    numbers."""
     passing = _check("SSIM similarity", 0.95, 0.8, "< thr → NG", OK, "Compare")
     for case, sentence in CASES:
         assert _sentences(InspectionResult(case[4], 0.0, checks=[passing, _check(*case)])) == [sentence]
