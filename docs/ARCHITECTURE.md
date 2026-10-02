@@ -111,8 +111,10 @@ the page, so the key works wherever the focus is on the page and only while the 
 `action_button` whose label carries the key ("Next Board  F8") and whose enabled state follows the action's, so the
 button and the key never disagree (REQ-INSP-005). The Inspection page answers within the action itself: the banner is
 repainted grey with "Inspecting…" before the pool thread starts, and the verdict is painted before the image and the
-defect table are built from the result (REQ-INSP-002); the first board's engine is built on the pool thread and one
-worker runs at a time per page (#120). `tests/test_run_controls.py` measures both budgets.
+defect table are built from the result (REQ-INSP-002); the first board's engine is built on the pool thread and kept
+for the rest of the queue unless the page dropped it meanwhile (a board model change or a revisit raises a generation
+counter, so a stale engine is never kept), and one worker runs at a time per page (#120).
+`tests/test_run_controls.py` measures both budgets.
 
 Colours, point sizes and size classes are tokens in `aoi/ui/theme.py` (REQ-SET-004, since S18): the stylesheet is
 built from them with `theme.stylesheet()`, so another theme is a set of overrides (REQ-SET-008); a page never writes a
