@@ -138,6 +138,46 @@ jobs:
       - name: Regenerate the four lock files from their inputs and compare (prints any difference)
         run: python tools/make_lock.py --check
 
+  perf:
+    name: Performance (base vs head)
+    # Engineering standard, "Measured in CI": a slowdown over 10 % fails the build. A runner is another machine every
+    # time, so the base commit is timed beside the head (for a pull request, the merge commit) on this one runner.
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Check out the base commit beside the head
+        if: env.BASE_SHA != '0000000000000000000000000000000000000000'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.BASE_SHA }}
+          path: .perf-base
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: requirements*.lock
+      - name: Install dependencies
+        run: |
+          python -m pip install --require-hashes --no-deps -r requirements-torch-cpu.lock
+          python -m pip install --require-hashes -r requirements-dev.lock
+          python -m pip check
+      - name: Time the base and the head; fails when the head is over 10 % slower (exit 1) or they cannot be compared
+        run: |
+          if [ "$BASE_SHA" = "0000000000000000000000000000000000000000" ]; then
+            echo "perf: the push created the branch, so there is no base commit to compare with"
+            exit 0
+          fi
+          python tools/perf_compare.py --base .perf-base --head . --out perf-compare.json
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        if: always()
+        with:
+          name: perf-compare
+          path: perf-compare.json
+          if-no-files-found: ignore
+
   security:
     name: Security scans
     runs-on: ubuntu-latest
