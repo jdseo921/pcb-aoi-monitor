@@ -15,6 +15,12 @@ from ..widgets.empty_state import EmptyState
 from ..widgets.image_view import ImageView
 from .base import QT_TRANSLATE_NOOP, Page, button, cell_text, fill_table, make_table, view_text
 
+# The columns of the checks file beside the records file (REQ-INSP-012), the header even when no record has checks.
+CHECK_COLUMNS = [
+    "inspection_id", "inspection_uuid", "time", "board_model", "view", "model_version", "model_uuid", "recipe_rev",
+    "recipe_uuid", "no", "region", "metric", "source", "value", "threshold", "rule", "result",
+]  # fmt: skip
+
 if TYPE_CHECKING:
     from ..main_window import MainWindow
 
@@ -149,16 +155,27 @@ class LogsPage(Page):
         return QMessageBox.question(self, self.tr("Confirm export"), question) == QMessageBox.StandardButton.Yes
 
     def export_csv(self) -> None:
-        if not self.rows or not self._confirm(
-            self.tr("Export CSV for {count} record(s)?").format(count=len(self.rows))
-        ):
+        question = self.tr(
+            "Export CSV for {count} record(s)? Two files are written: the records, and a second file ending in"
+            " _checks.csv with one row per check."
+        )
+        if not self.rows or not self._confirm(question.format(count=len(self.rows))):
             return
         f, _ = QFileDialog.getSaveFileName(
             self, self.tr("Export CSV"), str(self.ctx.settings.exports_dir / "inspections.csv"), self.tr("CSV (*.csv)")
         )
         if not f:
             return
-        out = []
+        checks_file = Path(f).with_name(f"{Path(f).stem}_checks.csv")
+        if checks_file.exists() and not self._confirm(
+            self.tr("{file} exists. Replace it?").format(file=checks_file.name)
+        ):
+            return
+        # Two files: the records, and beside them one row per check with the evidence that decided each verdict
+        # (REQ-INSP-012). The records keep their columns in order, so a reader built on them still works.
+        checks = self.ctx.checks_for_many([r["id"] for r in self.rows])
+        out: list[dict[str, Any]] = []
+        check_rows: list[dict[str, Any]] = []
         for r in self.rows:
             ds = self.ctx.defects_for(r["id"])
             out.append(
@@ -176,10 +193,30 @@ class LogsPage(Page):
                     "operator": r["operator"],
                     "image": r["image_path"],
                     "overlay": r["overlay_path"],
+                    "uuid": r["uuid"],
+                    "model_uuid": r["model_uuid"],
+                    "recipe_uuid": r["recipe_uuid"],
                 }
             )
+            record = {k: r[k] for k in ("time", "board_model", "view", "model_version", "model_uuid", "recipe_rev")}
+            record["recipe_uuid"] = r["recipe_uuid"]
+            for c in checks[r["id"]]:
+                evidence = {
+                    k: c[k] for k in ("no", "region", "metric", "source", "value", "threshold", "rule", "result")
+                }
+                check_rows.append({"inspection_id": r["id"], "inspection_uuid": r["uuid"], **record, **evidence})
         self.ctx.export_csv(f, out)
-        self.shell.status(self.tr("Exported {count} rows to {file}").format(count=len(out), file=f))
+        self.ctx.export_csv(checks_file, check_rows, what="checks", fieldnames=CHECK_COLUMNS)
+        status = self.tr("Exported {count} records and {checks} check rows to {folder}: {file}, {checks_file}")
+        self.shell.status(
+            status.format(
+                count=len(out),
+                checks=len(check_rows),
+                folder=Path(f).parent,
+                file=Path(f).name,
+                checks_file=checks_file.name,
+            )
+        )
 
     def export_overlays(self) -> None:
         question = self.tr("Export overlay images for {count} record(s)?").format(count=len(self.rows))

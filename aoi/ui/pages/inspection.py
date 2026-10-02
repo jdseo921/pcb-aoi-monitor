@@ -8,7 +8,6 @@ from typing import TYPE_CHECKING
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QKeySequence
 from PySide6.QtWidgets import (
-    QCheckBox,
     QComboBox,
     QFileDialog,
     QGridLayout,
@@ -22,8 +21,9 @@ from PySide6.QtWidgets import (
 
 from ... import defects as taxonomy
 from ...core.imaging import IMAGE_EXTS, list_images, save_image
-from ...core.inspector import InspectionResult, draw_overlay
+from ...core.inspector import NG, InspectionResult, draw_overlay
 from ...core.services import AppContext
+from ...errors import AoiError
 from ...hal import VIEWS
 from ...times import to_local
 from .. import theme
@@ -66,7 +66,6 @@ class InspectionPage(Page):
         self.running = False
         self.last: InspectionResult | None = None
         self.last_path: Path | None = None
-        self.last_inspector: Inspector | None = None  # produced `last`; a saved result records its model version
         self.inspector: Inspector | None = None  # built on the first board for the board model, recipe and reference
         self._engine_gen = 0  # counts the times the engine was dropped, so a board's engine from before is not kept
         # The board being inspected, if one is: Start and Next Board wait for it (#120).
@@ -87,9 +86,6 @@ class InspectionPage(Page):
         for view in VIEWS:
             self.view_combo.addItem(view_text(view), view)  # the English name is the key the engine stores
         bar.addWidget(size_class(self.view_combo, "T"))
-        self.autosave = QCheckBox(self.tr("Auto-save each board"))
-        self.autosave.setChecked(True)
-        bar.addWidget(self.autosave)
         bar.addStretch(1)
         self.queue_label = QLabel(self.tr("No images loaded"))
         self.queue_label.setObjectName("muted")
@@ -135,7 +131,7 @@ class InspectionPage(Page):
         self.act_start = self.action(self.tr("▶  Start"), "F5", self.start_run)
         self.act_stop = self.action(self.tr("■  Stop"), "F6", self.stop_run)
         self.act_next = self.action(self.tr("Next Board"), "F8", self.next_board)
-        self.act_save = self.action(self.tr("Save Result"), "F9", self.save_result)
+        self.act_save = self.action(self.tr("Save Image…"), "F9", self.save_annotated_image)
         ctl = QGridLayout()
         self.btn_start = action_button(self.act_start, "start")
         self.btn_stop = action_button(self.act_stop, "stop")
@@ -283,7 +279,7 @@ class InspectionPage(Page):
 
     def _on_result(self, out: tuple[Path, InspectionResult, Inspector]) -> None:
         path, res, insp = out
-        self.last, self.last_path, self.last_inspector = res, path, insp
+        self.last, self.last_path = res, path
         self._show_verdict(res)  # painted before the image and the table are built: the verdict first (REQ-INSP-002)
         self.empty.hide()
         self.view.set_image(res.image, keep_view=self.queue_pos > 0)
@@ -299,24 +295,38 @@ class InspectionPage(Page):
         self.shell.status(summary)  # in place of "Inspecting …"
         fill_table(self.table, [[d.no, d.type, d.score, view_text(d.side), d.x, d.y] for d in res.defects])
         self.shell.last_inspected = (str(path), res)
-        if self.autosave.isChecked():
-            self.ctx.log_result(insp.recipe.board_model, str(path), res, insp)  # an NG result stores an alarm
+        # Every result is saved with its evidence before the next board starts (REQ-INSP-008); an NG stores an alarm.
+        try:
+            self.ctx.log_result(insp.recipe.board_model, str(path), res, insp)
+        except Exception as e:
+            self._not_saved(path, e)
+            return
+        if res.verdict == NG:
             self._refresh_alarms()
         if self.running:
             self.next_board()
 
-    def save_result(self) -> None:
-        res, path, insp = self.last, self.last_path, self.last_inspector
-        if res is None or path is None or insp is None:
+    def _not_saved(self, path: Path, e: BaseException) -> None:
+        """The result was shown but could not be saved (the disk is full, the workspace cannot be written, a database
+        error): the run stops before the next board, the coded dialog says what happened and what to do, and the
+        verdict stays on screen (REQ-INSP-008, REQ-SET-019); Next Board carries on with the queue."""
+        self.running = False
+        self._update_buttons()
+        err = AoiError("AOI-INSP-008", detail=f"{type(e).__name__}: {e}", file=path.name)
+        err.__cause__ = e  # the log keeps the cause with its trace
+        self.error(err)
+        self._refresh_alarms()
+
+    def save_annotated_image(self) -> None:
+        """F9: write the last board's image with its defect boxes to a picture file; the result itself is saved."""
+        res, path = self.last, self.last_path
+        if res is None or path is None:
             return
         f, _ = QFileDialog.getSaveFileName(
             self, self.tr("Save annotated image"), f"{path.stem}_{res.verdict}.png", self.tr("PNG (*.png)")
         )
         if f:
             save_image(f, draw_overlay(res))
-            if not self.autosave.isChecked():
-                self.ctx.log_result(insp.recipe.board_model, str(path), res, insp)
-                self._refresh_alarms()
             self.shell.status(self.tr("Saved {file}").format(file=Path(f).name))
 
     def open_compare(self) -> None:
@@ -344,7 +354,7 @@ class InspectionPage(Page):
 
     def _update_buttons(self) -> None:
         """Enable the actions, and with them the buttons and the keys, for the state: Start and Next Board wait while a
-        board is being inspected (#120), Stop acts while a run is on, Save Result once there is a result."""
+        board is being inspected (#120), Stop acts while a run is on, Save Image… once there is a result."""
         has, busy = bool(self.queue), self.worker is not None
         self.act_start.setEnabled(has and not self.running and not busy)
         self.act_stop.setEnabled(self.running)

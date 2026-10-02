@@ -15,7 +15,9 @@ from aoi import times
 from aoi.config import Settings
 from aoi.core.recipe import Recipe
 from aoi.core.services import AppContext
+from aoi.data import db as dbmod
 from aoi.data import migrate as mg
+from aoi.data.db import Database
 from tests.conftest import TrainedModel, engineer
 
 UUID4 = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$")
@@ -103,3 +105,17 @@ def test_req_set_001_moved_workspace_opens_everything(tmp_path: Path, tiny_model
     assert ctx.load_model("TINY") is not None
     assert ctx.inspect_file("TINY", str(opened[0])).verdict in ("OK", "WARN", "NG")
     assert str(old_root) not in json.dumps(ctx.db.query("SELECT * FROM inspections"))
+
+
+def test_req_insp_012_checks_of_many_records_come_in_chunks(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """`checks_for_many` reads the checks of an export in IN queries of IN_CHUNK ids: every record's checks come back,
+    in order, however many chunks it takes; a record without checks maps to [] and a repeated id is read once."""
+    db = Database(tmp_path / "aoi.sqlite")
+    monkeypatch.setattr(dbmod, "IN_CHUNK", 2)
+    check = {"name": "a", "value": 1.0, "threshold": 2.0, "rule": "r", "verdict": "OK", "source": "AI", "explain": ""}
+    check["region"] = "Board"
+    ids = [db.add_inspection({"result": "OK"}, [], [check, {**check, "name": f"b{i}"}]) for i in range(5)]
+    ids.append(db.add_inspection({"result": "OK"}, [], None))
+    got = db.checks_for_many([*ids, ids[0]])
+    assert got == {i: db.checks_for(i) for i in ids} and got[ids[-1]] == []
+    assert [c["metric"] for c in got[ids[2]]] == ["a", "b2"]

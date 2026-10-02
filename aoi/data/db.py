@@ -22,6 +22,8 @@ from .errors import WorkspaceError
 from .migrate import migrate
 from .paths import resolve, to_stored
 
+IN_CHUNK = 500  # ids per IN (…) query, under SQLite's 999 bound variables on older builds
+
 
 def new_uuid() -> str:
     return str(uuid.uuid4())
@@ -285,6 +287,22 @@ class Database:
             " WHERE inspection_id=? ORDER BY no",
             (inspection_id,),
         )
+
+    def checks_for_many(self, inspection_ids: Iterable[int]) -> dict[int, list[dict[str, Any]]]:
+        """The checks of many inspections in one pass, {inspection_id: [checks in order]}, for an export; an id without
+        checks (a record from before migration 0006) maps to []."""
+        ids = list(dict.fromkeys(inspection_ids))  # each id once, in order
+        out: dict[int, list[dict[str, Any]]] = {i: [] for i in ids}
+        for start in range(0, len(ids), IN_CHUNK):
+            chunk = ids[start : start + IN_CHUNK]
+            rows = self.query(
+                "SELECT inspection_id, no, region, metric, source, value, threshold, rule, result, explain FROM checks"
+                f" WHERE inspection_id IN ({','.join('?' * len(chunk))}) ORDER BY inspection_id, no",
+                chunk,
+            )
+            for r in rows:
+                out[r.pop("inspection_id")].append(r)
+        return out
 
     def inspection_result(self, inspection_id: int) -> dict[str, Any] | None:
         """The whole stored result of one inspection, as `InspectionResult.to_dict` wrote it; None for a record from

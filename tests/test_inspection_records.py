@@ -17,28 +17,21 @@ from tests.test_req_done_in_v01 import BOARD, _inspect_one, _window
 
 
 def test_req_insp_008_a_saved_result_names_the_model_version_and_recipe_revision_that_produced_it(
-    qtbot: QtBot, trained_ctx: AppContext, ng_board: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    qtbot: QtBot, trained_ctx: AppContext, ng_board: Path
 ) -> None:
-    """Save Result after the page was left and reopened: reopening drops the page's cached engine, and before S22b the
-    record was then written without the model version and recipe revision, under whatever board model was current."""
+    """The record written as the result arrives names the engine that produced it, by version and by UUID: the board
+    model's active model and its latest recipe revision. (Since S25b every result is saved as it arrives; before, Save
+    Result after the page was reopened wrote the record without the model version and recipe revision.)"""
     win = _window(qtbot, trained_ctx, "Operator")
-    page = win.pages["Inspection"]
-    page.autosave.setChecked(False)
-    _inspect_one(qtbot, win, ng_board)
-    assert trained_ctx.inspections(board_model=BOARD) == [], "autosave is off, so nothing is saved yet"
-    win.navigate("Home")
-    win.navigate("Inspection")
-    assert page.inspector is None and page.last is not None, "reopening the page drops its cached engine"
-    out = tmp_path / "saved.png"
-    monkeypatch.setattr(QFileDialog, "getSaveFileName", staticmethod(lambda *a, **k: (str(out), "PNG (*.png)")))
-    page.save_result()
-    assert out.exists()
+    page = _inspect_one(qtbot, win, ng_board)
     (row,) = trained_ctx.inspections(board_model=BOARD)
     active = trained_ctx.active_model(BOARD)
     assert active is not None
     rev, _ = trained_ctx.recipe(BOARD)
+    (latest,) = [h for h in trained_ctx.recipe_history(BOARD) if h["revision"] == rev]
     assert (row["board_model"], row["model_version"], row["recipe_rev"]) == (BOARD, active["version"], rev)
-    assert row["result"] == page.last.verdict
+    assert (row["model_uuid"], row["recipe_uuid"]) == (active["uuid"], latest["uuid"])
+    assert page.last is not None and row["result"] == page.last.verdict
 
 
 def test_req_insp_010_view_stored_and_exported(

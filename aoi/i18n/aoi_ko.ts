@@ -471,13 +471,13 @@
 <context>
     <name>InspectionPage</name>
     <message>
-        <location filename="../ui/pages/inspection.py" line="+77"/>
-        <location line="+84"/>
+        <location filename="../ui/pages/inspection.py" line="+76"/>
+        <location line="+81"/>
         <source>Load Images…</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-83"/>
+        <location line="-80"/>
         <source>Load Folder…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -492,12 +492,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+5"/>
-        <source>Auto-save each board</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+4"/>
+        <location line="+6"/>
         <location line="+67"/>
         <source>No images loaded</source>
         <translation type="unfinished"></translation>
@@ -555,7 +550,7 @@
     </message>
     <message>
         <location line="+1"/>
-        <source>Save Result</source>
+        <source>Save Image…</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -639,7 +634,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+18"/>
+        <location line="+35"/>
         <source>Save annotated image</source>
         <translation type="unfinished"></translation>
     </message>
@@ -649,7 +644,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+7"/>
+        <location line="+4"/>
         <source>Saved {file}</source>
         <translation type="unfinished"></translation>
     </message>
@@ -657,7 +652,7 @@
 <context>
     <name>LogsPage</name>
     <message>
-        <location filename="../ui/pages/logs.py" line="+36"/>
+        <location filename="../ui/pages/logs.py" line="+42"/>
         <source>Include archived</source>
         <translation type="unfinished"></translation>
     </message>
@@ -730,12 +725,12 @@
     </message>
     <message>
         <location line="+9"/>
-        <location line="+79"/>
+        <location line="+81"/>
         <source>Export CSV</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-78"/>
+        <location line="-80"/>
         <source>Export Image Overlays</source>
         <translation type="unfinished"></translation>
     </message>
@@ -786,21 +781,26 @@
     </message>
     <message>
         <location line="+4"/>
-        <source>Export CSV for {count} record(s)?</source>
+        <source>Export CSV for {count} record(s)? Two files are written: the records, and a second file ending in _checks.csv with one row per check.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+4"/>
+        <location line="+12"/>
+        <source>{file} exists. Replace it?</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+39"/>
+        <source>Exported {count} records and {checks} check rows to {folder}: {file}, {checks_file}</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="-45"/>
         <source>CSV (*.csv)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+25"/>
-        <source>Exported {count} rows to {file}</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+3"/>
+        <location line="+57"/>
         <source>Export overlay images for {count} record(s)?</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1155,7 +1155,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/logs.py" line="-186"/>
+        <location filename="../ui/pages/logs.py" line="-217"/>
         <source>Logs &amp; Export</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1170,7 +1170,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/inspection.py" line="-261"/>
+        <location filename="../ui/pages/inspection.py" line="-271"/>
         <source>Inspection</source>
         <translation type="unfinished"></translation>
     </message>
