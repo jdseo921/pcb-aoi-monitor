@@ -91,6 +91,13 @@ through `AppContext.load_image`, which applies them; `FolderCamera` takes them w
 (Stage 2); `tests/test_layers.py` fails a page that imports `load_image` or calls it on anything but the context; and
 `import_samples` still copies sample files without a check (threat model, page 2).
 
+The view an inspection was taken from (REQ-INSP-010, since S23b) travels with its result: `InspectionResult.view` is set
+by the engine from the view it inspected under, and every defect's side is taken from it, so a change of the Inspection
+page's View box during a run cannot relabel a board already inspected or its defects. It is stored in `inspections.view`
+(migration 0005; NULL for rows from before it, never guessed) and shows in the Logs & Export table's View column, after
+Operator as the S02 sketch places it (`docs/sketches/logs-history.md`, PR #79), and in its CSV export after
+`board_model`. The headless `AppContext.inspect_file` takes the view as `side` and records Top by default.
+
 Slow work never runs on the UI thread (REQ-SET-021, since S17): a page wraps it in a `Worker` (`aoi/ui/workers.py`),
 which runs it as a `Job` on the pool `AppContext.jobs` owns (`aoi/core/jobs.py`: progress, cancel and finished callbacks,
 no Qt, so the same jobs run headless) and turns the callbacks into signals; the slots run on the UI thread, the only
@@ -273,7 +280,7 @@ User switching is a local picker for the PoC; Stage 4 replaces it with MES authe
 | `samples` | board_model, path, label OK/NG, defect_type (DCT), side |
 | `models` | board_model, version, path (.pt), metrics JSON (thresholds, scores, timing), active |
 | `recipes` | board_model, revision, body JSON, user, created_at |
-| `inspections` | time, board_model, model_version, recipe_rev, image/overlay paths, result, score, metrics JSON, operator, archived |
+| `inspections` | time, board_model, model_version, recipe_rev, image/overlay paths, view (Top, Side or Bottom; NULL for rows from before migration 0005), result, score, metrics JSON, operator, archived |
 | `defects` | inspection_id, no, type, score, side, x, y, w, h |
 | `test_runs` | time, board_model, model_version, folder, metrics JSON, results JSON |
 | `alarms` | time, level NG/WARN/ERROR, code AOI-<AREA>-<NNN>, message; the newest 1,000 are shown and survive a restart |

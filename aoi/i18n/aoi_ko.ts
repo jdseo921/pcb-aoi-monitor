@@ -675,6 +675,11 @@
     </message>
     <message>
         <location line="+2"/>
+        <source>View</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
         <source>Image</source>
         <translation type="unfinished"></translation>
     </message>
@@ -685,12 +690,12 @@
     </message>
     <message>
         <location line="+9"/>
-        <location line="+78"/>
+        <location line="+79"/>
         <source>Export CSV</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-77"/>
+        <location line="-78"/>
         <source>Export Image Overlays</source>
         <translation type="unfinished"></translation>
     </message>
@@ -700,7 +705,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+34"/>
+        <location line="+35"/>
         <source>{count} inspections · {ng} NG · yield {rate:.1%}</source>
         <translation type="unfinished"></translation>
     </message>
@@ -750,7 +755,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+24"/>
+        <location line="+25"/>
         <source>Exported {count} rows to {file}</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1105,7 +1110,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/logs.py" line="-183"/>
+        <location filename="../ui/pages/logs.py" line="-186"/>
         <source>Logs &amp; Export</source>
         <translation type="unfinished"></translation>
     </message>

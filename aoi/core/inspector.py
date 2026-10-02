@@ -73,6 +73,7 @@ class InspectionResult:
     compare: CompareResult | None = None
     elapsed_ms: float = 0.0
     notes: list[str] = field(default_factory=list)
+    view: str = "Top"  # the camera view the board was inspected under, kept with the result (REQ-INSP-010)
 
     def metrics_dict(self) -> dict[str, Any]:
         d = {c.name: c.value for c in self.checks}
@@ -119,7 +120,7 @@ class Inspector:
     def inspect(self, img: np.ndarray) -> InspectionResult:
         t0 = time.perf_counter()
         r = self.recipe
-        res = InspectionResult(verdict=OK, score=0.0, reference=self.reference)
+        res = InspectionResult(verdict=OK, score=0.0, reference=self.reference, view=self.side)
         regions: list[Region] = []
         work = img
 
@@ -254,7 +255,7 @@ class Inspector:
                     break
             score = reg.peak if reg.source == "ai" else reg.peak / max(1, self.recipe.diff_threshold)
             sev = taxonomy.BY_NAME.get(dtype, taxonomy.ANOMALY).severity
-            out.append(Defect(i, dtype, float(score), self.side, reg.x, reg.y, reg.w, reg.h, reg.source, sev))
+            out.append(Defect(i, dtype, float(score), res.view, reg.x, reg.y, reg.w, reg.h, reg.source, sev))
         return out
 
 
