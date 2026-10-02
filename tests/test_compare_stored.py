@@ -1,6 +1,7 @@
 """REQ-CMP-003 and REQ-INSP-009 (S26): Compare shows a stored result as it was decided and never inspects the board
-again: its decision table equals the stored checks row for row for every board of the regression set, one click from
-Inspection opens it within 300 ms at 5 MP with the failing rows highlighted, and a note names the versions used."""
+again: its decision table equals the stored checks row for row for every board of the synthetic regression set, one
+click from Inspection opens it within 300 ms at 5 MP with the failing rows highlighted, and a note names the versions
+used."""
 
 from __future__ import annotations
 
@@ -66,9 +67,9 @@ def _expected(page: ComparePage, checks: list[dict[str, object]]) -> list[tuple[
 def test_req_cmp_003_table_equals_stored_checks(
     qtbot: QtBot, trained_ctx: AppContext, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Every board of the regression set, inspected and stored through the engine, then opened on Compare from its
-    record: the verdict and the decision table are the stored ones, row for row, the failing rows highlighted and the
-    inspection time last; the engine is not run again."""
+    """Every board of the synthetic regression set, inspected and stored through the engine, then opened on Compare from
+    its record: the verdict and the decision table are the stored ones, row for row, the failing rows highlighted and
+    the inspection time last; the engine is not run again."""
     ctx, out, ids = trained_ctx, tmp_path / "regression", []
     for board in rs.generate(out):
         ctx.inspect_file(BOARD, str(out / board.name))

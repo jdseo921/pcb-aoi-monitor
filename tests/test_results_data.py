@@ -73,9 +73,10 @@ def test_results_round_trip_json(tiny_model: TrainedModel, ng_board: Path, synth
 def test_req_insp_012_all_five_present_in_db(
     trained_ctx: AppContext, tiny_model: TrainedModel, regression_boards: list[Path]
 ) -> None:
-    """Every result of the regression set, saved through the service the Inspection page calls, names in the database
-    the region, metric and threshold of every check and the AI model version and recipe revision that decided it, by
-    version and by UUID; the checks table and the stored result agree row for row. The CSV part follows in S25b."""
+    """Every result of the synthetic regression set, saved through the service the Inspection page calls, names in the
+    database the region, metric and threshold of every check and the AI model version and recipe revision that decided
+    it, by version and by UUID; the checks table and the stored result agree row for row. The CSV part follows in
+    S25b."""
     ctx = trained_ctx
     recipe = ctx.recipe(BOARD)[1]
     recipe.rois.append(ROI("R1", "Presence", 110, 110, 110, 110))  # one ROI check, so a region other than the board

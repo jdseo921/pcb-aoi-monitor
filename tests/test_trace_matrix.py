@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import os
 import re
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -30,13 +32,27 @@ JUNIT = """<?xml version="1.0" encoding="utf-8"?>
 </testsuite></testsuites>
 """
 
-SUBJECTS = [
-    "[REQ-INSP-002] feat: verdict banner with a shape (S18)",
-    "[#5] test: fixtures (S05a)",
-    "[REQ-INSP-002] feat: verdict banner with a shape (S18)",
-    "[REQ-ZZZ-999] fix: cites an unknown row",
-    "docs: no citation",
-]
+# `git log --first-parent --format=%H%x1f%s%x1f%b%x1e` on main: a commit not merged through a pull request, a merge
+# commit (title in the body), a squash commit, an issue-only title, a title citing an unknown row, a commit without one
+LOG = (
+    "a" * 40
+    + "\x1f[REQ-INSP-002] feat: a commit pushed before its pull request merged\x1f\x1e\n"
+    + "b" * 40
+    + "\x1fMerge pull request #98 from jdseo921/feat/REQ-INSP-002-banner\x1f"
+    + "[REQ-INSP-002] feat: verdict banner with a shape (S18)\n\x1e\n"
+    + "c" * 40
+    + "\x1f[REQ-INSP-002] [REQ-CMP-001] fix: banner and pan (#99)\x1f\x1e\n"
+    + "d" * 40
+    + "\x1fMerge pull request #76 from jdseo921/chore/18-fixtures\x1f[#5] test: fixtures (S05a)\x1e\n"
+    + "e" * 40
+    + "\x1fMerge pull request #77 from jdseo921/x\x1f[REQ-ZZZ-999] fix: cites an unknown row\x1e\n"
+    + "f" * 40
+    + "\x1fdocs: no citation\x1f\x1e\n"
+    + "1" * 40  # #98 merged again after a revert: still listed once
+    + "\x1fMerge pull request #98 from jdseo921/feat/REQ-INSP-002-banner\x1f"
+    + "[REQ-INSP-002] feat: verdict banner with a shape (S18)\x1e\n"
+)
+CHANGES = tm.parse_log(LOG)
 
 
 @pytest.fixture
@@ -51,19 +67,48 @@ def test_register_rows_and_matrix_columns(register: Path, tmp_path: Path) -> Non
     assert (reqs["REQ-INSP-001"].priority, reqs["REQ-INSP-001"].v01) == ("MUST G1", "Partial: no size check")
     junit = tmp_path / "junit.xml"
     junit.write_text(JUNIT, encoding="utf-8")
-    rows, unknown = tm.build(reqs, [], tm.read_junit(junit), SUBJECTS)
+    rows, unknown = tm.build(reqs, [], tm.read_junit(junit), CHANGES)
     by_id = {r.req.id: r for r in rows}
     assert by_id["REQ-INSP-001"].result == "FAIL (1 of 2 failing)"
     assert by_id["REQ-INSP-002"].result == "no test"
-    assert by_id["REQ-INSP-002"].commits == ["[REQ-INSP-002] feat: verdict banner with a shape (S18)"]
+    assert by_id["REQ-INSP-002"].prs == ["commit aaaaaaa", "#98", "#99"]  # the pull requests by number, each once
+    assert by_id["REQ-CMP-001"].prs == ["#99"]
     assert by_id["REQ-CMP-001"].tests == ["test_a.py::test_req_cmp_001_linked"]  # parameter cases fold into one
     assert by_id["REQ-CMP-001"].result == "pass (1)"
     assert by_id["REQ-USR-002"].result == "not run (1 of 1)"  # skipped counts as not run
-    assert unknown == ["commit '[REQ-ZZZ-999] fix: cites an unknown row' cites REQ-ZZZ-999"]
+    assert unknown == ["#77 '[REQ-ZZZ-999] fix: cites an unknown row' cites REQ-ZZZ-999"]
     md, csv_path = tm.write(rows, tmp_path / "out")
     matrix = md.read_text(encoding="utf-8")
     assert "| REQ-INSP-001 | MUST G1 | Partial | — | test_a.py::test_req_insp_001_bmp_opens; " in matrix
-    assert csv_path.read_text(encoding="utf-8").splitlines()[0] == "id,priority,v01,commits,tests,last_result"
+    assert "| REQ-CMP-001 | SHOULD G1 | Done | #99 | test_a.py::test_req_cmp_001_linked | pass (1) |" in matrix
+    assert csv_path.read_text(encoding="utf-8").splitlines()[0] == "id,priority,v01,prs,tests,last_result"
+    assert [(c.pr, c.title) for c in CHANGES][1:4] == [
+        (98, "[REQ-INSP-002] feat: verdict banner with a shape (S18)"),
+        (99, "[REQ-INSP-002] [REQ-CMP-001] fix: banner and pan"),
+        (76, "[#5] test: fixtures (S05a)"),
+    ]
+
+
+def test_git_changes_reads_merged_pull_requests_from_a_real_history(tmp_path: Path) -> None:
+    """A pull request merged with GitHub's "Create a merge commit" is read by its number and title; the commits inside
+    it are not listed again, and a commit on the first-parent line is listed by its hash."""
+    env = {**os.environ, "GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@t", "GIT_COMMITTER_NAME": "t",
+           "GIT_COMMITTER_EMAIL": "t@t"}  # fmt: skip
+
+    def git(*args: str) -> None:
+        subprocess.run(["git", *args], cwd=tmp_path, env=env, check=True, capture_output=True)
+
+    git("init", "-q", "-b", "main")
+    git("commit", "-q", "--allow-empty", "-m", "chore: import the v0.1 baseline")
+    git("checkout", "-q", "-b", "feat/REQ-INSP-002-banner")
+    git("commit", "-q", "--allow-empty", "-m", "[REQ-INSP-002] feat: verdict banner (S18)")
+    git("commit", "-q", "--allow-empty", "-m", "[REQ-INSP-002] fix: review findings")
+    git("checkout", "-q", "main")
+    title = "[REQ-INSP-002] feat: verdict banner with a shape (S18)"
+    git("merge", "-q", "--no-ff", "feat/REQ-INSP-002-banner", "-m", "Merge pull request #98 from x/banner", "-m", title)
+    changes = tm.git_changes("HEAD", tmp_path)
+    assert [(c.label, c.title) for c in changes][0] == ("#98", title)
+    assert [c.title for c in changes][1:] == ["chore: import the v0.1 baseline"]
 
 
 def test_collected_names_count_as_not_run_and_unknown_test_ids_are_reported(register: Path, tmp_path: Path) -> None:
@@ -87,6 +132,9 @@ def test_gate_fails_on_an_unproven_must_row_and_passes_when_every_must_row_passe
         "REQ-INSP-001 (MUST G1): no test",
         "REQ-INSP-002 (MUST G1): FAIL (1 of 1 failing)",
     ]
+    outcomes = {**outcomes, "test_a.py::test_req_insp_002_more": "failed", "test_a.py::test_req_cmp_001_pan": "failed"}
+    rows, unknown = tm.build(reqs, [], outcomes, [])  # a MUST row passing once and failing once; a failing SHOULD row
+    assert tm.gate(rows, unknown, "G1") == ["REQ-INSP-002 (MUST G1): FAIL (1 of 2 failing)"]
 
 
 def test_the_real_register_parses_and_every_test_function_cites_a_known_row() -> None:
