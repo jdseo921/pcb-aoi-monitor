@@ -27,7 +27,7 @@ register; `{braces}` are filled in when the error is raised.
 | AOI-SET-006 | Migration files invalid | The app's migration files are not valid: {problem}. | Reinstall the app and report it; this is a defect in the build. |
 | AOI-SET-007 | Unexpected error | An unexpected error ({error_type}) stopped the last action{context}. | Try again; if it happens again, restart the app and send the log file (the workspace's logs folder) to support. |
 | AOI-SET-008 | Setting invalid | The setting {name} in settings.json is {value}; it must be {expected}. | Fix or remove that line in settings.json, in the default workspace folder, and start the app again. |
-| AOI-TRN-001 | AI model file refused | AI model file refused: {path} is not a weights-only model file this app wrote ({reason}). | Train the board model again, or import a model file exported by this app. |
+| AOI-TRN-001 | AI model file refused | AI model file refused: {path} could not be loaded as a weights-only model file this app wrote ({reason}). | Train the board model again, or import a model file exported by this app. |
 | AOI-TRN-002 | Not enough good boards to train | Training needs at least 2 OK (good board) images; {found} found. | Upload more OK images for this board model, then train again. |
 | AOI-TRN-003 | No trained AI model | Board model {board} has no trained AI model, so only the golden-board comparison runs. | Train a model on the Training page when the AI checks are needed. |
 | AOI-USR-001 | Not allowed for this role | {what} needs the {roles} role. | Sign in as a user with that role, or ask one to do it. |

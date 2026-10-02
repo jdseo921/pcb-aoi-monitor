@@ -123,7 +123,7 @@ CODES: dict[str, ErrorCode] = {
         ErrorCode(
             "AOI-TRN-001",
             "AI model file refused",
-            "AI model file refused: {path} is not a weights-only model file this app wrote ({reason}).",
+            "AI model file refused: {path} could not be loaded as a weights-only model file this app wrote ({reason}).",
             "Train the board model again, or import a model file exported by this app.",
         ),
         ErrorCode(
