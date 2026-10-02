@@ -323,10 +323,15 @@ class Database:
     def inspection(self, inspection_id: int) -> dict[str, Any] | None:
         """One inspection record by id with its paths absolute, or None for an unknown id (REQ-INSP-009)."""
         paths = ("image_path", "overlay_path", "diff_map_path", "ai_map_path", "reference_path")
-        cols = "id, time, board_model, model_version, model_uuid, recipe_rev, recipe_uuid, view, result, score"
+        cols = "id, uuid, time, board_model, model_version, model_uuid, recipe_rev, recipe_uuid, view, result, score"
         sql = f"SELECT {cols}, reference_sha256, {', '.join(paths)} FROM inspections WHERE id=?"
         r = self.query(sql, (inspection_id,))
         return self._resolved(r[0], *paths) if r else None
+
+    def inspection_id(self, uuid: str) -> int | None:
+        """The id of the inspection record with this UUID, or None."""
+        r = self.query("SELECT id FROM inspections WHERE uuid=?", (uuid,))
+        return int(r[0]["id"]) if r else None
 
     def map_paths(self, inspection_id: int) -> tuple[str | None, str | None]:
         """The stored map files of one inspection, absolute; None where none was stored or the sweep deleted it."""
