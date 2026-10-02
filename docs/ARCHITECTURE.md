@@ -86,7 +86,11 @@ Engineer …" for a role that cannot open the page (REQ-SET-019, since S18c).
 
 Every page is rendered offscreen for every role that may open it and compared with an approved image (REQ-SET-004,
 since S21): `tools/render_screens.py` builds the synthetic workspace with pinned ids, times, inspection time and fonts
-(DejaVu Sans without hinting on Linux), and `tests/screens/test_screens.py` compares the 1920×1080 renders with
+(DejaVu Sans without hinting on Linux) and inspects with a pixel-based stand-in for the trained model (`PinnedModel`: the
+seeded training's float rounding differs by CPU type, so a trained model's verdict and boxes differ between machines; the
+stand-in's quantised 8-bit difference from the golden board, with wide margins to its thresholds, shows the same verdict,
+boxes and scores everywhere, and only SSIM and inlier digits from the float alignment still move, far under the
+tolerance), and `tests/screens/test_screens.py` compares the 1920×1080 renders with
 `tests/screens/approved/` on Linux; a page fails when more than 0.5 % of its pixels move by more than 40 levels, and
 the new images with a diff per failing page stay in `tests/screens/actual/`, which CI uploads. An intended screen
 change is approved with `python tools/render_screens.py --approve`; the images are generated files that Jay approves by
