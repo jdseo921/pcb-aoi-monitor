@@ -40,6 +40,9 @@ class ModelFileError(AoiError):
 
 # Metadata arrays that travel in the file as tensors and are used as NumPy arrays in memory.
 _ARRAY_META_KEYS = ("err_mean", "err_std")
+# The least spread of the reconstruction error a pixel is scored by: with errors at most 1 (the decoder ends in a
+# sigmoid) no score reaches 1 / SPREAD_FLOOR = 1000 σ, which a stored AI map holds (maps.AI_MAX).
+SPREAD_FLOOR = 1e-3
 
 
 def _to_safe(value: Any) -> Any:
@@ -257,7 +260,7 @@ def train(
     errs = np.stack([model.raw_error(ok_images[i]) for i in train_idx])
     sd = errs.std(axis=0)
     model.meta["err_mean"] = errs.mean(axis=0).astype(np.float32)
-    model.meta["err_std"] = np.maximum(sd, max(float(np.median(sd)), 1e-3)).astype(np.float32)
+    model.meta["err_std"] = np.maximum(sd, max(float(np.median(sd)), SPREAD_FLOOR)).astype(np.float32)
     # Calibrate on held-out OK images when we have them, otherwise on training images.
     cal_ok = [ok_images[i] for i in (val_idx or train_idx)]
     ok_maps = [model.anomaly_map(im) for im in cal_ok]

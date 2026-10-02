@@ -336,7 +336,8 @@ class AppContext:
         day = local_date()  # the folder is named for the operator's shift date; the stored time is UTC
         overlay = self.settings.results_dir / day / f"{Path(path).stem}_{uuid.uuid4().hex[:6]}_{res.verdict}.png"
         save_image(overlay, draw_overlay(res))
-        diff_map_path, ai_map_path = save_maps(res, overlay.with_suffix(""))  # beside the overlay, whole or not at all
+        pixel_threshold = insp.model.pixel_threshold if insp.model is not None else None  # the AI map's, kept (S28a)
+        diff_map_path, ai_map_path = save_maps(res, overlay.with_suffix(""), pixel_threshold=pixel_threshold)
         doc = res.to_dict()
         iid = self.db.add_inspection(
             {
@@ -503,7 +504,8 @@ class AppContext:
     def inspection_result(self, inspection_id: int, with_maps: bool = False) -> InspectionResult | None:
         """One stored result read back without its images (verdict, checks, defects, compare metrics and regions, as
         decided) for Compare (REQ-INSP-008); with `with_maps`, the stored maps too, where their files exist
-        (REQ-INSP-012). None for a record from before migration 0006."""
+        (REQ-INSP-012), and AOI-CMP-003 for one there that cannot be read. None for a record from before migration
+        0006."""
         doc = self.db.inspection_result(inspection_id)
         res = InspectionResult.from_dict(doc) if doc is not None else None
         return load_maps(res, *self.db.map_paths(inspection_id)) if res is not None and with_maps else res
