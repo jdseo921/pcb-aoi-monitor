@@ -23,6 +23,7 @@ from .. import logging_setup
 from ..config import Settings, resolve_device
 from ..data import atomic
 from ..data.db import Database, new_uuid
+from ..data.errors import WorkspaceError
 from ..data.paths import to_stored
 from ..errors import AoiError
 from ..times import local_date, now_utc
@@ -99,7 +100,10 @@ def requires(
 class AppContext:
     def __init__(self, settings: Settings | None = None) -> None:
         self.settings = settings or Settings.load()
-        self.settings.ensure_dirs()
+        try:
+            self.settings.ensure_dirs()
+        except OSError as e:  # a drive not connected, a file where the folder must go (REQ-SET-019)
+            raise WorkspaceError("AOI-SET-011", path=str(self.settings.root), error=str(e)) from e
         self.log = logging_setup.setup(self.settings.root)
         try:
             self.db = Database(self.settings.db_path, self.settings.root)

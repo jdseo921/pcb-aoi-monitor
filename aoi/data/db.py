@@ -36,9 +36,12 @@ class Database:
     def __init__(self, path: Path, workspace: Path | None = None) -> None:
         self.path = Path(path)
         self.workspace = Path(workspace) if workspace else self.path.parent
-        self.path.parent.mkdir(parents=True, exist_ok=True)
         self._lock = threading.Lock()
-        self._conn = sqlite3.connect(self.path, check_same_thread=False)
+        try:
+            self.path.parent.mkdir(parents=True, exist_ok=True)
+            self._conn = sqlite3.connect(self.path, check_same_thread=False)
+        except (OSError, sqlite3.Error) as e:  # a drive not connected, a folder that cannot be written (REQ-SET-019)
+            raise WorkspaceError("AOI-SET-011", path=str(self.workspace), error=str(e)) from e
         self._conn.row_factory = sqlite3.Row
         try:
             # Write-ahead log with a full sync on every commit: a finished write survives a power cut (ADR 0004).
@@ -48,6 +51,9 @@ class Database:
             self._conn.execute("PRAGMA synchronous = FULL")
             self._conn.execute("PRAGMA foreign_keys = ON")
             migrate(self._conn)
+        except sqlite3.Error as e:  # aoi.sqlite is not a database, or is damaged: migrate's own errors carry codes
+            self._conn.close()
+            raise WorkspaceError("AOI-SET-011", path=str(self.workspace), error=str(e)) from e
         except BaseException:
             self._conn.close()  # a refused database is not held open while another workspace is chosen (REQ-SET-016)
             raise

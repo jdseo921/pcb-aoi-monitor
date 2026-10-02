@@ -207,6 +207,20 @@ CODES: dict[str, ErrorCode] = {
             "Free disk space on the workspace folder's drive and check that the folder can be written, then start the "
             "app again.",
         ),
+        ErrorCode(
+            "AOI-SET-010",
+            "Settings file cannot be read",
+            "The settings file {path} could not be read: {reason}.",
+            "Correct the file, or rename it so the app starts with the default settings, then start the app again.",
+        ),
+        ErrorCode(
+            "AOI-SET-011",
+            "Workspace cannot be opened",
+            "The workspace folder {path} could not be opened: {error}.",
+            "If the folder is on a drive that is not connected, connect it and start the app again; if its database "
+            "aoi.sqlite is damaged, restore the backup aoi.sqlite.bak-… (engineer manual, chapter 1). Or choose "
+            "another workspace folder in the window that opens next; Cancel there closes the app.",
+        ),
     )
 }
 
