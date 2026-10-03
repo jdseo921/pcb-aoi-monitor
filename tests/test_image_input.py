@@ -356,6 +356,32 @@ def test_req_set_019_a_relative_aoi_workspace_never_stops_the_next_start(
     assert saved.workspace == str(tmp_path / "relative_ws") and saved.last_page == "Logs & Export"
 
 
+@pytest.mark.parametrize("given", ["relative_ws", "~/ws", "C:AOI_Workspace", "..\\up"])
+def test_req_set_019_every_form_of_aoi_workspace_gives_a_workspace_settings_json_accepts(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, given: str
+) -> None:
+    """AOI_WORKSPACE relative, under ~, drive-relative ("C:AOI_Workspace", which Path.absolute() on Python 3.11 left
+    relative on Windows) or with "..": the workspace the app uses is a full path that settings.json accepts (#170
+    review). On Linux "C:AOI_Workspace" is a plain relative folder name."""
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("AOI_WORKSPACE", given)
+    Settings.check("workspace", str(default_workspace()))
+    assert Settings().root == default_workspace()
+
+
+def test_req_set_019_the_first_settings_json_write_refuses_settings_the_next_start_would_refuse(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """With no settings.json yet, the first key-only write wrote every setting the app holds; one the next start
+    refuses, such as a relative workspace, is now refused with AOI-SET-008 and nothing is written (#170 review)."""
+    monkeypatch.setenv("AOI_WORKSPACE", str(tmp_path))
+    with pytest.raises(AoiError) as refused:
+        Settings(workspace="relative_ws").save_keys({"last_page": "Logs & Export"})
+    assert refused.value.code == "AOI-SET-008" and not (tmp_path / "settings.json").exists()
+    Settings().save_keys({"last_page": "Logs & Export"})
+    assert Settings.load().last_page == "Logs & Export"
+
+
 def test_req_insp_001_the_decoder_limits_are_refused_with_a_code(tmp_path: Path) -> None:
     """A side over the decoder's 1,048,576 px is refused by the header (AOI-INSP-007), whatever the pixel limit says,
     and should the decoder refuse a file by its own limits the operator reads a coded message, not an unexpected

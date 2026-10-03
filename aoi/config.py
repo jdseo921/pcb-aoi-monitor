@@ -31,9 +31,10 @@ _LEAST = {  # the smallest whole number a count setting takes; a map retention o
 
 
 def default_workspace() -> Path:
-    """The workspace folder, and where settings.json lives: AOI_WORKSPACE or ~/AOI_Workspace, made absolute, so a
-    relative AOI_WORKSPACE never reaches settings.json, which refuses a relative workspace (AOI-SET-008)."""
-    return Path(os.environ.get("AOI_WORKSPACE", Path.home() / "AOI_Workspace")).expanduser().absolute()
+    """The workspace folder, and where settings.json lives: AOI_WORKSPACE or ~/AOI_Workspace as a full path, so the
+    workspace the app holds is one settings.json accepts (AOI-SET-008 refuses a relative one). os.path.abspath, not
+    Path.absolute(), which on Python 3.11 leaves a drive-relative "C:AOI_Workspace" relative on Windows (#170)."""
+    return Path(os.path.abspath(os.path.expanduser(os.environ.get("AOI_WORKSPACE", Path.home() / "AOI_Workspace"))))
 
 
 @dataclass
@@ -142,14 +143,17 @@ class Settings:
 
     def save_keys(self, values: dict[str, object]) -> None:
         """Write `values` over settings.json as it is on disk now, so every other key keeps what the file holds, a hand
-        edit made while the app runs included (#170); with no file yet, over these settings. Each value is checked
-        first, as `load` checks it (AOI-SET-008), and a file that cannot be read is refused with AOI-SET-010, never
-        overwritten. These settings themselves are left as they are: the caller sets what the running app follows."""
+        edit made while the app runs included (#170); with no file yet, over these settings, every one of which is then
+        checked too, so the first write never stores a value the next start refuses. Each value is checked first, as
+        `load` checks it (AOI-SET-008), and a file that cannot be read is refused with AOI-SET-010, never overwritten.
+        These settings themselves are left as they are: the caller sets what the running app follows."""
         for name, value in values.items():
             self.check(name, value)
         data = self._read()
         if data is None:
             data = asdict(self)
+            for name, value in data.items():
+                self.check(name, values.get(name, value))
         data.update(values)
         from .data import atomic  # settings.json is read at start-up: never leave it half-written
 
