@@ -61,8 +61,9 @@ stays in use. Import photos of several different good boards, then train again.
 **A board is never passed on no evidence.** A board model with neither a Golden board nor an AI model, or a recipe
 that turns off both "Use the Golden board comparison" and "Use the self-trained AI model", judges nothing: every
 board is refused with AOI-INSP-010, which names why each check did not run. A Golden board whose file is gone or
-damaged refuses every board of its board model with AOI-INSP-009: put the file back, or set a new Golden board on
-Training (Set Reference, or train the AI model again).
+damaged refuses every board of its board model with AOI-INSP-009: put the file back, or choose another OK sample as
+the Golden board with Set Reference on Training. Training again does not cure it while the Golden board is one of the
+imported samples, since training reads every OK sample.
 
 (to be written: ROIs, thresholds, Test Run, revisions, the AOI checklist)
 

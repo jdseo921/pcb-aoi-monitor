@@ -86,8 +86,8 @@ CODES: dict[str, ErrorCode] = {
             "Golden board file not available",
             "Board model {board} names {file} as its Golden board, but {reason}, so no board of it can be compared"
             " with the Golden board. The board was not inspected.",
-            "Put the file back, for example from a backup of the workspace, or have an Engineer set a new Golden board"
-            " on Training (Set Reference, or train the AI model again); then inspect the board again.",
+            "Put the file back, for example from a backup of the workspace, or have an Engineer choose another OK"
+            " sample as the Golden board with Set Reference on Training; then inspect the board again.",
         ),
         ErrorCode(
             "AOI-INSP-010",

@@ -154,6 +154,9 @@ def test_req_insp_015_no_board_is_judged_without_its_golden_board_or_with_no_che
         assert unavailable.value.code == "AOI-INSP-009", unavailable.value
         assert f"names {golden} as its Golden board, but {why}, so no board" in unavailable.value.what
     assert ctx.inspections() == [], "no record for a board not inspected"
+    other = next(s for s in ctx.samples(BOARD, "OK") if Path(s["path"]) != golden)
+    ctx.set_reference(BOARD, other["id"])  # the remedy AOI-INSP-009 gives: another OK sample, with Set Reference
+    assert ctx.inspect_file(BOARD, str(ng_board), save=False).verdict == "NG"
     golden.write_bytes(kept)
     ctx.ensure_board_model("EMPTY")  # neither a golden board nor an AI model
     with pytest.raises(AoiError) as nothing:
