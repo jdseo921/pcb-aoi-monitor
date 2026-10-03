@@ -9,7 +9,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Any
 
-from PySide6.QtCore import QObject, Signal
+from PySide6.QtCore import QCoreApplication, QEvent, QObject, Signal
 
 from ..core.jobs import Job, Jobs
 
@@ -27,6 +27,7 @@ class Worker:
 
     def __init__(self, fn: Callable[..., Any], *args: Any, with_progress: bool = False, **kwargs: Any) -> None:
         self.signals = WorkerSignals()
+        self.jobs: Jobs | None = None  # the pool `start` submitted it to
         self.job: Job[Any] = Job(getattr(fn, "__name__", "job"), fn, *args, with_progress=with_progress, **kwargs)
         self.job.on_progress(self.signals.progress.emit)
         self.job.on_result(self.signals.result.emit)
@@ -46,6 +47,17 @@ def start(worker: Worker, jobs: Jobs) -> Worker:
     run on the UI thread, so the signals outlive the pool thread and no queued slot is lost; then it is released."""
     key = id(worker)
     _live[key] = worker
+    worker.jobs = jobs
     worker.signals.finished.connect(lambda: _live.pop(key, None))
     jobs.submit(worker.job)
     return worker
+
+
+def drop_queued(jobs: Jobs) -> None:
+    """Once `jobs` has shut down (the window closing, #171): drop the slots its jobs queued, unrun, so none meets the
+    closed context, and let go of their workers, whose `finished` slot was among those dropped or, for a job dropped
+    while still queued, never comes."""
+    QCoreApplication.removePostedEvents(None, QEvent.Type.MetaCall)  # type: ignore[arg-type]  # None: every receiver
+    for key, worker in list(_live.items()):
+        if worker.jobs is jobs:
+            del _live[key]

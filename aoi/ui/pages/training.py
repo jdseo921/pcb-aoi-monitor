@@ -348,6 +348,8 @@ class TrainingPage(Page):
         self.refresh()
 
     def _finished(self) -> None:
+        if self.worker is not None and self.worker.job.cancelled and self.worker.job.result is None:  # Stop (#171)
+            self.log.appendPlainText(self.tr("Stopped: no AI model was saved; the active AI model is unchanged."))
         self.btn_train.setEnabled(True)
         self.btn_stop.setEnabled(False)
         self.worker = None

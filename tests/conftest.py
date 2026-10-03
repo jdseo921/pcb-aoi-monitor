@@ -124,6 +124,13 @@ def dialogs(monkeypatch: pytest.MonkeyPatch) -> Iterator[list[tuple[str, str]]]:
     assert all(title.startswith("AOI-") for title, _ in shown), f"an error dialog without a code: {shown}"
 
 
+@pytest.fixture(autouse=True)
+def _questions_answer_yes(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Yes in place of a modal question that would block offscreen: a window closed at a test's end while work runs
+    asks whether to stop it (#171). A test that answers otherwise patches QMessageBox.question itself."""
+    monkeypatch.setattr(QMessageBox, "question", staticmethod(lambda *_: QMessageBox.StandardButton.Yes))
+
+
 @pytest.fixture
 def ng_board(synthetic_dataset: Path) -> Path:
     """A test-split board with a missing component: the largest defect, found by the compare step alone."""

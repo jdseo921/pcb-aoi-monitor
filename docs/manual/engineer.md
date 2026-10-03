@@ -18,10 +18,12 @@ replaced file, so keep a copy of it if they matter. The app never deletes the ba
 **A workspace the app refuses.** A workspace created by version 0.1 (AOI-SET-001), written by a newer version
 (AOI-SET-002), recorded with a migration file that has changed since (AOI-SET-003), or on a drive without the
 database's write-ahead log, such as a network drive (AOI-SET-005), is refused at start-up, before the main window opens.
-After the message a window asks for another workspace folder: the folder you choose is saved in `settings.json`, in the
-default workspace folder, as the Settings page saves it, and opened; Cancel closes the app. The refused folder is left
-as it is. The same window follows AOI-SET-011: the workspace folder cannot be created or opened (a USB or network drive
-that is not connected) or its `aoi.sqlite` is not a database the app can open (restore the backup, as above).
+After the message a window asks for another workspace folder: the folder you choose is opened, then saved in
+`settings.json`, in the default workspace folder, as the Settings page saves it (if that folder cannot be written, the
+next start asks again); Cancel closes the app. The refused folder is left as it is. The same window follows AOI-SET-011:
+the workspace folder cannot be created or opened (a USB or network drive that is not connected) or its `aoi.sqlite` is
+not a database the app can open or write (restore the backup, as above); and AOI-SET-012: another program holds
+`aoi.sqlite` (another copy of the app, a database tool): close it, then choose the same folder.
 
 **Settings the app cannot read.** A `settings.json` that is not valid JSON, not UTF-8 text or not a JSON object stops
 the start with AOI-SET-010, naming the file and, for JSON, the line and column; correct it, or rename it to start with
@@ -61,6 +63,9 @@ locking the validation set)
 **A model that cannot judge.** When training gives an AI model that cannot judge boards, for example an image threshold
 of 0 because the OK images are copies of one photo, it stops with AOI-TRN-004: nothing is saved and the active AI model
 stays in use. Import photos of several different good boards, then train again.
+
+**Stop** ends a training run without saving anything: no AI model version, golden board or audit entry; the active AI
+model stays. Closing the app while work runs asks whether to stop it; an AI model test finishes its folder first.
 
 (to be written: training, progress and cancel, versions, activation and rollback, the model card)
 

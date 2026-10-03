@@ -20,7 +20,10 @@ def main() -> int:
     win = MainWindow(ctx)
     install_excepthook(ctx, win)  # unhandled errors: log with the trace, show a coded dialog (REQ-LOG-005)
     win.showMaximized()
-    return app.exec()
+    try:
+        return app.exec()
+    finally:  # closing the window closed it already; this covers an event loop that ended another way (#171)
+        ctx.close()
 
 
 if __name__ == "__main__":
