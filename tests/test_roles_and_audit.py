@@ -16,7 +16,7 @@ from pytestqt.qtbot import QtBot
 
 from aoi.config import Settings, default_workspace
 from aoi.core.recipe import Recipe
-from aoi.core.services import REQUIRED_ROLE, ROLES, AppContext
+from aoi.core.services import REQUIRED_ROLE, ROLES, AppContext, CsvFile
 from aoi.errors import AoiError
 from aoi.ui.main_window import MainWindow
 from aoi.ui.pages.base import role_text
@@ -54,6 +54,10 @@ WRITES: dict[str, tuple[str, Callable[[AppContext, Path, Path], Any]]] = {
     "export_report": (
         "export.report",
         lambda ctx, data, tmp: ctx.export_report(tmp / "report.pdf", b"%PDF-1.4", "TINY", None, None),
+    ),
+    "export_csv_files": (
+        "export.csv",
+        lambda ctx, data, tmp: ctx.export_csv_files([CsvFile(tmp / "a.csv", [{"a": 1}]), CsvFile(tmp / "b.csv", [])]),
     ),
     "archive_old": ("inspection.archive", lambda ctx, data, tmp: ctx.archive_old(-1)),
     "add_user": ("user.change", lambda ctx, data, tmp: ctx.add_user("kim", "Engineer")),

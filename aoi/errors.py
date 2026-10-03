@@ -591,6 +591,19 @@ CODES: dict[str, ErrorCode] = {
                 "closes the app.",
             ),
         ),
+        ErrorCode(
+            "AOI-SET-013",
+            QT_TRANSLATE_NOOP("Errors", "Workspace database busy"),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Another program holds the workspace database {path}, so the app could not write to it: {error}.",
+            ),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Close the other program (another copy of this app, a database tool or a backup), then do the last "
+                "action again.",
+            ),
+        ),
     )
 }
 

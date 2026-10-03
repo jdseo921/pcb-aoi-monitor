@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Any
 from PySide6.QtCore import QDate, Qt
 from PySide6.QtWidgets import QCheckBox, QComboBox, QDateEdit, QFileDialog, QHBoxLayout, QLabel, QMessageBox, QSplitter
 
-from ...core.services import AppContext
+from ...core.services import AppContext, CsvFile
 from ...times import to_local
 from .. import theme
 from ..widgets.busy import BusyOverlay
@@ -258,8 +258,8 @@ class LogsPage(Page):
                 }
                 check_rows.append({"inspection_id": r["id"], "inspection_uuid": r["uuid"], **record, **evidence})
             progress(i, len(rows))
-        self.ctx.export_csv(f, out)
-        self.ctx.export_csv(checks_file, check_rows, what="checks", fieldnames=CHECK_COLUMNS)
+        # both files or neither (#195); one another program holds open is refused with AOI-LOG-002, shown as the dialog
+        self.ctx.export_csv_files([CsvFile(f, out), CsvFile(checks_file, check_rows, "checks", CHECK_COLUMNS)])
         return len(out), len(check_rows)
 
     def _csv_written(self, counts: tuple[int, int] | None, f: Path, checks_file: Path) -> None:

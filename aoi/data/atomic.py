@@ -8,10 +8,11 @@ the data is on disk before the rename, and on POSIX the folder entry is synced a
 
 from __future__ import annotations
 
+import contextlib
 import os
 import shutil
 import uuid
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from pathlib import Path
 from typing import BinaryIO
 
@@ -22,7 +23,7 @@ def write_with(path: str | Path, writer: Callable[[BinaryIO], object]) -> None:
     """Call `writer` with a binary file on a temporary name next to `path`, then move it into place."""
     target = Path(path)
     target.parent.mkdir(parents=True, exist_ok=True)
-    tmp = target.with_name(f".{target.name}.{uuid.uuid4().hex[:8]}{TEMP_SUFFIX}")
+    tmp = _temp_name(target)
     try:
         with open(tmp, "wb") as f:
             writer(f)
@@ -33,6 +34,52 @@ def write_with(path: str | Path, writer: Callable[[BinaryIO], object]) -> None:
         tmp.unlink(missing_ok=True)
         raise
     _sync_folder(target.parent)
+
+
+def write_all(files: Sequence[tuple[str | Path, bytes]]) -> None:
+    """Write several files together or not at all (#195): each to a temporary name first, then each moved into place,
+    the file it replaces kept under a temporary name until all are in place. When one cannot be moved (another program
+    holds it open), the files already moved are taken back out and the ones they replaced put back."""
+    staged: list[tuple[Path, Path]] = []
+    moved: list[tuple[Path, Path | None]] = []  # a target in place, and the file it replaced
+    target = Path()
+    try:
+        for path, data in files:
+            target = Path(path)
+            target.parent.mkdir(parents=True, exist_ok=True)
+            staged.append((target, _temp_name(target)))
+            with open(staged[-1][1], "wb") as f:
+                f.write(data)
+                f.flush()
+                os.fsync(f.fileno())
+        for target, tmp in staged:
+            old = _temp_name(target) if target.is_file() else None
+            if old is not None:
+                os.replace(target, old)
+            try:
+                os.replace(tmp, target)
+            except BaseException:
+                if old is not None:
+                    os.replace(old, target)
+                raise
+            moved.append((target, old))
+    except BaseException as e:
+        for done, old in reversed(moved):
+            with contextlib.suppress(OSError):  # the error that stopped the write is the one to report
+                if old is None:
+                    done.unlink()
+                else:
+                    os.replace(old, done)
+        for _, tmp in staged:
+            tmp.unlink(missing_ok=True)
+        if isinstance(e, OSError):  # named by the file that could not be written, not by a temporary name
+            raise OSError(e.errno, e.strerror, str(target)) from e
+        raise
+    for _, old in moved:
+        if old is not None:
+            old.unlink(missing_ok=True)
+    for folder in {done.parent for done, _ in moved}:
+        _sync_folder(folder)
 
 
 def write_bytes(path: str | Path, data: bytes) -> None:
@@ -59,6 +106,11 @@ def sweep_temp_files(folder: str | Path) -> int:
     for p in leftovers:
         p.unlink(missing_ok=True)
     return len(leftovers)
+
+
+def _temp_name(target: Path) -> Path:
+    """A hidden name beside `target` that `sweep_temp_files` removes after a crash."""
+    return target.with_name(f".{target.name}.{uuid.uuid4().hex[:8]}{TEMP_SUFFIX}")
 
 
 def _sync_folder(folder: Path) -> None:

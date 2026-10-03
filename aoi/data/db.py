@@ -25,6 +25,7 @@ from .migrate import migrate
 from .paths import resolve, to_stored
 
 IN_CHUNK = 500  # ids per IN (…) query, under SQLite's 999 bound variables on older builds
+WAIT_MS = 5000  # how long a write waits for another program's lock on the database before SQLite refuses it
 DbError = sqlite3.Error  # what a Database call raises when SQLite refuses it, for callers that do not import sqlite3
 
 
@@ -35,6 +36,12 @@ def new_uuid() -> str:
 def _phrase_json(message: str) -> str | None:
     """An alarm message that is a phrase, as the JSON the alarm list shows it from in the UI language (#198)."""
     return json.dumps(message.to_json(), ensure_ascii=False) if isinstance(message, Phrase) else None
+
+
+def is_busy(e: BaseException | None) -> bool:
+    """SQLite's refusal while another program holds the lock a statement needs (SQLITE_BUSY, SQLITE_LOCKED)."""
+    code = getattr(e, "sqlite_errorcode", 0) if isinstance(e, sqlite3.Error) else 0
+    return (code & 0xFF) in (sqlite3.SQLITE_BUSY, sqlite3.SQLITE_LOCKED)
 
 
 class Database:
@@ -48,7 +55,7 @@ class Database:
         self._tx_depth = 0  # >0 while a `transaction()` is open; only the thread holding the lock reads or sets it
         try:
             self.path.parent.mkdir(parents=True, exist_ok=True)
-            self._conn = sqlite3.connect(self.path, check_same_thread=False)
+            self._conn = sqlite3.connect(self.path, timeout=WAIT_MS / 1000, check_same_thread=False)
         except (OSError, sqlite3.Error) as e:  # a drive not connected, a folder that cannot be written (REQ-SET-019)
             raise WorkspaceError("AOI-SET-011", path=str(self.workspace), error=str(e)) from e
         self._conn.row_factory = sqlite3.Row
@@ -79,7 +86,7 @@ class Database:
     def refusal(self, e: DbError) -> WorkspaceError:
         """The start-up refusal the folder picker follows (REQ-SET-016): AOI-SET-012 while another program holds the
         database's lock, else AOI-SET-011 with SQLite's reason (read-only, disk full, damaged)."""
-        if (getattr(e, "sqlite_errorcode", 0) & 0xFF) in (sqlite3.SQLITE_BUSY, sqlite3.SQLITE_LOCKED):
+        if is_busy(e):
             return WorkspaceError("AOI-SET-012", path=str(self.path), error=str(e))
         return WorkspaceError("AOI-SET-011", path=str(self.workspace), error=str(e))
 
@@ -118,16 +125,22 @@ class Database:
         if not self._tx_depth:  # inside `transaction()` the exception rolls back the whole of it
             self._conn.rollback()
 
-    def execute(self, sql: str, params: Iterable[Any] = ()) -> int | None:
+    def execute(self, sql: str, params: Iterable[Any] = (), wait_ms: int | None = None) -> int | None:
         """Run one statement and commit. Returns the new row id after an INSERT, otherwise None. A statement that fails
-        is rolled back, so no transaction is left open to hold the write lock or join the next commit (#171)."""
+        is rolled back, so no transaction is left open to hold the write lock or join the next commit (#171).
+        `wait_ms` waits that long for another program's lock instead of WAIT_MS (#195)."""
         with self._lock:
+            if wait_ms is not None:
+                self._conn.execute(f"PRAGMA busy_timeout = {int(wait_ms)}")
             try:
                 cur = self._conn.execute(sql, tuple(params))
                 self._commit()
             except BaseException:
                 self._rollback()
                 raise
+            finally:
+                if wait_ms is not None:
+                    self._conn.execute(f"PRAGMA busy_timeout = {WAIT_MS}")
             return cur.lastrowid
 
     def _insert(self, sql: str, params: Iterable[Any] = ()) -> int:
@@ -508,11 +521,13 @@ class Database:
         r = self.query(sql, (board_model,))[0]
         return int(r["n"]), int(r["ng"])
 
-    def alarm(self, level: str, message: str, code: str | None = None) -> None:
-        """Store an alarm: its message in English and, for a phrase, the phrase as JSON (migration 0011)."""
+    def alarm(self, level: str, message: str, code: str | None = None, wait_ms: int | None = None) -> None:
+        """Store an alarm: its message in English and, for a phrase, the phrase as JSON (migration 0011); `wait_ms` as
+        `execute` takes it."""
         self.execute(
             "INSERT INTO alarms(uuid, time, level, code, message, phrase) VALUES(?,?,?,?,?,?)",
             (new_uuid(), now_utc(), level, code, str(message), _phrase_json(message)),
+            wait_ms,
         )
 
     def alarms(self, limit: int = 1000) -> list[dict[str, Any]]:

@@ -24,7 +24,7 @@ import numpy as np
 from .. import logging_setup
 from ..config import Settings, resolve_device
 from ..data import atomic
-from ..data.db import Database, DbError, new_uuid
+from ..data.db import Database, DbError, is_busy, new_uuid
 from ..data.errors import WorkspaceError
 from ..data.paths import to_stored
 from ..errors import QT_TRANSLATE_NOOP, AoiError, Phrase, joined
@@ -37,6 +37,7 @@ from .maps import load_maps, save_maps
 from .recipe import Recipe
 
 ALARM_LIMIT = 1000  # REQ-INSP-006: the alarms a screen shows and that survive a restart
+BUSY_ALARM_WAIT_MS = 200  # an error that is the database's lock: its alarm waits this long for it, not another 5 s
 
 
 @dataclass(frozen=True)
@@ -55,6 +56,17 @@ class ErrorReport:
             where = QT_TRANSLATE_NOOP("Errors", " ({context})").fill(context=context) if context else ""
             exc = AoiError("AOI-SET-007", error_type=type(exc).__name__, context=where)
         return cls(exc.code, exc.title, exc.what, exc.action)
+
+
+@dataclass(frozen=True)
+class CsvFile:
+    """One file of a CSV export: where it goes, its rows, what they are (the audit entry's object type) and its header
+    when `rows` may be empty."""
+
+    path: str | Path
+    rows: list[dict[str, Any]]
+    what: str = "inspections"
+    fieldnames: list[str] | None = None
 
 
 @dataclass(frozen=True)
@@ -570,10 +582,11 @@ class AppContext:
         return iid
 
     # --- alarms and errors (REQ-INSP-006, REQ-LOG-005, REQ-SET-019) -----------
-    def alarm(self, level: str, message: str, code: str | None = None) -> None:
+    def alarm(self, level: str, message: str, code: str | None = None, wait_ms: int | None = None) -> None:
         """Store an alarm (NG, WARN or ERROR) with its code; it survives a restart and reaches the log. A `message`
-        that is a phrase is stored with it, so the alarm list shows it in the UI language (#198)."""
-        self.db.alarm(level, message, code)
+        that is a phrase is stored with it, so the alarm list shows it in the UI language (#198). `wait_ms` bounds the
+        wait for another program's lock on the database (#195)."""
+        self.db.alarm(level, message, code, wait_ms)
         self.log.info("alarm", extra={"alarm_level": level, "code": code, "text": message})
 
     def alarms(self, limit: int = ALARM_LIMIT) -> list[dict[str, Any]]:
@@ -583,7 +596,14 @@ class AppContext:
     def report_error(self, exc: BaseException, context: str = "") -> ErrorReport:
         """The one handler for an error a user will see: log it with the build version and the stack trace,
         store an alarm with its code, and return the plain report the dialog shows. A plain exception becomes
-        AOI-SET-007 (unexpected error); its text stays in the log. It never raises (an alarm refused is logged)."""
+        AOI-SET-007 (unexpected error); its text stays in the log, but a database another program holds while the app
+        works is AOI-SET-013, and its alarm waits only BUSY_ALARM_WAIT_MS for the lock (#195). It never raises (an alarm
+        refused is logged)."""
+        busy = is_busy(exc) or is_busy(exc.__cause__)
+        if is_busy(exc):  # not unexpected: the user can close the other program and try again
+            held = AoiError("AOI-SET-013", detail=str(exc), path=str(self.db.path), error=str(exc))
+            held.__cause__ = exc  # the log keeps SQLite's error and its trace
+            exc = held.with_traceback(exc.__traceback__)
         report = ErrorReport.of(exc, context)
         self.log.error(
             "error.shown",
@@ -591,7 +611,7 @@ class AppContext:
             extra={"code": report.code, "context": context, "detail": getattr(exc, "detail", None) or str(exc)},
         )
         try:
-            self.alarm("ERROR", report.what, report.code)
+            self.alarm("ERROR", report.what, report.code, BUSY_ALARM_WAIT_MS if busy else None)
         except Exception:  # #171: the report, and so the coded dialog, must not depend on the database
             self.log.warning("alarm.not_stored", exc_info=True, extra={"code": report.code})
         return report
@@ -962,7 +982,12 @@ class AppContext:
         """Copy a model version's file to `dest`, whole or not at all. The audit entry stores `dest` relative to the
         workspace when inside it (REQ-SET-001), else in full."""
         model = self.model(model_id)
-        atomic.copy_file(model["path"], dest)
+        try:
+            atomic.copy_file(model["path"], dest)
+        except OSError as e:
+            if e.filename == model["path"]:  # the AI model's own file, not the destination
+                raise
+            raise _not_written(e, dest) from e
         after = {"version": model["version"], "dest": to_stored(Path(dest).absolute(), self.settings.root)}
         self._audit_files([Path(dest)], "export.model", "model", model["uuid"], after, [Path(model["path"])])
         return Path(dest)
@@ -1019,13 +1044,27 @@ class AppContext:
         fieldnames: list[str] | None = None,
     ) -> int:
         """Write `rows` as CSV to `path`, whole or not at all, and audit the export; returns the row count. `fieldnames`
-        gives the header when `rows` may be empty. A file that cannot be written is refused with AOI-LOG-002. The audit
-        entry stores `path` relative to the workspace when inside it (REQ-SET-001), else in full."""
-        with _export_write(path):
-            export_csv(path, rows, fieldnames)
-        stored = to_stored(Path(path).absolute(), self.settings.root)
-        self._audit_files([Path(path)], "export.csv", what, None, {"path": stored, "rows": len(rows)})
+        gives the header when `rows` may be empty."""
+        self.export_csv_files([CsvFile(path, rows, what, fieldnames)])
         return len(rows)
+
+    @requires("Engineer", QT_TRANSLATE_NOOP("Errors", "Exporting CSV"))
+    def export_csv_files(self, files: list[CsvFile]) -> None:
+        """Write `files` as CSV, all or none (Logs & Export's records and checks, #195), then audit each, every entry
+        or none. A file that cannot be written (another program holds it open) is refused with AOI-LOG-002 naming it;
+        when the entries cannot be written the files are removed (#178). Paths are stored as #196 stores them."""
+        try:
+            atomic.write_all([(f.path, csv_bytes(f.rows, f.fieldnames)) for f in files])
+        except OSError as e:
+            raise _not_written(e, e.filename) from e
+        try:
+            with self.db.transaction():
+                for f in files:
+                    after = {"path": to_stored(Path(f.path).absolute(), self.settings.root), "rows": len(f.rows)}
+                    self.audit("export.csv", f.what, None, None, after)
+        except BaseException:
+            _remove([Path(f.path) for f in files])
+            raise
 
     @requires("Engineer", QT_TRANSLATE_NOOP("Errors", "Exporting a report"))
     def export_report(
@@ -1073,7 +1112,12 @@ def _export_write(path: str | Path) -> Iterator[None]:
     try:
         yield
     except OSError as e:
-        raise AoiError("AOI-LOG-002", detail=repr(e), path=str(path), reason=str(e)) from e
+        raise _not_written(e, path) from e
+
+
+def _not_written(e: OSError, path: object) -> AoiError:
+    """AOI-LOG-002 for a file the user named for an export or a save that cannot be written (#180, #195)."""
+    return AoiError("AOI-LOG-002", detail=repr(e), path=str(path), reason=e.strerror or str(e))
 
 
 def classification_metrics(rows: list[dict[str, Any]]) -> dict[str, Any]:
@@ -1099,6 +1143,11 @@ def classification_metrics(rows: list[dict[str, Any]]) -> dict[str, Any]:
 
 
 def export_csv(path: str | Path, rows: list[dict[str, Any]], fieldnames: list[str] | None = None) -> None:
+    """`rows` as a CSV file, whole or not at all."""
+    atomic.write_bytes(path, csv_bytes(rows, fieldnames))
+
+
+def csv_bytes(rows: list[dict[str, Any]], fieldnames: list[str] | None = None) -> bytes:
     """`rows` as CSV, UTF-8 with a BOM so Excel opens Korean; the header comes from `fieldnames` or the first row, so a
     file with no rows still names its columns when `fieldnames` is given."""
     buf = io.StringIO(newline="")
@@ -1107,4 +1156,4 @@ def export_csv(path: str | Path, rows: list[dict[str, Any]], fieldnames: list[st
         w = csv.DictWriter(buf, fieldnames=names)
         w.writeheader()
         w.writerows(rows)
-    atomic.write_text(path, buf.getvalue(), encoding="utf-8-sig" if names else "utf-8")
+    return buf.getvalue().encode("utf-8-sig" if names else "utf-8")
