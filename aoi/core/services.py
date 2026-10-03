@@ -202,7 +202,6 @@ class AppContext:
         )
         model = anomaly.train(ok, ng, cfg, progress, should_stop)
         if should_stop is not None and should_stop():  # Stop, or the window closing: the active model stays (TRN-008)
-            say(0, 1, 0.0, "Stopped: no AI model was saved; the active AI model is unchanged")
             raise JobCancelled(f"training {board_model}")  # nothing saved, registered, activated or audited (#171)
         previous = self.db.active_model(board_model)
         version = self.db.next_model_version(board_model)

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, cast
 
-from PySide6.QtCore import QCoreApplication, QEvent, Qt
+from PySide6.QtCore import Qt
 from PySide6.QtGui import QCloseEvent, QColor
 from PySide6.QtWidgets import (
     QComboBox,
@@ -38,6 +38,7 @@ from .pages.recipe_editor import RecipeEditorPage
 from .pages.settings import SettingsPage
 from .pages.training import TrainingPage
 from .widgets.empty_state import EmptyState
+from .workers import drop_queued
 
 if TYPE_CHECKING:
     from ..core.inspector import InspectionResult
@@ -372,6 +373,5 @@ class MainWindow(QMainWindow):
             self.status(self.tr("Stopping the running work…"), ms=0)
             self.statusBar().repaint()  # the wait below holds the UI thread until each job has stopped
         self.ctx.close()  # every job asked to stop and waited for, then the database and the log file closed
-        # Slots the jobs queued before they stopped would meet the closed context: drop them (None: every receiver).
-        QCoreApplication.removePostedEvents(None, QEvent.Type.MetaCall)  # type: ignore[arg-type]
+        drop_queued(self.ctx.jobs)  # slots the jobs queued before they stopped would meet the closed context
         event.accept()

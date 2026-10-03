@@ -124,8 +124,9 @@ worker. One call starts a thread of its own: `maps.load_maps`, run by a job, dec
 helper thread while the job decodes the difference map, and waits for it before it returns.
 Closing the window stops the background work (#171): while a job runs `MainWindow.closeEvent` asks first (No keeps the
 window open), then `AppContext.close` cancels every job, waits for it and closes the database and the log, and the slots
-the jobs queued are dropped unrun; `main.py` closes the context again after the event loop (a no-op). A stopped training
-run saves nothing (REQ-TRN-008); an AI model test has no stop yet, so it finishes its folder first.
+the jobs queued are dropped unrun, and the workers that waited for them let go (`workers.drop_queued`); `main.py` closes
+the context again after the event loop (a no-op). A stopped training run saves nothing (REQ-TRN-008), and the Training
+page says so; an AI model test has no stop yet, so it finishes its folder first.
 
 A control an operator uses by key and by touch is one `QAction` (`Page.action`, since S24): a window shortcut owned by
 the page, so the key works wherever the focus is on the page and only while the page is shown, behind an

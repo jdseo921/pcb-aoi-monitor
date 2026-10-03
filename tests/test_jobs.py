@@ -21,10 +21,11 @@ from PySide6.QtWidgets import QMessageBox
 from pytestqt.qtbot import QtBot
 
 from aoi import logging_setup
-from aoi.core.jobs import Job, Jobs
+from aoi.core.jobs import MAX_WORKERS, Job, JobCancelled, Jobs
 from aoi.core.services import AppContext
 from aoi.ui.main_window import MainWindow
-from aoi.ui.workers import Worker, start
+from aoi.ui.pages.training import TrainingPage
+from aoi.ui.workers import Worker, _live, start
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -207,8 +208,28 @@ def test_req_trn_008_a_stopped_training_run_saves_registers_activates_and_audits
     assert ctx.jobs.submit(job).wait(120) and job.cancelled and outcome == [] and job.result is None
     assert ctx.models("TINY") == models and ctx.db.active_model("TINY") == active
     assert ctx.db.reference("TINY") == reference and sorted(ctx.settings.models_dir.rglob("*")) == files
-    assert ctx.audit_entries() == audit
-    assert messages[-1] == "Stopped: no AI model was saved; the active AI model is unchanged"
+    assert ctx.audit_entries() == audit and messages, "it was stopped once under way"
+
+
+def test_req_trn_008_the_training_page_says_a_stopped_run_saved_nothing(qtbot: QtBot, trained_ctx: AppContext) -> None:
+    """#171: once a stopped run ends, the Training page says, in the UI language, that no AI model was saved."""
+
+    def stopped(progress: Callable[..., None], should_stop: Callable[[], bool]) -> None:
+        while not should_stop():
+            time.sleep(0.01)
+        raise JobCancelled("training")  # as AppContext.train ends a stopped run
+
+    win = MainWindow(trained_ctx)
+    qtbot.addWidget(win)
+    page = win.pages["Training"]
+    assert isinstance(page, TrainingPage)
+    page.worker = Worker(stopped, with_progress=True)
+    page.worker.signals.finished.connect(page._finished)
+    start(page.worker, trained_ctx.jobs)
+    page.stop()
+    qtbot.waitUntil(lambda: page.worker is None, timeout=10000)
+    said = "Stopped: no AI model was saved; the active AI model is unchanged."
+    assert page.log.toPlainText().splitlines()[-1] == said
 
 
 def test_req_set_021_closing_the_window_stops_the_background_work(
@@ -216,7 +237,7 @@ def test_req_set_021_closing_the_window_stops_the_background_work(
 ) -> None:
     """#171: closing the window while work runs asks whether to stop it; No keeps the window open and the work going,
     Yes stops every job, waits for it and closes the database and the log, so no hidden process outlives the window.
-    A slot the job queued for the screens never runs on the closed context."""
+    A slot the job queued for the screens never runs on the closed context, and no worker is kept waiting for one."""
     win = MainWindow(ctx)
     qtbot.addWidget(win)
     win.show()
@@ -225,13 +246,17 @@ def test_req_set_021_closing_the_window_stops_the_background_work(
     w, late = Worker(count_to, 10**6, with_progress=True), list[object]()
     w.signals.result.connect(late.append)
     start(w, ctx.jobs)
+    more = [start(Worker(count_to, 10**6, with_progress=True), ctx.jobs) for _ in range(MAX_WORKERS)]  # last: queued
     try:
         assert not win.close() and not w.job.cancelled  # No: the window stays and the work goes on
         assert win.close() and w.job.done and w.job.result is not None and w.job.result < 10**6
     finally:
-        w.job.cancel()  # a failed assertion leaves no job running
+        for job in [w.job, *(m.job for m in more)]:
+            job.cancel()  # a failed assertion leaves no job running
     qtbot.wait(100)
     assert late == [] and asked == ["Stop the running work?"] * 2  # queued before the context closed: dropped
+    assert not more[-1].job.done, "dropped while queued: it never ran"
+    assert not [x for x in _live.values() if x is w or x in more], "no worker waits for a slot that was dropped"
     with pytest.raises(RuntimeError):
         ctx.jobs.submit(Job("late", count_to, 1, with_progress=True))
     with pytest.raises(sqlite3.ProgrammingError):

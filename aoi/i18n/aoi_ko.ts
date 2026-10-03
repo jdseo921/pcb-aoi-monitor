@@ -488,7 +488,7 @@
 <context>
     <name>HomePage</name>
     <message>
-        <location filename="../ui/main_window.py" line="+56"/>
+        <location filename="../ui/main_window.py" line="+57"/>
         <source>Upload samples</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1882,12 +1882,12 @@
     </message>
     <message>
         <location line="+1"/>
-        <location line="+287"/>
+        <location line="+289"/>
         <source>Import Folder…</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-281"/>
+        <location line="-283"/>
         <location line="+50"/>
         <source>ID</source>
         <translation type="unfinished"></translation>
@@ -2065,7 +2065,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+21"/>
+        <location line="+5"/>
+        <source>Stopped: no AI model was saved; the active AI model is unchanged.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+18"/>
         <source>Export AI model</source>
         <translation type="unfinished"></translation>
     </message>
