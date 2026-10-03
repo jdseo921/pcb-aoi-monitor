@@ -23,6 +23,34 @@ def test_req_log_004_audit_is_append_only(ctx: AppContext) -> None:
     assert not hasattr(ctx.db, "update_audit") and not hasattr(ctx.db, "delete_audit")
 
 
+@pytest.mark.parametrize("verb", ["INSERT OR REPLACE", "REPLACE"])
+@pytest.mark.parametrize("by", ["id", "uuid"])
+def test_req_log_004_audit_entry_cannot_be_replaced(ctx: AppContext, verb: str, by: str) -> None:
+    """#196: `INSERT OR REPLACE INTO audit` and `REPLACE INTO audit` reusing an entry's id or uuid are refused, on the
+    app's connection and on any other one (migration 0010), and the entry keeps its time, role, values and reason.
+    Before, REPLACE deleted the entry without firing the delete trigger and wrote the forged one in its place."""
+    ctx.audit("threshold.change", "recipe", None, {"ssim_min": 0.7}, {"ssim_min": 0.5}, "looser")
+    ctx.audit("recipe.save", "recipe", None, None, {"a": 1})
+    entries = ctx.audit_entries()
+    first = entries[-1]
+    key = {"id": (first["id"], "forged-uuid"), "uuid": (999, first["uuid"])}[by]
+    forged = (
+        f"{verb} INTO audit(id, uuid, at_utc, role, action, object_type, after_json, reason)"
+        " VALUES(?, ?, '2020-01-01T00:00:00+00:00', 'Admin', 'threshold.change', 'recipe', '{\"ssim_min\": 0.9}',"
+        " 'no change')"
+    )
+    with pytest.raises(sqlite3.DatabaseError, match="never changed"):
+        ctx.db.execute(forged, key)
+    other = sqlite3.connect(ctx.db.path)  # not the app's connection: the trigger lives in the schema
+    try:
+        with pytest.raises(sqlite3.DatabaseError, match="never changed"):
+            other.execute(forged, key)
+    finally:
+        other.close()
+    assert ctx.audit_entries() == entries
+    assert ctx.db.query("PRAGMA recursive_triggers")[0]["recursive_triggers"] == 1  # REPLACE fires delete triggers
+
+
 def test_req_log_004_recipe_save_writes_before_and_after(ctx: AppContext) -> None:
     first = Recipe(board_model="TINY")
     assert ctx.save_recipe(first) == 1
@@ -39,7 +67,11 @@ def test_req_log_004_audit_entries_filter(ctx: AppContext) -> None:
     for i in range(3):
         ctx.audit("model.activate", "model", f"model-{i}", None, {"version": i})
     ctx.audit("user.change", "user", "u-1", {"role": "Operator"}, {"role": "Engineer"})
-    assert len(ctx.audit_entries()) == 4
+    ctx.audit("export.none", "test", None, None, None)  # neither before nor after (#196)
+    entries = ctx.audit_entries()
+    assert len(entries) == 5 and (entries[0]["before"], entries[0]["after"]) == (None, None)
+    assert {frozenset(e) for e in entries} == {frozenset(entries[1])}  # every entry has the same fields
+    assert not [k for k in entries[0] if k.endswith("_json")]
     assert [e["after"]["version"] for e in ctx.audit_entries(object_type="model", limit=2)] == [2, 1]
     assert ctx.audit_entries(object_uuid="model-0")[0]["action"] == "model.activate"
     assert ctx.audit_entries(action="user.change")[0]["before"] == {"role": "Operator"}

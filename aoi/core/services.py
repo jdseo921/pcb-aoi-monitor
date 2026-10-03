@@ -387,7 +387,9 @@ class AppContext:
         since: str | None = None,
         limit: int = 1000,
     ) -> list[dict[str, Any]]:
-        """Read audit entries, newest first, filtered by object type, object UUID, action and a UTC time floor."""
+        """Read audit entries, newest first, filtered by object type, object UUID, action and a UTC time floor. Every
+        entry has the same fields: the audit columns, with `before` and `after` decoded from JSON (None when the entry
+        has none) in place of the raw `before_json` and `after_json`."""
         return self.db.audit_entries(object_type, object_uuid, action, since, limit)
 
     # --- inspection ----------------------------------------------------------
@@ -859,10 +861,11 @@ class AppContext:
 
     @requires("Engineer", "Exporting a model")
     def export_model(self, model_id: int, dest: str | Path) -> Path:
-        """Copy a model version's file to `dest`, whole or not at all."""
+        """Copy a model version's file to `dest`, whole or not at all. The audit entry stores `dest` relative to the
+        workspace when inside it (REQ-SET-001), else in full."""
         model = self.model(model_id)
         atomic.copy_file(model["path"], dest)
-        after = {"version": model["version"], "dest": str(dest)}
+        after = {"version": model["version"], "dest": to_stored(Path(dest).absolute(), self.settings.root)}
         self._audit_files([Path(dest)], "export.model", "model", model["uuid"], after, [Path(model["path"])])
         return Path(dest)
 
@@ -870,7 +873,7 @@ class AppContext:
     def export_overlays(self, inspections: list[dict[str, Any]], folder: str | Path) -> int:
         """Copy the overlay images of `inspections` (records from `inspections()`) into `folder`; returns how many. A
         copy that fails stops the export with AOI-LOG-001; the entry names the files that left before it, which stay
-        (#178)."""
+        (#178), and stores `folder` relative to the workspace when inside it (REQ-SET-001), else in full."""
         sources = [Path(r["overlay_path"]) for r in inspections if r.get("overlay_path")]
         sources = [p for p in sources if p.exists()]
         copied: list[Path] = []
@@ -882,7 +885,8 @@ class AppContext:
                 failed = (Path(folder) / src.name, e)
                 break
             copied.append(Path(folder) / src.name)
-        after: dict[str, Any] = {"folder": str(folder), "records": len(inspections), "copied": len(copied)}
+        stored = to_stored(Path(folder).absolute(), self.settings.root)
+        after: dict[str, Any] = {"folder": stored, "records": len(inspections), "copied": len(copied)}
         if failed:
             after["error"] = f"{failed[0].name}: {failed[1].strerror or failed[1]}"
         self._audit_files(copied, "export.overlays", "inspections", None, after, sources)
@@ -901,10 +905,12 @@ class AppContext:
         fieldnames: list[str] | None = None,
     ) -> int:
         """Write `rows` as CSV to `path`, whole or not at all, and audit the export; returns the row count. `fieldnames`
-        gives the header when `rows` may be empty. A file that cannot be written is refused with AOI-LOG-002."""
+        gives the header when `rows` may be empty. A file that cannot be written is refused with AOI-LOG-002. The audit
+        entry stores `path` relative to the workspace when inside it (REQ-SET-001), else in full."""
         with _export_write(path):
             export_csv(path, rows, fieldnames)
-        self._audit_files([Path(path)], "export.csv", what, None, {"path": str(path), "rows": len(rows)})
+        stored = to_stored(Path(path).absolute(), self.settings.root)
+        self._audit_files([Path(path)], "export.csv", what, None, {"path": stored, "rows": len(rows)})
         return len(rows)
 
     @requires("Engineer", "Exporting a report")
@@ -919,8 +925,8 @@ class AppContext:
         with _export_write(path):
             atomic.write_bytes(path, pdf)
         after = {
-            "path": str(path), "board_model": board_model, "run_uuid": run_uuid, "model_version": model_version,
-            "bytes": len(pdf),
+            "path": to_stored(Path(path).absolute(), self.settings.root), "board_model": board_model,
+            "run_uuid": run_uuid, "model_version": model_version, "bytes": len(pdf),
         }  # fmt: skip
         self._audit_files([Path(path)], "export.report", "test_run", run_uuid, after)
 

@@ -31,7 +31,7 @@ from aoi.data.db import Database
 from aoi.ui.main_window import MainWindow
 from aoi.ui.pages.settings import SettingsPage
 from tests.conftest import TrainedModel, engineer
-from tests.test_req_done_in_v01 import BOARD, _window
+from tests.test_req_done_in_v01 import BOARD, _inspect_one, _window
 
 UUID4 = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$")
 STORED_TIME = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\+00:00$")
@@ -176,6 +176,8 @@ def test_req_set_001_moved_workspace_opens_everything(tmp_path: Path, tiny_model
             assert r["p"] and not Path(r["p"]).is_absolute(), (table, r["p"])
     for r in old.db.query("SELECT results FROM test_runs"):
         assert all(not Path(x["image"]).is_absolute() for x in json.loads(r["results"])), r
+    old.export_csv(old.settings.exports_dir / "inspections.csv", old.inspections())  # the folder Logs suggests (#196)
+    old.export_overlays(old.inspections(), old.settings.exports_dir)
     old.close()  # the database and the log file; an open file keeps the folder from moving on Windows
     new_root = tmp_path / "new_place"
     shutil.move(str(old_root), str(new_root))
@@ -202,9 +204,43 @@ def test_req_set_001_moved_workspace_opens_everything(tmp_path: Path, tiny_model
     windows = r"C:\Users\op\old_place\a.png"  # as a Windows station stores it, in a JSON list in a column
     assert [s for s in stored_strings([{"results": json.dumps([{"image": windows}])}]) if absolute_path(s)] == [windows]
     rows = ctx.db.query("SELECT * FROM inspections") + ctx.db.query("SELECT * FROM test_runs")
+    rows += ctx.db.query("SELECT before_json, after_json FROM audit")  # export entries name their folder too (#196)
     absolute = [s for s in stored_strings(rows) if absolute_path(s) or str(old_root) in s or str(new_root) in s]
     assert rows and not absolute, absolute
     ctx.close()
+
+
+def test_req_set_001_exports_to_the_suggested_folder_are_audited_relative_to_the_workspace(
+    qtbot: QtBot, trained_ctx: AppContext, ng_board: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """#196: an Engineer who accepts the folder Logs & Export suggests (<workspace>/exports) for Export CSV and Export
+    overlays, and an AI model exported there, leave audit entries that name the destination relative to the workspace,
+    as every other stored path is; before, each entry held the workspace's absolute location. An export to a folder
+    outside the workspace (a USB drive) is still recorded with its full path."""
+    win = _window(qtbot, trained_ctx)
+    _inspect_one(qtbot, win, ng_board)
+    win.navigate("Logs & Export")
+    logs = win.pages["Logs & Export"]
+    monkeypatch.setattr(QMessageBox, "question", staticmethod(lambda *a, **k: QMessageBox.StandardButton.Yes))
+    monkeypatch.setattr(QFileDialog, "getSaveFileName", staticmethod(lambda _p, _c, suggested, kind: (suggested, kind)))
+    monkeypatch.setattr(QFileDialog, "getExistingDirectory", staticmethod(lambda _p, _c, suggested: suggested))
+    logs.export_csv()
+    logs.export_overlays()
+    exports, active = trained_ctx.settings.exports_dir, trained_ctx.active_model(BOARD)
+    assert active and (exports / "inspections.csv").is_file() and any(exports.glob("*.png"))
+    trained_ctx.export_model(active["id"], exports / "model.pt")
+    usb = tmp_path / "usb"
+    usb.mkdir()
+    trained_ctx.export_csv(usb / "rows.csv", [{"a": 1}])
+    keys = {"export.csv": "path", "export.overlays": "folder", "export.model": "dest"}
+    stored = [(e["action"], e["after"][keys[e["action"]]]) for e in trained_ctx.audit_entries() if e["action"] in keys]
+    assert stored == [  # newest first
+        ("export.csv", str(usb / "rows.csv")),
+        ("export.model", "exports/model.pt"),
+        ("export.overlays", "exports"),
+        ("export.csv", "exports/inspections_checks.csv"),
+        ("export.csv", "exports/inspections.csv"),
+    ]
 
 
 def test_req_set_001_a_workspace_saved_on_settings_waits_for_the_restart(
