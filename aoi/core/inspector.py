@@ -15,7 +15,7 @@ import cv2
 import numpy as np
 
 from .. import defects as taxonomy
-from ..errors import AoiError
+from ..errors import QT_TRANSLATE_NOOP, AoiError, joined
 from .anomaly import AnomalyModel
 from .compare import MIN_SIDE, CompareResult, Region, changed_regions, compare, regions_from_mask
 from .imaging import align_to_reference
@@ -29,10 +29,12 @@ NO_AI_NOTE = "No trained model for this board model; AI check skipped."
 NOT_COMPARED_NOTE = "Comparison with the golden board did not run at inspection; not judged again."
 NOT_AI_JUDGED_NOTE = "AI check did not run at inspection; not judged again."
 NOT_RUN = {  # why a check did not run, by its note, for AOI-INSP-010
-    NO_GOLDEN_NOTE: "no Golden board is set",
-    NOT_COMPARED_NOTE: "the Golden board comparison did not run when the board was inspected",
-    NO_AI_NOTE: "no AI model is trained",
-    NOT_AI_JUDGED_NOTE: "the AI check did not run when the board was inspected",
+    NO_GOLDEN_NOTE: QT_TRANSLATE_NOOP("Errors", "no Golden board is set"),
+    NOT_COMPARED_NOTE: QT_TRANSLATE_NOOP(
+        "Errors", "the Golden board comparison did not run when the board was inspected"
+    ),
+    NO_AI_NOTE: QT_TRANSLATE_NOOP("Errors", "no AI model is trained"),
+    NOT_AI_JUDGED_NOTE: QT_TRANSLATE_NOOP("Errors", "the AI check did not run when the board was inspected"),
 }
 
 
@@ -214,7 +216,8 @@ class Inspector:
     def inspect(self, img: np.ndarray) -> InspectionResult:
         """The board in `img` aligned, compared and judged. AOI-INSP-011 before any work when it, or the golden board,
         has a side under MIN_SIDE px; AOI-INSP-010 when no check could judge it (`judge`)."""
-        for image, im in (("board image", img), ("Golden board", self.reference)):
+        board, golden = QT_TRANSLATE_NOOP("Errors", "board image"), QT_TRANSLATE_NOOP("Errors", "Golden board")
+        for image, im in ((board, img), (golden, self.reference)):
             if im is not None and min(im.shape[:2]) < MIN_SIDE:
                 h, w = im.shape[:2]
                 raise AoiError("AOI-INSP-011", image=image, width=w, height=h, minimum=MIN_SIDE)
@@ -354,9 +357,15 @@ class Inspector:
 
         # 5) Verdict: any NG check -> NG; else any WARN -> WARN. No check, no verdict: never OK on no evidence (#169).
         if not res.checks:
-            off = [name for name, on in (("Golden board comparison", r.use_compare), ("AI model", r.use_ai)) if not on]
-            why = [NOT_RUN[n] for n in res.notes if n in NOT_RUN] + [f"the recipe turns the {n} off" for n in off]
-            raise AoiError("AOI-INSP-010", board=r.board_model, reason="; ".join(why) or "no check ran")
+            turned_off = (
+                (QT_TRANSLATE_NOOP("Errors", "the recipe turns the Golden board comparison off"), r.use_compare),
+                (QT_TRANSLATE_NOOP("Errors", "the recipe turns the AI model off"), r.use_ai),
+            )
+            why = [NOT_RUN[n] for n in res.notes if n in NOT_RUN] + [text for text, on in turned_off if not on]
+            reason = joined(QT_TRANSLATE_NOOP("Errors", "{first}; {rest}"), why) or QT_TRANSLATE_NOOP(
+                "Errors", "no check ran"
+            )
+            raise AoiError("AOI-INSP-010", board=r.board_model, reason=reason)
         verdicts = [c.verdict for c in res.checks]
         res.verdict = NG if NG in verdicts else WARN if WARN in verdicts else OK
         if res.verdict == OK and res.defects and any(d.severity != "Minor" for d in res.defects):
