@@ -472,7 +472,8 @@ by position, not a QBuffer), a run checks that every file an inspection and a tr
 and 20 random kills, each after a saved result, lose no finished result. Every error a user can see is
 an `AoiError` from the catalogue in `aoi/errors.py`, with a code `AOI-<AREA>-<NNN>`, what happened and what to do;
 `docs/error-codes.md` is generated from it (REQ-LOG-004, REQ-SET-019). An error's title, what happened and what to do
-are `Phrase`s (`aoi/errors.py`, no Qt): the English template with its translation context "Errors" and the values that
+are `Phrase`s (`aoi/errors.py`, no Qt), each catalogue text marked `QT_TRANSLATE_NOOP("Errors", …)` so it is in
+`aoi_ko.ts` (a test checks every one): the English template with its translation context and the values that
 fill it, a value being a phrase in turn where it is words (the action a role check names and the roles it needs, a
 Recipe Editor quantity, the page an unexpected error stopped on, the reason the engine gives; a list of reasons is
 joined by a phrase too, `joined()`). Their str is the English text the log keeps;

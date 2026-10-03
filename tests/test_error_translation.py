@@ -13,6 +13,7 @@ from PySide6.QtCore import QCoreApplication, QRectF, QTranslator
 from pytestqt.qtbot import QtBot
 
 from aoi.config import Settings
+from aoi.core.anomaly import _unusable
 from aoi.core.inspector import Inspector
 from aoi.core.recipe import Recipe
 from aoi.core.services import AppContext, ErrorReport
@@ -124,3 +125,30 @@ def test_req_set_005_image_and_compare_errors_reach_the_translation_file(tiny_mo
         f"§No check can judge this board of board model {tiny_model.board_model}: §§the recipe turns the Golden board"
         " comparison off; §the recipe turns the AI model off. The board was given no verdict."
     )
+
+
+def test_req_set_005_every_error_code_reaches_the_translation_file(ctx: AppContext) -> None:
+    """#198 acceptance: every title, what and action of the catalogue is in aoi_ko.ts under the context Errors, and
+    the values the app fills AOI-USR-002 (a role name), AOI-SET-008 (what a setting must be) and AOI-TRN-004 (why a
+    trained AI model cannot judge boards) with come out translated."""
+    _in_translation_file("AOI-")
+    ctx.set_user("admin")
+    with pytest.raises(AoiError) as last_admin:
+        ctx.add_user("admin", "Operator")
+    with pytest.raises(AoiError) as setting:
+        Settings.check("log_retention_days", 0)
+    unusable = AoiError("AOI-TRN-004", reason=_unusable({"image_size": 7}, {}))
+    translator = Marking()
+    assert QCoreApplication.installTranslator(translator)
+    try:
+        texts = [
+            dialog_text(ErrorReport.of(e))[1].split("\n\n")[0] for e in (last_admin.value, setting.value, unusable)
+        ]
+    finally:
+        QCoreApplication.removeTranslator(translator)
+    assert texts[0] == (
+        "§admin is the only user with the Admin role, so it cannot change to §Operator: no one could then manage users"
+        " or settings."
+    )
+    assert texts[1] == "§The setting log_retention_days is 0; it must be §a whole number above 0."
+    assert texts[2].startswith("§Training made an AI model that cannot judge boards (§its input size 7 is not a mult")

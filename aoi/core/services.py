@@ -27,7 +27,7 @@ from ..data import atomic
 from ..data.db import Database, DbError, new_uuid
 from ..data.errors import WorkspaceError
 from ..data.paths import to_stored
-from ..errors import QT_TRANSLATE_NOOP, AoiError, joined
+from ..errors import QT_TRANSLATE_NOOP, AoiError, Phrase, joined
 from ..times import local_date, now_utc
 from . import anomaly
 from .imaging import align_to_reference, list_images, load_image, load_image_sha256, save_image
@@ -377,7 +377,9 @@ class AppContext:
             return cached[1]
         m = anomaly.AnomalyModel.load(rec["path"], device)
         if m.meta.get("uuid") != rec["uuid"]:  # another AI model's file in its place, such as one written over it
-            why = f"its UUID {m.meta.get('uuid') or '(none)'} is not {rec['uuid']}, the one the model registry names"
+            why = QT_TRANSLATE_NOOP("Errors", "its UUID {found} is not {uuid}, the one the model registry names").fill(
+                found=m.meta.get("uuid") or "(none)", uuid=rec["uuid"]
+            )
             raise anomaly.ModelFileError("AOI-TRN-001", path=rec["path"], reason=why)
         loaded = (rec["version"], m, str(rec["uuid"]))
         if self.device == device:
@@ -847,7 +849,7 @@ class AppContext:
         (AOI-TRN-007): inspections would compare against a defective board."""
         before = self.db.sample(sample_id)
         if label != "OK":
-            self._refuse_reference_change(before, "relabelled NG")
+            self._refuse_reference_change(before, QT_TRANSLATE_NOOP("Errors", "relabelled NG"))
         self.db.update_sample(sample_id, label, defect_type)
         old = {"label": before["label"], "defect_type": before["defect_type"]}
         self.audit("sample.update", "sample", before["uuid"], old, {"label": label, "defect_type": defect_type})
@@ -858,7 +860,7 @@ class AppContext:
         """Remove a sample's record; its image file stays in the workspace. The reference sample cannot be removed
         (AOI-TRN-007)."""
         before = self.db.sample(sample_id)
-        self._refuse_reference_change(before, "removed")
+        self._refuse_reference_change(before, QT_TRANSLATE_NOOP("Errors", "removed"))
         self.db.delete_sample(sample_id)
         old = {"label": before["label"], "path": to_stored(Path(before["path"]), self.settings.root)}
         self.audit("sample.delete", "sample", before["uuid"], old, None)
@@ -887,7 +889,7 @@ class AppContext:
         AOI-USR-002 before anything is written or audited: no one could manage users or settings after it (#170)."""
         users = self.db.users()
         if role != "Admin" and [u["name"] for u in users if u["role"] == "Admin"] == [name]:
-            raise AoiError("AOI-USR-002", name=name, role=role)
+            raise AoiError("AOI-USR-002", name=name, role=Phrase("Role", role))  # the role's name as the UI shows it
         before = next((u for u in users if u["name"] == name), None)
         self.db.add_user(name, role)
         old = {"role": before["role"]} if before else None

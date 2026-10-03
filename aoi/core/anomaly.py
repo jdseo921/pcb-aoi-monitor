@@ -32,7 +32,19 @@ import torch
 from torch import nn
 
 from ..data import atomic
-from ..errors import AoiError
+from ..errors import QT_TRANSLATE_NOOP, AoiError
+
+# Why an AI model file or a trained AI model is refused (AOI-TRN-001, AOI-TRN-004), as phrases shown translated (#198)
+DAMAGED = QT_TRANSLATE_NOOP("Errors", "the file is damaged ({damaged})")
+CRC_FAILS = QT_TRANSLATE_NOOP("Errors", "{entry} fails its CRC-32")
+IS_FOLDER = QT_TRANSLATE_NOOP("Errors", "{entry} is marked as a folder")
+BAD_SIZE = QT_TRANSLATE_NOOP("Errors", "its input size {size} is not a multiple of {stride} pixels")
+BAD_MAP = QT_TRANSLATE_NOOP("Errors", "its {key} is not a {size} x {size} map of finite numbers")
+MALFORMED = QT_TRANSLATE_NOOP("Errors", "its metadata is malformed ({error})")
+NOT_ABOVE_0 = {
+    "image_threshold": QT_TRANSLATE_NOOP("Errors", "its image threshold {value} is not a number above 0"),
+    "pixel_threshold": QT_TRANSLATE_NOOP("Errors", "its pixel threshold {value} is not a number above 0"),
+}
 
 
 class ModelFileError(AoiError):
@@ -183,34 +195,34 @@ class AnomalyModel:
                 crc = z.testzip()  # a weight changed on disk would otherwise load and judge boards wrongly
                 # torch never reads the bytes of an entry flagged as a folder: its weights would be stray memory
                 folder = next((i.filename for i in z.infolist() if i.is_dir() or i.external_attr & 0x10), None)
-            damaged = f"{crc} fails its CRC-32" if crc else f"{folder} is marked as a folder" if folder else None
+            damaged = CRC_FAILS.fill(entry=crc) if crc else IS_FOLDER.fill(entry=folder) if folder else None
             ckpt = None if damaged else torch.load(path, map_location=device, weights_only=True)
         except OSError as e:  # gone, a folder, unreadable, or cut short (torch reports EINVAL)
             raise ModelFileError("AOI-TRN-001", path=str(path), reason=e.strerror or type(e).__name__) from e
         except Exception as e:  # any other way a malformed file trips the reader: refused, never an uncoded error
             raise ModelFileError("AOI-TRN-001", path=str(path), reason=type(e).__name__) from e
         if damaged:
-            raise ModelFileError("AOI-TRN-001", path=str(path), reason=f"the file is damaged ({damaged})")
+            raise ModelFileError("AOI-TRN-001", path=str(path), reason=DAMAGED.fill(damaged=damaged))
         if (
             not isinstance(ckpt, dict)
             or not isinstance(ckpt.get("meta"), dict)
             or not isinstance(ckpt.get("state_dict"), dict)
         ):
-            raise ModelFileError("AOI-TRN-001", path=str(path), reason="it holds no state_dict and metadata")
+            raise ModelFileError(
+                "AOI-TRN-001", path=str(path), reason=QT_TRANSLATE_NOOP("Errors", "it holds no state_dict and metadata")
+            )
         try:
             meta = _from_safe(ckpt["meta"])
             why = _unusable(meta, ckpt["state_dict"])
         except Exception as e:  # metadata of a kind this app never writes, such as a bfloat16 map
-            raise ModelFileError(
-                "AOI-TRN-001", path=str(path), reason=f"its metadata is malformed ({type(e).__name__})"
-            ) from e
+            raise ModelFileError("AOI-TRN-001", path=str(path), reason=MALFORMED.fill(error=type(e).__name__)) from e
         if why is not None:
             raise ModelFileError("AOI-TRN-001", path=str(path), reason=why)
         net = ConvAutoencoder()
         try:
             net.load_state_dict(ckpt["state_dict"])
         except Exception as e:  # names or shapes of another network, or weights that are not tensors
-            why = "its weights do not fit this app's AI model"
+            why = QT_TRANSLATE_NOOP("Errors", "its weights do not fit this app's AI model")
             raise ModelFileError("AOI-TRN-001", path=str(path), reason=why) from e
         return cls(net, meta, device)
 
@@ -221,20 +233,20 @@ def _unusable(meta: dict[str, Any], weights: dict[str, Any]) -> str | None:
     weights."""
     size = meta.get("image_size")
     if isinstance(size, bool) or not isinstance(size, int) or not 0 < size <= 4096 or size % STRIDE:
-        return f"its input size {size!r} is not a multiple of {STRIDE} pixels"
+        return BAD_SIZE.fill(size=repr(size), stride=STRIDE)
     for key in ("image_threshold", "pixel_threshold"):
         value = meta.get(key)
         if isinstance(value, bool) or not isinstance(value, (int, float)) or not (math.isfinite(value) and value > 0):
-            return f"its {key.replace('_', ' ')} {value!r} is not a number above 0"
+            return NOT_ABOVE_0[key].fill(value=repr(value))
     maps = [meta.get(key) for key in _ARRAY_META_KEYS]
     if any(m is not None for m in maps):
         for key, m in zip(_ARRAY_META_KEYS, maps, strict=True):
             if not isinstance(m, np.ndarray) or m.shape != (size, size) or not np.isfinite(m).all():
-                return f"its {key} is not a {size} x {size} map of finite numbers"
+                return BAD_MAP.fill(key=key, size=size)
         if (meta["err_std"] <= 0).any():
-            return "its err_std holds a spread of 0 or less"
+            return QT_TRANSLATE_NOOP("Errors", "its err_std holds a spread of 0 or less")
     if not all(bool(torch.isfinite(t).all()) for t in weights.values() if torch.is_tensor(t) and t.is_floating_point()):
-        return "its weights hold numbers that are not finite"
+        return QT_TRANSLATE_NOOP("Errors", "its weights hold numbers that are not finite")
     return None
 
 

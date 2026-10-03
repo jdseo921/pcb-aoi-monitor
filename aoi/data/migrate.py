@@ -19,6 +19,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 
+from ..errors import QT_TRANSLATE_NOOP
 from .atomic import TEMP_SUFFIX
 from .errors import WorkspaceError
 
@@ -30,6 +31,12 @@ SCHEMA_VERSION_TABLE = (
     "CREATE TABLE IF NOT EXISTS schema_version ("
     " number INTEGER PRIMARY KEY, name TEXT NOT NULL, applied_at TEXT NOT NULL, checksum TEXT NOT NULL)"
 )
+
+
+# What is wrong with the migration files (AOI-SET-006), as phrases a screen translates (#198)
+BAD_NAME = QT_TRANSLATE_NOOP("Errors", "file name is not NNNN_name.sql: {file}")
+OWN_COMMIT = QT_TRANSLATE_NOOP("Errors", "{file} manages its own transaction; the runner does that")
+GAP = QT_TRANSLATE_NOOP("Errors", "numbers must run 1, 2, 3 ... without gaps: found {file}")
 
 
 class MigrationError(WorkspaceError):
@@ -63,16 +70,14 @@ def load_migrations(folder: Path = MIGRATIONS_DIR) -> list[Migration]:
     for path in sorted(folder.glob("*.sql")):
         m = FILE_NAME.match(path.name)
         if not m:
-            raise MigrationError("AOI-SET-006", problem=f"file name is not NNNN_name.sql: {path.name}")
+            raise MigrationError("AOI-SET-006", problem=BAD_NAME.fill(file=path.name))
         sql = path.read_text(encoding="utf-8")
         if OWN_TRANSACTION.search(sql):
-            raise MigrationError(
-                "AOI-SET-006", problem=f"{path.name} manages its own transaction; the runner does that"
-            )
+            raise MigrationError("AOI-SET-006", problem=OWN_COMMIT.fill(file=path.name))
         found.append(Migration(int(m.group(1)), m.group(2), sql, checksum(sql)))
     for expected, mig in enumerate(found, 1):
         if mig.number != expected:
-            raise MigrationError("AOI-SET-006", problem=f"numbers must run 1, 2, 3 ... without gaps: found {mig.file}")
+            raise MigrationError("AOI-SET-006", problem=GAP.fill(file=mig.file))
     return found
 
 
