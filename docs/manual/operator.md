@@ -36,6 +36,9 @@ stops after the board in hand, which is saved under the run's board model, and t
 with AOI-INSP-012; the remaining boards are not inspected. Check the board model in the header, then press Start to
 carry on with the queue. The board shown before the change is cleared, so "Compare with Golden board ›" never opens it
 as a board of the new board model.
+A run also belongs to the user who pressed Start. If another user signs in with Switch User during a run, the run stops
+after the board in hand, which is recorded under the user who pressed Start, and the status bar says so; the user now
+signed in presses Start to carry on with the queue, and those boards are recorded under their name.
 
 Reading the verdict: while a board is being inspected the banner turns grey and reads "Inspecting…", and the status
 bar at the bottom names the board and its place in the queue, such as "Inspecting board_07.png (3 of 12)…". The

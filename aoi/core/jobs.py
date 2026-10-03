@@ -6,10 +6,13 @@ a CLI, the Stage 3 robot cycle), and `aoi/ui/workers.py` turns the callbacks int
 Callbacks run on the pool thread. A job function takes plain values in and returns plain values out; with
 `with_progress=True` it also gets `progress(*values)` to report how far it is and `should_stop()` to check for a
 cancel. A cancel is a request: the function stops when it next checks, and what it returns is still its result.
+A job runs with the context variables of the moment it was submitted (`Jobs(context=...)`), so it acts as the user who
+started it (#177).
 """
 
 from __future__ import annotations
 
+import contextvars
 import logging
 import threading
 import time
@@ -61,6 +64,7 @@ class Job(Generic[T]):
         self._listeners: dict[str, list[Callable[..., None]]] = {k: [] for k in events}
         self.result: T | None = None
         self.error: BaseException | None = None
+        self.context: contextvars.Context | None = None  # what `Jobs.submit` gives it: the function runs in it
 
     def on_progress(self, cb: Callable[[tuple[Any, ...]], None]) -> Job[T]:
         self._listeners["progress"].append(cb)
@@ -118,7 +122,10 @@ class Job(Generic[T]):
         self._started = time.monotonic()
         try:
             self.check_cancelled()  # cancelled while still queued: never run
-            value = self._fn(*self._args, **self._kwargs)
+            if self.context is None:
+                value = self._fn(*self._args, **self._kwargs)
+            else:
+                value = self.context.run(self._fn, *self._args, **self._kwargs)
         except JobCancelled:
             pass
         except Exception as e:  # reaches the user as a coded dialog through on_error; never kills the pool thread
@@ -143,12 +150,18 @@ class Jobs:
     """The pool `AppContext` owns. `submit` runs a job on a pool thread; `shutdown` cancels and waits, so a workspace
     folder is removed only once nothing in it is still being written (`AppContext.close`)."""
 
-    def __init__(self, max_workers: int = MAX_WORKERS) -> None:
+    def __init__(
+        self, max_workers: int = MAX_WORKERS, context: Callable[[], contextvars.Context] = contextvars.copy_context
+    ) -> None:
+        """`context` gives a job, as it is submitted, the context variables its function runs with: by default the
+        submitter's, as `asyncio.to_thread` does; `AppContext` adds the user who submitted it (#177)."""
+        self._context = context
         self._pool = ThreadPoolExecutor(max_workers, thread_name_prefix="aoi-job")
         self._jobs: weakref.WeakSet[Job[Any]] = weakref.WeakSet()  # the pool never keeps a finished job's result alive
         self._lock = threading.Lock()
 
     def submit(self, job: Job[T]) -> Job[T]:
+        job.context = self._context()  # taken here, on the submitting thread, not when a pool thread gets to the job
         with self._lock:
             self._jobs.add(job)
         self._pool.submit(job.run)

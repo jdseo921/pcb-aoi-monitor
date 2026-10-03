@@ -24,7 +24,7 @@ from ... import defects as taxonomy
 from ...core.explain import notes
 from ...core.imaging import IMAGE_EXTS, list_images, save_image
 from ...core.inspector import NG, InspectionResult, draw_overlay
-from ...core.services import AppContext
+from ...core.services import Actor, AppContext
 from ...errors import AoiError
 from ...hal import VIEWS
 from ...times import to_local
@@ -71,6 +71,7 @@ class InspectionPage(Page):
         self.queue_pos = -1
         self.running = False
         self.run_board_model: str | None = None  # the board model a run started under: its boards are judged under it
+        self.run_actor: Actor = ctx.actor  # who pressed Start: every board of the run is recorded under them (#177)
         self.last: InspectionResult | None = None
         self.last_path: Path | None = None
         self.last_id: int | None = None  # the record of the last result, for Compare (REQ-INSP-009)
@@ -193,7 +194,7 @@ class InspectionPage(Page):
         """F5: inspect the queue board after board until Stop or the end of the queue."""
         if not self.need_board_model():
             return
-        self.running, self.run_board_model = True, self.board_model
+        self.running, self.run_board_model, self.run_actor = True, self.board_model, self.ctx.actor
         self._update_buttons()
         self.next_board()
 
@@ -222,6 +223,9 @@ class InspectionPage(Page):
             self.running = False
             self.shell.status(self.tr("End of queue"))
             self._update_buttons()
+            return
+        if self.running and self.ctx.user != self.run_actor.name:  # a board of a run names who pressed Start (#177)
+            self._stop_for_user()  # another user signed in; a change of the same user's role goes on
             return
         self.queue_pos += 1
         path = self.queue[self.queue_pos]
@@ -406,6 +410,17 @@ class InspectionPage(Page):
         ).format(old=self.run_board_model, new=name or NO_VERDICT)
         self.shell.status(msg, ms=0)  # until the board in hand, if one is, replaces it with its own line
         self._alarm("WARN", msg, "AOI-INSP-012")
+
+    def _stop_for_user(self) -> None:
+        """Another user signed in with Switch User during a run: the run stops after the board in hand, which is
+        recorded under the user who pressed Start, so no board is recorded under a user who did not start it (#177)."""
+        self.running = False
+        self._update_buttons()
+        msg = self.tr(
+            "Run stopped: {user} signed in. The boards of the run so far are recorded under {starter}; press Start to"
+            " carry on with the queue as {user}."
+        ).format(user=self.ctx.user, starter=self.run_actor.name)
+        self.shell.status(msg, ms=0)  # until the next message, so the user now signed in sees why the run stopped
 
     def on_board_model_changed(self, name: str | None) -> None:
         self._drop_engine()  # rebuilt lazily with the new model/recipe/reference
