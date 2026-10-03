@@ -38,11 +38,12 @@ from ...core.explain import explain
 from ...core.imaging import IMAGE_EXTS
 from ...core.inspector import Check, InspectionResult
 from ...core.recipe import Recipe
-from ...core.services import AppContext, Judged
+from ...core.services import ROLES_FROM, AppContext, Judged
 from ...core.views import ai_view, difference_view
 from ...errors import AoiError
 from ...times import to_local
 from .. import theme
+from ..errors import phrase_text
 from ..widgets.busy import BusyOverlay
 from ..widgets.empty_state import EmptyState
 from ..widgets.image_view import ImageView
@@ -481,7 +482,7 @@ class ComparePage(Page):
             parts.append(self.tr("The board model's Golden board is now {file}.").format(file=name))
         if not any(p and Path(p).is_file() for p in (rec["diff_map_path"], rec["ai_map_path"])):
             e = AoiError("AOI-CMP-001", file=Path(rec["image_path"]).name, days=self.ctx.settings.map_retention_days_ok)
-            parts.append(f"{e.code} {e.message}")
+            parts.append(f"{e.code} {phrase_text(e.what)} {phrase_text(e.action)}")
         self.note.setText(" ".join(parts))
         self.note.show()
 
@@ -537,7 +538,11 @@ class ComparePage(Page):
 
     def save_recipe(self) -> None:
         if self.ctx.role == "Operator":
-            self.error(AoiError("AOI-USR-001", what="Changing recipes", roles="Engineer or Admin"))
+            self.error(
+                AoiError(
+                    "AOI-USR-001", what=QT_TRANSLATE_NOOP("Errors", "Changing recipes"), roles=ROLES_FROM["Engineer"]
+                )
+            )
             return
         if (bm := self.checked_board_model()) is None:
             return
