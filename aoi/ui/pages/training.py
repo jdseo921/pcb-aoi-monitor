@@ -34,6 +34,7 @@ from ...errors import AoiError
 from ...hal import VIEWS
 from ...times import to_local
 from .. import theme
+from ..errors import phrase_text
 from ..widgets.busy import BusyOverlay
 from ..widgets.empty_state import EmptyState
 from ..widgets.image_view import ImageView
@@ -364,8 +365,8 @@ class TrainingPage(Page):
         if total > 1:
             self.bar.setMaximum(total)
             self.bar.setValue(ep)
-        if msg:
-            self.log.appendPlainText(msg)
+        if msg:  # a phrase of the engine, shown in the UI language (#199)
+            self.log.appendPlainText(phrase_text(msg))
         elif ep % 5 == 0 or ep == 1:
             self.log.appendPlainText(
                 self.tr("epoch {epoch}/{total}  loss {loss:.4f}").format(epoch=ep, total=total, loss=loss)
@@ -421,7 +422,16 @@ class TrainingPage(Page):
         s = self.ctx.samples(self.board_model)
         fill_table(
             self.samples,
-            [[r["id"], r["label"], r["defect_type"] or "", r["side"], Path(r["path"]).name] for r in s],
+            [
+                [
+                    r["id"],
+                    r["label"],
+                    r["defect_type"] or "",
+                    view_text(r["side"]) if r["side"] else "",
+                    Path(r["path"]).name,
+                ]
+                for r in s
+            ],
             [None if r["label"] == "OK" else theme.NG_TINT for r in s],
             [r["path"] for r in s],
         )

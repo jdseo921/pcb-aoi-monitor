@@ -39,6 +39,7 @@ from .recipe import Recipe
 
 ALARM_LIMIT = 1000  # REQ-INSP-006: the alarms a screen shows and that survive a restart
 BUSY_ALARM_WAIT_MS = 200  # how long the alarm of a locked database's error, or an Inspection alarm, waits, not 5 s
+ALIGNING = QT_TRANSLATE_NOOP("Training", "Aligning {count} images to the reference board")  # a progress line (#199)
 
 
 @dataclass(frozen=True)
@@ -333,7 +334,7 @@ class AppContext:
         # per-pixel median of good boards: less noise than any single photo.
         ref_path = self.db.reference(board_model)
         anchor = self.load_image(ref_path) if ref_path and Path(ref_path).exists() else ok[0]
-        say(0, 1, 0.0, f"Aligning {len(ok) + len(ng)} images to the reference board")
+        say(0, 1, 0.0, ALIGNING.fill(count=len(ok) + len(ng)))
         ok = [align_to_reference(im, anchor)[0] for im in ok]
         ng = [align_to_reference(im, anchor)[0] for im in ng]
         golden = np.median(np.stack(ok), axis=0).astype(np.uint8)

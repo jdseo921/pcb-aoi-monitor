@@ -32,7 +32,7 @@ import torch
 from torch import nn
 
 from ..data import atomic
-from ..errors import QT_TRANSLATE_NOOP, AoiError
+from ..errors import QT_TRANSLATE_NOOP, AoiError, Phrase
 
 # Why an AI model file or a trained AI model is refused (AOI-TRN-001, AOI-TRN-004), as phrases shown translated (#198)
 DAMAGED = QT_TRANSLATE_NOOP("Errors", "the file is damaged ({damaged})")
@@ -41,6 +41,17 @@ IS_FOLDER = QT_TRANSLATE_NOOP("Errors", "{entry} is marked as a folder")
 BAD_SIZE = QT_TRANSLATE_NOOP("Errors", "its input size {size} is not a multiple of {stride} pixels")
 BAD_MAP = QT_TRANSLATE_NOOP("Errors", "its {key} is not a {size} x {size} map of finite numbers")
 MALFORMED = QT_TRANSLATE_NOOP("Errors", "its metadata is malformed ({error})")
+# A training run's progress lines and threshold rules: phrases the Training page shows in the UI language (#199).
+TRAINING_ON = QT_TRANSLATE_NOOP(
+    "Training", "Training on {train} OK images ({held_out} held out, {ng} NG for calibration) on {device}"
+)
+STOPPED = QT_TRANSLATE_NOOP("Training", "Stopped by user; calibrating current weights")
+CALIBRATED = QT_TRANSLATE_NOOP(
+    "Training", "Calibrated image threshold {threshold:.4f} ({rule}); pixel threshold {pixel:.4f}"
+)
+OK_ONLY = QT_TRANSLATE_NOOP("Training", "OK-only: max(mean+3σ, 1.05×max OK)")
+SEPARABLE = QT_TRANSLATE_NOOP("Training", "separable: midpoint of max OK and min NG")
+OVERLAP = QT_TRANSLATE_NOOP("Training", "overlap: OK-based cut, {missed}/{ng} labelled NG below it")
 NOT_ABOVE_0 = {
     "image_threshold": QT_TRANSLATE_NOOP("Errors", "its image threshold {value} is not a number above 0"),
     "pixel_threshold": QT_TRANSLATE_NOOP("Errors", "its pixel threshold {value} is not a number above 0"),
@@ -128,7 +139,7 @@ class TrainConfig:
     seed: int = 0
 
 
-ProgressFn = Callable[[int, int, float, str], None]  # epoch, total, loss, message
+ProgressFn = Callable[[int, int, float, str], None]  # epoch, total, loss, message: "" or a Phrase (#199)
 
 
 class AnomalyModel:
@@ -250,20 +261,20 @@ def _unusable(meta: dict[str, Any], weights: dict[str, Any]) -> str | None:
     return None
 
 
-def calibrate(ok_scores: list[float], ng_scores: list[float]) -> tuple[float, str]:
-    """Pick the image-level threshold from validation scores."""
+def calibrate(ok_scores: list[float], ng_scores: list[float]) -> tuple[float, Phrase]:
+    """Pick the image-level threshold from validation scores; the rule that picked it is a phrase (#199)."""
     ok = np.array(ok_scores, dtype=np.float64)
     stat = float(ok.mean() + 3 * ok.std()) if len(ok) > 1 else float(ok.max() * 1.25)
     base = max(stat, float(ok.max()) * 1.05)
     if not ng_scores:
-        return base, "OK-only: max(mean+3σ, 1.05×max OK)"
+        return base, OK_ONLY
     ng = np.array(ng_scores, dtype=np.float64)
     if ng.min() > ok.max():
-        return float((ok.max() + ng.min()) / 2), "separable: midpoint of max OK and min NG"
+        return float((ok.max() + ng.min()) / 2), SEPARABLE
     # Overlap: keep the OK-based cut so good boards are not flagged; the golden-sample
     # comparison is the second line of defence for the NG samples that fall below it.
     missed = int((ng < base).sum())
-    return base, f"overlap: OK-based cut, {missed}/{len(ng)} labelled NG below it"
+    return base, OVERLAP.fill(missed=missed, ng=len(ng))
 
 
 def train(
@@ -293,11 +304,7 @@ def train(
     l1 = nn.L1Loss()
     t0 = time.time()
     say(
-        0,
-        cfg.epochs,
-        0.0,
-        f"Training on {len(train_set)} OK images "
-        f"({n_val} held out, {len(ng_images)} NG for calibration) on {cfg.device}",
+        0, cfg.epochs, 0.0, TRAINING_ON.fill(train=len(train_set), held_out=n_val, ng=len(ng_images), device=cfg.device)
     )
     loss_hist = []
     for ep in range(1, cfg.epochs + 1):
@@ -315,7 +322,7 @@ def train(
         loss_hist.append(running / cfg.steps_per_epoch)
         say(ep, cfg.epochs, loss_hist[-1], "")
         if should_stop and should_stop():
-            say(ep, cfg.epochs, loss_hist[-1], "Stopped by user; calibrating current weights")
+            say(ep, cfg.epochs, loss_hist[-1], STOPPED)
             break
 
     model = AnomalyModel(
@@ -336,7 +343,7 @@ def train(
     model.meta.update(
         image_threshold=thr,
         pixel_threshold=max(pix, 1e-4),
-        threshold_rule=rule,
+        threshold_rule=str(rule),  # plain text: a model file holds tensors and plain values only
         ok_scores=ok_scores,
         ng_scores=ng_scores,
         n_ok_train=len(train_set),
@@ -351,10 +358,5 @@ def train(
     # of one photo score 0, so the threshold is 0.
     if (why := _unusable(model.meta, model.net.state_dict())) is not None:
         raise AoiError("AOI-TRN-004", reason=why)
-    say(
-        len(loss_hist),
-        cfg.epochs,
-        loss_hist[-1],
-        f"Calibrated image threshold {thr:.4f} ({rule}); pixel threshold {pix:.4f}",
-    )
+    say(len(loss_hist), cfg.epochs, loss_hist[-1], CALIBRATED.fill(threshold=thr, rule=rule, pixel=pix))
     return model

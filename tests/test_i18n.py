@@ -38,7 +38,7 @@ TEXT_SETTERS = {  # Qt methods whose string arguments appear on screen, and this
     "setSpecialValueText", "setPrefix", "setSuffix", "addItem", "addItems", "insertItem", "addTab", "addRow",
     "setHtml", "setPlainText", "appendPlainText", "setHorizontalHeaderLabels", "setVerticalHeaderLabels",
     "showMessage", "setLabelText", "setInformativeText", "setDetailedText", "setTabText", "setItemText",
-    "show_state", "status", "action",
+    "show_state", "status", "action", "fill_table",
 }  # fmt: skip
 OWNED_SETTERS = {  # static methods that show text when called on these classes (QMessageBox.warning, not log.warning)
     "QMessageBox": {"information", "warning", "critical", "question", "about"},
@@ -187,9 +187,10 @@ def _shows_text(node: ast.Call) -> bool:
 
 
 def _scan(path: Path) -> set[tuple[int, str]]:
-    """(line, text) of every visible literal passed to something that shows text, outside tr(); page titles too; and
-    every literal tr() gets only through a loop variable (`self.tr(h) for h in headers`): pyside6-lupdate extracts a
-    literal argument only, so such a string never reaches the translation file and stays English on screen."""
+    """(line, text) of every visible literal passed to something that shows text, outside tr(), also in a branch of a
+    conditional, an operand, an `or` or a dict lookup (#199); page titles too; and every literal tr(), translate() or
+    QT_TRANSLATE_NOOP() gets other than as its literal argument (`self.tr(h) for h in headers`): pyside6-lupdate
+    extracts a literal argument only, so such a string never reaches the translation file and stays English."""
     tree = ast.parse(path.read_text(encoding="utf-8"))
     parents = {child: node for node in ast.walk(tree) for child in ast.iter_child_nodes(node)}
     scopes = (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda, ast.Module)
@@ -201,7 +202,10 @@ def _scan(path: Path) -> set[tuple[int, str]]:
             target, value = node.target, node.value
         else:
             continue
-        literal = isinstance(value, (ast.List, ast.Tuple)) or _literal_text(value) is not None  # check() reads a list
+        literal = isinstance(value, (ast.List, ast.Tuple, ast.IfExp, ast.BoolOp, ast.BinOp)) or (
+            isinstance(value, ast.Subscript) and isinstance(value.value, ast.Dict)
+        )  # check() reads these
+        literal = literal or _literal_text(value) is not None
         if isinstance(target, ast.Name) and literal and not _is_translated(value):
             scope = node
             while not isinstance(scope, scopes):
@@ -214,29 +218,49 @@ def _scan(path: Path) -> set[tuple[int, str]]:
             arg = assigned[scope][arg.id]
         if _is_translated(arg):
             return
+        parts: list[ast.AST] = []  # where a literal can hide: each item, branch, operand, dict value or row (#199)
         if isinstance(arg, (ast.List, ast.Tuple)):
-            for elt in arg.elts:
-                check(elt, scope)
-            return
+            parts = list(arg.elts)
+        elif isinstance(arg, ast.IfExp):
+            parts = [arg.body, arg.orelse]
+        elif isinstance(arg, ast.BoolOp):
+            parts = list(arg.values)
+        elif isinstance(arg, ast.BinOp):
+            parts = [arg.left, arg.right]
+        elif isinstance(arg, ast.Subscript) and isinstance(arg.value, ast.Dict):
+            parts = [v for v in arg.value.values if v is not None]
+        elif isinstance(arg, (ast.ListComp, ast.GeneratorExp)):
+            parts = [arg.elt]
+        for part in parts:
+            check(part, scope)
         text = _literal_text(arg)
         if text is not None and _visible(text):
             found.add((arg.lineno, text))
 
-    def looped(call: ast.Call) -> ast.AST | None:
-        """What the loop or comprehension runs over whose variable is the text of this tr() or translate() call."""
-        pos = 1 if _callee(call)[1] == "translate" else 0
-        if _callee(call)[1] not in ("tr", "translate") or len(call.args) <= pos:
+    def hidden(call: ast.Call) -> ast.AST | None:
+        """What hides the text of this tr(), translate() or QT_TRANSLATE_NOOP() call from pyside6-lupdate, which
+        extracts a literal argument only: the loop or comprehension its variable runs over, or the text itself when it
+        is not a literal (check() then finds a literal inside it: a name assigned one, a branch, a dict value). A
+        QT_TRANSLATE_NOOP whose text is no literal marks nothing, so it is flagged whatever it holds (#199)."""
+        name = _callee(call)[1]
+        pos = 0 if name == "tr" else 1
+        if name not in ("tr", "translate", "QT_TRANSLATE_NOOP") or len(call.args) <= pos:
             return None
-        node, name = call, call.args[pos].id if isinstance(call.args[pos], ast.Name) else None
-        while name and node in parents:
+        text = call.args[pos]
+        if isinstance(text, ast.Constant) and isinstance(text.value, str):
+            return None
+        node, var = call, text.id if isinstance(text, ast.Name) else None
+        while var and node in parents:
             node = parents[node]
             for loop in getattr(node, "generators", None) or ([node] if isinstance(node, ast.For) else []):
-                if isinstance(loop.target, ast.Name) and loop.target.id == name:
+                if isinstance(loop.target, ast.Name) and loop.target.id == var:
                     return loop.iter
-        return None
+        if name == "QT_TRANSLATE_NOOP":
+            found.add((text.lineno, f"QT_TRANSLATE_NOOP({ast.unparse(text)})"))
+        return text
 
     for node in ast.walk(tree):
-        seq = looped(node) if isinstance(node, ast.Call) else None
+        seq = hidden(node) if isinstance(node, ast.Call) else None
         if isinstance(node, ast.Call) and (seq is not None or _shows_text(node)):
             scope = node
             while not isinstance(scope, scopes):
@@ -262,9 +286,9 @@ def _scan(path: Path) -> set[tuple[int, str]]:
 def test_req_set_005_no_untranslated_literals() -> None:
     """An AST scan of aoi/ui and main.py: a string literal (an f-string, `literal.format()` or a name assigned one in
     the same function count too) passed to a Qt text setter, a text widget constructor, a message box, an input or
-    file dialog, a table header, a tooltip, one of this code's own helpers (`button`, `make_table`, `show_state`,
-    `status`) or an AoiError as a value of its message (#198) is wrapped in tr(), QT_TRANSLATE_NOOP or a *_text
-    helper, and every page title and subtitle is marked.
+    file dialog, a table header, a tooltip, one of this code's own helpers (`button`, `make_table`, `fill_table`,
+    `show_state`, `status`) or an AoiError as a value of its message (#198) is wrapped in tr(), QT_TRANSLATE_NOOP or
+    a *_text helper, in every branch and operand (#199), and every page title and subtitle is marked.
     Names the engine or the taxonomy supplies arrive as variables, so they are outside this scan (they stay English
     until a word list exists). ALLOWED_LITERALS lists what may stay a literal, each with its reason."""
     files = [*sorted((ROOT / "aoi" / "ui").rglob("*.py")), ROOT / "main.py"]
@@ -297,10 +321,6 @@ ENGINE_ALLOWED = {  # (file, literal): why it is not a phrase; a stale entry fai
     ("aoi/core/services.py", "missing"): "a Judged key; Compare words it (JUDGED in aoi/ui/pages/compare.py)",
     ("aoi/core/services.py", "unreadable"): "a Judged key; Compare words it (JUDGED in aoi/ui/pages/compare.py)",
     ("aoi/core/services.py", "changed"): "a Judged key; Compare words it (JUDGED in aoi/ui/pages/compare.py)",
-    # calibrate()'s rule: the AI model file and its AI checks keep it as English; the Training log line is issue #199
-    ("aoi/core/anomaly.py", "OK-only: max(mean+3σ, 1.05×max OK)"): "an AI model's stored calibration rule",
-    ("aoi/core/anomaly.py", "separable: midpoint of max OK and min NG"): "an AI model's stored calibration rule",
-    ("aoi/core/anomaly.py", "overlap: OK-based cut, 0/0 labelled NG below it"): "an AI model's stored calibration rule",
 }
 
 
@@ -349,13 +369,18 @@ def _engine_literals(path: Path) -> set[tuple[int, str]]:
             for kw in node.keywords:
                 if kw.arg not in SKIP_KEYWORDS:
                     check(kw.value, scope(node))
+        if isinstance(node, ast.Call) and _callee(node)[1] == "QT_TRANSLATE_NOOP" and len(node.args) > 1:
+            text = node.args[1]  # pyside6-lupdate extracts a literal only, so any other text is never translated (#199)
+            if not (isinstance(text, ast.Constant) and isinstance(text.value, str)):
+                found.add((text.lineno, f"QT_TRANSLATE_NOOP({ast.unparse(text)})"))
     return found
 
 
 def test_req_set_005_the_engine_fills_errors_with_phrases_only(tmp_path: Path) -> None:
     """Outside aoi/ui (which the scan above covers), an error's message is filled with phrases and data, never with an
-    English literal a screen could not translate, and no function returns one (#198): the sample shows what the scan
-    flags and lets through. ENGINE_ALLOWED lists what may stay a literal, each with its reason."""
+    English literal a screen could not translate, and no function returns one (#198), and every QT_TRANSLATE_NOOP marks
+    a literal (#199): the sample shows what the scan flags and lets through. ENGINE_ALLOWED lists what may stay a
+    literal, each with its reason."""
     files = sorted(p for p in (ROOT / "aoi").rglob("*.py") if "ui" not in p.relative_to(ROOT / "aoi").parts[:1])
     hits = {(p.relative_to(ROOT).as_posix(), line, text) for p in files for line, text in _engine_literals(p)}
     untranslated = sorted(f"{file}:{line}: {text!r}" for file, line, text in hits if (file, text) not in ENGINE_ALLOWED)
@@ -385,18 +410,20 @@ def test_req_set_005_the_engine_fills_errors_with_phrases_only(tmp_path: Path) -
         "class C:\n"
         '    kind: str = "a field default"\n'
         "def k(kind):\n"
-        "    return kind\n",
+        "    return kind\n"
+        'RULES = [QT_TRANSLATE_NOOP("Training", r) for r in ("first", "second")]\n',
         encoding="utf-8",
     )
     returned = {"its weights hold numbers that are not finite", "noted"}  # what a function returns (#198)
     found = {text for _, text in _engine_literals(sample)}
-    assert found == {"a number", "a reason", "bad", "0 failed", "none", "huge", *returned}
+    assert found == {"a number", "a reason", "bad", "0 failed", "none", "huge", "QT_TRANSLATE_NOOP(r)", *returned}
 
 
 def test_req_set_005_the_scan_catches_a_literal(tmp_path: Path) -> None:
     """The scan itself: it flags a literal, an f-string, a `.format()` on a literal, a name assigned a literal (with or
     without an annotation), a title (annotated or not), a dialog's words and a value an AoiError fills its message with
-    (#198), and lets through tr(), markup-only text, a file name, a logger's warning and an AoiError's detail."""
+    (#198), a literal in a conditional, a concatenation, an `or`, a dict lookup or a fill_table row (#199), and lets
+    through tr(), markup-only text, a file name, a logger's warning and an AoiError's detail."""
     sample = tmp_path / "sample.py"
     sample.write_text(
         "class P(Page):\n"
@@ -419,7 +446,14 @@ def test_req_set_005_the_scan_catches_a_literal(tmp_path: Path) -> None:
         '        self.action(self.tr("Go"), "F5", self.go)\n'  # the key is not text
         '        self.action("Run", "F6", self.go)\n'
         '        raise AoiError("AOI-USR-001", detail="log", what="Changing recipes", roles=ROLES_FROM[role])\n'
-        '        raise AoiError("AOI-RCP-002", quantity=QT_TRANSLATE_NOOP("Errors", "Height"), low=f"{low:g}")\n',
+        '        raise AoiError("AOI-RCP-002", quantity=QT_TRANSLATE_NOOP("Errors", "Height"), low=f"{low:g}")\n'
+        '        self.a.setText("Ready" if ok else self.tr("Not ready"))\n'  # #199: a branch, an operand, a dict value
+        '        self.b.setText(self.tr("Board") + " failed")\n'
+        '        self.c.setText({"OK": "Passed"}[ok])\n'
+        '        fill_table(self.t, [["Yes", 1]])\n'  # a row's cells; a number is no text
+        '        state = self.name or "Unnamed"\n'
+        "        self.d.setText(state)\n"
+        '        self.e.setText(self.tr("Fine") if ok else self.tr("Also fine") + " · ")\n',
         encoding="utf-8",
     )
     assert {text for _, text in _scan(sample)} == {
@@ -434,6 +468,11 @@ def test_req_set_005_the_scan_catches_a_literal(tmp_path: Path) -> None:
         "Body",
         "Run",
         "Changing recipes",
+        "Ready",
+        " failed",
+        "Passed",
+        "Yes",
+        "Unnamed",
     }
 
 
@@ -441,7 +480,9 @@ def test_req_set_005_the_scan_catches_a_literal_reaching_tr_through_a_loop(tmp_p
     """pyside6-lupdate extracts tr()'s text only when it is a literal, so `self.tr(h) for h in headers` over literals
     leaves them out of the translation file and on screen in English: the Recipe Editor's ROI table headers (#173).
     The scan flags such literals, in a comprehension or a for loop, inline or through a name, and lets marked ones
-    through; the ROI table's headers are now in the file under the Recipe Editor's context."""
+    through; the ROI table's headers are now in the file under the Recipe Editor's context. QT_TRANSLATE_NOOP over a
+    loop variable (Settings' "Stage 1" to "Stage 4", #199) or any other text that is not a literal is flagged, and so
+    is tr() of a name assigned a literal or of a conditional of literals; tr() of a value passed through is not."""
     sample = tmp_path / "sample.py"
     sample.write_text(
         "def f(self):\n"
@@ -450,9 +491,27 @@ def test_req_set_005_the_scan_catches_a_literal_reaching_tr_through_a_loop(tmp_p
         '    for side in ("Left", "Right"):\n'
         "        self.combo.addItem(self.tr(side))\n"
         '    marked = [QT_TRANSLATE_NOOP("P", "Fine")]\n'
-        "    self.combo.addItems([self.tr(m) for m in marked])\n",
+        "    self.combo.addItems([self.tr(m) for m in marked])\n"
+        '    _S1, _S2 = (QT_TRANSLATE_NOOP("P", s) for s in ("Stage 1", "Stage 2"))\n'  # settings.py before #199
+        '    why = "Busy"\n'
+        "    self.label.setText(self.tr(why))\n"
+        '    self.label.setText(self.tr("On" if on else "Off"))\n'
+        '    NAME = QT_TRANSLATE_NOOP("P", name)\n'
+        "    self.table.setItem(0, 0, QTableWidgetItem(self.tr(cell)))\n",  # a value passed through, marked elsewhere
         encoding="utf-8",
     )
-    assert {text for _, text in _scan(sample)} == {"Kind", "Size", "Left", "Right"}
+    found = {text for _, text in _scan(sample)}
+    assert found == {
+        "Kind",
+        "Size",
+        "Left",
+        "Right",
+        "Stage 1",
+        "Stage 2",
+        "Busy",
+        "On",
+        "Off",
+        "QT_TRANSLATE_NOOP(name)",
+    }
     headers = ("Name", "Type", "X", "Y", "W", "H", "AI score")
     assert {("RecipeEditorPage", h) for h in headers} <= set(_messages(TS_FILE))
