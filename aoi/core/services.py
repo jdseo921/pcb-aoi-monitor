@@ -378,7 +378,7 @@ class AppContext:
         m = anomaly.AnomalyModel.load(rec["path"], device)
         if m.meta.get("uuid") != rec["uuid"]:  # another AI model's file in its place, such as one written over it
             why = QT_TRANSLATE_NOOP("Errors", "its UUID {found} is not {uuid}, the one the model registry names").fill(
-                found=m.meta.get("uuid") or "(none)", uuid=rec["uuid"]
+                found=m.meta.get("uuid") or QT_TRANSLATE_NOOP("Errors", "(none)"), uuid=rec["uuid"]
             )
             raise anomaly.ModelFileError("AOI-TRN-001", path=rec["path"], reason=why)
         loaded = (rec["version"], m, str(rec["uuid"]))
