@@ -255,14 +255,16 @@ class InspectionPage(Page):
             if (worker := ref()) is not None and self.worker is worker:
                 self.worker = None  # before _on_result, which may start the next board of a run
                 self._update_buttons()  # the controls follow the worker at once, not at the finished signal
+            no_ai_model = False
             if insp is None and self.inspector is None and gen == self._engine_gen and bm == self.board_model:
                 self.inspector = out[2]  # the engine this board built serves the rest of the queue
-                if out[2].model is None:
-                    msg = self.tr("No AI model for {board_model} yet: only the Golden board comparison runs").format(
-                        board_model=bm
-                    )
-                    self._alarm("WARN", msg, "AOI-TRN-003")
-            self._on_result(out)
+                no_ai_model = out[2].model is None
+            self._on_result(out)  # first: the result, and a failed save's error, never wait for the alarm below (#179)
+            if no_ai_model:
+                msg = self.tr("No AI model for {board_model} yet: only the Golden board comparison runs").format(
+                    board_model=bm
+                )
+                self._alarm("WARN", msg, "AOI-TRN-003")
             if bm != self.board_model:  # the header moved on meanwhile: shown and saved under bm, not current (#172)
                 self.last = self.last_path = self.last_id = self.shell.last_inspected = None
                 self._update_buttons()
@@ -375,13 +377,24 @@ class InspectionPage(Page):
                 self.view.center_on_box(d.x, d.y, d.w, d.h)
 
     def _alarm(self, level: str, msg: str, code: str) -> None:
-        """Store an alarm with its code, so it survives a restart, and show the list again (REQ-INSP-006)."""
-        self.ctx.alarm(level, msg, code)
+        """Store an alarm with its code, so it survives a restart, and show the list again (REQ-INSP-006). It never
+        raises, as report_error since #171: an alarm the database refuses (another program holds its write lock, the
+        disk is full) is logged, and the result, the run's stop or the board model change that raised it goes on."""
+        try:
+            self.ctx.alarm(level, msg, code)
+        except Exception:  # #179: it replaced the result's own error with AOI-SET-007 and left the run on
+            self.ctx.log.warning("alarm.not_stored", exc_info=True, extra={"code": code})
         self._refresh_alarms()
 
     def _refresh_alarms(self) -> None:
+        """Show the stored alarms again; when the database cannot be read, the list keeps what it showed (#179)."""
+        try:
+            rows = self.ctx.alarms()
+        except Exception:
+            self.ctx.log.warning("alarms.not_read", exc_info=True)
+            return
         self.alarms.clear()
-        for a in self.ctx.alarms():
+        for a in rows:
             self.alarms.addItem(alarm_line(a["time"], a["level"], a["code"], a["message"]))
 
     def _update_buttons(self) -> None:

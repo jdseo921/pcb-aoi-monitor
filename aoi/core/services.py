@@ -453,15 +453,17 @@ class AppContext:
 
     def log_result(self, board_model: str, path: str, res: InspectionResult, insp: Inspector) -> int:
         """Save a result with its evidence (REQ-INSP-008, spec 4.1): the overlay PNG and the two maps beside it, then
-        one transaction with the row, the whole result as JSON, its checks and its defects, naming the AI model version
-        and recipe revision that decided it (REQ-INSP-012) and the golden board it was judged against (REQ-CMP-003).
-        Called on the pool thread by the Inspection page."""
+        one transaction with the row, the whole result as JSON, its checks, its defects and an NG board's alarm
+        (REQ-INSP-006), naming the AI model version and recipe revision that decided it (REQ-INSP-012) and the golden
+        board it was judged against (REQ-CMP-003). Called on the pool thread by the Inspection page."""
         day = local_date()  # the folder is named for the operator's shift date; the stored time is UTC
         overlay = self.settings.results_dir / day / f"{Path(path).stem}_{uuid.uuid4().hex[:6]}_{res.verdict}.png"
         save_image(overlay, draw_overlay(res))
         pixel_threshold = insp.model.pixel_threshold if insp.model is not None else None  # the AI map's, kept (S28a)
         diff_map_path, ai_map_path = save_maps(res, overlay.with_suffix(""), pixel_threshold=pixel_threshold)
         doc = res.to_dict()
+        ng = res.verdict == NG
+        alarm = ("NG", f"{Path(path).name}: {len(res.defects)} defect(s)", "AOI-INSP-003") if ng else None
         iid = self.db.add_inspection(
             {
                 "board_model": board_model,
@@ -484,9 +486,10 @@ class AppContext:
             },
             [d.as_row() for d in res.defects],
             doc["checks"],
+            alarm,  # in the record's transaction: a saved NG board always has its alarm (REQ-INSP-006, #179)
         )
-        if res.verdict == NG:
-            self.alarm("NG", f"{Path(path).name}: {len(res.defects)} defect(s)", "AOI-INSP-003")
+        if alarm is not None:
+            self.log.info("alarm", extra={"alarm_level": alarm[0], "code": alarm[2], "text": alarm[1]})
         self.log.info(
             "inspection.saved",
             extra={

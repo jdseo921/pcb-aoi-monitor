@@ -439,11 +439,15 @@ an `AoiError` from the catalogue in `aoi/errors.py`, with a code `AOI-<AREA>-<NN
 log in `<workspace>/logs/`, one file per UTC day, with time, level, module, event, ids and the app version, and never
 an image or a password; a caller's extra never replaces one of those fixed fields (one of the same name is written as
 `extra_<name>`, #171). Alarms (an NG verdict, a missing AI model, every error shown) are stored in `alarms` with
-their code through `AppContext.alarm`, and `AppContext.report_error` is the one path for an error a user sees: it
+their code through `AppContext.alarm` (an NG verdict's in its record's own transaction, `Database.add_inspection`,
+so a saved NG board always has its alarm and a refused alarm saves neither, #179), and `AppContext.report_error` is
+the one path for an error a user sees: it
 logs the stack trace with the build version, stores an ERROR alarm and returns the plain report that
 `aoi/ui/errors.py` shows (code, title, what happened, what to do), also for unhandled errors through
 `sys.excepthook`; it never raises, so the dialog shows even when the database refuses the alarm (logged as
-`alarm.not_stored`, #171). Two coded errors are shown in the page without a dialog or an alarm: Compare's AOI-CMP-001
+`alarm.not_stored`, #171). The Inspection page's own alarms (no AI model yet, a run stopped by a board model change)
+never raise either: one the database refuses is logged as `alarm.not_stored`, and the result, its AOI-INSP-008 or
+the stop goes on (#179). Two coded errors are shown in the page without a dialog or an alarm: Compare's AOI-CMP-001
 note, and a Golden board file that the Recipe Editor or Compare cannot read for its pane, which says the code and
 what to do there and logs `golden_board.unreadable` as a warning. Both pages read the Golden board again when shown
 if the file, or which file it is, changed since their last read (`Page.golden_board_stamp`); inspecting a board of
