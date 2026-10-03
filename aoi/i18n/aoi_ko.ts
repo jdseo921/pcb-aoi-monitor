@@ -1367,7 +1367,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/settings.py" line="+41"/>
+        <location filename="../ui/pages/settings.py" line="+42"/>
         <source>Settings</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1785,12 +1785,12 @@
     </message>
     <message>
         <location line="+0"/>
-        <location line="+31"/>
+        <location line="+48"/>
         <source>Role</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-29"/>
+        <location line="-46"/>
         <source>Add / Change User</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1820,7 +1820,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+11"/>
+        <location line="+26"/>
         <source>Saved. Restart the app to switch the workspace.</source>
         <translation type="unfinished"></translation>
     </message>

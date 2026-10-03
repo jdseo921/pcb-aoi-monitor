@@ -94,4 +94,4 @@ def _open_workspace() -> AppContext | None:
         if not folder:
             return None
         settings.workspace = folder
-        settings.save()
+        settings.save_keys({"workspace": folder})  # that key alone: the rest of the file stays as written (#170)

@@ -20,6 +20,7 @@ from PySide6.QtWidgets import (
 
 from ...config import APP_VERSION
 from ...core.services import AppContext
+from ...errors import AoiError
 from .base import QT_TRANSLATE_NOOP, ROLES, Page, button, fill_table, make_table, role_text
 
 if TYPE_CHECKING:
@@ -103,12 +104,27 @@ class SettingsPage(Page):
             self.ws.setText(d)
 
     def save(self) -> None:
+        """Write the page's own settings over settings.json as it is now, so a hand edit of another key stays (#170).
+        Each value is checked first (AOI-SET-008: an empty or relative workspace), and nothing is written on a refusal.
+        The running app follows every value but the workspace: its database, log and folders stay on the open one
+        until the restart, so no file lands in a folder its database does not list (REQ-SET-001)."""
         s = self.ctx.settings
-        moved = s.workspace != self.ws.text()
-        s.workspace, s.device = self.ws.text(), self.device.currentText()
-        s.image_size, s.default_epochs = int(self.input_size.currentText()), self.epochs.value()
-        s.log_retention_days, s.language = self.ret.value(), self.lang.currentData()
-        s.save()
+        values = {
+            "workspace": self.ws.text(),
+            "device": self.device.currentText(),
+            "image_size": int(self.input_size.currentText()),
+            "default_epochs": self.epochs.value(),
+            "log_retention_days": self.ret.value(),
+            "language": self.lang.currentData(),
+        }
+        try:
+            s.save_keys(values)
+        except (AoiError, OSError) as e:
+            self.error(e)
+            return
+        s.device, s.image_size, s.default_epochs = values["device"], values["image_size"], values["default_epochs"]
+        s.log_retention_days, s.language = values["log_retention_days"], values["language"]
+        moved = s.workspace != values["workspace"]
         saved = self.tr("Saved. Restart the app to switch the workspace.") if moved else self.tr("Saved.")
         QMessageBox.information(self, self.tr("Settings"), saved)
 
@@ -116,10 +132,19 @@ class SettingsPage(Page):
         name, ok = QInputDialog.getText(self, self.tr("User"), self.tr("User name"))
         if ok and name:
             names = [role_text(r) for r in ROLES]
-            role, ok = QInputDialog.getItem(self, self.tr("Role"), self.tr("Role"), names, 0, False)
+            current = next((u["role"] for u in self.ctx.users() if u["name"] == name), None)
+            at = ROLES.index(current) if current in ROLES else 0  # an existing user's own role: OK changes nothing
+            role, ok = QInputDialog.getItem(self, self.tr("Role"), self.tr("Role"), names, at, False)
             if ok:
-                self.ctx.add_user(name, ROLES[names.index(role)])
+                chosen = ROLES[names.index(role)]
+                try:
+                    self.ctx.add_user(name, chosen)  # the last Admin keeps the role (AOI-USR-002)
+                except AoiError as e:
+                    self.error(e)
+                    return
                 self.on_show()
+                if name == self.ctx.user and chosen != self.ctx.role:  # the signed-in user's own role changed
+                    self.shell.set_role(chosen, name)
 
     def on_show(self) -> None:
         fill_table(self.users, [[u["name"], role_text(u["role"])] for u in self.ctx.users()])

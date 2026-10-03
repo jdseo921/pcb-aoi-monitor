@@ -8,6 +8,7 @@ import re
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import cast
 
 import pytest
 from PySide6.QtWidgets import QMessageBox
@@ -17,6 +18,7 @@ from aoi.config import APP_VERSION, Settings, default_workspace
 from aoi.core.services import ALARM_LIMIT, AppContext
 from aoi.ui.errors import install_excepthook
 from aoi.ui.main_window import MainWindow
+from aoi.ui.pages.settings import SettingsPage
 from tests.test_req_done_in_v01 import BOARD, _inspect_one, _window
 
 # ISO date, 24-hour time, level, code and message, two spaces apart (REQ-INSP-006)
@@ -105,6 +107,27 @@ def test_req_log_005_reopens_on_the_last_page(qtbot: QtBot, trained_ctx: AppCont
         settings.last_page = last_page
         settings.save()
         assert reopened() == "Home"
+
+
+def test_req_log_005_the_app_keeps_hand_edits_to_settings_json(
+    qtbot: QtBot, ctx: AppContext, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Remembering the page in use and saving the Settings page each write their own keys over settings.json as it is
+    on disk now (#170), so an Admin's edit made while the app runs, such as a raised image limit, stays. Before, every
+    page change wrote the whole settings held in memory and put the old limit back."""
+    monkeypatch.setattr(QMessageBox, "information", staticmethod(lambda *a: QMessageBox.StandardButton.Ok))
+    win = MainWindow(ctx)  # an empty workspace opens as Admin
+    qtbot.addWidget(win)
+    f = default_workspace() / "settings.json"
+    f.parent.mkdir(parents=True, exist_ok=True)
+    f.write_text('{"max_image_megapixels": 120, "map_retention_days_ok": 3, "unknown_key": 1}', encoding="utf-8")
+    assert win.navigate("Logs & Export")
+    page = cast(SettingsPage, win.pages["Settings"])
+    page.lang.setCurrentIndex(page.lang.findData("ko"))
+    page.save()
+    saved = json.loads(f.read_text(encoding="utf-8"))
+    assert (saved["last_page"], saved["language"]) == ("Logs & Export", "ko")
+    assert [saved.get(k) for k in ("max_image_megapixels", "map_retention_days_ok", "unknown_key")] == [120, 3, 1]
 
 
 def test_req_set_019_page_errors_show_code_what_and_action_never_a_trace(

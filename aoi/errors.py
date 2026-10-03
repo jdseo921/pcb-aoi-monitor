@@ -196,6 +196,13 @@ CODES: dict[str, ErrorCode] = {
             "Sign in as a user with that role, or ask one to do it.",
         ),
         ErrorCode(
+            "AOI-USR-002",
+            "Last Admin",
+            "{name} is the only user with the Admin role, so it cannot change to {role}: no one could then manage "
+            "users or settings.",
+            "Give another user the Admin role first, then change this one.",
+        ),
+        ErrorCode(
             "AOI-SET-001",
             "Workspace from version 0.1",
             "This workspace was created by AOI PoC Inspector 0.1 and cannot be upgraded.",
@@ -247,8 +254,9 @@ CODES: dict[str, ErrorCode] = {
         ErrorCode(
             "AOI-SET-008",
             "Setting invalid",
-            "The setting {name} in settings.json is {value}; it must be {expected}.",
-            "Fix or remove that line in settings.json, in the default workspace folder, and start the app again.",
+            "The setting {name} is {value}; it must be {expected}.",
+            "On the Settings page, correct it and save again. If the app stopped at start-up, fix or remove that line "
+            "in settings.json, in the default workspace folder, and start the app again.",
         ),
         ErrorCode(
             "AOI-SET-009",
