@@ -13,6 +13,8 @@ from collections.abc import Callable
 from PySide6.QtCore import QEvent, QObject, QRect, QSize, Qt
 from PySide6.QtWidgets import QLabel, QPushButton, QVBoxLayout, QWidget
 
+from .busy import BusyOverlay
+
 
 class _Text(QLabel):
     """A wrapped label that a layout may narrow below its longest word, such as a golden board's file name: the word
@@ -78,6 +80,10 @@ class EmptyState(QWidget):
             self.setGeometry(self._over.rect())
         self.show()
         self.raise_()
+        if self._over is not None:  # a page job's busy overlay ("Importing…" and Cancel) stays on top (REQ-SET-021)
+            for busy in self._over.children():
+                if isinstance(busy, BusyOverlay) and not busy.isHidden():  # shown, also on a page not shown now
+                    busy.raise_()
 
     def _follow(self) -> None:
         if self._go is not None:

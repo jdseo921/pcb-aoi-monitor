@@ -360,9 +360,9 @@ class MainWindow(QMainWindow):
         if not self.ctx.jobs.idle():
             yes, no = QMessageBox.StandardButton.Yes, QMessageBox.StandardButton.No
             question = self.tr(
-                "Work is still running: training, an AI model test or an inspection. Stop it and close the app? "
-                "Training stops without saving an AI model, so the active one stays; an AI model test finishes its "
-                "folder first."
+                "Work is still running: training, an AI model test, an inspection, an export or an image import. Stop "
+                "it and close the app? Training stops without saving an AI model, so the active one stays; an AI model "
+                "test finishes its folder first; an export or import keeps the files copied so far."
             )
             if QMessageBox.question(self, self.tr("Stop the running work?"), question, yes | no, no) != yes:
                 event.ignore()
