@@ -27,7 +27,7 @@
 <context>
     <name>ComparePage</name>
     <message>
-        <location filename="../ui/pages/compare.py" line="+54"/>
+        <location filename="../ui/pages/compare.py" line="+55"/>
         <source>Side by side</source>
         <translation type="unfinished"></translation>
     </message>
@@ -47,7 +47,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+6"/>
+        <location line="+8"/>
         <source>This result was judged without a Golden board.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -98,12 +98,12 @@
     </message>
     <message>
         <location line="+3"/>
-        <location line="+45"/>
+        <location line="+48"/>
         <source>Golden board</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-44"/>
+        <location line="-47"/>
         <source>AI model</source>
         <translation type="unfinished"></translation>
     </message>
@@ -133,7 +133,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+21"/>
+        <location line="+24"/>
         <source>Test Image…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -159,12 +159,12 @@
     </message>
     <message>
         <location line="+14"/>
-        <location line="+387"/>
+        <location line="+434"/>
         <source>Test board</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-381"/>
+        <location line="-428"/>
         <source>Inspecting…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -260,12 +260,22 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+45"/>
+        <location line="+50"/>
         <source>Test board: {file}</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+38"/>
+        <location line="+49"/>
+        <source>{file} was not inspected: its Golden board cannot be opened.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>Board not inspected</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+15"/>
         <source>Reference: {file}</source>
         <translation type="unfinished"></translation>
     </message>
@@ -285,7 +295,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+5"/>
+        <location line="+6"/>
         <source>The verdict and the decision table are the stored ones; press Re-evaluate to inspect the board again with today&apos;s Golden board.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -296,7 +306,7 @@
     </message>
     <message>
         <location line="+0"/>
-        <location line="+75"/>
+        <location line="+86"/>
         <location line="+102"/>
         <source>Re-evaluate ›</source>
         <translation type="unfinished"></translation>
@@ -312,7 +322,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+17"/>
+        <location line="+15"/>
         <source>Inspection time (ms)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -327,12 +337,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+22"/>
+        <location line="+23"/>
         <source>Test board: {file} (stored result)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+24"/>
+        <location line="+25"/>
         <source>The verdict and the decision table are the stored ones; press Re-evaluate to inspect the board again from its image file.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -384,7 +394,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+16"/>
+        <location line="+23"/>
         <source>Inspect a board on Inspection, or pick a test image.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1324,7 +1334,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/base.py" line="+117"/>
+        <location filename="../ui/pages/base.py" line="+119"/>
         <source>No board model yet</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1354,7 +1364,22 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+93"/>
+        <location line="+17"/>
+        <source>The Golden board for {board_model} cannot be opened</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>{code} {what} Put the file back, or choose another OK sample with Set Reference on Training.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>{code} {what} Ask an Engineer to put the file back, or to choose another OK sample with Set Reference on Training.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+98"/>
         <source>{action}  {key}</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1364,7 +1389,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/compare.py" line="-431"/>
+        <location filename="../ui/pages/compare.py" line="-487"/>
         <source>Compare</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1475,7 +1500,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+30"/>
+        <location line="+32"/>
         <source>Draw ROI</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1666,7 +1691,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+44"/>
+        <location line="+75"/>
         <source>Train an AI model or set a reference image on Training.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1676,7 +1701,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+26"/>
+        <location line="+11"/>
         <source>No ROIs yet</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1686,7 +1711,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+19"/>
+        <location line="+14"/>
         <source>◌  needs Stage 2 (3D / side camera)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1745,7 +1770,7 @@
 <context>
     <name>Role</name>
     <message>
-        <location filename="../ui/pages/base.py" line="-183"/>
+        <location filename="../ui/pages/base.py" line="-211"/>
         <source>Operator</source>
         <translation type="unfinished"></translation>
     </message>
