@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import json
 import re
+import sqlite3
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
@@ -16,6 +17,7 @@ from pytestqt.qtbot import QtBot
 
 from aoi.config import APP_VERSION, Settings, default_workspace
 from aoi.core.services import ALARM_LIMIT, AppContext
+from aoi.errors import AoiError
 from aoi.ui.errors import install_excepthook
 from aoi.ui.main_window import MainWindow
 from aoi.ui.pages.settings import SettingsPage
@@ -89,6 +91,30 @@ def test_req_log_005_unhandled_error_is_logged_with_the_version_and_shown_with_i
     assert row["context"] == "unhandled" and "RuntimeError: secret detail" in str(row["trace"])
     (alarm,) = ctx.alarms()
     assert alarm["level"] == "ERROR" and alarm["code"] == "AOI-SET-007" and "secret detail" not in alarm["message"]
+
+
+def test_req_set_019_an_error_is_shown_when_the_database_refuses_its_alarm(
+    ctx: AppContext, dialogs: list[tuple[str, str]], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """#171: when the database refuses writes (another program holds its lock, the disk is full), the error being
+    reported is often that refusal, and its ERROR alarm cannot be stored either. report_error logs that instead and
+    still returns the report, so the coded dialog shows; through the excepthook too, which fell back to stderr."""
+    ctx.db._conn.execute("PRAGMA busy_timeout = 100")  # not SQLite's 5 s wait
+    other = sqlite3.connect(ctx.db.path, isolation_level=None)
+    other.execute("BEGIN IMMEDIATE")
+    err = AoiError("AOI-INSP-008", detail="OperationalError: database is locked", file="b.png")
+    assert ctx.report_error(err, "Inspection").code == "AOI-INSP-008"
+    monkeypatch.setattr(sys, "excepthook", sys.excepthook)  # put the original back after the test
+    install_excepthook(ctx, None)
+    try:
+        raise err
+    except AoiError as e:
+        sys.excepthook(type(e), e, e.__traceback__)
+    other.close()  # the other program lets go
+    assert [title for title, _ in dialogs] == ["AOI-INSP-008 Result not saved"]
+    assert [r["code"] for r in _log_rows(ctx, "alarm.not_stored")] == ["AOI-INSP-008", "AOI-INSP-008"]
+    assert [r["code"] for r in _log_rows(ctx, "error.shown")] == ["AOI-INSP-008", "AOI-INSP-008"]
+    assert ctx.alarms() == []
 
 
 def test_req_log_005_reopens_on_the_last_page(qtbot: QtBot, trained_ctx: AppContext) -> None:

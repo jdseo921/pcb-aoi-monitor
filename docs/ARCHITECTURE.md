@@ -406,11 +406,13 @@ defects commit in one transaction, so a crash leaves a whole result or none (REQ
 an `AoiError` from the catalogue in `aoi/errors.py`, with a code `AOI-<AREA>-<NNN>`, what happened and what to do;
 `docs/error-codes.md` is generated from it (REQ-LOG-004, REQ-SET-019). `aoi/logging_setup.py` writes the JSON-lines
 log in `<workspace>/logs/`, one file per UTC day, with time, level, module, event, ids and the app version, and never
-an image or a password. Alarms (an NG verdict, a missing AI model, every error shown) are stored in `alarms` with
+an image or a password; a caller's extra never replaces one of those fixed fields (one of the same name is written as
+`extra_<name>`, #171). Alarms (an NG verdict, a missing AI model, every error shown) are stored in `alarms` with
 their code through `AppContext.alarm`, and `AppContext.report_error` is the one path for an error a user sees: it
 logs the stack trace with the build version, stores an ERROR alarm and returns the plain report that
 `aoi/ui/errors.py` shows (code, title, what happened, what to do), also for unhandled errors through
-`sys.excepthook`. The page in use is kept in `settings.json` and reopened at start-up (REQ-INSP-006, REQ-LOG-005);
+`sys.excepthook`; it never raises, so the dialog shows even when the database refuses the alarm (logged as
+`alarm.not_stored`, #171). The page in use is kept in `settings.json` and reopened at start-up (REQ-INSP-006, REQ-LOG-005);
 a page change writes that key alone. A workspace saved on Settings goes to `settings.json` only: the running app keeps
 its database, log and folders on the open workspace until the restart (REQ-SET-001, #170).
 Every visible string goes through `self.tr()` in a page class (REQ-SET-005, since S19). PySide takes the

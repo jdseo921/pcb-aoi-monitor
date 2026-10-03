@@ -136,7 +136,7 @@ class Job(Generic[T]):
             try:
                 cb(*args)
             except Exception:  # a listener's failure (a widget already closed) is not the job's: the result stands
-                log.warning("job.listener_failed", exc_info=True, extra={"job": self.name, "event": event})
+                log.warning("job.listener_failed", exc_info=True, extra={"job": self.name, "listener": event})
 
 
 class Jobs:
