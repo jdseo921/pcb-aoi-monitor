@@ -45,8 +45,11 @@ Reading the verdict: while a board is being inspected the banner turns grey and 
 bar at the bottom names the board and its place in the queue, such as "Inspecting board_07.png (3 of 12)…". The
 verdict then fills the banner: ✓ OK on green, ✗ NG on red, ▲ WARN on amber, with the defect list under it (section 3),
 and the status bar shows the board's summary line: file, AI score, defects and time.
-A board the app cannot read stops the run with a message that says what happened and what to do, and the banner keeps
-the last verdict; press Next Board to go on with the queue. A board is never passed on no evidence: the run stops the
+A board the app cannot read stops the run with a message that says what happened and what to do; the banner then reads
+"· Not inspected" on grey, the picture and the defect list are empty, and the view names the board, the error's code
+and what happened, so the verdict of the board before is never shown beside it. Press Next Board to go on with the
+queue; when it was the last board, the view says so and offers Load Images… to queue more. A board is never passed on
+no evidence: the run stops the
 same way when the Golden board's file is gone or damaged (AOI-INSP-009), when nothing can judge the board because the
 board model has neither a Golden board nor an AI model yet, or the recipe turns both off (AOI-INSP-010), and for a
 picture under 11 px on a side (AOI-INSP-011); for the first two, call an Engineer. At the end of the queue the status bar reads "End of

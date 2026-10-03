@@ -53,7 +53,8 @@ the same files.
 **Set Reference** makes the selected OK sample the reference image: inspections compare against it at once, and the
 next training run aligns the boards to it before it learns a new golden board. An NG sample is refused (AOI-TRN-006),
 and the sample that is the reference cannot be relabelled NG or removed until another OK sample is set (AOI-TRN-007);
-with several rows selected, Mark NG and Remove change all the others and leave the reference as it is.
+with several rows selected, Mark NG and Remove change all the others and leave the reference as it is. Remove asks
+first, with No as the default: Enter keeps the samples.
 
 **Importing images** with + OK or + NG is all or nothing: if one picked file cannot be copied (gone, unreadable, or
 the workspace drive full), AOI-TRN-008 names it and none of the picked images is imported, so importing them again adds
@@ -122,7 +123,9 @@ those results came from, even when another folder has been picked since to run n
 under the board model they were run for: picking another board model in the header clears them, and a run that
 ends after such a change is stored but not shown. The report is written whole or not at all and recorded in the
 audit trail; when it cannot be written (a folder that cannot be made, a file open in a viewer, a full disk), the
-app shows AOI-LOG-002 and an earlier report of that name stays as it was.
+app shows AOI-LOG-002 and an earlier report of that name stays as it was. Selecting a row previews that board; when
+it cannot be inspected (its file moved, for example), the preview reads "· Not inspected" with no picture, never the
+verdict of the row before.
 A folder inside the workspace is stored relative to it, so a moved workspace still finds the run's folder and images; a
 folder elsewhere is stored as its full path.
 
@@ -141,7 +144,8 @@ and changing the header's board model clears the board of a record from Compare.
 from the recipe whenever a new revision has been saved since (on Recipe Editor, for example), so Save to Recipe never
 puts back the thresholds of an older revision; values tried and not saved stay while no revision is saved. Cancel on
 the busy overlay clears the verdict, table and picture and says the board named over the picture was not inspected;
-Re-evaluate inspects it. (to be written: trying thresholds, picking another reference)
+Re-evaluate inspects it. A test image that cannot be read does the same: the banner reads "· Not inspected" and the
+pane gives the error's code and what happened. (to be written: trying thresholds, picking another reference)
 
 ## 8. Logs and audit
 
@@ -152,9 +156,10 @@ beside it holds one row per check that decided each verdict: the record's time, 
 recipe revision with their UUIDs, then the check's number, region (the whole board, or an ROI's name and box), metric,
 source, value, threshold, rule and result. Records from before the checks were stored have no rows in the second file.
 Each export is confirmed first and written whole or not at all, and the audit trail records it; if that entry cannot
-be written, the exported file is removed (never the station's own file, when exported onto itself). **Export Image Overlays** that stops part-way (the drive full or pulled out,
-a folder already named like an overlay) shows AOI-LOG-001 with how many images were copied, and the audit trail records
-those, with the file that failed.
+be written, the exported file is removed (never the station's own file, when exported onto itself). When a
+`<name>_checks.csv` is already there, the app asks whether to replace it, with No as the default: Enter keeps it.
+**Export Image Overlays** that stops part-way (the drive full or pulled out, a folder already named like an overlay)
+shows AOI-LOG-001 with how many images were copied, and the audit trail records those, with the file that failed.
 
 The **From** and **To** boxes take days from 2000-01-01 to 2100-12-31. The picture beside the table is the selected
 record's overlay; it is empty when the record's overlay file is gone, when no row is selected and after **Filter**.

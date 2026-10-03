@@ -297,6 +297,7 @@ class ComparePage(Page):
         self.run_in_background(
             self._evaluate, bm, self.test_path, self.ref_override, recipe, judged,
             on_result=functools.partial(self._on_evaluated, quiet=quiet), busy=self.busy if self.test_path else None,
+            on_error=self._not_inspected,
         )  # fmt: skip
 
     def _evaluate(
@@ -561,6 +562,17 @@ class ComparePage(Page):
         file = Path(self.test_path).name if self.test_path else ""
         what = self.tr("{file} was not inspected; press Re-evaluate to inspect it.").format(file=file)
         self.test_empty.show_state(self.tr("Inspection cancelled"), what, self.tr("Re-evaluate ›"), self.run)
+
+    def _not_inspected(self, e: BaseException) -> None:
+        """The board named over the picture could not be judged (its file or the reference cannot be read): as on
+        Cancel, no verdict, table or picture of the board before stays under its name; the banner says Not inspected
+        and the pane says why, with Re-evaluate (#182)."""
+        if not self.test_path:  # only the Golden board was to be read: no result is shown to clear
+            return
+        self._clear_result()
+        heading, sentence = self.not_inspected(self.verdict, Path(self.test_path).name, e)
+        what = " ".join([sentence, self.tr("Press Re-evaluate to inspect it again.")])
+        self.test_empty.show_state(heading, what, self.tr("Re-evaluate ›"), self.run)
 
     def on_board_model_changed(self, name: str | None) -> None:
         self.res = self.stored = self.as_judged = self.golden_error = None  # the last board model's views go with it

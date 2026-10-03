@@ -200,10 +200,17 @@ class ModelTestPage(Page):
         if not rows or (bm := self.run_board_model) is None:
             return  # a row is judged under the board model of its run (#180), never the header's after a switch
         path = cell_item(self.table, rows[0].row(), 0).toolTip()
+        self._clear_preview()  # the row before never stands beside this one, even when it cannot be inspected (#182)
         self.run_in_background(
             self.ctx.inspect_file, bm, path, save=False,
             on_result=lambda res: self._show_preview(path, res, bm), busy=self.busy,
+            on_error=lambda e: self.not_inspected(self.preview_verdict, Path(path).name, e, big=False),
         )  # fmt: skip
+
+    def _clear_preview(self) -> None:
+        self.preview_verdict.setText("—")
+        self.preview_verdict.setStyleSheet(theme.verdict_style("INFO", big=False))
+        self.view.set_image(None)
 
     def _show_preview(self, path: str, res: InspectionResult, board_model: str) -> None:
         if board_model != self.run_board_model or board_model != self.board_model:
@@ -226,9 +233,7 @@ class ModelTestPage(Page):
             t.set(None)
         self.confusion.clear()
         fill_table(self.table, [])
-        self.preview_verdict.setText("—")
-        self.preview_verdict.setStyleSheet(theme.verdict_style("INFO", big=False))
-        self.view.set_image(None)
+        self._clear_preview()
         self.btn_run.setText(self.tr("Run Test"))
 
     def on_show(self) -> None:

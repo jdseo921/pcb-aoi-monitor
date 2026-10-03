@@ -159,12 +159,12 @@
     </message>
     <message>
         <location line="+14"/>
-        <location line="+434"/>
+        <location line="+446"/>
         <source>Test board</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-428"/>
+        <location line="-440"/>
         <source>Inspecting…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -265,7 +265,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+49"/>
+        <location line="+50"/>
         <source>{file} was not inspected: its Golden board cannot be opened.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -308,11 +308,12 @@
         <location line="+0"/>
         <location line="+86"/>
         <location line="+102"/>
+        <location line="+11"/>
         <source>Re-evaluate ›</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-174"/>
+        <location line="-185"/>
         <source>Train an AI model on Training.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -394,7 +395,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+23"/>
+        <location line="+10"/>
+        <source>Press Re-evaluate to inspect it again.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+24"/>
         <source>Inspect a board on Inspection, or pick a test image.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -659,13 +665,14 @@
 <context>
     <name>InspectionPage</name>
     <message>
-        <location filename="../ui/pages/inspection.py" line="+86"/>
+        <location filename="../ui/pages/inspection.py" line="+89"/>
         <location line="+81"/>
+        <location line="+133"/>
         <source>Load Images…</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-80"/>
+        <location line="-213"/>
         <source>Load Folder…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -747,7 +754,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+9"/>
+        <location line="+130"/>
+        <source>Next Board ›</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="-119"/>
         <source>Select PCB images</source>
         <translation type="unfinished"></translation>
     </message>
@@ -802,17 +814,27 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+19"/>
+        <location line="+24"/>
+        <source>Press Next Board to carry on with the queue.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>No board is left in the queue. Load Images… or Load Folder… to queue more boards.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+5"/>
         <source>{file}  ·  not inspected</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+9"/>
+        <location line="+11"/>
         <source>Inspecting…</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+3"/>
+        <location line="+6"/>
         <source>Inspecting {file}…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -928,12 +950,12 @@
     </message>
     <message>
         <location line="+9"/>
-        <location line="+86"/>
+        <location line="+89"/>
         <source>Export CSV</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-85"/>
+        <location line="-88"/>
         <source>Export Image Overlays</source>
         <translation type="unfinished"></translation>
     </message>
@@ -978,7 +1000,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+21"/>
+        <location line="+24"/>
         <source>Confirm export</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1120,25 +1142,25 @@
     <name>ModelTestPage</name>
     <message>
         <location filename="../ui/pages/model_test.py" line="+70"/>
-        <location line="+176"/>
+        <location line="+181"/>
         <source>Select Test Folder…</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-175"/>
+        <location line="-180"/>
         <location line="+91"/>
-        <location line="+70"/>
+        <location line="+75"/>
         <source>Run Test</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-159"/>
-        <location line="+179"/>
+        <location line="-164"/>
+        <location line="+184"/>
         <source>Export CSV</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-178"/>
+        <location line="-183"/>
         <source>Export Report</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1234,7 +1256,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+55"/>
+        <location line="+60"/>
         <source>No AI model for {board_model} yet</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1391,17 +1413,27 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+98"/>
+        <location line="+16"/>
+        <source>Not inspected</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>{file} was not inspected</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+96"/>
         <source>{action}  {key}</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/logs.py" line="-223"/>
+        <location filename="../ui/pages/logs.py" line="-226"/>
         <source>Logs &amp; Export</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/compare.py" line="-487"/>
+        <location filename="../ui/pages/compare.py" line="-499"/>
         <source>Compare</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1411,7 +1443,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/inspection.py" line="-368"/>
+        <location filename="../ui/pages/inspection.py" line="-389"/>
         <source>Inspection</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1421,7 +1453,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/model_test.py" line="-252"/>
+        <location filename="../ui/pages/model_test.py" line="-257"/>
         <source>AI Model Test</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1782,7 +1814,7 @@
 <context>
     <name>Role</name>
     <message>
-        <location filename="../ui/pages/base.py" line="-211"/>
+        <location filename="../ui/pages/base.py" line="-230"/>
         <source>Operator</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1978,12 +2010,12 @@
     </message>
     <message>
         <location line="+1"/>
-        <location line="+300"/>
+        <location line="+301"/>
         <source>Import Folder…</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-294"/>
+        <location line="-295"/>
         <location line="+50"/>
         <source>ID</source>
         <translation type="unfinished"></translation>
@@ -2031,12 +2063,12 @@
     </message>
     <message>
         <location line="+1"/>
-        <location line="+187"/>
+        <location line="+188"/>
         <source>Remove</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-182"/>
+        <location line="-183"/>
         <source>Select a sample to preview</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2146,7 +2178,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+45"/>
+        <location line="+46"/>
         <source>epoch {epoch}/{total}  loss {loss:.4f}</source>
         <translation type="unfinished"></translation>
     </message>

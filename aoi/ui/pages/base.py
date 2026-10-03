@@ -20,7 +20,7 @@ from PySide6.QtWidgets import (
 )
 
 from ...core.explain import Sentence
-from ...core.services import AppContext
+from ...core.services import AppContext, ErrorReport
 from ...errors import AoiError
 from .. import theme
 from ..errors import show_error
@@ -180,6 +180,18 @@ class Page(QWidget):
         """Show an error the way the standard asks: its code, what happened and what to do (REQ-SET-019)."""
         show_error(self, self.ctx.report_error(exc, self.title))
 
+    def not_inspected(self, banner: QLabel, file: str, exc: BaseException, big: bool = True) -> tuple[str, str]:
+        """A board that could not be judged (its file cannot be read, the engine failed): `banner` shows a shape and
+        "Not inspected" in the neutral colour, never the verdict of the board shown before (#182, REQ-INSP-002). Returns
+        the heading and the sentence (the error's code and what happened) of the page's empty state for that board."""
+        word = QCoreApplication.translate("Page", "Not inspected")
+        banner.setText(f"{theme.VERDICT_SHAPES['INFO']} {word}")
+        banner.setStyleSheet(theme.verdict_style("INFO", big))
+        banner.repaint()
+        report = ErrorReport.of(exc, self.title)
+        heading = QCoreApplication.translate("Page", "{file} was not inspected").format(file=file)
+        return heading, f"{report.code} {report.what}"
+
     def action(self, text: str, key: str | QKeySequence.StandardKey, slot: Callable[[], object]) -> QAction:
         """An action a button and a key share (REQ-INSP-005): `action_button()` makes the button, and the key works
         wherever the focus is on this page, while this page is the one shown (a window shortcut owned by the page
@@ -198,11 +210,13 @@ class Page(QWidget):
         on_result: Callable[[Any], None],
         busy: BusyOverlay | None = None,
         on_cancel: Callable[[], None] | None = None,
+        on_error: Callable[[BaseException], object] | None = None,
         **kwargs: Any,
     ) -> Worker:
         """Run `fn(*args, **kwargs)` on a pool thread (REQ-SET-021); `on_result` gets its return value on the UI thread
-        and an error becomes the coded dialog. The newest call wins: an earlier run is stopped and its result dropped.
-        `busy` covers where the result will appear; Cancel drops the result and calls `on_cancel` when the job stops."""
+        and an error becomes the coded dialog, after `on_error` has cleared what the job was to replace (#182). The
+        newest call wins: an earlier run is stopped and its result dropped. `busy` covers where the result will appear;
+        Cancel drops the result and calls `on_cancel` when the job stops."""
         if self._bg is not None:
             self._bg.stop()
             if self._bg_busy is not None and self._bg_busy is not busy:  # its finished slot will not finish it
@@ -229,8 +243,13 @@ class Page(QWidget):
             if worker is not None and worker.job.cancelled and on_cancel is not None:
                 on_cancel()
 
+        def failed(exc: BaseException) -> None:
+            if on_error is not None:
+                on_error(exc)  # first: the page behind the dialog never shows the result before as this one's
+            self.error(exc)
+
         w.signals.result.connect(current(on_result))
-        w.signals.error.connect(current(self.error))
+        w.signals.error.connect(current(failed))
         w.signals.finished.connect(finished)
         if busy is not None:
             busy.watch(w.job)
