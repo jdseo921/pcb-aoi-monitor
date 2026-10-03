@@ -18,7 +18,6 @@ inputs"; REQ-TRN-014).
 from __future__ import annotations
 
 import math
-import pickle
 import random
 import time
 import zipfile
@@ -181,29 +180,36 @@ class AnomalyModel:
         with AOI-TRN-001 naming it; nothing falls back to a less strict load."""
         try:
             with zipfile.ZipFile(path) as z:  # torch.save writes a zip, and each entry carries a CRC-32 of its bytes
-                damaged = z.testzip()  # a weight changed on disk would otherwise load and judge boards wrongly
+                crc = z.testzip()  # a weight changed on disk would otherwise load and judge boards wrongly
+                # torch never reads the bytes of an entry flagged as a folder: its weights would be stray memory
+                folder = next((i.filename for i in z.infolist() if i.is_dir() or i.external_attr & 0x10), None)
+            damaged = f"{crc} fails its CRC-32" if crc else f"{folder} is marked as a folder" if folder else None
             ckpt = None if damaged else torch.load(path, map_location=device, weights_only=True)
-        except (pickle.UnpicklingError, RuntimeError, ValueError, EOFError, KeyError, zipfile.BadZipFile) as e:
-            raise ModelFileError("AOI-TRN-001", path=str(path), reason=type(e).__name__) from e
         except OSError as e:  # gone, a folder, unreadable, or cut short (torch reports EINVAL)
             raise ModelFileError("AOI-TRN-001", path=str(path), reason=e.strerror or type(e).__name__) from e
+        except Exception as e:  # any other way a malformed file trips the reader: refused, never an uncoded error
+            raise ModelFileError("AOI-TRN-001", path=str(path), reason=type(e).__name__) from e
         if damaged:
-            raise ModelFileError(
-                "AOI-TRN-001", path=str(path), reason=f"the file is damaged ({damaged} fails its CRC-32)"
-            )
+            raise ModelFileError("AOI-TRN-001", path=str(path), reason=f"the file is damaged ({damaged})")
         if (
             not isinstance(ckpt, dict)
             or not isinstance(ckpt.get("meta"), dict)
             or not isinstance(ckpt.get("state_dict"), dict)
         ):
             raise ModelFileError("AOI-TRN-001", path=str(path), reason="it holds no state_dict and metadata")
-        meta = _from_safe(ckpt["meta"])
-        if (why := _unusable(meta, ckpt["state_dict"])) is not None:
+        try:
+            meta = _from_safe(ckpt["meta"])
+            why = _unusable(meta, ckpt["state_dict"])
+        except Exception as e:  # metadata of a kind this app never writes, such as a bfloat16 map
+            raise ModelFileError(
+                "AOI-TRN-001", path=str(path), reason=f"its metadata is malformed ({type(e).__name__})"
+            ) from e
+        if why is not None:
             raise ModelFileError("AOI-TRN-001", path=str(path), reason=why)
         net = ConvAutoencoder()
         try:
             net.load_state_dict(ckpt["state_dict"])
-        except (RuntimeError, TypeError, AttributeError) as e:  # names or shapes of another network
+        except Exception as e:  # names or shapes of another network, or weights that are not tensors
             why = "its weights do not fit this app's AI model"
             raise ModelFileError("AOI-TRN-001", path=str(path), reason=why) from e
         return cls(net, meta, device)
@@ -329,6 +335,10 @@ def train(
         loss_history=loss_hist,
         train_seconds=round(time.time() - t0, 1),
     )
+    # A model the loader would refuse is refused here, before anything is saved or activated: OK images that are copies
+    # of one photo score 0, so the threshold is 0.
+    if (why := _unusable(model.meta, model.net.state_dict())) is not None:
+        raise AoiError("AOI-TRN-004", reason=why)
     say(
         len(loss_hist),
         cfg.epochs,

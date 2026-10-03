@@ -1867,12 +1867,12 @@
     </message>
     <message>
         <location line="+1"/>
-        <location line="+266"/>
+        <location line="+272"/>
         <source>Import Folder…</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-260"/>
+        <location line="-266"/>
         <location line="+50"/>
         <source>ID</source>
         <translation type="unfinished"></translation>
@@ -1920,12 +1920,12 @@
     </message>
     <message>
         <location line="+1"/>
-        <location line="+153"/>
+        <location line="+159"/>
         <source>Remove</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-148"/>
+        <location line="-154"/>
         <source>Select a sample to preview</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2025,12 +2025,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+24"/>
-        <source>Reference image set; the next training run re-learns the Golden board from it</source>
+        <location line="+29"/>
+        <source>Reference image set: inspections compare against it now, until training learns a Golden board</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+6"/>
+        <location line="+7"/>
         <source>Remove {count} sample(s) from the dataset?</source>
         <translation type="unfinished"></translation>
     </message>

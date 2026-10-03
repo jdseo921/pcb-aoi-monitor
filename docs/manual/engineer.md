@@ -32,14 +32,25 @@ the log in the default workspace folder (`logs/aoi-<date>.jsonl`, event `app.sta
 
 ## 2. Board models and scale
 
+**Names.** A new board model's name must differ from every existing one in more than upper and lower case: `tbox-a1`
+next to `TBOX-A1` is refused with AOI-TRN-005, since Windows would store the AI model and golden board files of both as
+the same files.
+
 (to be written: creating a board model, calibrating px per mm)
 
 ## 3. Samples, labels and datasets
+
+**Set Reference** makes the selected OK sample the reference image: inspections compare against it at once, and the
+next training run aligns the boards to it before it learns a new golden board. An NG sample is refused (AOI-TRN-006).
 
 (to be written: import, OK/NG/UNSURE labels, defect boxes, second-person check, freezing a dataset version,
 locking the validation set)
 
 ## 4. Training and AI model versions
+
+**A model that cannot judge.** When training gives an AI model that cannot judge boards, for example an image threshold
+of 0 because the OK images are copies of one photo, it stops with AOI-TRN-004: nothing is saved and the active AI model
+stays in use. Import photos of several different good boards, then train again.
 
 (to be written: training, progress and cancel, versions, activation and rollback, the model card)
 

@@ -4,7 +4,13 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+from pytestqt.qtbot import QtBot
+
 from aoi.core.services import AppContext
+from aoi.errors import AoiError
+from aoi.ui.pages.base import cell_text
+from tests.test_req_done_in_v01 import BOARD, _window
 
 
 def test_req_usr_001_appcontext_reads_and_writes_what_the_screens_need(trained_ctx: AppContext, tmp_path: Path) -> None:
@@ -46,3 +52,30 @@ def test_req_usr_001_appcontext_reads_and_writes_what_the_screens_need(trained_c
     assert ctx.save_recipe(ctx.recipe("TINY")[1]) == 2
     assert [h["revision"] for h in ctx.recipe_history("TINY")] == [2, 1]
     assert (ctx.board_status("TINY").recipe_revision, ctx.board_status("TINY").recipe_is_default) == (2, False)
+
+
+def test_req_trn_007_only_an_ok_sample_can_be_the_reference(
+    qtbot: QtBot, trained_ctx: AppContext, dialogs: list[tuple[str, str]]
+) -> None:
+    """An NG sample never becomes the reference image that inspections compare against (#168): set_reference refuses it
+    with AOI-TRN-006 before anything is written or audited, and the Training page shows that error; an OK sample still
+    becomes the reference at once."""
+    ctx = trained_ctx
+    reference, entries, ng = ctx.reference_image(BOARD), ctx.audit_entries(), ctx.samples(BOARD, "NG")[0]
+    with pytest.raises(AoiError) as refused:
+        ctx.set_reference(BOARD, ng["id"])
+    assert refused.value.code == "AOI-TRN-006"
+    assert refused.value.what.startswith(f"Sample {Path(ng['path']).name} is labelled NG; only an OK")
+    assert (ctx.reference_image(BOARD), ctx.audit_entries()) == (reference, entries)
+    win = _window(qtbot, ctx)
+    win.navigate("Training")
+    page = win.pages["Training"]
+    ok = ctx.samples(BOARD, "OK")[1]
+    for sample in (ng, ok):
+        page.samples.selectRow(
+            next(r for r in range(page.samples.rowCount()) if cell_text(page.samples, r, 0) == str(sample["id"]))
+        )
+        page._set_reference()
+    assert dialogs == [(f"AOI-TRN-006 {refused.value.entry.title}", f"{refused.value.what}\n\n{refused.value.action}")]
+    assert ctx.reference_image(BOARD) == ok["path"] != reference
+    assert win.statusBar().currentMessage().startswith("Reference image set: inspections compare against it now")

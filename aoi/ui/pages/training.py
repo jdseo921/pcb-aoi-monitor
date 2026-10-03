@@ -263,8 +263,14 @@ class TrainingPage(Page):
     def _set_reference(self) -> None:
         ids = self._selected_ids()
         if ids and (bm := self.board_model):  # a selected sample implies a board model: the table is empty without one
-            self.ctx.set_reference(bm, ids[0])
-            self.shell.status(self.tr("Reference image set; the next training run re-learns the Golden board from it"))
+            try:
+                self.ctx.set_reference(bm, ids[0])
+            except AoiError as e:  # an NG sample is never the reference (AOI-TRN-006)
+                self.error(e)
+                return
+            self.shell.status(
+                self.tr("Reference image set: inspections compare against it now, until training learns a Golden board")
+            )
 
     def _remove(self) -> None:
         ids = self._selected_ids()
