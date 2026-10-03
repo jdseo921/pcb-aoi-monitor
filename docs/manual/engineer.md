@@ -54,7 +54,10 @@ start too: the app starts with the Admin added first while the workspace has no 
 next to `TBOX-A1` is refused with AOI-TRN-005, since Windows would store the AI model and golden board files of both as
 the same files.
 
-(to be written: creating a board model, calibrating px per mm)
+Until a board model exists, Home, Inspection, Training, AI Model Test and Recipe Editor say so and offer
+**+ New board model**, which an Engineer or Admin uses; an Operator is told to ask an Engineer.
+
+(to be written: creating a board model in full, calibrating px per mm)
 
 ## 3. Samples, labels and datasets
 
@@ -173,6 +176,9 @@ shows AOI-LOG-001 with how many images were copied, and the audit trail records 
 
 The **From** and **To** boxes take days from 2000-01-01 to 2100-12-31. The picture beside the table is the selected
 record's overlay; it is empty when the record's overlay file is gone, when no row is selected and after **Filter**.
+When no record matches, the table offers **Reset Filters** (the last 7 days, every board model and operator, archived
+records hidden); when every record is older than that or archived, it offers **Show All Records** instead, which sets
+**From** to the oldest record's date, **To** to today and ticks **Include archived** when any record is archived.
 
 **Evidence files.** Beside each record's overlay picture (the results folder, by day) the app keeps the two maps the
 verdict was judged on as PNG files named after the overlay: `<overlay name>_diff.png`, the colour difference against the

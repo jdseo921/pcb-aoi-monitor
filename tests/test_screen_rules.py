@@ -10,10 +10,22 @@ from __future__ import annotations
 
 import ast
 import re
+import sqlite3
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
+import pytest
 from PySide6.QtCore import QMetaObject, Qt, Signal, SignalInstance
-from PySide6.QtWidgets import QApplication, QBoxLayout, QFrame, QPushButton, QTableWidget, QWidget
+from PySide6.QtWidgets import (
+    QApplication,
+    QBoxLayout,
+    QFileDialog,
+    QFrame,
+    QInputDialog,
+    QPushButton,
+    QTableWidget,
+    QWidget,
+)
 from pytestqt.qtbot import QtBot
 
 from aoi.core.services import AppContext
@@ -33,6 +45,7 @@ COLOUR_CALLS = {"QColor", "QBrush", "QPen"}
 DESTRUCTIVE = re.compile(r"^(Delete|Remove|Reset Demo|Clear)\b")  # Reset Filters only changes a view
 QT_OVERRIDES = re.compile(r"Event$|^event$|^eventFilter$|[sS]izeHint$|^paintEngine$")  # Qt virtuals defined on purpose
 QT_INSTALLED = (Signal, SignalInstance, QMetaObject)
+NO_BOARD_MODEL_PAGES = ("Inspection", "Training", "AI Model Test", "Recipe Editor")  # Page.no_board_model()
 
 
 def _docstrings(tree: ast.AST) -> set[ast.AST]:
@@ -164,10 +177,11 @@ def _empties(page: QWidget) -> list[EmptyState]:
 
 
 def test_req_set_019_empty_states_link_next_step(
-    qtbot: QtBot, ctx: AppContext, trained_ctx: AppContext, ng_board: Path
+    qtbot: QtBot, ctx: AppContext, trained_ctx: AppContext, ng_board: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Every empty page, list and image area says what is missing, what to do and links there; a role that cannot
-    open the linked page is told to ask an Engineer; a filtered-out history offers Reset Filters."""
+    open the linked page is told to ask an Engineer; with no board model the step is "+ New board model", or for an
+    Operator to ask an Engineer; a filtered-out history offers Reset Filters."""
     win = MainWindow(ctx)  # an empty workspace, opened as Admin
     qtbot.addWidget(win)
     win.resize(1600, 900)
@@ -191,6 +205,29 @@ def test_req_set_019_empty_states_link_next_step(
             assert e.heading.text() and e.sentence.text().endswith("."), (title, e.heading.text(), e.sentence.text())
         seen[title] = empties[0]
     assert seen["Home"].link.isVisibleTo(win.pages["Home"]) and seen["Home"].link.text() == "+ New board model"
+    # With no board model the header list is empty, so there is nothing to pick: an Engineer or Admin is offered
+    # "+ New board model" as on Home, and an Operator is told to ask an Engineer (#200).
+    asked: list[str] = []
+
+    def get_text(parent: QWidget, title: str, *args: object, **kwargs: object) -> tuple[str, bool]:
+        asked.append(title)
+        return "", False
+
+    monkeypatch.setattr(QInputDialog, "getText", staticmethod(get_text))
+    for role in ("Admin", "Engineer"):
+        win.set_user(role.lower())
+        for title in NO_BOARD_MODEL_PAGES:
+            win.navigate(title)
+            e = _empties(win.pages[title])[0]
+            got = (e.heading.text(), e.sentence.text(), e.link.text(), e.link.isVisibleTo(win.pages[title]))
+            assert got == ("No board model yet", "Create one to begin.", "+ New board model", True), (role, title)
+            e.link.click()
+            assert asked.pop() == "New board model", (role, title)
+    win.set_user("operator")
+    win.navigate("Inspection")
+    e = _empties(win.pages["Inspection"])[0]
+    assert (e.sentence.text(), e.link.isVisibleTo(win.pages["Inspection"])) == ("Ask an Engineer to create one.", False)
+    win.set_user("admin")
     assert seen["3D Profile"].link.objectName() == "primary"
     seen["3D Profile"].link.click()
     assert win.stack.currentWidget() is win.pages["Recipe Editor"]
@@ -229,6 +266,69 @@ def test_req_set_019_empty_states_link_next_step(
     assert logs.table.rowCount() == 0 and logs.empty.heading.text() == "No records match"
     logs.empty.link.click()
     assert logs.table.rowCount() == 1 and not _empties(logs)
+
+
+@pytest.mark.parametrize("history", ["old", "archived"])
+def test_req_set_019_logs_link_brings_back_old_or_archived_records(
+    qtbot: QtBot, trained_ctx: AppContext, ng_board: Path, history: str
+) -> None:
+    """When every record is older than the 7 days Reset Filters shows, or archived, the "No records match" link is not
+    Reset Filters, which ran the same empty query again (#200): it shows every record and the rows come back."""
+    win = _window(qtbot, trained_ctx, "Engineer")
+    _inspect_one(qtbot, win, ng_board)
+    with sqlite3.connect(trained_ctx.settings.db_path) as db:
+        if history == "old":
+            db.execute("UPDATE inspections SET time=?", ((datetime.now(UTC) - timedelta(days=30)).isoformat(),))
+        else:
+            db.execute("UPDATE inspections SET archived=1")
+    db.close()
+    logs = win.pages["Logs & Export"]
+    win.navigate("Logs & Export")
+    assert logs.table.rowCount() == 0 and logs.empty.heading.text() == "No records match"
+    assert logs.empty.link.isVisibleTo(logs)
+    logs.empty.link.click()
+    assert logs.table.rowCount() == 1 and not _empties(logs), (logs.empty.sentence.text(), logs.empty.link.text())
+    assert logs.archived.isChecked() == (history == "archived")
+
+
+def test_req_set_019_next_step_links_with_a_board_model(
+    qtbot: QtBot, trained_ctx: AppContext, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """With a board model chosen, each page's own empty state shows its link and the link does its step: Inspection
+    asks for images, Training for a folder of samples, AI Model Test for a validation folder, and Compare opens
+    Inspection (#200: removing any of these links passed the stage test)."""
+    opened: list[str] = []
+
+    def open_files(*args: object, **kwargs: object) -> tuple[list[str], str]:
+        opened.append("files")
+        return [], ""
+
+    def open_folder(*args: object, **kwargs: object) -> str:
+        opened.append("folder")
+        return ""
+
+    monkeypatch.setattr(QFileDialog, "getOpenFileNames", staticmethod(open_files))
+    monkeypatch.setattr(QFileDialog, "getExistingDirectory", staticmethod(open_folder))
+    win = _window(qtbot, trained_ctx, "Engineer")
+    trained_ctx.ensure_board_model("NO-SAMPLES")
+    steps = (  # page, its empty state, the board model, heading, link, then the file dialog opened or the page shown
+        ("Inspection", "empty", BOARD, "No images loaded", "Load Images…", "files"),
+        ("AI Model Test", "empty", BOARD, f"No validation run for {BOARD} yet", "Select Test Folder…", "folder"),
+        ("Compare", "test_empty", BOARD, "No board to compare yet", "Open Inspection ›", "Inspection"),
+        ("Training", "samples_empty", "NO-SAMPLES", "No samples for NO-SAMPLES yet", "Import Folder…", "folder"),
+    )
+    for title, name, board_model, heading, link, then in steps:
+        win._reload_board_models(board_model)
+        win.navigate(title)
+        page = win.pages[title]
+        empty = getattr(page, name)
+        qtbot.waitUntil(lambda e=empty, h=heading: e.heading.text() == h, timeout=30000)
+        assert empty.isVisibleTo(page) and empty.link.isVisibleTo(page) and empty.link.text() == link, title
+        empty.link.click()
+        if then in ("files", "folder"):
+            assert opened.pop() == then and not opened, title
+        else:
+            assert win.stack.currentWidget() is win.pages[then], title
 
 
 def test_req_set_019_empty_state_shows_every_line_in_a_narrow_area(qtbot: QtBot) -> None:

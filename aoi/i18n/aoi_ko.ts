@@ -581,28 +581,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+13"/>
-        <location line="+3"/>
-        <source>No board model yet</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="-3"/>
-        <source>Ask an Engineer to create one.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+4"/>
-        <source>Create one to begin.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+1"/>
-        <source>+ New board model</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+8"/>
+        <location line="+18"/>
         <source>{ok} OK · {ng} NG uploaded</source>
         <translation type="unfinished"></translation>
     </message>
@@ -877,7 +856,7 @@
 <context>
     <name>LogsPage</name>
     <message>
-        <location filename="../ui/pages/logs.py" line="+43"/>
+        <location filename="../ui/pages/logs.py" line="+45"/>
         <source>Include archived</source>
         <translation type="unfinished"></translation>
     </message>
@@ -950,22 +929,22 @@
     </message>
     <message>
         <location line="+9"/>
-        <location line="+89"/>
+        <location line="+109"/>
         <source>Export CSV</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-88"/>
+        <location line="-108"/>
         <source>Export Image Overlays</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+155"/>
+        <location line="+175"/>
         <source>Archive older than {days} days</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-116"/>
+        <location line="-136"/>
         <source>{count} inspections · {ng} NG · yield {rate:.1%}</source>
         <translation type="unfinished"></translation>
     </message>
@@ -975,22 +954,32 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+6"/>
+        <location line="+11"/>
+        <source>Every record is archived or older than {days} days.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Show All Records</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+3"/>
         <source>No records match</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1"/>
+        <location line="-9"/>
         <source>Widen the dates or the filters.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1"/>
+        <location line="+0"/>
         <source>Reset Filters</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+4"/>
+        <location line="+11"/>
         <source>Run boards on Inspection.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1000,7 +989,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+24"/>
+        <location line="+39"/>
         <source>Confirm export</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1358,7 +1347,7 @@
 <context>
     <name>Page</name>
     <message>
-        <location filename="../ui/main_window.py" line="-328"/>
+        <location filename="../ui/main_window.py" line="-320"/>
         <source>Home</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1368,17 +1357,27 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/base.py" line="+119"/>
+        <location filename="../ui/pages/base.py" line="+120"/>
         <source>No board model yet</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1"/>
-        <source>Pick a board model in the header first.</source>
+        <location line="+2"/>
+        <source>Ask an Engineer to create one.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+11"/>
+        <location line="+1"/>
+        <source>+ New board model</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Create one to begin.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+10"/>
         <source>Board model</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1428,7 +1427,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/logs.py" line="-231"/>
+        <location filename="../ui/pages/logs.py" line="-251"/>
         <source>Logs &amp; Export</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1814,7 +1813,7 @@
 <context>
     <name>Role</name>
     <message>
-        <location filename="../ui/pages/base.py" line="-230"/>
+        <location filename="../ui/pages/base.py" line="-233"/>
         <source>Operator</source>
         <translation type="unfinished"></translation>
     </message>

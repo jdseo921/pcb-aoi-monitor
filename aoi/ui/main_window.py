@@ -129,15 +129,7 @@ class HomePage(Page):
         bm = self.board_model
         self.cards.setVisible(bool(bm))
         if not bm:
-            if self.ctx.role == "Operator":
-                self.empty.show_state(self.tr("No board model yet"), self.tr("Ask an Engineer to create one."))
-            else:
-                self.empty.show_state(
-                    self.tr("No board model yet"),
-                    self.tr("Create one to begin."),
-                    self.tr("+ New board model"),
-                    self.shell.new_board_model,
-                )
+            self.empty.show_state(*self.no_board_model())
             return
         self.empty.hide()
         st = self.ctx.board_status(bm)

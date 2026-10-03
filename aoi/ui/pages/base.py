@@ -113,12 +113,15 @@ class Page(QWidget):
         """The subtitle in the UI language; a page whose subtitle carries a value overrides this."""
         return page_text(self.subtitle)
 
-    def no_board_model(self) -> tuple[str, str]:
-        """Heading and sentence of the empty state every page shows until a board model is chosen (REQ-SET-019)."""
-        return (
-            QCoreApplication.translate("Page", "No board model yet"),
-            QCoreApplication.translate("Page", "Pick a board model in the header first."),
-        )
+    def no_board_model(self) -> tuple[str, str, str, Callable[[], object] | None]:
+        """The empty state every page shows until a board model exists (REQ-SET-019): heading, sentence, link and its
+        slot. The header list is empty whenever no board model is chosen, so the step is to create one: an Engineer or
+        Admin gets the "+ New board model" link, an Operator, whom the service layer refuses, is told to ask (#200)."""
+        heading = QCoreApplication.translate("Page", "No board model yet")
+        if self.ctx.role == "Operator":
+            return heading, QCoreApplication.translate("Page", "Ask an Engineer to create one."), "", None
+        new = QCoreApplication.translate("Page", "+ New board model")
+        return heading, QCoreApplication.translate("Page", "Create one to begin."), new, self.shell.new_board_model
 
     # Hooks called by the shell.
     def on_show(self) -> None: ...
