@@ -162,10 +162,16 @@ times each view until both panes are painted, the median of five openings of a s
 Colours, point sizes and size classes are tokens in `aoi/ui/theme.py` (REQ-SET-004, since S18): the stylesheet is
 built from them with `theme.stylesheet()`, so another theme is a set of overrides (REQ-SET-008); a page never writes a
 colour or a point size of its own, nothing is below 14 pt, and `tests/test_screen_rules.py` scans aoi/ui for a
-literal and checks that every page sits in the one frame (REQ-SET-018). A verdict is shown as its colour with a shape and the word
+literal (a hex, rgb(), hsv() or hsl() colour or a colour name in a string, in any case as Qt reads them; a
+`Qt.GlobalColor` member in any spelling; a QColor, QBrush or QPen, `setNamedColor()` or a `QColor.from…()` factory
+built from a constant; a self-test lists each spelling, #203) and checks that every page sits in the one frame
+(REQ-SET-018). A verdict is shown as its colour with a shape and the word
 (`theme.verdict_label`: ✓ OK, ✗ NG, ▲ WARN; REQ-INSP-002), each page has one blue `primary` button, and a button that
 removes data is a red `danger` button, last in its row and never the default; a question that removes or overwrites
-data passes its buttons with No as the default, so Enter keeps the data (#182). A board that could not be judged shows
+data passes its buttons with No as the default, so Enter keeps the data (#182). A disabled button of every kind greys out
+to `BG_RAISED` and `TEXT_DISABLED` (`QPushButton#primary:disabled` and its siblings outrank the coloured ID rules), and
+a selected row, selected text and a combo box's highlighted entry are white on `BG_SELECTED` (the `selection-*`
+properties on `*`), never the platform's highlight (#203). A board that could not be judged shows
 `Page.not_inspected` on its banner (· Not inspected, in the neutral colour) with its picture and verdict table cleared,
 never the verdict of the board before (#182), and its empty state (Inspection, Compare's test pane) names the board, the
 error's code and what happened, translated through `phrase_text()` (#198); `run_in_background(on_error=…)` lets a
@@ -199,7 +205,9 @@ merging. On Linux, CI also renders every page at 1366×768 and at 3840×2160 wit
 widget against the standard's "Sizes": 14 pt text (QGraphics text on an image takes `label_font()`), 120×40 buttons whose
 text fits, 48 px operator targets (sidebar entries, header controls, defect and history rows), 56 px run controls, and
 WCAG 2.1 contrast of 4.5:1 between a widget's pixels and its background (3:1 for bold or 18 pt text; disabled controls
-exempt). On Windows, CI points `QT_QPA_FONTDIR` at the system font folder: Qt's offscreen platform ships no fonts
+exempt, but a disabled button must show the disabled fill), a progress bar's centred percentage included; the prepared
+states hold a selected defect row on Inspection and a bar at 100 % on Training, so both are measured (#203). On
+Windows, CI points `QT_QPA_FONTDIR` at the system font folder: Qt's offscreen platform ships no fonts
 there, and without fonts every text is a box that reads as -0.8 pt, so the walk asserts first that fonts loaded.
 A control's size class is set with `size_class(widget, "T")` (48 px) or `"T+"` (56 px), which the stylesheet sizes
 through `[sizeClass=…]` rules; `setMinimumHeight()` on a styled widget is undone when the stylesheet is applied.

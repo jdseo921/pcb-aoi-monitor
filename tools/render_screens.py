@@ -260,18 +260,23 @@ def prepare(win: MainWindow, title: str, dataset: Path) -> None:
     from PySide6.QtCore import QDate
 
     page: Any = win.pages[title]
-    if title == "Inspection" and page.last is None:
-        no_record = mock.patch.object(type(page.ctx), "log_result", lambda *a, **k: 0)  # no record and no alarm
-        with pinned_engine(), no_record:
-            page._set_queue([ng_board(dataset)])
-            page.next_board()
-            wait_until(lambda: page.last is not None)
-            assert page.last.elapsed_ms == FIXED_MS, "the Inspection run was not pinned"  # no real run reports 480.0
+    if title == "Inspection":
+        if page.last is None:
+            no_record = mock.patch.object(type(page.ctx), "log_result", lambda *a, **k: 0)  # no record and no alarm
+            with pinned_engine(), no_record:
+                page._set_queue([ng_board(dataset)])
+                page.next_board()
+                wait_until(lambda: page.last is not None)
+                assert page.last.elapsed_ms == FIXED_MS, "the Inspection run was not pinned"  # no real run: 480.0
+        page.table.selectRow(0)  # an Operator zooms to a defect: the walk measures a selected row (#203)
     elif title == "Compare" and page.res is None:
         with pinned_engine():
             page.set_test(str(ng_board(dataset)))
             wait_until(lambda: page.res is not None)
             assert page.res.elapsed_ms == FIXED_MS, "the Compare run was not pinned"
+    elif title == "Training":
+        page.bar.setRange(0, TINY_EPOCHS)
+        page.bar.setValue(TINY_EPOCHS)  # as a finished run leaves it: the percentage on the accent chunk (#203)
     elif title == "Logs & Export":
         page.d_from.setDate(QDate(2025, 12, 25))
         page.d_to.setDate(QDate(2026, 1, 8))

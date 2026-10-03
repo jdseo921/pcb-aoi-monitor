@@ -11,17 +11,23 @@ from __future__ import annotations
 import ast
 import re
 import sqlite3
+from collections import Counter
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
+import numpy as np
 import pytest
-from PySide6.QtCore import QMetaObject, Qt, Signal, SignalInstance
+from PySide6.QtCore import QMetaObject, QRect, Qt, Signal, SignalInstance
+from PySide6.QtGui import QColor, QPalette
 from PySide6.QtWidgets import (
     QApplication,
     QBoxLayout,
     QFileDialog,
     QFrame,
     QInputDialog,
+    QLineEdit,
+    QListWidget,
+    QPlainTextEdit,
     QPushButton,
     QTableWidget,
     QWidget,
@@ -31,17 +37,26 @@ from pytestqt.qtbot import QtBot
 from aoi.core.services import AppContext
 from aoi.ui import theme
 from aoi.ui.main_window import MainWindow
+from aoi.ui.pages.base import button
 from aoi.ui.pages.compare import MODE_DIFF
 from aoi.ui.widgets.empty_state import EmptyState
+from tests.screens.test_sizes_and_contrast import MIN_RATIO, _check_widget, _contrast, _pixels, _region
 from tests.test_req_done_in_v01 import BOARD, _inspect_one, _window
 
 ROOT = Path(__file__).resolve().parents[1]
 UI_DIR = ROOT / "aoi" / "ui"
 THEME = UI_DIR / "theme.py"
-COLOUR_LITERAL = re.compile(r"#[0-9a-fA-F]{3,8}\b|\brgba?\(")
+COLOUR_LITERAL = re.compile(r"#[0-9a-f]{3,8}\b|\b(?:rgb|hsv|hsl)a?\(", re.IGNORECASE)  # Qt reads RGB( and hsv( too
 POINT_SIZE = re.compile(r"font-size:\s*(\d+)\s*pt")
-QT_COLOURS = {"white", "black", "red", "green", "blue", "yellow", "gray", "darkGray", "lightGray", "cyan", "magenta"}
-COLOUR_CALLS = {"QColor", "QBrush", "QPen"}
+QT_COLOURS = {m.name for m in Qt.GlobalColor}  # white, red, darkGreen, transparent, color0, …
+COLOUR_CALLS = {"QColor", "QBrush", "QPen", "setNamedColor"}
+COLOUR_FACTORIES = {
+    f"from{s}" for s in ("Rgb", "RgbF", "Rgba64", "Hsv", "HsvF", "Hsl", "HslF", "Cmyk", "CmykF", "String")
+}
+CSS_COLOUR = re.compile(  # Qt takes "Background: Green" as it takes "background: green"
+    r"(?<![\w-])([a-z-]*(?:color|background|border)[a-z-]*)\s*:\s*([^;{}'\"]*)", re.IGNORECASE
+)
+CSS_NAMES = {n.lower() for n in QColor.colorNames()}  # green, white, darkred, transparent, …
 DESTRUCTIVE = re.compile(r"^(Delete|Remove|Reset Demo|Clear)\b")  # Reset Filters only changes a view
 QT_OVERRIDES = re.compile(r"Event$|^event$|^eventFilter$|[sS]izeHint$|^paintEngine$")  # Qt virtuals defined on purpose
 QT_INSTALLED = (Signal, SignalInstance, QMetaObject)
@@ -57,26 +72,107 @@ def _docstrings(tree: ast.AST) -> set[ast.AST]:
     return out
 
 
+def _dotted(node: ast.AST) -> str:
+    """The dotted name of an attribute chain, such as "Qt.GlobalColor"; "" for anything else."""
+    if isinstance(node, ast.Name):
+        return node.id
+    if isinstance(node, ast.Attribute) and (head := _dotted(node.value)):
+        return f"{head}.{node.attr}"
+    return ""
+
+
+def colour_literals(source: str, name: str) -> list[str]:
+    """Every colour written in `source` other than through a theme token: "name:line spelling" for each. A string
+    with a hex or rgb() colour or a CSS colour property with a colour name; a Qt.GlobalColor member, in full or as
+    Qt.red; QColor, QBrush or QPen built from a constant; a QColor.from…() factory with a constant. Colour names and
+    property names match in any case, as Qt reads them."""
+    tree = ast.parse(source, filename=name)
+    docstrings = _docstrings(tree)
+    found: list[str] = []
+    inner: set[ast.AST] = set()
+    for node in ast.walk(tree):  # breadth first: Qt.GlobalColor.red comes before its Qt.GlobalColor
+        where = f"{name}:{getattr(node, 'lineno', 0)}"
+        if isinstance(node, ast.Constant) and isinstance(node.value, str) and node not in docstrings:
+            named = [v for _, v in CSS_COLOUR.findall(node.value) if set(re.findall(r"[a-z]+", v.lower())) & CSS_NAMES]
+            if COLOUR_LITERAL.search(node.value) or named:
+                found.append(f"{where} {node.value!r}")
+        elif isinstance(node, ast.Attribute) and node not in inner:
+            dotted = _dotted(node)
+            if node.attr in QT_COLOURS and ({"Qt", "GlobalColor"} & set(dotted.split(".")[:-1])):
+                inner.add(node.value)  # Qt.GlobalColor.red is one finding, not two
+                found.append(f"{where} {dotted}")
+            elif node.attr == "GlobalColor":  # Qt.GlobalColor(7), or the enum passed on
+                found.append(f"{where} {dotted}")
+        elif isinstance(node, ast.Call):
+            first = [*node.args, *(k.value for k in node.keywords)][:1]  # QColor(200, 0, 0) or QColor(name="red")
+            func = node.func.attr if isinstance(node.func, ast.Attribute) else _dotted(node.func)
+            owner = _dotted(node.func.value).split(".")[-1] if isinstance(node.func, ast.Attribute) else ""
+            factory = func in COLOUR_FACTORIES and owner == "QColor"  # not QDate.fromString("2025-01-01", …)
+            if first and isinstance(first[0], ast.Constant) and (func in COLOUR_CALLS or factory):
+                found.append(f"{where} {func}({first[0].value!r})")
+    return found
+
+
 def test_req_set_004_no_colour_literals_outside_theme() -> None:
-    """Pages and widgets take colours from the theme tokens: no hex or rgb() string, Qt colour name or QColor("…")."""
+    """Pages and widgets take colours from the theme tokens: none of the spellings `colour_literals` reports."""
     found: list[str] = []
     for path in sorted(UI_DIR.rglob("*.py")):
-        if path == THEME:
-            continue
-        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
-        docstrings = _docstrings(tree)
-        for node in ast.walk(tree):
-            where = f"{path.relative_to(ROOT)}:{getattr(node, 'lineno', 0)}"
-            if isinstance(node, ast.Constant) and isinstance(node.value, str) and node not in docstrings:
-                if COLOUR_LITERAL.search(node.value):
-                    found.append(f"{where} {node.value!r}")
-            elif isinstance(node, ast.Attribute) and node.attr in QT_COLOURS:
-                if isinstance(node.value, ast.Name) and node.value.id == "Qt":
-                    found.append(f"{where} Qt.{node.attr}")
-            elif isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id in COLOUR_CALLS:
-                if node.args and isinstance(node.args[0], ast.Constant):
-                    found.append(f"{where} {node.func.id}({node.args[0].value!r})")
+        if path != THEME:
+            found += colour_literals(path.read_text(encoding="utf-8"), str(path.relative_to(ROOT)))
     assert not found, "colour literals outside aoi/ui/theme.py: " + ", ".join(found)
+
+
+# Each spelling of a colour the scan must report (#203), and token-built code it must leave alone
+COLOUR_SPELLINGS = {
+    "hex": 'w.setStyleSheet("color: #ff0000")',
+    "rgb()": 'w.setStyleSheet("background: rgb(200, 0, 0)")',
+    "CSS colour keyword": 'w.setStyleSheet("background: green; color: white; font-size: 40pt")',
+    "CSS keyword in an HTML style": "label.setText(\"<span style='color:red'>NG</span>\")",
+    "CSS keyword on a border": 'w.setStyleSheet("border: 2px solid darkred")',
+    "CSS keyword capitalised": 'w.setStyleSheet("background: Green; color: White; font-size: 40pt")',
+    "CSS keyword in capitals": 'w.setStyleSheet("BACKGROUND-COLOR: RED")',
+    "RGB() in capitals": 'w.setStyleSheet("color: RGB(200, 0, 0)")',
+    "hsv()": 'w.setStyleSheet("border: 2px solid hsv(0, 255, 230)")',
+    "hsla()": 'w.setStyleSheet("background: hsla(120, 255, 100, 255)")',
+    "QtCore.Qt.red": "QColor(QtCore.Qt.red)",
+    "QtCore.Qt.GlobalColor.red": "QColor(QtCore.Qt.GlobalColor.red)",
+    'QColor(name="…")': 'QColor(name="red")',
+    "setNamedColor": 'c.setNamedColor("red")',
+    "Qt.red": "QColor(Qt.red)",
+    "Qt.GlobalColor.red": "c = QColor(Qt.GlobalColor.red)",
+    "QPen(Qt.GlobalColor.red)": "pen = QPen(Qt.GlobalColor.red, width)",
+    "GlobalColor imported": "brush = QBrush(GlobalColor.darkGreen)",
+    "Qt.GlobalColor(int)": "QColor(Qt.GlobalColor(7))",
+    "QColor(int)": "QColor(200, 0, 0)",
+    'QColor("…")': 'QColor("red")',
+    "QtGui.QColor(int)": "QtGui.QColor(200, 0, 0)",
+    "QColor.fromRgb": "c = QColor.fromRgb(200, 0, 0).name()",
+    "QColor.fromRgbF": "QColor.fromRgbF(0.8, 0, 0)",
+    "QColor.fromHsv": "QColor.fromHsv(0, 255, 200)",
+    "QColor.fromHsl": "QColor.fromHsl(0, 255, 100)",
+    "QColor.fromCmyk": "QColor.fromCmyk(0, 255, 255, 50)",
+    "QColor.fromString": 'QColor.fromString("red")',
+}
+TOKEN_BUILT = """
+\"\"\"A docstring may name #ff0000 and color: red.\"\"\"
+w.setStyleSheet(f"background:{theme.BG}; color:{on_color(c)}; border: 1px solid {theme.LINE}")
+label.setText(f"<span style='font-size:{theme.FONT_PT}pt;color:{theme.ACCENT}'>{n}</span>")
+pen = QPen(QColor(theme.NG_COLOR), width)
+pen.setStyle(Qt.PenStyle.DashLine)
+label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+c = QColor.fromString(theme.OK_COLOR)
+day = QDate.fromString("2025-01-01", "yyyy-MM-dd")
+keys = QKeySequence.fromString("Ctrl+S")
+w.setToolTip(self.tr("Border: the board's edge, background: the bare board"))
+"""
+
+
+def test_req_set_004_colour_scan_reports_every_spelling() -> None:
+    """The scan above reports each way of writing a colour, as a page would write it, and leaves token-built strings,
+    docstrings and other Qt enums alone (#203: named CSS colours, Qt.GlobalColor.red and QColor.fromRgb() passed)."""
+    missed = [what for what, code in COLOUR_SPELLINGS.items() if not colour_literals(code, what)]
+    assert not missed, f"the colour scan does not report: {missed}"
+    assert colour_literals(TOKEN_BUILT, "token-built") == []
 
 
 def test_req_set_004_text_is_14pt_or_more_and_the_verdict_40pt() -> None:
@@ -170,6 +266,104 @@ def test_req_set_018_destructive_buttons_red_not_default(qtbot: QtBot, trained_c
             if b.objectName() == "danger":
                 assert _row_of(page, b)[-1] is b, f"{red[-1]} is not the last button in its row"
     assert {"Training: Remove", "Recipe Editor: Delete", "Inspection: ■  Stop  F6"} <= set(red), red
+
+
+def _fill(win: QWidget, shot: np.ndarray, w: QWidget) -> str:
+    """The colour of `w` in the window grab just inside its left edge, half way down: a button's fill."""
+    p = w.mapTo(win, w.rect().center())
+    x, y = w.mapTo(win, w.rect().topLeft()).x() + 2 * theme.RADIUS, p.y()
+    return "#" + "".join(f"{int(v):02x}" for v in shot[y, x])
+
+
+def test_req_set_004_a_disabled_coloured_button_looks_disabled(qtbot: QtBot, trained_ctx: AppContext) -> None:
+    """A disabled primary, Start, Stop or red Delete button greys out like a plain one (#203: the ID rules outranked
+    QPushButton:disabled, so Start, Stop and Next Board looked live on an idle Inspection page)."""
+    fills = {"": theme.BG_BUTTON, "primary": theme.ACCENT, "start": theme.OK_COLOR, "stop": theme.NG_COLOR}
+    fills["danger"] = theme.NG_COLOR
+    for kind, fill in fills.items():
+        grabs = []
+        for enabled in (True, False):
+            b = button("Delete", kind)
+            qtbot.addWidget(b)
+            b.resize(200, theme.RUN_CONTROL_H)
+            b.setEnabled(enabled)
+            b.show()
+            QApplication.processEvents()
+            grabs.append(shot := _pixels(b.grab().toImage()))
+            measured = _contrast(shot)
+            assert measured is not None, kind
+            want = (fill, theme.ON_DARK if kind else theme.TEXT) if enabled else (theme.BG_RAISED, theme.TEXT_DISABLED)
+            assert measured[1:] == want, (kind or "plain", enabled, measured)
+        assert not np.array_equal(*grabs), f"a disabled {kind or 'plain'} button looks like an enabled one"
+    win = _window(qtbot, trained_ctx, "Engineer")
+    insp, recipe = win.pages["Inspection"], win.pages["Recipe Editor"]
+    win.navigate("Inspection")  # nothing queued: Start, Stop and Next Board are off
+    QApplication.processEvents()
+    shot = _pixels(win.grab().toImage())
+    for b in (insp.btn_start, insp.btn_stop, insp.btn_next, insp.btn_save):
+        assert not b.isEnabled() and _fill(win, shot, b) == theme.BG_RAISED, (b.text(), _fill(win, shot, b))
+    win.navigate("Recipe Editor")  # no ROI selected: Apply and the red Delete are off
+    QApplication.processEvents()
+    shot = _pixels(win.grab().toImage())
+    for b in (recipe.apply_btn, recipe.delete_btn):
+        assert not b.isEnabled() and _fill(win, shot, b) == theme.BG_RAISED, (b.text(), _fill(win, shot, b))
+
+
+def test_req_set_004_a_selected_row_reads_at_4_5_to_1(qtbot: QtBot, trained_ctx: AppContext, ng_board: Path) -> None:
+    """An Operator selects a defect row to zoom to it: the row is drawn in the theme's selection colours, 14 pt white
+    on BG_SELECTED at 4.5:1 or more, the focused cell too (#203: Qt's default highlight, 3.7:1 and 3.4:1); fields,
+    lists, text areas and combo popups select in the same colours."""
+    win = _window(qtbot, trained_ctx, "Operator")
+    page = _inspect_one(qtbot, win, ng_board)
+    table = page.table
+    assert table.rowCount() >= 1
+    table.selectRow(0)
+    for focused in (False, True):
+        if focused:
+            win.activateWindow()
+            table.setFocus()
+            qtbot.waitUntil(table.hasFocus)
+        QApplication.processEvents()
+        shot = _pixels(win.grab().toImage())
+        for c in range(table.columnCount()):
+            it = table.item(0, c)
+            assert it is not None and it.isSelected()
+            measured = _contrast(_region(shot, win, table.viewport(), table.visualItemRect(it)))
+            assert measured is not None and measured[0] >= MIN_RATIO, (focused, it.text(), measured)
+            if c == table.columnCount() - 1:  # not the current cell, which carries the focus frame
+                assert measured[1:] == (theme.BG_SELECTED, theme.ON_DARK), (focused, it.text(), measured)
+    views = [win.bm_combo.view()] + [
+        next(w for w in win.findChildren(cls)) for cls in (QLineEdit, QListWidget, QPlainTextEdit, QTableWidget)
+    ]
+    for v in views:
+        v.ensurePolished()
+        colours = (
+            v.palette().color(r).name() for r in (QPalette.ColorRole.Highlight, QPalette.ColorRole.HighlightedText)
+        )
+        assert tuple(colours) == (theme.BG_SELECTED, theme.ON_DARK), type(v).__name__
+
+
+def test_req_set_004_a_progress_bar_past_half_reads_and_is_measured(qtbot: QtBot, trained_ctx: AppContext) -> None:
+    """A finished training run leaves the bar at 100 %: its percentage on the accent chunk is bold white, 3:1 or more
+    for large text, and the size and contrast walk measures it and fails on the look before #203 (regular TEXT at
+    3.1:1, which the walk never measured)."""
+    win = _window(qtbot, trained_ctx, "Engineer")
+    win.navigate("Training")
+    bar = win.pages["Training"].bar
+    bar.setRange(0, 10)
+    bar.setValue(10)
+    QApplication.processEvents()
+    seen: Counter = Counter()
+    shot = _pixels(win.grab().toImage())
+    assert _check_widget("Training", win, shot, bar, seen) == [] and seen["contrast"] == 1, seen
+    text = QRect(0, 0, bar.fontMetrics().horizontalAdvance(bar.text()), bar.fontMetrics().height())
+    text.moveCenter(bar.rect().center())
+    measured = _contrast(_region(shot, win, bar, text))
+    assert measured is not None and measured[1:] == (theme.ACCENT, theme.ON_DARK) and bar.font().bold(), measured
+    bar.setStyleSheet(f"QProgressBar {{ color: {theme.TEXT}; font-weight: 400; }}")  # the look before #203
+    QApplication.processEvents()
+    findings = _check_widget("Training", win, _pixels(win.grab().toImage()), bar, seen)
+    assert len(findings) == 1 and "reads at 3.1:1, needs 4.5:1" in findings[0], findings
 
 
 def _empties(page: QWidget) -> list[EmptyState]:
