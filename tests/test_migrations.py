@@ -4,6 +4,7 @@ migration 0005 adds; REQ-INSP-012 for the evidence columns and the checks table 
 
 from __future__ import annotations
 
+import builtins
 import functools
 import json
 import logging
@@ -444,4 +445,6 @@ def test_req_set_016_a_picked_folder_opens_when_settings_json_cannot_be_written(
     assert [title for title, _ in dialogs] == ["AOI-SET-011 Workspace cannot be opened"]
     lines = [json.loads(line) for f in (local / "logs").glob("aoi-*.jsonl") for line in f.open(encoding="utf-8")]
     (failed,) = [line for line in lines if line["event"] == "settings.save_failed"]
-    assert (failed["level"], failed["workspace"]) == ("WARNING", str(local)) and "NotADirectoryError" in failed["trace"]
+    raised = failed["trace"].rstrip().splitlines()[-1].split(":", 1)[0]  # NotADirectoryError; Windows: FileExistsError
+    assert (failed["level"], failed["workspace"]) == ("WARNING", str(local))
+    assert issubclass(getattr(builtins, raised), OSError), failed["trace"]
