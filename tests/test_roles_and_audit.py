@@ -64,14 +64,16 @@ UNCHECKED = {
     "checks_for_many", "inspection_result", "inspection", "judged_reference", "users", "board_status",
 }  # fmt: skip
 CALLS = {**{name: call for name, (_, call) in WRITES.items()}, **CHECKED_READS}
-REFUSED = [(name, role) for name in CALLS for role in ROLES[: ROLES.index(REQUIRED_ROLE[name])]]
+# The lowest role allowed each call, copied from the write table of docs/ARCHITECTURE.md §5 and REQ-CMP-005, never read
+# from the decorators under test (#181): built from REQUIRED_ROLE, a lowered @requires refused fewer roles and passed.
+EXPECTED_ROLE = {name: "Engineer" for name in CALLS} | {"add_user": "Admin"}
+REFUSED = [(name, role) for name in CALLS for role in ROLES[: ROLES.index(EXPECTED_ROLE[name])]]
 
 
 def test_req_usr_001_every_appcontext_call_is_classified() -> None:
     public = {name for name, _ in inspect.getmembers(AppContext, inspect.isfunction) if not name.startswith("_")}
     assert public == UNCHECKED | set(CALLS), public ^ (UNCHECKED | set(CALLS))
-    assert set(REQUIRED_ROLE) == set(CALLS) and all(role in ROLES for role in REQUIRED_ROLE.values())
-    assert REQUIRED_ROLE["re_evaluate"] == "Engineer"  # REQ-CMP-005: trying other thresholds is for an Engineer
+    assert REQUIRED_ROLE == EXPECTED_ROLE  # each @requires names the §5 role (re_evaluate: Engineer, REQ-CMP-005)
 
 
 @pytest.mark.parametrize(("method", "role"), REFUSED, ids=[f"{m}-{r}" for m, r in REFUSED])
@@ -82,7 +84,7 @@ def test_req_usr_001_lower_role_is_refused(
     before = trained_ctx.audit_entries()  # the fixture's own imports and training
     with pytest.raises(AoiError) as refused:
         CALLS[method](trained_ctx, synthetic_dataset, tmp_path)
-    allowed = " or ".join(ROLES[ROLES.index(REQUIRED_ROLE[method]) :])
+    allowed = " or ".join(ROLES[ROLES.index(EXPECTED_ROLE[method]) :])
     assert refused.value.code == "AOI-USR-001" and refused.value.what.endswith(f"needs the {allowed} role.")
     assert trained_ctx.audit_entries() == before  # refused before anything was written
 

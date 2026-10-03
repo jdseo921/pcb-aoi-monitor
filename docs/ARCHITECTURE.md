@@ -345,6 +345,8 @@ hiding a page or disabling a button is only a convenience. Every write also appe
 Reads, inspections (`inspect_file`, `log_result`), alarms and error reports need no role: an Operator inspects boards.
 One call that writes nothing needs a role: `re_evaluate`, judging a stored result with other thresholds (REQ-CMP-005),
 is for an Engineer, through the same check; it stores nothing, so it writes no audit entry.
+`tests/test_roles_and_audit.py` keeps the Role column above (and `re_evaluate`: Engineer) as a table of its own,
+fails when a `@requires` names another role, and calls each of them with every role below its own (#181).
 Until sign-in ships (REQ-USR-002, 1.0) the user is the one picked in the header, so an entry names who was picked.
 The user is one immutable `Actor` (name, role, UUID) that `set_user` replaces whole. Work acts as the user who started
 it (#177): `@requires` checks the user acting (`AppContext.actor`) and holds it in a context variable for the whole
