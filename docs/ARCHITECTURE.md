@@ -210,7 +210,15 @@ removes data is a red `danger` button, last in its row and never the default; a 
 data passes its buttons with No as the default, so Enter keeps the data (#182). A disabled button of every kind greys out
 to `BG_RAISED` and `TEXT_DISABLED` (`QPushButton#primary:disabled` and its siblings outrank the coloured ID rules), and
 a selected row, selected text and a combo box's highlighted entry are white on `BG_SELECTED` (the `selection-*`
-properties on `*`), never the platform's highlight (#203). A board that could not be judged shows
+properties on `*`), never the platform's highlight (#203). The list a drop-down opens, the calendar of a date field
+and every menu (the calendar's month list, a text field's right-click menu) are themed too: `TEXT` on `BG_DEEP` or
+`BG_RAISED`, never the platform's light background; the days outside the shown month are `TEXT_MUTED`, and Logs &
+Export sets its weekend days to `TEXT` instead of Qt's red (#239). The calendar's navigation bar stays on `BG_SELECTED`
+with the month and year in `ON_DARK` (5.7:1), on `BG_BUTTON_HOVER` under the pointer or while the month list is open
+(8.4:1): Qt draws the previous and next month arrows dark, and they read at 3.4:1 on `BG_SELECTED` but 1.5:1 on
+`BG_RAISED`, below the 3:1 a control's graphic needs (WCAG 1.4.11) (#239). The sidebar's section headings are `TEXT_MUTED`; a
+page entry the role may not open is greyed to `TEXT_DISABLED` by `MainWindow.set_user` on the item itself, because a
+stylesheet rule for disabled items would grey the headings, which have no item flags either (#239). A board that could not be judged shows
 `Page.not_inspected` on its banner (· Not inspected, in the neutral colour) with its picture and verdict table cleared,
 never the verdict of the board before (#182), and its empty state (Inspection, Compare's test pane) names the board, the
 error's code and what happened, translated through `phrase_text()` (#198); `run_in_background(on_error=…)` lets a
@@ -252,7 +260,13 @@ widget against the standard's "Sizes": 14 pt text (QGraphics text on an image ta
 text fits, 48 px operator targets (sidebar entries, header controls, defect and history rows), 56 px run controls, and
 WCAG 2.1 contrast of 4.5:1 between a widget's pixels and its background (3:1 for bold or 18 pt text; disabled controls
 exempt, but a disabled button must show the disabled fill), a progress bar's centred percentage included; the prepared
-states hold a selected defect row on Inspection and a bar at 100 % on Training, so both are measured (#203). On
+states hold a selected defect row on Inspection and a bar at 100 % on Training, so both are measured (#203). Every list
+item with text is measured, the sidebar's section headings too; only a sidebar entry of a page the role may not open is
+exempt, as a disabled control. The walk opens every drop-down list and every date field's calendar on the page, with
+the calendar's month menu, and one text field's right-click menu, and measures each entry, day, weekday name and the
+month and year, these also under the pointer (Qt's `WA_UnderMouse`, which drives `:hover`): they are windows of their
+own, so the page grab does not hold them. The calendar's previous and next month arrows, which carry no text, must read
+at 3:1 on their ground, at rest and under the pointer (#239). On
 Windows, CI points `QT_QPA_FONTDIR` at the system font folder: Qt's offscreen platform ships no fonts
 there, and without fonts every text is a box that reads as -0.8 pt, so the walk asserts first that fonts loaded.
 A control's size class is set with `size_class(widget, "T")` (48 px) or `"T+"` (56 px), which the stylesheet sizes

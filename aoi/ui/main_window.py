@@ -212,7 +212,7 @@ class MainWindow(QMainWindow):
             if section:
                 sec = QListWidgetItem(self.tr(section))
                 sec.setFlags(Qt.ItemFlag.NoItemFlags)
-                sec.setForeground(QColor(theme.TEXT_MUTED))
+                sec.setForeground(QColor(theme.TEXT_MUTED))  # a heading, not a disabled control: 7.4:1 (#239)
                 self.nav.addItem(sec)
             page = cls(ctx, self)
             self.pages[cls.title] = page
@@ -309,6 +309,9 @@ class MainWindow(QMainWindow):
                 Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable if allowed else Qt.ItemFlag.NoItemFlags
             )
             it.setToolTip("" if allowed else self._needs_role(title))
+            # greyed as a disabled control here, not by a stylesheet rule for disabled items: that rule would grey
+            # the section headings too, which have no flags either (#239)
+            it.setData(Qt.ItemDataRole.ForegroundRole, None if allowed else QColor(theme.TEXT_DISABLED))
         cur = self.stack.currentWidget()
         if isinstance(cur, Page) and role not in cur.roles:
             self.navigate("Home")

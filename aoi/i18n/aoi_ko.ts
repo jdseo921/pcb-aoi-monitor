@@ -611,7 +611,7 @@
     </message>
     <message>
         <location line="+21"/>
-        <location filename="../ui/main_window.py" line="+396"/>
+        <location filename="../ui/main_window.py" line="+399"/>
         <source>start-up</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1167,7 +1167,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+14"/>
+        <location line="+5"/>
+        <source>Ask an Admin to save a workspace folder with a shorter path on Settings and then, with the app closed, to copy everything in the folder {workspace} into that folder, or to turn on long paths in Windows; then import the images again.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+9"/>
         <source>AI model, recipe or Golden board changed since the run</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1497,12 +1502,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+105"/>
-        <source>Ask an Admin to save a workspace folder with a shorter path on Settings and then, with the app closed, to copy everything in the folder {workspace} into that folder, or to turn on long paths in Windows; then import the images again.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+38"/>
+        <location line="+143"/>
         <source>ROI thresholds refused</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1735,12 +1735,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+4"/>
-        <source>The recipe turns the AI check off, so the AI check did not run and no AI model judged the board: an Engineer can turn it on in the Recipe Editor.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+5"/>
+        <location line="+9"/>
         <source>The board was not compared with the Golden board when it was inspected, so the comparison is not judged again here: inspect the board again with the Golden board comparison in use.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1785,7 +1780,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+32"/>
+        <location line="+16"/>
+        <source>The recipe turns the AI check off, so the AI check did not run and no AI model judged the board: an Engineer can turn it on in the Recipe Editor.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+16"/>
         <source>Note: {note}</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1793,7 +1793,7 @@
 <context>
     <name>HomePage</name>
     <message>
-        <location filename="../ui/main_window.py" line="-339"/>
+        <location filename="../ui/main_window.py" line="-342"/>
         <source>Upload samples</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2148,7 +2148,7 @@
 <context>
     <name>LogsPage</name>
     <message>
-        <location filename="../ui/pages/logs.py" line="+49"/>
+        <location filename="../ui/pages/logs.py" line="+54"/>
         <source>Include archived</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2419,7 +2419,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+16"/>
+        <location line="+19"/>
         <source>{page} needs the {roles} role</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2689,7 +2689,7 @@
 <context>
     <name>Page</name>
     <message>
-        <location filename="../ui/main_window.py" line="-329"/>
+        <location filename="../ui/main_window.py" line="-332"/>
         <source>Home</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2759,7 +2759,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/logs.py" line="-292"/>
+        <location filename="../ui/pages/logs.py" line="-296"/>
         <source>Logs &amp; Export</source>
         <translation type="unfinished"></translation>
     </message>

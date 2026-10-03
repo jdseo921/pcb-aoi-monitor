@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from PySide6.QtCore import QDate, Qt
+from PySide6.QtGui import QColor, QTextCharFormat
 from PySide6.QtWidgets import QCheckBox, QComboBox, QDateEdit, QFileDialog, QHBoxLayout, QLabel, QMessageBox, QSplitter
 
 from ...core.inspector import ai_check
@@ -40,10 +41,14 @@ class LogsPage(Page):
         f = QHBoxLayout()
         self.d_from = QDateEdit(QDate.currentDate().addDays(-DEFAULT_DAYS))
         self.d_to = QDateEdit(QDate.currentDate())
+        weekend = QTextCharFormat()
+        weekend.setForeground(QColor(theme.TEXT))  # not Qt's red, which reads at 4.1:1 on the dark calendar (#239)
         for d in (self.d_from, self.d_to):
             d.setCalendarPopup(True)
             d.setDisplayFormat("yyyy-MM-dd")  # ISO dates everywhere (REQ-SET-017), not the locale's short form
             d.setDateRange(QDate(2000, 1, 1), QDate(2100, 12, 31))  # days every station's clock converts (#174)
+            for day in (Qt.DayOfWeek.Saturday, Qt.DayOfWeek.Sunday):
+                d.calendarWidget().setWeekdayTextFormat(day, weekend)
         self.model = QComboBox()
         self.operator = QComboBox()
         self.archived = QCheckBox(self.tr("Include archived"))

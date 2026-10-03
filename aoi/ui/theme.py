@@ -11,7 +11,10 @@ surface reads at 4.5:1 or more, except white on the standard's OK green (3.3:1),
 Stop buttons, a progress bar's percentage), for which WCAG AA asks 3:1; whether the standard's "4.5:1" allows that
 reading is open with Jay. The selected sidebar entry, tab and row, and selected text, whose text is not bold, sit on
 BG_SELECTED instead (5.7:1). A disabled control is exempt (WCAG 1.4.3), and every disabled button, coloured or not,
-greys out to BG_RAISED and TEXT_DISABLED, so it never looks ready to press.
+greys out to BG_RAISED and TEXT_DISABLED, so it never looks ready to press. The lists, calendars and menus that open as
+windows of their own are themed here too, never left on the platform's light background, and the calendar's bar stays
+BG_SELECTED, on which Qt's dark month arrows read at 3.4:1 (#239); the sidebar greys a page the role may not open on
+the item itself, since a rule for disabled items would also grey its headings.
 """
 
 from string import Template
@@ -81,7 +84,6 @@ QListWidget#nav { background: $BG_DEEP; border: none; padding-top: ${SPACE_S}px;
 QListWidget#nav::item { padding: ${SPACE}px 18px; margin: 2px ${SPACE_S}px; border-radius: ${RADIUS}px; }
 QListWidget#nav::item:selected { background: $BG_SELECTED; color: $ON_DARK; }
 QListWidget#nav::item:hover:!selected { background: $BG_NAV_HOVER; }
-QListWidget#nav::item:disabled { color: $TEXT_DISABLED; }
 QPushButton { background: $BG_BUTTON; border: 1px solid $LINE_STRONG; border-radius: ${RADIUS}px;
               min-width: ${BUTTON_W}px; min-height: ${BUTTON_H}px; padding: 0 ${SPACE}px; }
 QPushButton:hover { background: $BG_BUTTON_HOVER; }
@@ -97,6 +99,19 @@ QPushButton#primary:disabled, QPushButton#start:disabled, QPushButton#stop:disab
 QComboBox, QLineEdit, QSpinBox, QDoubleSpinBox, QDateEdit {
     background: $BG_DEEP; border: 1px solid $LINE_STRONG; border-radius: 4px; min-height: ${FIELD_H}px;
     padding: 0 6px; }
+QComboBox QAbstractItemView { background: $BG_DEEP; color: $TEXT; border: 1px solid $LINE_STRONG;
+    selection-background-color: $BG_SELECTED; selection-color: $ON_DARK; }
+QCalendarWidget QAbstractItemView { background: $BG_DEEP; color: $TEXT; alternate-background-color: $BG_RAISED;
+    selection-background-color: $BG_SELECTED; selection-color: $ON_DARK; }
+QCalendarWidget QAbstractItemView:disabled { color: $TEXT_MUTED; }
+QCalendarWidget QWidget#qt_calendar_navigationbar { background: $BG_SELECTED; }
+QCalendarWidget QToolButton { color: $ON_DARK; }
+QCalendarWidget QToolButton#qt_calendar_monthbutton:hover, QCalendarWidget QToolButton#qt_calendar_monthbutton:pressed,
+QCalendarWidget QToolButton#qt_calendar_yearbutton:hover, QCalendarWidget QToolButton#qt_calendar_yearbutton:pressed {
+    background: $BG_BUTTON_HOVER; border: none; border-radius: 4px; }
+QMenu { background: $BG_RAISED; color: $TEXT; border: 1px solid $LINE_STRONG; }
+QMenu::item:selected { background: $BG_SELECTED; color: $ON_DARK; }
+QMenu::item:disabled { color: $TEXT_DISABLED; }
 QTableWidget, QListWidget, QPlainTextEdit, QTextEdit {
     background: $BG_DEEP; alternate-background-color: $BG_ALT; gridline-color: $LINE; border: 1px solid $LINE; }
 QHeaderView::section { background: $BG_RAISED; padding: 6px; border: none; font-weight: 600; }
