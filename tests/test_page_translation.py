@@ -11,11 +11,13 @@ import subprocess
 import xml.etree.ElementTree as ET
 from collections.abc import Iterator
 from pathlib import Path
+from typing import Any
 
 import pytest
 from PySide6.QtCore import QCoreApplication, QTranslator
 from pytestqt.qtbot import QtBot
 
+from aoi.core.jobs import Job
 from aoi.core.services import AppContext
 from aoi.ui.pages.settings import SettingsPage
 from aoi.ui.pages.training import TrainingPage
@@ -43,7 +45,9 @@ def marked(tmp_path: Path) -> Iterator[None]:
         QCoreApplication.removeTranslator(translator)
 
 
-def test_req_set_005_every_training_log_line_is_translated(qtbot: QtBot, trained_ctx: AppContext, marked: None) -> None:
+def test_req_set_005_every_training_log_line_is_translated(
+    qtbot: QtBot, trained_ctx: AppContext, marked: None, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """#199 defect 1: a training run stopped after its first epoch fills the log with the engine's progress lines
     (aligning, training on, stopped, calibrated with its rule) and the page's own; every line, and the calibration
     rule inside it, is in the UI language. Before, only the epoch and "Stopped:" lines were."""
@@ -53,10 +57,15 @@ def test_req_set_005_every_training_log_line_is_translated(qtbot: QtBot, trained
     assert isinstance(page, TrainingPage)
     page.epochs.setValue(page.epochs.minimum())
     page.input_size.setCurrentIndex(0)
+    submit = trained_ctx.jobs.submit
+
+    def stop_after_epoch_1(job: Job[Any]) -> Job[Any]:  # a listener goes on before the job is submitted (jobs.py)
+        job.on_progress(lambda a: job.cancel() if a[0] >= 1 else None)  # on the training thread: the engine sees it
+        return submit(job)
+
+    monkeypatch.setattr(trained_ctx.jobs, "submit", stop_after_epoch_1)
     page.train()
     assert page.worker is not None
-    job = page.worker.job  # Stop once the first epoch is done, on the training thread, so the engine sees it there
-    job.on_progress(lambda a: job.cancel() if a[0] >= 1 else None)
     qtbot.waitUntil(lambda: page.worker is None, timeout=120000)
     lines = page.log.toPlainText().splitlines()
     assert len(lines) >= 5, lines
