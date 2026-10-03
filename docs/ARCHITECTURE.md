@@ -162,10 +162,13 @@ since S21): `tools/render_screens.py` builds the synthetic workspace with pinned
 (DejaVu Sans without hinting on Linux) and inspects with a pixel-based stand-in for the trained model (`PinnedModel`: the
 seeded training's float rounding differs by CPU type, so a trained model's verdict and boxes differ between machines; the
 stand-in's quantised 8-bit difference from the golden board, with wide margins to its thresholds, shows the same verdict,
-boxes and scores everywhere, and only SSIM and inlier digits from the float alignment still move, far under the
-tolerance), and `tests/screens/test_screens.py` compares the 1920×1080 renders with
-`tests/screens/approved/` on Linux; a page fails when more than 0.5 % of its pixels move by more than 40 levels, and
-the new images with a diff per failing page stay in `tests/screens/actual/`, which CI uploads. An intended screen
+boxes and scores everywhere, and the similarity (SSIM) and alignment points that the float alignment still moves
+are pinned too, `FIXED_SSIM` and `FIXED_INLIERS`), and `tests/screens/test_screens.py` compares the 1920×1080 renders
+with `tests/screens/approved/` on Linux. A pixel differs when a channel moves by more than 40 levels, and a page fails
+when more than 4 differing pixels touch (since #175; before, only when 0.5 % of the page differed, which a changed
+word or number never reached): one changed digit at 14 pt makes a cluster of 10 px or more, while what moves between renders
+does not (nothing on one machine; single pixels of the board picture with OpenCV and NumPy held to SSE3). The new
+images with a diff per failing page stay in `tests/screens/actual/`, which CI uploads. An intended screen
 change is approved with `python tools/render_screens.py --approve`; the images are generated files that Jay approves by
 merging. On Linux, CI also renders every page at 1366×768 and at 3840×2160 with 150 % and 200 % scaling into the
 `screens-review` artifact of the run (kept 30 days), which is how the layouts are checked at the standard's other sizes
@@ -450,7 +453,9 @@ the only addition expected.
 ## 7. Requirement traceability (Stage 1)
 
 The requirement register is `docs/requirements/stage1.md`; `tools/trace_matrix.py` generates the trace matrix
-from it on every CI run (the `trace-matrix` artifact). The table below is the v0.1 draft's informal check against
+from it on every CI run (the `trace-matrix` artifact). A pull request's run reads the pull request's own commits from
+GitHub's merge of it into its base, and its number and title from the workflow, so a citation of an unknown ID shows
+in that run (since #175). The table below is the v0.1 draft's informal check against
 the source specifications and stays as history.
 
 Speed (REQ-INSP-007): the CI job "Performance (base vs head)" times `Inspector.inspect` on the regression set's 40
