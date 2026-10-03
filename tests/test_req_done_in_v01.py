@@ -2,11 +2,13 @@
 
 Each test is named for its row in docs/requirements/stage1.md and checks that row's acceptance criteria. REQ-INSP-015's
 check of every board lives in tests/regression/test_regression_verdicts.py, where the synthetic regression set is; that
-set holds no WARN board, so the rule itself is tested here, on the engine's own verdict step.
+set holds no WARN board, so the rule itself is tested here, on the engine's own verdict step. The Recipe Editor's fixes
+of #173 are tested beside REQ-RCP-002's test, the one that drives that page's form, whatever their rows' status.
 """
 
 from __future__ import annotations
 
+import copy
 import hashlib
 from pathlib import Path
 from time import perf_counter
@@ -28,6 +30,7 @@ from aoi.core.services import AppContext
 from aoi.errors import AoiError
 from aoi.ui.main_window import MainWindow
 from aoi.ui.pages.inspection import InspectionPage
+from aoi.ui.workers import _live
 from tests.conftest import TrainedModel, engineer
 
 BOARD = "TINY"
@@ -332,6 +335,124 @@ def test_req_rcp_002_five_roi_types_and_five_fields_save_and_reload(
         page.roi_table.selectRow(i)
         spins = (page.r_ai, page.r_hmin, page.r_hmax, page.r_vmin, page.r_vmax)
         assert (page.r_type.currentData(), *(s.value() for s in spins)) == (roi_type, *fields[i])
+
+
+def test_req_rcp_002_height_or_volume_min_over_max_or_below_zero_is_refused(
+    qtbot: QtBot, trained_ctx: AppContext, dialogs: list[tuple[str, str]]
+) -> None:
+    """Height or Volume min above max, or a limit below 0, is refused with AOI-RCP-002 and nothing is applied; only
+    the spin box's own "—" (-1) leaves a limit unset, so a typed -0.5 is never stored as "not set" (#173)."""
+    win = _window(qtbot, trained_ctx)
+    win.navigate("Recipe Editor")
+    page = win.pages["Recipe Editor"]
+    page.view.roiDrawn.emit(QRectF(20, 30, 40, 50))
+    before = copy.deepcopy(page.edited_recipe.rois)
+    spins = (page.r_hmin, page.r_hmax, page.r_vmin, page.r_vmax)
+    for limits in ((5, 1, -1, -1), (-1, -1, 3, 1), (-1, -1, -0.5, 2), (-0.25, 4, -1, -1)):
+        for spin, value in zip(spins, limits, strict=True):
+            spin.setValue(value)
+        qtbot.mouseClick(_button(page, "Apply"), Qt.MouseButton.LeftButton)
+        assert [title for title, _ in dialogs] == ["AOI-RCP-002 ROI limits refused"], limits
+        assert page.edited_recipe.rois == before, limits
+        dialogs.clear()
+    page.r_hmin.setValue(5)
+    page.r_hmax.setValue(1)
+    qtbot.mouseClick(_button(page, "Apply"), Qt.MouseButton.LeftButton)
+    assert dialogs.pop()[1].startswith("ROI R1: Height min 5 and max 1 cannot be stored")
+    for spin, value in zip(spins, (0, 1.5, -1, 2), strict=True):
+        spin.setValue(value)
+    qtbot.mouseClick(_button(page, "Apply"), Qt.MouseButton.LeftButton)
+    roi = page.edited_recipe.rois[0]
+    assert not dialogs and (roi.height_min, roi.height_max, roi.volume_min, roi.volume_max) == (0, 1.5, None, 2)
+
+
+def test_req_rcp_001_after_delete_no_roi_is_selected_and_apply_is_off(qtbot: QtBot, trained_ctx: AppContext) -> None:
+    """Delete clears the selection and the Selected ROI form, and Apply and Delete are off until an ROI is selected, so
+    Apply never copies the deleted ROI onto the one that moved up into its row (#173)."""
+    win = _window(qtbot, trained_ctx)
+    win.navigate("Recipe Editor")
+    page = win.pages["Recipe Editor"]
+    for roi_type, box in (("Presence", (10, 10, 50, 50)), ("Polarity", (100, 100, 50, 50))):
+        page.roi_type.setCurrentIndex(page.roi_type.findData(roi_type))
+        page.view.roiDrawn.emit(QRectF(*box))
+    r2 = copy.deepcopy(page.edited_recipe.rois[1])
+    page.roi_table.selectRow(0)
+    page.r_ai.setValue(2.0)
+    qtbot.mouseClick(_button(page, "Apply"), Qt.MouseButton.LeftButton)
+    assert page.edited_recipe.rois[0].ai_score == 2.0
+    qtbot.mouseClick(_button(page, "Delete"), Qt.MouseButton.LeftButton)
+    qtbot.mouseClick(_button(page, "Apply"), Qt.MouseButton.LeftButton)
+    page.apply_roi()  # the slot itself, as a key would call it
+    assert page.edited_recipe.rois == [r2]
+    assert page._sel_index() == -1 and page.r_name.text() == "" and page.r_hmin.text() == "—"
+    assert not _button(page, "Apply").isEnabled() and not _button(page, "Delete").isEnabled()
+    page.roi_table.selectRow(0)
+    assert page.r_name.text() == "R2" and _button(page, "Apply").isEnabled() and _button(page, "Delete").isEnabled()
+
+
+def test_req_rcp_004_a_revision_saved_since_is_shown_and_never_reverted_by_save(
+    qtbot: QtBot, trained_ctx: AppContext, monkeypatch: pytest.MonkeyPatch, dialogs: list[tuple[str, str]]
+) -> None:
+    """A revision saved after the Recipe Editor loaded its own (Compare's Save to Recipe) is shown when the editor is
+    opened again; with unsaved changes the editor asks first, keeps them on No, and then refuses Save with AOI-RCP-001
+    until the user loads the newer revision, so Save never reverts it unseen (#173)."""
+    monkeypatch.setattr(QMessageBox, "information", staticmethod(lambda *_: QMessageBox.StandardButton.Ok))
+    answers: list[QMessageBox.StandardButton] = []
+    monkeypatch.setattr(QMessageBox, "question", staticmethod(lambda *_: answers.pop(0)))
+    win = _window(qtbot, trained_ctx)
+    win.navigate("Recipe Editor")
+    page = win.pages["Recipe Editor"]
+    first = page.rev
+
+    def saved_elsewhere(ssim_min: float, diff: int) -> None:
+        """What Compare's Save to Recipe stores: the latest revision with other thresholds; then back to the editor."""
+        win.navigate("Home")
+        r = trained_ctx.recipe(BOARD)[1]
+        r.ssim_min, r.diff_threshold = ssim_min, diff
+        trained_ctx.save_recipe(r)
+        win.navigate("Recipe Editor")
+
+    saved_elsewhere(0.9, 30)  # nothing unsaved in the editor: it shows the new revision without asking
+    assert (page.rev, page.ssim.value(), page.diff.value()) == (first + 1, pytest.approx(0.9), 30)
+    page.view.roiDrawn.emit(QRectF(10, 10, 20, 20))
+    qtbot.mouseClick(_button(page, "Save Recipe"), Qt.MouseButton.LeftButton)
+    rev, r = trained_ctx.recipe(BOARD)
+    assert (rev, r.ssim_min, r.diff_threshold, len(r.rois)) == (first + 2, pytest.approx(0.9), 30, 1)
+
+    page.view.roiDrawn.emit(QRectF(40, 40, 20, 20))  # an unsaved change
+    answers.append(QMessageBox.StandardButton.No)
+    saved_elsewhere(0.85, 35)
+    assert (page.rev, len(page.edited_recipe.rois)) == (first + 2, 2), "No keeps the unsaved change"
+    answers.append(QMessageBox.StandardButton.No)
+    qtbot.mouseClick(_button(page, "Save Recipe"), Qt.MouseButton.LeftButton)
+    assert [title for title, _ in dialogs] == ["AOI-RCP-001 Recipe saved since it was opened"]
+    rev, r = trained_ctx.recipe(BOARD)
+    assert (rev, r.ssim_min, r.diff_threshold, len(r.rois)) == (first + 3, pytest.approx(0.85), 35, 1)
+    answers.append(QMessageBox.StandardButton.Yes)
+    qtbot.mouseClick(_button(page, "Save Recipe"), Qt.MouseButton.LeftButton)
+    assert (page.rev, page.ssim.value(), len(page.edited_recipe.rois)) == (first + 3, pytest.approx(0.85), 1)
+    assert trained_ctx.recipe(BOARD)[0] == first + 3 and not answers
+
+
+def test_req_rcp_003_a_board_model_switch_cancels_the_try_and_clears_its_verdict(
+    qtbot: QtBot, trained_ctx: AppContext, ng_board: Path
+) -> None:
+    """Picking another board model clears the last Try's verdict and cancels a Try still running, so a result of the
+    board model before never shows, or paints its board, under the new one (#173)."""
+    win = _window(qtbot, trained_ctx)
+    win.navigate("Recipe Editor")
+    page = win.pages["Recipe Editor"]
+    page.run_test(str(ng_board))
+    qtbot.waitUntil(lambda: page.test_verdict.text().startswith("Try result:"), timeout=60000)
+    trained_ctx.ensure_board_model("BM2")
+    win._reload_board_models("BM2")
+    assert page.test_verdict.text() == "", "a finished Try's verdict goes with its board model"
+    win._reload_board_models(BOARD)
+    page.run_test(str(ng_board))
+    win._reload_board_models("BM2")  # while the Try runs
+    qtbot.waitUntil(lambda: not _live, timeout=60000)  # its result and finished slots have run
+    assert page.test_verdict.text() == "" and page.view._pix is None, "BM2 has no Golden board: nothing is painted"
+    assert not page.busy.isVisible()
 
 
 def test_req_set_002_auto_picks_cuda_when_present_and_cpu_otherwise(monkeypatch: pytest.MonkeyPatch) -> None:

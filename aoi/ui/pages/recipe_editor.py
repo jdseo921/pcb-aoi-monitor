@@ -31,6 +31,7 @@ from ...core.imaging import IMAGE_EXTS
 from ...core.inspector import InspectionResult
 from ...core.recipe import ROI, ROI_TYPES, Recipe
 from ...core.services import AppContext
+from ...errors import AoiError
 from ...times import to_local
 from .. import theme
 from ..widgets.busy import BusyOverlay
@@ -68,6 +69,7 @@ class RecipeEditorPage(Page):
         super().__init__(ctx, shell)
         self.recipe: Recipe | None = None
         self.rev = 0
+        self._loaded: dict[str, object] = {}  # the recipe as load() showed it, to tell an unsaved change (#173)
         self.ref: np.ndarray | None = None
 
         split = QSplitter(Qt.Orientation.Horizontal)
@@ -96,8 +98,8 @@ class RecipeEditorPage(Page):
         roi_tab = QWidget()
         roi_tab.setObjectName("page")
         rl = QVBoxLayout(roi_tab)
-        headers = ["Name", "Type", "X", "Y", "W", "H"]
-        self.roi_table = make_table([*(self.tr(h) for h in headers), self.tr("AI score")], sortable=False)
+        headers = [self.tr("Name"), self.tr("Type"), self.tr("X"), self.tr("Y"), self.tr("W"), self.tr("H")]
+        self.roi_table = make_table([*headers, self.tr("AI score")], sortable=False)  # literals, so lupdate finds them
         self.roi_table.itemSelectionChanged.connect(self._select_roi)
         self.roi_empty = EmptyState(self.roi_table)
         rl.addWidget(self.roi_table, 1)
@@ -118,10 +120,13 @@ class RecipeEditorPage(Page):
         f.addRow(self.tr("Volume min / max (Stage 2)"), self._pair(self.r_vmin, self.r_vmax))
         f.addRow(self.r_enabled)
         row = QHBoxLayout()
-        row.addWidget(button(self.tr("Apply"), slot=self.apply_roi))
-        row.addWidget(button(self.tr("Delete"), "danger", self.delete_roi))  # red, last in its row, never the default
+        self.apply_btn = button(self.tr("Apply"), slot=self.apply_roi)  # off while no ROI is selected (#173)
+        row.addWidget(self.apply_btn)
+        self.delete_btn = button(self.tr("Delete"), "danger", self.delete_roi)  # red, last, never the default; off too
+        row.addWidget(self.delete_btn)
         f.addRow(row)
         rl.addWidget(g)
+        self._select_roi()  # none yet: the empty form, as after a Delete
         tabs.addTab(roi_tab, self.tr("ROIs"))
 
         # Global thresholds tab
@@ -223,6 +228,7 @@ class RecipeEditorPage(Page):
 
     # --- load / show ------------------------------------------------------------
     def load(self) -> None:
+        self.roi_table.clearSelection()  # row i of the recipe before is not ROI i of this one: the form empties (#173)
         if not self.board_model:
             self.view_empty.show_state(*self.no_board_model())
             return
@@ -251,6 +257,7 @@ class RecipeEditorPage(Page):
             [[h["revision"], h["user"], to_local(h["created_at"])] for h in self.ctx.recipe_history(self.board_model)],
         )
         self._refresh_rois()
+        self._loaded = self._collect().to_dict()  # as the form shows it, rounded to its spin boxes
 
     def _refresh_rois(self) -> None:
         r = self.edited_recipe
@@ -310,10 +317,10 @@ class RecipeEditorPage(Page):
 
     def _select_roi(self) -> None:
         i = self._sel_index()
-        if i < 0:
-            return
-        rois = self.edited_recipe.rois
-        x = rois[i]
+        self.apply_btn.setEnabled(i >= 0)
+        self.delete_btn.setEnabled(i >= 0)
+        rois = self.edited_recipe.rois if i >= 0 else []
+        x = rois[i] if i >= 0 else ROI("", "", ai_score=0, enabled=False)  # none selected: an empty form, no stale ROI
         self.r_name.setText(x.name)
         self.r_type.setCurrentIndex(self.r_type.findData(x.type))
         self.r_ai.setValue(x.ai_score)
@@ -325,6 +332,8 @@ class RecipeEditorPage(Page):
         ):
             w.setValue(-1 if v is None else v)
         self.r_enabled.setChecked(x.enabled)
+        if i < 0:
+            return
         self.view.clear_overlays()
         for j, r in enumerate(rois):
             color = theme.ROI_SELECTED if j == i else theme.ROI_COLOR
@@ -335,27 +344,31 @@ class RecipeEditorPage(Page):
         if i < 0:
             return
         x = self.edited_recipe.rois[i]
+        limits = [self._limit(w) for w in (self.r_hmin, self.r_hmax, self.r_vmin, self.r_vmax)]
+        for quantity, (low, high) in (("Height", limits[:2]), ("Volume", limits[2:])):
+            negative = any(v is not None and v < 0 for v in (low, high))
+            if negative or (low is not None and high is not None and low > high):
+                shown = ["—" if v is None else f"{v:g}" for v in (low, high)]
+                self.error(AoiError("AOI-RCP-002", roi=x.name, quantity=quantity, low=shown[0], high=shown[1]))
+                return  # nothing applied: a Stage 2 check would fail every board on these limits (#173)
         x.name, x.type, x.ai_score, x.enabled = (
             self.r_name.text(),
             self.r_type.currentData(),
             self.r_ai.value(),
             self.r_enabled.isChecked(),
         )
-
-        def opt(w: QDoubleSpinBox) -> float | None:
-            return None if w.value() < 0 else w.value()
-
-        x.height_min, x.height_max, x.volume_min, x.volume_max = (
-            opt(self.r_hmin),
-            opt(self.r_hmax),
-            opt(self.r_vmin),
-            opt(self.r_vmax),
-        )
+        x.height_min, x.height_max, x.volume_min, x.volume_max = limits
         self._refresh_rois()
+
+    @staticmethod
+    def _limit(w: QDoubleSpinBox) -> float | None:
+        """A Stage 2 limit: None only at the spin box's own "—" (its minimum, -1); any other number is kept as typed."""
+        return None if w.value() == w.minimum() else w.value()
 
     def delete_roi(self) -> None:
         i = self._sel_index()
         if i >= 0:
+            self.roi_table.clearSelection()  # the next ROI moves up to row i: the form must not stay on the deleted one
             del self.edited_recipe.rois[i]
             self._refresh_rois()
 
@@ -402,16 +415,55 @@ class RecipeEditorPage(Page):
         self.test_verdict.setStyleSheet(theme.verdict_style(res.verdict, big=False))
 
     def save(self) -> None:
-        if not self.need_board_model():
+        if (bm := self.checked_board_model()) is None:
+            return
+        if (latest := self.ctx.recipe(bm)[0]) != self.rev:  # saved since, on Compare: saving would undo it unseen
+            if not self._show_latest(latest):
+                self.error(AoiError("AOI-RCP-001", board_model=bm, latest=latest, revision=self.rev))
             return
         rev = self.ctx.save_recipe(self._collect())
         saved = self.tr("Saved revision {revision} by {user}.").format(revision=rev, user=self.ctx.user)
         QMessageBox.information(self, self.tr("Recipe"), saved)
         self.load()
 
+    def _show_latest(self, latest: int) -> bool:
+        """Load revision `latest`, saved after the one the editor holds, unless that would discard an unsaved change
+        the user keeps; True when loaded (#173)."""
+        if self._collect().to_dict() != self._loaded and not self._discard_ok(latest):
+            return False
+        before = self.rev
+        self._drop_try()
+        self.load()
+        shown = self.tr("Revision {latest}, saved after revision {revision}, is shown now.")
+        self.shell.status(shown.format(latest=latest, revision=before))
+        return True
+
+    def _discard_ok(self, latest: int) -> bool:
+        """Ask before unsaved changes are discarded for revision `latest`; No is the default, so Enter keeps them."""
+        ask = self.tr(
+            "Revision {latest} of {board_model} was saved after revision {revision}, which you are editing. Load "
+            "revision {latest} and discard your unsaved changes? With No, they stay on screen, but Save Recipe refuses "
+            "them until revision {latest} is loaded."
+        ).format(latest=latest, board_model=self.board_model, revision=self.rev)
+        buttons = QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+        answer = QMessageBox.question(self, self.tr("Recipe"), ask, buttons, QMessageBox.StandardButton.No)
+        return answer == QMessageBox.StandardButton.Yes
+
+    def _drop_try(self) -> None:
+        """Cancel a running Try and clear the last Try's verdict: they belong to a recipe no longer shown (#173)."""
+        if self._bg is not None:
+            self._bg.stop()  # run_in_background drops the result of a cancelled job
+            self._bg = None
+            self.busy.finish()
+        self.test_verdict.clear()
+        self.test_verdict.setStyleSheet("")
+
     def on_board_model_changed(self, name: str | None) -> None:
+        self._drop_try()
         self.load()
 
     def on_show(self) -> None:
         if self.recipe is None or self.recipe.board_model != self.board_model:
             self.load()
+        elif self.board_model and (latest := self.ctx.recipe(self.board_model)[0]) != self.rev:
+            self._show_latest(latest)  # saved since, on Compare: shown, so that Save never reverts it

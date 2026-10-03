@@ -1419,7 +1419,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/recipe_editor.py" line="+63"/>
+        <location filename="../ui/pages/recipe_editor.py" line="+64"/>
         <source>Recipe Editor</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1475,7 +1475,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+29"/>
+        <location line="+30"/>
         <source>Draw ROI</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1505,12 +1505,38 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1"/>
+        <location line="-14"/>
+        <location line="+15"/>
         <source>Name</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1"/>
+        <location line="-15"/>
+        <source>Type</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+0"/>
+        <source>X</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+0"/>
+        <source>Y</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+0"/>
+        <source>W</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+0"/>
+        <source>H</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+16"/>
         <source>ROI type</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1535,12 +1561,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1"/>
+        <location line="+2"/>
         <source>Delete</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+3"/>
+        <location line="+5"/>
         <source>ROIs</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1640,7 +1666,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+43"/>
+        <location line="+44"/>
         <source>Train an AI model or set a reference image on Training.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1650,7 +1676,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+25"/>
+        <location line="+26"/>
         <source>No ROIs yet</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1680,7 +1706,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+91"/>
+        <location line="+97"/>
         <source>Image to try the recipe on</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1695,13 +1721,24 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+10"/>
+        <location line="+14"/>
         <source>Saved revision {revision} by {user}.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location line="+1"/>
+        <location line="+23"/>
         <source>Recipe</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="-12"/>
+        <source>Revision {latest}, saved after revision {revision}, is shown now.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+7"/>
+        <source>Revision {latest} of {board_model} was saved after revision {revision}, which you are editing. Load revision {latest} and discard your unsaved changes? With No, they stay on screen, but Save Recipe refuses them until revision {latest} is loaded.</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
