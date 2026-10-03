@@ -28,6 +28,14 @@ the start with AOI-SET-010, naming the file and, for JSON, the line and column; 
 the default settings. An error at start-up that has no code of its own shows AOI-SET-007; its details are written to
 the log in the default workspace folder (`logs/aoi-<date>.jsonl`, event `app.start_failed`) for support.
 
+**Settings and settings.json.** A workspace folder saved on the Settings page is used from the next start; until
+then the app keeps the open workspace, its database, log and folders. The folder must be a full path
+(`C:\AOI_Workspace`, not `AOI_Workspace`): an empty or relative folder, or a log retention, input size or epoch count
+below 1, is refused with AOI-SET-008, on the page before anything is saved and at start-up from `settings.json`. The
+app writes only the settings it changes into `settings.json`, so a line you edit there while the app runs, such as an
+image limit, stays; it takes effect at the next start. The last user with the Admin role cannot lose it (AOI-USR-002):
+give another user the Admin role first.
+
 (to be written: the workspace folder, device, limits, demo workspace)
 
 ## 2. Board models and scale

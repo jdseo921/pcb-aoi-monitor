@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import functools
+import json
 import struct
 import zlib
 from pathlib import Path
+from typing import cast
 
 import cv2
 import numpy as np
@@ -14,13 +16,15 @@ import tifffile
 from PIL import Image
 from pytestqt.qtbot import QtBot
 
-from aoi.config import Settings
+from aoi.config import Settings, default_workspace
 from aoi.core.imaging import image_header, load_image
 from aoi.core.inspector import NG, Inspector, _grade
 from aoi.core.recipe import Recipe
 from aoi.core.services import AppContext
 from aoi.errors import AoiError
 from aoi.hal import FolderCamera
+from aoi.ui.main_window import MainWindow
+from aoi.ui.pages.settings import SettingsPage
 from tests.test_req_done_in_v01 import _window
 
 FORMATS = (".png", ".jpg", ".bmp", ".tif")
@@ -307,10 +311,36 @@ def test_req_insp_001_a_setting_of_the_wrong_type_is_refused_at_start_up(
         f.write_text("{" + f'"{name}": {value}' + "}", encoding="utf-8")
         with pytest.raises(AoiError) as e:
             Settings.load()
-        assert e.value.code == "AOI-SET-008" and f"{name} in settings.json is {value}" in e.value.what, name
+        assert e.value.code == "AOI-SET-008" and f"setting {name} is {value}" in e.value.what, name
         assert f"must be {expected}" in e.value.what, name
     f.write_text('{"max_image_megapixels": 80, "unknown_key": true}', encoding="utf-8")
     assert Settings.load().max_image_megapixels == 80
+
+
+def test_req_set_019_an_empty_or_relative_workspace_and_a_count_below_1_are_refused(
+    qtbot: QtBot, ctx: AppContext, dialogs: list[tuple[str, str]]
+) -> None:
+    """settings.json with an empty, blank or relative workspace, or a log retention, input size or epoch count below 1,
+    is refused at start-up with AOI-SET-008 (#170): "" opened a new, empty workspace in whatever folder the app was
+    started from, and a retention of -1 days archived every record. The Settings page checks before it saves and shows
+    the same code, writing nothing."""
+    f = default_workspace() / "settings.json"
+    f.parent.mkdir(parents=True, exist_ok=True)
+    cases = [("workspace", v) for v in ("", "   ", "relative/folder")]
+    cases += [("log_retention_days", 0), ("log_retention_days", -1), ("image_size", 0), ("default_epochs", 0)]
+    for name, value in cases:
+        f.write_text(json.dumps({name: value}), encoding="utf-8")
+        with pytest.raises(AoiError) as e:
+            Settings.load()
+        assert e.value.code == "AOI-SET-008" and f"setting {name} is {json.dumps(value)}" in e.value.what, name
+    f.unlink()
+    win = MainWindow(ctx)  # an empty workspace opens as Admin
+    qtbot.addWidget(win)
+    page, open_workspace = cast(SettingsPage, win.pages["Settings"]), ctx.settings.workspace
+    page.ws.setText("")
+    page.save()
+    assert dialogs[-1][0] == "AOI-SET-008 Setting invalid" and "On the Settings page" in dialogs[-1][1]
+    assert not f.exists() and ctx.settings.workspace == open_workspace
 
 
 def test_req_insp_001_the_decoder_limits_are_refused_with_a_code(tmp_path: Path) -> None:

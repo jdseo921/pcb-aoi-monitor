@@ -9,9 +9,12 @@ import shutil
 import sqlite3
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import cast
 
+import cv2
+import numpy as np
 import pytest
-from PySide6.QtWidgets import QFileDialog
+from PySide6.QtWidgets import QFileDialog, QMessageBox
 from pytestqt.qtbot import QtBot
 
 from aoi import times
@@ -22,6 +25,8 @@ from aoi.core.services import AppContext
 from aoi.data import db as dbmod
 from aoi.data import migrate as mg
 from aoi.data.db import Database
+from aoi.ui.main_window import MainWindow
+from aoi.ui.pages.settings import SettingsPage
 from tests.conftest import TrainedModel, engineer
 from tests.test_req_done_in_v01 import BOARD, _window
 
@@ -112,8 +117,7 @@ def test_req_set_001_moved_workspace_opens_everything(tmp_path: Path, tiny_model
     old.close()  # the database and the log file; an open file keeps the folder from moving on Windows
     new_root = tmp_path / "new_place"
     shutil.move(str(old_root), str(new_root))
-    old.settings.workspace = str(new_root)  # what the Settings page's Save does; the app reads it at its next start
-    old.settings.save()
+    old.settings.save_keys({"workspace": str(new_root)})  # what the Settings page's Save writes; read at the next start
 
     ctx = AppContext(Settings.load())  # what main.py does at start-up
     assert ctx.settings.root == new_root
@@ -136,6 +140,34 @@ def test_req_set_001_moved_workspace_opens_everything(tmp_path: Path, tiny_model
     stored = json.dumps(ctx.db.query("SELECT * FROM inspections") + ctx.db.query("SELECT * FROM test_runs"))
     assert str(old_root) not in stored and str(new_root) not in stored
     ctx.close()
+
+
+def test_req_set_001_a_workspace_saved_on_settings_waits_for_the_restart(
+    qtbot: QtBot, ctx: AppContext, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Saving another workspace on Settings writes it to settings.json only (#170): until the restart the app keeps its
+    database, log and every folder on the open workspace, so a sample imported meanwhile lands there, stored relative
+    to it, and nothing is written to the new folder; a later save of other settings keeps the new folder in the file.
+    Before, the folders moved at once while the database stayed, and the sample was stored by its absolute path."""
+    told: list[str] = []
+    monkeypatch.setattr(QMessageBox, "information", staticmethod(lambda _p, _t, text: told.append(text)))
+    win = MainWindow(ctx)  # an empty workspace opens as Admin
+    qtbot.addWidget(win)
+    page = cast(SettingsPage, win.pages["Settings"])
+    old, new = ctx.settings.root, tmp_path / "new_place"
+    page.ws.setText(str(new))
+    page.save()
+    assert ctx.settings.root == old and Settings.load().workspace == str(new)
+    assert told == ["Saved. Restart the app to switch the workspace."]
+    page.lang.setCurrentIndex(page.lang.findData("ko"))
+    page.save()  # another setting, later
+    assert (Settings.load().workspace, Settings.load().language) == (str(new), "ko")
+    src = tmp_path / "board.png"
+    cv2.imwrite(str(src), np.full((32, 32, 3), 128, np.uint8))
+    ctx.ensure_board_model(BOARD)
+    ctx.import_samples(BOARD, [str(src)], "OK")
+    (row,) = ctx.db.query("SELECT path FROM samples")
+    assert row["path"].startswith("images/") and (old / row["path"]).is_file() and not new.exists()
 
 
 def test_req_set_017_migration_0009_gives_runs_and_alarms_a_uuid(tmp_path: Path) -> None:

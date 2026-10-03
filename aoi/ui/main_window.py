@@ -336,9 +336,9 @@ class MainWindow(QMainWindow):
         page.on_show()
         if self.ctx.settings.last_page != page.title:
             self.ctx.settings.last_page = page.title
-            try:
-                self.ctx.settings.save()
-            except OSError:
+            try:  # that key alone, over the file as it is now: a hand edit made while the app runs stays (#170)
+                self.ctx.settings.save_keys({"last_page": page.title})
+            except (OSError, AoiError):  # a file that cannot be written, or read (AOI-SET-010): left as it is
                 self.ctx.log.warning("settings.save_failed", exc_info=True)
 
     def open_compare(self, path: str) -> None:
