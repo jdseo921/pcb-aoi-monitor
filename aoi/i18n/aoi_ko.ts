@@ -594,7 +594,8 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+20"/>
+        <location line="+21"/>
+        <location filename="../ui/main_window.py" line="+387"/>
         <source>start-up</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1605,7 +1606,7 @@
 <context>
     <name>HomePage</name>
     <message>
-        <location filename="../ui/main_window.py" line="+57"/>
+        <location filename="../ui/main_window.py" line="-330"/>
         <source>Upload samples</source>
         <translation type="unfinished"></translation>
     </message>
