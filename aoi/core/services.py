@@ -221,8 +221,8 @@ class AppContext:
         self, board_model: str, paths: list[str], label: str, defect_type: str | None = None, side: str = "Top"
     ) -> int:
         """Copy uploads into the workspace so training data survives the source folder moving. All or nothing (#178):
-        a file that cannot be copied stops the import and removes the copies made; then the samples, a new board
-        model's default recipe and reference, and the audit entry commit together."""
+        a file that cannot be copied stops the import with AOI-TRN-008 and removes the copies made; then the samples, a
+        new board model's default recipe and reference, and the audit entry commit together."""
         self._refuse_case_variant(board_model)  # a new board model is created by its first import
         dest = self.settings.images_dir / board_model / label
         copies: list[Path] = []
@@ -230,7 +230,11 @@ class AppContext:
             for p in paths:
                 src = Path(p)
                 target = dest / f"{src.stem}_{uuid.uuid4().hex[:6]}{src.suffix.lower()}"
-                atomic.copy_file(src, target)
+                try:
+                    atomic.copy_file(src, target)
+                except OSError as e:  # gone, unreadable, or the workspace drive full
+                    why = e.strerror or str(e)
+                    raise AoiError("AOI-TRN-008", str(e), path=str(src), reason=why, count=len(paths)) from e
                 copies.append(target)
             with self.db.transaction():
                 for target in copies:
@@ -861,14 +865,28 @@ class AppContext:
 
     @requires("Engineer", "Exporting overlay images")
     def export_overlays(self, inspections: list[dict[str, Any]], folder: str | Path) -> int:
-        """Copy the overlay images of `inspections` (records from `inspections()`) into `folder`; returns how many."""
+        """Copy the overlay images of `inspections` (records from `inspections()`) into `folder`; returns how many. A
+        copy that fails stops the export with AOI-LOG-001; the entry names the files that left before it, which stay
+        (#178)."""
+        sources = [Path(r["overlay_path"]) for r in inspections if r.get("overlay_path")]
+        sources = [p for p in sources if p.exists()]
         copied: list[Path] = []
-        for r in inspections:
-            if r.get("overlay_path") and Path(r["overlay_path"]).exists():
-                atomic.copy_file(r["overlay_path"], Path(folder) / Path(r["overlay_path"]).name)
-                copied.append(Path(folder) / Path(r["overlay_path"]).name)
-        after = {"folder": str(folder), "records": len(inspections), "copied": len(copied)}
+        failed: tuple[Path, OSError] | None = None
+        for src in sources:
+            try:
+                atomic.copy_file(src, Path(folder) / src.name)
+            except OSError as e:  # the drive full or pulled out, a name the folder cannot take
+                failed = (Path(folder) / src.name, e)
+                break
+            copied.append(Path(folder) / src.name)
+        after: dict[str, Any] = {"folder": str(folder), "records": len(inspections), "copied": len(copied)}
+        if failed:
+            after["error"] = f"{failed[0].name}: {failed[1].strerror or failed[1]}"
         self._audit_files(copied, "export.overlays", "inspections", None, after)
+        if failed:
+            params = {"copied": len(copied), "total": len(sources), "folder": str(folder), "file": failed[0].name}
+            why = failed[1].strerror or str(failed[1])
+            raise AoiError("AOI-LOG-001", str(failed[1]), reason=why, **params) from failed[1]
         return len(copied)
 
     @requires("Engineer", "Exporting CSV")

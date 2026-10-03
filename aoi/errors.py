@@ -197,6 +197,14 @@ CODES: dict[str, ErrorCode] = {
             "Select another good (OK) sample and press Set Reference; then try again.",
         ),
         ErrorCode(
+            "AOI-TRN-008",
+            "Images not imported",
+            "Copying {path} into the workspace failed ({reason}), so none of the {count} image(s) picked were"
+            " imported.",
+            "Check that the file is still there and can be opened and that the workspace drive has free space, then"
+            " import the images again.",
+        ),
+        ErrorCode(
             "AOI-RCP-001",
             "Recipe saved since it was opened",
             "Revision {latest} of board model {board_model} was saved after revision {revision}, the one the Recipe"
@@ -211,6 +219,14 @@ CODES: dict[str, ErrorCode] = {
             " above max.",
             "Nothing was applied. Correct the two values, or step a limit down below 0 to — to leave it unset, then"
             " press Apply again.",
+        ),
+        ErrorCode(
+            "AOI-LOG-001",
+            "Export stopped part-way",
+            "{file} could not be written to {folder} ({reason}), so the export stopped after {copied} of {total}"
+            " overlay image(s); the audit trail records those {copied}.",
+            "Check that the drive is connected, has free space and can be written, and that nothing in the folder"
+            " already has the name {file}; then export again.",
         ),
         ErrorCode(
             "AOI-USR-001",

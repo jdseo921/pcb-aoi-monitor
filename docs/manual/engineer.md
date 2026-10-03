@@ -55,6 +55,10 @@ next training run aligns the boards to it before it learns a new golden board. A
 and the sample that is the reference cannot be relabelled NG or removed until another OK sample is set (AOI-TRN-007);
 with several rows selected, Mark NG and Remove change all the others and leave the reference as it is.
 
+**Importing images** with + OK or + NG is all or nothing: if one picked file cannot be copied (gone, unreadable, or
+the workspace drive full), AOI-TRN-008 names it and none of the picked images is imported, so importing them again adds
+each once.
+
 (to be written: import, OK/NG/UNSURE labels, defect boxes, second-person check, freezing a dataset version,
 locking the validation set)
 
@@ -142,7 +146,9 @@ beside it holds one row per check that decided each verdict: the record's time, 
 recipe revision with their UUIDs, then the check's number, region (the whole board, or an ROI's name and box), metric,
 source, value, threshold, rule and result. Records from before the checks were stored have no rows in the second file.
 Each export is confirmed first and written whole or not at all, and the audit trail records it; if that entry cannot
-be written, the exported file is removed.
+be written, the exported file is removed. **Export Image Overlays** that stops part-way (the drive full or pulled out,
+a folder already named like an overlay) shows AOI-LOG-001 with how many images were copied, and the audit trail records
+those, with the file that failed.
 
 The **From** and **To** boxes take days from 2000-01-01 to 2100-12-31. The picture beside the table is the selected
 record's overlay; it is empty when the record's overlay file is gone, when no row is selected and after **Filter**.
