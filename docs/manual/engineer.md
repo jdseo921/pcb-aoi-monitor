@@ -96,7 +96,8 @@ clears the last Try's verdict.
 
 Each validation run is stored with a UUID and the UUID of the AI model it tested. **Export CSV** writes one row per
 image (`image`, `gt` the label, `ai_result` the verdict, `score`, `defects`, `pass_fail`), then `run_uuid`,
-`model_version` and `model_uuid`; **Export Report** names the same run and AI model by UUID under the validation folder.
+`model_version` and `model_uuid`; **Export Report** names the same run and AI model by UUID under the validation folder
+those results came from, even when another folder has been picked since to run next.
 A folder inside the workspace is stored relative to it, so a moved workspace still finds the run's folder and images; a
 folder elsewhere is stored as its full path.
 
@@ -126,6 +127,9 @@ beside it holds one row per check that decided each verdict: the record's time, 
 recipe revision with their UUIDs, then the check's number, region (the whole board, or an ROI's name and box), metric,
 source, value, threshold, rule and result. Records from before the checks were stored have no rows in the second file.
 Each export is confirmed first and written whole or not at all, and the audit trail records it.
+
+The **From** and **To** boxes take days from 2000-01-01 to 2100-12-31. The picture beside the table is the selected
+record's overlay; it is empty when the record's overlay file is gone, when no row is selected and after **Filter**.
 
 **Evidence files.** Beside each record's overlay picture (the results folder, by day) the app keeps the two maps the
 verdict was judged on as PNG files named after the overlay: `<overlay name>_diff.png`, the colour difference against the

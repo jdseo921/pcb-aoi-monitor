@@ -59,9 +59,10 @@ class ModelTestPage(Page):
 
     def __init__(self, ctx: AppContext, shell: MainWindow) -> None:
         super().__init__(ctx, shell)
-        self.folder: str | None = None
+        self.folder: str | None = None  # the folder picked, to run next
         self.rows: list[dict[str, Any]] = []
         self.metrics: dict[str, Any] = {}
+        self.run_folder = ""  # the folder the rows and metrics came from, which the report names (#174)
 
         bar = QHBoxLayout()
         bar.addWidget(button(self.tr("Select Test Folder…"), slot=self.pick))
@@ -160,13 +161,14 @@ class ModelTestPage(Page):
             self.bar.setVisible(False)
 
         w.signals.progress.connect(on_progress)
-        w.signals.result.connect(self._show)
+        w.signals.result.connect(lambda out: self._show(out, folder))  # the folder goes with its results
         w.signals.error.connect(self.error)
         w.signals.finished.connect(finished)
         start(w, self.ctx.jobs)
 
-    def _show(self, out: tuple[dict[str, Any], list[dict[str, Any]]]) -> None:
+    def _show(self, out: tuple[dict[str, Any], list[dict[str, Any]]], folder: str) -> None:
         self.metrics, self.rows = out
+        self.run_folder = folder
         self.empty.hide()
         m = self.metrics
         for k, t in self.tiles.items():
@@ -261,7 +263,7 @@ class ModelTestPage(Page):
             board_model=html.escape(bm),
             version=html.escape(run.get("model_version") or self.tr("none")),
             date=f"{datetime.now():%Y-%m-%d %H:%M}",
-            folder=html.escape(self.folder or ""),
+            folder=html.escape(self.run_folder),
             run_uuid=run.get("run_uuid") or "—",
             model_uuid=run.get("model_uuid") or self.tr("none"),
         )
