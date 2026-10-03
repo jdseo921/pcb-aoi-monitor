@@ -518,6 +518,16 @@ class AppContext:
         model, version, model_uuid = (mv[1], mv[0], mv[2]) if mv else (None, None, None)
         return Inspector(recipe or rcp, model, reference, side, version, rev, model_uuid, recipe_uuid, golden, sha)
 
+    def engine_is_current(self, board_model: str, insp: Inspector) -> bool:
+        """Whether `insp` was built from what `inspector(board_model)` would use now: the active AI model, the latest
+        recipe revision and the Golden board, by UUID and path (`Inspector.inputs`). It reads the database only, no
+        image or weights, so the Inspection page asks before each board whether the engine it keeps is still the one to
+        use: a training run, an activation or a saved recipe makes it stale (#243)."""
+        active = self.db.active_model(board_model)
+        latest = self.db.latest_recipe(board_model)
+        now = str(active["uuid"]) if active else None, latest[2] if latest else None, self.db.reference(board_model)
+        return insp.inputs == now
+
     def inspect(
         self,
         board_model: str,

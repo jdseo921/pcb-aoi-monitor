@@ -110,6 +110,13 @@ user who started them, whoever signs in meanwhile: the audit trail and the inspe
 folder import is not refused part-way. An inspection run (Start) stops after that board, and the status bar says so; the
 user now signed in presses Start to carry on with the queue, so no board is recorded under a user who did not start it.
 
+**Training or activating while boards are inspected.** A new AI model version, an activation or a rollback, a saved
+recipe and a Golden board set with Set Reference apply on the Inspection page from the next board that starts, with no
+need to leave the page: the board in hand finishes with what it started with, and a run in progress goes on with the
+new one, saying so under the verdict banner and in the alarm log with AOI-INSP-013. Each record names the AI model version, recipe revision and Golden board that
+judged it: the CSV export of Logs & Export lists the AI model version and recipe revision of each board, and Compare
+shows a stored board beside the Golden board it was judged against.
+
 (to be written: training, progress and cancel, versions, activation and rollback, the model card)
 
 ## 5. Recipes

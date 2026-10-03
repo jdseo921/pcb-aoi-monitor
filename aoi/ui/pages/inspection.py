@@ -74,14 +74,16 @@ class InspectionPage(Page):
         self.running = False
         self.run_board_model: str | None = None  # the board model a run started under: its boards are judged under it
         self.run_actor: Actor = ctx.actor  # who pressed Start: every board of the run is recorded under them (#177)
+        self.run_inputs: tuple[str | None, str | None, str | None] | None = None  # what judged the run's last board
         self.last: InspectionResult | None = None
         self.last_path: Path | None = None
         self.last_id: int | None = None  # the record of the last result, for Compare (REQ-INSP-009)
         self.last_board_model: str | None = None  # the board model it was inspected under
         # The empty state of a board that was not inspected (#182): heading, sentence, link and where it leads
         self.skipped: tuple[str, str, str, Callable[[], None]] | None = None
-        self.inspector: Inspector | None = None  # built on the first board for the board model, recipe and reference
+        self.inspector: Inspector | None = None  # built on a board, kept while it is what is active (#243)
         self._engine_gen = 0  # counts the times the engine was dropped, so a board's engine from before is not kept
+        self._no_ai_warned: str | None = None  # the board model AOI-TRN-003 was stored for on this page visit (#243)
         # The board being inspected, if one is: Start and Next Board wait for it (#120).
         self.worker: Worker | None = None
 
@@ -190,6 +192,7 @@ class InspectionPage(Page):
 
     def _set_queue(self, paths: list[Path]) -> None:
         self.queue, self.queue_pos, self.skipped = paths, -1, None
+        self._drop_engine()  # a new queue builds its engine from what is active (#243)
         self.queue_label.setText(self.tr("{count} image(s) queued").format(count=len(paths)))
         self.shell.status(self.tr("Loaded {count} image(s)").format(count=len(paths)))
         self._update_buttons()
@@ -201,6 +204,7 @@ class InspectionPage(Page):
         if not self.need_board_model():
             return
         self.running, self.run_board_model, self.run_actor = True, self.board_model, self.ctx.actor
+        self.run_inputs = None
         self._update_buttons()
         self.next_board()
 
@@ -238,9 +242,13 @@ class InspectionPage(Page):
         view = str(self.view_combo.currentData())  # the English key the engine stores on every defect
         insp = self.inspector  # None on the first board: built on the pool thread, so no key waits for a model load
         gen = self._engine_gen  # the engine this board builds is kept only while nothing has dropped it meanwhile
+        in_run = self.running
 
         def inspect() -> Outcome:
-            engine = insp if insp is not None else self.ctx.inspector(bm, side=view)
+            # The kept engine only while it is what is active: a training run, an activation or a recipe saved while
+            # the page stays shown makes it stale, and the board is judged with what is active now (#243).
+            current = insp is not None and self.ctx.engine_is_current(bm, insp)
+            engine = self.ctx.inspector(bm, side=view) if insp is None or not current else insp
             engine.side = view  # one worker at a time per page, so nothing else reads it meanwhile
             res = engine.inspect(self.ctx.load_image(path))
             report(res)  # the verdict first, while the save runs; bound before the job starts
@@ -261,16 +269,23 @@ class InspectionPage(Page):
             if (worker := ref()) is not None and self.worker is worker:
                 self.worker = None  # before _on_result, which may start the next board of a run
                 self._update_buttons()  # the controls follow the worker at once, not at the finished signal
-            no_ai_model = False
-            if insp is None and self.inspector is None and gen == self._engine_gen and bm == self.board_model:
-                self.inspector = out[2]  # the engine this board built serves the rest of the queue
-                no_ai_model = out[2].model is None
+            engine, no_ai_model, moved = out[2], False, False
+            if engine is not insp and gen == self._engine_gen and bm == self.board_model:
+                self.inspector = engine  # the engine this board built serves the next boards while it is current
+                # AOI-TRN-003 once per page visit and board model, not again for the engine each new queue builds
+                no_ai_model = engine.model is None and self._no_ai_warned != bm
+                self._no_ai_warned = bm if engine.model is None else None
+            if in_run:  # a run judged with two AI models, recipes or Golden boards says so (#243)
+                moved = self.run_inputs is not None and engine.inputs != self.run_inputs
+                self.run_inputs = engine.inputs
             self._on_result(out)  # first: the result, and a failed save's error, never wait for the alarm below (#179)
             if no_ai_model:
                 msg = self.tr("No AI model for {board_model} yet: only the Golden board comparison runs").format(
                     board_model=bm
                 )
                 self._alarm("WARN", msg, "AOI-TRN-003")
+            if moved:
+                self._run_moved(out[0], engine)
             if bm != self.board_model:  # the header moved on meanwhile: shown and saved under bm, not current (#172)
                 self.last = self.last_path = self.last_id = self.shell.last_inspected = None
                 self._update_buttons()
@@ -443,7 +458,7 @@ class InspectionPage(Page):
 
     def _drop_engine(self) -> None:
         """The next board builds the engine again, and an engine a board is building at this moment is not kept when
-        it arrives: a board model change or a page revisit during the first board must not leave a stale engine."""
+        it arrives: a board model change, a page revisit or a new queue during a board must not leave a stale engine."""
         self.inspector = None
         self._engine_gen += 1
 
@@ -459,6 +474,24 @@ class InspectionPage(Page):
         self.shell.status(msg, ms=0)  # until the board in hand, if one is, replaces it with its own line
         self._alarm("WARN", msg, "AOI-INSP-012")
 
+    def _run_moved(self, path: Path, engine: Inspector) -> None:
+        """The AI model, recipe or Golden board changed during a run, and `path` is the run's first board judged with
+        what is active now: a line under the banner names it, below the next board's "Inspecting …" line or the
+        result's summary when the run has ended, and a WARN alarm AOI-INSP-013 keeps it in the alarm log, so the
+        operator sees that the run was judged by two (#243). The status bar keeps the next board's busy line, or "End
+        of queue"; each record names what judged it. It runs after _on_result, which never waits for an alarm (#179)."""
+        msg = self.tr(
+            "The AI model, recipe or Golden board changed during this run: {file} was judged with AI model {version},"
+            " recipe revision {revision} and Golden board {golden}; each record names what judged it."
+        ).format(
+            file=path.name,
+            version=engine.model_version or NO_VERDICT,
+            revision=NO_VERDICT if engine.recipe_rev is None else engine.recipe_rev,
+            golden=Path(engine.reference_path).name if engine.reference_path else NO_VERDICT,
+        )
+        self.summary.setText("\n".join(line for line in (self.summary.text(), msg) if line))
+        self._alarm("WARN", msg, "AOI-INSP-013")
+
     def _stop_for_user(self) -> None:
         """Another user signed in with Switch User during a run: the run stops after the board in hand, which is
         recorded under the user who pressed Start, so no board is recorded under a user who did not start it (#177)."""
@@ -472,6 +505,7 @@ class InspectionPage(Page):
 
     def on_board_model_changed(self, name: str | None) -> None:
         self._drop_engine()  # rebuilt lazily with the new model/recipe/reference
+        self._no_ai_warned = None  # the board model picked again has its AOI-TRN-003 again
         if self.running and name != self.run_board_model:  # stops after the board in hand (#172)
             self._stop_for_board_model(name)
         if self.last is not None and name != self.last_board_model:  # another board model's board is not current
@@ -486,5 +520,6 @@ class InspectionPage(Page):
 
     def on_show(self) -> None:
         self._drop_engine()  # pick up newly trained models or saved recipes
+        self._no_ai_warned = None  # each visit says once that a board model has no AI model yet
         self._refresh_alarms()
         self._show_empty()

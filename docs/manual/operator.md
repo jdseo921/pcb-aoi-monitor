@@ -40,6 +40,11 @@ as a board of the new board model.
 A run also belongs to the user who pressed Start. If another user signs in with Switch User during a run, the run stops
 after the board in hand, which is recorded under the user who pressed Start, and the status bar says so; the user now
 signed in presses Start to carry on with the queue, and those boards are recorded under their name.
+Each board is judged with the AI model, recipe and Golden board in use when it starts. If an Engineer trains or
+activates an AI model version, saves a recipe or sets a Golden board while the Inspection page is open, the next board
+uses it, whether you press Next Board or Start or load a new queue. During a run, the board in hand finishes with what it
+started with and the boards after it use the new one; the line under the banner and the alarm log say so with
+AOI-INSP-013. Each record names the AI model version, recipe revision and Golden board that judged it.
 
 Reading the verdict: while a board is being inspected the banner turns grey and reads "Inspecting…", and the status
 bar at the bottom names the board and its place in the queue, such as "Inspecting board_07.png (3 of 12)…". The
