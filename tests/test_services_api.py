@@ -5,10 +5,13 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
+from PySide6.QtWidgets import QMessageBox
 from pytestqt.qtbot import QtBot
 
+from aoi.core.imaging import list_images
 from aoi.core.services import AppContext
 from aoi.errors import AoiError
+from aoi.ui.main_window import MainWindow
 from aoi.ui.pages.base import cell_text
 from tests.test_req_done_in_v01 import BOARD, _window
 
@@ -79,3 +82,44 @@ def test_req_trn_007_only_an_ok_sample_can_be_the_reference(
     assert dialogs == [(f"AOI-TRN-006 {refused.value.entry.title}", f"{refused.value.what}\n\n{refused.value.action}")]
     assert ctx.reference_image(BOARD) == ok["path"] != reference
     assert win.statusBar().currentMessage().startswith("Reference image set: inspections compare against it now")
+
+
+def test_req_trn_007_the_reference_sample_is_never_relabelled_ng_or_removed(
+    qtbot: QtBot,
+    ctx: AppContext,
+    synthetic_dataset: Path,
+    dialogs: list[tuple[str, str]],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """An import makes its first OK sample the reference; relabelling that sample NG, or removing it, is refused with
+    AOI-TRN-007 before anything is written or audited, so inspections never compare against a board found defective
+    (#168 review: before, the relabel went through and a good board was judged NG). Once another OK sample is the
+    reference, the first can be relabelled and removed; the Training page shows the refusal."""
+    defective = list_images(synthetic_dataset / "test" / "ng")[0]
+    oks = list_images(synthetic_dataset / "train" / "ok")[:2]
+    ctx.import_samples("B", [str(defective), *map(str, oks)], "OK")  # a defective board imported as OK by mistake
+    first = ctx.samples("B", "OK")[0]
+    assert ctx.reference_image("B") == first["path"]
+    entries = ctx.audit_entries()
+    for change, call in (("relabelled NG", lambda: ctx.update_sample(first["id"], "NG", "Missing")),
+                         ("removed", lambda: ctx.delete_sample(first["id"]))):  # fmt: skip
+        with pytest.raises(AoiError) as refused:
+            call()
+        assert refused.value.code == "AOI-TRN-007" and f"so it cannot be {change} while it is" in refused.value.what
+    assert (ctx.samples("B", "OK")[0], ctx.audit_entries()) == (first, entries)
+    win = MainWindow(ctx)
+    qtbot.addWidget(win)
+    win.set_role("Engineer", "engineer")
+    win._on_board_model("B")
+    win.navigate("Training")
+    page = win.pages["Training"]
+    page.samples.selectRow(
+        next(r for r in range(page.samples.rowCount()) if cell_text(page.samples, r, 0) == str(first["id"]))
+    )
+    monkeypatch.setattr(QMessageBox, "question", lambda *a, **k: QMessageBox.StandardButton.Yes)
+    page._remove()
+    assert [d[0] for d in dialogs] == ["AOI-TRN-007 Reference sample cannot change"]
+    ctx.set_reference("B", ctx.samples("B", "OK")[1]["id"])
+    ctx.update_sample(first["id"], "NG", "Missing")
+    ctx.delete_sample(first["id"])
+    assert all(s["id"] != first["id"] for s in ctx.samples("B"))

@@ -654,19 +654,31 @@ class AppContext:
 
     @requires("Engineer", "Relabelling a sample")
     def update_sample(self, sample_id: int, label: str, defect_type: str | None) -> None:
-        """Relabel a sample OK or NG and set its defect type."""
+        """Relabel a sample OK or NG and set its defect type. The reference sample cannot be relabelled NG
+        (AOI-TRN-007): inspections would compare against a defective board."""
         before = self.db.sample(sample_id)
+        if label != "OK":
+            self._refuse_reference_change(before, "relabelled NG")
         self.db.update_sample(sample_id, label, defect_type)
         old = {"label": before["label"], "defect_type": before["defect_type"]}
         self.audit("sample.update", "sample", before["uuid"], old, {"label": label, "defect_type": defect_type})
 
     @requires("Engineer", "Removing a sample")
     def delete_sample(self, sample_id: int) -> None:
-        """Remove a sample's record; its image file stays in the workspace."""
+        """Remove a sample's record; its image file stays in the workspace. The reference sample cannot be removed
+        (AOI-TRN-007)."""
         before = self.db.sample(sample_id)
+        self._refuse_reference_change(before, "removed")
         self.db.delete_sample(sample_id)
         old = {"label": before["label"], "path": to_stored(Path(before["path"]), self.settings.root)}
         self.audit("sample.delete", "sample", before["uuid"], old, None)
+
+    def _refuse_reference_change(self, sample: dict[str, Any], change: str) -> None:
+        """Refuse a change that would leave inspections comparing against a board that is not a good sample (#168):
+        the reference an import picked, or one an Engineer set, stays an OK sample until another is set."""
+        reference = self.db.reference(sample["board_model"])
+        if reference is not None and Path(reference) == Path(sample["path"]):
+            raise AoiError("AOI-TRN-007", sample=Path(sample["path"]).name, change=change)
 
     @requires("Engineer", "Activating a model version")
     def activate_model(self, model_id: int) -> None:

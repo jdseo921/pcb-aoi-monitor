@@ -161,6 +161,14 @@ CODES: dict[str, ErrorCode] = {
             "Select an OK sample, or relabel this one OK if it shows a good board, then press Set Reference again.",
         ),
         ErrorCode(
+            "AOI-TRN-007",
+            "Reference sample cannot change",
+            "Sample {sample} is the reference image that inspections compare against, so it cannot be {change} while"
+            " it is.",
+            "Select a good (OK) sample and press Set Reference, or train the AI model, which sets a Golden board; then"
+            " try again.",
+        ),
+        ErrorCode(
             "AOI-USR-001",
             "Not allowed for this role",
             "{what} needs the {roles} role.",

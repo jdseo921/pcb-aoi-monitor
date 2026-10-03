@@ -41,7 +41,8 @@ the same files.
 ## 3. Samples, labels and datasets
 
 **Set Reference** makes the selected OK sample the reference image: inspections compare against it at once, and the
-next training run aligns the boards to it before it learns a new golden board. An NG sample is refused (AOI-TRN-006).
+next training run aligns the boards to it before it learns a new golden board. An NG sample is refused (AOI-TRN-006),
+and the sample that is the reference cannot be relabelled NG or removed until another OK sample is set (AOI-TRN-007).
 
 (to be written: import, OK/NG/UNSURE labels, defect boxes, second-person check, freezing a dataset version,
 locking the validation set)

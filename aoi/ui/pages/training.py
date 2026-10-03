@@ -256,8 +256,11 @@ class TrainingPage(Page):
             if not dlg.exec():
                 return
             dtype = dlg.value()[0]
-        for i in ids:
-            self.ctx.update_sample(i, label, dtype)
+        try:
+            for i in ids:
+                self.ctx.update_sample(i, label, dtype)
+        except AoiError as e:  # the reference sample stays OK (AOI-TRN-007); the rows before it are relabelled
+            self.error(e)
         self.refresh()
 
     def _set_reference(self) -> None:
@@ -278,8 +281,11 @@ class TrainingPage(Page):
             return
         question = self.tr("Remove {count} sample(s) from the dataset?").format(count=len(ids))
         if QMessageBox.question(self, self.tr("Remove"), question) == QMessageBox.StandardButton.Yes:
-            for i in ids:
-                self.ctx.delete_sample(i)
+            try:
+                for i in ids:
+                    self.ctx.delete_sample(i)
+            except AoiError as e:  # the reference sample stays (AOI-TRN-007)
+                self.error(e)
             self.refresh()
 
     def _preview(self) -> None:

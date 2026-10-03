@@ -213,7 +213,7 @@ Re-training after more uploads creates a new version; older versions stay select
 An AI model the loader would refuse, such as one with an image threshold of 0 from OK images that are copies of one
 photo, is refused at step 5 with AOI-TRN-004: nothing is saved, registered or audited, and the active version stays.
 The reference image an Engineer sets (Set Reference) must be an OK sample (AOI-TRN-006): inspections compare against it
-at once, and step 1 aligns to it.
+at once, and step 1 aligns to it. While a sample is the reference, it cannot be relabelled NG or removed (AOI-TRN-007).
 
 **Next AI step (not in this draft):** once enough labelled NG crops exist per type, add a small supervised
 classifier that names the defect (Solder Bridge, Tombstone, …) for each flagged region. Today a region is named by
