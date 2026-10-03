@@ -413,7 +413,7 @@
 <context>
     <name>Errors</name>
     <message>
-        <location filename="../core/services.py" line="+58"/>
+        <location filename="../core/services.py" line="+59"/>
         <source> ({context})</source>
         <translation type="unfinished"></translation>
     </message>
@@ -433,7 +433,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+154"/>
+        <location line="+168"/>
         <source>Importing samples</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1349,13 +1349,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+9"/>
-        <source>Workspace database in use</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+1"/>
-        <location line="+14"/>
+        <location line="+23"/>
         <source>Another program holds the workspace database {path}, so the app could not write to it: {error}.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1365,7 +1359,17 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+9"/>
+        <location line="-4"/>
+        <source>Workspace in use</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Another program is using {path} in the workspace, so the app could not open it: {error}.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+12"/>
         <source>Workspace database busy</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1487,6 +1491,11 @@
     <message>
         <location line="+1"/>
         <source>numbers must run 1, 2, 3 ... without gaps: found {file}</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../data/workspace_lock.py" line="+27"/>
+        <source>another copy of this app has this workspace open</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -3143,7 +3152,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/services.py" line="-1072"/>
+        <location filename="../core/services.py" line="-1086"/>
         <source>Aligning {count} images to the reference board</source>
         <translation type="unfinished"></translation>
     </message>

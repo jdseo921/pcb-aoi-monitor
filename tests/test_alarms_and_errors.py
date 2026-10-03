@@ -35,7 +35,8 @@ UNEXPECTED = "AOI-SET-007 Unexpected error"
 
 
 def _restart(ctx: AppContext) -> AppContext:
-    """A new AppContext on the same workspace, as a restart of the app creates."""
+    """A new AppContext on the same workspace, as a restart of the app creates: the first closes before (#204)."""
+    ctx.close()
     return AppContext(Settings(workspace=ctx.settings.workspace, device="cpu"))
 
 
@@ -124,14 +125,18 @@ def test_req_set_019_an_error_is_shown_when_the_database_refuses_its_alarm(
 
 
 def test_req_log_005_reopens_on_the_last_page(qtbot: QtBot, trained_ctx: AppContext) -> None:
-    _window(qtbot, trained_ctx, "Operator").navigate("Inspection")
+    first = _window(qtbot, trained_ctx, "Operator")
+    first.navigate("Inspection")
     saved = json.loads((default_workspace() / "settings.json").read_text(encoding="utf-8"))
     assert saved["last_page"] == "Inspection" and saved["workspace"] == trained_ctx.settings.workspace
+    first.close()  # the app closes before it starts again: one copy per workspace (#204)
 
     def reopened() -> str:
         win = MainWindow(AppContext(Settings.load()))  # what main.py does at start-up
         qtbot.addWidget(win)
-        return win.stack.currentWidget().title
+        title = win.stack.currentWidget().title
+        win.close()
+        return title
 
     assert reopened() == "Inspection"
     for last_page in ("Training", "Nowhere"):  # a page the start-up role cannot open, or one that no longer exists

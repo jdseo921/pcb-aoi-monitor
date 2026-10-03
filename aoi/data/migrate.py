@@ -20,7 +20,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from ..errors import QT_TRANSLATE_NOOP
-from .atomic import TEMP_SUFFIX
+from .atomic import temp_path
 from .errors import WorkspaceError
 
 log = logging.getLogger(__name__)
@@ -100,7 +100,7 @@ def backup(conn: sqlite3.Connection, old: int, new: int) -> Path:
     db = Path(conn.execute("PRAGMA database_list").fetchone()[2])  # the main database's file
     stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")  # ISO 8601 basic: no colon, which Windows refuses in a name
     target = db.with_name(f"{db.name}.bak-{old:04d}-to-{new:04d}-{stamp}")
-    tmp = target.with_name(f".{target.name}{TEMP_SUFFIX}")  # swept at the next start if a crash leaves it
+    tmp = temp_path(target)  # swept at the next start if a crash leaves it
     try:
         copy_database(conn, tmp)
         os.replace(tmp, target)

@@ -28,6 +28,7 @@ from ..data import atomic
 from ..data.db import Database, DbError, is_busy, new_uuid
 from ..data.errors import WorkspaceError
 from ..data.paths import to_stored
+from ..data.workspace_lock import WorkspaceLock
 from ..errors import QT_TRANSLATE_NOOP, AoiError, Phrase, joined
 from ..times import local_date, now_utc
 from . import anomaly
@@ -167,16 +168,28 @@ class AppContext:
             self.settings.ensure_dirs()
         except OSError as e:  # a drive not connected, a file where the folder must go (REQ-SET-019)
             raise WorkspaceError("AOI-SET-011", path=str(self.settings.root), error=str(e)) from e
-        self.log = logging_setup.setup(self.settings.root)
+        # One copy of the app per workspace: a second one is refused with AOI-SET-012 before it opens or deletes
+        # anything, so the sweep below only meets what a crash left (#204)
+        self._lock = WorkspaceLock.acquire(self.settings.root)
+        try:
+            self.log = logging_setup.setup(self.settings.root)
+        except BaseException:
+            self._lock.release()
+            raise
         try:
             self.db = Database(self.settings.db_path, self.settings.root)
         except BaseException:
             logging_setup.close(self.log)  # nor is the refused workspace's log file (REQ-SET-016)
+            self._lock.release()
             raise
-        swept = atomic.sweep_temp_files(self.settings.root)  # a crash mid-write leaves only a temp file; drop it
-        self.device = resolve_device(self.settings.device)
-        self.log.info("app.start", extra={"workspace": str(self.settings.root), "device": self.device, "swept": swept})
-        try:  # the first writes: another program may hold the database, or the drive refuse them (#171)
+        try:  # the first writes: the drive may refuse them, or another program hold the database (#171, #204)
+            self.device = resolve_device(self.settings.device)
+            swept, skipped = atomic.sweep_temp_files(self.settings.root)  # a crash mid-write leaves only a temp file
+            for path, reason in skipped:  # harmless: kept, and tried again at the next start (#204)
+                rel = path.relative_to(self.settings.root).as_posix()
+                self.log.warning("sweep.skipped", extra={"path": rel, "reason": reason})
+            extra = {"workspace": str(self.settings.root), "device": self.device, "swept": swept}
+            self.log.info("app.start", extra=extra)
             self.set_user(self.start_user())  # the role the users table holds, never one written here (#197)
             archived = self.db.archive_old(self.settings.log_retention_days)  # retention is a system action
             self.log.info("retention.archived", extra={"days": self.settings.log_retention_days, "archived": archived})
@@ -186,6 +199,7 @@ class AppContext:
         except BaseException as e:
             self.db.close()  # a refused workspace holds no file open while another folder is chosen (REQ-SET-016)
             logging_setup.close(self.log)
+            self._lock.release()
             if isinstance(e, DbError):  # a coded refusal the folder picker follows, not AOI-SET-007
                 raise self.db.refusal(e) from e
             raise
@@ -209,6 +223,7 @@ class AppContext:
         self.jobs.shutdown()  # a running job may still read the database or write a file
         self.db.close()
         logging_setup.close(self.log)
+        self._lock.release()  # last: another copy may open the workspace now (#204)
 
     def set_user(self, name: str) -> None:
         """Make `name` the current user, with the UUID and the role the users table holds for them: the table is the

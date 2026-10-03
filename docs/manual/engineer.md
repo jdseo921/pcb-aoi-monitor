@@ -22,8 +22,10 @@ After the message a window asks for another workspace folder: the folder you cho
 `settings.json`, in the default workspace folder, as the Settings page saves it (if that folder cannot be written, the
 next start asks again); Cancel closes the app. The refused folder is left as it is. The same window follows AOI-SET-011:
 the workspace folder cannot be created or opened (a USB or network drive that is not connected) or its `aoi.sqlite` is
-not a database the app can open or write (restore the backup, as above); and AOI-SET-012: another program holds
-`aoi.sqlite` (another copy of the app, a database tool): close it, then choose the same folder. If another program
+not a database the app can open or write (restore the backup, as above); and AOI-SET-012: another copy of the app has
+the workspace open (on this PC, or in another user's session), or another program holds `aoi.sqlite` (a database
+tool): close it, then choose the same folder. A copy of the app that crashed, or a power cut, never blocks the next
+start. The workspace folder holds an empty file `.aoi.lock` while the app runs; leave it where it is. If another program
 takes hold of `aoi.sqlite` while the app runs, a change that cannot be stored is refused after 5 s with AOI-SET-013:
 close that program and do the change again.
 
