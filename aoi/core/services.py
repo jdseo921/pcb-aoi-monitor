@@ -168,7 +168,8 @@ class AppContext:
             if isinstance(e, DbError):  # a coded refusal the folder picker follows, not AOI-SET-007
                 raise self.db.refusal(e) from e
             raise
-        self._model_cache: dict[str, tuple[str, anomaly.AnomalyModel, str]] = {}
+        # board model -> (device, (version, model, uuid)): the weights of the active version, on the device they sit on
+        self._model_cache: dict[str, tuple[str, tuple[str, anomaly.AnomalyModel, str]]] = {}
         # background work (REQ-SET-021): screens submit through aoi/ui/workers, tests directly; a job acts as the user
         # who submitted it (#177)
         self.jobs = Jobs(context=self._acting_context)
@@ -279,6 +280,10 @@ class AppContext:
         progress: anomaly.ProgressFn | None = None,
         should_stop: Callable[[], bool] | None = None,
     ) -> dict[str, Any]:
+        """Train an AI model of `board_model` on its samples, then save, register, activate and audit it. The run reads
+        the device once, before it loads anything, and keeps it to the end: a device saved on Settings while the run
+        loads, aligns or trains applies from the next run (#201)."""
+        device = self.device  # not self.device later: save_settings may change it while the samples load and align
         say = progress or (lambda *a: None)
         ok = [self.load_image(s["path"]) for s in self.db.samples(board_model, "OK")]
         ng = [self.load_image(s["path"]) for s in self.db.samples(board_model, "NG")]
@@ -295,7 +300,7 @@ class AppContext:
         cfg = anomaly.TrainConfig(
             image_size=image_size or self.settings.image_size,
             epochs=epochs or self.settings.default_epochs,
-            device=self.device,
+            device=device,
         )
         model = anomaly.train(ok, ng, cfg, progress, should_stop)
         if should_stop is not None and should_stop():  # Stop, or the window closing: the active model stays (TRN-008)
@@ -335,19 +340,24 @@ class AppContext:
 
     def load_model(self, board_model: str) -> tuple[str, anomaly.AnomalyModel, str] | None:
         """The active model of a board model as (version, model, uuid), the three from one row so a record never names
-        one version's UUID with another's weights; the weights are cached by version."""
+        one version's UUID with another's weights; the weights are cached by version and device. A load that was
+        running when save_settings changed the device returns its model to its caller but does not cache it, and a
+        cached model is used only on the device in use, so no later board runs on the old device (#201)."""
         rec = self.db.active_model(board_model)
         if not rec:
             return None
+        device = self.device
         cached = self._model_cache.get(board_model)
-        if cached and cached[0] == rec["version"]:
-            return cached
-        m = anomaly.AnomalyModel.load(rec["path"], self.device)
+        if cached and cached[0] == device and cached[1][0] == rec["version"]:
+            return cached[1]
+        m = anomaly.AnomalyModel.load(rec["path"], device)
         if m.meta.get("uuid") != rec["uuid"]:  # another AI model's file in its place, such as one written over it
             why = f"its UUID {m.meta.get('uuid') or '(none)'} is not {rec['uuid']}, the one the model registry names"
             raise anomaly.ModelFileError("AOI-TRN-001", path=rec["path"], reason=why)
-        self._model_cache[board_model] = (rec["version"], m, str(rec["uuid"]))
-        return self._model_cache[board_model]
+        loaded = (rec["version"], m, str(rec["uuid"]))
+        if self.device == device:
+            self._model_cache[board_model] = (device, loaded)
+        return loaded
 
     # --- recipe --------------------------------------------------------------
     def recipe(self, board_model: str) -> tuple[int, Recipe]:
@@ -847,9 +857,12 @@ class AppContext:
     def save_settings(self, values: dict[str, Any]) -> None:
         """Write the Settings page's values over settings.json (`Settings.save_keys`: each value checked first,
         AOI-SET-008, every other key kept as the file holds it) and audit `settings.change` with the values the file
-        held before (#197). The running app follows every value but the workspace: its database, log and folders stay
-        on the open one until the restart, so no file lands in a folder its database does not list (REQ-SET-001). When
-        the entry cannot be written, settings.json goes back to what was in effect and the app keeps it (#178)."""
+        held before (#197). The running app follows the device, defaults and retention at once; the workspace waits for
+        the restart, its database, log and folders staying on the open one so no file lands in a folder its database
+        does not list (REQ-SET-001), and the language is stored only (no translation is loaded before 2H 2027). The AI
+        device is resolved again: when it changes, training and inference use the new one from the next call and the
+        weights load again on it (load_model; REQ-SET-002, #201). When the entry cannot be written, settings.json goes
+        back to what was in effect and the app keeps it (#178)."""
         before = self.settings.save_keys(values)
         try:
             self.audit("settings.change", "settings", None, before, values)
@@ -859,6 +872,11 @@ class AppContext:
         for name, value in values.items():
             if name != "workspace":
                 setattr(self.settings, name, value)
+        device = resolve_device(self.settings.device)
+        if device != self.device:
+            self.log.info("device.change", extra={"before": self.device, "after": device})
+            self.device = device
+            self._model_cache.clear()  # weights loaded on the old device; a run in progress keeps the model it holds
 
     @requires("Engineer", "Archiving records")
     @transactional

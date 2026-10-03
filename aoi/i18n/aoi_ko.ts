@@ -960,12 +960,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1"/>
+        <location line="+155"/>
         <source>Archive older than {days} days</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+38"/>
+        <location line="-116"/>
         <source>{count} inspections · {ng} NG · yield {rate:.1%}</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1040,12 +1040,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+4"/>
+        <location line="+7"/>
         <source>Archived {count} record(s)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+13"/>
+        <location line="+15"/>
         <source>All</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1428,7 +1428,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/logs.py" line="-226"/>
+        <location filename="../ui/pages/logs.py" line="-231"/>
         <source>Logs &amp; Export</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1928,12 +1928,12 @@
     </message>
     <message>
         <location line="+0"/>
-        <location line="+45"/>
+        <location line="+46"/>
         <source>Role</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-43"/>
+        <location line="-44"/>
         <source>Add / Change User</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1963,7 +1963,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+23"/>
+        <location line="+24"/>
         <source>Saved. Restart the app to switch the workspace.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2010,18 +2010,18 @@
     </message>
     <message>
         <location line="+1"/>
-        <location line="+301"/>
+        <location line="+304"/>
         <source>Import Folder…</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-295"/>
-        <location line="+50"/>
+        <location line="-298"/>
+        <location line="+52"/>
         <source>ID</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-50"/>
+        <location line="-52"/>
         <source>Label</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2032,12 +2032,12 @@
     </message>
     <message>
         <location line="+0"/>
-        <location line="+80"/>
+        <location line="+82"/>
         <source>View</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-80"/>
+        <location line="-82"/>
         <source>File</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2063,12 +2063,12 @@
     </message>
     <message>
         <location line="+1"/>
-        <location line="+188"/>
+        <location line="+190"/>
         <source>Remove</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-183"/>
+        <location line="-185"/>
         <source>Select a sample to preview</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2078,7 +2078,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+8"/>
+        <location line="+9"/>
         <source>Epochs</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2088,7 +2088,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1"/>
+        <location line="+2"/>
         <source>Device</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2198,7 +2198,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+18"/>
+        <location line="+19"/>
         <source>Export AI model</source>
         <translation type="unfinished"></translation>
     </message>
