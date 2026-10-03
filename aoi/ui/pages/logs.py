@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -11,6 +12,7 @@ from PySide6.QtWidgets import QCheckBox, QComboBox, QDateEdit, QFileDialog, QHBo
 from ...core.services import AppContext
 from ...times import to_local
 from .. import theme
+from ..widgets.busy import BusyOverlay
 from ..widgets.empty_state import EmptyState
 from ..widgets.image_view import ImageView
 from .base import QT_TRANSLATE_NOOP, Page, button, cell_text, fill_table, make_table, view_text
@@ -74,6 +76,7 @@ class LogsPage(Page):
         self.table.verticalHeader().setDefaultSectionSize(theme.TARGET_H)  # a history row is an operator target
         self.table.itemSelectionChanged.connect(self._preview)
         self.empty = EmptyState(self.table)
+        self.busy = BusyOverlay(self.table, self.tr("Exporting…"))
         split.addWidget(self.table)
         self.view = ImageView(placeholder=self.tr("Select a row to see its overlay"))
         split.addWidget(self.view)
@@ -202,12 +205,30 @@ class LogsPage(Page):
             self.tr("{file} exists. Replace it?").format(file=checks_file.name), overwrites=True
         ):
             return
+        self.run_in_background(
+            self._write_csv, list(self.rows), f, checks_file, with_progress=True, busy=self.busy,
+            on_result=lambda counts: self._csv_written(counts, Path(f), checks_file),
+            on_cancel=lambda counts: self._csv_written(counts, Path(f), checks_file),
+        )  # fmt: skip
+
+    def _write_csv(
+        self,
+        rows: list[dict[str, Any]],
+        f: str,
+        checks_file: Path,
+        progress: Callable[[int, int], None],
+        should_stop: Callable[[], bool],
+    ) -> tuple[int, int] | None:
+        """Pool thread (REQ-SET-021, #194): gather each record's defects and checks, then write both files; (records,
+        check rows), or None when Cancel came before the files were written, which leaves neither."""
         # Two files: the records, and beside them one row per check with the evidence that decided each verdict
         # (REQ-INSP-012). The records keep their columns in order, so a reader built on them still works.
-        checks = self.ctx.checks_for_many([r["id"] for r in self.rows])
+        checks = self.ctx.checks_for_many([r["id"] for r in rows])
         out: list[dict[str, Any]] = []
         check_rows: list[dict[str, Any]] = []
-        for r in self.rows:
+        for i, r in enumerate(rows, 1):
+            if should_stop():
+                return None
             ds = self.ctx.defects_for(r["id"])
             out.append(
                 {
@@ -236,17 +257,18 @@ class LogsPage(Page):
                     k: c[k] for k in ("no", "region", "metric", "source", "value", "threshold", "rule", "result")
                 }
                 check_rows.append({"inspection_id": r["id"], "inspection_uuid": r["uuid"], **record, **evidence})
+            progress(i, len(rows))
         self.ctx.export_csv(f, out)
         self.ctx.export_csv(checks_file, check_rows, what="checks", fieldnames=CHECK_COLUMNS)
+        return len(out), len(check_rows)
+
+    def _csv_written(self, counts: tuple[int, int] | None, f: Path, checks_file: Path) -> None:
+        if counts is None:
+            self.shell.status(self.tr("Export CSV stopped: no file was written."))
+            return
         status = self.tr("Exported {count} records and {checks} check rows to {folder}: {file}, {checks_file}")
         self.shell.status(
-            status.format(
-                count=len(out),
-                checks=len(check_rows),
-                folder=Path(f).parent,
-                file=Path(f).name,
-                checks_file=checks_file.name,
-            )
+            status.format(count=counts[0], checks=counts[1], folder=f.parent, file=f.name, checks_file=checks_file.name)
         )
 
     def export_overlays(self) -> None:
@@ -256,8 +278,14 @@ class LogsPage(Page):
         d = QFileDialog.getExistingDirectory(self, self.tr("Export overlays to"), str(self.ctx.settings.exports_dir))
         if not d:
             return
-        n = self.ctx.export_overlays(self.rows, d)
-        self.shell.status(self.tr("Copied {count} overlay image(s) to {folder}").format(count=n, folder=d))
+        copied = self.tr("Copied {count} overlay image(s) to {folder}")
+        stopped = self.tr("Stopped: copied {count} overlay image(s) to {folder}; the others were not copied.")
+        # On the pool (REQ-SET-021, #194): Cancel keeps the overlays copied so far and says how many.
+        self.run_in_background(
+            self.ctx.export_overlays, list(self.rows), d, with_progress=True, busy=self.busy,
+            on_result=lambda n: self.shell.status(copied.format(count=n, folder=d)),
+            on_cancel=lambda n: self.shell.status(stopped.format(count=n or 0, folder=d)),
+        )  # fmt: skip
 
     def _archive_text(self) -> str:
         return self.tr("Archive older than {days} days").format(days=self._arch_days)

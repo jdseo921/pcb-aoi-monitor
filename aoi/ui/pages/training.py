@@ -193,16 +193,27 @@ class TrainingPage(Page):
                 self, self.tr("View"), self.tr("Camera view of these images"), names, 0, False
             )
             if ok:
-                self.ctx.import_samples(bm, files, "OK", side=VIEWS[names.index(side)])
-                self.refresh()
+                self._add(bm, files, "OK", None, VIEWS[names.index(side)])
 
     def add_ng(self) -> None:
         if (bm := self.checked_board_model()) and (files := self._pick()):
             dlg = NgDialog(self)
             if dlg.exec():
                 dtype, side = dlg.value()
-                self.ctx.import_samples(bm, files, "NG", dtype, side)
-                self.refresh()
+                self._add(bm, files, "NG", dtype, side)
+
+    def _add(self, board_model: str, files: list[str], label: str, dtype: str | None, side: str) -> None:
+        """Copy the picked files on a pool thread (REQ-SET-021, #194); Cancel keeps the samples added so far."""
+        self.run_in_background(
+            self.ctx.import_samples, board_model, files, label, dtype, side, with_progress=True,
+            on_result=lambda _added: self.refresh(), busy=self.busy,
+            on_cancel=lambda added: self._add_stopped(added or 0, len(files)),
+        )  # fmt: skip
+
+    def _add_stopped(self, added: int, total: int) -> None:
+        stopped = self.tr("Stopped: added {added} of {total} images; the others were not added.")
+        self.shell.status(stopped.format(added=added, total=total))
+        self.refresh()
 
     def import_folder(self) -> None:
         """Folder with ok/ and ng/ sub-folders (ng/<defect type>/ also accepted)."""
@@ -218,7 +229,7 @@ class TrainingPage(Page):
             return
         self.run_in_background(
             self._import, bm, folder, with_progress=True,
-            on_result=self._imported, busy=self.busy, on_cancel=self.refresh,
+            on_result=self._imported, busy=self.busy, on_cancel=lambda _counts: self.refresh(),
         )  # fmt: skip
 
     def _import(

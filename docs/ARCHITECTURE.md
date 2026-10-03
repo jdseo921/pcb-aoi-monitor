@@ -115,8 +115,14 @@ which runs it as a `Job` on the pool `AppContext.jobs` owns (`aoi/core/jobs.py`:
 no Qt, so the same jobs run headless) and turns the callbacks into signals; the slots run on the UI thread, the only
 place a widget changes. A job function takes plain values in and returns plain values out, never a widget. A page runs
 its background action through `Page.run_in_background` (the newest call wins) under a `BusyOverlay` where the result
-will appear (after 1 s the time so far; after 10 s progress, time left, Cancel); `tests/test_no_freeze.py` ticks the UI
-thread every 50 ms through each page's 5 MP action and fails on a gap over 2 s. No slot and no job function holds its
+will appear (after 1 s the time so far; after 10 s a bar and Cancel, with progress and the time left only for a job
+that reports steps: folder import, the + OK and + NG Images copies and the two Logs exports; Compare, the AI Model Test
+preview and Recipe Test Run inspect one board, report no steps and show the seconds so far, #194). Cancel drops the
+result and hands `on_cancel` what the job returned, so a job that checks `should_stop()` says what it kept (the sample
+copies and Export Image Overlays: `AppContext.import_samples` and `export_overlays` take `progress` and `should_stop`
+and audit `cancelled`). `tests/test_no_freeze.py` ticks the UI thread every 50 ms through each page's 5 MP action (for
+the Logs exports and the sample copies, enough 5 MP files to take over 2 s on the UI thread) and fails on a gap over
+2 s. No slot and no job function holds its
 own worker or the worker's signals (#132): Qt keeps a slot as long as the signals, which the worker holds, so a worker
 its slot held would stay, with its job and the job's result, for as long as the app runs; and signals a job held would
 be deleted with the job, on whichever thread let go of it last, where Qt forbids deleting an object of another thread.

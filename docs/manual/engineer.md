@@ -82,6 +82,10 @@ locking the validation set)
 of 0 because the OK images are copies of one photo, it stops with AOI-TRN-004: nothing is saved and the active AI model
 stays in use. Import photos of several different good boards, then train again.
 
+**+ OK Images** and **+ NG Images** copy the picked files in the background (#194): the sample table shows
+"Importing…" after a second and Cancel later; Cancel keeps the samples already added, and the status line says how
+many of the picked files were added.
+
 **Stop** ends a training run without saving anything: no AI model version, golden board or audit entry; the active AI
 model stays. Closing the app while work runs asks whether to stop it; an AI model test finishes its folder first.
 
@@ -173,6 +177,9 @@ that entry cannot be written, the exported file is removed (never the station's 
 When a `<name>_checks.csv` is already there, the app asks whether to replace it, with No as the default: Enter keeps it.
 **Export Image Overlays** that stops part-way (the drive full or pulled out, a folder already named like an overlay)
 shows AOI-LOG-001 with how many images were copied, and the audit trail records those, with the file that failed.
+Both exports run in the background (#194): the window keeps answering, and after a second the table shows
+"Exporting…" with the seconds so far, then Cancel. Cancel on **Export Image Overlays** keeps the overlays already copied
+and the status line says how many; Cancel on **Export CSV** before its files are written leaves neither file.
 
 The **From** and **To** boxes take days from 2000-01-01 to 2100-12-31. The picture beside the table is the selected
 record's overlay; it is empty when the record's overlay file is gone, when no row is selected and after **Filter**.

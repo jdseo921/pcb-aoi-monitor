@@ -236,16 +236,30 @@ class AppContext:
 
     @requires("Engineer", "Importing samples")
     def import_samples(
-        self, board_model: str, paths: list[str], label: str, defect_type: str | None = None, side: str = "Top"
+        self,
+        board_model: str,
+        paths: list[str],
+        label: str,
+        defect_type: str | None = None,
+        side: str = "Top",
+        progress: Callable[[int, int], None] | None = None,
+        should_stop: Callable[[], bool] | None = None,
     ) -> int:
-        """Copy uploads into the workspace so training data survives the source folder moving. All or nothing (#178):
-        a file that cannot be copied stops the import with AOI-TRN-008 and removes the copies made; then the samples, a
-        new board model's default recipe and reference, and the audit entry commit together."""
+        """Copy uploads into the workspace so training data survives the source folder moving; returns how many were
+        added. All or nothing (#178): a file that cannot be copied stops the import with AOI-TRN-008 and removes the
+        copies made; then the samples, a new board model's default recipe and reference, and the audit entry commit
+        together. A page runs it on the pool (REQ-SET-021, #194): `progress(done, total)` follows each file, and once
+        `should_stop()` is true the files not yet copied are left out, the ones copied are added and the audit entry
+        says so (`cancelled`)."""
         self._refuse_case_variant(board_model)  # a new board model is created by its first import
         dest = self.settings.images_dir / board_model / label
         copies: list[Path] = []
+        stopped = False
         try:
             for p in paths:
+                if should_stop is not None and should_stop():
+                    stopped = True
+                    break
                 src = Path(p)
                 target = dest / f"{src.stem}_{uuid.uuid4().hex[:6]}{src.suffix.lower()}"
                 try:
@@ -254,6 +268,8 @@ class AppContext:
                     why = e.strerror or str(e)
                     raise AoiError("AOI-TRN-008", str(e), path=str(src), reason=why, count=len(paths)) from e
                 copies.append(target)
+                if progress is not None:
+                    progress(len(copies), len(paths))
             with self.db.transaction():
                 for target in copies:
                     self.db.add_sample(board_model, str(target), label, defect_type, side)  # creates a new board model
@@ -263,7 +279,9 @@ class AppContext:
                     oks = self.db.samples(board_model, "OK")
                     if oks:
                         self.db.set_reference(board_model, oks[0]["path"])
-                after = {"label": label, "defect_type": defect_type, "side": side, "added": len(copies)}
+                after = {
+                    "label": label, "defect_type": defect_type, "side": side, "added": len(copies), "cancelled": stopped
+                }  # fmt: skip
                 self.audit("sample.import", "board_model", board_model, None, after)
         except BaseException:
             _remove(copies)
@@ -924,23 +942,39 @@ class AppContext:
         return Path(dest)
 
     @requires("Engineer", "Exporting overlay images")
-    def export_overlays(self, inspections: list[dict[str, Any]], folder: str | Path) -> int:
+    def export_overlays(
+        self,
+        inspections: list[dict[str, Any]],
+        folder: str | Path,
+        progress: Callable[[int, int], None] | None = None,
+        should_stop: Callable[[], bool] | None = None,
+    ) -> int:
         """Copy the overlay images of `inspections` (records from `inspections()`) into `folder`; returns how many. A
         copy that fails stops the export with AOI-LOG-001; the entry names the files that left before it, which stay
-        (#178), and stores `folder` relative to the workspace when inside it (REQ-SET-001), else in full."""
+        (#178), and stores `folder` relative to the workspace when inside it (REQ-SET-001), else in full. A page runs
+        it on the pool (REQ-SET-021, #194): `progress(done, total)` follows each overlay, and once `should_stop()` is
+        true the copies made stay and the audit entry says the export was cancelled."""
         sources = [Path(r["overlay_path"]) for r in inspections if r.get("overlay_path")]
         sources = [p for p in sources if p.exists()]
         copied: list[Path] = []
         failed: tuple[Path, OSError] | None = None
+        stopped = False
         for src in sources:
+            if should_stop is not None and should_stop():
+                stopped = True
+                break
             try:
                 atomic.copy_file(src, Path(folder) / src.name)
             except OSError as e:  # the drive full or pulled out, a name the folder cannot take
                 failed = (Path(folder) / src.name, e)
                 break
             copied.append(Path(folder) / src.name)
+            if progress is not None:
+                progress(len(copied), len(sources))
         stored = to_stored(Path(folder).absolute(), self.settings.root)
-        after: dict[str, Any] = {"folder": stored, "records": len(inspections), "copied": len(copied)}
+        after: dict[str, Any] = {
+            "folder": stored, "records": len(inspections), "copied": len(copied), "cancelled": stopped
+        }  # fmt: skip
         if failed:
             after["error"] = f"{failed[0].name}: {failed[1].strerror or failed[1]}"
         self._audit_files(copied, "export.overlays", "inspections", None, after, sources)

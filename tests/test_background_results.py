@@ -46,7 +46,7 @@ def test_issue_132_a_background_job_keeps_nothing_once_its_result_is_shown(
     qtbot.waitUntil(lambda: trained_ctx.jobs.idle() and page._bg is None, timeout=20000)
     made: list[weakref.ref[Payload]] = []
     workers = []
-    cancelled: list[bool] = []
+    cancelled: list[int | None] = []
 
     def make() -> Payload:
         made.append(weakref.ref(p := Payload()))
@@ -61,14 +61,14 @@ def test_issue_132_a_background_job_keeps_nothing_once_its_result_is_shown(
         with_progress=True,
         on_result=lambda n: None,
         busy=page.busy,
-        on_cancel=lambda: cancelled.append(True),
+        on_cancel=cancelled.append,
     )
     stopped = weakref.ref(stop)
     del stop
-    # the newest run wins: the one before is stopped, its result dropped and its on_cancel called
+    # the newest run wins: the one before is stopped, its result dropped and its on_cancel called with the steps done
     workers.append(weakref.ref(page.run_in_background(make, on_result=lambda p: None, busy=page.busy)))
     qtbot.waitUntil(lambda: page._bg is None and not _live, timeout=10000)  # every run's last slot has run
-    assert cancelled == [True]
+    assert len(cancelled) == 1 and cancelled[0] in (None, *range(500))  # #194: the steps done; None: never ran
     gc.collect()
     assert len(made) == 4 and [r() for r in made] == [None] * 4, "what each job returned is freed"
     assert [r() for r in [*workers, stopped]] == [None] * 5, "each worker, and with it its job, is freed"
