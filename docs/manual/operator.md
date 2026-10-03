@@ -31,6 +31,11 @@ it, before the next board starts; the records are on Logs & Export. If a result 
 the workspace folder cannot be written, another program holds the database) the run stops with AOI-INSP-008: press
 Next Board to carry on, and inspect that board again later. Closing the app while a board is being inspected asks
 whether to stop: No keeps the app open; Yes records the board in hand and closes.
+A run belongs to the board model it was started under. If the board model in the header changes during a run, the run
+stops after the board in hand, which is saved under the run's board model, and the status bar and the alarm log say so
+with AOI-INSP-012; the remaining boards are not inspected. Check the board model in the header, then press Start to
+carry on with the queue. The board shown before the change is cleared, so "Compare with Golden board ›" never opens it
+as a board of the new board model.
 
 Reading the verdict: while a board is being inspected the banner turns grey and reads "Inspecting…", and the status
 bar at the bottom names the board and its place in the queue, such as "Inspecting board_07.png (3 of 12)…". The

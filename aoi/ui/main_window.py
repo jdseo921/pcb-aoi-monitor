@@ -286,6 +286,8 @@ class MainWindow(QMainWindow):
             self._reload_board_models(name.strip())
 
     def _on_board_model(self, name: str) -> None:
+        if (name or None) != self.board_model:  # the board inspected last was another board model's: Use Last
+            self.last_inspected = None  # Inspected never opens it as one of this board model (#172)
         self.board_model = name or None
         for p in self.pages.values():
             p.on_board_model_changed(self.board_model)

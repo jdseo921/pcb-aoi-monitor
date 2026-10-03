@@ -5,9 +5,11 @@ from __future__ import annotations
 
 import gc
 import statistics
+import threading
 import weakref
 from pathlib import Path
 from time import perf_counter
+from typing import Any
 
 import cv2
 import numpy as np
@@ -19,6 +21,7 @@ from aoi.core.imaging import heat_overlay
 from aoi.core.inspector import InspectionResult
 from aoi.core.services import AppContext
 from aoi.core.views import difference_view
+from aoi.ui import theme
 from aoi.ui.pages.compare import MODE_AI, MODE_BOXES, MODE_DIFF, MODE_SIDE, MODES, ComparePage
 from tests.test_no_freeze import SIZE_5MP, board_5mp  # noqa: F401  # the 5 MP fixture
 from tests.test_req_done_in_v01 import BOARD, _window
@@ -157,3 +160,33 @@ def test_req_cmp_002_heat_overlay_draws_what_it_drew_before() -> None:
     shaded = heat_overlay(img, zero, 0.0)
     assert np.array_equal(shaded[1:], img[1:]) and np.array_equal(shaded[0, 1:], img[0, 1:])
     assert np.array_equal(shaded[0, 0], heat_overlay(img, zero, 0.5)[0, 0]), "in full colour"
+
+
+def test_req_set_021_compare_cancel_leaves_no_verdict_under_another_board(
+    qtbot: QtBot, trained_ctx: AppContext, ng_board: Path, synthetic_dataset: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """#172: an NG board compared, then another board picked and its inspection cancelled on the busy overlay: the page
+    shows no verdict, decision table or picture of the NG board under the other board's name, and says that board was
+    not inspected, with Re-evaluate one click away."""
+    page, _ = _compare(qtbot, trained_ctx, monkeypatch)
+    page.set_test(str(ng_board))
+    qtbot.waitUntil(lambda: page._bg is None and page.res is not None, timeout=20000)
+    assert page.verdict.text() == theme.verdict_label("NG") and page.metrics.rowCount() > 0
+    gate, real = threading.Event(), AppContext.inspect
+
+    def held(c: AppContext, *a: Any, **k: Any) -> InspectionResult:
+        assert gate.wait(30), "the test did not release the inspection"
+        return real(c, *a, **k)
+
+    monkeypatch.setattr(AppContext, "inspect", held)
+    ok = sorted(synthetic_dataset.glob("test/ok/*.png"))[0]
+    page.set_test(str(ok))
+    page.busy.cancel_button.click()  # Cancel, as the overlay offers it after 10 s
+    gate.set()
+    qtbot.waitUntil(lambda: page._bg is None and trained_ctx.jobs.idle(), timeout=20000)
+    assert page.test_label.text() == f"Test board: {ok.name}" and page.res is None
+    assert page.verdict.text() == "—" and page.metrics.rowCount() == 0 and page.test_view._pix is None
+    assert page.test_empty.isVisible() and ok.name in page.test_empty.sentence.text()
+    page.test_empty.link.click()  # Re-evaluate ›: the board named is inspected
+    qtbot.waitUntil(lambda: page._bg is None and page.res is not None, timeout=20000)
+    assert page.test_empty.isHidden() and page.verdict.text() == theme.verdict_label(page.res.verdict)

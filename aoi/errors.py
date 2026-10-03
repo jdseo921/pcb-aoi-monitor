@@ -104,6 +104,13 @@ CODES: dict[str, ErrorCode] = {
             " Engineer sets another on Training.",
         ),
         ErrorCode(
+            "AOI-INSP-012",
+            "Run stopped: board model changed",
+            "The board model changed from {old} to {new} during a run, so the run stopped after the board in hand; the"
+            " boards inspected before the change are saved under {old}.",
+            "Check the board model in the header, then press Start to carry on with the queue under it.",
+        ),
+        ErrorCode(
             "AOI-CMP-001",
             "Result has no stored heatmaps",
             "The result of {file} was saved without its difference and AI maps, or they were deleted after the"
