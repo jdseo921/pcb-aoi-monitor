@@ -185,7 +185,9 @@ def _shows_text(node: ast.Call) -> bool:
 
 
 def _scan(path: Path) -> set[tuple[int, str]]:
-    """(line, text) of every visible literal passed to something that shows text, outside tr(); page titles too."""
+    """(line, text) of every visible literal passed to something that shows text, outside tr(); page titles too; and
+    every literal tr() gets only through a loop variable (`self.tr(h) for h in headers`): pyside6-lupdate extracts a
+    literal argument only, so such a string never reaches the translation file and stays English on screen."""
     tree = ast.parse(path.read_text(encoding="utf-8"))
     parents = {child: node for node in ast.walk(tree) for child in ast.iter_child_nodes(node)}
     scopes = (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda, ast.Module)
@@ -197,7 +199,8 @@ def _scan(path: Path) -> set[tuple[int, str]]:
             target, value = node.target, node.value
         else:
             continue
-        if isinstance(target, ast.Name) and _literal_text(value) is not None and not _is_translated(value):
+        literal = isinstance(value, (ast.List, ast.Tuple)) or _literal_text(value) is not None  # check() reads a list
+        if isinstance(target, ast.Name) and literal and not _is_translated(value):
             scope = node
             while not isinstance(scope, scopes):
                 scope = parents[scope]
@@ -217,13 +220,28 @@ def _scan(path: Path) -> set[tuple[int, str]]:
         if text is not None and _visible(text):
             found.add((arg.lineno, text))
 
+    def looped(call: ast.Call) -> ast.AST | None:
+        """What the loop or comprehension runs over whose variable is the text of this tr() or translate() call."""
+        pos = 1 if _callee(call)[1] == "translate" else 0
+        if _callee(call)[1] not in ("tr", "translate") or len(call.args) <= pos:
+            return None
+        node, name = call, call.args[pos].id if isinstance(call.args[pos], ast.Name) else None
+        while name and node in parents:
+            node = parents[node]
+            for loop in getattr(node, "generators", None) or ([node] if isinstance(node, ast.For) else []):
+                if isinstance(loop.target, ast.Name) and loop.target.id == name:
+                    return loop.iter
+        return None
+
     for node in ast.walk(tree):
-        if isinstance(node, ast.Call) and _shows_text(node):
+        seq = looped(node) if isinstance(node, ast.Call) else None
+        if isinstance(node, ast.Call) and (seq is not None or _shows_text(node)):
             scope = node
             while not isinstance(scope, scopes):
                 scope = parents[scope]
             limit = TEXT_POSITIONS.get(_callee(node)[1], len(node.args))
-            for arg in node.args[:limit] + [kw.value for kw in node.keywords if kw.arg not in SKIP_KEYWORDS]:
+            args = node.args[:limit] + [kw.value for kw in node.keywords if kw.arg not in SKIP_KEYWORDS]
+            for arg in [seq] if seq is not None else args:
                 check(arg, scope)
         if isinstance(node, ast.ClassDef):
             for stmt in node.body:
@@ -295,3 +313,24 @@ def test_req_set_005_the_scan_catches_a_literal(tmp_path: Path) -> None:
         "Body",
         "Run",
     }
+
+
+def test_req_set_005_the_scan_catches_a_literal_reaching_tr_through_a_loop(tmp_path: Path) -> None:
+    """pyside6-lupdate extracts tr()'s text only when it is a literal, so `self.tr(h) for h in headers` over literals
+    leaves them out of the translation file and on screen in English: the Recipe Editor's ROI table headers (#173).
+    The scan flags such literals, in a comprehension or a for loop, inline or through a name, and lets marked ones
+    through; the ROI table's headers are now in the file under the Recipe Editor's context."""
+    sample = tmp_path / "sample.py"
+    sample.write_text(
+        "def f(self):\n"
+        '    headers = ["Kind", "Size"]\n'
+        '    self.table = make_table([*(self.tr(h) for h in headers), self.tr("Score")])\n'
+        '    for side in ("Left", "Right"):\n'
+        "        self.combo.addItem(self.tr(side))\n"
+        '    marked = [QT_TRANSLATE_NOOP("P", "Fine")]\n'
+        "    self.combo.addItems([self.tr(m) for m in marked])\n",
+        encoding="utf-8",
+    )
+    assert {text for _, text in _scan(sample)} == {"Kind", "Size", "Left", "Right"}
+    headers = ("Name", "Type", "X", "Y", "W", "H", "AI score")
+    assert {("RecipeEditorPage", h) for h in headers} <= set(_messages(TS_FILE))

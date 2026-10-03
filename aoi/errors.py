@@ -197,6 +197,22 @@ CODES: dict[str, ErrorCode] = {
             "Select another good (OK) sample and press Set Reference; then try again.",
         ),
         ErrorCode(
+            "AOI-RCP-001",
+            "Recipe saved since it was opened",
+            "Revision {latest} of board model {board_model} was saved after revision {revision}, the one the Recipe"
+            " Editor holds; saving it would undo revision {latest}, so nothing was saved.",
+            "Press Save Recipe again and choose Yes to load revision {latest}, then make your changes again on it;"
+            " until then they stay on screen.",
+        ),
+        ErrorCode(
+            "AOI-RCP-002",
+            "ROI limits refused",
+            "ROI {roi}: {quantity} min {low} and max {high} cannot be stored; a limit is 0 or more, and min is not"
+            " above max.",
+            "Nothing was applied. Correct the two values, or step a limit down below 0 to — to leave it unset, then"
+            " press Apply again.",
+        ),
+        ErrorCode(
             "AOI-USR-001",
             "Not allowed for this role",
             "{what} needs the {roles} role.",
