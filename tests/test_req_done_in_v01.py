@@ -20,9 +20,12 @@ from pytestqt.qtbot import QtBot
 
 from aoi.config import Settings, resolve_device
 from aoi.core.compare import CompareResult, Region
-from aoi.core.inspector import InspectionResult, Inspector
+from aoi.core.explain import explain
+from aoi.core.imaging import list_images
+from aoi.core.inspector import InspectionResult, Inspector, re_grade
 from aoi.core.recipe import ROI, ROI_TYPES, Recipe
 from aoi.core.services import AppContext
+from aoi.errors import AoiError
 from aoi.ui.main_window import MainWindow
 from aoi.ui.pages.inspection import InspectionPage
 from tests.conftest import TrainedModel, engineer
@@ -127,6 +130,44 @@ def test_req_insp_015_ng_then_warn_from_a_check_or_a_major_or_critical_defect_el
     assert {c.name: c.verdict for c in res.checks if c.verdict not in ("OK", "INFO")} == flagged
     assert [d.severity for d in res.defects] == severities
     assert res.verdict == verdict
+
+
+def test_req_insp_015_no_board_is_judged_without_its_golden_board_or_with_no_check(
+    ctx: AppContext, synthetic_dataset: Path, ng_board: Path
+) -> None:
+    """A board no check judged was OK (#169): with the golden board's file gone, the comparison was dropped as if none
+    were set and an NG board passed with no check; with neither a golden board nor an AI model, every board passed. Now
+    a golden board the database names whose file is gone or cannot be read refuses the board with AOI-INSP-009, the
+    engine gives a board no check judged, inspected or judged again, no verdict but AOI-INSP-010 saying why, and an OK
+    stored with no check is not said to be inside its thresholds."""
+    ctx.import_samples(BOARD, [str(p) for p in list_images(synthetic_dataset / "train" / "ok")], "OK")
+    golden, kept = Path(str(ctx.reference_image(BOARD))), Path(str(ctx.reference_image(BOARD))).read_bytes()
+    judged = ctx.inspect_file(BOARD, str(ng_board), save=False)  # the golden board comparison alone: no AI model
+    assert judged.verdict == "NG" and {c.source for c in judged.checks} == {"Compare"}
+    for why, change in (
+        ("the file is gone", golden.unlink),
+        ("it cannot be read (AOI-INSP-004 File format not supported)", lambda: golden.write_bytes(b"no image")),
+    ):
+        change()
+        with pytest.raises(AoiError) as unavailable:
+            ctx.inspect_file(BOARD, str(ng_board))
+        assert unavailable.value.code == "AOI-INSP-009", unavailable.value
+        assert f"names {golden} as its Golden board, but {why}, so no board" in unavailable.value.what
+    assert ctx.inspections() == [], "no record for a board not inspected"
+    golden.write_bytes(kept)
+    ctx.ensure_board_model("EMPTY")  # neither a golden board nor an AI model
+    with pytest.raises(AoiError) as nothing:
+        ctx.inspect_file("EMPTY", str(ng_board))
+    assert nothing.value.code == "AOI-INSP-010"
+    assert "of board model EMPTY: no Golden board is set; no AI model is trained." in nothing.value.what
+    with pytest.raises(AoiError) as turned_off:  # thresholds that turn every check off judge nothing either
+        re_grade(judged, Recipe(board_model=BOARD, use_compare=False, use_ai=False), None)
+    assert turned_off.value.code == "AOI-INSP-010"
+    off = "the recipe turns the Golden board comparison off; the recipe turns the AI model off"
+    assert off in turned_off.value.what
+    assert [s.text() for s in explain(InspectionResult("OK", 0.0))] == [
+        "The stored checks do not show why; inspect the board again."
+    ]
 
 
 def test_req_insp_016_six_step_cards_open_their_pages_and_show_status(

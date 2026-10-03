@@ -82,6 +82,28 @@ CODES: dict[str, ErrorCode] = {
             " and inspect {file} again later.",
         ),
         ErrorCode(
+            "AOI-INSP-009",
+            "Golden board file not available",
+            "Board model {board} names {file} as its Golden board, but {reason}, so no board of it can be compared"
+            " with the Golden board. The board was not inspected.",
+            "Put the file back, for example from a backup of the workspace, or have an Engineer set a new Golden board"
+            " on Training (Set Reference, or train the AI model again); then inspect the board again.",
+        ),
+        ErrorCode(
+            "AOI-INSP-010",
+            "Nothing can judge the board",
+            "No check can judge this board of board model {board}: {reason}. The board was given no verdict.",
+            "An Engineer sets a Golden board or trains an AI model on Training, or turns on the Golden board"
+            " comparison or the AI model in the Recipe Editor; then inspect the board again.",
+        ),
+        ErrorCode(
+            "AOI-INSP-011",
+            "Image too small to inspect",
+            "The {image} is {width} × {height} px; inspecting needs at least {minimum} px on each side.",
+            "Load a picture of the whole board as the camera takes it; if the Golden board is the small one, an"
+            " Engineer sets another on Training.",
+        ),
+        ErrorCode(
             "AOI-CMP-001",
             "Result has no stored heatmaps",
             "The result of {file} was saved without its difference and AI maps, or they were deleted after the"

@@ -13,6 +13,11 @@ from .imaging import align_to_reference
 # SSIM as scikit-image's structural_similarity computes it with its defaults: 7 px uniform window, sample
 # covariance, K1 = 0.01, K2 = 0.03, data range 255, "reflect" border, mean over the map without the border.
 SSIM_WINDOW, SSIM_K1, SSIM_K2, SSIM_RANGE = 7, 0.01, 0.03, 255.0
+DIFF_BORDER = 4  # px at each edge of the difference map that are never judged: warping leaves no board there
+# The shortest side the engine inspects (#169): SSIM needs one whole window (under 7 px its score is the mean of
+# nothing, NaN), and the difference map 3 px inside its border for the 3 × 3 noise clean-up to keep a pixel (at 10 px
+# or less no pixel is ever judged changed); ORB's image pyramid fails on a 1 px side.
+MIN_SIDE = max(SSIM_WINDOW, 2 * DIFF_BORDER + 3)  # 11 px
 
 
 @dataclass
@@ -137,7 +142,7 @@ def compare(
     a = cv2.cvtColor(cv2.GaussianBlur(aligned, (5, 5), 0), cv2.COLOR_BGR2LAB)
     b = cv2.cvtColor(cv2.GaussianBlur(reference, (5, 5), 0), cv2.COLOR_BGR2LAB)
     diff = shift_tolerant_diff(a, b).astype(np.float32)
-    m = max(4, min(diff.shape) // 60)  # ignore warped borders
+    m = max(DIFF_BORDER, min(diff.shape) // 60)  # ignore warped borders
     diff[:m, :] = diff[-m:, :] = 0
     diff[:, :m] = diff[:, -m:] = 0
 

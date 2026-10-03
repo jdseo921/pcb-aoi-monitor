@@ -6,6 +6,7 @@ metrics shown side-by-side are exactly the ones that produced the OK/NG result.
 
 from __future__ import annotations
 
+import math
 import time
 from dataclasses import asdict, dataclass, field
 from typing import Any
@@ -14,8 +15,9 @@ import cv2
 import numpy as np
 
 from .. import defects as taxonomy
+from ..errors import AoiError
 from .anomaly import AnomalyModel
-from .compare import CompareResult, Region, changed_regions, compare, regions_from_mask
+from .compare import MIN_SIDE, CompareResult, Region, changed_regions, compare, regions_from_mask
 from .imaging import align_to_reference
 from .recipe import ROI_DEFECT, Recipe
 
@@ -26,6 +28,12 @@ NO_AI_NOTE = "No trained model for this board model; AI check skipped."
 # A re-evaluation's (REQ-CMP-005), when the recipe turns on a check that did not run when the board was inspected.
 NOT_COMPARED_NOTE = "Comparison with the golden board did not run at inspection; not judged again."
 NOT_AI_JUDGED_NOTE = "AI check did not run at inspection; not judged again."
+NOT_RUN = {  # why a check did not run, by its note, for AOI-INSP-010
+    NO_GOLDEN_NOTE: "no Golden board is set",
+    NOT_COMPARED_NOTE: "the Golden board comparison did not run when the board was inspected",
+    NO_AI_NOTE: "no AI model is trained",
+    NOT_AI_JUDGED_NOTE: "the AI check did not run when the board was inspected",
+}
 
 
 @dataclass
@@ -158,6 +166,8 @@ def _plain(v: Any) -> Any:
 
 
 def _grade(value: float, threshold: float, warn_ratio: float, higher_is_bad: bool = True) -> str:
+    if not math.isfinite(value):  # NaN fails every comparison below and would pass: a value that is no number is NG
+        return NG
     if higher_is_bad:
         if value >= threshold:
             return NG
@@ -202,6 +212,12 @@ class Inspector:
         self.reference_sha256 = reference_sha256
 
     def inspect(self, img: np.ndarray) -> InspectionResult:
+        """The board in `img` aligned, compared and judged. AOI-INSP-011 before any work when it, or the golden board,
+        has a side under MIN_SIDE px; AOI-INSP-010 when no check could judge it (`judge`)."""
+        for image, im in (("board image", img), ("Golden board", self.reference)):
+            if im is not None and min(im.shape[:2]) < MIN_SIDE:
+                h, w = im.shape[:2]
+                raise AoiError("AOI-INSP-011", image=image, width=w, height=h, minimum=MIN_SIDE)
         t0 = time.perf_counter()
         r = self.recipe
         res = InspectionResult(verdict=OK, score=0.0, reference=self.reference, view=self.side)
@@ -233,7 +249,8 @@ class Inspector:
         comparison, of its AI map with `ai` and of the recipe's ROIs, then its defects and its verdict. `inspect` calls
         it on a board just inspected and `re_grade` on a stored result's maps (REQ-CMP-005), so both judge by one set
         of rules. `peaks` holds the highest AI map value of each ROI the result was judged on, by the region its check
-        names; an ROI found there takes that value, not one read from a stored map that holds it to a step."""
+        names; an ROI found there takes that value, not one read from a stored map that holds it to a step. A board no
+        check judged gets no verdict: AOI-INSP-010, saying why each check did not run (#169)."""
         r = self.recipe
         regions: list[Region] = []
         res.checks, res.defects, res.score = [], [], 0.0  # judged afresh, never added to
@@ -335,7 +352,11 @@ class Inspector:
         # 4) Merge evidence into a defect list ------------------------------------
         res.defects = self._defects(regions, res)
 
-        # 5) Verdict: any NG check -> NG; else any WARN -> WARN.
+        # 5) Verdict: any NG check -> NG; else any WARN -> WARN. No check, no verdict: never OK on no evidence (#169).
+        if not res.checks:
+            off = [name for name, on in (("Golden board comparison", r.use_compare), ("AI model", r.use_ai)) if not on]
+            why = [NOT_RUN[n] for n in res.notes if n in NOT_RUN] + [f"the recipe turns the {n} off" for n in off]
+            raise AoiError("AOI-INSP-010", board=r.board_model, reason="; ".join(why) or "no check ran")
         verdicts = [c.verdict for c in res.checks]
         res.verdict = NG if NG in verdicts else WARN if WARN in verdicts else OK
         if res.verdict == OK and res.defects and any(d.severity != "Minor" for d in res.defects):
@@ -371,7 +392,7 @@ def re_grade(judged: InspectionResult, recipe: Recipe, ai: AiEvidence | None) ->
     threshold changes them, and so do the inspection time, the view and the picture. A check the recipe turns on that
     did not run on the board is not judged, with a note saying so, as inspecting with the recipe notes a check it cannot
     run. `judged` is not changed; the result shares its maps. ValueError when a check the recipe uses ran on the board
-    but its map, or its AI evidence, is not given."""
+    but its map, or its AI evidence, is not given; AOI-INSP-010 when the recipe leaves no check that ran on it."""
     cr, ran_ai = judged.compare, any(c.source == "AI" for c in judged.checks)
     if (recipe.use_compare and cr is not None and cr.diff_map is None) or (
         recipe.use_ai and ran_ai and (ai is None or judged.anomaly_map is None)
