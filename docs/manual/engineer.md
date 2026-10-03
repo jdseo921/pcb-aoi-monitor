@@ -99,7 +99,13 @@ the result was judged against, named over the pane: each record keeps that file'
 the engine read, and the pane gives the reason instead when the file has changed, cannot be read or is gone, or none
 was recorded. Re-evaluate inspects the board again with the form's thresholds and the current AI model, against
 that same golden board while it is shown (press Golden Board for today's), and shows that fresh result instead;
-Save to Recipe saves the form's thresholds as a new revision. (to be written: trying thresholds, picking another reference)
+Save to Recipe saves the form's thresholds as a new revision. A stored result is judged again only under its own board
+model: with another board model in the header, Re-evaluate refuses with AOI-CMP-005 and names the board model to pick,
+and changing the header's board model clears the board of a record from Compare. The thresholds form is loaded again
+from the recipe whenever a new revision has been saved since (on Recipe Editor, for example), so Save to Recipe never
+puts back the thresholds of an older revision; values tried and not saved stay while no revision is saved. Cancel on
+the busy overlay clears the verdict, table and picture and says the board named over the picture was not inspected;
+Re-evaluate inspects it. (to be written: trying thresholds, picking another reference)
 
 ## 8. Logs and audit
 

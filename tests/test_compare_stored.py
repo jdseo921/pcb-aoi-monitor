@@ -8,6 +8,7 @@ from __future__ import annotations
 import hashlib
 from pathlib import Path
 from time import perf_counter
+from typing import Any
 
 import numpy as np
 import pytest
@@ -16,7 +17,8 @@ from pytestqt.qtbot import QtBot
 
 from aoi.core import anomaly
 from aoi.core.explain import explain
-from aoi.core.inspector import Check, Inspector, draw_overlay
+from aoi.core.inspector import Check, InspectionResult, Inspector, draw_overlay
+from aoi.core.recipe import Recipe
 from aoi.core.services import AppContext
 from aoi.times import to_local
 from aoi.ui import theme
@@ -25,7 +27,7 @@ from aoi.ui.pages.compare import JUDGED, ComparePage
 from tests.regression import make_regression_set as rs
 from tests.test_alarms_and_errors import _log_rows
 from tests.test_no_freeze import board_5mp  # noqa: F401  # the 5 MP fixture
-from tests.test_req_done_in_v01 import BOARD, _window
+from tests.test_req_done_in_v01 import BOARD, _inspect_one, _window
 
 FAILING = ("NG", "WARN")
 
@@ -288,3 +290,101 @@ def test_req_cmp_003_golden_board_as_judged(
     assert "Golden board is now" not in compare.note.text(), "a record that names none says nothing of a change"
     logged = [r["reason"] for r in _log_rows(ctx, "compare.golden_board_not_as_judged")]
     assert logged == ["changed", "unreadable", "missing"], logged
+
+
+def test_req_cmp_005_a_record_is_judged_under_its_own_board_model(
+    qtbot: QtBot,
+    trained_ctx: AppContext,
+    ng_board: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    dialogs: list[tuple[str, str]],
+) -> None:
+    """#172: once the header shows another board model, Inspection forgets its last board and Compare drops a record's
+    board, so neither is judged as the new board model's; Re-evaluate on a record of another board model is refused
+    with AOI-CMP-005 naming the board model to pick, and under that board model it judges the board."""
+    ctx = trained_ctx
+    ctx.ensure_board_model("ZZZ")
+    win = _window(qtbot, ctx, "Engineer")
+    insp, compare = win.pages["Inspection"], win.pages["Compare"]
+    assert isinstance(compare, ComparePage)
+    iid = _inspect_one(qtbot, win, ng_board).last_id
+    assert iid is not None and win.last_inspected is not None
+    insp.open_compare()  # the record, on Compare
+    qtbot.waitUntil(lambda: ctx.jobs.idle() and compare._bg is None, timeout=20000)
+    calls: list[tuple[str, str | None]] = []
+    real = AppContext.inspect
+
+    def spy(c: AppContext, bm: str, image: np.ndarray, recipe: Recipe | None = None, **k: Any) -> InspectionResult:
+        calls.append((bm, recipe.board_model if recipe else None))  # the board model judged under, and its recipe's
+        return real(c, bm, image, recipe, **k)
+
+    monkeypatch.setattr(AppContext, "inspect", spy)
+    win.bm_combo.setCurrentText("ZZZ")
+    qtbot.waitUntil(lambda: ctx.jobs.idle() and compare._bg is None, timeout=20000)
+    assert insp.last is None and insp.last_id is None and insp.last_path is None and win.last_inspected is None
+    assert insp.verdict.text() == "—" and insp.table.rowCount() == 0 and not insp.act_save.isEnabled()
+    assert compare.test_path is None and compare.verdict.text() == "—" and compare.metrics.rowCount() == 0
+    assert compare.test_empty.heading.text() == "No board to compare yet" and calls == []
+    win.navigate("Inspection")
+    insp.open_compare()  # nothing of TINY opens as ZZZ's
+    assert win.stack.currentWidget() is insp and compare.stored is None
+    compare.show_stored(iid)  # a TINY record shown while the header shows ZZZ, as a link from elsewhere would
+    qtbot.waitUntil(lambda: ctx.jobs.idle() and compare._bg is None, timeout=20000)
+    compare.run()  # Re-evaluate
+    assert dialogs and dialogs[-1][0].startswith("AOI-CMP-005") and "board model TINY" in dialogs[-1][1], dialogs
+    assert calls == [] and compare.stored is not None, "nothing was judged; the stored result stays"
+    win.bm_combo.setCurrentText(BOARD)  # its own board model: the board is judged under it
+    qtbot.waitUntil(lambda: ctx.jobs.idle() and compare._bg is None and compare.res is not None, timeout=20000)
+    assert calls == [(BOARD, BOARD)]
+
+
+def test_req_cmp_005_form_follows_a_revision_saved_elsewhere(
+    qtbot: QtBot, trained_ctx: AppContext, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """#172: a recipe revision saved while Compare's form holds the revision before (as Recipe Editor saves one): back
+    on Compare the form shows the new revision, so Save to Recipe keeps it; edits not saved stay while no revision is
+    saved."""
+    ctx = trained_ctx
+    win = _window(qtbot, ctx, "Engineer")
+    compare = win.pages["Compare"]
+    assert isinstance(compare, ComparePage)
+    win.navigate("Compare")
+    qtbot.waitUntil(lambda: ctx.jobs.idle() and compare._bg is None, timeout=20000)
+    recipe = ctx.recipe(BOARD)[1]
+    assert compare.diff_thr.value() == recipe.diff_threshold
+    compare.min_area.setValue(recipe.min_defect_area + 5)  # tried, not saved
+    win.navigate("Home")
+    win.navigate("Compare")
+    assert compare.min_area.value() == recipe.min_defect_area + 5, "no revision since: the form keeps what was tried"
+    recipe.diff_threshold += 20
+    ctx.save_recipe(recipe)  # as Recipe Editor's Save Recipe stores it
+    win.navigate("Recipe Editor")
+    win.navigate("Compare")
+    assert compare.diff_thr.value() == recipe.diff_threshold and compare.min_area.value() == recipe.min_defect_area
+    compare.ssim_min.setValue(compare.ssim_min.value() - 0.01)
+    compare.save_recipe()
+    saved = ctx.recipe(BOARD)[1]
+    assert saved.diff_threshold == recipe.diff_threshold and saved.ssim_min == pytest.approx(recipe.ssim_min - 0.01)
+    qtbot.waitUntil(lambda: ctx.jobs.idle() and compare._bg is None, timeout=20000)
+
+
+def test_req_cmp_003_re_evaluate_hides_board_picture_no_longer_stored(
+    qtbot: QtBot, trained_ctx: AppContext, ng_board: Path
+) -> None:
+    """#172: a stored result whose picture was deleted says "Board picture no longer stored"; its own Re-evaluate ›
+    shows the fresh result, and the block goes."""
+    ctx = trained_ctx
+    ctx.inspect_file(BOARD, str(ng_board))
+    rec = ctx.inspections(board_model=BOARD)[0]
+    win = _window(qtbot, ctx, "Engineer")
+    compare = win.pages["Compare"]
+    assert isinstance(compare, ComparePage)
+    win.navigate("Compare")
+    qtbot.waitUntil(lambda: ctx.jobs.idle() and compare._bg is None, timeout=20000)
+    Path(rec["overlay_path"]).unlink()
+    compare.show_stored(rec["id"])
+    qtbot.waitUntil(compare.test_empty.isVisible, timeout=10000)
+    assert compare.test_empty.heading.text() == "Board picture no longer stored"
+    compare.test_empty.link.click()  # Re-evaluate ›
+    qtbot.waitUntil(lambda: compare._bg is None and compare.test_view._pix is not None, timeout=20000)
+    assert compare.stored is None and compare.test_empty.isHidden(), "the fresh result is not under the block"

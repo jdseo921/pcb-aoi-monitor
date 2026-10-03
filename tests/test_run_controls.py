@@ -28,7 +28,7 @@ from aoi.ui import theme
 from aoi.ui.main_window import MainWindow
 from aoi.ui.pages.inspection import InspectionPage
 from aoi.ui.widgets.image_view import ImageView
-from tests.test_req_done_in_v01 import _window
+from tests.test_req_done_in_v01 import BOARD, _window
 
 BUDGET_S = 0.1  # REQ-INSP-005: a response within 100 ms; REQ-INSP-002: the verdict within 100 ms of the result
 MIN_W, MIN_H = 120, theme.RUN_CONTROL_H  # the plan's 120 px wide; the sketch's T+, 56 px tall
@@ -329,3 +329,41 @@ def test_req_insp_005_an_engine_built_for_the_state_before_is_dropped(
     press(qtbot, win, page.act_next)
     qtbot.waitUntil(lambda: page.worker is None, timeout=30000)
     assert len(engine.builds) == 2 and page.inspector is not None, "the next board built the engine again"
+
+
+def test_req_insp_005_a_board_model_change_stops_the_run(
+    qtbot: QtBot, trained_ctx: AppContext, synthetic_dataset: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """#172: the header's board model changed while a run is on: the board in hand is saved under the run's board
+    model, no board of the queue starts under the new one, and the status bar and the alarm log say so with
+    AOI-INSP-012; the board in hand is not the last inspected board of the new board model."""
+    trained_ctx.ensure_board_model("ZZZ")
+    win = _window(qtbot, trained_ctx, "Operator")
+    page = win.pages["Inspection"]
+    assert isinstance(page, InspectionPage)
+    win.navigate("Inspection")
+    qtbot.waitUntil(trained_ctx.jobs.idle, timeout=10000)
+    gate, started, real = threading.Event(), [], Inspector.inspect
+
+    def inspect(engine: Inspector, image: np.ndarray) -> InspectionResult:
+        started.append(perf_counter())
+        assert len(started) != 2 or gate.wait(30), "the test did not release the second board"
+        return real(engine, image)
+
+    monkeypatch.setattr(Inspector, "inspect", inspect)
+    page._set_queue(list_images(synthetic_dataset / "test" / "ok")[:4])
+    page.start_run()
+    qtbot.waitUntil(lambda: len(started) == 2, timeout=60000)  # the second board is in hand
+    win.bm_combo.setCurrentText("ZZZ")  # a pick, or the mouse wheel over the box
+    assert not page.running and page.worker is not None and not page.act_stop.isEnabled()
+    assert win.statusBar().currentMessage().startswith("Run stopped: the board model changed from TINY to ZZZ.")
+    assert trained_ctx.alarms()[0]["code"] == "AOI-INSP-012" and "AOI-INSP-012" in page.alarms.item(0).text()
+    gate.set()
+    qtbot.waitUntil(lambda: page.worker is None and trained_ctx.jobs.idle(), timeout=60000)
+    assert [r["board_model"] for r in trained_ctx.inspections()] == [BOARD, BOARD], "the board in hand kept TINY"
+    assert len(started) == 2 and page.queue_pos == 1 and not page.running
+    assert page.last is None and page.last_id is None and win.last_inspected is None, "not ZZZ's last board"
+    assert "inspected under board model TINY" in win.statusBar().currentMessage()
+    page.running, page.run_board_model = True, BOARD  # a run of TINY, should one reach Next Board under ZZZ
+    page.next_board()
+    assert page.worker is None and not page.running and len(started) == 2, "no board of it starts under ZZZ"

@@ -57,6 +57,7 @@ MODES = [  # the Show combo, in this order; shown through tr()
     QT_TRANSLATE_NOOP("ComparePage", "Defect boxes only"),
 ]
 MODE_SIDE, MODE_DIFF, MODE_AI, MODE_BOXES = range(4)
+NO_VERDICT = "—"  # the banner with no result shown
 Stored: TypeAlias = "tuple[np.ndarray | None, Judged, InspectionResult | None]"  # golden board, why not, result
 JUDGED: dict[Judged, str] = {  # why a stored result's golden board is not shown; today's would mislead
     "none": QT_TRANSLATE_NOOP("ComparePage", "This result was judged without a Golden board."),
@@ -104,6 +105,8 @@ class ComparePage(Page):
         self._res: InspectionResult | None = None
         self.stored: dict[str, Any] | None = None  # the record of the stored result shown; None for a fresh inspection
         self.as_judged: tuple[str, np.ndarray] | None = None  # its golden board, which Re-evaluate keeps (REQ-CMP-003)
+        self.record_board_model: str | None = None  # the board model of the record the test board came from, if any
+        self.form_revision: tuple[str, int] | None = None  # the board model and recipe revision the form came from
         self._fitted = False
 
         bar = QHBoxLayout()
@@ -132,6 +135,7 @@ class ComparePage(Page):
         self.ref_empty, self.test_empty = EmptyState(self.ref_view), EmptyState(self.test_view)
         self.ref_view.link(self.test_view)  # zoom/pan stay in sync
         self.busy = BusyOverlay(self.test_view, self.tr("Inspecting…"))  # where the result will appear
+        self.busy.cancel_button.clicked.connect(self._cancelled)  # at the press, not when the job stops (#172)
         for column, (label, view) in enumerate(((self.ref_label, self.ref_view), (self.test_label, self.test_view))):
             label.setWordWrap(True)  # a long file name wraps rather than widen its pane: the two stay the same width
             label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignBottom)  # each label over its view
@@ -144,7 +148,7 @@ class ComparePage(Page):
         panel = QWidget()
         pl = QVBoxLayout(panel)
         pl.setContentsMargins(8, 0, 0, 0)
-        self.verdict = QLabel("—")
+        self.verdict = QLabel(NO_VERDICT)
         self.verdict.setStyleSheet(theme.verdict_style("INFO"))
         self.verdict.setMinimumHeight(theme.BANNER_H)
         pl.addWidget(self.verdict)
@@ -207,7 +211,7 @@ class ComparePage(Page):
 
     # --- inputs ------------------------------------------------------------------
     def set_test(self, path: str) -> None:
-        self.test_path, self.as_judged = path, None
+        self.test_path, self.as_judged, self.record_board_model = path, None, None  # a file: the header's board model
         self.test_empty.hide()
         self._fitted = False
         self.run()
@@ -242,7 +246,8 @@ class ComparePage(Page):
     def _load_recipe_into_form(self) -> None:
         if not self.board_model:
             return
-        _, r = self.ctx.recipe(self.board_model)
+        rev, r = self.ctx.recipe(self.board_model)
+        self.form_revision = (self.board_model, rev)  # on_show loads the form again once another revision is saved
         self.ai_thr.setValue(r.anomaly_threshold or 0)
         self.diff_thr.setValue(r.diff_threshold)
         self.min_area.setValue(r.min_defect_area)
@@ -265,6 +270,10 @@ class ComparePage(Page):
         """Load the reference and inspect the test image on a pool thread (REQ-SET-021); the form is read here."""
         bm = self.board_model
         if not bm:
+            return
+        if self.test_path and self.record_board_model not in (None, bm):  # a record's board is judged under its own
+            file, own = Path(self.test_path).name, self.record_board_model  # board model, never the header's (#172)
+            self.error(AoiError("AOI-CMP-005", tried=bm, file=file, judged=own))
             return
         self.stored = None  # a fresh inspection with the form's thresholds, not a stored result
         self.note.hide()
@@ -296,6 +305,7 @@ class ComparePage(Page):
         ref, res = out
         self._show_reference(ref)
         if res is not None:
+            self.test_empty.hide()  # a fresh result: no "Board picture no longer stored" over it (#172)
             self._show_result(res)
             self.redraw()
 
@@ -364,6 +374,7 @@ class ComparePage(Page):
             self.error(AoiError("AOI-CMP-002", id=inspection_id, file=file))
             return
         self.stored, self.test_path, self.ref_override, self.as_judged = rec, rec["image_path"], None, None
+        self.record_board_model = rec["board_model"]  # Re-evaluate judges the board under it (#172)
         self._fitted = False
         self.test_empty.hide()
         self.test_view.set_image(None)  # the board shown before goes at once, not when this one's picture arrives
@@ -478,11 +489,34 @@ class ComparePage(Page):
         if (bm := self.checked_board_model()) is None:
             return
         rev = self.ctx.save_recipe(self._form_recipe(bm))
+        self.form_revision = (bm, rev)
         self.shell.status(self.tr("Recipe saved as revision {revision}").format(revision=rev))
+
+    def _clear_result(self) -> None:
+        """No result on the page: the banner, the decision table, the explanation and the board's pictures go."""
+        self.res = None
+        self.verdict.setText(NO_VERDICT)
+        self.verdict.setStyleSheet(theme.verdict_style("INFO"))
+        fill_table(self.metrics, [])
+        self.why.clear()
+        self.test_view.set_image(None)
+        self.ref_view.clear_overlays()
+
+    def _cancelled(self) -> None:
+        """Cancel on the busy overlay: the board named over the picture was not judged, so no verdict, table or picture
+        of the board before stays under its name (#172); Re-evaluate inspects it."""
+        self._clear_result()
+        file = Path(self.test_path).name if self.test_path else ""
+        what = self.tr("{file} was not inspected; press Re-evaluate to inspect it.").format(file=file)
+        self.test_empty.show_state(self.tr("Inspection cancelled"), what, self.tr("Re-evaluate ›"), self.run)
 
     def on_board_model_changed(self, name: str | None) -> None:
         self.res = self.stored = self.as_judged = None  # the last board model's heat views go with its result
         self.note.hide()
+        if self.record_board_model not in (None, name):  # a record's board is not judged under another board model
+            self.test_path = self.record_board_model = None  # (#172): the page starts empty
+            self.test_label.setText(self.tr("Test board"))
+            self._clear_result()
         self._load_recipe_into_form()
         if name:
             self.run()
@@ -492,5 +526,5 @@ class ComparePage(Page):
         if self.res is None and self.test_path is None:
             step = self.empty_step(self.tr("Inspect a board on Inspection, or pick a test image."), "Inspection")
             self.test_empty.show_state(self.tr("No board to compare yet"), *step)
-        if self.ai_thr.value() == 0 and self.diff_thr.value() == 1:
-            self._load_recipe_into_form()
+        if self.board_model and self.form_revision != (self.board_model, self.ctx.recipe(self.board_model)[0]):
+            self._load_recipe_into_form()  # a revision saved since, on Recipe Editor: Save to Recipe never reverts it
