@@ -5,6 +5,7 @@ the UI thread, which is where widgets may change."""
 from __future__ import annotations
 
 import gc
+import json
 import logging
 import subprocess
 import sys
@@ -17,6 +18,7 @@ from pathlib import Path
 import pytest
 from pytestqt.qtbot import QtBot
 
+from aoi import logging_setup
 from aoi.core.jobs import Job, Jobs
 from aoi.core.services import AppContext
 from aoi.ui.workers import Worker, start
@@ -114,7 +116,25 @@ def test_req_set_021_a_failing_listener_is_logged_and_the_job_still_finishes(job
         logging.getLogger("aoi").removeHandler(handler)
     (record,) = records
     assert record.getMessage() == "job.listener_failed" and record.exc_info and record.exc_info[0] is ZeroDivisionError
-    assert (record.job, record.event) == ("count", "result")  # type: ignore[attr-defined]
+    assert (record.job, record.listener) == ("count", "result")  # type: ignore[attr-defined]
+
+
+def test_req_log_004_a_failed_listener_keeps_its_event_name_in_the_log(tmp_path: Path, jobs: Jobs) -> None:
+    """#171: the log line of a listener that failed reads event "job.listener_failed", with the listener under its own
+    key; before, the extra named "event" replaced the event name. No extra replaces a line's fixed fields."""
+    log = logging_setup.setup(tmp_path)
+    try:
+        job = jobs.submit(Job("count", count_to, 1, with_progress=True).on_result(lambda r: 1 / 0))
+        assert job.wait(10)
+        log.warning("clash", extra={"event": "mine", "level": "mine", "trace": "mine"})
+    finally:
+        logging_setup.close(log)
+    lines = [json.loads(line) for f in (tmp_path / "logs").glob("aoi-*.jsonl") for line in f.open(encoding="utf-8")]
+    failed, clash = lines
+    assert (failed["event"], failed["job"], failed["listener"]) == ("job.listener_failed", "count", "result")
+    assert "ZeroDivisionError" in failed["trace"]
+    assert (clash["event"], clash["level"], "trace" in clash) == ("clash", "WARNING", False)
+    assert clash["extra_event"] == clash["extra_level"] == clash["extra_trace"] == "mine"
 
 
 def test_req_set_021_worker_signals_arrive_on_the_ui_thread_even_when_nothing_references_it(
