@@ -558,6 +558,16 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <location line="+17"/>
+        <source>Exporting a report</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+9"/>
+        <source>the report came out empty</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <location filename="../ui/errors.py" line="+67"/>
         <source>unhandled</source>
         <translation type="unfinished"></translation>
@@ -905,6 +915,81 @@
     <message>
         <location line="+5"/>
         <source>Nothing was judged. Open the result on Compare with its own board model picked, then try the thresholds again.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+55"/>
+        <source>Images not imported</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Copying {path} into the workspace failed ({reason}), so none of the {count} image(s) picked were imported.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>Check that the file is still there and can be opened and that the workspace drive has free space, then import the images again.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+8"/>
+        <source>Folder import stopped part-way</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Copying {path} into the workspace failed ({reason}), so the import of {folder} stopped at image {at} of {total}; the {imported} image(s) imported before it stay in the sample table.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>Check that the file is still there and can be opened and that the workspace drive has free space. Importing the folder again would add those {imported} a second time: import the images not yet imported with + OK or + NG, or first remove the {imported} from the sample table.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+25"/>
+        <source>Export stopped part-way</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Copying {file} to {folder} failed ({reason}), so the export stopped after {copied} of {total} overlay image(s); the audit trail records those {copied}.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>Check that the drive is connected, has free space and can be written, that nothing in the folder already has the name {file}, and that the record&apos;s overlay image is still in the results folder; then export again.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+9"/>
+        <source>Export not written</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>The export {path} could not be written: {reason}. Nothing was exported, and a file of that name already there is left as it was.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>Choose a folder that can be written, close any program that has the file open and check the free disk space, then export again.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+21"/>
+        <source>Unknown user</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>There is no user named {name} in this workspace, so no role to sign in with.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Pick a user from the list under Switch User; an Admin adds users on the Settings page.</source>
         <translation type="unfinished"></translation>
     </message>
 </context>

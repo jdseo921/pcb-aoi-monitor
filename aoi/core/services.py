@@ -1025,7 +1025,7 @@ class AppContext:
         self._audit_files([Path(path)], "export.csv", what, None, {"path": stored, "rows": len(rows)})
         return len(rows)
 
-    @requires("Engineer", "Exporting a report")
+    @requires("Engineer", QT_TRANSLATE_NOOP("Errors", "Exporting a report"))
     def export_report(
         self, path: str | Path, pdf: bytes, board_model: str, run_uuid: str | None, model_version: str | None
     ) -> None:
@@ -1033,7 +1033,9 @@ class AppContext:
         export under the test run it reports (#180). An empty `pdf`, or a file that cannot be written, is refused with
         AOI-LOG-002 and nothing is written or audited; a report whose entry cannot be written is removed (#178)."""
         if not pdf:
-            raise AoiError("AOI-LOG-002", path=str(path), reason="the report came out empty")
+            raise AoiError(
+                "AOI-LOG-002", path=str(path), reason=QT_TRANSLATE_NOOP("Errors", "the report came out empty")
+            )
         with _export_write(path):
             atomic.write_bytes(path, pdf)
         after = {
