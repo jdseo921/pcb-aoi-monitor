@@ -159,7 +159,7 @@ def test_req_log_004_export_report_is_written_whole_or_not_at_all_and_audited(
     assert good.read_bytes() == earlier and [p.name for p in tmp_path.iterdir() if p.name.endswith(".tmp")] == []
     assert [t for t, _ in dialogs][1:] == ["AOI-LOG-002 Export not written"] and len(audited()) == 1
 
-    win.set_role("Operator", "operator")
+    win.set_user("operator")
     refused = tmp_path / "operator.pdf"
     _save_as(monkeypatch, refused)
     page.export_report()

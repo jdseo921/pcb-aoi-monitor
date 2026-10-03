@@ -205,7 +205,7 @@ def test_req_set_019_the_app_opens_when_the_golden_board_file_is_gone(
         golden = Path(str(trained_ctx.reference_image(BOARD)))
         change(golden)
         alarms = trained_ctx.alarms()
-        trained_ctx.set_user("operator", "Operator")  # as at every start: the pages load the board model first
+        trained_ctx.set_user("operator")  # as at every start: the pages load the board model first
         win = _window(qtbot, trained_ctx, "Operator")
         compare, editor = win.pages["Compare"], win.pages["Recipe Editor"]
         qtbot.waitUntil(lambda page=compare: trained_ctx.jobs.idle() and page._bg is None, timeout=20000)
@@ -214,7 +214,7 @@ def test_req_set_019_the_app_opens_when_the_golden_board_file_is_gone(
         assert (compare.ref_empty.heading.text(), compare.ref_empty.link.isVisible()) == (heading, False)
         assert compare.ref_empty.sentence.text().startswith(f"{code} ")
         assert compare.ref_empty.sentence.text().endswith(f"Ask an Engineer to put the file back, or to {fix}")
-        win.set_role("Engineer", "engineer")
+        win.set_user("engineer")
         for page, empty in (("Recipe Editor", editor.view_empty), ("Compare", compare.ref_empty)):
             win.navigate(page)
             assert empty.isVisible() and empty.heading.text() == heading and empty.link.text() == "Open Training ›"
@@ -324,14 +324,14 @@ def test_req_set_019_compare_says_no_golden_board_yet_for_the_role_signed_in(
     """Compare's "No Golden board yet" pane is built at start-up for the Operator; an Engineer who signs in reads the
     step for the Engineer with its link, as on the Recipe Editor (#176 review)."""
     trained_ctx.ensure_board_model("ZZZ")
-    trained_ctx.set_user("operator", "Operator")
+    trained_ctx.set_user("operator")
     win = _window(qtbot, trained_ctx, "Operator")
     compare = win.pages["Compare"]
     win._on_board_model("ZZZ")
     win.navigate("Compare")
     qtbot.waitUntil(lambda: trained_ctx.jobs.idle() and compare._bg is None, timeout=20000)
     assert compare.ref_empty.heading.text() == "No Golden board for ZZZ yet" and not compare.ref_empty.link.isVisible()
-    win.set_role("Engineer", "engineer")
+    win.set_user("engineer")
     assert compare.ref_empty.isVisible() and compare.ref_empty.link.text() == "Open Training ›"
 
 
@@ -458,7 +458,7 @@ def test_req_set_019_a_refused_alarm_never_replaces_the_result_not_saved_error(
     qtbot.waitExposed(win)
     monkeypatch.setattr(sys, "excepthook", sys.excepthook)  # put the original back after the test
     install_excepthook(ctx, win)
-    win.set_role("Operator", "operator")
+    win.set_user("operator")
     win.bm_combo.setCurrentText("NOAI")
     win.navigate("Inspection")
     page = cast(InspectionPage, win.pages["Inspection"])

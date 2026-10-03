@@ -260,6 +260,12 @@ CODES: dict[str, ErrorCode] = {
             "Give another user the Admin role first, then change this one.",
         ),
         ErrorCode(
+            "AOI-USR-003",
+            "Unknown user",
+            "There is no user named {name} in this workspace, so no role to sign in with.",
+            "Pick a user from the list under Switch User; an Admin adds users on the Settings page.",
+        ),
+        ErrorCode(
             "AOI-SET-001",
             "Workspace from version 0.1",
             "This workspace was created by AOI PoC Inspector 0.1 and cannot be upgraded.",

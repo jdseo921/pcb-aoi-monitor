@@ -235,7 +235,7 @@ def test_req_set_004_sizes_and_contrast_on_every_page(
         win.show()
         qtbot.waitExposed(win)
         for role in ROLES:
-            win.set_role(role, role.lower())
+            win.set_user(role.lower())
             for title, page in win.pages.items():
                 if role not in page.roles:
                     continue

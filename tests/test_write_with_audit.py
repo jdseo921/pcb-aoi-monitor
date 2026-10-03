@@ -71,7 +71,7 @@ def test_req_log_004_a_write_whose_audit_entry_fails_leaves_nothing(
     method: str, trained_ctx: AppContext, synthetic_dataset: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     action, call = WRITES[method]
-    trained_ctx.set_user("admin", "Admin")  # every write's role
+    trained_ctx.set_user("admin")  # every write's role
     SETUP.get(method, lambda ctx: None)(trained_ctx)
     out = tmp_path / "out"
     out.mkdir()
@@ -89,7 +89,7 @@ from aoi.config import Settings
 from aoi.core.recipe import Recipe
 from aoi.core.services import AppContext
 ctx = AppContext(Settings(workspace={workspace.workspace!r}, device="cpu"))
-ctx.set_user("engineer", "Engineer")
+ctx.set_user("engineer")
 ctx.ensure_board_model("B1")
 add = ctx.db.add_audit
 ctx.db.add_audit = lambda *a: os._exit(9) if a[2] == "recipe.save" else add(*a)  # the process dies in between
@@ -107,7 +107,7 @@ def test_req_trn_001_an_import_that_fails_part_way_stores_nothing(
 ) -> None:
     win = MainWindow(ctx)
     qtbot.addWidget(win)
-    win.set_role("Engineer", "engineer")
+    win.set_user("engineer")
     win._on_board_model("NEWB")
     page = win.pages["Training"]
     files = [tmp_path / f"ok{i}.png" for i in range(3)]
@@ -151,7 +151,7 @@ def test_req_trn_001_a_folder_import_that_fails_part_way_says_what_was_imported(
     monkeypatch.setattr(atomic, "copy_file", copy_or_refuse)
     win = MainWindow(ctx)
     qtbot.addWidget(win)
-    win.set_role("Engineer", "engineer")
+    win.set_user("engineer")
     win._on_board_model("NEWB")
     page = win.pages["Training"]
     page.import_from(str(folder))

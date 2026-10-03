@@ -138,7 +138,7 @@ def build_workspace(root: Path) -> AppContext:
     write_dataset(dataset, DATASET_OK, DATASET_NG, DATASET_SEED)
     with mock.patch("uuid.uuid4", side_effect=counted_uuids()):
         ctx = AppContext(Settings(workspace=str(root / "workspace"), device="cpu"))
-        ctx.set_user("engineer", "Engineer")
+        ctx.set_user("engineer")
         ctx.import_samples(BOARD_MODEL, [str(p) for p in list_images(dataset / "train" / "ok")], "OK")
         ctx.import_samples(BOARD_MODEL, [str(p) for p in list_images(dataset / "train" / "ng")], "NG")
         ctx.train(BOARD_MODEL, epochs=TINY_EPOCHS, image_size=TINY_IMAGE_SIZE)
@@ -289,7 +289,7 @@ def render_stored(win: Any, ctx: AppContext, out: Path) -> dict[str, Path]:
     record = ctx.inspections(board_model=BOARD_MODEL)[0]["id"]
     golden = Path(str(ctx.reference_image(BOARD_MODEL)))
     kept = golden.read_bytes()
-    win.set_role("Operator", "operator")
+    win.set_user("operator")
     try:
         for name in STORED_STATES:
             golden.write_bytes(kept if name == STORED_STATES[0] else kept + b"\0")
@@ -324,7 +324,7 @@ def render_pages(
     QTest.qWaitForWindowExposed(win)
     files: dict[str, Path] = {}
     for role in ROLES:
-        win.set_role(role, role.lower())
+        win.set_user(role.lower())
         for title, page in win.pages.items():
             if role not in page.roles:
                 continue

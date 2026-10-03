@@ -1113,7 +1113,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+7"/>
+        <location line="+8"/>
         <source>{user}  ·  {role}</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1358,7 +1358,7 @@
 <context>
     <name>Page</name>
     <message>
-        <location filename="../ui/main_window.py" line="-327"/>
+        <location filename="../ui/main_window.py" line="-328"/>
         <source>Home</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1928,12 +1928,12 @@
     </message>
     <message>
         <location line="+0"/>
-        <location line="+48"/>
+        <location line="+45"/>
         <source>Role</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-46"/>
+        <location line="-43"/>
         <source>Add / Change User</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1963,7 +1963,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+26"/>
+        <location line="+23"/>
         <source>Saved. Restart the app to switch the workspace.</source>
         <translation type="unfinished"></translation>
     </message>

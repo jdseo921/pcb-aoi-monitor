@@ -48,7 +48,7 @@ def test_main_window_shows_every_page_offscreen(qtbot: QtBot, ctx: AppContext) -
 def test_operator_cannot_open_an_admin_page(qtbot: QtBot, ctx: AppContext) -> None:
     win = MainWindow(ctx)
     qtbot.addWidget(win)
-    win.set_role("Operator", "operator")
+    win.set_user("operator")
     win.navigate("Settings")
     assert win.stack.currentWidget() is win.pages["Home"]
     assert win.statusBar().currentMessage() == "Settings needs the Admin role"
@@ -92,17 +92,17 @@ def test_switch_user_refreshes_the_page_on_screen(qtbot: QtBot, ctx: AppContext)
     can export from Logs & Export at once, and an Operator on Compare no longer sees Save to Recipe enabled."""
     win = MainWindow(ctx)
     qtbot.addWidget(win)
-    win.set_role("Operator", "operator")
+    win.set_user("operator")
     assert win.navigate("Logs & Export")
     logs = cast(LogsPage, win.pages["Logs & Export"])
     assert not logs.btn_csv.isEnabled()
-    win.set_role("Engineer", "engineer")
+    win.set_user("engineer")
     assert win.stack.currentWidget() is logs
     assert logs.btn_csv.isEnabled() and logs.btn_img.isEnabled() and logs.btn_arch.isEnabled()
     assert win.navigate("Compare")
     compare = cast(ComparePage, win.pages["Compare"])
     assert compare.btn_save.isEnabled()
-    win.set_role("Operator", "operator")
+    win.set_user("operator")
     assert win.stack.currentWidget() is compare and not compare.btn_save.isEnabled()
 
 

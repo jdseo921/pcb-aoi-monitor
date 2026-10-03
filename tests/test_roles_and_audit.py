@@ -5,14 +5,16 @@ the entry (re-evaluating a result, since S28a)."""
 from __future__ import annotations
 
 import inspect
+import sqlite3
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any, cast
 
 import pytest
-from PySide6.QtWidgets import QInputDialog
+from PySide6.QtWidgets import QInputDialog, QMessageBox
 from pytestqt.qtbot import QtBot
 
+from aoi.config import Settings, default_workspace
 from aoi.core.recipe import Recipe
 from aoi.core.services import REQUIRED_ROLE, ROLES, AppContext
 from aoi.errors import AoiError
@@ -55,6 +57,7 @@ WRITES: dict[str, tuple[str, Callable[[AppContext, Path, Path], Any]]] = {
     ),
     "archive_old": ("inspection.archive", lambda ctx, data, tmp: ctx.archive_old(-1)),
     "add_user": ("user.change", lambda ctx, data, tmp: ctx.add_user("kim", "Engineer")),
+    "save_settings": ("settings.change", lambda ctx, data, tmp: ctx.save_settings({"default_epochs": 7})),
 }
 # what only an Engineer does that writes nothing, so no audit entry: re-evaluating a result (REQ-CMP-005, since S28a)
 CHECKED_READS: dict[str, Callable[[AppContext, Path, Path], Any]] = {
@@ -65,12 +68,12 @@ UNCHECKED = {
     "alarm", "alarms", "audit", "audit_entries", "report_error", "close", "set_user", "load_model", "recipe",
     "inspector", "inspect", "inspect_file", "load_image", "log_result", "board_models", "reference_image", "samples",
     "sample_path", "models", "model", "active_model", "recipe_history", "inspections", "defects_for", "checks_for",
-    "checks_for_many", "inspection_result", "inspection", "judged_reference", "users", "board_status",
+    "checks_for_many", "inspection_result", "inspection", "judged_reference", "users", "board_status", "start_user",
 }  # fmt: skip
 CALLS = {**{name: call for name, (_, call) in WRITES.items()}, **CHECKED_READS}
 # The lowest role allowed each call, copied from the write table of docs/ARCHITECTURE.md §5 and REQ-CMP-005, never read
 # from the decorators under test (#181): built from REQUIRED_ROLE, a lowered @requires refused fewer roles and passed.
-EXPECTED_ROLE = {name: "Engineer" for name in CALLS} | {"add_user": "Admin"}
+EXPECTED_ROLE = {name: "Engineer" for name in CALLS} | {"add_user": "Admin", "save_settings": "Admin"}
 REFUSED = [(name, role) for name in CALLS for role in ROLES[: ROLES.index(EXPECTED_ROLE[name])]]
 
 
@@ -84,7 +87,7 @@ def test_req_usr_001_every_appcontext_call_is_classified() -> None:
 def test_req_usr_001_lower_role_is_refused(
     method: str, role: str, trained_ctx: AppContext, synthetic_dataset: Path, tmp_path: Path
 ) -> None:
-    trained_ctx.set_user("someone", role)
+    trained_ctx.set_user(role.lower())  # the seeded user of that role
     before = trained_ctx.audit_entries()  # the fixture's own imports and training
     with pytest.raises(AoiError) as refused:
         CALLS[method](trained_ctx, synthetic_dataset, tmp_path)
@@ -95,7 +98,7 @@ def test_req_usr_001_lower_role_is_refused(
 
 def test_req_log_004_writes_are_audited(trained_ctx: AppContext, synthetic_dataset: Path, tmp_path: Path) -> None:
     ctx = trained_ctx
-    ctx.set_user("admin", "Admin")
+    ctx.set_user("admin")
     earlier = {e["uuid"] for e in ctx.audit_entries()}  # the fixture's own imports and training
     ctx.inspect_file("TINY", ctx.samples("TINY", "OK")[0]["path"])  # an Operator's record: not audited, exportable
     assert {e["uuid"] for e in ctx.audit_entries()} == earlier
@@ -119,6 +122,7 @@ def test_req_log_004_writes_are_audited(trained_ctx: AppContext, synthetic_datas
     assert by_action["sample.update"]["after"] == {"label": "NG", "defect_type": "Scratch"}
     assert not Path(by_action["board_model.reference"]["after"]["reference"]).is_absolute()
     assert by_action["user.change"]["before"] is None and by_action["user.change"]["after"]["role"] == "Engineer"
+    assert by_action["settings.change"]["after"] == {"default_epochs": 7} and ctx.settings.default_epochs == 7
     assert by_action["inspection.archive"]["after"]["archived"] == 1 and by_action["export.csv"]["after"]["rows"] == 1
     assert by_action["recipe.save"]["before"] == Recipe(board_model="TINY").to_dict()  # revision 1, the default
     assert by_action["test.run"]["after"]["model_version"] == versions[1]  # the test ran after the rollback
@@ -126,12 +130,39 @@ def test_req_log_004_writes_are_audited(trained_ctx: AppContext, synthetic_datas
 
 def test_req_usr_001_the_current_user_is_held_with_uuid_name_and_role(ctx: AppContext) -> None:
     assert (ctx.user, ctx.role, ctx.user_uuid) == ("engineer", "Engineer", ctx.db.user_uuid("engineer"))
-    ctx.set_user("operator", "Operator")
+    ctx.set_user("operator")
     assert ctx.role == "Operator" and ctx.user_uuid == ctx.db.user_uuid("operator")
-    ctx.set_user("nobody", "Admin")  # a picked name with no users row (G1 keeps the picker, ADR 0002)
-    uid = ctx.audit("test.only", "x", None, None, None)
-    (entry,) = ctx.audit_entries()
-    assert ctx.user_uuid is None and entry["uuid"] == uid and entry["user_uuid"] is None
+    ctx.set_user("admin")
+    ctx.add_user("operator", "Engineer")
+    ctx.set_user("operator")
+    assert ctx.role == "Engineer"  # the role comes from the users table, never from the caller (#197)
+    with pytest.raises(AoiError) as unknown:
+        ctx.set_user("nobody")  # a name with no users row has no role to sign in with
+    assert unknown.value.code == "AOI-USR-003" and (ctx.user, ctx.role) == ("operator", "Engineer")
+    ctx.set_user("admin")
+    ctx.add_user("kim", "Admin")
+    ctx.add_user("admin", "Operator")  # the signed-in Admin gives up the role: the next check reads the stored one
+    assert (ctx.user, ctx.role) == ("admin", "Operator")
+    with pytest.raises(AoiError) as refused:
+        ctx.save_settings({"default_epochs": 9})
+    assert refused.value.code == "AOI-USR-001" and ctx.settings.default_epochs != 9
+
+
+def test_req_log_004_settings_whose_entry_cannot_be_written_stay_as_they_were(
+    ctx: AppContext, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A Settings save whose audit entry cannot be written (the disk full, the database held) leaves settings.json and
+    the running app as they were, as every other write does (#178); before, the change stayed with no entry."""
+    ctx.set_user("admin")
+    epochs = ctx.settings.default_epochs
+
+    def full(*a: object, **k: object) -> None:
+        raise sqlite3.OperationalError("database or disk is full")
+
+    monkeypatch.setattr(ctx.db, "add_audit", full)
+    with pytest.raises(sqlite3.OperationalError):
+        ctx.save_settings({"default_epochs": epochs + 1})
+    assert ctx.settings.default_epochs == epochs and Settings.load().default_epochs == epochs
 
 
 def test_req_usr_001_the_last_admin_keeps_the_admin_role(
@@ -167,3 +198,88 @@ def test_req_usr_001_the_last_admin_keeps_the_admin_role(
     page.add_user()
     assert {u["name"]: u["role"] for u in ctx.users()}["admin"] == "Engineer"
     assert ctx.role == "Engineer" and win.stack.currentWidget() is win.pages["Home"]  # Settings is the Admin's
+
+
+def test_req_usr_001_saving_settings_needs_the_admin_role_and_is_audited(
+    qtbot: QtBot, ctx: AppContext, monkeypatch: pytest.MonkeyPatch, dialogs: list[tuple[str, str]]
+) -> None:
+    """#197: the Settings page saved settings.json through `ctx.settings` with no role check and no audit entry, so
+    an Operator's save went through and a one-day log retention, which archives records at every start, had no trace.
+    It saves through `AppContext.save_settings` now: an Operator is refused with AOI-USR-001 and nothing changes, on
+    disk or in the running app; an Admin's save writes one `settings.change` entry with the values before and after."""
+    monkeypatch.setattr(QMessageBox, "information", staticmethod(lambda *a: QMessageBox.StandardButton.Ok))
+    win = MainWindow(ctx)  # an empty workspace opens as Admin
+    qtbot.addWidget(win)
+    page = cast(SettingsPage, win.pages["Settings"])
+    f = default_workspace() / "settings.json"
+    f.parent.mkdir(parents=True, exist_ok=True)
+    f.write_text('{"device": "cpu"}', encoding="utf-8")  # the retention not in the file: the default is in effect
+    on_disk = f.read_bytes()
+
+    def running() -> tuple[str, int]:
+        return ctx.settings.device, ctx.settings.log_retention_days
+
+    before = running()
+    win.set_user("operator")
+    page.device.setCurrentText("cuda")
+    page.ret.setValue(1)
+    page.save()
+    assert [title for title, _ in dialogs] == ["AOI-USR-001 Not allowed for this role"]
+    assert dialogs[0][1].startswith("Changing settings needs the Admin role.")
+    assert f.read_bytes() == on_disk and running() == before
+    assert not ctx.audit_entries(action="settings.change")
+    win.set_user("admin")
+    page.save()
+    (entry,) = ctx.audit_entries(action="settings.change")
+    assert (entry["role"], entry["user_uuid"], entry["object_type"]) == ("Admin", ctx.db.user_uuid("admin"), "settings")
+    assert (entry["before"]["device"], entry["before"]["log_retention_days"]) == before
+    assert (entry["after"]["device"], entry["after"]["log_retention_days"]) == ("cuda", 1)
+    from_file = (entry["before"]["workspace"], entry["after"]["workspace"])  # a start would have opened the default
+    assert from_file == (str(default_workspace()), ctx.settings.workspace)
+    saved = Settings.load()
+    assert (saved.device, saved.log_retention_days) == running() == ("cuda", 1)
+
+
+def _restart(qtbot: QtBot, workspace: Settings) -> tuple[AppContext, MainWindow]:
+    """Start again on `workspace`, as main.py does: a new AppContext, then the window."""
+    again = AppContext(workspace)
+    at_init = (again.user, again.role)
+    win = MainWindow(again)
+    qtbot.addWidget(win)
+    stored = {u["name"]: u["role"] for u in again.users()}
+    assert at_init[1] == stored[at_init[0]], at_init  # the context never holds a role the table does not
+    return again, win
+
+
+def test_req_usr_001_a_start_signs_in_with_the_role_the_users_table_holds(qtbot: QtBot, workspace: Settings) -> None:
+    """#197: the start-up user's role was a literal in the code, Admin for 'admin' on a workspace with no board model
+    and Operator for 'operator' otherwise, so a demoted 'admin' started as Admin, could change users and was audited
+    as Admin under the UUID of a user the table holds as Operator, and a promoted 'operator' started as Operator.
+    A start now reads the role from the users table: setting up, the first stored Admin; otherwise 'operator'."""
+    first = AppContext(workspace)
+    first.set_user("admin")
+    first.add_user("kim", "Admin")
+    first.add_user("admin", "Operator")  # kim is still an Admin, so the last-Admin guard (AOI-USR-002) allows it
+    first.close()
+    ctx, win = _restart(qtbot, workspace)  # no board model yet: the station is being set up
+    stored = {u["name"]: u["role"] for u in ctx.users()}
+    assert ctx.role == stored[ctx.user]  # before: 'admin' started as Admin, stored as Operator
+    assert (ctx.user, ctx.role) == ("kim", "Admin")  # the first stored Admin
+    assert win.user_label.text() == f"{ctx.user}  ·  {role_text(ctx.role)}"
+    ctx.add_user("eve", "Engineer")
+    entry = ctx.audit_entries(action="user.change")[0]
+    by_uuid = {u["uuid"]: u["role"] for u in ctx.users()}
+    assert entry["role"] == by_uuid[entry["user_uuid"]] == "Admin"
+
+
+def test_req_usr_001_a_promoted_operator_starts_with_the_stored_role(qtbot: QtBot, workspace: Settings) -> None:
+    """#197, the reverse: 'operator', promoted to Admin, started as Operator once a board model existed."""
+    first = AppContext(workspace)
+    first.set_user("admin")
+    first.ensure_board_model("B1")
+    first.add_user("operator", "Admin")
+    first.close()
+    ctx, win = _restart(qtbot, workspace)  # a board model exists: the station starts with 'operator'
+    assert (ctx.user, ctx.role) == ("operator", "Admin")
+    assert win.user_label.text() == f"operator  ·  {role_text('Admin')}"
+    assert win.navigate("Settings")  # the page follows the stored role too

@@ -50,7 +50,7 @@ def test_req_usr_001_appcontext_reads_and_writes_what_the_screens_need(trained_c
     assert ctx.inspections(board_model="OTHER") == [] and ctx.archive_old() == 0
     assert ctx.archive_old(-1) == 1  # a cutoff in the future, so the record saved this second counts
     assert ctx.inspections() == [] and len(ctx.inspections(include_archived=True)) == 1
-    ctx.set_user("admin", "Admin")  # users are an Admin's to change
+    ctx.set_user("admin")  # users are an Admin's to change
     ctx.add_user("kim", "Engineer")
     assert ("kim", "Engineer") in [(u["name"], u["role"]) for u in ctx.users()]
     assert [h["revision"] for h in ctx.recipe_history("TINY")] == [1]  # revision 1: the stored default (S25a-2)
@@ -111,7 +111,7 @@ def test_req_trn_007_the_reference_sample_is_never_relabelled_ng_or_removed(
     assert (ctx.samples("B", "OK")[0], ctx.audit_entries()) == (first, entries)
     win = MainWindow(ctx)
     qtbot.addWidget(win)
-    win.set_role("Engineer", "engineer")
+    win.set_user("engineer")
     win._on_board_model("B")
     win.navigate("Training")
     page = win.pages["Training"]
@@ -142,7 +142,7 @@ def test_req_trn_007_mark_ng_and_remove_skip_only_the_reference_whatever_the_sel
     assert ctx.reference_image("B") == ctx.sample_path(ref)
     win = MainWindow(ctx)
     qtbot.addWidget(win)
-    win.set_role("Engineer", "engineer")
+    win.set_user("engineer")
     win._on_board_model("B")
     win.navigate("Training")
     page = win.pages["Training"]

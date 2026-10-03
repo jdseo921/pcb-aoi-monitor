@@ -42,7 +42,7 @@ def _window(qtbot: QtBot, ctx: AppContext, role: str = "Engineer") -> MainWindow
     win.resize(1600, 900)
     win.show()
     qtbot.waitExposed(win)
-    win.set_role(role, role.lower())
+    win.set_user(role.lower())
     assert win.board_model == BOARD
     return win
 
