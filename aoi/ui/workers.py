@@ -17,7 +17,8 @@ from ..core.jobs import Job, Jobs
 class WorkerSignals(QObject):
     progress = Signal(object)  # the tuple the function reported: (done, total) or training's (epoch, total, loss, msg)
     result = Signal(object)
-    error = Signal(object)  # the exception itself; Page.error turns it into a coded dialog and a log line
+    error = Signal(object)  # the exception itself; Page.run_in_background logs and alarms it, with a coded dialog
+    # unless the run was cancelled or replaced (#206)
     finished = Signal()
 
 

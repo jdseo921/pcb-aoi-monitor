@@ -235,14 +235,16 @@ class TrainingPage(Page):
             return
         self.run_in_background(
             self._import, bm, folder, with_progress=True,
-            on_result=self._imported, busy=self.busy, on_cancel=lambda _counts: self.refresh(),
+            on_result=self._imported, busy=self.busy, on_cancel=self._import_stopped,
+            on_error=lambda _e: self.refresh(),
         )  # fmt: skip
 
     def _import(
         self, board_model: str, folder: str, progress: Callable[[int, int], None], should_stop: Callable[[], bool]
     ) -> tuple[int, int, AoiError | None]:
         """Pool thread: files and the service layer only, never a widget. One file per call, so what was imported
-        before a file that cannot be copied stays, and the error returned (AOI-TRN-009) says so (#178)."""
+        before a file that cannot be copied stays, and the error returned (AOI-TRN-009) says so (#178); any other
+        error after a file went in is returned as AOI-TRN-010 with the same count (#206)."""
         n_ok = n_ng = 0
         files = list_images(folder)
         for i, p in enumerate(files, 1):
@@ -256,11 +258,18 @@ class TrainingPage(Page):
                     sub = p.parent.name.replace("_", " ").title()
                     dtype = sub if sub in taxonomy.BY_NAME else None
                     n_ng += self.ctx.import_samples(board_model, [str(p)], "NG", dtype)
-            except AoiError as e:
-                if e.code != "AOI-TRN-008":  # this one file not copied; any other refusal is shown as it is
-                    raise
+            except Exception as e:
                 n = {"at": i, "total": len(files), "imported": n_ok + n_ng}
-                stopped = AoiError("AOI-TRN-009", e.detail, path=str(p), reason=e.params["reason"], folder=folder, **n)
+                if isinstance(e, AoiError) and e.code == "AOI-TRN-008":  # this one file not copied
+                    reason, code = e.params["reason"], "AOI-TRN-009"
+                elif n["imported"]:  # files went in before it: the message must say how many (#206)
+                    title = QT_TRANSLATE_NOOP("Errors", "{code} {title}")  # the title in the UI language (#198)
+                    reason = title.fill(code=e.code, title=e.title) if isinstance(e, AoiError) else type(e).__name__
+                    code = "AOI-TRN-010"
+                else:  # nothing imported yet: the error is shown as it is
+                    raise
+                detail = e.detail if isinstance(e, AoiError) else str(e)
+                stopped = AoiError(code, detail, path=str(p), reason=reason, folder=folder, **n)
                 stopped.__cause__ = e
                 return n_ok, n_ng, stopped
             progress(i, len(files))
@@ -272,6 +281,19 @@ class TrainingPage(Page):
         self.refresh()  # the table shows what was imported before the dialog says how far it went
         if stopped is not None:
             self.error(stopped)
+
+    def _import_stopped(self, outcome: tuple[int, int, AoiError | None] | None) -> None:
+        """Cancel stopped the import: the table and the status line show what it imported, and a file it could not
+        import is logged and alarmed with no dialog, since the user has left that import (#206). No newer import can
+        stop it: one import runs at a time (#194)."""
+        self.refresh()
+        if outcome is None:  # stopped before it ran, or it raised (run_in_background reported that)
+            return
+        n_ok, n_ng, stopped = outcome
+        msg = self.tr("Import cancelled: {ok} OK and {ng} NG images imported before it stopped")
+        self.shell.status(msg.format(ok=n_ok, ng=n_ng))
+        if stopped is not None:
+            self.ctx.report_error(stopped, self.title)
 
     def _selected_ids(self) -> list[int]:
         return [int(cell_text(self.samples, i.row(), 0)) for i in self.samples.selectionModel().selectedRows()]

@@ -1081,6 +1081,21 @@
     </message>
     <message>
         <location line="+9"/>
+        <source>Folder import stopped by an error</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Importing {path} failed ({reason}), so the import of {folder} stopped at image {at} of {total}; the {imported} image(s) imported before it stay in the sample table.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>Fix what stopped it (the log file in the workspace&apos;s logs folder has the details; send it to support if the cause is unclear). Importing the folder again would add those {imported} a second time: import the images not yet imported with + OK or + NG, or first remove the {imported} from the sample table.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+10"/>
         <source>Recipe saved since it was opened</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1497,6 +1512,11 @@
     <message>
         <location filename="../data/workspace_lock.py" line="+27"/>
         <source>another copy of this app has this workspace open</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/pages/training.py" line="+266"/>
+        <source>{code} {title}</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -2414,7 +2434,7 @@
 <context>
     <name>NgDialog</name>
     <message>
-        <location filename="../ui/pages/training.py" line="+53"/>
+        <location filename="../ui/pages/training.py" line="-213"/>
         <source>Label NG images</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2527,7 +2547,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+100"/>
+        <location line="+109"/>
         <source>{action}  {key}</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2918,7 +2938,7 @@
 <context>
     <name>Role</name>
     <message>
-        <location filename="../ui/pages/base.py" line="-241"/>
+        <location filename="../ui/pages/base.py" line="-250"/>
         <source>Operator</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3172,12 +3192,12 @@
     </message>
     <message>
         <location line="+1"/>
-        <location line="+337"/>
+        <location line="+359"/>
         <source>Import Folder…</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-329"/>
+        <location line="-351"/>
         <location line="+52"/>
         <source>ID</source>
         <translation type="unfinished"></translation>
@@ -3225,12 +3245,12 @@
     </message>
     <message>
         <location line="+1"/>
-        <location line="+204"/>
+        <location line="+226"/>
         <source>Remove</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-199"/>
+        <location line="-221"/>
         <source>Select a sample to preview</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3330,8 +3350,13 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+43"/>
+        <location line="+52"/>
         <source>Imported {ok} OK and {ng} NG images</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+13"/>
+        <source>Import cancelled: {ok} OK and {ng} NG images imported before it stopped</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
