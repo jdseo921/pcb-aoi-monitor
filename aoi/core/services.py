@@ -141,6 +141,7 @@ class AppContext:
         self, board_model: str, paths: list[str], label: str, defect_type: str | None = None, side: str = "Top"
     ) -> int:
         """Copy uploads into the workspace so training data survives the source folder moving."""
+        self._refuse_case_variant(board_model)  # a new board model is created by its first import
         dest = self.settings.images_dir / board_model / label
         dest.mkdir(parents=True, exist_ok=True)
         n = 0
@@ -224,6 +225,9 @@ class AppContext:
         if cached and cached[0] == rec["version"]:
             return cached
         m = anomaly.AnomalyModel.load(rec["path"], self.device)
+        if m.meta.get("uuid") != rec["uuid"]:  # another AI model's file in its place, such as one written over it
+            why = f"its UUID {m.meta.get('uuid') or '(none)'} is not {rec['uuid']}, the one the model registry names"
+            raise anomaly.ModelFileError("AOI-TRN-001", path=rec["path"], reason=why)
         self._model_cache[board_model] = (rec["version"], m, str(rec["uuid"]))
         return self._model_cache[board_model]
 
@@ -621,14 +625,28 @@ class AppContext:
         """Create a board model unless it exists."""
         if name in self.db.board_models():
             return
+        self._refuse_case_variant(name)
         self.db.ensure_board_model(name)
         self.audit("board_model.create", "board_model", name, None, {"name": name})
         self._ensure_recipe(name)
 
+    def _refuse_case_variant(self, name: str) -> None:
+        """Refuse a new board model whose name differs from an existing one's only in case (AOI-TRN-005): on Windows,
+        where file names ignore case, both would write the same AI model and golden board files."""
+        names = self.db.board_models()
+        same = next((n for n in names if n.casefold() == name.casefold()), None) if name not in names else None
+        if same is not None:
+            raise AoiError("AOI-TRN-005", name=name, existing=same)
+
     @requires("Engineer", "Changing the reference image")
     def set_reference(self, board_model: str, sample_id: int) -> None:
-        """Make a stored sample the reference image; the next training run learns the golden template from it."""
-        before, path = self.db.reference(board_model), self.sample_path(sample_id)
+        """Make a stored OK sample the reference image: inspections compare against it from now on, and the next
+        training run aligns its boards to it before it learns the golden template. An NG sample is refused
+        (AOI-TRN-006)."""
+        sample = self.db.sample(sample_id)
+        if sample["label"] != "OK":
+            raise AoiError("AOI-TRN-006", sample=Path(sample["path"]).name, label=sample["label"])
+        before, path = self.db.reference(board_model), sample["path"]
         self.db.set_reference(board_model, path)
         root = self.settings.root
         old = {"reference": to_stored(Path(before), root) if before else None}
@@ -636,19 +654,31 @@ class AppContext:
 
     @requires("Engineer", "Relabelling a sample")
     def update_sample(self, sample_id: int, label: str, defect_type: str | None) -> None:
-        """Relabel a sample OK or NG and set its defect type."""
+        """Relabel a sample OK or NG and set its defect type. The reference sample cannot be relabelled NG
+        (AOI-TRN-007): inspections would compare against a defective board."""
         before = self.db.sample(sample_id)
+        if label != "OK":
+            self._refuse_reference_change(before, "relabelled NG")
         self.db.update_sample(sample_id, label, defect_type)
         old = {"label": before["label"], "defect_type": before["defect_type"]}
         self.audit("sample.update", "sample", before["uuid"], old, {"label": label, "defect_type": defect_type})
 
     @requires("Engineer", "Removing a sample")
     def delete_sample(self, sample_id: int) -> None:
-        """Remove a sample's record; its image file stays in the workspace."""
+        """Remove a sample's record; its image file stays in the workspace. The reference sample cannot be removed
+        (AOI-TRN-007)."""
         before = self.db.sample(sample_id)
+        self._refuse_reference_change(before, "removed")
         self.db.delete_sample(sample_id)
         old = {"label": before["label"], "path": to_stored(Path(before["path"]), self.settings.root)}
         self.audit("sample.delete", "sample", before["uuid"], old, None)
+
+    def _refuse_reference_change(self, sample: dict[str, Any], change: str) -> None:
+        """Refuse a change that would leave inspections comparing against a board that is not a good sample (#168):
+        the reference an import picked, or one an Engineer set, stays an OK sample until another is set."""
+        reference = self.db.reference(sample["board_model"])
+        if reference is not None and Path(reference) == Path(sample["path"]):
+            raise AoiError("AOI-TRN-007", sample=Path(sample["path"]).name, change=change)
 
     @requires("Engineer", "Activating a model version")
     def activate_model(self, model_id: int) -> None:

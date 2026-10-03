@@ -1867,12 +1867,12 @@
     </message>
     <message>
         <location line="+1"/>
-        <location line="+266"/>
+        <location line="+287"/>
         <source>Import Folder…</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-260"/>
+        <location line="-281"/>
         <location line="+50"/>
         <source>ID</source>
         <translation type="unfinished"></translation>
@@ -1920,12 +1920,12 @@
     </message>
     <message>
         <location line="+1"/>
-        <location line="+153"/>
+        <location line="+176"/>
         <source>Remove</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-148"/>
+        <location line="-171"/>
         <source>Select a sample to preview</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2025,17 +2025,17 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+24"/>
-        <source>Reference image set; the next training run re-learns the Golden board from it</source>
+        <location line="+46"/>
+        <source>Reference image set: inspections compare against it now, until training learns a Golden board</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+6"/>
+        <location line="+7"/>
         <source>Remove {count} sample(s) from the dataset?</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+47"/>
+        <location line="+45"/>
         <source>epoch {epoch}/{total}  loss {loss:.4f}</source>
         <translation type="unfinished"></translation>
     </message>

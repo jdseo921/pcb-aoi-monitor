@@ -139,6 +139,35 @@ CODES: dict[str, ErrorCode] = {
             "Train a model on the Training page when the AI checks are needed.",
         ),
         ErrorCode(
+            "AOI-TRN-004",
+            "Training gave an AI model that cannot judge boards",
+            "Training made an AI model that cannot judge boards ({reason}), so it was not saved; the AI model in use "
+            "is unchanged.",
+            "Import photos of several different good boards (copies of one photo leave nothing to learn), then train "
+            "again.",
+        ),
+        ErrorCode(
+            "AOI-TRN-005",
+            "Board model name already taken",
+            "Board model {existing} already exists, and {name} differs from it only in upper and lower case; Windows "
+            "would store the AI model and golden board files of both as the same files.",
+            "Select {existing} in the top bar, or give the new board model a name that differs in more than case.",
+        ),
+        ErrorCode(
+            "AOI-TRN-006",
+            "Reference must be a good board",
+            "Sample {sample} is labelled {label}; only an OK (good board) sample can be the reference image that "
+            "inspections compare against.",
+            "Select an OK sample, or relabel this one OK if it shows a good board, then press Set Reference again.",
+        ),
+        ErrorCode(
+            "AOI-TRN-007",
+            "Reference sample cannot change",
+            "Sample {sample} is the reference image that inspections compare against, so it cannot be {change} while"
+            " it is; it was left unchanged.",
+            "Select another good (OK) sample and press Set Reference; then try again.",
+        ),
+        ErrorCode(
             "AOI-USR-001",
             "Not allowed for this role",
             "{what} needs the {roles} role.",
