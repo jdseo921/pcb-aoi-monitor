@@ -182,6 +182,29 @@ def test_req_set_019_page_errors_show_code_what_and_action_never_a_trace(
     assert [a["code"] for a in trained_ctx.alarms()] == ["AOI-INSP-001", "AOI-SET-007", "AOI-USR-001"]
 
 
+def test_req_set_019_the_app_opens_when_the_golden_board_file_is_gone(
+    qtbot: QtBot, trained_ctx: AppContext, dialogs: list[tuple[str, str]]
+) -> None:
+    """With the Golden board's file of the board model in use gone or damaged, the main window did not open: the
+    Recipe Editor read the file when the board model was selected at start-up, and its error escaped the window, so no
+    Engineer could reach Training to set another. Now the window opens, the Recipe Editor says the Golden board cannot
+    be opened, with the code and what to do, and inspecting a board still refuses it with AOI-INSP-009."""
+    golden = Path(str(trained_ctx.reference_image(BOARD)))
+    for change, code in ((golden.unlink, "AOI-INSP-001"), (lambda: golden.write_bytes(b"no image"), "AOI-INSP-004")):
+        change()
+        win = _window(qtbot, trained_ctx)
+        editor = win.pages["Recipe Editor"]
+        win.navigate("Recipe Editor")
+        assert editor.ref is None and editor.view_empty.isVisible()
+        assert editor.view_empty.heading.text() == f"The Golden board for {BOARD} cannot be opened"
+        assert editor.view_empty.sentence.text().startswith(f"{code} ")
+        assert editor.view_empty.sentence.text().endswith("choose another OK sample with Set Reference on Training.")
+    assert not [d for d in dialogs if "AOI-SET-007" in d[0]], "no unexpected error on the way"
+    with pytest.raises(AoiError) as refused:
+        trained_ctx.inspect_file(BOARD, str(golden))
+    assert refused.value.code == "AOI-INSP-009"
+
+
 def test_req_set_019_compare_save_to_recipe_without_a_board_model_asks_for_one(
     qtbot: QtBot, trained_ctx: AppContext, monkeypatch: pytest.MonkeyPatch
 ) -> None:

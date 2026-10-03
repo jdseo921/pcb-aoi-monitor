@@ -235,9 +235,20 @@ class RecipeEditorPage(Page):
         self.rev, r = self.ctx.recipe(self.board_model)
         self.recipe = r
         ref_path = self.ctx.reference_image(self.board_model)
-        self.ref = self.ctx.load_image(ref_path) if ref_path else None
+        unreadable: AoiError | None = None
+        try:  # a Golden board file gone or damaged must not stop the window opening on this board model (#176)
+            self.ref = self.ctx.load_image(ref_path) if ref_path else None
+        except AoiError as e:
+            self.ref, unreadable = None, e
         self.view.set_image(self.ref)
-        if self.ref is None:
+        if unreadable is not None:
+            fix = self.tr(
+                "{code} {what} Put the file back, or choose another OK sample with Set Reference on Training."
+            )
+            step = self.empty_step(fix.format(code=unreadable.code, what=unreadable.what), "Training")
+            heading = self.tr("The Golden board for {board_model} cannot be opened")
+            self.view_empty.show_state(heading.format(board_model=self.board_model), *step)
+        elif self.ref is None:
             step = self.empty_step(self.tr("Train an AI model or set a reference image on Training."), "Training")
             heading = self.tr("No Golden board for {board_model} yet").format(board_model=self.board_model)
             self.view_empty.show_state(heading, *step)
