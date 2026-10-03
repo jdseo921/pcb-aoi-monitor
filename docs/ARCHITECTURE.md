@@ -450,7 +450,9 @@ the only addition expected.
 ## 7. Requirement traceability (Stage 1)
 
 The requirement register is `docs/requirements/stage1.md`; `tools/trace_matrix.py` generates the trace matrix
-from it on every CI run (the `trace-matrix` artifact). The table below is the v0.1 draft's informal check against
+from it on every CI run (the `trace-matrix` artifact). A pull request's run reads the pull request's own commits from
+GitHub's merge of it into its base, and its number and title from the workflow, so a citation of an unknown ID shows
+in that run (since #175). The table below is the v0.1 draft's informal check against
 the source specifications and stays as history.
 
 Speed (REQ-INSP-007): the CI job "Performance (base vs head)" times `Inspector.inspect` on the regression set's 40
