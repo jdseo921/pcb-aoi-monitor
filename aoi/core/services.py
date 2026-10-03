@@ -22,7 +22,7 @@ import numpy as np
 from .. import logging_setup
 from ..config import Settings, resolve_device
 from ..data import atomic
-from ..data.db import Database, new_uuid
+from ..data.db import Database, DbError, new_uuid
 from ..data.errors import WorkspaceError
 from ..data.paths import to_stored
 from ..errors import AoiError
@@ -30,7 +30,7 @@ from ..times import local_date, now_utc
 from . import anomaly
 from .imaging import align_to_reference, list_images, load_image, load_image_sha256, save_image
 from .inspector import NG, OK, WARN, AiEvidence, InspectionResult, Inspector, draw_overlay, re_grade
-from .jobs import Jobs
+from .jobs import JobCancelled, Jobs
 from .maps import load_maps, save_maps
 from .recipe import Recipe
 
@@ -113,20 +113,31 @@ class AppContext:
         swept = atomic.sweep_temp_files(self.settings.root)  # a crash mid-write leaves only a temp file; drop it
         self.device = resolve_device(self.settings.device)
         self.log.info("app.start", extra={"workspace": str(self.settings.root), "device": self.device, "swept": swept})
-        self.user, self.role, self.user_uuid = "operator", "Operator", self.db.user_uuid("operator")
-        archived = self.db.archive_old(self.settings.log_retention_days)  # retention is a system action, not a user's
-        self.log.info("retention.archived", extra={"days": self.settings.log_retention_days, "archived": archived})
-        self._sweep_ok_maps()  # the map files of OK results past their retention go too (REQ-INSP-012, S25c)
-        for board_model in self.db.board_models():
-            self._ensure_recipe(board_model)  # a workspace from before S25: its results name a stored revision too
+        try:  # the first writes: another program may hold the database, or the drive refuse them (#171)
+            self.user, self.role, self.user_uuid = "operator", "Operator", self.db.user_uuid("operator")
+            archived = self.db.archive_old(self.settings.log_retention_days)  # retention is a system action
+            self.log.info("retention.archived", extra={"days": self.settings.log_retention_days, "archived": archived})
+            self._sweep_ok_maps()  # the map files of OK results past their retention go too (REQ-INSP-012, S25c)
+            for board_model in self.db.board_models():
+                self._ensure_recipe(board_model)  # a workspace from before S25: its results name a stored revision too
+        except BaseException as e:
+            self.db.close()  # a refused workspace holds no file open while another folder is chosen (REQ-SET-016)
+            logging_setup.close(self.log)
+            if isinstance(e, DbError):  # a coded refusal the folder picker follows, not AOI-SET-007
+                raise self.db.refusal(e) from e
+            raise
         self._model_cache: dict[str, tuple[str, anomaly.AnomalyModel, str]] = {}
         self.jobs = Jobs()  # background work (REQ-SET-021): screens submit through aoi/ui/workers, tests directly
+        self._closed = False
 
     # --- dataset -------------------------------------------------------------
 
     def close(self) -> None:
         """Release the database and the log file, as a restart or a change of workspace does; a workspace folder
         can be moved only once nothing holds a file in it open."""
+        if self._closed:  # the window closes it, and main.py again after the event loop (#171)
+            return
+        self._closed = True
         self.jobs.shutdown()  # a running job may still read the database or write a file
         self.db.close()
         logging_setup.close(self.log)
@@ -190,6 +201,9 @@ class AppContext:
             device=self.device,
         )
         model = anomaly.train(ok, ng, cfg, progress, should_stop)
+        if should_stop is not None and should_stop():  # Stop, or the window closing: the active model stays (TRN-008)
+            say(0, 1, 0.0, "Stopped: no AI model was saved; the active AI model is unchanged")
+            raise JobCancelled(f"training {board_model}")  # nothing saved, registered, activated or audited (#171)
         previous = self.db.active_model(board_model)
         version = self.db.next_model_version(board_model)
         model_uuid = new_uuid()  # in the file's metadata and in the registry row, so an exported .pt names its record

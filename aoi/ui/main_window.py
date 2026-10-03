@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, cast
 
-from PySide6.QtCore import Qt
-from PySide6.QtGui import QColor
+from PySide6.QtCore import QCoreApplication, QEvent, Qt
+from PySide6.QtGui import QCloseEvent, QColor
 from PySide6.QtWidgets import (
     QComboBox,
     QFrame,
@@ -16,6 +16,7 @@ from PySide6.QtWidgets import (
     QListWidget,
     QListWidgetItem,
     QMainWindow,
+    QMessageBox,
     QStackedWidget,
     QStatusBar,
     QVBoxLayout,
@@ -353,3 +354,24 @@ class MainWindow(QMainWindow):
     def status(self, msg: str, ms: int = 8000) -> None:
         """A message in the status bar, for 8 s by default; `ms=0` keeps it until the next message replaces it."""
         self.statusBar().showMessage(msg, ms)
+
+    # --- closing (#171) -------------------------------------------------------------
+    def closeEvent(self, event: QCloseEvent) -> None:
+        """Closing the window stops the background work and closes the context; while work runs it asks first, and No
+        keeps the window open. A stopped training run saves nothing (REQ-TRN-008)."""
+        if not self.ctx.jobs.idle():
+            yes, no = QMessageBox.StandardButton.Yes, QMessageBox.StandardButton.No
+            question = self.tr(
+                "Work is still running: training, an AI model test or an inspection. Stop it and close the app? "
+                "Training stops without saving an AI model, so the active one stays; an AI model test finishes its "
+                "folder first."
+            )
+            if QMessageBox.question(self, self.tr("Stop the running work?"), question, yes | no, no) != yes:
+                event.ignore()
+                return
+            self.status(self.tr("Stopping the running work…"), ms=0)
+            self.statusBar().repaint()  # the wait below holds the UI thread until each job has stopped
+        self.ctx.close()  # every job asked to stop and waited for, then the database and the log file closed
+        # Slots the jobs queued before they stopped would meet the closed context: drop them (None: every receiver).
+        QCoreApplication.removePostedEvents(None, QEvent.Type.MetaCall)  # type: ignore[arg-type]
+        event.accept()

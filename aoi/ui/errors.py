@@ -21,8 +21,8 @@ from ..core.services import AppContext, ErrorReport
 from ..errors import AoiError
 
 # Refusals another workspace folder cures: a v0.1 or newer database, a changed migration, a folder without WAL, a
-# folder or database that cannot be opened.
-ANOTHER_WORKSPACE = {"AOI-SET-001", "AOI-SET-002", "AOI-SET-003", "AOI-SET-005", "AOI-SET-011"}
+# folder or database that cannot be opened, a database another program holds (the same folder, once it lets go).
+ANOTHER_WORKSPACE = {"AOI-SET-001", "AOI-SET-002", "AOI-SET-003", "AOI-SET-005", "AOI-SET-011", "AOI-SET-012"}
 
 
 def dialog_text(report: ErrorReport) -> tuple[str, str]:
@@ -51,8 +51,9 @@ def open_workspace() -> AppContext | None:
     """The AppContext the app starts with, on the workspace settings.json names, or None to close the app.
 
     A refused workspace is shown with its coded message before any window opens, so the Settings page cannot be reached;
-    for a refusal another folder cures, a folder picker follows. The folder chosen is saved to settings.json, as the
-    Settings page saves it, and opened in turn; Cancel closes the app. Any other coded error is shown and closes the
+    for a refusal another folder cures, a folder picker follows. The folder chosen is opened in turn and, once open,
+    saved to settings.json as the Settings page saves it; a settings.json that cannot be written is logged, and the
+    folder still serves this session. Cancel closes the app. Any other coded error is shown and closes the
     app. An error without a code is shown as AOI-SET-007 and its trace goes to the default workspace's log
     (REQ-SET-019: stack traces go only to the log), since the excepthook is installed only once the window exists."""
     try:
@@ -82,16 +83,23 @@ def _open_workspace() -> AppContext | None:
     except AoiError as e:  # settings.json cannot be read (AOI-SET-010) or holds a wrong value (AOI-SET-008)
         show_error(None, ErrorReport.of(e))  # no workspace yet, so no log: the dialog carries the code
         return None
+    chosen = False
     while True:
         try:
-            return AppContext(settings)
+            ctx = AppContext(settings)
         except AoiError as e:
             show_error(None, ErrorReport.of(e))
             if e.code not in ANOTHER_WORKSPACE:
                 return None
+        else:
+            if chosen:  # saved once it opened (#171): settings.json never names a folder that was refused
+                try:  # that key alone: the rest of the file stays as written (#170)
+                    settings.save_keys({"workspace": settings.workspace})
+                except (OSError, AoiError):  # settings.json cannot be read or written: the session keeps the folder
+                    ctx.log.warning("settings.save_failed", exc_info=True, extra={"workspace": settings.workspace})
+            return ctx
         title = QCoreApplication.translate("Startup", "Choose another workspace folder")
         folder = QFileDialog.getExistingDirectory(None, title, settings.workspace)
         if not folder:
             return None
-        settings.workspace = folder
-        settings.save_keys({"workspace": folder})  # that key alone: the rest of the file stays as written (#170)
+        settings.workspace, chosen = folder, True

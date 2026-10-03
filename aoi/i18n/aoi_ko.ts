@@ -488,7 +488,7 @@
 <context>
     <name>HomePage</name>
     <message>
-        <location filename="../ui/main_window.py" line="+55"/>
+        <location filename="../ui/main_window.py" line="+56"/>
         <source>Upload samples</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1063,6 +1063,21 @@
         <source>{page} needs the {roles} role</source>
         <translation type="unfinished"></translation>
     </message>
+    <message>
+        <location line="+45"/>
+        <source>Work is still running: training, an AI model test or an inspection. Stop it and close the app? Training stops without saving an AI model, so the active one stays; an AI model test finishes its folder first.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+4"/>
+        <source>Stop the running work?</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>Stopping the running work…</source>
+        <translation type="unfinished"></translation>
+    </message>
 </context>
 <context>
     <name>ModelTestPage</name>
@@ -1277,7 +1292,7 @@
 <context>
     <name>Page</name>
     <message>
-        <location filename="../ui/main_window.py" line="-271"/>
+        <location filename="../ui/main_window.py" line="-323"/>
         <source>Home</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1848,7 +1863,7 @@
 <context>
     <name>Startup</name>
     <message>
-        <location filename="../ui/errors.py" line="+92"/>
+        <location filename="../ui/errors.py" line="+101"/>
         <source>Choose another workspace folder</source>
         <translation type="unfinished"></translation>
     </message>

@@ -4,11 +4,13 @@ migration 0005 adds; REQ-INSP-012 for the evidence columns and the checks table 
 
 from __future__ import annotations
 
+import functools
 import json
 import logging
 import re
 import shutil
 import sqlite3
+import threading
 from contextlib import closing
 from dataclasses import replace
 from pathlib import Path
@@ -364,3 +366,82 @@ def test_req_insp_008_a_record_the_database_refuses_leaves_nothing_behind(tmp_pa
     db.alarm("INFO", "the next write", "AOI-INSP-003")  # would commit a transaction left open
     assert db.inspections() == [] and not db._conn.in_transaction
     db.close()
+
+
+def test_req_trn_010_switching_the_active_model_is_one_transaction(tmp_path: Path) -> None:
+    """#171: registering an active version and activating one each switch in one transaction: a reader on another
+    thread never finds no active AI model, and a failure halfway (a trigger refusing the new active row, as a power cut
+    between two commits would) keeps the version that was active."""
+    db = Database(tmp_path / "aoi.sqlite")
+    first, second = (db.register_model("B", v, f"{v}.pt", {}) for v in ("v1.0", "v1.1"))
+    seen: list[dict[str, object] | None] = []
+    stop = threading.Event()
+    reader = threading.Thread(target=lambda: [seen.append(db.active_model("B")) for _ in iter(stop.is_set, True)])
+    reader.start()
+    for i in range(60):
+        db.activate_model(first if i % 2 else second)
+    for i in range(30):
+        db.register_model("B", f"v2.{i}", f"{i}.pt", {})
+    stop.set()
+    reader.join()
+    assert seen and None not in seen, f"{seen.count(None)} of {len(seen)} reads found no active AI model"
+    db.activate_model(first)
+    db._conn.executescript(
+        "CREATE TEMP TRIGGER u BEFORE UPDATE OF active ON models WHEN NEW.active BEGIN SELECT RAISE(ABORT, 'x'); END;"
+        "CREATE TEMP TRIGGER i BEFORE INSERT ON models WHEN NEW.active BEGIN SELECT RAISE(ABORT, 'x'); END;"
+    )
+    for switch in (lambda: db.activate_model(second), lambda: db.register_model("B", "v3.0", "c.pt", {})):
+        with pytest.raises(sqlite3.IntegrityError):
+            switch()
+        active = db.active_model("B")
+        assert active is not None and active["id"] == first and not db._conn.in_transaction
+    db.close()
+
+
+def test_req_set_019_a_database_in_use_at_start_up_offers_the_folder_again(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, dialogs: list[tuple[str, str]]
+) -> None:
+    """#171: another program holding the workspace database's write lock at start-up (a second copy of the app, a
+    database tool) is refused with AOI-SET-012, the database and the log closed first, not shown as AOI-SET-007; the
+    folder picker follows, and the same folder opens once the other program lets go."""
+    ws = tmp_path / "ws"
+    AppContext(Settings(workspace=str(ws), device="cpu")).close()
+    Settings(workspace=str(ws), device="cpu").save()
+    monkeypatch.setattr(sqlite3, "connect", functools.partial(sqlite3.connect, timeout=0.2))  # not SQLite's 5 s wait
+    other = sqlite3.connect(ws / "aoi.sqlite", isolation_level=None)
+    other.execute("BEGIN IMMEDIATE")
+    closed, close, at_picker = list[Path](), Database.close, list[object]()
+    monkeypatch.setattr(Database, "close", lambda db: (closed.append(db.path), close(db))[1])
+
+    def pick(*_: object) -> str:  # what is still open when the picker shows; then the other program lets go
+        log = logging.getLogger(logging_setup.LOGGER)
+        at_picker.extend([*closed, *(h for h in log.handlers if isinstance(h, logging_setup.JsonLinesHandler))])
+        other.rollback()
+        return str(ws)
+
+    monkeypatch.setattr(QFileDialog, "getExistingDirectory", staticmethod(pick))
+    ctx = ui_errors.open_workspace()
+    assert ctx is not None and ctx.settings.root == ws and at_picker == [ws / "aoi.sqlite"]  # closed, no log open
+    ctx.close()
+    other.close()
+    assert [title for title, _ in dialogs] == ["AOI-SET-012 Workspace database in use"]
+    assert str(ws / "aoi.sqlite") in dialogs[0][1] and "database is locked" in dialogs[0][1]
+
+
+def test_req_set_016_a_picked_folder_opens_when_settings_json_cannot_be_written(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, dialogs: list[tuple[str, str]]
+) -> None:
+    """#171: when the default workspace folder, which holds settings.json, cannot be reached (AOI_WORKSPACE on a drive
+    that is not connected), the folder picked after AOI-SET-011 is opened all the same: settings.json is written only
+    once the folder opened, and a settings.json that cannot be written is logged, not a start-up failure."""
+    (tmp_path / "blocker").write_text("a file where the drive's folder would be", encoding="utf-8")
+    monkeypatch.setenv("AOI_WORKSPACE", str(tmp_path / "blocker" / "AOI"))
+    local = tmp_path / "local"
+    monkeypatch.setattr(QFileDialog, "getExistingDirectory", staticmethod(lambda *_: str(local)))
+    ctx = ui_errors.open_workspace()
+    assert ctx is not None and ctx.settings.root == local and (local / "aoi.sqlite").exists()
+    ctx.close()
+    assert [title for title, _ in dialogs] == ["AOI-SET-011 Workspace cannot be opened"]
+    lines = [json.loads(line) for f in (local / "logs").glob("aoi-*.jsonl") for line in f.open(encoding="utf-8")]
+    (failed,) = [line for line in lines if line["event"] == "settings.save_failed"]
+    assert (failed["level"], failed["workspace"]) == ("WARNING", str(local)) and "NotADirectoryError" in failed["trace"]

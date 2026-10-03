@@ -23,6 +23,7 @@ from .migrate import migrate
 from .paths import resolve, to_stored
 
 IN_CHUNK = 500  # ids per IN (…) query, under SQLite's 999 bound variables on older builds
+DbError = sqlite3.Error  # what a Database call raises when SQLite refuses it, for callers that do not import sqlite3
 
 
 def new_uuid() -> str:
@@ -51,9 +52,9 @@ class Database:
             self._conn.execute("PRAGMA synchronous = FULL")
             self._conn.execute("PRAGMA foreign_keys = ON")
             migrate(self._conn)
-        except sqlite3.Error as e:  # aoi.sqlite is not a database, or is damaged: migrate's own errors carry codes
+        except sqlite3.Error as e:  # not a database, damaged, or in use: migrate's own errors carry codes
             self._conn.close()
-            raise WorkspaceError("AOI-SET-011", path=str(self.workspace), error=str(e)) from e
+            raise self.refusal(e) from e
         except BaseException:
             self._conn.close()  # a refused database is not held open while another workspace is chosen (REQ-SET-016)
             raise
@@ -65,12 +66,24 @@ class Database:
         with self._lock:
             self._conn.close()
 
+    def refusal(self, e: DbError) -> WorkspaceError:
+        """The start-up refusal the folder picker follows (REQ-SET-016): AOI-SET-012 while another program holds the
+        database's lock, else AOI-SET-011 with SQLite's reason (read-only, disk full, damaged)."""
+        if (getattr(e, "sqlite_errorcode", 0) & 0xFF) in (sqlite3.SQLITE_BUSY, sqlite3.SQLITE_LOCKED):
+            return WorkspaceError("AOI-SET-012", path=str(self.path), error=str(e))
+        return WorkspaceError("AOI-SET-011", path=str(self.workspace), error=str(e))
+
     # --- primitives --------------------------------------------------------
     def execute(self, sql: str, params: Iterable[Any] = ()) -> int | None:
-        """Run one statement and commit. Returns the new row id after an INSERT, otherwise None."""
+        """Run one statement and commit. Returns the new row id after an INSERT, otherwise None. A statement that fails
+        is rolled back, so no transaction is left open to hold the write lock or join the next commit (#171)."""
         with self._lock:
-            cur = self._conn.execute(sql, tuple(params))
-            self._conn.commit()
+            try:
+                cur = self._conn.execute(sql, tuple(params))
+                self._conn.commit()
+            except BaseException:
+                self._conn.rollback()
+                raise
             return cur.lastrowid
 
     def _insert(self, sql: str, params: Iterable[Any] = ()) -> int:
@@ -152,13 +165,24 @@ class Database:
     ) -> int:
         """Add a model version to the registry and return its id. `uid` is the UUID the model file's metadata already
         holds (training writes it there before the file is saved, REQ-SET-017); a new one when None."""
-        if activate:
-            self.execute("UPDATE models SET active=0 WHERE board_model=?", (board_model,))
         uid = uid or new_uuid()
-        return self._insert(
-            "INSERT INTO models(uuid, board_model, version, path, created_at, metrics, active) VALUES(?,?,?,?,?,?,?)",
-            (uid, board_model, version, self._stored(path), now_utc(), json.dumps(metrics), int(activate)),
-        )
+        row = (uid, board_model, version, self._stored(path), now_utc(), json.dumps(metrics), int(activate))
+        with self._lock:  # one transaction: a reader sees the old active model or the new one, never none (#171)
+            try:
+                if activate:
+                    self._conn.execute("UPDATE models SET active=0 WHERE board_model=?", (board_model,))
+                cur = self._conn.execute(
+                    "INSERT INTO models(uuid, board_model, version, path, created_at, metrics, active)"
+                    " VALUES(?,?,?,?,?,?,?)",
+                    row,
+                )
+                self._conn.commit()
+            except BaseException:  # the old version stays active unless the new one is in
+                self._conn.rollback()
+                raise
+        if cur.lastrowid is None:
+            raise sqlite3.DatabaseError("INSERT INTO models returned no row id")
+        return cur.lastrowid
 
     def models(self, board_model: str) -> list[dict[str, Any]]:
         rows = self.query("SELECT * FROM models WHERE board_model=? ORDER BY id DESC", (board_model,))
@@ -173,9 +197,11 @@ class Database:
         return self._resolved(r[0], "path") if r else None
 
     def activate_model(self, model_id: int) -> None:
-        bm = self.query("SELECT board_model FROM models WHERE id=?", (model_id,))[0]["board_model"]
-        self.execute("UPDATE models SET active=0 WHERE board_model=?", (bm,))
-        self.execute("UPDATE models SET active=1 WHERE id=?", (model_id,))
+        """Make `model_id` its board model's one active version in a single statement: never none, or two (#171)."""
+        self.execute(
+            "UPDATE models SET active = (id = ?) WHERE board_model = (SELECT board_model FROM models WHERE id = ?)",
+            (model_id, model_id),
+        )
 
     def next_model_version(self, board_model: str) -> str:
         n = len(self.models(board_model)) + 1
