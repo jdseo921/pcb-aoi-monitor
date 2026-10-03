@@ -229,6 +229,21 @@ CODES: dict[str, ErrorCode] = {
             ),
         ),
         ErrorCode(
+            "AOI-INSP-014",
+            QT_TRANSLATE_NOOP("Errors", "Result not saved: path too long"),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "The result of {file} was shown but could not be saved, so it is not in Logs & Export: the system "
+                "refused the path of its evidence files in the workspace folder {workspace} as too long.",
+            ),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Ask an Admin to save a workspace folder with a shorter path on Settings and then, with the app "
+                "closed, to copy everything in the folder {workspace} into that folder, or to turn on long paths in "
+                "Windows; then inspect {file} again.",
+            ),
+        ),
+        ErrorCode(
             "AOI-CMP-001",
             QT_TRANSLATE_NOOP("Errors", "Result has no stored heatmaps"),
             QT_TRANSLATE_NOOP(

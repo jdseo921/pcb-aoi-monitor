@@ -8,7 +8,7 @@ intended change of a screen: the images are generated files, and Jay approves th
 The pages are rendered on the synthetic workspace: the board model TINY with the seeded dataset's samples, a tiny AI
 model trained for a few epochs, one inspected NG board (its first IC missing), one recipe revision with one Presence
 ROI around that IC. Everything that would change from run to run is pinned, and what would change with the machine's
-CPU is pinned or kept within the comparison's tolerance: record ids and the suffix of every sample's file name come from
+CPU is pinned or kept within the comparison's tolerance: record ids and the UUID in every sample's file name come from
 a counter instead of uuid4(), every stored time is FIXED_TIME and is shown as UTC, the Logs filter covers that week, the
 Settings page shows FIXED_WORKSPACE, and the Inspection page is rendered with `log_result` patched out, so it adds no
 record. The inspections shown run with PinnedModel in place of the trained model and report FIXED_MS: the training is
@@ -80,8 +80,8 @@ def slug(title: str) -> str:
 
 
 def counted_uuids() -> Iterator[uuid.UUID]:
-    """What uuid4() returns while the workspace is built: 000001…, 000002…, so the six hex digits that import_samples
-    adds to a sample's file name, and every record id, are the same in every run."""
+    """What uuid4() returns while the workspace is built: 000001…, 000002…, so the UUID that names each sample's file
+    and the record's evidence files (#245), and every record id, are the same in every run."""
     for n in itertools.count(1):
         yield uuid.UUID(int=(n << 104) | n, version=4)
 

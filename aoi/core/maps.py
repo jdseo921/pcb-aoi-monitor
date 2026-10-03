@@ -67,15 +67,20 @@ def decode_ai(img: np.ndarray) -> np.ndarray:
     return AI_VALUES[np.asarray(img, dtype=np.uint16)]
 
 
+def map_paths(base: Path) -> tuple[Path, Path]:
+    """The names `save_maps` gives the difference map and the AI map of `base` (the overlay path, no suffix)."""
+    return base.with_name(base.name + "_diff.png"), base.with_name(base.name + AI_FILE)
+
+
 def save_maps(res: InspectionResult, base: Path, *, pixel_threshold: float | None) -> tuple[str | None, str | None]:
     """Write the maps `res` holds as `<base>_diff.png` and `<base>_ai2.png` (base: the overlay path, no suffix); the AI
     map on the sides of `pixel_threshold`, that of the AI model that made it (None only without one)."""
     diff_path = ai_path = None
     if res.compare is not None and res.compare.diff_map is not None:
-        diff_path = base.with_name(base.name + "_diff.png")
+        diff_path = map_paths(base)[0]
         save_image(diff_path, encode_diff(res.compare.diff_map))
     if res.anomaly_map is not None:
-        ai_path = base.with_name(base.name + AI_FILE)
+        ai_path = map_paths(base)[1]
         save_image(ai_path, encode_ai(res.anomaly_map, pixel_threshold))
     return (str(diff_path) if diff_path else None, str(ai_path) if ai_path else None)
 
