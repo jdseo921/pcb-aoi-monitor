@@ -1867,12 +1867,12 @@
     </message>
     <message>
         <location line="+1"/>
-        <location line="+278"/>
+        <location line="+287"/>
         <source>Import Folder…</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-272"/>
+        <location line="-281"/>
         <location line="+50"/>
         <source>ID</source>
         <translation type="unfinished"></translation>
@@ -1920,12 +1920,12 @@
     </message>
     <message>
         <location line="+1"/>
-        <location line="+162"/>
+        <location line="+176"/>
         <source>Remove</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-157"/>
+        <location line="-171"/>
         <source>Select a sample to preview</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2025,7 +2025,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+32"/>
+        <location line="+46"/>
         <source>Reference image set: inspections compare against it now, until training learns a Golden board</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2035,7 +2035,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+50"/>
+        <location line="+45"/>
         <source>epoch {epoch}/{total}  loss {loss:.4f}</source>
         <translation type="unfinished"></translation>
     </message>

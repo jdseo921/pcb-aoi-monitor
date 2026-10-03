@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
+from PySide6.QtCore import QItemSelectionModel
 from PySide6.QtWidgets import QMessageBox
 from pytestqt.qtbot import QtBot
 
@@ -13,6 +14,7 @@ from aoi.core.services import AppContext
 from aoi.errors import AoiError
 from aoi.ui.main_window import MainWindow
 from aoi.ui.pages.base import cell_text
+from aoi.ui.pages.training import NgDialog
 from tests.test_req_done_in_v01 import BOARD, _window
 
 
@@ -123,3 +125,41 @@ def test_req_trn_007_the_reference_sample_is_never_relabelled_ng_or_removed(
     ctx.update_sample(first["id"], "NG", "Missing")
     ctx.delete_sample(first["id"])
     assert all(s["id"] != first["id"] for s in ctx.samples("B"))
+
+
+def test_req_trn_007_mark_ng_and_remove_skip_only_the_reference_whatever_the_selection_order(
+    qtbot: QtBot,
+    ctx: AppContext,
+    synthetic_dataset: Path,
+    dialogs: list[tuple[str, str]],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Mark NG and Remove on several rows change every selected sample but the reference, which stays and is named in
+    one AOI-TRN-007 dialog, whichever row was selected first (#168 review: before, the loop stopped at the reference,
+    so the rows selected after it were silently left unchanged)."""
+    ctx.import_samples("B", [str(p) for p in list_images(synthetic_dataset / "train" / "ok")[:4]], "OK")
+    ref, a, b, c = (s["id"] for s in ctx.samples("B", "OK"))
+    assert ctx.reference_image("B") == ctx.sample_path(ref)
+    win = MainWindow(ctx)
+    qtbot.addWidget(win)
+    win.set_role("Engineer", "engineer")
+    win._on_board_model("B")
+    win.navigate("Training")
+    page = win.pages["Training"]
+    monkeypatch.setattr(NgDialog, "exec", lambda self: 1)
+    monkeypatch.setattr(QMessageBox, "question", lambda *a, **k: QMessageBox.StandardButton.Yes)
+
+    def select(*ids: int) -> None:  # in this order: the reference first
+        page.samples.clearSelection()
+        rows = {int(cell_text(page.samples, r, 0)): r for r in range(page.samples.rowCount())}
+        flags = QItemSelectionModel.SelectionFlag.Select | QItemSelectionModel.SelectionFlag.Rows
+        for i in ids:
+            page.samples.selectionModel().select(page.samples.model().index(rows[i], 0), flags)
+
+    select(ref, a, b)
+    page._relabel("NG")
+    assert {s["id"]: s["label"] for s in ctx.samples("B")} == {ref: "OK", a: "NG", b: "NG", c: "OK"}
+    select(ref, c)
+    page._remove()
+    assert [s["id"] for s in ctx.samples("B")] == [ref, a, b]
+    assert [d[0] for d in dialogs] == ["AOI-TRN-007 Reference sample cannot change"] * 2

@@ -164,9 +164,8 @@ CODES: dict[str, ErrorCode] = {
             "AOI-TRN-007",
             "Reference sample cannot change",
             "Sample {sample} is the reference image that inspections compare against, so it cannot be {change} while"
-            " it is.",
-            "Select a good (OK) sample and press Set Reference, or train the AI model, which sets a Golden board; then"
-            " try again.",
+            " it is; it was left unchanged.",
+            "Select another good (OK) sample and press Set Reference; then try again.",
         ),
         ErrorCode(
             "AOI-USR-001",

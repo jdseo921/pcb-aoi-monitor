@@ -256,11 +256,25 @@ class TrainingPage(Page):
             if not dlg.exec():
                 return
             dtype = dlg.value()[0]
+        self._each_sample(ids, lambda i: self.ctx.update_sample(i, label, dtype))
+
+    def _each_sample(self, ids: list[int], write: Callable[[int], None]) -> None:
+        """Write each selected sample but the reference, which stays as it is and is named once the others are written
+        (AOI-TRN-007), so which rows change never depends on the order they were selected in (#168). Any other refusal
+        stops at the sample it names."""
+        refused: AoiError | None = None
         try:
             for i in ids:
-                self.ctx.update_sample(i, label, dtype)
-        except AoiError as e:  # the reference sample stays OK (AOI-TRN-007); the rows before it are relabelled
-            self.error(e)
+                try:
+                    write(i)
+                except AoiError as e:
+                    if e.code != "AOI-TRN-007":
+                        raise
+                    refused = e
+        except AoiError as e:
+            refused = e
+        if refused is not None:
+            self.error(refused)
         self.refresh()
 
     def _set_reference(self) -> None:
@@ -281,12 +295,7 @@ class TrainingPage(Page):
             return
         question = self.tr("Remove {count} sample(s) from the dataset?").format(count=len(ids))
         if QMessageBox.question(self, self.tr("Remove"), question) == QMessageBox.StandardButton.Yes:
-            try:
-                for i in ids:
-                    self.ctx.delete_sample(i)
-            except AoiError as e:  # the reference sample stays (AOI-TRN-007)
-                self.error(e)
-            self.refresh()
+            self._each_sample(ids, self.ctx.delete_sample)
 
     def _preview(self) -> None:
         rows = self.samples.selectionModel().selectedRows()
