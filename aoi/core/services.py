@@ -14,7 +14,7 @@ import io
 import json
 import math
 import uuid
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Concatenate, Literal, ParamSpec, TypeVar, cast
@@ -901,10 +901,28 @@ class AppContext:
         fieldnames: list[str] | None = None,
     ) -> int:
         """Write `rows` as CSV to `path`, whole or not at all, and audit the export; returns the row count. `fieldnames`
-        gives the header when `rows` may be empty."""
-        export_csv(path, rows, fieldnames)
+        gives the header when `rows` may be empty. A file that cannot be written is refused with AOI-LOG-002."""
+        with _export_write(path):
+            export_csv(path, rows, fieldnames)
         self._audit_files([Path(path)], "export.csv", what, None, {"path": str(path), "rows": len(rows)})
         return len(rows)
+
+    @requires("Engineer", "Exporting a report")
+    def export_report(
+        self, path: str | Path, pdf: bytes, board_model: str, run_uuid: str | None, model_version: str | None
+    ) -> None:
+        """Write the validation report `pdf` (rendered by AI Model Test) to `path`, whole or not at all, and audit the
+        export under the test run it reports (#180). An empty `pdf`, or a file that cannot be written, is refused with
+        AOI-LOG-002 and nothing is written or audited; a report whose entry cannot be written is removed (#178)."""
+        if not pdf:
+            raise AoiError("AOI-LOG-002", path=str(path), reason="the report came out empty")
+        with _export_write(path):
+            atomic.write_bytes(path, pdf)
+        after = {
+            "path": str(path), "board_model": board_model, "run_uuid": run_uuid, "model_version": model_version,
+            "bytes": len(pdf),
+        }  # fmt: skip
+        self._audit_files([Path(path)], "export.report", "test_run", run_uuid, after)
 
     def _audit_files(
         self,
@@ -924,6 +942,16 @@ class AppContext:
             own = {p.resolve() for p in sources or []}
             _remove([f for f in files if f.resolve() not in own])
             raise
+
+
+@contextlib.contextmanager
+def _export_write(path: str | Path) -> Iterator[None]:
+    """An export that cannot be written (a folder that cannot be made, a file held open, a full disk) becomes
+    AOI-LOG-002; atomic.py has left any earlier file of that name as it was."""
+    try:
+        yield
+    except OSError as e:
+        raise AoiError("AOI-LOG-002", detail=repr(e), path=str(path), reason=str(e)) from e
 
 
 def classification_metrics(rows: list[dict[str, Any]]) -> dict[str, Any]:

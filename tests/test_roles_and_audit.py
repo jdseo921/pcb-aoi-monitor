@@ -49,6 +49,10 @@ WRITES: dict[str, tuple[str, Callable[[AppContext, Path, Path], Any]]] = {
         lambda ctx, data, tmp: ctx.export_overlays(ctx.inspections(), tmp / "overlays"),
     ),
     "export_csv": ("export.csv", lambda ctx, data, tmp: ctx.export_csv(tmp / "rows.csv", [{"a": 1}])),
+    "export_report": (
+        "export.report",
+        lambda ctx, data, tmp: ctx.export_report(tmp / "report.pdf", b"%PDF-1.4", "TINY", None, None),
+    ),
     "archive_old": ("inspection.archive", lambda ctx, data, tmp: ctx.archive_old(-1)),
     "add_user": ("user.change", lambda ctx, data, tmp: ctx.add_user("kim", "Engineer")),
 }
