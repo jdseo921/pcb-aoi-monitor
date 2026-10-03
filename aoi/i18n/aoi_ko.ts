@@ -840,7 +840,7 @@
 <context>
     <name>LogsPage</name>
     <message>
-        <location filename="../ui/pages/logs.py" line="+42"/>
+        <location filename="../ui/pages/logs.py" line="+43"/>
         <source>Include archived</source>
         <translation type="unfinished"></translation>
     </message>
@@ -913,12 +913,12 @@
     </message>
     <message>
         <location line="+9"/>
-        <location line="+81"/>
+        <location line="+86"/>
         <source>Export CSV</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-80"/>
+        <location line="-85"/>
         <source>Export Image Overlays</source>
         <translation type="unfinished"></translation>
     </message>
@@ -928,7 +928,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+35"/>
+        <location line="+38"/>
         <source>{count} inspections · {ng} NG · yield {rate:.1%}</source>
         <translation type="unfinished"></translation>
     </message>
@@ -963,7 +963,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+19"/>
+        <location line="+21"/>
         <source>Confirm export</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1081,7 +1081,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+14"/>
+        <location line="+16"/>
         <source>{page} needs the {roles} role</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1104,24 +1104,24 @@
 <context>
     <name>ModelTestPage</name>
     <message>
-        <location filename="../ui/pages/model_test.py" line="+67"/>
-        <location line="+151"/>
+        <location filename="../ui/pages/model_test.py" line="+68"/>
+        <location line="+152"/>
         <source>Select Test Folder…</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-150"/>
+        <location line="-151"/>
         <source>Run Test</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location line="+2"/>
-        <location line="+154"/>
+        <location line="+155"/>
         <source>Export CSV</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-153"/>
+        <location line="-154"/>
         <source>Export Report</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1207,7 +1207,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+16"/>
+        <location line="+17"/>
         <source>{labelled} labelled of {images} images  ·  TP {tp}  FN {fn}  FP {fp}  TN {tn}  ·  WARN counts as NG</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1314,7 +1314,7 @@
 <context>
     <name>Page</name>
     <message>
-        <location filename="../ui/main_window.py" line="-325"/>
+        <location filename="../ui/main_window.py" line="-327"/>
         <source>Home</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1359,7 +1359,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/logs.py" line="-217"/>
+        <location filename="../ui/pages/logs.py" line="-223"/>
         <source>Logs &amp; Export</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1384,7 +1384,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/model_test.py" line="-214"/>
+        <location filename="../ui/pages/model_test.py" line="-216"/>
         <source>AI Model Test</source>
         <translation type="unfinished"></translation>
     </message>

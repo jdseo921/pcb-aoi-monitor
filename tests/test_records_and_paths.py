@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import csv
+import html
 import json
 import re
 import shutil
@@ -246,6 +247,24 @@ def test_req_set_017_validation_exports_name_the_run_and_the_ai_model(
     }
     report = page._report_html()
     assert f"Validation run UUID: {run['uuid']}" in report and f"AI model UUID: {active['uuid']}" in report
+
+
+def test_model_test_report_names_the_folder_its_results_came_from(
+    qtbot: QtBot, trained_ctx: AppContext, synthetic_dataset: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """#174: a folder picked after a run, to run next, leaves the report on the run whose results it holds: the report
+    names the folder that run tested and stored, not the folder picked last."""
+    win = _window(qtbot, trained_ctx)
+    page = win.pages["AI Model Test"]
+    tested, picked = synthetic_dataset / "test" / "ng", synthetic_dataset / "test" / "ok"
+    page.folder = str(tested)
+    page.run()
+    qtbot.waitUntil(lambda: bool(page.rows) and page.btn_run.isEnabled(), timeout=60000)
+    monkeypatch.setattr(QFileDialog, "getExistingDirectory", staticmethod(lambda *a, **k: str(picked)))
+    page.pick()
+    run = trained_ctx.db.latest_test_run(BOARD)
+    assert run and Path(run["folder"]) == tested
+    assert f"Validation folder: {html.escape(str(tested))}<br>" in page._report_html()
 
 
 def test_req_insp_012_checks_of_many_records_come_in_chunks(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

@@ -37,6 +37,7 @@ class LogsPage(Page):
         for d in (self.d_from, self.d_to):
             d.setCalendarPopup(True)
             d.setDisplayFormat("yyyy-MM-dd")  # ISO dates everywhere (REQ-SET-017), not the locale's short form
+            d.setDateRange(QDate(2000, 1, 1), QDate(2100, 12, 31))  # days every station's clock converts (#174)
         self.model = QComboBox()
         self.operator = QComboBox()
         self.archived = QCheckBox(self.tr("Include archived"))
@@ -90,13 +91,16 @@ class LogsPage(Page):
         self.root.addLayout(b)
 
     def refresh(self) -> None:
-        self.rows = self.ctx.inspections(
+        rows = self.ctx.inspections(
             self.d_from.date().toString("yyyy-MM-dd"),
             self.d_to.date().toString("yyyy-MM-dd"),
             self.model.currentData(),
             self.operator.currentData(),
             self.archived.isChecked(),
         )
+        self.table.clearSelection()  # the preview follows the selection, so it clears now and never reads a row that
+        # fill_table is replacing (#174): a selected row that survives a shrinking table still holds an old record's ID
+        self.rows = rows
         fill_table(
             self.table,
             [
@@ -144,12 +148,14 @@ class LogsPage(Page):
         self.refresh()
 
     def _preview(self) -> None:
+        """The selected record's overlay, or the placeholder: never another record's board (#174)."""
         rows = self.table.selectionModel().selectedRows()
+        r = None
         if rows:
             iid = int(cell_text(self.table, rows[0].row(), 0))
-            r = next(x for x in self.rows if x["id"] == iid)
-            if r["overlay_path"] and Path(r["overlay_path"]).exists():
-                self.view.set_image(self.ctx.load_image(r["overlay_path"]))
+            r = next((x for x in self.rows if x["id"] == iid), None)  # None: a row no longer listed
+        overlay = r["overlay_path"] if r else None
+        self.view.set_image(self.ctx.load_image(overlay) if overlay and Path(overlay).exists() else None)
 
     def _confirm(self, question: str) -> bool:
         return QMessageBox.question(self, self.tr("Confirm export"), question) == QMessageBox.StandardButton.Yes
