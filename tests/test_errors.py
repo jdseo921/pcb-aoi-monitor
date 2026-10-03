@@ -31,7 +31,7 @@ def test_req_log_004_codes_are_well_formed() -> None:
 
 def test_req_set_019_errors_carry_code_what_and_action() -> None:
     e = AoiError("AOI-TRN-001", detail="traceback goes to the log", path="old.pt", reason="RuntimeError")
-    assert str(e).startswith("AOI-TRN-001 AI model file refused: old.pt could not be loaded as a weights-only model")
+    assert str(e).startswith("AOI-TRN-001 AI model file refused: old.pt could not be loaded as a weights-only AI model")
     assert e.message == f"{e.what} {e.action}" and "Train the board model again" in e.action
     assert e.detail == "traceback goes to the log" and e.detail not in str(e)
     with pytest.raises(KeyError):

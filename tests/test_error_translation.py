@@ -201,8 +201,8 @@ def test_req_set_005_a_faulty_translation_leaves_the_english(qtbot: QtBot, trans
     try:
         failed = AoiError("AOI-INSP-003", board="B7", defects=3)
         assert dialog_text(ErrorReport.of(failed)) == (
-            "AOI-INSP-003 §Board failed inspection",
-            "Board B7 failed inspection with 3 defect(s).\n\n§Review the result on the Compare page before the board"
+            "AOI-INSP-003 §Board judged NG",
+            "Board B7 was judged NG with 3 defect(s).\n\n§Review the result on the Compare page before the board"
             " moves on.",
         )
         assert phrase_text(CODES["AOI-INSP-001"].what) == "§The file {path} could not be opened as an image."

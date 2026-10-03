@@ -1,5 +1,5 @@
 """3D Profile Viewer (spec 4.5). Needs Stage 2 3D camera data: until then the page is one card that says so and
-leads to the Recipe Editor, where height and volume limits are already entered per ROI (sketch profile3d-card.md)."""
+leads to the Recipe Editor, where height and volume thresholds are entered per ROI (sketch profile3d-card.md)."""
 
 from __future__ import annotations
 
@@ -33,7 +33,7 @@ class Profile3DPage(Page):
 
     def on_show(self) -> None:
         what = self.tr(
-            "Height and coplanarity need the 3D camera. Height and volume limits can be entered per ROI in the "
-            "Recipe Editor; they are stored now and checked from Stage 2."
+            "Height and coplanarity need the 3D camera. Height and volume thresholds (min and max) can be entered per"
+            " ROI in the Recipe Editor; they are stored now and checked from Stage 2."
         )
         self.card.show_state(self.tr("3D Profile arrives with Stage 2"), *self.empty_step(what, "Recipe Editor"))

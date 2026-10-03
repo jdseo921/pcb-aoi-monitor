@@ -36,7 +36,7 @@ from ..errors import QT_TRANSLATE_NOOP, AoiError, Phrase
 
 # Why an AI model file or a trained AI model is refused (AOI-TRN-001, AOI-TRN-004), as phrases shown translated (#198)
 DAMAGED = QT_TRANSLATE_NOOP("Errors", "the file is damaged ({damaged})")
-CRC_FAILS = QT_TRANSLATE_NOOP("Errors", "{entry} fails its CRC-32")
+CRC_FAILS = QT_TRANSLATE_NOOP("Errors", "{entry} does not match its CRC-32")
 IS_FOLDER = QT_TRANSLATE_NOOP("Errors", "{entry} is marked as a folder")
 BAD_SIZE = QT_TRANSLATE_NOOP("Errors", "its input size {size} is not a multiple of {stride} pixels")
 BAD_MAP = QT_TRANSLATE_NOOP("Errors", "its {key} is not a {size} x {size} map of finite numbers")

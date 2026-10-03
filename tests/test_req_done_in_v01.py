@@ -341,8 +341,8 @@ def test_req_rcp_002_five_roi_types_and_five_fields_save_and_reload(
 def test_req_rcp_002_height_or_volume_min_over_max_or_below_zero_is_refused(
     qtbot: QtBot, trained_ctx: AppContext, dialogs: list[tuple[str, str]]
 ) -> None:
-    """Height or Volume min above max, or a limit below 0, is refused with AOI-RCP-002 and nothing is applied; only
-    the spin box's own "—" (-1) leaves a limit unset, so a typed -0.5 is never stored as "not set" (#173)."""
+    """Height or Volume min above max, or a threshold below 0, is refused with AOI-RCP-002 and nothing is applied; only
+    the spin box's own "—" (-1) leaves a threshold unset, so a typed -0.5 is never stored as "not set" (#173)."""
     win = _window(qtbot, trained_ctx)
     win.navigate("Recipe Editor")
     page = win.pages["Recipe Editor"]
@@ -353,7 +353,7 @@ def test_req_rcp_002_height_or_volume_min_over_max_or_below_zero_is_refused(
         for spin, value in zip(spins, limits, strict=True):
             spin.setValue(value)
         qtbot.mouseClick(_button(page, "Apply"), Qt.MouseButton.LeftButton)
-        assert [title for title, _ in dialogs] == ["AOI-RCP-002 ROI limits refused"], limits
+        assert [title for title, _ in dialogs] == ["AOI-RCP-002 ROI thresholds refused"], limits
         assert page.edited_recipe.rois == before, limits
         dialogs.clear()
     page.r_hmin.setValue(5)

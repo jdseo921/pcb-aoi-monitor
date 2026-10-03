@@ -429,7 +429,7 @@ class TrainingPage(Page):
             return
         mid = int(cell_text(self.models, rows[0].row(), 0))
         src = Path(self.ctx.model(mid)["path"])
-        f, _ = QFileDialog.getSaveFileName(self, self.tr("Export AI model"), src.name, self.tr("PyTorch model (*.pt)"))
+        f, _ = QFileDialog.getSaveFileName(self, self.tr("Export AI model"), src.name, self.tr("AI model file (*.pt)"))
         if f:
             self.ctx.export_model(mid, f)
 

@@ -118,8 +118,8 @@ class RecipeEditorPage(Page):
         f.addRow(self.tr("Name"), self.r_name)
         f.addRow(self.tr("ROI type"), self.r_type)
         f.addRow(self.tr("AI score (× AI model threshold)"), self.r_ai)
-        f.addRow(self.tr("Height min / max (Stage 2)"), self._pair(self.r_hmin, self.r_hmax))
-        f.addRow(self.tr("Volume min / max (Stage 2)"), self._pair(self.r_vmin, self.r_vmax))
+        f.addRow(self.tr("Height thresholds min / max (Stage 2)"), self._pair(self.r_hmin, self.r_hmax))
+        f.addRow(self.tr("Volume thresholds min / max (Stage 2)"), self._pair(self.r_vmin, self.r_vmax))
         f.addRow(self.r_enabled)
         row = QHBoxLayout()
         self.apply_btn = button(self.tr("Apply"), slot=self.apply_roi)  # off while no ROI is selected (#173)
@@ -357,26 +357,26 @@ class RecipeEditorPage(Page):
         if i < 0:
             return
         x = self.edited_recipe.rois[i]
-        limits = [self._limit(w) for w in (self.r_hmin, self.r_hmax, self.r_vmin, self.r_vmax)]
+        thresholds = [self._threshold(w) for w in (self.r_hmin, self.r_hmax, self.r_vmin, self.r_vmax)]
         height, volume = QT_TRANSLATE_NOOP("Errors", "Height"), QT_TRANSLATE_NOOP("Errors", "Volume")
-        for quantity, (low, high) in ((height, limits[:2]), (volume, limits[2:])):
+        for quantity, (low, high) in ((height, thresholds[:2]), (volume, thresholds[2:])):
             negative = any(v is not None and v < 0 for v in (low, high))
             if negative or (low is not None and high is not None and low > high):
                 shown = ["—" if v is None else f"{v:g}" for v in (low, high)]
                 self.error(AoiError("AOI-RCP-002", roi=x.name, quantity=quantity, low=shown[0], high=shown[1]))
-                return  # nothing applied: a Stage 2 check would fail every board on these limits (#173)
+                return  # nothing applied: a Stage 2 check would judge every board NG on these thresholds (#173)
         x.name, x.type, x.ai_score, x.enabled = (
             self.r_name.text(),
             self.r_type.currentData(),
             self.r_ai.value(),
             self.r_enabled.isChecked(),
         )
-        x.height_min, x.height_max, x.volume_min, x.volume_max = limits
+        x.height_min, x.height_max, x.volume_min, x.volume_max = thresholds
         self._refresh_rois()
 
     @staticmethod
-    def _limit(w: QDoubleSpinBox) -> float | None:
-        """A Stage 2 limit: None only at the spin box's own "—" (its minimum, -1); any other number is kept as typed."""
+    def _threshold(w: QDoubleSpinBox) -> float | None:
+        """A Stage 2 threshold: None only at the spin box's "—" (its minimum, -1); any other number is kept as typed."""
         return None if w.value() == w.minimum() else w.value()
 
     def delete_roi(self) -> None:
