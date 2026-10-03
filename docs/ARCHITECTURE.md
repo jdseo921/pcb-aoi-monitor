@@ -370,6 +370,7 @@ The writes, their roles and entries:
 | `save_recipe` | Engineer | `recipe.save` (recipe body); object = recipe UUID |
 | `batch_test` | Engineer | `test.run` (folder, model version, metrics); object = board model name |
 | `export_model`, `export_overlays`, `export_csv` | Engineer | `export.model`, `export.overlays`, `export.csv` (destination, relative to the workspace when inside it, else in full (#196); counts) |
+| `export_csv_files` | Engineer | `export.csv` once per file (destination, stored as above, and row count); object type = what the rows are. Logs & Export's records and checks: the files are written all or none (`atomic.write_all`), a file that cannot be written is `AOI-LOG-002` naming it, the entries go in one transaction, and the files are removed when the entries cannot be written (#195) |
 | `export_report` | Engineer | `export.report` (destination, stored as for the exports above, board model, run UUID, AI model version, bytes); object = test run UUID. The page renders the PDF in memory and the service writes it through `atomic.py`; an export that cannot be written is `AOI-LOG-002`, as for `export_csv` (#180) |
 | `archive_old` | Engineer | `inspection.archive` (days, count); the retention run at start-up is a system action: logged, not audited |
 | `_sweep_ok_maps` | system, at start-up; no page calls it | `maps.sweep` (days, swept, skipped): the map files of OK results past `map_retention_days_ok` are deleted and forgotten, NG and WARN maps stay; audited, unlike the start-up archive, because it deletes evidence. A file that cannot be deleted, or lies outside results/, is skipped with a warning and kept for the next start |
@@ -488,21 +489,31 @@ AOI-CMP-001 note, the Golden board pane and the alarm list (#198); a translation
 the English. `aoi/logging_setup.py` writes the JSON-lines
 log in `<workspace>/logs/`, one file per UTC day, with time, level, module, event, ids and the app version, and never
 an image or a password; a caller's extra never replaces one of those fixed fields (one of the same name is written as
-`extra_<name>`, #171). Alarms (an NG verdict, a missing AI model, every error shown) are stored in `alarms` with
-their code through `AppContext.alarm` (an NG verdict's in its record's own transaction, `Database.add_inspection`,
-so a saved NG board always has its alarm and a refused alarm saves neither, #179), and `AppContext.report_error` is
-the one path for an error a user sees: it
+`extra_<name>`, #171). An error code's personal values (`ErrorCode.personal`: AOI-USR-002's user name) reach the log
+only as the user's UUID: `report_error` logs `AoiError.log_safe()`, the same error and trace with them replaced, and
+its alarm line that text, while the dialog and the stored alarm keep the name (REQ-LOG-004, #195). Alarms (an NG
+verdict, a missing AI model, every error shown but Compare's AOI-CMP-001 note) are stored in `alarms` with their code
+through `AppContext.alarm` (an NG verdict's in its record's own transaction, `Database.add_inspection`, so a saved NG
+board always has its alarm and a refused alarm saves neither, #179), and `AppContext.report_error` is the one path for
+an error a dialog shows: it
 logs the stack trace with the build version, stores an ERROR alarm and returns the plain report that
 `aoi/ui/errors.py` shows (code, title, what happened, what to do), also for unhandled errors through
 `sys.excepthook`; it never raises, so the dialog shows even when the database refuses the alarm (logged as
 `alarm.not_stored`, #171). SQLite's refusal while another program holds the database's lock during work becomes
 `AOI-SET-013` there, and the alarm of an error caused by that lock waits 200 ms for it, not SQLite's 5 s (#195). The
-Inspection page's own alarms (no AI model yet, a run stopped by a board model change)
-never raise either: one the database refuses is logged as `alarm.not_stored`, and the result, its AOI-INSP-008 or
-the stop goes on (#179). Two coded errors are shown in the page without a dialog or an alarm: Compare's AOI-CMP-001
-note, and a Golden board file that the Recipe Editor or Compare cannot read for its pane, which says the code and
-what to do there and logs `golden_board.unreadable` as a warning. Both pages read the Golden board again when shown
-if the file, or which file it is, changed since their last read (`Page.golden_board_stamp`); inspecting a board of
+Inspection page's own alarms (no AI model yet, a run stopped by a board model change) and the Golden board alarm
+(#195) wait the same 200 ms for that lock, not 5 s on the UI thread, and never raise either: one the database
+refuses is logged as `alarm.not_stored`,
+and the result, its AOI-INSP-008 or the stop goes on (#179, #195). A header change while the pool thread saves the
+board in hand still waits for that save first, up to 5 s: `Database.add_inspection` holds the database's thread lock
+through SQLite's wait, and the alarm and every read of the database on the UI thread wait for that lock.
+Compare's AOI-CMP-001 note is shown in the page without a dialog or an alarm. A Golden board file that the Recipe
+Editor or Compare cannot read is shown on its pane, with the code and what to do, without a dialog;
+`AppContext.golden_board_unreadable` logs `golden_board.unreadable` as a warning and stores an ERROR alarm with that
+code once per board model, file and code while the app runs (it remembers each one it alarmed), so showing a pane
+again, or the file going back to a state already alarmed, adds none (#195). Both pages
+read the Golden board again when shown if the file, or which file it is, changed since their last read
+(`Page.golden_board_stamp`); inspecting a board of
 that board model is refused with AOI-INSP-009, which is alarmed; Compare then clears the verdict of the board
 before, says on its test pane that the board was not inspected, and judges it when shown again once the Golden board
 can be read (#176). The page in use is kept in `settings.json` and reopened at start-up (REQ-INSP-006, REQ-LOG-005);
@@ -535,8 +546,8 @@ helpers outside `tr()`, on a literal value an `AoiError` fills its message with 
 placeholder title). A second scan covers the rest of `aoi/`: a literal an engine error or a phrase's `fill()` takes as a
 value fails, and so does one a function returns, alone or in a tuple, since a helper's reason reaches an error as a
 value (`reason=_unusable(...)` in `aoi/core/anomaly.py`), unless `ENGINE_ALLOWED` names it with its reason (a number
-with a unit symbol, a device or image format name, a user name, a key Compare words itself, the AI model's stored
-calibration rule; the Training log line that shows that rule is #199). `aoi/i18n/aoi_ko.ts` is
+with a unit symbol, a device or image format name, a user's name or log pseudonym, a key Compare words itself, the AI
+model's stored calibration rule; the Training log line that shows that rule is #199). `aoi/i18n/aoi_ko.ts` is
 generated by `python tools/update_translations.py` (pyside6-lupdate over `aoi/`) and a test fails when it is stale; Korean
 translations are filled in later with Qt Linguist and compiled with `pyside6-lrelease`.
 
