@@ -8,8 +8,10 @@ import json
 import re
 import shutil
 import sqlite3
+import time
+from collections.abc import Iterator
 from datetime import UTC, datetime
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 from typing import cast
 
 import cv2
@@ -46,6 +48,31 @@ STORED_PATHS = (
 )
 
 
+def stored_strings(value: object) -> Iterator[str]:
+    """Every string a stored value holds, with JSON text decoded (`metrics`, `result_json` and the paths in a validation
+    run's `results` are JSON in a column), so a path is read as written, not as JSON escapes its backslashes."""
+    if isinstance(value, dict):
+        value = list(value.values())
+    if isinstance(value, list):
+        for v in value:
+            yield from stored_strings(v)
+    elif isinstance(value, str):
+        try:
+            decoded = json.loads(value)
+        except ValueError:
+            decoded = None
+        if isinstance(decoded, dict | list):
+            yield from stored_strings(decoded)
+        else:
+            yield value
+
+
+def absolute_path(text: str) -> bool:
+    """`text` starts at a root: a Windows path (C:\\…, C:/…, \\\\server\\share\\…) or a POSIX one (/…), on either
+    system."""
+    return PureWindowsPath(text).is_absolute() or text.startswith(("/", "\\"))
+
+
 def filled_ctx(tmp_path: Path, tiny_model: TrainedModel, name: str = "ws") -> AppContext:
     """A private copy of the trained workspace with one inspection logged, one recipe saved, one alarm stored and one
     validation run on a folder inside the workspace (`validation/ok` and `validation/ng`, a sample copied into each)."""
@@ -68,8 +95,11 @@ def test_req_set_017_records_have_uuid(tmp_path: Path, tiny_model: TrainedModel)
         ids = [r["uuid"] for r in ctx.db.query(f"SELECT uuid FROM {table}")]
         assert ids and all(UUID4.match(u) for u in ids), table
         assert len(set(ids)) == len(ids), table
+    user = "SELECT uuid, role FROM users WHERE name='operator'"
+    before = ctx.db.query(user)
     ctx.db.add_user("operator", "Engineer")  # a role change keeps the record, and so its UUID
-    assert len({r["uuid"] for r in ctx.db.query("SELECT uuid FROM users")}) == 3
+    assert before[0]["role"] == "Operator" and ctx.db.query(user) == [{"uuid": before[0]["uuid"], "role": "Engineer"}]
+    assert ctx.db.query("SELECT COUNT(*) n FROM users")[0]["n"] == 3
 
 
 def test_req_set_017_migration_0002_backfills_existing_rows(tmp_path: Path) -> None:
@@ -102,6 +132,37 @@ def test_req_set_017_times_are_utc_with_offset(tmp_path: Path, tiny_model: Train
     assert len(ctx.db.inspections(today, today)) == 1
     assert ctx.db.inspections("2000-01-01", "2000-01-02") == []
     assert ctx.db.inspections(date_to="2000-01-02") == []
+
+
+@pytest.fixture
+def seoul_time(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
+    """The process runs in Asia/Seoul (UTC+9, no daylight saving time), and its zone is put back afterwards: CI's
+    runners run in UTC, where local time and UTC are the same. Windows has no `time.tzset`, so a running process cannot
+    change its zone there and the test is skipped; the Linux leg runs it."""
+    if not hasattr(time, "tzset"):
+        pytest.skip("time.tzset does not exist on Windows; the Linux leg checks local time")
+    monkeypatch.setenv("TZ", "Asia/Seoul")
+    time.tzset()
+    yield
+    monkeypatch.undo()  # TZ as it was, then the C library reads it again
+    time.tzset()
+
+
+@pytest.mark.usefixtures("seoul_time")
+def test_req_set_017_local_time_and_day_filter_in_a_zone_ahead_of_utc(tmp_path: Path) -> None:
+    """At a station in Korea a time stored as 20:30 UTC on 1 October is shown as 05:30 on 2 October, and the Logs filter
+    finds it under 2 October, not 1 October: a local calendar day runs from 15:00 UTC the day before."""
+    stored = "2026-10-01T20:30:00+00:00"
+    assert times.to_local(stored) == "2026-10-02 05:30:00"
+    day = ("2026-10-01T15:00:00+00:00", "2026-10-02T15:00:00+00:00")
+    assert times.local_day_bounds_utc("2026-10-02", "2026-10-02") == day
+    assert times.local_day_bounds_utc("2026-10-02", None) == (day[0], None)
+    db = Database(tmp_path / "aoi.sqlite")
+    record = db.add_inspection({"result": "OK"}, [])
+    db.execute("UPDATE inspections SET time=? WHERE id=?", (stored, record))
+    assert [r["id"] for r in db.inspections("2026-10-02", "2026-10-02")] == [record]
+    assert db.inspections("2026-10-01", "2026-10-01") == []
+    db.close()
 
 
 def test_req_set_001_moved_workspace_opens_everything(tmp_path: Path, tiny_model: TrainedModel) -> None:
@@ -138,8 +199,11 @@ def test_req_set_001_moved_workspace_opens_everything(tmp_path: Path, tiny_model
         assert ctx.judged_reference(r["id"])[1] == "same"
     assert ctx.load_model("TINY") is not None
     assert ctx.inspect_file("TINY", images[0]).verdict in ("OK", "WARN", "NG")
-    stored = json.dumps(ctx.db.query("SELECT * FROM inspections") + ctx.db.query("SELECT * FROM test_runs"))
-    assert str(old_root) not in stored and str(new_root) not in stored
+    windows = r"C:\Users\op\old_place\a.png"  # as a Windows station stores it, in a JSON list in a column
+    assert [s for s in stored_strings([{"results": json.dumps([{"image": windows}])}]) if absolute_path(s)] == [windows]
+    rows = ctx.db.query("SELECT * FROM inspections") + ctx.db.query("SELECT * FROM test_runs")
+    absolute = [s for s in stored_strings(rows) if absolute_path(s) or str(old_root) in s or str(new_root) in s]
+    assert rows and not absolute, absolute
     ctx.close()
 
 
