@@ -145,8 +145,8 @@ def explain(res: InspectionResult) -> list[Sentence]:
     severe = sum(d.severity != "Minor" for d in res.defects)
     if not out and res.verdict == WARN and severe:
         out.append(Sentence(SEVERE_DEFECT) if severe == 1 else Sentence(SEVERE_DEFECTS, {"count": str(severe)}))
-    elif not out:
-        out.append(Sentence(ALL_INSIDE if res.verdict == OK else UNEXPLAINED))
+    elif not out:  # an OK with no check at all, stored before #169, had nothing inside a threshold
+        out.append(Sentence(ALL_INSIDE if res.verdict == OK and res.checks else UNEXPLAINED))
     return out + notes(res)
 
 

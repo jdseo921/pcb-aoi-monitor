@@ -303,7 +303,9 @@ class AppContext:
         (or `reference`, such as another stored OK board on the Compare page). Screens never build an Inspector.
         The engine names the model version and recipe revision it applies, with their UUIDs, for the records it
         produces (REQ-INSP-012); a `recipe` that differs from the stored revision names none. Likewise the golden board
-        file it read, with the SHA-256 of its bytes (REQ-CMP-003); a `reference` passed in names none."""
+        file it read, with the SHA-256 of its bytes (REQ-CMP-003); a `reference` passed in names none. AOI-INSP-009 when
+        the database names a golden board whose file is gone or cannot be read: a board is never judged as if none
+        were set (#169)."""
         latest = self.db.latest_recipe(board_model)
         rev: int | None
         rev, rcp, recipe_uuid = (latest[0], Recipe.from_dict(latest[1]), latest[2]) if latest else (0, None, None)
@@ -313,10 +315,12 @@ class AppContext:
         mv = self.load_model(board_model)
         golden = self.db.reference(board_model) if reference is None else None
         sha: str | None = None
-        if golden and Path(golden).exists():
-            reference, sha = self._load_image_sha256(golden)  # one read: the bytes hashed are the bytes judged
-        else:
-            golden = None
+        if golden:
+            try:
+                reference, sha = self._load_image_sha256(golden)  # one read: the bytes hashed are the bytes judged
+            except AoiError as e:  # the comparison and the alignment the AI model was trained on would silently go
+                why = f"it cannot be read ({e.code} {e.entry.title})" if Path(golden).exists() else "the file is gone"
+                raise AoiError("AOI-INSP-009", detail=str(e), board=board_model, file=golden, reason=why) from e
         model, version, model_uuid = (mv[1], mv[0], mv[2]) if mv else (None, None, None)
         return Inspector(recipe or rcp, model, reference, side, version, rev, model_uuid, recipe_uuid, golden, sha)
 
@@ -563,8 +567,8 @@ class AppContext:
 
         Raises AOI-USR-001 below the Engineer role; AOI-CMP-002 for an unknown UUID or a result stored without its
         decision table; AOI-CMP-005 when `thresholds` are another board model's; AOI-CMP-003 when a map it reads is
-        there but cannot be read; and AOI-CMP-004 when a map, or the AI model's calibration, that a check `thresholds`
-        uses was judged on is gone."""
+        there but cannot be read; AOI-CMP-004 when a map, or the AI model's calibration, that a check `thresholds`
+        uses was judged on is gone; and AOI-INSP-010 when `thresholds` leave no check that ran on the board."""
         iid = self.db.inspection_id(result_uuid)
         rec = self.db.inspection(iid) if iid is not None else None
         res = self.inspection_result(iid) if iid is not None else None

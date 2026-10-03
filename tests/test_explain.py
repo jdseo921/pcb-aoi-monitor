@@ -124,10 +124,13 @@ def test_req_cmp_004_every_engine_check_has_its_sentences(tiny_model: TrainedMod
 def test_req_cmp_004_why_without_a_failing_check() -> None:
     """With no failing check: why the board is a WARN when defects above Minor severity make it one (one or several,
     Minor ones not counted), that every deciding check is inside its threshold for an OK, and that the stored checks
-    do not show why for anything else; then one sentence per check that did not run, with what to do."""
+    do not show why for anything else, an OK that no check judged (stored before #169) included; then one sentence per
+    check that did not run, with what to do."""
 
-    def why(verdict: str, defects: list[Defect], notes: list[str] | None = None) -> list[str]:
-        return [s.text() for s in ex.explain(InspectionResult(verdict, 0.0, defects=defects, notes=notes or []))]
+    def why(verdict: str, defects: list[Defect], notes: list[str] | None = None, checked: bool = True) -> list[str]:
+        checks = [_check("SSIM similarity", 0.99, 0.8, "< thr → NG", OK, "Compare")] if checked else []
+        res = InspectionResult(verdict, 0.0, checks=checks, defects=defects, notes=notes or [])
+        return [s.text() for s in ex.explain(res)]
 
     one = "No check failed, but a defect above Minor severity is marked on the board, so a person needs to look."
     assert (
@@ -141,12 +144,13 @@ def test_req_cmp_004_why_without_a_failing_check() -> None:
         == why(OK, [_defect(1, "Minor")])
         == ["Every check that decides the verdict is inside its threshold."]
     )
-    assert why(NG, []) == ["The stored checks do not show why; inspect the board again."]
+    assert why(NG, []) == why(OK, [], checked=False) == ["The stored checks do not show why; inspect the board again."]
     assert why(OK, [], [NO_GOLDEN_NOTE, NO_AI_NOTE, "Other"]) == [
         "Every check that decides the verdict is inside its threshold.", *NOTE_TEXTS, "Note: Other"
     ]  # fmt: skip
-    bare = Inspector(Recipe(board_model="B")).inspect(np.zeros((64, 64, 3), np.uint8))  # no Golden board, no AI model
-    assert [s.text() for s in ex.notes(bare)] == NOTE_TEXTS
+    golden = np.zeros((64, 64, 3), np.uint8)  # with neither a Golden board nor an AI model a board is refused (#169)
+    compared = Inspector(Recipe(board_model="B"), reference=golden).inspect(golden)  # a Golden board, no AI model
+    assert [s.text() for s in ex.notes(compared)] == NOTE_TEXTS[1:]
     assert (NO_GOLDEN_NOTE, NO_AI_NOTE) == (  # results stored by earlier builds hold these words: they never change
         "No golden reference image set for this board model; comparison skipped.",
         "No trained model for this board model; AI check skipped.",
