@@ -343,6 +343,19 @@ def test_req_set_019_an_empty_or_relative_workspace_and_a_count_below_1_are_refu
     assert not f.exists() and ctx.settings.workspace == open_workspace
 
 
+def test_req_set_019_a_relative_aoi_workspace_never_stops_the_next_start(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """With a relative AOI_WORKSPACE and no settings.json yet, the first write (the page change's last_page) wrote the
+    relative workspace into settings.json, so every later start stopped with AOI-SET-008 (#170 review): the default
+    workspace is now made absolute where it is read."""
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("AOI_WORKSPACE", "relative_ws")
+    Settings().save_keys({"last_page": "Logs & Export"})
+    saved = Settings.load()
+    assert saved.workspace == str(tmp_path / "relative_ws") and saved.last_page == "Logs & Export"
+
+
 def test_req_insp_001_the_decoder_limits_are_refused_with_a_code(tmp_path: Path) -> None:
     """A side over the decoder's 1,048,576 px is refused by the header (AOI-INSP-007), whatever the pixel limit says,
     and should the decoder refuse a file by its own limits the operator reads a coded message, not an unexpected

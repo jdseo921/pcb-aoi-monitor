@@ -31,7 +31,9 @@ _LEAST = {  # the smallest whole number a count setting takes; a map retention o
 
 
 def default_workspace() -> Path:
-    return Path(os.environ.get("AOI_WORKSPACE", Path.home() / "AOI_Workspace"))
+    """The workspace folder, and where settings.json lives: AOI_WORKSPACE or ~/AOI_Workspace, made absolute, so a
+    relative AOI_WORKSPACE never reaches settings.json, which refuses a relative workspace (AOI-SET-008)."""
+    return Path(os.environ.get("AOI_WORKSPACE", Path.home() / "AOI_Workspace")).expanduser().absolute()
 
 
 @dataclass
