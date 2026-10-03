@@ -16,11 +16,14 @@ seeded, but PyTorch's float rounding differs by CPU type (the same seed and data
 its vectorised and its default CPU kernels), so a trained model's score, boxes and verdict differ between machines.
 PinnedModel takes the model out of that equation: its map is 8-bit OpenCV arithmetic from the golden board, and the
 Training page lists its threshold. The ORB alignment stays a float pipeline, so the golden board and the aligned test
-board can still differ by a level or a sub-pixel between machines; the shift-tolerant difference, the quantised map and
-the wide margins between the shown values and their thresholds keep the verdict, the boxes and the scores identical,
-and only the last digits of SSIM and the inlier count move (about 0.02 % of a page, against the test's 0.5 %). On Linux
-the pages are drawn with DejaVu Sans without hinting, so every Linux machine draws the same pixels; Windows draws Segoe
-UI, so there the tests check sizes and contrast only.
+board can still differ by a level or a sub-pixel between machines (with OpenCV's AVX code turned off, the alignment
+found 379 points instead of 382 and the similarity read 0.9395 instead of 0.9377); the shift-tolerant difference, the
+quantised map and the wide margins between the shown values and their thresholds keep the verdict, the boxes and the
+scores identical, and the two numbers that follow the alignment's last digits are pinned: Compare shows FIXED_SSIM and
+FIXED_INLIERS. What still moves is the aligned board picture, by a level or two (at most 42 levels, at 2 single pixels,
+with OpenCV and NumPy held to SSE3), which the comparison tolerates (tests/screens/test_screens.py). On Linux the pages
+are drawn with DejaVu Sans without hinting, so every Linux machine draws the same pixels; Windows draws Segoe UI, so
+there the tests check sizes and contrast only.
 """
 
 from __future__ import annotations
@@ -51,6 +54,7 @@ APPROVED_DIR = ROOT / "tests" / "screens" / "approved"
 BOARD_MODEL = "TINY"
 FIXED_TIME = "2026-01-01T09:00:00+00:00"  # every stored time, so a render does not change with the clock
 FIXED_MS = 480.0  # the inspection time Inspection and Compare show
+FIXED_SSIM, FIXED_INLIERS = 0.95, 400  # the similarity and alignment points Compare shows (module docstring)
 STORED_STATES = ("compare-stored-operator", "compare-golden-changed-operator")  # see render_stored
 FIXED_WORKSPACE = "C:/AOI_Workspace"  # what the Settings page shows instead of the temporary folder
 TEST_FONT = '"DejaVu Sans"'  # the font the approved images are drawn with (Linux)
@@ -208,11 +212,19 @@ def pinned_rendering(app: QApplication, font: str) -> Iterator[None]:
 
 @contextmanager
 def pinned_engine() -> Iterator[None]:
-    """Every inspection runs with PinnedModel in place of the trained model and reports FIXED_MS, so the verdict, the
-    score, the boxes and the time that Inspection, Compare, Logs and Home show are the same on every machine."""
+    """Every inspection runs with PinnedModel in place of the trained model, reports FIXED_MS and is judged on
+    FIXED_SSIM and FIXED_INLIERS, so the verdict, the score, the boxes, the time and the checks that Inspection,
+    Compare, Logs and Home show are the same on every machine."""
+    from aoi.core import inspector
+    from aoi.core.compare import CompareResult
     from aoi.core.inspector import Inspector
 
-    real = Inspector.inspect
+    real, real_compare = Inspector.inspect, inspector.compare
+
+    def compare(*args: Any, **kwargs: Any) -> CompareResult:
+        res = real_compare(*args, **kwargs)
+        res.metrics.update(ssim=FIXED_SSIM, alignment_inliers=FIXED_INLIERS)  # their last digits follow the CPU
+        return res
 
     def inspect(self: Inspector, *args: Any, **kwargs: Any) -> Any:
         model = self.model
@@ -227,7 +239,7 @@ def pinned_engine() -> Iterator[None]:
         res.elapsed_ms = FIXED_MS
         return res
 
-    with mock.patch.object(Inspector, "inspect", inspect):
+    with mock.patch.object(Inspector, "inspect", inspect), mock.patch.object(inspector, "compare", compare):
         yield
 
 
