@@ -12,7 +12,8 @@ import json
 import sqlite3
 import threading
 import uuid
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable, Iterator
+from contextlib import contextmanager
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
@@ -37,7 +38,8 @@ class Database:
     def __init__(self, path: Path, workspace: Path | None = None) -> None:
         self.path = Path(path)
         self.workspace = Path(workspace) if workspace else self.path.parent
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()  # re-entrant: a statement inside `transaction()` takes it again
+        self._tx_depth = 0  # >0 while a `transaction()` is open; only the thread holding the lock reads or sets it
         try:
             self.path.parent.mkdir(parents=True, exist_ok=True)
             self._conn = sqlite3.connect(self.path, check_same_thread=False)
@@ -74,15 +76,49 @@ class Database:
         return WorkspaceError("AOI-SET-011", path=str(self.workspace), error=str(e))
 
     # --- primitives --------------------------------------------------------
+    @contextmanager
+    def transaction(self) -> Iterator[None]:
+        """Every statement inside commits together at the end, or none does: an exception, or the process dying, rolls
+        them all back (#178). A write and its audit entry go in one, so neither is ever stored without the other. The
+        lock is held throughout, so no other thread's statement joins or commits it; keep file work outside. One opened
+        inside another joins it."""
+        with self._lock:
+            if self._tx_depth:
+                self._tx_depth += 1
+                try:
+                    yield
+                finally:
+                    self._tx_depth -= 1
+                return
+            self._conn.execute("BEGIN IMMEDIATE")  # the write lock now: a write inside never waits half-way
+            self._tx_depth = 1
+            try:
+                yield
+                self._conn.commit()
+            except BaseException:
+                self._conn.rollback()
+                raise
+            finally:
+                self._tx_depth = 0
+
+    def _commit(self) -> None:
+        """Commit a statement's own transaction; inside `transaction()` the outermost one commits."""
+        if not self._tx_depth:
+            self._conn.commit()
+
+    def _rollback(self) -> None:
+        if not self._tx_depth:  # inside `transaction()` the exception rolls back the whole of it
+            self._conn.rollback()
+
     def execute(self, sql: str, params: Iterable[Any] = ()) -> int | None:
         """Run one statement and commit. Returns the new row id after an INSERT, otherwise None. A statement that fails
         is rolled back, so no transaction is left open to hold the write lock or join the next commit (#171)."""
         with self._lock:
             try:
                 cur = self._conn.execute(sql, tuple(params))
-                self._conn.commit()
+                self._commit()
             except BaseException:
-                self._conn.rollback()
+                self._rollback()
                 raise
             return cur.lastrowid
 
@@ -176,9 +212,9 @@ class Database:
                     " VALUES(?,?,?,?,?,?,?)",
                     row,
                 )
-                self._conn.commit()
+                self._commit()
             except BaseException:  # the old version stays active unless the new one is in
-                self._conn.rollback()
+                self._rollback()
                 raise
         if cur.lastrowid is None:
             raise sqlite3.DatabaseError("INSERT INTO models returned no row id")
@@ -203,9 +239,14 @@ class Database:
             (model_id, model_id),
         )
 
-    def next_model_version(self, board_model: str) -> str:
-        n = len(self.models(board_model)) + 1
-        return f"v1.{n - 1}" if n > 1 else "v1.0"
+    def next_model_version(self, board_model: str, taken: Callable[[str], bool] = lambda version: False) -> str:
+        """The first of v1.0, v1.1, ... from the count of registered versions that no version has and `taken` does not
+        report in use, such as by files a run left unregistered: a file a result names is never written over (#178)."""
+        names = {m["version"] for m in self.models(board_model)}
+        n = len(names)
+        while (version := f"v1.{n}") in names or taken(version):
+            n += 1
+        return version
 
     # --- recipes -----------------------------------------------------------
     def save_recipe(self, board_model: str, body: dict[str, Any], user: str) -> tuple[int, str]:
@@ -292,9 +333,9 @@ class Database:
                     " explain) VALUES(?,?,?,?,?,?,?,?,?,?)",
                     [(iid, *c) for c in check_rows],
                 )
-                self._conn.commit()
+                self._commit()
             except BaseException:  # a database error or anything else: the record is whole or absent
-                self._conn.rollback()
+                self._rollback()
                 raise
         return iid
 

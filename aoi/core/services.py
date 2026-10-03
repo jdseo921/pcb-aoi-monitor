@@ -6,6 +6,7 @@ and later a Stage 3 robot cycle or Stage 4 MES hook).
 
 from __future__ import annotations
 
+import contextlib
 import contextvars
 import csv
 import functools
@@ -119,6 +120,25 @@ def requires(
     return wrap
 
 
+def transactional(fn: Callable[Concatenate[AppContext, P], R]) -> Callable[Concatenate[AppContext, P], R]:
+    """Run a write that touches only the database, its audit entry included, in one transaction: both are stored or
+    neither is (#178). Goes under `requires`, so a refused call opens none."""
+
+    @functools.wraps(fn)
+    def run(self: AppContext, *args: P.args, **kwargs: P.kwargs) -> R:
+        with self.db.transaction():
+            return fn(self, *args, **kwargs)
+
+    return cast("Callable[Concatenate[AppContext, P], R]", run)
+
+
+def _remove(files: list[Path]) -> None:
+    """Remove files a write made before it failed, so none is left that its records or audit entry do not name."""
+    for f in files:
+        with contextlib.suppress(OSError):
+            f.unlink(missing_ok=True)
+
+
 class AppContext:
     def __init__(self, settings: Settings | None = None) -> None:
         self.settings = settings or Settings.load()
@@ -200,26 +220,33 @@ class AppContext:
     def import_samples(
         self, board_model: str, paths: list[str], label: str, defect_type: str | None = None, side: str = "Top"
     ) -> int:
-        """Copy uploads into the workspace so training data survives the source folder moving."""
+        """Copy uploads into the workspace so training data survives the source folder moving. All or nothing (#178):
+        a file that cannot be copied stops the import and removes the copies made; then the samples, a new board
+        model's default recipe and reference, and the audit entry commit together."""
         self._refuse_case_variant(board_model)  # a new board model is created by its first import
         dest = self.settings.images_dir / board_model / label
-        dest.mkdir(parents=True, exist_ok=True)
-        n = 0
-        for p in paths:
-            src = Path(p)
-            target = dest / f"{src.stem}_{uuid.uuid4().hex[:6]}{src.suffix.lower()}"
-            atomic.copy_file(src, target)
-            self.db.add_sample(board_model, str(target), label, defect_type, side)  # creates the board model if new
-            n += 1
-        if n:
-            self._ensure_recipe(board_model)
-        if not self.db.reference(board_model):
-            oks = self.db.samples(board_model, "OK")
-            if oks:
-                self.db.set_reference(board_model, oks[0]["path"])
-        after = {"label": label, "defect_type": defect_type, "side": side, "added": n}
-        self.audit("sample.import", "board_model", board_model, None, after)
-        return n
+        copies: list[Path] = []
+        try:
+            for p in paths:
+                src = Path(p)
+                target = dest / f"{src.stem}_{uuid.uuid4().hex[:6]}{src.suffix.lower()}"
+                atomic.copy_file(src, target)
+                copies.append(target)
+            with self.db.transaction():
+                for target in copies:
+                    self.db.add_sample(board_model, str(target), label, defect_type, side)  # creates a new board model
+                if copies:
+                    self._ensure_recipe(board_model)
+                if not self.db.reference(board_model):
+                    oks = self.db.samples(board_model, "OK")
+                    if oks:
+                        self.db.set_reference(board_model, oks[0]["path"])
+                after = {"label": label, "defect_type": defect_type, "side": side, "added": len(copies)}
+                self.audit("sample.import", "board_model", board_model, None, after)
+        except BaseException:
+            _remove(copies)
+            raise
+        return len(copies)
 
     # --- training ------------------------------------------------------------
     @requires("Engineer", "Training a model")
@@ -253,27 +280,35 @@ class AppContext:
         if should_stop is not None and should_stop():  # Stop, or the window closing: the active model stays (TRN-008)
             raise JobCancelled(f"training {board_model}")  # nothing saved, registered, activated or audited (#171)
         previous = self.db.active_model(board_model)
-        version = self.db.next_model_version(board_model)
-        model_uuid = new_uuid()  # in the file's metadata and in the registry row, so an exported .pt names its record
-        model.meta.update(board_model=board_model, version=version, uuid=model_uuid, created_at=now_utc())
         out = self.settings.models_dir / board_model
         out.mkdir(parents=True, exist_ok=True)
-        path = out / f"{board_model}_{version}.pt"
-        model.save(path)
-        golden_path = out / f"{board_model}_{version}_golden.png"
-        save_image(golden_path, golden)
-        self.db.set_reference(board_model, str(golden_path))
-        model.meta["golden_image"] = to_stored(golden_path, self.settings.root)
-        summary = {k: v for k, v in model.meta.items() if k not in ("loss_history", "err_mean", "err_std")}
-        self.db.register_model(board_model, version, str(path), summary, activate=True, uid=model_uuid)
+
+        def files(v: str) -> list[Path]:
+            return [out / f"{board_model}_{v}.pt", out / f"{board_model}_{v}_golden.png"]
+
+        # never a name whose file is on disk: a result may name a Golden board that a run left unregistered (#178)
+        version = self.db.next_model_version(board_model, lambda v: any(f.exists() for f in files(v)))
+        path, golden_path = files(version)
+        model_uuid = new_uuid()  # in the file's metadata and in the registry row, so an exported .pt names its record
+        model.meta.update(board_model=board_model, version=version, uuid=model_uuid, created_at=now_utc())
+        try:
+            model.save(path)
+            save_image(golden_path, golden)
+            model.meta["golden_image"] = to_stored(golden_path, self.settings.root)
+            summary = {k: v for k, v in model.meta.items() if k not in ("loss_history", "err_mean", "err_std")}
+            with self.db.transaction():  # the Golden board in use, the active version and the entry change together
+                before = self.db.reference(board_model)
+                self.db.set_reference(board_model, str(golden_path))
+                self.db.register_model(board_model, version, str(path), summary, activate=True, uid=model_uuid)
+                old = {
+                    "active_version": previous["version"] if previous else None,
+                    "reference": to_stored(Path(before), self.settings.root) if before else None,
+                }
+                self.audit("model.train", "model", model_uuid, old, {"version": version, "metrics": summary})
+        except BaseException:
+            _remove(files(version))  # not registered: no file is left for a later run to take for its own
+            raise
         self._model_cache.pop(board_model, None)
-        self.audit(
-            "model.train",
-            "model",
-            model_uuid,
-            {"active_version": previous["version"] if previous else None},
-            {"version": version, "metrics": summary},
-        )
         self.log.info("training.finished", extra={"board_model": board_model, "model_version": version})
         return model.meta
 
@@ -305,17 +340,19 @@ class AppContext:
     def _ensure_recipe(self, board_model: str) -> None:
         """Store the default recipe as revision 1 for a board model that has no revision yet, so every result names
         the stored recipe revision, and its UUID, that decided it (REQ-INSP-012). No verdict changes: the defaults
-        were the recipe in use. Recorded as the system's, with an audit entry, since a recipe decides verdicts."""
-        if self.db.latest_recipe(board_model) is not None:
-            return
-        body = Recipe(board_model=board_model).to_dict()
-        rev, uid = self.db.save_recipe(board_model, body, "system")
-        self.db.add_audit(
-            None, None, "recipe.default", "recipe", uid, None, body, "default recipe stored as revision 1"
-        )
+        were the recipe in use. Recorded as the system's, with an audit entry, since a recipe decides verdicts; the
+        revision and its entry are stored together or not at all (#178)."""
+        with self.db.transaction():
+            if self.db.latest_recipe(board_model) is not None:
+                return
+            body = Recipe(board_model=board_model).to_dict()
+            rev, uid = self.db.save_recipe(board_model, body, "system")
+            reason = "default recipe stored as revision 1"
+            self.db.add_audit(None, None, "recipe.default", "recipe", uid, None, body, reason)
         self.log.info("recipe.default", extra={"board_model": board_model, "revision": rev})
 
     @requires("Engineer", "Saving a recipe")
+    @transactional
     def save_recipe(self, recipe: Recipe, reason: str | None = None) -> int:
         """Store the next recipe revision and audit it with the revision before (a recipe decides verdicts)."""
         latest = self.db.latest_recipe(recipe.board_model)
@@ -518,10 +555,11 @@ class AppContext:
                 progress(i, len(files))
         metrics = classification_metrics(rows)
         model_version = insp.model_version or "-"
-        run_uuid = self.db.add_test_run(board_model, model_version, folder, metrics, rows, insp.model_uuid)
-        ids = {"run_uuid": run_uuid, "model_version": insp.model_version, "model_uuid": insp.model_uuid}
-        after = {"folder": to_stored(Path(folder).absolute(), self.settings.root), **ids, **metrics}
-        self.audit("test.run", "board_model", board_model, None, after)
+        with self.db.transaction():  # the run and its entry, or neither (#178)
+            run_uuid = self.db.add_test_run(board_model, model_version, folder, metrics, rows, insp.model_uuid)
+            ids = {"run_uuid": run_uuid, "model_version": insp.model_version, "model_uuid": insp.model_uuid}
+            after = {"folder": to_stored(Path(folder).absolute(), self.settings.root), **ids, **metrics}
+            self.audit("test.run", "board_model", board_model, None, after)
         return metrics, [{**r, **ids} for r in rows]
 
     # --- what the screens read (REQ-USR-001: pages call only AppContext, never the database) ---
@@ -691,6 +729,7 @@ class AppContext:
 
     # --- what the screens change: each checks the role and appends an audit entry (REQ-USR-001, REQ-LOG-004) ---
     @requires("Engineer", "Creating a board model")
+    @transactional
     def ensure_board_model(self, name: str) -> None:
         """Create a board model unless it exists."""
         if name in self.db.board_models():
@@ -709,6 +748,7 @@ class AppContext:
             raise AoiError("AOI-TRN-005", name=name, existing=same)
 
     @requires("Engineer", "Changing the reference image")
+    @transactional
     def set_reference(self, board_model: str, sample_id: int) -> None:
         """Make a stored OK sample the reference image: inspections compare against it from now on, and the next
         training run aligns its boards to it before it learns the golden template. An NG sample is refused
@@ -723,6 +763,7 @@ class AppContext:
         self.audit("board_model.reference", "board_model", board_model, old, {"reference": to_stored(Path(path), root)})
 
     @requires("Engineer", "Relabelling a sample")
+    @transactional
     def update_sample(self, sample_id: int, label: str, defect_type: str | None) -> None:
         """Relabel a sample OK or NG and set its defect type. The reference sample cannot be relabelled NG
         (AOI-TRN-007): inspections would compare against a defective board."""
@@ -734,6 +775,7 @@ class AppContext:
         self.audit("sample.update", "sample", before["uuid"], old, {"label": label, "defect_type": defect_type})
 
     @requires("Engineer", "Removing a sample")
+    @transactional
     def delete_sample(self, sample_id: int) -> None:
         """Remove a sample's record; its image file stays in the workspace. The reference sample cannot be removed
         (AOI-TRN-007)."""
@@ -751,6 +793,7 @@ class AppContext:
             raise AoiError("AOI-TRN-007", sample=Path(sample["path"]).name, change=change)
 
     @requires("Engineer", "Activating a model version")
+    @transactional
     def activate_model(self, model_id: int) -> None:
         """Make a model version the one inspections use (an older version: a rollback)."""
         target = self.db.model(model_id)
@@ -760,6 +803,7 @@ class AppContext:
         self.audit("model.activate", "model", target["uuid"], old, {"active_version": target["version"]})
 
     @requires("Admin", "Changing users")
+    @transactional
     def add_user(self, name: str, role: str) -> None:
         """Add a user, or change the role of an existing one. Taking the Admin role from the last Admin is refused with
         AOI-USR-002 before anything is written or audited: no one could manage users or settings after it (#170)."""
@@ -772,6 +816,7 @@ class AppContext:
         self.audit("user.change", "user", self.db.user_uuid(name), old, {"name": name, "role": role})
 
     @requires("Engineer", "Archiving records")
+    @transactional
     def archive_old(self, days: int | None = None) -> int:
         """Archive inspections older than `days` (default: the retention setting); returns how many were archived."""
         days = self.settings.log_retention_days if days is None else days
@@ -798,9 +843,10 @@ class AppContext:
                 continue
             swept.append(r["id"])
         if swept:
-            self.db.clear_map_paths(swept)
             after = {"days": days, "swept": len(swept), "skipped": skipped}
-            self.db.add_audit(None, None, "maps.sweep", "inspections", None, None, after, "OK maps past retention")
+            with self.db.transaction():  # the paths forgotten and the entry, or neither (#178)
+                self.db.clear_map_paths(swept)
+                self.db.add_audit(None, None, "maps.sweep", "inspections", None, None, after, "OK maps past retention")
         self.log.info("maps.swept", extra={"days": days, "swept": len(swept), "skipped": skipped})
         return len(swept)
 
@@ -809,20 +855,21 @@ class AppContext:
         """Copy a model version's file to `dest`, whole or not at all."""
         model = self.model(model_id)
         atomic.copy_file(model["path"], dest)
-        self.audit("export.model", "model", model["uuid"], None, {"version": model["version"], "dest": str(dest)})
+        after = {"version": model["version"], "dest": str(dest)}
+        self._audit_files([Path(dest)], "export.model", "model", model["uuid"], after)
         return Path(dest)
 
     @requires("Engineer", "Exporting overlay images")
     def export_overlays(self, inspections: list[dict[str, Any]], folder: str | Path) -> int:
         """Copy the overlay images of `inspections` (records from `inspections()`) into `folder`; returns how many."""
-        n = 0
+        copied: list[Path] = []
         for r in inspections:
             if r.get("overlay_path") and Path(r["overlay_path"]).exists():
                 atomic.copy_file(r["overlay_path"], Path(folder) / Path(r["overlay_path"]).name)
-                n += 1
-        after = {"folder": str(folder), "records": len(inspections), "copied": n}
-        self.audit("export.overlays", "inspections", None, None, after)
-        return n
+                copied.append(Path(folder) / Path(r["overlay_path"]).name)
+        after = {"folder": str(folder), "records": len(inspections), "copied": len(copied)}
+        self._audit_files(copied, "export.overlays", "inspections", None, after)
+        return len(copied)
 
     @requires("Engineer", "Exporting CSV")
     def export_csv(
@@ -835,8 +882,19 @@ class AppContext:
         """Write `rows` as CSV to `path`, whole or not at all, and audit the export; returns the row count. `fieldnames`
         gives the header when `rows` may be empty."""
         export_csv(path, rows, fieldnames)
-        self.audit("export.csv", what, None, None, {"path": str(path), "rows": len(rows)})
+        self._audit_files([Path(path)], "export.csv", what, None, {"path": str(path), "rows": len(rows)})
         return len(rows)
+
+    def _audit_files(
+        self, files: list[Path], action: str, object_type: str, object_uuid: str | None, after: dict[str, Any]
+    ) -> None:
+        """Audit an export; when its entry cannot be written, remove the files it wrote, so none leaves the station
+        unaudited (#178). A file cannot join a database transaction, so the files are written first."""
+        try:
+            self.audit(action, object_type, object_uuid, None, after)
+        except BaseException:
+            _remove(files)
+            raise
 
 
 def classification_metrics(rows: list[dict[str, Any]]) -> dict[str, Any]:

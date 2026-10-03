@@ -67,6 +67,11 @@ stays in use. Import photos of several different good boards, then train again.
 **Stop** ends a training run without saving anything: no AI model version, golden board or audit entry; the active AI
 model stays. Closing the app while work runs asks whether to stop it; an AI model test finishes its folder first.
 
+**A run that fails as it is registered** (the disk full, the database held by another program) leaves the Golden board
+and the AI model in use as they were, with no new version, file or audit entry; train again once the cause is fixed.
+A new version never takes the name of files already in the AI model folder, so no Golden board a result was judged
+against is written over.
+
 **Switch User while work runs.** Training, an AI model test, a folder import and the board being inspected finish as the
 user who started them, whoever signs in meanwhile: the audit trail and the inspection record name that user, and a
 folder import is not refused part-way. An inspection run (Start) stops after that board, and the status bar says so; the
@@ -136,7 +141,8 @@ count and types, operator, image and overlay paths, then the record's, model's a
 beside it holds one row per check that decided each verdict: the record's time, board model, view, model version and
 recipe revision with their UUIDs, then the check's number, region (the whole board, or an ROI's name and box), metric,
 source, value, threshold, rule and result. Records from before the checks were stored have no rows in the second file.
-Each export is confirmed first and written whole or not at all, and the audit trail records it.
+Each export is confirmed first and written whole or not at all, and the audit trail records it; if that entry cannot
+be written, the exported file is removed.
 
 The **From** and **To** boxes take days from 2000-01-01 to 2100-12-31. The picture beside the table is the selected
 record's overlay; it is empty when the record's overlay file is gone, when no row is selected and after **Filter**.

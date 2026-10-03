@@ -104,7 +104,8 @@ def test_req_log_004_writes_are_audited(trained_ctx: AppContext, synthetic_datas
     assert set(by_action) == {action for action, _ in WRITES.values()} | {"recipe.default"}
     assert (by_action["recipe.default"]["user_uuid"], by_action["recipe.default"]["role"]) == (None, None)
     versions = [m["version"] for m in ctx.models("TINY")]  # newest first: the version trained above, then v1.0
-    assert by_action["model.train"]["before"] == {"active_version": versions[1]}
+    reference = by_action["board_model.reference"]["after"]["reference"]  # set before training; the Golden board (#178)
+    assert by_action["model.train"]["before"] == {"active_version": versions[1], "reference": reference}
     assert by_action["model.train"]["after"]["version"] == versions[0]
     assert (by_action["model.activate"]["before"], by_action["model.activate"]["after"]) == (
         {"active_version": versions[0]},
