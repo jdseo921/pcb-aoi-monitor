@@ -123,7 +123,11 @@ result and hands `on_cancel` what the job returned, so a job that checks `should
 copies and Export Image Overlays: `AppContext.import_samples` and `export_overlays` take `progress` and `should_stop`
 and audit `cancelled`). `tests/test_no_freeze.py` ticks the UI thread every 50 ms through each page's 5 MP action (for
 the Logs exports and the sample copies, enough 5 MP files to take over 2 s on the UI thread) and fails on a gap over
-2 s. A page job runs as the user who started it, as every job does (#177), so a Switch User while an export or a
+2 s; its `heavy_calls` helper wraps `AppContext.load_image`, `inspector`, `inspect`, `inspect_file`, `log_result`,
+`import_samples`, `checks_for_many`, `export_csv_files`, `export_overlays` and `Inspector.inspect`, fails a page whose
+work reached none of them or ran one on the UI thread, and stalls the first engine inspection (or sample import, or
+export) 2.5 s, so such work fails the gap budget too, on any PC (#208). A page job runs as the user who started it, as
+every job does (#177), so a Switch User while an export or a
 sample copy runs changes neither its role checks nor its audit entries, and `Page.update_actions()` runs as a job
 starts and ends: Logs turns its two exports off, Training its three imports, its empty table's Import Folder… link
 and Start Training, and Training's import slots return while one runs, so a second action cannot stop the first; an
