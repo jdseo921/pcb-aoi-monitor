@@ -11,6 +11,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import cast
 
+import numpy as np
 import pytest
 from PySide6.QtWidgets import QMessageBox
 from pytestqt.qtbot import QtBot
@@ -187,22 +188,176 @@ def test_req_set_019_the_app_opens_when_the_golden_board_file_is_gone(
 ) -> None:
     """With the Golden board's file of the board model in use gone or damaged, the main window did not open: the
     Recipe Editor read the file when the board model was selected at start-up, and its error escaped the window, so no
-    Engineer could reach Training to set another. Now the window opens, the Recipe Editor says the Golden board cannot
-    be opened, with the code and what to do, and inspecting a board still refuses it with AOI-INSP-009."""
-    golden = Path(str(trained_ctx.reference_image(BOARD)))
-    for change, code in ((golden.unlink, "AOI-INSP-001"), (lambda: golden.write_bytes(b"no image"), "AOI-INSP-004")):
-        change()
-        win = _window(qtbot, trained_ctx)
-        editor = win.pages["Recipe Editor"]
+    Engineer could reach Training to set another. Now the window opens as at every start, with the Operator signed in,
+    and shows no error for it: the Recipe Editor and Compare say on their Golden board pane that it cannot be opened,
+    with the code, what happened and the next step for the role signed in, built again when an Engineer signs in, and
+    no alarm is stored. Inspecting a board, on Compare too, still refuses it with AOI-INSP-009; once the step is done
+    (Set Reference on another OK sample), both panes show the new Golden board when shown again, and Compare judges the
+    board it refused (#176 review: Compare showed AOI-INSP-009 and stored an alarm at every start, the Recipe Editor
+    kept the Operator's "Ask an Engineer" text, and both kept the error after the remedy)."""
+    fix = "choose another OK sample with Set Reference on Training."
+    board = trained_ctx.samples(BOARD, "OK")[-1]["path"]
+    for change, code in ((Path.unlink, "AOI-INSP-001"), (lambda p: p.write_bytes(b"no image"), "AOI-INSP-004")):
+        golden = Path(str(trained_ctx.reference_image(BOARD)))
+        change(golden)
+        alarms = trained_ctx.alarms()
+        trained_ctx.set_user("operator", "Operator")  # as at every start: the pages load the board model first
+        win = _window(qtbot, trained_ctx, "Operator")
+        compare, editor = win.pages["Compare"], win.pages["Recipe Editor"]
+        qtbot.waitUntil(lambda page=compare: trained_ctx.jobs.idle() and page._bg is None, timeout=20000)
+        win.navigate("Compare")
+        heading = f"The Golden board for {BOARD} cannot be opened"
+        assert (compare.ref_empty.heading.text(), compare.ref_empty.link.isVisible()) == (heading, False)
+        assert compare.ref_empty.sentence.text().startswith(f"{code} ")
+        assert compare.ref_empty.sentence.text().endswith(f"Ask an Engineer to put the file back, or to {fix}")
+        win.set_role("Engineer", "engineer")
+        for page, empty in (("Recipe Editor", editor.view_empty), ("Compare", compare.ref_empty)):
+            win.navigate(page)
+            assert empty.isVisible() and empty.heading.text() == heading and empty.link.text() == "Open Training ›"
+            assert empty.sentence.text().startswith(f"{code} ") and empty.sentence.text().endswith(f"or {fix}")
+        qtbot.waitUntil(lambda page=compare: trained_ctx.jobs.idle() and page._bg is None, timeout=20000)
+        assert compare.ref_empty.isVisible() and compare.ref_empty.link.text() == "Open Training ›"
+        assert trained_ctx.alarms() == alarms
+        with pytest.raises(AoiError) as refused:
+            trained_ctx.inspect_file(BOARD, board, save=False)
+        assert refused.value.code == "AOI-INSP-009"
+        assert dialogs == [], "no error dialog on the way"
+        compare.set_test(board)  # a board to judge, which the Golden board keeps from being judged
+        qtbot.waitUntil(lambda: bool(dialogs), timeout=20000)
+        assert [d[0] for d in dialogs] == ["AOI-INSP-009 Golden board file not available"] and compare.res is None
+        dialogs.clear()
+        other = next(s for s in trained_ctx.samples(BOARD, "OK") if Path(s["path"]) not in (golden, Path(board)))
+        trained_ctx.set_reference(BOARD, other["id"])  # the step the panes give, done on Training
         win.navigate("Recipe Editor")
-        assert editor.ref is None and editor.view_empty.isVisible()
-        assert editor.view_empty.heading.text() == f"The Golden board for {BOARD} cannot be opened"
-        assert editor.view_empty.sentence.text().startswith(f"{code} ")
-        assert editor.view_empty.sentence.text().endswith("choose another OK sample with Set Reference on Training.")
-    assert not [d for d in dialogs if "AOI-SET-007" in d[0]], "no unexpected error on the way"
-    with pytest.raises(AoiError) as refused:
-        trained_ctx.inspect_file(BOARD, str(golden))
-    assert refused.value.code == "AOI-INSP-009"
+        assert editor.ref is not None and not editor.view_empty.isVisible()
+        win.navigate("Compare")
+        qtbot.waitUntil(lambda page=compare: page.res is not None and page._bg is None, timeout=20000)
+        assert not compare.ref_empty.isVisible() and not compare.ref_view._placeholder.isVisible()
+    assert dialogs == []
+
+
+def test_req_set_019_compare_says_why_a_board_is_not_judged_and_judges_it_once_it_can(
+    qtbot: QtBot, trained_ctx: AppContext, dialogs: list[tuple[str, str]]
+) -> None:
+    """A test board on Compare whose Golden board file went after it was judged: Re-evaluate refuses it with
+    AOI-INSP-009, its dialog and alarm, and now also clears the verdict of the board before and says on the Golden
+    board pane that the file cannot be opened; once a Golden board can be read again, showing the page judges the
+    board. Showing the page while the new Golden board cannot be read either names the new file on the pane, with no
+    dialog or alarm (#176 review: the pane kept the old picture and a stale OK, and the board was never judged again;
+    a later show raised a dialog and an alarm while the pane named the old file)."""
+    board = trained_ctx.samples(BOARD, "OK")[-1]["path"]
+    win = _window(qtbot, trained_ctx)
+    compare = win.pages["Compare"]
+    win.navigate("Compare")
+    compare.set_test(board)
+    qtbot.waitUntil(lambda: compare.res is not None and compare._bg is None, timeout=60000)
+    golden = Path(str(trained_ctx.reference_image(BOARD)))
+    golden.unlink()
+    compare.run()  # Re-evaluate
+    qtbot.waitUntil(lambda: bool(dialogs) and compare._bg is None, timeout=20000)
+    assert [d[0] for d in dialogs] == ["AOI-INSP-009 Golden board file not available"]
+    assert compare.res is None and compare.verdict.text() == "—" and compare.test_empty.isVisible()
+    assert compare.test_empty.heading.text() == "Board not inspected"
+    assert compare.ref_empty.heading.text() == f"The Golden board for {BOARD} cannot be opened"
+    assert golden.name in compare.ref_empty.sentence.text() and compare.ref_empty.link.text() == "Open Training ›"
+    dialogs.clear()
+    alarms = trained_ctx.alarms()
+    oks = [s for s in trained_ctx.samples(BOARD, "OK") if Path(s["path"]) not in (golden, Path(board))]
+    trained_ctx.set_reference(BOARD, oks[0]["id"])
+    Path(oks[0]["path"]).unlink()  # the new Golden board cannot be read either
+    win.navigate("Home")
+    win.navigate("Compare")
+    qtbot.waitUntil(lambda: trained_ctx.jobs.idle() and compare._bg is None, timeout=20000)
+    assert dialogs == [] and trained_ctx.alarms() == alarms and compare.res is None
+    assert Path(oks[0]["path"]).name in compare.ref_empty.sentence.text()
+    trained_ctx.set_reference(BOARD, oks[1]["id"])
+    win.navigate("Home")
+    win.navigate("Compare")
+    qtbot.waitUntil(lambda: compare.res is not None and compare._bg is None, timeout=60000)
+    assert not compare.ref_empty.isVisible() and not compare.test_empty.isVisible() and dialogs == []
+
+
+def test_req_cmp_003_a_stored_result_on_compare_is_never_inspected_again_on_show(
+    qtbot: QtBot,
+    trained_ctx: AppContext,
+    ng_board: Path,
+    dialogs: list[tuple[str, str]],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A stored result opened on Compare while today's Golden board cannot be read, whose stored maps cannot be read
+    either (AOI-CMP-003), stayed the stored result until a new Golden board was set: showing the page then inspected
+    the board again with today's Golden board and dropped the stored verdict, unasked (#176 review, REQ-CMP-003)."""
+    win = _window(qtbot, trained_ctx)
+    page = _inspect_one(qtbot, win, ng_board)
+    rid = page.last_id
+    assert rid is not None
+    golden = Path(str(trained_ctx.reference_image(BOARD)))
+    golden.unlink()
+    compare = win.pages["Compare"]
+    win.navigate("Compare")
+    qtbot.waitUntil(lambda: trained_ctx.jobs.idle() and compare._bg is None, timeout=20000)
+    assert compare.golden_error is not None
+
+    def damaged(*a: object, **k: object) -> None:
+        raise AoiError("AOI-CMP-003", file="map.png", reason="damaged for the test")
+
+    monkeypatch.setattr(trained_ctx, "judged_reference", damaged)
+    compare.show_stored(rid)
+    qtbot.waitUntil(lambda: bool(dialogs) and compare._bg is None, timeout=20000)
+    assert [d[0].split()[0] for d in dialogs] == ["AOI-CMP-003"]
+    dialogs.clear()
+    other = next(s for s in trained_ctx.samples(BOARD, "OK") if Path(s["path"]) != golden)
+    trained_ctx.set_reference(BOARD, other["id"])
+    win.navigate("Home")
+    win.navigate("Compare")
+    qtbot.waitUntil(lambda: trained_ctx.jobs.idle() and compare._bg is None, timeout=20000)
+    assert compare.stored is not None and compare.test_label.text().endswith("(stored result)") and dialogs == []
+
+
+def test_req_set_019_compare_says_no_golden_board_yet_for_the_role_signed_in(
+    qtbot: QtBot, trained_ctx: AppContext
+) -> None:
+    """Compare's "No Golden board yet" pane is built at start-up for the Operator; an Engineer who signs in reads the
+    step for the Engineer with its link, as on the Recipe Editor (#176 review)."""
+    trained_ctx.ensure_board_model("ZZZ")
+    trained_ctx.set_user("operator", "Operator")
+    win = _window(qtbot, trained_ctx, "Operator")
+    compare = win.pages["Compare"]
+    win._on_board_model("ZZZ")
+    win.navigate("Compare")
+    qtbot.waitUntil(lambda: trained_ctx.jobs.idle() and compare._bg is None, timeout=20000)
+    assert compare.ref_empty.heading.text() == "No Golden board for ZZZ yet" and not compare.ref_empty.link.isVisible()
+    win.set_role("Engineer", "engineer")
+    assert compare.ref_empty.isVisible() and compare.ref_empty.link.text() == "Open Training ›"
+
+
+def test_req_set_019_both_golden_board_panes_follow_a_new_reference(
+    qtbot: QtBot, trained_ctx: AppContext, ng_board: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """With a readable Golden board, Set Reference, or the file replaced where it is, shows on the Recipe Editor and
+    Compare when they are shown again, and a Try judged against the Golden board before is dropped (#176 review: the
+    Recipe Editor kept its Try verdict under another Golden board, and neither page read a file replaced in place)."""
+    win = _window(qtbot, trained_ctx)
+    editor, compare = win.pages["Recipe Editor"], win.pages["Compare"]
+    shown: list[object] = []
+    keep = compare._show_reference
+    monkeypatch.setattr(compare, "_show_reference", lambda ref, judged=None: (shown.append(ref), keep(ref, judged)))
+    win.navigate("Recipe Editor")
+    editor.run_test(str(ng_board))
+    qtbot.waitUntil(lambda: editor.test_verdict.text().startswith("Try result:"), timeout=60000)
+    golden = Path(str(trained_ctx.reference_image(BOARD)))
+    one, two = [s["path"] for s in trained_ctx.samples(BOARD, "OK") if Path(s["path"]) != golden][:2]
+    trained_ctx.set_reference(BOARD, next(s["id"] for s in trained_ctx.samples(BOARD, "OK") if s["path"] == one))
+    for step, path in (("Set Reference", one), ("the file replaced", two)):
+        if step == "the file replaced":
+            Path(one).write_bytes(Path(two).read_bytes())
+        win.navigate("Home")
+        win.navigate("Recipe Editor")
+        assert editor.ref is not None and np.array_equal(editor.ref, trained_ctx.load_image(path)), step
+        assert editor.test_verdict.text() == "", step
+        win.navigate("Compare")
+        qtbot.waitUntil(lambda page=compare: trained_ctx.jobs.idle() and page._bg is None, timeout=20000)
+        assert np.array_equal(cast(np.ndarray, shown[-1]), trained_ctx.load_image(path)), step
 
 
 def test_req_set_019_compare_save_to_recipe_without_a_board_model_asks_for_one(

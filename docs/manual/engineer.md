@@ -76,8 +76,12 @@ that turns off both "Use the Golden board comparison" and "Use the self-trained 
 board is refused with AOI-INSP-010, which names why each check did not run. A Golden board whose file is gone or
 damaged refuses every board of its board model with AOI-INSP-009: put the file back, or choose another OK sample as
 the Golden board with Set Reference on Training. Training again does not cure it while the Golden board is one of the
-imported samples, since training reads every OK sample. The Recipe Editor shows such a Golden board as one that
-cannot be opened, with the file's error code and the same steps, and the app still opens (#176).
+imported samples, since training reads every OK sample. The Recipe Editor and Compare show such a Golden board as one
+that cannot be opened, with the file's error code and the same steps, and the app still opens with no error dialog
+(#176); an Operator reads the same with "Ask an Engineer". When shown again after Set Reference, a training run, or the
+file put back or replaced, both read the Golden board again and show it; Compare then judges the test board it could
+not, and the Recipe Editor drops a Try judged against the Golden board before. Until then a test board Compare
+was asked to judge shows "Board not inspected" in place of a verdict.
 
 The Selected ROI form edits the ROI selected in the ROI table: Apply and Delete are off while none is, and Delete
 leaves none selected. Height and Volume min and max (stored now, checked from Stage 2) are 0 or more, with min not above max; "—",

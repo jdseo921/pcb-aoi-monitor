@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import weakref
 from collections.abc import Callable, Sequence
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, TypeVar
 
 from PySide6.QtCore import QCoreApplication, Qt
@@ -20,6 +21,7 @@ from PySide6.QtWidgets import (
 
 from ...core.explain import Sentence
 from ...core.services import AppContext
+from ...errors import AoiError
 from .. import theme
 from ..errors import show_error
 from ..widgets.busy import BusyOverlay
@@ -145,6 +147,34 @@ class Page(QWidget):
             return sentence, link, lambda: self.shell.navigate(target)
         ask = QCoreApplication.translate("Page", "Ask an Engineer to do this on {page}.").format(page=page)
         return ask, "", None
+
+    def golden_board_stamp(self) -> tuple[str | None, int, int]:
+        """Which file is the board model's Golden board, with its modification time and size ((0, -1) when it cannot
+        be read): a page showing the Golden board reads it again when this changes, as after Set Reference, training,
+        or the file put back, replaced or gone (#176)."""
+        path = self.ctx.reference_image(self.board_model) if self.board_model else None
+        try:
+            stat = Path(path).stat() if path else None
+        except OSError:
+            stat = None
+        return (path, stat.st_mtime_ns, stat.st_size) if stat else (path, 0, -1)
+
+    def golden_board_unreadable(self, e: AoiError) -> tuple[str, str, str, Callable[[], object] | None]:
+        """The empty state of a Golden board pane whose file is gone or cannot be read (#176): what happened, with its
+        code, and the next step for the role signed in now, so a page builds it again when it is shown."""
+        heading = QCoreApplication.translate("Page", "The Golden board for {board_model} cannot be opened")
+        fix = QCoreApplication.translate(
+            "Page", "{code} {what} Put the file back, or choose another OK sample with Set Reference on Training."
+        )
+        sentence, link, go = self.empty_step(fix.format(code=e.code, what=e.what), "Training")
+        if go is None:  # a role that cannot open Training still reads what happened
+            ask = QCoreApplication.translate(
+                "Page",
+                "{code} {what} Ask an Engineer to put the file back, or to choose another OK sample with Set Reference"
+                " on Training.",
+            )
+            sentence = ask.format(code=e.code, what=e.what)
+        return heading.format(board_model=self.board_model), sentence, link, go
 
     def error(self, exc: BaseException) -> None:
         """Show an error the way the standard asks: its code, what happened and what to do (REQ-SET-019)."""

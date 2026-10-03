@@ -71,6 +71,8 @@ class RecipeEditorPage(Page):
         self.rev = 0
         self._loaded: dict[str, object] = {}  # the recipe as load() showed it, to tell an unsaved change (#173)
         self.ref: np.ndarray | None = None
+        self.golden_seen: tuple[str | None, int, int] | None = None  # the Golden board file last read (#176)
+        self.golden_error: AoiError | None = None  # and why it could not be
 
         split = QSplitter(Qt.Orientation.Horizontal)
         left = QWidget()
@@ -234,26 +236,7 @@ class RecipeEditorPage(Page):
             return
         self.rev, r = self.ctx.recipe(self.board_model)
         self.recipe = r
-        ref_path = self.ctx.reference_image(self.board_model)
-        unreadable: AoiError | None = None
-        try:  # a Golden board file gone or damaged must not stop the window opening on this board model (#176)
-            self.ref = self.ctx.load_image(ref_path) if ref_path else None
-        except AoiError as e:
-            self.ref, unreadable = None, e
-        self.view.set_image(self.ref)
-        if unreadable is not None:
-            fix = self.tr(
-                "{code} {what} Put the file back, or choose another OK sample with Set Reference on Training."
-            )
-            step = self.empty_step(fix.format(code=unreadable.code, what=unreadable.what), "Training")
-            heading = self.tr("The Golden board for {board_model} cannot be opened")
-            self.view_empty.show_state(heading.format(board_model=self.board_model), *step)
-        elif self.ref is None:
-            step = self.empty_step(self.tr("Train an AI model or set a reference image on Training."), "Training")
-            heading = self.tr("No Golden board for {board_model} yet").format(board_model=self.board_model)
-            self.view_empty.show_state(heading, *step)
-        else:
-            self.view_empty.hide()
+        self._read_golden_board()
         self.use_ai.setChecked(r.use_ai)
         self.use_cmp.setChecked(r.use_compare)
         self.ai_thr.setValue(r.anomaly_threshold or 0)
@@ -270,6 +253,30 @@ class RecipeEditorPage(Page):
         self._refresh_rois()
         self._loaded = self._collect().to_dict()  # as the form shows it, rounded to its spin boxes
 
+    def _read_golden_board(self) -> None:
+        """Read the board model's Golden board into the view. A file gone or damaged must not stop the window opening
+        on this board model (#176): its error is kept for the pane, and logged."""
+        self.golden_seen, self.golden_error = self.golden_board_stamp(), None
+        try:
+            self.ref = self.ctx.load_image(self.golden_seen[0]) if self.golden_seen[0] else None
+        except AoiError as e:
+            self.ref, self.golden_error = None, e
+            self.ctx.log.warning("golden_board.unreadable", extra={"board_model": self.board_model, "code": e.code})
+        self.view.set_image(self.ref)
+        self._show_golden_board()
+
+    def _show_golden_board(self) -> None:
+        """The Golden board pane's empty state, for the role signed in now: load() runs at start-up, before anyone signs
+        in, so on_show() builds it again (#176 review)."""
+        if self.golden_error is not None:
+            self.view_empty.show_state(*self.golden_board_unreadable(self.golden_error))
+        elif self.ref is None:
+            step = self.empty_step(self.tr("Train an AI model or set a reference image on Training."), "Training")
+            heading = self.tr("No Golden board for {board_model} yet").format(board_model=self.board_model)
+            self.view_empty.show_state(heading, *step)
+        else:
+            self.view_empty.hide()
+
     def _refresh_rois(self) -> None:
         r = self.edited_recipe
         fill_table(self.roi_table, [[x.name, x.type, x.x, x.y, x.w, x.h, x.ai_score] for x in r.rois])
@@ -277,12 +284,7 @@ class RecipeEditorPage(Page):
             self.roi_empty.hide()
         else:
             self.roi_empty.show_state(self.tr("No ROIs yet"), self.tr("Press Draw ROI and drag on the Golden board."))
-        self.view.clear_overlays()
-        sel = self._sel_index()
-        for i, x in enumerate(r.rois):
-            # spec: yellow = active (being edited), green = saved
-            color = theme.ROI_SELECTED if i == sel else theme.ROI_COLOR if x.enabled else theme.ROI_DISABLED
-            self.view.add_box(x.x, x.y, x.w, x.h, color, f"{x.name} [{self._type_text(x.type)}]")
+        self._draw_rois()
         covered = {x.type for x in r.rois}
         self.mand_list.clear()
         roi_for = {
@@ -469,6 +471,14 @@ class RecipeEditorPage(Page):
         self.test_verdict.clear()
         self.test_verdict.setStyleSheet("")
 
+    def _draw_rois(self) -> None:
+        self.view.clear_overlays()
+        sel = self._sel_index()
+        for i, x in enumerate(self.edited_recipe.rois):
+            # spec: yellow = active (being edited), green = saved
+            color = theme.ROI_SELECTED if i == sel else theme.ROI_COLOR if x.enabled else theme.ROI_DISABLED
+            self.view.add_box(x.x, x.y, x.w, x.h, color, f"{x.name} [{self._type_text(x.type)}]")
+
     def on_board_model_changed(self, name: str | None) -> None:
         self._drop_try()
         self.load()
@@ -476,5 +486,12 @@ class RecipeEditorPage(Page):
     def on_show(self) -> None:
         if self.recipe is None or self.recipe.board_model != self.board_model:
             self.load()
-        elif self.board_model and (latest := self.ctx.recipe(self.board_model)[0]) != self.rev:
+            return
+        if self.golden_board_stamp() != self.golden_seen:  # Set Reference, training, or the file put back, replaced
+            self._drop_try()  # or gone since (#176 review): a Try was judged against the Golden board before (#173)
+            self._read_golden_board()
+            self._draw_rois()
+        else:
+            self._show_golden_board()  # the role may have changed since load() built it
+        if self.board_model and (latest := self.ctx.recipe(self.board_model)[0]) != self.rev:
             self._show_latest(latest)  # saved since, on Compare: shown, so that Save never reverts it

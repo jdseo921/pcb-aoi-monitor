@@ -424,7 +424,13 @@ their code through `AppContext.alarm`, and `AppContext.report_error` is the one 
 logs the stack trace with the build version, stores an ERROR alarm and returns the plain report that
 `aoi/ui/errors.py` shows (code, title, what happened, what to do), also for unhandled errors through
 `sys.excepthook`; it never raises, so the dialog shows even when the database refuses the alarm (logged as
-`alarm.not_stored`, #171). The page in use is kept in `settings.json` and reopened at start-up (REQ-INSP-006, REQ-LOG-005);
+`alarm.not_stored`, #171). Two coded errors are shown in the page without a dialog or an alarm: Compare's AOI-CMP-001
+note, and a Golden board file that the Recipe Editor or Compare cannot read for its pane, which says the code and
+what to do there and logs `golden_board.unreadable` as a warning. Both pages read the Golden board again when shown
+if the file, or which file it is, changed since their last read (`Page.golden_board_stamp`); inspecting a board of
+that board model is refused with AOI-INSP-009, which is alarmed; Compare then clears the verdict of the board
+before, says on its test pane that the board was not inspected, and judges it when shown again once the Golden board
+can be read (#176). The page in use is kept in `settings.json` and reopened at start-up (REQ-INSP-006, REQ-LOG-005);
 a page change writes that key alone. A workspace saved on Settings goes to `settings.json` only: the running app keeps
 its database, log and folders on the open workspace until the restart (REQ-SET-001, #170).
 Every visible string goes through `self.tr()` in a page class (REQ-SET-005, since S19). PySide takes the
