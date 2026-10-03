@@ -334,8 +334,9 @@ Since S16 the check lives in the service layer (ADR 0002, decision 5): every `Ap
 hiding a page or disabling a button is only a convenience. Every write also appends an audit entry (REQ-LOG-004), in
 the same transaction as its rows (`Database.transaction()`, `@transactional`): both are stored or neither, on an error
 or a crash (#178). A file cannot join it, so file writes come first and are removed when what records them fails: an
-import's copies, a training run's files, an export whose entry cannot be written. An import is all or nothing
-(AOI-TRN-008); an overlay export that stops part-way records the files that left (AOI-LOG-001).
+import's copies, a training run's files, an export whose entry cannot be written (never its own source). An import is all
+or nothing (AOI-TRN-008); a folder import, one file per call, stops at such a file with AOI-TRN-009 naming how many were
+imported; an overlay export that stops part-way records the files that left (AOI-LOG-001).
 The writes, their roles and entries:
 
 | Write | Role | Audit action and object (before → after) |

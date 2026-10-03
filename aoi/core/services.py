@@ -860,7 +860,7 @@ class AppContext:
         model = self.model(model_id)
         atomic.copy_file(model["path"], dest)
         after = {"version": model["version"], "dest": str(dest)}
-        self._audit_files([Path(dest)], "export.model", "model", model["uuid"], after)
+        self._audit_files([Path(dest)], "export.model", "model", model["uuid"], after, [Path(model["path"])])
         return Path(dest)
 
     @requires("Engineer", "Exporting overlay images")
@@ -882,7 +882,7 @@ class AppContext:
         after: dict[str, Any] = {"folder": str(folder), "records": len(inspections), "copied": len(copied)}
         if failed:
             after["error"] = f"{failed[0].name}: {failed[1].strerror or failed[1]}"
-        self._audit_files(copied, "export.overlays", "inspections", None, after)
+        self._audit_files(copied, "export.overlays", "inspections", None, after, sources)
         if failed:
             params = {"copied": len(copied), "total": len(sources), "folder": str(folder), "file": failed[0].name}
             why = failed[1].strerror or str(failed[1])
@@ -904,14 +904,22 @@ class AppContext:
         return len(rows)
 
     def _audit_files(
-        self, files: list[Path], action: str, object_type: str, object_uuid: str | None, after: dict[str, Any]
+        self,
+        files: list[Path],
+        action: str,
+        object_type: str,
+        object_uuid: str | None,
+        after: dict[str, Any],
+        sources: list[Path] | None = None,
     ) -> None:
         """Audit an export; when its entry cannot be written, remove the files it wrote, so none leaves the station
-        unaudited (#178). A file cannot join a database transaction, so the files are written first."""
+        unaudited (#178). A file cannot join a database transaction, so the files are written first. A file that is
+        one of its `sources` (exported onto itself) is the station's own and stays."""
         try:
             self.audit(action, object_type, object_uuid, None, after)
         except BaseException:
-            _remove(files)
+            own = {p.resolve() for p in sources or []}
+            _remove([f for f in files if f.resolve() not in own])
             raise
 
 

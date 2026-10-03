@@ -57,7 +57,9 @@ with several rows selected, Mark NG and Remove change all the others and leave t
 
 **Importing images** with + OK or + NG is all or nothing: if one picked file cannot be copied (gone, unreadable, or
 the workspace drive full), AOI-TRN-008 names it and none of the picked images is imported, so importing them again adds
-each once.
+each once. **Import Folder** imports one image at a time, so Cancel keeps what was imported: a file it cannot copy stops
+it with AOI-TRN-009, which says how many images before it were imported. They are in the sample table; importing the
+folder again would add them a second time, so import the rest with + OK or + NG, or remove those first.
 
 (to be written: import, OK/NG/UNSURE labels, defect boxes, second-person check, freezing a dataset version,
 locking the validation set)
@@ -146,7 +148,7 @@ beside it holds one row per check that decided each verdict: the record's time, 
 recipe revision with their UUIDs, then the check's number, region (the whole board, or an ROI's name and box), metric,
 source, value, threshold, rule and result. Records from before the checks were stored have no rows in the second file.
 Each export is confirmed first and written whole or not at all, and the audit trail records it; if that entry cannot
-be written, the exported file is removed. **Export Image Overlays** that stops part-way (the drive full or pulled out,
+be written, the exported file is removed (never the station's own file, when exported onto itself). **Export Image Overlays** that stops part-way (the drive full or pulled out,
 a folder already named like an overlay) shows AOI-LOG-001 with how many images were copied, and the audit trail records
 those, with the file that failed.
 

@@ -221,27 +221,38 @@ class TrainingPage(Page):
 
     def _import(
         self, board_model: str, folder: str, progress: Callable[[int, int], None], should_stop: Callable[[], bool]
-    ) -> tuple[int, int]:
-        """Pool thread: files and the service layer only, never a widget."""
+    ) -> tuple[int, int, AoiError | None]:
+        """Pool thread: files and the service layer only, never a widget. One file per call, so what was imported
+        before a file that cannot be copied stays, and the error returned (AOI-TRN-009) says so (#178)."""
         n_ok = n_ng = 0
         files = list_images(folder)
         for i, p in enumerate(files, 1):
             if should_stop():
                 break
             parts = [x.lower() for x in p.relative_to(folder).parts[:-1]]
-            if any(x in ("ok", "good") for x in parts):
-                n_ok += self.ctx.import_samples(board_model, [str(p)], "OK")
-            elif any(x in ("ng", "bad", "defect", "defects") for x in parts):
-                sub = p.parent.name.replace("_", " ").title()
-                dtype = sub if sub in taxonomy.BY_NAME else None
-                n_ng += self.ctx.import_samples(board_model, [str(p)], "NG", dtype)
+            try:
+                if any(x in ("ok", "good") for x in parts):
+                    n_ok += self.ctx.import_samples(board_model, [str(p)], "OK")
+                elif any(x in ("ng", "bad", "defect", "defects") for x in parts):
+                    sub = p.parent.name.replace("_", " ").title()
+                    dtype = sub if sub in taxonomy.BY_NAME else None
+                    n_ng += self.ctx.import_samples(board_model, [str(p)], "NG", dtype)
+            except AoiError as e:
+                if e.code != "AOI-TRN-008":  # this one file not copied; any other refusal is shown as it is
+                    raise
+                n = {"at": i, "total": len(files), "imported": n_ok + n_ng}
+                stopped = AoiError("AOI-TRN-009", e.detail, path=str(p), reason=e.params["reason"], folder=folder, **n)
+                stopped.__cause__ = e
+                return n_ok, n_ng, stopped
             progress(i, len(files))
-        return n_ok, n_ng
+        return n_ok, n_ng, None
 
-    def _imported(self, counts: tuple[int, int]) -> None:
-        n_ok, n_ng = counts
+    def _imported(self, outcome: tuple[int, int, AoiError | None]) -> None:
+        n_ok, n_ng, stopped = outcome
         self.shell.status(self.tr("Imported {ok} OK and {ng} NG images").format(ok=n_ok, ng=n_ng))
-        self.refresh()
+        self.refresh()  # the table shows what was imported before the dialog says how far it went
+        if stopped is not None:
+            self.error(stopped)
 
     def _selected_ids(self) -> list[int]:
         return [int(cell_text(self.samples, i.row(), 0)) for i in self.samples.selectionModel().selectedRows()]

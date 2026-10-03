@@ -205,6 +205,15 @@ CODES: dict[str, ErrorCode] = {
             " import the images again.",
         ),
         ErrorCode(
+            "AOI-TRN-009",
+            "Folder import stopped part-way",
+            "Copying {path} into the workspace failed ({reason}), so the import of {folder} stopped at image {at} of"
+            " {total}; the {imported} image(s) imported before it stay in the sample table.",
+            "Check that the file is still there and can be opened and that the workspace drive has free space."
+            " Importing the folder again would add those {imported} a second time: import the images not yet imported"
+            " with + OK or + NG, or first remove the {imported} from the sample table.",
+        ),
+        ErrorCode(
             "AOI-RCP-001",
             "Recipe saved since it was opened",
             "Revision {latest} of board model {board_model} was saved after revision {revision}, the one the Recipe"
@@ -223,10 +232,11 @@ CODES: dict[str, ErrorCode] = {
         ErrorCode(
             "AOI-LOG-001",
             "Export stopped part-way",
-            "{file} could not be written to {folder} ({reason}), so the export stopped after {copied} of {total}"
-            " overlay image(s); the audit trail records those {copied}.",
-            "Check that the drive is connected, has free space and can be written, and that nothing in the folder"
-            " already has the name {file}; then export again.",
+            "Copying {file} to {folder} failed ({reason}), so the export stopped after {copied} of {total} overlay"
+            " image(s); the audit trail records those {copied}.",
+            "Check that the drive is connected, has free space and can be written, that nothing in the folder already"
+            " has the name {file}, and that the record's overlay image is still in the results folder; then export"
+            " again.",
         ),
         ErrorCode(
             "AOI-USR-001",
@@ -338,6 +348,7 @@ class AoiError(Exception):
         self.entry = CODES[code]
         self.code = code
         self.detail = detail
+        self.params = params  # what filled the placeholders, for a caller that reports the error in a wider one
         self.what = self.entry.what.format(**params)
         self.action = self.entry.action.format(**params)
         super().__init__(f"{code} {self.what} {self.action}")

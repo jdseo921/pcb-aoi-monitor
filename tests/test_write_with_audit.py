@@ -8,6 +8,7 @@ import shutil
 import sqlite3
 import subprocess
 import sys
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -18,6 +19,7 @@ from pytestqt.qtbot import QtBot
 from aoi.config import Settings
 from aoi.core.imaging import list_images, load_image, save_image
 from aoi.core.services import AppContext
+from aoi.data import atomic
 from aoi.errors import AoiError
 from aoi.ui.main_window import MainWindow
 from tests.test_req_done_in_v01 import BOARD, _window
@@ -45,12 +47,32 @@ def _state(ctx: AppContext, out: Path) -> set[str]:
     return set(ctx.db._conn.iterdump()) | kept
 
 
+def _second_version(ctx: AppContext) -> None:
+    """v1.1 active, so activating v1.0 (WRITES) changes which AI model judges."""
+    v10 = ctx.models("TINY")[0]
+    ctx.db.register_model("TINY", "v1.1", v10["path"], {}, activate=True)
+
+
+def _a_result(ctx: AppContext) -> None:
+    """One stored result with its overlay, so archiving and exporting overlays have something to change."""
+    ctx.inspect_file("TINY", ctx.samples("TINY", "OK")[0]["path"])
+
+
+# a write that would change nothing on the trained workspace gets something to change, or its case proves nothing
+SETUP: dict[str, Callable[[AppContext], None]] = {
+    "activate_model": _second_version,
+    "archive_old": _a_result,
+    "export_overlays": _a_result,
+}
+
+
 @pytest.mark.parametrize("method", list(WRITES))
 def test_req_log_004_a_write_whose_audit_entry_fails_leaves_nothing(
     method: str, trained_ctx: AppContext, synthetic_dataset: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     action, call = WRITES[method]
     trained_ctx.set_user("admin", "Admin")  # every write's role
+    SETUP.get(method, lambda ctx: None)(trained_ctx)
     out = tmp_path / "out"
     out.mkdir()
     before = _state(trained_ctx, out)
@@ -103,6 +125,61 @@ def test_req_trn_001_an_import_that_fails_part_way_stores_nothing(
     page.add_ok()
     assert len(ctx.samples("NEWB")) == 3 and ctx.reference_image("NEWB") and ctx.recipe("NEWB")[0] == 1
     assert [e["after"]["added"] for e in ctx.audit_entries(action="sample.import")] == [3]
+
+
+def test_req_trn_001_a_folder_import_that_fails_part_way_says_what_was_imported(
+    qtbot: QtBot,
+    ctx: AppContext,
+    synthetic_dataset: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    dialogs: list[tuple[str, str]],
+) -> None:
+    """A folder import imports one file per call (Cancel keeps what was imported), so a file it cannot copy leaves the
+    files before it imported: the message says so, and the table shows them, so the folder is not imported twice."""
+    folder = tmp_path / "fold"
+    (folder / "ok").mkdir(parents=True)
+    for i, p in enumerate(list_images(synthetic_dataset / "train" / "ok")[:5]):
+        shutil.copy(p, folder / "ok" / f"ok_{i}.png")
+    copy = atomic.copy_file
+
+    def copy_or_refuse(src: str | Path, dst: str | Path) -> None:
+        if Path(src).name == "ok_2.png":
+            raise PermissionError(13, "Permission denied", str(src))
+        copy(src, dst)
+
+    monkeypatch.setattr(atomic, "copy_file", copy_or_refuse)
+    win = MainWindow(ctx)
+    qtbot.addWidget(win)
+    win.set_role("Engineer", "engineer")
+    win._on_board_model("NEWB")
+    page = win.pages["Training"]
+    page.import_from(str(folder))
+    qtbot.waitUntil(lambda: page._bg is None, timeout=30000)
+    assert len(ctx.samples("NEWB")) == 2 and page.samples.rowCount() == 2  # the two before it, shown in the table
+    [(title, text)] = dialogs
+    assert title == "AOI-TRN-009 Folder import stopped part-way", title
+    assert "ok_2.png" in text and "Permission denied" in text and "image 3 of 5" in text, text
+    assert "the 2 image(s) imported before it" in text and "would add those 2 a second time" in text, text
+    assert win.statusBar().currentMessage() == "Imported 2 OK and 0 NG images"
+
+
+def test_req_log_004_an_export_onto_its_own_file_is_never_removed(
+    trained_ctx: AppContext, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """An export whose entry cannot be written removes what it wrote, but never the station's own file it was
+    exported onto (the model's .pt, an overlay exported into the results folder)."""
+    ctx = trained_ctx
+    _a_result(ctx)
+    overlay = Path(ctx.inspections()[0]["overlay_path"])
+    model = Path(ctx.models("TINY")[0]["path"])
+    _fail_audit(monkeypatch, ctx, "export.model")
+    with pytest.raises(sqlite3.OperationalError):
+        ctx.export_model(ctx.models("TINY")[0]["id"], model)
+    _fail_audit(monkeypatch, ctx, "export.overlays")
+    with pytest.raises(sqlite3.OperationalError):
+        ctx.export_overlays(ctx.inspections(), overlay.parent)
+    assert model.is_file() and overlay.is_file()
 
 
 def test_req_log_002_an_overlay_export_that_fails_part_way_records_what_left(
