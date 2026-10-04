@@ -306,7 +306,7 @@ def render_stored(win: Any, ctx: AppContext, out: Path) -> dict[str, Path]:
             page.show_stored(record)
             wait_until(lambda: page._bg is None)
             if name == STORED_STATES[2]:  # an AI score threshold above the AI score, and no pixel differs enough
-                page.ai_thr.setValue(7.0)
+                page.ai_thr.set_override(7.0)
                 page.diff_thr.setValue(255)
                 page.act_try.trigger()
                 wait_until(lambda: page._bg is None)

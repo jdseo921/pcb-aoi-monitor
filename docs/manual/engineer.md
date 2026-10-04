@@ -232,7 +232,10 @@ both panes say why, with the message's code (AOI-SET-013 when another program ho
 database), and the Golden board pane what to do; neither pane ever shows the result opened before.
 The thresholds form, Re-evaluate and Save to Recipe are in the Try other thresholds panel, for Engineer and Admin; an
 Operator does not see it, and Compare judges an Operator's boards by the board model's recipe, never by values left in
-the form. On a stored result, once the load of its pictures and maps has ended, Re-evaluate (Ctrl+R) judges it again
+the form. Its AI score threshold works as on the Recipe Editor (section 5), except that on a stored result the tick
+names the calibrated value of the AI model that judged it, which Re-evaluate applies while the tick is clear; on any
+other board, and on a stored result judged with the AI check off, it names the active AI model's. On a stored result,
+once the load of its pictures and maps has ended, Re-evaluate (Ctrl+R) judges it again
 with the form's thresholds from its stored maps and the calibration of the AI model that judged it, without running the
 AI model: the banner keeps the stored verdict, "Would be" beside Re-evaluate shows the verdict they give, and the table
 and the explanation show their checks until you change a threshold, the form takes a revision saved on another page, you
