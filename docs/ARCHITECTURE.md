@@ -343,7 +343,10 @@ Engineer judges a stored result again through `AppContext.re_evaluate(result_uui
 result's stored AI check and the AI model's calibration from the model registry row the result names by UUID; it refuses
 with AOI-CMP-004 a result whose map or AI model calibration is gone when a check the thresholds use needs it, and with
 AOI-CMP-005 thresholds of another board model; it stores nothing, and takes about 130 ms at 5 MP on the 4-core cloud
-VM the tests run on. `tests/test_re_evaluate.py` checks this.
+VM the tests run on. With thresholds that leave thousands of difference regions (Pixel difference 10 and Minimum defect
+area 1 leave about 5,600 on the 5 MP test board) it takes about 180 ms there, since `inspector.merge_regions`, which
+merges the regions into defects for every inspection too, tests a region only against the defects kept in the 64 px
+cells it covers (#249; testing every one kept took 1.5 s). `tests/test_re_evaluate.py` checks both.
 
 ---
 

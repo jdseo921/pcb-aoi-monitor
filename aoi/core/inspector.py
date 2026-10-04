@@ -183,6 +183,31 @@ def _overlap(r: Region, x: int, y: int, w: int, h: int) -> bool:
     return not (r.x + r.w <= x or x + w <= r.x or r.y + r.h <= y or y + h <= r.y)
 
 
+CELL = 64  # px: the side of the grid cells `merge_regions` indexes the regions it keeps by
+
+
+def merge_regions(regions: list[Region]) -> list[Region]:
+    """The regions kept as defects: largest area first (ties in the order given), each that overlaps none kept before
+    it, boxes that only touch being apart (`_overlap`). The kept boxes are indexed by the CELL px cells they cover, and
+    two boxes that overlap share a cell, so a region is tested only against those in its cells: the same regions as
+    testing every kept box, which took about 1.5 s for the 5,600 regions that Pixel difference 10 and Minimum defect
+    area 1 leave on a 5 MP board (#249)."""
+    merged: list[Region] = []
+    grid: dict[tuple[int, int], list[Region]] = {}
+    for reg in sorted(regions, key=lambda q: -q.area):
+        cells = [
+            (cx, cy)  # a box with no width or height still covers its corner's cell, which `_overlap` may count
+            for cx in range(reg.x // CELL, (reg.x + max(reg.w, 1) - 1) // CELL + 1)
+            for cy in range(reg.y // CELL, (reg.y + max(reg.h, 1) - 1) // CELL + 1)
+        ]
+        if any(_overlap(reg, m.x, m.y, m.w, m.h) for cell in cells for m in grid.get(cell, ())):
+            continue
+        merged.append(reg)
+        for cell in cells:
+            grid.setdefault(cell, []).append(reg)
+    return merged
+
+
 class Inspector:
     """The engine for one board model. `model_version`, `recipe_rev` and their UUIDs name the AI model version and the
     recipe revision a saved record carries (REQ-INSP-008, REQ-INSP-012), and `reference_path` and `reference_sha256`
@@ -378,13 +403,8 @@ class Inspector:
             res.verdict = WARN
 
     def _defects(self, regions: list[Region], res: InspectionResult) -> list[Defect]:
-        merged: list[Region] = []
-        for reg in sorted(regions, key=lambda q: -q.area):
-            if any(_overlap(reg, m.x, m.y, m.w, m.h) for m in merged):
-                continue
-            merged.append(reg)
         out = []
-        for i, reg in enumerate(merged, 1):
+        for i, reg in enumerate(merge_regions(regions), 1):
             dtype = "Anomaly"
             for roi in self.recipe.rois:
                 if roi.enabled and _overlap(reg, roi.x, roi.y, roi.w, roi.h):

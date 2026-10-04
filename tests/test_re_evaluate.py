@@ -19,6 +19,7 @@ import pytest
 from torch import nn
 
 from aoi.core import anomaly, explain, inspector, maps
+from aoi.core.compare import Region
 from aoi.core.imaging import load_image, save_image
 from aoi.core.inspector import (
     NO_AI_NOTE,
@@ -287,6 +288,26 @@ def test_req_cmp_005_the_stored_ai_map_keeps_each_pixel_on_its_side_of_the_pixel
     assert res.anomaly_map is not None and res.anomaly_map[0].tolist() == pytest.approx([0.0, 1.235, 65.535])
 
 
+def _store_5mp(ctx: AppContext, board: Path) -> str:
+    """The 5 MP `board` stored with both maps, judged against a 5 MP golden board; its record's UUID."""
+    golden = Path(str(ctx.reference_image(BOARD)))
+    big = golden.with_name("golden_5mp.png")  # the customer's golden board is taken by the same 5 MP camera
+    cv2.imwrite(str(big), cv2.resize(cv2.imread(str(golden)), SIZE_5MP, interpolation=cv2.INTER_CUBIC))
+    ctx.db.set_reference(BOARD, str(big))
+    return _store(ctx, board)
+
+
+def _five_calls(call: Callable[[], InspectionResult]) -> tuple[list[float], InspectionResult]:
+    """The seconds each of five calls took, printed with their median, and the last call's result."""
+    took, results = [], []
+    for _ in range(5):
+        t0 = perf_counter()
+        results.append(call())
+        took.append(perf_counter() - t0)
+    print(f"re_evaluate at 5 MP: median {statistics.median(took) * 1000:.0f} ms, worst {max(took) * 1000:.0f} ms")
+    return took, results[-1]
+
+
 def test_req_cmp_005_reevaluate_without_model_under_300_ms(
     trained_ctx: AppContext,
     board_5mp: Path,  # noqa: F811
@@ -295,25 +316,65 @@ def test_req_cmp_005_reevaluate_without_model_under_300_ms(
     """A stored 5 MP NG result with both maps, judged again with other thresholds: the AI model never runs, nor do the
     alignment and the comparison; the median of five re-evaluations is under 300 ms; nothing is stored."""
     ctx = trained_ctx
-    golden = Path(str(ctx.reference_image(BOARD)))
-    big = golden.with_name("golden_5mp.png")  # the customer's golden board is taken by the same 5 MP camera
-    cv2.imwrite(str(big), cv2.resize(cv2.imread(str(golden)), SIZE_5MP, interpolation=cv2.INTER_CUBIC))
-    ctx.db.set_reference(BOARD, str(big))
-    uuid = _store(ctx, board_5mp)
+    uuid = _store_5mp(ctx, board_5mp)
     before = (ctx.audit_entries(), ctx.inspections(), ctx.recipe_history(BOARD))
     _refuse_the_engine(monkeypatch)
     thresholds = _what_if(ctx.recipe(BOARD)[1])[-1]
-    took, results = [], []
-    for _ in range(5):
-        t0 = perf_counter()
-        results.append(ctx.re_evaluate(uuid, thresholds))
-        took.append(perf_counter() - t0)
-    print(f"re_evaluate at 5 MP: median {statistics.median(took) * 1000:.0f} ms, worst {max(took) * 1000:.0f} ms")
+    took, res = _five_calls(lambda: ctx.re_evaluate(uuid, thresholds))
     assert statistics.median(took) < BUDGET_S, took
-    res = results[-1]
     assert {c.source for c in res.checks} == {"Compare", "AI"} and res.anomaly_map is not None
     assert next(c for c in res.checks if c.source == "AI").threshold == thresholds.anomaly_threshold
     assert (ctx.audit_entries(), ctx.inspections(), ctx.recipe_history(BOARD)) == before, "nothing is stored"
+
+
+def test_req_cmp_005_reevaluate_with_thousands_of_regions_under_300_ms(
+    trained_ctx: AppContext,
+    board_5mp: Path,  # noqa: F811
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Pixel difference 10 and Minimum defect area 1, values the what-if form and Recipe Editor take, leave thousands of
+    difference regions on the stored 5 MP board, and judged again with them the median of five calls is still under
+    300 ms. Before (#249), merging the regions into defects tested each against every one kept: about 5,600 regions and
+    a median of about 1.7 s, 1.5 s of it in the merge."""
+    ctx = trained_ctx
+    uuid = _store_5mp(ctx, board_5mp)
+    _refuse_the_engine(monkeypatch)
+    thresholds = copy.deepcopy(ctx.recipe(BOARD)[1])
+    thresholds.diff_threshold, thresholds.min_defect_area = 10, 1
+    took, res = _five_calls(lambda: ctx.re_evaluate(uuid, thresholds))
+    regions = res.compare.metrics["compare_regions"] if res.compare is not None else 0
+    print(f"{regions} difference regions, {len(res.defects)} defects, {res.verdict}")
+    assert regions >= 1000, "the case keeps testing thousands of regions"
+    assert statistics.median(took) < BUDGET_S, took
+
+
+def test_req_cmp_005_the_defect_merge_keeps_what_testing_every_kept_box_kept() -> None:
+    """Merging regions into defects keeps the regions, in the order, that testing each against every region kept before
+    it kept (the merge before #249, which took about 1.5 s for 5,600 regions): on boxes that overlap, only touch (kept
+    apart), nest or repeat, around and across the 64 px cells the merge indexes by, with ties in area in the order
+    given. The defects of every board of the regression set (tests/regression) are the end-to-end check."""
+
+    def scan(regions: list[Region]) -> list[Region]:
+        merged: list[Region] = []
+        for reg in sorted(regions, key=lambda q: -q.area):
+            if not any(inspector._overlap(reg, m.x, m.y, m.w, m.h) for m in merged):
+                merged.append(reg)
+        return merged
+
+    fixed = [(0, 0, 64, 64), (64, 0, 64, 64), (0, 64, 64, 64), (63, 63, 2, 2), (10, 10, 100, 100), (20, 20, 5, 5)]
+    fixed += [(20, 20, 5, 5), (0, 0, 640, 2), (127, 0, 1, 300), (128, 128, 1, 1), (127, 127, 1, 1)]
+    rng, judge = np.random.default_rng(249), Inspector(Recipe(board_model="X"))
+    for trial in range(300):
+        boxes = list(fixed)
+        for _ in range(int(rng.integers(1, 150))):
+            x, y = (max(0, 64 * int(rng.integers(0, 8)) + int(rng.integers(-2, 3))) for _ in range(2))
+            w, h = (int(rng.integers(1, int(rng.choice([4, 70, 400])))) for _ in range(2))
+            boxes.append((x, y, w, h))
+        regions = [Region(*box, int(rng.integers(1, 30)), float(i), "ai") for i, box in enumerate(boxes)]
+        rng.shuffle(regions)
+        kept = judge._defects(regions, InspectionResult("OK", 0.0))
+        want = [(r.x, r.y, r.w, r.h, r.peak) for r in scan(regions)]
+        assert [(d.x, d.y, d.w, d.h, d.score) for d in kept] == want, trial
 
 
 def test_req_cmp_005_reevaluate_judges_a_stored_result_as_inspecting_with_those_thresholds(

@@ -671,7 +671,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+188"/>
+        <location line="+213"/>
         <source>board image</source>
         <translation type="unfinished"></translation>
     </message>
