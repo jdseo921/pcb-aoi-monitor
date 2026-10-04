@@ -191,6 +191,11 @@ class Page(QWidget):
             sentence = ask.format(code=e.code, what=what)
         return heading.format(board_model=self.board_model), sentence, link, go
 
+    def coded_text(self, e: AoiError) -> str:
+        """A coded error as one line of a page, in the UI language: its code, what happened and what to do."""
+        said = QCoreApplication.translate("Page", "{code} {what} {action}")
+        return said.format(code=e.code, what=phrase_text(e.what), action=phrase_text(e.action))
+
     def error(self, exc: BaseException) -> None:
         """Show an error the way the standard asks: its code, what happened and what to do (REQ-SET-019)."""
         show_error(self, self.ctx.report_error(exc, self.title))

@@ -47,6 +47,19 @@ if TYPE_CHECKING:
     from ..main_window import MainWindow
 
 
+def _sample_counts(model: dict[str, Any]) -> str:
+    """The OK/NG sample counts training stored in an AI model registry row; empty for a row whose counts cannot be read
+    (only a change by hand leaves one), so the Threshold cell beside it says why with its code (REQ-TRN-015)."""
+    try:
+        meta = json.loads(model["metrics"] or "{}")
+    except (ValueError, TypeError):
+        return ""
+    counts = [meta.get(key, 0) for key in ("n_ok_train", "n_ok_val", "n_ng")] if isinstance(meta, dict) else []
+    if len(counts) != 3 or not all(type(c) is int for c in counts):  # bool is an int, but not a count
+        return ""
+    return f"{counts[0] + counts[1]}/{counts[2]}"
+
+
 class NgDialog(QDialog):
     """Ask which defect type an uploaded NG batch shows (taxonomy from the classification table)."""
 
@@ -509,20 +522,17 @@ class TrainingPage(Page):
         self.counts.set_line(lambda name: counts.format(ok=n_ok, ng=len(s) - n_ok, reference=name), reference)
         self.tip.setVisible(n_ok < 20)
         ms = self.ctx.models(self.board_model)
-        rows = []
+        rows, tips = [], []
         for m in ms:
-            meta = json.loads(m["metrics"] or "{}")
-            rows.append(
-                [
-                    m["id"],
-                    m["version"],
-                    to_local(m["created_at"]),
-                    float(meta.get("image_threshold", 0)),
-                    f"{meta.get('n_ok_train', 0) + meta.get('n_ok_val', 0)}/{meta.get('n_ng', 0)}",
-                    "●" if m["active"] else "",
-                ]
-            )
-        fill_table(self.models, rows)
+            tip = None
+            try:  # read as Recipe Editor and Compare read it (REQ-TRN-015)
+                threshold: float | str = self.ctx.calibration_of(m)
+            except AoiError as e:  # AOI-TRN-012: a registry row changed by hand
+                threshold, tip = e.code, self.coded_text(e)
+            active = "●" if m["active"] else ""
+            rows.append([m["id"], m["version"], to_local(m["created_at"]), threshold, _sample_counts(m), active])
+            tips.append(tip)
+        fill_table(self.models, rows, tooltips=tips)
         if ms:
             self.models_empty.hide()
         else:

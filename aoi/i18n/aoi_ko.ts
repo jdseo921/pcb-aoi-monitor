@@ -455,7 +455,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+183"/>
+        <location line="+195"/>
         <source>Importing samples</source>
         <translation type="unfinished"></translation>
     </message>
@@ -475,7 +475,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+70"/>
+        <location line="+86"/>
         <source>it cannot be read ({code} {title})</source>
         <translation type="unfinished"></translation>
     </message>
@@ -495,7 +495,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+144"/>
+        <location line="+165"/>
         <source>Re-evaluating a result</source>
         <translation type="unfinished"></translation>
     </message>
@@ -510,7 +510,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+13"/>
+        <location line="+8"/>
         <source>the calibration of AI model {version}</source>
         <translation type="unfinished"></translation>
     </message>
@@ -580,12 +580,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-594"/>
+        <location line="-626"/>
         <source>its UUID {found} is not {uuid}, as in the AI model registry</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+609"/>
+        <location line="+641"/>
         <source>Changing settings</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1194,6 +1194,21 @@
     </message>
     <message>
         <location line="+9"/>
+        <source>AI model calibration cannot be read</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>AI model {version} of board model {board} has no usable calibration in the AI model registry.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+4"/>
+        <source>For the next boards, train again or activate another version on Training, or set a value of your own.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+7"/>
         <source>AI model, recipe or Golden board changed since the run</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1488,7 +1503,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-574"/>
+        <location line="-586"/>
         <source>Board judged NG</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1528,7 +1543,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+143"/>
+        <location line="+155"/>
         <source>ROI thresholds refused</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1683,7 +1698,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/training.py" line="+301"/>
+        <location filename="../ui/pages/training.py" line="+314"/>
         <source>{code} {title}</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2810,7 +2825,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+17"/>
+        <location line="+10"/>
+        <source>{code} {what} {action}</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+12"/>
         <source>Not inspected</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3211,7 +3231,7 @@
 <context>
     <name>Role</name>
     <message>
-        <location filename="../ui/pages/base.py" line="-266"/>
+        <location filename="../ui/pages/base.py" line="-271"/>
         <source>Operator</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3446,7 +3466,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/services.py" line="-1159"/>
+        <location filename="../core/services.py" line="-1203"/>
         <source>Aligning {count} images to the reference board</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3698,7 +3718,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+22"/>
+        <location line="+19"/>
         <source>No AI model yet</source>
         <translation type="unfinished"></translation>
     </message>
