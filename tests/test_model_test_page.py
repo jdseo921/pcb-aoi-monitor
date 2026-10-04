@@ -1,10 +1,13 @@
 """AI Model Test (#180): a run's results stay with the board model they were run for, and Export Report writes the PDF
 through the service layer: whole or not at all, role-checked and audited (REQ-TST-004, REQ-LOG-004). A row's preview
-is judged by what judged its run, or not at all (#250, REQ-TST-003)."""
+is judged by what judged its run, or not at all (#250, REQ-TST-003); a run judged with the AI check off says so (#246,
+REQ-TST-005)."""
 
 from __future__ import annotations
 
+import copy
 import csv
+import shutil
 import threading
 from pathlib import Path
 from typing import Any
@@ -519,3 +522,49 @@ def test_req_log_004_export_writes_that_fail_carry_a_code(trained_ctx: AppContex
     assert csv_refused.value.code == empty.value.code == "AOI-LOG-002" and "blocker" in csv_refused.value.what
     assert not (tmp_path / "empty.pdf").exists()
     assert trained_ctx.audit_entries(action="export.csv") == trained_ctx.audit_entries(action="export.report") == []
+
+
+AI_OFF_RUN = (  # the report's sentence under its head for a run judged with the AI check off (#246)
+    "The recipe turned the AI check off for this run: no AI model judged the images, and the verdicts come from the"
+    " Golden board comparison alone."
+)
+
+
+def test_req_tst_005_a_run_judged_with_the_ai_check_off_says_so(
+    qtbot: QtBot, trained_ctx: AppContext, synthetic_dataset: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """AI Model Test under a recipe with the AI check off, on a board model with an active AI model: every image is
+    judged by the Golden board comparison alone. The run names the AI model active then, as every run does
+    (REQ-TST-005), and says the AI check was off: each row as stored and in the CSV (ai_check OFF), and the report
+    under its head. With the AI check on again, the rows read RAN and the report has no such sentence. Before, the run,
+    its CSV and its report named AI model v1.0 with nothing to say that it had not judged the images."""
+    ctx = trained_ctx
+    active = ctx.active_model(BOARD)
+    assert active is not None
+    folder = tmp_path / "validation"
+    for label in ("ok", "ng"):
+        (folder / label).mkdir(parents=True)
+        board = sorted(synthetic_dataset.glob(f"test/{label}/*.png"))[0]
+        shutil.copy(board, folder / label / board.name)
+    recipe = copy.deepcopy(ctx.recipe(BOARD)[1])
+    recipe.use_ai = False
+    ctx.save_recipe(recipe)
+    win = _window(qtbot, ctx)
+    page = _tested_page(qtbot, win, folder)
+    assert {(r["model_version"], r["model_uuid"]) for r in page.rows} == {(active["version"], str(active["uuid"]))}
+    run = ctx.db.latest_test_run(BOARD)
+    assert run is not None
+    out = tmp_path / "model_test.csv"
+    monkeypatch.setattr(QFileDialog, "getSaveFileName", staticmethod(lambda *a, **k: (str(out), "CSV (*.csv)")))
+    page.export_csv()
+    with out.open(encoding="utf-8-sig", newline="") as f:
+        exported = list(csv.DictReader(f))
+    report = page._report_html()
+    said = [{r.get("ai_check") for r in rows} for rows in (page.rows, run["results"], exported)]
+    assert (said, AI_OFF_RUN in report) == ([{"OFF"}] * 3, True), report
+    assert f"AI model: {active['version']}" in report and {r["model_version"] for r in exported} == {active["version"]}
+    recipe.use_ai = True
+    ctx.save_recipe(recipe)
+    page._clear_run()
+    page = _tested_page(qtbot, win, folder)
+    assert {r["ai_check"] for r in page.rows} == {"RAN"} and AI_OFF_RUN not in page._report_html()

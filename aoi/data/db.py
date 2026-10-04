@@ -500,9 +500,10 @@ class Database:
         results: list[dict[str, Any]],
         model_uuid: str | None = None,
     ) -> str:
-        """Store one validation run of the AI Model Test screen, naming the AI model it tested by UUID, and return the
-        run's UUID (REQ-SET-017). The folder and each result's "image" are stored relative to the workspace when inside
-        it, else absolute: a folder on a USB drive or a share is not part of the workspace and does not move with it
+        """Store one validation run of the AI Model Test screen, naming by UUID the AI model version active when the run
+        was judged, and return the run's UUID (REQ-SET-017); each result's "ai_check" says whether the AI check judged
+        it (#246). The folder and each result's "image" are stored relative to the workspace when inside it, else
+        absolute: a folder on a USB drive or a share is not part of the workspace and does not move with it
         (REQ-SET-001)."""
         uid = new_uuid()
         stored = [{**r, "image": self._stored(str(Path(r["image"]).absolute()))} for r in results]

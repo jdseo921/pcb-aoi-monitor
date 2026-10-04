@@ -484,7 +484,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+141"/>
+        <location line="+143"/>
         <source>Re-evaluating a result</source>
         <translation type="unfinished"></translation>
     </message>
@@ -569,12 +569,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-583"/>
+        <location line="-585"/>
         <source>its UUID {found} is not {uuid}, as in the AI model registry</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+598"/>
+        <location line="+600"/>
         <source>Changing settings</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2598,7 +2598,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+4"/>
+        <location line="+3"/>
+        <source>The recipe turned the AI check off for this run: no AI model judged the images, and the verdicts come from the Golden board comparison alone.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+6"/>
         <source>TP {tp} · FN {fn} · FP {fp} · TN {tn} (NG = positive class; WARN counted as NG)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2739,7 +2744,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/model_test.py" line="-366"/>
+        <location filename="../ui/pages/model_test.py" line="-371"/>
         <source>AI Model Test</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3335,7 +3340,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/services.py" line="-1148"/>
+        <location filename="../core/services.py" line="-1150"/>
         <source>Aligning {count} images to the reference board</source>
         <translation type="unfinished"></translation>
     </message>

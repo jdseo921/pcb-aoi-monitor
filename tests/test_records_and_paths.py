@@ -326,9 +326,9 @@ def test_req_set_017_model_file_names_its_registry_record(tmp_path: Path, traine
 def test_req_set_017_validation_exports_name_the_run_and_the_ai_model(
     qtbot: QtBot, trained_ctx: AppContext, synthetic_dataset: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """A validation run on AI Model Test is stored with a UUID and the UUID of the AI model it tested; its CSV export
-    keeps its columns and gains the run's UUID, the AI model version and its UUID at the end, and the PDF report names
-    the run and the AI model by UUID."""
+    """A validation run on AI Model Test is stored with a UUID and the UUID of the AI model active when it ran; its CSV
+    export keeps its columns and gains the run's UUID, the AI model version and its UUID at the end, and the PDF report
+    names the run and the AI model by UUID."""
     win = _window(qtbot, trained_ctx)
     page = win.pages["AI Model Test"]
     page.folder = str(synthetic_dataset / "test" / "ng")

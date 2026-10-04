@@ -165,29 +165,30 @@ clears the last Try's verdict.
 
 (to be written: running a test, rates with counts and bounds, exports, the validation report)
 
-Each validation run is stored with a UUID and the UUID of the AI model it tested. **Export CSV** writes one row per
-image (`image`, `gt` the label, `ai_result` the verdict, `score`, `defects`, `pass_fail`), then `run_uuid`,
-`model_version` and `model_uuid`. `gt` is OK or NG from the image's sub-folder (`ok/` or `ng/`), or `?` for an image in
-neither; `pass_fail` is `PASS` when the verdict (WARN counted as NG) matches the label, `FAIL` when it differs and
-`NO_LABEL` for an image with no label, shown in the table and the report's Matches label? column as Matches label,
-Differs from label (in red) and No label. **Export Report** names the same run and AI model by UUID under the
-validation folder those results came from, even when another folder has been picked since to run next. Results stay on the page only
-under the board model they were run for: picking another board model in the header clears them, and a run that
-ends after such a change is stored but not shown. The report is written whole or not at all and recorded in the
-audit trail; when it cannot be written (a folder that cannot be made, a file open in a viewer, a full disk), the
-app shows AOI-LOG-002 and an earlier report of that name stays as it was. Selecting a row previews that board; when
-it cannot be inspected (its file moved, for example), the preview reads "· Not inspected" with no picture, never the
-verdict of the row before. A preview is judged by the AI model, recipe revision and Golden board that judged the run.
-Once another is in use (training ended, a version was activated, a recipe saved or a Golden board set), a selected
-row is not previewed: the pane reads "Not inspected" with AOI-TST-001, and Compare's Use Last Inspected keeps the board
-it had. A line above the table then names what judged the run and what is in use now; it shows when the page is opened
-or a row is selected, so after a training run that ends while the page stays open it appears at the next row selected.
-When the page is opened, a row still selected from before shows the same in place of its earlier preview; once
-what judged the run is in use again (that AI model version activated again, for example), it is previewed again.
-The rows and both exports still describe the stored run; press **Run Test Again** in the preview pane to test the run's
-folder with what is in use now. A preview still being inspected when a new run ends is not shown beside its rows.
-A folder inside the workspace is stored relative to it, so a moved workspace still finds the run's folder and images; a
-folder elsewhere is stored as its full path.
+Each validation run is stored with a UUID and the UUID of the AI model active when it ran. **Export CSV** writes one row
+per image (`image`, `gt` the label, `ai_result` the verdict, `score`, `defects`, `pass_fail`, `ai_check`), then
+`run_uuid`, `model_version` and `model_uuid`. `ai_check` is `RAN`, `OFF` or `NO_AI_MODEL`, as on Logs & Export: with
+`OFF` the recipe turned the AI check off, so the AI model named did not judge the images, and the report says so under
+its head. `gt` is OK or NG from the image's sub-folder (`ok/` or `ng/`), or `?` for an image in neither; `pass_fail` is
+`PASS` when the verdict (WARN counted as NG) matches the label, `FAIL` when it differs and `NO_LABEL` for an image with
+no label, shown in the table and the report's Matches label? column as Matches label, Differs from label (in red) and No
+label. **Export Report** names the same run and AI model by UUID under the validation folder those results came from,
+even when another folder has been picked since to run next. Results stay on the page only under the board model they
+were run for: picking another board model in the header clears them, and a run that ends after such a change is stored
+but not shown. The report is written whole or not at all and recorded in the audit trail; when it cannot be written (a
+folder that cannot be made, a file open in a viewer, a full disk), the app shows AOI-LOG-002 and an earlier report of
+that name stays as it was. Selecting a row previews that board; when it cannot be inspected (its file moved, for
+example), the preview reads "· Not inspected" with no picture, never the verdict of the row before. A preview is judged
+by the AI model, recipe revision and Golden board that judged the run. Once another is in use (training ended, a version
+was activated, a recipe saved or a Golden board set), a selected row is not previewed: the pane reads "Not inspected"
+with AOI-TST-001, and Compare's Use Last Inspected keeps the board it had. A line above the table then names what judged
+the run and what is in use now; it shows when the page is opened or a row is selected, so after a training run that ends
+while the page stays open it appears at the next row selected. When the page is opened, a row still selected from before
+shows the same in place of its earlier preview; once what judged the run is in use again (that AI model version
+activated again, for example), it is previewed again. The rows and both exports still describe the stored run; press
+**Run Test Again** in the preview pane to test the run's folder with what is in use now. A preview still being inspected
+when a new run ends is not shown beside its rows. A folder inside the workspace is stored relative to it, so a moved
+workspace still finds the run's folder and images; a folder elsewhere is stored as its full path.
 
 ## 7. Compare
 

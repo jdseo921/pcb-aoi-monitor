@@ -417,7 +417,7 @@ class ModelTestPage(Page):
         """The validation report: every sentence through tr(), the markup and the numbers from the code."""
         m = self.metrics
         bm = self.run_board_model or ""  # the board model the run was for (#180)
-        run = self.rows[0] if self.rows else {}  # each row names the run and the AI model it tested (REQ-SET-017)
+        run = self.rows[0] if self.rows else {}  # each row names the run and the AI model active then (REQ-SET-017)
         title = self.tr("AI Model Validation Report")
         head = self.tr(
             "Board model: <b>{board_model}</b> · AI model: {version} · Date: {date}<br>Validation folder: {folder}"
@@ -431,6 +431,11 @@ class ModelTestPage(Page):
             run_uuid=run.get("run_uuid") or "—",
             model_uuid=run.get("model_uuid") or self.tr("none"),
         )
+        off = self.tr(
+            "The recipe turned the AI check off for this run: no AI model judged the images, and the verdicts come from"
+            " the Golden board comparison alone."
+        )
+        head += f"<br>{html.escape(off)}" if run.get("ai_check") == "OFF" else ""  # the AI model named did not (#246)
         tiles = "".join(f"<th>{t.name}</th>" for t in self.tiles.values())
         values = "".join(f"<td>{m[k]:.1%}</td>" for k in self.tiles)
         counts = self.tr("TP {tp} · FN {fn} · FP {fp} · TN {tn} (NG = positive class; WARN counted as NG)")

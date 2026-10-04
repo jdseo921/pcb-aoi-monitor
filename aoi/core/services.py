@@ -34,7 +34,7 @@ from ..errors import QT_TRANSLATE_NOOP, AoiError, Phrase, joined
 from ..times import local_date, now_utc
 from . import anomaly
 from .imaging import align_to_reference, encode_image, list_images, load_image, load_image_sha256, save_image
-from .inspector import NG, OK, WARN, AiEvidence, InspectionResult, Inspector, JudgedBy, draw_overlay, re_grade
+from .inspector import NG, OK, WARN, AiEvidence, InspectionResult, Inspector, JudgedBy, ai_check, draw_overlay, re_grade
 from .jobs import JobCancelled, Jobs
 from .maps import load_maps, map_paths, picture_shape, save_maps
 from .recipe import Recipe
@@ -731,8 +731,9 @@ class AppContext:
         and the AI model, recipe revision and Golden board that judged them all (#250; beside the rows, not in them,
         since the CSV export writes every key of a row). Ground truth comes from sub-folder names: under `ng`/`defect`
         NG, under `ok`/`good` OK, elsewhere no label ("?"); `pass_fail` is PASS when the verdict (WARN as NG) matches
-        the label, FAIL when not and NO_LABEL without one. Each row ends with the run's UUID, the AI model version and
-        its UUID (run_uuid, model_version, model_uuid; None without an AI model), as the CSV export writes them
+        the label, FAIL when not and NO_LABEL without one; `ai_check` says whether the AI check judged it, RAN, OFF or
+        NO_AI_MODEL, as for an inspection record (#246). Each row ends with the run's UUID, the AI model version active
+        then and its UUID (run_uuid, model_version, model_uuid; None without an AI model), as the CSV export writes them
         (REQ-SET-017)."""
         insp = self.inspector(board_model)
         files = list_images(folder)
@@ -750,6 +751,7 @@ class AppContext:
                     "score": round(res.score, 3),
                     "defects": len(res.defects),
                     "pass_fail": "NO_LABEL" if gt is None else "PASS" if gt == pred else "FAIL",  # vs the label (#207)
+                    "ai_check": ai_check(res),  # stored with the run: its AI model may not have judged it (#246)
                 }
             )
             if progress:
