@@ -170,6 +170,7 @@ def test_req_insp_008_saved_before_next_board(
     out = tmp_path / "picture.png"
     monkeypatch.setattr(QFileDialog, "getSaveFileName", staticmethod(lambda *a, **k: (str(out), "PNG (*.png)")))
     page.act_save.trigger()
+    qtbot.waitUntil(lambda: page._bg is None, timeout=30000)  # the save runs on the pool (#241)
     assert out.exists() and len(trained_ctx.inspections(board_model=BOARD)) == 3, "Save Image… adds no record"
 
 

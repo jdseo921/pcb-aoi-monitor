@@ -59,6 +59,12 @@ WRITES: dict[str, tuple[str, Callable[[AppContext, Path, Path], Any]]] = {
         "export.csv",
         lambda ctx, data, tmp: ctx.export_csv_files([CsvFile(tmp / "a.csv", [{"a": 1}]), CsvFile(tmp / "b.csv", [])]),
     ),
+    "export_board_image": (
+        "export.image",
+        lambda ctx, data, tmp: ctx.export_board_image(
+            ctx.inspect_file("TINY", str(data / "golden.png"), save=False), "TINY", None, "golden.png", tmp / "b.png"
+        ),
+    ),
     "archive_old": ("inspection.archive", lambda ctx, data, tmp: ctx.archive_old(-1)),
     "add_user": ("user.change", lambda ctx, data, tmp: ctx.add_user("kim", "Engineer")),
     "save_settings": ("settings.change", lambda ctx, data, tmp: ctx.save_settings({"default_epochs": 7})),
@@ -79,6 +85,7 @@ CALLS = {**{name: call for name, (_, call) in WRITES.items()}, **CHECKED_READS}
 # The lowest role allowed each call, copied from the write table of docs/ARCHITECTURE.md §5 and REQ-CMP-005, never read
 # from the decorators under test (#181): built from REQUIRED_ROLE, a lowered @requires refused fewer roles and passed.
 EXPECTED_ROLE = {name: "Engineer" for name in CALLS} | {"add_user": "Admin", "save_settings": "Admin"}
+EXPECTED_ROLE["export_board_image"] = "Operator"  # Save Image… (F9): every role keeps it, audited (#241, REQ-INSP-005)
 REFUSED = [(name, role) for name in CALLS for role in ROLES[: ROLES.index(EXPECTED_ROLE[name])]]
 
 

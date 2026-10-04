@@ -173,9 +173,11 @@ def test_req_insp_005_keys_and_buttons_do_the_same(
     by_key, by_button = tmp_path / "by_key.png", tmp_path / "by_button.png"
     monkeypatch.setattr(QFileDialog, "getSaveFileName", staticmethod(lambda *a, **k: (str(by_key), "PNG (*.png)")))
     press(qtbot, win, page.act_save)
+    qtbot.waitUntil(lambda: page._bg is None, timeout=30000)  # the save runs on the pool (#241)
     assert by_key.exists() and win.statusBar().currentMessage() == "Saved by_key.png"
     monkeypatch.setattr(QFileDialog, "getSaveFileName", staticmethod(lambda *a, **k: (str(by_button), "PNG (*.png)")))
     qtbot.mouseClick(page.btn_save, Qt.MouseButton.LeftButton)
+    qtbot.waitUntil(lambda: page._bg is None, timeout=30000)
     assert by_button.exists()
 
     page._set_queue([ng_board, ng_board, ng_board])

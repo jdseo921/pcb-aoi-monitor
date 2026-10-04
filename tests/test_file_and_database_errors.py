@@ -54,6 +54,7 @@ def test_req_set_019_save_image_to_a_name_that_cannot_be_written_says_why(
     target = out / name
     monkeypatch.setattr(QFileDialog, "getSaveFileName", staticmethod(lambda *a, **k: (str(target), "")))
     _as_the_app_runs(trained_ctx, monkeypatch, page.save_annotated_image)
+    qtbot.waitUntil(lambda: page._bg is None, timeout=30000)  # the save runs on the pool (#241)
     assert [title for title, _ in dialogs] == [code]
     assert trained_ctx.alarms()[0]["code"] == code.split()[0]
     assert [p.name for p in out.iterdir()] == ["taken.png"], "no file written, not even a temporary one"

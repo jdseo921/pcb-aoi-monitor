@@ -208,7 +208,11 @@ Both exports run in the background (#194): the window keeps answering, and after
 "Exporting…" with the seconds so far, then Cancel. Cancel on **Export Image Overlays** keeps the overlays already copied
 and the status line says how many; Cancel on **Export CSV** before its files are written leaves neither file. While
 an export runs both export buttons are off, "Exporting…" stays over the table after Filter, and a Switch User does not
-stop it: the audit trail names the user who started it.
+stop it: the audit trail names the user who started it. **Save Image…** (F9) on Inspection, which every role may
+use, records each picture in the audit trail as `export.image`, with who saved it, the record it shows, its board model,
+board file and verdict, and where it went, stored as above. F9 pressed during a run records the board shown when it
+was pressed, even if the run moves on while the file is named. A picture whose entry cannot be written is removed,
+and with it a file of that name it replaced.
 
 The **From** and **To** boxes take days from 2000-01-01 to 2100-12-31. The picture beside the table is the selected
 record's overlay; it is empty when the record's overlay file is gone, when no row is selected and after **Filter**.
