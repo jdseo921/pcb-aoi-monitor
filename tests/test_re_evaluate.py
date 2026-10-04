@@ -8,6 +8,7 @@ from __future__ import annotations
 import copy
 import json
 import statistics
+from collections.abc import Callable
 from dataclasses import replace
 from pathlib import Path
 from time import perf_counter
@@ -372,10 +373,23 @@ def test_req_cmp_005_reevaluate_uses_the_ai_model_that_judged_it(trained_ctx: Ap
     _assert_close(ctx.re_evaluate(uuid, ctx.recipe(BOARD)[1]), as_judged, "after a newer AI model")
 
 
+def _refusal(call: Callable[[], object]) -> str:
+    """The code and what happened of the AoiError `call` raises, or what it did instead: a cv2.error, or a result."""
+    try:
+        call()
+    except AoiError as e:
+        return f"{e.code} {e.what}"
+    except cv2.error as e:
+        return f"cv2.error: {e.err}"
+    return "a result"
+
+
 def test_req_cmp_005_reevaluate_refuses_what_it_cannot_judge(trained_ctx: AppContext, ng_board: Path) -> None:
     """An unknown result, another board model's recipe, a map that cannot be read, and a result whose map or AI model
     calibration is gone: each refused with its code and what to do, unless the thresholds turn off the check that needs
-    it, whose map is then not read; the stored result is not changed."""
+    it, whose map is then not read; the stored result is not changed. A map an image editor re-saved in colour, or at
+    half size, is not the map judged and reads as damaged (#249): before, the colour one raised a raw cv2.error and the
+    half-size one was judged, its regions in the half-size map's coordinates."""
     ctx = trained_ctx
     uuid, (_, recipe) = _store(ctx, ng_board), ctx.recipe(BOARD)
     with pytest.raises(AoiError) as unknown:
@@ -387,16 +401,21 @@ def test_req_cmp_005_reevaluate_refuses_what_it_cannot_judge(trained_ctx: AppCon
     (rec,) = ctx.inspections(board_model=BOARD)
     without_ai, without_compare = copy.deepcopy(recipe), copy.deepcopy(recipe)
     without_ai.use_ai, without_compare.use_compare = False, False
+    edits: dict[tuple[str, str], str] = {}  # what each map, damaged or edited by hand, gives
     for column, missing, without, source in (
         ("ai_map_path", "AI score map", without_ai, "AI"),
         ("diff_map_path", "difference map", without_compare, "Compare"),
     ):
         kept = Path(rec[column]).read_bytes()
-        Path(rec[column]).write_bytes(b"damaged")
-        with pytest.raises(AoiError) as damaged:
-            ctx.re_evaluate(uuid, recipe)
-        assert damaged.value.code == "AOI-CMP-003" and Path(rec[column]).name in damaged.value.what
-        assert source not in {c.source for c in ctx.re_evaluate(uuid, without).checks}, "a map not used is not read"
+        stored = cv2.imdecode(np.frombuffer(kept, np.uint8), cv2.IMREAD_UNCHANGED)
+        half = cv2.resize(stored, (stored.shape[1] // 2, stored.shape[0] // 2))
+        for how, edited in (("damaged", None), ("colour", cv2.cvtColor(stored, cv2.COLOR_GRAY2BGR)), ("half", half)):
+            if edited is None:
+                Path(rec[column]).write_bytes(b"damaged")
+            else:
+                save_image(rec[column], edited)  # as an image editor saves it: a whole PNG that decodes
+            edits[column, how] = _refusal(lambda: ctx.re_evaluate(uuid, recipe))
+            assert source not in {c.source for c in ctx.re_evaluate(uuid, without).checks}, "a map not used is not read"
         Path(rec[column]).unlink()
         with pytest.raises(AoiError) as gone:
             ctx.re_evaluate(uuid, recipe)
@@ -405,6 +424,12 @@ def test_req_cmp_005_reevaluate_refuses_what_it_cannot_judge(trained_ctx: AppCon
         judged = ctx.re_evaluate(uuid, without)  # the check that needs the map is off: judged without it
         assert judged.checks and source not in {c.source for c in judged.checks}, source
         Path(rec[column]).write_bytes(kept)
+    damaged = "AOI-CMP-003 The stored map {file} could not be read: the file is damaged."
+    assert edits == {
+        (c, how): damaged.format(file=Path(rec[c]).name)
+        for c in ("ai_map_path", "diff_map_path")
+        for how in ("damaged", "colour", "half")
+    }
     model = ctx.active_model(BOARD)
     for metrics in (
         "not JSON", "[]", None, '{"pixel_threshold": 2}', '{"image_threshold": "NaN", "pixel_threshold": 1}',

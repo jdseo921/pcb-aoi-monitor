@@ -29,8 +29,9 @@ evidence it is judged on, which AI model's calibration applies, who may call it 
    is an Engineer's task and a would-be verdict next to a stored one is easy to misread on the line. Compare hides
    the panel from Operators (S28b).
 5. **What cannot be judged says so.** AOI-CMP-002 for no such result or no stored decision table, AOI-CMP-003 for a
-   map file that is there but cannot be read, and AOI-CMP-004 for a map or calibration that a check the thresholds
-   use needs but is gone, naming it; turning that check off lets the rest be judged.
+   map file that is there but cannot be read or is not the map written (ADR 0005 decision 5), and AOI-CMP-004 for a
+   map or calibration that a check the thresholds use needs but is gone, naming it; turning that check off lets the
+   rest be judged.
 
 ## Alternatives considered
 

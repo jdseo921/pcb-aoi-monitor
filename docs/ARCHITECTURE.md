@@ -331,7 +331,9 @@ inspecting it with them gives. A check the recipe turns on that did not run on t
 saying so. A stored result holds that evidence in its record and its two map files (`aoi/core/maps.py`, format 2 since
 S28a, [ADR 0005](adr/0005-stored-ai-map-format-2.md)): the difference map exactly, and the AI map within one step (0.001
 σ up to 32.767 σ, then 1/8192 of the value, up to 1789 σ) with each pixel on the side of the AI model's pixel threshold
-it was judged on; a map file that is there but cannot be read raises AOI-CMP-003. So a stored result is judged again as
+it was judged on; a map file that is there but cannot be read raises AOI-CMP-003, and so does one that decodes but is
+not the map written (not one channel of its bit depth at the size of the board picture, whose PNG header `load_maps`
+reads), as damaged, for `re_evaluate` and for Compare alike (#249). So a stored result is judged again as
 the live one would be, but for what is read from its AI map, within one step over the AI threshold: an AI defect's
 score, so two AI defects of equal area whose peaks are that close may swap numbers or, where they overlap, keep the
 other one, and the value of an ROI added, moved or renamed since, which that close to its threshold may grade the other

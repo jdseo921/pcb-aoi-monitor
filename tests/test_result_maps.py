@@ -18,6 +18,7 @@ from pytestqt.qtbot import QtBot
 
 from aoi.config import Settings
 from aoi.core import maps
+from aoi.core.compare import CompareResult
 from aoi.core.imaging import list_images, save_image
 from aoi.core.inspector import InspectionResult
 from aoi.core.services import AppContext
@@ -102,6 +103,42 @@ def _backdate(ctx: AppContext, days: int, *ids: int) -> None:
     """Move records `days` back (and a second, so a sweep with `days` as its cutoff takes a record this old)."""
     then = (datetime.now(UTC) - timedelta(days=days, seconds=1)).isoformat(timespec="seconds")
     ctx.db.execute(f"UPDATE inspections SET time=? WHERE id IN ({','.join('?' * len(ids))})", (then, *ids))
+
+
+def test_req_insp_012_a_map_that_is_not_the_map_written_reads_as_damaged(tmp_path: Path) -> None:
+    """A map that decodes but is not the map written cannot be judged as it, so it raises AOI-CMP-003 naming it as
+    damaged (#249): one in colour, a 16-bit difference map, an 8-bit AI map, two maps of different sizes when no board
+    picture gives the size (the difference map is named), and maps not the size of the board picture, read from its
+    header. Before, each was put on the result as it decoded."""
+    diff, ai, picture, junk = (tmp_path / f"b{end}" for end in ("_diff.png", maps.AI_FILE, ".png", "_junk.png"))
+
+    def loaded(d: np.ndarray, a: np.ndarray, *shape: tuple[int, int] | None) -> str:
+        save_image(diff, d)
+        save_image(ai, a)
+        res = InspectionResult("NG", 0.0, compare=CompareResult())
+        try:
+            maps.load_maps(res, str(diff), str(ai), *shape)
+        except AoiError as e:
+            assert e.code == "AOI-CMP-003" and str(e.what).endswith(" could not be read: the file is damaged."), e
+            return next(p.name for p in (diff, ai) if p.name in str(e.what))
+        assert res.compare is not None and res.compare.diff_map is not None and res.anomaly_map is not None
+        return "loaded"
+
+    u8, u16, small = np.zeros((4, 6), np.uint8), np.zeros((4, 6), np.uint16), np.zeros((2, 3), np.uint16)
+    got = {
+        "intact": loaded(u8, u16),
+        "colour AI map": loaded(u8, cv2.cvtColor(u16, cv2.COLOR_GRAY2BGR)),
+        "16-bit difference map": loaded(u16, u16),
+        "8-bit AI map": loaded(u8, u8),
+        "sizes differ": loaded(u8, small),
+    }
+    named = {"colour AI map": ai.name, "16-bit difference map": diff.name, "8-bit AI map": ai.name}
+    assert got == {"intact": "loaded", **named, "sizes differ": diff.name}
+    save_image(picture, np.zeros((4, 6, 3), np.uint8))
+    junk.write_bytes(b"not a PNG")
+    shape = maps.picture_shape(picture)
+    assert shape == (4, 6) and [maps.picture_shape(p) for p in (None, tmp_path / "gone.png", junk)] == [None] * 3
+    assert loaded(u8, u16, shape) == "loaded" and loaded(small.astype(np.uint8), small, shape) == ai.name
 
 
 def test_req_insp_012_ok_maps_are_swept_after_retention_and_ng_maps_stay(
