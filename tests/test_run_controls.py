@@ -18,7 +18,7 @@ import numpy as np
 import pytest
 from PySide6.QtCore import QEvent, QObject, Qt
 from PySide6.QtGui import QAction, QKeySequence
-from PySide6.QtWidgets import QApplication, QFileDialog, QLabel
+from PySide6.QtWidgets import QApplication, QFileDialog, QLabel, QMessageBox
 from pytestqt.qtbot import QtBot
 
 from aoi.core.imaging import list_images
@@ -370,6 +370,44 @@ def test_req_insp_005_a_board_model_change_stops_the_run(
     page.running, page.run_board_model = True, BOARD  # a run of TINY, should one reach Next Board under ZZZ
     page.next_board()
     assert page.worker is None and not page.running and len(started) == 2, "no board of it starts under ZZZ"
+
+
+def test_req_insp_005_run_controls_off_without_a_board_model(
+    qtbot: QtBot, ctx: AppContext, ng_board: Path, monkeypatch: pytest.MonkeyPatch, dialogs: list[tuple[str, str]]
+) -> None:
+    """#244: with no board model and images queued, Start and Next Board (their buttons, F5 and F8) were on for every
+    role and opened a "Board model" message with no code that told an Operator to create or select a board model in the
+    top bar, which an Operator cannot do. They are grey now; they come on when an Engineer creates the first board model
+    without leaving the page, and go grey again when the header empties."""
+    asked: list[tuple[str, str]] = []
+
+    def record(parent: object, title: str, text: str, *buttons: object) -> QMessageBox.StandardButton:
+        asked.append((title, text))
+        return QMessageBox.StandardButton.Ok
+
+    monkeypatch.setattr(QMessageBox, "information", staticmethod(record))
+    win = MainWindow(ctx)  # an empty workspace: no board model
+    qtbot.addWidget(win)
+    win.show()
+    qtbot.waitExposed(win)
+    win.set_user("operator")
+    page = win.pages["Inspection"]
+    assert isinstance(page, InspectionPage)
+    win.navigate("Inspection")
+    assert win.board_model is None and ctx.role == "Operator" and page.empty.isVisible()
+    page._set_queue([ng_board])
+    controls = (page.act_start, page.act_next, page.btn_start, page.btn_next)
+    assert [c.isEnabled() for c in controls] == [False] * 4, "Start and Next Board, buttons and keys, are grey"
+    page.act_start.trigger()  # F5's action
+    page.btn_next.click()  # F8's button
+    assert (asked, dialogs, page.running, page.worker) == ([], [], False, None)
+    win.set_user("engineer")
+    ctx.ensure_board_model(BOARD)
+    win._reload_board_models(BOARD)  # what + New does after the name dialog
+    assert win.board_model == BOARD and win.stack.currentWidget() is page and page.queue == [ng_board]
+    assert [c.isEnabled() for c in controls] == [True] * 4, "on once a board model is chosen, on the same page"
+    win._on_board_model("")  # the header emptied
+    assert [c.isEnabled() for c in controls] == [False] * 4
 
 
 @pytest.mark.parametrize("press", ["next_board", "start_run"])

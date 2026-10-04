@@ -374,22 +374,22 @@ def test_req_set_019_both_golden_board_panes_follow_a_new_reference(
 
 
 def test_req_set_019_compare_save_to_recipe_without_a_board_model_asks_for_one(
-    qtbot: QtBot, trained_ctx: AppContext, monkeypatch: pytest.MonkeyPatch
+    qtbot: QtBot, trained_ctx: AppContext, monkeypatch: pytest.MonkeyPatch, dialogs: list[tuple[str, str]]
 ) -> None:
-    """Before S22b the save reached the database with no board model and came back as an unexpected-error dialog."""
+    """Before S22b the save reached the database with no board model and came back as an unexpected-error dialog; until
+    #244 it opened a "Board model" message with no code that told every role to create or select a board model, which an
+    Operator cannot do. It is AOI-SET-014 now, with a step every role can take, logged and alarmed like any error."""
     win = _window(qtbot, trained_ctx)
     before = trained_ctx.recipe_history(BOARD)
-    asked: list[tuple[str, str]] = []
-
-    def record(parent: object, title: str, text: str, *buttons: object) -> QMessageBox.StandardButton:
-        asked.append((title, text))
-        return QMessageBox.StandardButton.Ok
-
-    monkeypatch.setattr(QMessageBox, "information", staticmethod(record))
+    uncoded: list[tuple[object, ...]] = []
+    monkeypatch.setattr(QMessageBox, "information", staticmethod(lambda *a: uncoded.append(a)))
     win._on_board_model("")  # the top bar cleared, as after the last board model is removed
     assert win.board_model is None
     win.pages["Compare"].save_recipe()
-    assert asked == [("Board model", "Create or select a board model in the top bar first.")]
+    what = "Compare needs a board model, and none is selected in the top bar."
+    step = "Select a board model in the top bar. If the list is empty, an Engineer or Admin creates one with + New."
+    assert (uncoded, dialogs) == ([], [("AOI-SET-014 No board model selected", f"{what}\n\n{step}")])
+    assert trained_ctx.alarms()[0]["code"] == "AOI-SET-014"
     assert trained_ctx.recipe_history(BOARD) == before
 
 

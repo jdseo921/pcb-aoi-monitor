@@ -11,7 +11,6 @@ from PySide6.QtWidgets import (
     QAbstractItemView,
     QHBoxLayout,
     QLabel,
-    QMessageBox,
     QPushButton,
     QTableWidget,
     QTableWidgetItem,
@@ -125,12 +124,11 @@ class Page(QWidget):
     def on_board_model_changed(self, name: str | None) -> None: ...
 
     def need_board_model(self) -> bool:
+        """True with a board model in the header; else the coded AOI-SET-014, logged and alarmed, whose step every role
+        can take: select one, or have an Engineer or Admin create the first with + New (#244, REQ-SET-019). Inspection's
+        Start and Next Board are grey with no board model, so there it is only a backstop."""
         if not self.board_model:
-            QMessageBox.information(
-                self,
-                QCoreApplication.translate("Page", "Board model"),
-                QCoreApplication.translate("Page", "Create or select a board model in the top bar first."),
-            )
+            self.error(AoiError("AOI-SET-014", page=self.title))
             return False
         return True
 

@@ -62,7 +62,10 @@ next to `TBOX-A1` is refused with AOI-TRN-005, since Windows would store the AI 
 the same files.
 
 Until a board model exists, Home, Inspection, Training, AI Model Test and Recipe Editor say so and offer
-**+ New board model**, which an Engineer or Admin uses; an Operator is told to ask an Engineer.
+**+ New board model**, which an Engineer or Admin uses; an Operator is told to ask an Engineer. Start and Next Board
+on Inspection stay grey until a board model is chosen in the top bar; an action on another page that needs one, such
+as Compare's Save to Recipe, shows AOI-SET-014 (select a board model; an Engineer or Admin creates the first with
+**+ New**).
 
 (to be written: creating a board model in full, calibrating px per mm)
 

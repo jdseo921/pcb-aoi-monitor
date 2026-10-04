@@ -1340,7 +1340,22 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-10"/>
+        <location line="+12"/>
+        <source>No board model selected</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>{page} needs a board model, and none is selected in the top bar.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Select a board model in the top bar. If the list is empty, an Engineer or Admin creates one with + New.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="-24"/>
         <source>Close the other program (another copy of this app, a database tool or a backup), then choose the same folder in the window that opens next; or choose another workspace folder there. Cancel there closes the app.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1978,7 +1993,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+65"/>
+        <location line="+66"/>
         <source>Run stopped: the board model changed from {old} to {new}. Boards inspected before the change are saved under {old}; press Start to carry on with the queue under {new}.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2527,7 +2542,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/base.py" line="+114"/>
+        <location filename="../ui/pages/base.py" line="+113"/>
         <source>No board model yet</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2547,17 +2562,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+13"/>
-        <source>Board model</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+1"/>
-        <source>Create or select a board model in the top bar first.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+14"/>
+        <location line="+27"/>
         <source>Open {page} ›</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2612,7 +2617,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/inspection.py" line="-463"/>
+        <location filename="../ui/pages/inspection.py" line="-464"/>
         <source>Inspection</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2983,7 +2988,7 @@
 <context>
     <name>Role</name>
     <message>
-        <location filename="../ui/pages/base.py" line="-250"/>
+        <location filename="../ui/pages/base.py" line="-249"/>
         <source>Operator</source>
         <translation type="unfinished"></translation>
     </message>
