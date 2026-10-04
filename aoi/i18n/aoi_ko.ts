@@ -449,7 +449,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+58"/>
+        <location line="+61"/>
         <source>Training an AI model</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1123,6 +1123,16 @@
     </message>
     <message>
         <location line="+10"/>
+        <source>Images not imported: path too long</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>None of the {count} image(s) picked were imported: the system refused the path of the copy of {path} in the workspace folder {workspace} as too long.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+14"/>
         <source>AI model, recipe or Golden board changed since the run</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1417,7 +1427,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-558"/>
+        <location line="-573"/>
         <source>Board judged NG</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1447,7 +1457,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+128"/>
+        <location line="+105"/>
+        <source>Ask an Admin to save a workspace folder with a shorter path on Settings and then, with the app closed, to copy everything in the folder {workspace} into that folder, or to turn on long paths in Windows; then import the images again.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+38"/>
         <source>ROI thresholds refused</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1602,7 +1617,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/training.py" line="+300"/>
+        <location filename="../ui/pages/training.py" line="+301"/>
         <source>{code} {title}</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2586,7 +2601,7 @@
 <context>
     <name>NgDialog</name>
     <message>
-        <location filename="../ui/pages/training.py" line="-245"/>
+        <location filename="../ui/pages/training.py" line="-246"/>
         <source>Label NG images</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3315,7 +3330,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/services.py" line="-1138"/>
+        <location filename="../core/services.py" line="-1141"/>
         <source>Aligning {count} images to the reference board</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3334,12 +3349,12 @@
     </message>
     <message>
         <location line="+1"/>
-        <location line="+363"/>
+        <location line="+367"/>
         <source>Import Folder…</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-357"/>
+        <location line="-361"/>
         <source>Tip: 20+ OK images give a steadier threshold</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3392,12 +3407,12 @@
     </message>
     <message>
         <location line="+1"/>
-        <location line="+226"/>
+        <location line="+230"/>
         <source>Remove</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-221"/>
+        <location line="-225"/>
         <source>Select a sample to preview</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3497,7 +3512,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+52"/>
+        <location line="+56"/>
         <source>Imported {ok} OK and {ng} NG images</source>
         <translation type="unfinished"></translation>
     </message>

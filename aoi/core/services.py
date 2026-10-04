@@ -303,11 +303,11 @@ class AppContext:
         should_stop: Callable[[], bool] | None = None,
     ) -> int:
         """Copy uploads into the workspace so training data survives the source folder moving; returns how many were
-        added. All or nothing (#178): a file that cannot be copied stops the import with AOI-TRN-008 and removes the
-        copies made; then the samples, a new board model's default recipe and reference, and the audit entry commit
-        together. A page runs it on the pool (REQ-SET-021, #194): `progress(done, total)` follows each file, and once
-        `should_stop()` is true the files not yet copied are left out, the ones copied are added and the audit entry
-        says so (`cancelled`)."""
+        added. All or nothing (#178): a file that cannot be copied stops the import with AOI-TRN-008, or AOI-TRN-011
+        when the system refuses the copy's path as too long (#245), and removes the copies made; then the samples, a
+        new board model's default recipe and reference, and the audit entry commit together. A page runs it on the
+        pool (REQ-SET-021, #194): `progress(done, total)` follows each file, and once `should_stop()` is true the files
+        not yet copied are left out, the ones copied are added and the audit entry says so (`cancelled`)."""
         self._refuse_case_variant(board_model)  # a new board model is created by its first import
         dest = self.settings.images_dir / board_model / label
         copies: list[Path] = []
@@ -323,7 +323,10 @@ class AppContext:
                 target = dest / f"{_stem(src)}_{uid}{src.suffix.lower()}"
                 try:
                     atomic.copy_file(src, target)
-                except OSError as e:  # gone, unreadable, or the workspace drive full
+                except OSError as e:  # gone, unreadable, the workspace drive full, or a path the system refuses
+                    if _too_long(e) and str(e.filename) != str(src):  # the copy's path, not the picked file's (#245)
+                        where = {"workspace": str(self.settings.root), "count": len(paths)}
+                        raise AoiError("AOI-TRN-011", str(e), path=str(src), **where) from e
                     why = e.strerror or str(e)
                     raise AoiError("AOI-TRN-008", str(e), path=str(src), reason=why, count=len(paths)) from e
                 copies.append(target)
