@@ -27,7 +27,7 @@
 <context>
     <name>ComparePage</name>
     <message>
-        <location filename="../ui/pages/compare.py" line="+67"/>
+        <location filename="../ui/pages/compare.py" line="+71"/>
         <source>Side by side</source>
         <translation type="unfinished"></translation>
     </message>
@@ -98,13 +98,13 @@
     </message>
     <message>
         <location line="+3"/>
-        <location line="+53"/>
-        <location line="+337"/>
+        <location line="+56"/>
+        <location line="+387"/>
         <source>Golden board</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-389"/>
+        <location line="-442"/>
         <source>AI model</source>
         <translation type="unfinished"></translation>
     </message>
@@ -134,7 +134,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+28"/>
+        <location line="+31"/>
         <source>Test Image…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -160,12 +160,12 @@
     </message>
     <message>
         <location line="+15"/>
-        <location line="+549"/>
+        <location line="+604"/>
         <source>Test board</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-543"/>
+        <location line="-598"/>
         <source>Inspecting…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -205,18 +205,28 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+216"/>
+        <location line="+123"/>
+        <source>Would be: {verdict}</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+137"/>
         <source>The verdict and the decision table are the stored ones; press Re-evaluate › to inspect the board again with today&apos;s Golden board.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location line="+5"/>
-        <location line="+132"/>
+        <location line="+140"/>
         <source>The verdict and the decision table are the stored ones; press Re-evaluate › to inspect the board again from its image file.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+120"/>
+        <location line="+41"/>
+        <source>Why this board would be {verdict} with these thresholds:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+82"/>
         <source>{file} was not inspected; press Re-evaluate › to inspect it.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -226,7 +236,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-480"/>
+        <location line="-535"/>
         <source>AI model default</source>
         <translation type="unfinished"></translation>
     </message>
@@ -256,12 +266,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+2"/>
+        <location line="+7"/>
         <source>Re-evaluate</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1"/>
+        <location line="+2"/>
         <source>Save to Recipe</source>
         <translation type="unfinished"></translation>
     </message>
@@ -282,12 +292,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+59"/>
+        <location line="+96"/>
         <source>Test board: {file}</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+66"/>
+        <location line="+67"/>
         <source>{file} was not inspected: its Golden board cannot be opened.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -323,14 +333,14 @@
     </message>
     <message>
         <location line="+0"/>
-        <location line="+131"/>
-        <location line="+118"/>
+        <location line="+139"/>
+        <location line="+121"/>
         <location line="+12"/>
         <source>Re-evaluate ›</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-247"/>
+        <location line="-258"/>
         <source>Train an AI model on Training.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -340,7 +350,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+15"/>
+        <location line="+19"/>
         <source>Inspection time (ms)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -355,12 +365,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+28"/>
+        <location line="+30"/>
         <source>Test board: {file} (stored result)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+42"/>
+        <location line="+44"/>
         <source>Golden board not shown</source>
         <translation type="unfinished"></translation>
     </message>
@@ -397,12 +407,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+17"/>
+        <location line="+18"/>
         <source>Why this board is {verdict}:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+65"/>
+        <location line="+67"/>
         <source>Recipe saved as revision {revision}</source>
         <translation type="unfinished"></translation>
     </message>
@@ -412,7 +422,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+65"/>
+        <location line="+67"/>
         <source>Inspect a board on Inspection, or pick a test image.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -617,7 +627,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/compare.py" line="-92"/>
+        <location filename="../ui/pages/compare.py" line="-94"/>
         <source>Changing recipes</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1822,6 +1832,11 @@
     </message>
     <message>
         <location line="+6"/>
+        <source>The recipe turns the AI check off, so these thresholds judge the board without it: an Engineer can turn it on in the Recipe Editor.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+5"/>
         <source>Note: {note}</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2805,7 +2820,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/compare.py" line="-540"/>
+        <location filename="../ui/pages/compare.py" line="-598"/>
         <source>Compare</source>
         <translation type="unfinished"></translation>
     </message>

@@ -6,6 +6,8 @@ every metric that decided OK / WARN / NG; a stored result is shown as it was
 decided and never inspected again (REQ-CMP-003). The "Try other thresholds"
 panel is for an Engineer or Admin and hidden for an Operator (REQ-CMP-005,
 docs/adr/0006-judging-a-stored-result-again.md decision 4).
+Its Re-evaluate judges a stored result again from its stored maps and shows
+what it would be.
 """
 
 from __future__ import annotations
@@ -51,6 +53,7 @@ from ..widgets.image_view import ImageView
 from .base import (
     QT_TRANSLATE_NOOP,
     Page,
+    action_button,
     breakable,
     breakable_names,
     button,
@@ -62,6 +65,7 @@ from .base import (
 
 if TYPE_CHECKING:
     from ..main_window import MainWindow
+    from ..workers import Worker
 
 MODES = [  # the Show combo, in this order; shown through tr()
     QT_TRANSLATE_NOOP("ComparePage", "Side by side"),
@@ -137,6 +141,9 @@ class ComparePage(Page):
         self.judge_on_show = False  # the header changed while the page was hidden: judge its board when shown (#247)
         self.by_form = False  # the board shown was inspected with the form's thresholds, not the recipe's
         self.operator_form = False  # the form was loaded from the recipe when the Operator signed in
+        self.loaded = False  # the load of a stored result's pictures and maps has ended: Re-evaluate may judge it
+        self.tried = False  # the table and the "why" box show the checks the form's thresholds give, not the result's
+        self._trying: Worker | None = None  # the re-evaluation running, if any
         self._fitted = False
 
         bar = QHBoxLayout()
@@ -230,8 +237,14 @@ class ComparePage(Page):
         f.addRow(self.tr("Minimum defect area (px)"), self.min_area)
         f.addRow(self.tr("Similarity minimum (SSIM)"), self.ssim_min)
         f.addRow(self.tr("Allowed difference regions"), self.max_regions)
+        for field in (self.ai_thr, self.diff_thr, self.min_area, self.ssim_min, self.max_regions):
+            field.valueChanged.connect(self._drop_tried)  # what was tried no longer applies
         row = QHBoxLayout()
-        row.addWidget(button(self.tr("Re-evaluate"), slot=self.run))
+        self.would_be = QLabel()  # "Would be: ▲ WARN" beside Re-evaluate once a stored result is judged again (sketch)
+        self.would_be.hide()
+        row.addWidget(self.would_be)
+        self.act_try = self.action(self.tr("Re-evaluate"), "Ctrl+R", self.re_evaluate)
+        row.addWidget(action_button(self.act_try, show_key=False))
         self.btn_save = button(self.tr("Save to Recipe"), "primary", self.save_recipe)  # the page's one blue primary
         row.addWidget(self.btn_save)
         f.addRow(row)
@@ -286,6 +299,7 @@ class ComparePage(Page):
             self.mode.setCurrentIndex(MODE_SIDE)  # redraw shows the pane and its label, and fits the board to its half
 
     def _load_recipe_into_form(self) -> None:
+        self._drop_tried()  # tried with the recipe the form came from
         if not self.board_model:
             return
         rev, r = self.ctx.recipe(self.board_model)
@@ -308,6 +322,41 @@ class ComparePage(Page):
         return r
 
     # --- evaluate ----------------------------------------------------------------
+    def re_evaluate(self) -> None:
+        """Re-evaluate (Ctrl+R, Engineer and Admin): a stored result is judged again with the form's thresholds from its
+        stored maps on the pool thread, without the AI model (`AppContext.re_evaluate`, REQ-CMP-005), and "Would be"
+        shows the verdict they give while the banner keeps the stored one (ADR 0006 decision 3); a board not stored is
+        inspected again with them. The service refuses the header's board model's thresholds for another's result."""
+        if self.stored is None:
+            self.run()
+            return
+        if (bm := self.checked_board_model()) is None:
+            return
+        self._drop_tried()
+        recipe, uuid = self._form_recipe(bm), self.stored["uuid"]
+        self._trying = self.run_in_background(self.ctx.re_evaluate, uuid, recipe, on_result=self._on_tried)
+
+    def _on_tried(self, res: InspectionResult) -> None:
+        """The checks and the explanation the thresholds tried give; the banner keeps the stored verdict."""
+        self._trying, self.tried = None, True
+        self.would_be.setText(self.tr("Would be: {verdict}").format(verdict=theme.verdict_label(res.verdict)))
+        self.would_be.setStyleSheet(theme.verdict_style(res.verdict, big=False))
+        self.would_be.show()
+        self._show_checks(res, tried=True)
+
+    def _drop_tried(self) -> None:
+        """Back to the checks of the result shown once what was tried no longer applies: a threshold or the recipe
+        changes, another run starts or another result shows, the board model changes or an Operator signs in. A
+        re-evaluation still running is stopped, so its answer never shows, and its error, logged and alarmed, shows no
+        dialog (#206)."""
+        if self._trying is not None and self._trying is self._bg:
+            self._trying.stop()
+        self._trying = None
+        self.would_be.hide()
+        if self.tried and self.res is not None:
+            self._show_checks(self.res)
+        self.tried = False
+
     def run(self) -> None:
         """Load the reference and inspect the test image on a pool thread (REQ-SET-021); the form is read here."""
         self._start(quiet=False)
@@ -323,12 +372,14 @@ class ComparePage(Page):
             file, own = Path(self.test_path).name, self.record_board_model  # board model, never the header's (#172)
             self.error(AoiError("AOI-CMP-005", tried=bm, file=file, judged=own))
             return
+        self._drop_tried()
         self.stored = None  # a fresh inspection with the form's thresholds, not a stored result
         self.note.hide()
         if self.test_path:
             self.test_label.setText(self.tr("Test board: {file}").format(file=breakable(Path(self.test_path).name)))
         recipe = self._form_recipe(bm) if self.test_path and self.ctx.role != "Operator" else None  # else the recipe
         self.by_form = recipe is not None  # an Operator signing in has it judged again by the recipe
+        self._sync_roles()  # Re-evaluate, waiting for a stored result's maps, now inspects again
         judged = self.as_judged[1] if self.as_judged and not self.ref_override else None
         if not self.ref_override:
             self.golden_seen = self.golden_board_stamp()
@@ -457,6 +508,10 @@ class ComparePage(Page):
         self.res = r
         self.verdict.setText(theme.verdict_label(r.verdict))
         self.verdict.setStyleSheet(theme.verdict_style(r.verdict))
+        self._show_checks(r)
+
+    def _show_checks(self, r: InspectionResult, tried: bool = False) -> None:
+        """The decision table and "why" box of `r`: the result shown, or (`tried`) what the thresholds tried give it."""
         rows, colors = [], []
         for c in r.checks:
             name, source, rule = self._check_text(c)
@@ -474,7 +529,7 @@ class ComparePage(Page):
         )
         colors.append(None)
         fill_table(self.metrics, rows, colors)
-        self.why.setHtml(self._explain(r))
+        self.why.setHtml(self._explain(r, tried))
 
     def show_stored(self, inspection_id: int) -> None:
         """A stored result as it was decided, never inspected again (REQ-CMP-003): the verdict, table and explanation
@@ -485,10 +540,12 @@ class ComparePage(Page):
             file = Path(rec["image_path"]).name if rec else "?"
             self.error(AoiError("AOI-CMP-002", id=inspection_id, file=file))
             return
+        self._drop_tried()
         self.stored, self.test_path, self.ref_override, self.as_judged = rec, rec["image_path"], None, None
         self.golden_error, self.golden_state = None, False  # its pane shows the golden board as judged, not today's
         self.record_board_model = rec["board_model"]  # Re-evaluate judges the board under it (#172)
-        self._fitted = False
+        self._fitted = self.loaded = False
+        self._sync_roles()  # Re-evaluate waits for its pictures and maps
         self.judge_on_show = False  # a stored result is never inspected again unasked
         self.test_empty.hide()
         self.test_view.set_image(None)  # the board shown before goes at once, not when this one's picture arrives,
@@ -536,6 +593,8 @@ class ComparePage(Page):
     def _on_stored_loaded(self, out: Stored) -> None:
         if self.stored is None:  # a fresh run or a board model change came first: nothing of it shows
             return
+        self.loaded = True  # read, or not: Re-evaluate no longer stops the load
+        self._sync_roles()
         if isinstance(out, ErrorReport):  # none of its pictures: the verdict and table stand, and each pane says why
             why = f"{out.code} {phrase_text(out.what)}"  # the Golden board pane's next step is the dialog's
             self.ref_empty.show_state(self.tr("Golden board not shown"), f"{why} {phrase_text(out.action)}")
@@ -596,12 +655,15 @@ class ComparePage(Page):
         name = self.tr(CHECK_NAMES[c.name]) if c.name in CHECK_NAMES else c.name
         return name, self.tr(SOURCES.get(c.source, c.source)), self.tr(RULES.get(c.rule, c.rule))
 
-    def _explain(self, r: InspectionResult) -> str:
+    def _explain(self, r: InspectionResult, tried: bool = False) -> str:
         """The "why" box (REQ-CMP-004; sketch docs/sketches/compare-decision-table.md of PR #79): a heading with the
         verdict, then the plain-word sentences of `explain` as bullets, the deciding checks first, each in the UI
-        language, a stored result's notes in the past tense; every value is escaped, so none is read as markup."""
+        language, a stored result's notes in the past tense; every value is escaped, so none is read as markup. With
+        `tried`, the verdict the thresholds tried would give, and the AI check off said of their recipe (#246)."""
         heading = self.tr("Why this board is {verdict}:").format(verdict=r.verdict)
-        sentences = explain(r, stored=self.stored is not None)
+        if tried:
+            heading = self.tr("Why this board would be {verdict} with these thresholds:").format(verdict=r.verdict)
+        sentences = explain(r, stored=self.stored is not None, tried=tried)
         return "<br>".join(
             [f"<b>{html.escape(heading)}</b>", *(f"• {html.escape(sentence_text(t))}" for t in sentences)]
         )
@@ -721,10 +783,12 @@ class ComparePage(Page):
         """The threshold panel for an Engineer or Admin only, hidden for an Operator, who never sees what other
         thresholds would give (REQ-CMP-005; ADR 0006 decision 4, sketch Q17): for an Operator the hidden form holds the
         recipe's thresholds, read once at the sign-in, which the Difference heatmap follows, and a board inspected with
-        an Engineer's is cleared and judged again by the recipe, a run of it still going replaced (review)."""
+        an Engineer's is cleared and judged again by the recipe, a run of it still going replaced (review). Re-evaluate
+        waits until the load of a stored result's pictures and maps has ended, so it never stops it."""
         engineer = self.ctx.role != "Operator"
         self.tryout.setVisible(engineer)
         self.btn_save.setEnabled(engineer)
+        self.act_try.setEnabled(engineer and (self.stored is None or self.loaded))
         if engineer or self.operator_form:  # the form is the recipe's since the Operator signed in: no read again
             self.operator_form = not engineer
             return
