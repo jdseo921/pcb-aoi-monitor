@@ -6,9 +6,11 @@ import functools
 import io
 import json
 import struct
+import subprocess
+import sys
 import zlib
 from pathlib import Path
-from typing import cast
+from typing import Any, NoReturn, cast
 
 import cv2
 import numpy as np
@@ -18,6 +20,7 @@ from PIL import Image
 from pytestqt.qtbot import QtBot
 
 from aoi.config import Settings, default_workspace
+from aoi.core import imaging
 from aoi.core.imaging import image_header, load_image
 from aoi.core.inspector import NG, Inspector, _grade
 from aoi.core.recipe import Recipe
@@ -29,6 +32,7 @@ from aoi.ui.pages.settings import SettingsPage
 from tests.test_req_done_in_v01 import _window
 
 FORMATS = (".png", ".jpg", ".bmp", ".tif")
+ROOT = Path(__file__).resolve().parents[1]
 
 
 def board(width: int, height: int) -> np.ndarray:
@@ -436,8 +440,10 @@ def repoint(data: bytes, how: str) -> bytes:
     byte count, as the #242 review built its file; "one_offset" leaves only the first offset, which libtiff pads with 0
     for the other strips, so they read from the start of the file; "last_listed" turns the PlanarConfiguration entry,
     listed after StripOffsets, into TileOffsets pointing at the first one's offset n times, which libtiff takes as the
-    strips' offsets since it is listed last. "counts_are_offsets" instead writes the offsets into the byte counts, a
-    vendor fault libtiff works around in an uncompressed file by reading each strip at its size."""
+    strips' offsets since it is listed last; "per_sample" also gives the Compression entry one value per sample (7, 7
+    and 7, at the end of the file), as TIFF before 5.0 allowed and libtiff still reads. "counts_are_offsets" instead
+    writes the offsets into the byte counts, a vendor fault libtiff works around in an uncompressed file by reading each
+    strip at its size, and "two_counts" lists two byte counts, 3,000 then the first, which libtiff works around too."""
     with tifffile.TiffFile(io.BytesIO(data)) as tif:
         tags = tif.pages[0].tags
         where = tags.get("StripOffsets") or tags["TileOffsets"]
@@ -446,7 +452,11 @@ def repoint(data: bytes, how: str) -> bytes:
         n, offsets, first, first_held = len(where.value), where.value, where.value[0], held.value[0]
         entry, at, held_at, held_fmt = where.offset, where.valueoffset, held.valueoffset, {3: "H", 4: "I"}[held.dtype]
         planar = tags["PlanarConfiguration"].offset if how == "last_listed" else 0
+        compression, held_entry = tags["Compression"].offset, held.offset
     out = bytearray(data)
+    if how == "per_sample":
+        struct.pack_into("<HHII", out, compression, 259, 3, 3, len(out))  # three SHORTs at the end of the file
+        out += struct.pack("<3H", 7, 7, 7)
     if how == "last_listed":
         struct.pack_into("<HHII", out, planar, 324, 4, n, len(out))  # TileOffsets: n LONGs at the end of the file
         return bytes(out + struct.pack(f"<{n}I", *[first] * n))
@@ -455,6 +465,9 @@ def repoint(data: bytes, how: str) -> bytes:
         return bytes(out)
     if how == "counts_are_offsets":
         struct.pack_into(f"<{n}{held_fmt}", out, held_at, *offsets)
+        return bytes(out)
+    if how == "two_counts":  # two SHORTs, held in the entry itself
+        struct.pack_into("<HHIHH", out, held_entry, 279, 3, 2, 3000, first_held)
         return bytes(out)
     struct.pack_into(f"<{n}I", out, at, *[first] * n)
     if how == "first":
@@ -467,6 +480,7 @@ SHARED = {  # file: (what builds it, what AOI-INSP-006 says of it)
     "jpeg_first.tif": (lambda: repoint(pillow_tiff("jpeg"), "first"), "its 8 strips add up to more than the"),
     "raw_one_offset.tif": (lambda: repoint(tifffile_tiff(rows=8), "one_offset"), "its strips 2 and 3 share bytes"),
     "jpeg_last_listed.tif": (lambda: repoint(pillow_tiff("jpeg"), "last_listed"), "its strips 1 and 2 share bytes"),
+    "jpeg_per_sample.tif": (lambda: repoint(pillow_tiff("jpeg"), "per_sample"), "its strips 1 and 2 share bytes"),
     "deflate.tif": (lambda: repoint(pillow_tiff("tiff_adobe_deflate"), "offsets"), "its strips 1 and 2 share bytes"),
     "raw.tif": (lambda: repoint(tifffile_tiff(rows=8), "offsets"), "its strips 1 and 2 share bytes of the file"),
     "tiles.tif": (
@@ -486,7 +500,9 @@ def test_req_insp_001_a_tiff_whose_strips_or_tiles_share_bytes_is_refused_before
     69 s; strips sharing a 1 MB block cost about as much uncompressed or with Deflate, and far more with PackBits. Each
     file here, a Pillow or tifffile TIFF of eight strips or four tiles rewritten so they share their bytes or add up to
     more than the file, is now refused with AOI-INSP-006 before cv2.imdecode is called; the decoder is patched to fail
-    the test, so the code before fails at once."""
+    the test, so the code before fails at once. jpeg_per_sample.tif, whose Compression entry gives JPEG once per sample
+    as TIFF before 5.0 did, passed the check until the #242 stack review's fix, which took it for an uncompressed file
+    whose byte counts libtiff ignores, while libtiff reads it as JPEG and decodes every shared strip."""
 
     def no_decode(buf: np.ndarray, flags: int) -> np.ndarray:
         pytest.fail(f"cv2.imdecode was called for {name} ({len(buf):,} bytes)")
@@ -505,8 +521,9 @@ def test_req_insp_001_tiffs_of_many_strips_or_tiles_still_open(tmp_path: Path) -
     """The shared-bytes check of the #242 review leaves TIFFs as writers lay them out, each strip or tile in its own
     bytes: Pillow's JPEG and Deflate TIFFs of eight strips, tifffile's uncompressed TIFF of eight strips, and its
     uncompressed and Deflate TIFFs of four tiles open at their size, the lossless ones pixel for pixel; so does the
-    uncompressed TIFF whose byte counts hold its offsets, which libtiff ignores, reading each strip at its size. This
-    passed before the fix too: it guards against a check that refuses too much."""
+    uncompressed TIFF whose byte counts hold its offsets, which libtiff ignores, reading each strip at its size, and so
+    it does with two byte counts listed for eight strips (the rule counts the strips, not the values listed; #242 stack
+    review). This passed before the fix too: it guards against a check that refuses too much."""
     img = board(64, 64)
     files = {
         "jpeg.tif": pillow_tiff("jpeg"),
@@ -515,6 +532,7 @@ def test_req_insp_001_tiffs_of_many_strips_or_tiles_still_open(tmp_path: Path) -
         "tiles.tif": tifffile_tiff(tile=(32, 32)),
         "tiles_deflate.tif": tifffile_tiff(tile=(32, 32), compression="zlib"),
         "counts_are_offsets.tif": repoint(tifffile_tiff(rows=8), "counts_are_offsets"),
+        "two_counts.tif": repoint(tifffile_tiff(rows=8), "two_counts"),
     }
     for name, data in files.items():
         with tifffile.TiffFile(io.BytesIO(data)) as tif:
@@ -526,6 +544,192 @@ def test_req_insp_001_tiffs_of_many_strips_or_tiles_still_open(tmp_path: Path) -
             assert np.abs(got.astype(int) - img).mean() < 2, name  # lossy, yet the same board
         else:
             assert np.array_equal(got, img), name
+
+
+def listed_tiff(
+    width: int,
+    height: int,
+    block: list[tuple[int, int]],
+    offsets: np.ndarray,
+    counts: np.ndarray,
+    listed: int = 0,
+    planes: int = 0,
+    extra: tuple[tuple[int, int, int, int], ...] = (),
+) -> bytes:
+    """A little-endian uncompressed RGB TIFF (`planes` samples stored plane by plane, if given) of `width` × `height` px
+    in the strips or tiles `block`, as the #242 stack review built its files: its directory at byte 8, then `offsets`
+    and `counts` (little-endian BYTE, SHORT or LONG arrays), which its offset and byte-count entries list `listed`
+    values of each (as many as they hold by default), so an entry can list far more values than the file holds; the
+    entries `extra` (tag, type, count, value) follow the others of their tag."""
+    kinds, lists = {1: 1, 2: 3, 4: 4}, (324, 325) if any(t in (322, 323) for t, _ in block) else (273, 279)
+    tags = [(256, 4, 1, width), (257, 4, 1, height), (258, 3, 1, 8), (259, 3, 1, 1), (262, 3, 1, 2)]
+    tags += [(277, 3, 1, planes or 3), (284, 3, 1, 2 if planes else 1), *((t, 4, 1, v) for t, v in block), *extra]
+    at = 8 + 2 + 12 * (len(tags) + 2) + 4  # the lists follow the directory
+    tags += [(lists[0], kinds[offsets.itemsize], listed or len(offsets), at)]
+    tags += [(lists[1], kinds[counts.itemsize], listed or len(counts), at + offsets.nbytes)]
+    tags.sort(key=lambda t: t[0])
+    entries = b"".join(
+        struct.pack("<HHI", t, k, n) + (struct.pack("<HH", v, 0) if k == 3 and n == 1 else struct.pack("<I", v))
+        for t, k, n, v in tags
+    )
+    head = b"II*\x00" + struct.pack("<IH", 8, len(tags)) + entries + bytes(4)
+    return head + offsets.tobytes() + counts.tobytes()
+
+
+# load_image in a fresh process: its peak memory before and after, and the image's shape and whether cv2.imdecode gives
+# the same pixels, or the code and text refusing it. On Linux the peak is VmHWM, since ru_maxrss keeps the peak of the
+# process that started it (pytest's) over exec; on Windows the peak working set, elsewhere ru_maxrss.
+MEASURED = """
+import json, sys
+import cv2
+import numpy as np
+from aoi.core.imaging import load_image
+from aoi.errors import AoiError
+
+
+def peak():
+    try:
+        with open("/proc/self/status") as status:
+            return next(int(line.split()[1]) * 1024 for line in status if line.startswith("VmHWM:"))
+    except OSError:
+        pass
+    try:
+        import resource
+    except ImportError:
+        import ctypes
+        from ctypes import wintypes
+
+        class Counters(ctypes.Structure):
+            _fields_ = [("cb", wintypes.DWORD), ("faults", wintypes.DWORD), ("peak", ctypes.c_size_t)]
+            _fields_ += [(f"size{i}", ctypes.c_size_t) for i in range(7)]
+
+        kernel = ctypes.WinDLL("kernel32")
+        kernel.GetCurrentProcess.restype = wintypes.HANDLE
+        kernel.K32GetProcessMemoryInfo.argtypes = [wintypes.HANDLE, ctypes.POINTER(Counters), wintypes.DWORD]
+        got = Counters(cb=ctypes.sizeof(Counters))
+        assert kernel.K32GetProcessMemoryInfo(kernel.GetCurrentProcess(), ctypes.byref(got), got.cb)
+        return got.peak
+    return resource.getrusage(resource.RUSAGE_SELF).ru_maxrss  # in bytes on macOS
+
+
+before = peak()
+try:
+    img = load_image(sys.argv[1])
+except AoiError as e:
+    out = {"grew_mb": (peak() - before) / 2**20, "code": e.code, "what": e.what}
+else:
+    out = {"grew_mb": (peak() - before) / 2**20, "shape": list(img.shape)}
+    out["same"] = bool(np.array_equal(img, cv2.imdecode(np.fromfile(sys.argv[1], np.uint8), cv2.IMREAD_COLOR)))
+print(json.dumps(out))
+"""
+
+
+def load_measured(path: Path) -> dict[str, Any]:
+    """What load_image(`path`) gives in a fresh process (MEASURED), with how far its peak memory grew, in MB."""
+    run = subprocess.run([sys.executable, "-c", MEASURED, str(path)], cwd=ROOT, capture_output=True, text=True)
+    assert run.returncode == 0, run.stderr[-3000:]
+    got = cast(dict[str, Any], json.loads(run.stdout.splitlines()[-1]))
+    print(path.name, f"{path.stat().st_size:,} bytes:", got)
+    return got
+
+
+HELD = 2_000_000  # values of each list the review's files (a) and (b) hold here: 8 MB, not 120 MB and 200 MB
+
+
+def test_req_insp_001_a_tiff_listing_more_offsets_than_it_has_strips_opens_as_the_decoder_opens_it(
+    tmp_path: Path,
+) -> None:
+    """The #242 stack review's file (a): a 64 × 64 TIFF of one strip whose offset and byte-count entries each list
+    30,000,000 values (all 8, all 1). libtiff reads one value of each, as the image has one strip, and decodes it at
+    once; the shared-bytes check read them all and refused it ("its strips 1 and 2 share bytes"), taking 2.2 GB. Here
+    the file holds 2,000,000 values of each list (8 MB), which took the check before 147 MB. Now the file opens, pixel
+    for pixel as cv2.imdecode opens it, in a process whose peak memory grows under 100 MB."""
+    p = tmp_path / "a_listed_30000000.tif"
+    p.write_bytes(listed_tiff(64, 64, [(278, 64)], np.full(HELD, 8, "<u2"), np.full(HELD, 1, "<u2"), 30_000_000))
+    got = load_measured(p)
+    assert got.get("shape") == [64, 64, 3] and got["same"], got
+    assert got["grew_mb"] < 100, got
+
+
+def test_req_insp_001_a_tiff_of_more_strips_or_tiles_than_the_app_reads_is_refused_before_its_lists_are_read(
+    tmp_path: Path,
+) -> None:
+    """The #242 stack review's file (b): 7071 × 7071 px in 49,999,041 tiles of 1 × 1 px, each listed. The shared-bytes
+    check read every value and built about ten arrays as long, taking 3.7 GB before refusing it, or raised a bare
+    MemoryError. Here the file holds 2,000,000 values of each list (8 MB), which took the check before 147 MB. Now the
+    strips or tiles are counted as libtiff counts them, and a TIFF of more than 4,194,304 is refused with AOI-INSP-006
+    before a list is read, in a process whose peak memory grows under 100 MB. Small files show the bound: 4,194,305
+    tiles, 4,194,304 tiles two deep (ImageDepth 3 in tiles 2 deep, then an ImageDepth 1 libtiff ignores), and 1,048,576
+    one-row strips in 5 planes (or 65,535, with two values listed; or 5 then 1 given) are refused; 4,194,304 tiles, or
+    such strips in 4 planes, are read and checked (refused, as the strips the file lists all start at byte 1); a
+    TileWidth with no TileLength, no tile to libtiff, and strips starting past the end of the file, which hold no byte
+    of it, are left to libtiff, which refuses them."""
+    p = tmp_path / "b_tiles_49999041.tif"
+    p.write_bytes(
+        listed_tiff(7071, 7071, [(322, 1), (323, 1)], np.full(HELD, 8, "<u2"), np.full(HELD, 1, "<u2"), 49_999_041)
+    )
+    got = load_measured(p)
+    assert got.get("code") == "AOI-INSP-006", got
+    assert "it has 49,999,041 tiles, more than the 4,194,304 this app decodes" in got["what"], got
+    assert got["grew_mb"] < 100, got
+    tiles, strips, few = [(322, 1), (323, 1)], [(278, 1)], np.full(4, 1, "<u2")
+    deep = ((32997, 4, 1, 3), (32997, 4, 1, 1), (32998, 4, 1, 2))
+    files = {  # name: (file, the reason that refuses it)
+        "tiles_4194305.tif": (listed_tiff(5, 838_861, tiles, few, few, 4_194_305), "it has 4,194,305 tiles, more than"),
+        "depth2.tif": (listed_tiff(4, 1 << 20, tiles, few, few, 0, 0, deep), "it has 8,388,608 tiles, more than"),
+        "planes5.tif": (listed_tiff(47, 1 << 20, strips, few, few, 5 << 20, 5), "it has 5,242,880 strips, more than"),
+        "planes65535.tif": (listed_tiff(47, 1 << 20, strips, few[:2], few[:2], 0, 65535), "it has 68,718,428,160 str"),
+        "samples_twice.tif": (
+            listed_tiff(47, 1 << 20, strips, few, few, 0, 5, ((277, 3, 1, 1),)),
+            "it has 5,242,880 s",
+        ),
+        "tile_width_only.tif": (listed_tiff(64, 64, [(322, 64)], few, few), "it is cut short, damaged"),
+        "past_end.tif": (listed_tiff(64, 64, [(278, 8)], few.repeat(2) * 60000, few.repeat(2) * 8), "it is cut short"),
+        "tiles_4194304.tif": (listed_tiff(4, 1 << 20, tiles, few, few, 1 << 22), "its tiles 1 and 2 share bytes"),
+        "planes4.tif": (listed_tiff(47, 1 << 20, strips, few, few, 1 << 22, 4), "its strips 1 and 2 share bytes"),
+    }
+    for name, (data, reason) in files.items():
+        (tmp_path / name).write_bytes(data)
+        with pytest.raises(AoiError) as refused:
+            load_image(tmp_path / name)
+        assert refused.value.code == "AOI-INSP-006" and reason in refused.value.what, (name, refused.value.what)
+
+
+def test_req_insp_001_the_check_of_a_tiff_at_the_bound_stays_under_100_mb(tmp_path: Path) -> None:
+    """The costliest TIFF the bound leaves the shared-bytes check to read (21 MB): 2048 × 2048 px in 4,194,304 tiles
+    of 1 × 1 px, their LONG offsets in reverse order, so that the check sorts them, and tiles 1 and 2 sharing the last
+    byte, so that it reads to the end before refusing the file. It took the check before 280 MB; now the peak memory of
+    a fresh process grows under 100 MB, the file included."""
+    n = 1 << 22
+    offsets = (8 + n - 1 - np.arange(n, dtype=np.uint32)).astype("<u4")  # tile k at byte 4,194,311 - k
+    offsets[1] = offsets[0]
+    p = tmp_path / "tiles_4194304_reversed.tif"
+    p.write_bytes(listed_tiff(2048, 2048, [(322, 1), (323, 1)], offsets, np.ones(n, np.uint8)))
+    got = load_measured(p)
+    assert got.get("code") == "AOI-INSP-006" and "its tiles 1 and 2 share bytes" in got["what"], got
+    assert got["grew_mb"] < 100, got
+
+
+def test_req_insp_001_a_check_short_of_memory_refuses_the_file_with_a_code(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The #242 stack review: with too little memory for its arrays the shared-bytes check raised a bare MemoryError
+    ("Unable to allocate 381. MiB ..."), which is no AoiError, so the user saw AOI-SET-007, not why the image was
+    refused. Now a MemoryError in the check refuses the file with AOI-INSP-006, and the decoder is never called."""
+
+    def short(*args: object) -> NoReturn:
+        raise MemoryError("Unable to allocate 381. MiB for an array with shape (49999041,) and data type uint64")
+
+    def no_decode(buf: np.ndarray, flags: int) -> np.ndarray:
+        pytest.fail("cv2.imdecode was called")
+
+    monkeypatch.setattr(imaging, "_tiff_blocks", short)
+    monkeypatch.setattr(cv2, "imdecode", no_decode)
+    (tmp_path / "jpeg.tif").write_bytes(pillow_tiff("jpeg"))
+    with pytest.raises(AoiError) as refused:
+        load_image(tmp_path / "jpeg.tif")
+    assert refused.value.code == "AOI-INSP-006", refused.value.what
+    assert "there was not enough free memory to check its strips or tiles" in refused.value.what
 
 
 def test_req_insp_001_an_image_too_small_to_inspect_is_refused_and_no_number_grades_ng() -> None:

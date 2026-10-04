@@ -631,7 +631,17 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/imaging.py" line="+212"/>
+        <location filename="../core/imaging.py" line="+251"/>
+        <source>it has {count} tiles, more than the {most} this app decodes</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>it has {count} strips, more than the {most} this app decodes</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+12"/>
         <source>its {count} tiles add up to more than the {size} bytes of the file</source>
         <translation type="unfinished"></translation>
     </message>
@@ -641,7 +651,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+15"/>
+        <location line="+19"/>
         <source>its tiles {first} and {second} share bytes of the file, so the decoder would read them again</source>
         <translation type="unfinished"></translation>
     </message>
@@ -651,7 +661,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+35"/>
+        <location line="+37"/>
         <source>it holds {scans} scans, more than the {most} this app decodes</source>
         <translation type="unfinished"></translation>
     </message>
@@ -661,7 +671,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+7"/>
+        <location line="+8"/>
+        <source>there was not enough free memory to check its strips or tiles</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+2"/>
         <source>its tiles are {cols} × {rows} px, more than its {width} × {height} px image needs</source>
         <translation type="unfinished"></translation>
     </message>
@@ -671,7 +686,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+33"/>
+        <location line="+34"/>
         <source>{megabytes} MB ({count} bytes)</source>
         <translation type="unfinished"></translation>
     </message>
