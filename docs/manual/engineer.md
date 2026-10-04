@@ -168,7 +168,19 @@ first. Choosing No keeps them on screen, but Save Recipe then refuses (AOI-RCP-0
 so a save never undoes another without notice. Picking another board model cancels a Try Recipe… still running and
 clears the last Try's verdict.
 
-(to be written: drawing ROIs, thresholds, Test Run, revision history, the AOI checklist)
+**AI score threshold** (Thresholds tab). Each AI model is calibrated to an AI score threshold when it is trained (the
+Threshold column on Training), and the recipe judges by that value unless you override it for the board model. The tick
+names the active AI model's value ("Override 3.063"), and the field beside it shows that value greyed until you tick
+it. Ticked, the field starts from that value and holds yours; Save Recipe keeps it in a new revision. Clear the tick and
+save to go back to the calibrated value, which then follows each AI model trained or activated later. Every board
+judged after the save uses the same threshold: on Inspection, on Compare (Re-evaluate and boards it inspects) and in AI
+Model Test. The audit trail records setting, changing and clearing the override (section 8). With no value to name,
+the tick reads "Set my own value", the field shows once ticked, and the note under them says why: no AI model is
+trained yet, or no AI model version is active, or, when the AI model registry holds no usable calibration for the
+active AI model (only after a change by hand), AOI-TRN-012 with what to do: for the next boards, train again or
+activate another version on Training, or set a value of your own.
+
+(to be written: drawing ROIs, the other thresholds, Test Run, revision history, the AOI checklist)
 
 ## 6. AI model test and reports
 

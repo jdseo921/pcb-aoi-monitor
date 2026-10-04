@@ -90,6 +90,7 @@ QPushButton { background: $BG_BUTTON; border: 1px solid $LINE_STRONG; border-rad
 QPushButton:hover { background: $BG_BUTTON_HOVER; }
 QPushButton[sizeClass="T"], QComboBox[sizeClass="T"] { min-height: ${TARGET_H}px; }
 QPushButton[sizeClass="T+"] { min-height: ${RUN_CONTROL_H}px; }
+QCheckBox[sizeClass="F"] { min-height: ${FIELD_H}px; }
 QPushButton:disabled { color: $TEXT_DISABLED; background: $BG_RAISED; }
 QPushButton#primary, QPushButton#start, QPushButton#stop, QPushButton#danger { color: $ON_DARK; font-weight: 700; }
 QPushButton#primary { background: $ACCENT; border-color: $ACCENT; }
@@ -100,6 +101,7 @@ QPushButton#primary:disabled, QPushButton#start:disabled, QPushButton#stop:disab
 QComboBox, QLineEdit, QSpinBox, QDoubleSpinBox, QDateEdit {
     background: $BG_DEEP; border: 1px solid $LINE_STRONG; border-radius: 4px; min-height: ${FIELD_H}px;
     padding: 0 6px; }
+QDoubleSpinBox#calibrated:disabled { color: $TEXT_MUTED; }
 QComboBox QAbstractItemView { background: $BG_DEEP; color: $TEXT; border: 1px solid $LINE_STRONG;
     selection-background-color: $BG_SELECTED; selection-color: $ON_DARK; }
 QCalendarWidget QAbstractItemView { background: $BG_DEEP; color: $TEXT; alternate-background-color: $BG_RAISED;

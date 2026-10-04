@@ -5,7 +5,7 @@ least 48 px tall, text contrast at least 4.5:1. The walk opens the shell at 1920
 every page in the state the screenshots show (`tools/render_screens.py`) and, for every role that may open it, reads
 each visible widget: its resolved font, its size, whether its text fits, and the colours of its pixels in the window
 grab. The operator targets are named (the Inspection source bar among them), and every visible control marked with
-size class T or T+ is held to 48 or 56 px too (#240). Contrast is the WCAG 2.1 ratio between a widget's background
+size class T, T+ or F is held to 48, 56 or 40 px (#240). Contrast is the WCAG 2.1 ratio between a widget's background
 (its most common colour) and its text (the colour farthest from the background in luminance); a label is also measured
 line by line, and each colour its rich text sets at that text's own size, on the text's own background where it sets
 one (a chip), so a second colour beside a stronger one is read too (#240). Bold or 18 pt text may read at 3:1 (WCAG
@@ -465,8 +465,8 @@ def _check_targets(where: str, win: MainWindow, title: str, seen: Counter) -> li
     """Operator targets (sketch size classes T, 48 px, and T+, 56 px): sidebar entries, header controls, defect and
     history rows, the Inspection source bar (Load Images…, Load Folder…, View) and run controls, each named, so one
     whose size class a change drops is still measured, and held to its size class where that asks more; then every
-    visible widget marked T or T+, so one marked later is measured before anyone names it, whatever its type: the
-    stylesheet sizes only buttons and drop-downs (#240)."""
+    visible widget marked T, T+ or F (40 px: a tick beside a field), so one marked later is measured before anyone names
+    it, whatever its type: the stylesheet sizes only buttons (T, T+), drop-downs (T) and check boxes (F) (#240)."""
     out: list[str] = []
     page: Any = win.pages[title]
     targets: list[tuple[str, int, int]] = []
@@ -486,7 +486,7 @@ def _check_targets(where: str, win: MainWindow, title: str, seen: Counter) -> li
             ("run control", b, theme.RUN_CONTROL_H)
             for b in (page.btn_start, page.btn_stop, page.btn_next, page.btn_save)
         ]
-    need = {"T": theme.TARGET_H, "T+": theme.RUN_CONTROL_H}
+    need = {"T": theme.TARGET_H, "T+": theme.RUN_CONTROL_H, "F": theme.FIELD_H}  # size_class() in pages/base.py
     named = [(what, w, max(h, need.get(str(w.property("sizeClass")), 0))) for what, w, h in named]
     for w in win.findChildren(QWidget):
         if w.isVisible() and (cls := w.property("sizeClass")) in need and all(w is not n for _, n, _ in named):
@@ -592,7 +592,8 @@ def test_req_set_004_the_walk_holds_every_size_class_t_control_to_48_px(
     """Load Folder with its size class cleared at run time, as a change that drops its size_class() leaves it (42 px),
     a field marked T that no list names, and the header's Board model marked T+ (56 px) where the list names it at 48:
     the walk's target check reports all three. Before #240 it measured a fixed list without the Inspection source bar
-    and never read sizeClass, so it reported none."""
+    and never read sizeClass, so it reported none. Every size class is held, not T alone as the name says: a label
+    marked F, a tick's class (40 px, REQ-TRN-015), which the stylesheet gives a check box alone, is reported too."""
     ctx, dataset = screens
     with _shell(ctx, qtbot, qapp) as win:
         win.set_user("engineer")
@@ -605,11 +606,14 @@ def test_req_set_004_the_walk_holds_every_size_class_t_control_to_48_px(
         folder.style().polish(folder)
         field = size_class(QLineEdit("a field marked T"), "T")  # the stylesheet sizes no field to 48 px
         page.root.addWidget(field)
+        page.root.addWidget(tick := size_class(QLabel("a label marked F"), "F"))  # a tick's height, but not a tick
         win.bm_combo.setProperty("sizeClass", "T+")  # not polished again: it stays at the 48 px the list names
         QApplication.processEvents()
         assert folder.height() < theme.TARGET_H and field.height() < theme.TARGET_H, (folder.height(), field.height())
+        assert tick.height() < theme.FIELD_H, tick.height()
         found = _check_targets("Inspection", win, "Inspection", Counter())
     assert any("Load Folder" in f for f in found) and any("a field marked T" in f for f in found), found
+    assert any("a label marked F" in f and f.endswith("needs 40") for f in found), found
     assert any(f.startswith("Inspection: header control") and f.endswith("needs 56") for f in found), found
 
 
