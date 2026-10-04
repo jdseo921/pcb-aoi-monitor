@@ -630,9 +630,9 @@ def test_req_set_019_empty_state_shows_every_line_in_a_narrow_area(qtbot: QtBot)
     qtbot.addWidget(host)
     host.resize(400, 800)
     empty = EmptyState(host)
-    sentence = (
-        "The Golden board this result was judged against{name} has changed since; press Re-evaluate to inspect the"
-        " board again with today's Golden board."
+    sentence = (  # Compare's Golden board pane, with and without the file's name
+        "The Golden board this result was judged against{name} has changed since. The verdict and the decision table"
+        " are the stored ones; press Re-evaluate to inspect the board again with today's Golden board."
     )
     host.show()
     qtbot.waitExposed(host)

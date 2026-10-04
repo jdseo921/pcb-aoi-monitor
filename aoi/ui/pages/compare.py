@@ -418,10 +418,16 @@ class ComparePage(Page):
         self.golden_state = False
         if judged is not None and judged in JUDGED:
             what = self.tr(JUDGED[judged]).format(file=breakable(Path(recorded or "").name))
-            do = self.tr(
-                "The verdict and the decision table are the stored ones; press Re-evaluate to inspect the board again"
-                " with today's Golden board."
-            )
+            if self.record_board_model and self.ctx.reference_image(self.record_board_model):
+                do = self.tr(
+                    "The verdict and the decision table are the stored ones; press Re-evaluate to inspect the board"
+                    " again with today's Golden board."
+                )
+            else:  # none today either: Re-evaluate judges the board without one, so the sentence promises none
+                do = self.tr(
+                    "The verdict and the decision table are the stored ones; press Re-evaluate to inspect the board"
+                    " again from its image file."
+                )
             self.ref_empty.show_state(
                 self.tr("Golden board not available"), f"{what} {do}", self.tr("Re-evaluate ›"), self.run
             )
@@ -588,10 +594,11 @@ class ComparePage(Page):
     def _explain(self, r: InspectionResult) -> str:
         """The "why" box (REQ-CMP-004; sketch docs/sketches/compare-decision-table.md of PR #79): a heading with the
         verdict, then the plain-word sentences of `explain` as bullets, the deciding checks first, each in the UI
-        language; every value is escaped, so none is read as markup."""
+        language, a stored result's notes in the past tense; every value is escaped, so none is read as markup."""
         heading = self.tr("Why this board is {verdict}:").format(verdict=r.verdict)
+        sentences = explain(r, stored=self.stored is not None)
         return "<br>".join(
-            [f"<b>{html.escape(heading)}</b>", *(f"• {html.escape(sentence_text(s))}" for s in explain(r))]
+            [f"<b>{html.escape(heading)}</b>", *(f"• {html.escape(sentence_text(t))}" for t in sentences)]
         )
 
     def redraw(self) -> None:

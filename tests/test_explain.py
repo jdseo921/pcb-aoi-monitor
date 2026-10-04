@@ -21,6 +21,8 @@ from aoi.core.inspector import (
     NG,
     NO_AI_NOTE,
     NO_GOLDEN_NOTE,
+    NOT_AI_JUDGED_NOTE,
+    NOT_COMPARED_NOTE,
     OK,
     WARN,
     AiEvidence,
@@ -291,3 +293,26 @@ def test_req_cmp_004_the_sentences_reach_the_screens(qtbot: QtBot, ctx: AppConte
         assert "AI 점수가 3.25로 임계값 2.50 이상입니다." in page.why.toPlainText(), page.why.toPlainText()
     finally:
         QCoreApplication.removeTranslator(translator)
+
+
+def test_req_cmp_004_a_stored_results_notes_speak_of_the_day_it_was_inspected() -> None:
+    """ "No AI model is trained…" is true of a board just inspected, not of one stored before an AI model was trained:
+    on a stored result the three notes say what was set when it was inspected (review B of S28a, N7), in the Charter's
+    words, the AI check turned off in the recipe (#246) too, as an Engineer may turn it on since; a fresh result keeps
+    today's, and the notes of a result judged again and an unknown note read the same."""
+    others = [NOT_COMPARED_NOTE, NOT_AI_JUDGED_NOTE, "x"]
+    res = InspectionResult("OK", 0.0, notes=[NO_GOLDEN_NOTE, NO_AI_NOTE, AI_OFF_NOTE, *others])
+    fresh = [s.text() for s in ex.explain(res)][1:]  # after the sentence on the verdict
+    stored = [s.text() for s in ex.explain(res, stored=True)][1:]
+    assert fresh[:3] == [*NOTE_TEXTS, ex.NOTES[AI_OFF_NOTE]] and fresh == [s.text() for s in ex.notes(res)]
+    assert stored[:3] == [
+        "No Golden board was in use for this board model when the board was inspected, so it was not compared with"
+        " one: inspect the board again once one is set.",
+        "No AI model was trained for this board model when the board was inspected, so the AI check did not run:"
+        " inspect the board again once one is trained.",
+        "The recipe turned the AI check off when the board was inspected, so the AI check did not run and no AI model"
+        " judged the board: inspect the board again once the recipe turns it on.",
+    ]
+    assert stored[3:] == fresh[3:] == [ex.NOTES[NOT_COMPARED_NOTE], ex.NOTES[NOT_AI_JUDGED_NOTE], "Note: x"]
+    assert all(not_words(t) == [] for t in ex.STORED_NOTES.values())
+    assert set(ex.STORED_NOTES.values()) <= set(ex.TEMPLATES), "marked for translation, as every template is"

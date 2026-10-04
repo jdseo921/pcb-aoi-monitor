@@ -91,19 +91,24 @@ changed area is 2.35 % of the board, at or above its threshold of 0.50 %."; an R
 threshold, "2.00 ×": the recipe's when an Engineer sets one, otherwise the AI model's). With no failing check it says
 that every check that decides the verdict is inside its threshold or, for a WARN, that defects above Minor severity are
 marked on the board, so a person needs to look. A sentence for each check that did not run (no Golden board set, no AI
-model trained, or the AI check turned off in the recipe) says what to do; the Inspection page shows it under its summary
-too. A line under the verdict says when the result was judged, which AI model version was active and which recipe
-revision judged it; when the recipe turned the AI check off, the "why" box says that no AI model judged the board. When
-an Engineer has changed either since, the line says so, and the table still shows the thresholds that applied at the
-time. When the result's heatmaps are no longer stored (OK results lose them after the retention period), the line says
-so with the code AOI-CMP-001, and the Side by side and Defect boxes only views still work. When the stored picture
-itself was deleted, or cannot be read (a message with AOI-CMP-006 names the file), the page says "Board picture no
-longer stored", the table still stands, and Re-evaluate inspects the board again from its image file. The Golden board
-pane names the file the result was judged against. When that file has changed, cannot be read or is gone, or the result
-names none (it was judged without one, or saved before this version), the pane says "Golden board not available" and
-why, rather than show today's Golden board, and Re-evaluate under it inspects the board again with today's; the line
-under the verdict names today's when an Engineer or a training run has set another. A long file name over a picture, in
-a message on its pane or in the line under the verdict wraps onto the next line after a _ or -.
+model trained, or the AI check turned off in the recipe) says what to do. On a result opened from its record, with
+"Compare with Golden board ›" or Use Last Inspected even right after the board was inspected, it says what was set when
+the board was inspected ("No AI model was trained for this board model when the board was inspected, …"), not what is
+set today. The Inspection page shows today's sentence under its summary, and so does Compare for a board it inspects
+itself, with Test Image…, Golden Board, Reference…, Re-evaluate or a pane's Re-evaluate ›. A line under the verdict says
+when the result was judged, which AI model version was active and which recipe revision judged it; when the recipe
+turned the AI check off, the "why" box says that no AI model judged the board. When an Engineer has changed either
+since, the line says so, and the table still shows the thresholds that applied at the time. When the result's heatmaps
+are no longer stored (OK results lose them after the retention period), the line says so with the code AOI-CMP-001, and
+the Side by side and Defect boxes only views still work. When the stored picture itself was deleted, or cannot be read
+(a message with AOI-CMP-006 names the file), the page says "Board picture no longer stored", the table still stands, and
+Re-evaluate inspects the board again from its image file. The Golden board pane names the file the result was judged
+against. When that file has changed, cannot be read or is gone, or the result names none (it was judged without one, or
+saved before this version), the pane says "Golden board not available" and why, rather than show today's Golden board,
+and Re-evaluate under it inspects the board again with today's Golden board, or without one while the board model has
+none, as the pane then says; the line under the verdict names today's when an Engineer or a training run has set
+another. A long file name over a picture, in a message on its pane or in the line under the verdict wraps onto the next
+line after a _ or -.
 
 ## 4. Alarms and messages
 
