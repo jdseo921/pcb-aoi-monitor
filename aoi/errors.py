@@ -219,8 +219,8 @@ CODES: dict[str, ErrorCode] = {
             QT_TRANSLATE_NOOP(
                 "Errors",
                 "The AI model, recipe or Golden board of {board} changed during a run (training ended, a version was"
-                " activated, a recipe saved or a Golden board set), so {file} and the boards after it are judged with"
-                " what is active now; the boards before keep what judged them.",
+                " activated while the recipe has the AI check on, a recipe saved or a Golden board set), so {file} and"
+                " the boards after it are judged with what is active now; the boards before keep what judged them.",
             ),
             QT_TRANSLATE_NOOP(
                 "Errors",

@@ -277,6 +277,15 @@ class Inspector:
         return self.model_uuid, self.recipe_uuid, self.reference_path
 
     @property
+    def judging_inputs(self) -> tuple[str | None, str | None, str | None]:
+        """What judges a board: `inputs`, with no AI model (None) when the recipe turns the AI check off, as no AI model
+        judges the board then (#246). The Inspection page compares them from board to board of a run, so an AI model
+        activated during a run with the AI check off is no change of what judges it (AOI-INSP-013, #243), while
+        `AppContext.engine_is_current` still compares `inputs`: the engine is rebuilt on an activation, and each
+        record names the AI model version active when its board was judged."""
+        return self.model_uuid if self.recipe.use_ai else None, self.recipe_uuid, self.reference_path
+
+    @property
     def judged_by(self) -> JudgedBy:
         """What the engine judges with, kept with an AI Model Test run after the engine is gone (#250)."""
         return JudgedBy(self.model_version, self.model_uuid, self.recipe_rev, self.recipe_uuid, self.reference_path)

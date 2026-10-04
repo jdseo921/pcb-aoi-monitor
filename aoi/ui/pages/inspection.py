@@ -74,7 +74,8 @@ class InspectionPage(Page):
         self.running = False
         self.run_board_model: str | None = None  # the board model a run started under: its boards are judged under it
         self.run_actor: Actor = ctx.actor  # who pressed Start: every board of the run is recorded under them (#177)
-        self.run_inputs: tuple[str | None, str | None, str | None] | None = None  # what judged the run's last board
+        # What judged the run's last board (Inspector.judging_inputs: no AI model with the AI check off, #246)
+        self.run_inputs: tuple[str | None, str | None, str | None] | None = None
         self.last: InspectionResult | None = None
         self.last_path: Path | None = None
         self.last_id: int | None = None  # the record of the last result, for Compare (REQ-INSP-009)
@@ -276,9 +277,10 @@ class InspectionPage(Page):
                 # AOI-TRN-003 once per page visit and board model, not again for the engine each new queue builds
                 no_ai_model = engine.model is None and self._no_ai_warned != bm
                 self._no_ai_warned = bm if engine.model is None else None
-            if in_run:  # a run judged with two AI models, recipes or Golden boards says so (#243)
-                moved = self.run_inputs is not None and engine.inputs != self.run_inputs
-                self.run_inputs = engine.inputs
+            if in_run:  # a run judged with two AI models, recipes or Golden boards says so (#243), by what judged its
+                # boards: an AI model activated while the recipe turns the AI check off judged none of them (#246)
+                moved = self.run_inputs is not None and engine.judging_inputs != self.run_inputs
+                self.run_inputs = engine.judging_inputs
             self._on_result(out)  # first: the result, and a failed save's error, never wait for the alarm below (#179)
             if no_ai_model:
                 msg = self.tr("No AI model for {board_model} yet: only the Golden board comparison runs").format(
@@ -513,15 +515,26 @@ class InspectionPage(Page):
         self._alarm("WARN", msg, "AOI-INSP-012")
 
     def _run_moved(self, path: Path, engine: Inspector) -> None:
-        """The AI model, recipe or Golden board changed during a run, and `path` is the run's first board judged with
-        what is active now: a line under the banner names it, below the next board's "Inspecting …" line or the
-        result's summary when the run has ended, and a WARN alarm AOI-INSP-013 keeps it in the alarm log, so the
-        operator sees that the run was judged by two (#243). The status bar keeps the next board's busy line, or "End
-        of queue"; each record names what judged it. It runs after _on_result, which never waits for an alarm (#179)."""
-        msg = self.tr(
-            "The AI model, recipe or Golden board changed during this run: {file} was judged with AI model {version},"
-            " recipe revision {revision} and Golden board {golden}; each record names what judged it."
-        ).format(
+        """What judges the run's boards changed during a run (`Inspector.judging_inputs`), and `path` is the run's first
+        board judged with what is active now: a line under the banner names it, below the next board's "Inspecting …"
+        line or the result's summary when the run has ended, and a WARN alarm AOI-INSP-013 keeps it in the alarm log,
+        so the operator sees that the run was judged by two (#243). With the AI check off in the recipe the line names
+        no AI model, as none judged the board, and says the AI check was off (#246). The status bar keeps the next
+        board's busy line, or "End of queue"; each record names the recipe revision and Golden board that judged it and
+        the AI model version active then. It runs after _on_result, which never waits for an alarm (#179)."""
+        if engine.recipe.use_ai:
+            msg = self.tr(
+                "The AI model, recipe or Golden board changed during this run: {file} was judged with AI model"
+                " {version}, recipe revision {revision} and Golden board {golden}; each record names the recipe"
+                " revision and Golden board that judged it and the AI model version active then."
+            )
+        else:  # only the recipe or the Golden board can have changed what judged it
+            msg = self.tr(
+                "The recipe or Golden board changed during this run: {file} was judged with the AI check off, recipe"
+                " revision {revision} and Golden board {golden}; each record names the recipe revision and Golden board"
+                " that judged it and the AI model version active then."
+            )
+        msg = msg.format(
             file=path.name,
             version=engine.model_version or NO_VERDICT,
             revision=NO_VERDICT if engine.recipe_rev is None else engine.recipe_rev,

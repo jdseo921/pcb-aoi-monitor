@@ -711,7 +711,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+249"/>
+        <location line="+258"/>
         <source>board image</source>
         <translation type="unfinished"></translation>
     </message>
@@ -921,12 +921,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1"/>
-        <source>The AI model, recipe or Golden board of {board} changed during a run (training ended, a version was activated, a recipe saved or a Golden board set), so {file} and the boards after it are judged with what is active now; the boards before keep what judged them.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+15"/>
+        <location line="+16"/>
         <source>Result not saved: path too long</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1477,7 +1472,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+120"/>
+        <location line="+114"/>
+        <source>The AI model, recipe or Golden board of {board} changed during a run (training ended, a version was activated while the recipe has the AI check on, a recipe saved or a Golden board set), so {file} and the boards after it are judged with what is active now; the boards before keep what judged them.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+6"/>
         <source>No action is needed: each record names the AI model version active when its board was judged, the recipe revision that judged it, which says whether the AI check ran, and the Golden board it was judged against.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1921,14 +1921,14 @@
 <context>
     <name>InspectionPage</name>
     <message>
-        <location filename="../ui/pages/inspection.py" line="+92"/>
+        <location filename="../ui/pages/inspection.py" line="+93"/>
         <location line="+82"/>
-        <location line="+143"/>
+        <location line="+144"/>
         <source>Load Images…</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-224"/>
+        <location line="-225"/>
         <source>Load Folder…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2010,12 +2010,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+140"/>
+        <location line="+141"/>
         <source>Next Board ›</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-129"/>
+        <location line="-130"/>
         <source>Select PCB images</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2060,7 +2060,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+49"/>
+        <location line="+50"/>
         <source>No AI model for {board_model} yet: only the Golden board comparison runs</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2135,12 +2135,17 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+13"/>
-        <source>The AI model, recipe or Golden board changed during this run: {file} was judged with AI model {version}, recipe revision {revision} and Golden board {golden}; each record names what judged it.</source>
+        <location line="+16"/>
+        <source>The AI model, recipe or Golden board changed during this run: {file} was judged with AI model {version}, recipe revision {revision} and Golden board {golden}; each record names the recipe revision and Golden board that judged it and the AI model version active then.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+17"/>
+        <location line="+6"/>
+        <source>The recipe or Golden board changed during this run: {file} was judged with the AI check off, recipe revision {revision} and Golden board {golden}; each record names the recipe revision and Golden board that judged it and the AI model version active then.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+19"/>
         <source>Run stopped: {user} signed in. The boards of the run so far are recorded under {starter}; press Start to carry on with the queue as {user}.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2774,7 +2779,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/inspection.py" line="-472"/>
+        <location filename="../ui/pages/inspection.py" line="-485"/>
         <source>Inspection</source>
         <translation type="unfinished"></translation>
     </message>
