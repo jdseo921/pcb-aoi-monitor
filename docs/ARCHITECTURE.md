@@ -257,9 +257,16 @@ merging. On Linux, CI also renders every page at 1366×768 and at 3840×2160 wit
 `screens-review` artifact of the run (kept 30 days), which is how the layouts are checked at the standard's other sizes
 (#104 records that the pages do not yet fit 1366×768). `tests/screens/test_sizes_and_contrast.py` walks the same pages on Linux and Windows and measures every visible
 widget against the standard's "Sizes": 14 pt text (QGraphics text on an image takes `label_font()`), 120×40 buttons whose
-text fits, 48 px operator targets (sidebar entries, header controls, defect and history rows), 56 px run controls, and
+text fits, 48 px operator targets (sidebar entries, header controls, defect and history rows, the Inspection source
+bar), 56 px run controls, and every visible control of size class T or T+, named or not, to its class (#240), and
 WCAG 2.1 contrast of 4.5:1 between a widget's pixels and its background (3:1 for bold or 18 pt text; disabled controls
-exempt, but a disabled button must show the disabled fill), a progress bar's centred percentage included; the prepared
+exempt, but a disabled button must show the disabled fill), a progress bar's centred percentage included. A label is
+measured as a whole, line by line and, for rich text, in each colour its HTML sets at that text's own size and weight
+(on the text's own background where the HTML sets one, and in the label's own colour on a background the HTML sets
+alone), so a second colour beside a stronger one is read too. Text drawn on an image is measured in its own colour
+against the pixels under its glyphs, found by drawing it in two far-apart colours, so text in its ground's own colour
+is found too: its dark backing, or the board where none is drawn; the 10th percentile of those pixels' ratios decides,
+so a label partly over a bright part of a board is read there (#240). The prepared
 states hold a selected defect row on Inspection and a bar at 100 % on Training, so both are measured (#203). Every list
 item with text is measured, the sidebar's section headings too; only a sidebar entry of a page the role may not open is
 exempt, as a disabled control. The walk opens every drop-down list and every date field's calendar on the page, with

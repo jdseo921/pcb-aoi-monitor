@@ -9,12 +9,13 @@ Contrast, by the WCAG 2.1 formula (tests/screens measures it on every rendered p
 surface reads at 4.5:1 or more, except white on the standard's OK green (3.3:1), NG red (4.2:1) and accent blue
 (3.7:1). Those three fills carry only bold or 40 pt text (the verdict banner, coloured cells, the primary, Start and
 Stop buttons, a progress bar's percentage), for which WCAG AA asks 3:1; whether the standard's "4.5:1" allows that
-reading is open with Jay. The selected sidebar entry, tab and row, and selected text, whose text is not bold, sit on
-BG_SELECTED instead (5.7:1). A disabled control is exempt (WCAG 1.4.3), and every disabled button, coloured or not,
-greys out to BG_RAISED and TEXT_DISABLED, so it never looks ready to press. The lists, calendars and menus that open as
-windows of their own are themed here too, never left on the platform's light background, and the calendar's bar stays
-BG_SELECTED, on which Qt's dark month arrows read at 3.4:1 (#239); the sidebar greys a page the role may not open on
-the item itself, since a rule for disabled items would also grey its headings.
+reading is open with Jay. The 22 pt bold number on a Home card, ACCENT on BG_RAISED (3.5:1), takes the same reading
+(#240). The selected sidebar entry, tab and row, and selected text, whose text is not bold, sit on BG_SELECTED instead
+(5.7:1). A disabled control is exempt (WCAG 1.4.3), and every disabled button, coloured or not, greys out to BG_RAISED
+and TEXT_DISABLED, so it never looks ready to press. The lists, calendars and menus that open as windows of their own
+are themed here too, never left on the platform's light background, and the calendar's bar stays BG_SELECTED, on which
+Qt's dark month arrows read at 3.4:1 (#239); the sidebar greys a page the role may not open on the item itself, since a
+rule for disabled items would also grey its headings.
 """
 
 from string import Template
