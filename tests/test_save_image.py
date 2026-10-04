@@ -4,6 +4,7 @@ audit trail; before, the page wrote the picture itself, to any folder, with neit
 
 from __future__ import annotations
 
+import shutil
 import sqlite3
 import threading
 from pathlib import Path
@@ -14,6 +15,8 @@ from PySide6.QtWidgets import QFileDialog
 from pytestqt.qtbot import QtBot
 
 from aoi.core.services import REQUIRED_ROLE, AppContext
+from aoi.data import atomic
+from aoi.errors import AoiError
 from aoi.ui.pages.inspection import InspectionPage
 from aoi.ui.workers import _live
 from tests.test_req_done_in_v01 import BOARD, _inspect_one, _window
@@ -184,6 +187,82 @@ def test_req_log_004_a_read_that_fails_leaves_no_picture(
         trained_ctx.export_board_image(res, BOARD, iid, ng_board.name, tmp_path / "out" / "board.png")
     assert not (tmp_path / "out").exists(), "a picture left with no entry after the record read failed"
     assert trained_ctx.audit_entries(action="export.image") == []
+
+
+def test_req_log_004_a_refused_entry_leaves_every_destination_as_it_was(
+    trained_ctx: AppContext, ng_board: Path, synthetic_dataset: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The picture was written over the file at the destination before its entry, so a refused entry deleted that file
+    (a dataset sample, a board on a USB stick) or left the picture in its place with no entry: over the Golden board,
+    every later board was judged NG (third review of #241). Now the picture goes into place only with its entry: each
+    file keeps its bytes, no picture, folder or temporary file is left, and later boards are judged as before. The
+    overlay is another record's: the record's own holds this very picture, so writing over it changes no byte."""
+    usb = tmp_path / "usb_stick"
+    usb.mkdir()
+    board = Path(shutil.copy(ng_board, usb))
+    insp = trained_ctx.inspector(BOARD)
+    res = insp.inspect(trained_ctx.load_image(board))
+    iid = trained_ctx.log_result(BOARD, str(board), res, insp)
+    oks = sorted(synthetic_dataset.glob("test/ok/*.png"))[:3]
+    results = [insp.inspect(trained_ctx.load_image(p)) for p in oks]
+    other = trained_ctx.inspection(trained_ctx.log_result(BOARD, str(oks[0]), results[0], insp))
+    golden = trained_ctx.reference_image(BOARD)
+    assert other is not None and golden is not None
+    held = [Path(golden), Path(other["overlay_path"]), Path(trained_ctx.samples(BOARD, "NG")[0]["path"]), board]
+    before, verdicts = [p.read_bytes() for p in held], [r.verdict for r in results]
+    monkeypatch.setattr(AppContext, "audit", _refuse)
+    for dest in [*held, usb / "board.png", usb / "new" / "board.png"]:
+        with pytest.raises(sqlite3.OperationalError):
+            trained_ctx.export_board_image(res, BOARD, iid, board.name, dest)
+    kept = [p.is_file() and p.read_bytes() == b for p, b in zip(held, before, strict=True)]
+    assert kept == [True, True, True, True], "the Golden board, an overlay, a sample and the USB board as they were"
+    assert sorted(usb.iterdir()) == [board], "no picture and no folder left on the USB stick"
+    assert [t for p in held for t in p.parent.glob(".*.tmp")] == [], "no temporary file left"
+    judged = [trained_ctx.inspector(BOARD).inspect(trained_ctx.load_image(p)).verdict for p in oks]
+    assert judged == verdicts, "later boards are judged against the Golden board as before"
+
+
+class _CommitFails:
+    """The database connection, whose commits fail as on a full disk; everything else goes to the real one."""
+
+    def __init__(self, conn: sqlite3.Connection) -> None:
+        self.conn = conn
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self.conn, name)
+
+    def commit(self) -> None:
+        raise sqlite3.OperationalError("disk I/O error")
+
+
+@pytest.mark.parametrize("fails", ["move", "commit"])
+def test_req_log_004_a_save_whose_move_or_commit_fails_leaves_the_file_as_it_was(
+    trained_ctx: AppContext, ng_board: Path, monkeypatch: pytest.MonkeyPatch, fails: str
+) -> None:
+    """The entry and the picture in place commit together (third review of #241): a move into place that fails, as
+    over a file another program holds, rolls the entry back and is AOI-LOG-002, and a commit that fails after the move
+    puts back the file the picture replaced. Either way the Golden board keeps its bytes and no entry is stored."""
+    res = trained_ctx.inspect_file(BOARD, str(ng_board), save=False)
+    golden = Path(trained_ctx.reference_image(BOARD) or "")
+    before, real, moves = golden.read_bytes(), atomic.os.replace, list[str]()
+
+    def replace(src: Any, dst: Any) -> None:  # the move onto the Golden board fails; putting it back does not
+        moves.append(str(dst))
+        if moves.count(str(golden)) == 1 and Path(dst) == golden:
+            raise PermissionError(13, "Permission denied", str(dst))
+        real(src, dst)
+
+    with monkeypatch.context() as m:
+        if fails == "move":
+            m.setattr(atomic.os, "replace", replace)
+        else:
+            m.setattr(trained_ctx.db, "_conn", _CommitFails(trained_ctx.db._conn))
+        with pytest.raises(AoiError if fails == "move" else sqlite3.OperationalError) as e:
+            trained_ctx.export_board_image(res, BOARD, None, ng_board.name, golden)
+    assert fails == "commit" or getattr(e.value, "code", None) == "AOI-LOG-002"
+    same = golden.is_file() and golden.read_bytes() == before  # a bool: pytest would diff 400 kB of bytes for minutes
+    assert same, "the Golden board as it was"
+    assert list(golden.parent.glob(".*.tmp")) == [] and trained_ctx.audit_entries(action="export.image") == []
 
 
 def test_req_insp_005_save_image_and_compare_come_on_with_the_result(

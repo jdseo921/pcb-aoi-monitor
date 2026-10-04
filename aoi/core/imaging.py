@@ -182,7 +182,9 @@ def _read_image(p: Path, max_megapixels: float, max_megabytes: float) -> tuple[n
     return img, data
 
 
-def save_image(path: str | Path, img: np.ndarray) -> None:
+def encode_image(path: str | Path, img: np.ndarray) -> bytes:
+    """`img` in the image format `path`'s suffix names (PNG with none), before anything is written: AOI-INSP-002 for a
+    suffix no format has."""
     ext = Path(path).suffix or ".png"
     try:
         ok, buf = cv2.imencode(ext, img)
@@ -190,7 +192,11 @@ def save_image(path: str | Path, img: np.ndarray) -> None:
         raise AoiError("AOI-INSP-002", detail=str(e), path=str(path)) from e
     if not ok:
         raise AoiError("AOI-INSP-002", path=str(path))
-    atomic.write_bytes(path, buf.tobytes())  # whole file or nothing, and non-ASCII Windows paths work
+    return buf.tobytes()
+
+
+def save_image(path: str | Path, img: np.ndarray) -> None:
+    atomic.write_bytes(path, encode_image(path, img))  # whole file or nothing, and non-ASCII Windows paths work
 
 
 def list_images(folder: str | Path) -> list[Path]:

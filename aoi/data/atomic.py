@@ -13,7 +13,7 @@ import os
 import re
 import shutil
 import uuid
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Iterator, Sequence
 from pathlib import Path
 from typing import BinaryIO
 
@@ -82,6 +82,48 @@ def write_all(files: Sequence[tuple[str | Path, bytes]]) -> None:
             old.unlink(missing_ok=True)
     for folder in {done.parent for done, _ in moved}:
         _sync_folder(folder)
+
+
+@contextlib.contextmanager
+def staged(path: str | Path, data: bytes) -> Iterator[Callable[[], None]]:
+    """Write `data` to a temporary name beside `path` and give the block `move_in`, which moves it into place, the file
+    it replaces kept under a temporary name. A block that raises, before or after `move_in`, leaves `path` as it was:
+    the new file out, the one it replaced back, the temporary file and the folders made for it removed. So the move can
+    go in a database transaction and be undone with it: a refused audit entry, a failed move or commit (#241)."""
+    target = Path(path)
+    made = [p for p in (target.parent, *target.parent.parents) if not p.exists()]  # deepest first
+    tmp, old = temp_path(target), temp_path(target)
+    done: list[Path] = []  # `old` once the file it replaces is aside, `target` once the new one is in place
+
+    def move_in() -> None:
+        if target.is_file():
+            os.replace(target, old)
+            done.append(old)
+        os.replace(tmp, target)
+        done.append(target)
+        _sync_folder(target.parent)
+
+    try:
+        target.parent.mkdir(parents=True, exist_ok=True)
+        with open(tmp, "wb") as f:
+            f.write(data)
+            f.flush()
+            os.fsync(f.fileno())
+        yield move_in
+    except BaseException:
+        with contextlib.suppress(OSError):  # the error that stopped the write is the one to report
+            if old in done:
+                os.replace(old, target)
+            elif target in done:
+                target.unlink()
+        with contextlib.suppress(OSError):
+            tmp.unlink(missing_ok=True)
+        for folder in made:
+            with contextlib.suppress(OSError):  # not empty: something else is in it now
+                folder.rmdir()
+        raise
+    with contextlib.suppress(OSError):  # left, it keeps a temporary name, which the start-up sweep removes
+        old.unlink(missing_ok=True)
 
 
 def write_bytes(path: str | Path, data: bytes) -> None:
