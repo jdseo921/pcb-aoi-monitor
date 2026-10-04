@@ -275,6 +275,9 @@ class MainWindow(QMainWindow):
             except AoiError as e:  # the service layer refuses an Operator; the dialog names the role it needs
                 show_error(self, self.ctx.report_error(e, "Board model"))
                 return
+            if name.strip() == self.board_model:  # nothing changes: no page drops what it shows or judges again (#247)
+                self.status(self.tr("Board model {name} is already selected.").format(name=name.strip()))
+                return
             self._reload_board_models(name.strip())
 
     def _on_board_model(self, name: str) -> None:
@@ -341,13 +344,17 @@ class MainWindow(QMainWindow):
                 self.ctx.log.warning("settings.save_failed", exc_info=True)
 
     def open_compare(self, path: str) -> None:
+        compare = cast(ComparePage, self.pages["Compare"])
+        compare.judge_on_show = False  # set_test judges `path` next: on_show starts no run of the board before (#247)
         self.navigate("Compare")
-        cast(ComparePage, self.pages["Compare"]).set_test(path)
+        compare.set_test(path)
 
     def open_stored(self, inspection_id: int) -> None:
         """Compare on a stored result in one click, as it was decided (REQ-INSP-009)."""
+        compare = cast(ComparePage, self.pages["Compare"])
+        compare.judge_on_show = False  # the record shows next: on_show starts no run of the board before (#247)
         self.navigate("Compare")
-        cast(ComparePage, self.pages["Compare"]).show_stored(inspection_id)
+        compare.show_stored(inspection_id)
 
     def status(self, msg: str, ms: int = 8000) -> None:
         """A message in the status bar, for 8 s by default; `ms=0` keeps it until the next message replaces it."""

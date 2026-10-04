@@ -14,6 +14,7 @@ from typing import Any
 import numpy as np
 import pytest
 from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QInputDialog
 from pytestqt.qtbot import QtBot
 
 from aoi.core import anomaly
@@ -335,7 +336,9 @@ def test_req_cmp_005_a_record_is_judged_under_its_own_board_model(
     compare.run()  # Re-evaluate
     assert dialogs and dialogs[-1][0].startswith("AOI-CMP-005") and "board model TINY" in dialogs[-1][1], dialogs
     assert calls == [] and compare.stored is not None, "nothing was judged; the stored result stays"
-    win.bm_combo.setCurrentText(BOARD)  # its own board model: the board is judged under it
+    win.bm_combo.setCurrentText(BOARD)  # its own board model: the board is judged under it,
+    assert compare._bg is None and calls == []
+    win.navigate("Compare")  # once Compare is shown, never behind the page in use (#247)
     qtbot.waitUntil(lambda: ctx.jobs.idle() and compare._bg is None and compare.res is not None, timeout=20000)
     assert calls == [(BOARD, BOARD)]
 
@@ -474,3 +477,94 @@ def test_req_cmp_003_another_records_golden_board_never_stays_beside_a_stored_re
         assert "image tool" not in dialogs[0][1]
         assert compare.test_view._pix is None and not compare.ref_view._overlay_items
         assert compare.test_empty.isVisible() and compare.test_empty.heading.text() == "Board picture no longer stored"
+
+
+def test_req_cmp_003_new_with_the_board_models_own_name_keeps_the_stored_result(
+    qtbot: QtBot,
+    trained_ctx: AppContext,
+    ng_board: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    dialogs: list[tuple[str, str]],
+) -> None:
+    """#247: "+ New" with the name of the board model in the header, while Compare showed a stored result judged with
+    recipe revision 1: Compare dropped it and inspected the board again with revision 2, unasked, and lost the what-if
+    values typed in the form. Now nothing changes, also for any other notice of the same board model, and the status
+    bar says the board model is already selected."""
+    ctx = trained_ctx
+    ctx.inspect_file(BOARD, str(ng_board))
+    rid = ctx.inspections(board_model=BOARD)[0]["id"]
+    recipe = ctx.recipe(BOARD)[1]
+    recipe.changed_pct_max, recipe.max_diff_regions, recipe.anomaly_threshold = 50, 100, 100
+    ctx.save_recipe(recipe)
+    win = _window(qtbot, ctx, "Engineer")
+    compare = win.pages["Compare"]
+    assert isinstance(compare, ComparePage)
+    win.navigate("Compare")
+    qtbot.waitUntil(lambda: ctx.jobs.idle() and compare._bg is None, timeout=20000)
+    compare.show_stored(rid)
+    qtbot.waitUntil(lambda: compare._bg is None and compare.test_view._pix is not None, timeout=20000)
+    compare.min_area.setValue(compare.min_area.value() + 7)  # a what-if value, typed and not saved
+
+    def page() -> tuple[object, ...]:
+        return (compare.verdict.text(), compare.test_label.text(), compare.note.text(), _table(compare))
+
+    shown, typed, calls = page(), compare.min_area.value(), []
+    real = AppContext.inspect
+
+    def spy(c: AppContext, *args: Any, **kwargs: Any) -> InspectionResult:
+        calls.append(1)
+        return real(c, *args, **kwargs)
+
+    monkeypatch.setattr(AppContext, "inspect", spy)
+    monkeypatch.setattr(QInputDialog, "getText", staticmethod(lambda *a, **k: (BOARD, True)))
+    win.new_board_model()
+    said = win.statusBar().currentMessage()
+    win._on_board_model(BOARD)  # any other notice of the same board model changes nothing on Compare either
+    qtbot.waitUntil(lambda: ctx.jobs.idle() and compare._bg is None, timeout=20000)
+    assert compare.stored is not None and compare.stored["id"] == rid and compare.note.isVisible()
+    assert page() == shown and compare.test_label.text().endswith("(stored result)")
+    assert compare.min_area.value() == typed and calls == [] and dialogs == []
+    assert said == f"Board model {BOARD} is already selected."
+
+
+@pytest.mark.parametrize("link", ["open_stored", "open_compare"])
+def test_req_insp_009_a_link_to_compare_starts_no_run_of_the_board_before(
+    qtbot: QtBot,
+    trained_ctx: AppContext,
+    ng_board: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    dialogs: list[tuple[str, str]],
+    link: str,
+) -> None:
+    """#247 review: a test image picked on Compare, then the header changed and back on Inspection, so Compare judges
+    that image when next shown. Inspection's "Compare with Golden board" (open_stored) or AI Model Test's link
+    (open_compare) then showed Compare, whose on_show started a full inspection of that image, replaced at once by the
+    record or the new file. Now only what the link asks for runs: nothing for a record, one run for a file."""
+    ctx = trained_ctx
+    ctx.ensure_board_model("ZZZ")
+    win = _window(qtbot, ctx, "Engineer")
+    compare = win.pages["Compare"]
+    assert isinstance(compare, ComparePage)
+    win.navigate("Compare")
+    compare.set_test(str(ng_board))
+    qtbot.waitUntil(lambda: compare.res is not None and compare._bg is None, timeout=60000)
+    win.navigate("Inspection")
+    win.bm_combo.setCurrentText("ZZZ")
+    win.bm_combo.setCurrentText(BOARD)
+    assert compare.judge_on_show
+    insp = _inspect_one(qtbot, win, ng_board)
+    runs: list[bool] = []
+    real = ComparePage._start
+
+    def spy(page: ComparePage, quiet: bool) -> None:
+        runs.append(quiet)
+        real(page, quiet)
+
+    monkeypatch.setattr(ComparePage, "_start", spy)
+    if link == "open_stored":
+        insp.open_compare()  # the record, as it was decided
+    else:
+        win.open_compare(str(ng_board))
+    qtbot.waitUntil(lambda: ctx.jobs.idle() and compare._bg is None, timeout=20000)
+    assert runs == ([] if link == "open_stored" else [False]) and dialogs == []
+    assert (compare.stored is not None) == (link == "open_stored") and compare.res is not None

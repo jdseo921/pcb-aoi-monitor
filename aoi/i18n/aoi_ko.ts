@@ -27,7 +27,7 @@
 <context>
     <name>ComparePage</name>
     <message>
-        <location filename="../ui/pages/compare.py" line="+56"/>
+        <location filename="../ui/pages/compare.py" line="+55"/>
         <source>Side by side</source>
         <translation type="unfinished"></translation>
     </message>
@@ -47,7 +47,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+10"/>
+        <location line="+13"/>
         <source>This result was judged without a Golden board.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -98,13 +98,13 @@
     </message>
     <message>
         <location line="+3"/>
-        <location line="+48"/>
-        <location line="+300"/>
+        <location line="+50"/>
+        <location line="+317"/>
         <source>Golden board</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-347"/>
+        <location line="-366"/>
         <source>AI model</source>
         <translation type="unfinished"></translation>
     </message>
@@ -134,7 +134,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+24"/>
+        <location line="+26"/>
         <source>Test Image…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -160,12 +160,12 @@
     </message>
     <message>
         <location line="+14"/>
-        <location line="+489"/>
+        <location line="+511"/>
         <source>Test board</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-483"/>
+        <location line="-505"/>
         <source>Inspecting…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -261,12 +261,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+50"/>
+        <location line="+51"/>
         <source>Test board: {file}</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+50"/>
+        <location line="+65"/>
         <source>{file} was not inspected: its Golden board cannot be opened.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -307,14 +307,14 @@
     </message>
     <message>
         <location line="+0"/>
-        <location line="+126"/>
+        <location line="+127"/>
         <location line="+105"/>
         <location line="+11"/>
         <source>Re-evaluate ›</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-228"/>
+        <location line="-229"/>
         <source>Train an AI model on Training.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -339,7 +339,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+26"/>
+        <location line="+27"/>
         <source>Test board: {file} (stored result)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -411,7 +411,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+24"/>
+        <location line="+33"/>
         <source>Inspect a board on Inspection, or pick a test image.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -611,12 +611,12 @@
     </message>
     <message>
         <location line="+21"/>
-        <location filename="../ui/main_window.py" line="+387"/>
+        <location filename="../ui/main_window.py" line="+394"/>
         <source>start-up</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/compare.py" line="-61"/>
+        <location filename="../ui/pages/compare.py" line="-70"/>
         <source>Changing recipes</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1683,7 +1683,7 @@
 <context>
     <name>HomePage</name>
     <message>
-        <location filename="../ui/main_window.py" line="-330"/>
+        <location filename="../ui/main_window.py" line="-337"/>
         <source>Upload samples</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2284,7 +2284,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+23"/>
+        <location line="+9"/>
+        <source>Board model {name} is already selected.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+17"/>
         <source>{user} ({role})</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2309,7 +2314,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+45"/>
+        <location line="+49"/>
         <source>Work is still running: training, an AI model test, an inspection, an export or an image import. Stop it and close the app? Training stops without saving an AI model, so the active one stays; an AI model test finishes its folder first; an export or import keeps the files copied so far.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2559,7 +2564,7 @@
 <context>
     <name>Page</name>
     <message>
-        <location filename="../ui/main_window.py" line="-320"/>
+        <location filename="../ui/main_window.py" line="-327"/>
         <source>Home</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2634,7 +2639,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/compare.py" line="-481"/>
+        <location filename="../ui/pages/compare.py" line="-500"/>
         <source>Compare</source>
         <translation type="unfinished"></translation>
     </message>

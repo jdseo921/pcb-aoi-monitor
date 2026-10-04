@@ -443,7 +443,7 @@ def test_req_set_019_empty_states_link_next_step(
     win.set_user("operator")
     win.navigate("Compare")
     compare = win.pages["Compare"]
-    compare.on_board_model_changed("TBOX-X")  # evaluate again as the Operator; the newest run wins
+    compare.run()  # Re-evaluate as the Operator; the newest run wins
     ask = "Ask an Engineer to do this on Training."
     qtbot.waitUntil(lambda: compare.ref_empty.sentence.text() == ask, timeout=30000)
     assert compare.ref_empty.isVisibleTo(compare)

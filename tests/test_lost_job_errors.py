@@ -20,11 +20,13 @@ from aoi.core.imaging import list_images
 from aoi.core.services import AppContext
 from aoi.data import atomic
 from aoi.errors import AoiError
-from aoi.ui import workers
+from aoi.ui import theme, workers
 from aoi.ui.main_window import MainWindow
 from aoi.ui.pages.base import Page
+from aoi.ui.pages.compare import NO_VERDICT, ComparePage
 from aoi.ui.workers import Worker
 from tests.test_alarms_and_errors import _log_rows
+from tests.test_req_done_in_v01 import BOARD, _window
 
 
 def _engineer_window(qtbot: QtBot, ctx: AppContext) -> MainWindow:
@@ -70,6 +72,115 @@ def test_req_log_005_the_error_of_a_cancelled_or_replaced_job_is_logged_and_alar
     assert len(rows) == 1 and "OSError: share went away mid-copy" in str(rows[0]["trace"]), rows
     assert [(a["level"], a["code"]) for a in ctx.alarms()] == [("ERROR", "AOI-SET-007")]
     assert [t for t, _ in dialogs] == (["AOI-SET-007 Unexpected error"] if how == "none" else [])
+
+
+@pytest.mark.parametrize(("board_model", "how"), [("EMPTY", "cancel"), ("EMPTY", "replace"), ("GONE", "cancel")])
+def test_req_log_005_a_compare_refusal_of_a_run_cancelled_or_replaced_is_logged_and_alarmed(
+    qtbot: QtBot,
+    trained_ctx: AppContext,
+    ng_board: Path,
+    synthetic_dataset: Path,
+    dialogs: list[tuple[str, str]],
+    monkeypatch: pytest.MonkeyPatch,
+    board_model: str,
+    how: str,
+) -> None:
+    """#247 review: Test Image... on Compare under a board model nothing can judge (EMPTY: AOI-INSP-010) or whose
+    Golden board file is gone (GONE: AOI-INSP-009), then Cancel or Re-evaluate before the run ends. The refusal comes
+    back as the run's result, which a run left drops, so it was neither logged nor alarmed. Now every run asked for
+    logs and alarms its refusal on the pool thread, and only the run not left shows the dialog."""
+    ctx, code = trained_ctx, "AOI-INSP-009" if board_model == "GONE" else "AOI-INSP-010"
+    win = _window(qtbot, ctx)
+    compare = win.pages["Compare"]
+    win.navigate("Compare")
+    ctx.ensure_board_model(board_model)
+    if board_model == "GONE":
+        ctx.import_samples(board_model, [str(p) for p in list_images(synthetic_dataset / "train" / "ok")[:3]], "OK")
+        Path(str(ctx.reference_image(board_model))).unlink()
+    win._reload_board_models(board_model)
+    qtbot.waitUntil(lambda: ctx.jobs.idle() and compare._bg is None, timeout=20000)
+    started, gate, real = threading.Event(), threading.Event(), AppContext.inspector
+
+    def held(c: AppContext, *args: Any) -> Any:  # the first run waits inside, before its refusal is raised
+        if not started.is_set():
+            started.set()
+            assert gate.wait(30)
+        return real(c, *args)
+
+    monkeypatch.setattr(AppContext, "inspector", held)
+    compare.set_test(str(ng_board))  # Test Image...: asked for
+    runs = [compare._bg]
+    qtbot.waitUntil(started.is_set, timeout=20000)
+    if how == "cancel":
+        compare.busy.cancel_button.click()
+    else:
+        compare.run()  # Re-evaluate: the newer run wins
+        runs.append(compare._bg)
+    gate.set()
+    _settled(qtbot, *[w for w in runs if w is not None])
+    qtbot.waitUntil(lambda: ctx.jobs.idle() and compare._bg is None, timeout=20000)
+    assert len(runs) == (1 if how == "cancel" else 2) and runs[0] is not None and runs[0].job.cancelled
+    assert [a["code"] for a in ctx.alarms()].count(code) == len(runs), "one alarm for each run that was refused"
+    assert [r["code"] for r in _log_rows(ctx, "error.shown")].count(code) == len(runs)
+    assert [t.split()[0] for t, _ in dialogs] == ([code] if how == "replace" else [])
+
+
+@pytest.mark.parametrize(("first", "then"), [(BOARD, "EMPTY"), ("GONE", BOARD)])
+def test_req_insp_006_a_compare_run_in_flight_at_a_header_change_shows_nothing_under_the_new_board_model(
+    qtbot: QtBot,
+    trained_ctx: AppContext,
+    ng_board: Path,
+    synthetic_dataset: Path,
+    dialogs: list[tuple[str, str]],
+    monkeypatch: pytest.MonkeyPatch,
+    first: str,
+    then: str,
+) -> None:
+    """#247 review: Test Image... on Compare under `first`, still running when the user goes to Inspection and changes
+    the header to `then`. The run went on, so the last board model's verdict, table and boxes, or its AOI-INSP-009
+    dialog (GONE), arrived after the header had moved on, the dialog over Inspection. Now the header change stops it:
+    nothing of it shows, Compare judges the board under `then` when shown, and a refusal is alarmed once (#206)."""
+    ctx = trained_ctx
+    win = _window(qtbot, ctx)
+    compare = win.pages["Compare"]
+    assert isinstance(compare, ComparePage)
+    ctx.ensure_board_model("EMPTY")
+    if first == "GONE":
+        ctx.import_samples(first, [str(p) for p in list_images(synthetic_dataset / "train" / "ok")[:3]], "OK")
+        Path(str(ctx.reference_image(first))).unlink()
+    win._reload_board_models(first)
+    win.navigate("Compare")
+    qtbot.waitUntil(lambda: ctx.jobs.idle() and compare._bg is None, timeout=20000)
+    started, gate, name = threading.Event(), threading.Event(), "inspector" if first == "GONE" else "inspect"
+    real = getattr(AppContext, name)
+
+    def held(c: AppContext, *args: Any, **kwargs: Any) -> Any:  # the run waits inside, until the header has changed
+        if not started.is_set():
+            started.set()
+            assert gate.wait(30)
+        return real(c, *args, **kwargs)
+
+    monkeypatch.setattr(AppContext, name, held)
+    compare.set_test(str(ng_board))  # Test Image...: asked for
+    run = compare._bg
+    assert run is not None
+    qtbot.waitUntil(started.is_set, timeout=20000)
+    win.navigate("Inspection")
+    win.bm_combo.setCurrentText(then)
+    gate.set()
+    _settled(qtbot, run)
+    qtbot.waitUntil(lambda: ctx.jobs.idle() and compare._bg is None, timeout=20000)
+    assert win.board_model == then and win.stack.currentWidget() is win.pages["Inspection"] and dialogs == []
+    assert compare.verdict.text() == NO_VERDICT and compare.metrics.rowCount() == 0, "the last board model's verdict"
+    assert [a["code"] for a in ctx.alarms()].count("AOI-INSP-009") == int(first == "GONE"), "the refusal, alarmed once"
+    win.navigate("Compare")  # judged under `then` now; until that run ends, nothing of `first` shows
+    assert compare.verdict.text() == NO_VERDICT and compare.metrics.rowCount() == 0
+    qtbot.waitUntil(lambda: ctx.jobs.idle() and compare._bg is None, timeout=20000)
+    assert dialogs == []
+    if then == "EMPTY":  # nothing can judge it: said on the test pane, quietly
+        assert compare.res is None and compare.test_empty.sentence.text().startswith("AOI-INSP-010 ")
+    else:
+        assert compare.res is not None and compare.verdict.text() == theme.verdict_label("NG")
 
 
 def _folder(root: Path, source: Path, names: list[str]) -> Path:
