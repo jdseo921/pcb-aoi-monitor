@@ -46,6 +46,7 @@ MATCHES = {  # a row's pass_fail, stored and exported as this English key -> wha
 # also names its files through breakable (#245), so a log would build its own from the plain names
 AI_MODEL = QT_TRANSLATE_NOOP("Errors", "AI model {version}")
 NO_AI_MODEL = QT_TRANSLATE_NOOP("Errors", "no AI model")
+AI_CHECK_OFF = QT_TRANSLATE_NOOP("Errors", "no AI model (the AI check off)")  # a recipe that turns it off (#246)
 GOLDEN_BOARD = QT_TRANSLATE_NOOP("Errors", "Golden board {file}")
 NO_GOLDEN_BOARD = QT_TRANSLATE_NOOP("Errors", "no Golden board")
 
@@ -261,12 +262,19 @@ class ModelTestPage(Page):
 
     def _judged_now(self) -> dict[str, object] | None:
         """None while the run is current: its board model still uses the AI model, recipe revision and Golden board
-        that judged it (`AppContext.engine_is_current`, the comparison Inspection makes, #243). Otherwise those and the
-        ones in use now, by version, revision and file name, for the note and AOI-TST-001 (#250)."""
+        that judged it (`AppContext.engine_is_current`, the comparison Inspection makes, #243), or, for a run judged
+        with the AI check off, the recipe revision and Golden board, whatever AI model is active, as none judged it and
+        a preview gives each row's verdict (#246). Otherwise those and the ones in use now, by version, revision and
+        file name, for the note and AOI-TST-001 (#250); a recipe with the AI check off names AI_CHECK_OFF in place of
+        an AI model, the one active then having judged nothing."""
         bm, run = self.run_board_model, self.run_judged
         if bm is None or run is None or self.ctx.engine_is_current(bm, run):
             return None
-        model, recipes, golden = self.ctx.active_model(bm), self.ctx.recipe_history(bm), self.ctx.reference_image(bm)
+        recipes, golden = self.ctx.recipe_history(bm), self.ctx.reference_image(bm)
+        same_recipe = (recipes[0]["uuid"] if recipes else None) == run.recipe_uuid
+        if not run.use_ai and same_recipe and golden == run.reference_path:
+            return None  # only the AI model changed, and it judged none of the run's images
+        model, ai_now = self.ctx.active_model(bm), run.use_ai if same_recipe else self.ctx.recipe(bm)[1].use_ai
 
         def ai_model(version: str | None) -> Phrase:
             return AI_MODEL.fill(version=version) if version else NO_AI_MODEL
@@ -276,10 +284,10 @@ class ModelTestPage(Page):
 
         return {
             "board_model": bm,
-            "run_model": ai_model(run.model_version),
+            "run_model": ai_model(run.model_version) if run.use_ai else AI_CHECK_OFF,
             "run_recipe": run.recipe_rev or 0,
             "run_golden": golden_board(run.reference_path),
-            "model": ai_model(model["version"] if model else None),
+            "model": ai_model(model["version"] if model else None) if ai_now else AI_CHECK_OFF,
             "recipe": recipes[0]["revision"] if recipes else 0,
             "golden": golden_board(golden),
         }

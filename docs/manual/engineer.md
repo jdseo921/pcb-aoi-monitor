@@ -182,17 +182,21 @@ but not shown. The report is written whole or not at all and recorded in the aud
 folder that cannot be made, a file open in a viewer, a full disk), the app shows AOI-LOG-002 and an earlier report of
 that name stays as it was. Selecting a row previews that board; when it cannot be inspected (its file moved, for
 example), the preview reads "· Not inspected" with no picture, never the verdict of the row before. A preview is judged
-by the AI model, recipe revision and Golden board that judged the run. Once another is in use (training ended, a version
-was activated, a recipe saved or a Golden board set), a selected row is not previewed: the pane reads "Not inspected"
-with AOI-TST-001 (a long file name in it wraps onto the next line after a _ or -), and Compare's Use Last Inspected
-keeps the board it had. A line above the table then names what judged the run and what is in use now; it shows when the
-page is opened or a row is selected, so after a training run that ends while the page stays open it appears at the next
-row selected. When the page is opened, a row still selected from before shows the same in place of its earlier preview;
-once what judged the run is in use again (that AI model version activated again, for example), it is previewed again.
-The rows and both exports still describe the stored run; press **Run Test Again** in the preview pane to test the run's
-folder with what is in use now. A preview still being inspected when a new run ends is not shown beside its rows. A
-folder inside the workspace is stored relative to it, so a moved workspace still finds the run's folder and images; a
-folder elsewhere is stored as its full path.
+by the recipe revision and Golden board that judged the run and, when that recipe ran the AI check, by its AI model.
+Once another is in use (training ended, a version was activated, a recipe saved or a Golden board set), a selected row
+is not previewed: the pane reads "Not inspected" with AOI-TST-001 (a long file name in it wraps onto the next line after
+a _ or -), and Compare's Use Last Inspected keeps the board it had. A line above the table then names what judged the
+run and what is in use now; it shows when the page is opened or a row is selected, so after a training run that ends
+while the page stays open it appears at the next row selected. When the page is opened, a row still selected from before
+shows the same in place of its earlier preview; once what judged the run is in use again (that AI model version
+activated again, for example), it is previewed again. A run judged with the AI check off was judged by no AI model, so
+activating another AI model version leaves its rows previewed; a saved recipe, a Golden board set or a training run,
+which sets a new Golden board, still stops their previews. The line and AOI-TST-001 then name "no AI model (the AI check
+off)" for that run, and for a recipe now in use that turns the AI check off, in place of an AI model. The rows and both
+exports still describe the stored run; press **Run Test Again** in the preview pane to test the run's folder with what
+is in use now. A preview still being inspected when a new run ends is not shown beside its rows. A folder inside the
+workspace is stored relative to it, so a moved workspace still finds the run's folder and images; a folder elsewhere is
+stored as its full path.
 
 ## 7. Compare
 

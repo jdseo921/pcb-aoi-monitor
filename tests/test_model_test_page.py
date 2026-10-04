@@ -26,7 +26,7 @@ from aoi.ui import workers
 from aoi.ui.main_window import MainWindow
 from aoi.ui.pages.base import cell_item, cell_text
 from aoi.ui.pages.model_test import ModelTestPage
-from tests.conftest import wrapped
+from tests.conftest import another_version, wrapped
 from tests.test_error_translation import Marking
 from tests.test_req_done_in_v01 import BOARD, _window
 
@@ -388,6 +388,69 @@ def test_req_tst_003_a_run_with_no_ai_model_says_so_once_one_is_trained(
     shown = judged.replace(golden, wrapped(golden))  # the pane's names may break after each _ and - (#245)
     assert said.startswith(f"AOI-TST-001 {wrapped(cell_text(page.table, 0, 0))} was judged in this run {shown}")
     assert "Not inspected" in page.preview_verdict.text() and dialogs == []
+
+
+@pytest.mark.parametrize("change", ["activate", "recipe", "reference", "recipe_off"])
+def test_req_tst_003_a_run_judged_with_the_ai_check_off_is_tied_to_its_recipe_and_golden_board(
+    qtbot: QtBot,
+    trained_ctx: AppContext,
+    synthetic_dataset: Path,
+    tmp_path: Path,
+    dialogs: list[tuple[str, str]],
+    change: str,
+) -> None:
+    """#250 with #246 (stack review): no AI model judged a run made with the AI check off, so an AI model activated
+    since ("activate") changes nothing that judged it: every row is previewed, its banner reads its Verdict cell, Use
+    Last Inspected follows, and no note shows. A recipe saved since ("recipe", the AI check still off) or another
+    Golden board set ("reference") refuses the rows, and the note and AOI-TST-001 say the run was judged, and the board
+    model is now judged, by "no AI model (the AI check off)", never by AI model v1.0. A run judged with the AI check on,
+    then a recipe saved that turns it off ("recipe_off"), names the run's AI model and the AI check off now. Before, the
+    activation refused every row of the AI-off run with AOI-TST-001, and its text and the note said the run was "judged
+    by AI model v1.0", while the run's report says that no AI model judged the images."""
+    ctx = trained_ctx
+    recipe = copy.deepcopy(ctx.recipe(BOARD)[1])
+    recipe.use_ai = change == "recipe_off"
+    run_rev = ctx.save_recipe(recipe)
+    folder = tmp_path / "validation"
+    for label in ("ok", "ng"):
+        (folder / label).mkdir(parents=True)
+        for board in sorted(synthetic_dataset.glob(f"test/{label}/*.png"))[:2]:
+            shutil.copy(board, folder / label / board.name)
+    win = _window(qtbot, ctx)
+    page = _tested_page(qtbot, win, folder)
+    page.table.selectRow(0)
+    qtbot.waitUntil(lambda: page._bg is None and win.last_inspected is not None, timeout=30000)
+    before, now_rev, run_golden = win.last_inspected, run_rev, Path(ctx.reference_image(BOARD) or "").name
+    win.navigate("Training")
+    if change == "activate":  # another version, with the Golden board kept
+        ctx.activate_model(another_version(ctx, BOARD, "v1.1"))
+    elif change == "reference":  # another OK sample as the Golden board, with the recipe kept
+        ok = next(s for s in ctx.samples(BOARD, "OK") if s["path"] != ctx.reference_image(BOARD))
+        ctx.set_reference(BOARD, ok["id"])
+    else:
+        recipe.use_ai, recipe.ssim_min = False, 0.75
+        now_rev = ctx.save_recipe(recipe)
+    win.navigate("AI Model Test")
+    seen = _preview_every_row(qtbot, page)
+    note, golden = page.run_note.text(), Path(ctx.reference_image(BOARD) or "").name
+    print(change, seen, note, sep="\n")
+    assert len(seen) == 4 and dialogs == [] and (golden != run_golden) == (change == "reference")
+    if change == "activate":
+        assert all(s[2] == s[1] and s[3] == "" for s in seen) and page.run_note.isHidden(), seen
+        assert win.last_inspected is not None and win.last_inspected[0] == cell_item(page.table, 3, 0).toolTip()
+        return
+    off = "no AI model (the AI check off)"
+    run_model = "AI model v1.0" if change == "recipe_off" else off
+    judged = (
+        f"by {run_model}, recipe revision {run_rev} and Golden board {run_golden}; {BOARD} now uses {off}, recipe"
+        f" revision {now_rev} and Golden board {golden}"
+    )
+    assert all("Not inspected" in s[2] for s in seen) and win.last_inspected is before
+    assert page.run_note.isVisible() and note.startswith(f"These results were judged {judged}."), note
+    shown = judged  # the pane's names may break after each _ and - (#245), as the note's do not
+    for name in {run_golden, golden}:
+        shown = shown.replace(f"Golden board {name}", f"Golden board {wrapped(name)}")
+    assert seen[-1][3].startswith(f"AOI-TST-001 {wrapped(seen[-1][0])} was judged in this run {shown}, so"), seen[-1][3]
 
 
 def test_req_tst_004_a_run_is_not_shown_under_another_board_model(

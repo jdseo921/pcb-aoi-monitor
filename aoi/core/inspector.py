@@ -224,14 +224,17 @@ def merge_regions(regions: list[Region]) -> list[Region]:
 @dataclass(frozen=True)
 class JudgedBy:
     """What an engine judges with, by version and file (#250): the AI model version and UUID, the recipe revision and
-    UUID and the Golden board's path, each None when it has none. `AppContext.batch_test` returns it with a run, and
-    `AppContext.engine_is_current` compares its `inputs` with what is active now, as it does an engine's."""
+    UUID and the Golden board's path, each None when it has none, and whether the recipe runs the AI check (`use_ai`;
+    with it off the AI model named is the one active then, which judged nothing, #246). `AppContext.batch_test` returns
+    it with a run, and `AppContext.engine_is_current` compares its `inputs` with what is active now, as it does an
+    engine's; AI Model Test compares a run with the AI check off by its recipe revision and Golden board alone."""
 
     model_version: str | None
     model_uuid: str | None
     recipe_rev: int | None
     recipe_uuid: str | None
     reference_path: str | None
+    use_ai: bool = True
 
     @property
     def inputs(self) -> tuple[str | None, str | None, str | None]:
@@ -287,8 +290,10 @@ class Inspector:
 
     @property
     def judged_by(self) -> JudgedBy:
-        """What the engine judges with, kept with an AI Model Test run after the engine is gone (#250)."""
-        return JudgedBy(self.model_version, self.model_uuid, self.recipe_rev, self.recipe_uuid, self.reference_path)
+        """What the engine judges with, kept with an AI Model Test run after the engine is gone (#250), with whether its
+        recipe runs the AI check (#246)."""
+        rev, path = self.recipe_rev, self.reference_path
+        return JudgedBy(self.model_version, self.model_uuid, rev, self.recipe_uuid, path, self.recipe.use_ai)
 
     def inspect(self, img: np.ndarray) -> InspectionResult:
         """The board in `img` aligned, compared and judged. AOI-INSP-011 before any work when it, or the golden board,

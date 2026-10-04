@@ -548,7 +548,8 @@ class AppContext:
         recipe revision and the Golden board, by UUID and path (`Inspector.inputs`). It reads the database only, no
         image or weights, so the Inspection page asks before each board whether the engine it keeps is still the one to
         use: a training run, an activation or a saved recipe makes it stale (#243). AI Model Test asks it with the
-        `JudgedBy` of a run before a row is previewed (#250), so both pages agree on when a result is current."""
+        `JudgedBy` of a run before a row is previewed (#250), so both pages agree on when a result is current; for a run
+        judged with the AI check off, that page then compares the recipe revision and Golden board alone (#246)."""
         active = self.db.active_model(board_model)
         latest = self.db.latest_recipe(board_model)
         now = str(active["uuid"]) if active else None, latest[2] if latest else None, self.db.reference(board_model)
@@ -728,9 +729,10 @@ class AppContext:
         self, board_model: str, folder: str, progress: Callable[[int, int], None] | None = None
     ) -> tuple[dict[str, Any], list[dict[str, Any]], JudgedBy]:
         """Validate the active AI model on a folder and store the run: (metrics, rows, judged_by), one row per image,
-        and the AI model, recipe revision and Golden board that judged them all (#250; beside the rows, not in them,
-        since the CSV export writes every key of a row). Ground truth comes from sub-folder names: under `ng`/`defect`
-        NG, under `ok`/`good` OK, elsewhere no label ("?"); `pass_fail` is PASS when the verdict (WARN as NG) matches
+        and the recipe revision and Golden board that judged them all, the AI model version active then and whether the
+        recipe ran the AI check (#250, #246; beside the rows, not in them, since the CSV export writes every key of a
+        row). Ground truth comes from sub-folder names: under `ng`/`defect` NG, under `ok`/`good` OK, elsewhere no
+        label ("?"); `pass_fail` is PASS when the verdict (WARN as NG) matches
         the label, FAIL when not and NO_LABEL without one; `ai_check` says whether the AI check judged it, RAN, OFF or
         NO_AI_MODEL, as for an inspection record (#246). Each row ends with the run's UUID, the AI model version active
         then and its UUID (run_uuid, model_version, model_uuid; None without an AI model), as the CSV export writes them
