@@ -25,7 +25,7 @@ class ROI:
     y: int = 0
     w: int = 50
     h: int = 50
-    ai_score: float = 1.0  # ROI fails when (anomaly / model threshold) >= this
+    ai_score: float = 1.0  # NG when the ROI's AI score peak / the AI score threshold (recipe's, else AI model's) ≥ this
     height_min: float | None = None  # Stage 2 (3D camera) parameters, stored now
     height_max: float | None = None
     volume_min: float | None = None

@@ -12,15 +12,28 @@ from pathlib import Path
 import cv2
 import numpy as np
 from PySide6.QtCore import QCoreApplication, QTranslator
+from PySide6.QtWidgets import QFormLayout, QLabel
 from pytestqt.qtbot import QtBot
 
 from aoi.core import explain as ex
-from aoi.core.inspector import NG, NO_AI_NOTE, NO_GOLDEN_NOTE, OK, WARN, Check, Defect, InspectionResult, Inspector
+from aoi.core.inspector import (
+    NG,
+    NO_AI_NOTE,
+    NO_GOLDEN_NOTE,
+    OK,
+    WARN,
+    AiEvidence,
+    Check,
+    Defect,
+    InspectionResult,
+    Inspector,
+)
 from aoi.core.recipe import ROI, Recipe
 from aoi.core.services import AppContext
 from aoi.ui.main_window import MainWindow
 from aoi.ui.pages.compare import CHECK_NAMES, JUDGED, MODES, RULES, SOURCES, ComparePage
 from aoi.ui.pages.inspection import InspectionPage
+from aoi.ui.pages.recipe_editor import RecipeEditorPage
 from tests.conftest import TrainedModel
 from tests.regression import make_regression_set as rs
 from tools.update_translations import TS_FILE, qt_tool
@@ -68,10 +81,10 @@ CASES = [  # (name, value, threshold, rule, verdict, source): the sentence it ge
     (("AI anomaly score", 2.31, 2.5, "≥ thr → NG", WARN, "AI"),
      "The AI score is 2.31, close to its threshold of 2.50."),
     (("ROI R1 [Presence]", 1.4, 1.0, "≥ thr → NG", NG, "ROI"),
-     "In ROI R1 [Presence], the AI score is 1.40 × the AI model's threshold, at or above the ROI's threshold of"
+     "In ROI R1 [Presence], the AI score is 1.40 × the AI score threshold, at or above the ROI's threshold of"
      " 1.00 ×."),
     (("ROI R2 [Polarity]", 0.93, 1.0, "≥ thr → NG", WARN, "ROI"),
-     "In ROI R2 [Polarity], the AI score is 0.93 × the AI model's threshold, close to the ROI's threshold of 1.00 ×."),
+     "In ROI R2 [Polarity], the AI score is 0.93 × the AI score threshold, close to the ROI's threshold of 1.00 ×."),
     (("Board flatness", 2.0, 1.0, "≥ thr → NG", NG, "Compare"),  # a name this build does not know (stored data)
      "Board flatness is 2.00, against its threshold of 1.00."),
 ]  # fmt: skip
@@ -171,6 +184,36 @@ def test_req_cmp_004_why_without_a_failing_check() -> None:
         "No golden reference image set for this board model; comparison skipped.",
         "No trained model for this board model; AI check skipped.",
     )
+
+
+def test_req_cmp_004_roi_sentence_names_the_threshold_used(qtbot: QtBot, ctx: AppContext) -> None:
+    """#248: an ROI's value is its AI score peak divided by the threshold the AI check used, the recipe's AI score
+    threshold when an Engineer sets one, but its sentence named the AI model's threshold: with the AI model's at 2.00
+    and the recipe's at 4.00, a peak of 6.0 read "1.50 × the AI model's threshold" (it is 3.00 × that) under "its
+    threshold of 4.00". The sentence now names the AI score threshold, the one the AI score sentence gives, with or
+    without the recipe's own; no template names the AI model's threshold, and neither does the Recipe Editor's field
+    for an ROI's threshold."""
+    for override, threshold, multiple in ((4.0, "4.00", "1.50"), (None, "2.00", "3.00")):
+        amap = np.zeros((64, 64), np.float32)
+        amap[10, 10] = 6.0
+        recipe = Recipe(board_model="B", rois=[ROI("R1", "Presence", 0, 0, 32, 32)], anomaly_threshold=override)
+        res = InspectionResult(OK, 0.0, image=np.zeros((64, 64, 3), np.uint8), anomaly_map=amap)
+        Inspector(recipe).judge(res, AiEvidence(6.0, 2.0, 1.0))
+        assert res.verdict == NG
+        assert [s.text() for s in ex.explain(res)] == [
+            f"The AI score is 6.00, at or above its threshold of {threshold}.",
+            f"In ROI R1 [Presence], the AI score is {multiple} × the AI score threshold, at or above the ROI's"
+            " threshold of 1.00 ×.",
+        ], override
+    assert [t for t in ex.TEMPLATES if "AI model's threshold" in t] == []
+    win = MainWindow(ctx)
+    qtbot.addWidget(win)
+    editor = win.pages["Recipe Editor"]
+    assert isinstance(editor, RecipeEditorPage)
+    form = editor.r_ai.parentWidget().layout()
+    assert isinstance(form, QFormLayout)
+    label = form.labelForField(editor.r_ai)
+    assert isinstance(label, QLabel) and label.text() == "AI score (× AI score threshold)"
 
 
 def test_req_cmp_004_uses_only_glossary_terms() -> None:

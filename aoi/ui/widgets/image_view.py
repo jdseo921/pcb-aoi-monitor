@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import cv2
 import numpy as np
-from PySide6.QtCore import QPointF, QRectF, Qt, Signal
+from PySide6.QtCore import QPointF, QRectF, QSize, Qt, Signal
 from PySide6.QtGui import QBrush, QColor, QFont, QImage, QMouseEvent, QPainter, QPen, QPixmap, QTransform, QWheelEvent
 from PySide6.QtWidgets import (
     QGraphicsItem,
@@ -75,9 +75,16 @@ class ImageView(QGraphicsView):
             self.fit()
 
     def fit(self) -> None:
-        if self._pix is not None:
-            self.fitInView(self._pix, Qt.AspectRatioMode.KeepAspectRatio)
-            self._emit_changed()
+        """The whole picture in the view, measured as fitInView does but on the viewport with no scroll bars: those of
+        a zoom go only at the next event, and a fit measured with them left the board 5 % short of the pane (#248)."""
+        room = self.maximumViewportSize() - QSize(4, 4)  # fitInView's margin of 2 px a side
+        rect = self._pix.sceneBoundingRect() if self._pix is not None else QRectF()
+        if rect.isEmpty() or room.isEmpty():
+            return
+        ratio = min(room.width() / rect.width(), room.height() / rect.height())
+        self.setTransform(QTransform.fromScale(ratio, ratio))
+        self.centerOn(rect.center())
+        self._emit_changed()
 
     def clear_overlays(self) -> None:
         for it in self._overlay_items:
@@ -167,8 +174,8 @@ class ImageView(QGraphicsView):
 
     def _emit_changed(self, *_: object) -> None:
         self.viewChanged.emit()
-        if self._syncing:
-            return
+        if self._syncing or self.isHidden():  # a pane its page hid (Compare's Golden board in Defect boxes only) moves
+            return  # no other: its fit, at the width it last had, shrank the board shown by half (#248)
         for p in self._peers:
             p._syncing = True
             p.setTransform(self.transform())

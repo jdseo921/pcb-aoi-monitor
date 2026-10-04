@@ -238,8 +238,8 @@ CODES: dict[str, ErrorCode] = {
             ),
             QT_TRANSLATE_NOOP(
                 "Errors",
-                "The decision table is the stored one; use Side by side or Boxes only, or inspect the board again on"
-                " Inspection to see its heatmaps.",
+                "The decision table is the stored one; use Side by side or Defect boxes only, or inspect the board"
+                " again on Inspection to see its heatmaps.",
             ),
         ),
         ErrorCode(

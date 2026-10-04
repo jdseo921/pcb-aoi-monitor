@@ -346,6 +346,7 @@ class MainWindow(QMainWindow):
     def open_compare(self, path: str) -> None:
         compare = cast(ComparePage, self.pages["Compare"])
         compare.judge_on_show = False  # set_test judges `path` next: on_show starts no run of the board before (#247)
+        compare.show_golden_pane()  # "Compare with Golden board ›": shown beside the board (#248)
         self.navigate("Compare")
         compare.set_test(path)
 
@@ -353,6 +354,7 @@ class MainWindow(QMainWindow):
         """Compare on a stored result in one click, as it was decided (REQ-INSP-009)."""
         compare = cast(ComparePage, self.pages["Compare"])
         compare.judge_on_show = False  # the record shows next: on_show starts no run of the board before (#247)
+        compare.show_golden_pane()  # lined up with the Golden board it was judged against (#248)
         self.navigate("Compare")
         compare.show_stored(inspection_id)
 

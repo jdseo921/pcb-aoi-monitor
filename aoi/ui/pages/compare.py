@@ -139,6 +139,7 @@ class ComparePage(Page):
         views = QWidget()
         grid = QGridLayout(views)  # the labels share a row, so one wrapped to two lines never shifts its view down
         grid.setContentsMargins(0, 0, 0, 0)
+        self.panes, self.splitter = grid, split  # Defect boxes only gives the Golden board's column away (#248)
         self.ref_label = QLabel(self.tr("Golden board"))
         self.ref_label.setObjectName("muted")
         self.test_label = QLabel(self.tr("Test board"))
@@ -238,9 +239,12 @@ class ComparePage(Page):
             self.set_test(f)
 
     def use_last(self) -> None:
-        if (last := self.shell.last_inspected) and last[2] is not None:
+        if not (last := self.shell.last_inspected):
+            return
+        self.show_golden_pane()
+        if last[2] is not None:
             self.show_stored(last[2])  # the record, as it was decided (REQ-INSP-009)
-        elif last:
+        else:
             self.set_test(last[0])  # a preview from AI Model Test is not recorded: inspected again
 
     def pick_ref(self) -> None:
@@ -250,11 +254,19 @@ class ComparePage(Page):
         )
         if f:
             self.ref_override = f
+            self.show_golden_pane()
             self.run()
 
     def use_golden(self) -> None:
         self.ref_override = self.as_judged = None  # today's golden board
+        self.show_golden_pane()
         self.run()
+
+    def show_golden_pane(self) -> None:
+        """A Golden board or a reference asked for ("Compare with Golden board ›", Use Last Inspected, Golden Board,
+        Reference…): Defect boxes only, which hides its pane, gives way to Side by side; any other view stays (#248)."""
+        if self.mode.currentIndex() == MODE_BOXES:
+            self.mode.setCurrentIndex(MODE_SIDE)  # redraw shows the pane and its label, and fits the board to its half
 
     def _load_recipe_into_form(self) -> None:
         if not self.board_model:
@@ -563,6 +575,17 @@ class ComparePage(Page):
         )
 
     def redraw(self) -> None:
+        """The view chosen under Show: the test board's picture for it, with a labelled box per defect, beside the
+        Golden board pane with a dashed box per defect; Defect boxes only hides that pane, so the test board and its
+        boxes take the width of both (REQ-CMP-002, #248)."""
+        alone = self.mode.currentIndex() == MODE_BOXES  # with or without a result: the panes follow the view chosen
+        if alone != self.ref_view.isHidden():  # the test board's pane changes width: the board is fitted to it again
+            self.ref_label.setHidden(alone)
+            self.ref_view.setHidden(alone)
+            self.panes.setColumnStretch(0, 0 if alone else 1)  # a hidden column with a stretch keeps its half
+            self.panes.activate()  # now, not at the next event: the fit below needs the pane's new width
+            self.splitter.refresh()
+            self._fitted = False
         r = self.res
         if r is None or r.image is None:  # a stored result whose picture is gone: no boxes in the air
             return

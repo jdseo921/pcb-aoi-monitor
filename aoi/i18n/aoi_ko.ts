@@ -98,13 +98,13 @@
     </message>
     <message>
         <location line="+3"/>
-        <location line="+50"/>
-        <location line="+317"/>
+        <location line="+51"/>
+        <location line="+328"/>
         <source>Golden board</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-366"/>
+        <location line="-378"/>
         <source>AI model</source>
         <translation type="unfinished"></translation>
     </message>
@@ -159,13 +159,13 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+14"/>
-        <location line="+511"/>
+        <location line="+15"/>
+        <location line="+533"/>
         <source>Test board</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-505"/>
+        <location line="-527"/>
         <source>Inspecting…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -251,7 +251,7 @@
     </message>
     <message>
         <location line="+0"/>
-        <location line="+14"/>
+        <location line="+17"/>
         <source>Images ({extensions})</source>
         <translation type="unfinished"></translation>
     </message>
@@ -261,7 +261,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+51"/>
+        <location line="+59"/>
         <source>Test board: {file}</source>
         <translation type="unfinished"></translation>
     </message>
@@ -308,13 +308,13 @@
     <message>
         <location line="+0"/>
         <location line="+127"/>
-        <location line="+105"/>
+        <location line="+116"/>
         <location line="+11"/>
         <source>Re-evaluate ›</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-229"/>
+        <location line="-240"/>
         <source>Train an AI model on Training.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -391,7 +391,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+53"/>
+        <location line="+64"/>
         <source>Recipe saved as revision {revision}</source>
         <translation type="unfinished"></translation>
     </message>
@@ -611,7 +611,7 @@
     </message>
     <message>
         <location line="+21"/>
-        <location filename="../ui/main_window.py" line="+394"/>
+        <location filename="../ui/main_window.py" line="+396"/>
         <source>start-up</source>
         <translation type="unfinished"></translation>
     </message>
@@ -901,12 +901,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+5"/>
-        <source>The decision table is the stored one; use Side by side or Boxes only, or inspect the board again on Inspection to see its heatmaps.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+8"/>
+        <location line="+13"/>
         <source>Result has no stored decision table</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1402,7 +1397,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+205"/>
+        <location line="+134"/>
+        <source>The decision table is the stored one; use Side by side or Defect boxes only, or inspect the board again on Inspection to see its heatmaps.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+71"/>
         <source>AI model file refused: {path} could not be loaded as a weights-only AI model file this app wrote ({reason}).</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1610,17 +1610,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+13"/>
-        <source>In ROI {roi}, the AI score is {value} the AI model&apos;s threshold, at or above the ROI&apos;s threshold of {threshold}.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+5"/>
-        <source>In ROI {roi}, the AI score is {value} the AI model&apos;s threshold, close to the ROI&apos;s threshold of {threshold}.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+6"/>
+        <location line="+25"/>
         <source>Every check that decides the verdict is inside its threshold.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1650,7 +1640,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-45"/>
+        <location line="-46"/>
         <source>The AI score is {value}, at or above its threshold of {threshold}.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1660,7 +1650,17 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+15"/>
+        <location line="+7"/>
+        <source>In ROI {roi}, the AI score is {value} the AI score threshold, at or above the ROI&apos;s threshold of {threshold}.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+4"/>
+        <source>In ROI {roi}, the AI score is {value} the AI score threshold, close to the ROI&apos;s threshold of {threshold}.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+5"/>
         <source>{check} is {value}, against its threshold of {threshold}.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1683,7 +1683,7 @@
 <context>
     <name>HomePage</name>
     <message>
-        <location filename="../ui/main_window.py" line="-337"/>
+        <location filename="../ui/main_window.py" line="-339"/>
         <source>Upload samples</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2314,7 +2314,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+49"/>
+        <location line="+51"/>
         <source>Work is still running: training, an AI model test, an inspection, an export or an image import. Stop it and close the app? Training stops without saving an AI model, so the active one stays; an AI model test finishes its folder first; an export or import keeps the files copied so far.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2564,7 +2564,7 @@
 <context>
     <name>Page</name>
     <message>
-        <location filename="../ui/main_window.py" line="-327"/>
+        <location filename="../ui/main_window.py" line="-329"/>
         <source>Home</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2639,7 +2639,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/compare.py" line="-500"/>
+        <location filename="../ui/pages/compare.py" line="-523"/>
         <source>Compare</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2817,7 +2817,7 @@
     </message>
     <message>
         <location line="+1"/>
-        <source>AI score (× AI model threshold)</source>
+        <source>AI score (× AI score threshold)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>

@@ -117,7 +117,7 @@ class RecipeEditorPage(Page):
         self.r_enabled = QCheckBox(self.tr("Enabled"))
         f.addRow(self.tr("Name"), self.r_name)
         f.addRow(self.tr("ROI type"), self.r_type)
-        f.addRow(self.tr("AI score (× AI model threshold)"), self.r_ai)
+        f.addRow(self.tr("AI score (× AI score threshold)"), self.r_ai)  # the recipe's, else the AI model's
         f.addRow(self.tr("Height thresholds min / max (Stage 2)"), self._pair(self.r_hmin, self.r_hmax))
         f.addRow(self.tr("Volume thresholds min / max (Stage 2)"), self._pair(self.r_vmin, self.r_vmax))
         f.addRow(self.r_enabled)
