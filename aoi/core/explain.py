@@ -9,6 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from .inspector import (
+    AI_OFF_NOTE,
     NG,
     NO_AI_NOTE,
     NO_GOLDEN_NOTE,
@@ -88,6 +89,11 @@ NOTES = {
     NO_AI_NOTE: QT_TRANSLATE_NOOP(
         "Explain",
         "No AI model is trained for this board model, so the AI check did not run: an Engineer trains one on Training.",
+    ),
+    AI_OFF_NOTE: QT_TRANSLATE_NOOP(  # the record names the AI model active then: this says it did not judge (#246)
+        "Explain",
+        "The recipe turns the AI check off, so the AI check did not run and no AI model judged the board: an Engineer"
+        " can turn it on in the Recipe Editor.",
     ),
     NOT_COMPARED_NOTE: QT_TRANSLATE_NOOP(
         "Explain",

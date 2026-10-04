@@ -224,8 +224,9 @@ CODES: dict[str, ErrorCode] = {
             ),
             QT_TRANSLATE_NOOP(
                 "Errors",
-                "No action is needed: each record names the AI model version, recipe revision and Golden board that"
-                " judged it.",
+                "No action is needed: each record names the AI model version active when its board was judged, the"
+                " recipe revision that judged it, which says whether the AI check ran, and the Golden board it was"
+                " judged against.",
             ),
         ),
         ErrorCode(

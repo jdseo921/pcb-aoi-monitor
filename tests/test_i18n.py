@@ -392,6 +392,9 @@ ENGINE_ALLOWED = {  # (file, literal): why it is not a phrase; a stale entry fai
     ("aoi/core/imaging.py", "0 MP (0 × 0)"): "numbers and a unit symbol, written the same in every language",
     # what a function returns (#198): names the same in every language, and keys a screen words itself
     ("aoi/config.py", "cpu"): "a torch device name",
+    ("aoi/core/inspector.py", "RAN"): "an ai_check key the CSV exports write as it is, as pass_fail's (#246)",
+    ("aoi/core/inspector.py", "OFF"): "an ai_check key the CSV exports write as it is, as pass_fail's (#246)",
+    ("aoi/core/inspector.py", "NO_AI_MODEL"): "an ai_check key the CSV exports write as it is, as pass_fail's (#246)",
     ("aoi/config.py", "cuda"): "a torch device name",
     ("aoi/core/imaging.py", "PNG"): "an image format's name (AOI-INSP-006's {kind}), the same in every language",
     ("aoi/core/imaging.py", "BMP"): "an image format's name (AOI-INSP-006's {kind}), the same in every language",

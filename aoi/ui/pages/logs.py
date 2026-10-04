@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Any
 from PySide6.QtCore import QDate, Qt
 from PySide6.QtWidgets import QCheckBox, QComboBox, QDateEdit, QFileDialog, QHBoxLayout, QLabel, QMessageBox, QSplitter
 
+from ...core.inspector import ai_check
 from ...core.services import AppContext, CsvFile
 from ...times import to_local
 from .. import theme
@@ -17,10 +18,11 @@ from ..widgets.empty_state import EmptyState
 from ..widgets.image_view import ImageView
 from .base import QT_TRANSLATE_NOOP, Page, button, cell_text, fill_table, make_table, view_text
 
-# The columns of the checks file beside the records file (REQ-INSP-012), the header even when no record has checks.
+# The columns of the checks file beside the records file (REQ-INSP-012), the header even when no record has checks;
+# ai_check says whether the AI check ran on the record: RAN, OFF or NO_AI_MODEL (`inspector.ai_check`, #246).
 CHECK_COLUMNS = [
     "inspection_id", "inspection_uuid", "time", "board_model", "view", "model_version", "model_uuid", "recipe_rev",
-    "recipe_uuid", "no", "region", "metric", "source", "value", "threshold", "rule", "result",
+    "recipe_uuid", "ai_check", "no", "region", "metric", "source", "value", "threshold", "rule", "result",
 ]  # fmt: skip
 
 DEFAULT_DAYS = 7  # a new page and Reset Filters show the last 7 days
@@ -230,6 +232,7 @@ class LogsPage(Page):
             if should_stop():
                 return None
             ds = self.ctx.defects_for(r["id"])
+            ai = self._ai_check(r["id"])
             out.append(
                 {
                     "id": r["id"],
@@ -248,10 +251,11 @@ class LogsPage(Page):
                     "uuid": r["uuid"],
                     "model_uuid": r["model_uuid"],
                     "recipe_uuid": r["recipe_uuid"],
+                    "ai_check": ai,  # last, so the columns before it keep their places
                 }
             )
             record = {k: r[k] for k in ("time", "board_model", "view", "model_version", "model_uuid", "recipe_rev")}
-            record["recipe_uuid"] = r["recipe_uuid"]
+            record.update(recipe_uuid=r["recipe_uuid"], ai_check=ai)
             for c in checks[r["id"]]:
                 evidence = {
                     k: c[k] for k in ("no", "region", "metric", "source", "value", "threshold", "rule", "result")
@@ -261,6 +265,15 @@ class LogsPage(Page):
         # both files or neither (#195); one another program holds open is refused with AOI-LOG-002, shown as the dialog
         self.ctx.export_csv_files([CsvFile(f, out), CsvFile(checks_file, check_rows, "checks", CHECK_COLUMNS)])
         return len(out), len(check_rows)
+
+    def _ai_check(self, inspection_id: int) -> str:
+        """`inspector.ai_check` of a record's stored result, or "" when the record does not tell: none is stored, or the
+        stored one cannot be read (damaged), which is logged by the record's id and stops no export (#246)."""
+        try:
+            return ai_check(self.ctx.inspection_result(inspection_id))
+        except (ValueError, KeyError, TypeError, AttributeError):  # not JSON, or JSON that is no stored result
+            self.ctx.log.warning("export.result_not_read", exc_info=True, extra={"inspection_id": inspection_id})
+            return ""
 
     def _csv_written(self, counts: tuple[int, int] | None, f: Path, checks_file: Path) -> None:
         if counts is None:

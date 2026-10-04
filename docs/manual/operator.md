@@ -52,7 +52,8 @@ Each board is judged with the AI model, recipe and Golden board in use when it s
 activates an AI model version, saves a recipe or sets a Golden board while the Inspection page is open, the next board
 uses it, whether you press Next Board or Start or load a new queue. During a run, the board in hand finishes with what it
 started with and the boards after it use the new one; the line under the banner and the alarm log say so with
-AOI-INSP-013. Each record names the AI model version, recipe revision and Golden board that judged it.
+AOI-INSP-013. Each record names the AI model version active when its board was judged, the recipe revision that
+judged it (which says whether the AI check ran) and the Golden board it was judged against.
 
 Reading the verdict: while a board is being inspected the banner turns grey and reads "Inspecting…", and the status
 bar at the bottom names the board and its place in the queue, such as "Inspecting board_07.png (3 of 12)…". The
@@ -78,27 +79,27 @@ exactly as they were decided and stored; the board is not inspected again. The S
 shows the Golden board, with a dashed box per defect, beside the board with its labelled defect boxes; Difference
 heatmap and AI score heatmap show the board under its map; Defect boxes only hides the Golden board and fits the board
 with its boxes to the width of both panes. Any other view brings the Golden board back and fits the board to its half
-again; a zoom is reset at either switch. The view stays as chosen for Test Image… and Re-evaluate, while "Compare
-with Golden board ›", Use Last Inspected, Golden Board and Reference… ask for a Golden board, so they show it in Side
-by side. The "why" box under the
-table explains the verdict in plain words, under the heading "Why this board is NG:": one sentence per failing check,
-the NG ones first, naming the check, its value and its threshold with their unit ("The changed area is 2.35 % of the
-board, at or above its threshold of 0.50 %."; an ROI's value is a multiple of the AI score threshold, "2.00 ×": the
-recipe's when an Engineer sets one, otherwise the AI model's). With no failing check it says that every check that
-decides the verdict is inside its threshold or, for a WARN, that defects above Minor severity are marked on the board,
-so a person needs to look. A sentence for each check that did not run (no Golden board set, or no AI model trained)
-says what to do; the Inspection page shows it under its summary too. A line under the verdict says when the result was
-judged and with which AI model version and recipe revision; when an Engineer has changed either since, it says so, and
-the table still shows the thresholds that applied at the time. When the result's heatmaps are no longer stored (OK
-results lose them after the retention period), the line says so with the code AOI-CMP-001, and the Side by side and
-Defect boxes only views still work. When the stored picture itself was deleted, or cannot be read (a message with
-AOI-CMP-006 names the file), the page says "Board picture no longer stored", the table still stands, and Re-evaluate
-inspects the board again from its image file. The Golden board pane names the file the result was judged against. When
-that file has changed, cannot be read or is gone, or the result names none (it was judged without one, or saved before
-this version), the pane says "Golden board not available" and why, rather than show today's Golden board, and
-Re-evaluate under it inspects the board again with today's; the line under the verdict names today's when an Engineer
-or a training run has set another. A long file name over a picture, in a message on its pane or in the line under the
-verdict wraps onto the next line after a _ or -.
+again; a zoom is reset at either switch. The view stays as chosen for Test Image… and Re-evaluate, while "Compare with
+Golden board ›", Use Last Inspected, Golden Board and Reference… ask for a Golden board, so they show it in Side by
+side. The "why" box under the table explains the verdict in plain words, under the heading "Why this board is NG:": one
+sentence per failing check, the NG ones first, naming the check, its value and its threshold with their unit ("The
+changed area is 2.35 % of the board, at or above its threshold of 0.50 %."; an ROI's value is a multiple of the AI score
+threshold, "2.00 ×": the recipe's when an Engineer sets one, otherwise the AI model's). With no failing check it says
+that every check that decides the verdict is inside its threshold or, for a WARN, that defects above Minor severity are
+marked on the board, so a person needs to look. A sentence for each check that did not run (no Golden board set, no AI
+model trained, or the AI check turned off in the recipe) says what to do; the Inspection page shows it under its summary
+too. A line under the verdict says when the result was judged, which AI model version was active and which recipe
+revision judged it; when the recipe turned the AI check off, the "why" box says that no AI model judged the board. When
+an Engineer has changed either since, the line says so, and the table still shows the thresholds that applied at the
+time. When the result's heatmaps are no longer stored (OK results lose them after the retention period), the line says
+so with the code AOI-CMP-001, and the Side by side and Defect boxes only views still work. When the stored picture
+itself was deleted, or cannot be read (a message with AOI-CMP-006 names the file), the page says "Board picture no
+longer stored", the table still stands, and Re-evaluate inspects the board again from its image file. The Golden board
+pane names the file the result was judged against. When that file has changed, cannot be read or is gone, or the result
+names none (it was judged without one, or saved before this version), the pane says "Golden board not available" and
+why, rather than show today's Golden board, and Re-evaluate under it inspects the board again with today's; the line
+under the verdict names today's when an Engineer or a training run has set another. A long file name over a picture, in
+a message on its pane or in the line under the verdict wraps onto the next line after a _ or -.
 
 ## 4. Alarms and messages
 

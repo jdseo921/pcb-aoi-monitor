@@ -314,7 +314,8 @@ class Database:
         a crash or a refused write leaves all or none (REQ-INSP-008, REQ-INSP-006; #179). `uid` is the record's UUID,
         which the names of its overlay and maps already carry (#245); a new one when None.
         `rec["result_json"]` is the whole result as `InspectionResult.to_dict` gives it, `model_uuid` and `recipe_uuid`
-        name the AI model version and recipe revision that decided it, `diff_map_path` and `ai_map_path` the map files
+        name the AI model version active when the board was judged and the recipe revision that judged it, which says
+        whether the AI check ran (its notes say so too, #246), `diff_map_path` and `ai_map_path` the map files
         beside the overlay, `reference_path` and `reference_sha256` the golden board file it was judged against and the
         SHA-256 of its bytes (every path is stored relative to the workspace), and each check is a dict with the fields
         of `Check` (name, value, threshold, rule, verdict, source, explain, region) (REQ-INSP-012)."""

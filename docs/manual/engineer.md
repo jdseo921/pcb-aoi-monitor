@@ -123,8 +123,9 @@ user now signed in presses Start to carry on with the queue, so no board is reco
 **Training or activating while boards are inspected.** A new AI model version, an activation or a rollback, a saved
 recipe and a Golden board set with Set Reference apply on the Inspection page from the next board that starts, with no
 need to leave the page: the board in hand finishes with what it started with, and a run in progress goes on with the
-new one, saying so under the verdict banner and in the alarm log with AOI-INSP-013. Each record names the AI model version, recipe revision and Golden board that
-judged it: the CSV export of Logs & Export lists the AI model version and recipe revision of each board, and Compare
+new one, saying so under the verdict banner and in the alarm log with AOI-INSP-013. Each record names the AI model
+version active when its board was judged, the recipe revision that judged it (which says whether the AI check ran)
+and the Golden board it was judged against: the CSV export of Logs & Export lists the AI model version and recipe revision of each board, and Compare
 shows a stored board beside the Golden board it was judged against.
 
 (to be written: training, progress and cancel, versions, activation and rollback, the model card)
@@ -191,8 +192,9 @@ folder elsewhere is stored as its full path.
 ## 7. Compare
 
 Opened from Inspection, or with Use Last Inspected, Compare shows the stored result as it was decided: the table's
-thresholds are the ones that applied then, and the line under the verdict names the AI model version and recipe
-revision that judged it and what the board model has moved to since. The Golden board pane shows the golden board
+thresholds are the ones that applied then, and the line under the verdict names the AI model version active when the
+board was judged and the recipe revision that judged it, and what the board model has moved to since (when that
+revision turned the AI check off, the "why" box says it did not run). The Golden board pane shows the golden board
 the result was judged against, named over the pane: each record keeps that file's path and the SHA-256 of the bytes
 the engine read, and the pane gives the reason instead when the file has changed, cannot be read or is gone, or none
 was recorded. When a stored map cannot be read (AOI-CMP-003), the heat views show the picture alone; when the stored
@@ -224,10 +226,14 @@ another reference)
 
 **Export CSV** on Logs & Export writes two files, UTF-8 with a byte-order mark so Excel opens Korean text: the file you
 name holds one row per record (id, time, board model, view, AI model version, recipe revision, result, score, defect
-count and types, operator, image and overlay paths, then the record's, model's and recipe's UUIDs), and `<name>_checks.csv`
-beside it holds one row per check that decided each verdict: the record's time, board model, view, model version and
-recipe revision with their UUIDs, then the check's number, region (the whole board, or an ROI's name and box), metric,
-source, value, threshold, rule and result. Records from before the checks were stored have no rows in the second file.
+count and types, operator, image and overlay paths, then the record's, model's and recipe's UUIDs and `ai_check`), and
+`<name>_checks.csv` beside it holds one row per check that decided each verdict: the record's time, board model, view,
+AI model version and recipe revision with their UUIDs and `ai_check`, then the check's number, region (the whole board,
+or an ROI's name and box), metric, source, value, threshold, rule and result. `ai_check` says whether the AI check ran
+on the record: `RAN`, `OFF` (turned off in the recipe; the AI model version is the one active then, which did not judge
+the board) or `NO_AI_MODEL` (none trained), and is empty for a record stored without its result or one whose stored
+result cannot be read (damaged), which the log names (`export.result_not_read`) without stopping the export. Records
+from before the checks were stored have no rows in the second file.
 Each export is confirmed first and written whole or not at all, the two CSV files together, and the audit trail
 records it: a file or folder inside the workspace, such as the suggested `exports` folder, relative to the workspace
 (`exports/inspections.csv`), so the entry still holds after the workspace folder moves; a folder outside it, such as a USB drive, with its full path. If

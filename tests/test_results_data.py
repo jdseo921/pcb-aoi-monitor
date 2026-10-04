@@ -186,7 +186,8 @@ def test_req_insp_012_all_five_present_in_csv(
 ) -> None:
     """The Logs & Export CSV carries the evidence too: a second file beside the records with one row per check (region,
     metric, source, value, threshold, rule, result) and the UUIDs of the AI model version and recipe revision, equal to
-    the checks table row for row; the records file keeps its columns and gains the UUIDs after them."""
+    the checks table row for row; the records file keeps its columns and gains the UUIDs after them, then ai_check,
+    whether the AI check ran (#246: RAN for these boards, empty for the older record)."""
     ctx = trained_ctx
     for path in regression_boards[:3]:
         ctx.inspect_file(BOARD, str(path))
@@ -207,9 +208,10 @@ def test_req_insp_012_all_five_present_in_csv(
     rows = ctx.inspections(board_model=BOARD)
     active = ctx.active_model(BOARD)
     assert active is not None and [int(r["id"]) for r in records] == [r["id"] for r in rows] and len(rows) == 4
-    assert list(records[0])[:4] == ["id", "time", "board_model", "view"] and list(records[0])[-3:] == [
-        "uuid", "model_uuid", "recipe_uuid",
+    assert list(records[0])[:4] == ["id", "time", "board_model", "view"] and list(records[0])[-4:] == [
+        "uuid", "model_uuid", "recipe_uuid", "ai_check",
     ]  # fmt: skip
+    assert [rec["ai_check"] for rec in records] == ["", "RAN", "RAN", "RAN"], "the older record has no stored result"
     for rec, r in zip(records, rows, strict=True):
         assert (rec["uuid"], rec["model_uuid"], rec["recipe_uuid"]) == tuple(
             r[k] or "" for k in ("uuid", "model_uuid", "recipe_uuid")

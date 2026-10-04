@@ -17,6 +17,7 @@ from pytestqt.qtbot import QtBot
 
 from aoi.core import explain as ex
 from aoi.core.inspector import (
+    AI_OFF_NOTE,
     NG,
     NO_AI_NOTE,
     NO_GOLDEN_NOTE,
@@ -180,9 +181,10 @@ def test_req_cmp_004_why_without_a_failing_check() -> None:
     golden = np.zeros((64, 64, 3), np.uint8)  # with neither a Golden board nor an AI model a board is refused (#169)
     compared = Inspector(Recipe(board_model="B"), reference=golden).inspect(golden)  # a Golden board, no AI model
     assert [s.text() for s in ex.notes(compared)] == NOTE_TEXTS[1:]
-    assert (NO_GOLDEN_NOTE, NO_AI_NOTE) == (  # results stored by earlier builds hold these words: they never change
+    assert (NO_GOLDEN_NOTE, NO_AI_NOTE, AI_OFF_NOTE) == (  # stored results hold these words: they never change
         "No golden reference image set for this board model; comparison skipped.",
         "No trained model for this board model; AI check skipped.",
+        "AI check turned off in the recipe; AI check skipped.",  # since #246
     )
 
 
