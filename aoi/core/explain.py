@@ -79,6 +79,16 @@ SEVERE_DEFECTS = QT_TRANSLATE_NOOP(
     "No check is NG or WARN, but {count} defects above Minor severity are marked on the board, so a person needs to"
     " look.",
 )
+TRIED_SEVERE_DEFECT = QT_TRANSLATE_NOOP(  # thresholds tried on a stored result: the board keeps its stored boxes
+    "Explain",
+    "No check is NG or WARN with these thresholds, but they would mark a defect above Minor severity, so a person would"
+    " need to look; the boxes on the board are the stored result's.",
+)
+TRIED_SEVERE_DEFECTS = QT_TRANSLATE_NOOP(
+    "Explain",
+    "No check is NG or WARN with these thresholds, but they would mark {count} defects above Minor severity, so a"
+    " person would need to look; the boxes on the board are the stored result's.",
+)
 UNEXPLAINED = QT_TRANSLATE_NOOP("Explain", "The stored checks do not show why; inspect the board again.")
 NOTES = {
     NO_GOLDEN_NOTE: QT_TRANSLATE_NOOP(
@@ -133,7 +143,7 @@ UNITS = {"Changed area %": "%", "Difference regions": "", "Alignment inliers": "
 TEMPLATES = [  # every template a screen may translate, for the tests
     *CHECKS.values(), *ROI_CHECK.values(), OTHER_CHECK, ALL_INSIDE, SEVERE_DEFECT, SEVERE_DEFECTS, UNEXPLAINED,
     *NOTES.values(), *STORED_NOTES.values(), OTHER_NOTE,
-    TRIED_AI_OFF,
+    TRIED_SEVERE_DEFECT, TRIED_SEVERE_DEFECTS, TRIED_AI_OFF,
 ]  # fmt: skip
 
 
@@ -166,7 +176,9 @@ def numbers(c: Check) -> tuple[str, str]:
 def explain(res: InspectionResult, stored: bool = False, tried: bool = False) -> list[Sentence]:
     """The sentences for `res`: one per NG check, then one per WARN check, each in the order the engine ran them (or,
     with none, why the verdict is what it is), then one per check that did not run (`notes`; `stored` for a stored
-    result, `tried` for what other thresholds give one, REQ-CMP-005)."""
+    result). `tried`: `res` is what other thresholds give a stored result (REQ-CMP-005), whose board picture keeps the
+    stored boxes, so defects that make it a WARN are ones the thresholds would mark, and whose AI-off note speaks of
+    those thresholds (`notes`, #246)."""
     out = []
     for c in [c for c in res.checks if c.verdict == NG] + [c for c in res.checks if c.verdict == WARN]:
         value, threshold = numbers(c)
@@ -177,7 +189,8 @@ def explain(res: InspectionResult, stored: bool = False, tried: bool = False) ->
             out.append(Sentence(CHECKS.get((c.name, c.verdict), OTHER_CHECK), {"check": c.name, **values}))
     severe = sum(d.severity != "Minor" for d in res.defects)
     if not out and res.verdict == WARN and severe:
-        out.append(Sentence(SEVERE_DEFECT) if severe == 1 else Sentence(SEVERE_DEFECTS, {"count": str(severe)}))
+        one, several = (TRIED_SEVERE_DEFECT, TRIED_SEVERE_DEFECTS) if tried else (SEVERE_DEFECT, SEVERE_DEFECTS)
+        out.append(Sentence(one) if severe == 1 else Sentence(several, {"count": str(severe)}))
     elif not out:  # an OK with no check at all, stored before #169, had nothing inside a threshold
         out.append(Sentence(ALL_INSIDE if res.verdict == OK and res.checks else UNEXPLAINED))
     return out + notes(res, stored, tried)

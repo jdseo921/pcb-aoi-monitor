@@ -334,7 +334,10 @@ class ComparePage(Page):
             return
         self._drop_tried()
         recipe, uuid = self._form_recipe(bm), self.stored["uuid"]
-        self._trying = self.run_in_background(self.ctx.re_evaluate, uuid, recipe, on_result=self._on_tried)
+        self._trying = self.run_in_background(
+            self.ctx.re_evaluate, uuid, recipe, on_result=self._on_tried,
+            on_error=lambda _: setattr(self, "_trying", None),  # a refusal holds no worker past its end (#132)
+        )  # fmt: skip
 
     def _on_tried(self, res: InspectionResult) -> None:
         """The checks and the explanation the thresholds tried give; the banner keeps the stored verdict."""
@@ -663,7 +666,7 @@ class ComparePage(Page):
         heading = self.tr("Why this board is {verdict}:").format(verdict=r.verdict)
         if tried:
             heading = self.tr("Why this board would be {verdict} with these thresholds:").format(verdict=r.verdict)
-        sentences = explain(r, stored=self.stored is not None, tried=tried)
+        sentences = explain(r, stored=self.stored is not None, tried=tried)  # tried: the board keeps the stored boxes
         return "<br>".join(
             [f"<b>{html.escape(heading)}</b>", *(f"• {html.escape(sentence_text(t))}" for t in sentences)]
         )

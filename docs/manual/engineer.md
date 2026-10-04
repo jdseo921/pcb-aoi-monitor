@@ -214,14 +214,16 @@ both panes say why, with the message's code (AOI-SET-013 when another program ho
 database), and the Golden board pane what to do; neither pane ever shows the result opened before.
 The thresholds form, Re-evaluate and Save to Recipe are in the Try other thresholds panel, for Engineer and Admin; an
 Operator does not see it, and Compare judges an Operator's boards by the board model's recipe, never by values left in
-the form. On a stored result, once its pictures and maps are read, Re-evaluate (Ctrl+R) judges it again with the form's
-thresholds from its stored maps and the calibration of the AI model that judged it, without running the AI model: the
-banner keeps the stored verdict, "Would be" beside Re-evaluate shows the verdict they give, and the table and the
-explanation show their checks until you change a threshold, open another result, inspect a board, change the board model
-or an Operator signs in. Nothing is stored. A result whose map is gone gives AOI-CMP-004, naming it: inspect the board
-again and try the thresholds on the new result. Any other board, and a pane's Re-evaluate › on a stored result, is
-inspected again from its image file with the form's thresholds and the current AI model, against the golden board as
-judged while it is shown (press Golden Board for today's).
+the form. On a stored result, once the load of its pictures and maps has ended, Re-evaluate (Ctrl+R) judges it again
+with the form's thresholds from its stored maps and the calibration of the AI model that judged it, without running the
+AI model: the banner keeps the stored verdict, "Would be" beside Re-evaluate shows the verdict they give, and the table
+and the explanation show their checks until you change a threshold, the form takes a revision saved on another page, you
+open another result, inspect a board or change the board model, or an Operator signs in. The board keeps the stored
+result's defect boxes: when defects make the verdict WARN, the explanation says how many the thresholds would mark.
+Nothing is stored. A result whose map is gone gives AOI-CMP-004, naming it: inspect the board again and try the
+thresholds on the new result. Any other board, and a pane's Re-evaluate › on a stored result, is inspected again from
+its image file with the form's thresholds and the current AI model, against the golden board as judged while it is shown
+(press Golden Board for today's).
 Save to Recipe saves the form's thresholds as a new revision. A stored result is judged again only under its own board
 model: with another board model in the header, Re-evaluate refuses with AOI-CMP-005 and names the board model to pick,
 and changing the header's board model clears the board of a record from Compare. A test image you picked stays,
