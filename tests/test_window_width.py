@@ -1,6 +1,7 @@
-"""Training's line over the samples table and Compare's file names never make the window wider than a 1920 px screen,
-however long the file names of the samples and boards are, and a file name in a message on a Compare pane stays within
-the pane (REQ-SET-004, #245).
+"""Training's line over the samples table never makes the window wider than a 1920 px screen: it cuts a long name at its
+end. Compare's file names, and the file names in a message on a Compare pane or on AI Model Test's preview pane, break
+after a _ or -, so they neither widen the window nor run past the pane's edge; a part of a name with neither stays whole
+(REQ-SET-004, #245).
 
 The window is as wide as its widest page asks, shown or not, so one label that grows with a file name widens every page.
 """
@@ -14,12 +15,13 @@ from pathlib import Path
 
 import pytest
 from PySide6.QtCore import QRect, Qt
-from PySide6.QtWidgets import QLabel
+from PySide6.QtWidgets import QLabel, QMessageBox
 from pytestqt.qtbot import QtBot
 
 from aoi.core.imaging import list_images
 from aoi.core.services import AppContext
 from aoi.ui.pages.compare import ComparePage
+from aoi.ui.pages.model_test import ModelTestPage
 from aoi.ui.pages.training import TrainingPage
 from tests.conftest import ZWSP, wrapped
 from tests.test_req_done_in_v01 import _window
@@ -135,6 +137,59 @@ def test_req_set_004_compare_names_never_widen_the_window(
     assert (f"AOI-CMP-001 The result of {board.name} was saved without" in note) != maps, note
 
 
+@pytest.mark.parametrize(
+    ("column", "said"),
+    [
+        ("diff_map_path", "AOI-CMP-003 The stored map {file} could not be read"),
+        ("overlay_path", "AOI-CMP-006 The stored board picture {file} of this result could not be read"),
+    ],
+    ids=["diff_map", "overlay"],
+)
+def test_req_set_004_a_damaged_stored_file_named_in_compares_note_never_widens_the_window(
+    qtbot: QtBot,
+    ctx: AppContext,
+    synthetic_dataset: Path,
+    ng_board: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    dialogs: list[tuple[str, str]],
+    column: str,
+    said: str,
+) -> None:
+    """A stored result whose difference map (AOI-CMP-003) or overlay picture (AOI-CMP-006) cannot be read adds the
+    error's code and what happened, which names the file, to the note under the verdict (#247). That name did not go
+    through breakable: `<first 40 characters of the stem>_<record UUID>_<verdict>[_diff].png` was one word for about
+    1 UUID in 5, drawn here every time, and with a 100-character board name a damaged map made the window 1940 to
+    1963 px wide (a damaged overlay, its name 5 characters shorter, about 1900 to 1920 px and sometimes over: 1921 px
+    once, as the width moves with the UUID's other hex digits). The names in the note now break after each _ and -;
+    the dialog and the alarm keep the name as it is."""
+    _digits_after_hyphens(monkeypatch)
+    stem = (LINE_NAME + "_PANEL" * 40)[:100]
+    _import(ctx, synthetic_dataset, tmp_path, stem, 3)
+    board = tmp_path / "SN9999" / f"{stem}.png"
+    board.parent.mkdir()
+    shutil.copy(ng_board, board)
+    ctx.inspect_file("TINY", str(board))
+    (rec,) = ctx.inspections(board_model="TINY")
+    damaged = Path(rec[column])
+    damaged.write_bytes(b"not an image")
+    win = _window(qtbot, ctx, "Engineer")
+    win.resize(1920, 1080)
+    win.navigate("Compare")
+    page = win.pages["Compare"]
+    assert isinstance(page, ComparePage)
+    page.show_stored(rec["id"])
+    qtbot.waitUntil(lambda: page._bg is None and bool(dialogs), timeout=30000)
+    qtbot.wait(50)  # the layout settles
+    code = said.split()[0]
+    print(column, "window min", win.minimumSizeHint().width(), "note min", page.note.minimumSizeHint().width())
+    assert win.minimumSizeHint().width() <= 1920, "a page asks for more than a 1920 px screen"
+    assert said.format(file=wrapped(damaged.name)) in page.note.text(), page.note.text()
+    assert [t.split()[0] for t, _ in dialogs] == [code] and damaged.name in dialogs[0][1], dialogs
+    alarm = next(a for a in ctx.alarms() if a["code"] == code)
+    assert damaged.name in str(alarm["message"]) and ZWSP not in str(alarm["message"])
+
+
 def _named_within(label: QLabel, path: Path) -> None:
     """`label`, a message on a picture's pane, names the whole `path`, and its text from the file's name on wraps within
     the label, the name breaking after each _ and -. The measure starts at the name: Qt never breaks a Windows path
@@ -202,3 +257,57 @@ def test_req_set_004_a_test_board_that_cannot_be_read_is_named_within_its_pane(
     qtbot.wait(50)  # the layout settles
     assert dialogs[0][0].startswith("AOI-INSP-004") and label.text().startswith("AOI-INSP-004 The file ")
     _named_within(label, bad)
+
+
+def test_req_set_004_ai_model_tests_preview_pane_wraps_the_names_aoi_tst_001_gives(
+    qtbot: QtBot,
+    ctx: AppContext,
+    synthetic_dataset: Path,
+    ng_board: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    dialogs: list[tuple[str, str]],
+) -> None:
+    """Run Test on a folder whose one board has a 100-character name, judged against the first of 3 OK samples with a
+    40-character stem (no AI model: the first OK sample is the Golden board), then Set Reference to the second sample
+    and the row selected. AI Model Test's preview pane refuses the row with AOI-TST-001, which names the row's file
+    and both samples' copies, `<stem>_<sample UUID>.png`. Those names did not go through breakable: for about 1 UUID in
+    5, drawn here every time, each copy's name was one word of about 930 px, and the row's name in the heading one of
+    about 1500 px, in labels of about 795 px at 1920x1080, so they ran past the pane's edges and were cut off (the
+    window stays 1920 px wide, as the pane's labels ask no minimum width). They now break after each _ and -."""
+    monkeypatch.setattr(QMessageBox, "information", staticmethod(lambda *a: QMessageBox.StandardButton.Ok))
+    _digits_after_hyphens(monkeypatch)
+    _import(ctx, synthetic_dataset, tmp_path, (LINE_NAME + "_PANEL" * 40)[:40], 3)
+    row = (LINE_NAME + "_PANEL" * 40)[:100] + ".png"
+    folder = tmp_path / "run"
+    (folder / "ng").mkdir(parents=True)
+    shutil.copy(ng_board, folder / "ng" / row)
+    win = _window(qtbot, ctx, "Engineer")
+    win.resize(1920, 1080)
+    win.navigate("AI Model Test")
+    page = win.pages["AI Model Test"]
+    assert isinstance(page, ModelTestPage)
+    page.folder = str(folder)
+    page.run()
+    qtbot.waitUntil(lambda: bool(page.rows) and page.btn_run.isEnabled(), timeout=60000)
+    run_golden, golden = (Path(str(s["path"])).name for s in ctx.samples("TINY", "OK")[:2])
+    assert Path(str(ctx.reference_image("TINY"))).name == run_golden
+    ctx.set_reference("TINY", ctx.samples("TINY", "OK")[1]["id"])
+    page.table.selectRow(0)
+    pane = page.preview_empty
+    qtbot.waitUntil(lambda: pane.sentence.isVisible() and pane.sentence.width() > 0, timeout=30000)
+    qtbot.wait(50)  # the layout settles
+    assert win.minimumSizeHint().width() <= 1920 and win.width() == 1920, "a page asks for more than the screen"
+    assert pane.sentence.text().startswith("AOI-TST-001 ") and "Not inspected" in page.preview_verdict.text()
+    assert page.run_note.isVisible(), "the note above the table names both Golden boards, as they are"
+    needs: dict[str, tuple[int, int]] = {}  # each label's width and what its text needs, wrapped at that width
+    for name, label in (("heading", pane.heading), ("sentence", pane.sentence)):
+        rect = QRect(0, 0, label.width(), 100000)
+        text = label.fontMetrics().boundingRect(rect, Qt.TextFlag.TextWordWrap, label.text()).width()
+        needs[name] = (label.width(), text)
+    print("label px, text needs px:", needs, pane.heading.text(), pane.sentence.text(), sep="\n")
+    assert all(text <= width for width, text in needs.values()), f"a name runs past the pane's edge: {needs}"
+    assert pane.heading.text() == f"{wrapped(row)} was not inspected"
+    for name in (row, run_golden, golden):
+        assert wrapped(name) in pane.sentence.text(), f"the name breaks after each _ and -: {name}"
+    assert dialogs == []
