@@ -336,10 +336,10 @@ def test_req_cmp_005_reevaluate_with_thousands_of_regions_under_300_ms(
     board_5mp: Path,  # noqa: F811
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Pixel difference 10 and Minimum defect area 1, values the what-if form and Recipe Editor take, leave thousands of
-    difference regions on the stored 5 MP board, and judged again with them the median of five calls is still under
-    300 ms. Before (#249), merging the regions into defects tested each against every one kept: about 5,600 regions and
-    a median of about 1.7 s, 1.5 s of it in the merge."""
+    """Pixel difference 10 and Minimum defect area 1, values Compare's Try other thresholds form and Recipe Editor take,
+    leave thousands of difference regions on the stored 5 MP board, and judged again with them the median of five calls
+    is still under 300 ms. Before (#249), merging the regions into defects tested each against every one kept: about
+    5,600 regions and a median of about 1.7 s, 1.5 s of it in the merge."""
     ctx = trained_ctx
     uuid = _store_5mp(ctx, board_5mp)
     _refuse_the_engine(monkeypatch)

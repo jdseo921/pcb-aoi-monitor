@@ -109,8 +109,8 @@ def test_req_insp_012_all_five_present_in_db(
             (c["region"], c["metric"], c["value"], c["threshold"], c["rule"], c["result"]) for c in checks
         ]
     assert {r["result"] for r in rows} >= {"OK", "NG"}, "boards the engine passes and fails (OK depends on the model)"
-    # The engine names the stored revision it applies, also when handed that recipe; an unsaved recipe (the Compare
-    # page's what-if thresholds) names none, so no record can claim a revision that did not decide it.
+    # The engine names the stored revision it applies, also when handed that recipe; an unsaved recipe (thresholds
+    # tried on Compare) names none, so no record can claim a revision that did not decide it.
     assert ctx.inspector(BOARD, recipe=ctx.recipe(BOARD)[1]).recipe_uuid == latest["uuid"]
     unsaved = ctx.inspector(BOARD, recipe=Recipe(board_model=BOARD, ssim_min=0.5))
     assert (unsaved.recipe_rev, unsaved.recipe_uuid, unsaved.model_uuid) == (None, None, active["uuid"])

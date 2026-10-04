@@ -538,7 +538,7 @@ def test_req_set_019_empty_states_link_next_step(
     win.set_user("operator")
     win.navigate("Compare")
     compare = win.pages["Compare"]
-    compare.run()  # Re-evaluate as the Operator; the newest run wins
+    compare.run()  # as Golden Board does for the Operator; the newest run wins
     ask = "Ask an Engineer to do this on Training."
     qtbot.waitUntil(lambda: compare.ref_empty.sentence.text() == ask, timeout=30000)
     assert compare.ref_empty.isVisibleTo(compare)
@@ -632,7 +632,7 @@ def test_req_set_019_empty_state_shows_every_line_in_a_narrow_area(qtbot: QtBot)
     empty = EmptyState(host)
     sentence = (  # Compare's Golden board pane, with and without the file's name
         "The Golden board this result was judged against{name} has changed since. The verdict and the decision table"
-        " are the stored ones; press Re-evaluate to inspect the board again with today's Golden board."
+        " are the stored ones; press Re-evaluate › to inspect the board again with today's Golden board."
     )
     host.show()
     qtbot.waitExposed(host)

@@ -153,8 +153,8 @@ def test_req_cmp_003_note_names_the_versions_and_missing_maps(
     monkeypatch: pytest.MonkeyPatch,
     dialogs: list[tuple[str, str]],
 ) -> None:
-    """The note names when and with which versions the result was judged, on the picture judged; Re-evaluate leaves
-    it and leaves no busy overlay behind; a new recipe revision and model version are named while the table keeps the
+    """The note names when and with which versions the result was judged, on the picture judged; inspecting again
+    leaves it, and no busy overlay behind; a new recipe revision and model version are named while the table keeps the
     old thresholds and no model loads; AOI-CMP-001 once both maps are gone; a deleted picture says so; Use Last
     Inspected opens the record or inspects a preview; an unknown record gives AOI-CMP-002."""
     ctx = trained_ctx
@@ -166,7 +166,7 @@ def test_req_cmp_003_note_names_the_versions_and_missing_maps(
     win.navigate("Compare")
     qtbot.waitUntil(ctx.jobs.idle, timeout=10000)
     compare.show_stored(iid)
-    compare.run()  # Re-evaluate: a fresh inspection with the form's thresholds, no longer the stored result
+    compare.run()  # inspected again from its image file: a fresh inspection, no longer the stored result
     assert compare.stored is None and compare.note.isHidden()
     compare.show_stored(iid)  # while that inspection runs
     qtbot.waitUntil(lambda: ctx.jobs.idle() and compare.test_view._pix is not None, timeout=20000)
@@ -237,9 +237,9 @@ def test_req_cmp_003_golden_board_as_judged(
     qtbot: QtBot, trained_ctx: AppContext, ng_board: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Each record names the golden board its engine judged against, with the SHA-256 of its bytes (migration 0008):
-    Compare shows that board after an Engineer set another, and Re-evaluate keeps it until Golden Board is pressed;
+    Compare shows that board after an Engineer set another, and inspecting the board again keeps it until Golden Board;
     when its file has other bytes, cannot be read or is gone, or none was recorded, the pane says so and what to do,
-    one click from Re-evaluate; nothing is inspected again."""
+    one click from Re-evaluate ›; nothing is inspected again."""
     ctx, golden = trained_ctx, Path(str(trained_ctx.reference_image(BOARD)))
     engine = ctx.inspector(BOARD)  # an Inspection run keeps one engine while an Engineer sets another golden board
     other = next(s for s in ctx.samples(BOARD, "OK") if Path(s["path"]) != golden)
@@ -258,7 +258,7 @@ def test_req_cmp_003_golden_board_as_judged(
     shown: list[np.ndarray | None] = []
     monkeypatch.setattr(compare.ref_view, "set_image", lambda img, *a: shown.append(img))
     as_judged = f"Golden board as judged: {wrapped(golden.name)}"
-    for press in (lambda: compare.show_stored(iid), compare.run):  # the stored result, then Re-evaluate
+    for press in (lambda: compare.show_stored(iid), compare.run):  # the stored result, then inspected again
         press()
         qtbot.waitUntil(lambda: compare._bg is None, timeout=10000)
         assert np.array_equal(shown[-1], ctx.load_image(golden)) and compare.ref_label.text() == as_judged
@@ -405,8 +405,8 @@ def test_req_cmp_004_a_stored_results_notes_on_compare_speak_of_the_day_it_was_i
 ) -> None:
     """A board inspected while its board model had a Golden board and no AI model is stored with the note that the AI
     check did not run. Opened on Compare, the "why" box said "No AI model is trained for this board model", of today
-    (review B of S28a, N7); it now says that none was trained when the board was inspected. Re-evaluate gives a fresh
-    result, whose note speaks of today again. The next test has an AI model trained since."""
+    (review B of S28a, N7); it now says that none was trained when the board was inspected. Inspected again,
+    it gives a fresh result whose note speaks of today again. The next test has an AI model trained since."""
     ok = sorted(synthetic_dataset.glob("train/ok/*.png"))[:2]
     ctx.import_samples(BOARD, [str(p) for p in ok], "OK")  # a new board model: its Golden board, and no AI model
     ctx.inspect_file(BOARD, str(ng_board))
@@ -426,7 +426,7 @@ def test_req_cmp_004_a_stored_results_notes_on_compare_speak_of_the_day_it_was_i
     )
     assert compare.why.toPlainText().split("\n")[-1] == then, compare.why.toPlainText()
     assert compare.test_empty.isHidden() and compare.ref_empty.isHidden(), "both pictures show: no pane's link"
-    compare.run()  # Re-evaluate: a fresh result, with today's board model
+    compare.run()  # inspected again from its image file: a fresh result, with today's board model
     qtbot.waitUntil(lambda: compare._bg is None and compare.stored is None and compare.res is not None, timeout=20000)
     today = "• No AI model is trained for this board model, so the AI check did not run: an Engineer trains one on"
     assert compare.why.toPlainText().split("\n")[-1].startswith(today), compare.why.toPlainText()
@@ -442,8 +442,8 @@ def test_req_cmp_004_a_board_inspected_before_its_ai_model_was_trained_says_so_o
 ) -> None:
     """N7 itself (review B of S28a): a board inspected before its board model had an AI model, opened on Compare once
     one is active, says that none was trained when it was inspected, and the note names the AI model the board model
-    moved to; Re-evaluate judges it with that AI model. A board inspected without a Golden board says so too; while
-    the board model still has none, the Golden board pane promises none (Re-evaluate inspects the board again from its
+    moved to; inspected again, it gets that AI model. A board inspected without a Golden board says so too; while
+    the board model still has none, the Golden board pane promises none (its link inspects the board again from its
     image file, and does so without one), and once one is set it names today's (S28b review)."""
     ctx = trained_ctx
     golden = ctx.reference_image(BOARD)
@@ -470,12 +470,12 @@ def test_req_cmp_004_a_board_inspected_before_its_ai_model_was_trained_says_so_o
     compare.show_stored(no_ai)
     assert last(no_ai).startswith("• No AI model was trained for this board model when the board was inspected")
     assert "Since then the board model moved to AI model v1.0" in compare.note.text(), compare.note.text()
-    compare.run()  # Re-evaluate: judged with the AI model active today
+    compare.run()  # inspected again from its image file: judged with the AI model active today
     assert "No AI model" not in last(None) and compare.res is not None and compare.res.notes == []
     compare.show_stored(no_golden)
     assert last(no_golden).startswith("• No Golden board was in use for this board model when the board was inspected")
     judged_without = "This result was judged without a Golden board. The verdict and the decision table are the stored"
-    from_file = f"{judged_without} ones; press Re-evaluate to inspect the board again from its image file."
+    from_file = f"{judged_without} ones; press Re-evaluate › to inspect the board again from its image file."
     assert compare.ref_empty.sentence.text() == from_file and compare.ref_empty.link.text() == "Re-evaluate ›"
     compare.ref_empty.link.click()  # still no Golden board today: the board is judged without one
     assert last(None).startswith("• No Golden board is set for this board model"), compare.why.toPlainText()
@@ -484,7 +484,7 @@ def test_req_cmp_004_a_board_inspected_before_its_ai_model_was_trained_says_so_o
     compare.show_stored(no_golden)
     assert last(no_golden).startswith("• No Golden board was in use for this board model when the board was inspected")
     assert compare.ref_empty.sentence.text().endswith(
-        "press Re-evaluate to inspect the board again with today's Golden board."
+        "press Re-evaluate › to inspect the board again with today's Golden board."
     )
     assert not dialogs
 
@@ -596,9 +596,9 @@ def test_req_cmp_003_new_with_the_board_models_own_name_keeps_the_stored_result(
     dialogs: list[tuple[str, str]],
 ) -> None:
     """#247: "+ New" with the name of the board model in the header, while Compare showed a stored result judged with
-    recipe revision 1: Compare dropped it and inspected the board again with revision 2, unasked, and lost the what-if
-    values typed in the form. Now nothing changes, also for any other notice of the same board model, and the status
-    bar says the board model is already selected."""
+    recipe revision 1: Compare dropped it and inspected the board again with revision 2, unasked, and lost the values
+    typed in the Try other thresholds form. Now nothing changes, also for any other notice of the same board model,
+    and the status bar says the board model is already selected."""
     ctx = trained_ctx
     ctx.inspect_file(BOARD, str(ng_board))
     rid = ctx.inspections(board_model=BOARD)[0]["id"]
@@ -612,7 +612,7 @@ def test_req_cmp_003_new_with_the_board_models_own_name_keeps_the_stored_result(
     qtbot.waitUntil(lambda: ctx.jobs.idle() and compare._bg is None, timeout=20000)
     compare.show_stored(rid)
     qtbot.waitUntil(lambda: compare._bg is None and compare.test_view._pix is not None, timeout=20000)
-    compare.min_area.setValue(compare.min_area.value() + 7)  # a what-if value, typed and not saved
+    compare.min_area.setValue(compare.min_area.value() + 7)  # a threshold tried, typed and not saved
 
     def page() -> tuple[object, ...]:
         return (compare.verdict.text(), compare.test_label.text(), compare.note.text(), _table(compare))

@@ -2,8 +2,10 @@
 
 Optional page (reachable from the sidebar or "Compare with Golden" on the
 Inspection screen) that shows the golden reference next to a test board and
-every metric that decided OK / WARN / NG, with what-if thresholds; a stored
-result is shown as it was decided and never inspected again (REQ-CMP-003).
+every metric that decided OK / WARN / NG; a stored result is shown as it was
+decided and never inspected again (REQ-CMP-003). The "Try other thresholds"
+panel is for an Engineer or Admin and hidden for an Operator (REQ-CMP-005,
+docs/adr/0006-judging-a-stored-result-again.md decision 4).
 """
 
 from __future__ import annotations
@@ -133,6 +135,8 @@ class ComparePage(Page):
         self.form_revision: tuple[str, int] | None = None  # the board model and recipe revision the form came from
         self.shown_board_model: str | None = None  # the header's board model the page last followed (#247)
         self.judge_on_show = False  # the header changed while the page was hidden: judge its board when shown (#247)
+        self.by_form = False  # the board shown was inspected with the form's thresholds, not the recipe's
+        self.operator_form = False  # the form was loaded from the recipe when the Operator signed in
         self._fitted = False
 
         bar = QHBoxLayout()
@@ -205,8 +209,8 @@ class ComparePage(Page):
         self.why.setMaximumHeight(150)
         pl.addWidget(self.why)
 
-        g = QGroupBox(self.tr("What-if thresholds (not saved until you press Save to Recipe)"))
-        f = QFormLayout(g)
+        self.tryout = QGroupBox(self.tr("Try other thresholds (nothing is saved until you press Save to Recipe)"))
+        f = QFormLayout(self.tryout)
         self.ai_thr = QDoubleSpinBox()
         self.ai_thr.setDecimals(3)
         self.ai_thr.setRange(0, 1e4)
@@ -231,7 +235,7 @@ class ComparePage(Page):
         self.btn_save = button(self.tr("Save to Recipe"), "primary", self.save_recipe)  # the page's one blue primary
         row.addWidget(self.btn_save)
         f.addRow(row)
-        pl.addWidget(g)
+        pl.addWidget(self.tryout)
         split.addWidget(panel)
         split.setSizes([800, 920])  # the decision table shows all six columns at 1920 x 1080
         self.root.addWidget(split, 1)
@@ -293,7 +297,7 @@ class ComparePage(Page):
         self.max_regions.setValue(r.max_diff_regions)
 
     def _form_recipe(self, board_model: str) -> Recipe:
-        """The board model's recipe with the what-if thresholds from the form."""
+        """The board model's recipe with the thresholds from the form."""
         _, r = self.ctx.recipe(board_model)
         r = copy.deepcopy(r)
         r.anomaly_threshold = self.ai_thr.value() or None
@@ -323,7 +327,8 @@ class ComparePage(Page):
         self.note.hide()
         if self.test_path:
             self.test_label.setText(self.tr("Test board: {file}").format(file=breakable(Path(self.test_path).name)))
-        recipe = self._form_recipe(bm) if self.test_path else None
+        recipe = self._form_recipe(bm) if self.test_path and self.ctx.role != "Operator" else None  # else the recipe
+        self.by_form = recipe is not None  # an Operator signing in has it judged again by the recipe
         judged = self.as_judged[1] if self.as_judged and not self.ref_override else None
         if not self.ref_override:
             self.golden_seen = self.golden_board_stamp()
@@ -420,12 +425,12 @@ class ComparePage(Page):
             what = self.tr(JUDGED[judged]).format(file=breakable(Path(recorded or "").name))
             if self.record_board_model and self.ctx.reference_image(self.record_board_model):
                 do = self.tr(
-                    "The verdict and the decision table are the stored ones; press Re-evaluate to inspect the board"
+                    "The verdict and the decision table are the stored ones; press Re-evaluate › to inspect the board"
                     " again with today's Golden board."
                 )
             else:  # none today either: Re-evaluate judges the board without one, so the sentence promises none
                 do = self.tr(
-                    "The verdict and the decision table are the stored ones; press Re-evaluate to inspect the board"
+                    "The verdict and the decision table are the stored ones; press Re-evaluate › to inspect the board"
                     " again from its image file."
                 )
             self.ref_empty.show_state(
@@ -557,7 +562,7 @@ class ComparePage(Page):
         """The test pane of a stored result without its picture: `why`, that the verdict and the table stand, and
         Re-evaluate."""
         sentence = self.tr(
-            "The verdict and the decision table are the stored ones; press Re-evaluate to inspect the board again"
+            "The verdict and the decision table are the stored ones; press Re-evaluate › to inspect the board again"
             " from its image file."
         )
         self.test_empty.show_state(heading, f"{why} {sentence}".strip(), self.tr("Re-evaluate ›"), self.run)
@@ -677,7 +682,7 @@ class ComparePage(Page):
         of the board before stays under its name (#172); Re-evaluate inspects it."""
         self._clear_result()
         file = breakable(Path(self.test_path).name) if self.test_path else ""
-        what = self.tr("{file} was not inspected; press Re-evaluate to inspect it.").format(file=file)
+        what = self.tr("{file} was not inspected; press Re-evaluate › to inspect it.").format(file=file)
         self.test_empty.show_state(self.tr("Inspection cancelled"), what, self.tr("Re-evaluate ›"), self.run)
 
     def _not_inspected(self, e: BaseException) -> None:
@@ -689,7 +694,7 @@ class ComparePage(Page):
         self._clear_result()
         shown = breakable_names(e) if isinstance(e, AoiError) else e  # the file it names wraps in the pane (#245)
         heading, sentence = self.not_inspected(self.verdict, breakable(Path(self.test_path).name), shown)
-        what = " ".join([sentence, self.tr("Press Re-evaluate to inspect it again.")])
+        what = " ".join([sentence, self.tr("Press Re-evaluate › to inspect it again.")])
         self.test_empty.show_state(heading, what, self.tr("Re-evaluate ›"), self.run)
 
     def on_board_model_changed(self, name: str | None) -> None:
@@ -712,8 +717,29 @@ class ComparePage(Page):
         elif name:  # only the Golden board to read: now, not asked for, so the pane is ready at start-up
             self._start(quiet=True)
 
+    def _sync_roles(self) -> None:
+        """The threshold panel for an Engineer or Admin only, hidden for an Operator, who never sees what other
+        thresholds would give (REQ-CMP-005; ADR 0006 decision 4, sketch Q17): for an Operator the hidden form holds the
+        recipe's thresholds, read once at the sign-in, which the Difference heatmap follows, and a board inspected with
+        an Engineer's is cleared and judged again by the recipe, a run of it still going replaced (review)."""
+        engineer = self.ctx.role != "Operator"
+        self.tryout.setVisible(engineer)
+        self.btn_save.setEnabled(engineer)
+        if engineer or self.operator_form:  # the form is the recipe's since the Operator signed in: no read again
+            self.operator_form = not engineer
+            return
+        self.operator_form = True
+        scale = self.diff_thr.value()
+        self._load_recipe_into_form()  # values an Engineer left there unsaved go
+        if self.diff_thr.value() != scale and self.mode.currentIndex() == MODE_DIFF:
+            self.redraw()
+        going = self._bg is not None and not self._bg.job.cancelled  # a run stopped, by Cancel say, is not replaced
+        if self.by_form and self.stored is None and (self.res is not None or going):
+            self._clear_result()  # no verdict, table or "why" by the form's thresholds while the recipe judges it
+            self._start(quiet=True)  # by the recipe now: the newest run wins, so a run with the form's never shows
+
     def on_show(self) -> None:
-        self.btn_save.setEnabled(self.ctx.role != "Operator")
+        self._sync_roles()
         if self.golden_state and self.board_model:
             self._show_golden_state()
         fresh = self.stored is None and not self.ref_override  # a stored result is never inspected again unasked

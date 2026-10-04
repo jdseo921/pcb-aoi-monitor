@@ -212,7 +212,9 @@ Golden board pane shows the golden board as judged, the verdict and table stand,
 line under the verdict keeps the error's code. When nothing of the result's pictures can be read,
 both panes say why, with the message's code (AOI-SET-013 when another program holds the workspace
 database), and the Golden board pane what to do; neither pane ever shows the result opened before.
-Re-evaluate inspects the board again with the form's thresholds and the current AI model, against
+The thresholds form, Re-evaluate and Save to Recipe are in the Try other thresholds panel, for Engineer and Admin; an
+Operator does not see it, and Compare judges an Operator's boards by the board model's recipe, never by values left in
+the form. Re-evaluate inspects the board again with the form's thresholds and the current AI model, against
 that same golden board while it is shown (press Golden Board for today's), and shows that fresh result instead;
 Save to Recipe saves the form's thresholds as a new revision. A stored result is judged again only under its own board
 model: with another board model in the header, Re-evaluate refuses with AOI-CMP-005 and names the board model to pick,
@@ -224,7 +226,11 @@ alarm; Re-evaluate shows the message and stores the alarm, which is kept even wh
 or start another. "+ New" with the name of the board model already in the header changes nothing: the status
 bar says it is already selected, and a stored result stays as it was. The thresholds form is loaded again
 from the recipe whenever a new revision has been saved since (on Recipe Editor, for example), so Save to Recipe never
-puts back the thresholds of an older revision; values tried and not saved stay while no revision is saved. Cancel on
+puts back the thresholds of an older revision; values tried and not saved stay while no revision is saved and no
+Operator signs in. When an Operator signs in, the form goes back to the recipe's thresholds, and a board you inspected
+with values not saved is cleared and inspected again by the recipe, even while your inspection still runs, so the
+Operator never sees its verdict, decision table or explanation, even after signing in on another page; an inspection
+you cancelled stays cancelled, and a stored result stays as it was decided. Cancel on
 the busy overlay clears the verdict, table and picture and says the board named over the picture was not inspected;
 Re-evaluate inspects it. A test image that cannot be read does the same: the banner reads "· Not inspected" and the
 pane gives the error's code and what happened. A long file name over a picture, in a message on a picture's pane or

@@ -554,7 +554,8 @@ def test_req_set_004_sizes_and_contrast_on_every_page(
                 findings += _check_targets(where, win, title, seen)
     enough = {"pages": 21, "text": 500, "buttons": 100, "contrast": 500, "targets": 200, "image_text": 2}
     enough |= {"popup_rows": 80, "calendar_cells": 300, "calendar_hover": 12}  # 6 calendars: Logs From and To, 3 roles
-    enough |= {"calendar_arrows": 24, "field_menus": 11, "menu_entries": 72 + 11 * 7}  # 12 months; 7 entries a field
+    enough |= {"calendar_arrows": 24, "field_menus": 10, "menu_entries": 72 + 10 * 7}  # 12 months; 7 entries a field
+    # (a field's menu per page and role with a field: Compare's are in Try other thresholds, hidden for an Operator)
     assert all(seen[k] >= n for k, n in enough.items()), seen
     assert not findings, f"{len(findings)} findings:\n" + "\n".join(sorted(set(findings)))
 

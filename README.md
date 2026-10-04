@@ -54,7 +54,8 @@ The first launch opens as `admin`; use **Switch User** to see the Operator view.
 
 * Put at least **20 good boards** (more is better) of one board model, photographed with the same camera, distance
   and lighting, into `ok\`. Defective examples go into `ng\` (optionally `ng\solder_bridge\` etc. to label the type).
-* Train, then tune thresholds on **Compare** (what-if) or in **Recipe Editor**, and validate on a separate test folder.
+* Train, then tune thresholds on **Compare** (Try other thresholds, Engineer and Admin) or in **Recipe Editor**, and
+  validate on a separate test folder.
 
 ## Checks
 

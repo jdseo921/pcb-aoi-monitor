@@ -81,14 +81,14 @@ def test_issue_132_compare_keeps_only_the_result_it_shows(
     synthetic_dataset: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Opening one stored result after another, then Re-evaluate: each result Compare showed before is freed."""
+    """Opening one stored result after another, then inspecting the board again: each result shown before is freed."""
     other = next(p for p in sorted(synthetic_dataset.glob("test/ng/*.png")) if p != ng_board)
     for path in (ng_board, other):
         trained_ctx.inspect_file(BOARD, str(path))
     b_id, a_id = (r["id"] for r in trained_ctx.inspections(board_model=BOARD)[:2])
     page, _ = _compare(qtbot, trained_ctx, monkeypatch)
     shown = [weakref.ref(_open(qtbot, page, i)) for i in (a_id, b_id, a_id)]
-    page.run()  # Re-evaluate: a new result, from the board's image file
+    page.run()  # inspected again: a new result, from the board's image file
     qtbot.waitUntil(lambda: page._bg is None and page.stored is None and page.res is not None, timeout=20000)
     gc.collect()
     assert [r() for r in shown] == [None] * 3, "a stored result goes once another result is shown"
