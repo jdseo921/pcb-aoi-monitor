@@ -168,7 +168,13 @@ ends after such a change is stored but not shown. The report is written whole or
 audit trail; when it cannot be written (a folder that cannot be made, a file open in a viewer, a full disk), the
 app shows AOI-LOG-002 and an earlier report of that name stays as it was. Selecting a row previews that board; when
 it cannot be inspected (its file moved, for example), the preview reads "· Not inspected" with no picture, never the
-verdict of the row before.
+verdict of the row before. A preview is judged by the AI model, recipe revision and Golden board that judged the run.
+Once another is in use (training ended, a version was activated, a recipe saved or a Golden board set), a selected
+row is not previewed: the pane reads "Not inspected" with AOI-TST-001, and Compare's Use Last Inspected keeps the board
+it had. A line above the table then names what judged the run and what is in use now; it shows when the page is opened
+or a row is selected, so after a training run that ends while the page stays open it appears at the next row selected.
+The rows and both exports still describe the stored run; press **Run Test Again** to test the folder with what is in
+use now. A preview still being inspected when a new run ends is not shown beside its rows.
 A folder inside the workspace is stored relative to it, so a moved workspace still finds the run's folder and images; a
 folder elsewhere is stored as its full path.
 

@@ -33,7 +33,7 @@ from ..errors import QT_TRANSLATE_NOOP, AoiError, Phrase, joined
 from ..times import local_date, now_utc
 from . import anomaly
 from .imaging import align_to_reference, encode_image, list_images, load_image, load_image_sha256, save_image
-from .inspector import NG, OK, WARN, AiEvidence, InspectionResult, Inspector, draw_overlay, re_grade
+from .inspector import NG, OK, WARN, AiEvidence, InspectionResult, Inspector, JudgedBy, draw_overlay, re_grade
 from .jobs import JobCancelled, Jobs
 from .maps import load_maps, picture_shape, save_maps
 from .recipe import Recipe
@@ -518,11 +518,12 @@ class AppContext:
         model, version, model_uuid = (mv[1], mv[0], mv[2]) if mv else (None, None, None)
         return Inspector(recipe or rcp, model, reference, side, version, rev, model_uuid, recipe_uuid, golden, sha)
 
-    def engine_is_current(self, board_model: str, insp: Inspector) -> bool:
+    def engine_is_current(self, board_model: str, insp: Inspector | JudgedBy) -> bool:
         """Whether `insp` was built from what `inspector(board_model)` would use now: the active AI model, the latest
         recipe revision and the Golden board, by UUID and path (`Inspector.inputs`). It reads the database only, no
         image or weights, so the Inspection page asks before each board whether the engine it keeps is still the one to
-        use: a training run, an activation or a saved recipe makes it stale (#243)."""
+        use: a training run, an activation or a saved recipe makes it stale (#243). AI Model Test asks it with the
+        `JudgedBy` of a run before a row is previewed (#250), so both pages agree on when a result is current."""
         active = self.db.active_model(board_model)
         latest = self.db.latest_recipe(board_model)
         now = str(active["uuid"]) if active else None, latest[2] if latest else None, self.db.reference(board_model)
@@ -681,12 +682,14 @@ class AppContext:
     @requires("Engineer", QT_TRANSLATE_NOOP("Errors", "Running an AI model test"))
     def batch_test(
         self, board_model: str, folder: str, progress: Callable[[int, int], None] | None = None
-    ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
-        """Validate the active AI model on a folder and store the run: (metrics, rows), one row per image. Ground truth
-        comes from sub-folder names: under `ng`/`defect` NG, under `ok`/`good` OK, elsewhere no label ("?"); `pass_fail`
-        is PASS when the verdict (WARN as NG) matches the label, FAIL when not and NO_LABEL without one. Each row
-        ends with the run's UUID, the AI model version and its UUID (run_uuid, model_version, model_uuid; None without
-        an AI model), as the CSV export writes them (REQ-SET-017)."""
+    ) -> tuple[dict[str, Any], list[dict[str, Any]], JudgedBy]:
+        """Validate the active AI model on a folder and store the run: (metrics, rows, judged_by), one row per image,
+        and the AI model, recipe revision and Golden board that judged them all (#250; beside the rows, not in them,
+        since the CSV export writes every key of a row). Ground truth comes from sub-folder names: under `ng`/`defect`
+        NG, under `ok`/`good` OK, elsewhere no label ("?"); `pass_fail` is PASS when the verdict (WARN as NG) matches
+        the label, FAIL when not and NO_LABEL without one. Each row ends with the run's UUID, the AI model version and
+        its UUID (run_uuid, model_version, model_uuid; None without an AI model), as the CSV export writes them
+        (REQ-SET-017)."""
         insp = self.inspector(board_model)
         files = list_images(folder)
         rows = []
@@ -714,7 +717,7 @@ class AppContext:
             ids = {"run_uuid": run_uuid, "model_version": insp.model_version, "model_uuid": insp.model_uuid}
             after = {"folder": to_stored(Path(folder).absolute(), self.settings.root), **ids, **metrics}
             self.audit("test.run", "board_model", board_model, None, after)
-        return metrics, [{**r, **ids} for r in rows]
+        return metrics, [{**r, **ids} for r in rows], insp.judged_by
 
     # --- what the screens read (REQ-USR-001: pages call only AppContext, never the database) ---
     def board_models(self) -> list[str]:

@@ -474,7 +474,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+52"/>
+        <location line="+53"/>
         <source>{file}: {defects} defect(s)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -484,7 +484,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+139"/>
+        <location line="+141"/>
         <source>Re-evaluating a result</source>
         <translation type="unfinished"></translation>
     </message>
@@ -569,12 +569,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-561"/>
+        <location line="-564"/>
         <source>its UUID {found} is not {uuid}, as in the AI model registry</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+576"/>
+        <location line="+579"/>
         <source>Changing settings</source>
         <translation type="unfinished"></translation>
     </message>
@@ -671,7 +671,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+213"/>
+        <location line="+236"/>
         <source>board image</source>
         <translation type="unfinished"></translation>
     </message>
@@ -881,12 +881,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1"/>
-        <source>The AI model, recipe or Golden board of {board} changed during a run (training ended, a version was activated, a recipe saved or a Golden board set), so {file} and the boards after it are judged with what is active now; the boards before keep what judged them.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+6"/>
+        <location line="+7"/>
         <source>No action is needed: each record names the AI model version, recipe revision and Golden board that judged it.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1108,6 +1103,21 @@
     </message>
     <message>
         <location line="+10"/>
+        <source>AI model, recipe or Golden board changed since the run</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>{file} was judged in this run by AI model {run_model}, recipe revision {run_recipe} and Golden board {run_golden}; {board_model} now uses AI model {model}, recipe revision {recipe} and Golden board {golden}, so a preview would not show the verdict of its row.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+6"/>
+        <source>Press Run Test Again to test the folder with what is in use now; the run&apos;s rows, CSV and report keep the verdicts it gave.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+8"/>
         <source>Recipe saved since it was opened</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1387,7 +1397,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-528"/>
+        <location line="-543"/>
         <source>Board judged NG</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1397,7 +1407,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+134"/>
+        <location line="+114"/>
+        <source>The AI model, recipe or Golden board of {board} changed during a run (training ended, a version was activated, a recipe saved or a Golden board set), so {file} and the boards after it are judged with what is active now; the boards before keep what judged them.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+20"/>
         <source>The decision table is the stored one; use Side by side or Defect boxes only, or inspect the board again on Inspection to see its heatmaps.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1417,7 +1432,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+113"/>
+        <location line="+128"/>
         <source>ROI thresholds refused</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2332,26 +2347,26 @@
 <context>
     <name>ModelTestPage</name>
     <message>
-        <location filename="../ui/pages/model_test.py" line="+76"/>
-        <location line="+186"/>
+        <location filename="../ui/pages/model_test.py" line="+78"/>
+        <location line="+263"/>
         <source>Select Test Folder…</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-185"/>
-        <location line="+91"/>
-        <location line="+80"/>
+        <location line="-262"/>
+        <location line="+99"/>
+        <location line="+148"/>
         <source>Run Test</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-169"/>
-        <location line="+189"/>
+        <location line="-245"/>
+        <location line="+266"/>
         <source>Export CSV</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-188"/>
+        <location line="-265"/>
         <source>Export Report</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2381,7 +2396,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+15"/>
+        <location line="+20"/>
         <source>Image</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2401,7 +2416,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-72"/>
+        <location line="-78"/>
         <source>Matches label</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2416,7 +2431,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+71"/>
+        <location line="+77"/>
         <source>Matches label?</source>
         <comment>whether the verdict matches the image&apos;s label</comment>
         <translation type="unfinished"></translation>
@@ -2432,12 +2447,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+8"/>
+        <location line="+9"/>
         <source>Validation folder (with ok/ and ng/ sub-folders)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+17"/>
+        <location line="+19"/>
         <source>No AI model</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2457,12 +2472,22 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+13"/>
+        <location line="+17"/>
         <source>{labelled} labelled of {images} images  ·  TP {tp}  FN {fn}  FP {fp}  TN {tn}  ·  WARN counts as NG</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+65"/>
+        <location line="+75"/>
+        <source>Run Test Again ›</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+10"/>
+        <source>These results were judged by AI model {run_model}, recipe revision {run_recipe} and Golden board {run_golden}; {board_model} now uses AI model {model}, recipe revision {recipe} and Golden board {golden}. Rows are not previewed: Run Test Again tests the folder with what is in use now.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+45"/>
         <source>No AI model for {board_model} yet</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2512,7 +2537,8 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+5"/>
+        <location line="-129"/>
+        <location line="+134"/>
         <location line="+4"/>
         <source>none</source>
         <translation type="unfinished"></translation>
@@ -2659,7 +2685,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/model_test.py" line="-262"/>
+        <location filename="../ui/pages/model_test.py" line="-340"/>
         <source>AI Model Test</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3255,7 +3281,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/services.py" line="-1102"/>
+        <location filename="../core/services.py" line="-1105"/>
         <source>Aligning {count} images to the reference board</source>
         <translation type="unfinished"></translation>
     </message>

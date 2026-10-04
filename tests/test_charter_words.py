@@ -222,7 +222,7 @@ def test_req_tst_003_an_image_with_no_label_never_reads_as_matching_it(
     translator = _Marking()
     assert QCoreApplication.installTranslator(translator)
     try:
-        page._show((page.metrics, [stored, labelled]), str(folder), BOARD)
+        page._show((page.metrics, [stored, labelled], page.run_judged), str(folder), BOARD)
         shown = sorted(cell_item(page.table, i, 4).text() for i in range(page.table.rowCount()))
         report = page._report_html()
     finally:

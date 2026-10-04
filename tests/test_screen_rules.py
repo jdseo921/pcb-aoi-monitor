@@ -226,7 +226,7 @@ def test_req_insp_002_verdict_has_shape_and_word(qtbot: QtBot, trained_ctx: AppC
     assert compare.test_view._pix is not before, "the mode switch did not redraw the test view"
     test_page = win.pages["AI Model Test"]
     test_page.run_board_model = win.board_model  # a run's row, previewed under the board model of that run (#180)
-    test_page._show_preview(str(ng_board), res, test_page.run_board_model)
+    test_page._show_preview(str(ng_board), res, test_page.run_board_model, test_page.run_judged)
     assert test_page.preview_verdict.text() == "✗ NG" and theme.NG_COLOR in test_page.preview_verdict.styleSheet()
 
 

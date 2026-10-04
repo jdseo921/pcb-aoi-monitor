@@ -424,6 +424,21 @@ CODES: dict[str, ErrorCode] = {
             ),
         ),
         ErrorCode(
+            "AOI-TST-001",
+            QT_TRANSLATE_NOOP("Errors", "AI model, recipe or Golden board changed since the run"),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "{file} was judged in this run by AI model {run_model}, recipe revision {run_recipe} and Golden board"
+                " {run_golden}; {board_model} now uses AI model {model}, recipe revision {recipe} and Golden board"
+                " {golden}, so a preview would not show the verdict of its row.",
+            ),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Press Run Test Again to test the folder with what is in use now; the run's rows, CSV and report keep"
+                " the verdicts it gave.",
+            ),
+        ),
+        ErrorCode(
             "AOI-RCP-001",
             QT_TRANSLATE_NOOP("Errors", "Recipe saved since it was opened"),
             QT_TRANSLATE_NOOP(
