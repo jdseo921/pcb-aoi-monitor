@@ -37,8 +37,9 @@ def test_req_insp_008_a_saved_result_names_the_model_version_and_recipe_revision
 def test_req_insp_010_view_stored_and_exported(
     qtbot: QtBot, trained_ctx: AppContext, ng_board: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """The view picked on Inspection stays with the result: on the record (new), on every defect and in the Side column
-    (as in v0.1), in the Logs & Export table's View column and in the CSV export (new)."""
+    """The view picked on Inspection stays with the result: on the record (new), in its stored result as Compare reads
+    it back (#246: only the column was checked), on every defect and in the Side column (as in v0.1), in the Logs &
+    Export table's View column and in the CSV export (new)."""
     win = _window(qtbot, trained_ctx)  # an Engineer, since exports need the role
     page = win.pages["Inspection"]
     page.view_combo.setCurrentIndex(VIEWS.index("Side"))
@@ -47,6 +48,8 @@ def test_req_insp_010_view_stored_and_exported(
     assert cell_text(page.table, 0, 3) == "Side"  # the Side column of the defect list
     (row,) = trained_ctx.inspections(board_model=BOARD)
     assert row["view"] == "Side" and {d["side"] for d in trained_ctx.defects_for(row["id"])} == {"Side"}
+    stored = trained_ctx.inspection_result(row["id"])
+    assert stored is not None and stored.view == "Side"
     logs = win.pages["Logs & Export"]
     win.navigate("Logs & Export")
     headers = [logs.table.horizontalHeaderItem(c).text() for c in range(logs.table.columnCount())]

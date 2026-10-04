@@ -474,12 +474,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+64"/>
+        <location line="+66"/>
         <source>{file}: {defects} defect(s)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+114"/>
+        <location line="+118"/>
         <source>Running an AI model test</source>
         <translation type="unfinished"></translation>
     </message>
@@ -569,12 +569,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-576"/>
+        <location line="-582"/>
         <source>its UUID {found} is not {uuid}, as in the AI model registry</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+591"/>
+        <location line="+597"/>
         <source>Changing settings</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3330,7 +3330,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/services.py" line="-1141"/>
+        <location filename="../core/services.py" line="-1147"/>
         <source>Aligning {count} images to the reference board</source>
         <translation type="unfinished"></translation>
     </message>

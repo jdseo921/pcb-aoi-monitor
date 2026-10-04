@@ -440,7 +440,8 @@ def test_req_insp_006_an_ng_record_and_its_alarm_are_saved_together(
 
 def test_req_insp_008_an_ng_record_whose_alarm_is_refused_is_not_saved(trained_ctx: AppContext, ng_board: Path) -> None:
     """#179: a refused NG alarm left the record saved and the board reported as not saved; now neither is stored,
-    so the AOI-INSP-008 the Inspection page shows is true and inspecting the board again adds no duplicate."""
+    so the AOI-INSP-008 the Inspection page shows is true and inspecting the board again adds no duplicate. Nor is its
+    overlay or either map left in results/ (#246)."""
     insp = trained_ctx.inspector(BOARD)
     res = insp.inspect(trained_ctx.load_image(str(ng_board)))
     assert res.verdict == "NG"
@@ -450,6 +451,7 @@ def test_req_insp_008_an_ng_record_whose_alarm_is_refused_is_not_saved(trained_c
     with pytest.raises(sqlite3.IntegrityError, match="alarm refused"):
         trained_ctx.log_result(BOARD, str(ng_board), res, insp)
     assert trained_ctx.inspections() == [] and trained_ctx.alarms() == []
+    assert [p.name for p in trained_ctx.settings.results_dir.rglob("*") if p.is_file()] == []
 
 
 @pytest.mark.qt_no_exception_capture

@@ -520,7 +520,9 @@ validation runs stored before migration 0009. The Logs filter's local days becom
 a day the clock cannot convert is no bound on its side, never an error (#174).
 Every file the app writes (images, overlays, AI models, exports, settings) goes through `aoi/data/atomic.py`:
 a temporary name in the same folder, flush and fsync, then an atomic rename, and an inspection's row, checks and
-defects commit in one transaction, so a crash leaves a whole result or none (REQ-INSP-008). The only other writers are
+defects commit in one transaction, so a crash leaves a whole result or none (REQ-INSP-008). A save that fails before its
+row commits (the database refuses it, or a map write fails) removes the overlay and maps it wrote, so it leaves no file
+that no record names; a crash between the files and the row still can (REQ-LOG-006; #246). The only other writers are
 the log (appended line by line), the schema backup (SQLite's backup API to a temporary name, renamed whole) and the tool
 that writes `docs/error-codes.md`. `tests/test_power_cut.py` holds this (#202): a scan of `aoi/` fails any other file
 write by the calls it knows (opens for writing, gzip, tarfile and ZipFile too; Path, os, shutil, cv2, NumPy and torch
