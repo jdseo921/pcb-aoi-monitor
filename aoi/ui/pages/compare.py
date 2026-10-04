@@ -38,12 +38,12 @@ from ...core.explain import explain
 from ...core.imaging import IMAGE_EXTS
 from ...core.inspector import Check, InspectionResult
 from ...core.recipe import Recipe
-from ...core.services import ROLES_FROM, AppContext, Judged
+from ...core.services import ROLES_FROM, AppContext, ErrorReport, Judged
 from ...core.views import ai_view, difference_view
 from ...errors import AoiError
 from ...times import to_local
 from .. import theme
-from ..errors import phrase_text
+from ..errors import phrase_text, show_error
 from ..widgets.busy import BusyOverlay
 from ..widgets.empty_state import EmptyState
 from ..widgets.image_view import ImageView
@@ -60,7 +60,9 @@ MODES = [  # the Show combo, in this order; shown through tr()
 ]
 MODE_SIDE, MODE_DIFF, MODE_AI, MODE_BOXES = range(4)
 NO_VERDICT = "—"  # the banner with no result shown
-Stored: TypeAlias = "tuple[np.ndarray | None, Judged, InspectionResult | None]"  # golden board, why not, result
+Stored: TypeAlias = "tuple[np.ndarray | None, Judged, InspectionResult | None, list[ErrorReport]] | ErrorReport"
+# golden board, why not, result, and the stored files of it that could not be read; or why none of it could be read.
+# Each error is already logged and alarmed (#247)
 Evaluated: TypeAlias = "tuple[np.ndarray | None, InspectionResult | None, AoiError | None, AoiError | None]"  # golden
 # board, result, why the Golden board cannot be shown, and the refusal of a test board it kept from being judged
 JUDGED: dict[Judged, str] = {  # why a stored result's golden board is not shown; today's would mislead
@@ -430,7 +432,10 @@ class ComparePage(Page):
         self.record_board_model = rec["board_model"]  # Re-evaluate judges the board under it (#172)
         self._fitted = False
         self.test_empty.hide()
-        self.test_view.set_image(None)  # the board shown before goes at once, not when this one's picture arrives
+        self.test_view.set_image(None)  # the board shown before goes at once, not when this one's picture arrives,
+        self.ref_view.set_image(None)  # and so do its golden board and boxes, and why that pane had none (#247)
+        self.ref_empty.hide()
+        self.ref_label.setText(self.tr("Golden board"))
         self.test_label.setText(self.tr("Test board: {file} (stored result)").format(file=Path(rec["image_path"]).name))
         self._show_result(res)
         self._show_note(rec)
@@ -439,29 +444,65 @@ class ComparePage(Page):
     def _load_stored(self, rec: dict[str, Any], inspection_id: int) -> Stored:
         """Pool thread: the golden board the result was judged against (REQ-CMP-003), the result with its stored maps,
         and its stored overlay as the picture, aligned to that golden board as judged (the board's own file is not);
-        never a widget."""
-        ref, judged = self.ctx.judged_reference(inspection_id)
-        res = self.ctx.inspection_result(inspection_id, with_maps=True)
-        if res is not None and rec["overlay_path"] and Path(rec["overlay_path"]).is_file():
-            res.image = self.ctx.load_image(rec["overlay_path"])
-        return ref, judged, res
+        never a widget. A map or overlay that cannot be read takes away only itself, never the golden board; when none
+        of it can be read (a database another program holds, say), the report comes back alone. Each error is logged
+        and alarmed here, so a load a newer one replaced loses none, and comes back for the panes and the dialog,
+        which so name the one code (#247)."""
+        unread: list[AoiError] = []
+        try:
+            ref, judged = self.ctx.judged_reference(inspection_id)
+            try:
+                res = self.ctx.inspection_result(inspection_id, with_maps=True)
+            except AoiError as e:  # AOI-CMP-003: the heat views show the picture alone
+                if e.code != "AOI-CMP-003":
+                    raise
+                res = self.ctx.inspection_result(inspection_id)
+                unread.append(e)
+        except Exception as exc:  # reported as a failed job is, but here: a busy database is AOI-SET-013 (#195)
+            return self.ctx.report_error(exc, self.title)
+        path = rec["overlay_path"]
+        if res is not None and path and Path(path).is_file():
+            try:
+                res.image = self.ctx.load_image(path)
+            except AoiError as e:  # a stored file, not one to save again with an image tool (AOI-INSP-004)
+                picture = AoiError(
+                    "AOI-CMP-006", detail=str(e), file=Path(path).name, error_code=e.code, error_title=e.title
+                )
+                picture.__cause__ = e  # the log keeps the reader's error and its trace
+                unread.append(picture.with_traceback(e.__traceback__))
+        return ref, judged, res, [self.ctx.report_error(e, self.title) for e in unread]
 
     def _on_stored_loaded(self, out: Stored) -> None:
-        ref, judged, res = out
-        if res is None or self.stored is None:  # a fresh run or a board model change came first: nothing of it shows
+        if self.stored is None:  # a fresh run or a board model change came first: nothing of it shows
+            return
+        if isinstance(out, ErrorReport):  # none of its pictures: the verdict and table stand, and each pane says why
+            why = f"{out.code} {phrase_text(out.what)}"  # the Golden board pane's next step is the dialog's
+            self.ref_empty.show_state(self.tr("Golden board not shown"), f"{why} {phrase_text(out.action)}")
+            self._no_board_picture(self.tr("Board picture not shown"), why)
+            show_error(self, out)
+            return
+        ref, judged, res, unread = out
+        if res is None:
             return
         self.as_judged = (self.stored["reference_path"], ref) if ref is not None else None
         self.golden_error = None  # the pane shows the stored result's golden board now, not today's
         self._show_reference(ref, judged)
         self.res = res  # the table stays as show_stored filled it
-        if res.image is None:  # its overlay was deleted by hand: the verdict and the table still stand
-            sentence = self.tr(
-                "The verdict and the decision table are the stored ones; press Re-evaluate to inspect the board again"
-                " from its image file."
-            )
-            heading = self.tr("Board picture no longer stored")
-            self.test_empty.show_state(heading, sentence, self.tr("Re-evaluate ›"), self.run)
+        if res.image is None:  # its overlay was deleted by hand, or cannot be read: the verdict and the table stand
+            self._no_board_picture(self.tr("Board picture no longer stored"))
         self.redraw()
+        for report in unread:  # after the panes are drawn, so the dialog names the file beside them; the note keeps it
+            self.note.setText(f"{self.note.text()} {report.code} {phrase_text(report.what)}")
+            show_error(self, report)
+
+    def _no_board_picture(self, heading: str, why: str = "") -> None:
+        """The test pane of a stored result without its picture: `why`, that the verdict and the table stand, and
+        Re-evaluate."""
+        sentence = self.tr(
+            "The verdict and the decision table are the stored ones; press Re-evaluate to inspect the board again"
+            " from its image file."
+        )
+        self.test_empty.show_state(heading, f"{why} {sentence}".strip(), self.tr("Re-evaluate ›"), self.run)
 
     def _show_note(self, rec: dict[str, Any]) -> None:
         """One line under the verdict: when the result was judged and with which versions, what has changed since

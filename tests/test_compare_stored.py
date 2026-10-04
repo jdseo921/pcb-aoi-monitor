@@ -6,6 +6,7 @@ used."""
 from __future__ import annotations
 
 import hashlib
+import sqlite3
 from pathlib import Path
 from time import perf_counter
 from typing import Any
@@ -389,3 +390,87 @@ def test_req_cmp_003_re_evaluate_hides_board_picture_no_longer_stored(
     compare.test_empty.link.click()  # Re-evaluate ›
     qtbot.waitUntil(lambda: compare._bg is None and compare.test_view._pix is not None, timeout=20000)
     assert compare.stored is None and compare.test_empty.isHidden(), "the fresh result is not under the block"
+
+
+@pytest.mark.parametrize("damaged", ["diff_map_path", "overlay_path", "database", "busy"])
+def test_req_cmp_003_another_records_golden_board_never_stays_beside_a_stored_result(
+    qtbot: QtBot,
+    trained_ctx: AppContext,
+    ng_board: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    dialogs: list[tuple[str, str]],
+    damaged: str,
+) -> None:
+    """#247: record A opened on Compare, then record B, judged against another Golden board, whose stored difference
+    map or overlay cannot be read (or whose pictures the database refuses): the Golden board pane kept A's golden board,
+    its "as judged" label and A's boxes beside B's verdict, the test pane said nothing, and a damaged overlay showed
+    AOI-INSP-004, which advises saving the image with an image tool. Now the pane shows B's golden board as judged, or
+    says why it shows none, and the dialog names the file: AOI-CMP-003 for a map, AOI-CMP-006 for the overlay. A
+    database another program holds is AOI-SET-013 on both panes, as in the dialog (review)."""
+    ctx = trained_ctx
+    golden = Path(str(ctx.reference_image(BOARD)))
+    ctx.inspect_file(BOARD, str(ng_board))
+    a = ctx.inspections(board_model=BOARD)[0]["id"]
+    other = next(s for s in ctx.samples(BOARD, "OK") if Path(s["path"]) != golden)
+    ctx.set_reference(BOARD, other["id"])
+    ctx.inspect_file(BOARD, str(ng_board))
+    b = ctx.inspections(board_model=BOARD)[0]["id"]
+    rec = ctx.inspection(b)
+    assert rec is not None
+    judged = Path(str(rec["reference_path"]))
+    assert b != a and judged.name != golden.name
+    win = _window(qtbot, ctx, "Operator")
+    compare = win.pages["Compare"]
+    assert isinstance(compare, ComparePage)
+    win.navigate("Compare")
+    qtbot.waitUntil(lambda: ctx.jobs.idle() and compare._bg is None, timeout=20000)
+    compare.show_stored(a)
+    qtbot.waitUntil(lambda: compare._bg is None and bool(compare.ref_view._overlay_items), timeout=20000)
+    assert compare.ref_label.text() == f"Golden board as judged: {golden.name}"
+    boxes = list(compare.ref_view._overlay_items)  # A's dashed defect boxes, on A's golden board
+
+    def refused(*args: object) -> None:
+        if damaged == "busy":
+            held = sqlite3.OperationalError("database is locked")
+            held.sqlite_errorcode = sqlite3.SQLITE_BUSY  # type: ignore[attr-defined]
+            raise held
+        raise sqlite3.DatabaseError("database disk image is malformed")
+
+    code = "AOI-SET-013" if damaged == "busy" else "AOI-SET-007"
+    if damaged in ("database", "busy"):
+        monkeypatch.setattr(ctx, "judged_reference", refused)
+    else:
+        Path(str(rec[damaged])).write_bytes(b"damaged")
+    compare.show_stored(b)
+    qtbot.waitUntil(lambda: compare._bg is None and bool(dialogs), timeout=20000)
+    assert compare.stored is not None and compare.stored["id"] == b
+    assert compare.verdict.text() == theme.verdict_label(rec["result"]) and compare.note.isVisible()
+    assert golden.name not in compare.ref_label.text(), compare.ref_label.text()
+    assert all(box.scene() is None for box in boxes), "none of A's boxes stays on the Golden board pane"
+    if damaged in ("database", "busy"):  # neither pane shows another record's picture, and each says why
+        assert compare.ref_label.text() == "Golden board" and compare.ref_view._pix is None
+        for empty, heading in (
+            (compare.ref_empty, "Golden board not shown"),
+            (compare.test_empty, "Board picture not shown"),
+        ):
+            assert (
+                empty.isVisible() and empty.heading.text() == heading and empty.sentence.text().startswith(f"{code} ")
+            )
+        what, do = dialogs[0][1].split("\n\n")
+        assert compare.ref_empty.sentence.text() == f"{code} {what} {do}", "the next step, as the dialog says (review)"
+        assert [d[0].split()[0] for d in dialogs] == [code]
+        return
+    assert compare.ref_label.text() == f"Golden board as judged: {judged.name}" and compare.ref_empty.isHidden()
+    assert compare.as_judged is not None and np.array_equal(compare.as_judged[1], ctx.load_image(judged))
+    assert compare.ref_view._pix is not None
+    name = Path(str(rec[damaged])).name
+    assert f"{dialogs[0][0].split()[0]} " in compare.note.text(), "the note keeps why a stored file is not shown"
+    if damaged == "diff_map_path":  # the maps go; the picture and B's boxes on both panes stay
+        assert dialogs == [("AOI-CMP-003 Stored map cannot be read", dialogs[0][1])] and name in dialogs[0][1]
+        assert compare.test_view._pix is not None and compare.ref_view._overlay_items and compare.test_empty.isHidden()
+        assert compare.res is not None and compare.res.compare is not None and compare.res.compare.diff_map is None
+    else:  # the picture goes, said on the test pane; the dialog speaks of a stored file, not of re-saving an image
+        assert [d[0] for d in dialogs] == ["AOI-CMP-006 Stored board picture cannot be read"] and name in dialogs[0][1]
+        assert "image tool" not in dialogs[0][1]
+        assert compare.test_view._pix is None and not compare.ref_view._overlay_items
+        assert compare.test_empty.isVisible() and compare.test_empty.heading.text() == "Board picture no longer stored"

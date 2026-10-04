@@ -176,7 +176,13 @@ thresholds are the ones that applied then, and the line under the verdict names 
 revision that judged it and what the board model has moved to since. The Golden board pane shows the golden board
 the result was judged against, named over the pane: each record keeps that file's path and the SHA-256 of the bytes
 the engine read, and the pane gives the reason instead when the file has changed, cannot be read or is gone, or none
-was recorded. Re-evaluate inspects the board again with the form's thresholds and the current AI model, against
+was recorded. When a stored map cannot be read (AOI-CMP-003), the heat views show the picture alone; when the stored
+board picture cannot be read (AOI-CMP-006), the test pane says "Board picture no longer stored"; either way the
+Golden board pane shows the golden board as judged, the verdict and table stand, the dialog names the file, and the
+line under the verdict keeps the error's code. When nothing of the result's pictures can be read,
+both panes say why, with the message's code (AOI-SET-013 when another program holds the workspace
+database), and the Golden board pane what to do; neither pane ever shows the result opened before.
+Re-evaluate inspects the board again with the form's thresholds and the current AI model, against
 that same golden board while it is shown (press Golden Board for today's), and shows that fresh result instead;
 Save to Recipe saves the form's thresholds as a new revision. A stored result is judged again only under its own board
 model: with another board model in the header, Re-evaluate refuses with AOI-CMP-005 and names the board model to pick,
@@ -225,10 +231,10 @@ records hidden); when every record is older than that or archived, it offers **S
 verdict was judged on as PNG files named after the overlay: `<overlay name>_diff.png`, the colour difference against the
 golden board, and `<overlay name>_ai2.png`, the AI score map in steps of 0.001 σ up to 32.767 σ and of 1/8192 of the
 value above (`<overlay name>_ai.png` for results stored before this version, in 0.001 σ steps up to 65.535 σ). A map
-file another program holds open, or a damaged one, shows error AOI-CMP-003 on Compare; the stored verdict and decision
-table still stand. The maps of OK results are deleted at start-up once older than `map_retention_days_ok` days (7, set
-in `settings.json` in the default workspace folder; 0 deletes them at the next start); NG and WARN maps, and every
-record, overlay and check, are kept. Each sweep is in the audit trail as `maps.sweep`; a file the app cannot delete
-(open in another program) is tried again at the next start.
+file another program holds open, or a damaged one, shows error AOI-CMP-003 on Compare, and such an overlay picture
+AOI-CMP-006; the stored verdict and decision table still stand. The maps of OK results are deleted at start-up once
+older than `map_retention_days_ok` days (7, set in `settings.json` in the default workspace folder; 0 deletes them at
+the next start); NG and WARN maps, and every record, overlay and check, are kept. Each sweep is in the audit trail as
+`maps.sweep`; a file the app cannot delete (open in another program) is tried again at the next start.
 
 (to be written: history, archive, the audit trail, error codes)

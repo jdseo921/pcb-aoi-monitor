@@ -47,7 +47,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+8"/>
+        <location line="+10"/>
         <source>This result was judged without a Golden board.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -99,11 +99,12 @@
     <message>
         <location line="+3"/>
         <location line="+48"/>
+        <location line="+300"/>
         <source>Golden board</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-47"/>
+        <location line="-347"/>
         <source>AI model</source>
         <translation type="unfinished"></translation>
     </message>
@@ -159,12 +160,12 @@
     </message>
     <message>
         <location line="+14"/>
-        <location line="+450"/>
+        <location line="+489"/>
         <source>Test board</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-444"/>
+        <location line="-483"/>
         <source>Inspecting…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -306,14 +307,14 @@
     </message>
     <message>
         <location line="+0"/>
-        <location line="+86"/>
-        <location line="+106"/>
+        <location line="+126"/>
+        <location line="+105"/>
         <location line="+11"/>
         <source>Re-evaluate ›</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-189"/>
+        <location line="-228"/>
         <source>Train an AI model on Training.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -338,22 +339,32 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+23"/>
+        <location line="+26"/>
         <source>Test board: {file} (stored result)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+25"/>
+        <location line="+41"/>
+        <source>Golden board not shown</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Board picture not shown</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+21"/>
         <source>The verdict and the decision table are the stored ones; press Re-evaluate to inspect the board again from its image file.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+3"/>
+        <location line="-10"/>
         <source>Board picture no longer stored</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+8"/>
+        <location line="+19"/>
         <source>Stored result of {time}: AI model {model}, recipe revision {revision}, view {view}.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -870,7 +881,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+7"/>
+        <location line="+1"/>
+        <source>The AI model, recipe or Golden board of {board} changed during a run (training ended, a version was activated, a recipe saved or a Golden board set), so {file} and the boards after it are judged with what is active now; the boards before keep what judged them.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+6"/>
         <source>No action is needed: each record names the AI model version, recipe revision and Golden board that judged it.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -916,11 +932,12 @@
     </message>
     <message>
         <location line="+1"/>
+        <location line="+42"/>
         <source>The stored verdict and decision table still stand. Close any program that has the file open and open the result again; if the file is damaged, inspect the board again on Inspection.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+8"/>
+        <location line="-34"/>
         <source>Result cannot be judged again</source>
         <translation type="unfinished"></translation>
     </message>
@@ -951,6 +968,16 @@
     </message>
     <message>
         <location line="+8"/>
+        <source>Stored board picture cannot be read</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>The stored board picture {file} of this result could not be read ({error_code} {error_title}).</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+12"/>
         <source>AI model file refused</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1365,7 +1392,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-515"/>
+        <location line="-528"/>
         <source>Board judged NG</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1375,12 +1402,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+114"/>
-        <source>The AI model, recipe or Golden board of {board} changed during a run (training ended, a version was activated, a recipe saved or a Golden board set), so {file} and the boards after it are judged with what is active now; the boards before keep what judged them.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+78"/>
+        <location line="+205"/>
         <source>AI model file refused: {path} could not be loaded as a weights-only AI model file this app wrote ({reason}).</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2612,7 +2634,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/compare.py" line="-442"/>
+        <location filename="../ui/pages/compare.py" line="-481"/>
         <source>Compare</source>
         <translation type="unfinished"></translation>
     </message>

@@ -292,6 +292,19 @@ CODES: dict[str, ErrorCode] = {
             ),
         ),
         ErrorCode(
+            "AOI-CMP-006",
+            QT_TRANSLATE_NOOP("Errors", "Stored board picture cannot be read"),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "The stored board picture {file} of this result could not be read ({error_code} {error_title}).",
+            ),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "The stored verdict and decision table still stand. Close any program that has the file open and open "
+                "the result again; if the file is damaged, inspect the board again on Inspection.",
+            ),
+        ),
+        ErrorCode(
             "AOI-TRN-001",
             QT_TRANSLATE_NOOP("Errors", "AI model file refused"),
             QT_TRANSLATE_NOOP(
