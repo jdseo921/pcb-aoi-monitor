@@ -25,6 +25,7 @@ from aoi.core.views import difference_view
 from aoi.ui import theme
 from aoi.ui.pages.compare import MODE_AI, MODE_BOXES, MODE_DIFF, MODE_SIDE, MODES, ComparePage
 from aoi.ui.widgets.image_view import ImageView
+from tests.conftest import wrapped
 from tests.test_no_freeze import SIZE_5MP, board_5mp  # noqa: F401  # the 5 MP fixture
 from tests.test_req_done_in_v01 import BOARD, _window
 
@@ -279,9 +280,9 @@ def test_req_set_021_compare_cancel_leaves_no_verdict_under_another_board(
     page.busy.cancel_button.click()  # Cancel, as the overlay offers it after 10 s
     gate.set()
     qtbot.waitUntil(lambda: page._bg is None and trained_ctx.jobs.idle(), timeout=20000)
-    assert page.test_label.text() == f"Test board: {ok.name}" and page.res is None
+    assert page.test_label.text() == f"Test board: {wrapped(ok.name)}" and page.res is None
     assert page.verdict.text() == "—" and page.metrics.rowCount() == 0 and page.test_view._pix is None
-    assert page.test_empty.isVisible() and ok.name in page.test_empty.sentence.text()
+    assert page.test_empty.isVisible() and wrapped(ok.name) in page.test_empty.sentence.text()
     page.test_empty.link.click()  # Re-evaluate ›: the board named is inspected
     qtbot.waitUntil(lambda: page._bg is None and page.res is not None, timeout=20000)
     assert page.test_empty.isHidden() and page.verdict.text() == theme.verdict_label(page.res.verdict)

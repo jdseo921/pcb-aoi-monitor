@@ -28,6 +28,7 @@ from aoi.ui.main_window import MainWindow
 from aoi.ui.pages.compare import NO_VERDICT
 from aoi.ui.pages.inspection import InspectionPage
 from aoi.ui.pages.settings import SettingsPage
+from tests.conftest import wrapped
 from tests.test_req_done_in_v01 import BOARD, _inspect_one, _window
 
 # ISO date, 24-hour time, level, code and message, two spaces apart (REQ-INSP-006)
@@ -272,7 +273,8 @@ def test_req_set_019_compare_says_why_a_board_is_not_judged_and_judges_it_once_i
     assert compare.res is None and compare.verdict.text() == "—" and compare.test_empty.isVisible()
     assert compare.test_empty.heading.text() == "Board not inspected"
     assert compare.ref_empty.heading.text() == f"The Golden board for {BOARD} cannot be opened"
-    assert golden.name in compare.ref_empty.sentence.text() and compare.ref_empty.link.text() == "Open Training ›"
+    assert wrapped(golden.name) in compare.ref_empty.sentence.text(), "the file, which may break after each _ and -"
+    assert compare.ref_empty.link.text() == "Open Training ›"
     dialogs.clear()
     alarms = trained_ctx.alarms()
     oks = [s for s in trained_ctx.samples(BOARD, "OK") if Path(s["path"]) not in (golden, Path(board))]
@@ -283,7 +285,8 @@ def test_req_set_019_compare_says_why_a_board_is_not_judged_and_judges_it_once_i
     qtbot.waitUntil(lambda: trained_ctx.jobs.idle() and compare._bg is None, timeout=20000)
     stored = trained_ctx.alarms()[: len(trained_ctx.alarms()) - len(alarms)]
     assert [a["code"] for a in stored] == ["AOI-INSP-001"] and Path(oks[0]["path"]).name in stored[0]["message"]
-    assert dialogs == [] and compare.res is None and Path(oks[0]["path"]).name in compare.ref_empty.sentence.text()
+    new_name = wrapped(Path(oks[0]["path"]).name)  # the pane's name may break after each _ and - (#245)
+    assert dialogs == [] and compare.res is None and new_name in compare.ref_empty.sentence.text()
     trained_ctx.set_reference(BOARD, oks[1]["id"])
     win.navigate("Home")
     win.navigate("Compare")

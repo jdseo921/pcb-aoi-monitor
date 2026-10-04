@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QResizeEvent
 from PySide6.QtWidgets import (
     QComboBox,
     QDialog,
@@ -21,6 +22,7 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QPlainTextEdit,
     QProgressBar,
+    QSizePolicy,
     QSpinBox,
     QSplitter,
     QVBoxLayout,
@@ -83,6 +85,35 @@ class NgDialog(QDialog):
         return self.type.currentData(), self.side.currentData()
 
 
+class _Counts(QLabel):
+    """The line over the samples table: the sample counts and the reference image's name. It never sets the page's
+    minimum width, which the window takes from its widest page (#245): the name is cut at its end to the width the line
+    gets, as the File column cuts it, and the tooltip then shows the whole line."""
+
+    def __init__(self) -> None:
+        super().__init__("")
+        self.setObjectName("muted")
+        self.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
+        self._line: Callable[[str], str] = lambda _name: ""
+        self._name = ""
+
+    def set_line(self, line: Callable[[str], str], name: str) -> None:
+        """Show `line(name)`, `name` cut at its end when the whole line does not fit."""
+        self._line, self._name = line, name
+        self._fit()
+
+    def resizeEvent(self, event: QResizeEvent) -> None:
+        super().resizeEvent(event)
+        self._fit()
+
+    def _fit(self) -> None:
+        fm, whole = self.fontMetrics(), self._line(self._name)
+        room = self.contentsRect().width() - 2 * self.margin() - fm.horizontalAdvance(self._line(""))
+        shown = self._line(fm.elidedText(self._name, Qt.TextElideMode.ElideRight, max(room, 0)))
+        self.setText(shown)
+        self.setToolTip(whole if shown != whole else "")
+
+
 class TrainingPage(Page):
     title = QT_TRANSLATE_NOOP("Page", "Training")
     subtitle = QT_TRANSLATE_NOOP(
@@ -107,9 +138,12 @@ class TrainingPage(Page):
         for b in (self.btn_ok, self.btn_ng, self.btn_folder):
             up.addWidget(b)
         ll.addLayout(up)
-        self.counts = QLabel("")
-        self.counts.setObjectName("muted")
+        self.counts = _Counts()
         ll.addWidget(self.counts)
+        self.tip = QLabel(self.tr("Tip: 20+ OK images give a steadier threshold"))  # its own line: the name keeps room
+        self.tip.setObjectName("muted")
+        self.tip.setWordWrap(True)
+        ll.addWidget(self.tip)
         self.samples = make_table(
             [self.tr("ID"), self.tr("Label"), self.tr("Defect type"), self.tr("View"), self.tr("File")]
         )
@@ -437,7 +471,8 @@ class TrainingPage(Page):
         if not self.board_model:
             self.samples.setRowCount(0)
             self.models.setRowCount(0)
-            self.counts.setText("")
+            self.counts.set_line(lambda _name: "", "")
+            self.tip.hide()
             self.samples_empty.show_state(*self.no_board_model())
             self.models_empty.hide()
             return
@@ -466,12 +501,9 @@ class TrainingPage(Page):
         n_ok = sum(r["label"] == "OK" for r in s)
         ref = self.ctx.reference_image(self.board_model)
         reference = Path(ref).name if ref else self.tr("none")
-        counts = self.tr("{ok} OK · {ng} NG · reference: {reference}").format(
-            ok=n_ok, ng=len(s) - n_ok, reference=reference
-        )
-        if n_ok < 20:
-            counts += "  ·  " + self.tr("tip: 20+ OK images give a steadier threshold")
-        self.counts.setText(counts)
+        counts = self.tr("{ok} OK · {ng} NG · reference: {reference}")
+        self.counts.set_line(lambda name: counts.format(ok=n_ok, ng=len(s) - n_ok, reference=name), reference)
+        self.tip.setVisible(n_ok < 20)
         ms = self.ctx.models(self.board_model)
         rows = []
         for m in ms:

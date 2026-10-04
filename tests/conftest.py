@@ -33,6 +33,13 @@ from tools.make_synthetic_dataset import write_dataset  # noqa: E402
 DATASET_SEED = 7  # the generator's default seed, so the fixture matches `python tools/make_synthetic_dataset.py`
 DATASET_OK, DATASET_NG = 30, 14
 TINY_EPOCHS, TINY_IMAGE_SIZE = 6, 64  # seconds on a CPU; enough for tests of the training and model code paths
+ZWSP = "\u200b"  # zero width space
+
+
+def wrapped(name: str) -> str:
+    """`name` as a page shows a file name that may wrap after each _ and - (`breakable` in aoi/ui/pages/base.py, #245),
+    spelled out here, so that a test does not take its expected text from the code under test."""
+    return "".join(c + ZWSP if c in "_-" else c for c in name)
 
 
 @pytest.fixture

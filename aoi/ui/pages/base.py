@@ -60,6 +60,21 @@ def view_text(view: str) -> str:
 
 
 VIEW_NAMES = (QT_TRANSLATE_NOOP("View", "Top"), QT_TRANSLATE_NOOP("View", "Side"), QT_TRANSLATE_NOOP("View", "Bottom"))
+ZWSP = "\u200b"  # zero width space: a place where a wrapped label may break a line, never shown
+
+
+def breakable(name: str) -> str:
+    """A file name that a wrapped label may break after each _ and -, so that a long one never sets the page's minimum
+    width (REQ-SET-004, #245): Qt breaks a line only between words, and inside a UUID only at a hyphen no digit follows,
+    so `<stem>_<UUID>.png` was often one word."""
+    return name.replace("_", "_" + ZWSP).replace("-", "-" + ZWSP)
+
+
+def breakable_names(e: AoiError) -> AoiError:
+    """A copy of `e` whose {path} and {file} go through breakable(), for a message on a picture's pane (#245): shown
+    only, never raised or logged, so the log keeps the names as they are."""
+    named = {k: breakable(v) if k in ("path", "file") and isinstance(v, str) else v for k, v in e.params.items()}
+    return AoiError(e.code, e.detail, **named)
 
 
 class Page(QWidget):
@@ -159,19 +174,21 @@ class Page(QWidget):
 
     def golden_board_unreadable(self, e: AoiError) -> tuple[str, str, str, Callable[[], object] | None]:
         """The empty state of a Golden board pane whose file is gone or cannot be read (#176): what happened, with its
-        code, and the next step for the role signed in now, so a page builds it again when it is shown."""
+        code, and the next step for the role signed in now, so a page builds it again when it is shown. The file it
+        names may break after each _ and - (breakable_names, #245)."""
         heading = QCoreApplication.translate("Page", "The Golden board for {board_model} cannot be opened")
         fix = QCoreApplication.translate(
             "Page", "{code} {what} Put the file back, or choose another OK sample with Set Reference on Training."
         )
-        sentence, link, go = self.empty_step(fix.format(code=e.code, what=phrase_text(e.what)), "Training")
+        what = phrase_text(breakable_names(e).what)
+        sentence, link, go = self.empty_step(fix.format(code=e.code, what=what), "Training")
         if go is None:  # a role that cannot open Training still reads what happened
             ask = QCoreApplication.translate(
                 "Page",
                 "{code} {what} Ask an Engineer to put the file back, or to choose another OK sample with Set Reference"
                 " on Training.",
             )
-            sentence = ask.format(code=e.code, what=phrase_text(e.what))
+            sentence = ask.format(code=e.code, what=what)
         return heading.format(board_model=self.board_model), sentence, link, go
 
     def error(self, exc: BaseException) -> None:

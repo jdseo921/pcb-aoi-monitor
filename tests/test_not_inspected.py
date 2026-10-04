@@ -15,6 +15,7 @@ from aoi.ui import theme
 from aoi.ui.pages.base import cell_item
 from aoi.ui.pages.compare import ComparePage
 from aoi.ui.pages.model_test import ModelTestPage
+from tests.conftest import wrapped
 from tests.test_req_done_in_v01 import _window
 
 NOT_INSPECTED = f"{theme.VERDICT_SHAPES['INFO']} Not inspected"
@@ -60,7 +61,7 @@ def test_req_insp_002_an_unreadable_board_never_shows_the_verdict_before(
     assert page.empty.isVisible(), "the not-inspected state stays when the page is shown again"
     compare = win.pages["Compare"]
     compare.use_last()
-    assert compare.test_label.text() == f"Test board: {ok.name} (stored result)"
+    assert compare.test_label.text() == f"Test board: {wrapped(ok.name)} (stored result)"
 
 
 def test_req_insp_002_an_unreadable_last_board_offers_load_images(
@@ -151,7 +152,7 @@ def test_req_insp_002_compare_shows_no_verdict_beside_a_board_it_could_not_read(
     assert dialogs[0][0].startswith("AOI-INSP-004")
     assert page.verdict.text() == NOT_INSPECTED, "the banner shows the board before"
     assert page.res is None and page.metrics.rowCount() == 0 and page.why.toPlainText() == ""
-    assert page.test_view._pix is None and page.test_label.text() == "Test board: board_0042.png"
-    assert page.test_empty.isVisible() and page.test_empty.heading.text() == "board_0042.png was not inspected"
+    assert page.test_view._pix is None and page.test_label.text() == "Test board: board_\u200b0042.png"
+    assert page.test_empty.isVisible() and page.test_empty.heading.text() == "board_\u200b0042.png was not inspected"
     assert page.test_empty.sentence.text().startswith("AOI-INSP-004 ")
     assert page.test_empty.link.text() == "Re-evaluate ›"
