@@ -10,9 +10,12 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from PySide6.QtWidgets import QFileDialog
+from PySide6.QtCore import QCoreApplication
+from PySide6.QtWidgets import QFileDialog, QMessageBox
 from pytestqt.qtbot import QtBot
 
+from aoi.core.imaging import list_images
+from aoi.core.inspector import JudgedBy
 from aoi.core.services import AppContext
 from aoi.data import atomic
 from aoi.errors import AoiError
@@ -20,6 +23,7 @@ from aoi.ui import workers
 from aoi.ui.main_window import MainWindow
 from aoi.ui.pages.base import cell_item, cell_text
 from aoi.ui.pages.model_test import ModelTestPage
+from tests.test_error_translation import Marking
 from tests.test_req_done_in_v01 import BOARD, _window
 
 
@@ -51,7 +55,9 @@ def _preview_every_row(qtbot: QtBot, page: ModelTestPage) -> list[tuple[str, str
     return seen
 
 
-@pytest.mark.parametrize("change", ["none", "retrain_away", "retrain_on_page", "activate", "recipe", "reference"])
+@pytest.mark.parametrize(
+    "change", ["none", "retrain_away", "retrain_on_page", "activate", "activate_back", "recipe", "reference"]
+)
 def test_req_tst_003_a_preview_is_judged_by_what_judged_its_row_or_not_at_all(
     qtbot: QtBot,
     trained_ctx: AppContext,
@@ -66,11 +72,12 @@ def test_req_tst_003_a_preview_is_judged_by_what_judged_its_row_or_not_at_all(
     Golden board; then every row selected. No preview may read another verdict than its row: each is refused with
     AOI-TST-001 in the preview pane, Use Last Inspected keeps the board before, and the note above the table names
     both AI model versions; Export CSV and Export Report still name the run's AI model. With no change ("none") every
-    preview is judged and matches its row. Before (#250), after a retrain 2 of 21 previews read OK beside a row the
-    run judged NG, and nothing on the page said why."""
+    preview is judged and matches its row, as it is once the run's AI model is activated again ("activate_back"), when
+    the row still selected is previewed again in place of its refusal. Before (#250), after a retrain 2 of 21 previews
+    read OK beside a row the run judged NG, and nothing on the page said why."""
     ctx, train = trained_ctx, lambda: trained_ctx.train(BOARD, epochs=1, image_size=64)
-    if change == "activate":  # the run is judged by v1.1; v1.0 is activated after it, which keeps the Golden board
-        train()
+    if change in ("activate", "activate_back"):  # the run is judged by v1.1; v1.0 is activated after it, which keeps
+        train()  # the Golden board
     win = _window(qtbot, ctx)
     page = _tested_page(qtbot, win, synthetic_dataset / "test")
     run_version = page.rows[0]["model_version"]
@@ -82,10 +89,24 @@ def test_req_tst_003_a_preview_is_judged_by_what_judged_its_row_or_not_at_all(
         train()
         win.navigate("AI Model Test")  # shown again, the note says what changed before another row is selected
         assert page.run_note.isVisible() and all(f"AI model {v}" in page.run_note.text() for v in ("v1.0", "v1.1"))
+        first = cell_text(page.table, 0, 0)  # and row 0, still selected, no longer shows its preview from before
+        assert "Not inspected" in page.preview_verdict.text() and page.view._pix is None
+        assert page.preview_empty.sentence.text().startswith(f"AOI-TST-001 {first} was judged in this run by AI")
     elif change == "retrain_on_page":
         train()
     elif change == "activate":
         ctx.activate_model(next(m["id"] for m in ctx.models(BOARD) if m["version"] == "v1.0"))
+    elif change == "activate_back":  # v1.0 activated on Training, then v1.1 again, the page shown after each
+        for version in ("v1.0", "v1.1"):
+            win.navigate("Training")
+            ctx.activate_model(next(m["id"] for m in ctx.models(BOARD) if m["version"] == version))
+            win.navigate("AI Model Test")
+            qtbot.waitUntil(lambda: page._bg is None, timeout=30000)
+            refused_now = "Not inspected" in page.preview_verdict.text()
+            assert refused_now == (version == "v1.0") == page.run_note.isVisible(), (version, refused_now)
+        assert page.preview_empty.isHidden() and page.preview_verdict.text() == cell_text(page.table, 0, 2)
+        assert page.view._pix is not None and win.last_inspected is not before  # row 0 previewed again, by v1.1
+        assert win.last_inspected is not None and win.last_inspected[0] == cell_item(page.table, 0, 0).toolTip()
     elif change == "recipe":
         recipe = ctx.recipe(BOARD)[1]
         recipe.ssim_min = 0.75
@@ -105,7 +126,7 @@ def test_req_tst_003_a_preview_is_judged_by_what_judged_its_row_or_not_at_all(
         print("DIFF", s)
     assert diffs == [], f"{len(diffs)} of {len(seen)} previews read another verdict than their row"
     assert len(seen) == 21 and dialogs == []
-    if change == "none":
+    if change in ("none", "activate_back"):
         last = cell_item(page.table, len(seen) - 1, 0).toolTip()
         assert refused == [] and win.last_inspected is not None and win.last_inspected[0] == last
         assert page.run_note.isHidden()
@@ -126,14 +147,16 @@ def test_req_tst_003_a_preview_is_judged_by_what_judged_its_row_or_not_at_all(
         assert "AI model: v1.0" in page._report_html()
         assert ctx.audit_entries(action="export.report")[0]["after"]["model_version"] == "v1.0"
     run_uuid = page.rows[0]["run_uuid"]  # Run Test Again, as the pane says: a run of what is in use, previewed again
+    page.folder = str(synthetic_dataset / "test" / "ng")  # another folder picked since: the pane's link tests the run's
     page.preview_empty.link.click()
     qtbot.waitUntil(lambda: page.rows[0]["run_uuid"] != run_uuid and page.btn_run.isEnabled(), timeout=60000)
     assert page.run_note.isHidden() and page.preview_empty.isHidden() and page.rows[0]["model_version"] == active
+    assert page.run_folder == page.folder_label.text() == str(synthetic_dataset / "test") and len(page.rows) == 21
     again = _preview_every_row(qtbot, page)[:3]
     assert all(s[2] == s[1] and s[3] == "" for s in again) and win.last_inspected is not before, again
 
 
-@pytest.mark.parametrize("row", ["same_row", "another_row"])
+@pytest.mark.parametrize("row", ["same_row", "another_row", "shown_again"])
 def test_req_tst_003_a_preview_inspected_across_a_change_is_not_shown(
     qtbot: QtBot,
     trained_ctx: AppContext,
@@ -143,10 +166,12 @@ def test_req_tst_003_a_preview_inspected_across_a_change_is_not_shown(
     row: str,
 ) -> None:
     """A row's preview is still being inspected when what judges the board model changes: a training run ends
-    ("same_row"), or a recipe is saved and another row is selected, which is refused at once ("another_row"). The
-    preview that arrives late is not shown and never reaches Use Last Inspected; the pane keeps AOI-TST-001 for the row
-    selected last, and no dialog shows. Before (#250), the late preview of the new AI model was shown and handed to
-    Compare."""
+    ("same_row"), a recipe is saved and another row is selected, which is refused at once ("another_row"), or a recipe
+    is saved on another page and the page is shown again ("shown_again"), which drops the preview at once, its busy
+    overlay with it, and refuses the row still selected; that preview's job then fails, as for a file moved meanwhile.
+    The preview that arrives late, or its error, is not shown and never reaches Use Last Inspected; the pane keeps
+    AOI-TST-001 for the row selected last, and no dialog shows. Before (#250), the late preview of the new AI model was
+    shown and handed to Compare."""
     win = _window(qtbot, trained_ctx)
     page = _tested_page(qtbot, win, synthetic_dataset / "test")
     gate, inspected = threading.Event(), []
@@ -155,6 +180,8 @@ def test_req_tst_003_a_preview_inspected_across_a_change_is_not_shown(
     def slow_inspect(board_model: str, path: str, **kwargs: Any) -> Any:
         inspected.append(path)
         gate.wait(60)
+        if row == "shown_again":  # a dropped preview's error shows no dialog and does not replace the refusal
+            raise AoiError("AOI-INSP-001", path=path)
         return real(board_model, path, **kwargs)
 
     monkeypatch.setattr(trained_ctx, "inspect_file", slow_inspect)
@@ -163,9 +190,15 @@ def test_req_tst_003_a_preview_inspected_across_a_change_is_not_shown(
     last = 0
     if row == "same_row":
         trained_ctx.train(BOARD, epochs=1, image_size=64)
-    else:
+    elif row == "another_row":
         trained_ctx.save_recipe(trained_ctx.recipe(BOARD)[1])
         page.table.selectRow(last := 1)
+    else:
+        win.navigate("Training")
+        trained_ctx.save_recipe(trained_ctx.recipe(BOARD)[1])
+        win.navigate("AI Model Test")
+        print("shown again: job", page._bg, "busy watching", page.busy._job)
+        assert page._bg is None and page.busy._job is None  # the preview is dropped at once, not when its job ends
     gate.set()
     qtbot.waitUntil(lambda: page._bg is None and not workers._live, timeout=60000)  # every result has reached the page
     name = cell_text(page.table, last, 0)
@@ -228,6 +261,119 @@ def test_req_tst_003_a_preview_of_the_run_before_is_not_shown_beside_a_new_run(
     assert selected == [] and page.table.selectionModel().selectedRows() == []
     assert last is None and page.preview_verdict.text() == "—" and page.view._pix is None
     assert page.preview_empty.isHidden() and dialogs == []
+
+
+def test_req_tst_003_the_panes_run_test_again_during_a_run_changes_nothing(
+    qtbot: QtBot,
+    trained_ctx: AppContext,
+    synthetic_dataset: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    dialogs: list[tuple[str, str]],
+) -> None:
+    """Run Test on the 21 test images, then a recipe saved, so the run shown is no longer current; another folder
+    (test/ng) picked and Run Test Again in the bar going on it. A row of the first run, selected meanwhile, is refused,
+    and the preview pane's Run Test Again pressed then changes nothing: it starts no second run, and once the run ends
+    the folder beside the bar is the one its rows came from. One run is stored and audited (#250 reviews: run() returns
+    at once while a run is going, and _run_again sets the run's folder only when no run is going)."""
+    win = _window(qtbot, trained_ctx)
+    page = _tested_page(qtbot, win, synthetic_dataset / "test")
+    trained_ctx.save_recipe(trained_ctx.recipe(BOARD)[1])
+    picked = str(synthetic_dataset / "test" / "ng")
+    page.folder = picked
+    page.folder_label.setText(picked)  # as pick() does
+    gate, calls, real = threading.Event(), [], trained_ctx.batch_test
+
+    def slow_test(*args: Any, **kwargs: Any) -> Any:
+        calls.append(args[1])  # the folder tested
+        gate.wait(60)
+        return real(*args, **kwargs)
+
+    monkeypatch.setattr(trained_ctx, "batch_test", slow_test)
+    runs = len(trained_ctx.audit_entries(action="test.run"))
+    page.run()  # the bar's Run Test Again, on the folder picked
+    page.table.selectRow(0)  # a row of the first run
+    assert "Not inspected" in page.preview_verdict.text() and page.preview_empty.link.isVisible()
+    page.preview_empty.link.click()
+    gate.set()
+    qtbot.waitUntil(lambda: page.btn_run.isEnabled() and not workers._live, timeout=60000)
+    entries = len(trained_ctx.audit_entries(action="test.run")) - runs
+    print("runs started:", calls, "test.run entries:", entries, "rows:", len(page.rows))
+    print("run folder:", page.run_folder, "folder:", page.folder, "label:", page.folder_label.text())
+    assert calls == [picked] and entries == 1 and len(page.rows) == 11 and dialogs == []
+    assert page.run_folder == page.folder == page.folder_label.text() == picked
+
+
+def test_req_tst_003_a_run_with_no_ai_model_or_golden_board_reads_so(
+    qtbot: QtBot, trained_ctx: AppContext, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The note and AOI-TST-001 say "no AI model" and "no Golden board", never "AI model none" (#250 review). In another
+    UI language the screen shows each phrase translated, while the error's own text, which a log would keep, stays
+    English. The run's JudgedBy is built by hand with neither, to pin both phrases in one test: batch_test returns no
+    such run, as Inspector.judge refuses every board of a board model with neither with AOI-INSP-010 (#169). A run with
+    no AI model is tested end to end by test_req_tst_003_a_run_with_no_ai_model_says_so_once_one_is_trained."""
+    win = _window(qtbot, trained_ctx)
+    win.navigate("AI Model Test")
+    page = win.pages["AI Model Test"]
+    assert isinstance(page, ModelTestPage)
+    recipe = trained_ctx.recipe_history(BOARD)[0]
+    page.rows, page.run_board_model = [{}], BOARD
+    page.run_judged = JudgedBy(None, None, recipe["revision"], recipe["uuid"], None)
+    changed = page._judged_now() or {}
+    page._refuse_preview("ok_009.png", changed)
+    page._note(changed)
+    note, said = page.run_note.text(), page.preview_empty.sentence.text()
+    print(note, said, sep="\n")
+    golden = Path(trained_ctx.reference_image(BOARD) or "").name
+    now = f"{BOARD} now uses AI model v1.0, recipe revision 1 and Golden board {golden}"
+    assert note.startswith(f"These results were judged by no AI model, recipe revision 1 and no Golden board; {now}.")
+    assert said.startswith("AOI-TST-001 ok_009.png was judged in this run by no AI model, recipe revision 1 and no")
+    assert f"Golden board; {now}, so" in said and "none" not in note + said
+    errors: list[AoiError] = []
+    shown = page.not_inspected
+    monkeypatch.setattr(page, "not_inspected", lambda *a, **k: errors.append(a[2]) or shown(*a, **k))
+    translator = Marking()  # marks every string it translates with "§"
+    assert QCoreApplication.installTranslator(translator)
+    try:  # a row refused in another UI language
+        changed = page._judged_now() or {}
+        page._refuse_preview("ok_009.png", changed)
+        page._note(changed)
+    finally:
+        QCoreApplication.removeTranslator(translator)
+    print(page.run_note.text(), page.preview_empty.sentence.text(), str(errors[0]), sep="\n")
+    marked = ("§no AI model", "§AI model v1.0", "§no Golden board", f"§Golden board {golden}")
+    assert all(m in page.run_note.text() and m in page.preview_empty.sentence.text() for m in marked)
+    assert "§" not in str(errors[0]) and "by no AI model, recipe revision 1 and no Golden board;" in str(errors[0])
+
+
+def test_req_tst_003_a_run_with_no_ai_model_says_so_once_one_is_trained(
+    qtbot: QtBot,
+    ctx: AppContext,
+    synthetic_dataset: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    dialogs: list[tuple[str, str]],
+) -> None:
+    """End to end (#250 review): Run Test on a board model with a Golden board and no AI model yet, one row previewed,
+    then an AI model trained on Training. Shown again, the page says that the run was judged by no AI model, in the note
+    and in AOI-TST-001 for the row previewed before, and names the AI model in use now."""
+    monkeypatch.setattr(QMessageBox, "information", staticmethod(lambda *a: QMessageBox.StandardButton.Ok))
+    for label in ("OK", "NG"):
+        ctx.import_samples(BOARD, [str(p) for p in list_images(synthetic_dataset / "train" / label.lower())], label)
+    ctx.set_reference(BOARD, ctx.samples(BOARD, "OK")[0]["id"])
+    golden = Path(ctx.reference_image(BOARD) or "").name
+    win = _window(qtbot, ctx)
+    page = _tested_page(qtbot, win, synthetic_dataset / "test" / "ng")
+    assert page.run_judged is not None and page.run_judged.model_version is None and page.run_judged.reference_path
+    page.table.selectRow(0)
+    qtbot.waitUntil(lambda: page._bg is None and win.last_inspected is not None, timeout=30000)
+    win.navigate("Training")
+    ctx.train(BOARD, epochs=1, image_size=64)
+    win.navigate("AI Model Test")
+    note, said = page.run_note.text(), page.preview_empty.sentence.text()
+    print(note, said, sep="\n")
+    judged = f"by no AI model, recipe revision 1 and Golden board {golden}; {BOARD} now uses AI model v1.0,"
+    assert page.run_note.isVisible() and note.startswith(f"These results were judged {judged}")
+    assert said.startswith(f"AOI-TST-001 {cell_text(page.table, 0, 0)} was judged in this run {judged}")
+    assert "Not inspected" in page.preview_verdict.text() and dialogs == []
 
 
 def test_req_tst_004_a_run_is_not_shown_under_another_board_model(

@@ -428,14 +428,14 @@ CODES: dict[str, ErrorCode] = {
             QT_TRANSLATE_NOOP("Errors", "AI model, recipe or Golden board changed since the run"),
             QT_TRANSLATE_NOOP(
                 "Errors",
-                "{file} was judged in this run by AI model {run_model}, recipe revision {run_recipe} and Golden board"
-                " {run_golden}; {board_model} now uses AI model {model}, recipe revision {recipe} and Golden board"
-                " {golden}, so a preview would not show the verdict of its row.",
+                "{file} was judged in this run by {run_model}, recipe revision {run_recipe} and {run_golden};"
+                " {board_model} now uses {model}, recipe revision {recipe} and {golden}, so a preview could show"
+                " another verdict than its row.",
             ),
             QT_TRANSLATE_NOOP(
                 "Errors",
-                "Press Run Test Again to test the folder with what is in use now; the run's rows, CSV and report keep"
-                " the verdicts it gave.",
+                "Press Run Test Again in the preview pane to test the run's folder with what is in use now; the run's"
+                " rows, CSV and report keep the verdicts it gave.",
             ),
         ),
         ErrorCode(

@@ -24,7 +24,7 @@ from PySide6.QtWidgets import (
 from ... import defects as taxonomy
 from ...core.inspector import InspectionResult, JudgedBy
 from ...core.services import AppContext
-from ...errors import AoiError
+from ...errors import AoiError, Phrase
 from .. import theme
 from ..errors import phrase_text
 from ..widgets.busy import BusyOverlay
@@ -41,6 +41,12 @@ MATCHES = {  # a row's pass_fail, stored and exported as this English key -> wha
     "FAIL": QT_TRANSLATE_NOOP("ModelTestPage", "Differs from label"),
     "NO_LABEL": QT_TRANSLATE_NOOP("ModelTestPage", "No label"),
 }
+# What judged a run and what is in use now, as AOI-TST-001 and the note name them: phrases, which a screen translates in
+# place while the error's own text, which a log would keep, stays English (#250)
+AI_MODEL = QT_TRANSLATE_NOOP("Errors", "AI model {version}")
+NO_AI_MODEL = QT_TRANSLATE_NOOP("Errors", "no AI model")
+GOLDEN_BOARD = QT_TRANSLATE_NOOP("Errors", "Golden board {file}")
+NO_GOLDEN_BOARD = QT_TRANSLATE_NOOP("Errors", "no Golden board")
 
 
 class MetricTile(QLabel):
@@ -229,6 +235,7 @@ class ModelTestPage(Page):
         if (changed := self._judged_now()) is not None:  # never judged by what did not judge its row (#250)
             self._drop_preview()  # nor the row before, still being inspected
             self._refuse_preview(path, changed)
+            self._note(changed)
             return
         run = self.run_judged
         self.run_in_background(
@@ -259,27 +266,39 @@ class ModelTestPage(Page):
         if bm is None or run is None or self.ctx.engine_is_current(bm, run):
             return None
         model, recipes, golden = self.ctx.active_model(bm), self.ctx.recipe_history(bm), self.ctx.reference_image(bm)
-        none = self.tr("none")
+
+        def ai_model(version: str | None) -> Phrase:
+            return AI_MODEL.fill(version=version) if version else NO_AI_MODEL
+
+        def golden_board(path: str | None) -> Phrase:
+            return GOLDEN_BOARD.fill(file=Path(path).name) if path else NO_GOLDEN_BOARD
+
         return {
             "board_model": bm,
-            "run_model": run.model_version or none,
+            "run_model": ai_model(run.model_version),
             "run_recipe": run.recipe_rev or 0,
-            "run_golden": Path(run.reference_path).name if run.reference_path else none,
-            "model": model["version"] if model else none,
+            "run_golden": golden_board(run.reference_path),
+            "model": ai_model(model["version"] if model else None),
             "recipe": recipes[0]["revision"] if recipes else 0,
-            "golden": Path(golden).name if golden else none,
+            "golden": golden_board(golden),
         }
 
     def _refuse_preview(self, path: str, changed: dict[str, object]) -> None:
         """A row of a run that is no longer current is not inspected (#250): the banner reads Not inspected, the pane
-        shows AOI-TST-001 (what judged the run, what is in use now, what to do), Use Last Inspected keeps the board it
-        had, and the note above the table shows."""
+        shows AOI-TST-001 (what judged the run, what is in use now, what to do), and Use Last Inspected keeps the board
+        it had. The callers show the note above the table."""
         name = Path(path).name
         e = AoiError("AOI-TST-001", None, file=name, **changed)
         heading, sentence = self.not_inspected(self.preview_verdict, name, e, big=False)
         what = " ".join([sentence, phrase_text(e.action)])
-        self.preview_empty.show_state(heading, what, self.tr("Run Test Again ›"), self.run)
-        self._note(changed)
+        self.preview_empty.show_state(heading, what, self.tr("Run Test Again ›"), self._run_again)
+
+    def _run_again(self) -> None:
+        """The preview pane's Run Test Again tests the run's folder, as AOI-TST-001 says, even if another was picked."""
+        if self.run_folder and self.btn_run.isEnabled():  # while a run is going, run() starts no second one
+            self.folder = self.run_folder
+            self.folder_label.setText(self.run_folder)
+        self.run()
 
     def _show_note(self) -> None:
         """The line above the table while the run's AI model, recipe or Golden board is no longer in use (#250)."""
@@ -288,11 +307,12 @@ class ModelTestPage(Page):
     def _note(self, changed: dict[str, object] | None) -> None:
         if changed is not None:
             note = self.tr(
-                "These results were judged by AI model {run_model}, recipe revision {run_recipe} and Golden board"
-                " {run_golden}; {board_model} now uses AI model {model}, recipe revision {recipe} and Golden board"
-                " {golden}. Rows are not previewed: Run Test Again tests the folder with what is in use now."
+                "These results were judged by {run_model}, recipe revision {run_recipe} and {run_golden};"
+                " {board_model} now uses {model}, recipe revision {recipe} and {golden}. Rows are not previewed; select"
+                " one for Run Test Again, which tests the run's folder with what is in use now."
             )
-            self.run_note.setText(note.format(**changed))
+            shown = {k: phrase_text(v) if isinstance(v, str) else v for k, v in changed.items()}  # phrases translated
+            self.run_note.setText(note.format(**shown))
         self.run_note.setVisible(changed is not None)
 
     def _show_preview(self, path: str, res: InspectionResult, board_model: str, run: JudgedBy | None) -> None:
@@ -302,6 +322,7 @@ class ModelTestPage(Page):
             return
         if (changed := self._judged_now()) is not None:  # an AI model trained or activated while it was inspected
             self._refuse_preview(path, changed)  # neither shows nor reaches Compare (#250)
+            self._note(changed)
             return
         self.preview_verdict.setText(theme.verdict_label(res.verdict))
         self.preview_verdict.setStyleSheet(theme.verdict_style(res.verdict, big=False))
@@ -327,7 +348,18 @@ class ModelTestPage(Page):
 
     def on_show(self) -> None:
         bm = self.board_model
-        self._show_note()  # an AI model trained or activated, a recipe saved or a Golden board set elsewhere (#250)
+        # An AI model trained or activated, a recipe saved or a Golden board set on another page (#250): the note says
+        # so, and the pane drops the row previewed before; a row still selected is refused, as selecting it now would be
+        changed = self._judged_now() if self.rows else None
+        self._note(changed)
+        if changed is not None:
+            self._drop_preview()
+            self._clear_preview()
+            if sel := self.table.selectionModel().selectedRows():
+                self._refuse_preview(cell_item(self.table, sel[0].row(), 0).toolTip(), changed)
+        elif not self.preview_empty.isHidden():  # what judged the run is in use again (an activation undone): the row
+            self._clear_preview()  # still selected is previewed again, by it, in place of the refusal
+            self._preview()
         if self.rows:
             self.empty.hide()
         elif not bm:

@@ -1108,12 +1108,12 @@
     </message>
     <message>
         <location line="+1"/>
-        <source>{file} was judged in this run by AI model {run_model}, recipe revision {run_recipe} and Golden board {run_golden}; {board_model} now uses AI model {model}, recipe revision {recipe} and Golden board {golden}, so a preview would not show the verdict of its row.</source>
+        <source>{file} was judged in this run by {run_model}, recipe revision {run_recipe} and {run_golden}; {board_model} now uses {model}, recipe revision {recipe} and {golden}, so a preview could show another verdict than its row.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location line="+6"/>
-        <source>Press Run Test Again to test the folder with what is in use now; the run&apos;s rows, CSV and report keep the verdicts it gave.</source>
+        <source>Press Run Test Again in the preview pane to test the run&apos;s folder with what is in use now; the run&apos;s rows, CSV and report keep the verdicts it gave.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -1589,6 +1589,26 @@
     <message>
         <location filename="../ui/pages/training.py" line="+266"/>
         <source>{code} {title}</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/pages/model_test.py" line="+46"/>
+        <source>AI model {version}</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>no AI model</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Golden board {file}</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>no Golden board</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -2347,26 +2367,26 @@
 <context>
     <name>ModelTestPage</name>
     <message>
-        <location filename="../ui/pages/model_test.py" line="+78"/>
-        <location line="+263"/>
+        <location filename="../ui/pages/model_test.py" line="+35"/>
+        <location line="+289"/>
         <source>Select Test Folder…</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-262"/>
+        <location line="-288"/>
         <location line="+99"/>
-        <location line="+148"/>
+        <location line="+163"/>
         <source>Run Test</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-245"/>
-        <location line="+266"/>
+        <location line="-260"/>
+        <location line="+292"/>
         <source>Export CSV</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-265"/>
+        <location line="-291"/>
         <source>Export Report</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2416,7 +2436,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-78"/>
+        <location line="+186"/>
+        <source>These results were judged by {run_model}, recipe revision {run_recipe} and {run_golden}; {board_model} now uses {model}, recipe revision {recipe} and {golden}. Rows are not previewed; select one for Run Test Again, which tests the run&apos;s folder with what is in use now.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="-270"/>
         <source>Matches label</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2431,7 +2456,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+77"/>
+        <location line="+83"/>
         <source>Matches label?</source>
         <comment>whether the verdict matches the image&apos;s label</comment>
         <translation type="unfinished"></translation>
@@ -2477,17 +2502,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+75"/>
+        <location line="+82"/>
         <source>Run Test Again ›</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+10"/>
-        <source>These results were judged by AI model {run_model}, recipe revision {run_recipe} and Golden board {run_golden}; {board_model} now uses AI model {model}, recipe revision {recipe} and Golden board {golden}. Rows are not previewed: Run Test Again tests the folder with what is in use now.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+45"/>
+        <location line="+74"/>
         <source>No AI model for {board_model} yet</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2537,8 +2557,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-129"/>
-        <location line="+134"/>
+        <location line="+5"/>
         <location line="+4"/>
         <source>none</source>
         <translation type="unfinished"></translation>
@@ -2685,7 +2704,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/model_test.py" line="-340"/>
+        <location filename="../ui/pages/model_test.py" line="-366"/>
         <source>AI Model Test</source>
         <translation type="unfinished"></translation>
     </message>
