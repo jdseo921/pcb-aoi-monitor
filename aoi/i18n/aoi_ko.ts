@@ -631,7 +631,27 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/imaging.py" line="+178"/>
+        <location filename="../core/imaging.py" line="+212"/>
+        <source>its {count} tiles add up to more than the {size} bytes of the file</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>its {count} strips add up to more than the {size} bytes of the file</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+15"/>
+        <source>its tiles {first} and {second} share bytes of the file, so the decoder would read them again</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>its strips {first} and {second} share bytes of the file, so the decoder would read them again</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+35"/>
         <source>it holds {scans} scans, more than the {most} this app decodes</source>
         <translation type="unfinished"></translation>
     </message>
@@ -651,7 +671,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+32"/>
+        <location line="+33"/>
         <source>{megabytes} MB ({count} bytes)</source>
         <translation type="unfinished"></translation>
     </message>
