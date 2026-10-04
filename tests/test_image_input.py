@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import functools
+import io
 import json
 import struct
 import zlib
@@ -55,19 +56,22 @@ def forged(ext: str, width: int, height: int, order: str = "<") -> bytes:
 
 def tiff(width: int, height: int, order: str = "<", kind: int = 4, big: bool = False) -> bytes:
     """A TIFF header, classic or BigTIFF, in either byte order, whose size tags are of integer type `kind` (LONG by
-    default): the first directory holds ImageWidth and ImageLength and nothing else."""
+    default): the first directory holds ImageWidth and ImageLength and nothing else. In a classic file the 8 bytes of a
+    LONG8 or SLONG8 value follow the directory, where its entry points."""
     fmt = {1: "B", 3: "H", 4: "I", 6: "b", 8: "h", 9: "i", 16: "Q", 17: "q"}[kind]
     values_fmt, value_len = ("Q", 8) if big else ("I", 4)
+    apart = not big and kind in (16, 17)
 
-    def entry(tag: int, value: int) -> bytes:
+    def entry(tag: int, value: int, at: int) -> bytes:
         field = struct.pack(order + fmt, value).ljust(value_len, b"\x00")  # left-justified in the value field
-        return struct.pack(order + "HH" + values_fmt, tag, kind, 1) + field
+        return struct.pack(order + "HH" + values_fmt, tag, kind, 1) + (struct.pack(order + "I", at) if apart else field)
 
     if big:
         magic = (b"II+\x00" if order == "<" else b"MM\x00+") + struct.pack(order + "HHQ", 8, 0, 16)
-        return magic + struct.pack(order + "Q", 2) + entry(256, width) + entry(257, height) + bytes(8)
+        return magic + struct.pack(order + "Q", 2) + entry(256, width, 0) + entry(257, height, 0) + bytes(8)
     magic = (b"II*\x00" if order == "<" else b"MM\x00*") + struct.pack(order + "I", 8)
-    return magic + struct.pack(order + "H", 2) + entry(256, width) + entry(257, height) + bytes(4)
+    values = struct.pack(order + fmt * 2, width, height) if apart else b""  # at 38 and 46, after the directory
+    return magic + struct.pack(order + "H", 2) + entry(256, width, 38) + entry(257, height, 46) + bytes(4) + values
 
 
 @functools.cache
@@ -77,21 +81,51 @@ def _black_strip(width: int, height: int) -> bytes:
     return b"".join(z.compress(bytes(width * 3)) for _ in range(height)) + z.flush()
 
 
-def deflate_tiff(sizes: list[tuple[int, int]], width: int, height: int) -> bytes:
+def deflate_tiff(
+    sizes: list[tuple[int, int]],
+    width: int,
+    height: int,
+    block: list[tuple[int, int]] | None = None,
+    kind: int = 4,
+    size_kind: int = 4,
+) -> bytes:
     """A little-endian TIFF of `width` × `height` black RGB pixels in one Deflate strip, as the #169 verifier built it:
-    its first directory lists the ImageWidth and ImageLength entries `sizes`, (tag, value) in that order, then the tags
-    a decoder needs."""
+    its first directory lists the ImageWidth and ImageLength entries `sizes`, (tag, value) in that order, of integer
+    type `size_kind`, then the tags a decoder needs, with the RowsPerStrip, TileWidth or TileLength entries `block`
+    (RowsPerStrip the height by default) of integer type `kind`, both LONG by default; the 8 bytes of a LONG8 or SLONG8
+    value follow BitsPerSample's, those of `block` first, where its entry points. With a tile tag the pixels are
+    declared one tile, as the #242 verifiers built it; its bytes are the strip's, since nothing reads them once the
+    header check has refused the file."""
     strip = _black_strip(width, height)
-    bits_at = 8 + len(strip)  # BitsPerSample's three values follow the strip, then the directory
-    tags = [(t, 4, 1, v) for t, v in sizes] + [(258, 3, 3, bits_at), (259, 3, 1, 8), (262, 3, 1, 2), (273, 4, 1, 8)]
-    tags += [(277, 3, 1, 3), (278, 4, 1, height), (279, 4, 1, len(strip)), (284, 3, 1, 1)]
+    bits_at = 8 + len(strip)  # BitsPerSample's three values follow the strip, then any 8-byte values, the directory
+    block = [(278, height)] if block is None else block
+    tags, wide = list[tuple[int, int, int, int]](), b""
+    for t, k, v in [(t, kind, v) for t, v in block] + [(t, size_kind, v) for t, v in sizes]:
+        tags.append((t, k, 1, bits_at + 6 + len(wide) if k in (16, 17) else v))
+        wide += struct.pack("<Q", v) if k in (16, 17) else b""
+    offsets, counts = (324, 325) if any(t in (322, 323) for t, _ in block) else (273, 279)
+    tags += [(258, 3, 3, bits_at), (259, 3, 1, 8), (262, 3, 1, 2)]
+    tags += [(offsets, 4, 1, 8), (277, 3, 1, 3), (counts, 4, 1, len(strip)), (284, 3, 1, 1)]
+    tags.sort(key=lambda t: t[0])  # in tag order, as a directory is; entries of one tag keep theirs
 
     def entry(tag: int, kind: int, n: int, value: int) -> bytes:
         field = struct.pack("<HH", value, 0) if kind == 3 and n == 1 else struct.pack("<I", value)  # left-justified
         return struct.pack("<HHI", tag, kind, n) + field
 
     directory = struct.pack("<H", len(tags)) + b"".join(entry(*t) for t in tags) + bytes(4)
-    return b"II*\x00" + struct.pack("<I", bits_at + 6) + strip + struct.pack("<HHH", 8, 8, 8) + directory
+    head = b"II*\x00" + struct.pack("<I", bits_at + 6 + len(wide))
+    return head + strip + struct.pack("<HHH", 8, 8, 8) + wide + directory
+
+
+def scans_jpeg(width: int, height: int, repeats: int, pad: bytes = b"") -> bytes:
+    """A progressive JPEG of flat grey saved by Pillow (10 scans), with its last scan, from its start-of-scan marker to
+    the end-of-image marker, repeated `repeats` times before that marker, each after the bytes `pad`, as the #242
+    verifiers built it: libjpeg warns "Inconsistent progression sequence" and decodes every scan. Each repeat of a flat
+    image's last scan is 31 bytes."""
+    buf = io.BytesIO()
+    Image.fromarray(np.full((height, width, 3), 128, np.uint8)).save(buf, "JPEG", quality=30, progressive=True)
+    data = buf.getvalue()
+    return data[:-2] + (pad + data[data.rindex(b"\xff\xda") : -2]) * repeats + data[-2:]
 
 
 @pytest.fixture(scope="module")
@@ -167,22 +201,23 @@ def test_req_insp_001_headers_are_read_in_both_tiff_byte_orders() -> None:
     assert image_header(b"\x89PNG\r\n\x1a\n" + bytes(10)) == ("PNG", 0, 0)  # a cut header: no size, so refused
 
 
-@pytest.mark.parametrize("kind", [1, 3, 4, 6, 8, 9])
+@pytest.mark.parametrize("kind", [1, 3, 4, 6, 8, 9, 16, 17])
 def test_req_insp_001_tiff_size_tags_are_read_in_every_integer_type(kind: int) -> None:
-    """libtiff reads ImageWidth and ImageLength from a BYTE, SHORT, LONG, SBYTE, SSHORT or SLONG tag, so the reader does
-    too (the S23a review retyped the tags of a 60 MP TIFF as SLONG to slip it past a reader that knew SHORT and LONG),
-    in both byte orders, and in a BigTIFF file, whose tags may also be LONG8."""
+    """libtiff reads ImageWidth and ImageLength from a BYTE, SHORT, LONG, SBYTE, SSHORT, SLONG, LONG8 or SLONG8 tag, so
+    the reader does too (the S23a review retyped the tags of a 60 MP TIFF as SLONG to slip it past a reader that knew
+    SHORT and LONG), in both byte orders, classic or BigTIFF; in a classic file the 8 bytes of a LONG8 or SLONG8 sit
+    where its entry points, which the reader skipped until the #242 review."""
     for order in "<>":
         assert image_header(tiff(120, 100, order, kind)) == ("TIFF", 120, 100)  # within a SBYTE's 127
-        big_kind = kind if kind in (3, 4, 8, 9) else 16  # 5472 fits no BYTE or SBYTE; LONG8 is BigTIFF's own type
+        big_kind = kind if kind in (3, 4, 8, 9, 16, 17) else 16  # 5472 fits no BYTE or SBYTE
         assert image_header(tiff(5472, 3648, order, big_kind, big=True)) == ("TIFF", 5472, 3648)
 
 
 def test_req_insp_001_headers_are_read_as_the_decoders_read_them(tmp_path: Path) -> None:
-    """Where a file can be read in two ways the reader follows the decoder, so no file measures small here and decodes
-    large (the S23a review's blocking finding): stray, stuffed and fill bytes between JPEG segments are skipped as
-    libjpeg skips them, a bitmap is known by its header size and not by its reserved words, and a negative TIFF size is
-    no size."""
+    """Where a file can be read in two ways the reader follows the decoder, so the size measured here is the size of the
+    image decoded (the S23a review's blocking finding): stray, stuffed and fill bytes between JPEG segments are skipped
+    as libjpeg skips them, a bitmap is known by its header size and not by its reserved words, and a negative TIFF size
+    is no size. The decoder's work is bounded by the scan and tile checks (#242), tested below."""
     jpg = forged(".jpg", 10000, 6000)
     for junk in (b"\x00", b"\xff\x00", b"\xff\xff", b"junk!"):
         assert image_header(jpg[:20] + junk + jpg[20:]) == ("JPEG", 10000, 6000), junk
@@ -226,6 +261,157 @@ def test_req_insp_001_a_tiff_that_gives_its_size_twice_is_refused(tmp_path: Path
     with pytest.raises(AoiError) as over:
         load_image(once)
     assert over.value.code == "AOI-INSP-005" and "64.00 MP (8000 × 8000)" in over.value.what
+
+
+SIZE_64 = [(256, 64), (257, 64)]
+TWICE = "it gives the size of its tiles or strips twice"
+TILE = "its tiles are 16000 × 16000 px, more than its 64 × 64 px image needs"
+ROWS = "its strips are 64 × 100000 px, more than its 64 × 64 px image needs"
+COSTLY = {  # file: (what builds it, what AOI-INSP-006 says of it); the 4000 × 4000 JPEG is built when its case runs
+    "scans.jpg": (lambda: scans_jpeg(4000, 4000, 2000), "it holds 2,010 scans, more than the 100 this app decodes"),
+    "tile16000.tif": (lambda: deflate_tiff(SIZE_64, 64, 64, [(322, 16000), (323, 16000)]), TILE),
+    "rows100000.tif": (lambda: deflate_tiff(SIZE_64, 64, 64, [(278, 100_000)]), ROWS),
+    # the #242 review's files: LONG8 and SLONG8 in a classic file, which the reader skipped and libtiff reads
+    "tile16000_long8.tif": (lambda: deflate_tiff(SIZE_64, 64, 64, [(322, 16000), (323, 16000)], kind=16), TILE),
+    "tile16000_slong8.tif": (lambda: deflate_tiff(SIZE_64, 64, 64, [(322, 16000), (323, 16000)], kind=17), TILE),
+    "rows100000_long8.tif": (lambda: deflate_tiff(SIZE_64, 64, 64, [(278, 100_000)], kind=16), ROWS),
+    "tile_twice.tif": (lambda: deflate_tiff(SIZE_64, 64, 64, [(322, 256), (322, 256), (323, 256)]), TWICE),
+    "rows_twice.tif": (lambda: deflate_tiff(SIZE_64, 64, 64, [(278, 64), (278, 64)]), TWICE),
+}
+
+
+@pytest.mark.parametrize("name", COSTLY)
+def test_req_insp_001_a_file_that_costs_the_decoder_far_more_than_its_image_is_refused_before_decoding(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, name: str
+) -> None:
+    """#242: a progressive 4000 × 4000 JPEG with its last scan repeated 2,000 times (0.16 MB) passed every check and
+    held the decoder about 20 s, and a 64 × 64 TIFF declaring one 16000 × 16000 tile took about 1 GB to decode, since
+    the checks bounded the image's size and not the decoder's work; a strip far taller than its image, and a tile or
+    strip tag given twice (libtiff reads the first), passed too. So did the tile and the strip given as LONG8 or SLONG8
+    in a classic file (the #242 review), which the reader skipped and libtiff reads where the entry points. Each is now
+    refused with AOI-INSP-006 by its scans, its tile or its strip before cv2.imdecode is called. The decoder is patched
+    to fail the test, so the code before fails at once rather than decoding for 20 s or taking 1 GB."""
+
+    def no_decode(buf: np.ndarray, flags: int) -> np.ndarray:
+        pytest.fail(f"cv2.imdecode was called for {name} ({len(buf):,} bytes)")
+
+    monkeypatch.setattr(cv2, "imdecode", no_decode)
+    build, reason = COSTLY[name]
+    p = tmp_path / name
+    p.write_bytes(build())
+    with pytest.raises(AoiError) as refused:
+        load_image(p)
+    print(name, f"{p.stat().st_size:,} bytes:", refused.value.what)
+    assert refused.value.code == "AOI-INSP-006" and p.name in refused.value.what and reason in refused.value.what
+
+
+def test_req_insp_001_scans_are_counted_as_libjpeg_reaches_them(tmp_path: Path) -> None:
+    """libjpeg reads a JPEG from marker to marker up to its first end-of-image marker, and the scan count follows it
+    (the #242 review): start-of-scan bytes after that marker (where a phone's motion photo keeps its video) or inside
+    another segment (an EXIF thumbnail's scans) are no scans of the image, while stray, stuffed, restart and fill bytes
+    or segments between the scans hide none, past JPEG_MAX_MARKERS markers too. Counting every FF DA in the file
+    refused the first two files as holding 201 scans."""
+    data = cv2.imencode(".jpg", board(640, 480))[1].tobytes()  # baseline: one scan
+    files = {
+        "after.jpg": data + b"\xff\xda" * 200,
+        "inside.jpg": data[:2] + b"\xff\xfe" + struct.pack(">H", 402) + b"\xff\xda" * 200 + data[2:],  # in a comment
+    }
+    for name, crafted in files.items():
+        (tmp_path / name).write_bytes(crafted)
+        assert load_image(tmp_path / name).shape == (480, 640, 3), name
+    for n, pad in enumerate((b"junk\xff\x00\xff\xd0\xff\xfe\x00\x04ab\xff\xff", b"\xff\xfe\x00\x02" * 800)):
+        (tmp_path / f"between{n}.jpg").write_bytes(scans_jpeg(640, 480, 91, pad))
+        with pytest.raises(AoiError) as e:
+            load_image(tmp_path / f"between{n}.jpg")
+        assert "it holds 101 scans, more than the 100" in e.value.what, n
+
+
+def test_req_insp_001_progressive_jpegs_and_tiled_or_one_strip_tiffs_still_open(tmp_path: Path) -> None:
+    """The scan, tile and strip checks of #242 leave ordinary files alone: a progressive JPEG saved by Pillow (10
+    scans), a 64 × 64 TIFF written by tifffile with 256 × 256 tiles (TIFF 6.0 makes tile sides multiples of 16, so a
+    small image has a tile larger than itself) and a strip TIFF whose RowsPerStrip is the TIFF default 4,294,967,295,
+    one strip for the whole image, open at their size; the TIFFs give every pixel back. This passed before the fix
+    too: it guards against a bound that refuses too much."""
+    img = board(640, 480)
+    Image.fromarray(np.ascontiguousarray(img[:, :, ::-1])).save(tmp_path / "progressive.jpg", progressive=True)
+    tile = tmp_path / "tiled.tif"
+    tifffile.imwrite(tile, np.ascontiguousarray(img[:64, :64, ::-1]), tile=(256, 256))
+    one_strip = tmp_path / "one_strip.tif"
+    one_strip.write_bytes(deflate_tiff([(256, 640), (257, 480)], 640, 480, [(278, 0xFFFFFFFF)]))
+    assert (tmp_path / "progressive.jpg").read_bytes().count(b"\xff\xda") == 10
+    assert load_image(tmp_path / "progressive.jpg").shape == (480, 640, 3)
+    assert np.array_equal(load_image(tile), img[:64, :64])
+    assert np.array_equal(load_image(one_strip), np.zeros((480, 640, 3), np.uint8))
+
+
+def test_req_insp_001_a_classic_tiff_s_8_byte_tags_are_read_where_their_entries_point(tmp_path: Path) -> None:
+    """The 8 bytes of a LONG8 or SLONG8 value fit no entry of a classic TIFF, and libtiff reads them at the offset the
+    entry holds (TIFFReadDirEntryCheckedLong8), which the reader skipped until the #242 review. A file giving its size
+    in either type, its entries holding the offsets of 640 and 480 and not the sizes, was refused as giving no size;
+    it is now measured at 640 × 480 and opens pixel for pixel, so it is judged. A RowsPerStrip of 480 given as a LONG8
+    opens; the same file with 0 at the entry's offset is refused by the decoder ("Bad value 0 for RowsPerStrip"), while
+    one whose RowsPerStrip is that offset itself opens: so libtiff reads the bytes the entry points to, not the entry,
+    as the reader now does."""
+
+    def pointed(data: bytes, tag: int) -> tuple[int, int]:
+        """The 4-byte field of `tag`'s entry in the first directory, and the 8 bytes at that offset as a number."""
+        at = struct.unpack_from("<I", data, 4)[0]
+        entries = (
+            struct.unpack_from("<HHII", data, at + 2 + 12 * n) for n in range(struct.unpack_from("<H", data, at)[0])
+        )
+        field = next(f for t, _, _, f in entries if t == tag)
+        return field, struct.unpack_from("<Q", data, field)[0]
+
+    black = np.zeros((480, 640, 3), np.uint8)
+    for size_kind in (16, 17):
+        data = deflate_tiff([(256, 640), (257, 480)], 640, 480, size_kind=size_kind)
+        (width_at, width), (height_at, height) = pointed(data, 256), pointed(data, 257)
+        assert (width, height) == (640, 480) and {width_at, height_at}.isdisjoint({640, 480}), (width_at, height_at)
+        assert image_header(data) == ("TIFF", 640, 480)
+        (tmp_path / f"size{size_kind}.tif").write_bytes(data)
+        assert np.array_equal(load_image(tmp_path / f"size{size_kind}.tif"), black), size_kind
+    at = pointed(deflate_tiff([(256, 640), (257, 480)], 640, 480, [(278, 480)], kind=16), 278)[0]
+    for rows in (480, 0, at):
+        data = deflate_tiff([(256, 640), (257, 480)], 640, 480, [(278, rows)], kind=16)
+        assert pointed(data, 278) == (at, rows)
+        (tmp_path / f"rows{rows}.tif").write_bytes(data)
+    assert np.array_equal(load_image(tmp_path / "rows480.tif"), black)
+    assert np.array_equal(load_image(tmp_path / f"rows{at}.tif"), black)
+    with pytest.raises(AoiError) as zero:
+        load_image(tmp_path / "rows0.tif")
+    assert zero.value.code == "AOI-INSP-006" and "it is cut short, damaged" in zero.value.what
+
+
+def test_req_insp_001_the_scan_tile_and_strip_bounds_sit_at_their_values(tmp_path: Path) -> None:
+    """The bounds of #242 where they lie: a JPEG of 100 scans opens and one of 101 is refused; a tile or strip may hold
+    up to the larger of 1024 × 1024 px and the image with each side rounded up to a multiple of 16, and one more row or
+    column is refused. Before the fix every one of these files was decoded, so the refusals fail on that code."""
+    files = {
+        "scans100.jpg": scans_jpeg(640, 480, 90),
+        "scans101.jpg": scans_jpeg(640, 480, 91),
+        "rows16384.tif": deflate_tiff(SIZE_64, 64, 64, [(278, 16384)]),  # 64 × 16384 = 1024 × 1024 px
+        "rows16385.tif": deflate_tiff(SIZE_64, 64, 64, [(278, 16385)]),
+        "rows1504.tif": deflate_tiff([(256, 2000), (257, 1500)], 2000, 1500, [(278, 1504)]),  # 1500 rounds up to 1504
+        "rows1505.tif": deflate_tiff([(256, 2000), (257, 1500)], 2000, 1500, [(278, 1505)]),
+    }
+    for name, data in files.items():
+        (tmp_path / name).write_bytes(data)
+    small = np.ascontiguousarray(board(64, 64)[:, :, ::-1])
+    tifffile.imwrite(tmp_path / "tile1024.tif", small, tile=(1024, 1024))
+    tifffile.imwrite(tmp_path / "tile1040.tif", small, tile=(1040, 1024))
+    shapes = {"scans100.jpg": (480, 640, 3), "rows1504.tif": (1500, 2000, 3)}
+    for name in ("scans100.jpg", "rows16384.tif", "rows1504.tif", "tile1024.tif"):
+        assert load_image(tmp_path / name).shape == shapes.get(name, (64, 64, 3)), name
+    refused = {
+        "scans101.jpg": "it holds 101 scans, more than the 100 this app decodes",
+        "rows16385.tif": "its strips are 64 × 16385 px",
+        "rows1505.tif": "its strips are 2000 × 1505 px, more than its 2000 × 1500 px image needs",
+        "tile1040.tif": "its tiles are 1024 × 1040 px",  # tifffile's tile is (length, width)
+    }
+    for name, reason in refused.items():
+        with pytest.raises(AoiError) as e:
+            load_image(tmp_path / name)
+        assert e.value.code == "AOI-INSP-006" and reason in e.value.what, (name, e.value.what)
 
 
 def test_req_insp_001_an_image_too_small_to_inspect_is_refused_and_no_number_grades_ng() -> None:

@@ -87,9 +87,25 @@ over the pixel limit with `AOI-INSP-005` before a pixel is decoded, an image wit
 own limit, with `AOI-INSP-007`, a file that holds no PNG, JPG, BMP or TIFF image with `AOI-INSP-004`, and a recognised
 format whose header gives no size, or that the decoder rejects (cut short, damaged, a variant OpenCV does not read), with
 `AOI-INSP-006`. Wherever a file can be read in two ways the header readers follow the decoders (stray bytes between JPEG
-segments are skipped as libjpeg skips them, a TIFF size tag of any integer type counts, classic or BigTIFF, a TIFF that
-gives a size tag twice is refused with `AOI-INSP-006` since libtiff reads the first entry (#169), a bitmap is known by
-its header size), so no file measures small here and decodes large; `tests/test_image_input.py` holds the
+segments are skipped as libjpeg skips them, a TIFF size tag of any integer type counts, classic or BigTIFF (in a classic
+file the 8 bytes of a LONG8 or SLONG8 are read where its entry points, as libtiff reads them), a TIFF that gives a size
+tag twice is refused with `AOI-INSP-006` since libtiff reads the first entry (#169), a bitmap is known by its header
+size), so the size measured is the size of the image the decoder returns. That bounds the image, not the decoder's work,
+which two more checks bound before decoding, both refusing with `AOI-INSP-006` (#242): a JPEG with more than 100 scans
+(`JPEG_MAX_SCANS`, libtiff's default for a JPEG inside a TIFF; libjpeg decodes every scan, each a pass over the image,
+and its progression writes 10 for a colour image), counted as libjpeg reaches them, from marker to marker up to the
+first end-of-image marker, so that no scan libjpeg decodes is missed while the scans of an EXIF thumbnail inside a
+segment and the bytes after the image (where a phone's motion photo keeps its video) do not count; and a TIFF whose tile
+or strip, by which OpenCV allocates its buffer up to 1 GiB, holds more pixels than the larger of 1024 × 1024 and the
+image with each side rounded up to a multiple of 16 (TIFF 6.0 makes tile sides multiples of 16, so a 64 × 64 image with
+256 × 256 tiles opens), or that gives RowsPerStrip, TileWidth or TileLength twice. libtiff fills a whole tile, so a
+64 × 64 TIFF declaring one 16000 × 16000 tile took about 1 GB of memory; of a strip it fills only the image's rows, so
+for a strip the bound limits what OpenCV allocates (about 1 GB of address space for a 64 × 4,000,000 strip) rather than
+the memory in use, which stayed near 56 MB on Linux. A RowsPerStrip of 0 or 4,294,967,295 reads as the image height, as
+OpenCV reads it. The strip bound also refuses a short image whose RowsPerStrip is a constant well above its height, such
+as 2,048 rows per strip for 640 × 480 px (a buffer of about 5 MB), although it decodes cheaply; no TIFF that Pillow,
+tifffile or OpenCV wrote in testing was refused, and whether such a file must open is for Jay to decide. Both checks run
+in `_decoder_work` before `cv2.imdecode` is called, and `tests/test_image_input.py` holds the
 crafted files and files from Pillow and tifffile. The limits are the two `max_image_*` values in `settings.json`, in the
 default workspace folder (50 MP and 200 MB, that is 200,000,000 bytes, both proposed, since a 50 MP 24-bit BMP is
 150 MB); `Settings.load` refuses a file it cannot read (not JSON, not UTF-8, not an object) with `AOI-SET-010`, and a

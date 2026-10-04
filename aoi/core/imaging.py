@@ -12,7 +12,7 @@ import cv2
 import numpy as np
 
 from ..data import atomic
-from ..errors import QT_TRANSLATE_NOOP, AoiError
+from ..errors import QT_TRANSLATE_NOOP, AoiError, Phrase
 
 IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".bmp", ".tif", ".tiff"}
 # Limits an image must stay within to be decoded (REQ-INSP-001), at the register's proposed values; a station's own
@@ -23,17 +23,29 @@ MAX_SIDE = 1 << 20  # a side longer than this is beyond the decoder (OpenCV's CV
 BMP_HEADER_SIZES = {12, 16, 40, 52, 56, 64, 108, 124}  # BITMAPCOREHEADER to BITMAPV5HEADER: how a bitmap is known
 JPEG_FRAME_MARKERS = {0xC0, 0xC1, 0xC2, 0xC3, 0xC5, 0xC6, 0xC7, 0xC9, 0xCA, 0xCB, 0xCD, 0xCE, 0xCF}
 JPEG_BARE_MARKERS = {0x00, 0x01, 0xD8, *range(0xD0, 0xD8)}  # no length field follows: a stuffed byte, TEM, SOI, RSTn
-JPEG_MAX_MARKERS = 65536  # more markers than any camera writes before the frame: past it the walk gives up
+JPEG_MAX_MARKERS = 65536  # more markers than any camera writes: past it a walk gives up
 JPEG_FILL = re.compile(rb"\xff+")
+# libjpeg's progression writes 10 scans for a colour image, and its decoder reads every scan a file holds; libtiff stops
+# a JPEG inside a TIFF at the same 100 scans by default (LIBTIFF_JPEG_MAX_ALLOWED_SCAN_NUMBER)
+JPEG_MAX_SCANS = 100
+# The markers libjpeg acts on in `_jpeg_scans`: EOI (D9) and SOS (DA), and the segments it reads by their length and
+# goes on from (SOF0-3 and 9-11, DHT, DAC, DQT, DNL, DRI, APPn, COM). Any other pair is stuffing, fill, a restart or a
+# marker libjpeg fails at or searches past, so the walk searches past it too and skips no byte libjpeg reads.
+JPEG_WALK = re.compile(rb"\xff([\xc0-\xc4\xc9-\xcc\xd9-\xdd\xe0-\xef\xfe])")
 TIFF_INT_TYPES = {1: "B", 3: "H", 4: "I", 6: "b", 8: "h", 9: "i", 16: "Q", 17: "q"}  # BYTE to SLONG8: a size's types
+TIFF_TAGS = (256, 257, 278, 322, 323)  # ImageWidth, ImageLength, RowsPerStrip, TileWidth, TileLength
+TIFF_TWICE = -1  # what `_tiff_tags` gives a tag listed twice: no single value
+TIFF_WHOLE_SIDE = (0, 0xFFFFFFFF)  # a RowsPerStrip of 0, or the TIFF default 4,294,967,295, reads as the image height
+TIFF_BLOCK_PIXELS = 1024 * 1024  # a tile or strip may always hold this many pixels, however small the image
 
 
 def image_header(data: bytes) -> tuple[str, int, int] | None:
     """(format, width, height) of a PNG, JPEG, BMP or TIFF file read from its bytes, never from its name; None for
     anything else. Only the header is read, so a file is measured before any pixel is decoded. Wherever a file can be
-    read in two ways the readers follow the decoders (libjpeg, libtiff, OpenCV's bitmap reader), so no file measures
-    small here and decodes large; a recognised format whose size still cannot be read gives width and height 0, and
-    `load_image` refuses it rather than hand it to the decoder."""
+    read in two ways the readers follow the decoders (libjpeg, libtiff, OpenCV's bitmap reader), so the size measured
+    here is the size of the image the decoder returns; it bounds the image, not the decoder's work, which `load_image`
+    bounds by a JPEG's scans and a TIFF's tiles and strips (#242). A recognised format whose size still cannot be read
+    gives width and height 0, and `load_image` refuses it rather than hand it to the decoder."""
     if data[:8] == b"\x89PNG\r\n\x1a\n":
         if len(data) < 24 or data[12:16] != b"IHDR":
             return "PNG", 0, 0
@@ -85,41 +97,105 @@ def _jpeg_header(data: bytes) -> tuple[str, int, int]:
 
 
 def _tiff_header(data: bytes) -> tuple[str, int, int]:
-    """ImageWidth (tag 256) and ImageLength (257) from the first directory of a classic or a BigTIFF file; the directory
-    may sit anywhere in the file. (TIFF, 0, 0) when it or either tag cannot be read. A size tag counts when it holds one
-    value of an integer type, as libtiff reads it; a value of 0 or less is no size, and so is a size tag given twice:
-    libtiff reads the first entry and ignores the rest, so a file listing 8000 then 10 would measure small and decode
-    large wherever the last counted (#169)."""
+    """ImageWidth (tag 256) and ImageLength (257) from the first directory, as `_tiff_tags` reads them; (TIFF, 0, 0)
+    when either cannot be read. A value of 0 or less is no size, and so is a size tag given twice: libtiff reads the
+    first entry and ignores the rest, so a file listing 8000 then 10 would measure small and decode large wherever the
+    last counted (#169)."""
+    tags = _tiff_tags(data)
+    if TIFF_TWICE in (tags.get(256), tags.get(257)):
+        return "TIFF", 0, 0
+    return "TIFF", tags.get(256, 0), tags.get(257, 0)
+
+
+def _tiff_tags(data: bytes) -> dict[int, int]:
+    """The TIFF_TAGS the first directory of a classic or a BigTIFF file holds, by tag; the directory may sit anywhere in
+    the file. A tag counts when it holds one value of an integer type, BYTE to SLONG8, as libtiff's TIFFReadDirEntryLong
+    reads it: in a classic file the 8 bytes of a LONG8 or SLONG8 sit at the offset its entry holds (#242 review), and a
+    value below 0 reads as 0. A tag listed twice gives TIFF_TWICE whatever either entry holds, since libtiff reads the
+    first."""
     order = "<" if data[:2] == b"II" else ">"
     big = data[2:4] in (b"+\x00", b"\x00+")  # BigTIFF: 8-byte offsets and counts, 20-byte entries
     head, count_fmt, values_fmt, entry_len, value_at = (16, "Q", "Q", 20, 12) if big else (8, "H", "I", 12, 8)
     if len(data) < head:
-        return "TIFF", 0, 0
+        return {}
     (offset,) = struct.unpack(order + "Q", data[8:16]) if big else struct.unpack(order + "I", data[4:8])
     count_len = struct.calcsize(count_fmt)
     if offset + count_len > len(data):
-        return "TIFF", 0, 0
+        return {}
     (count,) = struct.unpack(order + count_fmt, data[offset : offset + count_len])
-    size, seen = {256: 0, 257: 0}, set[int]()
+    tags, seen = dict[int, int](), set[int]()
     for n in range(min(int(count), 65535)):  # a classic count's maximum; libtiff refuses a directory over 4,096 entries
         at = offset + count_len + entry_len * n
         entry = data[at : at + entry_len]
         if len(entry) < entry_len:
             break
         tag, kind = struct.unpack(order + "HH", entry[:4])
-        if tag in size and tag in seen:  # whatever either entry holds: no single size, so the file is refused
-            return "TIFF", 0, 0
+        if tag in TIFF_TAGS and tag in seen:  # whatever either entry holds: no single value, so the file is refused
+            tags[tag] = TIFF_TWICE
+            continue
         seen.add(tag)
         fmt = TIFF_INT_TYPES.get(kind)
-        if tag not in size or fmt is None or (kind in (16, 17) and not big):  # LONG8 and SLONG8 exist only in BigTIFF
+        if tag not in TIFF_TAGS or fmt is None:
             continue
         (values,) = struct.unpack(order + values_fmt, entry[4:value_at])
-        if values != 1:
-            continue
-        (value,) = struct.unpack(order + fmt, entry[value_at : value_at + struct.calcsize(fmt)])
-        if value > 0:
-            size[tag] = int(value)
-    return "TIFF", size[256], size[257]
+        field = entry[value_at:]
+        if kind in (16, 17) and not big:  # 8 bytes fit no classic entry: libtiff reads them where the entry points
+            (where,) = struct.unpack(order + "I", field)
+            field = data[where : where + 8]  # short past the end of the file, where libtiff refuses the directory
+        if values == 1 and len(field) >= struct.calcsize(fmt):
+            (value,) = struct.unpack(order + fmt, field[: struct.calcsize(fmt)])
+            tags[tag] = max(int(value), 0)
+    return tags
+
+
+def _jpeg_scans(data: bytes) -> int:
+    """The scans libjpeg decodes in a JPEG, or more, never fewer (#242 review). libjpeg reads from marker to marker: it
+    reads a segment by its length, starts a scan at each SOS, searches past a scan's coded data, stuffed and fill bytes,
+    restarts and stray bytes for the next marker, and stops at the first EOI it meets. So the scans of an EXIF thumbnail
+    (inside a segment) or the bytes after the image (a phone's video) are no scans of its. Past JPEG_MAX_MARKERS
+    markers the walk stops and every FF DA pair left counts as a scan, so the count never exceeds the file's FF DA
+    pairs either."""
+    scans, i = 0, 2
+    for _ in range(JPEG_MAX_MARKERS):
+        found = JPEG_WALK.search(data, i)
+        if found is None or found[1] == b"\xd9":
+            return scans
+        scans += found[1] == b"\xda"
+        i = found.end() + int.from_bytes(data[found.end() : found.end() + 2], "big")  # the length counts its 2 bytes
+    return scans + data.count(b"\xff\xda", i)
+
+
+def _decoder_work(data: bytes, kind: str, width: int, height: int) -> Phrase | None:
+    """Why decoding the file would cost far more than its `width` × `height` image, or None (#242). libjpeg decodes
+    every scan of a progressive JPEG, each a pass over the image, and a file can repeat a scan thousands of times at 31
+    bytes each: a JPEG with more than JPEG_MAX_SCANS is refused, counted by `_jpeg_scans` once the file holds more FF DA
+    pairs than that (the walk can only lower the count, so a file with fewer is never walked). OpenCV allocates its
+    TIFF buffer by one tile or strip, up to 1 GiB, whatever the image (libtiff fills a whole tile, but of a strip only
+    the image's rows): a TIFF is refused when its tile or strip, TileWidth (or the width) by TileLength (or
+    RowsPerStrip, or the height), holds more pixels than the larger of TIFF_BLOCK_PIXELS and the image with each side
+    rounded up to a multiple of 16, as TIFF 6.0 makes tile sides."""
+    if kind == "JPEG" and data.count(b"\xff\xda") > JPEG_MAX_SCANS and (scans := _jpeg_scans(data)) > JPEG_MAX_SCANS:
+        reason = QT_TRANSLATE_NOOP("Errors", "it holds {scans} scans, more than the {most} this app decodes")
+        return reason.fill(scans=f"{scans:,}", most=JPEG_MAX_SCANS)
+    if kind != "TIFF":
+        return None
+    tags = _tiff_tags(data)
+    if TIFF_TWICE in (tags.get(t) for t in TIFF_TAGS[2:]):
+        return QT_TRANSLATE_NOOP("Errors", "it gives the size of its tiles or strips twice")
+    rows = tags.get(278, 0)
+    rows = height if rows in TIFF_WHOLE_SIDE else rows
+    cols, rows = tags.get(322) or width, tags.get(323) or rows
+    if cols * rows <= max(TIFF_BLOCK_PIXELS, -(-width // 16) * 16 * (-(-height // 16) * 16)):
+        return None
+    if 322 in tags or 323 in tags:
+        reason = QT_TRANSLATE_NOOP(
+            "Errors", "its tiles are {cols} × {rows} px, more than its {width} × {height} px image needs"
+        )
+    else:
+        reason = QT_TRANSLATE_NOOP(
+            "Errors", "its strips are {cols} × {rows} px, more than its {width} × {height} px image needs"
+        )
+    return reason.fill(cols=cols, rows=rows, width=width, height=height)
 
 
 def load_image(
@@ -127,9 +203,10 @@ def load_image(
 ) -> np.ndarray:
     """Read as BGR uint8 after checking the file (REQ-INSP-001): it must hold a PNG, JPEG, BMP or TIFF image by its
     content, whatever its name, and stay within `max_megabytes` on disk, `max_megapixels` by its header and `MAX_SIDE`
-    on either side; all three are checked before a pixel is decoded, so a huge or forged file costs nothing, and a
-    recognised format whose header gives no size is refused, never decoded. Decoding the bytes with `imdecode` keeps
-    non-ASCII (Korean) Windows paths working."""
+    on either side, and a JPEG within JPEG_MAX_SCANS scans and a TIFF's tiles or strips within its image's size, so the
+    decoder's work stays near the image's (#242). All of these are checked before a pixel is decoded, and a recognised
+    format whose header gives no size is refused, never decoded. Decoding the bytes with `imdecode` keeps non-ASCII
+    (Korean) Windows paths working."""
     return _read_image(Path(path), max_megapixels, max_megabytes)[0]
 
 
@@ -166,6 +243,8 @@ def _read_image(p: Path, max_megapixels: float, max_megabytes: float) -> tuple[n
         raise AoiError("AOI-INSP-005", path=str(p), size=pixels, limit=f"{max_megapixels:g} MP")
     if max(w, h) > MAX_SIDE:
         raise AoiError("AOI-INSP-007", path=str(p), width=w, height=h, limit=f"{MAX_SIDE:,}")
+    if (costly := _decoder_work(data, kind, w, h)) is not None:
+        raise AoiError("AOI-INSP-006", path=str(p), kind=kind, reason=costly)
     try:
         img = cv2.imdecode(np.frombuffer(data, dtype=np.uint8), cv2.IMREAD_COLOR)
     except cv2.error as e:  # the decoder's own limits, which hold whatever the settings say
