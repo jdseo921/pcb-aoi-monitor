@@ -247,7 +247,7 @@ class ComparePage(Page):
 
         self.tryout = QGroupBox(self.tr("Try other thresholds (nothing is saved until you press Save to Recipe)"))
         f = QFormLayout(self.tryout)
-        self.ai_thr = self.ai_threshold_field()
+        self.ai_thr = self.ai_threshold_field(self.tr("Override the AI model's value {value}"), own_row=True)
         self.diff_thr = QSpinBox()
         self.diff_thr.setRange(1, 255)
         self.min_area = QSpinBox()
@@ -258,12 +258,14 @@ class ComparePage(Page):
         self.max_regions = QSpinBox()
         self.max_regions.setRange(0, 1000)
         f.addRow(self.tr("AI score threshold"), self.ai_thr)
+        f.addRow(self.ai_thr.tick_row)  # the sketch's label, naming the value: beside the field it widens the window
         f.addRow(self.ai_thr.note)  # why no calibrated value is named, as wide as the panel
         f.addRow(self.tr("Pixel difference (0-255)"), self.diff_thr)
         f.addRow(self.tr("Minimum defect area (px)"), self.min_area)
         f.addRow(self.tr("Similarity minimum (SSIM)"), self.ssim_min)
         f.addRow(self.tr("Allowed difference regions"), self.max_regions)
         self.ai_thr.changed.connect(self._drop_tried)  # what was tried no longer applies
+        self.ai_thr.ticking.connect(self._show_calibration)  # an AI model trained since the value was named
         for field in (self.diff_thr, self.min_area, self.ssim_min, self.max_regions):
             field.valueChanged.connect(self._drop_tried)
         row = QHBoxLayout()
@@ -346,7 +348,8 @@ class ComparePage(Page):
         board inspected here, also on a stored result judged with the AI check off, whose record names the AI model
         active then, which judged nothing (#246)."""
         if self.stored is not None and self.stored["model_uuid"] and ai_check(self.res) == "RAN":
-            self.show_calibrated(self.ai_thr, self.stored["board_model"], self.stored["model_uuid"])
+            stored = self.stored
+            self.show_calibrated(self.ai_thr, stored["board_model"], stored["model_uuid"], stored["model_version"])
         else:
             self.show_calibrated(self.ai_thr, self.board_model)
 

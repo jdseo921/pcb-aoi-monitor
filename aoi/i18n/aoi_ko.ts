@@ -99,12 +99,12 @@
     <message>
         <location line="+3"/>
         <location line="+78"/>
-        <location line="+452"/>
+        <location line="+455"/>
         <source>Golden board</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-529"/>
+        <location line="-532"/>
         <source>AI model</source>
         <translation type="unfinished"></translation>
     </message>
@@ -160,12 +160,12 @@
     </message>
     <message>
         <location line="+15"/>
-        <location line="+670"/>
+        <location line="+673"/>
         <source>Test board</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-664"/>
+        <location line="-667"/>
         <source>Inspecting…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -210,7 +210,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+174"/>
+        <location line="+2"/>
+        <source>Override the AI model&apos;s value {value}</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+175"/>
         <source>Would be: {verdict}</source>
         <translation type="unfinished"></translation>
     </message>
@@ -241,12 +246,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-588"/>
+        <location line="-591"/>
         <source>AI score threshold</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+2"/>
+        <location line="+3"/>
         <source>Pixel difference (0-255)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -266,7 +271,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+8"/>
+        <location line="+9"/>
         <source>Re-evaluate</source>
         <translation type="unfinished"></translation>
     </message>
@@ -292,7 +297,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+151"/>
+        <location line="+152"/>
         <source>Test board: {file}</source>
         <translation type="unfinished"></translation>
     </message>
@@ -495,7 +500,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+165"/>
+        <location line="+168"/>
         <source>Re-evaluating a result</source>
         <translation type="unfinished"></translation>
     </message>
@@ -580,12 +585,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-626"/>
+        <location line="-629"/>
         <source>its UUID {found} is not {uuid}, as in the AI model registry</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+641"/>
+        <location line="+644"/>
         <source>Changing settings</source>
         <translation type="unfinished"></translation>
     </message>
@@ -632,7 +637,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/recipe_editor.py" line="+361"/>
+        <location filename="../ui/pages/recipe_editor.py" line="+362"/>
         <source>Height</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1698,7 +1703,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/training.py" line="+314"/>
+        <location filename="../ui/pages/training.py" line="+319"/>
         <source>{code} {title}</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2732,7 +2737,7 @@
 <context>
     <name>NgDialog</name>
     <message>
-        <location filename="../ui/pages/training.py" line="-246"/>
+        <location filename="../ui/pages/training.py" line="-251"/>
         <source>Label NG images</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2800,7 +2805,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+7"/>
+        <location line="+9"/>
         <source>Override {value}</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2810,7 +2815,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+18"/>
+        <location line="+24"/>
         <source>No AI model version is active: there is no calibrated value.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2870,7 +2875,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/compare.py" line="-664"/>
+        <location filename="../ui/pages/compare.py" line="-667"/>
         <source>Compare</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2925,7 +2930,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/recipe_editor.py" line="-297"/>
+        <location filename="../ui/pages/recipe_editor.py" line="-298"/>
         <source>Recipe Editor</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3087,7 +3092,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+19"/>
+        <location line="+20"/>
         <source>AI score threshold</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3246,7 +3251,7 @@
 <context>
     <name>Role</name>
     <message>
-        <location filename="../ui/pages/base.py" line="-305"/>
+        <location filename="../ui/pages/base.py" line="-313"/>
         <source>Operator</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3481,7 +3486,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/services.py" line="-1203"/>
+        <location filename="../core/services.py" line="-1206"/>
         <source>Aligning {count} images to the reference board</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3500,12 +3505,12 @@
     </message>
     <message>
         <location line="+1"/>
-        <location line="+367"/>
+        <location line="+373"/>
         <source>Import Folder…</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-361"/>
+        <location line="-367"/>
         <source>Tip: 20+ OK images give a steadier threshold</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3527,12 +3532,12 @@
     </message>
     <message>
         <location line="+0"/>
-        <location line="+82"/>
+        <location line="+87"/>
         <source>View</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-82"/>
+        <location line="-87"/>
         <source>File</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3558,12 +3563,12 @@
     </message>
     <message>
         <location line="+1"/>
-        <location line="+230"/>
+        <location line="+235"/>
         <source>Remove</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-225"/>
+        <location line="-230"/>
         <source>Select a sample to preview</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3628,7 +3633,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+6"/>
+        <location line="+11"/>
         <source>Activate Selected</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3713,7 +3718,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+32"/>
+        <location line="+33"/>
         <source>Add at least 20 OK boards with + OK Images or Import Folder…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3733,7 +3738,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+19"/>
+        <location line="+23"/>
         <source>No AI model yet</source>
         <translation type="unfinished"></translation>
     </message>

@@ -133,9 +133,10 @@ sets a new Golden board, and the line names no AI model but says the AI check wa
 
 **Threshold column.** Each AI model version's calibrated AI score threshold, which judges the board model's boards while
 the recipe holds no override of its own (section 5). A version whose calibrated value the AI model registry cannot give,
-which only a change made by hand leaves, reads AOI-TRN-012, with what happened and what to do as the row's tooltip:
-for the next boards, train again or activate another version, or set a value of your own for the board model (section
-5). Where such a row's sample counts cannot be read either, its OK/NG cell stays empty.
+which only a change made by hand leaves, reads AOI-TRN-012, with what happened and what to do as the row's tooltip
+and in a line under the table: for the next boards, train again or activate another version, or set a value of your
+own for the board model (section 5). Where such a row's sample counts cannot be read either, its OK/NG cell stays
+empty.
 
 (to be written: training, progress and cancel, versions, activation and rollback, the model card)
 
@@ -171,7 +172,8 @@ clears the last Try's verdict.
 **AI score threshold** (Thresholds tab). Each AI model is calibrated to an AI score threshold when it is trained (the
 Threshold column on Training), and the recipe judges by that value unless you override it for the board model. The tick
 names the active AI model's value ("Override 3.063"), and the field beside it shows that value greyed until you tick
-it. Ticked, the field starts from that value and holds yours; Save Recipe keeps it in a new revision. Clear the tick and
+it. Ticked, the field starts from the value that judges when you tick, even if an AI model was trained or activated
+while the page stayed open, and holds yours; Save Recipe keeps it in a new revision. Clear the tick and
 save to go back to the calibrated value, which then follows each AI model trained or activated later. Every board
 judged after the save uses the same threshold: on Inspection, on Compare (Re-evaluate and boards it inspects) and in AI
 Model Test. The audit trail records setting, changing and clearing the override (section 8). With no value to name,
@@ -233,7 +235,8 @@ both panes say why, with the message's code (AOI-SET-013 when another program ho
 database), and the Golden board pane what to do; neither pane ever shows the result opened before.
 The thresholds form, Re-evaluate and Save to Recipe are in the Try other thresholds panel, for Engineer and Admin; an
 Operator does not see it, and Compare judges an Operator's boards by the board model's recipe, never by values left in
-the form. Its AI score threshold works as on the Recipe Editor (section 5), except that on a stored result the tick
+the form. Its AI score threshold works as on the Recipe Editor (section 5), with the tick under the field, reading
+"Override the AI model's value 3.063", except that on a stored result the tick
 names the calibrated value of the AI model that judged it, which Re-evaluate applies while the tick is clear; on any
 other board, and on a stored result judged with the AI check off, it names the active AI model's. On a stored result,
 once the load of its pictures and maps has ended, Re-evaluate (Ctrl+R) judges it again
