@@ -166,6 +166,7 @@ class ComparePage(Page):
         self.loaded = False  # the load of a stored result's pictures and maps has ended: Re-evaluate may judge it
         self.tried = False  # the table and the "why" box show the checks the form's thresholds give, not the result's
         self._trying: Worker | None = None  # the re-evaluation running, if any
+        self._refocus = False  # it put the focus in the "why" box, for Re-evaluate to take back at its end (review)
         self._fitted = False
 
         bar = QHBoxLayout()
@@ -232,11 +233,17 @@ class ComparePage(Page):
         hh.setStretchLastSection(False)
         hh.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)  # a stretched Check column shrank to "C…"
         self.metrics.setWordWrap(True)
-        pl.addWidget(self.metrics, 2)
+        self.decision = QWidget()  # the decision table and the "why" box, where the checks tried appear
+        dl = QVBoxLayout(self.decision)
+        dl.setContentsMargins(0, 0, 0, 0)
+        dl.addWidget(self.metrics, 1)
         self.why = QTextEdit()
         self.why.setReadOnly(True)
         self.why.setMaximumHeight(150)
-        pl.addWidget(self.why)
+        dl.addWidget(self.why)
+        pl.addWidget(self.decision, 2)
+        self.try_busy = BusyOverlay(self.decision, self.tr("Re-evaluating…"))  # over both: Cancel fits at least size
+        self.try_busy.cancel_button.clicked.connect(self._cancel_tried)  # the stored checks again (REQ-SET-021, review)
 
         self.tryout = QGroupBox(self.tr("Try other thresholds (nothing is saved until you press Save to Recipe)"))
         f = QFormLayout(self.tryout)
@@ -264,7 +271,8 @@ class ComparePage(Page):
         self.would_be.hide()
         row.addWidget(self.would_be)
         self.act_try = self.action(self.tr("Re-evaluate"), "Ctrl+R", self.re_evaluate)
-        row.addWidget(action_button(self.act_try, show_key=False))
+        self.btn_try = action_button(self.act_try, show_key=False)
+        row.addWidget(self.btn_try)
         self.btn_save = button(self.tr("Save to Recipe"), "primary", self.save_recipe)  # the page's one blue primary
         row.addWidget(self.btn_save)
         f.addRow(row)
@@ -355,37 +363,77 @@ class ComparePage(Page):
     # --- evaluate ----------------------------------------------------------------
     def re_evaluate(self) -> None:
         """Re-evaluate (Ctrl+R, Engineer and Admin): a stored result is judged again with the form's thresholds from its
-        stored maps on the pool thread, without the AI model (`AppContext.re_evaluate`, REQ-CMP-005), and "Would be"
-        shows the verdict they give while the banner keeps the stored one (ADR 0006 decision 3); a board not stored is
-        inspected again with them. The service refuses the header's board model's thresholds for another's result."""
+        stored maps on the pool thread, without the AI model (`AppContext.re_evaluate`, REQ-CMP-005), under a busy
+        indicator over the decision table once it takes a second (REQ-SET-021), and "Would be" shows the verdict they
+        give while the banner keeps the stored one (ADR 0006 decision 3); a board not stored is inspected again with
+        them. The service refuses the header's board model's thresholds for another's result. The focus rule: a focus
+        on Re-evaluate or on any other control the run turns off waits in the "why" box under the indicator, one Tab
+        before Cancel once that shows, and goes to Re-evaluate when the run ends if it is still there (`_not_trying`);
+        Qt would pass it on to the next control in the Tab order, Save to Recipe after Re-evaluate, where a second Space
+        would act (review)."""
         if self.stored is None:
             self.run()
             return
         if (bm := self.checked_board_model()) is None:
             return
+        focus: QWidget | None = self.window().focusWidget()  # the window's, before anything is turned off (review)
         self._drop_tried()
         recipe, uuid = self._form_recipe(bm), self.stored["uuid"]
         self._trying = self.run_in_background(
-            self.ctx.re_evaluate, uuid, recipe, on_result=self._on_tried,
-            on_error=lambda _: setattr(self, "_trying", None),  # a refusal holds no worker past its end (#132)
+            self.ctx.re_evaluate, uuid, recipe, on_result=self._on_tried, busy=self.try_busy,
+            on_error=lambda _: self._not_trying(),  # a refusal holds no worker past its end (#132)
         )  # fmt: skip
+        self._sync_roles()  # Re-evaluate is off while it runs: a second press would start the same job (REQ-SET-021)
+        if focus is not None and not focus.isEnabled():  # on Re-evaluate, or on another control the run turned off
+            self.why.setFocus(Qt.FocusReason.OtherFocusReason)  # under the indicator, one Tab before Cancel once shown
+            self._refocus = True
+
+    def _not_trying(self) -> None:
+        """No re-evaluation runs any more: its worker is let go (#132) and Re-evaluate is on again, with the focus it
+        had when the run started if that is still in the "why" box, where the run put it (review). Its answer, an error
+        and `_drop_tried` call this before the indicator hides, so a focus on its Cancel, which Qt would then pass on to
+        the AI score threshold's tick, goes to Re-evaluate too, or, once an Operator's sign-in hides the panel, to the
+        "why" box, not on to the header's board model (second verification). The focus read is the window's, which it
+        keeps while another window is in front, when `hasFocus()` is False for every control: given to Re-evaluate
+        then, it is there when the window is in front again (review)."""
+        focus = self.window().focusWidget()
+        held = focus is self.try_busy.cancel_button
+        self._trying = None
+        self._sync_roles()
+        if (held or (self._refocus and focus is self.why)) and self.act_try.isEnabled():
+            self.btn_try.setFocus(Qt.FocusReason.OtherFocusReason)
+        elif held:
+            self.why.setFocus(Qt.FocusReason.OtherFocusReason)
+        self._refocus = False
+
+    def _cancel_tried(self) -> None:
+        """Cancel on the busy indicator: the stored checks again, and the focus on Re-evaluate, on again (verification).
+        Cancel held it, pressed by key or click, and Qt passed it on as Cancel hid, to the AI score threshold's tick or
+        field, where a second Space would set the tick."""
+        self._drop_tried()
+        if self.act_try.isEnabled():
+            self.btn_try.setFocus(Qt.FocusReason.OtherFocusReason)
 
     def _on_tried(self, res: InspectionResult) -> None:
         """The checks and the explanation the thresholds tried give; the banner keeps the stored verdict."""
-        self._trying, self.tried = None, True
+        self._not_trying()
+        self.try_busy.finish()  # at the answer, not at the job's end, which a loaded pool thread may signal later
+        self.tried = True
         self.would_be.setText(self.tr("Would be: {verdict}").format(verdict=theme.verdict_label(res.verdict)))
-        self.would_be.setStyleSheet(theme.verdict_style(res.verdict, big=False))
+        self.would_be.setStyleSheet(theme.verdict_mark_style(res.verdict))  # beside the buttons, never one of them
         self.would_be.show()
         self._show_checks(res, tried=True)
 
     def _drop_tried(self) -> None:
         """Back to the checks of the result shown once what was tried no longer applies: a threshold or the recipe
-        changes, another run starts or another result shows, the board model changes or an Operator signs in. A
-        re-evaluation still running is stopped, so its answer never shows, and its error, logged and alarmed, shows no
-        dialog (#206)."""
-        if self._trying is not None and self._trying is self._bg:
-            self._trying.stop()
-        self._trying = None
+        changes, another run starts or another result shows, the board model changes, an Operator signs in or Cancel is
+        pressed on the busy indicator. A re-evaluation still running is stopped and its indicator goes, so its answer
+        never shows, and its error, logged and alarmed, shows no dialog (#206)."""
+        if (trying := self._trying) is not None:
+            self._not_trying()  # first: a focus on Cancel goes back before Cancel hides (second verification)
+            if trying is self._bg:
+                trying.stop()
+                self.try_busy.finish()  # at once, not when the pool thread lets go of it
         self.would_be.hide()
         if self.tried and self.res is not None:
             self._show_checks(self.res)
@@ -823,11 +871,11 @@ class ComparePage(Page):
     def _sync_roles(self) -> None:
         """The threshold panel for an Engineer or Admin only, hidden for an Operator, who never sees what other
         thresholds would give (REQ-CMP-005; ADR 0006 decision 4, sketch Q17). Re-evaluate waits until the load of a
-        stored result's pictures and maps has ended, so it never stops it."""
+        stored result's pictures and maps has ended, so it never stops it, and is off while a re-evaluation runs."""
         engineer = self.ctx.role != "Operator"
         self.tryout.setVisible(engineer)
         self.btn_save.setEnabled(engineer)
-        self.act_try.setEnabled(engineer and (self.stored is None or self.loaded))
+        self.act_try.setEnabled(engineer and (self.stored is None or self.loaded) and self._trying is None)
 
     def on_user_changed(self) -> None:
         """An Operator signs in, on Compare or on any other page (review): the hidden form goes back to the recipe's
@@ -836,9 +884,12 @@ class ComparePage(Page):
         recipe does not hold now (an Engineer's not saved, or a revision saved since it was inspected) is cleared, a run
         of it still going stopped, and judged by the recipe when Compare is shown (`on_show`, next if it is shown now).
         A run stopped by Cancel stays so, and a stored result as it was decided; a value that did not judge the board is
-        no change (`_judging`)."""
+        no change (`_judging`). A focus in the panel, which the sign-in hides, waits in the "why" box, which every role
+        sees, as one on the indicator's Cancel does (`_not_trying`), where Qt would pass it on to the header's board
+        model, whose list a Space opens (review); it can be in the panel only while Compare is shown."""
         if self.ctx.role != "Operator":
             return
+        focus: QWidget | None = self.window().focusWidget()  # before a run, ended by _drop_tried, hides the panel
         scale = self.diff_thr.value()
         saved = self._load_recipe_into_form()  # values an Engineer left there unsaved go, and what was tried with them
         if self.diff_thr.value() != scale and self.mode.currentIndex() == MODE_DIFF:
@@ -851,6 +902,8 @@ class ComparePage(Page):
                 self._bg.stop()  # its verdict never shows; an error of it is still logged and alarmed (#206)
             self._clear_result()  # no verdict, table or "why" by the form's thresholds while the recipe judges it
             self.judge_on_show = True  # by the recipe, as soon as the page is shown
+        if focus is not None and self.tryout.isAncestorOf(focus):
+            self.why.setFocus(Qt.FocusReason.OtherFocusReason)  # outside the panel, which hides now or in on_show
 
     def on_show(self) -> None:
         self._sync_roles()

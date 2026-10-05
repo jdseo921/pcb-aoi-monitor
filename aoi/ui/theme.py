@@ -65,6 +65,7 @@ NAV_W, HEADER_H, FIELD_W, CARD_W = 250, 64, 240, 720
 IMAGE_MIN_W, IMAGE_MIN_H, PROGRESS_W = 320, 240, 360
 SPACE, SPACE_S = 14, 8  # between blocks; inside a block
 RADIUS, RADIUS_L = 6, 10
+MARK_W = 6  # the verdict-colour bar beside a verdict said next to a control, such as Compare's "Would be"
 
 TOKENS = {k: v for k, v in dict(globals()).items() if k.isupper()}
 
@@ -158,6 +159,17 @@ def on_color(fill: str) -> str:
     """The text colour that reads on `fill`: dark on amber, grey and orange (5.6:1 or more), white on green, red and
     blue (where white measures 3.3:1 to 4.2:1, so the text there is bold or 40 pt; see the module docstring)."""
     return ON_LIGHT if fill in (WARN_COLOR, INFO_COLOR, MAJOR_COLOR) else ON_DARK
+
+
+def verdict_mark_style(verdict: str) -> str:
+    """Stylesheet of a verdict said next to a control, such as Compare's "Would be: ▲ WARN": bold text beside a bar in
+    the verdict's colour, with no fill or rounded box, so that it never reads as a button. The text keeps the
+    stylesheet's colour, so a theme passed to `stylesheet()` (the presenter theme, REQ-SET-008) colours it too."""
+    c = VERDICT_COLORS.get(verdict, INFO_COLOR)
+    return (
+        f"background:transparent; font-size:{FONT_PT}pt; font-weight:700; "
+        f"border:none; border-left:{MARK_W}px solid {c}; padding-left:{SPACE_S}px;"
+    )
 
 
 def verdict_style(verdict: str, big: bool = True) -> str:

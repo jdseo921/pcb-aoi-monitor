@@ -237,7 +237,11 @@ names the calibrated value of the AI model that judged it, which Re-evaluate app
 other board, and on a stored result judged with the AI check off, it names the active AI model's. On a stored result,
 once the load of its pictures and maps has ended, Re-evaluate (Ctrl+R) judges it again
 with the form's thresholds from its stored maps and the calibration of the AI model that judged it, without running the
-AI model: the banner keeps the stored verdict, "Would be" beside Re-evaluate shows the verdict they give, and the table
+AI model: the banner keeps the stored verdict, "Would be" beside Re-evaluate shows the verdict they give (when that takes
+over a second, "Re-evaluating…" covers the table and the explanation meanwhile, Re-evaluate is off until it ends, and
+its Cancel keeps the stored checks and puts the focus on Re-evaluate, as does the end of the run while Cancel has it;
+pressed from the keyboard, Re-evaluate leaves the focus in the explanation, one Tab before Cancel once that shows, so a
+second Space presses nothing, and takes it back at the end), and the table
 and the explanation show their checks until you change a threshold, the form takes a revision saved on another page,
 you open another result, inspect a board or change the board model, or an Operator signs in on any page. The board
 keeps the stored result's defect boxes: when defects make the verdict WARN, the explanation says how many the thresholds
