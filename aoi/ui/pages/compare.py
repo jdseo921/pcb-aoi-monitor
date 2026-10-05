@@ -13,6 +13,7 @@ what it would be.
 from __future__ import annotations
 
 import copy
+import dataclasses
 import html
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, TypeAlias
@@ -120,6 +121,28 @@ RULES = {
 }
 
 
+def _judging(r: Recipe, res: InspectionResult | None) -> Recipe:
+    """`r` as the engine judged the board `res` by it, to compare with another: a value that did not judge the board is
+    no change (review). An AI score threshold of 0 is none, as the engine reads it, and judges nothing when the board's
+    AI check did not run (off, or no AI model active; #243, #246), nor do an ROI's AI score and name, as no ROI check
+    runs then (`Inspector.judge`: an ROI only names the defects in it, by its type); the Golden board comparison's own
+    thresholds judge nothing when the board was judged without it (Minimum defect area also sizes the AI model's
+    defects: it counts); a disabled ROI, and an ROI's Stage 2 heights and volumes and its side, which nothing reads yet,
+    never judge (verification). `res` None, a board still being worked out: `r`'s switches say what judges it."""
+    ai, compared = (ai_check(res) == "RAN", res.compare is not None) if res is not None else (r.use_ai, r.use_compare)
+    rois = [
+        dataclasses.replace(x, height_min=None, height_max=None, volume_min=None, volume_max=None, side="")
+        for x in r.rois
+        if x.enabled
+    ]
+    if not ai:
+        rois = [dataclasses.replace(x, name="", ai_score=0.0) for x in rois]
+    r = dataclasses.replace(r, anomaly_threshold=(r.anomaly_threshold or None) if ai else None, rois=rois)
+    if compared:
+        return r
+    return dataclasses.replace(r, diff_threshold=0, ssim_min=0.0, changed_pct_max=0.0, max_diff_regions=0)
+
+
 class ComparePage(Page):
     title = QT_TRANSLATE_NOOP("Page", "Compare")
     subtitle = QT_TRANSLATE_NOOP("Page", "Golden board vs. test board, with the metrics behind the verdict")
@@ -139,8 +162,7 @@ class ComparePage(Page):
         self.form_revision: tuple[str, int] | None = None  # the board model and recipe revision the form came from
         self.shown_board_model: str | None = None  # the header's board model the page last followed (#247)
         self.judge_on_show = False  # the header changed while the page was hidden: judge its board when shown (#247)
-        self.by_form = False  # the board shown was inspected with the form's thresholds, not the recipe's
-        self.operator_form = False  # the form was loaded from the recipe when the Operator signed in
+        self.judged_by: Recipe | None = None  # the recipe a board inspected here, shown or still worked out, judges by
         self.loaded = False  # the load of a stored result's pictures and maps has ended: Re-evaluate may judge it
         self.tried = False  # the table and the "why" box show the checks the form's thresholds give, not the result's
         self._trying: Worker | None = None  # the re-evaluation running, if any
@@ -296,10 +318,11 @@ class ComparePage(Page):
         if self.mode.currentIndex() == MODE_BOXES:
             self.mode.setCurrentIndex(MODE_SIDE)  # redraw shows the pane and its label, and fits the board to its half
 
-    def _load_recipe_into_form(self) -> None:
+    def _load_recipe_into_form(self) -> Recipe | None:
+        """The form takes the header's board model's recipe, which is returned; None with no board model."""
         self._drop_tried()  # tried with the recipe the form came from
         if not self.board_model:
-            return
+            return None
         rev, r = self.ctx.recipe(self.board_model)
         self.form_revision = (self.board_model, rev)  # on_show loads the form again once another revision is saved
         self.ai_thr.set_override(r.anomaly_threshold)
@@ -307,6 +330,7 @@ class ComparePage(Page):
         self.min_area.setValue(r.min_defect_area)
         self.ssim_min.setValue(r.ssim_min)
         self.max_regions.setValue(r.max_diff_regions)
+        return r
 
     def _show_calibration(self) -> None:
         """The calibrated value the AI score threshold names (REQ-TRN-015): on a stored result, that of the AI model
@@ -318,10 +342,9 @@ class ComparePage(Page):
         else:
             self.show_calibrated(self.ai_thr, self.board_model)
 
-    def _form_recipe(self, board_model: str) -> Recipe:
-        """The board model's recipe with the thresholds from the form."""
-        _, r = self.ctx.recipe(board_model)
-        r = copy.deepcopy(r)
+    def _form_recipe(self, board_model: str, saved: Recipe | None = None) -> Recipe:
+        """The board model's recipe (`saved`, when read already) with the thresholds from the form."""
+        r = copy.deepcopy(self.ctx.recipe(board_model)[1] if saved is None else saved)
         r.anomaly_threshold = self.ai_thr.override()
         r.diff_threshold = self.diff_thr.value()
         r.min_defect_area = self.min_area.value()
@@ -389,8 +412,12 @@ class ComparePage(Page):
         self.note.hide()
         if self.test_path:
             self.test_label.setText(self.tr("Test board: {file}").format(file=breakable(Path(self.test_path).name)))
-        recipe = self._form_recipe(bm) if self.test_path and self.ctx.role != "Operator" else None  # else the recipe
-        self.by_form = recipe is not None  # an Operator signing in has it judged again by the recipe
+        recipe: Recipe | None = None  # an Operator's board is judged by the recipe
+        self.judged_by = None  # only the Golden board to read
+        if self.test_path:  # what judges it, which an Operator's sign-in holds against the recipe then (review)
+            saved = self.ctx.recipe(bm)[1]
+            recipe = None if self.ctx.role == "Operator" else self._form_recipe(bm, saved)
+            self.judged_by = saved if recipe is None else recipe
         self._sync_roles()  # Re-evaluate, waiting for a stored result's maps, now inspects again
         judged = self.as_judged[1] if self.as_judged and not self.ref_override else None
         if not self.ref_override:
@@ -557,6 +584,7 @@ class ComparePage(Page):
         self.golden_error, self.golden_state = None, False  # its pane shows the golden board as judged, not today's
         self.record_board_model = rec["board_model"]  # Re-evaluate judges the board under it (#172)
         self._fitted = self.loaded = False
+        self.judged_by = None  # judged as it was decided: an Operator's sign-in never judges it again
         self._sync_roles()  # Re-evaluate waits for its pictures and maps
         self.judge_on_show = False  # a stored result is never inspected again unasked
         self.test_empty.hide()
@@ -794,26 +822,35 @@ class ComparePage(Page):
 
     def _sync_roles(self) -> None:
         """The threshold panel for an Engineer or Admin only, hidden for an Operator, who never sees what other
-        thresholds would give (REQ-CMP-005; ADR 0006 decision 4, sketch Q17): for an Operator the hidden form holds the
-        recipe's thresholds, read once at the sign-in, which the Difference heatmap follows, and a board inspected with
-        an Engineer's is cleared and judged again by the recipe, a run of it still going replaced (review). Re-evaluate
-        waits until the load of a stored result's pictures and maps has ended, so it never stops it."""
+        thresholds would give (REQ-CMP-005; ADR 0006 decision 4, sketch Q17). Re-evaluate waits until the load of a
+        stored result's pictures and maps has ended, so it never stops it."""
         engineer = self.ctx.role != "Operator"
         self.tryout.setVisible(engineer)
         self.btn_save.setEnabled(engineer)
         self.act_try.setEnabled(engineer and (self.stored is None or self.loaded))
-        if engineer or self.operator_form:  # the form is the recipe's since the Operator signed in: no read again
-            self.operator_form = not engineer
+
+    def on_user_changed(self) -> None:
+        """An Operator signs in, on Compare or on any other page (review): the hidden form goes back to the recipe's
+        thresholds, which the Difference heatmap follows, and what was tried with values an Engineer left unsaved goes,
+        so the next Engineer finds the recipe's thresholds too; a board inspected with thresholds or other values the
+        recipe does not hold now (an Engineer's not saved, or a revision saved since it was inspected) is cleared, a run
+        of it still going stopped, and judged by the recipe when Compare is shown (`on_show`, next if it is shown now).
+        A run stopped by Cancel stays so, and a stored result as it was decided; a value that did not judge the board is
+        no change (`_judging`)."""
+        if self.ctx.role != "Operator":
             return
-        self.operator_form = True
         scale = self.diff_thr.value()
-        self._load_recipe_into_form()  # values an Engineer left there unsaved go
+        saved = self._load_recipe_into_form()  # values an Engineer left there unsaved go, and what was tried with them
         if self.diff_thr.value() != scale and self.mode.currentIndex() == MODE_DIFF:
             self.redraw()
-        going = self._bg is not None and not self._bg.job.cancelled  # a run stopped, by Cancel say, is not replaced
-        if self.by_form and self.stored is None and (self.res is not None or going):
+        going = self._bg is not None and not self._bg.job.cancelled  # a run stopped, by Cancel say, is not judged again
+        by, judged = self.judged_by, None if going else self.res  # a run still going: not its result yet
+        stale = by is not None and saved is not None and _judging(by, judged) != _judging(saved, judged)  # read now
+        if stale and self.stored is None and (self.res is not None or going):
+            if self._bg is not None:
+                self._bg.stop()  # its verdict never shows; an error of it is still logged and alarmed (#206)
             self._clear_result()  # no verdict, table or "why" by the form's thresholds while the recipe judges it
-            self._start(quiet=True)  # by the recipe now: the newest run wins, so a run with the form's never shows
+            self.judge_on_show = True  # by the recipe, as soon as the page is shown
 
     def on_show(self) -> None:
         self._sync_roles()

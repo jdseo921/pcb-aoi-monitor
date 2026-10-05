@@ -163,6 +163,10 @@ class Page(QWidget):
 
     # Hooks called by the shell.
     def on_show(self) -> None: ...
+    def on_user_changed(self) -> None:
+        """A sign-in, whichever page is shown: `MainWindow.set_user` calls it on every page before the page shown gets
+        `on_show`, so a page the new user opens later never finds what the user before left for that role."""
+
     def update_actions(self) -> None:
         """Enable the page's buttons for the role and for whether a background job runs (`self._bg`)."""
 

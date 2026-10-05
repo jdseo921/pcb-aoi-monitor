@@ -109,9 +109,11 @@ board, and Re-evaluate › under it inspects the board again with today's Golden
 model has none, as the pane then says; the line under the verdict names today's when an Engineer or a training run has
 set another. A long file name over a picture, in a message on its pane or in the line under the verdict wraps onto the
 next line after a _ or -. The thresholds panel, "Try other thresholds", is for Engineers and is not shown to an
-Operator: every board Compare inspects for you is judged by the board model's recipe, and a board an Engineer left on
-Compare, inspected with thresholds not saved, is cleared and inspected again by the recipe when you sign in, so you
-never see the verdict those thresholds gave.
+Operator: every board Compare inspects for you is judged by the board model's recipe, and a board left on Compare that
+was inspected with values the recipe does not hold when you sign in (an Engineer's thresholds not saved, or a recipe
+revision saved since; values that did not judge the board, such as the AI score threshold when its AI check did not
+run, are not counted) is cleared when you sign in, on any page, and inspected again by the recipe once Compare is shown,
+so you never see the verdict those values gave.
 
 ## 4. Alarms and messages
 
