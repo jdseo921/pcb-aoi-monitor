@@ -44,15 +44,30 @@ class CompareResult:
     metrics: dict[str, Any] = field(default_factory=dict)
 
 
+SMALL = 8  # px: the boxes this wide and high or less have their peaks read together, CHUNK boxes at a time
+CHUNK = 8192  # so that reading them never takes more than a few MB, however many regions a board has
+
+
 def regions_from_mask(mask: np.ndarray, value_map: np.ndarray, min_area: int, source: str) -> list[Region]:
-    n, _, stats, _ = cv2.connectedComponentsWithStats(mask, connectivity=8)
-    out = []
-    for i in range(1, n):
-        x, y, w, h, area = (int(v) for v in stats[i])
-        if area < min_area:
-            continue
-        peak = float(value_map[y : y + h, x : x + w].max())
-        out.append(Region(x, y, w, h, area, peak, source))
+    """The regions of `mask` (8-connected) of `min_area` px or more, each with its box and the highest value of
+    `value_map` in that box, highest first (ties in the order found). The peaks of boxes up to SMALL px a side are read
+    together from SMALL x SMALL windows, the cells outside each box left out, and the others one box at a time: the
+    same values as reading every box alone, which took about 20 ms for the 5,600 regions that Pixel difference 10 and
+    Minimum defect area 1 leave on a 5 MP board (#249)."""
+    _, _, stats, _ = cv2.connectedComponentsWithStats(mask, connectivity=8)
+    kept = stats[1:][stats[1:, cv2.CC_STAT_AREA] >= min_area]
+    x, y, w, h = kept[:, 0], kept[:, 1], kept[:, 2], kept[:, 3]
+    peaks, k = np.empty(len(kept)), np.arange(SMALL)
+    small = np.flatnonzero((w <= SMALL) & (h <= SMALL))
+    for part in (small[i : i + CHUNK] for i in range(0, len(small), CHUNK)):
+        rows = np.minimum(y[part, None, None] + k[None, :, None], value_map.shape[0] - 1)
+        cols = np.minimum(x[part, None, None] + k[None, None, :], value_map.shape[1] - 1)
+        inside = (k[None, :, None] < h[part, None, None]) & (k[None, None, :] < w[part, None, None])
+        peaks[part] = np.where(inside, value_map[rows, cols], -np.inf).max(axis=(1, 2))
+    for i in np.flatnonzero((w > SMALL) | (h > SMALL)).tolist():
+        peaks[i] = value_map[y[i] : y[i] + h[i], x[i] : x[i] + w[i]].max()
+    boxes = zip(kept.tolist(), peaks.tolist(), strict=True)
+    out = [Region(bx, by, bw, bh, area, peak, source) for (bx, by, bw, bh, area), peak in boxes]
     return sorted(out, key=lambda r: -r.peak)
 
 
@@ -69,7 +84,7 @@ def changed_regions(
     mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, k, iterations=2)
     regions = regions_from_mask(mask, diff, min_area, "compare")
     metrics = {
-        "changed_pct": float((mask > 0).mean() * 100.0),
+        "changed_pct": cv2.countNonZero(mask) / mask.size * 100.0,  # as (mask > 0).mean() * 100, in a tenth of the time
         "compare_regions": len(regions),
         "largest_region_px": max((r.area for r in regions), default=0),
     }
