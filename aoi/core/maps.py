@@ -11,6 +11,7 @@ of the board picture beside them; another format takes another file name (docs/a
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
@@ -25,6 +26,15 @@ AI_SCALE = 1000  # codes per sigma below AI_KNEE: steps of 0.001 sigma
 AI_KNEE = 32768  # the code of 32.768 sigma, where the log scale starts
 AI_LOG_STEPS = 8192  # codes per factor e above the knee: each step 1/8192 of the value
 AI_FILE, AI_FILE_V1 = "_ai2.png", "_ai.png"  # the AI map's file name ending, by format
+# How both maps are written: zlib level 1 with deflate's default strategy and PNG's Up filter on every row, where
+# OpenCV's own settings take level 1 with the run-length strategy and the Sub filter. On the 5 MP test board the same
+# pixels are written in the same time and read back in about two thirds of the time, which judging a stored result
+# again waits on (#249): the strategy halves the AI map and gives most of its gain, the filter most of the difference
+# map's. Any PNG reader reads them, and maps written before read as before.
+PNG_SETTINGS = (
+    *(cv2.IMWRITE_PNG_COMPRESSION, 1, cv2.IMWRITE_PNG_STRATEGY, cv2.IMWRITE_PNG_STRATEGY_DEFAULT),
+    *(cv2.IMWRITE_PNG_FILTER, cv2.IMWRITE_PNG_FILTER_UP),
+)
 DAMAGED = QT_TRANSLATE_NOOP("Errors", "the file is damaged")
 
 
@@ -63,8 +73,9 @@ def encode_ai(amap: np.ndarray, pixel_threshold: float | None = None) -> np.ndar
 
 
 def decode_ai(img: np.ndarray) -> np.ndarray:
-    """Format-2 codes back to sigma, as float32: one table lookup per pixel."""
-    return AI_VALUES[np.asarray(img, dtype=np.uint16)]
+    """Format-2 codes back to sigma, as float32: one table lookup per pixel (`np.take`, the values of indexing the table
+    with the codes in about three quarters of the time, #249)."""
+    return np.take(AI_VALUES, np.asarray(img, dtype=np.uint16))
 
 
 def save_maps(res: InspectionResult, base: Path, *, pixel_threshold: float | None) -> tuple[str | None, str | None]:
@@ -73,10 +84,10 @@ def save_maps(res: InspectionResult, base: Path, *, pixel_threshold: float | Non
     diff_path = ai_path = None
     if res.compare is not None and res.compare.diff_map is not None:
         diff_path = base.with_name(base.name + "_diff.png")
-        save_image(diff_path, encode_diff(res.compare.diff_map))
+        save_image(diff_path, encode_diff(res.compare.diff_map), PNG_SETTINGS)
     if res.anomaly_map is not None:
         ai_path = base.with_name(base.name + AI_FILE)
-        save_image(ai_path, encode_ai(res.anomaly_map, pixel_threshold))
+        save_image(ai_path, encode_ai(res.anomaly_map, pixel_threshold), PNG_SETTINGS)
     return (str(diff_path) if diff_path else None, str(ai_path) if ai_path else None)
 
 
@@ -114,34 +125,62 @@ def picture_shape(path: str | Path | None) -> tuple[int, int] | None:
     return (found[2], found[1]) if found and found[1] > 0 and found[2] > 0 else None
 
 
+def _fits(img: np.ndarray, dtype: type, shape: tuple[int, ...] | None) -> bool:
+    """Whether `img` can be the map written: one channel of `dtype`, and `shape` when given (an image editor re-saves a
+    map in colour, or at another size or bit depth)."""
+    return img.ndim == 2 and img.dtype == dtype and (shape is None or img.shape == shape)
+
+
 def _check(img: np.ndarray, path: str, dtype: type, shape: tuple[int, ...] | None) -> None:
-    """AOI-CMP-003 naming `path` as damaged unless `img`, read from it, is the map written there: one channel of
-    `dtype`, and `shape` when given (an image editor re-saves a map in colour, or at another size or bit depth)."""
-    if img.ndim != 2 or img.dtype != dtype or (shape is not None and img.shape != shape):
+    """AOI-CMP-003 naming `path` as damaged unless `img`, read from it, is the map written there (`_fits`)."""
+    if not _fits(img, dtype, shape):
         raise AoiError("AOI-CMP-003", file=Path(path).name, reason=DAMAGED)
 
 
+def _read_ai(path: str, shape: tuple[int, int] | None) -> tuple[np.ndarray | None, np.ndarray | None]:
+    """The codes `read_map` reads from an AI map and, when they can be the map written (`_fits`), its values as float32,
+    decoded on the thread that read them (#249)."""
+    codes = read_map(path)
+    if codes is None or not _fits(codes, np.uint16, shape):
+        return codes, None
+    v1 = path.endswith(AI_FILE_V1)
+    return codes, np.asarray(codes, dtype=np.float32) / np.float32(AI_SCALE) if v1 else decode_ai(codes)
+
+
 def load_maps(
-    res: InspectionResult, diff_path: str | None, ai_path: str | None, shape: tuple[int, int] | None = None
+    res: InspectionResult,
+    diff_path: str | None,
+    ai_path: str | None,
+    shape: tuple[int, int] | None = None,
+    *,
+    on_diff: Callable[[np.ndarray], object] | None = None,
 ) -> InspectionResult:
     """Put the stored maps back on a result; a map never stored, or whose file is gone, stays None, and one that cannot
     be read raises AOI-CMP-003 (`read_map`). So does one that is not the map written (#249): not one channel, not 8-bit
     (difference map) or 16-bit (AI map, either format), or not `shape`, the (height, width) of the board picture it was
     judged on (`picture_shape`); without `shape`, two maps read must have one size, and the difference map is named
-    when they do not. The result gets either map only when every map read passes. The AI map decodes on a thread of its
-    own while the difference map decodes here (decoding a PNG releases the GIL), so at 5 MP reading both takes about as
-    long as the slower one."""
+    when they do not. The result gets either map only when every map read passes. The AI map is read and decoded on a
+    thread of its own while the difference map is read here (decoding a PNG releases the GIL), so at 5 MP reading both
+    takes about as long as the slower one. `on_diff`, when given, gets the difference map as float32 once it passes its
+    checks: with `shape`, here while the AI map may still be decoding, so work on it overlaps that (AppContext.
+    re_evaluate finds the difference regions there, #249); without, once both maps pass. A map that fails raises as it
+    would without `on_diff`, whatever that did."""
+    early: np.ndarray | None = None
     with ThreadPoolExecutor(max_workers=1) as pool:
-        ai = pool.submit(read_map, ai_path) if ai_path else None
+        ai = pool.submit(_read_ai, ai_path, shape) if ai_path else None
         diff = read_map(diff_path) if diff_path and res.compare is not None else None
-        codes = ai.result() if ai is not None else None
+        if diff is not None and on_diff is not None and shape is not None and _fits(diff, np.uint8, shape):
+            early = np.asarray(diff, dtype=np.float32)
+            on_diff(early)
+        codes, values = ai.result() if ai is not None else (None, None)
     if codes is not None and ai_path is not None:
         _check(codes, ai_path, np.uint16, shape)
     if diff is not None and diff_path is not None:
         _check(diff, diff_path, np.uint8, shape or (codes.shape if codes is not None else None))
     if diff is not None and res.compare is not None:
-        res.compare.diff_map = np.asarray(diff, dtype=np.float32)  # the compare step's float32
-    if codes is not None and ai_path is not None:
-        v1 = ai_path.endswith(AI_FILE_V1)
-        res.anomaly_map = np.asarray(codes, dtype=np.float32) / np.float32(AI_SCALE) if v1 else decode_ai(codes)
+        res.compare.diff_map = early if early is not None else np.asarray(diff, dtype=np.float32)  # compare's float32
+        if early is None and on_diff is not None:
+            on_diff(res.compare.diff_map)
+    if codes is not None:
+        res.anomaly_map = values  # `_check` passed, so `_read_ai` decoded them
     return res

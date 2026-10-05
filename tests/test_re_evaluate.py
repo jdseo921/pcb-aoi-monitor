@@ -7,7 +7,9 @@ from __future__ import annotations
 
 import copy
 import json
+import math
 import statistics
+import threading
 from collections.abc import Callable
 from dataclasses import replace
 from pathlib import Path
@@ -18,7 +20,7 @@ import numpy as np
 import pytest
 from torch import nn
 
-from aoi.core import anomaly, explain, inspector, maps
+from aoi.core import anomaly, compare, explain, inspector, maps, services
 from aoi.core.compare import Region
 from aoi.core.imaging import load_image, save_image
 from aoi.core.inspector import (
@@ -377,6 +379,49 @@ def test_req_cmp_005_the_defect_merge_keeps_what_testing_every_kept_box_kept() -
         assert [(d.x, d.y, d.w, d.h, d.score) for d in kept] == want, trial
 
 
+def test_req_cmp_005_region_peaks_are_those_of_reading_each_box_alone() -> None:
+    """The regions found on a mask, with each box's peak on the value map, are those of reading every box alone (as
+    before #249, about 20 ms for 5,600 regions): on boxes of up to SMALL px a side, read together, and larger ones, at
+    the map's edges, over 8-, 16- and 32-bit value maps with a NaN, with the minimum area leaving some out, and on a
+    mask of more small boxes than one read of CHUNK takes."""
+
+    def box_by_box(mask: np.ndarray, value_map: np.ndarray, min_area: int, source: str) -> list[Region]:
+        n, _, stats, _ = cv2.connectedComponentsWithStats(mask, connectivity=8)
+        out = []
+        for i in range(1, n):
+            x, y, w, h, area = (int(v) for v in stats[i])
+            if area >= min_area:
+                out.append(Region(x, y, w, h, area, float(value_map[y : y + h, x : x + w].max()), source))
+        return sorted(out, key=lambda r: -r.peak)
+
+    def same(got: list[Region], want: list[Region]) -> bool:  # a NaN peak is equal to a NaN peak
+        return [replace(r, peak=0.0) for r in got] == [replace(r, peak=0.0) for r in want] and all(
+            g.peak == w.peak or (math.isnan(g.peak) and math.isnan(w.peak)) for g, w in zip(got, want, strict=True)
+        )
+
+    rng = np.random.default_rng(249)
+    for trial in range(200):
+        h, w = (int(rng.integers(1, 90)) for _ in range(2))
+        mask = (rng.random((h, w)) < rng.random() * 0.4).astype(np.uint8) * 255
+        if trial % 3 == 0:  # blobs larger than SMALL px a side
+            mask = cv2.dilate(mask, np.ones((int(rng.integers(1, 14)), int(rng.integers(1, 14))), np.uint8))
+        for value_map in (
+            rng.integers(0, 256, (h, w)).astype(np.uint8),
+            rng.random((h, w)).astype(np.float32) * 100,
+            rng.random((h, w)) * 5,
+        ):
+            if trial % 5 == 0 and value_map.dtype != np.uint8:
+                value_map[int(rng.integers(0, h)), int(rng.integers(0, w))] = np.nan
+            for min_area in (1, 3, 40):
+                want = box_by_box(mask, value_map, min_area, "compare")
+                assert same(compare.regions_from_mask(mask, value_map, min_area, "compare"), want), trial
+    many = np.zeros((300, 300), np.uint8)
+    many[::3, ::3] = 255  # 10,000 regions of one pixel, more than CHUNK
+    value_map = rng.random((300, 300)).astype(np.float32)
+    assert len(want := box_by_box(many, value_map, 1, "ai")) > compare.CHUNK
+    assert compare.regions_from_mask(many, value_map, 1, "ai") == want
+
+
 def test_req_cmp_005_reevaluate_judges_a_stored_result_as_inspecting_with_those_thresholds(
     trained_ctx: AppContext, synthetic_dataset: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -399,6 +444,41 @@ def test_req_cmp_005_reevaluate_judges_a_stored_result_as_inspecting_with_those_
         _assert_close(ctx.re_evaluate(uuid, ctx.recipe(BOARD)[1]), as_judged, f"{path.name} as judged")
         for i, thresholds in enumerate(what_if):
             _assert_close(ctx.re_evaluate(uuid, thresholds), fresh[path][i], f"{path.name} what-if {i}")
+
+
+def test_req_cmp_005_reevaluate_finds_the_difference_regions_while_the_ai_map_decodes(
+    trained_ctx: AppContext, ng_board: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """`re_evaluate` finds the difference regions once, with the thresholds asked for, while the AI map's thread is
+    still decoding (it waits here until they are found, at most 10 s), and `re_grade` takes them rather than finding
+    them again (#249); the result is the one judged at inspection, and with other thresholds the one they give."""
+    ctx = trained_ctx
+    uuid, as_judged = _store(ctx, ng_board), ctx.inspection_result(ctx.inspections(board_model=BOARD)[0]["id"])
+    other = copy.deepcopy(ctx.recipe(BOARD)[1])
+    other.diff_threshold, other.min_defect_area = other.diff_threshold + 20, other.min_defect_area + 5
+    want = ctx.inspect(BOARD, ctx.load_image(ng_board), other)
+    read_ai, found, order, again = maps._read_ai, threading.Event(), list[object](), list[object]()
+
+    def held(path: str, shape: tuple[int, int] | None) -> tuple[np.ndarray | None, np.ndarray | None]:
+        order.append("AI map decoded" if found.wait(10) else "AI map decoded first")
+        return read_ai(path, shape)
+
+    def spied(d: np.ndarray, threshold: float, area: int) -> tuple[np.ndarray, list[Region], dict[str, object]]:
+        order.append(("regions found", threshold, area))
+        found.set()
+        return compare.changed_regions(d, threshold, area)
+
+    monkeypatch.setattr(maps, "_read_ai", held)
+    monkeypatch.setattr(services, "changed_regions", spied)
+    monkeypatch.setattr(inspector, "changed_regions", lambda *a: again.append(a) or compare.changed_regions(*a))
+    _refuse_the_engine(monkeypatch)
+    assert as_judged is not None
+    for thresholds, expect in ((ctx.recipe(BOARD)[1], as_judged), (other, want)):
+        found.clear()
+        order.clear()
+        _assert_close(ctx.re_evaluate(uuid, thresholds), expect, f"diff threshold {thresholds.diff_threshold}")
+        assert order == [("regions found", thresholds.diff_threshold, thresholds.min_defect_area), "AI map decoded"]
+    assert again == [], "re_grade found the regions again"
 
 
 def test_req_cmp_005_reevaluate_a_result_without_maps_for_its_checks(trained_ctx: AppContext, ng_board: Path) -> None:
