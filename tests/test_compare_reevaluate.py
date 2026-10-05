@@ -35,7 +35,7 @@ from aoi.ui.main_window import MainWindow
 from aoi.ui.pages.compare import MODE_DIFF, MODE_SIDE, NO_VERDICT, ComparePage
 from aoi.ui.widgets.busy import BusyOverlay
 from tests.screens.test_sizes_and_contrast import _check_widget, _pixels
-from tests.test_compare_stored import _expected, _refuse_inspection, _table
+from tests.test_compare_stored import _expected, _refuse_inspection, _table, save_to_recipe
 from tests.test_no_freeze import BUDGET_S, assert_off_ui_thread, board_5mp, gap_meter, heavy_calls  # noqa: F401
 from tests.test_re_evaluate import _store_5mp
 from tests.test_req_done_in_v01 import BOARD, _window
@@ -406,7 +406,8 @@ def test_req_cmp_005_one_threshold_not_saved_is_enough_to_have_an_operator_s_boa
     AI check on or off, nor an ROI's Stage 2 values and side, which nothing reads yet; an ROI moved or given another
     type with the AI check off and two ROIs over the defects swapped, which name the defects otherwise (their type and
     severity, never the verdict), an ROI's AI score and name with the AI check on, and Minimum defect area with the
-    comparison off, which sizes the AI model's defects, do count (verification, and the second)."""
+    comparison off, which sizes the AI model's defects, do count (verification, and the second). Save to Recipe reads 0
+    as none too, but a value that did not judge the board is still a change to save (S28d)."""
     ctx = trained_ctx
     win, compare, _ = _stored_on_compare(qtbot, ctx, ng_board, "Engineer")
     _, recipe = ctx.recipe(BOARD)
@@ -462,7 +463,7 @@ def test_req_cmp_005_one_threshold_not_saved_is_enough_to_have_an_operator_s_boa
     win.set_user("engineer")
     assert golden_board().verdict == "NG", "the recipe's own thresholds"
     _pass_every_check(compare)
-    compare.save_recipe()  # saved after the board was judged, which is not judged again here
+    save_to_recipe(compare)  # saved after the board was judged, which is not judged again here
     assert ctx.recipe(BOARD)[1].diff_threshold == 255 and compare.verdict.text() == theme.verdict_label("NG")
     operator_signs_in("saved since by Save to Recipe", again=True)
     assert compare.verdict.text() == theme.verdict_label("WARN"), "the thresholds saved since judge it"
@@ -470,7 +471,7 @@ def test_req_cmp_005_one_threshold_not_saved_is_enough_to_have_an_operator_s_boa
     compare.diff_thr.setValue(200)
     golden_board()
     assert compare._form_recipe(BOARD) != ctx.recipe(BOARD)[1], "judged by values not saved"
-    compare.save_recipe()
+    save_to_recipe(compare)
     operator_signs_in("values not saved when inspected, saved since", again=False)
     win.set_user("engineer")
     zero = ctx.recipe(BOARD)[1]
@@ -480,6 +481,7 @@ def test_req_cmp_005_one_threshold_not_saved_is_enough_to_have_an_operator_s_boa
     win.navigate("Compare")  # the form takes the revision saved since, its AI score threshold as none
     assert compare._form_recipe(BOARD).anomaly_threshold is None and ctx.recipe(BOARD)[1].anomaly_threshold == 0.0
     golden_board()
+    assert not compare.btn_save.isEnabled() and compare._changes() == [], "0 is none to Save to Recipe too (S28d)"
     operator_signs_in("an AI score threshold of 0 saved, the form untouched", again=False)
     golden_board()  # by the Operator: judged by the recipe
     win.set_user("engineer")
@@ -494,6 +496,7 @@ def test_req_cmp_005_one_threshold_not_saved_is_enough_to_have_an_operator_s_boa
     compare.ai_thr.tick.setChecked(True)
     compare.ai_thr.field.setValue(500.0)
     golden_board()
+    assert compare.btn_save.isEnabled() and [k for k, _, _ in compare._changes()] == ["anomaly_threshold"], "S28d"
     operator_signs_in("an AI score threshold not saved, the AI check off", again=False)
     win.set_user("engineer")
     compare.ai_thr.tick.setChecked(True)
@@ -549,6 +552,7 @@ def test_req_cmp_005_one_threshold_not_saved_is_enough_to_have_an_operator_s_boa
     win.navigate("Compare")  # the form takes that revision
     compare.diff_thr.setValue(compare.diff_thr.value() + 7)
     assert golden_board().compare is None and ai_check(compare.res) == "RAN"
+    assert compare.btn_save.isEnabled() and [k for k, _, _ in compare._changes()] == ["diff_threshold"], "S28d"
     operator_signs_in("a Pixel difference not saved, the Golden board comparison off", again=False)
     win.set_user("engineer")
     compare.min_area.setValue(compare.min_area.value() + 1)  # it also sizes the AI model's defects (verification)

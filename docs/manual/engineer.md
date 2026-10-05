@@ -63,9 +63,9 @@ the same files.
 
 Until a board model exists, Home, Inspection, Training, AI Model Test and Recipe Editor say so and offer
 **+ New board model**, which an Engineer or Admin uses; an Operator is told to ask an Engineer. Start and Next Board
-on Inspection stay grey until a board model is chosen in the top bar; an action on another page that needs one, such
-as Compare's Save to Recipe, shows AOI-SET-014 (select a board model; an Engineer or Admin creates the first with
-**+ New**).
+on Inspection stay grey until a board model is chosen in the top bar, and so does Compare's Save to Recipe, since there
+is no recipe for a threshold to differ from; another action that needs one shows AOI-SET-014 (select a board model; an
+Engineer or Admin creates the first with **+ New**).
 
 (to be written: creating a board model in full, calibrating px per mm)
 
@@ -256,7 +256,10 @@ Nothing is stored. A result whose map is gone gives AOI-CMP-004, naming it: insp
 thresholds on the new result. Any other board, and a pane's Re-evaluate › on a stored result, is inspected again from
 its image file with the form's thresholds and the current AI model, against the golden board as judged while it is shown
 (press Golden Board for today's).
-Save to Recipe saves the form's thresholds as a new revision. A stored result is judged again only under its own board
+Save to Recipe saves the form's thresholds as a new revision. It is on once a threshold in the form differs from the
+recipe, even one that did not judge the board shown, such as the AI score threshold with the AI check off (an override
+the field shows rounded is no change), so a revision never repeats the recipe. A stored result is judged again only
+under its own board
 model: with another board model in the header, Re-evaluate refuses with AOI-CMP-005 and names the board model to pick,
 and changing the header's board model clears the board of a record from Compare. A test image you picked stays,
 without the last verdict (an inspection of it still running stops), and is judged under the new board model at
