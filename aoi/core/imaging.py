@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import re
 import struct
+from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
@@ -416,12 +417,12 @@ def _read_image(p: Path, max_megapixels: float, max_megabytes: float) -> tuple[n
     return img, data
 
 
-def encode_image(path: str | Path, img: np.ndarray) -> bytes:
+def encode_image(path: str | Path, img: np.ndarray, params: Sequence[int] = ()) -> bytes:
     """`img` in the image format `path`'s suffix names (PNG with none), before anything is written: AOI-INSP-002 for a
-    suffix no format has."""
+    suffix no format has. `params` are OpenCV encoder settings (`cv2.IMWRITE_*` flags and values), empty for its own."""
     ext = Path(path).suffix or ".png"
     try:
-        ok, buf = cv2.imencode(ext, img)
+        ok, buf = cv2.imencode(ext, img, list(params))
     except cv2.error as e:  # OpenCV 5 raises for a suffix it cannot encode, such as "lot.txt" or "board_v1.2" (#195)
         raise AoiError("AOI-INSP-002", detail=str(e), path=str(path)) from e
     if not ok:
@@ -429,8 +430,9 @@ def encode_image(path: str | Path, img: np.ndarray) -> bytes:
     return buf.tobytes()
 
 
-def save_image(path: str | Path, img: np.ndarray) -> None:
-    atomic.write_bytes(path, encode_image(path, img))  # whole file or nothing, and non-ASCII Windows paths work
+def save_image(path: str | Path, img: np.ndarray, params: Sequence[int] = ()) -> None:
+    """Write `img` to `path` as `encode_image` encodes it, with the OpenCV encoder settings `params`."""
+    atomic.write_bytes(path, encode_image(path, img, params))  # whole file or nothing, and non-ASCII Windows paths work
 
 
 def list_images(folder: str | Path) -> list[Path]:
