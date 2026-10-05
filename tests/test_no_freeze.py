@@ -343,13 +343,21 @@ def test_req_set_021_logs_export_does_not_freeze(
     entry = trained_ctx.audit_entries(action="export.overlays")[0]
     assert (entry["after"]["copied"], entry["after"]["cancelled"]) == (kept, True)
 
-    real = trained_ctx.defects_for
-    monkeypatch.setattr(trained_ctx, "defects_for", lambda iid: sleep(0.02) or real(iid))  # a slow database
+    real, clicked = trained_ctx.defects_for, threading.Event()
+    # A database that answers only once Cancel is clicked, so the export stops after its first record on any machine.
+    # A 20 ms answer per record raced Cancel, shown 0.4 s in: when the click landed after the export's check for it
+    # before the last record, the export wrote both files and said so, and the stop awaited below never came (Windows CI
+    # on #258, #266, #269). The wait outlasts the helper's 60 s, so the answer comes only after a click or a failure.
+    monkeypatch.setattr(trained_ctx, "defects_for", lambda iid: (clicked.wait(120), real(iid))[1])
     out_csv = tmp_path / "out2" / "inspections.csv"
-    page.export_csv()
-    _cancel_when_started(qtbot, page.busy, lambda: True)
+    try:
+        page.export_csv()
+        _cancel_when_started(qtbot, page.busy, lambda: True)
+    finally:
+        clicked.set()  # the pool thread never waits past the test
     qtbot.waitUntil(lambda: status().startswith("Export CSV stopped"), timeout=60000)
-    assert not out_csv.exists() and status() == "Export CSV stopped: no file was written."
+    assert not out_csv.exists() and not out_csv.with_name("inspections_checks.csv").exists()
+    assert status() == "Export CSV stopped: no file was written."
     for d in ("out", "out2"):
         shutil.rmtree(tmp_path / d)  # up to 2 GB of copies: free the disk now, not when pytest prunes old runs
 
