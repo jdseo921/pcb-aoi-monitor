@@ -7,7 +7,8 @@ decided and never inspected again (REQ-CMP-003). The "Try other thresholds"
 panel is for an Engineer or Admin and hidden for an Operator (REQ-CMP-005,
 docs/adr/0006-judging-a-stored-result-again.md decision 4).
 Its Re-evaluate judges a stored result again from its stored maps and shows
-what it would be.
+what it would be; its Save to Recipe makes them the board model's recipe,
+a new revision with an audit entry, after an inline sheet lists what changes and asks for a reason.
 """
 
 from __future__ import annotations
@@ -20,6 +21,7 @@ from typing import TYPE_CHECKING, Any, TypeAlias
 
 import numpy as np
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QAction, QKeySequence
 from PySide6.QtWidgets import (
     QComboBox,
     QDoubleSpinBox,
@@ -30,6 +32,7 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QHeaderView,
     QLabel,
+    QLineEdit,
     QSpinBox,
     QSplitter,
     QTextEdit,
@@ -174,6 +177,7 @@ class ComparePage(Page):
         self.record_board_model: str | None = None  # the board model of the record the test board came from, if any
         self.form_revision: tuple[str, int] | None = None  # the board model and recipe revision the form came from
         self.form_recipe: Recipe | None = None  # and that revision's recipe, which Save to Recipe tells a change from
+        self._asking = False  # the Save to Recipe sheet is open in place of the panel
         self.shown_board_model: str | None = None  # the header's board model the page last followed (#247)
         self.judge_on_show = False  # the header changed while the page was hidden: judge its board when shown (#247)
         self.judged_by: Recipe | None = None  # the recipe a board inspected here, shown or still worked out, judges by
@@ -289,16 +293,51 @@ class ComparePage(Page):
         self.act_try = self.action(self.tr("Re-evaluate"), "Ctrl+R", self.re_evaluate)
         self.btn_try = action_button(self.act_try, show_key=False)
         row.addWidget(self.btn_try)
-        self.btn_save = button(self.tr("Save to Recipe"), "primary", self.save_recipe)  # the page's one blue primary
+        self.act_save = self.action(self.tr("Save to Recipe"), "Ctrl+S", self.save_recipe)
+        self.btn_save = action_button(self.act_save, "primary", show_key=False)  # the page's one blue primary
         row.addWidget(self.btn_save)
         f.addRow(row)
         pl.addWidget(self.tryout)
+        pl.addWidget(self._save_sheet())
         self.ai_thr.changed.connect(self._sync_save)  # Save to Recipe is on while a threshold differs from the recipe
         for field in (self.diff_thr, self.min_area, self.ssim_min, self.max_regions):
             field.valueChanged.connect(self._sync_save)
         split.addWidget(panel)
         split.setSizes([800, 920])  # the decision table shows all six columns at 1920 x 1080
         self.root.addWidget(split, 1)
+
+    def _save_sheet(self) -> QGroupBox:
+        """Save to Recipe's confirmation, shown in place of the panel: inline, never a dialog over a dialog (sketch). It
+        lists each threshold that changes, before -> after, and asks for a reason, without which Save Revision is off;
+        Cancel, or Esc in the sheet, closes it. Save Revision is a plain button: the page keeps one blue primary."""
+        self.sheet = QGroupBox(self.tr("Save to Recipe"))
+        sl = QVBoxLayout(self.sheet)
+        self.sheet_heading, self.sheet_changes, self.sheet_note = QLabel(), QLabel(), QLabel()
+        self.sheet_note.setObjectName("muted")
+        for label in (self.sheet_heading, self.sheet_changes, self.sheet_note):
+            label.setWordWrap(True)
+            label.setTextFormat(Qt.TextFormat.PlainText)  # a board model's name is never read as markup
+            sl.addWidget(label)
+        form = QFormLayout()
+        self.reason = QLineEdit()
+        self.reason.textChanged.connect(self._sync_save)
+        self.reason.returnPressed.connect(self._confirm_save)
+        form.addRow(self.tr("Reason (required)"), self.reason)
+        sl.addLayout(form)
+        row = QHBoxLayout()
+        row.addStretch(1)
+        self.btn_cancel = button(self.tr("Cancel"), slot=self._close_sheet)
+        row.addWidget(self.btn_cancel)
+        self.btn_confirm = button(self.tr("Save Revision"), slot=self._confirm_save)  # named with its revision on open
+        row.addWidget(self.btn_confirm)
+        sl.addLayout(row)
+        esc = QAction(self.sheet)
+        esc.setShortcut(QKeySequence(Qt.Key.Key_Escape))
+        esc.setShortcutContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)  # Esc in the sheet closes it
+        esc.triggered.connect(self._close_sheet)
+        self.sheet.addAction(esc)
+        self.sheet.hide()
+        return self.sheet
 
     # --- inputs ------------------------------------------------------------------
     def set_test(self, path: str) -> None:
@@ -346,9 +385,11 @@ class ComparePage(Page):
             self.mode.setCurrentIndex(MODE_SIDE)  # redraw shows the pane and its label, and fits the board to its half
 
     def _load_recipe_into_form(self) -> Recipe | None:
-        """The form takes the header's board model's recipe, which is returned; None with no board model."""
+        """The form takes the header's board model's recipe, which is returned; None with no board model. A Save to
+        Recipe sheet open closes: what it lists was tried on the recipe before."""
         self._drop_tried()  # tried with the recipe the form came from
         self.form_recipe = None
+        self._close_sheet()
         if not self.board_model:
             return None
         rev, r = self.ctx.recipe(self.board_model)
@@ -833,19 +874,30 @@ class ComparePage(Page):
         return r.image if view is None else view
 
     def save_recipe(self) -> None:
-        """Save to Recipe (Engineer and Admin; REQ-CMP-005): the form's thresholds on the recipe they came from, stored
-        through AppContext as its next revision. Off while nothing differs: a revision that changes nothing is never
-        stored."""
+        """Save to Recipe (Ctrl+S, Engineer and Admin; REQ-CMP-005): the sheet, in place of the panel, lists each
+        threshold the form holds otherwise than the recipe, before -> after, and asks for a reason; nothing is stored
+        until Save Revision (sketch docs/sketches/compare-decision-table.md). Off while nothing differs."""
         if not self._may_save():
             roles = ROLES_FROM[REQUIRED_ROLE["save_recipe"]]
             self.error(AoiError("AOI-USR-001", what=QT_TRANSLATE_NOOP("Errors", "Changing recipes"), roles=roles))
             return
-        if (bm := self.checked_board_model()) is None or (saved := self.form_recipe) is None or not self._changes():
+        if (bm := self.checked_board_model()) is None or not (changes := self._changes()):
             return
-        rev = self.ctx.save_recipe(self._form_recipe(bm, saved))
-        self.form_revision, self.form_recipe = (bm, rev), self.ctx.recipe(bm)[1]
-        self._sync_save()
-        self.shell.status(self.tr("Recipe saved as revision {revision}").format(revision=rev))
+        revision = (self.form_revision[1] if self.form_revision else 0) + 1  # the revision the save will make
+        line = self.tr("{threshold}: {before} → {after}")
+        heading = self.tr("Save these thresholds as revision {revision} of the recipe of {board_model}?")
+        self.sheet_heading.setText(heading.format(revision=revision, board_model=bm))
+        shown = [(self.tr(THRESHOLDS[k]), self._shown(k, was), self._shown(k, now)) for k, was, now in changes]
+        self.sheet_changes.setText("\n".join(line.format(threshold=t, before=b, after=a) for t, b, a in shown))
+        note = self.tr(
+            "Boards inspected after the save are judged by revision {revision}; stored results keep their verdicts."
+        )
+        self.sheet_note.setText(note.format(revision=revision))
+        self.btn_confirm.setText(self.tr("Save Revision {revision}").format(revision=revision))
+        self._asking = True
+        self.reason.clear()
+        self._sync_roles()
+        self.reason.setFocus(Qt.FocusReason.OtherFocusReason)
 
     def _changes(self) -> list[tuple[str, Any, Any]]:
         """Each threshold the form holds otherwise than the recipe it came from, as the engine reads them (`_as_read`):
@@ -855,9 +907,53 @@ class ComparePage(Page):
         was, now = _as_read(saved), _as_read(self._form_recipe(saved.board_model, saved))
         return [(k, getattr(was, k), getattr(now, k)) for k in THRESHOLDS if getattr(was, k) != getattr(now, k)]
 
+    def _shown(self, field: str, value: object) -> str:
+        """A threshold's value as the sheet lists it: none of the recipe's own is the AI model's calibrated value; a
+        number shows as its field does, or with the decimals the recipe holds where the field shows fewer."""
+        if value is None:
+            return self.tr("the AI model's calibrated value")
+        if isinstance(value, float):
+            places = self.ai_thr.field.decimals() if field == "anomaly_threshold" else self.ssim_min.decimals()
+            return f"{value:.{places}f}" if round(value, places) == value else f"{value:g}"
+        return str(value)
+
+    def _confirm_save(self) -> None:
+        """Save Revision, or Enter in the reason: the form's thresholds on the recipe the sheet listed them against,
+        stored through AppContext as the next revision with its audit entry of before, after, user, time and reason
+        (REQ-CMP-005, REQ-LOG-004). A refusal (AOI-USR-001 for a role that may not save, say) is the coded dialog, and
+        the sheet stays with its reason. Inspection and the Recipe Editor take the revision up as they do one the
+        Recipe Editor saves: at the next board, and when the editor is shown again."""
+        reason, saved = self.reason.text().strip(), self.form_recipe
+        if not (self._asking and reason) or saved is None:
+            return
+        try:
+            rev = self.ctx.save_recipe(self._form_recipe(saved.board_model, saved), reason)
+        except Exception as e:  # logged and alarmed; nothing was stored (one transaction)
+            self.error(e)
+            return
+        self.form_revision, self.form_recipe = (saved.board_model, rev), self.ctx.recipe(saved.board_model)[1]
+        self._close_sheet()
+        self.shell.status(self.tr("Recipe saved as revision {revision}").format(revision=rev))
+
+    def _close_sheet(self) -> None:
+        """The sheet goes, with its reason, and the panel is back, nothing stored: Cancel, Esc, a save, any sign-in (a
+        revision never carries the reason of a user it does not name), a board model change or a recipe reloaded. With
+        none open, nothing changes: the panel shown or hidden while the page is not is a minimum size the window never
+        learns (the stack keeps the size its hidden page had)."""
+        if not self._asking:
+            return
+        self._asking = False
+        self.reason.clear()
+        self._sync_roles()
+        if self.isVisible():  # the focus back on the panel, not lost with the sheet
+            (self.btn_save if self.btn_save.isEnabled() else self.btn_try).setFocus(Qt.FocusReason.OtherFocusReason)
+
     def _sync_save(self) -> None:
-        """Save to Recipe on while a threshold differs from the recipe, for a role that may save one."""
-        self.btn_save.setEnabled(self._may_save() and bool(self._changes()))
+        """Save to Recipe on for a role that may save a recipe while a threshold differs, no sheet is open and no
+        re-evaluation runs (Ctrl+S opens no sheet over one), and Save Revision while the sheet has a reason."""
+        free = self._may_save() and not self._asking and self._trying is None
+        self.act_save.setEnabled(free and bool(self._changes()))
+        self.btn_confirm.setEnabled(self._asking and bool(self.reason.text().strip()))
 
     def _may_save(self) -> bool:
         """The role signed in is at or above the one `AppContext.save_recipe`'s @requires names (#241)."""
@@ -920,15 +1016,16 @@ class ComparePage(Page):
         focus on it as it goes off waits in the "why" box and goes back to it once it is on again, if still there,
         as when Inspection's "Compare with Golden board ›" showed Compare with the focus it had on Re-evaluate, then a
         stored result (third verification): Qt would pass it on to the header's board model, whose list a Space opens,
-        or, while a threshold differs, to Save to Recipe, where one more Space saved the form's thresholds. The focus
+        or, while a threshold differs, to Save to Recipe, where one more Space would open its sheet. The focus
         read is the window's, which it keeps while another window is in front (review)."""
         engineer = self.ctx.role != "Operator"
-        on = engineer and (self.stored is None or self.loaded) and self._trying is None
+        on = engineer and not self._asking and (self.stored is None or self.loaded) and self._trying is None
         focus = self.window().focusWidget()
         if not on and focus is self.btn_try:
             self.why.setFocus(Qt.FocusReason.OtherFocusReason)
             self._refocus = True
-        self.tryout.setVisible(engineer)
+        self.tryout.setVisible(engineer and not self._asking)
+        self.sheet.setVisible(engineer and self._asking)
         self.act_try.setEnabled(on)
         self._sync_save()
         if on and self._refocus and focus is self.why:
@@ -944,7 +1041,9 @@ class ComparePage(Page):
         A run stopped by Cancel stays so, and a stored result as it was decided; a value that did not judge the board is
         no change (`_judging`). A focus in the panel, which the sign-in hides, waits in the "why" box, which every role
         sees, as one on the indicator's Cancel does (`_not_trying`), where Qt would pass it on to the header's board
-        model, whose list a Space opens (review); it can be in the panel only while Compare is shown."""
+        model, whose list a Space opens (review); it can be in the panel only while Compare is shown. Any sign-in closes
+        Save to Recipe's sheet, its reason with it."""
+        self._close_sheet()
         if self.ctx.role != "Operator":
             return
         focus: QWidget | None = self.window().focusWidget()  # before a run, ended by _drop_tried, hides the panel
@@ -975,6 +1074,9 @@ class ComparePage(Page):
         if self.res is None and self.test_path is None:
             step = self.empty_step(self.tr("Inspect a board on Inspection, or pick a test image."), "Inspection")
             self.test_empty.show_state(self.tr("No board to compare yet"), *step)
+        asked = self.form_revision if self._asking else None  # the revision Save to Recipe's open sheet lists against
         if self.board_model and self.form_revision != (self.board_model, self.ctx.recipe(self.board_model)[0]):
             self._load_recipe_into_form()  # a revision saved since, on Recipe Editor: Save to Recipe never reverts it
         self._show_calibration()  # an AI model trained or activated since: its value
+        if asked and (now := self.form_revision) and now != asked:  # nor does a sheet left open: it closed (sketch)
+            self.error(AoiError("AOI-RCP-004", board_model=now[0], latest=now[1], revision=asked[1]))

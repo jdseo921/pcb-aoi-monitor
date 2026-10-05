@@ -27,7 +27,7 @@
 <context>
     <name>ComparePage</name>
     <message>
-        <location filename="../ui/pages/compare.py" line="+72"/>
+        <location filename="../ui/pages/compare.py" line="+75"/>
         <source>Side by side</source>
         <translation type="unfinished"></translation>
     </message>
@@ -98,13 +98,13 @@
     </message>
     <message>
         <location line="+3"/>
-        <location line="+92"/>
-        <location line="+466"/>
+        <location line="+93"/>
+        <location line="+503"/>
         <source>Golden board</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-557"/>
+        <location line="-595"/>
         <source>AI model</source>
         <translation type="unfinished"></translation>
     </message>
@@ -134,7 +134,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+67"/>
+        <location line="+68"/>
         <source>Test Image…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -160,12 +160,12 @@
     </message>
     <message>
         <location line="+15"/>
-        <location line="+701"/>
+        <location line="+793"/>
         <source>Test board</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-695"/>
+        <location line="-787"/>
         <source>Inspecting…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -215,7 +215,22 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+186"/>
+        <location line="+57"/>
+        <source>Reason (required)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+4"/>
+        <source>Cancel</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>Save Revision</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+160"/>
         <source>Would be: {verdict}</source>
         <translation type="unfinished"></translation>
     </message>
@@ -236,7 +251,32 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+99"/>
+        <location line="+64"/>
+        <source>{threshold}: {before} → {after}</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Save these thresholds as revision {revision} of the recipe of {board_model}?</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>Boards inspected after the save are judged by revision {revision}; stored results keep their verdicts.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>Save Revision {revision}</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+18"/>
+        <source>the AI model&apos;s calibrated value</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+63"/>
         <source>{file} was not inspected; press Re-evaluate › to inspect it.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -246,7 +286,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-770"/>
+        <location line="-863"/>
         <source>AI score threshold</source>
         <translation type="unfinished"></translation>
     </message>
@@ -271,17 +311,18 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+162"/>
+        <location line="+163"/>
         <source>Re-evaluate</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location line="+3"/>
+        <location line="+17"/>
         <source>Save to Recipe</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+21"/>
+        <location line="+39"/>
         <source>Test image</source>
         <translation type="unfinished"></translation>
     </message>
@@ -297,7 +338,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+160"/>
+        <location line="+162"/>
         <source>Test board: {file}</source>
         <translation type="unfinished"></translation>
     </message>
@@ -339,13 +380,13 @@
     <message>
         <location line="+0"/>
         <location line="+141"/>
-        <location line="+138"/>
+        <location line="+193"/>
         <location line="+12"/>
         <source>Re-evaluate ›</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-277"/>
+        <location line="-332"/>
         <source>Train an AI model on Training.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -417,17 +458,17 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+68"/>
+        <location line="+115"/>
         <source>Recipe saved as revision {revision}</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+34"/>
+        <location line="+42"/>
         <source>Inspection cancelled</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+94"/>
+        <location line="+97"/>
         <source>Inspect a board on Inspection, or pick a test image.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -632,7 +673,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/compare.py" line="-136"/>
+        <location filename="../ui/pages/compare.py" line="-194"/>
         <source>Changing recipes</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1244,6 +1285,21 @@
     </message>
     <message>
         <location line="+22"/>
+        <source>Recipe saved while Save to Recipe was open</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Revision {latest} of board model {board_model} was saved after revision {revision}, the one Save to Recipe listed its changes against; saving them would undo revision {latest}, so the sheet closed and nothing was saved. Compare now shows the thresholds of revision {latest}.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+6"/>
+        <source>Try your thresholds again on revision {latest}, then press Save to Recipe.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+4"/>
         <source>Export stopped part-way</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1508,7 +1564,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-586"/>
+        <location line="-597"/>
         <source>Board judged NG</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1563,7 +1619,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+180"/>
+        <location line="+191"/>
         <source>Workspace in use</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2875,7 +2931,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/compare.py" line="-681"/>
+        <location filename="../ui/pages/compare.py" line="-719"/>
         <source>Compare</source>
         <translation type="unfinished"></translation>
     </message>

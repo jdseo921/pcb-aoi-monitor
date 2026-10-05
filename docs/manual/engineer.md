@@ -256,10 +256,21 @@ Nothing is stored. A result whose map is gone gives AOI-CMP-004, naming it: insp
 thresholds on the new result. Any other board, and a pane's Re-evaluate › on a stored result, is inspected again from
 its image file with the form's thresholds and the current AI model, against the golden board as judged while it is shown
 (press Golden Board for today's).
-Save to Recipe saves the form's thresholds as a new revision. It is on once a threshold in the form differs from the
-recipe, even one that did not judge the board shown, such as the AI score threshold with the AI check off (an override
-the field shows rounded is no change), so a revision never repeats the recipe. A stored result is judged again only
-under its own board
+
+Save to Recipe (Ctrl+S, the blue button) is on once a threshold in the form differs from the recipe, even one that did
+not judge the board shown, such as the AI score threshold with the AI check off, and off while Re-evaluate runs; an
+override the field shows rounded is no change, so a revision never repeats the recipe. It opens a sheet in place of the
+panel, not a message box, that lists each threshold that changes, before → after (no override of the recipe's own reads
+"the AI model's calibrated value"), names the revision the save makes and asks for a reason. Save Revision, or Enter in
+the reason, is on once a reason is typed: it stores the new revision with your reason, the stored result keeps its
+verdict, and boards inspected afterwards are judged by it (on Inspection from the next board, a run in progress
+included), as the Recipe Editor shows when opened again. Cancel, or Esc in the sheet, closes it with nothing stored and
+the values tried kept in the form. A sign-in closes it too: an Engineer or Admin keeps the values tried, and an
+Operator's sign-in puts back the recipe's. A change of board model, or a revision saved on another page meanwhile
+(AOI-RCP-004 says so when Compare shows again), also closes it, and the form then holds that recipe: try your values
+again on it.
+
+A stored result is judged again only under its own board
 model: with another board model in the header, Re-evaluate refuses with AOI-CMP-005 and names the board model to pick,
 and changing the header's board model clears the board of a record from Compare. A test image you picked stays,
 without the last verdict (an inspection of it still running stops), and is judged under the new board model at
@@ -288,7 +299,8 @@ written: picking another reference)
 ## 8. Logs and audit
 
 **Recipes in the audit trail.** Each Save Recipe and Save to Recipe is recorded as `recipe.save` with the recipe before
-and after. One that sets, changes or clears the board model's override of the AI score threshold is also recorded as
+and after, the user and the time; a Save to Recipe also with the reason typed in its sheet.
+One that sets, changes or clears the board model's override of the AI score threshold is also recorded as
 `recipe.ai_threshold`, naming the board model, the user, the revisions and the value before and after: the override, or
 the AI model's calibrated value that judges without one, with that AI model's version.
 
