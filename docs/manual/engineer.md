@@ -261,14 +261,21 @@ Save to Recipe (Ctrl+S, the blue button) is on once a threshold in the form diff
 not judge the board shown, such as the AI score threshold with the AI check off, and off while Re-evaluate runs; an
 override the field shows rounded is no change, so a revision never repeats the recipe. It opens a sheet in place of the
 panel, not a message box, that lists each threshold that changes, before → after (no override of the recipe's own reads
-"the AI model's calibrated value"), names the revision the save makes and asks for a reason. Save Revision, or Enter in
-the reason, is on once a reason is typed: it stores the new revision with your reason, the stored result keeps its
-verdict, and boards inspected afterwards are judged by it (on Inspection from the next board, a run in progress
-included), as the Recipe Editor shows when opened again. Cancel, or Esc in the sheet, closes it with nothing stored and
-the values tried kept in the form. A sign-in closes it too: an Engineer or Admin keeps the values tried, and an
-Operator's sign-in puts back the recipe's. A change of board model, or a revision saved on another page meanwhile
-(AOI-RCP-004 says so when Compare shows again), also closes it, and the form then holds that recipe: try your values
-again on it.
+"the AI model's calibrated value", which the saved revision judges by, while the board model has an active AI model
+whose calibration can be read as the sheet opens, else "none"; a value with more decimals than its field shows reads
+with all of them), names the revision the save makes and asks for a reason. Save Revision, or Enter in the reason, is on
+once a reason is typed: it stores the new revision with your reason, the stored result keeps its verdict, and boards
+inspected afterwards are judged by it (on Inspection from the next board, a run in progress included), as the Recipe
+Editor shows when opened again. Cancel, or Esc in the sheet, closes it with nothing stored and the values tried kept in
+the form; so does opening any board on Compare, the one shown included (a stored result, from Inspection or Last
+Inspected, or a file), so a reason typed before never goes with what you open; a record that cannot be opened leaves the
+page, the sheet included, as it was. A sign-in closes it too: an Engineer or Admin keeps the values tried, and an
+Operator's sign-in puts back the recipe's. A change of board model, or a revision saved elsewhere meanwhile (AOI-RCP-004
+says so when Compare shows again, or when you press Save Revision), also closes it, and the form then holds that recipe:
+try your values again on it. When the sheet closes, the focus goes back to the panel if it was in the sheet (to the
+explanation while a stored result is still loading, Save to Recipe and Re-evaluate both off, and on to Re-evaluate once
+it has loaded); moved elsewhere, to the board model in the header say, it stays there. A long board model name in the
+sheet's heading wraps after each _ and -; a part with neither stays whole.
 
 A stored result is judged again only under its own board
 model: with another board model in the header, Re-evaluate refuses with AOI-CMP-005 and names the board model to pick,
