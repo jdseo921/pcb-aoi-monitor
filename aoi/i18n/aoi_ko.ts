@@ -632,7 +632,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/recipe_editor.py" line="+360"/>
+        <location filename="../ui/pages/recipe_editor.py" line="+361"/>
         <source>Height</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2925,7 +2925,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/recipe_editor.py" line="-296"/>
+        <location filename="../ui/pages/recipe_editor.py" line="-297"/>
         <source>Recipe Editor</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3167,7 +3167,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+76"/>
+        <location line="+77"/>
         <source>Train an AI model or set a reference image on Training.</source>
         <translation type="unfinished"></translation>
     </message>

@@ -175,7 +175,8 @@ it. Ticked, the field starts from that value and holds yours; Save Recipe keeps 
 save to go back to the calibrated value, which then follows each AI model trained or activated later. Every board
 judged after the save uses the same threshold: on Inspection, on Compare (Re-evaluate and boards it inspects) and in AI
 Model Test. The audit trail records setting, changing and clearing the override (section 8). With no value to name,
-the tick reads "Set my own value", the field shows once ticked, and the note under them says why: no AI model is
+the tick reads "Set my own value", the field shows once ticked, starting from 0, which is no override: type your value
+before you save, as a save with 0 keeps none. The note under them says why there is no value to name: no AI model is
 trained yet, or no AI model version is active, or, when the AI model registry holds no usable calibration for the
 active AI model (only after a change by hand), AOI-TRN-012 with what to do: for the next boards, train again or
 activate another version on Training, or set a value of your own.

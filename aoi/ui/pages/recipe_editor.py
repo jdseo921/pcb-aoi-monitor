@@ -231,6 +231,7 @@ class RecipeEditorPage(Page):
         self.roi_table.clearSelection()  # row i of the recipe before is not ROI i of this one: the form empties (#173)
         if not self.board_model:
             self.view_empty.show_state(*self.no_board_model())
+            self.show_calibrated(self.ai_thr, None)  # nothing to name, never the board model before's value (review)
             return
         self.rev, r = self.ctx.recipe(self.board_model)
         self.recipe = r
