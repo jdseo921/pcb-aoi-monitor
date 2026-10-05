@@ -25,6 +25,15 @@ AI_SCALE = 1000  # codes per sigma below AI_KNEE: steps of 0.001 sigma
 AI_KNEE = 32768  # the code of 32.768 sigma, where the log scale starts
 AI_LOG_STEPS = 8192  # codes per factor e above the knee: each step 1/8192 of the value
 AI_FILE, AI_FILE_V1 = "_ai2.png", "_ai.png"  # the AI map's file name ending, by format
+# How both maps are written: zlib level 1 with deflate's default strategy and PNG's Up filter on every row, where
+# OpenCV's own settings take level 1 with the run-length strategy and the Sub filter. On the 5 MP test board the same
+# pixels are written in the same time and read back in about two thirds of the time, which judging a stored result
+# again waits on (#249): the strategy halves the AI map and gives most of its gain, the filter most of the difference
+# map's. Any PNG reader reads them, and maps written before read as before.
+PNG_SETTINGS = (
+    *(cv2.IMWRITE_PNG_COMPRESSION, 1, cv2.IMWRITE_PNG_STRATEGY, cv2.IMWRITE_PNG_STRATEGY_DEFAULT),
+    *(cv2.IMWRITE_PNG_FILTER, cv2.IMWRITE_PNG_FILTER_UP),
+)
 DAMAGED = QT_TRANSLATE_NOOP("Errors", "the file is damaged")
 
 
@@ -63,8 +72,9 @@ def encode_ai(amap: np.ndarray, pixel_threshold: float | None = None) -> np.ndar
 
 
 def decode_ai(img: np.ndarray) -> np.ndarray:
-    """Format-2 codes back to sigma, as float32: one table lookup per pixel."""
-    return AI_VALUES[np.asarray(img, dtype=np.uint16)]
+    """Format-2 codes back to sigma, as float32: one table lookup per pixel (`np.take`, the values of indexing the table
+    with the codes in about three quarters of the time, #249)."""
+    return np.take(AI_VALUES, np.asarray(img, dtype=np.uint16))
 
 
 def save_maps(res: InspectionResult, base: Path, *, pixel_threshold: float | None) -> tuple[str | None, str | None]:
@@ -73,10 +83,10 @@ def save_maps(res: InspectionResult, base: Path, *, pixel_threshold: float | Non
     diff_path = ai_path = None
     if res.compare is not None and res.compare.diff_map is not None:
         diff_path = base.with_name(base.name + "_diff.png")
-        save_image(diff_path, encode_diff(res.compare.diff_map))
+        save_image(diff_path, encode_diff(res.compare.diff_map), PNG_SETTINGS)
     if res.anomaly_map is not None:
         ai_path = base.with_name(base.name + AI_FILE)
-        save_image(ai_path, encode_ai(res.anomaly_map, pixel_threshold))
+        save_image(ai_path, encode_ai(res.anomaly_map, pixel_threshold), PNG_SETTINGS)
     return (str(diff_path) if diff_path else None, str(ai_path) if ai_path else None)
 
 

@@ -141,6 +141,31 @@ def test_req_insp_012_a_map_that_is_not_the_map_written_reads_as_damaged(tmp_pat
     assert loaded(u8, u16, shape) == "loaded" and loaded(small.astype(np.uint8), small, shape) == ai.name
 
 
+def test_req_cmp_005_maps_are_written_to_be_read_fast(tmp_path: Path) -> None:
+    """`save_maps` writes both maps at zlib level 1 with deflate's default strategy and PNG's Up filter on every row
+    (`maps.PNG_SETTINGS`): the pixels saved, which on the 5 MP test board read back in about two thirds of the time
+    OpenCV's own settings take, what judging a stored result again waits on (#249). Before, OpenCV's own settings took
+    the run-length strategy and the Sub filter."""
+    y, x = np.mgrid[0:37, 0:53]  # a gradient: random pixels would come out the same under either strategy
+    diff = ((x * 5 + y * 3) % 256).astype(np.float32)
+    amap = diff / 255 * 40
+    res = InspectionResult("NG", 0.0, anomaly_map=amap, compare=CompareResult(diff_map=diff))
+    diff_path, ai_path = maps.save_maps(res, tmp_path / "b", pixel_threshold=None)
+    for path, written in ((diff_path, maps.encode_diff(diff)), (ai_path, maps.encode_ai(amap))):
+        assert path is not None
+        data, at, idat = Path(path).read_bytes(), 8, b""
+        while at < len(data):  # the chunks after the signature: length, type, body, CRC
+            (n,) = struct.unpack(">I", data[at : at + 4])
+            idat += data[at + 8 : at + 8 + n] if data[at + 4 : at + 8] == b"IDAT" else b""
+            at += 12 + n
+        rows, stride = zlib.decompress(idat), 1 + 53 * written.itemsize  # each row: its filter type, then its pixels
+        assert len(rows) == 37 * stride and set(rows[::stride]) == {2}, "the Up filter on every row"
+        assert np.array_equal(maps.read_map(path), written)
+        level_1 = [cv2.IMWRITE_PNG_COMPRESSION, 1, cv2.IMWRITE_PNG_STRATEGY, cv2.IMWRITE_PNG_STRATEGY_DEFAULT]
+        up = [cv2.IMWRITE_PNG_FILTER, cv2.IMWRITE_PNG_FILTER_UP]
+        assert data == cv2.imencode(".png", written, level_1 + up)[1].tobytes(), "the level and the strategy too"
+
+
 def test_req_insp_012_ok_maps_are_swept_after_retention_and_ng_maps_stay(
     tmp_path: Path, tiny_model: TrainedModel, ng_board: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import copy
 import json
+import math
 import statistics
 from collections.abc import Callable
 from dataclasses import replace
@@ -18,7 +19,7 @@ import numpy as np
 import pytest
 from torch import nn
 
-from aoi.core import anomaly, explain, inspector, maps
+from aoi.core import anomaly, compare, explain, inspector, maps
 from aoi.core.compare import Region
 from aoi.core.imaging import load_image, save_image
 from aoi.core.inspector import (
@@ -375,6 +376,49 @@ def test_req_cmp_005_the_defect_merge_keeps_what_testing_every_kept_box_kept() -
         kept = judge._defects(regions, InspectionResult("OK", 0.0))
         want = [(r.x, r.y, r.w, r.h, r.peak) for r in scan(regions)]
         assert [(d.x, d.y, d.w, d.h, d.score) for d in kept] == want, trial
+
+
+def test_req_cmp_005_region_peaks_are_those_of_reading_each_box_alone() -> None:
+    """The regions found on a mask, with each box's peak on the value map, are those of reading every box alone (as
+    before #249, about 20 ms for 5,600 regions): on boxes of up to SMALL px a side, read together, and larger ones, at
+    the map's edges, over 8-, 16- and 32-bit value maps with a NaN, with the minimum area leaving some out, and on a
+    mask of more small boxes than one read of CHUNK takes."""
+
+    def box_by_box(mask: np.ndarray, value_map: np.ndarray, min_area: int, source: str) -> list[Region]:
+        n, _, stats, _ = cv2.connectedComponentsWithStats(mask, connectivity=8)
+        out = []
+        for i in range(1, n):
+            x, y, w, h, area = (int(v) for v in stats[i])
+            if area >= min_area:
+                out.append(Region(x, y, w, h, area, float(value_map[y : y + h, x : x + w].max()), source))
+        return sorted(out, key=lambda r: -r.peak)
+
+    def same(got: list[Region], want: list[Region]) -> bool:  # a NaN peak is equal to a NaN peak
+        return [replace(r, peak=0.0) for r in got] == [replace(r, peak=0.0) for r in want] and all(
+            g.peak == w.peak or (math.isnan(g.peak) and math.isnan(w.peak)) for g, w in zip(got, want, strict=True)
+        )
+
+    rng = np.random.default_rng(249)
+    for trial in range(200):
+        h, w = (int(rng.integers(1, 90)) for _ in range(2))
+        mask = (rng.random((h, w)) < rng.random() * 0.4).astype(np.uint8) * 255
+        if trial % 3 == 0:  # blobs larger than SMALL px a side
+            mask = cv2.dilate(mask, np.ones((int(rng.integers(1, 14)), int(rng.integers(1, 14))), np.uint8))
+        for value_map in (
+            rng.integers(0, 256, (h, w)).astype(np.uint8),
+            rng.random((h, w)).astype(np.float32) * 100,
+            rng.random((h, w)) * 5,
+        ):
+            if trial % 5 == 0 and value_map.dtype != np.uint8:
+                value_map[int(rng.integers(0, h)), int(rng.integers(0, w))] = np.nan
+            for min_area in (1, 3, 40):
+                want = box_by_box(mask, value_map, min_area, "compare")
+                assert same(compare.regions_from_mask(mask, value_map, min_area, "compare"), want), trial
+    many = np.zeros((300, 300), np.uint8)
+    many[::3, ::3] = 255  # 10,000 regions of one pixel, more than CHUNK
+    value_map = rng.random((300, 300)).astype(np.float32)
+    assert len(want := box_by_box(many, value_map, 1, "ai")) > compare.CHUNK
+    assert compare.regions_from_mask(many, value_map, 1, "ai") == want
 
 
 def test_req_cmp_005_reevaluate_judges_a_stored_result_as_inspecting_with_those_thresholds(
