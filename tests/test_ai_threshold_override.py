@@ -361,7 +361,9 @@ def test_req_trn_015_compares_tick_keeps_the_reading_order_and_the_focus_when_it
     on the focused tick while the value it names comes or goes as the page stays shown (an AI model activated, then none
     active) moves the tick and leaves it the focus, so a digit typed next never edits Pixel difference, which judges
     Re-evaluate and Save to Recipe stores, and the next Space clears the tick (review round 2b: the focus went to Pixel
-    difference). A tick a run moves while the focus is elsewhere leaves the focus where it is (review round 3)."""
+    difference). A tick a run moves while the focus is elsewhere leaves the focus where it is (review round 3), and one
+    with the focus moved while another window is in front, when no control has hasFocus(), keeps it too: the header's
+    board model took it, where one Down changed the board model (third verification)."""
     ctx = trained_ctx
     model = ctx.active_model(BOARD)
     assert model is not None
@@ -403,6 +405,19 @@ def test_req_trn_015_compares_tick_keeps_the_reading_order_and_the_focus_when_it
         order = [field.field, field.tick, pixel] if named else [field.tick, field.field, pixel]
         assert _tab_from(order[0], 2) == order[1:], (named, "Tab in reading order")
         field.tick.setChecked(False)
+    other = QWidget()  # in front as the tick moves
+    qtbot.addWidget(other)
+    for value in (3.0, None) if field.tick.parentWidget() is field else (None, 3.0):
+        field.tick.setFocus(Qt.FocusReason.TabFocusReason)
+        other.show()
+        other.activateWindow()
+        qtbot.waitUntil(lambda: not win.isActiveWindow(), timeout=5000)
+        field.show_calibrated(value)  # a value to name, or none: the tick moves
+        assert field.tick.parentWidget() is (field if value is None else field.tick_row), value
+        other.hide()
+        win.activateWindow()
+        qtbot.waitUntil(lambda: QApplication.activeWindow() is win, timeout=5000)
+        assert QApplication.focusWidget() is field.tick, (value, "moved behind another window, it keeps the focus")
 
 
 def test_req_trn_015_a_calibration_that_cannot_be_read_says_so_with_a_code(

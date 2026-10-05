@@ -90,11 +90,13 @@ class AiThresholdField(QWidget):
     def _place_tick(self, in_row: bool) -> None:
         """The tick in `tick_row`, shown, or beside the field, the row hidden. Tab keeps the reading order, the tick
         under the field after it and beside it before it, and a tick that had the focus keeps it: a move to another
-        parent takes it away, and it went to the next field, which the next keys then edited (review round 2b)."""
+        parent takes it away, and it went to the next field, which the next keys then edited (review round 2b). The
+        focus read is the window's, which it keeps while another window is in front, when `hasFocus()` is False: the
+        header's board model took it then (third verification)."""
         beside, row = self.layout(), self.tick_row.layout()
         assert isinstance(beside, QHBoxLayout) and isinstance(row, QHBoxLayout)
         old, new = (beside, row) if in_row else (row, beside)
-        moved, focused = new.indexOf(self.tick) < 0, self.tick.hasFocus()
+        moved, focused = new.indexOf(self.tick) < 0, self.window().focusWidget() is self.tick
         if moved:
             old.removeWidget(self.tick)
             new.insertWidget(0, self.tick)
