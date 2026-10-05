@@ -30,6 +30,7 @@ from tests.test_compare_stored import save_to_recipe
 from tests.test_req_done_in_v01 import BOARD, _button, _inspect_one, _window
 
 REASON = "Pixel noise from the new lighting"
+SIGN_IN = "Sign in as a user with that role, or ask one to do it."  # AOI-USR-001's step
 
 
 @pytest.fixture(autouse=True)
@@ -61,6 +62,11 @@ def _no_dialog(monkeypatch: pytest.MonkeyPatch) -> list[object]:
     return opened
 
 
+def _note(revision: int) -> str:
+    """The sheet's note under its lines of changes, naming the revision the save makes."""
+    return f"Boards inspected after the save are judged by revision {revision}; stored results keep their verdicts."
+
+
 def _stored(ctx: AppContext) -> tuple[object, ...]:
     """What Save Revision may store: the recipe revisions, the audit trail and the inspection records."""
     return ctx.recipe_history(BOARD), ctx.audit_entries(), ctx.inspections()
@@ -80,8 +86,9 @@ def test_req_cmp_005_save_creates_audited_revision(
     tried and the rest of the recipe as it was, and one `recipe.save` audit entry names the user, the time (UTC, with
     its offset), the recipe before and after and the reason; the override set is audited as `recipe.ai_threshold` with
     that reason too. The stored result keeps its verdict and "Would be", the sheet closes, and Save to Recipe is off
-    again, as the form now holds the recipe. The sheet's text and buttons keep the size and contrast rules, and the page
-    keeps one blue primary."""
+    again, as the form now holds the recipe. The sheet's text and buttons keep the size and contrast rules, its labels
+    are plain text, and the page keeps one blue primary. A threshold tried after the save opens a sheet that names the
+    revision after it, which Compare left and shown again keeps open, reason and all: nothing was saved since."""
     ctx = trained_ctx
     win, compare, _ = _stored_on_compare(qtbot, ctx, ng_board, "Engineer")
     rev, before = ctx.recipe(BOARD)
@@ -100,6 +107,9 @@ def test_req_cmp_005_save_creates_audited_revision(
     assert compare.isAncestorOf(compare.sheet) and QApplication.activeModalWidget() is None
     assert dialogs == [] and opened == [], "no dialog, the sheet only"
     assert compare.sheet_heading.text() == f"Save these thresholds as revision {rev + 1} of the recipe of {BOARD}?"
+    assert compare.sheet_note.text() == _note(rev + 1)
+    labels = (compare.sheet_heading, compare.sheet_changes, compare.sheet_note)
+    assert {w.textFormat() for w in labels} == {Qt.TextFormat.PlainText}, "a board model's name is never markup"
     assert compare.sheet_changes.text().splitlines() == [
         "AI score threshold: the AI model's calibrated value → 7.000",
         f"Pixel difference (0-255): {before.diff_threshold} → 255",
@@ -142,7 +152,58 @@ def test_req_cmp_005_save_creates_audited_revision(
     assert compare.verdict.text() == theme.verdict_label("NG") and compare.would_be.isVisible()
     assert ctx.inspections() == stored[2], "the stored result keeps its verdict"
     assert win.statusBar().currentMessage() == f"Recipe saved as revision {rev + 1}"
-    assert dialogs == [] and opened == []
+    compare.min_area.setValue(77)  # tried after the save: the sheet lists it against the revision just saved
+    compare.btn_save.click()
+    assert compare.sheet_heading.text() == f"Save these thresholds as revision {rev + 2} of the recipe of {BOARD}?"
+    assert (compare.btn_confirm.text(), compare.sheet_note.text()) == (f"Save Revision {rev + 2}", _note(rev + 2))
+    compare.reason.setText(REASON)
+    win.navigate("Inspection")  # away and back with no revision saved since the sheet opened: it stays as it was
+    win.navigate("Compare")
+    assert compare.sheet.isVisible() and compare.reason.text() == REASON and ctx.recipe(BOARD)[0] == rev + 1
+    assert dialogs == [] and opened == [], "no AOI-RCP-004: nothing was saved since the sheet opened"
+
+
+def test_req_cmp_005_save_to_recipe_is_for_an_engineer_or_admin(
+    qtbot: QtBot, trained_ctx: AppContext, ng_board: Path, dialogs: list[tuple[str, str]]
+) -> None:
+    """An Operator has no Save to Recipe: the panel and the sheet are hidden, Ctrl+S opens nothing, the action stays off
+    even with the hidden form changed, and the page's action called anyway refuses with AOI-USR-001 and opens nothing.
+    An Engineer's sheet closes at any sign-in, an Admin's included, its reason gone and nothing stored, so a revision
+    never carries another user's reason; the Admin then saves as an Engineer does, the audit entry naming the Admin.
+    Should the role be gone when Save Revision is pressed, the service refuses with AOI-USR-001, nothing is stored, and
+    the sheet keeps its reason."""
+    ctx = trained_ctx
+    win, compare, _ = _stored_on_compare(qtbot, ctx, ng_board, "Operator")
+    history = ctx.recipe_history(BOARD)
+    assert compare.tryout.isHidden() and compare.sheet.isHidden() and not compare.act_save.isEnabled()
+    _press_save(qtbot, win, compare)
+    assert compare.sheet.isHidden() and dialogs == []
+    compare.diff_thr.setValue(255)  # the hidden form changed by code, not by the Operator: still off
+    assert not compare.act_save.isEnabled() and not compare.btn_save.isEnabled()
+    compare.save_recipe()
+    refused = "Changing recipes needs the Engineer or Admin role."
+    assert dialogs == [("AOI-USR-001 Not allowed for this role", f"{refused}\n\n{SIGN_IN}")]
+    assert compare.sheet.isHidden() and ctx.recipe_history(BOARD) == history
+    win.set_user("engineer")
+    compare.diff_thr.setValue(255)
+    _press_save(qtbot, win, compare)
+    compare.reason.setText("an Engineer's reason")
+    win.set_user("admin")
+    assert compare.sheet.isHidden() and compare.tryout.isVisible() and compare.reason.text() == ""
+    assert ctx.recipe_history(BOARD) == history and compare.diff_thr.value() == 255, "the Admin finds what was tried"
+    compare.btn_save.click()
+    compare.reason.setText("the Admin's reason")
+    ctx.set_user("operator")  # the role gone behind the page's back: no sign-in reached it
+    compare.btn_confirm.click()
+    refused = "Saving a recipe needs the Engineer or Admin role."
+    assert dialogs[-1] == ("AOI-USR-001 Not allowed for this role", f"{refused}\n\n{SIGN_IN}"), "the service's check"
+    assert ctx.recipe_history(BOARD) == history and compare.sheet.isVisible()
+    assert compare.reason.text() == "the Admin's reason"
+    ctx.set_user("admin")
+    compare.btn_confirm.click()
+    entry, admin = ctx.audit_entries(action="recipe.save")[0], ctx.db.user_uuid("admin")
+    assert (entry["user_uuid"], entry["role"], entry["reason"]) == (admin, "Admin", "the Admin's reason")
+    assert ctx.recipe(BOARD)[0] == history[0]["revision"] + 1 and compare.sheet.isHidden() and len(dialogs) == 2
 
 
 def test_req_cmp_005_nothing_is_stored_until_save_revision(
@@ -152,22 +213,38 @@ def test_req_cmp_005_nothing_is_stored_until_save_revision(
     monkeypatch: pytest.MonkeyPatch,
     dialogs: list[tuple[str, str]],
 ) -> None:
-    """Cancel and Esc close the sheet and store nothing, the thresholds tried staying in the form. A board model change
-    closes it too; so does a revision saved on the Recipe Editor while it is open, the form then holding that revision
-    and AOI-RCP-004 saying, once Compare shows it, that nothing was saved and what to do (sketch, Errors)."""
+    """With all five thresholds tried, the sheet lists all five. Cancel and Esc close it and store nothing, the
+    thresholds tried staying in the form and the focus going back to Save to Recipe. A board model change closes it
+    too. Compare left and shown again keeps it open with its reason while no revision was saved; a revision saved on the
+    Recipe Editor while it is open closes it, the form then holding that revision and AOI-RCP-004 saying, once Compare
+    shows it, that nothing was saved and what to do (sketch, Errors)."""
     ctx = trained_ctx
     monkeypatch.setattr(QMessageBox, "information", staticmethod(lambda *_: QMessageBox.StandardButton.Ok))
     win, compare, _ = _stored_on_compare(qtbot, ctx, ng_board, "Engineer")
     stored = _stored(ctx)
     compare.diff_thr.setValue(255)
+    compare.min_area.setValue(77)
+    compare.ssim_min.setValue(0.5)
+    compare.max_regions.setValue(3)
+    compare.ai_thr.set_override(5.5)
     compare.btn_save.click()
+    assert compare.sheet_changes.text().splitlines() == [  # each of the five, as its field shows it
+        "AI score threshold: the AI model's calibrated value → 5.500",
+        "Pixel difference (0-255): 45 → 255",
+        "Minimum defect area (px): 40 → 77",
+        "Similarity minimum (SSIM): 0.80 → 0.50",
+        "Allowed difference regions: 0 → 3",
+    ]
     compare.reason.setText("not saved")
     compare.btn_cancel.click()
+    tried = (compare.ai_thr.override(), compare.min_area.value(), compare.ssim_min.value(), compare.max_regions.value())
     assert compare.sheet.isHidden() and compare.tryout.isVisible() and compare.diff_thr.value() == 255
+    assert tried == (5.5, 77, 0.5, 3), "Cancel keeps the values tried"
     _press_save(qtbot, win, compare)
     assert compare.reason.text() == "", "Cancel let the reason go"
     qtbot.keyClick(compare.reason, Qt.Key.Key_Escape)
     assert compare.sheet.isHidden() and compare.btn_save.isEnabled() and _stored(ctx) == stored
+    assert compare.btn_save.hasFocus(), "the focus back on the panel, not lost with the sheet"
     compare.btn_save.click()
     win._on_board_model("")  # the header's board model cleared: the form follows it
     assert compare.sheet.isHidden() and not compare.act_save.isEnabled()
@@ -175,6 +252,10 @@ def test_req_cmp_005_nothing_is_stored_until_save_revision(
     compare.diff_thr.setValue(255)
     compare.btn_save.click()
     assert compare.sheet.isVisible() and _stored(ctx)[:2] == stored[:2]
+    compare.reason.setText("kept")
+    win.navigate("Inspection")  # away and back with no revision saved: the sheet stays, reason and all, no AOI-RCP-004
+    win.navigate("Compare")
+    assert compare.sheet.isVisible() and compare.reason.text() == "kept" and dialogs == []
     win.navigate("Recipe Editor")
     editor = win.pages["Recipe Editor"]
     assert isinstance(editor, RecipeEditorPage)
@@ -195,13 +276,14 @@ def test_req_cmp_005_nothing_is_stored_until_save_revision(
 
 
 def test_req_cmp_005_save_to_recipe_is_off_while_no_threshold_differs(
-    qtbot: QtBot, trained_ctx: AppContext, ng_board: Path
+    qtbot: QtBot, trained_ctx: AppContext, ng_board: Path, dialogs: list[tuple[str, str]]
 ) -> None:
     """Save to Recipe is off while the form holds the recipe's thresholds, as the engine judges by them (an AI score
     threshold stored as 0 is none, as the form shows it): on with one changed, off again with it set back to the
     recipe's, a tick cleared included, and off once the thresholds are saved, as the form then holds the recipe, or once
-    a revision saved elsewhere holds the value tried; a revision that changes nothing is never stored, not even by the
-    page's action called anyway."""
+    a revision saved elsewhere holds the value tried (with no sheet open, no AOI-RCP-004); a revision that changes
+    nothing is never stored, and the page's action called anyway opens no sheet. The sheet lists no AI score threshold
+    line while the recipe's is 0 and the form's none."""
     ctx = trained_ctx
     win, compare, _ = _stored_on_compare(qtbot, ctx, ng_board, "Engineer")
     zero = ctx.recipe(BOARD)[1]
@@ -213,7 +295,7 @@ def test_req_cmp_005_save_to_recipe_is_off_while_no_threshold_differs(
     assert compare.form_revision == (BOARD, rev) and recipe.anomaly_threshold == 0.0
     assert not compare.btn_save.isEnabled(), "nothing differs from the recipe"
     compare.save_recipe()  # called anyway
-    assert ctx.recipe(BOARD)[0] == rev, "no revision that changes nothing"
+    assert ctx.recipe(BOARD)[0] == rev and compare.sheet.isHidden(), "no revision, and no sheet, that changes nothing"
     edits: dict[str, tuple[Callable[[], None], Callable[[], None]]] = {  # a threshold changed, then set back
         "diff": (lambda: compare.diff_thr.setValue(46), lambda: compare.diff_thr.setValue(recipe.diff_threshold)),
         "area": (lambda: compare.min_area.setValue(41), lambda: compare.min_area.setValue(recipe.min_defect_area)),
@@ -229,6 +311,9 @@ def test_req_cmp_005_save_to_recipe_is_off_while_no_threshold_differs(
         assert not compare.btn_save.isEnabled(), (name, "set back to the recipe's")
     assert ctx.recipe(BOARD)[0] == rev
     compare.diff_thr.setValue(255)
+    compare.btn_save.click()  # an AI score threshold of 0 is none: the sheet lists Pixel difference alone
+    assert compare.sheet_changes.text() == f"Pixel difference (0-255): {recipe.diff_threshold} → 255"
+    compare.btn_cancel.click()
     assert save_to_recipe(compare) == rev + 1 and ctx.recipe(BOARD)[1].diff_threshold == 255
     assert not compare.btn_save.isEnabled(), "the form holds the recipe now"
     compare.min_area.setValue(77)  # tried, and then the same value saved elsewhere, on the Recipe Editor say
@@ -238,6 +323,7 @@ def test_req_cmp_005_save_to_recipe_is_off_while_no_threshold_differs(
     win.navigate("Inspection")
     win.navigate("Compare")
     assert compare.form_revision == (BOARD, rev + 2) and not compare.btn_save.isEnabled(), "nothing differs from it"
+    assert dialogs == [], "no AOI-RCP-004 without a sheet open"
 
 
 def test_req_cmp_005_a_revision_saved_on_compare_judges_the_next_boards(

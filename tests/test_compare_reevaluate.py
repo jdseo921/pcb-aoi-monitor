@@ -715,7 +715,12 @@ def test_req_set_021_a_re_evaluation_over_a_second_shows_a_busy_indicator_over_t
     on Show, gives the focus to Re-evaluate, so a second Space never sets the AI score threshold's tick, next after
     Cancel in the Tab order; Ctrl+R in the "why" box leaves the focus there when the answer comes, and an answer within
     the first second leaves no indicator to show after it while the job's end is still to come (verification). Save to
-    Recipe is off meanwhile too, so Ctrl+S opens no sheet over the run (S28d)."""
+    Recipe is off meanwhile too, so Ctrl+S opens no sheet over the run, and on again with Cancel: Ctrl+S then opens the
+    sheet at once, the worker Cancel stopped still held, and Save Revision, pressed with Space, gives the focus to
+    Re-evaluate, as Cancel does, Save to Recipe being off then, so a second Space re-evaluates and never sets the tick
+    (S28d). Ctrl+R with the focus on Save to Recipe, back there from the sheet by Esc, which the run turns off, sends
+    it to the "why" box too, and to Re-evaluate at the run's end: Qt passed it on to the header's board model list,
+    where Down picked another board model (S28d, review)."""
     ctx = trained_ctx
     win, compare, _ = _stored_on_compare(qtbot, ctx, ng_board, "Engineer")
     win.resize(win.minimumSizeHint())  # the panel at its least height (review)
@@ -839,6 +844,42 @@ def test_req_set_021_a_re_evaluation_over_a_second_shows_a_busy_indicator_over_t
     assert not compare.try_busy.isVisible(), "no indicator after the answer: its timer stopped with it (verification)"
     end.set()
     qtbot.waitUntil(lambda: compare._bg is None, timeout=20000)
+    gate.clear()  # where Cancel and Save to Recipe's sheet meet (S28d)
+    compare.mode.setFocus(Qt.FocusReason.TabFocusReason)
+    _press(qtbot, win, compare)
+    qtbot.waitUntil(lambda: any(o.cancel_button.isVisible() for o in over_the_checks()), timeout=10000)
+    qtbot.mouseClick(over_the_checks()[0].cancel_button, Qt.MouseButton.LeftButton)
+    qtbot.keyClick(win, Qt.Key.Key_S, Qt.KeyboardModifier.ControlModifier)  # at once: the worker stopped is still held
+    qtbot.keyRelease(win, Qt.Key.Key_S)
+    qtbot.keyClicks(compare.reason, "after Cancel")
+    compare.btn_confirm.setFocus(Qt.FocusReason.TabFocusReason)  # two Tabs from the reason, past the sheet's Cancel
+    qtbot.keyClick(compare.btn_confirm, Qt.Key.Key_Space)  # Save Revision: nothing differs then, Save to Recipe off
+    focus = QApplication.focusWidget()
+    assert focus is not None
+    qtbot.keyClick(focus, Qt.Key.Key_Space)  # a second Space, where Save Revision left the focus
+    assert not compare.ai_thr.tick.isChecked() and len(ctx.recipe_history(BOARD)) == revisions + 1, "one revision"
+    assert focus is compare.btn_try and compare._trying is not None, "Save Revision: the focus on Re-evaluate (S28d)"
+    gate.set()
+    qtbot.waitUntil(compare.would_be.isVisible, timeout=20000)
+    ctx.ensure_board_model("ZZZ")  # sorted after BOARD in the header's list, so Down there would pick it (S28d, review)
+    win._reload_board_models(BOARD)
+    compare.min_area.setValue(compare.min_area.value() + 1)  # a threshold differs again: Save to Recipe on
+    qtbot.keyClick(win, Qt.Key.Key_S, Qt.KeyboardModifier.ControlModifier)  # the sheet, then Esc in it
+    qtbot.keyRelease(win, Qt.Key.Key_S)
+    qtbot.keyClick(compare.reason, Qt.Key.Key_Escape)
+    assert QApplication.focusWidget() is compare.btn_save, "the focus back on Save to Recipe, which a run turns off"
+    gate.clear()
+    _press(qtbot, win, compare)
+    focus, going = QApplication.focusWidget(), compare._trying is not None
+    assert focus is not None and going
+    qtbot.keyClick(focus, Qt.Key.Key_Down)  # Down, where the focus went while the run goes
+    picked = win.board_model
+    gate.set()
+    qtbot.waitUntil(lambda: ctx.jobs.idle() and compare._bg is None, timeout=20000)
+    assert focus is compare.why and picked == BOARD, f"the focus on {type(focus).__name__}, board model {picked}"
+    assert compare.would_be.isVisible() and QApplication.focusWidget() is compare.btn_try, "on Re-evaluate at its end"
+    qtbot.keyClick(compare.btn_try, Qt.Key.Key_Down)
+    assert win.board_model == BOARD and len(ctx.recipe_history(BOARD)) == revisions + 1, "Down there changes nothing"
 
 
 def test_req_set_021_however_a_re_evaluation_starts_and_ends_a_further_space_writes_nothing(
