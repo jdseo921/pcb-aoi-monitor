@@ -455,7 +455,13 @@ class Inspector:
         return out
 
 
-def re_grade(judged: InspectionResult, recipe: Recipe, ai: AiEvidence | None) -> InspectionResult:
+def re_grade(
+    judged: InspectionResult,
+    recipe: Recipe,
+    ai: AiEvidence | None,
+    *,
+    changed: tuple[np.ndarray, list[Region], dict[str, Any]] | None = None,
+) -> InspectionResult:
     """The checks, defects and verdict `judged` would get under `recipe`, judged again from the evidence it holds
     without aligning, comparing or running the AI model (REQ-CMP-005): the difference regions are found again on its
     difference map with the recipe's pixel difference and minimum area, the AI score in `ai` is graded against the
@@ -466,7 +472,9 @@ def re_grade(judged: InspectionResult, recipe: Recipe, ai: AiEvidence | None) ->
     threshold changes them, and so do the inspection time, the view and the picture. A check the recipe turns on that
     did not run on the board is not judged, with a note saying so, as inspecting with the recipe notes a check it cannot
     run, and the AI check it turns off gets AI_OFF_NOTE (#246). `judged` is not changed; the result shares its maps.
-    ValueError when a check the recipe uses ran on the board but its map, or its AI evidence, is not given;
+    `changed`, when given, is what `changed_regions` gives for `judged`'s difference map with the recipe's pixel
+    difference and minimum area, found by the caller (`AppContext.re_evaluate` finds them while the AI map decodes,
+    #249). ValueError when a check the recipe uses ran on the board but its map, or its AI evidence, is not given;
     AOI-INSP-010 when the recipe leaves no check that ran on it."""
     cr, ran_ai = judged.compare, any(c.source == "AI" for c in judged.checks)
     if (recipe.use_compare and cr is not None and cr.diff_map is None) or (
@@ -476,7 +484,7 @@ def re_grade(judged: InspectionResult, recipe: Recipe, ai: AiEvidence | None) ->
     res = InspectionResult(OK, 0.0, image=judged.image, reference=judged.reference, view=judged.view)
     res.elapsed_ms = judged.elapsed_ms
     if recipe.use_compare and cr is not None and cr.diff_map is not None:
-        mask, regions, found = changed_regions(cr.diff_map, recipe.diff_threshold, recipe.min_defect_area)
+        mask, regions, found = changed or changed_regions(cr.diff_map, recipe.diff_threshold, recipe.min_defect_area)
         res.compare = CompareResult(cr.aligned, cr.diff_map, cr.ssim_map, mask, regions, {**cr.metrics, **found})
     if recipe.use_ai and ran_ai:
         res.anomaly_map = judged.anomaly_map
