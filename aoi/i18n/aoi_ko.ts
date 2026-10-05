@@ -424,7 +424,7 @@
 <context>
     <name>Errors</name>
     <message>
-        <location filename="../core/services.py" line="+63"/>
+        <location filename="../core/services.py" line="+64"/>
         <source> ({context})</source>
         <translation type="unfinished"></translation>
     </message>
@@ -494,7 +494,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+11"/>
+        <location line="+18"/>
         <source>difference map</source>
         <translation type="unfinished"></translation>
     </message>
@@ -569,12 +569,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-582"/>
+        <location line="-589"/>
         <source>its UUID {found} is not {uuid}, as in the AI model registry</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+597"/>
+        <location line="+604"/>
         <source>Changing settings</source>
         <translation type="unfinished"></translation>
     </message>
@@ -631,7 +631,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/imaging.py" line="+150"/>
+        <location filename="../core/imaging.py" line="+151"/>
         <source>{megabytes} MB ({count} bytes)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -701,7 +701,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/maps.py" line="+28"/>
+        <location filename="../core/maps.py" line="+38"/>
         <source>the file is damaged</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3330,7 +3330,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/services.py" line="-1147"/>
+        <location filename="../core/services.py" line="-1154"/>
         <source>Aligning {count} images to the reference board</source>
         <translation type="unfinished"></translation>
     </message>

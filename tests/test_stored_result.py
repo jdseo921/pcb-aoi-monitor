@@ -55,10 +55,10 @@ def test_req_insp_008_a_map_write_that_fails_leaves_no_file(
     ctx = trained_ctx
     real, written = maps.save_image, []
 
-    def save_image(path: Path, img: np.ndarray) -> None:
+    def save_image(path: Path, img: np.ndarray, params: tuple[int, ...] = ()) -> None:
         if str(path).endswith(failing):
             raise OSError(28, "No space left on device")
-        real(path, img)
+        real(path, img, params)
         written.append(Path(path).name.rsplit("_NG", 1)[1])  # ".png" for the overlay, then the map's ending
 
     monkeypatch.setattr(services, "save_image", save_image)

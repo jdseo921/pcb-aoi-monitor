@@ -33,6 +33,7 @@ from ..data.workspace_lock import WorkspaceLock
 from ..errors import QT_TRANSLATE_NOOP, AoiError, Phrase, joined
 from ..times import local_date, now_utc
 from . import anomaly
+from .compare import Region, changed_regions
 from .imaging import align_to_reference, encode_image, list_images, load_image, load_image_sha256, save_image
 from .inspector import NG, OK, WARN, AiEvidence, InspectionResult, Inspector, JudgedBy, draw_overlay, re_grade
 from .jobs import JobCancelled, Jobs
@@ -889,7 +890,14 @@ class AppContext:
             raise AoiError("AOI-CMP-005", tried=thresholds.board_model, file=file, judged=rec["board_model"])
         diff_path, ai_path = self.db.map_paths(iid)
         shape = picture_shape(rec["overlay_path"])  # the size the board was judged at: its maps' (#249)
-        load_maps(res, diff_path if thresholds.use_compare else None, ai_path if thresholds.use_ai else None, shape)
+        changed: list[tuple[np.ndarray, list[Region], dict[str, Any]]] = []  # found while the AI map decodes (#249)
+        load_maps(
+            res,
+            diff_path if thresholds.use_compare else None,
+            ai_path if thresholds.use_ai else None,
+            shape,
+            on_diff=lambda d: changed.append(changed_regions(d, thresholds.diff_threshold, thresholds.min_defect_area)),
+        )
         missing: list[str] = []  # only what the thresholds use, as re_grade asks for it
         if thresholds.use_compare and res.compare is not None and res.compare.diff_map is None:
             missing.append(QT_TRANSLATE_NOOP("Errors", "difference map"))
@@ -917,7 +925,7 @@ class AppContext:
                 missing=joined(QT_TRANSLATE_NOOP("Errors", "{first}, {rest}"), missing),
                 days=days,
             )
-        return re_grade(res, thresholds, ai)
+        return re_grade(res, thresholds, ai, changed=changed[0] if changed else None)
 
     def users(self) -> list[dict[str, Any]]:
         """Users (uuid, name, role), oldest first."""
