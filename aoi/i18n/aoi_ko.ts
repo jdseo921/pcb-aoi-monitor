@@ -424,7 +424,7 @@
 <context>
     <name>Errors</name>
     <message>
-        <location filename="../core/services.py" line="+63"/>
+        <location filename="../core/services.py" line="+64"/>
         <source> ({context})</source>
         <translation type="unfinished"></translation>
     </message>
@@ -494,7 +494,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+11"/>
+        <location line="+18"/>
         <source>difference map</source>
         <translation type="unfinished"></translation>
     </message>
@@ -569,12 +569,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-585"/>
+        <location line="-592"/>
         <source>its UUID {found} is not {uuid}, as in the AI model registry</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+600"/>
+        <location line="+607"/>
         <source>Changing settings</source>
         <translation type="unfinished"></translation>
     </message>
@@ -631,7 +631,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/imaging.py" line="+212"/>
+        <location filename="../core/imaging.py" line="+213"/>
         <source>its {count} tiles add up to more than the {size} bytes of the file</source>
         <translation type="unfinished"></translation>
     </message>
@@ -741,7 +741,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/maps.py" line="+28"/>
+        <location filename="../core/maps.py" line="+38"/>
         <source>the file is damaged</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3385,7 +3385,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/services.py" line="-1150"/>
+        <location filename="../core/services.py" line="-1157"/>
         <source>Aligning {count} images to the reference board</source>
         <translation type="unfinished"></translation>
     </message>
