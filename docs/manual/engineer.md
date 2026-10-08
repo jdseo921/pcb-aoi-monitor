@@ -181,14 +181,16 @@ image at once, without asking; an image already so labelled stays as it is, unle
 Labels keep their history), and the rows stay selected. Once drawn, an NG image's boxes carry its defect types, which
 the table's Defect type column shows, each with its count; Mark NG asks for no type and puts the focus on the image
 for you to draw its boxes. An image marked OK or UNSURE loses its boxes, which stay in its history, and Undo or Ctrl+Z
-gives them back with its label. While you type in a field, such as Epochs, or in a drop-down list, such as the Type
-list, the letters go there instead. **PgDn** and **PgUp** open the next and previous image of the table, in the order
-it is sorted. By keys alone: **D** presses Draw Box and puts the focus on the image, where Enter places a box 64
-pixels a side on screen at the middle of the image shown; the arrow keys move the selected box by 1 pixel, 10 with
-Shift, and with Ctrl move its bottom right corner; keys pressed one after another are saved once, half a second after
-the last. **Esc** leaves Draw mode. Tab moves between the image, the Type list and the Boxes list, where the up and
-down arrows select a box. With no wheel, **Zoom In** and **Zoom Out** under the image and **Fit** beside Draw Box, or
-the keys +, - and 0, zoom it by a click, a tap or a key; **Z** zooms to the selected box.
+gives them back with its label. While you type in a field, such as Epochs, in a drop-down list, such as the Type list,
+or anywhere in the import sheet, the letters, digits and signs go there instead: a letter typed in a row's Label or
+Defect type cell of the sheet opens its list on the value it starts. **PgDn** and **PgUp** open the next and previous
+image of the table, in the order it is sorted. By keys alone: **D** presses Draw Box and puts the focus on the image,
+where Enter places a box 64 pixels a side on screen at the middle of the image shown; the arrow keys move the selected
+box by 1 pixel, 10 with Shift, and with Ctrl move its bottom right corner; keys pressed one after another are saved
+once, half a second after the last. **Esc** leaves Draw mode, unless you are working in the import sheet: there Esc
+closes the sheet. Tab moves between the image, the Type list and the Boxes list, where the up and down arrows select a
+box. With no wheel, **Zoom In** and **Zoom Out** under the image and **Fit** beside Draw Box, or the keys +, - and 0,
+zoom it by a click, a tap or a key; **Z** zooms to the selected box.
 
 **A second user checks each label.** The labels of a board model and view are ready to freeze into a dataset only
 once a second Engineer or Admin has checked every NG label and OK labels drawn at random, 10 % of them rounded up; the

@@ -13,18 +13,28 @@ from typing import TYPE_CHECKING, Any
 import cv2
 import numpy as np
 import pytest
-from PySide6.QtCore import QEvent, QItemSelectionModel, QPoint, QPointF, QRectF, Qt
+from PySide6.QtCore import QEvent, QItemSelectionModel, QPoint, QPointF, QRectF, Qt, qInstallMessageHandler
 from PySide6.QtGui import QInputDevice, QKeyEvent, QPointingDevice, QWheelEvent
 from PySide6.QtTest import QTest
-from PySide6.QtWidgets import QApplication, QDialog, QGraphicsSimpleTextItem, QMessageBox, QPushButton, QWidget
+from PySide6.QtWidgets import (
+    QApplication,
+    QComboBox,
+    QDialog,
+    QGraphicsSimpleTextItem,
+    QMessageBox,
+    QPushButton,
+    QWidget,
+)
 from pytestqt.qtbot import QtBot
 
 from aoi import defects
 from aoi.core.labels import DefectBox
+from aoi.core.sample_import import ImportFile
 from aoi.core.services import AppContext
 from aoi.ui import theme
 from aoi.ui.pages.base import cell_text
 from aoi.ui.pages.training import TrainingPage
+from aoi.ui.pages.training_import import LABEL, TYPE
 from tests.test_req_done_in_v01 import BOARD, _window
 
 if TYPE_CHECKING:
@@ -768,3 +778,78 @@ def test_req_trn_003_editor_keyboard_only(qtbot: QtBot, trained_ctx: AppContext)
     press(Qt.Key.Key_O)
     _wait(page)
     assert editor.sample["label"] == "OK"
+
+
+def test_req_trn_003_editor_keys_typed_in_the_import_sheet_go_to_it(
+    qtbot: QtBot, trained_ctx: AppContext, tmp_path: Path
+) -> None:
+    """With S31's import sheet open beside the label editor, a key typed in the sheet goes to the sheet, never to the
+    page's keys O, N, U, D, Z, +, - and 0: typed in a row's Label or Defect type cell it opens the cell's drop-down on
+    the value it starts, where there is one. The images selected in the samples table keep their labels and boxes, no
+    label or audit entry is stored, Draw mode stays off and the zoom as it was (the review of the joined stack)."""
+    ctx = trained_ctx
+    ng, ok = ctx.samples(BOARD, "NG")[0], ctx.samples(BOARD, "OK")[2]
+    ctx.set_boxes(ng["uuid"], [DefectBox(100, 100, 60, 40, "Scratch")])
+    page = _page(qtbot, ctx)
+    page.samples.sortItems(1, Qt.SortOrder.AscendingOrder)  # NG rows first: the NG image shown, the OK one selected too
+    _select(page, ng["id"], ok["id"])
+    _wait(page)
+    editor, view, table = page.editor, page.editor.view, page.sheet.table
+    assert editor.sample is not None and editor.sample["uuid"] == ng["uuid"]
+    editor.box_list.setCurrentRow(0)  # a box selected: Z and Delete Box on, as Draw Box is
+    assert editor.act_to_box.isEnabled() and editor.act_draw.isEnabled() and not editor.draw_btn.isChecked()
+    before = [(ctx.label_history(s["uuid"]), ctx.boxes(s["uuid"])) for s in (ng, ok)], ctx.audit_entries()
+    scale = view.transform().m11()
+    page._open_sheet(BOARD, [ImportFile(str(tmp_path / "board.png"), "NG")])
+    keys = [Qt.Key.Key_O, Qt.Key.Key_N, Qt.Key.Key_U, Qt.Key.Key_D, Qt.Key.Key_Z, Qt.Key.Key_Plus, Qt.Key.Key_Minus]
+
+    def typed(column: int, key: Qt.Key) -> object:
+        """`key` typed on the sheet's cell: the value its drop-down shows, which Esc then closes."""
+        table.setCurrentCell(0, column)
+        _key(table, key)
+        box = QApplication.focusWidget()
+        assert isinstance(box, QComboBox) and table.isAncestorOf(box), (column, key, box)
+        shown = box.currentData()
+        QTest.keyClick(box, Qt.Key.Key_Escape)  # the drop-down closes, the sheet stays
+        assert QApplication.focusWidget() is table and page.sheet.isVisible()
+        return shown
+
+    assert [typed(LABEL, k) for k in [*keys, Qt.Key.Key_0]] == ["OK", "NG", "NG", "NG", "NG", "NG", "NG", "NG"]
+    kinds = [typed(TYPE, k) for k in [*keys, Qt.Key.Key_0]]
+    assert kinds == ["Open Circuit"] * 3 + ["Damaged Component"] * 5
+    assert (page.sheet.files[0].label, page.sheet.files[0].defect_type) == ("NG", "Damaged Component")
+    _wait(page)
+    after = [(ctx.label_history(s["uuid"]), ctx.boxes(s["uuid"])) for s in (ng, ok)], ctx.audit_entries()
+    assert after == before, "no image of the samples table was marked or changed"
+    assert not editor.draw_btn.isChecked() and view.transform().m11() == scale and view.chosen == 0
+    assert sorted(page._selected_ids()) == sorted([ng["id"], ok["id"]]) and not editor.act_undo.isEnabled()
+
+
+def test_req_trn_003_editor_esc_closes_the_import_sheet_or_leaves_draw_mode(
+    qtbot: QtBot, trained_ctx: AppContext, tmp_path: Path
+) -> None:
+    """With Draw mode on and S31's import sheet open, Esc with the focus anywhere in the sheet closes the sheet, Draw
+    mode staying on; with the focus anywhere else on the page it leaves Draw mode, the sheet staying open. Neither is
+    an ambiguous shortcut, which Qt logs and acts on neither of (the review of the joined stack)."""
+    ctx = trained_ctx
+    page = _open(qtbot, ctx, ctx.samples(BOARD, "NG")[0])
+    editor, sheet = page.editor, page.sheet
+    logged: list[str] = []
+    previous = qInstallMessageHandler(lambda _mode, _context, message: logged.append(message))
+    try:
+        for inside in (sheet.table, sheet.type_box, sheet.btn_copy):
+            page._open_sheet(BOARD, [ImportFile(str(tmp_path / "board.png"), "OK")])
+            editor.draw_btn.click()
+            assert editor.draw_btn.isChecked() and editor.act_leave.isEnabled()
+            _key(inside, Qt.Key.Key_Escape)
+            assert sheet.isHidden() and editor.draw_btn.isChecked(), type(inside).__name__
+            editor.draw_btn.click()
+        for outside in (page.samples, editor.view, editor.box_list):
+            page._open_sheet(BOARD, [ImportFile(str(tmp_path / "board.png"), "OK")])
+            editor.draw_btn.click()
+            _key(outside, Qt.Key.Key_Escape)
+            assert not editor.draw_btn.isChecked() and sheet.isVisible(), type(outside).__name__
+            page._close_sheet()
+    finally:
+        qInstallMessageHandler(previous)
+    assert not [m for m in logged if "mbiguous" in m], logged

@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Any
 from PySide6.QtCore import QEvent, QItemSelectionModel, QObject, Qt
 from PySide6.QtGui import QKeyEvent, QResizeEvent
 from PySide6.QtWidgets import (
+    QAbstractItemView,
     QApplication,
     QComboBox,
     QFileDialog,
@@ -60,6 +61,7 @@ if TYPE_CHECKING:
 SELECT_ROW = QItemSelectionModel.SelectionFlag.Select | QItemSelectionModel.SelectionFlag.Rows
 CHOOSE_ROW = QItemSelectionModel.SelectionFlag.ClearAndSelect | QItemSelectionModel.SelectionFlag.Rows
 NOT_TYPING = Qt.KeyboardModifier.ControlModifier | Qt.KeyboardModifier.AltModifier | Qt.KeyboardModifier.MetaModifier
+EDIT_ON_KEY = QAbstractItemView.EditTrigger.AnyKeyPressed
 
 
 def _each(ids: list[int], write: Callable[[int], None]) -> AoiError | None:
@@ -168,7 +170,7 @@ class TrainingPage(Page):
         self.samples_empty = EmptyState(self.samples)
         self.busy = BusyOverlay(self.samples, self.tr("Importing…"))
         ll.addWidget(self.samples, 1)
-        marks = QHBoxLayout()  # the labels sketch's row, a key each, which a drop-down list or a text field takes first
+        marks = QHBoxLayout()  # the labels sketch's row, a key each, a list, a field or the import sheet gets first
         self.act_ok = self.action(self.tr("Mark OK"), "O", lambda: self._relabel("OK"))
         self.act_ng = self.action(self.tr("Mark NG"), "N", lambda: self._relabel("NG"))
         self.act_unsure = self.action(self.tr("Mark UNSURE"), "U", lambda: self._relabel("UNSURE"))
@@ -177,7 +179,7 @@ class TrainingPage(Page):
         self.act_next = self.action(self.tr("Next image"), "PgDown", lambda: self._step(1))  # keys only (sketch)
         self.act_previous = self.action(self.tr("Previous image"), "PgUp", lambda: self._step(-1))
         ll.addLayout(marks)
-        shell.installEventFilter(self)  # the letters typed in a drop-down list, which reach the window last
+        shell.installEventFilter(self)  # the keys typed in a drop-down list or the import sheet reach the window last
         act = QHBoxLayout()
         act.addWidget(button(self.tr("Set Reference"), slot=self._set_reference))
         act.addWidget(button(self.tr("Remove"), "danger", self._remove))  # red, last in its row, never the default
@@ -444,15 +446,24 @@ class TrainingPage(Page):
         return [int(cell_text(self.samples, i.row(), 0)) for i in self.samples.selectionModel().selectedRows()]
 
     def eventFilter(self, watched: QObject, e: QEvent) -> bool:
-        """While this page is shown, a letter typed in a drop-down list, such as the Type list, goes to it, never to the
-        page's letter keys (O, N, U): the window takes its ShortcutOverride. A spin box or a text field, such as
-        Epochs, needs none of this: its line edit accepts the ShortcutOverride of a key it types first."""
+        """While this page is shown, a letter, digit or sign typed in a drop-down list, such as the Type list, in a
+        table or list that a typed key edits, or anywhere in S31's import sheet goes there, never to the page's keys
+        (O, N, U, D, Z, +, - and 0): the window takes its ShortcutOverride. A spin box or a text field, such as Epochs,
+        needs none of this: its line edit accepts the ShortcutOverride of a key it types first."""
         if e.type() == QEvent.Type.ShortcutOverride and self.isVisible() and isinstance(e, QKeyEvent):
             typed = e.text().isprintable() and e.text() != "" and not e.modifiers() & NOT_TYPING
-            if typed and isinstance(QApplication.focusWidget(), QComboBox):
+            if typed and self._takes_keys(QApplication.focusWidget()):
                 e.accept()
                 return True
         return super().eventFilter(watched, e)
+
+    def _takes_keys(self, focus: QWidget | None) -> bool:
+        """Whether `focus` takes the keys typed in it: a drop-down list; a table or list a typed key edits, such as the
+        import sheet's, whose cell opens its drop-down on the key; and every control of the import sheet (review)."""
+        if focus is None:
+            return False
+        edits = isinstance(focus, QAbstractItemView) and bool(focus.editTriggers() & EDIT_ON_KEY)
+        return isinstance(focus, QComboBox) or edits or self.sheet.isAncestorOf(focus)
 
     def _relabel(self, label: str) -> None:
         """Mark OK, Mark NG, Mark UNSURE (O, N, U): each selected image not already so labelled, on a pool thread, with
