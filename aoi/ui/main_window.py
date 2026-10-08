@@ -345,5 +345,6 @@ class MainWindow(QMainWindow):
         self.navigate("Compare")
         cast(ComparePage, self.pages["Compare"]).set_test(path)
 
-    def status(self, msg: str) -> None:
-        self.statusBar().showMessage(msg, 8000)
+    def status(self, msg: str, ms: int = 8000) -> None:
+        """A message in the status bar, for 8 s by default; `ms=0` keeps it until the next message replaces it."""
+        self.statusBar().showMessage(msg, ms)
