@@ -100,3 +100,14 @@ def test_req_insp_014_upper_bound_of_a_rate() -> None:
     assert dc.upper_95(0, 500) == pytest.approx(1 - 0.05 ** (1 / 500), abs=1e-6)
     assert dc.upper_95(3, 100) == pytest.approx(0.075711, abs=1e-5)  # Beta(4, 97) at 0.95, as SciPy gives it
     assert dc.upper_95(5, 5) == 1.0 and dc.upper_95(0, 0) == 1.0
+
+
+def test_req_insp_014_ai_model_trained_per_group_and_scored_on_the_test_split(tmp_path: Path) -> None:
+    deeppcb = _deeppcb(tmp_path / "d", boards=4)
+    out = tmp_path / "out"
+    args = ["--out", str(out), "--deeppcb", str(deeppcb), "--ai", "--epochs", "1", "--steps", "1", "--size", "64"]
+    assert dc.main(args) == 0
+    ai = json.loads((out / "results.json").read_text(encoding="utf-8"))["deeppcb"]["ai"]
+    assert ai["ok"] == 1 and ai["ng"] == 1  # the test split's template and its defective board
+    assert ai["groups"]["groupA"]["ok_trained"] == 3 and ai["groups"]["groupA"]["ng_calibrated"] == 0
+    assert ai["train_s"]["n"] == 1 and ai["ms"]["n"] == 2
