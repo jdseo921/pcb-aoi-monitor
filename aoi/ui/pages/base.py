@@ -65,6 +65,13 @@ class Page(QWidget):
             return False
         return True
 
+    def empty_step(self, sentence: str, target: str) -> tuple[str, str, Callable[[], None] | None]:
+        """What to do and where, for an `EmptyState`: `sentence` with the link "Open <target> ›", or, for a role that
+        cannot open that page, "Ask an Engineer to do this on <target>." with no link (REQ-SET-019)."""
+        if self.ctx.role in self.shell.pages[target].roles:
+            return sentence, f"Open {target} ›", lambda: self.shell.navigate(target)
+        return f"Ask an Engineer to do this on {target}.", "", None
+
     def error(self, exc: BaseException) -> None:
         """Show an error the way the standard asks: its code, what happened and what to do (REQ-SET-019)."""
         show_error(self, self.ctx.report_error(exc, self.title))

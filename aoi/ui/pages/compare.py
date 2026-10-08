@@ -33,6 +33,7 @@ from ...core.imaging import IMAGE_EXTS, heat_overlay, load_image
 from ...errors import AoiError
 from .. import theme
 from ..widgets.busy import BusyOverlay
+from ..widgets.empty_state import EmptyState
 from ..widgets.image_view import ImageView
 from .base import Page, button, fill_table, make_table
 
@@ -73,8 +74,9 @@ class ComparePage(Page):
         self.ref_label.setObjectName("muted")
         self.test_label = QLabel("Test board")
         self.test_label.setObjectName("muted")
-        self.ref_view = ImageView(placeholder="Golden reference")
-        self.test_view = ImageView(placeholder="Pick a test image")
+        self.ref_view = ImageView(placeholder="")
+        self.test_view = ImageView(placeholder="")
+        self.ref_empty, self.test_empty = EmptyState(self.ref_view), EmptyState(self.test_view)
         self.ref_view.link(self.test_view)  # zoom/pan stay in sync
         self.busy = BusyOverlay(self.test_view, self.tr("Inspecting…"))  # where the result will appear
         left.addWidget(self.ref_label)
@@ -138,6 +140,7 @@ class ComparePage(Page):
     # --- inputs ------------------------------------------------------------------
     def set_test(self, path: str):
         self.test_path = path
+        self.test_empty.hide()
         self._fitted = False
         self.run()
 
@@ -214,6 +217,11 @@ class ComparePage(Page):
             )
         )
         self.ref_view.set_image(ref)
+        if ref is None and self.board_model:
+            step = self.empty_step("Train an AI model on Training.", "Training")
+            self.ref_empty.show_state(f"No Golden board for {self.board_model} yet", *step)
+        else:
+            self.ref_empty.hide()
         if res is None:
             return
         self.res = r = res
@@ -294,5 +302,8 @@ class ComparePage(Page):
 
     def on_show(self):
         self.btn_save.setEnabled(self.ctx.role != "Operator")
+        if self.res is None and self.test_path is None:
+            step = self.empty_step("Inspect a board on Inspection, or pick a test image.", "Inspection")
+            self.test_empty.show_state("No board to compare yet", *step)
         if self.ai_thr.value() == 0 and self.diff_thr.value() == 1:
             self._load_recipe_into_form()

@@ -79,7 +79,10 @@ built from them with `theme.stylesheet()`, so another theme is a set of override
 colour or a point size of its own, nothing is below 14 pt, and `tests/test_screen_rules.py` scans aoi/ui for a
 literal and checks that every page sits in the one frame (REQ-SET-018). A verdict is shown as its colour with a shape and the word
 (`theme.verdict_label`: ✓ OK, ✗ NG, ▲ WARN; REQ-INSP-002), each page has one blue `primary` button, and a button that
-removes data is a red `danger` button, last in its row and never the default.
+removes data is a red `danger` button, last in its row and never the default. Every empty page, list and
+image area shows an `EmptyState` (`aoi/ui/widgets/empty_state.py`): what is missing, what to do next and one link
+button to the page where it is done; `Page.empty_step` turns "do this on <page>" into that link, or into "Ask an
+Engineer …" for a role that cannot open the page (REQ-SET-019, since S18c).
 
 ### Workspace on disk
 

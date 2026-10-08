@@ -34,6 +34,7 @@ from .pages.profile3d import Profile3DPage
 from .pages.recipe_editor import RecipeEditorPage
 from .pages.settings import SettingsPage
 from .pages.training import TrainingPage
+from .widgets.empty_state import EmptyState
 
 
 class HomePage(Page):
@@ -53,8 +54,9 @@ class HomePage(Page):
 
     def __init__(self, ctx, shell):
         super().__init__(ctx, shell)
-        grid = QGridLayout()
-        grid.setSpacing(14)
+        self.cards = QWidget()
+        grid = QGridLayout(self.cards)
+        grid.setSpacing(theme.SPACE)
         self.status_labels = {}
         for i, (n, name, desc, target) in enumerate(self.STEPS):
             card = QFrame()
@@ -77,32 +79,54 @@ class HomePage(Page):
             kind = "primary" if target == "Inspection" else ""  # the page's one blue primary: the Inspect card
             cl.addWidget(button(f"Open {target} ›", kind, lambda _=False, t=target: shell.navigate(t)))
             grid.addWidget(card, i // 3, i % 3)
-        self.root.addLayout(grid)
+        self.root.addWidget(self.cards)
+        self.empty = EmptyState()  # no board model yet: one block in place of the cards (REQ-SET-019)
+        self.root.addWidget(self.empty)
         self.root.addStretch(1)
 
     def on_show(self):
         bm = self.board_model
+        self.cards.setVisible(bool(bm))
         if not bm:
-            for label in self.status_labels.values():
-                label.setText("Create a board model in the top bar to begin.")
+            if self.ctx.role == "Operator":
+                self.empty.show_state("No board model yet", "Ask an Engineer to create one.")
+            else:
+                self.empty.show_state(
+                    "No board model yet", "Create one to begin.", "+ New board model", self.shell.new_board_model
+                )
             return
+        self.empty.hide()
         st = self.ctx.board_status(bm)
         tm = st.last_test
-        self.status_labels["Upload samples"].setText(f"{st.ok_samples} OK · {st.ng_samples} NG uploaded")
+        self.status_labels["Upload samples"].setText(
+            f"{st.ok_samples} OK · {st.ng_samples} NG uploaded"
+            if st.ok_samples or st.ng_samples
+            else "No samples yet. Add at least 20 OK boards."
+        )
         self.status_labels["Self-train"].setText(
-            f"Active model {st.model_version}" if st.model_version else "Not trained yet"
+            f"Active model {st.model_version}"
+            if st.model_version
+            else "No AI model yet. Train one from your OK boards."
         )
         self.status_labels["Tune recipe"].setText(
-            f"Recipe revision {st.recipe_revision}" if st.recipe_revision else "Using defaults"
+            f"Recipe revision {st.recipe_revision}"
+            if st.recipe_revision
+            else "Recipe uses defaults. Draw ROIs on the Golden board."
         )
         self.status_labels["Validate"].setText(
             f"Last test: accuracy {tm['accuracy']:.0%}, recall {tm['recall']:.0%}, "
             f"false calls {tm['false_call_rate']:.0%}"
             if tm
-            else "No test run yet"
+            else "Not validated yet. Run a labelled test folder."
         )
-        self.status_labels["Inspect"].setText(f"{st.inspected} boards inspected · {st.ng} NG")
-        self.status_labels["Export"].setText("Ready" if st.inspected else "Nothing to export yet")
+        self.status_labels["Inspect"].setText(
+            f"{st.inspected} boards inspected · {st.ng} NG"
+            if st.inspected
+            else "No boards inspected yet. Load images on Inspection."
+        )
+        self.status_labels["Export"].setText(
+            "Ready" if st.inspected else "Nothing to export yet. Inspect a board first."
+        )
 
 
 # Sidebar: (section, page class). Order = navigation order.
