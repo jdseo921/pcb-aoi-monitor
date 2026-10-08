@@ -239,6 +239,14 @@ CODES: dict[str, ErrorCode] = {
             " again.",
         ),
         ErrorCode(
+            "AOI-LOG-002",
+            "Export not written",
+            "The export {path} could not be written: {reason}. Nothing was exported, and a file of that name already"
+            " there is left as it was.",
+            "Choose a folder that can be written, close any program that has the file open and check the free disk"
+            " space, then export again.",
+        ),
+        ErrorCode(
             "AOI-USR-001",
             "Not allowed for this role",
             "{what} needs the {roles} role.",

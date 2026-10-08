@@ -1119,24 +1119,26 @@
 <context>
     <name>ModelTestPage</name>
     <message>
-        <location filename="../ui/pages/model_test.py" line="+68"/>
-        <location line="+152"/>
+        <location filename="../ui/pages/model_test.py" line="+70"/>
+        <location line="+176"/>
         <source>Select Test Folder…</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-151"/>
+        <location line="-175"/>
+        <location line="+91"/>
+        <location line="+70"/>
         <source>Run Test</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+2"/>
-        <location line="+155"/>
+        <location line="-159"/>
+        <location line="+179"/>
         <source>Export CSV</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-154"/>
+        <location line="-178"/>
         <source>Export Report</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1222,12 +1224,17 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+17"/>
+        <location line="+11"/>
+        <source>The AI model test of {board_model} is stored; its results are not shown here, since the board model changed while it ran.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+13"/>
         <source>{labelled} labelled of {images} images  ·  TP {tp}  FN {fn}  FP {fp}  TN {tn}  ·  WARN counts as NG</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+38"/>
+        <location line="+55"/>
         <source>No AI model for {board_model} yet</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1262,7 +1269,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+12"/>
+        <location line="+23"/>
         <source>Report saved: {file}</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1414,7 +1421,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/model_test.py" line="-216"/>
+        <location filename="../ui/pages/model_test.py" line="-252"/>
         <source>AI Model Test</source>
         <translation type="unfinished"></translation>
     </message>

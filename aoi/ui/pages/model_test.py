@@ -7,7 +7,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from PySide6.QtCore import QMarginsF, Qt
+from PySide6.QtCore import QBuffer, QIODevice, QMarginsF, Qt
 from PySide6.QtGui import QPageLayout, QPageSize, QPdfWriter, QTextDocument
 from PySide6.QtWidgets import (
     QFileDialog,
@@ -24,6 +24,7 @@ from PySide6.QtWidgets import (
 from ... import defects as taxonomy
 from ...core.inspector import InspectionResult
 from ...core.services import AppContext
+from ...errors import AoiError
 from .. import theme
 from ..widgets.busy import BusyOverlay
 from ..widgets.empty_state import EmptyState
@@ -63,6 +64,7 @@ class ModelTestPage(Page):
         self.rows: list[dict[str, Any]] = []
         self.metrics: dict[str, Any] = {}
         self.run_folder = ""  # the folder the rows and metrics came from, which the report names (#174)
+        self.run_board_model: str | None = None  # and the board model they were run for, while shown (#180)
 
         bar = QHBoxLayout()
         bar.addWidget(button(self.tr("Select Test Folder…"), slot=self.pick))
@@ -157,18 +159,25 @@ class ModelTestPage(Page):
 
         def finished() -> None:
             self.btn_run.setEnabled(True)
-            self.btn_run.setText(self.tr("Run Test Again"))
+            self.btn_run.setText(self.tr("Run Test Again") if self.rows else self.tr("Run Test"))
             self.bar.setVisible(False)
 
         w.signals.progress.connect(on_progress)
-        w.signals.result.connect(lambda out: self._show(out, folder))  # the folder goes with its results
+        w.signals.result.connect(lambda out: self._show(out, folder, bm))  # folder and board model go with them
         w.signals.error.connect(self.error)
         w.signals.finished.connect(finished)
         start(w, self.ctx.jobs)
 
-    def _show(self, out: tuple[dict[str, Any], list[dict[str, Any]]], folder: str) -> None:
+    def _show(self, out: tuple[dict[str, Any], list[dict[str, Any]]], folder: str, board_model: str) -> None:
+        if board_model != self.board_model:  # the header changed while it ran: its rows are not shown under the
+            status = self.tr(  # new board model's name (#180); the run is stored, as every run
+                "The AI model test of {board_model} is stored; its results are not shown here, since the board model"
+                " changed while it ran."
+            )
+            self.shell.status(status.format(board_model=board_model))
+            return
         self.metrics, self.rows = out
-        self.run_folder = folder
+        self.run_folder, self.run_board_model = folder, board_model
         self.empty.hide()
         m = self.metrics
         for k, t in self.tiles.items():
@@ -188,15 +197,17 @@ class ModelTestPage(Page):
 
     def _preview(self) -> None:
         rows = self.table.selectionModel().selectedRows()
-        if not rows or (bm := self.board_model) is None:
-            return  # the rows come from a run, which needed a board model (#110: a switch after the run)
+        if not rows or (bm := self.run_board_model) is None:
+            return  # a row is judged under the board model of its run (#180), never the header's after a switch
         path = cell_item(self.table, rows[0].row(), 0).toolTip()
         self.run_in_background(
             self.ctx.inspect_file, bm, path, save=False,
-            on_result=lambda res: self._show_preview(path, res), busy=self.busy,
+            on_result=lambda res: self._show_preview(path, res, bm), busy=self.busy,
         )  # fmt: skip
 
-    def _show_preview(self, path: str, res: InspectionResult) -> None:
+    def _show_preview(self, path: str, res: InspectionResult, board_model: str) -> None:
+        if board_model != self.run_board_model or board_model != self.board_model:
+            return  # the run went with a board model change while this row was inspected (#180)
         self.preview_verdict.setText(theme.verdict_label(res.verdict))
         self.preview_verdict.setStyleSheet(theme.verdict_style(res.verdict, big=False))
         self.view.set_image(res.image)
@@ -204,6 +215,21 @@ class ModelTestPage(Page):
             sev = taxonomy.BY_NAME.get(d.type, taxonomy.ANOMALY).severity
             self.view.add_box(d.x, d.y, d.w, d.h, theme.SEVERITY_COLORS.get(sev, theme.NG_COLOR), f"{d.no} {d.type}")
         self.shell.last_inspected = (path, res, None)  # a preview is not recorded
+
+    def on_board_model_changed(self, name: str | None) -> None:
+        if self.run_board_model not in (None, name):  # another board model's run is not shown, previewed or reported
+            self._clear_run()  # under this one's name (#180)
+
+    def _clear_run(self) -> None:
+        self.rows, self.metrics, self.run_folder, self.run_board_model = [], {}, "", None
+        for t in self.tiles.values():
+            t.set(None)
+        self.confusion.clear()
+        fill_table(self.table, [])
+        self.preview_verdict.setText("—")
+        self.preview_verdict.setStyleSheet(theme.verdict_style("INFO", big=False))
+        self.view.set_image(None)
+        self.btn_run.setText(self.tr("Run Test"))
 
     def on_show(self) -> None:
         bm = self.board_model
@@ -237,22 +263,33 @@ class ModelTestPage(Page):
             str(self.ctx.settings.exports_dir / "model_test_report.pdf"),
             self.tr("PDF (*.pdf)"),
         )
-        if not f:
+        if not f or self.run_board_model is None:
             return
         doc = QTextDocument()
         doc.setHtml(self._report_html())
-        w = QPdfWriter(f)
+        buf = QBuffer()  # rendered in memory, then written whole or not at all by the service layer (#180)
+        buf.open(QIODevice.OpenModeFlag.WriteOnly)
+        w = QPdfWriter(buf)
         page = QPageLayout(
             QPageSize(QPageSize.PageSizeId.A4), QPageLayout.Orientation.Portrait, QMarginsF(15, 15, 15, 15)
         )
         w.setPageLayout(page)
         doc.print_(w)
+        del w
+        run = self.rows[0]
+        try:
+            self.ctx.export_report(
+                f, bytes(buf.data().data()), self.run_board_model, run.get("run_uuid"), run.get("model_version")
+            )
+        except AoiError as e:  # AOI-LOG-002 (not written) or AOI-USR-001 (role): no "Report saved"
+            self.error(e)
+            return
         self.shell.status(self.tr("Report saved: {file}").format(file=f))
 
     def _report_html(self) -> str:
         """The validation report: every sentence through tr(), the markup and the numbers from the code."""
         m = self.metrics
-        bm = self.board_model or ""  # the rows come from a run, which needs a board model
+        bm = self.run_board_model or ""  # the board model the run was for (#180)
         run = self.rows[0] if self.rows else {}  # each row names the run and the AI model it tested (REQ-SET-017)
         title = self.tr("AI Model Validation Report")
         head = self.tr(

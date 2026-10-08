@@ -118,7 +118,11 @@ clears the last Try's verdict.
 Each validation run is stored with a UUID and the UUID of the AI model it tested. **Export CSV** writes one row per
 image (`image`, `gt` the label, `ai_result` the verdict, `score`, `defects`, `pass_fail`), then `run_uuid`,
 `model_version` and `model_uuid`; **Export Report** names the same run and AI model by UUID under the validation folder
-those results came from, even when another folder has been picked since to run next.
+those results came from, even when another folder has been picked since to run next. Results stay on the page only
+under the board model they were run for: picking another board model in the header clears them, and a run that
+ends after such a change is stored but not shown. The report is written whole or not at all and recorded in the
+audit trail; when it cannot be written (a folder that cannot be made, a file open in a viewer, a full disk), the
+app shows AOI-LOG-002 and an earlier report of that name stays as it was.
 A folder inside the workspace is stored relative to it, so a moved workspace still finds the run's folder and images; a
 folder elsewhere is stored as its full path.
 
