@@ -273,50 +273,77 @@ CODES: dict[str, ErrorCode] = {
         ),
         ErrorCode(
             "AOI-TRN-001",
-            "AI model file refused",
-            "AI model file refused: {path} could not be loaded as a weights-only model file this app wrote ({reason}).",
-            "Train the board model again, or import a model file exported by this app.",
+            QT_TRANSLATE_NOOP("Errors", "AI model file refused"),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "AI model file refused: {path} could not be loaded as a weights-only model file this app wrote "
+                "({reason}).",
+            ),
+            QT_TRANSLATE_NOOP("Errors", "Train the board model again, or import a model file exported by this app."),
         ),
         ErrorCode(
             "AOI-TRN-002",
-            "Not enough good boards to train",
-            "Training needs at least 2 OK (good board) images; {found} found.",
-            "Upload more OK images for this board model, then train again.",
+            QT_TRANSLATE_NOOP("Errors", "Not enough good boards to train"),
+            QT_TRANSLATE_NOOP("Errors", "Training needs at least 2 OK (good board) images; {found} found."),
+            QT_TRANSLATE_NOOP("Errors", "Upload more OK images for this board model, then train again."),
         ),
         ErrorCode(
             "AOI-TRN-003",
-            "No trained AI model",
-            "Board model {board} has no trained AI model, so only the golden-board comparison runs.",
-            "Train a model on the Training page when the AI checks are needed.",
+            QT_TRANSLATE_NOOP("Errors", "No trained AI model"),
+            QT_TRANSLATE_NOOP(
+                "Errors", "Board model {board} has no trained AI model, so only the golden-board comparison runs."
+            ),
+            QT_TRANSLATE_NOOP("Errors", "Train a model on the Training page when the AI checks are needed."),
         ),
         ErrorCode(
             "AOI-TRN-004",
-            "Training gave an AI model that cannot judge boards",
-            "Training made an AI model that cannot judge boards ({reason}), so it was not saved; the AI model in use "
-            "is unchanged.",
-            "Import photos of several different good boards (copies of one photo leave nothing to learn), then train "
-            "again.",
+            QT_TRANSLATE_NOOP("Errors", "Training gave an AI model that cannot judge boards"),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Training made an AI model that cannot judge boards ({reason}), so it was not saved; the AI model in "
+                "use is unchanged.",
+            ),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Import photos of several different good boards (copies of one photo leave nothing to learn), then "
+                "train again.",
+            ),
         ),
         ErrorCode(
             "AOI-TRN-005",
-            "Board model name already taken",
-            "Board model {existing} already exists, and {name} differs from it only in upper and lower case; Windows "
-            "would store the AI model and golden board files of both as the same files.",
-            "Select {existing} in the top bar, or give the new board model a name that differs in more than case.",
+            QT_TRANSLATE_NOOP("Errors", "Board model name already taken"),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Board model {existing} already exists, and {name} differs from it only in upper and lower case; "
+                "Windows would store the AI model and golden board files of both as the same files.",
+            ),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Select {existing} in the top bar, or give the new board model a name that differs in more than case.",
+            ),
         ),
         ErrorCode(
             "AOI-TRN-006",
-            "Reference must be a good board",
-            "Sample {sample} is labelled {label}; only an OK (good board) sample can be the reference image that "
-            "inspections compare against.",
-            "Select an OK sample, or relabel this one OK if it shows a good board, then press Set Reference again.",
+            QT_TRANSLATE_NOOP("Errors", "Reference must be a good board"),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Sample {sample} is labelled {label}; only an OK (good board) sample can be the reference image that "
+                "inspections compare against.",
+            ),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Select an OK sample, or relabel this one OK if it shows a good board, then press Set Reference again.",
+            ),
         ),
         ErrorCode(
             "AOI-TRN-007",
-            "Reference sample cannot change",
-            "Sample {sample} is the reference image that inspections compare against, so it cannot be {change} while"
-            " it is; it was left unchanged.",
-            "Select another good (OK) sample and press Set Reference; then try again.",
+            QT_TRANSLATE_NOOP("Errors", "Reference sample cannot change"),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Sample {sample} is the reference image that inspections compare against, so it cannot be {change} "
+                "while it is; it was left unchanged.",
+            ),
+            QT_TRANSLATE_NOOP("Errors", "Select another good (OK) sample and press Set Reference; then try again."),
         ),
         ErrorCode(
             "AOI-TRN-008",
@@ -349,19 +376,31 @@ CODES: dict[str, ErrorCode] = {
         ),
         ErrorCode(
             "AOI-RCP-001",
-            "Recipe saved since it was opened",
-            "Revision {latest} of board model {board_model} was saved after revision {revision}, the one the Recipe"
-            " Editor holds; saving it would undo revision {latest}, so nothing was saved.",
-            "Press Save Recipe again and choose Yes to load revision {latest}, then make your changes again on it;"
-            " until then they stay on screen.",
+            QT_TRANSLATE_NOOP("Errors", "Recipe saved since it was opened"),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Revision {latest} of board model {board_model} was saved after revision {revision}, the one the Recipe"
+                " Editor holds; saving it would undo revision {latest}, so nothing was saved.",
+            ),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Press Save Recipe again and choose Yes to load revision {latest}, then make your changes again on it;"
+                " until then they stay on screen.",
+            ),
         ),
         ErrorCode(
             "AOI-RCP-002",
-            "ROI limits refused",
-            "ROI {roi}: {quantity} min {low} and max {high} cannot be stored; a limit is 0 or more, and min is not"
-            " above max.",
-            "Nothing was applied. Correct the two values, or step a limit down below 0 to — to leave it unset, then"
-            " press Apply again.",
+            QT_TRANSLATE_NOOP("Errors", "ROI limits refused"),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "ROI {roi}: {quantity} min {low} and max {high} cannot be stored; a limit is 0 or more, and min is not"
+                " above max.",
+            ),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Nothing was applied. Correct the two values, or step a limit down below 0 to — to leave it unset, then"
+                " press Apply again.",
+            ),
         ),
         ErrorCode(
             "AOI-LOG-001",
@@ -394,16 +433,19 @@ CODES: dict[str, ErrorCode] = {
         ),
         ErrorCode(
             "AOI-USR-001",
-            "Not allowed for this role",
-            "{what} needs the {roles} role.",
-            "Sign in as a user with that role, or ask one to do it.",
+            QT_TRANSLATE_NOOP("Errors", "Not allowed for this role"),
+            QT_TRANSLATE_NOOP("Errors", "{what} needs the {roles} role."),
+            QT_TRANSLATE_NOOP("Errors", "Sign in as a user with that role, or ask one to do it."),
         ),
         ErrorCode(
             "AOI-USR-002",
-            "Last Admin",
-            "{name} is the only user with the Admin role, so it cannot change to {role}: no one could then manage "
-            "users or settings.",
-            "Give another user the Admin role first, then change this one.",
+            QT_TRANSLATE_NOOP("Errors", "Last Admin"),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "{name} is the only user with the Admin role, so it cannot change to {role}: no one could then manage "
+                "users or settings.",
+            ),
+            QT_TRANSLATE_NOOP("Errors", "Give another user the Admin role first, then change this one."),
         ),
         ErrorCode(
             "AOI-USR-003",
@@ -415,89 +457,135 @@ CODES: dict[str, ErrorCode] = {
         ),
         ErrorCode(
             "AOI-SET-001",
-            "Workspace from version 0.1",
-            "This workspace was created by AOI PoC Inspector 0.1 and cannot be upgraded.",
-            "Choose a new workspace folder in the window that opens next; Cancel there closes the app.",
+            QT_TRANSLATE_NOOP("Errors", "Workspace from version 0.1"),
+            QT_TRANSLATE_NOOP("Errors", "This workspace was created by AOI PoC Inspector 0.1 and cannot be upgraded."),
+            QT_TRANSLATE_NOOP(
+                "Errors", "Choose a new workspace folder in the window that opens next; Cancel there closes the app."
+            ),
         ),
         ErrorCode(
             "AOI-SET-002",
-            "Workspace newer than the app",
-            "The workspace database was written by a newer build of the app: it records migration {migration}, "
-            "which this build does not have.",
-            "Update the app, or choose another workspace folder in the window that opens next; Cancel there closes "
-            "the app.",
+            QT_TRANSLATE_NOOP("Errors", "Workspace newer than the app"),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "The workspace database was written by a newer build of the app: it records migration {migration}, "
+                "which this build does not have.",
+            ),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Update the app, or choose another workspace folder in the window that opens next; Cancel there closes "
+                "the app.",
+            ),
         ),
         ErrorCode(
             "AOI-SET-003",
-            "Migration file changed",
-            "Migration {file} differs from the one recorded in the workspace database; a shipped migration is never "
-            "edited.",
-            "Reinstall the app to restore the file, or choose another workspace folder in the window that opens next; "
-            "Cancel there closes the app.",
+            QT_TRANSLATE_NOOP("Errors", "Migration file changed"),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Migration {file} differs from the one recorded in the workspace database; a shipped migration is "
+                "never edited.",
+            ),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Reinstall the app to restore the file, or choose another workspace folder in the window that opens "
+                "next; Cancel there closes the app.",
+            ),
         ),
         ErrorCode(
             "AOI-SET-004",
-            "Migration failed",
-            "Migration {file} failed and was rolled back: {error}.",
-            "Restart the app; if it happens again, report it with the log file. To go back to the version you "
-            "upgraded from, close the app and copy the backup aoi.sqlite.bak-… in the workspace folder over aoi.sqlite "
-            "(engineer manual, chapter 1).",
+            QT_TRANSLATE_NOOP("Errors", "Migration failed"),
+            QT_TRANSLATE_NOOP("Errors", "Migration {file} failed and was rolled back: {error}."),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Restart the app; if it happens again, report it with the log file. To go back to the version you "
+                "upgraded from, close the app and copy the backup aoi.sqlite.bak-… in the workspace folder over "
+                "aoi.sqlite (engineer manual, chapter 1).",
+            ),
         ),
         ErrorCode(
             "AOI-SET-005",
-            "Workspace folder cannot hold the database",
-            "The workspace folder does not support the database's write-ahead log (is it on a network drive?).",
-            "Choose a folder on this computer in the window that opens next; Cancel there closes the app.",
+            QT_TRANSLATE_NOOP("Errors", "Workspace folder cannot hold the database"),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "The workspace folder does not support the database's write-ahead log (is it on a network drive?).",
+            ),
+            QT_TRANSLATE_NOOP(
+                "Errors", "Choose a folder on this computer in the window that opens next; Cancel there closes the app."
+            ),
         ),
         ErrorCode(
             "AOI-SET-006",
-            "Migration files invalid",
-            "The app's migration files are not valid: {problem}.",
-            "Reinstall the app and report it; this is a defect in the build.",
+            QT_TRANSLATE_NOOP("Errors", "Migration files invalid"),
+            QT_TRANSLATE_NOOP("Errors", "The app's migration files are not valid: {problem}."),
+            QT_TRANSLATE_NOOP("Errors", "Reinstall the app and report it; this is a defect in the build."),
         ),
         ErrorCode(
             "AOI-SET-007",
-            "Unexpected error",
-            "An unexpected error ({error_type}) stopped the last action{context}.",
-            "Try again; if it happens again, restart the app and send the log file (the workspace's logs folder) to "
-            "support.",
+            QT_TRANSLATE_NOOP("Errors", "Unexpected error"),
+            QT_TRANSLATE_NOOP("Errors", "An unexpected error ({error_type}) stopped the last action{context}."),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Try again; if it happens again, restart the app and send the log file (the workspace's logs folder) "
+                "to support.",
+            ),
         ),
         ErrorCode(
             "AOI-SET-008",
-            "Setting invalid",
-            "The setting {name} is {value}; it must be {expected}.",
-            "On the Settings page, correct it and save again. If the app stopped at start-up, fix or remove that line "
-            "in settings.json, in the default workspace folder, and start the app again.",
+            QT_TRANSLATE_NOOP("Errors", "Setting invalid"),
+            QT_TRANSLATE_NOOP("Errors", "The setting {name} is {value}; it must be {expected}."),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "On the Settings page, correct it and save again. If the app stopped at start-up, fix or remove that "
+                "line in settings.json, in the default workspace folder, and start the app again.",
+            ),
         ),
         ErrorCode(
             "AOI-SET-009",
-            "Backup before upgrade failed",
-            "The workspace database could not be copied to {file} before this version upgrades it: {error}. Nothing "
-            "was changed.",
-            "Free disk space on the workspace folder's drive and check that the folder can be written, then start the "
-            "app again.",
+            QT_TRANSLATE_NOOP("Errors", "Backup before upgrade failed"),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "The workspace database could not be copied to {file} before this version upgrades it: {error}. "
+                "Nothing was changed.",
+            ),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Free disk space on the workspace folder's drive and check that the folder can be written, then start "
+                "the app again.",
+            ),
         ),
         ErrorCode(
             "AOI-SET-010",
-            "Settings file cannot be read",
-            "The settings file {path} could not be read: {reason}.",
-            "Correct the file, or rename it so the app starts with the default settings, then start the app again.",
+            QT_TRANSLATE_NOOP("Errors", "Settings file cannot be read"),
+            QT_TRANSLATE_NOOP("Errors", "The settings file {path} could not be read: {reason}."),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Correct the file, or rename it so the app starts with the default settings, then start the app again.",
+            ),
         ),
         ErrorCode(
             "AOI-SET-011",
-            "Workspace cannot be opened",
-            "The workspace folder {path} could not be opened: {error}.",
-            "If the folder is on a drive that is not connected, connect it and start the app again; if its database "
-            "aoi.sqlite is damaged, restore the backup aoi.sqlite.bak-… (engineer manual, chapter 1). Or choose "
-            "another workspace folder in the window that opens next; Cancel there closes the app.",
+            QT_TRANSLATE_NOOP("Errors", "Workspace cannot be opened"),
+            QT_TRANSLATE_NOOP("Errors", "The workspace folder {path} could not be opened: {error}."),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "If the folder is on a drive that is not connected, connect it and start the app again; if its "
+                "database aoi.sqlite is damaged, restore the backup aoi.sqlite.bak-… (engineer manual, chapter 1). Or "
+                "choose another workspace folder in the window that opens next; Cancel there closes the app.",
+            ),
         ),
         ErrorCode(
             "AOI-SET-012",
-            "Workspace database in use",
-            "Another program holds the workspace database {path}, so the app could not write to it: {error}.",
-            "Close the other program (another copy of this app, a database tool or a backup), then choose the same "
-            "folder in the window that opens next; or choose another workspace folder there. Cancel there closes the "
-            "app.",
+            QT_TRANSLATE_NOOP("Errors", "Workspace database in use"),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Another program holds the workspace database {path}, so the app could not write to it: {error}.",
+            ),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Close the other program (another copy of this app, a database tool or a backup), then choose the "
+                "same folder in the window that opens next; or choose another workspace folder there. Cancel there "
+                "closes the app.",
+            ),
         ),
     )
 }
