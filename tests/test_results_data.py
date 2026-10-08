@@ -194,7 +194,8 @@ def test_req_insp_012_all_five_present_in_csv(
     out = tmp_path / "inspections.csv"
     monkeypatch.setattr(QFileDialog, "getSaveFileName", staticmethod(lambda *a, **k: (str(out), "CSV (*.csv)")))
     monkeypatch.setattr(QMessageBox, "question", staticmethod(lambda *a, **k: QMessageBox.StandardButton.Yes))
-    logs.export_csv()
+    logs.export_csv()  # on a pool thread since #194: the files are there once the status line says so
+    qtbot.waitUntil(lambda: win.statusBar().currentMessage().startswith("Exported"), timeout=30000)
     with out.open(encoding="utf-8-sig", newline="") as f:
         records = list(csv.DictReader(f))
     with (tmp_path / "inspections_checks.csv").open(encoding="utf-8-sig", newline="") as f:

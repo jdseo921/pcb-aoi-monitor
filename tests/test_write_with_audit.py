@@ -20,7 +20,6 @@ from aoi.config import Settings
 from aoi.core.imaging import list_images, load_image, save_image
 from aoi.core.services import AppContext
 from aoi.data import atomic
-from aoi.errors import AoiError
 from aoi.ui.main_window import MainWindow
 from tests.test_req_done_in_v01 import BOARD, _window
 from tests.test_roles_and_audit import WRITES
@@ -103,7 +102,12 @@ ctx.save_recipe(Recipe.from_dict({{**Recipe(board_model="B1").to_dict(), "warn_r
 
 
 def test_req_trn_001_an_import_that_fails_part_way_stores_nothing(
-    qtbot: QtBot, ctx: AppContext, synthetic_dataset: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    qtbot: QtBot,
+    ctx: AppContext,
+    synthetic_dataset: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    dialogs: list[tuple[str, str]],
 ) -> None:
     win = MainWindow(ctx)
     qtbot.addWidget(win)
@@ -116,13 +120,15 @@ def test_req_trn_001_an_import_that_fails_part_way_stores_nothing(
     files[2].unlink()  # gone between the pick and the copy
     monkeypatch.setattr(QFileDialog, "getOpenFileNames", staticmethod(lambda *_: ([str(f) for f in files], "")))
     monkeypatch.setattr(QInputDialog, "getItem", staticmethod(lambda *a: (a[3][0], True)))
-    with pytest.raises(AoiError) as refused:
-        page.add_ok()
-    assert refused.value.code == "AOI-TRN-008" and "ok2.png" in refused.value.what
+    page.add_ok()  # the copies run on the pool (#194); the error reaches the coded dialog
+    qtbot.waitUntil(lambda: page._bg is None, timeout=30000)
+    [(title, text)] = dialogs
+    assert title == "AOI-TRN-008 Images not imported" and "ok2.png" in text, (title, text)
     assert ctx.samples("NEWB") == [] and ctx.audit_entries(action="sample.import") == []
     assert not any((ctx.settings.images_dir / "NEWB").rglob("*.png"))  # no copy left behind
     shutil.copy(list_images(synthetic_dataset / "train" / "ok")[2], files[2])  # the file put back: Try again
     page.add_ok()
+    qtbot.waitUntil(lambda: page._bg is None, timeout=30000)
     assert len(ctx.samples("NEWB")) == 3 and ctx.reference_image("NEWB") and ctx.recipe("NEWB")[0] == 1
     assert [e["after"]["added"] for e in ctx.audit_entries(action="sample.import")] == [3]
 
@@ -183,7 +189,11 @@ def test_req_log_004_an_export_onto_its_own_file_is_never_removed(
 
 
 def test_req_log_002_an_overlay_export_that_fails_part_way_records_what_left(
-    qtbot: QtBot, trained_ctx: AppContext, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    qtbot: QtBot,
+    trained_ctx: AppContext,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    dialogs: list[tuple[str, str]],
 ) -> None:
     for s in trained_ctx.samples(BOARD, "OK")[:2]:
         trained_ctx.inspect_file(BOARD, s["path"])
@@ -194,9 +204,10 @@ def test_req_log_002_an_overlay_export_that_fails_part_way_records_what_left(
     dest = tmp_path / "usb"
     (dest / second).mkdir(parents=True)  # a name the copy cannot take
     monkeypatch.setattr(QFileDialog, "getExistingDirectory", staticmethod(lambda *_: str(dest)))
-    with pytest.raises(AoiError) as stopped:
-        page.export_overlays()
-    assert stopped.value.code == "AOI-LOG-001" and second in stopped.value.what
+    page.export_overlays()  # on the pool (#194); the error reaches the coded dialog
+    qtbot.waitUntil(lambda: page._bg is None, timeout=30000)
+    [(title, text)] = dialogs
+    assert title == "AOI-LOG-001 Export stopped part-way" and second in text, (title, text)
     assert (dest / first).is_file()
     entry = trained_ctx.audit_entries(action="export.overlays")[0]["after"]
     assert (entry["records"], entry["copied"], entry["folder"]) == (2, 1, str(dest)) and second in entry["error"]

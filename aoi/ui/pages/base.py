@@ -212,14 +212,15 @@ class Page(QWidget):
         *args: Any,
         on_result: Callable[[Any], None],
         busy: BusyOverlay | None = None,
-        on_cancel: Callable[[], None] | None = None,
+        on_cancel: Callable[[Any], None] | None = None,
         on_error: Callable[[BaseException], object] | None = None,
         **kwargs: Any,
     ) -> Worker:
         """Run `fn(*args, **kwargs)` on a pool thread (REQ-SET-021); `on_result` gets its return value on the UI thread
         and an error becomes the coded dialog, after `on_error` has cleared what the job was to replace (#182). The
         newest call wins: an earlier run is stopped and its result dropped. `busy` covers where the result will appear;
-        Cancel drops the result and calls `on_cancel` when the job stops."""
+        Cancel drops the result and, when the job stops, calls `on_cancel` with what it returned: the work done so far
+        for a job that checks `should_stop()`, None if it never ran (#194)."""
         if self._bg is not None:
             self._bg.stop()
             if self._bg_busy is not None and self._bg_busy is not busy:  # its finished slot will not finish it
@@ -244,7 +245,7 @@ class Page(QWidget):
                 if busy is not None:
                     busy.finish()
             if worker is not None and worker.job.cancelled and on_cancel is not None:
-                on_cancel()
+                on_cancel(worker.job.result)
 
         def failed(exc: BaseException) -> None:
             if on_error is not None:

@@ -856,7 +856,7 @@
 <context>
     <name>LogsPage</name>
     <message>
-        <location filename="../ui/pages/logs.py" line="+45"/>
+        <location filename="../ui/pages/logs.py" line="+47"/>
         <source>Include archived</source>
         <translation type="unfinished"></translation>
     </message>
@@ -923,7 +923,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+7"/>
+        <location line="+6"/>
+        <source>Exporting…</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+2"/>
         <source>Select a row to see its overlay</source>
         <translation type="unfinished"></translation>
     </message>
@@ -939,12 +944,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+175"/>
+        <location line="+200"/>
         <source>Archive older than {days} days</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-136"/>
+        <location line="-161"/>
         <source>{count} inspections · {ng} NG · yield {rate:.1%}</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1004,17 +1009,22 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+39"/>
+        <location line="+62"/>
+        <source>Export CSV stopped: no file was written.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+2"/>
         <source>Exported {count} records and {checks} check rows to {folder}: {file}, {checks_file}</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-45"/>
+        <location line="-70"/>
         <source>CSV (*.csv)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+57"/>
+        <location line="+76"/>
         <source>Export overlay images for {count} record(s)?</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1024,12 +1034,17 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+4"/>
+        <location line="+3"/>
         <source>Copied {count} overlay image(s) to {folder}</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+7"/>
+        <location line="+1"/>
+        <source>Stopped: copied {count} overlay image(s) to {folder}; the others were not copied.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+13"/>
         <source>Archived {count} record(s)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1422,12 +1437,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+96"/>
+        <location line="+97"/>
         <source>{action}  {key}</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/logs.py" line="-251"/>
+        <location filename="../ui/pages/logs.py" line="-277"/>
         <source>Logs &amp; Export</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1813,7 +1828,7 @@
 <context>
     <name>Role</name>
     <message>
-        <location filename="../ui/pages/base.py" line="-233"/>
+        <location filename="../ui/pages/base.py" line="-234"/>
         <source>Operator</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2009,12 +2024,12 @@
     </message>
     <message>
         <location line="+1"/>
-        <location line="+304"/>
+        <location line="+315"/>
         <source>Import Folder…</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-298"/>
+        <location line="-309"/>
         <location line="+52"/>
         <source>ID</source>
         <translation type="unfinished"></translation>
@@ -2062,12 +2077,12 @@
     </message>
     <message>
         <location line="+1"/>
-        <location line="+190"/>
+        <location line="+201"/>
         <source>Remove</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-185"/>
+        <location line="-196"/>
         <source>Select a sample to preview</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2157,7 +2172,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+18"/>
+        <location line="+21"/>
+        <source>Stopped: added {added} of {total} images; the others were not added.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+8"/>
         <source>Folder containing ok/ and ng/ sub-folders</source>
         <translation type="unfinished"></translation>
     </message>

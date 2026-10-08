@@ -189,6 +189,7 @@ def test_req_cmp_003_note_names_the_versions_and_missing_maps(
     assert thresholds == [round(float(str(c["threshold"])), 4) for c in ctx.checks_for(iid)]
     assert round(recipe.ssim_min, 4) not in thresholds, "the thresholds that applied then, not the new revision's"
     diff_path, ai_path = ctx.db.map_paths(iid)
+    qtbot.waitUntil(ctx.jobs.idle, timeout=10000)  # the pool reads the maps; Windows cannot delete a file held open
     Path(str(diff_path)).unlink()  # one map gone: the other still serves its view
     compare.show_stored(iid)
     qtbot.waitUntil(lambda: compare.test_view._pix is not None, timeout=10000)
