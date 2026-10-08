@@ -3,6 +3,7 @@
 Both the Inspection page and the Compare page call `Inspector.inspect`, so the
 metrics shown side-by-side are exactly the ones that produced the OK/NG result.
 """
+
 from __future__ import annotations
 
 import time
@@ -23,12 +24,13 @@ OK, WARN, NG = "OK", "WARN", "NG"
 @dataclass
 class Check:
     """One decision variable, shown as a row in the Compare page metrics table."""
+
     name: str
     value: float
     threshold: float
-    rule: str            # human-readable rule, e.g. "value < threshold"
-    verdict: str         # OK | WARN | NG | INFO
-    source: str          # AI | Compare | ROI
+    rule: str  # human-readable rule, e.g. "value < threshold"
+    verdict: str  # OK | WARN | NG | INFO
+    source: str  # AI | Compare | ROI
     explain: str = ""
 
 
@@ -36,7 +38,7 @@ class Check:
 class Defect:
     no: int
     type: str
-    score: float         # normalised: 1.0 == exactly at threshold
+    score: float  # normalised: 1.0 == exactly at threshold
     side: str
     x: int
     y: int
@@ -46,8 +48,16 @@ class Defect:
     severity: str = "Major"
 
     def as_row(self) -> dict:
-        return dict(no=self.no, type=self.type, score=round(self.score, 3), side=self.side,
-                    x=self.x, y=self.y, w=self.w, h=self.h)
+        return dict(
+            no=self.no,
+            type=self.type,
+            score=round(self.score, 3),
+            side=self.side,
+            x=self.x,
+            y=self.y,
+            w=self.w,
+            h=self.h,
+        )
 
 
 @dataclass
@@ -56,7 +66,7 @@ class InspectionResult:
     score: float
     checks: list[Check] = field(default_factory=list)
     defects: list[Defect] = field(default_factory=list)
-    image: np.ndarray | None = None          # test image (aligned to reference when available)
+    image: np.ndarray | None = None  # test image (aligned to reference when available)
     reference: np.ndarray | None = None
     anomaly_map: np.ndarray | None = None
     compare: CompareResult | None = None
@@ -86,8 +96,9 @@ def _overlap(r: Region, x, y, w, h) -> bool:
 
 
 class Inspector:
-    def __init__(self, recipe: Recipe, model: AnomalyModel | None = None,
-                 reference: np.ndarray | None = None, side: str = "Top"):
+    def __init__(
+        self, recipe: Recipe, model: AnomalyModel | None = None, reference: np.ndarray | None = None, side: str = "Top"
+    ):
         self.recipe = recipe
         self.model = model
         self.reference = reference
@@ -110,19 +121,50 @@ class Inspector:
             cr = compare(img, self.reference, r.diff_threshold, r.min_defect_area, work, align_info)
             res.compare = cr
             m = cr.metrics
-            res.checks.append(Check("SSIM similarity", m["ssim"], r.ssim_min, "< thr → NG",
-                                    _grade(m["ssim"], r.ssim_min, r.warn_ratio, higher_is_bad=False), "Compare",
-                                    "1.0 = identical to the golden board"))
-            res.checks.append(Check("Changed area %", m["changed_pct"], r.changed_pct_max, "≥ thr → NG",
-                                    _grade(m["changed_pct"], r.changed_pct_max, r.warn_ratio), "Compare",
-                                    f"pixels whose colour differs by ≥ {r.diff_threshold}"))
-            res.checks.append(Check("Difference regions", m["compare_regions"], r.max_diff_regions,
-                                    "> thr → NG",
-                                    NG if m["compare_regions"] > r.max_diff_regions else OK, "Compare",
-                                    f"blobs ≥ {r.min_defect_area} px after noise clean-up"))
-            res.checks.append(Check("Alignment inliers", m["alignment_inliers"], 12, "info only",
-                                    "INFO" if m["alignment_inliers"] >= 12 else WARN, "Compare",
-                                    m["alignment_method"]))
+            res.checks.append(
+                Check(
+                    "SSIM similarity",
+                    m["ssim"],
+                    r.ssim_min,
+                    "< thr → NG",
+                    _grade(m["ssim"], r.ssim_min, r.warn_ratio, higher_is_bad=False),
+                    "Compare",
+                    "1.0 = identical to the golden board",
+                )
+            )
+            res.checks.append(
+                Check(
+                    "Changed area %",
+                    m["changed_pct"],
+                    r.changed_pct_max,
+                    "≥ thr → NG",
+                    _grade(m["changed_pct"], r.changed_pct_max, r.warn_ratio),
+                    "Compare",
+                    f"pixels whose colour differs by ≥ {r.diff_threshold}",
+                )
+            )
+            res.checks.append(
+                Check(
+                    "Difference regions",
+                    m["compare_regions"],
+                    r.max_diff_regions,
+                    "> thr → NG",
+                    NG if m["compare_regions"] > r.max_diff_regions else OK,
+                    "Compare",
+                    f"blobs ≥ {r.min_defect_area} px after noise clean-up",
+                )
+            )
+            res.checks.append(
+                Check(
+                    "Alignment inliers",
+                    m["alignment_inliers"],
+                    12,
+                    "info only",
+                    "INFO" if m["alignment_inliers"] >= 12 else WARN,
+                    "Compare",
+                    m["alignment_method"],
+                )
+            )
             regions += cr.regions
         elif r.use_compare:
             res.notes.append("No golden reference image set for this board model; comparison skipped.")
@@ -134,11 +176,19 @@ class Inspector:
             thr = r.anomaly_threshold or self.model.image_threshold
             score = self.model.score(amap)
             res.score = score / thr
-            res.checks.append(Check("AI anomaly score", score, thr, "≥ thr → NG",
-                                    _grade(score, thr, r.warn_ratio), "AI",
-                                    self.model.meta.get("threshold_rule", "")))
+            res.checks.append(
+                Check(
+                    "AI anomaly score",
+                    score,
+                    thr,
+                    "≥ thr → NG",
+                    _grade(score, thr, r.warn_ratio),
+                    "AI",
+                    self.model.meta.get("threshold_rule", ""),
+                )
+            )
             pix_thr = self.model.pixel_threshold
-            mask = ((amap >= pix_thr).astype(np.uint8) * 255)
+            mask = (amap >= pix_thr).astype(np.uint8) * 255
             mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, np.ones((5, 5), np.uint8))
             regions += regions_from_mask(mask, amap / thr, r.min_defect_area, "ai")
         elif r.use_ai:
@@ -150,13 +200,21 @@ class Inspector:
             if res.anomaly_map is None:
                 break
             thr = r.anomaly_threshold or self.model.image_threshold
-            patch = res.anomaly_map[roi.y:roi.y + roi.h, roi.x:roi.x + roi.w]
+            patch = res.anomaly_map[roi.y : roi.y + roi.h, roi.x : roi.x + roi.w]
             if patch.size == 0:
                 continue
             val = float(patch.max()) / thr
-            res.checks.append(Check(f"ROI {roi.name} [{roi.type}]", val, roi.ai_score, "≥ thr → NG",
-                                    _grade(val, roi.ai_score, r.warn_ratio), "ROI",
-                                    f"fails as {ROI_DEFECT.get(roi.type, 'Anomaly')}"))
+            res.checks.append(
+                Check(
+                    f"ROI {roi.name} [{roi.type}]",
+                    val,
+                    roi.ai_score,
+                    "≥ thr → NG",
+                    _grade(val, roi.ai_score, r.warn_ratio),
+                    "ROI",
+                    f"fails as {ROI_DEFECT.get(roi.type, 'Anomaly')}",
+                )
+            )
 
         # 4) Merge evidence into a defect list ------------------------------------
         res.defects = self._defects(regions, res)

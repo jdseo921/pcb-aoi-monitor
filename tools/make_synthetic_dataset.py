@@ -8,6 +8,7 @@ Creates:
     sample_data/test/ok|ng/*.png    held-out set for the AI Model Test screen
     sample_data/labels.csv          file, label, defect_type
 """
+
 from __future__ import annotations
 
 import argparse
@@ -20,25 +21,30 @@ import numpy as np
 
 W, H = 640, 480
 GREEN = (40, 110, 30)
-PAD = (90, 190, 215)      # tin/gold (BGR)
+PAD = (90, 190, 215)  # tin/gold (BGR)
 TRACE = (50, 140, 45)
 IC = (30, 30, 30)
 RES = (60, 75, 95)
 
 # Component layout: (kind, x, y, w, h)
 LAYOUT = [
-    ("ic", 120, 120, 90, 90), ("ic", 380, 110, 120, 70),
-    ("res", 260, 260, 34, 14), ("res", 260, 300, 34, 14), ("res", 330, 300, 34, 14),
-    ("cap", 450, 260, 20, 30), ("cap", 500, 260, 20, 30),
-    ("conn", 90, 360, 200, 40), ("diode", 400, 360, 40, 18),
+    ("ic", 120, 120, 90, 90),
+    ("ic", 380, 110, 120, 70),
+    ("res", 260, 260, 34, 14),
+    ("res", 260, 300, 34, 14),
+    ("res", 330, 300, 34, 14),
+    ("cap", 450, 260, 20, 30),
+    ("cap", 500, 260, 20, 30),
+    ("conn", 90, 360, 200, 40),
+    ("diode", 400, 360, 40, 18),
 ]
 
 
 def draw_board(rng: random.Random, defect: str | None = None) -> np.ndarray:
     img = np.full((H, W, 3), GREEN, np.uint8)
     for x, y in ((20, 20), (W - 20, 20), (20, H - 20), (W - 20, H - 20)):
-        cv2.circle(img, (x, y), 8, PAD, -1)                       # fiducials
-    for i in range(8):                                             # traces
+        cv2.circle(img, (x, y), 8, PAD, -1)  # fiducials
+    for i in range(8):  # traces
         cv2.line(img, (30, 60 + i * 45), (W - 30, 70 + i * 40), TRACE, 3)
     cv2.putText(img, "TBOX-A1 REV2", (420, 450), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (230, 230, 230), 1)
 
@@ -61,12 +67,12 @@ def draw_board(rng: random.Random, defect: str | None = None) -> np.ndarray:
             dx, dy = rng.choice([(10, 0), (-10, 0), (0, 9), (0, -9)])
         x, y = x + dx, y + dy
         if kind == "ic":
-            for k in range(0, w, 10):                                # leads
+            for k in range(0, w, 10):  # leads
                 cv2.rectangle(img, (x + k + 2, y - 8), (x + k + 6, y), PAD, -1)
                 cv2.rectangle(img, (x + k + 2, y + h), (x + k + 6, y + h + 8), PAD, -1)
             cv2.rectangle(img, (x, y), (x + w, y + h), IC, -1)
             pol = (x + 8, y + 8) if defect != "Polarity Error" or i != 0 else (x + w - 8, y + h - 8)
-            cv2.circle(img, pol, 4, (200, 200, 200), -1)            # pin-1 mark
+            cv2.circle(img, pol, 4, (200, 200, 200), -1)  # pin-1 mark
         elif kind == "res":
             cv2.rectangle(img, (x, y), (x + w, y + h), RES, -1)
         elif kind == "cap":
@@ -84,8 +90,9 @@ def draw_board(rng: random.Random, defect: str | None = None) -> np.ndarray:
         cv2.rectangle(img, (x + 2, y + 2), (x + 16, y + 8), PAD, -1)
     elif defect == "Contamination":
         cx, cy = rng.randint(80, W - 80), rng.randint(80, H - 80)
-        cv2.ellipse(img, (cx, cy), (rng.randint(8, 16), rng.randint(5, 12)), rng.randint(0, 180), 0, 360,
-                    (120, 150, 160), -1)
+        cv2.ellipse(
+            img, (cx, cy), (rng.randint(8, 16), rng.randint(5, 12)), rng.randint(0, 180), 0, 360, (120, 150, 160), -1
+        )
     elif defect == "Scratch":
         x1, y1 = rng.randint(50, W - 150), rng.randint(50, H - 150)
         cv2.line(img, (x1, y1), (x1 + rng.randint(60, 120), y1 + rng.randint(20, 80)), (150, 200, 150), 2)
@@ -106,8 +113,15 @@ def capture(img: np.ndarray, rng: random.Random) -> np.ndarray:
     return np.clip(out, 0, 255).astype(np.uint8)
 
 
-DEFECTS = ["Missing Component", "Solder Bridge", "Misalignment", "Polarity Error",
-           "Contamination", "Scratch", "Solder Ball"]
+DEFECTS = [
+    "Missing Component",
+    "Solder Bridge",
+    "Misalignment",
+    "Polarity Error",
+    "Contamination",
+    "Scratch",
+    "Solder Ball",
+]
 
 
 def main() -> None:
@@ -137,7 +151,8 @@ def main() -> None:
         write(split, "NG", f"ng_{i:03d}_{d.replace(' ', '_').lower()}.png", capture(draw_board(rng, d), rng), d)
     with open(out / "labels.csv", "w", newline="") as f:
         w = csv.DictWriter(f, fieldnames=["file", "label", "defect_type"])
-        w.writeheader(); w.writerows(rows)
+        w.writeheader()
+        w.writerows(rows)
     print(f"Wrote {len(rows)} images to {out.resolve()}")
 
 

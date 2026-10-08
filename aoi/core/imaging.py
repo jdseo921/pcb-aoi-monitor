@@ -1,4 +1,5 @@
 """Image I/O and registration helpers (OpenCV)."""
+
 from __future__ import annotations
 
 from pathlib import Path

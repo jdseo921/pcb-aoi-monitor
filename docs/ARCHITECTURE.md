@@ -17,7 +17,7 @@ interfaces that Stages 2–4 (cameras, robot, MES/ERP) plug into without changin
 
 | Concern | Choice | Why |
 |---|---|---|
-| Language / UI | **Python 3.10+ / PySide6 (Qt 6)** | GUI §6 allows ".NET / C# or Python (PyQt / Tkinter)". PySide6 is the official, LGPL-licensed Qt binding (PyQt is GPL/commercial), which matters for selling 50–200+ licenses (RM §3–4). Qt also gives a native Windows 10/11 look, high-DPI, and 1920×1080 layouts. |
+| Language / UI | **Python 3.11 / PySide6 (Qt 6)** | GUI §6 allows ".NET / C# or Python (PyQt / Tkinter)". PySide6 is the official, LGPL-licensed Qt binding (PyQt is GPL/commercial), which matters for selling 50–200+ licenses (RM §3–4). Qt also gives a native Windows 10/11 look, high-DPI, and 1920×1080 layouts. |
 | AI | **PyTorch** | GUI §6 names TensorFlow / PyTorch; Stage 1 deliverable is a `.pt` or `.h5` model. CUDA used automatically when present. |
 | Vision | **OpenCV + scikit-image** | Registration, image differencing, morphology, SSIM. |
 | Storage | **SQLite** (one file per workspace) | GUI §6 "Local SQLite or PostgreSQL". All SQL is in one module so PostgreSQL can be swapped in for multi-station / MES use. |

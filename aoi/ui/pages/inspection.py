@@ -1,17 +1,27 @@
 """Main Inspection Screen (spec 4.1)."""
+
 from __future__ import annotations
 
 from datetime import datetime
 from pathlib import Path
 
-from PySide6.QtWidgets import (QCheckBox, QComboBox, QFileDialog, QGridLayout, QHBoxLayout, QLabel,
-                               QListWidget, QSplitter, QVBoxLayout, QWidget)
 from PySide6.QtCore import Qt
+from PySide6.QtWidgets import (
+    QCheckBox,
+    QComboBox,
+    QFileDialog,
+    QGridLayout,
+    QHBoxLayout,
+    QLabel,
+    QListWidget,
+    QSplitter,
+    QVBoxLayout,
+    QWidget,
+)
 
 from ... import defects as taxonomy
-from ...core.imaging import IMAGE_EXTS, list_images, load_image
+from ...core.imaging import IMAGE_EXTS, list_images, load_image, save_image
 from ...core.inspector import InspectionResult, draw_overlay
-from ...core.imaging import save_image
 from ...hal import VIEWS
 from ..theme import verdict_style
 from ..widgets.image_view import ImageView
@@ -37,12 +47,15 @@ class InspectionPage(Page):
         bar.addWidget(button("Load Images…", slot=self.load_files))
         bar.addWidget(button("Load Folder…", slot=self.load_folder))
         bar.addWidget(QLabel("View:"))
-        self.view_combo = QComboBox(); self.view_combo.addItems(VIEWS)
+        self.view_combo = QComboBox()
+        self.view_combo.addItems(VIEWS)
         bar.addWidget(self.view_combo)
-        self.autosave = QCheckBox("Auto-save each board"); self.autosave.setChecked(True)
+        self.autosave = QCheckBox("Auto-save each board")
+        self.autosave.setChecked(True)
         bar.addWidget(self.autosave)
         bar.addStretch(1)
-        self.queue_label = QLabel("No images loaded"); self.queue_label.setObjectName("muted")
+        self.queue_label = QLabel("No images loaded")
+        self.queue_label.setObjectName("muted")
         bar.addWidget(self.queue_label)
         self.root.addLayout(bar)
 
@@ -51,10 +64,16 @@ class InspectionPage(Page):
         self.view = ImageView(placeholder="Load PCB images to start inspection")
         split.addWidget(self.view)
 
-        side = QWidget(); sl = QVBoxLayout(side); sl.setContentsMargins(8, 0, 0, 0)
-        self.verdict = QLabel("—"); self.verdict.setStyleSheet(verdict_style("INFO")); self.verdict.setMinimumHeight(90)
+        side = QWidget()
+        sl = QVBoxLayout(side)
+        sl.setContentsMargins(8, 0, 0, 0)
+        self.verdict = QLabel("—")
+        self.verdict.setStyleSheet(verdict_style("INFO"))
+        self.verdict.setMinimumHeight(90)
         sl.addWidget(self.verdict)
-        self.summary = QLabel(""); self.summary.setObjectName("muted"); self.summary.setWordWrap(True)
+        self.summary = QLabel("")
+        self.summary.setObjectName("muted")
+        self.summary.setWordWrap(True)
         sl.addWidget(self.summary)
         self.table = make_table(["No", "Type", "Score", "Side", "X", "Y"])
         self.table.itemSelectionChanged.connect(self._focus_defect)
@@ -76,7 +95,8 @@ class InspectionPage(Page):
         self.root.addLayout(ctl)
 
         # Alarm log
-        self.alarms = QListWidget(); self.alarms.setMaximumHeight(110)
+        self.alarms = QListWidget()
+        self.alarms.setMaximumHeight(110)
         self.root.addWidget(self.alarms)
         self._update_buttons()
 
@@ -141,13 +161,16 @@ class InspectionPage(Page):
         self.view.set_image(res.image, keep_view=self.pos > 0)
         for d in res.defects:
             sev = taxonomy.BY_NAME.get(d.type, taxonomy.ANOMALY).severity
-            self.view.add_box(d.x, d.y, d.w, d.h, taxonomy.SEVERITY_COLOR.get(sev, "#e53935"),
-                              f"{d.no} {d.type} {d.score:.2f}")
+            self.view.add_box(
+                d.x, d.y, d.w, d.h, taxonomy.SEVERITY_COLOR.get(sev, "#e53935"), f"{d.no} {d.type} {d.score:.2f}"
+            )
         self.verdict.setText(res.verdict)
         self.verdict.setStyleSheet(verdict_style(res.verdict))
-        self.summary.setText(f"{path.name}  ·  score {res.score:.2f}× threshold  ·  "
-                             f"{len(res.defects)} defect(s)  ·  {res.elapsed_ms:.0f} ms"
-                             + ("\n" + "\n".join(res.notes) if res.notes else ""))
+        self.summary.setText(
+            f"{path.name}  ·  score {res.score:.2f}× threshold  ·  "
+            f"{len(res.defects)} defect(s)  ·  {res.elapsed_ms:.0f} ms"
+            + ("\n" + "\n".join(res.notes) if res.notes else "")
+        )
         fill_table(self.table, [[d.no, d.type, d.score, d.side, d.x, d.y] for d in res.defects])
         self._alarm(res.verdict, f"{path.name}: {res.verdict} ({len(res.defects)} defect(s))")
         self.shell.last_inspected = (str(path), res)
@@ -159,8 +182,9 @@ class InspectionPage(Page):
     def save_result(self):
         if not self.last:
             return
-        f, _ = QFileDialog.getSaveFileName(self, "Save annotated image",
-                                           f"{self.last_path.stem}_{self.last.verdict}.png", "PNG (*.png)")
+        f, _ = QFileDialog.getSaveFileName(
+            self, "Save annotated image", f"{self.last_path.stem}_{self.last.verdict}.png", "PNG (*.png)"
+        )
         if f:
             save_image(f, draw_overlay(self.last))
             if not self.autosave.isChecked():
@@ -191,7 +215,7 @@ class InspectionPage(Page):
         self.btn_save.setEnabled(self.last is not None)
 
     def on_board_model_changed(self, name):
-        self.inspector = None      # rebuilt lazily with the new model/recipe/reference
+        self.inspector = None  # rebuilt lazily with the new model/recipe/reference
 
     def on_show(self):
-        self.inspector = None      # pick up newly trained models or saved recipes
+        self.inspector = None  # pick up newly trained models or saved recipes
