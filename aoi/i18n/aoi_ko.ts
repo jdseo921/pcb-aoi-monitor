@@ -631,7 +631,27 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/imaging.py" line="+151"/>
+        <location filename="../core/imaging.py" line="+179"/>
+        <source>it holds {scans} scans, more than the {most} this app decodes</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+6"/>
+        <source>it gives the size of its tiles or strips twice</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+7"/>
+        <source>its tiles are {cols} × {rows} px, more than its {width} × {height} px image needs</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+4"/>
+        <source>its strips are {cols} × {rows} px, more than its {width} × {height} px image needs</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+32"/>
         <source>{megabytes} MB ({count} bytes)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -641,7 +661,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+15"/>
+        <location line="+17"/>
         <source>the decoder refused it</source>
         <translation type="unfinished"></translation>
     </message>
