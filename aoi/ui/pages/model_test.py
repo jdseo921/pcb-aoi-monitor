@@ -23,6 +23,7 @@ from PySide6.QtWidgets import (
 
 from ... import defects as taxonomy
 from ...core.inspector import InspectionResult, JudgedBy
+from ...core.recipe import scale_digits
 from ...core.services import AppContext
 from ...errors import AoiError, Phrase
 from .. import theme
@@ -49,6 +50,8 @@ NO_AI_MODEL = QT_TRANSLATE_NOOP("Errors", "no AI model")
 AI_CHECK_OFF = QT_TRANSLATE_NOOP("Errors", "no AI model (the AI check off)")  # a recipe that turns it off (#246)
 GOLDEN_BOARD = QT_TRANSLATE_NOOP("Errors", "Golden board {file}")
 NO_GOLDEN_BOARD = QT_TRANSLATE_NOOP("Errors", "no Golden board")
+SCALE = QT_TRANSLATE_NOOP("Errors", "a scale of {scale:.{digits}f} px/mm")  # the board model's, which sizes in mm use
+NO_SCALE = QT_TRANSLATE_NOOP("Errors", "no scale")
 
 
 class MetricTile(QLabel):
@@ -261,20 +264,23 @@ class ModelTestPage(Page):
         self.preview_empty.hide()
 
     def _judged_now(self) -> dict[str, object] | None:
-        """None while the run is current: its board model still uses the AI model, recipe revision and Golden board
-        that judged it (`AppContext.engine_is_current`, the comparison Inspection makes, #243), or, for a run judged
-        with the AI check off, the recipe revision and Golden board, whatever AI model is active, as none judged it and
-        a preview gives each row's verdict (#246). Otherwise those and the ones in use now, by version, revision and
-        file name, for the note and AOI-TST-001 (#250); a recipe with the AI check off names AI_CHECK_OFF in place of
-        an AI model, the one active then having judged nothing."""
+        """None while the run is current: its board model still uses the AI model, recipe revision, Golden board and
+        scale that judged it (`AppContext.engine_is_current`, the comparison Inspection makes, #243, S29), or all but
+        what judged none of its images, as a preview gives each row's verdict: the AI model for a run judged with the
+        AI check off (#246), the scale for a recipe that holds no size in mm (S29). Otherwise those and the ones in use
+        now, by version, revision, file name and px per mm, for the note and AOI-TST-001 (#250); a recipe with the AI
+        check off names AI_CHECK_OFF in place of an AI model, the one active then having judged nothing."""
         bm, run = self.run_board_model, self.run_judged
         if bm is None or run is None or self.ctx.engine_is_current(bm, run):
             return None
-        recipes, golden = self.ctx.recipe_history(bm), self.ctx.reference_image(bm)
+        recipes, golden, scale = self.ctx.recipe_history(bm), self.ctx.reference_image(bm), self.ctx.scale(bm)
         same_recipe = (recipes[0]["uuid"] if recipes else None) == run.recipe_uuid
-        if not run.use_ai and same_recipe and golden == run.reference_path:
-            return None  # only the AI model changed, and it judged none of the run's images
-        model, ai_now = self.ctx.active_model(bm), run.use_ai if same_recipe else self.ctx.recipe(bm)[1].use_ai
+        model, recipe = self.ctx.active_model(bm), self.ctx.recipe(bm)[1]
+        same_model = not run.use_ai or (str(model["uuid"]) if model else None) == run.model_uuid
+        same_scale = scale == run.px_per_mm or not recipe.sized_in_mm  # a recipe in px judges alike at any scale
+        if same_recipe and same_model and same_scale and golden == run.reference_path:
+            return None  # what changed judged none of the run's images
+        ai_now = run.use_ai if same_recipe else recipe.use_ai
 
         def ai_model(version: str | None) -> Phrase:
             return AI_MODEL.fill(version=version) if version else NO_AI_MODEL
@@ -282,14 +288,19 @@ class ModelTestPage(Page):
         def golden_board(path: str | None) -> Phrase:
             return GOLDEN_BOARD.fill(file=Path(path).name) if path else NO_GOLDEN_BOARD
 
+        def scale_of(s: float | None) -> Phrase:  # with the digits that tell the two apart (S29 review)
+            return NO_SCALE if s is None else SCALE.fill(scale=s, digits=scale_digits(run.px_per_mm, scale))
+
         return {
             "board_model": bm,
             "run_model": ai_model(run.model_version) if run.use_ai else AI_CHECK_OFF,
             "run_recipe": run.recipe_rev or 0,
             "run_golden": golden_board(run.reference_path),
+            "run_scale": scale_of(run.px_per_mm),
             "model": ai_model(model["version"] if model else None) if ai_now else AI_CHECK_OFF,
             "recipe": recipes[0]["revision"] if recipes else 0,
             "golden": golden_board(golden),
+            "scale": scale_of(scale),
         }
 
     def _refuse_preview(self, path: str, changed: dict[str, object]) -> None:
@@ -318,15 +329,15 @@ class ModelTestPage(Page):
         self.run()
 
     def _show_note(self) -> None:
-        """The line above the table while the run's AI model, recipe or Golden board is no longer in use (#250)."""
+        """The line above the table while the AI model, recipe, Golden board or scale of a run is not in use (#250)."""
         self._note(self._judged_now() if self.rows else None)
 
     def _note(self, changed: dict[str, object] | None) -> None:
         if changed is not None:
             note = self.tr(
-                "These results were judged by {run_model}, recipe revision {run_recipe} and {run_golden};"
-                " {board_model} now uses {model}, recipe revision {recipe} and {golden}. Rows are not previewed; select"
-                " one for Run Test Again, which tests the run's folder with what is in use now."
+                "These results were judged by {run_model}, recipe revision {run_recipe}, {run_golden} and {run_scale};"
+                " {board_model} now uses {model}, recipe revision {recipe}, {golden} and {scale}. Rows are not"
+                " previewed; select one for Run Test Again, which tests the run's folder with what is in use now."
             )
             shown = {k: phrase_text(v) if isinstance(v, str) else v for k, v in changed.items()}  # phrases translated
             self.run_note.setText(note.format(**shown))

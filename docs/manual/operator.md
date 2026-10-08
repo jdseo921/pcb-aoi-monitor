@@ -48,8 +48,9 @@ board, after a board that was not inspected and after a board model change.
 A run also belongs to the user who pressed Start. If another user signs in with Switch User during a run, the run stops
 after the board in hand, which is recorded under the user who pressed Start, and the status bar says so; the user now
 signed in presses Start to carry on with the queue, and those boards are recorded under their name.
-Each board is judged with the AI model, recipe and Golden board in use when it starts. If an Engineer trains or
-activates an AI model version, saves a recipe or sets a Golden board while the Inspection page is open, the next board
+Each board is judged with the AI model, recipe, scale and Golden board in use when it starts. If an Engineer trains or
+activates an AI model version, saves a recipe, sets a scale or sets a Golden board while the Inspection page is open,
+the next board
 uses it, whether you press Next Board or Start or load a new queue. During a run, the board in hand finishes with what it
 started with and the boards after it use the new one; the line under the banner and the alarm log say so with
 AOI-INSP-013. Each record names the AI model version active when its board was judged, the recipe revision that
@@ -58,6 +59,8 @@ AI check off, no AI model judges the boards, so an AI model version activated du
 them and the run goes on with no AOI-INSP-013 (the boards after it name the version now active); a saved recipe or a
 Golden board set still moves the run, and a training run does too, as it sets a new Golden board, and the line then
 says the AI check was off in place of naming an AI model.
+A scale set changes nothing that judges a board while the recipe holds its sizes in px, so the run then goes on with no
+AOI-INSP-013.
 
 Reading the verdict: while a board is being inspected the banner turns grey and reads "Inspecting…", and the status
 bar at the bottom names the board and its place in the queue, such as "Inspecting board_07.png (3 of 12)…". The
@@ -110,8 +113,9 @@ model has none, as the pane then says; the line under the verdict names today's 
 set another. A long file name over a picture, in a message on its pane or in the line under the verdict wraps onto the
 next line after a _ or -. The thresholds panel, "Try other thresholds", is for Engineers and is not shown to an
 Operator: every board Compare inspects for you is judged by the board model's recipe, and a board left on Compare that
-was inspected with values the recipe does not hold when you sign in (an Engineer's thresholds not saved, or a recipe
-revision saved since; values that did not judge the board, such as the AI score threshold when its AI check did not
+was inspected with values the recipe does not hold when you sign in (an Engineer's thresholds not saved, a recipe
+revision saved since, or a scale set since that gives a size in mm other px; values that did not judge the board, such
+as the AI score threshold when its AI check did not
 run, are not counted) is cleared when you sign in, on any page, and inspected again by the recipe once Compare is shown,
 so you never see the verdict those values gave.
 

@@ -132,15 +132,19 @@ folder import is not refused part-way. An inspection run (Start) stops after tha
 user now signed in presses Start to carry on with the queue, so no board is recorded under a user who did not start it.
 
 **Training or activating while boards are inspected.** A new AI model version, an activation or a rollback, a saved
-recipe and a Golden board set with Set Reference apply on the Inspection page from the next board that starts, with no
+recipe, a scale and a Golden board set with Set Reference apply on the Inspection page from the next board that starts,
+with no
 need to leave the page: the board in hand finishes with what it started with, and a run in progress goes on with the
 new one, saying so under the verdict banner and in the alarm log with AOI-INSP-013. Each record names the AI model
 version active when its board was judged, the recipe revision that judged it (which says whether the AI check ran)
 and the Golden board it was judged against: the CSV export of Logs & Export lists the AI model version and recipe revision of each board, and Compare
 shows a stored board beside the Golden board it was judged against. A run whose recipe turns the AI check off moves only
-when the recipe or the Golden board changes, as no AI model judges its boards: an activation or a rollback during it
+when the recipe, the scale or the Golden board changes, as no AI model judges its boards: an activation or a rollback
+during it
 raises no AOI-INSP-013, though the boards after it name the version now active, while a training run still does, as it
 sets a new Golden board, and the line names no AI model but says the AI check was off.
+A scale set changes nothing that judges a board while the recipe holds its sizes in px, so it then moves no run, with
+the AI check on or off.
 
 **Threshold column.** Each AI model version's calibrated AI score threshold, which judges the board model's boards while
 the recipe holds no override of its own (section 5). A version whose calibrated value the AI model registry cannot give,
@@ -214,8 +218,9 @@ but not shown. The report is written whole or not at all and recorded in the aud
 folder that cannot be made, a file open in a viewer, a full disk), the app shows AOI-LOG-002 and an earlier report of
 that name stays as it was. Selecting a row previews that board; when it cannot be inspected (its file moved, for
 example), the preview reads "· Not inspected" with no picture, never the verdict of the row before. A preview is judged
-by the recipe revision and Golden board that judged the run and, when that recipe ran the AI check, by its AI model.
-Once another is in use (training ended, a version was activated, a recipe saved or a Golden board set), a selected row
+by the recipe revision, Golden board and scale that judged the run and, when that recipe ran the AI check, its AI model.
+Once another is in use (training ended, a version was activated, a recipe saved, a scale or a Golden board set), a
+selected row
 is not previewed: the pane reads "Not inspected" with AOI-TST-001 (a long file name in it wraps onto the next line after
 a _ or -), and Compare's Use Last Inspected keeps the board it had. A line above the table then names what judged the
 run and what is in use now; it shows when the page is opened or a row is selected, so after a training run that ends
@@ -223,7 +228,8 @@ while the page stays open it appears at the next row selected. When the page is 
 shows the same in place of its earlier preview; once what judged the run is in use again (that AI model version
 activated again, for example), it is previewed again. A run judged with the AI check off was judged by no AI model, so
 activating another AI model version leaves its rows previewed; a saved recipe, a Golden board set or a training run,
-which sets a new Golden board, still stops their previews. The line and AOI-TST-001 then name "no AI model (the AI check
+which sets a new Golden board, still stops their previews. A scale set stops no preview of a run whose recipe holds its
+sizes in px, which no scale changes. The line and AOI-TST-001 then name "no AI model (the AI check
 off)" for that run, and for a recipe now in use that turns the AI check off, in place of an AI model. The rows and both
 exports still describe the stored run; press **Run Test Again** in the preview pane to test the run's folder with what
 is in use now. A preview still being inspected when a new run ends is not shown beside its rows. A folder inside the
@@ -234,7 +240,9 @@ stored as its full path.
 
 Opened from Inspection, or with Use Last Inspected, Compare shows the stored result as it was decided: the table's
 thresholds are the ones that applied then, and the line under the verdict names the AI model version active when the
-board was judged and the recipe revision that judged it, and what the board model has moved to since (when that
+board was judged and the recipe revision that judged it, and what the board model has moved to since, and for a result
+judged at another scale than the board model's now, both scales: Re-evaluate applies sizes in mm at the one it was
+judged at, and the form shows them at the board model's (when that
 revision turned the AI check off, the "why" box says it did not run). The Golden board pane shows the golden board
 the result was judged against, named over the pane: each record keeps that file's path and the SHA-256 of the bytes
 the engine read, and the pane gives the reason instead when the file has changed, cannot be read or is gone, or none
@@ -301,7 +309,8 @@ from the recipe whenever a new revision has been saved since (on Recipe Editor, 
 puts back the thresholds of an older revision; values tried and not saved stay while no revision is saved and no
 Operator signs in. When an Operator signs in, on Compare or on any other page, the form goes back to the recipe's
 thresholds, which you find there when you sign in again, and a board inspected with values the recipe does not hold at
-that sign-in (values you left unsaved, or a revision saved since the board was inspected; values that did not judge
+that sign-in (values you left unsaved, a revision saved since the board was inspected, or a scale set since that gives a
+size in mm other px; values that did not judge
 the board are not counted: the AI score threshold, and an ROI's AI score and name, when its AI check did not run;
 Pixel difference, Similarity minimum and Allowed difference regions when its Golden board comparison did not run; a
 disabled ROI; and an ROI's Height and Volume thresholds, not checked before Stage 2) is cleared, even while your

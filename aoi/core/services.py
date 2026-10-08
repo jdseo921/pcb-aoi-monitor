@@ -583,15 +583,16 @@ class AppContext:
 
     def engine_is_current(self, board_model: str, insp: Inspector | JudgedBy) -> bool:
         """Whether `insp` was built from what `inspector(board_model)` would use now: the active AI model, the latest
-        recipe revision and the Golden board, by UUID and path (`Inspector.inputs`). It reads the database only, no
-        image or weights, so the Inspection page asks before each board whether the engine it keeps is still the one to
-        use: a training run, an activation or a saved recipe makes it stale (#243). AI Model Test asks it with the
-        `JudgedBy` of a run before a row is previewed (#250), so both pages agree on when a result is current; for a run
-        judged with the AI check off, that page then compares the recipe revision and Golden board alone (#246)."""
+        recipe revision, the Golden board and the scale, by UUID, path and value (`Inspector.inputs`). It reads the
+        database only, no image or weights, so the Inspection page asks before each board whether the engine it keeps
+        is still the one to use: training, an activation, a saved recipe or a scale set makes it stale (#243, S29). AI
+        Model Test asks it with the `JudgedBy` of a run before a row is previewed (#250), so both pages agree on when a
+        result is current; that page then passes over the AI model for a run judged with the AI check off (#246), and
+        the scale for a recipe that holds no size in mm (S29)."""
         active = self.db.active_model(board_model)
         latest = self.db.latest_recipe(board_model)
-        now = str(active["uuid"]) if active else None, latest[2] if latest else None, self.db.reference(board_model)
-        return insp.inputs == now
+        model, recipe = str(active["uuid"]) if active else None, latest[2] if latest else None
+        return insp.inputs == (model, recipe, self.db.reference(board_model), self.db.scale(board_model))
 
     def inspect(
         self,

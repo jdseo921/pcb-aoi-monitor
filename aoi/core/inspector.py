@@ -239,7 +239,8 @@ class JudgedBy:
     UUID and the Golden board's path, each None when it has none, and whether the recipe runs the AI check (`use_ai`;
     with it off the AI model named is the one active then, which judged nothing, #246). `AppContext.batch_test` returns
     it with a run, and `AppContext.engine_is_current` compares its `inputs` with what is active now, as it does an
-    engine's; AI Model Test compares a run with the AI check off by its recipe revision and Golden board alone."""
+    engine's; AI Model Test passes over the AI model of a run with the AI check off, and the scale of one whose
+    recipe holds no size in mm, as neither judged it (`px_per_mm`, the scale, None without one, S29)."""
 
     model_version: str | None
     model_uuid: str | None
@@ -247,11 +248,12 @@ class JudgedBy:
     recipe_uuid: str | None
     reference_path: str | None
     use_ai: bool = True
+    px_per_mm: float | None = None
 
     @property
-    def inputs(self) -> tuple[str | None, str | None, str | None]:
-        """The AI model's UUID, the recipe revision's UUID and the Golden board's path, as `Inspector.inputs`."""
-        return self.model_uuid, self.recipe_uuid, self.reference_path
+    def inputs(self) -> tuple[str | None, str | None, str | None, float | None]:
+        """The AI model's and recipe revision's UUIDs, the Golden board's path and the scale, as `Inspector.inputs`."""
+        return self.model_uuid, self.recipe_uuid, self.reference_path, self.px_per_mm
 
 
 class Inspector:
@@ -290,26 +292,28 @@ class Inspector:
         self.reference_sha256 = reference_sha256
 
     @property
-    def inputs(self) -> tuple[str | None, str | None, str | None]:
-        """What the engine was built from: the AI model's UUID, the recipe revision's UUID and the Golden board's path,
-        each None when it has none. `AppContext.engine_is_current` compares them with what is active now (#243)."""
-        return self.model_uuid, self.recipe_uuid, self.reference_path
+    def inputs(self) -> tuple[str | None, str | None, str | None, float | None]:
+        """What the engine was built from: the AI model's UUID, the recipe revision's UUID, the Golden board's path and
+        the scale (S29), each None if it has none; `AppContext.engine_is_current` compares them with what is active."""
+        return self.model_uuid, self.recipe_uuid, self.reference_path, self.px_per_mm
 
     @property
-    def judging_inputs(self) -> tuple[str | None, str | None, str | None]:
+    def judging_inputs(self) -> tuple[str | None, str | None, str | None, float | None]:
         """What judges a board: `inputs`, with no AI model (None) when the recipe turns the AI check off, as no AI model
         judges the board then (#246). The Inspection page compares them from board to board of a run, so an AI model
         activated during a run with the AI check off is no change of what judges it (AOI-INSP-013, #243), while
         `AppContext.engine_is_current` still compares `inputs`: the engine is rebuilt on an activation, and each
-        record names the AI model version active when its board was judged."""
-        return self.model_uuid if self.recipe.use_ai else None, self.recipe_uuid, self.reference_path
+        record names the AI model version active when its board was judged. The scale counts only while the recipe
+        holds a size in mm, as it sizes nothing else (S29)."""
+        scale = self.px_per_mm if self.recipe.sized_in_mm else None
+        return self.model_uuid if self.recipe.use_ai else None, self.recipe_uuid, self.reference_path, scale
 
     @property
     def judged_by(self) -> JudgedBy:
         """What the engine judges with, kept with an AI Model Test run after the engine is gone (#250), with whether its
-        recipe runs the AI check (#246)."""
-        rev, path = self.recipe_rev, self.reference_path
-        return JudgedBy(self.model_version, self.model_uuid, rev, self.recipe_uuid, path, self.recipe.use_ai)
+        recipe runs the AI check (#246) and the scale it judges at (S29)."""
+        rev, path, use_ai = self.recipe_rev, self.reference_path, self.recipe.use_ai
+        return JudgedBy(self.model_version, self.model_uuid, rev, self.recipe_uuid, path, use_ai, self.px_per_mm)
 
     def inspect(self, img: np.ndarray) -> InspectionResult:
         """The board in `img` aligned, compared and judged. AOI-INSP-011 before any work when it, or the golden board,
