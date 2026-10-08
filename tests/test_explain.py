@@ -1,23 +1,29 @@
-"""REQ-CMP-004 (S27a): one plain-word sentence per NG or WARN check, the NG ones first, naming the check, its value
-and its threshold with units, in the Charter's words only, as templates a screen translates; the "why" box on Compare
-shows them from S27a-2."""
+"""REQ-CMP-004 (S27): the "why" box on Compare holds one plain-word sentence per NG or WARN check, the NG ones first,
+naming the check, its value and its threshold with units, in the Charter's words only; the sentences are templates the
+screen translates, so a Korean screen reads them in Korean once they are translated."""
 
 from __future__ import annotations
 
 import re
+import subprocess
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
 import cv2
 import numpy as np
+from PySide6.QtCore import QCoreApplication, QTranslator
+from pytestqt.qtbot import QtBot
 
 from aoi.core import explain as ex
 from aoi.core.inspector import NG, NO_AI_NOTE, NO_GOLDEN_NOTE, OK, WARN, Check, Defect, InspectionResult, Inspector
 from aoi.core.recipe import ROI, Recipe
-from aoi.ui.pages.compare import CHECK_NAMES, JUDGED, MODES, RULES, SOURCES
+from aoi.core.services import AppContext
+from aoi.ui.main_window import MainWindow
+from aoi.ui.pages.compare import CHECK_NAMES, JUDGED, MODES, RULES, SOURCES, ComparePage
+from aoi.ui.pages.inspection import InspectionPage
 from tests.conftest import TrainedModel
 from tests.regression import make_regression_set as rs
-from tools.update_translations import TS_FILE
+from tools.update_translations import TS_FILE, qt_tool
 
 # The Charter's "Words we use": the "Not" column of each term, and the words its plain-words rule bans.
 BANNED = [
@@ -149,8 +155,9 @@ def test_req_cmp_004_why_without_a_failing_check() -> None:
 def test_req_cmp_004_uses_only_glossary_terms() -> None:
     """Every sentence template (all of them: the list is the one pyside6-lupdate extracts under "Explain"), and every
     name, source, rule and view the Compare page shows, uses the Charter's terms: no word from the glossary's "Not"
-    column, "model" only as AI model or board model; the sentences use no engineering jargon and give every check's
-    value and threshold."""
+    column, "model" only as AI model or board model; the sentences and the check names use no engineering jargon (a
+    name may give the method in brackets after the plain words), and every check's sentence gives its value and
+    threshold."""
     contexts = ET.parse(TS_FILE).getroot().findall("context")
     marked = {m.findtext("source") for c in contexts if c.findtext("name") == "Explain" for m in c.findall("message")}
     assert set(ex.TEMPLATES) == marked
@@ -161,5 +168,48 @@ def test_req_cmp_004_uses_only_glossary_terms() -> None:
         assert not LONE_MODEL.search(text), text
     for text in ex.TEMPLATES:
         assert not any(word.lower() in text.lower() for word in JARGON), text
+    for text in CHECK_NAMES.values():  # "Similarity (SSIM)": the plain words first, the method only in brackets
+        assert not any(word.lower() in re.sub(r"\(.*?\)", "", text).lower() for word in JARGON), text
     for template in CHECK_TEMPLATES:
         assert "{value}" in template and "{threshold}" in template, template
+
+
+def test_req_cmp_004_the_sentences_reach_the_screens(qtbot: QtBot, ctx: AppContext, tmp_path: Path) -> None:
+    """Compare's box shows the heading and every sentence of `explain`, a value as text and never as markup, and a
+    translated template in the UI language with its values in place; the Inspection page words the checks that did
+    not run the same way."""
+    win = MainWindow(ctx)
+    qtbot.addWidget(win)
+    page, inspection = win.pages["Compare"], win.pages["Inspection"]
+    assert isinstance(page, ComparePage) and isinstance(inspection, InspectionPage)
+    checks = [_check(*CASES[1][0]), _check(*CASES[8][0]), _check(*CASES[10][0])]
+    res = InspectionResult(
+        NG, 1.3, checks=checks, notes=[NO_AI_NOTE, "<b>1 & 2</b>"], image=np.zeros((8, 8, 3), np.uint8)
+    )
+    page._show_result(res)
+    assert page.why.toPlainText().split("\n") == ["Why this board is NG:", *(f"• {s.text()}" for s in ex.explain(res))]
+    assert page.why.toPlainText().endswith("Note: <b>1 & 2</b>"), "a value is shown as text, never as markup"
+    inspection._on_result((tmp_path / "b.png", res, None, None, None))
+    assert inspection.summary.text().split("\n")[1:] == [NOTE_TEXTS[1], "Note: <b>1 & 2</b>"]
+    korean = "AI 점수가 {value}로 임계값 {threshold} 이상입니다."
+    tree = ET.parse(TS_FILE)
+    for context in tree.getroot().findall("context"):
+        for message in context.findall("message"):
+            if (context.findtext("name"), message.findtext("source")) == (
+                "Explain",
+                ex.CHECKS[("AI anomaly score", NG)],
+            ):
+                translation = message.find("translation")
+                assert translation is not None
+                translation.text = korean
+                translation.attrib.pop("type", None)
+    tree.write(tmp_path / "test.ts", encoding="utf-8", xml_declaration=True)
+    qm = tmp_path / "test.qm"
+    subprocess.run([qt_tool("pyside6-lrelease"), "-silent", str(tmp_path / "test.ts"), "-qm", str(qm)], check=True)
+    translator = QTranslator()
+    assert translator.load(str(qm)) and QCoreApplication.installTranslator(translator)
+    try:
+        page._show_result(res)
+        assert "AI 점수가 3.25로 임계값 2.50 이상입니다." in page.why.toPlainText(), page.why.toPlainText()
+    finally:
+        QCoreApplication.removeTranslator(translator)
