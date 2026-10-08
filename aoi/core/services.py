@@ -35,7 +35,7 @@ from . import anomaly
 from .imaging import align_to_reference, encode_image, list_images, load_image, load_image_sha256, save_image
 from .inspector import NG, OK, WARN, AiEvidence, InspectionResult, Inspector, draw_overlay, re_grade
 from .jobs import JobCancelled, Jobs
-from .maps import load_maps, save_maps
+from .maps import load_maps, picture_shape, save_maps
 from .recipe import Recipe
 
 ALARM_LIMIT = 1000  # REQ-INSP-006: the alarms a screen shows and that survive a restart
@@ -784,11 +784,14 @@ class AppContext:
     def inspection_result(self, inspection_id: int, with_maps: bool = False) -> InspectionResult | None:
         """One stored result read back without its images (verdict, checks, defects, compare metrics and regions, as
         decided) for Compare (REQ-INSP-008); with `with_maps`, the stored maps too, where their files exist
-        (REQ-INSP-012), and AOI-CMP-003 for one there that cannot be read. None for a record from before migration
-        0006."""
+        (REQ-INSP-012), and AOI-CMP-003 for one there that cannot be read or is not the map stored (in colour, or not
+        the size of its board picture, #249). None for a record from before migration 0006."""
         doc = self.db.inspection_result(inspection_id)
         res = InspectionResult.from_dict(doc) if doc is not None else None
-        return load_maps(res, *self.db.map_paths(inspection_id)) if res is not None and with_maps else res
+        if res is None or not with_maps:
+            return res
+        rec = self.db.inspection(inspection_id)
+        return load_maps(res, *self.db.map_paths(inspection_id), picture_shape(rec["overlay_path"] if rec else None))
 
     def judged_reference(self, inspection_id: int) -> tuple[np.ndarray | None, Judged]:
         """The golden board a stored result was judged against (REQ-CMP-003): its image and "same" while its file holds
@@ -826,7 +829,8 @@ class AppContext:
         Raises AOI-USR-001 below the Engineer role; AOI-CMP-002 for an unknown UUID or a result stored without its
         decision table; AOI-CMP-005 when `thresholds` are another board model's; AOI-CMP-003 when a map it reads is
         there but cannot be read; AOI-CMP-004 when a map, or the AI model's calibration, that a check `thresholds`
-        uses was judged on is gone; and AOI-INSP-010 when `thresholds` leave no check that ran on the board."""
+        uses was judged on is gone; and AOI-INSP-010 when `thresholds` leave no check that ran on the board. A map that
+        is not the map stored (in colour, or not the size of the result's board picture) cannot be read (#249)."""
         iid = self.db.inspection_id(result_uuid)
         rec = self.db.inspection(iid) if iid is not None else None
         res = self.inspection_result(iid) if iid is not None else None
@@ -838,7 +842,8 @@ class AppContext:
         if thresholds.board_model != rec["board_model"]:
             raise AoiError("AOI-CMP-005", tried=thresholds.board_model, file=file, judged=rec["board_model"])
         diff_path, ai_path = self.db.map_paths(iid)
-        load_maps(res, diff_path if thresholds.use_compare else None, ai_path if thresholds.use_ai else None)
+        shape = picture_shape(rec["overlay_path"])  # the size the board was judged at: its maps' (#249)
+        load_maps(res, diff_path if thresholds.use_compare else None, ai_path if thresholds.use_ai else None, shape)
         missing: list[str] = []  # only what the thresholds use, as re_grade asks for it
         if thresholds.use_compare and res.compare is not None and res.compare.diff_map is None:
             missing.append(QT_TRANSLATE_NOOP("Errors", "difference map"))

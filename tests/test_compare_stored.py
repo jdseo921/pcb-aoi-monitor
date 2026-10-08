@@ -11,6 +11,7 @@ from pathlib import Path
 from time import perf_counter
 from typing import Any
 
+import cv2
 import numpy as np
 import pytest
 from PySide6.QtCore import Qt
@@ -19,6 +20,7 @@ from pytestqt.qtbot import QtBot
 
 from aoi.core import anomaly
 from aoi.core.explain import explain
+from aoi.core.imaging import save_image
 from aoi.core.inspector import Check, InspectionResult, Inspector, draw_overlay
 from aoi.core.recipe import Recipe
 from aoi.core.services import AppContext
@@ -395,7 +397,9 @@ def test_req_cmp_003_re_evaluate_hides_board_picture_no_longer_stored(
     assert compare.stored is None and compare.test_empty.isHidden(), "the fresh result is not under the block"
 
 
-@pytest.mark.parametrize("damaged", ["diff_map_path", "overlay_path", "database", "busy"])
+@pytest.mark.parametrize(
+    "damaged", ["diff_map_path", "overlay_path", "database", "busy", "colour diff map", "half-size AI map"]
+)
 def test_req_cmp_003_another_records_golden_board_never_stays_beside_a_stored_result(
     qtbot: QtBot,
     trained_ctx: AppContext,
@@ -409,7 +413,9 @@ def test_req_cmp_003_another_records_golden_board_never_stays_beside_a_stored_re
     its "as judged" label and A's boxes beside B's verdict, the test pane said nothing, and a damaged overlay showed
     AOI-INSP-004, which advises saving the image with an image tool. Now the pane shows B's golden board as judged, or
     says why it shows none, and the dialog names the file: AOI-CMP-003 for a map, AOI-CMP-006 for the overlay. A
-    database another program holds is AOI-SET-013 on both panes, as in the dialog (review)."""
+    database another program holds is AOI-SET-013 on both panes, as in the dialog (review). A map an image editor
+    re-saved in colour or at half size reads as damaged (#249), as a map that cannot be read; before, no dialog
+    opened."""
     ctx = trained_ctx
     golden = Path(str(ctx.reference_image(BOARD)))
     ctx.inspect_file(BOARD, str(ng_board))
@@ -440,8 +446,16 @@ def test_req_cmp_003_another_records_golden_board_never_stays_beside_a_stored_re
         raise sqlite3.DatabaseError("database disk image is malformed")
 
     code = "AOI-SET-013" if damaged == "busy" else "AOI-SET-007"
+    column = {"colour diff map": "diff_map_path", "half-size AI map": "ai_map_path"}.get(damaged, damaged)
     if damaged in ("database", "busy"):
         monkeypatch.setattr(ctx, "judged_reference", refused)
+    elif column != damaged:  # a whole PNG that decodes, as an image editor saves it
+        stored = cv2.imread(str(rec[column]), cv2.IMREAD_UNCHANGED)
+        h, w = stored.shape
+        edited = (
+            cv2.cvtColor(stored, cv2.COLOR_GRAY2BGR) if "colour" in damaged else cv2.resize(stored, (w // 2, h // 2))
+        )
+        save_image(str(rec[column]), edited)
     else:
         Path(str(rec[damaged])).write_bytes(b"damaged")
     compare.show_stored(b)
@@ -466,12 +480,13 @@ def test_req_cmp_003_another_records_golden_board_never_stays_beside_a_stored_re
     assert compare.ref_label.text() == f"Golden board as judged: {judged.name}" and compare.ref_empty.isHidden()
     assert compare.as_judged is not None and np.array_equal(compare.as_judged[1], ctx.load_image(judged))
     assert compare.ref_view._pix is not None
-    name = Path(str(rec[damaged])).name
+    name = Path(str(rec[column])).name
     assert f"{dialogs[0][0].split()[0]} " in compare.note.text(), "the note keeps why a stored file is not shown"
-    if damaged == "diff_map_path":  # the maps go; the picture and B's boxes on both panes stay
+    if column != "overlay_path":  # the maps go; the picture and B's boxes on both panes stay
         assert dialogs == [("AOI-CMP-003 Stored map cannot be read", dialogs[0][1])] and name in dialogs[0][1]
         assert compare.test_view._pix is not None and compare.ref_view._overlay_items and compare.test_empty.isHidden()
         assert compare.res is not None and compare.res.compare is not None and compare.res.compare.diff_map is None
+        assert compare.res.anomaly_map is None
     else:  # the picture goes, said on the test pane; the dialog speaks of a stored file, not of re-saving an image
         assert [d[0] for d in dialogs] == ["AOI-CMP-006 Stored board picture cannot be read"] and name in dialogs[0][1]
         assert "image tool" not in dialogs[0][1]

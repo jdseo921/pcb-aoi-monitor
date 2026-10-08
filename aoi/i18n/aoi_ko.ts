@@ -484,17 +484,17 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+136"/>
+        <location line="+139"/>
         <source>Re-evaluating a result</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+17"/>
+        <location line="+18"/>
         <source>file unknown</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+10"/>
+        <location line="+11"/>
         <source>difference map</source>
         <translation type="unfinished"></translation>
     </message>
@@ -569,12 +569,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-556"/>
+        <location line="-561"/>
         <source>its UUID {found} is not {uuid}, as in the AI model registry</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+571"/>
+        <location line="+576"/>
         <source>Changing settings</source>
         <translation type="unfinished"></translation>
     </message>
@@ -701,7 +701,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/maps.py" line="+97"/>
+        <location filename="../core/maps.py" line="+28"/>
         <source>the file is damaged</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3255,7 +3255,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/services.py" line="-1097"/>
+        <location filename="../core/services.py" line="-1102"/>
         <source>Aligning {count} images to the reference board</source>
         <translation type="unfinished"></translation>
     </message>

@@ -28,7 +28,9 @@ narrower than the one judged, and an ROI peak just under its threshold can read 
 4. **Formats are told apart by file name.** Format 1 files keep their name and read as before; a later format takes
    a new name and decoder beside the old, so no record or migration changes.
 5. **Unreadable maps say so.** A map file that is gone reads as missing (AOI-CMP-001 once both are); one that is there
-   but cannot be read or decoded raises AOI-CMP-003, naming the file and why.
+   but cannot be read or decoded raises AOI-CMP-003, naming the file and why. One that decodes but is not the map
+   written counts as damaged (#249): not one channel, not 8-bit (difference map) or 16-bit (AI map), or not the size of
+   the board picture beside it, read from that PNG's header (without it, the two maps must have one size).
 
 ## Alternatives considered
 

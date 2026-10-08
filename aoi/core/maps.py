@@ -6,8 +6,8 @@ value in steps of 0.001 sigma, up to 32.767 sigma, and a code from AI_KNEE up a 
 1 / anomaly.SPREAD_FLOOR = 1000, its error being at most 1). Each pixel is kept on the side of the AI model's pixel
 threshold it was judged on, so judging a stored result again (REQ-CMP-005) finds the AI defects it was judged with and
 reads every value within one step. `<base>_ai.png` files (format 1, S25c to S27) hold 0.001 sigma steps clipped at
-65.535 sigma and read as such. Both maps are written whole or not at all (`save_image`); another format takes another
-file name (docs/adr/0005-stored-ai-map-format-2.md)."""
+65.535 sigma and read as such. Both maps are written whole or not at all (`save_image`), one channel each, at the size
+of the board picture beside them; another format takes another file name (docs/adr/0005-stored-ai-map-format-2.md)."""
 
 from __future__ import annotations
 
@@ -18,13 +18,14 @@ import cv2
 import numpy as np
 
 from ..errors import QT_TRANSLATE_NOOP, AoiError
-from .imaging import save_image
+from .imaging import image_header, save_image
 from .inspector import InspectionResult
 
 AI_SCALE = 1000  # codes per sigma below AI_KNEE: steps of 0.001 sigma
 AI_KNEE = 32768  # the code of 32.768 sigma, where the log scale starts
 AI_LOG_STEPS = 8192  # codes per factor e above the knee: each step 1/8192 of the value
 AI_FILE, AI_FILE_V1 = "_ai2.png", "_ai.png"  # the AI map's file name ending, by format
+DAMAGED = QT_TRANSLATE_NOOP("Errors", "the file is damaged")
 
 
 def _values(codes: np.ndarray) -> np.ndarray:
@@ -80,9 +81,10 @@ def save_maps(res: InspectionResult, base: Path, *, pixel_threshold: float | Non
 
 
 def read_map(path: str | Path) -> np.ndarray | None:
-    """A stored map as written, 8- or 16-bit, from a path that may hold non-ASCII characters (Windows); None when its
-    file is gone (the sweep deleted it, or it went as it was read). A file that is there but cannot be read (locked by
-    another program, no permission) or decoded (damaged) raises AOI-CMP-003, naming it."""
+    """A stored map as its file decodes, from a path that may hold non-ASCII characters (Windows); None when its file
+    is gone (the sweep deleted it, or it went as it was read). A file that is there but cannot be read (locked by
+    another program, no permission) or decoded (damaged) raises AOI-CMP-003, naming it. Whether what decodes is the map
+    written (one channel, its bit depth, its size) `load_maps` checks: one that is not counts as damaged too (#249)."""
     try:
         data = Path(path).read_bytes()
     except FileNotFoundError:
@@ -94,19 +96,52 @@ def read_map(path: str | Path) -> np.ndarray | None:
     except cv2.error:  # a header claiming more pixels than OpenCV decodes
         img = None
     if img is None:
-        raise AoiError("AOI-CMP-003", file=Path(path).name, reason=QT_TRANSLATE_NOOP("Errors", "the file is damaged"))
+        raise AoiError("AOI-CMP-003", file=Path(path).name, reason=DAMAGED)
     return img
 
 
-def load_maps(res: InspectionResult, diff_path: str | None, ai_path: str | None) -> InspectionResult:
+def picture_shape(path: str | Path | None) -> tuple[int, int] | None:
+    """(height, width) of the stored board picture (the overlay PNG) from its header, without decoding a pixel: the size
+    the board was judged at, which both maps have. None when there is no path, its file is gone or cannot be read, or
+    its header gives no size."""
+    if not path:
+        return None
+    try:
+        with Path(path).open("rb") as f:
+            found = image_header(f.read(24))  # a PNG's signature and IHDR hold its size
+    except OSError:
+        return None
+    return (found[2], found[1]) if found and found[1] > 0 and found[2] > 0 else None
+
+
+def _check(img: np.ndarray, path: str, dtype: type, shape: tuple[int, ...] | None) -> None:
+    """AOI-CMP-003 naming `path` as damaged unless `img`, read from it, is the map written there: one channel of
+    `dtype`, and `shape` when given (an image editor re-saves a map in colour, or at another size or bit depth)."""
+    if img.ndim != 2 or img.dtype != dtype or (shape is not None and img.shape != shape):
+        raise AoiError("AOI-CMP-003", file=Path(path).name, reason=DAMAGED)
+
+
+def load_maps(
+    res: InspectionResult, diff_path: str | None, ai_path: str | None, shape: tuple[int, int] | None = None
+) -> InspectionResult:
     """Put the stored maps back on a result; a map never stored, or whose file is gone, stays None, and one that cannot
-    be read raises AOI-CMP-003 (`read_map`). The AI map decodes on a thread of its own while the difference map decodes
-    here (decoding a PNG releases the GIL), so at 5 MP reading both takes about as long as the slower one."""
+    be read raises AOI-CMP-003 (`read_map`). So does one that is not the map written (#249): not one channel, not 8-bit
+    (difference map) or 16-bit (AI map, either format), or not `shape`, the (height, width) of the board picture it was
+    judged on (`picture_shape`); without `shape`, two maps read must have one size, and the difference map is named
+    when they do not. The result gets either map only when every map read passes. The AI map decodes on a thread of its
+    own while the difference map decodes here (decoding a PNG releases the GIL), so at 5 MP reading both takes about as
+    long as the slower one."""
     with ThreadPoolExecutor(max_workers=1) as pool:
         ai = pool.submit(read_map, ai_path) if ai_path else None
-        if diff_path and res.compare is not None and (diff := read_map(diff_path)) is not None:
-            res.compare.diff_map = np.asarray(diff, dtype=np.float32)  # the compare step's float32
-        if ai is not None and ai_path is not None and (codes := ai.result()) is not None:
-            v1 = ai_path.endswith(AI_FILE_V1)
-            res.anomaly_map = np.asarray(codes, dtype=np.float32) / np.float32(AI_SCALE) if v1 else decode_ai(codes)
+        diff = read_map(diff_path) if diff_path and res.compare is not None else None
+        codes = ai.result() if ai is not None else None
+    if codes is not None and ai_path is not None:
+        _check(codes, ai_path, np.uint16, shape)
+    if diff is not None and diff_path is not None:
+        _check(diff, diff_path, np.uint8, shape or (codes.shape if codes is not None else None))
+    if diff is not None and res.compare is not None:
+        res.compare.diff_map = np.asarray(diff, dtype=np.float32)  # the compare step's float32
+    if codes is not None and ai_path is not None:
+        v1 = ai_path.endswith(AI_FILE_V1)
+        res.anomaly_map = np.asarray(codes, dtype=np.float32) / np.float32(AI_SCALE) if v1 else decode_ai(codes)
     return res
