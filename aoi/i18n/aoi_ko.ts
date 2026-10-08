@@ -2496,7 +2496,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/training.py" line="+371"/>
+        <location filename="../ui/pages/training.py" line="+404"/>
         <location filename="../ui/pages/training_import.py" line="+38"/>
         <source>{code} {title}</source>
         <translation type="unfinished"></translation>
@@ -3246,7 +3246,7 @@
 <context>
     <name>LabelEditor</name>
     <message>
-        <location filename="../ui/pages/training_labels.py" line="+114"/>
+        <location filename="../ui/pages/training_labels.py" line="+116"/>
         <source>Draw Box</source>
         <translation>박스 그리기</translation>
     </message>
@@ -3276,7 +3276,7 @@
         <translation>박스 삭제</translation>
     </message>
     <message>
-        <location line="+7"/>
+        <location line="+8"/>
         <source>Opening the image…</source>
         <translation>이미지를 여는 중…</translation>
     </message>
@@ -3321,7 +3321,7 @@
         <translation>박스 {number}을(를) 삭제했습니다. 실행 취소 또는 Ctrl+Z로 되돌릴 수 있습니다</translation>
     </message>
     <message>
-        <location line="+53"/>
+        <location line="+57"/>
         <source>Wait until the image is open and the last change is stored</source>
         <translation>이미지가 열리고 마지막 변경 사항이 저장될 때까지 기다리십시오</translation>
     </message>
@@ -3832,7 +3832,7 @@
 <context>
     <name>NgDialog</name>
     <message>
-        <location filename="../ui/pages/training.py" line="-290"/>
+        <location filename="../ui/pages/training.py" line="-299"/>
         <source>Label NG images</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4630,23 +4630,23 @@
     </message>
     <message>
         <location line="+1"/>
-        <location line="+470"/>
+        <location line="+533"/>
         <source>Import Folder…</source>
         <translation>폴더 가져오기…</translation>
     </message>
     <message>
-        <location line="-462"/>
+        <location line="-525"/>
         <source>Tip: 20+ OK images give a steadier threshold</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location line="+10"/>
-        <location line="+54"/>
+        <location line="+63"/>
         <source>ID</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-54"/>
+        <location line="-63"/>
         <source>Label</source>
         <translation>라벨</translation>
     </message>
@@ -4673,31 +4673,46 @@
     <message>
         <location line="+3"/>
         <source>Mark OK</source>
-        <translation type="unfinished"></translation>
+        <translation>OK로 표시</translation>
     </message>
     <message>
         <location line="+1"/>
-        <source>Mark NG…</source>
-        <translation type="unfinished"></translation>
+        <source>Mark NG</source>
+        <translation>NG로 표시</translation>
     </message>
     <message>
         <location line="+1"/>
+        <source>Mark UNSURE</source>
+        <translation>UNSURE로 표시</translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>Next image</source>
+        <translation>다음 이미지</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Previous image</source>
+        <translation>이전 이미지</translation>
+    </message>
+    <message>
+        <location line="+4"/>
         <source>Set Reference</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location line="+1"/>
-        <location line="+309"/>
+        <location line="+328"/>
         <source>Remove</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-303"/>
+        <location line="-322"/>
         <source>Select a sample to preview</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+8"/>
+        <location line="+9"/>
         <source>Self-training</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4812,7 +4827,7 @@
         <translation>가져오기 취소됨: 멈추기 전에 OK 이미지 {ok}개와 NG 이미지 {ng}개를 {board_model}(으)로 가져왔습니다</translation>
     </message>
     <message>
-        <location line="+54"/>
+        <location line="+72"/>
         <source>Reference image set: inspections compare against it now, until training learns a Golden board</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4822,7 +4837,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+60"/>
+        <location line="+45"/>
+        <source>{type} ×{count}</source>
+        <translation>{type} ×{count}</translation>
+    </message>
+    <message>
+        <location line="+44"/>
         <source>epoch {epoch}/{total}  loss {loss:.4f}</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4852,7 +4872,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+34"/>
+        <location line="+41"/>
         <source>Add at least 20 OK boards with Add OK Images… or Import Folder…</source>
         <translation>OK 이미지 추가… 또는 폴더 가져오기…로 OK 보드를 20개 이상 추가하세요</translation>
     </message>

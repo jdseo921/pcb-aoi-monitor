@@ -158,6 +158,7 @@ def test_req_trn_007_mark_ng_and_remove_skip_only_the_reference_whatever_the_sel
 
     select(ref, a, b)
     page._relabel("NG")
+    qtbot.waitUntil(page.editor.idle)  # relabelled on a pool thread
     assert {s["id"]: s["label"] for s in ctx.samples("B")} == {ref: "OK", a: "NG", b: "NG", c: "OK"}
     select(ref, c)
     page._remove()
