@@ -39,7 +39,7 @@ from ..widgets.busy import BusyOverlay
 from ..widgets.empty_state import EmptyState
 from ..widgets.image_view import ImageView
 from ..widgets.scale import CalibrationSheet, DefectSizeField
-from .base import QT_TRANSLATE_NOOP, Page, button, fill_table, make_table
+from .base import QT_TRANSLATE_NOOP, Page, button, fill_table, make_table, scrolled
 
 if TYPE_CHECKING:
     from ..main_window import MainWindow
@@ -195,7 +195,7 @@ class RecipeEditorPage(Page):
             (self.maxreg, self.tr("Allowed difference regions")),
         ):
             tf.addRow(label, w) if label else tf.addRow(w)
-        tabs.addTab(thr_tab, self.tr("Thresholds"))
+        tabs.addTab(scrolled(thr_tab), self.tr("Thresholds"))  # scrolls where the window is too short for its rows
 
         # Mandatory defect set tab (classification table §4)
         mand = QWidget()

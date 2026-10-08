@@ -94,7 +94,9 @@ image noise: AOI-RCP-007 shows in amber, on Thresholds under the field with what
 with the least size, at the top of the "why" box while Try other thresholds shows (REQ-INSP-014). At 4 px or more the
 px beside the size carry a ✓. The recipe saves all the same, and the audit entry of its revision keeps the code. After
 Set Scale, the status bar says AOI-RCP-007 too while the size spans under 4 px at the new scale, as a size held in mm
-can at a smaller scale.
+can at a smaller scale. When the window is too short for every field of the Thresholds tab, as on a 1600 × 900 screen
+with this notice and the note under the AI score threshold shown, the tab scrolls: use the scroll bar at its right,
+the mouse wheel, or Tab, which brings each field into view.
 
 (to be written: creating a board model in full)
 

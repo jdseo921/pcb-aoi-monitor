@@ -9,9 +9,12 @@ from PySide6.QtCore import QCoreApplication, Qt
 from PySide6.QtGui import QAction, QColor, QFont, QKeySequence
 from PySide6.QtWidgets import (
     QAbstractItemView,
+    QApplication,
+    QFrame,
     QHBoxLayout,
     QLabel,
     QPushButton,
+    QScrollArea,
     QTableWidget,
     QTableWidgetItem,
     QVBoxLayout,
@@ -434,3 +437,34 @@ def cell_item(t: QTableWidget, row: int, column: int) -> QTableWidgetItem:
     if item is None:
         raise LookupError(f"the table has no item at row {row}, column {column}")
     return item
+
+
+class _Scrolled(QScrollArea):
+    """Shows the whole of a field in it as the field takes the focus, by Tab or a click: Qt's own scroll area shows only
+    a field's text cursor, on Tab alone (on Linux, the Recipe Editor's Thresholds tab at 1366 x 768 left 8 of a spin
+    box's 45 px under its edge). Its connection to the application's focusChanged goes when the area does."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        app = QApplication.instance()
+        if isinstance(app, QApplication):
+            app.focusChanged.connect(self._show_whole)
+
+    def _show_whole(self, _old: QWidget | None, field: QWidget | None) -> None:
+        content = self.widget()
+        if field is not None and content is not None and content.isAncestorOf(field):
+            centre = field.mapTo(content, field.rect().center())
+            self.ensureVisible(centre.x(), centre.y(), field.width() // 2 + 1, field.height() // 2 + 1)
+
+
+def scrolled(content: QWidget) -> QScrollArea:
+    """`content` in an area that scrolls it rather than squeeze a row where the area is shorter than its rows need at
+    its width: the Recipe Editor's Thresholds tab, which at 1600 x 900 with Windows' fonts, AOI-RCP-007 and the AI score
+    threshold's note shown had 597 of the 615 px its rows need. `content` is as wide as the area, which has no frame of
+    its own and takes no focus: Tab goes on to the fields, each shown whole."""
+    area = _Scrolled()
+    area.setWidget(content)
+    area.setWidgetResizable(True)
+    area.setFrameShape(QFrame.Shape.NoFrame)
+    area.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+    return area

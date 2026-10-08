@@ -9,7 +9,7 @@ import math
 from pathlib import Path
 
 import pytest
-from PySide6.QtCore import QPoint, QPointF, QRectF, Qt
+from PySide6.QtCore import QPoint, QPointF, QRect, QRectF, Qt
 from PySide6.QtWidgets import (
     QApplication,
     QGraphicsEllipseItem,
@@ -17,7 +17,9 @@ from PySide6.QtWidgets import (
     QGraphicsLineItem,
     QGraphicsRectItem,
     QMessageBox,
+    QScrollArea,
     QTabWidget,
+    QWidget,
 )
 from pytestqt.qtbot import QtBot
 
@@ -446,7 +448,12 @@ def test_req_insp_014_the_notice_squeezes_no_row_at_1600_by_900(
     """AOI-RCP-007 on the Recipe Editor and Compare at 1600 x 900 and 1920 x 1080, in each state of the AI score
     threshold's note: no row of either page's thresholds is squeezed for it, the window is no wider, and Compare's "why"
     box keeps theme.WHY_MIN_H (S29 review: on Windows the panel was too short for its rows, which
-    test_req_trn_015_tick_and_note_never_widen_the_window checks without the notice)."""
+    test_req_trn_015_tick_and_note_never_widen_the_window checks without the notice). The Recipe Editor's Thresholds
+    tab scrolls where the window is too short for its rows: Windows' fonts left it 597 of the 615 px they need at
+    1600 x 900 ("unreadable"). At 1366 x 768, the least screen REQ-SET-004 reviews pages at (which the window does not
+    fit yet, #104), the window is as short as its pages let it be, which with DejaVu Sans left the tab 527 of the 595 px
+    its rows need ("unreadable") and of 549 ("none-trained"); there, Tab shows each field it reaches whole, where Qt's
+    own scroll area left 8 of a spin box's 45 px under its edge."""
     ctx = trained_ctx
     model = ctx.active_model(BOARD)
     assert model is not None
@@ -463,7 +470,7 @@ def test_req_insp_014_the_notice_squeezes_no_row_at_1600_by_900(
     assert isinstance(editor, RecipeEditorPage) and isinstance(compare, ComparePage)
     tabs = editor.findChild(QTabWidget)
     assert tabs is not None
-    tabs.setCurrentWidget(editor.ai_thr.parentWidget())  # the Thresholds tab, where the field is
+    tabs.setCurrentIndex(next(i for i in range(tabs.count()) if tabs.widget(i).isAncestorOf(editor.ai_thr)))
     for size in ((1600, 900), (1920, 1080)):
         win.resize(*size)
         for page in (editor, compare):
@@ -474,3 +481,17 @@ def test_req_insp_014_the_notice_squeezes_no_row_at_1600_by_900(
             said = page.min_size.notice.isVisible() if page is editor else "AOI-RCP-007" in compare.why.toPlainText()
             assert said and win.width() <= max(size[0], MIN_WIDTH), (page.title, size)
         assert compare.why.height() >= theme.WHY_MIN_H, size
+    win.resize(1366, 768)  # the window as short as its pages let it be: with a note, shorter than the tab's rows
+    win.navigate(editor.title)
+    QApplication.processEvents()
+    rows = editor.ai_thr.parentWidget()
+    assert rows.height() >= rows.heightForWidth(rows.width()), ("Recipe Editor", win.size(), rows.height(), "squeezed")
+    area = tabs.currentWidget()
+    assert isinstance(area, QScrollArea) and area.widget() is rows
+    fields = [w for w in rows.findChildren(QWidget) if w.isVisible() and w.focusPolicy() & Qt.FocusPolicy.TabFocus]
+    fields[0].setFocus(Qt.FocusReason.TabFocusReason)
+    shown = []  # each field Tab reaches, and where it shows in the area
+    while (field := QApplication.focusWidget()) in fields and len(shown) < len(fields):
+        shown.append((type(field).__name__, QRect(field.mapTo(area.viewport(), QPoint(0, 0)), field.size())))
+        qtbot.keyClick(field, Qt.Key.Key_Tab)
+    assert len(shown) >= 9 and all(area.viewport().rect().contains(r) for _, r in shown), shown

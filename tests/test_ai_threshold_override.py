@@ -586,7 +586,7 @@ def test_req_trn_015_tick_and_note_never_widen_the_window(qtbot: QtBot, trained_
     pages = {"Recipe Editor": editor.ai_thr, "Compare": compare.ai_thr}
     tabs = editor.findChild(QTabWidget)
     assert tabs is not None
-    tabs.setCurrentWidget(editor.ai_thr.parentWidget())  # the Thresholds tab, where the field is
+    tabs.setCurrentIndex(next(i for i in range(tabs.count()) if tabs.widget(i).isAncestorOf(editor.ai_thr)))
     for title in pages:  # each page built and shown once
         win.navigate(title)
     cal = ctx.calibrated_threshold(BOARD) if state == "calibrated" else None
