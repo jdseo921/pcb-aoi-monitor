@@ -9,11 +9,14 @@ import sys
 from datetime import UTC, datetime
 from pathlib import Path
 
+import pytest
+from PySide6.QtWidgets import QMessageBox
+
 from aoi.config import APP_VERSION, Settings, default_workspace
 from aoi.core.services import ALARM_LIMIT, AppContext
 from aoi.ui.errors import install_excepthook
 from aoi.ui.main_window import MainWindow
-from tests.test_req_done_in_v01 import _inspect_one, _window
+from tests.test_req_done_in_v01 import BOARD, _inspect_one, _window
 
 # ISO date, 24-hour time, level, code and message, two spaces apart (REQ-INSP-006)
 ALARM_LINE = re.compile(r"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}  \[(NG|WARN|ERROR)\]  AOI-[A-Z0-9]+-\d{3}  .+$")
@@ -127,3 +130,23 @@ def test_req_set_019_page_errors_show_code_what_and_action_never_a_trace(
     assert [r["code"] for r in rows] == ["AOI-USR-001", "AOI-SET-007", "AOI-INSP-001"]
     assert rows[1]["context"] == "Compare" and "ValueError: secret detail" in str(rows[1]["trace"])
     assert [a["code"] for a in trained_ctx.alarms()] == ["AOI-INSP-001", "AOI-SET-007", "AOI-USR-001"]
+
+
+def test_req_set_019_compare_save_to_recipe_without_a_board_model_asks_for_one(
+    qtbot, trained_ctx: AppContext, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Before S22b the save reached the database with no board model and came back as an unexpected-error dialog."""
+    win = _window(qtbot, trained_ctx)
+    before = trained_ctx.recipe_history(BOARD)
+    asked: list[tuple[str, str]] = []
+
+    def record(parent: object, title: str, text: str, *buttons: object) -> QMessageBox.StandardButton:
+        asked.append((title, text))
+        return QMessageBox.StandardButton.Ok
+
+    monkeypatch.setattr(QMessageBox, "information", staticmethod(record))
+    win._on_board_model("")  # the top bar cleared, as after the last board model is removed
+    assert win.board_model is None
+    win.pages["Compare"].save_recipe()
+    assert asked == [("Board model", "Create or select a board model in the top bar first.")]
+    assert trained_ctx.recipe_history(BOARD) == before
