@@ -566,7 +566,12 @@ read the Golden board again when shown if the file, or which file it is, changed
 (`Page.golden_board_stamp`); inspecting a board of
 that board model is refused with AOI-INSP-009, which is alarmed; Compare then clears the verdict of the board
 before, says on its test pane that the board was not inspected, and judges it when shown again once the Golden board
-can be read (#176). The page in use is kept in `settings.json` and reopened at start-up (REQ-INSP-006, REQ-LOG-005);
+can be read (#176). Compare's stored result clears both panes at once; a stored map that cannot be read (AOI-CMP-003)
+takes away only the heat views, and a stored overlay that cannot be read (AOI-CMP-006) only the picture: the pane
+shows the golden board as judged, the dialog names the file and the note under the verdict keeps its code. Any other
+error (a database another program holds: AOI-SET-013) leaves both panes empty, each with the dialog's code. Each is
+logged and alarmed on the pool thread, and nothing of a load shows once the page has moved on (#247). The page in use
+is kept in `settings.json` and reopened at start-up (REQ-INSP-006, REQ-LOG-005);
 a page change writes that key alone. A workspace saved on Settings goes to `settings.json` only: the running app keeps
 its database, log and folders on the open workspace until the restart (REQ-SET-001, #170). The AI device, the
 default epochs and input size and the log retention apply at once: `save_settings` resolves the AI device again and,

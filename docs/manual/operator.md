@@ -83,8 +83,8 @@ under the verdict says when the result was judged and with which AI model versio
 revision; when an Engineer has changed either since, it says so, and the table still shows the thresholds that applied
 at the time. When the result's heatmaps are no longer stored (OK results lose them after the retention period), the
 line says so with the code AOI-CMP-001, and the Side by side and Boxes only views still work. When the stored picture
-itself was deleted, the page says "Board picture no longer stored", the table still stands, and Re-evaluate inspects
-the board again from its image file. The Golden board
+itself was deleted, or cannot be read (a message with AOI-CMP-006 names the file), the page says "Board picture no
+longer stored", the table still stands, and Re-evaluate inspects the board again from its image file. The Golden board
 pane names the file the result was judged against. When that file has changed, cannot be read or is gone, or the
 result names none (it was judged without one, or saved before this version), the pane says "Golden board not
 available" and why, rather than show today's Golden board, and Re-evaluate under it inspects the board again with

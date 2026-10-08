@@ -41,6 +41,7 @@ ALLOWED_WORDS = {  # (catalogue code or translation context, Not word): why the 
     ("AOI-SET-004", "fail"): OPERATION,
     ("AOI-SET-009", "fail"): OPERATION,
     ("AOI-CMP-003", "program"): OTHER_PROGRAM,
+    ("AOI-CMP-006", "program"): OTHER_PROGRAM,
     ("AOI-LOG-002", "program"): OTHER_PROGRAM,
     ("AOI-SET-012", "program"): OTHER_PROGRAM,
     ("AOI-SET-013", "program"): OTHER_PROGRAM,
