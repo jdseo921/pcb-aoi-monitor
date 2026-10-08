@@ -14,7 +14,10 @@ Each sketch holds:
 - the empty state and the next step it offers;
 - each error the screen can show, with its `AOI-<AREA>-<NNN>` code (a placeholder until the catalogue exists);
 - the requirement IDs the screen serves (`docs/requirements/stage1.md`);
-- anything the GUI specification leaves open, marked "Question for Jay".
+- anything the GUI specification leaves open, marked "Question for Jay". Since 2026-10-02 (Jay: "Do everything that
+  you would ask me permission for by yourself") each sketch records these under "Decisions (2026-10-02)" with a
+  reason, numbered Q1 to Q58 as in the S01–S02 audit; "Still for Jay" keeps only a MUST departure or a business or
+  contract decision.
 
 Rules every sketch follows (Engineering, "Screens"): role first, verdict first, one frame, at most 2 clicks from
 Home, no dialog over a dialog, destructive buttons red and never focused by default, every string translatable.
@@ -31,14 +34,14 @@ standard's 400 changed lines, in the order of this table; a link below works onc
 | [home-step-cards.md](home-step-cards.md) | Six step cards with status and the training indicator | S40 |
 | [inspection-run-controls.md](inspection-run-controls.md) | Verdict with shape, run controls and keys, view picker, refusals, alarm log, Compare in one click | S14, S18, S23, S24 |
 | [compare-decision-table.md](compare-decision-table.md) | Views, decision table from the stored result, plain-language why, try thresholds, Save to Recipe, AI threshold override | S26, S27, S28 |
-| [recipe-editor.md](recipe-editor.md) | ROI drawing and editing, ROI fields, Test Run, revisions, AOI checklist with reason prompt, mm scale | S29, S49, S50 |
+| [recipe-editor.md](recipe-editor.md) | ROI drawing and editing, zoom and pan, ROI fields, Try Recipe…, revisions, AOI checklist with reason prompt, mm scale | S29, S49, S50 |
 | [training-import.md](training-import.md) | Import files or ok/ and ng/ folders with view and defect type, progress, refused files | S31 |
 | [training-labels.md](training-labels.md) | OK/NG/UNSURE labels with history, defect box editor, second-person check, labeller agreement | S32, S33, S34 |
-| [training-datasets.md](training-datasets.md) | Frozen dataset versions with manifest, validation lock, customer and allowed uses | S35, S36, S38 |
+| [training-datasets.md](training-datasets.md) | Frozen dataset versions with manifest, split and validation lock on a frozen version, customer and allowed uses | S35, S36, S38 |
 | [training-run-and-versions.md](training-run-and-versions.md) | Training run with progress and Cancel, versions, Activate and Roll back, model card, export | S39, S40, S41, S42, S43 |
-| [model-test.md](model-test.md) | Test source, rates as n of N with bounds, recall per type, live results, history, exports, validation report | S44, S45, S46, S47, S48 |
+| [model-test.md](model-test.md) | Test source, rates as n of N with bounds, WARN as NG, synthetic marker, verdict banner, recall per type, live results, history, exports, validation report | S44, S45, S46, S47, S48 |
 | [logs-history.md](logs-history.md) | History table and filters, export with confirmation, archive, Admin-only delete | S51 |
-| [settings-demo.md](settings-demo.md) | Workspace, AI device, input limits, demo load and reset, scripted run pace, presenter theme | S53, S54 |
+| [settings-demo.md](settings-demo.md) | Workspace, AI device, input limits, log and map retention, demo load and reset, scripted run pace, presenter theme | S53, S54 |
 | [profile3d-card.md](profile3d-card.md) | The "Coming in Stage 2" card | S54 |
 
 Sketches still to write before their stages start: the sign-in dialog, user management in Settings and the

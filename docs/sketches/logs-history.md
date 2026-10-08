@@ -4,24 +4,24 @@ Sketch for stage S02; used by stage S51. Frame and patterns: [frame-and-patterns
 
 ## Page and roles
 
-Logs & Export (Data). All roles view; Engineer and Admin export and archive; only an Admin deletes
-(ARCHITECTURE.md §5, REQ-LOG-003). Operators see the table, the filters and the preview; the export, archive and
-delete buttons are not shown to them.
+Logs & Export (Data). All roles view; Engineer and Admin archive; only an Admin exports and deletes (GUI §8;
+Engineering, Security; Q58 below; REQ-LOG-003). Operators see the table, the filters and the preview; Engineers
+also see Archive Now; the export and delete buttons are shown to Admins only.
 
 ## Wireframe (1920 × 1080; at 1366 × 768 the preview collapses to a button)
 
 ```
 Logs & Export
-From [2026-09-24] To [2026-10-01]  Board model [All ▾]  Operator [All ▾]  Result [All ▾]  [▢ Include archived]  [■ Apply Filter]
+From [2026-09-24] To [2026-10-01] Board model [All▾] Operator [All▾] Result [All▾] [▢ Include archived] [■ Apply Filter]
 ┌──────────────────┬───────────┬────────┬────────┬─────────┬────────┬──────┬──────────┬──────────────┐ ┌──────────────┐
 │ Time             │Board model│AI model│ Result │ Defects │Operator│ View │Recipe rev│ Image        │ │ overlay of   │
 │ 2026-10-01 13:33 │ TBOX-A1   │ v1.2   │ ✗ NG   │ 1       │ park   │ Top  │ 4        │ ng_003.png   │ │ the selected │
 │ 2026-10-01 13:32 │ TBOX-A1   │ v1.2   │ ▲ WARN │ 0       │ park   │ Top  │ 4        │ ok_118.png   │ │ row, stored  │
 │ 2026-10-01 13:32 │ TBOX-A1   │ v1.2   │ ✓ OK   │ 0       │ park   │ Top  │ 4        │ ok_117.png   │ │ evidence     │
-│ … 128 rows, every column sorts (REQ-LOG-001) …                                                       │ │[Open in Compare ›]│
+│ … 128 rows, every column sorts (REQ-LOG-001) …                                                     │ │              │
 └──────────────────┴───────────┴────────┴────────┴─────────┴────────┴──────┴──────────┴──────────────┘ └──────────────┘
-128 records · 3 NG · 1 WARN · yield 97.7 % · archived records: 2,310 (older than 30 days)
-[Export CSV…] [Export Overlays…]            [Archive Now]                    [Delete Records…] red, Admin
+128 records · OK 124 of 128 (96.9 %) · NG 3 · WARN 1 · archived 2,310 (older than 30 days)           [Open in Compare ›]
+[Export CSV…] [Export Overlays…] Admin      [Archive Now]                    [Delete Records…] red, Admin
 ```
 
 NG rows carry the red cross and WARN rows the amber triangle in the Result cell; whole rows are not coloured, so
@@ -72,9 +72,10 @@ Compare); one blue primary (Apply Filter); destructive Delete Records red, Admin
 confirmation only before exporting and deleting; no dead ends; glossary (Board model, AI model, Recipe, Verdict
 OK/NG/WARN, Operator); sizes; every string through `self.tr()`.
 
-## Questions for Jay
+## Decisions (2026-10-02)
 
-- Delete scope: the filtered records (proposed) or selected rows only?
-- Should an Operator see other operators' records (proposed, since the filter exists), or only their own?
-- Retention days: 30 as in GUI §4.4, changeable by an Admin in Settings (proposed)?
-- Should Archive Now be a button at all, given it runs at start-up?
+- Q25: Delete Records… deletes the filtered records; the confirmation names the count and asks for a reason. Reason: The filter is how an Admin scopes what goes; one count to confirm.
+- Q26: Operators see every operator's records. Reason: The Operator filter exists, and a shift handover needs the line's history.
+- Q27: Records archive after 30 days, changed by an Admin in Settings. Reason: GUI §4.4 and Engineering ("Logs archive after 30 days"); Settings is Admin only.
+- Q28: Keep Archive Now beside the start-up archive. Reason: REQ-LOG-003 and S51 ask for archiving on demand too.
+- Q58: Only an Admin exports, here and on every page that writes customer images or results out (AI Model Test, the UNSURE list); Engineers archive. The code lets an Engineer export today (ARCHITECTURE.md §5): a follow-up issue. Reason: Engineering, Security (MUST): customer images and results never leave the station unless an Admin exports them; GUI §8 gives log export to the Admin; #119 decision 8.

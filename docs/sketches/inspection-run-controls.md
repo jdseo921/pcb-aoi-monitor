@@ -12,20 +12,20 @@ every result is saved with its evidence before the next board starts (REQ-INSP-0
 ## Wireframe (1920 × 1080; at 1366 × 768 the defect table shows 6 rows and the alarm log 3)
 
 ```
-Inspection                                           Board model TBOX-A1 · AI model v1.2 · Recipe rev 4
+Inspection                                                                       Board model TBOX-A1
 [Load Images…] [Load Folder…]   View  (● Top) ( Side) ( Bottom)          Queue 3 of 12 · ng_003.png
 ┌───────────────────────────────────────────────┐ ┌────────────────────────────────────────────────┐
 │                                               │ │ ┌────────────────────────────────────────────┐ │
 │                                               │ │ │          ✗   NG                            │ │ V, 40 pt
 │         board image, boxes coloured by        │ │ └────────────────────────────────────────────┘ │
 │         severity: Critical red, Major orange, │ │ AI score 3.81 × threshold · 1 defect · 578 ms   │
-│         Minor amber; label "1 Polarity Error" │ │ ┌────┬────────────────┬───────┬─────┬────┬────┐ │
-│                                               │ │ │ No │ Type           │ Score │Side │  X │  Y │ │
+│         Minor amber; label with severity word │ │ ┌────┬────────────────┬───────┬─────┬────┬────┐ │
+│      and shape: "1 Polarity Error ◆ Critical" │ │ │ No │ Type           │ Score │Side │  X │  Y │ │
 │                                               │ │ │ 1  │ Polarity Error │ 3.81  │ Top │183 │187 │ │
 │                                               │ │ └────┴────────────────┴───────┴─────┴────┴────┘ │
 │                                               │ │ [ Compare › ]  (T; shown for NG and WARN)       │
 └───────────────────────────────────────────────┘ └────────────────────────────────────────────────┘
-[ ▶ Start  F5 ]   [ ■ Stop  F6 ]   [ ■■ Next Board  F8 ]   [ Save Result  F9 ]          T+, 56 px tall
+[ ▶ Start  F5 ]   [ ■ Stop  F6 ]   [ ■■ Next Board  F8 ]   [ Save Image…  F9 ]          T+, 56 px tall
 ┌ Alarms ───────────────────────────────────────────────────────────────────────────────────────────┐
 │ 2026-10-01 13:33:24  AOI-INSP-011  ng_003.png: NG, 1 defect (Polarity Error, Critical)             │
 │ 2026-10-01 13:33:20  AOI-INSP-002  big_board.tif refused: 62 MP is over the 50 MP limit            │
@@ -33,10 +33,11 @@ Inspection                                           Board model TBOX-A1 · AI m
 └───────────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-Verdict banner (V): colour, word and shape together, white text on green and red, dark text on amber:
+Verdict banner (V): colour, word and shape together, black text on green and red, dark text on amber (Q53):
 `✓ OK` green #43A047, `✗ NG` red #E53935, `▲ WARN` amber #FDD835. Shown within 100 ms of the result; while a board
-is being inspected the banner turns grey with a spinner and "Inspecting…" (busy pattern). Order of the right
+is being inspected the banner turns grey with "Inspecting…" and no spinner (#125). Order of the right
 column: verdict, then the boxes on the image, then the defect list, then metrics (the one summary line).
+Severity on a box label is a word and a shape: ◆ Critical (red), ■ Major (orange), ● Minor (amber).
 
 ## Controls
 
@@ -48,7 +49,7 @@ column: verdict, then the boxes on the image, then the defect list, then metrics
 | Start | ▶ Start | F5 | T+ | Green #43A047; runs the queue board after board; disabled while running |
 | Stop | ■ Stop | F6 | T+ | Red; stops after the current board; nothing is deleted, so no confirmation; never the default focus |
 | Next Board | Next Board | F8 | T+ | The page's one blue primary button; inspects one board; default focus when idle |
-| Save Result | Save Result | F9 | T+ | Marks the result as checked by the operator and copies the overlay to the exports folder; the result itself is already saved |
+| Save Image | Save Image… | F9 | T+ | Writes the board picture with its defect boxes to a file the user picks and makes no second record: every result is saved as it arrives (#128). The rename is still for Jay (below) |
 | Compare | Compare › | Enter on the banner, or C | T | One click opens Compare on the stored result with the failing checks highlighted (REQ-INSP-009); hidden for OK |
 | Defect row | — | ↑ ↓ | row 48 px | Selecting a row centres its box within 300 ms (REQ-INSP-004) |
 | Alarm log | Alarms | — | rows 14 pt | Time (ISO date, 24-hour), code, message; last 1,000 kept across restarts (REQ-INSP-006) |
@@ -89,11 +90,14 @@ click); one blue primary (Next Board); short paths (Home → Inspection → Star
 dialog; Stop needs no confirmation); no dead ends; sizes (T+ 56 px run controls, 14 pt table); F5, F6, F8, F9;
 "AI score", never "anomaly z-score"; every string through `self.tr()`.
 
-## Questions for Jay
+## Decisions (2026-10-02)
 
-- Remove the "Auto-save each board" box and always save (proposed by REQ-INSP-008)?
-- Start green and Stop red as in GUI §7, with Next Board as the one blue primary: agree, or make Start primary?
-- What does Save Result mean when every result is already saved: operator check mark plus an overlay copy
-  (proposed), or should F9 be free for another action?
-- Column name "Side" (GUI §4.1) for the Top / Side / Bottom view tag, or rename the column "View"?
-- Should an Operator be able to load files at all in G1, or only an Engineer, with the Operator running a queue?
+- Q12: No Auto-save box; every result is saved as it arrives. Reason: REQ-INSP-008; built in #128.
+- Q13: Start green, Stop red, Next Board the one blue primary. Reason: GUI §7 colours and One frame (MUST); built in #98.
+- Q15: The defect-list column stays "Side"; the tag is called view elsewhere, as built in #123. Reason: REQ-INSP-004 and REQ-INSP-010 (MUST) name the Side column, and the register calls the tag a view.
+- Q16: Operators load images and folders in G1. Reason: There is no camera before Stage 2, so loading files is how an Operator starts a run (GUI §5, Stage 1 upload).
+- Q55: The busy banner shows "Inspecting…" with no spinner. Reason: Built in #125: at about half a second a board, a spinner would start and stop twice a second.
+- Q57: Box labels carry the severity word and shape, "1 Polarity Error ◆ Critical"; not built yet (#98), a follow-up issue. Reason: Engineering, Look (MUST): every severity pairs its colour with a word and a shape.
+
+Still for Jay: Q14. F9 is built as "Save Image…" (#128), but REQ-INSP-005 (MUST) and Engineering, Input (MUST)
+name "F9 Save Result", so the rename needs Jay's explicit approval (Charter rule 2) before the register changes.

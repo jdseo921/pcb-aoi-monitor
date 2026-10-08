@@ -36,10 +36,10 @@ the database within 300 ms of Home opening and refreshed every 5 s while the pag
 
 | Control | Label | Key | Size | Notes |
 |---|---|---|---|---|
-| Card 1 button | Open Training › | Alt+1 | T | Engineer, Admin |
-| Card 2 button | Open Training › | Alt+2 | T | Engineer, Admin; while training runs the label stays, the card shows progress |
+| Card 1 button | Open Training › | Alt+1 | T | Engineer, Admin; opens the Samples tab |
+| Card 2 button | Open Training › | Alt+2 | T | Engineer, Admin; opens the tab of the next step: Datasets while no version is frozen, AI models while a trained version waits for Activate, otherwise Train (where a running training shows its progress) |
 | Card 3 button | Open Recipe Editor › | Alt+3 | T | Engineer, Admin |
-| Card 4 button | Open AI Model Test › | Alt+4 | T | Engineer, Admin |
+| Card 4 button | Open AI Model Test › | Alt+4 | T | Engineer, Admin; opens the Run tab with the newest dataset version's locked validation set chosen |
 | Card 5 button | Open Inspection › | Alt+5 or Enter | T | The page's one blue primary button; default focus for Operators |
 | Card 6 button | Open Logs & Export › | Alt+6 | T | All roles (Operators view only) |
 | Training indicator | ⟳ Training running 42 % · about 3 min left | — | text | On card 2 and mirrored in the header (S40); click opens Training; when training ends it reads "v1.3 trained, not active" or "Training failed, AOI-TRN-033" until the card is opened |
@@ -80,13 +80,16 @@ REQ-USR-001 (Operator sees no Engineer controls), REQ-TST-002 (counts, not bare 
 ## Rules applied
 
 Role first (Operators get run and export cards only); short paths (every Stage 1 page is one click from Home,
-every action two); no dead ends (each card's empty status names the next step); glossary words (Board model, AI
+and each step's action two, because a card opens the tab of its next step: Freeze Dataset, Start Training and
+Activate included). SHOULD skipped, with this reason: Revisions › Open (Recipe Editor) and History › Open (AI Model
+Test) take a third click, the tab, because they look back at earlier work and must not hide the step's own tab;
+no dead ends (each card's empty status names the next step); glossary words (Board model, AI
 model, Golden board, Recipe, ROI, Missed defect, False call, Validation); sizes (T buttons, 14 pt text); every
 string through `self.tr()`.
 
-## Questions for Jay
+## Decisions (2026-10-02)
 
-- Operators: shrink cards 1 to 4 to a status strip (proposed) or hide them completely?
-- Card 2 name: "Train AI model" (glossary) replaces v0.1's "Self-train"; agree?
-- Should card 5 show today's counts (proposed) or the counts of the whole history?
-- Should the header indicator also show a running AI Model Test batch, or only training?
+- Q5: Operators see cards 1 to 4 as a status strip without buttons. Reason: Role first (MUST) keeps Engineer controls off Operator screens; the strip still shows that the line is set up and validated.
+- Q6: Card 2 is "Train AI model". Reason: Charter words (Training, AI model); "Self-train" is not one. The code (`aoi/ui/main_window.py:61` at 329f603) follows in the next Home change.
+- Q7: Card 5 counts today (local day). Reason: A shift reads today's counts; the whole history is on Logs & Export, one click away.
+- Q8: The header indicator shows any long job that continues off its page: training or a batch on AI Model Test. Reason: The busy pattern in frame-and-patterns.md: long work continues when the user changes page, and the header shows it (REQ-SET-021).
