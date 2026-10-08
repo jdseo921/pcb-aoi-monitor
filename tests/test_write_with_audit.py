@@ -23,7 +23,7 @@ from aoi.data import atomic
 from aoi.ui.main_window import MainWindow
 from aoi.ui.pages.base import cell_text
 from tests.test_req_done_in_v01 import BOARD, _window
-from tests.test_roles_and_audit import WRITES, calibration_samples, calibration_set, labelled_blind
+from tests.test_roles_and_audit import WRITES, calibration_samples, calibration_set, labelled_blind, ready_to_freeze
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -76,13 +76,14 @@ def _labelled_set(ctx: AppContext) -> None:
 
 
 # a write that would change nothing on the trained workspace gets something to change, or its case proves nothing
-SETUP: dict[str, Callable[[AppContext], None]] = {
+SETUP: dict[str, Callable[[AppContext], object]] = {
     "activate_model": _second_version,
     "archive_old": _a_result,
     "export_overlays": _a_result,
     "make_calibration_set": _cal_samples,
     "label_blind": _a_set,
     "run_agreement_check": _labelled_set,
+    "freeze_dataset": ready_to_freeze,
 }
 
 

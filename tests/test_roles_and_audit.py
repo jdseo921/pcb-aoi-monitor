@@ -56,6 +56,21 @@ def labelled_blind(ctx: AppContext) -> str:
     return uid
 
 
+def ready_to_freeze(ctx: AppContext) -> str:
+    """TINY, with every Top OK and NG label checked and drawn and an agreed check, stored through the database where
+    missing, so that only the call under test is role-checked and audited."""
+    who, labelled = str(ctx.db.user_uuid("engineer")), [s for s in ctx.samples("TINY") if s["label"] != "UNSURE"]
+    for s in [s for s in labelled if s["checked_by"] is None]:  # TINY's samples are all Top
+        ctx.db.add_check(s["label_uuid"], s["uuid"], who)
+    if not ctx.labels_ready_to_freeze("TINY", "Top"):
+        ctx.db.add_ok_check_draw("TINY", "Top", 0, 0, [s["uuid"] for s in labelled if s["label"] == "OK"], who)
+    counts = {"images": 100, "ok_ng_agree": 100, "both_ng": 3, "type_agree": 3, "ok_ng_target": 98, "type_target": 90}
+    if not ctx.agreement_checks("TINY"):  # who as both labellers: the database stores what the code gives it
+        ctx.db.add_row("agreement_checks", set_uuid="", board_model="TINY", labeller_a=who, labeller_b=who, **counts,
+                       agreed=1, run_by=who)  # fmt: skip
+    return "TINY"
+
+
 # every AppContext write: method -> (its audit action, a call that works on the trained workspace), in a runnable order
 WRITES: dict[str, tuple[str, Callable[[AppContext, Path, Path], Any]]] = {
     "ensure_board_model": ("board_model.create", lambda ctx, data, tmp: ctx.ensure_board_model("NEW")),
@@ -103,6 +118,10 @@ WRITES: dict[str, tuple[str, Callable[[AppContext, Path, Path], Any]]] = {
             labelled_blind(ctx), str(ctx.user_uuid), str(ctx.db.user_uuid("engineer"))
         ),
     ),
+    "freeze_dataset": (
+        "dataset.freeze",
+        lambda ctx, data, tmp: ctx.freeze_dataset(ready_to_freeze(ctx), "Top", "R1", "Acme Electronics"),
+    ),
     "train": ("model.train", lambda ctx, data, tmp: ctx.train("TINY", epochs=1, image_size=32)),
     "activate_model": ("model.activate", lambda ctx, data, tmp: ctx.activate_model(ctx.models("TINY")[-1]["id"])),
     "save_recipe": ("recipe.save", lambda ctx, data, tmp: ctx.save_recipe(Recipe(board_model="TINY"))),
@@ -146,7 +165,7 @@ UNCHECKED = {
     "checks_for_many", "inspection_result", "inspection", "judged_reference", "users", "board_status", "start_user",
     "golden_board_unreadable", "engine_is_current", "calibrated_threshold", "calibration_of", "scale", "label_history",
     "boxes", "box_history", "unsure_samples", "label_check_status", "labels_ready_to_freeze", "calibration_sets",
-    "agreement_checks",
+    "agreement_checks", "datasets", "dataset_items",
 }  # fmt: skip
 CALLS = {**{name: call for name, (_, call) in WRITES.items()}, **CHECKED_READS}
 # The lowest role allowed each call, copied from the write table of docs/ARCHITECTURE.md §5 and REQ-CMP-005, never read
