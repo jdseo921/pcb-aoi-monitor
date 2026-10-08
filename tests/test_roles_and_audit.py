@@ -7,13 +7,18 @@ from __future__ import annotations
 import inspect
 from collections.abc import Callable
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import pytest
+from PySide6.QtWidgets import QInputDialog
+from pytestqt.qtbot import QtBot
 
 from aoi.core.recipe import Recipe
 from aoi.core.services import REQUIRED_ROLE, ROLES, AppContext
 from aoi.errors import AoiError
+from aoi.ui.main_window import MainWindow
+from aoi.ui.pages.base import role_text
+from aoi.ui.pages.settings import SettingsPage
 
 # every AppContext write: method -> (its audit action, a call that works on the trained workspace), in a runnable order
 WRITES: dict[str, tuple[str, Callable[[AppContext, Path, Path], Any]]] = {
@@ -120,3 +125,38 @@ def test_req_usr_001_the_current_user_is_held_with_uuid_name_and_role(ctx: AppCo
     uid = ctx.audit("test.only", "x", None, None, None)
     (entry,) = ctx.audit_entries()
     assert ctx.user_uuid is None and entry["uuid"] == uid and entry["user_uuid"] is None
+
+
+def test_req_usr_001_the_last_admin_keeps_the_admin_role(
+    qtbot: QtBot, ctx: AppContext, monkeypatch: pytest.MonkeyPatch, dialogs: list[tuple[str, str]]
+) -> None:
+    """Taking the Admin role from the last Admin is refused with AOI-USR-002 before anything is written or audited
+    (#170): no user could open Settings again. With a second Admin it goes through. Add / Change User offers an existing
+    user's own role first, so OK on the offer changes nothing, and a change of the signed-in user's role reaches the
+    window. Before, the offer was Operator, the change was stored, and the session went on as Admin."""
+    win = MainWindow(ctx)  # an empty workspace opens as Admin, signed in as "admin"
+    qtbot.addWidget(win)
+    with pytest.raises(AoiError) as refused:
+        ctx.add_user("admin", "Operator")
+    assert refused.value.code == "AOI-USR-002" and not ctx.audit_entries(action="user.change")
+    offered: list[str] = []
+    pick: list[str] = []  # the role chosen in the dialog; none: OK on the one it offers
+
+    def get_item(*args: Any) -> tuple[str, bool]:
+        offered.append(args[3][args[4]])
+        return (role_text(pick.pop()) if pick else offered[-1]), True
+
+    monkeypatch.setattr(QInputDialog, "getText", staticmethod(lambda *a: ("admin", True)))
+    monkeypatch.setattr(QInputDialog, "getItem", staticmethod(get_item))
+    page = cast(SettingsPage, win.pages["Settings"])
+    assert win.navigate("Settings")
+    page.add_user()
+    pick.append("Engineer")
+    page.add_user()
+    assert offered == [role_text("Admin")] * 2 and [title for title, _ in dialogs] == ["AOI-USR-002 Last Admin"]
+    assert {u["name"]: u["role"] for u in ctx.users()}["admin"] == "Admin" and ctx.role == "Admin"
+    ctx.add_user("engineer", "Admin")  # a second Admin
+    pick.append("Engineer")
+    page.add_user()
+    assert {u["name"]: u["role"] for u in ctx.users()}["admin"] == "Engineer"
+    assert ctx.role == "Engineer" and win.stack.currentWidget() is win.pages["Home"]  # Settings is the Admin's

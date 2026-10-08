@@ -90,9 +90,12 @@ its header size), so no file measures small here and decodes large; `tests/test_
 crafted files and files from Pillow and tifffile. The limits are the two `max_image_*` values in `settings.json`, in the
 default workspace folder (50 MP and 200 MB, that is 200,000,000 bytes, both proposed, since a 50 MP 24-bit BMP is
 150 MB); `Settings.load` refuses a file it cannot read (not JSON, not UTF-8, not an object) with `AOI-SET-010`, and a
-value of the wrong type, or a limit not above 0, with `AOI-SET-008`, before the app starts, and the Settings page does not show them yet (an Admin edits the file); `map_retention_days_ok` (7, not below
-0) is the third: the map files of OK results older than that go at start-up (`_sweep_ok_maps`, audited as `maps.sweep`;
-NG and WARN maps stay, REQ-INSP-012). Every page and service reads an image
+value of the wrong type, a limit, log retention, input size or epoch count below 1, or a workspace that is not a full
+path (empty, blank or relative), with `AOI-SET-008`, before the app starts; the Settings page checks its own values
+the same way before it saves. The page does not show the limits yet (an Admin edits the file): the app writes only the
+keys it changes over `settings.json` as it is on disk (`Settings.save_keys`, #170), so the edit stays, for the next
+start to read. `map_retention_days_ok` (7, not below 0) is the third: the map files of OK results older than that go
+at start-up (`_sweep_ok_maps`, audited as `maps.sweep`; NG and WARN maps stay, REQ-INSP-012). Every page and service reads an image
 through `AppContext.load_image`, which applies them; `FolderCamera` takes them when the inspection cycle wires a camera
 (Stage 2); `tests/test_layers.py` fails a page that imports `load_image` or calls it on anything but the context; and
 `import_samples` still copies sample files without a check (threat model, page 2).
@@ -173,7 +176,7 @@ through `[sizeClass=…]` rules; `setMinimumHeight()` on a styled widget is undo
 ### Workspace on disk
 
 ```
-AOI_Workspace/                 (default ~/AOI_Workspace, set in Settings or AOI_WORKSPACE env var)
+AOI_Workspace/                 (default ~/AOI_Workspace, set in Settings, used from the next start, or AOI_WORKSPACE)
   aoi.sqlite                   database
   logs/aoi-YYYY-MM-DD.jsonl    JSON-lines log, one file per UTC day (REQ-LOG-004)
   settings.json
@@ -329,7 +332,7 @@ hiding a page or disabling a button is only a convenience. Every write also appe
 | `export_model`, `export_overlays`, `export_csv` | Engineer | `export.model`, `export.overlays`, `export.csv` (destination, counts) |
 | `archive_old` | Engineer | `inspection.archive` (days, count); the retention run at start-up is a system action: logged, not audited |
 | `_sweep_ok_maps` | system, at start-up; no page calls it | `maps.sweep` (days, swept, skipped): the map files of OK results past `map_retention_days_ok` are deleted and forgotten, NG and WARN maps stay; audited, unlike the start-up archive, because it deletes evidence. A file that cannot be deleted, or lies outside results/, is skipped with a warning and kept for the next start |
-| `add_user` | Admin | `user.change` (role); object = user UUID |
+| `add_user` | Admin | `user.change` (role); object = user UUID. The last Admin keeps the role: `AOI-USR-002`, nothing written |
 
 Reads, inspections (`inspect_file`, `log_result`), alarms and error reports need no role: an Operator inspects boards.
 One call that writes nothing needs a role: `re_evaluate`, judging a stored result with other thresholds (REQ-CMP-005),
@@ -407,7 +410,9 @@ an image or a password. Alarms (an NG verdict, a missing AI model, every error s
 their code through `AppContext.alarm`, and `AppContext.report_error` is the one path for an error a user sees: it
 logs the stack trace with the build version, stores an ERROR alarm and returns the plain report that
 `aoi/ui/errors.py` shows (code, title, what happened, what to do), also for unhandled errors through
-`sys.excepthook`. The page in use is kept in `settings.json` and reopened at start-up (REQ-INSP-006, REQ-LOG-005).
+`sys.excepthook`. The page in use is kept in `settings.json` and reopened at start-up (REQ-INSP-006, REQ-LOG-005);
+a page change writes that key alone. A workspace saved on Settings goes to `settings.json` only: the running app keeps
+its database, log and folders on the open workspace until the restart (REQ-SET-001, #170).
 Every visible string goes through `self.tr()` in a page class (REQ-SET-005, since S19). PySide takes the
 most-derived class name as the context of `self.tr()`, while `pyside6-lupdate` files a string under the class that
 contains the call, so the base `Page` uses `QCoreApplication.translate("Page", …)`, page titles are marked

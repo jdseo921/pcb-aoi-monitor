@@ -12,6 +12,7 @@ import json
 import os
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
+from typing import Any
 
 from .errors import AoiError
 
@@ -19,8 +20,21 @@ APP_NAME = "AOI PoC Inspector"
 APP_VERSION = "0.2.0"
 
 
+_LEAST = {  # the smallest whole number a count setting takes; a map retention of 0 deletes OK maps at the next start
+    "max_image_megapixels": 1,
+    "max_image_megabytes": 1,
+    "log_retention_days": 1,
+    "image_size": 1,
+    "default_epochs": 1,
+    "map_retention_days_ok": 0,
+}
+
+
 def default_workspace() -> Path:
-    return Path(os.environ.get("AOI_WORKSPACE", Path.home() / "AOI_Workspace"))
+    """The workspace folder, and where settings.json lives: AOI_WORKSPACE or ~/AOI_Workspace as a full path, so the
+    workspace the app holds is one settings.json accepts (AOI-SET-008 refuses a relative one). os.path.abspath, not
+    Path.absolute(), which on Python 3.11 leaves a drive-relative "C:AOI_Workspace" relative on Windows (#170)."""
+    return Path(os.path.abspath(os.path.expanduser(os.environ.get("AOI_WORKSPACE", Path.home() / "AOI_Workspace"))))
 
 
 @dataclass
@@ -79,9 +93,21 @@ class Settings:
         """The settings in settings.json, or the defaults when there is none. A file that cannot be read is refused
         with AOI-SET-010 and a wrong value with AOI-SET-008, before the app starts (REQ-SET-019). The workspace folder
         is created by AppContext, which refuses one that cannot be (AOI-SET-011) and so offers another."""
+        data = cls._read()
+        if data is None:
+            return cls()
+        known = {k: v for k, v in data.items() if k in cls.__dataclass_fields__}
+        for name, value in known.items():
+            cls.check(name, value)
+        return cls(**known)
+
+    @classmethod
+    def _read(cls) -> dict[str, Any] | None:
+        """settings.json as it is on disk now, or None when there is none; a file that cannot be read is refused with
+        AOI-SET-010."""
         f = cls._file()
         if not f.exists():
-            return cls()
+            return None
         try:
             data = json.loads(f.read_text(encoding="utf-8"))
         except json.JSONDecodeError as e:
@@ -94,24 +120,44 @@ class Settings:
             raise AoiError("AOI-SET-010", path=str(f), reason=e.strerror or type(e).__name__) from e
         if not isinstance(data, dict):
             raise AoiError("AOI-SET-010", path=str(f), reason="it does not hold a JSON object of settings")
-        known = {k: v for k, v in data.items() if k in cls.__dataclass_fields__}
-        for name, value in known.items():
-            cls.check(name, value)
-        return cls(**known)
+        return data
 
     @classmethod
     def check(cls, name: str, value: object) -> None:
-        """Refuse a value of the wrong JSON type for a known setting, an image limit that is not above 0 and a retention
-        below 0, with AOI-SET-008 before the app starts (REQ-INSP-001, S23c: a typo there used to fail every image load
-        with AOI-SET-007). An unknown key is still ignored, so an old or a newer settings.json loads."""
+        """Refuse a value of the wrong JSON type for a known setting, an image limit, a log retention, an image size or
+        an epoch count below 1, a map retention below 0, and a workspace that is not an absolute path (empty, spaces
+        only or relative: Path("") is the folder the app was started in), with AOI-SET-008: at start-up, and on the
+        Settings page before it saves (REQ-INSP-001, S23c: a typo there used to fail every image load with
+        AOI-SET-007; #170: a log retention of 0 or below archived every record at start-up). An unknown key is
+        still ignored, so an old or a newer settings.json loads."""
         want = type(getattr(cls(), name))
-        least = {"max_image_megapixels": 1, "max_image_megabytes": 1, "map_retention_days_ok": 0}.get(name)
+        least = _LEAST.get(name)
         typed = isinstance(value, want) and not (want is int and isinstance(value, bool))
+        if name == "workspace" and typed and not Path(str(value)).is_absolute():
+            raise AoiError("AOI-SET-008", name=name, value=json.dumps(value), expected="the full path of a folder")
         if not typed or (least is not None and isinstance(value, int) and value < least):
             expected = {int: "a whole number", str: "text"}.get(want, want.__name__)
             if least is not None:
                 expected += " above 0" if least else " of 0 or more"
             raise AoiError("AOI-SET-008", name=name, value=json.dumps(value), expected=expected)
+
+    def save_keys(self, values: dict[str, object]) -> None:
+        """Write `values` over settings.json as it is on disk now, so every other key keeps what the file holds, a hand
+        edit made while the app runs included (#170); with no file yet, over these settings, every one of which is then
+        checked too, so the first write never stores a value the next start refuses. Each value is checked first, as
+        `load` checks it (AOI-SET-008), and a file that cannot be read is refused with AOI-SET-010, never overwritten.
+        These settings themselves are left as they are: the caller sets what the running app follows."""
+        for name, value in values.items():
+            self.check(name, value)
+        data = self._read()
+        if data is None:
+            data = asdict(self)
+            for name, value in data.items():
+                self.check(name, values.get(name, value))
+        data.update(values)
+        from .data import atomic  # settings.json is read at start-up: never leave it half-written
+
+        atomic.write_text(self._file(), json.dumps(data, indent=2))
 
     def save(self) -> None:
         f = self._file()

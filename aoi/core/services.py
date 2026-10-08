@@ -695,8 +695,12 @@ class AppContext:
 
     @requires("Admin", "Changing users")
     def add_user(self, name: str, role: str) -> None:
-        """Add a user, or change the role of an existing one."""
-        before = next((u for u in self.db.users() if u["name"] == name), None)
+        """Add a user, or change the role of an existing one. Taking the Admin role from the last Admin is refused with
+        AOI-USR-002 before anything is written or audited: no one could manage users or settings after it (#170)."""
+        users = self.db.users()
+        if role != "Admin" and [u["name"] for u in users if u["role"] == "Admin"] == [name]:
+            raise AoiError("AOI-USR-002", name=name, role=role)
+        before = next((u for u in users if u["name"] == name), None)
         self.db.add_user(name, role)
         old = {"role": before["role"]} if before else None
         self.audit("user.change", "user", self.db.user_uuid(name), old, {"name": name, "role": role})
