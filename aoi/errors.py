@@ -468,6 +468,29 @@ CODES: dict[str, ErrorCode] = {
             ),
         ),
         ErrorCode(
+            "AOI-TRN-013",
+            QT_TRANSLATE_NOOP("Errors", "NG image needs a defect type"),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "{path} was not imported: an NG sample needs one of the 33 defect types of the defect classification"
+                " table, and {why}.",
+            ),
+            QT_TRANSLATE_NOOP("Errors", "Pick the defect type the image shows, then import it again."),
+        ),
+        ErrorCode(
+            "AOI-TRN-014",
+            QT_TRANSLATE_NOOP("Errors", "Image changed while it was copied"),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "{path} changed while it was copied into the workspace: its SHA-256 after the copy differs from the"
+                " one checked before it, so it was not imported.",
+            ),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Wait until the file is complete (a camera or a copy may still be writing it), then import it again.",
+            ),
+        ),
+        ErrorCode(
             "AOI-TST-001",
             QT_TRANSLATE_NOOP("Errors", "AI model, recipe, scale or Golden board changed since the run"),
             QT_TRANSLATE_NOOP(

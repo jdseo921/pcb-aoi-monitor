@@ -133,7 +133,7 @@ def build_workspace(root: Path) -> AppContext:
     from aoi.core.imaging import list_images
     from aoi.core.recipe import ROI
     from aoi.core.services import AppContext
-    from tools.make_synthetic_dataset import write_dataset
+    from tools.make_synthetic_dataset import ng_type, write_dataset
 
     os.environ["AOI_WORKSPACE"] = str(root / "default_workspace")  # settings.json is saved there, never in ~/
     dataset = root / "dataset"
@@ -142,7 +142,8 @@ def build_workspace(root: Path) -> AppContext:
         ctx = AppContext(Settings(workspace=str(root / "workspace"), device="cpu"))
         ctx.set_user("engineer")
         ctx.import_samples(BOARD_MODEL, [str(p) for p in list_images(dataset / "train" / "ok")], "OK")
-        ctx.import_samples(BOARD_MODEL, [str(p) for p in list_images(dataset / "train" / "ng")], "NG")
+        for p in list_images(dataset / "train" / "ng"):  # one call each: an NG sample is imported with its type
+            ctx.import_samples(BOARD_MODEL, [str(p)], "NG", ng_type(p))
         ctx.train(BOARD_MODEL, epochs=TINY_EPOCHS, image_size=TINY_IMAGE_SIZE)
         recipe = ctx.recipe(BOARD_MODEL)[1]
         recipe.rois.append(ROI("R1", "Presence", 110, 110, 110, 110))  # around the IC the NG board lacks (LAYOUT[0])

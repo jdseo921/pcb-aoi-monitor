@@ -287,12 +287,12 @@ def test_req_set_021_a_folder_import_that_fails_part_way_shows_the_files_it_impo
     folder = _folder(tmp_path / "fold", synthetic_dataset / "train" / "ok", ["a.png", "b.png", "c.png", "d.png"])
     add = ctx.db.add_sample
 
-    def add_or_fail(board_model: str, path: str, *a: Any) -> None:
+    def add_or_fail(board_model: str, path: str, *a: Any, **kw: Any) -> None:
         if Path(path).name.startswith("c_") and cause == "coded":
             raise AoiError("AOI-SET-013", "disk I/O error", path="aoi.sqlite", error="disk I/O error")
         if Path(path).name.startswith("c_"):
             raise sqlite3.OperationalError("disk I/O error")
-        add(board_model, path, *a)
+        add(board_model, path, *a, **kw)
 
     monkeypatch.setattr(ctx.db, "add_sample", add_or_fail)
     win = _engineer_window(qtbot, ctx)

@@ -205,12 +205,15 @@ class Database:
         defect_type: str | None = None,
         side: str = "Top",
         uid: str | None = None,
+        sha256: str | None = None,
     ) -> int:
-        """Add a sample; returns its id. `uid` is the UUID its file name already carries (#245); a new one when None."""
+        """Add a sample; returns its id. `uid` is the UUID its file name already carries (#245); a new one when None.
+        `sha256` is its source file's, as the import checked it (REQ-TRN-001)."""
         self.ensure_board_model(board_model)
         return self._insert(
-            "INSERT INTO samples(uuid, board_model, path, label, defect_type, side, added_at) VALUES(?,?,?,?,?,?,?)",
-            (uid or new_uuid(), board_model, self._stored(path), label, defect_type, side, now_utc()),
+            "INSERT INTO samples(uuid, board_model, path, label, defect_type, side, added_at, sha256)"
+            " VALUES(?,?,?,?,?,?,?,?)",
+            (uid or new_uuid(), board_model, self._stored(path), label, defect_type, side, now_utc(), sha256),
         )
 
     def samples(self, board_model: str, label: str | None = None) -> list[dict[str, Any]]:

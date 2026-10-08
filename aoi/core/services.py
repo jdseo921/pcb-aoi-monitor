@@ -11,6 +11,7 @@ import contextvars
 import csv
 import errno
 import functools
+import hashlib
 import io
 import json
 import math
@@ -23,6 +24,7 @@ from typing import Any, Concatenate, Literal, ParamSpec, TypeVar, cast
 
 import numpy as np
 
+from .. import defects as taxonomy
 from .. import logging_setup
 from ..config import Settings, resolve_device
 from ..data import atomic
@@ -32,7 +34,7 @@ from ..data.paths import to_stored
 from ..data.workspace_lock import WorkspaceLock
 from ..errors import QT_TRANSLATE_NOOP, AoiError, Phrase, joined
 from ..times import local_date, now_utc
-from . import anomaly
+from . import anomaly, imaging
 from .compare import Region, changed_regions
 from .imaging import align_to_reference, encode_image, list_images, load_image, load_image_sha256, save_image
 from .inspector import NG, OK, WARN, AiEvidence, InspectionResult, Inspector, JudgedBy, ai_check, draw_overlay, re_grade
@@ -43,6 +45,8 @@ from .recipe import Recipe
 ALARM_LIMIT = 1000  # REQ-INSP-006: the alarms a screen shows and that survive a restart
 BUSY_ALARM_WAIT_MS = 200  # how long the alarm of a locked database's error, or an Inspection alarm, waits, not 5 s
 ALIGNING = QT_TRANSLATE_NOOP("Training", "Aligning {count} images to the reference board")  # a progress line (#199)
+NO_TYPE = QT_TRANSLATE_NOOP("Errors", "no defect type was given")  # why AOI-TRN-013 refused an NG sample
+NOT_A_TYPE = QT_TRANSLATE_NOOP("Errors", "{name} is not one of them")
 STEM_CHARS = 40  # how much of a source file's stem names its evidence or sample file (#245)
 WINDOWS = os.name == "nt"
 MAX_PATH = 260  # the UTF-16 units of a path, its ending NUL included, that Windows takes with long paths off
@@ -195,6 +199,11 @@ def _too_long(e: OSError) -> bool:
     return WINDOWS and isinstance(e, FileNotFoundError) and units >= MAX_PATH
 
 
+def _sha256(path: Path) -> str:
+    with open(path, "rb") as f:
+        return hashlib.file_digest(f, "sha256").hexdigest()
+
+
 def _remove(files: list[Path]) -> None:
     """Remove files a write made before it failed, so none is left that its records or audit entry do not name."""
     for f in files:
@@ -325,53 +334,81 @@ class AppContext:
         should_stop: Callable[[], bool] | None = None,
     ) -> int:
         """Copy uploads into the workspace so training data survives the source folder moving; returns how many were
-        added. All or nothing (#178): a file that cannot be copied stops the import with AOI-TRN-008, or AOI-TRN-011
-        when the system refuses the copy's path as too long (#245), and removes the copies made; then the samples, a
-        new board model's default recipe and reference, and the audit entry commit together. A page runs it on the
-        pool (REQ-SET-021, #194): `progress(done, total)` follows each file, and once `should_stop()` is true the files
-        not yet copied are left out, the ones copied are added and the audit entry says so (`cancelled`)."""
+        added. Each file goes through `_copy_checked` (REQ-TRN-001): checked as Inspection checks an image, never
+        written, its SHA-256 recorded with the sample. An NG import names one of the 33 DCT types (AOI-TRN-013). All or
+        nothing (#178): a file refused, or one that cannot be copied (AOI-TRN-008, or AOI-TRN-011
+        when the system refuses the copy's path as too long, #245), stops the import with its code and removes the
+        copies made; then the samples, a new board model's default recipe and reference, and the audit entry, which
+        names each sample added by its UUID and SHA-256 (`samples`), commit together. `progress(done, total)` follows
+        each file, and once `should_stop()` is true the files not yet copied are left out, the ones copied are added
+        and the audit entry says so (`cancelled`)."""
         self._refuse_case_variant(board_model)  # a new board model is created by its first import
+        self._refuse_untyped(paths[0] if paths else "", label, defect_type)
         dest = self.settings.images_dir / board_model / label
-        copies: list[Path] = []
-        uids: list[str] = []  # each copy's sample UUID, which its file name carries (#245)
+        copies: list[tuple[Path, str, str]] = []  # each copy, its sample UUID (which its file name carries, #245), hash
         stopped = False
         try:
             for p in paths:
                 if should_stop is not None and should_stop():
                     stopped = True
                     break
-                src = Path(p)
-                uid = new_uuid()
+                src, uid = Path(p), new_uuid()
                 target = dest / f"{_stem(src)}_{uid}{src.suffix.lower()}"
-                try:
-                    atomic.copy_file(src, target)
-                except OSError as e:  # gone, unreadable, the workspace drive full, or a path the system refuses
-                    if _too_long(e) and str(e.filename) != str(src):  # the copy's path, not the picked file's (#245)
-                        where = {"workspace": str(self.settings.root), "count": len(paths)}
-                        raise AoiError("AOI-TRN-011", str(e), path=str(src), **where) from e
-                    why = e.strerror or str(e)
-                    raise AoiError("AOI-TRN-008", str(e), path=str(src), reason=why, count=len(paths)) from e
-                copies.append(target)
-                uids.append(uid)
+                copies.append((target, uid, self._copy_checked(src, target, len(paths))))
                 if progress is not None:
                     progress(len(copies), len(paths))
             with self.db.transaction():
-                for target, uid in zip(copies, uids, strict=True):  # the first creates a new board model
-                    self.db.add_sample(board_model, str(target), label, defect_type, side, uid)
+                for target, uid, digest in copies:  # the first creates a new board model
+                    self.db.add_sample(board_model, str(target), label, defect_type, side, uid, sha256=digest)
                 if copies:
                     self._ensure_recipe(board_model)
                 if not self.db.reference(board_model):
                     oks = self.db.samples(board_model, "OK")
                     if oks:
                         self.db.set_reference(board_model, oks[0]["path"])
-                after = {
+                after: dict[str, Any] = {
                     "label": label, "defect_type": defect_type, "side": side, "added": len(copies), "cancelled": stopped
                 }  # fmt: skip
+                after["samples"] = [{"uuid": uid, "sha256": digest} for _, uid, digest in copies]
                 self.audit("sample.import", "board_model", board_model, None, after)
         except BaseException:
-            _remove(copies)
+            _remove([target for target, _, _ in copies])
             raise
         return len(copies)
+
+    def _refuse_untyped(self, path: str, label: str, defect_type: str | None) -> None:
+        """Refuse an NG sample without one of the 33 DCT types, named as the classification table names it
+        (AOI-TRN-013, REQ-TRN-001): no type, "Unknown" or the AI model's "Anomaly" is never a sample's type."""
+        if label == "NG" and defect_type not in taxonomy.names():
+            why = NOT_A_TYPE.fill(name=defect_type) if defect_type else NO_TYPE
+            raise AoiError("AOI-TRN-013", path=path, why=why)
+
+    def _copy_checked(self, src: Path, target: Path, count: int) -> str:
+        """Copy one sample's source file to `target` and return its SHA-256 (REQ-TRN-001). The source is only read:
+        its bytes are checked and decoded as Inspection checks an image (`checked_bytes`: AOI-INSP-001, -004 to -007,
+        decision Q30) and hashed. The copy is a crash-safe write; then the source and the copy are read again, and a
+        SHA-256 other than the one checked (a writer still at the source) refuses the file with AOI-TRN-014 and removes
+        the copy. A copy that cannot be written raises AOI-TRN-008, or AOI-TRN-011 when the system refuses its path as
+        too long (#245)."""
+        data = imaging.checked_bytes(src, self.settings.max_image_megapixels, self.settings.max_image_megabytes)
+        digest = hashlib.sha256(data).hexdigest()
+        del data  # up to the size limit in memory: not kept through the copy
+        try:
+            atomic.copy_file(src, target)
+        except OSError as e:  # gone, unreadable, the workspace drive full, or a path the system refuses
+            if _too_long(e) and str(e.filename) != str(src):  # the copy's path, not the picked file's (#245)
+                where = {"workspace": str(self.settings.root), "count": count}
+                raise AoiError("AOI-TRN-011", str(e), path=str(src), **where) from e
+            why = e.strerror or str(e)
+            raise AoiError("AOI-TRN-008", str(e), path=str(src), reason=why, count=count) from e
+        try:
+            same = _sha256(src) == digest == _sha256(target)
+        except OSError:  # the source gone right after its copy: it cannot be found unchanged
+            same = False
+        if not same:
+            _remove([target])
+            raise AoiError("AOI-TRN-014", path=str(src))
+        return digest
 
     # --- training ------------------------------------------------------------
     @requires("Engineer", QT_TRANSLATE_NOOP("Errors", "Training an AI model"))
