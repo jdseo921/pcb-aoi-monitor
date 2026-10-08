@@ -126,7 +126,10 @@ need to leave the page: the board in hand finishes with what it started with, an
 new one, saying so under the verdict banner and in the alarm log with AOI-INSP-013. Each record names the AI model
 version active when its board was judged, the recipe revision that judged it (which says whether the AI check ran)
 and the Golden board it was judged against: the CSV export of Logs & Export lists the AI model version and recipe revision of each board, and Compare
-shows a stored board beside the Golden board it was judged against.
+shows a stored board beside the Golden board it was judged against. A run whose recipe turns the AI check off moves only
+when the recipe or the Golden board changes, as no AI model judges its boards: an activation or a rollback during it
+raises no AOI-INSP-013, though the boards after it name the version now active, while a training run still does, as it
+sets a new Golden board, and the line names no AI model but says the AI check was off.
 
 (to be written: training, progress and cancel, versions, activation and rollback, the model card)
 

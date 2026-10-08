@@ -53,7 +53,11 @@ activates an AI model version, saves a recipe or sets a Golden board while the I
 uses it, whether you press Next Board or Start or load a new queue. During a run, the board in hand finishes with what it
 started with and the boards after it use the new one; the line under the banner and the alarm log say so with
 AOI-INSP-013. Each record names the AI model version active when its board was judged, the recipe revision that
-judged it (which says whether the AI check ran) and the Golden board it was judged against.
+judged it (which says whether the AI check ran) and the Golden board it was judged against. When the recipe turns the
+AI check off, no AI model judges the boards, so an AI model version activated during a run changes nothing that judges
+them and the run goes on with no AOI-INSP-013 (the boards after it name the version now active); a saved recipe or a
+Golden board set still moves the run, and a training run does too, as it sets a new Golden board, and the line then
+says the AI check was off in place of naming an AI model.
 
 Reading the verdict: while a board is being inspected the banner turns grey and reads "Inspecting…", and the status
 bar at the bottom names the board and its place in the queue, such as "Inspecting board_07.png (3 of 12)…". The

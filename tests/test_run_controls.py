@@ -8,6 +8,7 @@ shown. #120: one board is inspected at a time per page.
 
 from __future__ import annotations
 
+import copy
 import threading
 from collections.abc import Callable, Iterator
 from pathlib import Path
@@ -22,13 +23,13 @@ from PySide6.QtWidgets import QApplication, QFileDialog, QLabel, QMessageBox
 from pytestqt.qtbot import QtBot
 
 from aoi.core.imaging import list_images
-from aoi.core.inspector import InspectionResult, Inspector
+from aoi.core.inspector import AI_OFF_NOTE, InspectionResult, Inspector
 from aoi.core.services import AppContext
 from aoi.ui import theme
 from aoi.ui.main_window import MainWindow
 from aoi.ui.pages.inspection import NO_VERDICT, InspectionPage
 from aoi.ui.widgets.image_view import ImageView
-from tests.conftest import TINY_EPOCHS, TINY_IMAGE_SIZE
+from tests.conftest import TINY_EPOCHS, TINY_IMAGE_SIZE, another_version
 from tests.test_req_done_in_v01 import BOARD, _button, _window
 
 BUDGET_S = 0.1  # REQ-INSP-005: a response within 100 ms; REQ-INSP-002: the verdict within 100 ms of the result
@@ -500,7 +501,8 @@ def test_req_insp_009_a_board_cleared_after_a_board_model_change_keeps_the_line_
     )
     moved = (
         f"The AI model, recipe or Golden board changed during this run: {boards[1].name} was judged with AI model v1.0,"
-        f" recipe revision 1 and Golden board {Path(golden['path']).name}; each record names what judged it."
+        f" recipe revision 1 and Golden board {Path(golden['path']).name}; each record names the recipe revision and"
+        " Golden board that judged it and the AI model version active then."
     )
     assert page.summary.text() == f"{cleared}\n{moved}" and win.statusBar().currentMessage() == cleared
     codes = [a["code"] for a in trained_ctx.alarms()]
@@ -567,7 +569,8 @@ def test_req_trn_010_a_board_started_after_an_activation_is_judged_by_the_active
     g10, g11 = f"{BOARD}_v1.0_golden.png", f"{BOARD}_v1.1_golden.png"
     note = (
         f"The AI model, recipe or Golden board changed during this run: {boards[6].name} was judged with AI model v1.0,"
-        f" recipe revision 1 and Golden board {g11}; each record names what judged it."
+        f" recipe revision 1 and Golden board {g11}; each record names the recipe revision and Golden board that"
+        " judged it and the AI model version active then."
     )
     assert page.summary.text() == f"Inspecting {boards[7].name}…\n{note}", "the run says it moved to v1.0"
     assert win.statusBar().currentMessage() == f"Inspecting {boards[7].name} (3 of 3)…", "the busy line stays"
@@ -587,6 +590,75 @@ def test_req_trn_010_a_board_started_after_an_activation_is_judged_by_the_active
     codes = [a["code"] for a in trained_ctx.alarms()]
     assert codes.count("AOI-INSP-013") == 1 and codes[0] == "AOI-INSP-013", "only the run that moved is alarmed"
     assert page.alarms.item(0).text().endswith(f"[WARN]  AOI-INSP-013  {note}")
+
+
+@pytest.mark.parametrize("change", ["activate_ai_on", "activate", "reference"])
+def test_req_trn_010_a_run_with_the_ai_check_off_moves_only_with_its_recipe_or_golden_board(
+    qtbot: QtBot, trained_ctx: AppContext, synthetic_dataset: Path, monkeypatch: pytest.MonkeyPatch, change: str
+) -> None:
+    """#243 with #246 (stack review): with the AI check off in the recipe no AI model judges a board, so an AI model
+    activated while board 1 of a run is in hand ("activate") changes nothing that judges board 2: no AOI-INSP-013 and
+    no line under the banner, while board 2's record names the version now active (#246 option (b)) and both records
+    carry AI_OFF_NOTE. A Golden board set meanwhile ("reference") still moves the run, and its line and alarm say that
+    the AI check was off and name no AI model. With the AI check on ("activate_ai_on", the control) the activation moves
+    the run and its line names the version now active. Before, the activation under an AI-off recipe stored
+    AOI-INSP-013 saying that board 2 "was judged with AI model v1.1", under the note that no AI model judged it, and the
+    Golden board's line said "AI model v1.0"."""
+    ctx = trained_ctx
+    v11 = another_version(ctx, BOARD, "v1.1")
+    recipe = copy.deepcopy(ctx.recipe(BOARD)[1])
+    recipe.use_ai = change == "activate_ai_on"
+    revision = ctx.save_recipe(recipe)
+    win = _window(qtbot, ctx, "Engineer")
+    page = win.pages["Inspection"]
+    assert isinstance(page, InspectionPage)
+    win.navigate("Inspection")
+    qtbot.waitUntil(ctx.jobs.idle, timeout=10000)
+    started: list[str | None] = []
+    gate, real = threading.Event(), Inspector.inspect
+
+    def inspect(engine: Inspector, image: np.ndarray) -> InspectionResult:
+        started.append(engine.model_version)
+        assert len(started) > 1 or gate.wait(30), "the test did not release the board"
+        return real(engine, image)
+
+    monkeypatch.setattr(Inspector, "inspect", inspect)
+    boards = list_images(synthetic_dataset / "test" / "ok")[:2]
+    page._set_queue(boards)
+    page.start_run()
+    qtbot.waitUntil(lambda: len(started) == 1, timeout=60000)  # board 1 is in hand
+    if change == "reference":
+        ok = next(s for s in ctx.samples(BOARD, "OK") if s["path"] != ctx.reference_image(BOARD))
+        ctx.set_reference(BOARD, ok["id"])
+    else:
+        ctx.activate_model(v11)
+    golden = Path(ctx.reference_image(BOARD) or "").name
+    gate.set()
+    qtbot.waitUntil(lambda: page.worker is None and not page.running and ctx.jobs.idle(), timeout=60000)
+    records = ctx.inspections()[::-1]
+    stored = [ctx.inspection_result(r["id"]) for r in records]
+    judged = [(Path(r["image_path"]).name, r["model_version"], r["recipe_rev"]) for r in records]
+    notes = [s.notes if s is not None else None for s in stored]
+    alarms = [a["message"] for a in ctx.alarms() if a["code"] == "AOI-INSP-013"]
+    print(change, judged, notes, alarms, page.summary.text(), sep="\n")
+    version = "v1.0" if change == "reference" else "v1.1"  # board 2's record names the version active then
+    assert judged == [(boards[0].name, "v1.0", revision), (boards[1].name, version, revision)] and started[1] == version
+    if change == "activate":
+        assert notes == [[AI_OFF_NOTE]] * 2 and alarms == [], "no AI model judged either board"
+        assert "changed during this run" not in page.summary.text()
+        return
+    if change == "activate_ai_on":
+        assert len(alarms) == 1 and AI_OFF_NOTE not in notes[1]
+        said = f"{boards[1].name} was judged with AI model v1.1, recipe revision {revision} and Golden board {golden};"
+        assert alarms[0].startswith(f"The AI model, recipe or Golden board changed during this run: {said}")
+        return
+    line = (
+        f"The recipe or Golden board changed during this run: {boards[1].name} was judged with the AI check off, recipe"
+        f" revision {revision} and Golden board {golden}; each record names the recipe revision and Golden board that"
+        " judged it and the AI model version active then."
+    )
+    assert notes == [[AI_OFF_NOTE]] * 2 and alarms == [line] and page.summary.text().endswith(f"\n{line}")
+    assert page.alarms.item(0).text().endswith(f"[WARN]  AOI-INSP-013  {line}")
 
 
 def test_req_insp_006_a_board_model_with_no_ai_model_is_alarmed_once_per_page_visit(

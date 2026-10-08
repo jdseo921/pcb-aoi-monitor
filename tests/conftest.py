@@ -27,6 +27,7 @@ from aoi.config import Settings  # noqa: E402
 from aoi.core import anomaly  # noqa: E402
 from aoi.core.imaging import list_images, load_image  # noqa: E402
 from aoi.core.services import AppContext  # noqa: E402
+from aoi.data.db import new_uuid  # noqa: E402
 from aoi.ui.theme import QSS  # noqa: E402
 from tools.make_synthetic_dataset import write_dataset  # noqa: E402
 
@@ -98,6 +99,19 @@ def tiny_model(tmp_path_factory: pytest.TempPathFactory, synthetic_dataset: Path
     reference = ctx.db.reference(board_model)
     assert reference is not None, "training set no reference image"
     return TrainedModel(ctx, board_model, loaded[0], loaded[1], load_image(reference), meta)
+
+
+def another_version(ctx: AppContext, board_model: str, version: str) -> int:
+    """A second AI model version of `board_model`, registered but not active, and its id for `activate_model`: the
+    active version's weights saved again under a UUID of their own, as training registers a version, so a test can
+    activate another AI model without a training run, which would also set a new Golden board."""
+    active = ctx.active_model(board_model)
+    assert active is not None, "no AI model to copy"
+    model, uid = anomaly.AnomalyModel.load(active["path"]), new_uuid()
+    model.meta.update(version=version, uuid=uid)
+    path = Path(active["path"]).with_name(f"{board_model}_{version}_copy.pt")
+    model.save(path)
+    return ctx.db.register_model(board_model, version, str(path), {}, activate=False, uid=uid)
 
 
 @pytest.fixture
