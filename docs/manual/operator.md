@@ -21,18 +21,19 @@ or cycle it with Alt+V; the view is stored with every result.
 | ▶ Start | F5 | Inspects the queue board after board, until Stop or the end of the queue |
 | ■ Stop | F6 | Stops after the board in hand; nothing is deleted, so there is no confirmation |
 | Next Board | F8 | Inspects one board |
-| Save Image… | F9 | Writes the board image with its defect boxes to a picture file you choose; the result itself is already recorded |
+| Save Image… | F9 | Writes the board shown when you press it, with its defect boxes, to a picture file you choose (a run goes on while you name the file); the result itself is already recorded. Each picture saved is recorded in the audit trail with who saved it, which result it shows and where it went |
 
 A button and its key do the same. The key works whichever control on the Inspection page is selected (the defect
 list, the View box, a button), and only while that page is shown. Both go grey while the action is not possible:
 Start and Next Board until images are queued, while no board model is chosen in the top bar (with none yet, the page
 says to ask an Engineer to create one), while a run is on and while a board is being inspected; Stop while no
-run is on; Save Image… before the first result. Every result is recorded as it arrives, with the checks that decided
-it, before the next board starts; the records are on Logs & Export. If a result cannot be recorded (the disk is full,
-the workspace folder cannot be written, another program holds the database) the run stops with AOI-INSP-008: press
-Next Board to carry on, and inspect that board again later; such a board is not on Logs & Export and, if NG, has no
-alarm. An NG board that is recorded always has its NG alarm (AOI-INSP-003). Closing the app while a board is being
-inspected asks whether to stop: No keeps the app open; Yes records the board in hand and closes.
+run is on; Save Image… before the first result and while a picture is being saved. Every result is recorded as it
+arrives, with the checks that decided it, before the next board starts; the records are on Logs & Export. If a result
+cannot be recorded (the disk is full, the workspace folder cannot be written, another program holds the database) the
+run stops with AOI-INSP-008: press Next Board to carry on, and inspect that board again later; such a board is not on
+Logs & Export and, if NG, has no alarm. An NG board that is recorded always has its NG alarm (AOI-INSP-003). Closing the
+app while a board is being inspected asks whether to stop: No keeps the app open; Yes records the board in hand and
+closes.
 A run belongs to the board model it was started under. If the board model in the header changes during a run, the run
 stops after the board in hand, which is saved under the run's board model, and the status bar and the alarm log say so
 with AOI-INSP-012; the remaining boards are not inspected. Check the board model in the header, then press Start to

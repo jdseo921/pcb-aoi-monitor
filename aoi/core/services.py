@@ -1147,6 +1147,33 @@ class AppContext:
         }  # fmt: skip
         self._audit_files([Path(path)], "export.report", "test_run", run_uuid, after)
 
+    @requires("Operator", QT_TRANSLATE_NOOP("Errors", "Saving a board image"))
+    def export_board_image(
+        self,
+        res: InspectionResult,
+        board_model: str | None,
+        inspection_id: int | None,
+        board_file: str,
+        dest: str | Path,
+    ) -> Path:
+        """Save Image… (F9): write `res`'s board picture with its defect boxes to `dest`, whole or not at all, and audit
+        it as `export.image` (#241, REQ-LOG-004). The object is the UUID of record `inspection_id`, None for a result
+        that was not saved; the entry holds `dest`, stored as the exports store it (#196), `board_model`, the board's
+        file name `board_file` and the verdict. A name whose suffix no image format has is AOI-INSP-002, a file that
+        cannot be written AOI-LOG-002 naming it; a picture whose entry cannot be written is removed (#178), and with it
+        a file of that name it replaced. The record is read before the write, so a read that fails leaves no picture.
+        Every role may save (REQ-INSP-005; who may export is open in #151); a page runs it on the pool (REQ-SET-021)."""
+        record = self.inspection(inspection_id) if inspection_id is not None else None
+        after = {
+            "path": to_stored(Path(dest).absolute(), self.settings.root), "board_model": board_model,
+            "board": board_file, "verdict": res.verdict,
+        }  # fmt: skip
+        picture = draw_overlay(res)
+        with _export_write(dest):  # every read is done: after the write, only the entry is left (#241 review)
+            save_image(dest, picture)
+        self._audit_files([Path(dest)], "export.image", "inspection", record["uuid"] if record else None, after)
+        return Path(dest)
+
     def _audit_files(
         self,
         files: list[Path],

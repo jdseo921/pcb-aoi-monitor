@@ -548,7 +548,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-75"/>
+        <location line="+108"/>
+        <source>Saving a board image</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="-183"/>
         <source>Changing users</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1973,12 +1978,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+21"/>
+        <location line="+22"/>
         <source>{file}  ·  AI score {score:.2f}× threshold  ·  {defects} defect(s)  ·  {ms:.0f} ms</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+33"/>
+        <location line="+38"/>
         <source>Save annotated image</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1988,12 +1993,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+14"/>
+        <location line="+4"/>
         <source>Saved {file}</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+66"/>
+        <location line="+74"/>
         <source>Run stopped: the board model changed from {old} to {new}. Boards inspected before the change are saved under {old}; press Start to carry on with the queue under {new}.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2617,7 +2622,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/inspection.py" line="-464"/>
+        <location filename="../ui/pages/inspection.py" line="-468"/>
         <source>Inspection</source>
         <translation type="unfinished"></translation>
     </message>

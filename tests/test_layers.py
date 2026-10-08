@@ -14,6 +14,7 @@ import sys
 from pathlib import Path
 
 import cv2
+from PySide6.QtGui import QImageWriter
 
 from aoi.core import imaging
 
@@ -25,8 +26,11 @@ UI_DIR = ROOT / "aoi" / "ui"
 FORBIDDEN_IN_UI = ("sqlite3", "aoi.data", "cv2.imread", "cv2.imdecode")
 # Forbidden whatever module they are imported through: services imports both readers and Database for its own use, so
 # they resolve there too (#202).
-FORBIDDEN_NAMES = (".load_image", ".load_image_sha256", ".Database")
+FORBIDDEN_NAMES = (".load_image", ".load_image_sha256", ".Database", ".save_image", ".QImageWriter")
 IMAGE_READERS = ("load_image", "load_image_sha256", "imread", "imdecode")
+# A picture leaves the station only through `AppContext.export_board_image`, which checks the role and audits it (#241);
+# a `.save(` with an argument, as a QImage's or a QPixmap's, writes one too (QPainter.save() takes none).
+IMAGE_WRITERS = ("save_image", "imwrite", "QImageWriter")
 QT_PACKAGES = {"PySide6", "PySide2", "PyQt5", "PyQt6", "shiboken6", "shiboken2"}
 
 
@@ -95,7 +99,8 @@ def through_context(value: ast.expr) -> bool:
 def appcontext_violations(path: Path, package: str) -> list[str]:
     """What a screen module does outside AppContext, each as "file:line what": a sqlite3 or aoi.data import, `Database`,
     `load_image` or `load_image_sha256` imported from any module, `load_image` or `load_image_sha256` called by its bare
-    name or on anything but the context, `cv2.imread` or `cv2.imdecode`, an `Inspector` imported outside
+    name or on anything but the context, `cv2.imread` or `cv2.imdecode`, `save_image` or `QImageWriter` imported,
+    either of them, `cv2.imwrite` or a `.save(` with an argument called (#241), an `Inspector` imported outside
     `if TYPE_CHECKING:` or built by its bare or dotted name, `.db`, or SQL `.execute(`, `.executemany(` or
     `.executescript(`."""
     found: list[str] = []
@@ -123,6 +128,11 @@ def appcontext_violations(path: Path, package: str) -> list[str]:
             found.append(f"{where} reads an image outside AppContext")
         if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id in IMAGE_READERS:
             found.append(f"{where} reads an image outside AppContext")
+        bare = isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id in IMAGE_WRITERS
+        saves = isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute) and node.func.attr == "save"
+        saves = saves and bool(node.args or node.keywords)  # a QImage's or QPixmap's save(path), not QPainter.save()
+        if bare or saves or (isinstance(node, ast.Attribute) and node.attr in IMAGE_WRITERS):
+            found.append(f"{where} writes an image outside AppContext")
         sql = ("execute", "executemany", "executescript")
         if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute) and node.func.attr in sql:
             found.append(f"{where} calls .{node.func.attr}(")
@@ -135,7 +145,9 @@ def test_req_usr_001_pages_use_appcontext_only() -> None:
     (the `Inspector` name may be imported under `if TYPE_CHECKING:` for a type hint, since S22b), and no `load_image`
     imported or called on a module: the settings' size limits apply only through `AppContext.load_image`
     (REQ-INSP-001, since S23c). Since #202 that holds through any module (`Database` and `load_image` resolve on
-    services too), for a bare `load_image(p)` call and for `cv2.imread` and `cv2.imdecode`."""
+    services too), for a bare `load_image(p)` call and for `cv2.imread` and `cv2.imdecode`. Since #241 no page writes
+    a picture (`save_image`, `cv2.imwrite`, `QImageWriter`, a QImage's or QPixmap's `.save(path)`): Save Image… goes
+    through `AppContext.export_board_image`, audited."""
     found: list[str] = []
     for path in sorted(UI_DIR.rglob("*.py")):
         package = module_name(path) if path.name == "__init__.py" else module_name(path).rpartition(".")[0]
@@ -147,7 +159,9 @@ def test_req_usr_001_the_scan_catches_a_built_inspector(tmp_path: Path) -> None:
     """The scan itself: a runtime import of Inspector, an Inspector built by its bare or dotted name, `.db`,
     `.execute(` and `load_image` imported or called on a module are flagged, and so are (#202) `Database` and both
     readers imported through services, a bare `load_image(p)`, `cv2.imread`, `cv2.imdecode`, `.executemany(` and
-    `.executescript(`; the import under `if TYPE_CHECKING:`, `load_image` on the context and other cv2 calls are not."""
+    `.executescript(`, and (#241) `save_image` and `QImageWriter` imported or called, `cv2.imwrite` and a `.save(` with
+    an argument; the import under `if TYPE_CHECKING:`, `load_image` on the context, other cv2 calls and
+    `QPainter.save()` are not."""
     sample = tmp_path / "sample.py"
     sample.write_text(
         "from typing import TYPE_CHECKING\n"
@@ -166,7 +180,13 @@ def test_req_usr_001_the_scan_catches_a_built_inspector(tmp_path: Path) -> None:
         "def g(ctx, path, conn):\n"
         "    load_image(path), load_image_sha256(path), cv2.imread(path), cv2.imdecode(path, 1)\n"
         "    conn.executescript('DELETE FROM inspections'), conn.executemany('DELETE FROM alarms', [])\n"
-        "    return cv2.cvtColor(ctx.load_image(path), cv2.COLOR_BGR2RGB)\n",
+        "    return cv2.cvtColor(ctx.load_image(path), cv2.COLOR_BGR2RGB)\n"
+        "from ...core.imaging import save_image\n"
+        "def h(path, img):\n"
+        "    save_image(path, img), imaging.save_image(path, img), cv2.imwrite(path, img)\n"
+        "from PySide6.QtGui import QImageWriter\n"
+        "def k(path, img, pix, painter):\n"
+        "    img.save(path), pix.save(path, 'PNG'), QImageWriter(path).write(img), painter.save()\n",
         encoding="utf-8",
     )
     assert sorted(appcontext_violations(sample, "aoi.ui.pages")) == [
@@ -182,7 +202,15 @@ def test_req_usr_001_the_scan_catches_a_built_inspector(tmp_path: Path) -> None:
         "sample.py:15 reads an image outside AppContext",
         "sample.py:16 calls .executemany(",
         "sample.py:16 calls .executescript(",
+        "sample.py:18 imports aoi.core.imaging.save_image",
         "sample.py:2 imports aoi.core.inspector.Inspector",
+        "sample.py:20 writes an image outside AppContext",
+        "sample.py:20 writes an image outside AppContext",
+        "sample.py:20 writes an image outside AppContext",
+        "sample.py:21 imports PySide6.QtGui.QImageWriter",
+        "sample.py:23 writes an image outside AppContext",
+        "sample.py:23 writes an image outside AppContext",
+        "sample.py:23 writes an image outside AppContext",
         "sample.py:4 imports aoi.core.imaging.load_image",
         "sample.py:8 builds an Inspector",
         "sample.py:9 builds an Inspector",
@@ -191,8 +219,10 @@ def test_req_usr_001_the_scan_catches_a_built_inspector(tmp_path: Path) -> None:
 
 def test_req_usr_001_no_screen_module_holds_the_data_layer_or_an_image_reader() -> None:
     """What every screen module holds once imported, whatever name or module it came through (#202): no sqlite3, nothing
-    from aoi.data (`Database` re-exported by services included) and no reader that skips the settings' size limits."""
-    readers = (imaging.load_image, imaging.load_image_sha256, cv2.imread, cv2.imdecode)
+    from aoi.data (`Database` re-exported by services included), no reader that skips the settings' size limits and
+    no image writer that skips the audit trail (#241)."""
+    readers = (imaging.load_image, imaging.load_image_sha256, cv2.imread, cv2.imdecode, imaging.save_image, cv2.imwrite)
+    readers += (QImageWriter,)
     found = []
     for path in sorted(UI_DIR.rglob("*.py")):
         module = importlib.import_module(module_name(path))

@@ -23,9 +23,9 @@ from PySide6.QtWidgets import (
 
 from ... import defects as taxonomy
 from ...core.explain import notes
-from ...core.imaging import IMAGE_EXTS, list_images, save_image
-from ...core.inspector import NG, InspectionResult, draw_overlay
-from ...core.services import BUSY_ALARM_WAIT_MS, Actor, AppContext
+from ...core.imaging import IMAGE_EXTS, list_images
+from ...core.inspector import NG, InspectionResult
+from ...core.services import BUSY_ALARM_WAIT_MS, REQUIRED_ROLE, ROLES, Actor, AppContext
 from ...errors import AoiError
 from ...hal import VIEWS
 from ...times import to_local
@@ -377,6 +377,7 @@ class InspectionPage(Page):
     def _on_result(self, out: Outcome) -> None:
         path, res, _engine, iid, save_error = out
         self.last, self.last_path, self.last_id, self.last_board_model = res, path, iid, self.board_model
+        self._update_buttons()  # Save Image… and Compare on with the result, not at the finished slot (#241 review)
         self._show_verdict(res)  # painted before the image and the table are built: the verdict first (REQ-INSP-002)
         self.empty.hide()
         self.view.set_image(res.image, keep_view=self.queue_pos > 0)
@@ -413,26 +414,23 @@ class InspectionPage(Page):
         self._refresh_alarms()
 
     def save_annotated_image(self) -> None:
-        """F9: write the last board's image with its defect boxes to a picture file; the result itself is saved."""
-        res, path = self.last, self.last_path
-        if res is None or path is None:
+        """F9: write the last board's picture with its defect boxes to a file the user names; the result itself is
+        saved. `AppContext.export_board_image` writes it on the pool (REQ-SET-021) as the user who pressed F9, checks
+        the role and records the picture in the audit trail with the record and where it went (#241, REQ-LOG-004); a
+        name with no image format (AOI-INSP-002) or a file that cannot be written (AOI-LOG-002) shows a coded error."""
+        # All of the board read before the dialog, whose event loop lets a run go on: a board finishing or a board
+        # model change meanwhile replaces them, and the entry would name another record than the picture's (#241 review)
+        res, path, iid, board_model = self.last, self.last_path, self.last_id, self.last_board_model
+        if res is None or path is None or self._bg is not None:  # one save at a time: a second would stop the first
             return
         f, _ = QFileDialog.getSaveFileName(
             self, self.tr("Save annotated image"), f"{path.stem}_{res.verdict}.png", self.tr("PNG (*.png)")
         )
         if not f:
             return
-        try:
-            save_image(f, draw_overlay(res))
-        except AoiError as e:  # a name with a suffix no image format has (AOI-INSP-002, #195)
-            self.error(e)
-            return
-        except OSError as e:  # a file another program holds open, a folder of that name
-            err = AoiError("AOI-LOG-002", detail=repr(e), path=f, reason=e.strerror or str(e))
-            err.__cause__ = e
-            self.error(err)
-            return
-        self.shell.status(self.tr("Saved {file}").format(file=Path(f).name))
+        saved = self.tr("Saved {file}").format(file=Path(f).name)
+        board = (res, board_model, iid, path.name)
+        self.run_in_background(self.ctx.export_board_image, *board, f, on_result=lambda _: self.shell.status(saved))
 
     def open_compare(self) -> None:
         """Compare on the last result in one click: its record as decided (REQ-INSP-009), or its file when not saved."""
@@ -476,15 +474,21 @@ class InspectionPage(Page):
     def _update_buttons(self) -> None:
         """Enable the actions, and with them the buttons and the keys, for the state: Start and Next Board need a queue
         and a board model in the header (#244: with none, neither can run, and an Operator cannot create one) and wait
-        while a board is being inspected (#120), Stop acts while a run is on, Save Image… once there is a result, and
-        Compare while there is a record or a file to open (#243): not before the first board, after a board that was not
-        inspected, or after a board model change."""
+        while a board is being inspected (#120), Stop acts while a run is on, Save Image… once there is a result, for a
+        role `export_board_image` allows and while no save runs (#241), and Compare while there is a record or a file to
+        open (#243): not before the first board, after a board that was not inspected, or after a board model change."""
         has, busy = bool(self.queue) and self.board_model is not None, self.worker is not None
         self.act_start.setEnabled(has and not self.running and not busy)
         self.act_stop.setEnabled(self.running)
         self.act_next.setEnabled(has and not self.running and not busy)
-        self.act_save.setEnabled(self.last is not None)
+        need = ROLES.index(REQUIRED_ROLE["export_board_image"])  # the service's @requires, never written out again here
+        may_save = self.ctx.role in ROLES and ROLES.index(self.ctx.role) >= need
+        self.act_save.setEnabled(self.last is not None and may_save and self._bg is None)
         self.btn_compare.setEnabled(self.last_id is not None or self.last_path is not None)
+
+    def update_actions(self) -> None:
+        """A Save Image… job starting or ending (`run_in_background`): Save Image… is off while it runs (#241)."""
+        self._update_buttons()
 
     def _drop_engine(self) -> None:
         """The next board builds the engine again, and an engine a board is building at this moment is not kept when
@@ -551,5 +555,6 @@ class InspectionPage(Page):
     def on_show(self) -> None:
         self._drop_engine()  # pick up newly trained models or saved recipes
         self._no_ai_warned = None  # each visit says once that a board model has no AI model yet
+        self._update_buttons()  # Save Image… follows the role after a Switch User (#241)
         self._refresh_alarms()
         self._show_empty()
