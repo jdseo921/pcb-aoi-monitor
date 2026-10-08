@@ -69,9 +69,12 @@ MODES = [  # the Show combo, in this order; shown through tr()
 ]
 MODE_SIDE, MODE_DIFF, MODE_AI, MODE_BOXES = range(4)
 NO_VERDICT = "—"  # the banner with no result shown
-Stored: TypeAlias = "tuple[np.ndarray | None, Judged, InspectionResult | None, list[ErrorReport]] | ErrorReport"
-# golden board, why not, result, and the stored files of it that could not be read; or why none of it could be read.
-# Each error is already logged and alarmed (#247)
+Stored: TypeAlias = (
+    "tuple[np.ndarray | None, Judged, InspectionResult | None, list[tuple[ErrorReport, AoiError]]] | ErrorReport"
+)
+# golden board, why not, result, and the stored files of it that could not be read, each as the dialog's report and the
+# note's copy of the error, whose file name may wrap (#245); or why none of it could be read. Each error is already
+# logged and alarmed (#247)
 # Evaluated: the golden board, the result, why the Golden board cannot be shown, the refusal of a test board it kept
 # from being judged, and that refusal's report for the dialog of a run that was asked for, already alarmed (#206, #247)
 Evaluated: TypeAlias = (
@@ -493,7 +496,8 @@ class ComparePage(Page):
         never a widget. A map or overlay that cannot be read takes away only itself, never the golden board; when none
         of it can be read (a database another program holds, say), the report comes back alone. Each error is logged
         and alarmed here, so a load a newer one replaced loses none, and comes back for the panes and the dialog,
-        which so name the one code (#247)."""
+        which so name the one code (#247), beside a copy for the note whose file name may wrap (breakable_names,
+        #245)."""
         unread: list[AoiError] = []
         try:
             ref, judged = self.ctx.judged_reference(inspection_id)
@@ -516,7 +520,7 @@ class ComparePage(Page):
                 )
                 picture.__cause__ = e  # the log keeps the reader's error and its trace
                 unread.append(picture.with_traceback(e.__traceback__))
-        return ref, judged, res, [self.ctx.report_error(e, self.title) for e in unread]
+        return ref, judged, res, [(self.ctx.report_error(e, self.title), breakable_names(e)) for e in unread]
 
     def _on_stored_loaded(self, out: Stored) -> None:
         if self.stored is None:  # a fresh run or a board model change came first: nothing of it shows
@@ -537,8 +541,10 @@ class ComparePage(Page):
         if res.image is None:  # its overlay was deleted by hand, or cannot be read: the verdict and the table stand
             self._no_board_picture(self.tr("Board picture no longer stored"))
         self.redraw()
-        for report in unread:  # after the panes are drawn, so the dialog names the file beside them; the note keeps it
-            self.note.setText(f"{self.note.text()} {report.code} {phrase_text(report.what)}")
+        # after the panes are drawn, so the dialog names the file beside them; the note keeps it, the name breakable
+        # (#245), while the dialog, the log and the alarm keep the name as it is
+        for report, shown in unread:
+            self.note.setText(f"{self.note.text()} {report.code} {phrase_text(shown.what)}")
             show_error(self, report)
 
     def _no_board_picture(self, heading: str, why: str = "") -> None:

@@ -47,7 +47,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+13"/>
+        <location line="+16"/>
         <source>This result was judged without a Golden board.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -160,12 +160,12 @@
     </message>
     <message>
         <location line="+15"/>
-        <location line="+538"/>
+        <location line="+541"/>
         <source>Test board</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-532"/>
+        <location line="-535"/>
         <source>Inspecting…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -307,14 +307,14 @@
     </message>
     <message>
         <location line="+0"/>
-        <location line="+128"/>
+        <location line="+131"/>
         <location line="+117"/>
         <location line="+12"/>
         <source>Re-evaluate ›</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-243"/>
+        <location line="-246"/>
         <source>Train an AI model on Training.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -344,7 +344,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+41"/>
+        <location line="+42"/>
         <source>Golden board not shown</source>
         <translation type="unfinished"></translation>
     </message>
@@ -354,17 +354,17 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+21"/>
+        <location line="+23"/>
         <source>The verdict and the decision table are the stored ones; press Re-evaluate to inspect the board again from its image file.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-10"/>
+        <location line="-12"/>
         <source>Board picture no longer stored</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+19"/>
+        <location line="+21"/>
         <source>Stored result of {time}: AI model {model}, recipe revision {revision}, view {view}.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1662,7 +1662,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/model_test.py" line="+46"/>
+        <location filename="../ui/pages/model_test.py" line="+47"/>
         <source>AI model {version}</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2443,25 +2443,25 @@
     <name>ModelTestPage</name>
     <message>
         <location filename="../ui/pages/model_test.py" line="+35"/>
-        <location line="+289"/>
+        <location line="+297"/>
         <source>Select Test Folder…</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-288"/>
+        <location line="-296"/>
         <location line="+99"/>
-        <location line="+163"/>
+        <location line="+171"/>
         <source>Run Test</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-260"/>
-        <location line="+292"/>
+        <location line="-268"/>
+        <location line="+300"/>
         <source>Export CSV</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-291"/>
+        <location line="-299"/>
         <source>Export Report</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2511,7 +2511,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-84"/>
+        <location line="-85"/>
         <source>Matches label</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2526,7 +2526,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+83"/>
+        <location line="+84"/>
         <source>Matches label?</source>
         <comment>whether the verdict matches the image&apos;s label</comment>
         <translation type="unfinished"></translation>
@@ -2572,7 +2572,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+82"/>
+        <location line="+90"/>
         <source>Run Test Again ›</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2764,7 +2764,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/compare.py" line="-527"/>
+        <location filename="../ui/pages/compare.py" line="-530"/>
         <source>Compare</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2784,7 +2784,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/model_test.py" line="-371"/>
+        <location filename="../ui/pages/model_test.py" line="-379"/>
         <source>AI Model Test</source>
         <translation type="unfinished"></translation>
     </message>

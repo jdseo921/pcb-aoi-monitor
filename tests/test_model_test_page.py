@@ -26,6 +26,7 @@ from aoi.ui import workers
 from aoi.ui.main_window import MainWindow
 from aoi.ui.pages.base import cell_item, cell_text
 from aoi.ui.pages.model_test import ModelTestPage
+from tests.conftest import wrapped
 from tests.test_error_translation import Marking
 from tests.test_req_done_in_v01 import BOARD, _window
 
@@ -94,7 +95,9 @@ def test_req_tst_003_a_preview_is_judged_by_what_judged_its_row_or_not_at_all(
         assert page.run_note.isVisible() and all(f"AI model {v}" in page.run_note.text() for v in ("v1.0", "v1.1"))
         first = cell_text(page.table, 0, 0)  # and row 0, still selected, no longer shows its preview from before
         assert "Not inspected" in page.preview_verdict.text() and page.view._pix is None
-        assert page.preview_empty.sentence.text().startswith(f"AOI-TST-001 {first} was judged in this run by AI")
+        assert page.preview_empty.sentence.text().startswith(
+            f"AOI-TST-001 {wrapped(first)} was judged in this run by AI"
+        )
     elif change == "retrain_on_page":
         train()
     elif change == "activate":
@@ -210,7 +213,8 @@ def test_req_tst_003_a_preview_inspected_across_a_change_is_not_shown(
     print(row, "inspected", len(inspected), "banner", page.preview_verdict.text(), "pane", said[0])
     print("last inspected:", win.last_inspected and Path(win.last_inspected[0]).name)
     assert win.last_inspected is None and "Not inspected" in page.preview_verdict.text()
-    assert said[0] == f"{name} was not inspected" and said[1].startswith(f"AOI-TST-001 {name} was judged in this run")
+    shown = wrapped(name)  # a name in the pane may break after each _ and - (#245)
+    assert said[0] == f"{shown} was not inspected" and said[1].startswith(f"AOI-TST-001 {shown} was judged in this run")
     assert len(inspected) == 1 and page.view._pix is None and dialogs == []
 
 
@@ -327,10 +331,14 @@ def test_req_tst_003_a_run_with_no_ai_model_or_golden_board_reads_so(
     note, said = page.run_note.text(), page.preview_empty.sentence.text()
     print(note, said, sep="\n")
     golden = Path(trained_ctx.reference_image(BOARD) or "").name
-    now = f"{BOARD} now uses AI model v1.0, recipe revision 1 and Golden board {golden}"
-    assert note.startswith(f"These results were judged by no AI model, recipe revision 1 and no Golden board; {now}.")
-    assert said.startswith("AOI-TST-001 ok_009.png was judged in this run by no AI model, recipe revision 1 and no")
-    assert f"Golden board; {now}, so" in said and "none" not in note + said
+    now = f"{BOARD} now uses AI model v1.0, recipe revision 1 and Golden board "  # the pane's names may wrap (#245)
+    assert note.startswith(
+        f"These results were judged by no AI model, recipe revision 1 and no Golden board; {now}{golden}."
+    )
+    assert said.startswith(
+        f"AOI-TST-001 {wrapped('ok_009.png')} was judged in this run by no AI model, recipe revision 1 and no"
+    )
+    assert f"Golden board; {now}{wrapped(golden)}, so" in said and "none" not in note + said
     errors: list[AoiError] = []
     shown = page.not_inspected
     monkeypatch.setattr(page, "not_inspected", lambda *a, **k: errors.append(a[2]) or shown(*a, **k))
@@ -343,8 +351,10 @@ def test_req_tst_003_a_run_with_no_ai_model_or_golden_board_reads_so(
     finally:
         QCoreApplication.removeTranslator(translator)
     print(page.run_note.text(), page.preview_empty.sentence.text(), str(errors[0]), sep="\n")
-    marked = ("§no AI model", "§AI model v1.0", "§no Golden board", f"§Golden board {golden}")
+    marked = ("§no AI model", "§AI model v1.0", "§no Golden board")
     assert all(m in page.run_note.text() and m in page.preview_empty.sentence.text() for m in marked)
+    assert f"§Golden board {golden}" in page.run_note.text()
+    assert f"§Golden board {wrapped(golden)}" in page.preview_empty.sentence.text()
     assert "§" not in str(errors[0]) and "by no AI model, recipe revision 1 and no Golden board;" in str(errors[0])
 
 
@@ -375,7 +385,8 @@ def test_req_tst_003_a_run_with_no_ai_model_says_so_once_one_is_trained(
     print(note, said, sep="\n")
     judged = f"by no AI model, recipe revision 1 and Golden board {golden}; {BOARD} now uses AI model v1.0,"
     assert page.run_note.isVisible() and note.startswith(f"These results were judged {judged}")
-    assert said.startswith(f"AOI-TST-001 {cell_text(page.table, 0, 0)} was judged in this run {judged}")
+    shown = judged.replace(golden, wrapped(golden))  # the pane's names may break after each _ and - (#245)
+    assert said.startswith(f"AOI-TST-001 {wrapped(cell_text(page.table, 0, 0))} was judged in this run {shown}")
     assert "Not inspected" in page.preview_verdict.text() and dialogs == []
 
 

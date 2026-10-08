@@ -31,7 +31,7 @@ from ..widgets.busy import BusyOverlay
 from ..widgets.empty_state import EmptyState
 from ..widgets.image_view import ImageView
 from ..workers import Worker, start
-from .base import QT_TRANSLATE_NOOP, Page, button, cell_item, fill_table, make_table
+from .base import QT_TRANSLATE_NOOP, Page, breakable, button, cell_item, fill_table, make_table
 
 if TYPE_CHECKING:
     from ..main_window import MainWindow
@@ -42,7 +42,8 @@ MATCHES = {  # a row's pass_fail, stored and exported as this English key -> wha
     "NO_LABEL": QT_TRANSLATE_NOOP("ModelTestPage", "No label"),
 }
 # What judged a run and what is in use now, as AOI-TST-001 and the note name them: phrases, which a screen translates in
-# place while the error's own text, which a log would keep, stays English (#250)
+# place while the error's own text, which a log would keep, stays English (#250). The preview pane's copy of AOI-TST-001
+# also names its files through breakable (#245), so a log would build its own from the plain names
 AI_MODEL = QT_TRANSLATE_NOOP("Errors", "AI model {version}")
 NO_AI_MODEL = QT_TRANSLATE_NOOP("Errors", "no AI model")
 GOLDEN_BOARD = QT_TRANSLATE_NOOP("Errors", "Golden board {file}")
@@ -286,9 +287,17 @@ class ModelTestPage(Page):
     def _refuse_preview(self, path: str, changed: dict[str, object]) -> None:
         """A row of a run that is no longer current is not inspected (#250): the banner reads Not inspected, the pane
         shows AOI-TST-001 (what judged the run, what is in use now, what to do), and Use Last Inspected keeps the board
-        it had. The callers show the note above the table."""
-        name = Path(path).name
-        e = AoiError("AOI-TST-001", None, file=name, **changed)
+        it had. The callers show the note above the table. The error is the pane's copy, never raised or logged: the
+        row's file name and each Golden board's go through breakable, so a long one wraps within the pane (#245);
+        `changed`, which the note shows, keeps the names as they are."""
+        name = breakable(Path(path).name)
+        shown = {
+            k: GOLDEN_BOARD.fill(file=breakable(str(v.values["file"])))
+            if isinstance(v, Phrase) and v.filled and v.source == GOLDEN_BOARD.source
+            else v
+            for k, v in changed.items()
+        }
+        e = AoiError("AOI-TST-001", None, file=name, **shown)
         heading, sentence = self.not_inspected(self.preview_verdict, name, e, big=False)
         what = " ".join([sentence, phrase_text(e.action)])
         self.preview_empty.show_state(heading, what, self.tr("Run Test Again ›"), self._run_again)
