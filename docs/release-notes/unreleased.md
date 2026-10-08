@@ -25,7 +25,7 @@ None. / 없음.
 
 ## Security / 보안 (draft)
 
-- (none yet)
+- [REQ-TRN-014] AI model files load as weights only on PyTorch 2.6 or later; a file that needs code to load is refused with an error naming the file (#1). / AI 모델 파일은 PyTorch 2.6 이상에서 가중치 전용으로만 불러오며, 코드 실행이 필요한 파일은 파일명을 알리는 오류와 함께 거부됩니다 (#1).
 
 ## Known issues / 알려진 문제 (draft)
 
@@ -33,8 +33,7 @@ None. / 없음.
 
 ## Upgrade notes / 업그레이드 안내 (draft)
 
-- v0.1 workspaces hold test data only and are not upgraded (ADR 0001). / v0.1 작업 폴더는 테스트 데이터만
-  담고 있으며 업그레이드되지 않습니다 (ADR 0001).
+- [REQ-TRN-014] AI model files written by v0.1 no longer load; retrain after upgrading. v0.1 workspaces hold test data only and are not upgraded (ADR 0001). / v0.1이 만든 AI 모델 파일은 더 이상 불러올 수 없으므로 업그레이드 후 다시 학습합니다. v0.1 작업 폴더는 테스트 데이터만 담고 있으며 업그레이드되지 않습니다 (ADR 0001).
 
 <!--
 Item format: "- [REQ-INSP-005] Start, Stop, Next Board and Save Result work by F5, F6, F8 and F9. / F5, F6, F8, F9 키로
