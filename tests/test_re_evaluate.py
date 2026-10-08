@@ -1,14 +1,18 @@
 """REQ-CMP-005: a result is judged again with other thresholds from the evidence it holds, without aligning, comparing
-or running the AI model (S28a): the engine (`Inspector.judge`, `re_grade`) and the maps stored with a result, which
-hold that evidence within one step (`aoi/core/maps.py`)."""
+or running the AI model (S28a): the engine (`Inspector.judge`, `re_grade`), the maps stored with a result, which hold
+that evidence within one step (`aoi/core/maps.py`), and `AppContext.re_evaluate`, which answers within 300 ms at 5 MP
+and stores nothing."""
 
 from __future__ import annotations
 
 import copy
 import json
+import statistics
 from dataclasses import replace
 from pathlib import Path
+from time import perf_counter
 
+import cv2
 import numpy as np
 import pytest
 from torch import nn
@@ -26,7 +30,13 @@ from aoi.core.inspector import (
     re_grade,
 )
 from aoi.core.recipe import ROI, Recipe
+from aoi.core.services import AppContext
+from aoi.errors import AoiError
 from tests.conftest import TrainedModel
+from tests.test_no_freeze import SIZE_5MP, board_5mp  # noqa: F401  # the 5 MP fixture
+from tests.test_req_done_in_v01 import BOARD
+
+BUDGET_S = 0.3
 
 AI, IN_R1, AREA, REGIONS = "AI anomaly score", "ROI R1 [Presence]", "Changed area %", "Difference regions"
 WHAT_IF = [  # other thresholds, one change at a time and all at once, and checks each grades otherwise on a test board
@@ -62,9 +72,15 @@ def _refuse_the_engine(monkeypatch: pytest.MonkeyPatch) -> None:
 
     for owner, name in (
         (anomaly.AnomalyModel, "anomaly_map"), (anomaly.AnomalyModel, "score"), (anomaly.AnomalyModel, "load"),
-        (inspector, "compare"), (inspector, "align_to_reference"),
+        (inspector, "compare"), (inspector, "align_to_reference"), (AppContext, "load_model"),
     ):  # fmt: skip
         monkeypatch.setattr(owner, name, refuse)
+
+
+def _store(ctx: AppContext, path: Path) -> str:
+    """Inspect a board with the board model's recipe and save the record, as Inspection does; the record's UUID."""
+    ctx.inspect_file(BOARD, str(path))
+    return str(ctx.inspections(board_model=BOARD)[0]["uuid"])
 
 
 def _evidence(res: InspectionResult, model: anomaly.AnomalyModel) -> AiEvidence:
@@ -260,3 +276,145 @@ def test_req_cmp_005_the_stored_ai_map_keeps_each_pixel_on_its_side_of_the_pixel
     save_image(old, np.array([[0, 1235, 65535]], np.uint16))
     res = maps.load_maps(InspectionResult("OK", 0.0), None, str(old))
     assert res.anomaly_map is not None and res.anomaly_map[0].tolist() == pytest.approx([0.0, 1.235, 65.535])
+
+
+def test_req_cmp_005_reevaluate_without_model_under_300_ms(
+    trained_ctx: AppContext,
+    board_5mp: Path,  # noqa: F811
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A stored 5 MP NG result with both maps, judged again with other thresholds: the AI model never runs, nor do the
+    alignment and the comparison; the median of five re-evaluations is under 300 ms; nothing is stored."""
+    ctx = trained_ctx
+    golden = Path(str(ctx.reference_image(BOARD)))
+    big = golden.with_name("golden_5mp.png")  # the customer's golden board is taken by the same 5 MP camera
+    cv2.imwrite(str(big), cv2.resize(cv2.imread(str(golden)), SIZE_5MP, interpolation=cv2.INTER_CUBIC))
+    ctx.db.set_reference(BOARD, str(big))
+    uuid = _store(ctx, board_5mp)
+    before = (ctx.audit_entries(), ctx.inspections(), ctx.recipe_history(BOARD))
+    _refuse_the_engine(monkeypatch)
+    thresholds = _what_if(ctx.recipe(BOARD)[1])[-1]
+    took, results = [], []
+    for _ in range(5):
+        t0 = perf_counter()
+        results.append(ctx.re_evaluate(uuid, thresholds))
+        took.append(perf_counter() - t0)
+    print(f"re_evaluate at 5 MP: median {statistics.median(took) * 1000:.0f} ms, worst {max(took) * 1000:.0f} ms")
+    assert statistics.median(took) < BUDGET_S, took
+    res = results[-1]
+    assert {c.source for c in res.checks} == {"Compare", "AI"} and res.anomaly_map is not None
+    assert next(c for c in res.checks if c.source == "AI").threshold == thresholds.anomaly_threshold
+    assert (ctx.audit_entries(), ctx.inspections(), ctx.recipe_history(BOARD)) == before, "nothing is stored"
+
+
+def test_req_cmp_005_reevaluate_judges_a_stored_result_as_inspecting_with_those_thresholds(
+    trained_ctx: AppContext, synthetic_dataset: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Test boards, OK and NG, stored under a recipe with an ROI, then judged again by UUID from the record, its map
+    files and the model registry: with the board model's recipe each gets back its stored checks, defects and verdict,
+    and with other thresholds what inspecting it with them gives, a value read from the AI map within one step (the
+    engine's tests above take every board)."""
+    ctx = trained_ctx
+    _, recipe = ctx.recipe(BOARD)
+    recipe.rois = [ROI("R1", "Presence", 200, 150, 160, 120, ai_score=0.8)]
+    ctx.save_recipe(recipe)
+    what_if, boards = _what_if(ctx.recipe(BOARD)[1]), sorted(synthetic_dataset.glob("test/*/*.png"))[::4]
+    assert {p.parent.name for p in boards} == {"ok", "ng"}
+    stored = {path: _store(ctx, path) for path in boards}
+    fresh = {path: [ctx.inspect(BOARD, ctx.load_image(path), r) for r in what_if] for path in boards}
+    _refuse_the_engine(monkeypatch)
+    for path, uuid in stored.items():
+        as_judged = ctx.inspection_result(ctx.inspections(board_model=BOARD)[-1 - boards.index(path)]["id"])
+        assert as_judged is not None
+        _assert_close(ctx.re_evaluate(uuid, ctx.recipe(BOARD)[1]), as_judged, f"{path.name} as judged")
+        for i, thresholds in enumerate(what_if):
+            _assert_close(ctx.re_evaluate(uuid, thresholds), fresh[path][i], f"{path.name} what-if {i}")
+
+
+def test_req_cmp_005_reevaluate_a_result_without_maps_for_its_checks(trained_ctx: AppContext, ng_board: Path) -> None:
+    """A result stored with the AI check and the comparison turned off has no maps, and needs none to be judged again
+    with both on: neither is judged, with the notes saying so; one stored with both, judged with both off, has
+    neither check."""
+    ctx = trained_ctx
+    _, recipe = ctx.recipe(BOARD)
+    off, on = copy.deepcopy(recipe), copy.deepcopy(recipe)
+    off.use_ai = off.use_compare = False
+    ctx.save_recipe(off)
+    bare = ctx.re_evaluate(_store(ctx, ng_board), on)
+    assert (bare.checks, bare.defects, bare.verdict) == ([], [], "OK")
+    assert bare.notes == [NOT_COMPARED_NOTE, NOT_AI_JUDGED_NOTE]
+    ctx.save_recipe(on)
+    full = ctx.re_evaluate(_store(ctx, ng_board), off)
+    assert (full.checks, full.notes, full.compare, full.anomaly_map) == ([], [], None, None)
+
+
+def test_req_cmp_005_reevaluate_uses_the_ai_model_that_judged_it(trained_ctx: AppContext, ng_board: Path) -> None:
+    """After a newer AI model is made active, a stored result is still judged again with the calibration of the AI
+    model that judged it: with the recipe it was judged by, it gets back its stored checks, defects and verdict."""
+    ctx = trained_ctx
+    uuid = _store(ctx, ng_board)
+    (rec,) = ctx.inspections(board_model=BOARD)
+    ctx.db.register_model(BOARD, "v9.9", "newer.pt", {"image_threshold": 1e6, "pixel_threshold": 1e6})
+    as_judged = ctx.inspection_result(rec["id"])
+    assert as_judged is not None and as_judged.verdict == "NG"
+    _assert_close(ctx.re_evaluate(uuid, ctx.recipe(BOARD)[1]), as_judged, "after a newer AI model")
+
+
+def test_req_cmp_005_reevaluate_refuses_what_it_cannot_judge(trained_ctx: AppContext, ng_board: Path) -> None:
+    """An unknown result, another board model's recipe, a map that cannot be read, and a result whose map or AI model
+    calibration is gone: each refused with its code and what to do, unless the thresholds turn off the check that needs
+    it, whose map is then not read; the stored result is not changed."""
+    ctx = trained_ctx
+    uuid, (_, recipe) = _store(ctx, ng_board), ctx.recipe(BOARD)
+    with pytest.raises(AoiError) as unknown:
+        ctx.re_evaluate("no-such-result", recipe)
+    assert unknown.value.code == "AOI-CMP-002" and "Record no-such-result (file unknown) has" in unknown.value.what
+    with pytest.raises(AoiError) as other:
+        ctx.re_evaluate(uuid, Recipe(board_model="OTHER"))
+    assert other.value.code == "AOI-CMP-005" and f"OTHER's, but the result of {ng_board.name}" in other.value.what
+    (rec,) = ctx.inspections(board_model=BOARD)
+    without_ai, without_compare = copy.deepcopy(recipe), copy.deepcopy(recipe)
+    without_ai.use_ai, without_compare.use_compare = False, False
+    for column, missing, without, source in (
+        ("ai_map_path", "AI score map", without_ai, "AI"),
+        ("diff_map_path", "difference map", without_compare, "Compare"),
+    ):
+        kept = Path(rec[column]).read_bytes()
+        Path(rec[column]).write_bytes(b"damaged")
+        with pytest.raises(AoiError) as damaged:
+            ctx.re_evaluate(uuid, recipe)
+        assert damaged.value.code == "AOI-CMP-003" and Path(rec[column]).name in damaged.value.what
+        assert source not in {c.source for c in ctx.re_evaluate(uuid, without).checks}, "a map not used is not read"
+        Path(rec[column]).unlink()
+        with pytest.raises(AoiError) as gone:
+            ctx.re_evaluate(uuid, recipe)
+        assert gone.value.code == "AOI-CMP-004" and gone.value.what.endswith(f"({missing}).")
+        assert ng_board.name in gone.value.what and "deleted 7 days after inspection" in gone.value.action
+        judged = ctx.re_evaluate(uuid, without)  # the check that needs the map is off: judged without it
+        assert judged.checks and source not in {c.source for c in judged.checks}, source
+        Path(rec[column]).write_bytes(kept)
+    model = ctx.active_model(BOARD)
+    for metrics in (
+        "not JSON", "[]", None, '{"pixel_threshold": 2}', '{"image_threshold": "NaN", "pixel_threshold": 1}',
+        '{"image_threshold": 0, "pixel_threshold": 1}', '{"image_threshold": 1e999, "pixel_threshold": 1}',
+        '{"image_threshold": 1' + "0" * 400 + ', "pixel_threshold": 1}',  # an integer float() cannot hold
+    ):  # fmt: skip
+        ctx.db.execute("UPDATE models SET metrics=? WHERE uuid=?", (metrics, model["uuid"]))  # damaged by hand
+        with pytest.raises(AoiError) as uncalibrated:
+            ctx.re_evaluate(uuid, recipe)
+        assert uncalibrated.value.what.endswith(f"(the calibration of AI model {rec['model_version']}).")
+    ctx.db.execute("UPDATE inspections SET model_uuid='retired' WHERE uuid=?", (uuid,))
+    with pytest.raises(AoiError) as retired:
+        ctx.re_evaluate(uuid, recipe)
+    assert retired.value.what.endswith(f"(the calibration of AI model {rec['model_version']}).")
+    ctx.db.execute("UPDATE inspections SET model_uuid=NULL, model_version=NULL WHERE uuid=?", (uuid,))
+    with pytest.raises(AoiError) as unnamed:
+        ctx.re_evaluate(uuid, recipe)
+    assert unnamed.value.what.endswith("(the AI model's calibration).")
+    assert "AI" not in {c.source for c in ctx.re_evaluate(uuid, without_ai).checks}
+    old = {"board_model": BOARD, "result": "OK", "image_path": str(ng_board)}  # as saved before migration 0006
+    untabled = ctx.db.inspection(ctx.db.add_inspection(old, [], None))
+    assert untabled is not None  # a record without its decision table
+    with pytest.raises(AoiError) as no_table:
+        ctx.re_evaluate(str(untabled["uuid"]), recipe)
+    assert no_table.value.code == "AOI-CMP-002" and ng_board.name in no_table.value.what

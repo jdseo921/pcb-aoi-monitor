@@ -10,6 +10,7 @@ import csv
 import functools
 import io
 import json
+import math
 import uuid
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -27,7 +28,7 @@ from ..errors import AoiError
 from ..times import local_date, now_utc
 from . import anomaly
 from .imaging import align_to_reference, list_images, load_image, load_image_sha256, save_image
-from .inspector import NG, OK, WARN, InspectionResult, Inspector, draw_overlay
+from .inspector import NG, OK, WARN, AiEvidence, InspectionResult, Inspector, draw_overlay, re_grade
 from .jobs import Jobs
 from .maps import load_maps, save_maps
 from .recipe import Recipe
@@ -67,7 +68,7 @@ class BoardStatus:
 
 
 ROLES = ("Operator", "Engineer", "Admin")  # lowest to highest (GUI §8, docs/ARCHITECTURE.md §5)
-REQUIRED_ROLE: dict[str, str] = {}  # AppContext write -> the lowest role allowed to call it
+REQUIRED_ROLE: dict[str, str] = {}  # AppContext write, or Engineer-only call -> the lowest role allowed to call it
 P = ParamSpec("P")
 R = TypeVar("R")
 # A stored result's golden board, as `judged_reference` finds it.
@@ -77,8 +78,9 @@ Judged = Literal["same", "none", "unrecorded", "missing", "unreadable", "changed
 def requires(
     role: str, what: str
 ) -> Callable[[Callable[Concatenate[AppContext, P], R]], Callable[Concatenate[AppContext, P], R]]:
-    """The one role check for every write (ADR 0002, decision 5): refuse with AOI-USR-001 when the current role is
-    below `role`. `what` names the action in the message: "Saving a recipe needs the Engineer or Admin role."."""
+    """The one role check for every write, and for what only an Engineer does without writing (re-evaluating a result
+    with other thresholds, REQ-CMP-005) (ADR 0002, decision 5): refuse with AOI-USR-001 when the current role is below
+    `role`. `what` names the action in the message: "Saving a recipe needs the Engineer or Admin role."."""
 
     def wrap(fn: Callable[Concatenate[AppContext, P], R]) -> Callable[Concatenate[AppContext, P], R]:
         REQUIRED_ROLE[fn.__name__] = role
@@ -313,8 +315,8 @@ class AppContext:
         side: str = "Top",
         reference: np.ndarray | None = None,
     ) -> InspectionResult:
-        """Inspect one image in memory without saving a record (the Compare page; re-evaluation without re-running the
-        AI model arrives in S28)."""
+        """Inspect one image in memory without saving a record (the Compare page); `re_evaluate` judges a stored one
+        again without the AI model."""
         return self.inspector(board_model, recipe, side, reference).inspect(image)
 
     def inspect_file(
@@ -496,9 +498,9 @@ class AppContext:
         return self.db.checks_for_many(inspection_ids)
 
     def inspection(self, inspection_id: int) -> dict[str, Any] | None:
-        """One inspection record by id (time, board model, the model version and recipe revision with their UUIDs, the
-        paths, the golden board's SHA-256, verdict and score), or None for an unknown id; Compare opens a stored result
-        from it (REQ-INSP-009)."""
+        """One inspection record by id (its UUID, time, board model, the model version and recipe revision with their
+        UUIDs, the paths, the golden board's SHA-256, verdict and score), or None for an unknown id; Compare opens a
+        stored result from it (REQ-INSP-009)."""
         return self.db.inspection(inspection_id)
 
     def inspection_result(self, inspection_id: int, with_maps: bool = False) -> InspectionResult | None:
@@ -533,6 +535,52 @@ class AppContext:
         extra = {"inspection_id": inspection_id, "reason": why, "file": Path(path).name}
         self.log.warning("compare.golden_board_not_as_judged", extra=extra)
         return None, why
+
+    @requires("Engineer", "Re-evaluating a result")
+    def re_evaluate(self, result_uuid: str, thresholds: Recipe) -> InspectionResult:
+        """A stored result judged again by `thresholds` (its board model's recipe with the thresholds an Engineer is
+        trying) from the maps stored with it, without aligning, comparing or running the AI model (REQ-CMP-005,
+        docs/adr/0006-judging-a-stored-result-again.md): the checks, defects and verdict that recipe gives the board,
+        within 300 ms at 5 MP. Only the maps the thresholds use are read. Nothing is stored: Save to Recipe stores the
+        thresholds. The AI score is the stored check's and the AI model's calibration the registry's, for the AI model
+        the record names by UUID (REQ-INSP-012).
+
+        Raises AOI-USR-001 below the Engineer role; AOI-CMP-002 for an unknown UUID or a result stored without its
+        decision table; AOI-CMP-005 when `thresholds` are another board model's; AOI-CMP-003 when a map it reads is
+        there but cannot be read; and AOI-CMP-004 when a map, or the AI model's calibration, that a check `thresholds`
+        uses was judged on is gone."""
+        iid = self.db.inspection_id(result_uuid)
+        rec = self.db.inspection(iid) if iid is not None else None
+        res = self.inspection_result(iid) if iid is not None else None
+        file = Path(rec["image_path"]).name if rec and rec["image_path"] else "file unknown"
+        if rec is None or res is None or iid is None:
+            raise AoiError("AOI-CMP-002", id=result_uuid, file=file)
+        if thresholds.board_model != rec["board_model"]:
+            raise AoiError("AOI-CMP-005", tried=thresholds.board_model, file=file, judged=rec["board_model"])
+        diff_path, ai_path = self.db.map_paths(iid)
+        load_maps(res, diff_path if thresholds.use_compare else None, ai_path if thresholds.use_ai else None)
+        missing: list[str] = []  # only what the thresholds use, as re_grade asks for it
+        if thresholds.use_compare and res.compare is not None and res.compare.diff_map is None:
+            missing.append("difference map")
+        ai, check = None, next((c for c in res.checks if c.source == "AI"), None)
+        if thresholds.use_ai and check is not None:
+            model = next((m for m in self.db.models(rec["board_model"]) if m["uuid"] == rec["model_uuid"]), None)
+            try:  # a registry row this app wrote holds both thresholds, finite and above 0
+                cal = json.loads(model["metrics"]) if model else {}
+                image_thr, pixel_thr = float(cal["image_threshold"]), float(cal["pixel_threshold"])
+            except (ValueError, TypeError, KeyError, OverflowError):
+                image_thr = pixel_thr = math.nan
+            if min(image_thr, pixel_thr) > 0 and math.isfinite(image_thr + pixel_thr):
+                ai = AiEvidence(check.value, image_thr, pixel_thr, check.explain)
+            else:
+                version = rec["model_version"] or rec["model_uuid"]
+                missing.append(f"the calibration of AI model {version}" if version else "the AI model's calibration")
+            if res.anomaly_map is None:
+                missing.append("AI score map")
+        if missing:
+            days = self.settings.map_retention_days_ok
+            raise AoiError("AOI-CMP-004", file=file, missing=", ".join(missing), days=days)
+        return re_grade(res, thresholds, ai)
 
     def users(self) -> list[dict[str, Any]]:
         """Users (uuid, name, role), oldest first."""
