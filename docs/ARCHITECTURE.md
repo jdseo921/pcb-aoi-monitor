@@ -86,7 +86,9 @@ known by its header size), so no file measures small here and decodes large; `te
 crafted files and files from Pillow and tifffile. The limits are the two `max_image_*` values in `settings.json`, in the
 default workspace folder (50 MP and 200 MB, that is 200,000,000 bytes, both proposed, since a 50 MP 24-bit BMP is
 150 MB); `Settings.load` refuses a value of the wrong type, or a limit not above 0, with `AOI-SET-008` before the app
-starts, and the Settings page does not show them yet (an Admin edits the file). Every page and service reads an image
+starts, and the Settings page does not show them yet (an Admin edits the file); `map_retention_days_ok` (7, not below
+0) is the third: the map files of OK results older than that go at start-up (`_sweep_ok_maps`, audited as `maps.sweep`;
+NG and WARN maps stay, REQ-INSP-012). Every page and service reads an image
 through `AppContext.load_image`, which applies them; `FolderCamera` takes them when the inspection cycle wires a camera
 (Stage 2); `tests/test_layers.py` fails a page that imports `load_image` or calls it on anything but the context; and
 `import_samples` still copies sample files without a check (threat model, page 2).
@@ -157,7 +159,7 @@ AOI_Workspace/                 (default ~/AOI_Workspace, set in Settings or AOI_
   images/<board>/<OK|NG>/      uploaded training samples (copied in, so source folders can move)
   models/<board>/<board>_vX.Y.pt            trained model + calibration
   models/<board>/<board>_vX.Y_golden.png    learned golden template
-  results/<date>/*.png         auto-saved overlay per inspected board
+  results/<date>/*.png         overlay per inspected board, with its *_diff.png and *_ai.png maps (REQ-INSP-012)
   exports/                     CSV / PDF / overlay exports
 ```
 
@@ -259,6 +261,7 @@ hiding a page or disabling a button is only a convenience. Every write also appe
 | `batch_test` | Engineer | `test.run` (folder, model version, metrics); object = board model name |
 | `export_model`, `export_overlays`, `export_csv` | Engineer | `export.model`, `export.overlays`, `export.csv` (destination, counts) |
 | `archive_old` | Engineer | `inspection.archive` (days, count); the retention run at start-up is a system action: logged, not audited |
+| `_sweep_ok_maps` | system, at start-up; no page calls it | `maps.sweep` (days, swept, skipped): the map files of OK results past `map_retention_days_ok` are deleted and forgotten, NG and WARN maps stay; audited, unlike the start-up archive, because it deletes evidence. A file that cannot be deleted, or lies outside results/, is skipped with a warning and kept for the next start |
 | `add_user` | Admin | `user.change` (role); object = user UUID |
 
 Reads, inspections (`inspect_file`, `log_result`), alarms and error reports need no role: an Operator inspects boards.
@@ -271,7 +274,7 @@ User switching is a local picker for the PoC; Stage 4 replaces it with MES authe
 | Page | Main functions | Spec |
 |---|---|---|
 | **Home** | Six step cards (Upload → Self-train → Tune recipe → Validate → Inspect → Export) with live status for the selected board model | RM Stage 1 flow |
-| **Inspection** | Load images/folder (Stage 1 "camera"); Top/Side/Bottom view tag; **Start / Stop / Next Board / Save Image…**; image with defect boxes coloured by severity; defect list **No, Type, Score, Side, X, Y** (click to zoom); big OK/NG/WARN banner; alarm log with time, level, code and message, kept across restarts; every result saved with its evidence before the next board (REQ-INSP-008; a failed save stops the run with AOI-INSP-008) | GUI §4.1 |
+| **Inspection** | Load images/folder (Stage 1 "camera"); Top/Side/Bottom view tag; **Start / Stop / Next Board / Save Image…**; image with defect boxes coloured by severity; defect list **No, Type, Score, Side, X, Y** (click to zoom); big OK/NG/WARN banner; alarm log with time, level, code and message, kept across restarts; every result saved with its evidence on the pool thread, before the next board (REQ-INSP-008, REQ-SET-021; a failed save stops the run with AOI-INSP-008) | GUI §4.1 |
 | **Compare** (optional) | Golden reference and test board **side by side** with **synchronised zoom/pan**; views: side-by-side, difference heatmap, AI anomaly heatmap, boxes only; **metrics table** (check, source, value, threshold, rule, result) with failing rows highlighted; plain-language "why" explanation; **what-if thresholds** with Re-evaluate and Save to Recipe; pick any reference image instead of the golden template | Jay's request |
 | **Training** | **+OK / +NG upload** (NG labelled with DCT category, type and view), import folder with `ok/` `ng/` sub-folders; dataset table with relabel / set reference / remove; preview; epochs, input size, device; Start/Stop with progress and log; **model version registry** with activate and export `.pt` | GUI §4.3, Stage 1, §6 model version control |
 | **AI Model Test** | Select labelled folder; Run Test / Run Test Again; **Accuracy, Precision, Recall, False Call Rate** tiles; confusion counts; results table **Image, GT, AI Result, Score, Pass/Fail** with failures in red; preview; **Export CSV / Export Report (PDF)**; runs stored in DB | GUI §4.3 |
@@ -290,7 +293,7 @@ User switching is a local picker for the PoC; Stage 4 replaces it with MES authe
 | `samples` | board_model, path, label OK/NG, defect_type (DCT), side |
 | `models` | board_model, version, path (.pt), metrics JSON (thresholds, scores, timing), active |
 | `recipes` | board_model, revision (1 is the default recipe, stored when the board model is created, so every result names a stored revision), uuid, body JSON, user, created_at |
-| `inspections` | time, board_model, model_version, model_uuid, recipe_rev, recipe_uuid, image/overlay paths, view (Top, Side or Bottom; NULL for rows from before migration 0005), result, score, metrics JSON, result_json (the whole result as `InspectionResult.to_dict` writes it, read back by `from_dict` without the images; NULL before migration 0006), operator, archived |
+| `inspections` | time, board_model, model_version, model_uuid, recipe_rev, recipe_uuid, image/overlay paths, diff_map_path and ai_map_path (the difference and AI score maps as PNG files beside the overlay, 8-bit exact and 16-bit in 0.001 σ steps; NULL for rows from before migration 0007, and for OK results once the retention sweep deleted them), view (Top, Side or Bottom; NULL for rows from before migration 0005), result, score, metrics JSON, result_json (the whole result as `InspectionResult.to_dict` writes it, read back by `from_dict` without the images; NULL before migration 0006), operator, archived |
 | `defects` | inspection_id, no, type, score, side, x, y, w, h |
 | `checks` | inspection_id, no, region (Board, or the ROI's name and box), metric, source, value, threshold, rule, result, explain: one row per decision variable of a result (REQ-INSP-012; none for rows from before migration 0006) |
 | `test_runs` | time, board_model, model_version, folder, metrics JSON, results JSON |

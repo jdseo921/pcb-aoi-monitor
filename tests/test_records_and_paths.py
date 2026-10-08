@@ -27,6 +27,8 @@ STORED_PATHS = (
     ("samples", "path"),
     ("models", "path"),
     ("inspections", "overlay_path"),
+    ("inspections", "diff_map_path"),
+    ("inspections", "ai_map_path"),
     ("board_models", "reference_image"),
 )
 
@@ -99,8 +101,8 @@ def test_req_set_001_moved_workspace_opens_everything(tmp_path: Path, tiny_model
     assert ref and active
     opened += [Path(ref), Path(active["path"])]
     for r in ctx.db.inspections(include_archived=True):
-        opened += [Path(r["overlay_path"]), Path(r["image_path"])]  # the inspected board was a sample
-    assert len(opened) == len(tiny_model.ctx.db.samples("TINY")) + 4
+        opened += [Path(r[k]) for k in ("overlay_path", "image_path", "diff_map_path", "ai_map_path")]
+    assert len(opened) == len(tiny_model.ctx.db.samples("TINY")) + 6
     assert all(p.is_relative_to(new_root) and p.exists() for p in opened), opened
     assert ctx.load_model("TINY") is not None
     assert ctx.inspect_file("TINY", str(opened[0])).verdict in ("OK", "WARN", "NG")
