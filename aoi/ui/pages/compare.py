@@ -11,7 +11,7 @@ import copy
 from pathlib import Path
 
 import numpy as np
-from PySide6.QtCore import Qt
+from PySide6.QtCore import QT_TRANSLATE_NOOP, Qt
 from PySide6.QtWidgets import (
     QComboBox,
     QDoubleSpinBox,
@@ -30,6 +30,7 @@ from PySide6.QtWidgets import (
 
 from ... import defects as taxonomy
 from ...core.imaging import IMAGE_EXTS, heat_overlay, load_image
+from ...core.inspector import Check
 from ...errors import AoiError
 from .. import theme
 from ..widgets.busy import BusyOverlay
@@ -37,12 +38,39 @@ from ..widgets.empty_state import EmptyState
 from ..widgets.image_view import ImageView
 from .base import Page, button, fill_table, make_table
 
-MODES = ["Side by side", "Difference heatmap", "AI anomaly heatmap", "Defect boxes only"]
+MODES = [  # the Show combo, in this order; shown through tr()
+    QT_TRANSLATE_NOOP("ComparePage", "Side by side"),
+    QT_TRANSLATE_NOOP("ComparePage", "Difference heatmap"),
+    QT_TRANSLATE_NOOP("ComparePage", "AI score heatmap"),
+    QT_TRANSLATE_NOOP("ComparePage", "Defect boxes only"),
+]
+MODE_DIFF, MODE_AI = 1, 2
+
+# The engine names its checks, their sources and rules in English and stores them with the result; the page shows
+# them in the UI language. An ROI check is named after the ROI and shows as the engine wrote it.
+CHECK_NAMES = {
+    "SSIM similarity": QT_TRANSLATE_NOOP("ComparePage", "Similarity (SSIM)"),
+    "Changed area %": QT_TRANSLATE_NOOP("ComparePage", "Changed area %"),
+    "Difference regions": QT_TRANSLATE_NOOP("ComparePage", "Difference regions"),
+    "Alignment inliers": QT_TRANSLATE_NOOP("ComparePage", "Alignment inliers"),
+    "AI anomaly score": QT_TRANSLATE_NOOP("ComparePage", "AI score"),
+}
+SOURCES = {
+    "Compare": QT_TRANSLATE_NOOP("ComparePage", "Golden board"),
+    "AI": QT_TRANSLATE_NOOP("ComparePage", "AI model"),
+    "ROI": QT_TRANSLATE_NOOP("ComparePage", "ROI"),
+}
+RULES = {
+    "< thr → NG": QT_TRANSLATE_NOOP("ComparePage", "< threshold → NG"),
+    "≥ thr → NG": QT_TRANSLATE_NOOP("ComparePage", "≥ threshold → NG"),
+    "> thr → NG": QT_TRANSLATE_NOOP("ComparePage", "> threshold → NG"),
+    "info only": QT_TRANSLATE_NOOP("ComparePage", "info only"),
+}
 
 
 class ComparePage(Page):
-    title = "Compare"
-    subtitle = "Golden reference vs. test board, with the metrics behind the verdict"
+    title = QT_TRANSLATE_NOOP("Page", "Compare")
+    subtitle = QT_TRANSLATE_NOOP("Page", "Golden board vs. test board, with the metrics behind the verdict")
 
     def __init__(self, ctx, shell):
         super().__init__(ctx, shell)
@@ -52,13 +80,13 @@ class ComparePage(Page):
         self._fitted = False
 
         bar = QHBoxLayout()
-        bar.addWidget(button("Test Image…", slot=self.pick_test))
-        bar.addWidget(button("Use Last Inspected", slot=self.use_last))
-        bar.addWidget(button("Reference…", slot=self.pick_ref))
-        bar.addWidget(button("Golden Template", slot=self.use_golden))
-        bar.addWidget(QLabel("Show:"))
+        bar.addWidget(button(self.tr("Test Image…"), slot=self.pick_test))
+        bar.addWidget(button(self.tr("Use Last Inspected"), slot=self.use_last))
+        bar.addWidget(button(self.tr("Reference…"), slot=self.pick_ref))
+        bar.addWidget(button(self.tr("Golden Board"), slot=self.use_golden))
+        bar.addWidget(QLabel(self.tr("Show:")))
         self.mode = QComboBox()
-        self.mode.addItems(MODES)
+        self.mode.addItems([self.tr(m) for m in MODES])
         self.mode.currentIndexChanged.connect(self.render)
         bar.addWidget(self.mode)
         bar.addStretch(1)
@@ -70,9 +98,9 @@ class ComparePage(Page):
         vl.setContentsMargins(0, 0, 0, 0)
         left = QVBoxLayout()
         right = QVBoxLayout()
-        self.ref_label = QLabel("Reference (golden)")
+        self.ref_label = QLabel(self.tr("Golden board"))
         self.ref_label.setObjectName("muted")
-        self.test_label = QLabel("Test board")
+        self.test_label = QLabel(self.tr("Test board"))
         self.test_label.setObjectName("muted")
         self.ref_view = ImageView(placeholder="")
         self.test_view = ImageView(placeholder="")
@@ -94,7 +122,17 @@ class ComparePage(Page):
         self.verdict.setStyleSheet(theme.verdict_style("INFO"))
         self.verdict.setMinimumHeight(theme.BANNER_H)
         pl.addWidget(self.verdict)
-        self.metrics = make_table(["Check", "Source", "Value", "Thr.", "Rule", "Result"], sortable=False)
+        self.metrics = make_table(
+            [
+                self.tr("Check"),
+                self.tr("Source"),
+                self.tr("Value"),
+                self.tr("Threshold"),
+                self.tr("Rule"),
+                self.tr("Result"),
+            ],
+            sortable=False,
+        )
         hh = self.metrics.horizontalHeader()
         hh.setStretchLastSection(False)
         hh.setSectionResizeMode(QHeaderView.ResizeToContents)
@@ -106,12 +144,12 @@ class ComparePage(Page):
         self.why.setMaximumHeight(150)
         pl.addWidget(self.why)
 
-        g = QGroupBox("What-if thresholds (not saved until you press Save to Recipe)")
+        g = QGroupBox(self.tr("What-if thresholds (not saved until you press Save to Recipe)"))
         f = QFormLayout(g)
         self.ai_thr = QDoubleSpinBox()
         self.ai_thr.setDecimals(3)
         self.ai_thr.setRange(0, 1e4)
-        self.ai_thr.setSpecialValueText("model default")
+        self.ai_thr.setSpecialValueText(self.tr("AI model default"))
         self.ai_thr.setSingleStep(0.1)
         self.diff_thr = QSpinBox()
         self.diff_thr.setRange(1, 255)
@@ -122,14 +160,14 @@ class ComparePage(Page):
         self.ssim_min.setSingleStep(0.01)
         self.max_regions = QSpinBox()
         self.max_regions.setRange(0, 1000)
-        f.addRow("AI anomaly threshold", self.ai_thr)
-        f.addRow("Pixel difference (0-255)", self.diff_thr)
-        f.addRow("Min defect area (px)", self.min_area)
-        f.addRow("SSIM minimum", self.ssim_min)
-        f.addRow("Allowed difference regions", self.max_regions)
+        f.addRow(self.tr("AI score threshold"), self.ai_thr)
+        f.addRow(self.tr("Pixel difference (0-255)"), self.diff_thr)
+        f.addRow(self.tr("Minimum defect area (px)"), self.min_area)
+        f.addRow(self.tr("Similarity minimum (SSIM)"), self.ssim_min)
+        f.addRow(self.tr("Allowed difference regions"), self.max_regions)
         row = QHBoxLayout()
-        row.addWidget(button("Re-evaluate", slot=self.run))
-        self.btn_save = button("Save to Recipe", "primary", self.save_recipe)  # the page's one blue primary
+        row.addWidget(button(self.tr("Re-evaluate"), slot=self.run))
+        self.btn_save = button(self.tr("Save to Recipe"), "primary", self.save_recipe)  # the page's one blue primary
         row.addWidget(self.btn_save)
         f.addRow(row)
         pl.addWidget(g)
@@ -146,7 +184,9 @@ class ComparePage(Page):
 
     def pick_test(self):
         exts = " ".join(f"*{e}" for e in sorted(IMAGE_EXTS))
-        f, _ = QFileDialog.getOpenFileName(self, "Test image", "", f"Images ({exts})")
+        f, _ = QFileDialog.getOpenFileName(
+            self, self.tr("Test image"), "", self.tr("Images ({extensions})").format(extensions=exts)
+        )
         if f:
             self.set_test(f)
 
@@ -156,7 +196,9 @@ class ComparePage(Page):
 
     def pick_ref(self):
         exts = " ".join(f"*{e}" for e in sorted(IMAGE_EXTS))
-        f, _ = QFileDialog.getOpenFileName(self, "Reference image", "", f"Images ({exts})")
+        f, _ = QFileDialog.getOpenFileName(
+            self, self.tr("Reference image"), "", self.tr("Images ({extensions})").format(extensions=exts)
+        )
         if f:
             self.ref_override = f
             self.run()
@@ -191,7 +233,7 @@ class ComparePage(Page):
         if not self.board_model:
             return
         if self.test_path:
-            self.test_label.setText(f"Test: {Path(self.test_path).name}")
+            self.test_label.setText(self.tr("Test board: {file}").format(file=Path(self.test_path).name))
         recipe = self._form_recipe() if self.test_path else None
         self.run_in_background(
             self._evaluate, self.board_model, self.test_path, self.ref_override, recipe,
@@ -206,20 +248,17 @@ class ComparePage(Page):
 
     def _on_evaluated(self, out):
         ref, res = out
-        self.ref_label.setText(
-            "Reference: "
-            + (
-                Path(self.ref_override).name
-                if self.ref_override
-                else "golden template"
-                if ref is not None
-                else "none set"
-            )
-        )
+        if self.ref_override:
+            self.ref_label.setText(self.tr("Reference: {file}").format(file=Path(self.ref_override).name))
+        elif ref is not None:
+            self.ref_label.setText(self.tr("Reference: Golden board"))
+        else:
+            self.ref_label.setText(self.tr("Reference: none set"))
         self.ref_view.set_image(ref)
         if ref is None and self.board_model:
-            step = self.empty_step("Train an AI model on Training.", "Training")
-            self.ref_empty.show_state(f"No Golden board for {self.board_model} yet", *step)
+            step = self.empty_step(self.tr("Train an AI model on Training."), "Training")
+            heading = self.tr("No Golden board for {board_model} yet").format(board_model=self.board_model)
+            self.ref_empty.show_state(heading, *step)
         else:
             self.ref_empty.hide()
         if res is None:
@@ -229,15 +268,16 @@ class ComparePage(Page):
         self.verdict.setStyleSheet(theme.verdict_style(r.verdict))
         rows, colors = [], []
         for c in r.checks:
-            rows.append([c.name, c.source, float(c.value), float(c.threshold), c.rule, c.verdict])
+            name, source, rule = self._check_text(c)
+            rows.append([name, source, float(c.value), float(c.threshold), rule, c.verdict])
             colors.append(None if c.verdict in ("OK", "INFO") else theme.VERDICT_COLORS[c.verdict])
         rows.append(
             [
-                "Inspection time (ms)",
-                "System",
+                self.tr("Inspection time (ms)"),
+                self.tr("System"),
                 float(r.elapsed_ms),
                 1000.0,
-                "spec < 1 s",
+                self.tr("spec < 1 s"),
                 "OK" if r.elapsed_ms < 1000 else "WARN",
             ]
         )
@@ -246,25 +286,37 @@ class ComparePage(Page):
         self.why.setHtml(self._explain())
         self.render()
 
+    def _check_text(self, c: Check) -> tuple[str, str, str]:
+        """A check's name, source and rule in the UI language (CHECK_NAMES, SOURCES, RULES)."""
+        name = self.tr(CHECK_NAMES[c.name]) if c.name in CHECK_NAMES else c.name
+        return name, self.tr(SOURCES.get(c.source, c.source)), self.tr(RULES.get(c.rule, c.rule))
+
     def _explain(self) -> str:
         r = self.res
         failing = [c for c in r.checks if c.verdict in ("NG", "WARN")]
-        lines = [f"<b>Verdict {r.verdict}</b>: "]
         if not failing:
-            lines.append("every check is inside its threshold.")
+            lines = [
+                self.tr("<b>Verdict {verdict}</b>: every check is inside its threshold.").format(verdict=r.verdict)
+            ]
         else:
-            lines.append(
-                "decided by "
-                + "; ".join(
-                    f"<b>{c.name}</b> = {c.value:.3g} (threshold {c.threshold:.3g}, rule {c.rule})" for c in failing
+            parts = []
+            for c in failing:
+                name, _, rule = self._check_text(c)
+                parts.append(
+                    self.tr("<b>{check}</b> = {value:.3g} (threshold {threshold:.3g}, rule {rule})").format(
+                        check=name, value=c.value, threshold=c.threshold, rule=rule
+                    )
                 )
-                + "."
-            )
+            checks = "; ".join(parts)
+            lines = [self.tr("<b>Verdict {verdict}</b>: decided by {checks}.").format(verdict=r.verdict, checks=checks)]
         if r.defects:
-            lines.append(
-                "<br>Regions: "
-                + ", ".join(f"#{d.no} {d.type} at ({d.x},{d.y}) {d.w}×{d.h}px [{d.source}]" for d in r.defects)
+            regions = ", ".join(
+                self.tr("#{no} {type} at ({x},{y}) {w}×{h} px [{source}]").format(
+                    no=d.no, type=d.type, x=d.x, y=d.y, w=d.w, h=d.h, source=d.source
+                )
+                for d in r.defects
             )
+            lines.append(self.tr("<br>Regions: {regions}").format(regions=regions))
         for n in r.notes:
             lines.append(f"<br><i>{n}</i>")
         return "".join(lines)
@@ -273,11 +325,11 @@ class ComparePage(Page):
         r = self.res
         if r is None:
             return
-        mode = self.mode.currentText()
+        mode = self.mode.currentIndex()
         img = r.image
-        if mode == "Difference heatmap" and r.compare is not None:
+        if mode == MODE_DIFF and r.compare is not None:
             img = heat_overlay(r.image, r.compare.diff_map, vmax=max(1, 1.5 * self.diff_thr.value()))
-        elif mode == "AI anomaly heatmap" and r.anomaly_map is not None:
+        elif mode == MODE_AI and r.anomaly_map is not None:
             thr = r.checks and next((c.threshold for c in r.checks if c.source == "AI"), None)
             img = heat_overlay(r.image, r.anomaly_map, vmax=(thr or float(np.max(r.anomaly_map))) * 1.5)
         self.test_view.set_image(img, keep_view=self._fitted)
@@ -292,7 +344,7 @@ class ComparePage(Page):
         if self.ctx.role == "Operator":
             return self.error(AoiError("AOI-USR-001", what="Changing recipes", roles="Engineer or Admin"))
         rev = self.ctx.save_recipe(self._form_recipe())
-        self.shell.status(f"Recipe saved as revision {rev}")
+        self.shell.status(self.tr("Recipe saved as revision {revision}").format(revision=rev))
 
     def on_board_model_changed(self, name):
         self.res = None
@@ -303,7 +355,7 @@ class ComparePage(Page):
     def on_show(self):
         self.btn_save.setEnabled(self.ctx.role != "Operator")
         if self.res is None and self.test_path is None:
-            step = self.empty_step("Inspect a board on Inspection, or pick a test image.", "Inspection")
-            self.test_empty.show_state("No board to compare yet", *step)
+            step = self.empty_step(self.tr("Inspect a board on Inspection, or pick a test image."), "Inspection")
+            self.test_empty.show_state(self.tr("No board to compare yet"), *step)
         if self.ai_thr.value() == 0 and self.diff_thr.value() == 1:
             self._load_recipe_into_form()

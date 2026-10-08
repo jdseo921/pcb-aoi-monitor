@@ -117,7 +117,7 @@ def test_req_cmp_006_any_stored_ok_sample_can_be_the_reference_and_metrics_recom
     page.set_test(str(ng_board))
     qtbot.waitUntil(lambda: page.res is not None, timeout=30000)  # the inspection runs on a pool thread (S17b)
     against_golden = dict(page.res.compare.metrics)
-    assert page.ref_label.text() == "Reference: golden template"
+    assert page.ref_label.text() == "Reference: Golden board"
     sample = trained_ctx.db.samples(BOARD, "OK")[0]["path"]
     first = page.res
     page.ref_override = sample  # what Reference… does after the file dialog
@@ -130,7 +130,7 @@ def test_req_cmp_006_any_stored_ok_sample_can_be_the_reference_and_metrics_recom
         page.metrics.item(r, 0).text(): page.metrics.item(r, 2).data(Qt.DisplayRole)
         for r in range(page.metrics.rowCount())
     }
-    assert rows["SSIM similarity"] == pytest.approx(against_sample["ssim"], abs=1e-4)
+    assert rows["Similarity (SSIM)"] == pytest.approx(against_sample["ssim"], abs=1e-4)
 
 
 def test_req_rcp_002_five_roi_types_and_five_fields_save_and_reload(qtbot, trained_ctx) -> None:

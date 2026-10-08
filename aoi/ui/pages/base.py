@@ -40,6 +40,14 @@ ROLES = (
 )
 
 
+def view_text(view: str) -> str:
+    """A camera view name (`aoi.hal.VIEWS`) in the UI language; the English name stays the key the engine stores."""
+    return QCoreApplication.translate("View", view)
+
+
+VIEW_NAMES = (QT_TRANSLATE_NOOP("View", "Top"), QT_TRANSLATE_NOOP("View", "Side"), QT_TRANSLATE_NOOP("View", "Bottom"))
+
+
 class Page(QWidget):
     """Base for every navigation page.
 
