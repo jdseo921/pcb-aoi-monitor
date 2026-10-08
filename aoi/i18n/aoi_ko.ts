@@ -27,7 +27,7 @@
 <context>
     <name>ComparePage</name>
     <message>
-        <location filename="../ui/pages/compare.py" line="+65"/>
+        <location filename="../ui/pages/compare.py" line="+67"/>
         <source>Side by side</source>
         <translation type="unfinished"></translation>
     </message>
@@ -98,13 +98,13 @@
     </message>
     <message>
         <location line="+3"/>
-        <location line="+51"/>
-        <location line="+336"/>
+        <location line="+53"/>
+        <location line="+337"/>
         <source>Golden board</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-386"/>
+        <location line="-389"/>
         <source>AI model</source>
         <translation type="unfinished"></translation>
     </message>
@@ -134,7 +134,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+26"/>
+        <location line="+28"/>
         <source>Test Image…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -160,12 +160,12 @@
     </message>
     <message>
         <location line="+15"/>
-        <location line="+548"/>
+        <location line="+549"/>
         <source>Test board</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-542"/>
+        <location line="-543"/>
         <source>Inspecting…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -201,11 +201,32 @@
     </message>
     <message>
         <location line="+14"/>
-        <source>What-if thresholds (not saved until you press Save to Recipe)</source>
+        <source>Try other thresholds (nothing is saved until you press Save to Recipe)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+216"/>
+        <source>The verdict and the decision table are the stored ones; press Re-evaluate › to inspect the board again with today&apos;s Golden board.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location line="+5"/>
+        <location line="+132"/>
+        <source>The verdict and the decision table are the stored ones; press Re-evaluate › to inspect the board again from its image file.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+120"/>
+        <source>{file} was not inspected; press Re-evaluate › to inspect it.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+12"/>
+        <source>Press Re-evaluate › to inspect it again.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="-480"/>
         <source>AI model default</source>
         <translation type="unfinished"></translation>
     </message>
@@ -266,7 +287,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+65"/>
+        <location line="+66"/>
         <source>{file} was not inspected: its Golden board cannot be opened.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -296,12 +317,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+7"/>
-        <source>The verdict and the decision table are the stored ones; press Re-evaluate to inspect the board again with today&apos;s Golden board.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+9"/>
+        <location line="+16"/>
         <source>Golden board not available</source>
         <translation type="unfinished"></translation>
     </message>
@@ -354,13 +370,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-109"/>
-        <location line="+132"/>
-        <source>The verdict and the decision table are the stored ones; press Re-evaluate to inspect the board again from its image file.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="-12"/>
+        <location line="+11"/>
         <source>Board picture no longer stored</source>
         <translation type="unfinished"></translation>
     </message>
@@ -397,22 +407,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+17"/>
-        <source>{file} was not inspected; press Re-evaluate to inspect it.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+1"/>
+        <location line="+18"/>
         <source>Inspection cancelled</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+11"/>
-        <source>Press Re-evaluate to inspect it again.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+33"/>
+        <location line="+65"/>
         <source>Inspect a board on Inspection, or pick a test image.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -617,7 +617,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/compare.py" line="-71"/>
+        <location filename="../ui/pages/compare.py" line="-92"/>
         <source>Changing recipes</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2805,7 +2805,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/compare.py" line="-537"/>
+        <location filename="../ui/pages/compare.py" line="-540"/>
         <source>Compare</source>
         <translation type="unfinished"></translation>
     </message>

@@ -528,7 +528,7 @@ class AppContext:
         rev, rcp, recipe_uuid = (latest[0], Recipe.from_dict(latest[1]), latest[2]) if latest else (0, None, None)
         rcp = rcp or Recipe(board_model=board_model)
         if recipe is not None and recipe.to_dict() != rcp.to_dict():
-            rev, recipe_uuid = None, None  # an unsaved recipe (the Compare page's what-if thresholds) has no revision
+            rev, recipe_uuid = None, None  # an unsaved recipe (thresholds tried on Compare) has no revision
         mv = self.load_model(board_model)
         golden = self.db.reference(board_model) if reference is None else None
         sha: str | None = None

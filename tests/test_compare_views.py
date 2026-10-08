@@ -115,7 +115,7 @@ def test_req_cmp_002_views_go_with_their_result(
     synthetic_dataset: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """The heat views drawn for a result go when another is shown (another stored result, Re-evaluate, another
+    """The heat views drawn for a result go when another is shown (another stored result, one inspected again, another
     board model), and the next result's views are drawn from its own maps; switching views 50 times leaves the
     Golden board's pane with one set of boxes, not 50."""
     ctx = trained_ctx
@@ -136,7 +136,7 @@ def test_req_cmp_002_views_go_with_their_result(
     _switch(page, MODE_DIFF)
     assert np.array_equal(shown[-1], difference_view(b, pixels))
     assert not np.array_equal(shown[-1], difference_view(a, pixels))
-    page.run()  # Re-evaluate: a new result, drawn from its own maps
+    page.run()  # inspected again from its image file: a new result, drawn from its own maps
     qtbot.waitUntil(lambda: page._bg is None and page.res is not b and page.res is not None, timeout=20000)
     assert page.res is not None and np.array_equal(shown[-1], difference_view(page.res, pixels))
     items = len(page.ref_view.scene().items())
