@@ -25,7 +25,8 @@ or cycle it with Alt+V; the view is stored with every result.
 
 A button and its key do the same. The key works whichever control on the Inspection page is selected (the defect
 list, the View box, a button), and only while that page is shown. Both go grey while the action is not possible:
-Start and Next Board until images are queued, while a run is on and while a board is being inspected; Stop while no
+Start and Next Board until images are queued, while no board model is chosen in the top bar (with none yet, the page
+says to ask an Engineer to create one), while a run is on and while a board is being inspected; Stop while no
 run is on; Save Image… before the first result. Every result is recorded as it arrives, with the checks that decided
 it, before the next board starts; the records are on Logs & Export. If a result cannot be recorded (the disk is full,
 the workspace folder cannot be written, another program holds the database) the run stops with AOI-INSP-008: press

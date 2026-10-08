@@ -194,7 +194,11 @@ image area shows an `EmptyState` (`aoi/ui/widgets/empty_state.py`): what is miss
 button to the page where it is done; `Page.empty_step` turns "do this on <page>" into that link, or into "Ask an
 Engineer …" for a role that cannot open the page (REQ-SET-019, since S18c). With no board model the header list is
 empty, so `Page.no_board_model()` gives Home, Inspection, Training, AI Model Test and Recipe Editor one next step by
-role: "+ New board model" for an Engineer or Admin, "Ask an Engineer to create one." for an Operator (#200). Logs &
+role: "+ New board model" for an Engineer or Admin, "Ask an Engineer to create one." for an Operator (#200).
+Inspection's Start and Next Board (F5, F8) stay grey with no board model, even with images queued, and
+`on_board_model_changed` sets them again on every change, so they come on once the first board model is created; an
+action that needs a board model and finds none (`Page.need_board_model()`: Training, AI Model Test, Recipe Editor,
+Compare's Save to Recipe, and Inspection as a backstop) shows AOI-SET-014, whose step every role can take (#244). Logs &
 Export's "No records match" offers Reset Filters only when its last-7-days filter would show rows; when every record is
 older or archived, Show All Records sets the dates around every record and Include archived instead (#200). The block is as wide as its text would
 like within the area and as tall as its text wraps to at that width; a word wider than the area runs past the edge,

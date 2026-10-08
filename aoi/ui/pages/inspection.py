@@ -474,11 +474,12 @@ class InspectionPage(Page):
             self.alarms.addItem(alarm_line(a["time"], a["level"], a["code"], alarm_text(a)))
 
     def _update_buttons(self) -> None:
-        """Enable the actions, and with them the buttons and the keys, for the state: Start and Next Board wait while a
-        board is being inspected (#120), Stop acts while a run is on, Save Image… once there is a result, and Compare
-        while there is a record or a file to open (#243): not before the first board, after a board that was not
+        """Enable the actions, and with them the buttons and the keys, for the state: Start and Next Board need a queue
+        and a board model in the header (#244: with none, neither can run, and an Operator cannot create one) and wait
+        while a board is being inspected (#120), Stop acts while a run is on, Save Image… once there is a result, and
+        Compare while there is a record or a file to open (#243): not before the first board, after a board that was not
         inspected, or after a board model change."""
-        has, busy = bool(self.queue), self.worker is not None
+        has, busy = bool(self.queue) and self.board_model is not None, self.worker is not None
         self.act_start.setEnabled(has and not self.running and not busy)
         self.act_stop.setEnabled(self.running)
         self.act_next.setEnabled(has and not self.running and not busy)
@@ -544,7 +545,7 @@ class InspectionPage(Page):
             if self.worker is None:  # else the banner reads "Inspecting…" until the board in hand arrives
                 self._show_verdict(None)
                 self.summary.clear()
-            self._update_buttons()
+        self._update_buttons()  # on every change: Start and Next Board follow the header's board model (#244)
         self._show_empty()
 
     def on_show(self) -> None:

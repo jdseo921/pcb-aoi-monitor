@@ -636,6 +636,16 @@ CODES: dict[str, ErrorCode] = {
                 "action again.",
             ),
         ),
+        ErrorCode(
+            "AOI-SET-014",
+            QT_TRANSLATE_NOOP("Errors", "No board model selected"),
+            QT_TRANSLATE_NOOP("Errors", "{page} needs a board model, and none is selected in the top bar."),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Select a board model in the top bar. If the list is empty, an Engineer or Admin creates one with "
+                "+ New.",
+            ),
+        ),
     )
 }
 
