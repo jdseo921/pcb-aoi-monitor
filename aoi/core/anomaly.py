@@ -17,9 +17,11 @@ inputs"; REQ-TRN-014).
 
 from __future__ import annotations
 
+import math
 import pickle
 import random
 import time
+import zipfile
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
@@ -35,11 +37,12 @@ from ..errors import AoiError
 
 
 class ModelFileError(AoiError):
-    """An AI model file was refused: not a weights-only model file this app wrote (AOI-TRN-001)."""
+    """An AI model file was refused: missing, damaged, or not a weights-only model file this app wrote (AOI-TRN-001)."""
 
 
 # Metadata arrays that travel in the file as tensors and are used as NumPy arrays in memory.
 _ARRAY_META_KEYS = ("err_mean", "err_std")
+STRIDE = 16  # the encoder halves the input four times, so the network's input size is a multiple of this
 # The least spread of the reconstruction error a pixel is scored by: with errors at most 1 (the decoder ends in a
 # sigmoid) no score reaches 1 / SPREAD_FLOOR = 1000 σ, which a stored AI map holds (maps.AI_MAX).
 SPREAD_FLOOR = 1e-3
@@ -173,16 +176,60 @@ class AnomalyModel:
 
     @classmethod
     def load(cls, path: str | Path, device: str = "cpu") -> AnomalyModel:
-        """Load a model file as weights only; any file that needs code to unpickle is refused."""
+        """Load a model file as weights only (REQ-TRN-014). A file that needs code to unpickle, or that is missing,
+        truncated, damaged in place, not this app's AI model or holding numbers it cannot judge with, is refused
+        with AOI-TRN-001 naming it; nothing falls back to a less strict load."""
         try:
-            ckpt = torch.load(path, map_location=device, weights_only=True)
-        except (pickle.UnpicklingError, RuntimeError, ValueError, EOFError) as e:
+            with zipfile.ZipFile(path) as z:  # torch.save writes a zip, and each entry carries a CRC-32 of its bytes
+                damaged = z.testzip()  # a weight changed on disk would otherwise load and judge boards wrongly
+            ckpt = None if damaged else torch.load(path, map_location=device, weights_only=True)
+        except (pickle.UnpicklingError, RuntimeError, ValueError, EOFError, KeyError, zipfile.BadZipFile) as e:
             raise ModelFileError("AOI-TRN-001", path=str(path), reason=type(e).__name__) from e
-        if not isinstance(ckpt, dict) or not isinstance(ckpt.get("meta"), dict) or "state_dict" not in ckpt:
+        except OSError as e:  # gone, a folder, unreadable, or cut short (torch reports EINVAL)
+            raise ModelFileError("AOI-TRN-001", path=str(path), reason=e.strerror or type(e).__name__) from e
+        if damaged:
+            raise ModelFileError(
+                "AOI-TRN-001", path=str(path), reason=f"the file is damaged ({damaged} fails its CRC-32)"
+            )
+        if (
+            not isinstance(ckpt, dict)
+            or not isinstance(ckpt.get("meta"), dict)
+            or not isinstance(ckpt.get("state_dict"), dict)
+        ):
             raise ModelFileError("AOI-TRN-001", path=str(path), reason="it holds no state_dict and metadata")
+        meta = _from_safe(ckpt["meta"])
+        if (why := _unusable(meta, ckpt["state_dict"])) is not None:
+            raise ModelFileError("AOI-TRN-001", path=str(path), reason=why)
         net = ConvAutoencoder()
-        net.load_state_dict(ckpt["state_dict"])
-        return cls(net, _from_safe(ckpt["meta"]), device)
+        try:
+            net.load_state_dict(ckpt["state_dict"])
+        except (RuntimeError, TypeError, AttributeError) as e:  # names or shapes of another network
+            why = "its weights do not fit this app's AI model"
+            raise ModelFileError("AOI-TRN-001", path=str(path), reason=why) from e
+        return cls(net, meta, device)
+
+
+def _unusable(meta: dict[str, Any], weights: dict[str, Any]) -> str | None:
+    """Why a model file's contents cannot judge a board, or None: the input size, the two thresholds as finite numbers
+    above 0, the normal-error maps (both or neither) as finite size x size maps with a spread above 0, and finite
+    weights."""
+    size = meta.get("image_size")
+    if isinstance(size, bool) or not isinstance(size, int) or not 0 < size <= 4096 or size % STRIDE:
+        return f"its input size {size!r} is not a multiple of {STRIDE} pixels"
+    for key in ("image_threshold", "pixel_threshold"):
+        value = meta.get(key)
+        if isinstance(value, bool) or not isinstance(value, (int, float)) or not (math.isfinite(value) and value > 0):
+            return f"its {key.replace('_', ' ')} {value!r} is not a number above 0"
+    maps = [meta.get(key) for key in _ARRAY_META_KEYS]
+    if any(m is not None for m in maps):
+        for key, m in zip(_ARRAY_META_KEYS, maps, strict=True):
+            if not isinstance(m, np.ndarray) or m.shape != (size, size) or not np.isfinite(m).all():
+                return f"its {key} is not a {size} x {size} map of finite numbers"
+        if (meta["err_std"] <= 0).any():
+            return "its err_std holds a spread of 0 or less"
+    if not all(bool(torch.isfinite(t).all()) for t in weights.values() if torch.is_tensor(t) and t.is_floating_point()):
+        return "its weights hold numbers that are not finite"
+    return None
 
 
 def calibrate(ok_scores: list[float], ng_scores: list[float]) -> tuple[float, str]:

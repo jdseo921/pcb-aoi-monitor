@@ -177,7 +177,9 @@ AOI_Workspace/                 (default ~/AOI_Workspace, set in Settings or AOI_
   logs/aoi-YYYY-MM-DD.jsonl    JSON-lines log, one file per UTC day (REQ-LOG-004)
   settings.json
   images/<board>/<OK|NG>/      uploaded training samples (copied in, so source folders can move)
-  models/<board>/<board>_vX.Y.pt            trained model + calibration
+  models/<board>/<board>_vX.Y.pt            trained model + calibration: tensors and plain values only, loaded with
+                                            torch.load(weights_only=True) after its zip CRC-32s check; a file that
+                                            is cut short, changed or unusable is refused, AOI-TRN-001 (REQ-TRN-014)
   models/<board>/<board>_vX.Y_golden.png    learned golden template
   results/<date>/*.png         overlay per inspected board, with its *_diff.png and *_ai2.png maps (REQ-INSP-012;
                                *_ai.png before S28a)
