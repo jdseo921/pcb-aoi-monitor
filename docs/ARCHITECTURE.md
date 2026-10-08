@@ -751,10 +751,13 @@ head's median or 95th percentile at either size is over 1.10 times the base's; `
 developer machine against its own `baseline.json` entry. Neither is the product's speed (`tests/perf/README.md`).
 
 Public datasets (S30, REQ-INSP-014): `tools/dataset_check.py` runs the golden-board comparison with the AI check off on
-DeepPCB and PKU-Market-PCB, laid out as their authors publish them, and with `--ai` the AI model alone on DeepPCB's
-test split, and writes counts, times and peak memory outside the repository and the datasets. Both are research-use
-datasets, used for internal checks only with Jay's written approval of 2026-10-08: no image, box or model trained on
-them enters the repository or ships, and their counts are never an accuracy claim. The record is in `docs/tests/`.
+DeepPCB and PKU-Market-PCB, laid out as their authors publish them, and with `--ai` the AI model alone on DeepPCB's test
+split, with `--min-area` as a what-if on the Minimum defect area; it hashes every file it reads before and after its
+checks, and writes counts, times, peak memory and the machine's threads and library versions outside the repository and
+the datasets. Both are research-use datasets, used for internal checks only with Jay's written approval of 2026-10-08:
+no image, box or model trained on them enters the repository or ships, and their counts are never an accuracy claim. The
+first run is recorded in `docs/tests/2026-10-08-public-dataset-check.md` (DeepPCB; PKU-Market-PCB waits for Jay's
+laptop), and ADR 0007 (proposed) keeps the default Minimum defect area of 40 px until the customer's size is agreed.
 
 | Requirement | Where | Status |
 |---|---|---|
