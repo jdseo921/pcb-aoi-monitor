@@ -4,7 +4,7 @@
 <context>
     <name>BoxEditor</name>
     <message>
-        <location filename="../ui/widgets/box_editor.py" line="+89"/>
+        <location filename="../ui/widgets/box_editor.py" line="+92"/>
         <source>{number} {type} ◆ {severity}</source>
         <translation>{number} {type} ◆ {severity}</translation>
     </message>
@@ -3246,7 +3246,7 @@
 <context>
     <name>LabelEditor</name>
     <message>
-        <location filename="../ui/pages/training_labels.py" line="+80"/>
+        <location filename="../ui/pages/training_labels.py" line="+102"/>
         <source>Draw Box</source>
         <translation>박스 그리기</translation>
     </message>
@@ -3266,12 +3266,22 @@
         <translation>박스</translation>
     </message>
     <message>
-        <location line="+30"/>
+        <location line="+6"/>
+        <source>Opening the image…</source>
+        <translation>이미지를 여는 중…</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Storing the change…</source>
+        <translation>변경 사항을 저장하는 중…</translation>
+    </message>
+    <message>
+        <location line="+51"/>
         <source>{file} · {label} · {view}</source>
         <translation>{file} · {label} · {view}</translation>
     </message>
     <message>
-        <location line="+34"/>
+        <location line="+45"/>
         <source>{number} {type} ({severity}) {x},{y} {w}×{h} px</source>
         <translation>{number} {type} ({severity}) {x},{y} {w}×{h} px</translation>
     </message>
@@ -3294,6 +3304,11 @@
         <location line="+0"/>
         <source>Only an NG image takes defect boxes.</source>
         <translation>결함 박스는 NG 이미지에만 그립니다.</translation>
+    </message>
+    <message>
+        <location line="+51"/>
+        <source>Wait until the image is open and the last change is stored</source>
+        <translation>이미지가 열리고 마지막 변경 사항이 저장될 때까지 기다리십시오</translation>
     </message>
 </context>
 <context>

@@ -169,9 +169,11 @@ pick. Drag a box to move it, or a handle of the selected box to resize it, with 
 image a box can be a few pixels on screen: a press inside the selected box still moves it, and its handles sit just
 outside its corners. A box stays inside the image and is at least 4 by 4 pixels of the image; a shorter drag draws
 nothing. Each box is saved, in whole pixels, when you let go, and each type when you pick it, as a new label in the
-image's history with the boxes before kept. An OK or UNSURE image takes no boxes, so Draw Box is off there. An image
-that cannot be read shows its error code under its name; its boxes are listed but cannot be changed. Deleting a box,
-marking an image and the editor's keys are not on this screen yet.
+image's history with the boxes before kept. Images open and changes are saved in the background: until a change is
+saved the image takes no other, and the status bar says to wait; one that takes over a second says so over the image.
+An OK or UNSURE image takes no boxes, so Draw Box is off there. An image that cannot be read shows its error code
+under its name; its boxes are listed but cannot be changed. Deleting a box, marking an image and the editor's keys are
+not on this screen yet.
 
 **A second user checks each label.** The labels of a board model and view are ready to freeze into a dataset only
 once a second Engineer or Admin has checked every NG label and OK labels drawn at random, 10 % of them rounded up; the

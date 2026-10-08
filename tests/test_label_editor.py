@@ -5,11 +5,14 @@ boxes before in the image's history (labels sketch, docs/sketches/training-label
 
 from __future__ import annotations
 
+import threading
+import time
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import cv2
 import numpy as np
+import pytest
 from PySide6.QtCore import QEvent, QItemSelectionModel, QPoint, QPointF, QRectF, Qt
 from PySide6.QtGui import QInputDevice, QPointingDevice, QWheelEvent
 from PySide6.QtTest import QTest
@@ -53,13 +56,24 @@ def _open(qtbot: QtBot, ctx: AppContext, sample: dict[str, Any]) -> TrainingPage
     """Training with `sample` selected and shown in the label editor."""
     page = _page(qtbot, ctx)
     _select(page, sample["id"])
-    qtbot.waitUntil(lambda: page.editor.sample is not None and page.editor.sample["uuid"] == sample["uuid"])
+    _wait(page)
+    assert page.editor.sample is not None and page.editor.sample["uuid"] == sample["uuid"]
     QApplication.processEvents()  # laid out, as the page is before a hand can reach it: the heading on all its lines
     return page
 
 
-def _stored(ctx: AppContext, uuid: str) -> list[tuple[int, int, int, int, str, str]]:
-    return [(b["x"], b["y"], b["w"], b["h"], b["dct_type"], b["severity"]) for b in ctx.boxes(uuid)]
+def _wait(page: TrainingPage) -> None:
+    """Until the label editor has read, or stored, what it was last given, on its pool thread, and shown the result."""
+    end = time.monotonic() + 20
+    while not page.editor.idle():
+        assert time.monotonic() < end, "the label editor's read or store did not end"
+        QTest.qWait(5)
+
+
+def _stored(page: TrainingPage, uuid: str) -> list[tuple[int, int, int, int, str, str]]:
+    """The sample's boxes as stored, once the editor's store in hand has ended."""
+    _wait(page)
+    return [(b["x"], b["y"], b["w"], b["h"], b["dct_type"], b["severity"]) for b in page.ctx.boxes(uuid)]
 
 
 def _at(view: BoxEditor, x: float, y: float) -> QPoint:
@@ -143,7 +157,7 @@ def test_req_trn_003_editor_draw(qtbot: QtBot, trained_ctx: AppContext) -> None:
     start, end = view.mapToScene(a), view.mapToScene(b)
     x, y = round(start.x()), round(start.y())
     box = (x, y, round(end.x()) - x, round(end.y()) - y, "Polarity Error", "Critical")
-    assert _stored(ctx, sample["uuid"]) == [box]
+    assert _stored(page, sample["uuid"]) == [box]
     assert len(ctx.label_history(sample["uuid"])) == rows + 1, "one drag, one label row"
     entry = ctx.audit_entries(action="label.set")[0]
     assert entry["object_uuid"] == sample["uuid"] and entry["after"]["boxes"][0]["dct_type"] == "Polarity Error"
@@ -153,12 +167,12 @@ def test_req_trn_003_editor_draw(qtbot: QtBot, trained_ctx: AppContext) -> None:
     assert "1 Polarity Error ◆ Critical" in labels
 
     _drag(view, _at(view, 600, 440), _at(view, 700, 560))  # past the bottom right corner of the 640 x 480 image
-    edge = _stored(ctx, sample["uuid"])[1]
+    edge = _stored(page, sample["uuid"])[1]
     assert (edge[0] + edge[2], edge[1] + edge[3]) == (640, 480)
     _drag(view, _at(view, 300, 300), _at(view, 301, 301))  # a slip of the hand, not a box
-    assert len(_stored(ctx, sample["uuid"])) == 2
+    assert len(_stored(page, sample["uuid"])) == 2
     view.roiDrawn.emit(QRectF(100.4, 120.6, 79.7, 80.2))  # a drag between pixels, as ImageView reports one
-    shown, stored = view.boxes[2], _stored(ctx, sample["uuid"])[2]
+    shown, stored = view.boxes[2], _stored(page, sample["uuid"])[2]
     assert stored[:4] == (100, 121, 80, 80), "the corners rounded to whole pixels"
     assert all(type(v) is int for v in (shown.x, shown.y, shown.w, shown.h, *stored[:4])), "set_boxes gets no float"
     editor.type_box.setCurrentIndex(editor.type_box.findData("Missing Component"))  # a long label near the left edge
@@ -167,7 +181,8 @@ def test_req_trn_003_editor_draw(qtbot: QtBot, trained_ctx: AppContext) -> None:
 
     ok = ctx.samples(BOARD, "OK")[1]
     _select(page, ok["id"])
-    qtbot.waitUntil(lambda: editor.sample is not None and editor.sample["uuid"] == ok["uuid"])
+    _wait(page)
+    assert editor.sample is not None and editor.sample["uuid"] == ok["uuid"]
     assert not editor.draw_btn.isEnabled() and not editor.draw_btn.isChecked()
     assert editor.box_list_empty.heading.text() == "No defect boxes"
     _drag(view, _at(view, 100, 100), _at(view, 200, 200))
@@ -177,7 +192,8 @@ def test_req_trn_003_editor_draw(qtbot: QtBot, trained_ctx: AppContext) -> None:
     ctx.set_boxes(gone["uuid"], [DefectBox(50, 60, 70, 80, "Scratch")])
     Path(ctx.sample_path(gone["id"])).unlink()  # removed from the workspace since it was imported
     _select(page, gone["id"])
-    qtbot.waitUntil(lambda: editor.sample is not None and editor.sample["uuid"] == gone["uuid"])
+    _wait(page)
+    assert editor.sample is not None and editor.sample["uuid"] == gone["uuid"]
     assert "AOI-INSP-001" in editor.heading.text() and view._pix is None and not editor.draw_btn.isEnabled()
     assert view.boxes == [] and editor.box_list.count() == 1, "listed, not drawn over the placeholder"
     assert not editor.box_list.isEnabled() and not editor.type_box.isEnabled()
@@ -201,18 +217,18 @@ def test_req_trn_003_editor_move(qtbot: QtBot, trained_ctx: AppContext) -> None:
     _drag(view, a, b)
     d = _shift(view, a, b)
     moved = (round(300 + d.x()), round(200 + d.y()), 50, 50, "Tombstone", "Major")
-    assert _stored(ctx, sample["uuid"]) == [(100, 100, 60, 40, "Scratch", "Minor"), moved]
+    assert _stored(page, sample["uuid"]) == [(100, 100, 60, 40, "Scratch", "Minor"), moved]
     assert len(ctx.label_history(sample["uuid"])) == rows + 1
 
     _drag(view, _at(view, moved[0] + 25, moved[1] + 25), _at(view, 1000, 1000))  # far past the bottom right corner
-    assert _stored(ctx, sample["uuid"])[1][:4] == (590, 430, 50, 50)
+    assert _stored(page, sample["uuid"])[1][:4] == (590, 430, 50, 50)
 
     a, b = _at(view, 130, 120), _at(view, 130, 120) + QPoint(-20, 25)
     d = _shift(view, a, b)
     _finger(view, a, b)
-    assert _stored(ctx, sample["uuid"])[0] == (round(100 + d.x()), round(100 + d.y()), 60, 40, "Scratch", "Minor")
+    assert _stored(page, sample["uuid"])[0] == (round(100 + d.x()), round(100 + d.y()), 60, 40, "Scratch", "Minor")
     assert view.chosen == 0 and len(ctx.label_history(sample["uuid"])) == rows + 3
-    first = _stored(ctx, sample["uuid"])[0]
+    first = _stored(page, sample["uuid"])[0]
     a = _at(view, first[0] + 30, first[1] + 20)
     port = view.viewport()
     QTest.mousePress(port, LEFT, NONE, a)
@@ -223,10 +239,10 @@ def test_req_trn_003_editor_move(qtbot: QtBot, trained_ctx: AppContext) -> None:
     QApplication.sendEvent(view, QEvent(QEvent.Type.Leave))  # the release lost: the pointer left the window
     d = _shift(view, a, a + QPoint(40, 40))
     moved = (round(first[0] + d.x()), round(first[1] + d.y()), 60, 40, "Scratch", "Minor")
-    assert _stored(ctx, sample["uuid"])[0] == moved, "stored as the drag left it"
+    assert _stored(page, sample["uuid"])[0] == moved, "stored as the drag left it"
     assert page.editor.sample is not None and page.editor.sample["uuid"] == other["uuid"], "then the row shown"
     QTest.mouseRelease(port, LEFT, NONE, a + QPoint(80, 80))  # a stray release later changes nothing
-    assert _stored(ctx, sample["uuid"])[0] == moved and len(ctx.label_history(sample["uuid"])) == rows + 4
+    assert _stored(page, sample["uuid"])[0] == moved and len(ctx.label_history(sample["uuid"])) == rows + 4
 
 
 def test_req_trn_003_editor_real_size(qtbot: QtBot, trained_ctx: AppContext, tmp_path: Path) -> None:
@@ -243,15 +259,15 @@ def test_req_trn_003_editor_real_size(qtbot: QtBot, trained_ctx: AppContext, tmp
     _finger(view, a)
     assert view.chosen == 0
     _finger(view, a, a + QPoint(30, 20), a + QPoint(60, 40))
-    x, y, w, h = _stored(ctx, sample["uuid"])[0][:4]
+    x, y, w, h = _stored(page, sample["uuid"])[0][:4]
     assert (w, h) == (40, 32) and (x, y) != (2000, 1500), "moved, not resized"
     corner = _at(view, x + w, y + h) + QPoint(theme.HANDLE_PX // 2, theme.HANDLE_PX // 2)  # its bottom right handle
     _finger(view, corner, corner + QPoint(20, 10))
-    x2, y2, w2, h2 = _stored(ctx, sample["uuid"])[0][:4]
+    x2, y2, w2, h2 = _stored(page, sample["uuid"])[0][:4]
     assert (x2, y2) == (x, y) and w2 > w and h2 > h
     editor.draw_btn.click()
     _finger(view, _at(view, 500, 500), _at(view, 1500, 1000))
-    assert len(_stored(ctx, sample["uuid"])) == 2
+    assert len(_stored(page, sample["uuid"])) == 2
 
 
 def test_req_trn_003_editor_resize(qtbot: QtBot, trained_ctx: AppContext) -> None:
@@ -269,17 +285,17 @@ def test_req_trn_003_editor_resize(qtbot: QtBot, trained_ctx: AppContext) -> Non
     _drag(view, a, b)
     d = _shift(view, a, b)
     x1, y1 = round(280 + d.x()), round(210 + d.y())
-    assert _stored(ctx, sample["uuid"]) == [(200, 150, x1 - 200, y1 - 150, "Bent Lead", "Major")]
+    assert _stored(page, sample["uuid"]) == [(200, 150, x1 - 200, y1 - 150, "Bent Lead", "Major")]
     a = _at(view, 200, 150)  # the top left handle, inwards
     b = a + QPoint(10, 15)
     _drag(view, a, b)
     d = _shift(view, a, b)
     x0, y0 = round(200 + d.x()), round(150 + d.y())
-    assert _stored(ctx, sample["uuid"])[0][:4] == (x0, y0, x1 - x0, y1 - y0)
+    assert _stored(page, sample["uuid"])[0][:4] == (x0, y0, x1 - x0, y1 - y0)
     _drag(view, _at(view, x1, y0), _at(view, 900, -90))  # the top right handle, past the image's top right corner
-    assert _stored(ctx, sample["uuid"])[0][:4] == (x0, 0, 640 - x0, y1)
+    assert _stored(page, sample["uuid"])[0][:4] == (x0, 0, 640 - x0, y1)
     _drag(view, _at(view, x0, y1), _at(view, 700, -50))  # the bottom left handle, past the opposite corner
-    assert _stored(ctx, sample["uuid"])[0][:4] == (636, 0, 4, 4)
+    assert _stored(page, sample["uuid"])[0][:4] == (636, 0, 4, 4)
 
 
 def test_req_trn_003_editor_type_and_severity(qtbot: QtBot, trained_ctx: AppContext) -> None:
@@ -304,14 +320,14 @@ def test_req_trn_003_editor_type_and_severity(qtbot: QtBot, trained_ctx: AppCont
     for _ in range(3):
         QTest.keyClick(types, Qt.Key.Key_Down)
     third = defects.names()[defects.names().index("Scratch") + 3]
-    assert types.currentData() == third and _stored(ctx, sample["uuid"])[0][4] == "Scratch", "shown, not picked"
+    assert types.currentData() == third and _stored(page, sample["uuid"])[0][4] == "Scratch", "shown, not picked"
     editor.box_list.setFocus()
     assert types.currentData() == "Scratch", "leaving the list puts back the type picked"
     for kind in defects.DEFECT_TYPES:
         types.setFocus()
         types.setCurrentIndex(types.findData(kind.name))  # as the arrow keys or a letter show it
         QTest.keyClick(types, Qt.Key.Key_Return)
-        assert _stored(ctx, sample["uuid"]) == [(50, 60, 40, 30, kind.name, kind.severity)]
+        assert _stored(page, sample["uuid"]) == [(50, 60, 40, 30, kind.name, kind.severity)]
         assert editor.severity.text() == kind.severity
         assert editor.box_list.item(0).text() == f"1 {kind.name} ({kind.severity}) 50,60 40×30 px"
     assert len(ctx.label_history(sample["uuid"])) == rows + 33, "one label row per type picked, each a change"
@@ -322,7 +338,7 @@ def test_req_trn_003_editor_type_and_severity(qtbot: QtBot, trained_ctx: AppCont
     above = defects.DEFECT_TYPES[-2]
     spot = types.view().visualRect(types.model().index(len(offered) - 2, 0)).center()
     QTest.mouseClick(types.view().viewport(), LEFT, NONE, spot)
-    assert _stored(ctx, sample["uuid"])[0][4:] == (above.name, above.severity) and not types.view().isVisible()
+    assert _stored(page, sample["uuid"])[0][4:] == (above.name, above.severity) and not types.view().isVisible()
     rows = len(ctx.label_history(sample["uuid"]))
     editor.box_list.setCurrentRow(-1)
     assert view.chosen == -1
@@ -331,4 +347,63 @@ def test_req_trn_003_editor_type_and_severity(qtbot: QtBot, trained_ctx: AppCont
     assert len(ctx.label_history(sample["uuid"])) == rows and editor.severity.text() == "Minor"
     editor.draw_btn.click()
     _drag(view, _at(view, 300, 300), _at(view, 340, 330))
-    assert [b[4:] for b in _stored(ctx, sample["uuid"])] == [(above.name, above.severity), ("Solder Ball", "Minor")]
+    assert [b[4:] for b in _stored(page, sample["uuid"])] == [(above.name, above.severity), ("Solder Ball", "Minor")]
+
+
+def test_req_trn_003_editor_reads_and_stores_off_the_ui_thread(
+    qtbot: QtBot, trained_ctx: AppContext, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The image and its boxes are read, and each change stored, on a pool thread, never on the UI thread. While a
+    change is stored the editor says so after a second and takes no other: a second box drawn or a type picked is
+    refused with a word in the status bar, the stored boxes staying as they are; a row selected meanwhile is shown once
+    the change is stored, and an image slow to open says so too."""
+    ctx = trained_ctx
+    first, other = ctx.samples(BOARD, "NG")[:2]
+    page = _page(qtbot, ctx)
+    _select(page, first["id"])
+    qtbot.waitUntil(page.editor.draw_btn.isEnabled)  # the image and its boxes read
+    editor, view, types = page.editor, page.editor.view, page.editor.type_box
+    on_ui: dict[str, set[bool]] = {}  # each call watched: made on the UI thread or not
+    gates = {"set_boxes": threading.Event(), "load_image": threading.Event()}  # held until the test lets them go
+
+    def watch(name: str) -> None:
+        call = getattr(ctx, name)
+
+        def watched(*args: Any) -> Any:
+            ui = threading.current_thread() is threading.main_thread()
+            on_ui.setdefault(name, set()).add(ui)
+            if name in gates and not ui:
+                gates[name].wait(10)
+            return call(*args)
+
+        monkeypatch.setattr(ctx, name, watched)
+
+    for name in ("set_boxes", "load_image", "boxes"):
+        watch(name)
+    rows, kind = len(ctx.label_history(first["uuid"])), types.currentData()
+    editor.draw_btn.click()
+    port = view.viewport()
+    for a, b in ((_at(view, 100, 100), _at(view, 160, 150)), (_at(view, 300, 300), _at(view, 360, 350))):
+        QTest.mousePress(port, LEFT, NONE, a)
+        QTest.mouseMove(port, b)
+        QTest.mouseRelease(port, LEFT, NONE, b)
+        qtbot.waitUntil(lambda: "set_boxes" in on_ui)
+        assert on_ui == {"set_boxes": {False}}, "stored on a pool thread"
+    assert len(view.boxes) == 1, "the second box refused while the first is stored"
+    wait = "Wait until the image is open and the last change is stored"
+    assert page.shell.statusBar().currentMessage() == wait
+    qtbot.waitUntil(editor.saving.isVisible, timeout=3000)  # after a second, over the image
+    types.setFocus()
+    types.setCurrentIndex(types.findData("Scratch" if kind != "Scratch" else "Tombstone"))
+    QTest.keyClick(types, Qt.Key.Key_Return)
+    assert view.boxes[0].dct_type == kind and types.currentData() == kind, "the type picked refused"
+    _select(page, other["id"])
+    assert editor.sample is not None and editor.sample["uuid"] == first["uuid"], "shown once the change is stored"
+    gates["set_boxes"].set()
+    qtbot.waitUntil(editor.reading.isVisible, timeout=3000)  # the other image, held, read after the store
+    assert editor.sample["uuid"] == other["uuid"] and not editor.draw_btn.isEnabled()
+    gates["load_image"].set()
+    _wait(page)
+    assert editor.sample["uuid"] == other["uuid"] and view._pix is not None and not editor.saving.isVisible()
+    assert on_ui == {"set_boxes": {False}, "load_image": {False}, "boxes": {False}}, "nothing on the UI thread"
+    assert [b[4] for b in _stored(page, first["uuid"])] == [kind] and len(ctx.label_history(first["uuid"])) == rows + 1
