@@ -254,6 +254,7 @@ class ComparePage(Page):
         self.why = QTextEdit()
         self.why.setReadOnly(True)
         self.why.setMaximumHeight(150)
+        self.why.setMinimumHeight(theme.WHY_MIN_H)  # at 1600 x 900 the panel is too short for all of it at full height
         dl.addWidget(self.why)
         pl.addWidget(self.decision, 2)
         self.try_busy = BusyOverlay(self.decision, self.tr("Re-evaluating…"))  # over both: Cancel fits at least size
