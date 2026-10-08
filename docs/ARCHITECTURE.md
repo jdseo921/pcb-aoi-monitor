@@ -447,7 +447,14 @@ validation runs stored before migration 0009. The Logs filter's local days becom
 a day the clock cannot convert is no bound on its side, never an error (#174).
 Every file the app writes (images, overlays, AI models, exports, settings) goes through `aoi/data/atomic.py`:
 a temporary name in the same folder, flush and fsync, then an atomic rename, and an inspection's row, checks and
-defects commit in one transaction, so a crash leaves a whole result or none (REQ-INSP-008). Every error a user can see is
+defects commit in one transaction, so a crash leaves a whole result or none (REQ-INSP-008). The only other writers are
+the log (appended line by line), the schema backup (SQLite's backup API to a temporary name, renamed whole) and the tool
+that writes `docs/error-codes.md`. `tests/test_power_cut.py` holds this (#202): a scan of `aoi/` fails any other file
+write by the calls it knows (opens for writing, gzip, tarfile and ZipFile too; Path, os, shutil, cv2, NumPy and torch
+writers; any `.save(path)`, as a QImage's; a QFile's open, copy or rename; Qt writers such as QPdfWriter given a file
+by position, not a QBuffer), a run checks that every file an inspection and a training run leave went through
+`atomic.write_with`, a kill inside such a write leaves the target absent and a temporary file the next start removes,
+and 20 random kills, each after a saved result, lose no finished result. Every error a user can see is
 an `AoiError` from the catalogue in `aoi/errors.py`, with a code `AOI-<AREA>-<NNN>`, what happened and what to do;
 `docs/error-codes.md` is generated from it (REQ-LOG-004, REQ-SET-019). `aoi/logging_setup.py` writes the JSON-lines
 log in `<workspace>/logs/`, one file per UTC day, with time, level, module, event, ids and the app version, and never
