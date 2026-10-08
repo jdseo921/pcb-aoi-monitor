@@ -83,6 +83,8 @@ QListWidget#nav::item:disabled { color: $TEXT_DISABLED; }
 QPushButton { background: $BG_BUTTON; border: 1px solid $LINE_STRONG; border-radius: ${RADIUS}px;
               min-width: ${BUTTON_W}px; min-height: ${BUTTON_H}px; padding: 0 ${SPACE}px; }
 QPushButton:hover { background: $BG_BUTTON_HOVER; }
+QPushButton[sizeClass="T"], QComboBox[sizeClass="T"] { min-height: ${TARGET_H}px; }
+QPushButton[sizeClass="T+"] { min-height: ${RUN_CONTROL_H}px; }
 QPushButton:disabled { color: $TEXT_DISABLED; background: $BG_RAISED; }
 QPushButton#primary, QPushButton#start, QPushButton#stop, QPushButton#danger { color: $ON_DARK; font-weight: 700; }
 QPushButton#primary { background: $ACCENT; border-color: $ACCENT; }
@@ -96,7 +98,8 @@ QTableWidget, QListWidget, QPlainTextEdit, QTextEdit {
 QHeaderView::section { background: $BG_RAISED; padding: 6px; border: none; font-weight: 600; }
 QGroupBox { border: 1px solid $LINE; border-radius: ${RADIUS}px; margin-top: 18px; padding-top: ${SPACE_S}px; }
 QGroupBox::title { subcontrol-origin: margin; left: 10px; padding: 0 4px; color: $TEXT_MUTED; }
-QProgressBar { border: 1px solid $LINE_STRONG; border-radius: 4px; text-align: center; min-height: 24px; }
+QProgressBar { background: $BG_DEEP; border: 1px solid $LINE_STRONG; border-radius: 4px; text-align: center;
+               min-height: 24px; }
 QProgressBar::chunk { background: $ACCENT; }
 QTabWidget::pane { background: $BG; border: 1px solid $LINE; }
 QTabWidget > QWidget, QStackedWidget > QWidget#qt_tabwidget_stackedwidget { background: $BG; }
@@ -106,6 +109,13 @@ QTabBar::tab { background: $BG_RAISED; padding: ${SPACE_S}px 18px; min-width: ${
 QTabBar::tab:selected { background: $BG_SELECTED; color: $ON_DARK; }
 QStatusBar { background: $BG_DEEP; color: $TEXT_MUTED; }
 QWidget#busy { background: $BG_BUSY; }
+QScrollBar:vertical { background: $BG_DEEP; width: 16px; margin: 0; }
+QScrollBar:horizontal { background: $BG_DEEP; height: 16px; margin: 0; }
+QScrollBar::handle { background: $BG_BUTTON; border-radius: ${RADIUS}px; }
+QScrollBar::handle:vertical { min-height: ${BUTTON_H}px; }
+QScrollBar::handle:horizontal { min-width: ${BUTTON_H}px; }
+QScrollBar::add-line, QScrollBar::sub-line, QScrollBar::add-page, QScrollBar::sub-page { background: none; border: none;
+                                                                                        width: 0; height: 0; }
 """)
 
 

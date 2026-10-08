@@ -51,6 +51,9 @@ State the result of each line in the change note; mark a line that does not appl
   `weights_only=False` anywhere in `aoi/`.
 - Times are stored in UTC as ISO 8601 with an offset, paths relative to the workspace, records with a
   UUID, and every schema change as a numbered migration.
+- A control's height comes from the stylesheet: `size_class(widget, "T")` for a 48 px operator target, `"T+"` for a
+  56 px run control; `setMinimumHeight()` is undone when the stylesheet is applied, and the size walk in
+  `tests/screens/test_sizes_and_contrast.py` fails on the result.
 - Text is at least 14 pt, colours and sizes come only from `aoi/ui/theme.py`, and every visible string
   goes through `self.tr()` (`QCoreApplication.translate("Page", …)` in the `Page` base class) with named
   `{placeholders}` and `.format()`; after changing a string run `python tools/update_translations.py` and commit
