@@ -11,7 +11,7 @@
     <message>
         <location line="+12"/>
         <source>Cancel</source>
-        <translation type="unfinished"></translation>
+        <translation type="unfinished">취소</translation>
     </message>
     <message>
         <location line="+36"/>
@@ -54,7 +54,7 @@
     <message>
         <location line="+0"/>
         <source>Cancel</source>
-        <translation type="unfinished"></translation>
+        <translation type="unfinished">취소</translation>
     </message>
     <message>
         <location line="+9"/>
@@ -275,7 +275,7 @@
     <message>
         <location line="+5"/>
         <source>Cancel</source>
-        <translation type="unfinished"></translation>
+        <translation type="unfinished">취소</translation>
     </message>
     <message>
         <location line="+2"/>
@@ -2048,6 +2048,7 @@
     </message>
     <message>
         <location filename="../ui/pages/training.py" line="+319"/>
+        <location filename="../ui/pages/training_import.py" line="+36"/>
         <source>{code} {title}</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2374,6 +2375,148 @@
     </message>
 </context>
 <context>
+    <name>ImportSheet</name>
+    <message>
+        <location filename="../ui/pages/training_import.py" line="+46"/>
+        <location line="+22"/>
+        <source>View</source>
+        <translation>뷰</translation>
+    </message>
+    <message>
+        <location line="-19"/>
+        <source>Label for all</source>
+        <translation>전체 라벨</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <location line="+89"/>
+        <source>OK</source>
+        <translation>OK</translation>
+    </message>
+    <message>
+        <location line="-89"/>
+        <location line="+89"/>
+        <source>NG</source>
+        <translation>NG</translation>
+    </message>
+    <message>
+        <location line="-84"/>
+        <source>Defect type for NG files</source>
+        <translation>NG 파일의 결함 유형</translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>All categories</source>
+        <translation>모든 분류</translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>Pick one of the 33 defect types</source>
+        <translation>33가지 결함 유형 중 하나를 고르세요</translation>
+    </message>
+    <message>
+        <location line="+6"/>
+        <source>File</source>
+        <translation>파일</translation>
+    </message>
+    <message>
+        <location line="+0"/>
+        <source>Label</source>
+        <translation>라벨</translation>
+    </message>
+    <message>
+        <location line="+0"/>
+        <source>Defect type</source>
+        <translation>결함 유형</translation>
+    </message>
+    <message>
+        <location line="+0"/>
+        <source>Status</source>
+        <translation>상태</translation>
+    </message>
+    <message>
+        <location line="+10"/>
+        <source>Copy List</source>
+        <translation>목록 복사</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <location line="+51"/>
+        <source>Cancel</source>
+        <translation>취소</translation>
+    </message>
+    <message>
+        <location line="-50"/>
+        <source>Import</source>
+        <translation>가져오기</translation>
+    </message>
+    <message>
+        <location line="+31"/>
+        <source>{type} · {severity}</source>
+        <translation>{type} · {severity}</translation>
+    </message>
+    <message>
+        <location line="+8"/>
+        <source>Import {count} file(s)</source>
+        <translation>파일 {count}개 가져오기</translation>
+    </message>
+    <message>
+        <location line="+45"/>
+        <source>pick a type</source>
+        <translation>유형을 고르세요</translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>ready</source>
+        <translation>준비됨</translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>unsorted: pick a label</source>
+        <translation>미분류: 라벨을 고르세요</translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>waiting: type needed</source>
+        <translation>대기: 유형이 필요합니다</translation>
+    </message>
+    <message>
+        <location line="+21"/>
+        <source>{count} NG file(s) need a defect type</source>
+        <translation>NG 파일 {count}개에 결함 유형이 필요합니다</translation>
+    </message>
+    <message>
+        <location line="+7"/>
+        <source>Importing…</source>
+        <translation>가져오는 중…</translation>
+    </message>
+    <message>
+        <location line="+10"/>
+        <source>copied</source>
+        <translation>복사됨</translation>
+    </message>
+    <message>
+        <location line="+11"/>
+        <source>not imported</source>
+        <translation>가져오지 않음</translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>Nothing to import: every file was refused (see the list).</source>
+        <translation>가져올 것이 없습니다. 모든 파일이 거부되었습니다(목록 참조).</translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>{added} imported · {count} not imported</source>
+        <translation>{added}개 가져옴 · {count}개 가져오지 않음</translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>Close</source>
+        <translation>닫기</translation>
+    </message>
+</context>
+<context>
     <name>InspectionPage</name>
     <message>
         <location filename="../ui/pages/inspection.py" line="+93"/>
@@ -2677,7 +2820,7 @@
     <message>
         <location line="+2"/>
         <source>View</source>
-        <translation type="unfinished"></translation>
+        <translation type="unfinished">뷰</translation>
     </message>
     <message>
         <location line="+1"/>
@@ -2968,7 +3111,7 @@
     <message>
         <location line="+1"/>
         <source>Label</source>
-        <translation type="unfinished"></translation>
+        <translation type="unfinished">라벨</translation>
     </message>
     <message>
         <location line="+1"/>
@@ -3138,12 +3281,12 @@
     <message>
         <location line="+1"/>
         <source>Defect type</source>
-        <translation type="unfinished"></translation>
+        <translation type="unfinished">결함 유형</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>View</source>
-        <translation type="unfinished"></translation>
+        <translation type="unfinished">뷰</translation>
     </message>
     <message>
         <location line="+9"/>
@@ -3831,7 +3974,7 @@
     <message>
         <location line="+0"/>
         <source>Status</source>
-        <translation type="unfinished"></translation>
+        <translation type="unfinished">상태</translation>
     </message>
     <message>
         <location line="+7"/>
@@ -3942,28 +4085,28 @@
     <message>
         <location line="-52"/>
         <source>Label</source>
-        <translation type="unfinished"></translation>
+        <translation type="unfinished">라벨</translation>
     </message>
     <message>
         <location line="+0"/>
         <source>Defect type</source>
-        <translation type="unfinished"></translation>
+        <translation type="unfinished">결함 유형</translation>
     </message>
     <message>
         <location line="+0"/>
         <location line="+87"/>
         <source>View</source>
-        <translation type="unfinished"></translation>
+        <translation type="unfinished">뷰</translation>
     </message>
     <message>
         <location line="-87"/>
         <source>File</source>
-        <translation type="unfinished"></translation>
+        <translation type="unfinished">파일</translation>
     </message>
     <message>
         <location line="+4"/>
         <source>Importing…</source>
-        <translation type="unfinished"></translation>
+        <translation type="unfinished">가져오는 중…</translation>
     </message>
     <message>
         <location line="+3"/>
