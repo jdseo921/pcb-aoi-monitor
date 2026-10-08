@@ -116,6 +116,12 @@ jobs:
       - name: Trace matrix (requirement to commits and tests; the G1 gate only reports until S59)
         if: runner.os == 'Linux' && always()
         continue-on-error: true
+        env:
+          # A pull request's run checks out GitHub's merge of it into its base; the tool reads the pull request's own
+          # commits from that merge, and its number and title from here. They stay in the environment, never in
+          # `run:`, so a title is never run as shell code; both are empty on a push to main.
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
         run: python tools/trace_matrix.py --junit test-results.xml --git-log --out trace-matrix --gate G1
       - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         if: runner.os == 'Linux' && always()

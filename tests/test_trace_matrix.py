@@ -53,6 +53,13 @@ LOG = (
     + "[REQ-INSP-002] feat: verdict banner with a shape (S18)\x1e\n"
 )
 CHANGES = tm.parse_log(LOG)
+GIT_AUTHOR = {"GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@t", "GIT_COMMITTER_NAME": "t", "GIT_COMMITTER_EMAIL": "t"}
+
+
+def git_in(repo: Path, *args: str) -> str:
+    """Runs git in `repo` as a fixed author and returns what it prints."""
+    env = {**os.environ, **GIT_AUTHOR}
+    return subprocess.run(["git", *args], cwd=repo, env=env, check=True, capture_output=True, text=True).stdout.strip()
 
 
 @pytest.fixture
@@ -92,11 +99,9 @@ def test_register_rows_and_matrix_columns(register: Path, tmp_path: Path) -> Non
 def test_git_changes_reads_merged_pull_requests_from_a_real_history(tmp_path: Path) -> None:
     """A pull request merged with GitHub's "Create a merge commit" is read by its number and title; the commits inside
     it are not listed again, and a commit on the first-parent line is listed by its hash."""
-    env = {**os.environ, "GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@t", "GIT_COMMITTER_NAME": "t",
-           "GIT_COMMITTER_EMAIL": "t@t"}  # fmt: skip
 
     def git(*args: str) -> None:
-        subprocess.run(["git", *args], cwd=tmp_path, env=env, check=True, capture_output=True)
+        git_in(tmp_path, *args)
 
     git("init", "-q", "-b", "main")
     git("commit", "-q", "--allow-empty", "-m", "chore: import the v0.1 baseline")
@@ -109,6 +114,47 @@ def test_git_changes_reads_merged_pull_requests_from_a_real_history(tmp_path: Pa
     changes = tm.git_changes("HEAD", tmp_path)
     assert [(c.label, c.title) for c in changes][0] == ("#98", title)
     assert [c.title for c in changes][1:] == ["chore: import the v0.1 baseline"]
+
+
+def test_git_changes_reads_a_pull_requests_own_commits_and_title_on_its_ci_run(
+    register: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """A pull request's CI run checks out GitHub's merge of it into its base ("Merge <head> into <base>", whose first
+    parent is the base): the pull request's own commits are read from the second parent, after the merge, so a commit
+    citing an unknown row fails that run's G1 gate; its number and title come from PR_NUMBER and PR_TITLE."""
+    git_in(tmp_path, "init", "-q", "-b", "main")
+    git_in(tmp_path, "commit", "-q", "--allow-empty", "-m", "chore: import the v0.1 baseline")
+    git_in(tmp_path, "checkout", "-q", "-b", "fix/banner")
+    git_in(tmp_path, "commit", "-q", "--allow-empty", "-m", "[REQ-ZZZ-999] fix: cites an unknown row")
+    typo = git_in(tmp_path, "rev-parse", "HEAD")
+    git_in(tmp_path, "commit", "-q", "--allow-empty", "-m", "[REQ-INSP-002] feat: verdict banner")
+    head = git_in(tmp_path, "rev-parse", "HEAD")
+    git_in(tmp_path, "checkout", "-q", "main")
+    git_in(tmp_path, "commit", "-q", "--allow-empty", "-m", "docs: other work on the base")
+    base = git_in(tmp_path, "rev-parse", "HEAD")
+    git_in(tmp_path, "merge", "-q", "--no-ff", "fix/banner", "-m", f"Merge {head} into {base}")  # refs/pull/N/merge
+    changes = tm.git_changes("HEAD", tmp_path)
+    assert [c.title for c in changes] == [
+        f"Merge {head} into {base}",
+        "[REQ-INSP-002] feat: verdict banner",
+        "[REQ-ZZZ-999] fix: cites an unknown row",
+        "docs: other work on the base",
+        "chore: import the v0.1 baseline",
+    ]
+    pr = tm.pr_change({"PR_NUMBER": "175", "PR_TITLE": "[REQ-CMP-001] fix: linked pan"})
+    assert pr is not None and tm.pr_change({"PR_NUMBER": "", "PR_TITLE": ""}) is None  # a push to main sets neither
+    rows, unknown = tm.build(tm.read_register(register), [], {}, [pr, *changes])
+    by_id = {r.req.id: r for r in rows}
+    assert (by_id["REQ-INSP-002"].prs, by_id["REQ-CMP-001"].prs) == ([f"commit {head[:7]}"], ["#175"])
+    assert unknown == [f"commit {typo[:7]} '[REQ-ZZZ-999] fix: cites an unknown row' cites REQ-ZZZ-999"]
+    assert unknown[0] in tm.gate(rows, unknown, "G1")
+    monkeypatch.setenv("PR_NUMBER", "175")
+    monkeypatch.setenv("PR_TITLE", "[REQ-ZZZ-998] fix: cites an unknown row")
+    collected = tmp_path / "collected.txt"
+    collected.write_text("tests/test_a.py::test_req_insp_001_png_opens\n", encoding="utf-8")
+    args = ["--register", str(register), "--collected", str(collected), "--out", str(tmp_path / "out"), "--gate", "G1"]
+    assert tm.main(args) == 1
+    assert "GATE G1: #175 '[REQ-ZZZ-998] fix: cites an unknown row' cites REQ-ZZZ-998" in capsys.readouterr().out
 
 
 def test_collected_names_count_as_not_run_and_unknown_test_ids_are_reported(register: Path, tmp_path: Path) -> None:

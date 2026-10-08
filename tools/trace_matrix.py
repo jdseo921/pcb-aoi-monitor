@@ -7,7 +7,10 @@ Reads the requirement tables in docs/requirements/*.md, the test ids pytest ran 
 collected (the output of `pytest --collect-only -q`), and, with --git-log, the changes on the first-parent history of
 HEAD: each merged pull request by its number and title (a "Merge pull request #12 from …" commit, whose body holds the
 title, or a squash commit ending "(#12)"), and each commit not merged through a pull request yet (a stacked branch
-before Jay merges it) by its short hash and subject. A title cites a requirement as `[REQ-TRN-014] fix: …`. Writes
+before Jay merges it) by its short hash and subject. A pull request's CI run checks out GitHub's merge of the pull
+request into its base ("Merge <sha> into <sha>"), whose first parent is the base: the pull request's own commits, on
+the second parent, are read too, and its number and title come from the environment (PR_NUMBER and PR_TITLE, which
+the workflow sets). A title cites a requirement as `[REQ-TRN-014] fix: …`. Writes
 trace-matrix.md and trace-matrix.csv, one row per requirement with the pull requests (or commits) and tests that cite
 it. With --gate G1 it exits 1 when any MUST G1 row has no passing test or a failing one, or a test or change cites a
 requirement ID the register does not know (Engineering standard, "Traceability"). A title that cites only an issue,
@@ -18,9 +21,11 @@ from __future__ import annotations
 
 import argparse
 import csv
+import os
 import re
 import subprocess
 import sys
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -32,6 +37,8 @@ TEST_REQ = re.compile(r"test_req_([a-z0-9]+)_(\d{3})")
 SUBJECT_REF = re.compile(r"\[(REQ-[A-Z0-9]+-\d{3}|#\d+)\]")
 MERGED_PR = re.compile(r"^Merge pull request #(\d+) ")  # GitHub's "Create a merge commit"; the title is the body
 SQUASHED_PR = re.compile(r" \(#(\d+)\)$")  # GitHub's "Squash and merge": the title, then the number
+PR_MERGE_REF = re.compile(r"^Merge [0-9a-f]{40} into [0-9a-f]{40}$")  # refs/pull/N/merge: what a PR's CI run tests
+LOG_FORMAT = "--format=%H%x1f%s%x1f%b%x1e"
 
 
 @dataclass
@@ -145,10 +152,25 @@ def parse_log(log: str) -> list[Change]:
     return changes
 
 
+def _git(repo: Path, *args: str) -> str:
+    return subprocess.run(["git", *args], cwd=repo, capture_output=True, text=True, check=True, encoding="utf-8").stdout
+
+
 def git_changes(ref: str = "HEAD", repo: Path = ROOT) -> list[Change]:
-    cmd = ["git", "log", "--first-parent", "--format=%H%x1f%s%x1f%b%x1e", ref]
-    out = subprocess.run(cmd, cwd=repo, capture_output=True, text=True, check=True, encoding="utf-8")
-    return parse_log(out.stdout)
+    """The changes on the first-parent history of `ref`; when `ref` is GitHub's merge of a pull request into its base,
+    the pull request's own commits too (its second parent's commits that the base lacks), after the merge itself."""
+    changes = parse_log(_git(repo, "log", "--first-parent", LOG_FORMAT, ref))
+    parents = _git(repo, "rev-list", "--parents", "-n", "1", ref).split()[1:]
+    if len(parents) == 2 and changes and PR_MERGE_REF.match(changes[0].title):
+        changes[1:1] = parse_log(_git(repo, "log", LOG_FORMAT, f"{parents[0]}..{parents[1]}"))
+    return changes
+
+
+def pr_change(env: Mapping[str, str]) -> Change | None:
+    """The pull request a CI run checks, by the number and title the workflow passes in PR_NUMBER and PR_TITLE (through
+    the environment, so a title is never read as shell code); None outside a pull request's run."""
+    number, title = env.get("PR_NUMBER", "").strip(), env.get("PR_TITLE", "").strip()
+    return Change(title, int(number)) if number.isdigit() and title else None
 
 
 def build(
@@ -234,7 +256,10 @@ def main(argv: list[str] | None = None) -> int:
     reqs = read_register(a.register)
     tests = read_collected(a.collected) if a.collected else []
     outcomes = read_junit(a.junit) if a.junit else {}
-    rows, unknown = build(reqs, tests, outcomes, git_changes() if a.git_log else [])
+    changes = git_changes() if a.git_log else []
+    if pr := pr_change(os.environ):
+        changes.insert(0, pr)
+    rows, unknown = build(reqs, tests, outcomes, changes)
     md, csv_path = write(rows, a.out)
     covered = sum(1 for r in rows if r.tests)
     print(
