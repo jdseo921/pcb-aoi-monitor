@@ -175,7 +175,10 @@ properties on `*`), never the platform's highlight (#203). A board that could no
 `Page.not_inspected` on its banner (· Not inspected, in the neutral colour) with its picture and verdict table cleared,
 never the verdict of the board before (#182), and its empty state (Inspection, Compare's test pane) names the board, the
 error's code and what happened, translated through `phrase_text()` (#198); `run_in_background(on_error=…)` lets a
-page clear what the job was to replace before the coded dialog opens. Every empty page, list and
+page clear what the job was to replace before the coded dialog opens (an error in `on_error` itself is reported, and the
+dialog still opens). The error of a run the user cancelled, or a newer call replaced, opens no dialog but still goes
+through `report_error` (an `error.shown` line with the trace, an ERROR alarm), as does the error a stopped folder import
+returns to `on_cancel` (#206). Every empty page, list and
 image area shows an `EmptyState` (`aoi/ui/widgets/empty_state.py`): what is missing, what to do next and one link
 button to the page where it is done; `Page.empty_step` turns "do this on <page>" into that link, or into "Ask an
 Engineer …" for a role that cannot open the page (REQ-SET-019, since S18c). With no board model the header list is
@@ -367,7 +370,8 @@ the same transaction as its rows (`Database.transaction()`, `@transactional`): b
 or a crash (#178). A file cannot join it, so file writes come first and are removed when what records them fails: an
 import's copies, a training run's files, an export whose entry cannot be written (never its own source). An import is all
 or nothing (AOI-TRN-008); a folder import, one file per call, stops at such a file with AOI-TRN-009 naming how many were
-imported; an overlay export that stops part-way records the files that left (AOI-LOG-001).
+imported, and at any other error after a file went in with AOI-TRN-010 and the same count (#206); an overlay export
+that stops part-way records the files that left (AOI-LOG-001).
 The writes, their roles and entries:
 
 | Write | Role | Audit action and object (before → after) |

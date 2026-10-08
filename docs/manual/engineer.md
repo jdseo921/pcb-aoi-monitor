@@ -76,9 +76,11 @@ first, with No as the default: Enter keeps the samples.
 
 **Importing images** with + OK or + NG is all or nothing: if one picked file cannot be copied (gone, unreadable, or
 the workspace drive full), AOI-TRN-008 names it and none of the picked images is imported, so importing them again adds
-each once. **Import Folder** imports one image at a time, so Cancel keeps what was imported: a file it cannot copy stops
-it with AOI-TRN-009, which says how many images before it were imported. They are in the sample table; importing the
-folder again would add them a second time, so import the rest with + OK or + NG, or remove those first.
+each once. **Import Folder** imports one image at a time, so Cancel keeps what was imported, and the status bar says
+how many OK and NG images that was. A file it cannot copy stops it with AOI-TRN-009, and any other error after an
+image went in with AOI-TRN-010; both say how many images before it were imported. They are in the sample table;
+importing the folder again would add them a second time, so import the rest with + OK or + NG, or remove those first.
+An error in an import you cancelled opens no message, but it is in the log and the alarm list.
 
 (to be written: import, OK/NG/UNSURE labels, defect boxes, second-person check, freezing a dataset version,
 locking the validation set)

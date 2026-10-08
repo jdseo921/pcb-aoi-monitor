@@ -380,6 +380,22 @@ CODES: dict[str, ErrorCode] = {
             ),
         ),
         ErrorCode(
+            "AOI-TRN-010",
+            QT_TRANSLATE_NOOP("Errors", "Folder import stopped by an error"),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Importing {path} failed ({reason}), so the import of {folder} stopped at image {at} of {total}; the"
+                " {imported} image(s) imported before it stay in the sample table.",
+            ),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Fix what stopped it (the log file in the workspace's logs folder has the details; send it to support"
+                " if the cause is unclear). Importing the folder again would add those {imported} a second time:"
+                " import the images not yet imported with + OK or + NG, or first remove the {imported} from the sample"
+                " table.",
+            ),
+        ),
+        ErrorCode(
             "AOI-RCP-001",
             QT_TRANSLATE_NOOP("Errors", "Recipe saved since it was opened"),
             QT_TRANSLATE_NOOP(

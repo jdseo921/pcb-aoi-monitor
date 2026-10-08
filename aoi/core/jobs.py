@@ -128,7 +128,8 @@ class Job(Generic[T]):
                 value = self.context.run(self._fn, *self._args, **self._kwargs)
         except JobCancelled:
             pass
-        except Exception as e:  # reaches the user as a coded dialog through on_error; never kills the pool thread
+        except Exception as e:  # never kills the pool thread; on_error's listener reports it (on a page: logged and
+            # alarmed, with a coded dialog unless the job was cancelled or replaced, #206)
             self.error = e
             self._call("error", e)
         else:

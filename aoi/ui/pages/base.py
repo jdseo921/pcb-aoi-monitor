@@ -218,8 +218,10 @@ class Page(QWidget):
         and an error becomes the coded dialog, after `on_error` has cleared what the job was to replace (#182). The
         newest call wins: an earlier run is stopped and its result dropped. `busy` covers where the result will appear;
         Cancel drops the result and, when the job stops, calls `on_cancel` with what it returned: the work done so far
-        for a job that checks `should_stop()`, None if it never ran. `update_actions()` runs as the job starts and ends,
-        so a page can turn off the buttons that would start a second job and stop this one (#194)."""
+        for a job that checks `should_stop()`, None if it never ran or raised. The error of a stopped run shows no
+        dialog, but is still logged with its trace and stored as an ERROR alarm (#206, REQ-LOG-005). `update_actions()`
+        runs as the job starts and ends, so a page can turn off the buttons that would start a second job and stop this
+        one (#194)."""
         if self._bg is not None:
             self._bg.stop()
             if self._bg_busy is not None and self._bg_busy is not busy:  # its finished slot will not finish it
@@ -249,12 +251,19 @@ class Page(QWidget):
                 on_cancel(worker.job.result)
 
         def failed(exc: BaseException) -> None:
+            worker = ref()
+            if worker is None or worker is not self._bg or worker.job.cancelled:
+                self.ctx.report_error(exc, self.title)  # a run the user left shows nothing, but is never lost (#206)
+                return
             if on_error is not None:
-                on_error(exc)  # first: the page behind the dialog never shows the result before as this one's
+                try:
+                    on_error(exc)  # first: the page behind the dialog never shows the result before as this one's
+                except Exception as hook_exc:  # a refresh on a database that cannot be read: `exc` is still shown
+                    self.ctx.report_error(hook_exc, self.title)
             self.error(exc)
 
         w.signals.result.connect(current(on_result))
-        w.signals.error.connect(current(failed))
+        w.signals.error.connect(failed)
         w.signals.finished.connect(finished)
         if busy is not None:
             busy.watch(w.job)
