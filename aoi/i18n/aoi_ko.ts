@@ -856,24 +856,24 @@
 <context>
     <name>ModelTestPage</name>
     <message>
-        <location filename="../ui/pages/model_test.py" line="+61"/>
-        <location line="+141"/>
+        <location filename="../ui/pages/model_test.py" line="+67"/>
+        <location line="+146"/>
         <source>Select Test Folder…</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-140"/>
+        <location line="-145"/>
         <source>Run Test</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location line="+2"/>
-        <location line="+144"/>
+        <location line="+149"/>
         <source>Export CSV</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-143"/>
+        <location line="-148"/>
         <source>Export Report</source>
         <translation type="unfinished"></translation>
     </message>
@@ -944,7 +944,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+13"/>
+        <location line="+17"/>
         <source>No AI model</source>
         <translation type="unfinished"></translation>
     </message>
@@ -954,17 +954,17 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+14"/>
+        <location line="+13"/>
         <source>Run Test Again</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+13"/>
+        <location line="+16"/>
         <source>{labelled} labelled of {images} images  ·  TP {tp}  FN {fn}  FP {fp}  TN {tn}  ·  WARN counts as NG</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+39"/>
+        <location line="+38"/>
         <source>No AI model for {board_model} yet</source>
         <translation type="unfinished"></translation>
     </message>
@@ -999,12 +999,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+9"/>
+        <location line="+12"/>
         <source>Report saved: {file}</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+6"/>
+        <location line="+7"/>
         <source>AI Model Validation Report</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1027,7 +1027,7 @@
 <context>
     <name>NgDialog</name>
     <message>
-        <location filename="../ui/pages/training.py" line="+46"/>
+        <location filename="../ui/pages/training.py" line="+52"/>
         <source>Label NG images</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1095,7 +1095,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+10"/>
+        <location line="+14"/>
         <source>Open {page} ›</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1130,7 +1130,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/model_test.py" line="-197"/>
+        <location filename="../ui/pages/model_test.py" line="-206"/>
         <source>AI Model Test</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1155,7 +1155,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/training.py" line="+7"/>
+        <location filename="../ui/pages/training.py" line="+8"/>
         <source>Training</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1165,7 +1165,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/recipe_editor.py" line="+56"/>
+        <location filename="../ui/pages/recipe_editor.py" line="+63"/>
         <source>Recipe Editor</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1386,7 +1386,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+32"/>
+        <location line="+43"/>
         <source>Train an AI model or set a reference image on Training.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1396,7 +1396,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+26"/>
+        <location line="+25"/>
         <source>No ROIs yet</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1426,7 +1426,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+89"/>
+        <location line="+91"/>
         <source>Image to try the recipe on</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1436,7 +1436,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+21"/>
+        <location line="+22"/>
         <source>Try result: {verdict}  ·  {defects} defect(s)  ·  {ms:.0f} ms</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1454,7 +1454,7 @@
 <context>
     <name>Role</name>
     <message>
-        <location filename="../ui/pages/base.py" line="-85"/>
+        <location filename="../ui/pages/base.py" line="-89"/>
         <source>Operator</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1642,12 +1642,12 @@
     </message>
     <message>
         <location line="+1"/>
-        <location line="+262"/>
+        <location line="+266"/>
         <source>Import Folder…</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-256"/>
+        <location line="-260"/>
         <location line="+50"/>
         <source>ID</source>
         <translation type="unfinished"></translation>
@@ -1695,12 +1695,12 @@
     </message>
     <message>
         <location line="+1"/>
-        <location line="+149"/>
+        <location line="+153"/>
         <source>Remove</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-144"/>
+        <location line="-148"/>
         <source>Select a sample to preview</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1795,7 +1795,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+30"/>
+        <location line="+34"/>
         <source>Imported {ok} OK and {ng} NG images</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1810,7 +1810,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+46"/>
+        <location line="+47"/>
         <source>epoch {epoch}/{total}  loss {loss:.4f}</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1835,7 +1835,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+23"/>
+        <location line="+22"/>
         <source>Add at least 20 OK boards with + OK Images or Import Folder…</source>
         <translation type="unfinished"></translation>
     </message>

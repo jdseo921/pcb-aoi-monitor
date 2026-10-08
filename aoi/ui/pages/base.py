@@ -123,6 +123,10 @@ class Page(QWidget):
             return False
         return True
 
+    def checked_board_model(self) -> str | None:
+        """The board model after `need_board_model()`: its name, or None once the user has been told to pick one."""
+        return self.board_model if self.need_board_model() else None
+
     def empty_step(self, sentence: str, target: str) -> tuple[str, str, Callable[[], object] | None]:
         """What to do and where, for an `EmptyState`: `sentence` with the link "Open <target> ›", or, for a role that
         cannot open that page, "Ask an Engineer to do this on <target>." with no link (REQ-SET-019)."""
@@ -209,7 +213,16 @@ def make_table(headers: list[str], sortable: bool = True) -> QTableWidget:
     return t
 
 
-def fill_table(t: QTableWidget, rows: Sequence[Sequence[object]], colors: Sequence[str | None] | None = None) -> None:
+def fill_table(
+    t: QTableWidget,
+    rows: Sequence[Sequence[object]],
+    colors: Sequence[str | None] | None = None,
+    tooltips: Sequence[str | None] | None = None,
+) -> None:
+    """Replace the rows of `t`; `colors[i]` and `tooltips[i]` go on every cell of row `i`.
+
+    Sorting is off while the rows are set and comes back at the end, which sorts the table at once by the header's
+    indicator; so anything a row carries is set here, never by a loop over the data after this returns (#111)."""
     sortable = t.isSortingEnabled()
     t.setSortingEnabled(False)
     t.setRowCount(len(rows))
@@ -218,6 +231,7 @@ def fill_table(t: QTableWidget, rows: Sequence[Sequence[object]], colors: Sequen
     bold.setBold(True)  # white on green or red reads at 3:1 only as large text, and bold 14 pt counts (WCAG 1.4.3)
     for i, row in enumerate(rows):
         color = colors[i] if colors else None
+        tip = tooltips[i] if tooltips else None
         for j, v in enumerate(row):
             it = QTableWidgetItem()
             if isinstance(v, float):
@@ -230,6 +244,8 @@ def fill_table(t: QTableWidget, rows: Sequence[Sequence[object]], colors: Sequen
                 it.setBackground(QColor(color))
                 it.setForeground(QColor(theme.on_color(color)))
                 it.setFont(bold)
+            if tip:
+                it.setToolTip(tip)
             t.setItem(i, j, it)
     t.resizeColumnsToContents()
     t.setSortingEnabled(sortable)
@@ -239,3 +255,12 @@ def cell_text(t: QTableWidget, row: int, column: int) -> str:
     """The text of a cell, or "" where the table holds no item there (`QTableWidget.item()` returns None then)."""
     item = t.item(row, column)
     return item.text() if item is not None else ""
+
+
+def cell_item(t: QTableWidget, row: int, column: int) -> QTableWidgetItem:
+    """The item of a cell `fill_table` filled, for its tooltip. `QTableWidget.item()` is typed as optional; a cell the
+    table never filled is a bug, not a case, so it raises."""
+    item = t.item(row, column)
+    if item is None:
+        raise LookupError(f"the table has no item at row {row}, column {column}")
+    return item
