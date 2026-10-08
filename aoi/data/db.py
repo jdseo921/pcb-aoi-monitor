@@ -335,6 +335,31 @@ class Database:
         )
         return [{**r, "sample_uuids": json.loads(r["sample_uuids"])} for r in rows]
 
+    # --- labeller agreement (REQ-TRN-016): rows are added, never changed ---
+    def add_row(self, table: str, **values: Any) -> str:
+        """Add a row with a new UUID and the time now (at_utc) to one of the append-only tables of migration 0016, the
+        names given by the code, never a user; returns the UUID."""
+        row = {"uuid": new_uuid(), **values, "at_utc": now_utc()}
+        marks = ",".join("?" * len(row))
+        self.execute(f"INSERT INTO {table}({','.join(row)}) VALUES({marks})", list(row.values()))  # noqa: S608
+        return str(row["uuid"])
+
+    def calibration_sets(self, board_model: str, uid: str | None = None) -> list[dict[str, Any]]:
+        """A board model's calibration sets, newest first, or the one with UUID `uid`, each with its sample UUIDs."""
+        where, params = ("uuid=?", (uid,)) if uid else ("board_model=?", (board_model,))
+        rows = self.query(f"SELECT * FROM calibration_sets WHERE {where} ORDER BY id DESC", params)  # noqa: S608
+        return [{**r, "sample_uuids": json.loads(r["sample_uuids"])} for r in rows]
+
+    def blind_labels(self, set_uuid: str, labelled_by: str | None) -> dict[str, tuple[str, str | None]]:
+        """A user's blind labels of a calibration set: {sample UUID: (label, defect type)}."""
+        rows = self.query("SELECT * FROM blind_labels WHERE set_uuid=? AND labelled_by=?", (set_uuid, labelled_by))
+        return {r["sample_uuid"]: (r["label"], r["defect_type"]) for r in rows}
+
+    def agreement_checks(self, board_model: str, uid: str | None = None) -> list[dict[str, Any]]:
+        """A board model's agreement checks, newest first, or the one with UUID `uid`."""
+        where, params = ("uuid=?", (uid,)) if uid else ("board_model=?", (board_model,))
+        return self.query(f"SELECT * FROM agreement_checks WHERE {where} ORDER BY id DESC", params)  # noqa: S608
+
     # --- model registry ----------------------------------------------------
     def register_model(
         self,

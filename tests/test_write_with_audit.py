@@ -23,7 +23,7 @@ from aoi.data import atomic
 from aoi.ui.main_window import MainWindow
 from aoi.ui.pages.base import cell_text
 from tests.test_req_done_in_v01 import BOARD, _window
-from tests.test_roles_and_audit import WRITES
+from tests.test_roles_and_audit import WRITES, calibration_samples, calibration_set, labelled_blind
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -58,11 +58,31 @@ def _a_result(ctx: AppContext) -> None:
     ctx.inspect_file("TINY", ctx.samples("TINY", "OK")[0]["path"])
 
 
+def _cal_samples(ctx: AppContext) -> None:
+    """100 samples of the board model CAL, for a calibration set."""
+    calibration_samples(ctx)
+
+
+def _a_set(ctx: AppContext) -> None:
+    """A calibration set of the board model CAL, for blind labels."""
+    ctx.make_calibration_set("CAL", calibration_samples(ctx))
+
+
+def _labelled_set(ctx: AppContext) -> None:
+    """A calibration set labelled blind by the engineer and the user acting, for an agreement check."""
+    _a_set(ctx)
+    ctx.label_blind(calibration_set(ctx)[0], calibration_set(ctx)[1][0], "OK")
+    labelled_blind(ctx)
+
+
 # a write that would change nothing on the trained workspace gets something to change, or its case proves nothing
 SETUP: dict[str, Callable[[AppContext], None]] = {
     "activate_model": _second_version,
     "archive_old": _a_result,
     "export_overlays": _a_result,
+    "make_calibration_set": _cal_samples,
+    "label_blind": _a_set,
+    "run_agreement_check": _labelled_set,
 }
 
 

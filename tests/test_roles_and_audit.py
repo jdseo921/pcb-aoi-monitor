@@ -32,6 +32,30 @@ def _raising(report: ImportReport) -> ImportReport:
     return report
 
 
+def calibration_samples(ctx: AppContext) -> list[str]:
+    """The board model CAL's 100 samples, added through the database when missing, so that only the call under test is
+    role-checked and audited."""
+    have = [s["uuid"] for s in ctx.samples("CAL")]
+    return have or [ctx.db.sample(ctx.db.add_sample("CAL", "images/CAL/board.png", "OK"))["uuid"] for _ in range(100)]
+
+
+def calibration_set(ctx: AppContext) -> tuple[str, list[str]]:
+    """The newest calibration set's UUID and images; none before one is made, as for a call refused by its role."""
+    sets = ctx.calibration_sets("CAL")
+    return (sets[0]["uuid"], sets[0]["sample_uuids"]) if sets else ("", [""])
+
+
+def labelled_blind(ctx: AppContext) -> str:
+    """The set's UUID, labelled blind where missing by the engineer and, past label_blind's image, the user acting."""
+    uid, images = calibration_set(ctx)
+    users = (ctx.db.user_uuid("engineer"), ctx.user_uuid)
+    for n, image in enumerate(images if uid else []):
+        for user in users[: 2 if n else 1]:
+            if image not in ctx.db.blind_labels(uid, user):
+                ctx.db.add_row("blind_labels", set_uuid=uid, sample_uuid=image, label="OK", labelled_by=user)
+    return uid
+
+
 # every AppContext write: method -> (its audit action, a call that works on the trained workspace), in a runnable order
 WRITES: dict[str, tuple[str, Callable[[AppContext, Path, Path], Any]]] = {
     "ensure_board_model": ("board_model.create", lambda ctx, data, tmp: ctx.ensure_board_model("NEW")),
@@ -65,6 +89,20 @@ WRITES: dict[str, tuple[str, Callable[[AppContext, Path, Path], Any]]] = {
         lambda ctx, data, tmp: ctx.check_label(ctx.samples("TINY", "OK")[1]["uuid"]),
     ),
     "draw_ok_checks": ("label.draw", lambda ctx, data, tmp: ctx.draw_ok_checks("TINY", "Top", seed=1)),
+    "make_calibration_set": (
+        "calibration.make",
+        lambda ctx, data, tmp: ctx.make_calibration_set("CAL", calibration_samples(ctx)),
+    ),
+    "label_blind": (
+        "label.blind",
+        lambda ctx, data, tmp: ctx.label_blind(calibration_set(ctx)[0], calibration_set(ctx)[1][0], "OK"),
+    ),
+    "run_agreement_check": (
+        "agreement.check",
+        lambda ctx, data, tmp: ctx.run_agreement_check(
+            labelled_blind(ctx), str(ctx.user_uuid), str(ctx.db.user_uuid("engineer"))
+        ),
+    ),
     "train": ("model.train", lambda ctx, data, tmp: ctx.train("TINY", epochs=1, image_size=32)),
     "activate_model": ("model.activate", lambda ctx, data, tmp: ctx.activate_model(ctx.models("TINY")[-1]["id"])),
     "save_recipe": ("recipe.save", lambda ctx, data, tmp: ctx.save_recipe(Recipe(board_model="TINY"))),
@@ -107,7 +145,8 @@ UNCHECKED = {
     "sample_path", "models", "model", "active_model", "recipe_history", "inspections", "defects_for", "checks_for",
     "checks_for_many", "inspection_result", "inspection", "judged_reference", "users", "board_status", "start_user",
     "golden_board_unreadable", "engine_is_current", "calibrated_threshold", "calibration_of", "scale", "label_history",
-    "boxes", "box_history", "unsure_samples", "label_check_status", "labels_ready_to_freeze",
+    "boxes", "box_history", "unsure_samples", "label_check_status", "labels_ready_to_freeze", "calibration_sets",
+    "agreement_checks",
 }  # fmt: skip
 CALLS = {**{name: call for name, (_, call) in WRITES.items()}, **CHECKED_READS}
 # The lowest role allowed each call, copied from the write table of docs/ARCHITECTURE.md §5 and REQ-CMP-005, never read
