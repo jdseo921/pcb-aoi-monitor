@@ -35,14 +35,20 @@ JPEG_MAX_SCANS = 100
 JPEG_WALK = re.compile(rb"\xff([\xc0-\xc4\xc9-\xcc\xd9-\xdd\xe0-\xef\xfe])")
 TIFF_INT_TYPES = {1: "B", 3: "H", 4: "I", 6: "b", 8: "h", 9: "i", 16: "Q", 17: "q"}  # BYTE to SLONG8: a size's types
 TIFF_BLOCK_TAGS = (278, 322, 323)  # RowsPerStrip, TileWidth, TileLength: the size of a strip or tile
-TIFF_TAGS = (256, 257, *TIFF_BLOCK_TAGS, 259, 284)  # with ImageWidth, ImageLength, Compression, PlanarConfiguration
-TIFF_TWICE = -1  # what `_tiff_tags` gives a tag listed twice: no single value
+# with ImageWidth, ImageLength, Compression, SamplesPerPixel, PlanarConfiguration, ImageDepth and TileDepth
+TIFF_TAGS = (256, 257, *TIFF_BLOCK_TAGS, 259, 277, 284, 32997, 32998)
+TIFF_FIRST = (277, 32997, 32998)  # SamplesPerPixel, ImageDepth, TileDepth: libtiff reads the first entry
+TIFF_TWICE = -1  # what `_tiff_tags` gives a tag listed twice, or a Compression given per sample: no single value
 # StripOffsets and TileOffsets fill libtiff's one list of where the strips or tiles start (0), StripByteCounts and
 # TileByteCounts its list of the bytes each holds (1); the values are read unsigned, as libtiff refuses a negative one
 TIFF_LISTS = {273: 0, 324: 0, 279: 1, 325: 1}
 TIFF_LIST_TYPES = {1: "u1", 3: "u2", 4: "u4", 6: "u1", 8: "u2", 9: "u4", 16: "u8", 17: "u8"}
 TIFF_WHOLE_SIDE = (0, 0xFFFFFFFF)  # a RowsPerStrip of 0, or the TIFF default 4,294,967,295, reads as the image height
 TIFF_BLOCK_PIXELS = 1024 * 1024  # a tile or strip may always hold this many pixels, however small the image
+# The most strips or tiles a TIFF may have (`_tiff_count`), fixed, though libtiff takes up to 65,535 samples a pixel:
+# one-row strips of the tallest image (MAX_SIDE rows) in four planes, RGB with alpha or CMYK stored plane by plane;
+# tiles of 16 × 16 px, TIFF 6.0's smallest, number about 196,000 a plane in 50 MP and 782,000 in 200 MP
+TIFF_MAX_BLOCKS = 4 * MAX_SIDE
 
 
 def image_header(data: bytes) -> tuple[str, int, int] | None:
@@ -144,12 +150,15 @@ def _tiff_tags(data: bytes) -> dict[int, int]:
     """The TIFF_TAGS the first directory of a classic or a BigTIFF file holds, by tag. A tag counts when it holds one
     value of an integer type, BYTE to SLONG8, as libtiff's TIFFReadDirEntryLong reads it: in a classic file the 8 bytes
     of a LONG8 or SLONG8 sit at the offset its entry holds (#242 review), and a value below 0 reads as 0. A tag listed
-    twice gives TIFF_TWICE whatever either entry holds, since libtiff reads the first."""
+    twice gives TIFF_TWICE whatever either entry holds, since libtiff reads the first, but TIFF_FIRST keep the first,
+    as they only set how many strips are read; so does a Compression given once per sample, as TIFF before 5.0 wrote
+    it and libtiff still reads it (#242 stack review)."""
     order, big, entries = _tiff_entries(data)
     tags, seen = dict[int, int](), set[int]()
     for tag, kind, values, field in entries:
         if tag in TIFF_TAGS and tag in seen:  # whatever either entry holds: no single value, so the file is refused
-            tags[tag] = TIFF_TWICE
+            if tag not in TIFF_FIRST:
+                tags[tag] = TIFF_TWICE
             continue
         seen.add(tag)
         fmt = TIFF_INT_TYPES.get(kind)
@@ -161,16 +170,38 @@ def _tiff_tags(data: bytes) -> dict[int, int]:
         if values == 1 and len(field) >= struct.calcsize(fmt):
             (value,) = struct.unpack(order + fmt, field[: struct.calcsize(fmt)])
             tags[tag] = max(int(value), 0)
+        elif tag == 259:  # libtiff takes the first value when the values agree: no single value read here
+            tags[tag] = TIFF_TWICE
     return tags
 
 
-def _tiff_blocks(data: bytes) -> tuple[np.ndarray, np.ndarray]:
-    """Where each strip or tile of a TIFF's first directory starts in the file and how many bytes it holds, two uint64
-    arrays of one length, read as libtiff 4.7.1 reads them (tif_dirread.c; #242 review): StripOffsets and TileOffsets
+def _tiff_count(tags: dict[int, int], width: int, height: int) -> int:
+    """The strips or tiles libtiff 4.7.1 counts in a TIFF (TIFFNumberOfStrips, TIFFNumberOfTiles), and so the values it
+    reads of each offset and byte-count list (#242 stack review): with a TileWidth or TileLength, columns over TileWidth
+    times rows over TileLength (a side of 4,294,967,295, which libtiff reads as the image's, gives one tile across here
+    too; 0 or none gives no tile, which libtiff refuses) times ImageDepth over TileDepth (each 1 when 0 or none, which
+    can only raise the count), else rows over RowsPerStrip (one strip for 4,294,967,295 or none); times SamplesPerPixel
+    when the planes are apart (PlanarConfiguration 2, or listed twice, which can only raise the count)."""
+    planes = tags.get(277, 1) if tags.get(284, 1) in (2, TIFF_TWICE) else 1
+    if 322 in tags or 323 in tags:
+        across, down = tags.get(322, 0), tags.get(323, 0)
+        if not across or not down:
+            return 0  # tif_dirread.c: "Cannot handle zero number of tiles"
+        return -(-width // across) * -(-height // down) * -(-(tags.get(32997) or 1) // (tags.get(32998) or 1)) * planes
+    rows = tags.get(278, 0)
+    return (1 if rows in TIFF_WHOLE_SIDE else -(-height // rows)) * planes
+
+
+def _tiff_blocks(data: bytes, most: int) -> tuple[np.ndarray, np.ndarray]:
+    """Where the strips or tiles of a TIFF's first directory start in the file and how many bytes each holds, read as
+    libtiff 4.7.1 reads them (tif_dirread.c; #242 review): only the first `most` values of each list, the strips
+    `_tiff_count` gives, whatever an entry lists (TIFFFetchStripThing; #242 stack review); StripOffsets and TileOffsets
     fill one list, the one listed last counting, each by its first entry, and so do StripByteCounts and TileByteCounts;
-    values of an integer type sit in the entry when they fit its value field and at the offset it holds otherwise; the
-    shorter list is padded with 0, as libtiff pads it. A list libtiff cannot read (of another type, or running past the
-    end of the file) is read as far as it goes, since libtiff then refuses the file before decoding a strip."""
+    values of an integer type sit in the entry when all it lists fit its value field and at the offset it holds
+    otherwise. Each array views the file's bytes in the list's own type, unsigned (libtiff refuses a negative value);
+    past the end of the shorter one stands the 0 libtiff pads it with. A list libtiff cannot read (of another type, or
+    running past the end of the file) is read as far as it goes, since libtiff then refuses the file before decoding a
+    strip."""
     order, big, entries = _tiff_entries(data)
     found, seen = dict[int, tuple[int, int, bytes]](), set[int]()
     for tag, kind, values, field in entries:
@@ -180,52 +211,78 @@ def _tiff_blocks(data: bytes) -> tuple[np.ndarray, np.ndarray]:
     lists = []
     for kind, values, field in (found.get(0, (1, 0, b"")), found.get(1, (1, 0, b""))):
         dtype = np.dtype(order + TIFF_LIST_TYPES.get(kind, "u1"))
-        if values * dtype.itemsize <= len(field):
-            got = np.frombuffer(field, dtype, values)
+        if values * dtype.itemsize <= len(field):  # by the number listed, as libtiff decides it
+            lists.append(np.frombuffer(field, dtype, min(values, most)))
         else:  # the field holds where the values are
             where = min(int.from_bytes(field, "little" if order == "<" else "big"), len(data))
-            got = np.frombuffer(data, dtype, min(values, (len(data) - where) // dtype.itemsize), where)
-        lists.append(got.astype(np.uint64))
-    n = max(len(lists[0]), len(lists[1]))
-    return np.pad(lists[0], (0, n - len(lists[0]))), np.pad(lists[1], (0, n - len(lists[1])))
+            lists.append(np.frombuffer(data, dtype, min(values, most, (len(data) - where) // dtype.itemsize), where))
+    return lists[0], lists[1]
 
 
-def _tiff_shared(data: bytes, tags: dict[int, int]) -> Phrase | None:
+def _tiff_spans(starts: np.ndarray, counts: np.ndarray, size: int) -> tuple[np.ndarray, np.ndarray]:
+    """Where the bytes each strip or tile holds of a file of `size` bytes begin and end (the byte after them), 4 bytes
+    each (8 from 2 GiB): a strip past the end of the offsets starts at 0, as libtiff pads them; one without a byte
+    count, of 0 bytes or starting past the end of the file holds none, and one running past the end the bytes up to
+    it. No count is over `size`."""
+    kind = np.uint32 if size < 1 << 31 else np.uint64
+    begin, end = np.zeros(max(len(starts), len(counts)), kind), np.zeros(max(len(starts), len(counts)), kind)
+    np.minimum(starts, np.uint64(size), out=begin[: len(starts)], casting="unsafe")
+    end[: len(counts)] = counts
+    np.add(end, begin, out=end)
+    np.minimum(end, kind(size), out=end)
+    return begin, end
+
+
+def _tiff_shared(data: bytes, tags: dict[int, int], width: int, height: int) -> Phrase | None:
     """Why the TIFF's strips or tiles would cost the decoder more bytes than the file holds, or None (#242 review).
     libtiff reads each strip or tile from its own offset and byte count and decodes it, so strips that all point at the
     same bytes cost those bytes once per strip: one-row strips sharing one JPEG stream of 99 scans held load_image about
     69 s on a 49 MP file of 8 MB, and one-row strips sharing a 1 MB block about 70 s uncompressed, as long with Deflate
-    and far longer with PackBits. Once two strips or tiles hold bytes, a file is refused when their byte counts add up
-    to more than the file, or when two of them share a byte, so that libtiff reads no byte of the file twice. libtiff
-    ignores the byte counts of an uncompressed file of more than two strips whose first two differ, and reads each
-    strip at its size, so such a file is not checked."""
-    starts, counts = _tiff_blocks(data)
-    estimated = tags.get(259, 1) == 1 and tags.get(284, 1) == 1 and len(counts) > 2
-    if estimated and counts[0] != counts[1] and counts[0] > 0 and counts[1] > 0:
-        return None  # tif_dirread.c: "Wrong StripByteCounts field, ignoring and calculating from imagelength"
-    held = np.flatnonzero(counts)  # libtiff refuses a strip of 0 bytes when it reaches it
-    starts, counts = np.minimum(starts[held], len(data)), counts[held]  # a start past the end holds no byte of the file
+    and far longer with PackBits. A TIFF of more than TIFF_MAX_BLOCKS strips or tiles is refused before a list is read
+    (#242 stack review: reading every value listed took 3.7 GB on a crafted 200 MB file). Once two strips or tiles hold
+    bytes, a file is refused when their byte counts add up to more than the file, or when two of them share a byte (the
+    lowest-numbered two holding the first byte shared are named), so that libtiff reads no byte of the file twice.
+    libtiff ignores the byte counts of an uncompressed file of more than two strips whose first two differ, and reads
+    each strip at its size, so such a file is not checked. The check holds two arrays of 4 bytes a strip, sorted in
+    place, and arrays of 1 byte a strip: about 40 MB at TIFF_MAX_BLOCKS. A strip that holds no byte (`_tiff_spans`)
+    shares none, and one starting past the end of the file is left to libtiff, which fails on reaching it."""
     tiles = 322 in tags or 323 in tags
-    if len(counts) < 2:
+    if (count := _tiff_count(tags, width, height)) > TIFF_MAX_BLOCKS:
+        if tiles:
+            many = QT_TRANSLATE_NOOP("Errors", "it has {count} tiles, more than the {most} this app decodes")
+        else:
+            many = QT_TRANSLATE_NOOP("Errors", "it has {count} strips, more than the {most} this app decodes")
+        return many.fill(count=f"{count:,}", most=f"{TIFF_MAX_BLOCKS:,}")
+    starts, counts = _tiff_blocks(data, count)
+    one, two = (int(counts[n]) if n < len(counts) else 0 for n in (0, 1))  # the first two byte counts
+    estimated = tags.get(259, 1) == 1 and tags.get(284, 1) == 1 and count > 2
+    if estimated and one != two and one > 0 and two > 0:
+        return None  # tif_dirread.c: "Wrong StripByteCounts field, ignoring and calculating from imagelength"
+    held = int(np.count_nonzero(counts))  # libtiff refuses a strip of 0 bytes when it reaches it
+    if held < 2:
         return None
-    if int(counts.max()) > len(data) or int(counts.sum()) > len(data):
+    if int(counts.max()) > len(data) or int(counts.sum(dtype=np.uint64)) > len(data):
         if tiles:
             over = QT_TRANSLATE_NOOP("Errors", "its {count} tiles add up to more than the {size} bytes of the file")
         else:
             over = QT_TRANSLATE_NOOP("Errors", "its {count} strips add up to more than the {size} bytes of the file")
-        return over.fill(count=f"{len(counts):,}", size=f"{len(data):,}")
-    ends = starts + counts
-    if bool(np.all(starts[1:] >= ends[:-1])):  # each after the last in the file, as writers lay them out
+        return over.fill(count=f"{held:,}", size=f"{len(data):,}")
+    begin, end = _tiff_spans(starts, counts, len(data))
+    if bool(np.all(begin[1:] >= end[:-1])):  # each after the last in the file, as writers lay them out
         return None
-    inside = np.flatnonzero(starts < len(data))
-    order = inside[np.argsort(starts[inside], kind="stable")]
-    reach = np.maximum.accumulate(ends[order])
-    clash = np.flatnonzero(starts[order][1:] < reach[:-1])
-    if not clash.size:
+    # Each sorted apart, a begin falls before the end one place lower exactly where two strips hold the same byte
+    begin.sort()
+    end.sort()
+    clash = begin[1:] < end[:-1]
+    if not clash.any():
         return None
-    later = int(clash[0]) + 1
-    earlier = int(np.argmax(ends[order][:later]))  # the strip that reaches past where the later one starts
-    first, second = sorted((int(held[order[earlier]]) + 1, int(held[order[later]]) + 1))  # numbered from 1
+    shared_at = int(begin[int(clash.argmax()) + 1])  # the first byte two strips hold
+    del begin, end, clash
+    begin, end = _tiff_spans(starts, counts, len(data))
+    holding = (begin <= shared_at) & (end > shared_at)
+    first = int(holding.argmax())
+    holding[first] = False
+    second = int(holding.argmax())
     if tiles:
         shared = QT_TRANSLATE_NOOP(
             "Errors",
@@ -236,7 +293,7 @@ def _tiff_shared(data: bytes, tags: dict[int, int]) -> Phrase | None:
             "Errors",
             "its strips {first} and {second} share bytes of the file, so the decoder would read them again",
         )
-    return shared.fill(first=first, second=second)
+    return shared.fill(first=first + 1, second=second + 1)  # numbered from 1
 
 
 def _jpeg_scans(data: bytes) -> int:
@@ -265,7 +322,9 @@ def _decoder_work(data: bytes, kind: str, width: int, height: int) -> Phrase | N
     the image's rows): a TIFF is refused when its tile or strip, TileWidth (or the width) by TileLength (or
     RowsPerStrip, or the height), holds more pixels than the larger of TIFF_BLOCK_PIXELS and the image with each side
     rounded up to a multiple of 16, as TIFF 6.0 makes tile sides. libtiff decodes each strip or tile from its own bytes:
-    a TIFF whose strips or tiles share bytes, or add up to more than the file, is refused by `_tiff_shared`."""
+    a TIFF of more than TIFF_MAX_BLOCKS strips or tiles, or whose strips or tiles share bytes or add up to more than the
+    file, is refused by `_tiff_shared`, and so is one whose check runs out of memory (#242 stack review: a bare
+    MemoryError reached the user as AOI-SET-007, not as a refused image)."""
     if kind == "JPEG" and data.count(b"\xff\xda") > JPEG_MAX_SCANS and (scans := _jpeg_scans(data)) > JPEG_MAX_SCANS:
         reason = QT_TRANSLATE_NOOP("Errors", "it holds {scans} scans, more than the {most} this app decodes")
         return reason.fill(scans=f"{scans:,}", most=JPEG_MAX_SCANS)
@@ -278,7 +337,10 @@ def _decoder_work(data: bytes, kind: str, width: int, height: int) -> Phrase | N
     rows = height if rows in TIFF_WHOLE_SIDE else rows
     cols, rows = tags.get(322) or width, tags.get(323) or rows
     if cols * rows <= max(TIFF_BLOCK_PIXELS, -(-width // 16) * 16 * (-(-height // 16) * 16)):
-        return _tiff_shared(data, tags)
+        try:
+            return _tiff_shared(data, tags, width, height)
+        except MemoryError:  # its arrays are bounded, yet a station short of memory can still refuse them
+            return QT_TRANSLATE_NOOP("Errors", "there was not enough free memory to check its strips or tiles")
     if 322 in tags or 323 in tags:
         reason = QT_TRANSLATE_NOOP(
             "Errors", "its tiles are {cols} × {rows} px, more than its {width} × {height} px image needs"
@@ -295,8 +357,9 @@ def load_image(
 ) -> np.ndarray:
     """Read as BGR uint8 after checking the file (REQ-INSP-001): it must hold a PNG, JPEG, BMP or TIFF image by its
     content, whatever its name, and stay within `max_megabytes` on disk, `max_megapixels` by its header and `MAX_SIDE`
-    on either side; a JPEG within JPEG_MAX_SCANS scans, and a TIFF's tiles or strips within its image's size, each in
-    bytes of its own, so the decoder's work is bounded by the image's pixels and the file's bytes (#242), though a
+    on either side; a JPEG within JPEG_MAX_SCANS scans, and a TIFF of at most TIFF_MAX_BLOCKS tiles or strips, each
+    within its image's size and in bytes of its own, so the decoder's work is bounded by the image's pixels and the
+    file's bytes (#242), though a
     crafted file within every bound can still hold it some seconds (docs/security/threat-model.md). All of these are
     checked before a pixel is decoded, and a recognised format whose header gives no size is refused, never decoded.
     Decoding the bytes with `imdecode` keeps non-ASCII (Korean) Windows paths working."""

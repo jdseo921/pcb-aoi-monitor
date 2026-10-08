@@ -109,13 +109,19 @@ tifffile or OpenCV wrote in testing was refused, and whether such a file must op
 and decodes each strip or tile from its own offset and byte count, whatever its compression, so strips that point at
 the same bytes cost them once per strip: a 49 MP TIFF of 8 MB whose 1,048,576 one-row strips all pointed at one JPEG
 stream of 99 scans held the decode about 69 s (the #242 review), and one-row strips sharing a 1 MB block about 70 s
-uncompressed, as long with Deflate and far longer with PackBits. The offsets and byte counts are read as libtiff reads
-them (StripOffsets and TileOffsets fill one list, the one listed last counting, and the shorter list is padded with 0),
-and an uncompressed TIFF of more than two strips whose first two byte counts differ is not checked, since libtiff then
-ignores its byte counts and reads each strip at its size. Within the three bounds the decoder's work still grows with
-the file: the costliest crafted files found, a 199 MB TIFF of one-row JPEG strips of 99 scans each, each in its own
-bytes, and a 192 MB TIFF of 16,000,000 tiles of 1 × 1 px, took about 10 s and 12 s in `load_image` on a busy
-4-core VM. The checks run in `_decoder_work` before `cv2.imdecode` is called, and `tests/test_image_input.py` holds the
+uncompressed, as long with Deflate and far longer with PackBits. A TIFF of more strips or tiles than 4,194,304
+(`TIFF_MAX_BLOCKS`: one-row strips of the tallest image in four planes), counted from the image as libtiff counts them
+(tiles times ImageDepth over TileDepth, and times SamplesPerPixel when the planes are stored apart), is refused before a
+list is read, since reading every value a list gives took the check 3.7 GB on a crafted 200 MB TIFF (the #242 stack
+review); only that many offsets and byte counts are read, as libtiff reads them (StripOffsets and TileOffsets fill one
+list, the one listed last counting, and libtiff pads the shorter list with 0), so values past them are ignored, as
+libtiff ignores them, and the check holds about 40 MB at most; a MemoryError in it refuses the file too. A Compression
+given once per sample (TIFF before 5.0) counts as compressed, so its byte counts are checked, and an uncompressed TIFF
+of more than two strips whose first two byte counts differ is not checked, since libtiff then ignores its byte counts
+and reads each strip at its size. Within the three bounds the decoder's work still grows with the file: the costliest
+crafted file found, a 199 MB TIFF of one-row JPEG strips of 99 scans each, each in its own bytes, took about 10 s in
+`load_image` on a busy 4-core VM, while one of 16,000,000 tiles of 1 × 1 px (192 MB, about 12 s) is now refused at once.
+The checks run in `_decoder_work` before `cv2.imdecode` is called, and `tests/test_image_input.py` holds the
 crafted files and files from Pillow and tifffile. The limits are the two `max_image_*` values in `settings.json`, in the
 default workspace folder (50 MP and 200 MB, that is 200,000,000 bytes, both proposed, since a 50 MP 24-bit BMP is
 150 MB); `Settings.load` refuses a file it cannot read (not JSON, not UTF-8, not an object) with `AOI-SET-010`, and a
