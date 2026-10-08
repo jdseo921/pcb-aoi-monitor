@@ -6,7 +6,9 @@ every page in the state the screenshots show (`tools/render_screens.py`) and, fo
 each visible widget: its resolved font, its size, whether its text fits, and the colours of its pixels in the window
 grab. Contrast is the WCAG 2.1 ratio between a widget's background (its most common colour) and its text (the colour
 farthest from the background in luminance); bold or 18 pt text may read at 3:1 (WCAG 1.4.3, large text) and a disabled
-control is exempt. Text drawn on an image (QGraphics items) is measured against the image area's background. The walk
+control is exempt, but a disabled button must show the disabled fill, so it never looks ready to press. A progress bar's
+percentage is measured in its centred text, and the prepared states hold a selected row (Inspection) and a bar past
+half (Training). Text drawn on an image (QGraphics items) is measured against the image area's background. The walk
 runs on Linux and Windows: sizes and colours do not depend on the font file.
 """
 
@@ -104,6 +106,14 @@ def _contrast(region: np.ndarray) -> tuple[float, str, str] | None:
     return float((max(lum[bg], lum[fg]) + 0.05) / (min(lum[bg], lum[fg]) + 0.05)), hexes[0], hexes[1]
 
 
+def _fill(region: np.ndarray | None) -> str | None:
+    """The most common colour of a region of the grab: a button's fill."""
+    if region is None:
+        return None
+    values, counts = np.unique(region.reshape(-1, 3), axis=0, return_counts=True)
+    return "#" + "".join(f"{int(v):02x}" for v in values[int(np.argmax(counts))])
+
+
 def _region(shot: np.ndarray, win: QWidget, w: QWidget, rect: QRect | None = None) -> np.ndarray | None:
     """The pixels of `rect` (in `w`'s coordinates; default: all of `w`) in the window grab."""
     rect = rect if rect is not None else w.rect()
@@ -165,10 +175,19 @@ def _check_widget(where: str, win: QWidget, shot: np.ndarray, w: QWidget, seen: 
         needed = w.fontMetrics().horizontalAdvance(w.text()) + 2 * w.margin()
         if w.width() < needed:
             out.append(f"{name}: {w.width()} px wide; its text needs {needed} px")
-    if not w.isEnabled() or _covered(win, w):
-        return out  # a disabled control is exempt from contrast (WCAG 1.4.3); a covered one shows another's pixels
+    if _covered(win, w):
+        return out  # a covered widget shows another's pixels
+    if not w.isEnabled():  # exempt from contrast (WCAG 1.4.3), but it must look disabled (#203)
+        if isinstance(w, QPushButton) and (fill := _fill(_region(shot, win, w))) not in (None, theme.BG_RAISED):
+            out.append(f"{name}: disabled, but drawn on {fill}, not the disabled fill {theme.BG_RAISED}")
+        return out
     if (isinstance(w, PLAIN_TEXT) and _text(w)) or (isinstance(w, QHeaderView) and w.count()):
         out += _check_contrast(_region(shot, win, w), w.font(), name, seen)
+    elif isinstance(w, QProgressBar) and w.isTextVisible() and w.text():
+        fm = w.fontMetrics()
+        rect = QRect(0, 0, fm.horizontalAdvance(w.text()), fm.height())
+        rect.moveCenter(w.rect().center())  # the theme centres the percentage
+        out += _check_contrast(_region(shot, win, w, rect), w.font(), name, seen)
     elif isinstance(w, QTabBar):
         for i in range(w.count()):
             out += _check_contrast(_region(shot, win, w, w.tabRect(i)), w.font(), f"{name} tab '{w.tabText(i)}'", seen)
