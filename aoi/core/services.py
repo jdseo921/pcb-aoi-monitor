@@ -21,7 +21,7 @@ import secrets
 import threading
 from collections.abc import Callable, Iterator, Sequence
 from dataclasses import dataclass
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 from typing import Any, Concatenate, Literal, ParamSpec, TypeVar, cast
 
 import numpy as np
@@ -55,6 +55,7 @@ NOT_A_TYPE = QT_TRANSLATE_NOOP("Errors", "{name} is not one of them")
 STEM_CHARS = 40  # how much of a source file's stem names its evidence or sample file (#245)
 WINDOWS = os.name == "nt"
 MAX_PATH = 260  # the UTF-16 units of a path, its ending NUL included, that Windows takes with long paths off
+NAME_MAX = 255  # the UTF-16 units of one name in a path that Windows takes, long paths on or off
 NO_BOARD_MODEL = QT_TRANSLATE_NOOP("Errors", "there is no board model of that name")  # AOI-RCP-008's reasons (S29)
 SCALE_NUMBERS = QT_TRANSLATE_NOOP(
     "Errors",
@@ -197,11 +198,21 @@ def _stem(path: str | Path) -> str:
 
 def _too_long(e: OSError) -> bool:
     """The system refused a path as too long: ENAMETOOLONG, or on Windows ERROR_FILENAME_EXCED_RANGE or a file not found
-    at a path of MAX_PATH UTF-16 units or more, which is how open() fails there with long paths off (#245)."""
+    at a path of MAX_PATH UTF-16 units or more, which is how open() fails there with long paths off (#245), or a path
+    holding a name of more than NAME_MAX units, which Windows refuses with long paths on as a name not valid (S35)."""
     if e.errno == errno.ENAMETOOLONG or getattr(e, "winerror", None) == 206:
         return True
-    units = len(str(e.filename or "").encode("utf-16-le", "surrogatepass")) // 2  # outside the BMP, 2 units
-    return WINDOWS and isinstance(e, FileNotFoundError) and units >= MAX_PATH
+    if not WINDOWS:
+        return False
+    paths = [str(p) for p in (e.filename, e.filename2) if p]
+    if any(_units(name) > NAME_MAX for p in paths for name in PureWindowsPath(p).parts):
+        return True
+    return isinstance(e, FileNotFoundError) and _units(str(e.filename or "")) >= MAX_PATH
+
+
+def _units(text: str) -> int:
+    """The UTF-16 units Windows counts in a path or name: one for each character, two outside the BMP."""
+    return len(text.encode("utf-16-le", "surrogatepass")) // 2
 
 
 def _sha256(path: Path) -> str:
