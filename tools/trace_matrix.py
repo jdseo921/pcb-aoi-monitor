@@ -4,11 +4,14 @@
     python tools/trace_matrix.py --collected collected.txt --out trace-matrix
 
 Reads the requirement tables in docs/requirements/*.md, the test ids pytest ran (JUnit XML from --junitxml) or
-collected (the output of `pytest --collect-only -q`), and the commit subjects that cite a requirement, such as
-`[REQ-TRN-014] fix: …`, or an issue, `[#12] …`. Writes trace-matrix.md and trace-matrix.csv, one row per
-requirement. With --gate G1 it exits 1 when any MUST G1 row has no passing test, or a test or commit cites a
-requirement ID the register does not know (Engineering standard, "Traceability"). Issue citations are listed
-but not checked against the register.
+collected (the output of `pytest --collect-only -q`), and, with --git-log, the changes on the first-parent history of
+HEAD: each merged pull request by its number and title (a "Merge pull request #12 from …" commit, whose body holds the
+title, or a squash commit ending "(#12)"), and each commit not merged through a pull request yet (a stacked branch
+before Jay merges it) by its short hash and subject. A title cites a requirement as `[REQ-TRN-014] fix: …`. Writes
+trace-matrix.md and trace-matrix.csv, one row per requirement with the pull requests (or commits) and tests that cite
+it. With --gate G1 it exits 1 when any MUST G1 row has no passing test or a failing one, or a test or change cites a
+requirement ID the register does not know (Engineering standard, "Traceability"). A title that cites only an issue,
+`[#5] …`, names no requirement row, so it is neither listed nor checked.
 """
 
 from __future__ import annotations
@@ -27,6 +30,8 @@ ROOT = Path(__file__).resolve().parents[1]
 REQ_ID = re.compile(r"REQ-[A-Z0-9]+-\d{3}")
 TEST_REQ = re.compile(r"test_req_([a-z0-9]+)_(\d{3})")
 SUBJECT_REF = re.compile(r"\[(REQ-[A-Z0-9]+-\d{3}|#\d+)\]")
+MERGED_PR = re.compile(r"^Merge pull request #(\d+) ")  # GitHub's "Create a merge commit"; the title is the body
+SQUASHED_PR = re.compile(r" \(#(\d+)\)$")  # GitHub's "Squash and merge": the title, then the number
 
 
 @dataclass
@@ -39,9 +44,22 @@ class Requirement:
 
 
 @dataclass
+class Change:
+    """A change on the first-parent history: a merged pull request (`pr`, its number) or a commit not merged yet."""
+
+    title: str
+    pr: int | None = None
+    sha: str = ""
+
+    @property
+    def label(self) -> str:
+        return f"#{self.pr}" if self.pr else f"commit {self.sha[:7]}"
+
+
+@dataclass
 class Row:
     req: Requirement
-    commits: list[str] = field(default_factory=list)
+    prs: list[str] = field(default_factory=list)  # "#84", or "commit 4367657" before it is merged
     tests: list[str] = field(default_factory=list)
     passed: int = 0
     failed: int = 0
@@ -109,17 +127,34 @@ def read_junit(path: Path) -> dict[str, str]:
     return outcome
 
 
-def git_subjects(ref: str = "HEAD") -> list[str]:
-    out = subprocess.run(
-        ["git", "log", "--format=%s", ref], cwd=ROOT, capture_output=True, text=True, check=True, encoding="utf-8"
-    )
-    return [s for s in out.stdout.splitlines() if s.strip()]
+def parse_log(log: str) -> list[Change]:
+    """Changes from `git log --first-parent --format=%H%x1f%s%x1f%b%x1e`: merged pull requests by number and title,
+    other commits by hash and subject."""
+    changes = []
+    for record in log.split("\x1e"):
+        if not record.strip():
+            continue
+        sha, subject, body = (record.strip("\n").split("\x1f") + ["", ""])[:3]
+        if merged := MERGED_PR.match(subject):
+            lines = [line for line in body.splitlines() if line.strip()]
+            changes.append(Change(lines[0].strip() if lines else subject, int(merged.group(1)), sha))
+        elif squashed := SQUASHED_PR.search(subject):
+            changes.append(Change(subject[: squashed.start()], int(squashed.group(1)), sha))
+        else:
+            changes.append(Change(subject, None, sha))
+    return changes
+
+
+def git_changes(ref: str = "HEAD", repo: Path = ROOT) -> list[Change]:
+    cmd = ["git", "log", "--first-parent", "--format=%H%x1f%s%x1f%b%x1e", ref]
+    out = subprocess.run(cmd, cwd=repo, capture_output=True, text=True, check=True, encoding="utf-8")
+    return parse_log(out.stdout)
 
 
 def build(
-    reqs: dict[str, Requirement], tests: list[str], outcomes: dict[str, str], subjects: list[str]
+    reqs: dict[str, Requirement], tests: list[str], outcomes: dict[str, str], changes: list[Change]
 ) -> tuple[list[Row], list[str]]:
-    """The matrix rows in register order, and the unknown requirement IDs that tests or commits cite."""
+    """The matrix rows in register order, and the unknown requirement IDs that tests or changes cite."""
     rows = {rid: Row(r) for rid, r in reqs.items()}
     unknown: list[str] = []
     for func in sorted({test_function(t) for t in tests} | set(outcomes)):
@@ -138,18 +173,14 @@ def build(
             row.failed += 1
         else:
             row.not_run += 1
-    seen: set[str] = set()
-    for subject in subjects:
-        if subject in seen:
-            continue
-        seen.add(subject)
-        for ref in SUBJECT_REF.findall(subject):
+    for change in changes:
+        for ref in dict.fromkeys(SUBJECT_REF.findall(change.title)):
             if ref.startswith("#"):
                 continue
             if ref not in rows:
-                unknown.append(f"commit {subject!r} cites {ref}")
-            elif subject not in rows[ref].commits:
-                rows[ref].commits.append(subject)
+                unknown.append(f"{change.label} {change.title!r} cites {ref}")
+            elif change.label not in rows[ref].prs:
+                rows[ref].prs.append(change.label)
     return list(rows.values()), unknown
 
 
@@ -160,29 +191,31 @@ def write(rows: list[Row], out_dir: Path) -> tuple[Path, Path]:
         "# Trace matrix",
         "",
         "Generated by `tools/trace_matrix.py` from `docs/requirements/`; do not edit. One row per requirement with",
-        "the commits and tests that cite it and the last test result.",
+        "the pull requests (or, before they are merged, the commits) and tests that cite it and the last test result.",
         "",
-        "| ID | Priority | v0.1 | Commits | Tests | Last result |",
+        "| ID | Priority | v0.1 | PRs | Tests | Last result |",
         "|---|---|---|---|---|---|",
     ]
     with csv_path.open("w", newline="", encoding="utf-8") as f:
         w = csv.writer(f)
-        w.writerow(["id", "priority", "v01", "commits", "tests", "last_result"])
+        w.writerow(["id", "priority", "v01", "prs", "tests", "last_result"])
         for row in rows:
-            commits, tests = "; ".join(row.commits), "; ".join(row.tests)
-            w.writerow([row.req.id, row.req.priority, row.req.v01, commits, tests, row.result])
+            prs, tests = "; ".join(row.prs), "; ".join(row.tests)
+            w.writerow([row.req.id, row.req.priority, row.req.v01, prs, tests, row.result])
             lines.append(
                 f"| {row.req.id} | {row.req.priority} | {row.req.v01.split(':')[0]} | "
-                f"{commits.replace('|', '/') or '—'} | {tests.replace('|', '/') or '—'} | {row.result} |"
+                f"{prs or '—'} | {tests.replace('|', '/') or '—'} | {row.result} |"
             )
     md.write_text("\n".join(lines) + "\n", encoding="utf-8")
     return md, csv_path
 
 
 def gate(rows: list[Row], unknown: list[str], release: str) -> list[str]:
+    """What stops `release`: each cited ID the register does not know, and each of its MUST rows with no passing test
+    or a failing one. Rows of other priorities never stop it (a failing test fails CI's test job anyway)."""
     problems = list(unknown)
     for row in rows:
-        if row.req.priority == f"MUST {release}" and row.passed == 0 or row.failed:
+        if row.req.priority == f"MUST {release}" and (row.passed == 0 or row.failed):
             problems.append(f"{row.req.id} ({row.req.priority}): {row.result}")
     return problems
 
@@ -201,7 +234,7 @@ def main(argv: list[str] | None = None) -> int:
     reqs = read_register(a.register)
     tests = read_collected(a.collected) if a.collected else []
     outcomes = read_junit(a.junit) if a.junit else {}
-    rows, unknown = build(reqs, tests, outcomes, git_subjects() if a.git_log else [])
+    rows, unknown = build(reqs, tests, outcomes, git_changes() if a.git_log else [])
     md, csv_path = write(rows, a.out)
     covered = sum(1 for r in rows if r.tests)
     print(

@@ -41,7 +41,7 @@ N_NG = 20
 BOARD_MODEL = "REGRESSION"
 EXPECTED_PATH = Path(__file__).with_name("expected.json")
 # The compare step alone: AI scores depend on trained weights, which differ from machine to machine, so the
-# regression set pins the deterministic path. tests/test_pipeline.py bounds the AI model's behaviour.
+# synthetic regression set pins the deterministic path. tests/test_pipeline.py bounds the AI model's behaviour.
 RECIPE = Recipe(board_model=BOARD_MODEL, use_ai=False)
 # Absolute tolerance per metric: room for last-bit differences between OpenCV builds, no room for a change
 # in behaviour. `alignment_method` must match exactly. A blob a few pixels either side of the minimum defect
