@@ -792,12 +792,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+37"/>
+        <location line="+40"/>
         <source>No AI model for {board_model} yet: only the Golden board comparison runs</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+8"/>
+        <location line="+7"/>
         <source>{file} was inspected under board model {board_model}; the header now shows {header}.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -842,7 +842,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+49"/>
+        <location line="+60"/>
         <source>Run stopped: the board model changed from {old} to {new}. Boards inspected before the change are saved under {old}; press Start to carry on with the queue under {new}.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1404,7 +1404,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/inspection.py" line="-355"/>
+        <location filename="../ui/pages/inspection.py" line="-368"/>
         <source>Inspection</source>
         <translation type="unfinished"></translation>
     </message>

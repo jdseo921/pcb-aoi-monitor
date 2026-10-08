@@ -29,8 +29,9 @@ Start and Next Board until images are queued, while a run is on and while a boar
 run is on; Save Image… before the first result. Every result is recorded as it arrives, with the checks that decided
 it, before the next board starts; the records are on Logs & Export. If a result cannot be recorded (the disk is full,
 the workspace folder cannot be written, another program holds the database) the run stops with AOI-INSP-008: press
-Next Board to carry on, and inspect that board again later. Closing the app while a board is being inspected asks
-whether to stop: No keeps the app open; Yes records the board in hand and closes.
+Next Board to carry on, and inspect that board again later; such a board is not on Logs & Export and, if NG, has no
+alarm. An NG board that is recorded always has its NG alarm (AOI-INSP-003). Closing the app while a board is being
+inspected asks whether to stop: No keeps the app open; Yes records the board in hand and closes.
 A run belongs to the board model it was started under. If the board model in the header changes during a run, the run
 stops after the board in hand, which is saved under the run's board model, and the status bar and the alarm log say so
 with AOI-INSP-012; the remaining boards are not inspected. Check the board model in the header, then press Start to

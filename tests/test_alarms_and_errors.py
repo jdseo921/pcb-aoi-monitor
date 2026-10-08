@@ -7,9 +7,10 @@ import json
 import re
 import sqlite3
 import sys
+import threading
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import cast
+from typing import Any, cast
 
 import numpy as np
 import pytest
@@ -17,10 +18,13 @@ from PySide6.QtWidgets import QMessageBox
 from pytestqt.qtbot import QtBot
 
 from aoi.config import APP_VERSION, Settings, default_workspace
+from aoi.core.imaging import list_images
+from aoi.core.inspector import InspectionResult, Inspector
 from aoi.core.services import ALARM_LIMIT, AppContext
 from aoi.errors import AoiError
 from aoi.ui.errors import install_excepthook
 from aoi.ui.main_window import MainWindow
+from aoi.ui.pages.inspection import InspectionPage
 from aoi.ui.pages.settings import SettingsPage
 from tests.test_req_done_in_v01 import BOARD, _inspect_one, _window
 
@@ -378,3 +382,143 @@ def test_req_set_019_compare_save_to_recipe_without_a_board_model_asks_for_one(
     win.pages["Compare"].save_recipe()
     assert asked == [("Board model", "Create or select a board model in the top bar first.")]
     assert trained_ctx.recipe_history(BOARD) == before
+
+
+def _hold_write_lock(ctx: AppContext) -> sqlite3.Connection:
+    """Another program takes the database's write lock and keeps it until closed; the app waits 200 ms, not 5 s."""
+    ctx.db._conn.execute("PRAGMA busy_timeout = 200")
+    other = sqlite3.connect(ctx.db.path, isolation_level=None, check_same_thread=False)
+    other.execute("BEGIN IMMEDIATE")
+    return other
+
+
+def test_req_insp_006_an_ng_record_and_its_alarm_are_saved_together(
+    qtbot: QtBot,
+    trained_ctx: AppContext,
+    ng_board: Path,
+    dialogs: list[tuple[str, str]],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """#179: the NG alarm was a second commit after the record's. When another program took the write lock between
+    the two, the saved NG board was reported as "Result not saved" (AOI-INSP-008, whose advice adds a duplicate), had
+    no alarm, and Compare opened its file, not its record. The record and its alarm now commit together."""
+    real, holders = trained_ctx.db.add_inspection, []
+
+    def add_then_lock(*args: Any, **kwargs: Any) -> int:
+        iid = real(*args, **kwargs)
+        holders.append(_hold_write_lock(trained_ctx))  # the moment the record's transaction has committed
+        return iid
+
+    monkeypatch.setattr(trained_ctx.db, "add_inspection", add_then_lock)
+    win = _window(qtbot, trained_ctx, "Operator")
+    page = _inspect_one(qtbot, win, ng_board)
+    qtbot.waitUntil(lambda: page.worker is None, timeout=30000)
+    for other in holders:
+        other.close()
+    assert dialogs == []
+    (rec,) = trained_ctx.inspections()
+    assert rec["result"] == "NG" and page.last_id == rec["id"] and page.last is not None
+    ng = [(a["code"], a["message"]) for a in trained_ctx.alarms() if a["level"] == "NG"]
+    assert ng == [("AOI-INSP-003", f"{ng_board.name}: {len(page.last.defects)} defect(s)")]
+    assert "AOI-INSP-003" in _alarm_lines(win)[0]
+
+
+def test_req_insp_008_an_ng_record_whose_alarm_is_refused_is_not_saved(trained_ctx: AppContext, ng_board: Path) -> None:
+    """#179: a refused NG alarm left the record saved and the board reported as not saved; now neither is stored,
+    so the AOI-INSP-008 the Inspection page shows is true and inspecting the board again adds no duplicate."""
+    insp = trained_ctx.inspector(BOARD)
+    res = insp.inspect(trained_ctx.load_image(str(ng_board)))
+    assert res.verdict == "NG"
+    trained_ctx.db._conn.execute(
+        "CREATE TEMP TRIGGER refuse_alarm BEFORE INSERT ON alarms BEGIN SELECT RAISE(ABORT, 'alarm refused'); END"
+    )
+    with pytest.raises(sqlite3.IntegrityError, match="alarm refused"):
+        trained_ctx.log_result(BOARD, str(ng_board), res, insp)
+    assert trained_ctx.inspections() == [] and trained_ctx.alarms() == []
+
+
+@pytest.mark.qt_no_exception_capture
+def test_req_set_019_a_refused_alarm_never_replaces_the_result_not_saved_error(
+    qtbot: QtBot,
+    ctx: AppContext,
+    synthetic_dataset: Path,
+    ng_board: Path,
+    dialogs: list[tuple[str, str]],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """#179: a board model with a Golden board and no AI model yet, inspected while another program holds the write
+    lock: the "No AI model" WARN alarm raised from the result slot, so AOI-SET-007 showed in place of AOI-INSP-008 and
+    the run stayed on with Start and Next Board off. The alarm refused, and an alarm list that cannot be read, are now
+    logged; the result and its error show."""
+    ctx.import_samples("NOAI", [str(p) for p in list_images(synthetic_dataset / "train" / "ok")[:3]], "OK")
+    assert ctx.reference_image("NOAI") is not None and ctx.load_model("NOAI") is None
+    win = MainWindow(ctx)
+    qtbot.addWidget(win)
+    win.show()
+    qtbot.waitExposed(win)
+    monkeypatch.setattr(sys, "excepthook", sys.excepthook)  # put the original back after the test
+    install_excepthook(ctx, win)
+    win.set_role("Operator", "operator")
+    win.bm_combo.setCurrentText("NOAI")
+    win.navigate("Inspection")
+    page = cast(InspectionPage, win.pages["Inspection"])
+    page._set_queue([ng_board])
+    other = _hold_write_lock(ctx)
+
+    def unreadable(*_: object) -> list[dict[str, Any]]:
+        raise sqlite3.OperationalError("disk I/O error")
+
+    monkeypatch.setattr(ctx, "alarms", unreadable)  # nor can the alarm list be read: it keeps what it showed
+    page.start_run()
+    qtbot.waitUntil(lambda: page.worker is None, timeout=30000)
+    qtbot.wait(500)
+    other.close()
+    assert [title for title, _ in dialogs] == ["AOI-INSP-008 Result not saved"]
+    assert not page.running and page.act_start.isEnabled() and page.act_next.isEnabled()
+    assert win.statusBar().currentMessage().startswith(f"{ng_board.name}  ·  AI score")
+    assert [r["code"] for r in _log_rows(ctx, "alarm.not_stored")] == ["AOI-INSP-008", "AOI-TRN-003"]
+    assert _log_rows(ctx, "alarms.not_read")
+
+
+@pytest.mark.qt_no_exception_capture
+def test_req_set_019_a_refused_alarm_never_stops_a_board_model_change(
+    qtbot: QtBot,
+    trained_ctx: AppContext,
+    synthetic_dataset: Path,
+    dialogs: list[tuple[str, str]],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """#179: the header's board model changed during a run while another program holds the write lock: the run-stopped
+    WARN alarm (AOI-INSP-012) raised, AOI-SET-007 showed and the pages after Inspection never heard of the change.
+    Now the run stops, every page follows the header, and the alarm refused is logged."""
+    trained_ctx.ensure_board_model("ZZZ")
+    win = _window(qtbot, trained_ctx, "Operator")
+    monkeypatch.setattr(sys, "excepthook", sys.excepthook)  # put the original back after the test
+    install_excepthook(trained_ctx, win)
+    page = cast(InspectionPage, win.pages["Inspection"])
+    win.navigate("Inspection")
+    qtbot.waitUntil(trained_ctx.jobs.idle, timeout=10000)
+    heard: dict[str, str | None] = {}
+    for title, p in win.pages.items():
+        keep = p.on_board_model_changed
+        monkeypatch.setattr(p, "on_board_model_changed", lambda n, t=title, k=keep: (heard.__setitem__(t, n), k(n)))
+    gate, started, real = threading.Event(), [], Inspector.inspect
+
+    def inspect(engine: Inspector, image: np.ndarray) -> InspectionResult:
+        started.append(1)
+        assert gate.wait(30), "the test did not release the board"
+        return real(engine, image)
+
+    monkeypatch.setattr(Inspector, "inspect", inspect)
+    page._set_queue(list_images(synthetic_dataset / "test" / "ok")[:2])
+    page.start_run()
+    qtbot.waitUntil(lambda: len(started) == 1, timeout=60000)  # the first board is in hand
+    other = _hold_write_lock(trained_ctx)
+    win.bm_combo.setCurrentText("ZZZ")
+    other.close()
+    gate.set()
+    qtbot.waitUntil(lambda: page.worker is None and trained_ctx.jobs.idle(), timeout=60000)
+    assert dialogs == []
+    assert heard == dict.fromkeys(win.pages, "ZZZ") and not page.running
+    assert [r["code"] for r in _log_rows(trained_ctx, "alarm.not_stored")] == ["AOI-INSP-012"]
+    assert [r["board_model"] for r in trained_ctx.inspections()] == [BOARD], "the board in hand kept TINY"

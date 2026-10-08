@@ -275,9 +275,14 @@ class Database:
 
     # --- inspections -------------------------------------------------------
     def add_inspection(
-        self, rec: dict[str, Any], defects: list[dict[str, Any]], checks: list[dict[str, Any]] | None = None
+        self,
+        rec: dict[str, Any],
+        defects: list[dict[str, Any]],
+        checks: list[dict[str, Any]] | None = None,
+        alarm: tuple[str, str, str | None] | None = None,
     ) -> int:
-        """The inspection row, its defects and its checks commit together: a crash leaves all or none (REQ-INSP-008).
+        """The inspection row, its defects, its checks and its alarm, given as (level, message, code), commit together:
+        a crash or a refused write leaves all or none (REQ-INSP-008, REQ-INSP-006; #179).
         `rec["result_json"]` is the whole result as `InspectionResult.to_dict` gives it, `model_uuid` and `recipe_uuid`
         name the AI model version and recipe revision that decided it, `diff_map_path` and `ai_map_path` the map files
         beside the overlay, `reference_path` and `reference_sha256` the golden board file it was judged against and the
@@ -333,6 +338,11 @@ class Database:
                     " explain) VALUES(?,?,?,?,?,?,?,?,?,?)",
                     [(iid, *c) for c in check_rows],
                 )
+                if alarm is not None:  # an NG board's alarm: never a record without it, nor it without the record
+                    self._conn.execute(
+                        "INSERT INTO alarms(uuid, time, level, code, message) VALUES(?,?,?,?,?)",
+                        (new_uuid(), row[1], alarm[0], alarm[2], alarm[1]),
+                    )
                 self._commit()
             except BaseException:  # a database error or anything else: the record is whole or absent
                 self._rollback()
