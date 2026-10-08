@@ -70,9 +70,11 @@ class InspectionPage(Page):
         self.queue: list[Path] = []
         self.queue_pos = -1
         self.running = False
+        self.run_board_model: str | None = None  # the board model a run started under: its boards are judged under it
         self.last: InspectionResult | None = None
         self.last_path: Path | None = None
         self.last_id: int | None = None  # the record of the last result, for Compare (REQ-INSP-009)
+        self.last_board_model: str | None = None  # the board model it was inspected under
         self.inspector: Inspector | None = None  # built on the first board for the board model, recipe and reference
         self._engine_gen = 0  # counts the times the engine was dropped, so a board's engine from before is not kept
         # The board being inspected, if one is: Start and Next Board wait for it (#120).
@@ -191,7 +193,7 @@ class InspectionPage(Page):
         """F5: inspect the queue board after board until Stop or the end of the queue."""
         if not self.need_board_model():
             return
-        self.running = True
+        self.running, self.run_board_model = True, self.board_model
         self._update_buttons()
         self.next_board()
 
@@ -212,6 +214,9 @@ class InspectionPage(Page):
     def next_board(self) -> None:
         """F8: inspect the next board of the queue on the pool thread; one board at a time per page (#120)."""
         if self.worker is not None or (bm := self.checked_board_model()) is None:
+            return
+        if self.running and bm != self.run_board_model:  # no board of a run is judged under another board model (#172)
+            self._stop_for_board_model(bm)
             return
         if self.queue_pos + 1 >= len(self.queue):
             self.running = False
@@ -254,6 +259,11 @@ class InspectionPage(Page):
                     )
                     self._alarm("WARN", msg, "AOI-TRN-003")
             self._on_result(out)
+            if bm != self.board_model:  # the header moved on meanwhile: shown and saved under bm, not current (#172)
+                self.last = self.last_path = self.last_id = self.shell.last_inspected = None
+                self._update_buttons()
+                note = self.tr("{file} was inspected under board model {board_model}; the header now shows {header}.")
+                self.shell.status(note.format(file=out[0].name, board_model=bm, header=self.board_model or NO_VERDICT))
 
         def done() -> None:
             if (worker := ref()) is not None and self.worker is worker:
@@ -296,7 +306,7 @@ class InspectionPage(Page):
 
     def _on_result(self, out: Outcome) -> None:
         path, res, _engine, iid, save_error = out
-        self.last, self.last_path, self.last_id = res, path, iid
+        self.last, self.last_path, self.last_id, self.last_board_model = res, path, iid, self.board_model
         self._show_verdict(res)  # painted before the image and the table are built: the verdict first (REQ-INSP-002)
         self.empty.hide()
         self.view.set_image(res.image, keep_view=self.queue_pos > 0)
@@ -385,8 +395,30 @@ class InspectionPage(Page):
         self.inspector = None
         self._engine_gen += 1
 
+    def _stop_for_board_model(self, name: str | None) -> None:
+        """The header shows another board model than the run's: the run stops, so no board of its queue is judged or
+        saved under a board model it was not started for; the board in hand keeps the run's (#172)."""
+        self.running = False
+        self._update_buttons()
+        msg = self.tr(
+            "Run stopped: the board model changed from {old} to {new}. Boards inspected before the change are saved"
+            " under {old}; press Start to carry on with the queue under {new}."
+        ).format(old=self.run_board_model, new=name or NO_VERDICT)
+        self.shell.status(msg, ms=0)  # until the board in hand, if one is, replaces it with its own line
+        self._alarm("WARN", msg, "AOI-INSP-012")
+
     def on_board_model_changed(self, name: str | None) -> None:
         self._drop_engine()  # rebuilt lazily with the new model/recipe/reference
+        if self.running and name != self.run_board_model:  # stops after the board in hand (#172)
+            self._stop_for_board_model(name)
+        if self.last is not None and name != self.last_board_model:  # another board model's board is not current
+            self.last = self.last_path = self.last_id = None  # so Compare never opens it as this one's (#172)
+            self.view.set_image(None)
+            fill_table(self.table, [])
+            if self.worker is None:  # else the banner reads "Inspecting…" until the board in hand arrives
+                self._show_verdict(None)
+                self.summary.clear()
+            self._update_buttons()
         self._show_empty()
 
     def on_show(self) -> None:
