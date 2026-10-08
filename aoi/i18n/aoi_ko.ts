@@ -474,7 +474,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+67"/>
+        <location line="+68"/>
         <source>{file}: {defects} defect(s)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -484,7 +484,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+143"/>
+        <location line="+144"/>
         <source>Re-evaluating a result</source>
         <translation type="unfinished"></translation>
     </message>
@@ -569,12 +569,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-592"/>
+        <location line="-594"/>
         <source>its UUID {found} is not {uuid}, as in the AI model registry</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+607"/>
+        <location line="+609"/>
         <source>Changing settings</source>
         <translation type="unfinished"></translation>
     </message>
@@ -711,7 +711,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+258"/>
+        <location line="+263"/>
         <source>board image</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1673,6 +1673,11 @@
     </message>
     <message>
         <location line="+1"/>
+        <source>no AI model (the AI check off)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
         <source>Golden board {file}</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2448,25 +2453,25 @@
     <name>ModelTestPage</name>
     <message>
         <location filename="../ui/pages/model_test.py" line="+35"/>
-        <location line="+297"/>
+        <location line="+304"/>
         <source>Select Test Folder…</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-296"/>
+        <location line="-303"/>
         <location line="+99"/>
-        <location line="+171"/>
+        <location line="+178"/>
         <source>Run Test</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-268"/>
-        <location line="+300"/>
+        <location line="-275"/>
+        <location line="+307"/>
         <source>Export CSV</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-299"/>
+        <location line="-306"/>
         <source>Export Report</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2516,7 +2521,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-85"/>
+        <location line="-86"/>
         <source>Matches label</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2531,7 +2536,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+84"/>
+        <location line="+85"/>
         <source>Matches label?</source>
         <comment>whether the verdict matches the image&apos;s label</comment>
         <translation type="unfinished"></translation>
@@ -2577,7 +2582,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+90"/>
+        <location line="+97"/>
         <source>Run Test Again ›</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2789,7 +2794,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/model_test.py" line="-379"/>
+        <location filename="../ui/pages/model_test.py" line="-386"/>
         <source>AI Model Test</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3385,7 +3390,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/services.py" line="-1157"/>
+        <location filename="../core/services.py" line="-1159"/>
         <source>Aligning {count} images to the reference board</source>
         <translation type="unfinished"></translation>
     </message>
