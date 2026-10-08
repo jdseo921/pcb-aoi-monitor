@@ -236,6 +236,7 @@ class ComparePage(Page):
         self.why = QTextEdit()
         self.why.setReadOnly(True)
         self.why.setMaximumHeight(150)
+        self.why.setMinimumHeight(theme.WHY_MIN_H)  # at 1600 x 900 the panel is too short for all of it at full height
         pl.addWidget(self.why)
 
         self.tryout = QGroupBox(self.tr("Try other thresholds (nothing is saved until you press Save to Recipe)"))
