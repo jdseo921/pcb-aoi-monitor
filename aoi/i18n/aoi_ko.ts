@@ -794,7 +794,7 @@
         <translation>데이터셋 버전 동결</translation>
     </message>
     <message>
-        <location line="+53"/>
+        <location line="+69"/>
         <source>the board revision {revision} is not 1 to 16 letters and digits</source>
         <translation>보드 리비전 {revision}이(가) 1~16자의 영문자와 숫자가 아닙니다</translation>
     </message>
@@ -839,7 +839,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1531"/>
+        <location line="-1547"/>
         <source>no defect type was given</source>
         <translation>결함 유형이 지정되지 않았습니다</translation>
     </message>
@@ -874,7 +874,7 @@
         <translation>{label}(으)로 다시 라벨링</translation>
     </message>
     <message>
-        <location line="+261"/>
+        <location line="+277"/>
         <source>Changing settings</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1528,12 +1528,12 @@
     </message>
     <message>
         <location line="+8"/>
-        <location line="+129"/>
+        <location line="+135"/>
         <source>View not known</source>
         <translation>알 수 없는 뷰</translation>
     </message>
     <message>
-        <location line="-128"/>
+        <location line="-134"/>
         <source>{path} was not imported: its view &quot;{view}&quot; is not one of {views}.</source>
         <translation>{path}을(를) 가져오지 않았습니다. 뷰 &quot;{view}&quot;는 {views} 중 하나가 아닙니다.</translation>
     </message>
@@ -1626,6 +1626,21 @@
         <location line="+1"/>
         <source>Do what the reason says, then freeze the dataset again; nothing was written.</source>
         <translation>이유에 적힌 대로 한 다음 데이터셋을 다시 동결하십시오. 아무것도 기록되지 않았습니다.</translation>
+    </message>
+    <message>
+        <location line="+4"/>
+        <source>Dataset version not found</source>
+        <translation>데이터셋 버전을 찾을 수 없음</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>The workspace holds no dataset version {dataset}, so nothing was verified.</source>
+        <translation>작업 공간에 데이터셋 버전 {dataset}이(가) 없어 아무것도 검증하지 않았습니다.</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Show the dataset versions again and pick one of them.</source>
+        <translation>데이터셋 버전 목록을 다시 표시하고 그중 하나를 선택하십시오.</translation>
     </message>
     <message>
         <location line="+4"/>
@@ -2163,7 +2178,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-865"/>
+        <location line="-871"/>
         <source>Board judged NG</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2243,7 +2258,7 @@
         <translation>{path}에 라벨 &quot;{label}&quot;을(를) 붙이지 않았습니다. {labels} 중 하나가 아닙니다.</translation>
     </message>
     <message>
-        <location line="+155"/>
+        <location line="+161"/>
         <source>ROI thresholds refused</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4440,7 +4455,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/services.py" line="-1705"/>
+        <location filename="../core/services.py" line="-1721"/>
         <source>Aligning {count} images to the reference board</source>
         <translation type="unfinished"></translation>
     </message>

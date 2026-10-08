@@ -75,6 +75,7 @@ register; `{braces}` are filled in when the error is raised.
 | AOI-TRN-021 | Dataset not frozen: OK labels not checked | {name} was not frozen: {checked} of {needed} OK labels to check (10 % of {ok}) are checked. | Draw OK labels for a check and have another Engineer or Admin check them, then freeze again. |
 | AOI-TRN-024 | Dataset not frozen: no customer | {name} was not frozen: no customer is set. | Enter the customer the dataset is for, then freeze it again. |
 | AOI-TRN-027 | Dataset not frozen | {name} was not frozen: {reason}. | Do what the reason says, then freeze the dataset again; nothing was written. |
+| AOI-TRN-028 | Dataset version not found | The workspace holds no dataset version {dataset}, so nothing was verified. | Show the dataset versions again and pick one of them. |
 | AOI-TRN-030 | Label not changed | The label of {sample} was not changed: {reason}. | Label the image OK, NG or UNSURE, and give an NG image's defect boxes one of the 33 defect types each; then save the label again. |
 | AOI-TRN-031 | Defect box outside the image | Defect box {number} on {sample}, {w} × {h} px at x {x}, y {y}, does not lie inside the image of {width} × {height} px, so the label and its boxes were not changed. | Move or resize the box so that it lies inside the image, then save again. |
 | AOI-TRN-032 | Sample not found | The workspace holds no sample {sample}, so nothing was changed. | Show the sample table again: the sample may have been removed since it was shown. |
