@@ -573,7 +573,7 @@
 <context>
     <name>Errors</name>
     <message>
-        <location filename="../core/services.py" line="+56"/>
+        <location filename="../core/services.py" line="+57"/>
         <source>a length of {length} px over {distance} mm gives no scale: both must be numbers above 0, and the scale from {least} to {most} px per mm</source>
         <translation type="unfinished"></translation>
     </message>
@@ -694,12 +694,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+13"/>
-        <source>relabelled NG</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+9"/>
+        <location line="+21"/>
         <source>Removing a sample</source>
         <translation type="unfinished"></translation>
     </message>
@@ -709,7 +704,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+12"/>
+        <location line="+86"/>
         <source>Activating an AI model version</source>
         <translation type="unfinished"></translation>
     </message>
@@ -729,7 +724,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1227"/>
+        <location line="-1300"/>
         <source>no defect type was given</source>
         <translation>결함 유형이 지정되지 않았습니다</translation>
     </message>
@@ -749,7 +744,22 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+722"/>
+        <location line="+697"/>
+        <source>Labelling an image</source>
+        <translation>이미지 라벨링</translation>
+    </message>
+    <message>
+        <location line="+11"/>
+        <source>Drawing defect boxes</source>
+        <translation>결함 박스 그리기</translation>
+    </message>
+    <message>
+        <location line="+57"/>
+        <source>relabelled {label}</source>
+        <translation>{label}(으)로 다시 라벨링</translation>
+    </message>
+    <message>
+        <location line="+30"/>
         <source>Changing settings</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1443,6 +1453,51 @@
     </message>
     <message>
         <location line="+8"/>
+        <source>Label not changed</source>
+        <translation>라벨이 바뀌지 않음</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>The label of {sample} was not changed: {reason}.</source>
+        <translation>{sample}의 라벨이 바뀌지 않았습니다: {reason}.</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Label the image OK, NG or UNSURE, and give an NG image&apos;s defect boxes one of the 33 defect types each; then save the label again.</source>
+        <translation>이미지를 OK, NG 또는 UNSURE로 라벨링하고 NG 이미지의 결함 박스마다 33가지 결함 유형 중 하나를 지정한 뒤 라벨을 다시 저장하십시오.</translation>
+    </message>
+    <message>
+        <location line="+8"/>
+        <source>Defect box outside the image</source>
+        <translation>이미지 밖의 결함 박스</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Defect box {number} on {sample}, {w} × {h} px at x {x}, y {y}, does not lie inside the image of {width} × {height} px, so the label and its boxes were not changed.</source>
+        <translation>{sample}의 결함 박스 {number}(x {x}, y {y}, {w} × {h} px)가 {width} × {height} px 이미지 안에 있지 않아 라벨과 박스가 바뀌지 않았습니다.</translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>Move or resize the box so that it lies inside the image, then save again.</source>
+        <translation>박스가 이미지 안에 들어오도록 옮기거나 크기를 바꾼 뒤 다시 저장하십시오.</translation>
+    </message>
+    <message>
+        <location line="+4"/>
+        <source>Sample not found</source>
+        <translation>샘플을 찾을 수 없음</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>The workspace holds no sample {sample}, so nothing was changed.</source>
+        <translation>작업 공간에 샘플 {sample}이(가) 없어 아무것도 바뀌지 않았습니다.</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Show the sample table again: the sample may have been removed since it was shown.</source>
+        <translation>샘플 표를 다시 표시하십시오. 표시된 뒤 샘플이 제거되었을 수 있습니다.</translation>
+    </message>
+    <message>
+        <location line="+6"/>
         <source>AI model, recipe, scale or Golden board changed since the run</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1847,7 +1902,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-760"/>
+        <location line="-788"/>
         <source>Board judged NG</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1927,7 +1982,7 @@
         <translation>{path}에 라벨 &quot;{label}&quot;을(를) 붙이지 않았습니다. {labels} 중 하나가 아닙니다.</translation>
     </message>
     <message>
-        <location line="+50"/>
+        <location line="+78"/>
         <source>ROI thresholds refused</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2151,6 +2206,31 @@
         <location line="+1"/>
         <source>{area} px of area</source>
         <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../core/labels.py" line="+42"/>
+        <source>{label} is not OK, NG or UNSURE</source>
+        <translation>{label}은(는) OK, NG, UNSURE 중 하나가 아닙니다</translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>only an NG image takes a defect box or type, not one labelled {label}</source>
+        <translation>결함 박스나 유형은 NG 이미지에만 지정할 수 있으며, {label}(으)로 라벨링된 이미지에는 지정할 수 없습니다</translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>the image&apos;s defect type, {type}, is not one of the 33 defect types: give the image one of the 33 with Mark NG, then draw its boxes again</source>
+        <translation>이미지의 결함 유형 {type}은(는) 33가지 결함 유형 중 하나가 아닙니다. Mark NG로 이미지에 33가지 중 하나를 지정한 뒤 박스를 다시 그리십시오</translation>
+    </message>
+    <message>
+        <location line="+6"/>
+        <source>{type} is not one of the 33 defect types</source>
+        <translation>{type}은(는) 33가지 결함 유형 중 하나가 아닙니다</translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>a defect box&apos;s position and size are not whole pixels</source>
+        <translation>결함 박스의 위치와 크기가 정수 픽셀이 아닙니다</translation>
     </message>
 </context>
 <context>
@@ -4099,7 +4179,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/services.py" line="-1401"/>
+        <location filename="../core/services.py" line="-1474"/>
         <source>Aligning {count} images to the reference board</source>
         <translation type="unfinished"></translation>
     </message>

@@ -542,6 +542,34 @@ CODES: dict[str, ErrorCode] = {
             ),
         ),
         ErrorCode(
+            "AOI-TRN-030",
+            QT_TRANSLATE_NOOP("Errors", "Label not changed"),
+            QT_TRANSLATE_NOOP("Errors", "The label of {sample} was not changed: {reason}."),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Label the image OK, NG or UNSURE, and give an NG image's defect boxes one of the 33 defect types each;"
+                " then save the label again.",
+            ),
+        ),
+        ErrorCode(
+            "AOI-TRN-031",
+            QT_TRANSLATE_NOOP("Errors", "Defect box outside the image"),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Defect box {number} on {sample}, {w} × {h} px at x {x}, y {y}, does not lie inside the image of"
+                " {width} × {height} px, so the label and its boxes were not changed.",
+            ),
+            QT_TRANSLATE_NOOP("Errors", "Move or resize the box so that it lies inside the image, then save again."),
+        ),
+        ErrorCode(
+            "AOI-TRN-032",
+            QT_TRANSLATE_NOOP("Errors", "Sample not found"),
+            QT_TRANSLATE_NOOP("Errors", "The workspace holds no sample {sample}, so nothing was changed."),
+            QT_TRANSLATE_NOOP(
+                "Errors", "Show the sample table again: the sample may have been removed since it was shown."
+            ),
+        ),
+        ErrorCode(
             "AOI-TST-001",
             QT_TRANSLATE_NOOP("Errors", "AI model, recipe, scale or Golden board changed since the run"),
             QT_TRANSLATE_NOOP(

@@ -608,7 +608,7 @@ class TrainingPage(Page):
                 ]
                 for r in s
             ],
-            [None if r["label"] == "OK" else theme.NG_TINT for r in s],
+            [theme.NG_TINT if r["label"] == "NG" else None for r in s],  # UNSURE is not NG (REQ-TRN-002)
             [r["path"] for r in s],
         )
         if s:
@@ -617,11 +617,11 @@ class TrainingPage(Page):
             what = self.tr("Add at least 20 OK boards with Add OK Images… or Import Folder…")
             heading = self.tr("No samples for {board_model} yet").format(board_model=self.board_model)
             self.samples_empty.show_state(heading, what, self.tr("Import Folder…"), self.import_folder)
-        n_ok = sum(r["label"] == "OK" for r in s)
+        n_ok, n_ng = (sum(r["label"] == label for r in s) for label in ("OK", "NG"))  # UNSURE counts as neither
         ref = self.ctx.reference_image(self.board_model)
         reference = Path(ref).name if ref else self.tr("none")
         counts = self.tr("{ok} OK · {ng} NG · reference: {reference}")
-        self.counts.set_line(lambda name: counts.format(ok=n_ok, ng=len(s) - n_ok, reference=name), reference)
+        self.counts.set_line(lambda name: counts.format(ok=n_ok, ng=n_ng, reference=name), reference)
         self.tip.setVisible(n_ok < 20)
         ms = self.ctx.models(self.board_model)
         rows, tips = [], []

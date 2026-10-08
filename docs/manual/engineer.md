@@ -146,7 +146,17 @@ An error in an import you cancelled opens no message, but it is in the log and
 the alarm list. The same goes for an import that stops after its user has signed out: the status line then names the
 board model and the file it stopped at; the user who pressed Import, if signed in again by then, gets the message.
 
-(to be written: OK/NG/UNSURE labels, defect boxes, second-person check, freezing a dataset version,
+**Labels keep their history.** Each image is labelled OK, NG or UNSURE, and an NG image can carry defect boxes, each
+with its position and size in whole pixels, one of the 33 defect types and the severity the defect table gives the type.
+Mark OK and Mark NG on Training, and every later label or box change, add a label to the image's history and keep the
+one before, with its boxes, who labelled it and when; nothing is deleted, and the audit trail records each change
+(`sample.update`, `label.set`). Marking an image as it is labelled already changes nothing. Images labelled before this
+version keep their label, with no labeller recorded. An UNSURE image is left out of training and its calibration and
+counted as neither OK nor NG on Training and Home. A box must lie inside the image (AOI-TRN-031); a label an image
+cannot take, such as a box on an OK image or a type not one of the 33, is refused (AOI-TRN-030). No screen marks an
+image UNSURE, draws boxes or lists UNSURE images for the customer's quality engineer yet: the label editor comes next.
+
+(to be written: the label editor and UNSURE on the Samples tab, second-person check, freezing a dataset version,
 locking the validation set)
 
 ## 4. Training and AI model versions
