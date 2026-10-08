@@ -74,7 +74,9 @@ def test_req_insp_014_counts_each_labelled_box_found_and_leaves_the_sources_unch
         assert golden["by_type"][kind]["found"] == 1 and golden["boxes_missed"] == 0, (name, golden)
         assert golden["smallest_box_found_px"] == [BOX[2], BOX[3]]
     assert results["sources_unchanged"] is True and results["settings"]["min_defect_area_px"] == 40  # the default
-    assert {"threads", "numpy", "opencv", "torch"} <= results["machine"].keys()  # what the record cites, recorded
+    assert {"threads", "env", "numpy", "opencv", "torch"} <= results[
+        "machine"
+    ].keys()  # what the record cites, recorded
     assert {**_files(deeppcb), **_files(pku)} == before  # nothing written into either dataset
     rows = (out / "manifest.csv").read_text(encoding="utf-8").splitlines()
     assert rows[0] == "file,sha256" and len(rows) == 1 + 4  # one DeepPCB pair, one PKU pair; rotation/ is left out
@@ -109,8 +111,18 @@ def test_req_insp_014_min_area_judges_with_another_minimum_defect_area(tmp_path:
     area = BOX[2] * BOX[3] + 1
     assert dc.main(["--out", str(out), "--deeppcb", str(deeppcb), "--min-area", str(area)]) == 0
     results = json.loads((out / "results.json").read_text(encoding="utf-8"))
-    assert results["settings"]["min_defect_area_px"] == area
+    assert results["settings"]["min_defect_area_px"] == area and results["arguments"]["min_area"] == area
     assert results["deeppcb"]["golden"]["boxes_missed"] == 1
+    assert f"default except Minimum defect area {area} px" in (out / "summary.md").read_text(encoding="utf-8")
+
+
+@pytest.mark.parametrize("area", ["0", "-5"])
+def test_req_insp_014_min_area_under_one_px_is_refused(tmp_path: Path, area: str) -> None:
+    deeppcb = _deeppcb(tmp_path / "d")
+    out = tmp_path / "out"
+    with pytest.raises(SystemExit, match="1 px or more"):
+        dc.main(["--out", str(out), "--deeppcb", str(deeppcb), "--min-area", area])
+    assert not out.exists()
 
 
 def test_req_insp_014_a_box_no_region_reaches_is_missed() -> None:

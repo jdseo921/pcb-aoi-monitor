@@ -277,6 +277,8 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
     out = Path(args.out)
     if not roots:
         raise SystemExit("give --deeppcb, --pku or both")
+    if args.min_area < 1:
+        raise SystemExit("--min-area must be 1 px or more")
     if not outside(out, [ROOT, *roots]):
         raise SystemExit("--out must lie outside the repository and the datasets")
     out.mkdir(parents=True, exist_ok=True)
@@ -286,12 +288,15 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         "machine": machine(),
         "settings": {
             "margin_px": MARGIN,
-            "recipe": "default, AI check off",
+            "recipe": "default, AI check off"
+            if args.min_area == Recipe.min_defect_area
+            else f"default except Minimum defect area {args.min_area} px, AI check off",
             "min_defect_area_px": args.min_area,
             "ok_train": args.ok_train,
             **vars(cfg),
         },
         "note": "Counts on public research datasets for an internal check; not validated accuracy.",
+        "arguments": vars(args),
     }
     test = deeppcb_items(Path(args.deeppcb), "test") if args.deeppcb else []
     train = deeppcb_items(Path(args.deeppcb), "trainval") if args.deeppcb and args.ai else []
@@ -315,6 +320,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
 
 def summary(r: dict[str, Any]) -> str:
     lines = [f"# Public dataset check, {r['when_utc']}", "", r["note"], "", f"Machine: {r['machine']}", ""]
+    lines += [f"Recipe: {r['settings']['recipe']}; arguments: {r['arguments']}.", ""]
     for name in ("deeppcb", "pku"):
         if name in r:
             g = r[name]["golden"]
@@ -347,6 +353,7 @@ def machine() -> dict[str, Any]:
         "opencv": cv2.__version__,
         "torch": torch.__version__,
         "threads": {"torch": torch.get_num_threads(), "opencv": cv2.getNumThreads()},
+        "env": {k: os.environ.get(k) for k in ("OMP_NUM_THREADS", "MKL_NUM_THREADS")},
     }
 
 
