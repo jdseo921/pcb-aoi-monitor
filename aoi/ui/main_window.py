@@ -316,6 +316,8 @@ class MainWindow(QMainWindow):
         cur = self.stack.currentWidget()
         if isinstance(cur, Page) and role not in cur.roles:
             self.navigate("Home")
+        elif isinstance(cur, Page) and self.nav.currentItem() is not None:  # none yet while the window is built
+            cur.on_show()  # the page stays: its role-gated buttons and links follow the new role (#174)
 
     def _needs_role(self, title: str) -> str:
         """One sentence naming the page and the roles that may open it, for the tooltip and the status bar."""

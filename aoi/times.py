@@ -24,11 +24,16 @@ def to_local(stored: str) -> str:
 
 def local_day_bounds_utc(date_from: str | None, date_to: str | None) -> tuple[str | None, str | None]:
     """Local calendar dates (YYYY-MM-DD) as stored-time bounds: from the start of `date_from` (inclusive) to
-    the start of the day after `date_to` (exclusive), both in UTC."""
+    the start of the day after `date_to` (exclusive), both in UTC. A day the clock cannot convert is no bound on its
+    side (None), never an error: the day after 9999-12-31, or on Windows one before 1970, which its local-time
+    conversion refuses (#174). The Logs & Export date boxes keep to 2000-01-01 to 2100-12-31 and never reach one."""
 
-    def start_of(day: str, days_later: int = 0) -> str:
-        local = (datetime.fromisoformat(day) + timedelta(days=days_later)).astimezone()  # naive = local time
-        return local.astimezone(UTC).isoformat(timespec="seconds")
+    def start_of(day: str, days_later: int = 0) -> str | None:
+        try:
+            local = (datetime.fromisoformat(day) + timedelta(days=days_later)).astimezone()  # naive = local time
+            return local.astimezone(UTC).isoformat(timespec="seconds")
+        except (OverflowError, OSError):  # past datetime's range, or (OSError) before 1970 on Windows
+            return None
 
     return (start_of(date_from) if date_from else None, start_of(date_to, 1) if date_to else None)
 
