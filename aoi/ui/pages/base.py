@@ -125,6 +125,9 @@ class Page(QWidget):
 
     # Hooks called by the shell.
     def on_show(self) -> None: ...
+    def update_actions(self) -> None:
+        """Enable the page's buttons for the role and for whether a background job runs (`self._bg`)."""
+
     def on_board_model_changed(self, name: str | None) -> None: ...
 
     def need_board_model(self) -> bool:
@@ -220,13 +223,15 @@ class Page(QWidget):
         and an error becomes the coded dialog, after `on_error` has cleared what the job was to replace (#182). The
         newest call wins: an earlier run is stopped and its result dropped. `busy` covers where the result will appear;
         Cancel drops the result and, when the job stops, calls `on_cancel` with what it returned: the work done so far
-        for a job that checks `should_stop()`, None if it never ran (#194)."""
+        for a job that checks `should_stop()`, None if it never ran. `update_actions()` runs as the job starts and ends,
+        so a page can turn off the buttons that would start a second job and stop this one (#194)."""
         if self._bg is not None:
             self._bg.stop()
             if self._bg_busy is not None and self._bg_busy is not busy:  # its finished slot will not finish it
                 self._bg_busy.finish()
         w = self._bg = Worker(fn, *args, **kwargs)
         self._bg_busy = busy
+        self.update_actions()
         ref = weakref.ref(w)  # Qt keeps a slot as long as the worker's signals, so a slot that held the worker would
         # keep it, its job and the job's result for as long as the app runs (#132): the slots hold it weakly
 
@@ -244,6 +249,7 @@ class Page(QWidget):
                 self._bg = None
                 if busy is not None:
                     busy.finish()
+                self.update_actions()
             if worker is not None and worker.job.cancelled and on_cancel is not None:
                 on_cancel(worker.job.result)
 

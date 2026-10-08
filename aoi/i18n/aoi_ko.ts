@@ -1049,7 +1049,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+15"/>
+        <location line="+19"/>
         <source>All</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1128,7 +1128,7 @@
     </message>
     <message>
         <location line="+45"/>
-        <source>Work is still running: training, an AI model test or an inspection. Stop it and close the app? Training stops without saving an AI model, so the active one stays; an AI model test finishes its folder first.</source>
+        <source>Work is still running: training, an AI model test, an inspection, an export or an image import. Stop it and close the app? Training stops without saving an AI model, so the active one stays; an AI model test finishes its folder first; an export or import keeps the files copied so far.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -1392,7 +1392,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+10"/>
+        <location line="+13"/>
         <source>Board model</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1437,12 +1437,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+97"/>
+        <location line="+100"/>
         <source>{action}  {key}</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/logs.py" line="-277"/>
+        <location filename="../ui/pages/logs.py" line="-281"/>
         <source>Logs &amp; Export</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1828,7 +1828,7 @@
 <context>
     <name>Role</name>
     <message>
-        <location filename="../ui/pages/base.py" line="-234"/>
+        <location filename="../ui/pages/base.py" line="-240"/>
         <source>Operator</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2024,12 +2024,12 @@
     </message>
     <message>
         <location line="+1"/>
-        <location line="+315"/>
+        <location line="+328"/>
         <source>Import Folder…</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-309"/>
+        <location line="-320"/>
         <location line="+52"/>
         <source>ID</source>
         <translation type="unfinished"></translation>
@@ -2077,12 +2077,12 @@
     </message>
     <message>
         <location line="+1"/>
-        <location line="+201"/>
+        <location line="+204"/>
         <source>Remove</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-196"/>
+        <location line="-199"/>
         <source>Select a sample to preview</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2172,7 +2172,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+21"/>
+        <location line="+24"/>
         <source>Stopped: added {added} of {total} images; the others were not added.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2217,7 +2217,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+19"/>
+        <location line="+27"/>
         <source>Export AI model</source>
         <translation type="unfinished"></translation>
     </message>

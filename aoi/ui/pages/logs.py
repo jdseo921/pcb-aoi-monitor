@@ -295,10 +295,14 @@ class LogsPage(Page):
         self.shell.status(self.tr("Archived {count} record(s)").format(count=n))
         self.refresh()
 
+    def update_actions(self) -> None:
+        admin_or_eng = self.ctx.role in ("Engineer", "Admin")  # spec 8: Admin exports logs (Engineer allowed for PoC)
+        for b in (self.btn_csv, self.btn_img):
+            b.setEnabled(admin_or_eng and self._bg is None)  # one at a time: a second would stop the first (#194)
+        self.btn_arch.setEnabled(admin_or_eng)
+
     def on_show(self) -> None:
-        admin_or_eng = self.ctx.role in ("Engineer", "Admin")
-        for b in (self.btn_csv, self.btn_img, self.btn_arch):
-            b.setEnabled(admin_or_eng)  # spec 8: Admin exports logs (Engineer allowed for PoC)
+        self.update_actions()
         self._arch_days = self.ctx.settings.log_retention_days  # a retention saved on Settings applies at once (#201)
         self.btn_arch.setText(self._archive_text())
         for combo, values in (

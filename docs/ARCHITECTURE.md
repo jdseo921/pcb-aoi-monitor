@@ -122,8 +122,12 @@ result and hands `on_cancel` what the job returned, so a job that checks `should
 copies and Export Image Overlays: `AppContext.import_samples` and `export_overlays` take `progress` and `should_stop`
 and audit `cancelled`). `tests/test_no_freeze.py` ticks the UI thread every 50 ms through each page's 5 MP action (for
 the Logs exports and the sample copies, enough 5 MP files to take over 2 s on the UI thread) and fails on a gap over
-2 s. No slot and no job function holds its
-own worker or the worker's signals (#132): Qt keeps a slot as long as the signals, which the worker holds, so a worker
+2 s. A page job runs as the user who started it, as every job does (#177), so a Switch User while an export or a
+sample copy runs changes neither its role checks nor its audit entries, and `Page.update_actions()` runs as a job
+starts and ends: Logs turns its two exports off, Training its three imports, its empty table's Import Folder… link
+and Start Training, and Training's import slots return while one runs, so a second action cannot stop the first; an
+`EmptyState` shown while a job runs (a refresh, Filter) raises a shown `BusyOverlay` of its host back above itself, so
+"Importing…"/"Exporting…" and Cancel stay on top (#194, `tests/test_page_jobs.py`). No slot and no job function holds its own worker or the worker's signals (#132): Qt keeps a slot as long as the signals, which the worker holds, so a worker
 its slot held would stay, with its job and the job's result, for as long as the app runs; and signals a job held would
 be deleted with the job, on whichever thread let go of it last, where Qt forbids deleting an object of another thread.
 The slots hold the worker by weak reference and a job function reports through a bound emit (`w.signals.progress.emit`,

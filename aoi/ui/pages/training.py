@@ -100,9 +100,11 @@ class TrainingPage(Page):
         ll = QVBoxLayout(left)
         ll.setContentsMargins(0, 0, 8, 0)
         up = QHBoxLayout()
-        up.addWidget(button(self.tr("+ OK Images"), slot=self.add_ok))  # verdict colours mean verdicts, not add buttons
-        up.addWidget(button(self.tr("+ NG Images"), slot=self.add_ng))
-        up.addWidget(button(self.tr("Import Folder…"), slot=self.import_folder))
+        self.btn_ok = button(self.tr("+ OK Images"), slot=self.add_ok)  # verdict colours mean verdicts, not add buttons
+        self.btn_ng = button(self.tr("+ NG Images"), slot=self.add_ng)
+        self.btn_folder = button(self.tr("Import Folder…"), slot=self.import_folder)
+        for b in (self.btn_ok, self.btn_ng, self.btn_folder):
+            up.addWidget(b)
         ll.addLayout(up)
         self.counts = QLabel("")
         self.counts.setObjectName("muted")
@@ -204,6 +206,8 @@ class TrainingPage(Page):
 
     def _add(self, board_model: str, files: list[str], label: str, dtype: str | None, side: str) -> None:
         """Copy the picked files on a pool thread (REQ-SET-021, #194); Cancel keeps the samples added so far."""
+        if self._bg is not None:  # one import at a time: a second would stop this one (#194)
+            return
         self.run_in_background(
             self.ctx.import_samples, board_model, files, label, dtype, side, with_progress=True,
             on_result=lambda _added: self.refresh(), busy=self.busy,
@@ -211,13 +215,14 @@ class TrainingPage(Page):
         )  # fmt: skip
 
     def _add_stopped(self, added: int, total: int) -> None:
-        stopped = self.tr("Stopped: added {added} of {total} images; the others were not added.")
-        self.shell.status(stopped.format(added=added, total=total))
+        if added < total:  # Cancel after the last file: every image was added, so nothing to say (#194)
+            stopped = self.tr("Stopped: added {added} of {total} images; the others were not added.")
+            self.shell.status(stopped.format(added=added, total=total))
         self.refresh()
 
     def import_folder(self) -> None:
         """Folder with ok/ and ng/ sub-folders (ng/<defect type>/ also accepted)."""
-        if not self.need_board_model():
+        if self._bg is not None or not self.need_board_model():  # one import at a time (#194)
             return
         d = QFileDialog.getExistingDirectory(self, self.tr("Folder containing ok/ and ng/ sub-folders"))
         if d:
@@ -225,7 +230,7 @@ class TrainingPage(Page):
 
     def import_from(self, folder: str) -> None:
         """Import on a pool thread (REQ-SET-021): the table shows the result; Cancel keeps what was imported so far."""
-        if (bm := self.checked_board_model()) is None:
+        if self._bg is not None or (bm := self.checked_board_model()) is None:  # one import at a time (#194)
             return
         self.run_in_background(
             self._import, bm, folder, with_progress=True,
@@ -375,10 +380,18 @@ class TrainingPage(Page):
     def _finished(self) -> None:
         if self.worker is not None and self.worker.job.cancelled and self.worker.job.result is None:  # Stop (#171)
             self.log.appendPlainText(self.tr("Stopped: no AI model was saved; the active AI model is unchanged."))
-        self.btn_train.setEnabled(True)
         self.btn_stop.setEnabled(False)
         self.worker = None
         self.device_label.setText(self.ctx.device.upper())  # a device saved during the run applies from the next one
+        self.update_actions()
+
+    def update_actions(self) -> None:
+        """One import at a time, and no training while one runs (#194): a second import, also from the empty table's
+        Import Folder… link, would stop the first, and training would learn from part of the images."""
+        idle = self._bg is None
+        for b in (self.btn_ok, self.btn_ng, self.btn_folder, self.samples_empty.link):
+            b.setEnabled(idle)
+        self.btn_train.setEnabled(idle and self.worker is None)
 
     # --- model registry ---------------------------------------------------------
     def activate(self) -> None:

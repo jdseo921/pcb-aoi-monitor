@@ -84,7 +84,9 @@ stays in use. Import photos of several different good boards, then train again.
 
 **+ OK Images** and **+ NG Images** copy the picked files in the background (#194): the sample table shows
 "Importing…" after a second and Cancel later; Cancel keeps the samples already added, and the status line says how
-many of the picked files were added.
+many of the picked files were added. While any import runs, + OK Images, + NG Images, Import Folder… (also the link
+in an empty sample table) and Start Training are off, "Importing…" stays over the table when the page is shown again,
+and a Switch User does not stop it: the samples are recorded as added by the user who started the import.
 
 **Stop** ends a training run without saving anything: no AI model version, golden board or audit entry; the active AI
 model stays. Closing the app while work runs asks whether to stop it; an AI model test finishes its folder first.
@@ -179,7 +181,9 @@ When a `<name>_checks.csv` is already there, the app asks whether to replace it,
 shows AOI-LOG-001 with how many images were copied, and the audit trail records those, with the file that failed.
 Both exports run in the background (#194): the window keeps answering, and after a second the table shows
 "Exporting…" with the seconds so far, then Cancel. Cancel on **Export Image Overlays** keeps the overlays already copied
-and the status line says how many; Cancel on **Export CSV** before its files are written leaves neither file.
+and the status line says how many; Cancel on **Export CSV** before its files are written leaves neither file. While
+an export runs both export buttons are off, "Exporting…" stays over the table after Filter, and a Switch User does not
+stop it: the audit trail names the user who started it.
 
 The **From** and **To** boxes take days from 2000-01-01 to 2100-12-31. The picture beside the table is the selected
 record's overlay; it is empty when the record's overlay file is gone, when no row is selected and after **Filter**.
