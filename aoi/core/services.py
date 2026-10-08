@@ -130,8 +130,39 @@ class AppContext:
             return latest[0], Recipe.from_dict(latest[1])
         return 0, Recipe(board_model=board_model)
 
-    def save_recipe(self, recipe: Recipe) -> int:
-        return self.db.save_recipe(recipe.board_model, recipe.to_dict(), self.user)
+    def save_recipe(self, recipe: Recipe, reason: str | None = None) -> int:
+        """Store the next recipe revision and audit it with the revision before (a recipe decides verdicts)."""
+        latest = self.db.latest_recipe(recipe.board_model)
+        rev, uid = self.db.save_recipe(recipe.board_model, recipe.to_dict(), self.user)
+        self.audit("recipe.save", "recipe", uid, latest[1] if latest else None, recipe.to_dict(), reason)
+        return rev
+
+    # --- audit trail (REQ-LOG-004) --------------------------------------------
+    def audit(
+        self,
+        action: str,
+        object_type: str,
+        object_uuid: str | None,
+        before: dict[str, Any] | None,
+        after: dict[str, Any] | None,
+        reason: str | None = None,
+    ) -> str:
+        """Append an audit entry as the current user: who did `action` to which object, with the object before and
+        after, and why. Returns the entry's UUID. Entries can never be changed or removed (migration 0003)."""
+        return self.db.add_audit(
+            self.db.user_uuid(self.user), self.role, action, object_type, object_uuid, before, after, reason
+        )
+
+    def audit_entries(
+        self,
+        object_type: str | None = None,
+        object_uuid: str | None = None,
+        action: str | None = None,
+        since: str | None = None,
+        limit: int = 1000,
+    ) -> list[dict[str, Any]]:
+        """Read audit entries, newest first, filtered by object type, object UUID, action and a UTC time floor."""
+        return self.db.audit_entries(object_type, object_uuid, action, since, limit)
 
     # --- inspection ----------------------------------------------------------
     def inspector(self, board_model: str, recipe: Recipe | None = None, side: str = "Top") -> Inspector:
