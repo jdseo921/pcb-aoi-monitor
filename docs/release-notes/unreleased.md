@@ -21,7 +21,7 @@ None. / 없음.
 
 ## Fixed / 수정 (draft)
 
-- (none yet)
+- [REQ-SET-016] The database is created and changed only through numbered migrations recorded in the workspace, and it runs in write-ahead-log mode with a full sync on every commit, so a finished write survives a power cut (#2, part). / 데이터베이스는 작업 폴더에 기록되는 번호 매긴 마이그레이션으로만 생성·변경되며, 매 커밋마다 완전 동기화하는 WAL 모드로 동작하여 완료된 기록이 전원 차단에도 남습니다 (#2, 일부).
 
 ## Security / 보안 (draft)
 
@@ -34,6 +34,7 @@ None. / 없음.
 ## Upgrade notes / 업그레이드 안내 (draft)
 
 - [REQ-TRN-014] AI model files written by v0.1 no longer load; retrain after upgrading. v0.1 workspaces hold test data only and are not upgraded (ADR 0001). / v0.1이 만든 AI 모델 파일은 더 이상 불러올 수 없으므로 업그레이드 후 다시 학습합니다. v0.1 작업 폴더는 테스트 데이터만 담고 있으며 업그레이드되지 않습니다 (ADR 0001).
+- [REQ-SET-016] A workspace created by v0.1 is refused at start-up with a message; choose a new workspace folder in Settings (ADR 0004). A workspace on a network drive is refused too. / v0.1이 만든 작업 폴더는 시작 시 안내 메시지와 함께 거부되므로 설정에서 새 작업 폴더를 선택합니다 (ADR 0004). 네트워크 드라이브의 작업 폴더도 거부됩니다.
 
 <!--
 Item format: "- [REQ-INSP-005] Start, Stop, Next Board and Save Result work by F5, F6, F8 and F9. / F5, F6, F8, F9 키로
