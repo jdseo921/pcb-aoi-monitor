@@ -103,6 +103,8 @@ class LabelEditor(QWidget):
         self.box_list.setFixedHeight(4 * theme.TARGET_H)
         self.box_list_empty = EmptyState(self.box_list)
         lay.addWidget(self.box_list)
+        self._later: list[dict[str, Any] | None] = []  # a sample to show once the drag in hand has ended
+        self.view.settled.connect(self._settled)
         self.view.picked.connect(self._picked)
         self.view.edited.connect(self._store)
         self.box_list.currentRowChanged.connect(self.view.choose)
@@ -116,6 +118,9 @@ class LabelEditor(QWidget):
     def show_sample(self, sample: dict[str, Any] | None) -> None:
         """Show `sample` (a row of `AppContext.samples`) with its stored boxes; None shows nothing. The picture is read
         again only for another sample; one that cannot be read is named with its code in the heading."""
+        if self.view.dragging():  # a refresh mid-drag: shown when the drag has ended, with what it stored
+            self._later = [sample]
+            return
         again = sample is not None and self.sample is not None and sample["uuid"] == self.sample["uuid"]
         self.sample = sample
         if sample is None:
@@ -136,6 +141,10 @@ class LabelEditor(QWidget):
             self.draw_btn.setChecked(False)
             self._toggle_draw()
         self._load(self.view.chosen if again else -1)
+
+    def _settled(self) -> None:
+        if self._later:
+            self.show_sample(self._later.pop())
 
     def _load(self, chosen: int = -1) -> None:
         """The stored boxes of the sample shown, `chosen` selected."""

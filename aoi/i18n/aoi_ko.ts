@@ -4,7 +4,7 @@
 <context>
     <name>BoxEditor</name>
     <message>
-        <location filename="../ui/widgets/box_editor.py" line="+49"/>
+        <location filename="../ui/widgets/box_editor.py" line="+89"/>
         <source>{number} {type} ◆ {severity}</source>
         <translation>{number} {type} ◆ {severity}</translation>
     </message>
@@ -3266,12 +3266,12 @@
         <translation>박스</translation>
     </message>
     <message>
-        <location line="+25"/>
+        <location line="+30"/>
         <source>{file} · {label} · {view}</source>
         <translation>{file} · {label} · {view}</translation>
     </message>
     <message>
-        <location line="+30"/>
+        <location line="+34"/>
         <source>{number} {type} ({severity}) {x},{y} {w}×{h} px</source>
         <translation>{number} {type} ({severity}) {x},{y} {w}×{h} px</translation>
     </message>
