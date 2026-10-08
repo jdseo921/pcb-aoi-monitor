@@ -34,7 +34,7 @@ COMPARE_TICK = "Override the AI model's value {value}"  # the Compare sketch's l
 OWN = "Set my own value"  # the tick's text with no calibrated value to name
 UNTRAINED = "No AI model is trained yet: there is no calibrated value."
 INACTIVE = "No AI model version is active: there is no calibrated value."
-MIN_WIDTH = 1616  # the window's minimum width before the tick (S28b): the review found 1729 to 1929 px with it
+MIN_WIDTH = 1600  # the screen's: 1616 px before the panel went under the images, 1729 to 1929 with the tick (S28b)
 OTHER = "OTHER"  # a board model with no AI model trained
 
 
@@ -69,14 +69,14 @@ def _tick_in_panel(compare: ComparePage) -> bool:
 
 
 def _placed_in_reading_order(compare: ComparePage) -> bool:
-    """Compare's tick, ticked, laid out where it reads: in its row under the field and above Pixel difference, or
-    beside the field and before it."""
+    """Compare's tick, ticked, laid out where it reads: in its row under the field, both left of Pixel difference's
+    column (the panel under the images, Jay's choice of 2026-10-08), or beside the field and before it."""
     QApplication.processEvents()  # a move is laid out on the event loop's next turn
     f = compare.ai_thr
-    tick, box, below = (QRect(w.mapTo(compare, QPoint(0, 0)), w.size()) for w in (f.tick, f.field, compare.diff_thr))
+    tick, box, after = (QRect(w.mapTo(compare, QPoint(0, 0)), w.size()) for w in (f.tick, f.field, compare.diff_thr))
     if f.tick.parentWidget() is f.tick_row:
-        return box.bottom() < tick.top() and tick.bottom() < below.top()
-    return tick.right() < box.left() and box.top() <= tick.center().y() <= box.bottom() < below.top()
+        return box.bottom() < tick.top() and max(tick.right(), box.right()) < after.left()
+    return tick.right() < box.left() and box.top() <= tick.center().y() <= box.bottom() and box.right() < after.left()
 
 
 def _editor(qtbot: QtBot, ctx: AppContext, monkeypatch: pytest.MonkeyPatch) -> tuple[MainWindow, RecipeEditorPage]:
@@ -566,7 +566,7 @@ def _without_rows(fields: list[AiThresholdField]) -> int:
 def test_req_trn_015_tick_and_note_never_widen_the_window(qtbot: QtBot, trained_ctx: AppContext, state: str) -> None:
     """The tick's words are short beside the field on the Recipe Editor ("Override 3.063", its sketch's), and Compare's
     sketch's label ("Override the AI model's value 3.063") is a row of its own; the note wraps in a row as wide as the
-    form. So the AI score threshold never widens the window: its minimum width stays 1616 px, as before the tick, and
+    form. So the AI score threshold never widens the window: its minimum width stays within a 1600 px screen, and
     the same as with the AI score threshold's rows hidden on the Recipe Editor and Compare, cleared and ticked (review
     round 1 found 1929 px, wider than a 1920 px screen; Compare's label beside the field, 1779 px). At 1600 x 900 and
     at 1920 x 1080 each page's note is as tall as its text at its width, so what to do shows whole, no row around it is
