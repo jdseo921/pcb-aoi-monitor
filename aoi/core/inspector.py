@@ -228,11 +228,12 @@ class Inspector:
         res.elapsed_ms = (time.perf_counter() - t0) * 1000
         return res
 
-    def judge(self, res: InspectionResult, ai: AiEvidence | None) -> None:
+    def judge(self, res: InspectionResult, ai: AiEvidence | None, peaks: dict[str, float] | None = None) -> None:
         """Steps 1 to 5 on the evidence `res` holds, by this engine's recipe: the checks of its golden board
         comparison, of its AI map with `ai` and of the recipe's ROIs, then its defects and its verdict. `inspect` calls
         it on a board just inspected and `re_grade` on a stored result's maps (REQ-CMP-005), so both judge by one set
-        of rules."""
+        of rules. `peaks` holds the highest AI map value of each ROI the result was judged on, by the region its check
+        names; an ROI found there takes that value, not one read from a stored map that holds it to a step."""
         r = self.recipe
         regions: list[Region] = []
         res.checks, res.defects, res.score = [], [], 0.0  # judged afresh, never added to
@@ -316,7 +317,8 @@ class Inspector:
             patch = res.anomaly_map[roi.y : roi.y + roi.h, roi.x : roi.x + roi.w]
             if patch.size == 0:
                 continue
-            val = float(patch.max()) / thr
+            where = f"{roi.name} @ {roi.x},{roi.y} {roi.w}x{roi.h}"
+            val = (peaks[where] if peaks and where in peaks else float(patch.max())) / thr
             res.checks.append(
                 Check(
                     f"ROI {roi.name} [{roi.type}]",
@@ -326,7 +328,7 @@ class Inspector:
                     _grade(val, roi.ai_score, r.warn_ratio),
                     "ROI",
                     f"fails as {ROI_DEFECT.get(roi.type, 'Anomaly')}",
-                    region=f"{roi.name} @ {roi.x},{roi.y} {roi.w}x{roi.h}",
+                    region=where,
                 )
             )
 
@@ -362,7 +364,8 @@ def re_grade(judged: InspectionResult, recipe: Recipe, ai: AiEvidence | None) ->
     """The checks, defects and verdict `judged` would get under `recipe`, judged again from the evidence it holds
     without aligning, comparing or running the AI model (REQ-CMP-005): the difference regions are found again on its
     difference map with the recipe's pixel difference and minimum area, the AI score in `ai` is graded against the
-    recipe's threshold, and the AI defects and ROI values are read from its AI map. `judged` is a result as inspected or
+    recipe's threshold, and the AI defects are read from its AI map. An ROI it was judged on keeps the peak it was
+    judged by; an ROI added, moved or renamed since is read from the AI map. `judged` is a result as inspected or
     stored, not one this function made; `ai` is its AI evidence (the score of its AI check, the AI model's calibration)
     when its AI check ran, else None. Similarity, alignment and the AI score keep the values `judged` holds, since no
     threshold changes them, and so do the inspection time, the view and the picture. A check the recipe turns on that
@@ -387,7 +390,11 @@ def re_grade(judged: InspectionResult, recipe: Recipe, ai: AiEvidence | None) ->
     if recipe.use_ai and not ran_ai:
         res.notes.append(NO_AI_NOTE if NO_AI_NOTE in judged.notes else NOT_AI_JUDGED_NOTE)
     res.notes += [n for n in judged.notes if n not in skipped]
-    Inspector(recipe).judge(res, ai)  # without the AI map, as when the recipe turns the AI check off, no AI check
+    ai_thr = next((c.threshold for c in judged.checks if c.source == "AI"), None)
+    peaks = {  # each ROI's peak as it was judged: its value times the AI threshold it was divided by, in float32
+        c.region: float(np.float32(c.value * ai_thr)) for c in judged.checks if c.source == "ROI" and ai_thr
+    }
+    Inspector(recipe).judge(res, ai, peaks)  # no AI map when the recipe turns the AI check off: no AI check
     return res
 
 

@@ -115,7 +115,8 @@ be deleted with the job, on whichever thread let go of it last, where Qt forbids
 The slots hold the worker by weak reference and a job function reports through a bound emit (`w.signals.progress.emit`,
 bound once the worker is built), which does not keep the signals; `tests/test_background_results.py` checks that a
 result is freed once the page shows another, and that a board that fails lets go of its worker's signals with the
-worker.
+worker. One call starts a thread of its own: `maps.load_maps`, run by a job, decodes a stored result's AI map on a
+helper thread while the job decodes the difference map, and waits for it before it returns.
 
 A control an operator uses by key and by touch is one `QAction` (`Page.action`, since S24): a window shortcut owned by
 the page, so the key works wherever the focus is on the page and only while the page is shown, behind an
@@ -177,7 +178,8 @@ AOI_Workspace/                 (default ~/AOI_Workspace, set in Settings or AOI_
   images/<board>/<OK|NG>/      uploaded training samples (copied in, so source folders can move)
   models/<board>/<board>_vX.Y.pt            trained model + calibration
   models/<board>/<board>_vX.Y_golden.png    learned golden template
-  results/<date>/*.png         overlay per inspected board, with its *_diff.png and *_ai.png maps (REQ-INSP-012)
+  results/<date>/*.png         overlay per inspected board, with its *_diff.png and *_ai2.png maps (REQ-INSP-012;
+                               *_ai.png before S28a)
   exports/                     CSV / PDF / overlay exports
 ```
 
@@ -239,11 +241,20 @@ threshold) or a non-minor defect region exists; else **OK**. Colours follow GUI 
 
 A result is judged again with other thresholds without aligning, comparing or running the AI model (REQ-CMP-005, the
 engine since S28a): `Inspector.judge` grades the evidence a result holds, a board's just inspected or a stored one's,
-and `inspector.re_grade` finds the difference regions again on the result's difference map and reads the AI defects and
-the ROI values from its AI map, with the AI score and the AI model's calibration given as `AiEvidence`. On the evidence
-a board was inspected with, the thresholds it was judged by give back its checks, defects and verdict, and other
-thresholds what inspecting it with them gives. A check the recipe turns on that did not run on the board is not judged,
-with a note saying so. `tests/test_re_evaluate.py` checks this.
+and `inspector.re_grade` finds the difference regions again on the result's difference map, reads the AI defects from
+its AI map and takes each ROI's peak from the ROI check it was judged with (an ROI added, moved or renamed since is read
+from the AI map), with the AI score and the AI model's calibration given as `AiEvidence`. On the evidence a board was
+inspected with, the thresholds it was judged by give back its checks, defects and verdict, and other thresholds what
+inspecting it with them gives. A check the recipe turns on that did not run on the board is not judged, with a note
+saying so. A stored result holds that evidence in its record and its two map files (`aoi/core/maps.py`, format 2 since
+S28a, [ADR 0005](adr/0005-stored-ai-map-format-2.md)): the difference map exactly, and the AI map within one step (0.001
+σ up to 32.767 σ, then 1/8192 of the value, up to 1789 σ) with each pixel on the side of the AI model's pixel threshold
+it was judged on; a map file that is there but cannot be read raises AOI-CMP-003. So a stored result is judged again as
+the live one would be, but for what is read from its AI map, within one step over the AI threshold: an AI defect's
+score, so two AI defects of equal area whose peaks are that close may swap numbers or, where they overlap, keep the
+other one, and the value of an ROI added, moved or renamed since, which that close to its threshold may grade the other
+way. AI maps stored before S28a (format 1) are clipped at 65.535 σ and not kept on their side of the pixel threshold.
+`tests/test_re_evaluate.py` checks this.
 
 ---
 
@@ -327,7 +338,7 @@ User switching is a local picker for the PoC; Stage 4 replaces it with MES authe
 | `samples` | board_model, path, label OK/NG, defect_type (DCT), side |
 | `models` | board_model, version, path (.pt), metrics JSON (thresholds, scores, timing), active |
 | `recipes` | board_model, revision (1 is the default recipe, stored when the board model is created, so every result names a stored revision), uuid, body JSON, user, created_at |
-| `inspections` | time, board_model, model_version, model_uuid, recipe_rev, recipe_uuid, image/overlay paths, diff_map_path and ai_map_path (the difference and AI score maps as PNG files beside the overlay, 8-bit exact and 16-bit in 0.001 σ steps; NULL for rows from before migration 0007, and for OK results once the retention sweep deleted them), reference_path and reference_sha256 (the golden board file the result was judged against and the SHA-256 of its bytes; NULL for rows from before migration 0008 and for results judged without a golden board), view (Top, Side or Bottom; NULL for rows from before migration 0005), result, score, metrics JSON, result_json (the whole result as `InspectionResult.to_dict` writes it, read back by `from_dict` without the images; NULL before migration 0006), operator, archived |
+| `inspections` | time, board_model, model_version, model_uuid, recipe_rev, recipe_uuid, image/overlay paths, diff_map_path and ai_map_path (the difference and AI score maps as PNG files beside the overlay, 8-bit exact, and 16-bit within one step: `_ai2.png` since S28a, 0.001 σ steps to 32.767 σ, then 1/8192 of the value to 1789 σ, or `_ai.png` before, 0.001 σ steps to 65.535 σ; NULL for rows from before migration 0007, and for OK results once the retention sweep deleted them), reference_path and reference_sha256 (the golden board file the result was judged against and the SHA-256 of its bytes; NULL for rows from before migration 0008 and for results judged without a golden board), view (Top, Side or Bottom; NULL for rows from before migration 0005), result, score, metrics JSON, result_json (the whole result as `InspectionResult.to_dict` writes it, read back by `from_dict` without the images; NULL before migration 0006), operator, archived |
 | `defects` | inspection_id, no, type, score, side, x, y, w, h |
 | `checks` | inspection_id, no, region (Board, or the ROI's name and box), metric, source, value, threshold, rule, result, explain: one row per decision variable of a result (REQ-INSP-012; none for rows from before migration 0006) |
 | `test_runs` | time, board_model, model_version, folder, metrics JSON, results JSON |

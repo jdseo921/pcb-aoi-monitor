@@ -97,6 +97,13 @@ CODES: dict[str, ErrorCode] = {
             "Inspect the board again on Inspection; Compare then opens the new result.",
         ),
         ErrorCode(
+            "AOI-CMP-003",
+            "Stored map cannot be read",
+            "The stored map {file} could not be read: {reason}.",
+            "The stored verdict and decision table still stand. Close any program that has the file open and open the"
+            " result again; if the file is damaged, inspect the board again on Inspection.",
+        ),
+        ErrorCode(
             "AOI-TRN-001",
             "AI model file refused",
             "AI model file refused: {path} is not a weights-only model file this app wrote ({reason}).",

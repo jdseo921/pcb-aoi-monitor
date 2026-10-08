@@ -52,9 +52,12 @@ Each export is confirmed first and written whole or not at all, and the audit tr
 
 **Evidence files.** Beside each record's overlay picture (the results folder, by day) the app keeps the two maps the
 verdict was judged on as PNG files named after the overlay: `<overlay name>_diff.png`, the colour difference against the
-golden board, and `<overlay name>_ai.png`, the AI score map in 0.001 σ steps. The maps of OK results are deleted at
-start-up once older than `map_retention_days_ok` days (7, set in `settings.json` in the default workspace folder; 0
-deletes them at the next start); NG and WARN maps, and every record, overlay and check, are kept. Each sweep is in the
-audit trail as `maps.sweep`; a file the app cannot delete (open in another program) is tried again at the next start.
+golden board, and `<overlay name>_ai2.png`, the AI score map in steps of 0.001 σ up to 32.767 σ and of 1/8192 of the
+value above (`<overlay name>_ai.png` for results stored before this version, in 0.001 σ steps up to 65.535 σ). A map
+file another program holds open, or a damaged one, shows error AOI-CMP-003 on Compare; the stored verdict and decision
+table still stand. The maps of OK results are deleted at start-up once older than `map_retention_days_ok` days (7, set
+in `settings.json` in the default workspace folder; 0 deletes them at the next start); NG and WARN maps, and every
+record, overlay and check, are kept. Each sweep is in the audit trail as `maps.sweep`; a file the app cannot delete
+(open in another program) is tried again at the next start.
 
 (to be written: history, archive, the audit trail, error codes)
