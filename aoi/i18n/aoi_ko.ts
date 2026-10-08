@@ -609,7 +609,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+82"/>
+        <location line="+87"/>
         <source>(none)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -689,7 +689,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+15"/>
+        <location line="+18"/>
         <source>Relabelling a sample</source>
         <translation type="unfinished"></translation>
     </message>
@@ -729,7 +729,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1211"/>
+        <location line="-1219"/>
         <source>no defect type was given</source>
         <translation>결함 유형이 지정되지 않았습니다</translation>
     </message>
@@ -744,12 +744,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+508"/>
+        <location line="+513"/>
         <source>its UUID {found} is not {uuid}, as in the AI model registry</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+713"/>
+        <location line="+716"/>
         <source>Changing settings</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1307,7 +1307,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+37"/>
+        <location line="+38"/>
         <source>Images not imported: path too long</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1337,7 +1337,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-245"/>
+        <location line="-246"/>
         <source>AI model, recipe, scale or Golden board changed during a run</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1347,7 +1347,17 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+251"/>
+        <location line="+201"/>
+        <source>Check that the file is still there and can be opened and that the workspace drive has free space, then, with {name} picked in the header, press Import again: the {imported} image(s) already imported are skipped.</source>
+        <translation>파일이 아직 그 자리에 있고 열 수 있는지, 작업 공간 드라이브에 여유 공간이 있는지 확인한 뒤 헤더에서 {name}을(를) 고른 상태로 가져오기를 다시 누르세요. 이미 가져온 이미지 {imported}개는 건너뜁니다.</translation>
+    </message>
+    <message>
+        <location line="+15"/>
+        <source>Fix what stopped it (the log file in the workspace&apos;s logs folder has the details; send it to support if the cause is unclear), then, with {name} picked in the header, press Import again: the {imported} image(s) already imported are skipped.</source>
+        <translation>가져오기를 멈춘 원인을 해결한 뒤(작업 공간 logs 폴더의 로그 파일에 자세한 내용이 있습니다. 원인이 분명하지 않으면 지원팀에 보내세요) 헤더에서 {name}을(를) 고른 상태로 가져오기를 다시 누르세요. 이미 가져온 이미지 {imported}개는 건너뜁니다.</translation>
+    </message>
+    <message>
+        <location line="+36"/>
         <source>NG image needs a defect type</source>
         <translation>NG 이미지에는 결함 유형이 필요합니다</translation>
     </message>
@@ -1837,7 +1847,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-759"/>
+        <location line="-760"/>
         <source>Board judged NG</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1887,12 +1897,7 @@
         <translation>{path}을(를) 작업 공간으로 복사하지 못해({reason}) 가져오기가 이미지 {total}개 중 {at}번째에서 멈췄습니다. 그 전에 가져온 이미지 {imported}개는 샘플 표에 남아 있습니다.</translation>
     </message>
     <message>
-        <location line="+5"/>
-        <source>Check that the file is still there and can be opened and that the workspace drive has free space, then press Import again: the {imported} image(s) already imported are skipped.</source>
-        <translation>파일이 아직 그 자리에 있고 열 수 있는지, 작업 공간 드라이브에 여유 공간이 있는지 확인한 뒤 가져오기를 다시 누르세요. 이미 가져온 이미지 {imported}개는 건너뜁니다.</translation>
-    </message>
-    <message>
-        <location line="+8"/>
+        <location line="+14"/>
         <source>Import stopped by an error</source>
         <translation>오류로 가져오기가 멈춤</translation>
     </message>
@@ -1902,12 +1907,7 @@
         <translation>{path}을(를) 가져오지 못해({reason}) 가져오기가 이미지 {total}개 중 {at}번째에서 멈췄습니다. 그 전에 가져온 이미지 {imported}개는 샘플 표에 남아 있습니다.</translation>
     </message>
     <message>
-        <location line="+5"/>
-        <source>Fix what stopped it (the log file in the workspace&apos;s logs folder has the details; send it to support if the cause is unclear), then press Import again: the {imported} image(s) already imported are skipped.</source>
-        <translation>가져오기를 멈춘 원인을 해결한 뒤(작업 공간 logs 폴더의 로그 파일에 자세한 내용이 있습니다. 원인이 분명하지 않으면 지원팀에 보내세요) 가져오기를 다시 누르세요. 이미 가져온 이미지 {imported}개는 건너뜁니다.</translation>
-    </message>
-    <message>
-        <location line="+37"/>
+        <location line="+42"/>
         <source>{path} was not taken as an NG sample: an NG sample needs one of the 33 defect types of the defect classification table, and {why}.</source>
         <translation>{path}을(를) NG 샘플로 받지 않았습니다. NG 샘플에는 결함 분류표의 결함 유형 33개 중 하나가 필요하지만 {why}.</translation>
     </message>
@@ -2092,7 +2092,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/training.py" line="+340"/>
+        <location filename="../ui/pages/training.py" line="+351"/>
         <location filename="../ui/pages/training_import.py" line="+38"/>
         <source>{code} {title}</source>
         <translation type="unfinished"></translation>
@@ -2422,7 +2422,7 @@
 <context>
     <name>ImportSheet</name>
     <message>
-        <location filename="../ui/pages/training_import.py" line="+51"/>
+        <location filename="../ui/pages/training_import.py" line="+55"/>
         <location line="+22"/>
         <source>View</source>
         <translation>뷰</translation>
@@ -2434,18 +2434,18 @@
     </message>
     <message>
         <location line="+1"/>
-        <location line="+102"/>
+        <location line="+104"/>
         <source>OK</source>
         <translation>OK</translation>
     </message>
     <message>
-        <location line="-102"/>
-        <location line="+102"/>
+        <location line="-104"/>
+        <location line="+104"/>
         <source>NG</source>
         <translation>NG</translation>
     </message>
     <message>
-        <location line="-97"/>
+        <location line="-99"/>
         <source>Defect type for NG files</source>
         <translation>NG 파일의 결함 유형</translation>
     </message>
@@ -2486,13 +2486,13 @@
     </message>
     <message>
         <location line="+1"/>
-        <location line="+53"/>
-        <location line="+82"/>
+        <location line="+55"/>
+        <location line="+96"/>
         <source>Cancel</source>
         <translation>취소</translation>
     </message>
     <message>
-        <location line="-134"/>
+        <location line="-150"/>
         <source>Import</source>
         <translation>가져오기</translation>
     </message>
@@ -2507,7 +2507,12 @@
         <translation>파일 {count}개를 {board_model}(으)로 가져오기</translation>
     </message>
     <message>
-        <location line="+125"/>
+        <location line="+2"/>
+        <source>These files were for board model {name}: pick it in the header to import the rest</source>
+        <translation>이 파일들은 보드 모델 {name}용이었습니다. 나머지를 가져오려면 헤더에서 그 보드 모델을 고르세요</translation>
+    </message>
+    <message>
+        <location line="+139"/>
         <source>Nothing to import: every file is already imported.</source>
         <translation>가져올 파일이 없습니다. 모든 파일을 이미 가져왔습니다.</translation>
     </message>
@@ -2517,7 +2522,7 @@
         <translation>{added}개 가져옴 · {skipped}개 이미 있음 · {count}개 가져오지 않음</translation>
     </message>
     <message>
-        <location line="-77"/>
+        <location line="-91"/>
         <source>pick a type</source>
         <translation>유형을 고르세요</translation>
     </message>
@@ -2537,12 +2542,12 @@
         <translation>대기: 유형이 필요합니다</translation>
     </message>
     <message>
-        <location line="+23"/>
+        <location line="+26"/>
         <source>{count} NG file(s) need a defect type</source>
         <translation>NG 파일 {count}개에 결함 유형이 필요합니다</translation>
     </message>
     <message>
-        <location line="+14"/>
+        <location line="+25"/>
         <source>Importing…</source>
         <translation>가져오는 중…</translation>
     </message>
@@ -3315,7 +3320,7 @@
 <context>
     <name>NgDialog</name>
     <message>
-        <location filename="../ui/pages/training.py" line="-260"/>
+        <location filename="../ui/pages/training.py" line="-271"/>
         <source>Label NG images</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4094,7 +4099,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/services.py" line="-1385"/>
+        <location filename="../core/services.py" line="-1393"/>
         <source>Aligning {count} images to the reference board</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4113,17 +4118,17 @@
     </message>
     <message>
         <location line="+1"/>
-        <location line="+397"/>
+        <location line="+424"/>
         <source>Import Folder…</source>
         <translation>폴더 가져오기…</translation>
     </message>
     <message>
-        <location line="-389"/>
+        <location line="-416"/>
         <source>Tip: 20+ OK images give a steadier threshold</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+7"/>
+        <location line="+8"/>
         <location line="+52"/>
         <source>ID</source>
         <translation type="unfinished"></translation>
@@ -4170,12 +4175,12 @@
     </message>
     <message>
         <location line="+1"/>
-        <location line="+254"/>
+        <location line="+280"/>
         <source>Remove</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-249"/>
+        <location line="-275"/>
         <source>Select a sample to preview</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4270,19 +4275,24 @@
         <translation>{folder}와(과) 그 하위 폴더에 이미지가 없어 가져올 것이 없습니다</translation>
     </message>
     <message>
-        <location line="+78"/>
-        <source>Imported {ok} OK and {ng} NG images</source>
-        <translation type="unfinished"></translation>
+        <location line="+99"/>
+        <source>Imported {ok} OK and {ng} NG images into {board_model}</source>
+        <translation>OK 이미지 {ok}개와 NG 이미지 {ng}개를 {board_model}(으)로 가져왔습니다</translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>Imported {ok} OK and {ng} NG images into {board_model}; {refused} not imported (see the list)</source>
+        <translation>OK 이미지 {ok}개와 NG 이미지 {ng}개를 {board_model}(으)로 가져왔습니다. {refused}개는 가져오지 않았습니다(목록 참조)</translation>
     </message>
     <message>
         <location line="+2"/>
-        <source>Imported {ok} OK and {ng} NG images; {refused} not imported (see the list)</source>
-        <translation>OK 이미지 {ok}개와 NG 이미지 {ng}개를 가져왔습니다. {refused}개는 가져오지 않았습니다(목록 참조).</translation>
+        <source>Imported {ok} OK and {ng} NG images into {board_model}; {refused} not imported</source>
+        <translation>OK 이미지 {ok}개와 NG 이미지 {ng}개를 {board_model}(으)로 가져왔습니다. {refused}개는 가져오지 않았습니다</translation>
     </message>
     <message>
-        <location line="+18"/>
-        <source>Import cancelled: {ok} OK and {ng} NG images imported before it stopped</source>
-        <translation type="unfinished"></translation>
+        <location line="+20"/>
+        <source>Import cancelled: {ok} OK and {ng} NG images imported into {board_model} before it stopped</source>
+        <translation>가져오기 취소됨: 멈추기 전에 OK 이미지 {ok}개와 NG 이미지 {ng}개를 {board_model}(으)로 가져왔습니다</translation>
     </message>
     <message>
         <location line="+52"/>

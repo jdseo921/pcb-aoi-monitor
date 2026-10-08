@@ -117,7 +117,9 @@ so no sample is NG without one (AOI-TRN-013). **Mark OK** clears the type. Neith
 **Importing images.** **Add OK Images…** (Ctrl+O), **Add NG Images…** (Ctrl+N) and **Import Folder…**
 (Ctrl+Shift+O) open the import sheet above the sample table, with the files picked or found in the folder; no dialog
 opens over the file picker. Its title names the board model the files go to, the one in the header when it opened;
-another one picked there closes the sheet, at once or, while it imports, once that import ends. A folder with no image
+another one picked there closes the sheet if it has not imported yet. A sheet that has imported, or is importing, stays
+with its list: its Import is off and a line names the board model its files are for until that one is back in the
+header, and Close (Esc) closes it. A folder with no image
 opens no sheet, and the status line says so. A name too long for its cell is cut at its start, so its end shows, and a
 screen reader reads its whole path. Import Folder… labels each image by its sub-folders: under `ok/` or `good/` OK,
 under `ng/`, `bad/`, `defect/` or `defects/` NG, with the defect type of its folder when that folder is named after one
@@ -132,11 +134,13 @@ would refuse (not an image, cut short, over the size limits: AOI-INSP-001, -004 
 already has (the same SHA-256, under any file name or label, and one picked twice: AOI-TRN-015, which names the sample
 that has it and its label) or a file with no label (AOI-TRN-016); the others go in. **Copy List** copies every row with
 what happened; Import again imports the rest and skips the images already imported. **Cancel** (Esc) while it runs keeps
-the images already copied, and the status line says how many OK and NG images that was; once it is done, Cancel or Close
+the images already copied, and the status line says how many OK and NG images that was and into which board model;
+once it is done, Cancel or Close
 (Esc) closes the sheet. The line beside the buttons counts the NG files that still need a type, and after an import the
 files of the sheet imported, already imported and not imported. A file that cannot be copied stops the import with
 AOI-TRN-009, and any other error after an image went in with AOI-TRN-010; both say how many images before it were
-imported, which stay in the sample table. An error in an import you cancelled opens no message, but it is in the log and
+imported, which stay in the sample table, and which board model to pick in the header before you press Import again.
+An error in an import you cancelled opens no message, but it is in the log and
 the alarm list.
 
 (to be written: OK/NG/UNSURE labels, defect boxes, second-person check, freezing a dataset version,

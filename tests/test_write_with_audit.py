@@ -172,8 +172,9 @@ def test_req_trn_001_a_folder_import_that_fails_part_way_says_what_was_imported(
     [(title, text)] = dialogs
     assert title == "AOI-TRN-009 Import stopped part-way", title
     assert "ok_2.png" in text and "Permission denied" in text and "image 3 of 5" in text, text
-    assert "the 2 image(s) imported before it" in text and "the 2 image(s) already imported are skipped" in text, text
-    assert win.statusBar().currentMessage() == "Imported 2 OK and 0 NG images"
+    assert "the 2 image(s) imported before it" in text, text
+    assert "with NEWB picked in the header, press Import again: the 2 image(s) already imported are skipped" in text
+    assert win.statusBar().currentMessage() == "Imported 2 OK and 0 NG images into NEWB"
 
 
 def test_req_log_004_an_export_onto_its_own_file_is_never_removed(

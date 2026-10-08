@@ -490,9 +490,15 @@ class AppContext:
     ) -> dict[str, Any]:
         """Train an AI model of `board_model` on its samples, then save, register, activate and audit it. The run reads
         the device once, before it loads anything, and keeps it to the end: a device saved on Settings while the run
-        loads, aligns or trains applies from the next run (#201)."""
+        loads, aligns or trains applies from the next run (#201). Its name meets the rule a new board model meets
+        (AOI-TRN-019, AOI-TRN-005), as its folder under models/ does, before anything is loaded."""
         device = self.device  # not self.device later: save_settings may change it while the samples load and align
         say = progress or (lambda *a: None)
+        self._refuse_unsafe_name(board_model)  # the run writes the board model's row and its folder
+        self._refuse_case_variant(board_model)
+        out = self.settings.models_dir / board_model
+        if not inside(out, self.settings.models_dir):  # a board model named before names were checked (#112)
+            raise AoiError("AOI-TRN-019", name=board_model)
         ok = [self.load_image(s["path"]) for s in self.db.samples(board_model, "OK")]
         ng = [self.load_image(s["path"]) for s in self.db.samples(board_model, "NG")]
         if len(ok) < 2:
@@ -514,7 +520,6 @@ class AppContext:
         if should_stop is not None and should_stop():  # Stop, or the window closing: the active model stays (TRN-008)
             raise JobCancelled(f"training {board_model}")  # nothing saved, registered, activated or audited (#171)
         previous = self.db.active_model(board_model)
-        out = self.settings.models_dir / board_model
         out.mkdir(parents=True, exist_ok=True)
 
         def files(v: str) -> list[Path]:
@@ -1202,7 +1207,10 @@ class AppContext:
     def set_reference(self, board_model: str, sample_id: int) -> None:
         """Make a stored OK sample the reference image: inspections compare against it from now on, and the next
         training run aligns its boards to it before it learns the golden template. An NG sample is refused
-        (AOI-TRN-006)."""
+        (AOI-TRN-006), and a board model it would create meets the rule a first import's does (AOI-TRN-019,
+        AOI-TRN-005)."""
+        self._refuse_unsafe_name(board_model)
+        self._refuse_case_variant(board_model)
         sample = self.db.sample(sample_id)
         if sample["label"] != "OK":
             raise AoiError("AOI-TRN-006", sample=Path(sample["path"]).name, label=sample["label"])

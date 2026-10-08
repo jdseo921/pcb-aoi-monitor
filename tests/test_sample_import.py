@@ -266,6 +266,35 @@ def test_req_trn_001_a_name_the_workspace_already_holds_is_kept(ctx: AppContext,
     assert ctx.db.board_models() == ["TBOX."]
 
 
+def test_req_trn_001_set_reference_and_training_meet_the_name_rule(
+    ctx: AppContext, synthetic_dataset: Path, tmp_path: Path
+) -> None:
+    """Set Reference and a training run, which write a board model's row and its models/ folder, meet the rule a new
+    board model meets, with the same exception for a name the workspace already holds: TBOX., made before names were
+    checked, gets its reference and trains, while a new name the rule refuses is refused before anything is written
+    (CON and TBOX2. with AOI-TRN-019, tbox-a1 beside TBOX-A1 with AOI-TRN-005), and a held name that leads outside
+    models/ never trains (AOI-TRN-019)."""
+    ctx.db.ensure_board_model("TBOX.")
+    ctx.db.ensure_board_model("../../escape")
+    ctx.ensure_board_model("TBOX-A1")
+    oks = [str(p) for p in list_images(synthetic_dataset / "train" / "ok")[:2]]
+    assert ctx.import_samples("TBOX.", oks, "OK") == 2
+    held = ctx.samples("TBOX.", "OK")[1]["id"]
+    ctx.set_reference("TBOX.", held)
+    assert ctx.train("TBOX.", epochs=1, image_size=32)["board_model"] == "TBOX."
+    before = outside(ctx, tmp_path)
+    writes = (lambda n: ctx.set_reference(n, held), lambda n: ctx.train(n, epochs=1, image_size=32))
+    for name, code in (("CON", "AOI-TRN-019"), ("TBOX2.", "AOI-TRN-019"), ("tbox-a1", "AOI-TRN-005")):
+        for write in writes:
+            with pytest.raises(AoiError) as refused:
+                write(name)
+            assert refused.value.code == code, (name, refused.value)
+    with pytest.raises(AoiError) as refused:
+        ctx.train("../../escape", epochs=1, image_size=32)
+    assert (refused.value.code, refused.value.params["name"]) == ("AOI-TRN-019", "../../escape"), refused.value
+    assert sorted(ctx.db.board_models()) == ["../../escape", "TBOX-A1", "TBOX."] and outside(ctx, tmp_path) == before
+
+
 @pytest.mark.parametrize("how", ["gone", "unreadable"])
 def test_req_trn_001_a_source_lost_before_its_copy_is_listed_and_the_others_go_in(
     ctx: AppContext, synthetic_dataset: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, how: str

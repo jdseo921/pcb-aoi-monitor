@@ -224,7 +224,7 @@ def test_req_set_021_training_folder_import_does_not_freeze(
         qtbot.waitUntil(lambda: page.samples.rowCount() == before + 3, timeout=60000)
     assert_off_ui_thread(calls, "AppContext.import_samples")
     assert g["longest_s"] < BUDGET_S, g
-    assert win.statusBar().currentMessage() == "Imported 2 OK and 1 NG images"
+    assert win.statusBar().currentMessage() == f"Imported 2 OK and 1 NG images into {BOARD}"
 
 
 def test_req_set_021_busy_indicator_waits_a_second_then_shows_progress_time_left_and_cancel(
@@ -402,7 +402,7 @@ def test_req_set_021_training_add_samples_does_not_freeze(
     _cancel_when_started(qtbot, page.busy, lambda: len(list(ng_dir.glob("board_5mp_*.png"))) > files_before)
     qtbot.waitUntil(lambda: status().startswith("Import cancelled"), timeout=60000)
     added = len(trained_ctx.samples(BOARD)) - before - n
-    stopped = f"Import cancelled: 0 OK and {added} NG images imported before it stopped"
+    stopped = f"Import cancelled: 0 OK and {added} NG images imported into {BOARD} before it stopped"
     assert 0 < added < n and status() == stopped, status()
     assert len(list(ng_dir.glob("board_5mp_*.png"))) - files_before == added
     assert page.samples.rowCount() == before + n + added, "the table shows the samples kept"

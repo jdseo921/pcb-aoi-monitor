@@ -178,6 +178,7 @@ class TrainingPage(Page):
         ll.addWidget(self.tip)
         self.sheet = ImportSheet(self._run_import, self._close_sheet)
         ll.addWidget(self.sheet, 2)
+        self._listed: tuple[str, str] | None = None  # the status line naming the sheet's list, and once it is gone
         self.samples = make_table(
             [self.tr("ID"), self.tr("Label"), self.tr("Defect type"), self.tr("View"), self.tr("File")]
         )
@@ -291,10 +292,12 @@ class TrainingPage(Page):
 
     def _open_sheet(self, board_model: str, files: list[ImportFile], base: str | None = None) -> None:
         """The import sheet in place of nothing: never a dialog over the file picker (sketch), for the board model in
-        the header. While it is open, its Import is the page's one blue primary and Start Training a plain button. One
+        the header. While it is open, its Import is the page's one blue primary and Start Training a plain button, the
+        other way round while its line names its board model under another in the header (`_follow_header`). One
         import at a time (#194)."""
         if self._bg is not None:
             return
+        self._unlist()
         self.sheet.open_files(board_model, files, base)
         self._primary(self.sheet.btn_import, self.btn_train)
 
@@ -304,7 +307,14 @@ class TrainingPage(Page):
             self.busy.cancel_button.click()
             return
         self.sheet.hide()
+        self._unlist()
         self._primary(self.btn_train, self.sheet.btn_import)
+
+    def _unlist(self) -> None:
+        """The status line says "(see the list)" only while the sheet shows that list."""
+        if self._listed is not None and self.shell.statusBar().currentMessage() == self._listed[0]:
+            self.shell.status(self._listed[1])
+        self._listed = None
 
     def _primary(self, blue: QPushButton, plain: QPushButton) -> None:
         for b, name in ((blue, "primary"), (plain, "")):
@@ -333,7 +343,8 @@ class TrainingPage(Page):
         if report.stopped is None:
             return None
         f, e = report.stopped
-        n = {"at": total - len(report.left), "total": total, "imported": len(report.added)}
+        n: dict[str, object] = {"at": total - len(report.left), "total": total, "imported": len(report.added)}
+        n["name"] = self.sheet.board_model  # the board model to pick in the header before Import again
         if isinstance(e, AoiError) and e.code == "AOI-TRN-008":  # this one file not copied
             reason, code = e.params["reason"], "AOI-TRN-009"
         elif n["imported"]:  # files went in before it: the message must say how many (#206)
@@ -353,18 +364,34 @@ class TrainingPage(Page):
         return {"ok": ok, "ng": len(report.added) - ok, "refused": len(report.refused)}
 
     def _report(self, report: ImportReport) -> None:
-        """The sheet shows what became of each file; a sheet whose board model is no longer the header's (another one
-        chosen while the import ran) then closes, so Import again cannot send its files elsewhere."""
+        """The sheet shows what became of each file and keeps its list; under another board model in the header (one
+        chosen while the import ran) its Import is off and a line names its own until that one is back (REQ-SET-021)."""
         self.sheet.show_report(report, self.coded_text)
-        if self.sheet.board_model != self.board_model:
-            self._close_sheet()
+        self._follow_header(self.board_model)
+
+    def _follow_header(self, name: str | None) -> None:
+        """While the sheet's line names its board model, Import is off and Start Training the page's one blue primary;
+        once that board model is back in the header, the sheet's Import is again (review)."""
+        self.sheet.follow_header(name)
+        if self.sheet.isHidden():
+            return
+        if self.sheet.away.isHidden():
+            self._primary(self.sheet.btn_import, self.btn_train)
+        else:
+            self._primary(self.btn_train, self.sheet.btn_import)
 
     def _imported(self, report: ImportReport, total: int) -> None:
+        """The status line names the board model the files went into and, while the sheet shows them, its list."""
         self._report(report)
-        n = self._counts(report)
-        said = self.tr("Imported {ok} OK and {ng} NG images").format(**n)
+        n, bm = self._counts(report), self.sheet.board_model
+        said = self.tr("Imported {ok} OK and {ng} NG images into {board_model}").format(board_model=bm, **n)
         if n["refused"]:
-            said = self.tr("Imported {ok} OK and {ng} NG images; {refused} not imported (see the list)").format(**n)
+            listed = self.tr(
+                "Imported {ok} OK and {ng} NG images into {board_model}; {refused} not imported (see the list)"
+            )
+            gone = self.tr("Imported {ok} OK and {ng} NG images into {board_model}; {refused} not imported")
+            self._listed = listed.format(board_model=bm, **n), gone.format(board_model=bm, **n)
+            said = self._listed[0]
         self.shell.status(said)
         self.refresh()  # the table shows what was imported before the dialog says how far it went
         if (stopped := self._stop_error(report, total)) is not None:
@@ -382,8 +409,8 @@ class TrainingPage(Page):
             return
         self.refresh()
         self._report(report)
-        msg = self.tr("Import cancelled: {ok} OK and {ng} NG images imported before it stopped")
-        self.shell.status(msg.format(**self._counts(report)))
+        msg = self.tr("Import cancelled: {ok} OK and {ng} NG images imported into {board_model} before it stopped")
+        self.shell.status(msg.format(board_model=self.sheet.board_model, **self._counts(report)))
         if (stopped := self._stop_error(report, len(files))) is not None:
             self.ctx.report_error(stopped, self.title)
 
@@ -593,8 +620,10 @@ class TrainingPage(Page):
 
     def on_board_model_changed(self, name: str | None) -> None:
         self.preview.set_image(None)
-        if not self.sheet.running:  # its files were picked for the board model shown before; an import that runs
-            self._close_sheet()  # goes on into that one, and its sheet closes when it ends (_report)
+        if self.sheet.running or self.sheet.reported:  # an import goes on into its board model, and a list stays,
+            self._follow_header(name)  # with Import off until that board model is back (REQ-SET-021)
+        else:  # files picked for the board model shown before, none imported yet
+            self._close_sheet()
         self.refresh()
 
     def on_show(self) -> None:

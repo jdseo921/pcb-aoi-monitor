@@ -70,14 +70,15 @@ class _RowChoice(QStyledItemDelegate):
 class ImportSheet(QGroupBox):
     """The files of one import, picked for one board model, and what to import them as. `on_import(files)` runs the
     import of copies of the rows (the page puts it on the pool, into `board_model`) and `on_close()` closes the sheet;
-    Import is off until every NG file has one of the 33 DCT types, and the files left without a label are listed as
-    such (AOI-TRN-016)."""
+    Import is off until every NG file has one of the 33 DCT types, and while the header shows another board model
+    (`follow_header`), and the files left without a label are listed as such (AOI-TRN-016)."""
 
     def __init__(self, on_import: Callable[[list[ImportFile]], None], on_close: Callable[[], None]) -> None:
         super().__init__()
         self._on_import, self._on_close = on_import, on_close
         self.files: list[ImportFile] = []
         self.board_model: str | None = None  # the files go there, whatever the header shows by then
+        self.in_header: str | None = None  # the board model the header shows: Import is off while it is another
         self.done: set[int] = set()  # rows imported or skipped as already there: Import again sends the others
         self.copied: set[int] = set()  # the rows of `done` imported by this sheet
         self.running = False
@@ -85,6 +86,9 @@ class ImportSheet(QGroupBox):
         self._said = ""  # the last report's line, in the note while no NG file waits for a type
         self._base: Path | None = None
         lay = QVBoxLayout(self)
+        self.away = QLabel()  # names `board_model` while the header shows another
+        self.away.setWordWrap(True)
+        lay.addWidget(self.away)
         row = QHBoxLayout()
         row.addWidget(QLabel(self.tr("View")))
         self.views = self._choice_row(row, [(view_text(v), v) for v in VIEWS], lambda v: self._for_all(VIEW, v))
@@ -171,9 +175,11 @@ class ImportSheet(QGroupBox):
         """Show `files`, picked for `board_model`, which the title names (named relative to `base`, the folder they
         were found in, when given), with Top checked for all (decision Q32) and their labels and types as given."""
         self.files, self.done, self.copied, self._base = files, set(), set(), Path(base) if base else None
-        self.board_model, self._said = board_model, ""
+        self.board_model, self.in_header, self._said = board_model, board_model, ""
         said = self.tr("Import {count} file(s) into {board_model}")
         self.setTitle(said.format(count=len(files), board_model=board_model))
+        said = self.tr("These files were for board model {name}: pick it in the header to import the rest")
+        self.away.setText(said.format(name=board_model))
         self.views.button(0).setChecked(True)
         labels = {f.label for f in files}
         self.labels.setExclusive(False)  # a mixed folder has no label for all until one is picked
@@ -243,10 +249,13 @@ class ImportSheet(QGroupBox):
             self.table.setItem(row, column, item)
 
     def _sync(self) -> None:
-        """Import is on while the sheet is idle and every NG file waiting to go in has its type (REQ-TRN-001)."""
+        """Import is on while the sheet is idle, the header shows its board model and every NG file waiting to go in
+        has its type (REQ-TRN-001); under another board model a line names the sheet's while files wait."""
         waiting = [i for i in range(len(self.files)) if i not in self.done]
         untyped = sum(self.files[i].label == "NG" and not self.files[i].defect_type for i in waiting)
-        self.btn_import.setEnabled(not self.running and bool(waiting) and not untyped)
+        here = self.in_header == self.board_model
+        self.btn_import.setEnabled(not self.running and here and bool(waiting) and not untyped)
+        self.away.setVisible(not self.running and not here and bool(waiting))
         self.table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers if self.running else self._edits)
         for w in (*self.views.buttons(), *self.labels.buttons(), self.category, self.type_box):
             w.setEnabled(not self.running)  # the files are the pool's while they are imported
@@ -256,6 +265,17 @@ class ImportSheet(QGroupBox):
         for column in range(LABEL, STATUS + 1):  # once a change, not once a cell; the file name takes what is left
             self.table.resizeColumnToContents(column)
         self._show_why()  # a row made ready again by a change has no coded line left
+
+    def follow_header(self, board_model: str | None) -> None:
+        """The header now shows `board_model`: while it is not the sheet's, Import is off and a line names the sheet's,
+        so the rest of its files go nowhere else (REQ-SET-021); once the header shows it again, Import is back."""
+        self.in_header = board_model
+        self._sync()
+
+    @property
+    def reported(self) -> bool:
+        """Whether the sheet shows what became of its files, which it keeps until Close or Esc."""
+        return bool(self._said)
 
     # --- the import -----------------------------------------------------------------------------------------------
     def start(self) -> None:
