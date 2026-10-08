@@ -320,20 +320,32 @@ CODES: dict[str, ErrorCode] = {
         ),
         ErrorCode(
             "AOI-TRN-008",
-            "Images not imported",
-            "Copying {path} into the workspace failed ({reason}), so none of the {count} image(s) picked were"
-            " imported.",
-            "Check that the file is still there and can be opened and that the workspace drive has free space, then"
-            " import the images again.",
+            QT_TRANSLATE_NOOP("Errors", "Images not imported"),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Copying {path} into the workspace failed ({reason}), so none of the {count} image(s) picked were"
+                " imported.",
+            ),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Check that the file is still there and can be opened and that the workspace drive has free space, then"
+                " import the images again.",
+            ),
         ),
         ErrorCode(
             "AOI-TRN-009",
-            "Folder import stopped part-way",
-            "Copying {path} into the workspace failed ({reason}), so the import of {folder} stopped at image {at} of"
-            " {total}; the {imported} image(s) imported before it stay in the sample table.",
-            "Check that the file is still there and can be opened and that the workspace drive has free space."
-            " Importing the folder again would add those {imported} a second time: import the images not yet imported"
-            " with + OK or + NG, or first remove the {imported} from the sample table.",
+            QT_TRANSLATE_NOOP("Errors", "Folder import stopped part-way"),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Copying {path} into the workspace failed ({reason}), so the import of {folder} stopped at image {at}"
+                " of {total}; the {imported} image(s) imported before it stay in the sample table.",
+            ),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Check that the file is still there and can be opened and that the workspace drive has free space."
+                " Importing the folder again would add those {imported} a second time: import the images not yet"
+                " imported with + OK or + NG, or first remove the {imported} from the sample table.",
+            ),
         ),
         ErrorCode(
             "AOI-RCP-001",
@@ -353,20 +365,32 @@ CODES: dict[str, ErrorCode] = {
         ),
         ErrorCode(
             "AOI-LOG-001",
-            "Export stopped part-way",
-            "Copying {file} to {folder} failed ({reason}), so the export stopped after {copied} of {total} overlay"
-            " image(s); the audit trail records those {copied}.",
-            "Check that the drive is connected, has free space and can be written, that nothing in the folder already"
-            " has the name {file}, and that the record's overlay image is still in the results folder; then export"
-            " again.",
+            QT_TRANSLATE_NOOP("Errors", "Export stopped part-way"),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Copying {file} to {folder} failed ({reason}), so the export stopped after {copied} of {total} overlay"
+                " image(s); the audit trail records those {copied}.",
+            ),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Check that the drive is connected, has free space and can be written, that nothing in the folder"
+                " already has the name {file}, and that the record's overlay image is still in the results folder; then"
+                " export again.",
+            ),
         ),
         ErrorCode(
             "AOI-LOG-002",
-            "Export not written",
-            "The export {path} could not be written: {reason}. Nothing was exported, and a file of that name already"
-            " there is left as it was.",
-            "Choose a folder that can be written, close any program that has the file open and check the free disk"
-            " space, then export again.",
+            QT_TRANSLATE_NOOP("Errors", "Export not written"),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "The export {path} could not be written: {reason}. Nothing was exported, and a file of that name"
+                " already there is left as it was.",
+            ),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Choose a folder that can be written, close any program that has the file open and check the free disk"
+                " space, then export again.",
+            ),
         ),
         ErrorCode(
             "AOI-USR-001",
@@ -383,9 +407,11 @@ CODES: dict[str, ErrorCode] = {
         ),
         ErrorCode(
             "AOI-USR-003",
-            "Unknown user",
-            "There is no user named {name} in this workspace, so no role to sign in with.",
-            "Pick a user from the list under Switch User; an Admin adds users on the Settings page.",
+            QT_TRANSLATE_NOOP("Errors", "Unknown user"),
+            QT_TRANSLATE_NOOP("Errors", "There is no user named {name} in this workspace, so no role to sign in with."),
+            QT_TRANSLATE_NOOP(
+                "Errors", "Pick a user from the list under Switch User; an Admin adds users on the Settings page."
+            ),
         ),
         ErrorCode(
             "AOI-SET-001",
