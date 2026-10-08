@@ -266,8 +266,14 @@ class Database:
             (now_utc(), board_model, model_version, folder, json.dumps(metrics), json.dumps(results)),
         )
 
-    def alarm(self, level: str, message: str) -> None:
-        self.execute("INSERT INTO alarms(time, level, message) VALUES(?,?,?)", (now_utc(), level, message))
+    def alarm(self, level: str, message: str, code: str | None = None) -> None:
+        self.execute(
+            "INSERT INTO alarms(time, level, code, message) VALUES(?,?,?,?)", (now_utc(), level, code, message)
+        )
+
+    def alarms(self, limit: int = 1000) -> list[dict[str, Any]]:
+        """The newest alarms first, at most `limit` of them (REQ-INSP-006)."""
+        return self.query("SELECT * FROM alarms ORDER BY id DESC LIMIT ?", (int(limit),))
 
     def users(self) -> list[dict[str, Any]]:
         return self.query("SELECT * FROM users ORDER BY id")

@@ -41,6 +41,12 @@ CODES: dict[str, ErrorCode] = {
             "Check the file name's extension (.png or .jpg) and try again.",
         ),
         ErrorCode(
+            "AOI-INSP-003",
+            "Board failed inspection",
+            "Board {board} failed inspection with {defects} defect(s).",
+            "Review the result on the Compare page before the board moves on.",
+        ),
+        ErrorCode(
             "AOI-TRN-001",
             "AI model file refused",
             "AI model file refused: {path} is not a weights-only model file this app wrote ({reason}).",
@@ -51,6 +57,18 @@ CODES: dict[str, ErrorCode] = {
             "Not enough good boards to train",
             "Training needs at least 2 OK (good board) images; {found} found.",
             "Upload more OK images for this board model, then train again.",
+        ),
+        ErrorCode(
+            "AOI-TRN-003",
+            "No trained AI model",
+            "Board model {board} has no trained AI model, so only the golden-board comparison runs.",
+            "Train a model on the Training page when the AI checks are needed.",
+        ),
+        ErrorCode(
+            "AOI-USR-001",
+            "Not allowed for this role",
+            "{what} needs the {roles} role.",
+            "Sign in as a user with that role, or ask one to do it.",
         ),
         ErrorCode(
             "AOI-SET-001",
@@ -89,6 +107,13 @@ CODES: dict[str, ErrorCode] = {
             "Migration files invalid",
             "The app's migration files are not valid: {problem}.",
             "Reinstall the app and report it; this is a defect in the build.",
+        ),
+        ErrorCode(
+            "AOI-SET-007",
+            "Unexpected error",
+            "An unexpected error ({error_type}) stopped the last action{context}.",
+            "Try again; if it happens again, restart the app and send the log file (the workspace's logs folder) to "
+            "support.",
         ),
     )
 }

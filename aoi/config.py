@@ -29,6 +29,7 @@ class Settings:
     default_epochs: int = 60
     log_retention_days: int = 30  # spec 4.4: auto-archive logs older than 30 days
     language: str = "en"  # en | ko (localization planned for 2H 2027)
+    last_page: str = "Home"  # the page to reopen after a restart (REQ-LOG-005)
 
     # --- paths derived from workspace ------------------------------------
     @property
