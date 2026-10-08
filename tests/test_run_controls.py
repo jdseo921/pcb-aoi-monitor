@@ -1,6 +1,6 @@
 """REQ-INSP-005 and the 100 ms of REQ-INSP-002 on the Inspection page (stage S24).
 
-Start, Stop, Next Board and Save Result are actions that a key and a button share, each answers within 100 ms, and the
+Start, Stop, Next Board and Save Image… are actions that a key and a button share, each answers within 100 ms, and the
 verdict is painted within 100 ms of the result. The keys are the sketch's (docs/sketches/inspection-run-controls.md,
 PR #79): F5, F6, F8, F9, Ctrl+O, Ctrl+Shift+O and Alt+V, wherever the focus is on the page and only while the page is
 shown. #120: one board is inspected at a time per page.
@@ -125,7 +125,7 @@ def test_req_insp_005_keys_and_buttons_do_the_same(
 ) -> None:
     """Each run control is one action behind a 120 × 56 px button labelled with its key and the key itself (the
     sketch's table): F8 and the Next Board button each inspect one board, F5 runs the queue, F6 stops it after the board
-    in hand, F9 saves the result; Ctrl+O and Ctrl+Shift+O load, Alt+V cycles the view. A key works with the focus
+    in hand, F9 saves the picture; Ctrl+O and Ctrl+Shift+O load, Alt+V cycles the view. A key works with the focus
     anywhere on the page and does nothing from another page."""
     engine.release()
     win, page = inspection

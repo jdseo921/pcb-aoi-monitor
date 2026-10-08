@@ -35,4 +35,12 @@ locking the validation set)
 
 ## 8. Logs and audit
 
-(to be written: history, export, archive, the audit trail, error codes)
+**Export CSV** on Logs & Export writes two files, UTF-8 with a byte-order mark so Excel opens Korean text: the file you
+name holds one row per record (id, time, board model, view, AI model version, recipe revision, result, score, defect
+count and types, operator, image and overlay paths, then the record's, model's and recipe's UUIDs), and `<name>_checks.csv`
+beside it holds one row per check that decided each verdict: the record's time, board model, view, model version and
+recipe revision with their UUIDs, then the check's number, region (the whole board, or an ROI's name and box), metric,
+source, value, threshold, rule and result. Records from before the checks were stored have no rows in the second file.
+Each export is confirmed first and written whole or not at all, and the audit trail records it.
+
+(to be written: history, archive, the audit trail, error codes)

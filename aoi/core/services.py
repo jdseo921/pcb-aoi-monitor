@@ -472,6 +472,11 @@ class AppContext:
         explain), in order; [] for a record from before migration 0006 (REQ-INSP-012)."""
         return self.db.checks_for(inspection_id)
 
+    def checks_for_many(self, inspection_ids: list[int]) -> dict[int, list[dict[str, Any]]]:
+        """The checks of many inspections in one pass, {inspection_id: [checks in order]}, as the CSV export needs
+        them; an id without checks maps to []."""
+        return self.db.checks_for_many(inspection_ids)
+
     def inspection_result(self, inspection_id: int) -> InspectionResult | None:
         """One stored result read back without its images: the verdict, checks, defects, compare metrics and regions
         as they were decided, for Compare to show (REQ-INSP-008); None for a record from before migration 0006."""
@@ -580,9 +585,16 @@ class AppContext:
         return n
 
     @requires("Engineer", "Exporting CSV")
-    def export_csv(self, path: str | Path, rows: list[dict[str, Any]], what: str = "inspections") -> int:
-        """Write `rows` as CSV to `path`, whole or not at all, and audit the export; returns the row count."""
-        export_csv(path, rows)
+    def export_csv(
+        self,
+        path: str | Path,
+        rows: list[dict[str, Any]],
+        what: str = "inspections",
+        fieldnames: list[str] | None = None,
+    ) -> int:
+        """Write `rows` as CSV to `path`, whole or not at all, and audit the export; returns the row count. `fieldnames`
+        gives the header when `rows` may be empty."""
+        export_csv(path, rows, fieldnames)
         self.audit("export.csv", what, None, None, {"path": str(path), "rows": len(rows)})
         return len(rows)
 
@@ -609,10 +621,13 @@ def classification_metrics(rows: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
-def export_csv(path: str | Path, rows: list[dict[str, Any]]) -> None:
+def export_csv(path: str | Path, rows: list[dict[str, Any]], fieldnames: list[str] | None = None) -> None:
+    """`rows` as CSV, UTF-8 with a BOM so Excel opens Korean; the header comes from `fieldnames` or the first row, so a
+    file with no rows still names its columns when `fieldnames` is given."""
     buf = io.StringIO(newline="")
-    if rows:
-        w = csv.DictWriter(buf, fieldnames=list(rows[0].keys()))
+    names = fieldnames or (list(rows[0].keys()) if rows else None)
+    if names:
+        w = csv.DictWriter(buf, fieldnames=names)
         w.writeheader()
         w.writerows(rows)
-    atomic.write_text(path, buf.getvalue(), encoding="utf-8-sig" if rows else "utf-8")  # BOM: Excel opens Korean
+    atomic.write_text(path, buf.getvalue(), encoding="utf-8-sig" if names else "utf-8")

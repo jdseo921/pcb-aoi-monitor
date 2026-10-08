@@ -75,6 +75,13 @@ CODES: dict[str, ErrorCode] = {
             "raised.",
         ),
         ErrorCode(
+            "AOI-INSP-008",
+            "Result not saved",
+            "The result of {file} was shown but could not be saved, so it is not in Logs & Export.",
+            "Check the free disk space and that the workspace folder can be written, then press Next Board to carry on"
+            " and inspect {file} again later.",
+        ),
+        ErrorCode(
             "AOI-TRN-001",
             "AI model file refused",
             "AI model file refused: {path} is not a weights-only model file this app wrote ({reason}).",
