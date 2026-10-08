@@ -196,6 +196,10 @@ the only addition expected.
 
 ## 7. Requirement traceability (Stage 1)
 
+The requirement register is `docs/requirements/stage1.md`; `tools/trace_matrix.py` generates the trace matrix
+from it on every CI run (the `trace-matrix` artifact). The table below is the v0.1 draft's informal check against
+the source specifications and stays as history.
+
 | Requirement | Where | Status |
 |---|---|---|
 | Image upload PNG/JPG | Training, Inspection | Done (also BMP/TIFF) |
