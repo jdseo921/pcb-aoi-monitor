@@ -581,10 +581,9 @@ CODES: dict[str, ErrorCode] = {
         ),
         ErrorCode(
             "AOI-SET-012",
-            QT_TRANSLATE_NOOP("Errors", "Workspace database in use"),
+            QT_TRANSLATE_NOOP("Errors", "Workspace in use"),
             QT_TRANSLATE_NOOP(
-                "Errors",
-                "Another program holds the workspace database {path}, so the app could not write to it: {error}.",
+                "Errors", "Another program is using {path} in the workspace, so the app could not open it: {error}."
             ),
             QT_TRANSLATE_NOOP(
                 "Errors",

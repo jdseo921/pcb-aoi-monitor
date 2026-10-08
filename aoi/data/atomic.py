@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import contextlib
 import os
+import re
 import shutil
 import uuid
 from collections.abc import Callable, Sequence
@@ -17,13 +18,14 @@ from pathlib import Path
 from typing import BinaryIO
 
 TEMP_SUFFIX = ".tmp"
+TEMP_NAME = re.compile(r"\..+\.[0-9a-f]{8}" + re.escape(TEMP_SUFFIX))  # what `temp_path` makes, and nothing else
 
 
 def write_with(path: str | Path, writer: Callable[[BinaryIO], object]) -> None:
     """Call `writer` with a binary file on a temporary name next to `path`, then move it into place."""
     target = Path(path)
     target.parent.mkdir(parents=True, exist_ok=True)
-    tmp = _temp_name(target)
+    tmp = temp_path(target)
     try:
         with open(tmp, "wb") as f:
             writer(f)
@@ -47,13 +49,13 @@ def write_all(files: Sequence[tuple[str | Path, bytes]]) -> None:
         for path, data in files:
             target = Path(path)
             target.parent.mkdir(parents=True, exist_ok=True)
-            staged.append((target, _temp_name(target)))
+            staged.append((target, temp_path(target)))
             with open(staged[-1][1], "wb") as f:
                 f.write(data)
                 f.flush()
                 os.fsync(f.fileno())
         for target, tmp in staged:
-            old = _temp_name(target) if target.is_file() else None
+            old = temp_path(target) if target.is_file() else None
             if old is not None:
                 os.replace(target, old)
             try:
@@ -100,16 +102,24 @@ def copy_file(src: str | Path, dst: str | Path) -> None:
     write_with(dst, copy)
 
 
-def sweep_temp_files(folder: str | Path) -> int:
-    """Remove temporary files a crash left behind under `folder`; returns how many."""
-    leftovers = [p for p in Path(folder).rglob(f".*{TEMP_SUFFIX}") if p.is_file()]
+def sweep_temp_files(folder: str | Path) -> tuple[int, list[tuple[Path, str]]]:
+    """Remove the temporary files a crash left behind under `folder`: only names `temp_path` makes, so a file another
+    program left is never touched. A file that cannot be deleted (read-only, held open) is harmless and skipped, never
+    an error (#204). Returns how many were removed, and each file skipped with the reason."""
+    leftovers = [p for p in Path(folder).rglob(f".*{TEMP_SUFFIX}") if TEMP_NAME.fullmatch(p.name) and p.is_file()]
+    removed, skipped = 0, list[tuple[Path, str]]()
     for p in leftovers:
-        p.unlink(missing_ok=True)
-    return len(leftovers)
+        try:
+            p.unlink(missing_ok=True)
+        except OSError as e:
+            skipped.append((p, str(e)))
+        else:
+            removed += 1
+    return removed, skipped
 
 
-def _temp_name(target: Path) -> Path:
-    """A hidden name beside `target` that `sweep_temp_files` removes after a crash."""
+def temp_path(target: Path) -> Path:
+    """A hidden name beside `target`, ``.<name>.<8 hex digits>.tmp``, that `sweep_temp_files` removes after a crash."""
     return target.with_name(f".{target.name}.{uuid.uuid4().hex[:8]}{TEMP_SUFFIX}")
 
 

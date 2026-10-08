@@ -425,7 +425,7 @@ def test_req_set_019_a_database_in_use_at_start_up_offers_the_folder_again(
     assert ctx is not None and ctx.settings.root == ws and at_picker == [ws / "aoi.sqlite"]  # closed, no log open
     ctx.close()
     other.close()
-    assert [title for title, _ in dialogs] == ["AOI-SET-012 Workspace database in use"]
+    assert [title for title, _ in dialogs] == ["AOI-SET-012 Workspace in use"]
     assert str(ws / "aoi.sqlite") in dialogs[0][1] and "database is locked" in dialogs[0][1]
 
 

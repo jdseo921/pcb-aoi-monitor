@@ -68,31 +68,35 @@ def test_req_set_005_error_dialogs_alarms_and_notes_show_in_the_ui_language(
         with pytest.raises(AoiError) as e:
             trained_ctx.import_samples("B", [], "OK")
         assert dialog_text(ErrorReport.of(e.value))[1].startswith("§§Importing samples needs the §Engineer or Admin")
-        restarted = _window(qtbot, AppContext(Settings(workspace=trained_ctx.settings.workspace, device="cpu")))
-        restarted.navigate("Inspection")
-        alarms = restarted.pages["Inspection"].alarms
+        win.close()  # the app closes before it starts again: one copy per workspace (#204)
+        ctx = AppContext(Settings(workspace=trained_ctx.settings.workspace, device="cpu"))
+        win = _window(qtbot, ctx)  # the restart, which goes on to the end
+        win.navigate("Inspection")
+        alarms = win.pages["Inspection"].alarms
         lines = [alarms.item(i).text().split("  ", 3)[1:] for i in range(alarms.count())]
         assert lines == [
             ["[ERROR]", "AOI-USR-001", refused],
             ["[NG]", "AOI-INSP-003", f"§{ng_board.name}: {len(page.last.defects)} defect(s)"],
         ]
-        english = [a["message"] for a in trained_ctx.alarms()]
+        english = [a["message"] for a in ctx.alarms()]
         assert english == [
             "Changing recipes needs the Engineer or Admin role.",
             f"{ng_board.name}: {len(page.last.defects)} defect(s)",
         ]
-        unexpected = dialog_text(trained_ctx.report_error(ValueError("x"), compare.title))
+        compare = win.pages["Compare"]
+        unexpected = dialog_text(ctx.report_error(ValueError("x"), compare.title))
         assert unexpected[1].startswith("§An unexpected error (ValueError) stopped the last action§ (§Compare).")
-        for path in trained_ctx.db.map_paths(page.last_id):
+        for path in ctx.db.map_paths(page.last_id):
             Path(str(path)).unlink()
         compare.show_stored(page.last_id)
-        qtbot.waitUntil(trained_ctx.jobs.idle, timeout=20000)
+        qtbot.waitUntil(ctx.jobs.idle, timeout=20000)
         assert f"AOI-CMP-001 §The result of {ng_board.name} was saved without" in compare.note.text()
         _, pane, _, _ = compare.golden_board_unreadable(AoiError("AOI-INSP-001", path="gone.png"))
         assert pane.startswith("§AOI-INSP-001 §The file gone.png could not be opened as an image. ")
         bad = Path(trained_ctx.settings.workspace).with_name("board_0042.png")
         bad.write_bytes(b"not an image at all")
         shown = len(dialogs)
+        page = win.pages["Inspection"]  # the restarted window's: the first one is closed (#204)
         page._set_queue([bad])
         page.next_board()
         qtbot.waitUntil(lambda: len(dialogs) > shown and page.worker is None, timeout=30000)

@@ -276,6 +276,7 @@ def test_req_trn_014_case_variant_names_and_another_models_file_are_refused(
     other = anomaly.AnomalyModel.load(rec["path"])  # another AI model, saved over this one's file
     other.meta["uuid"] = "another-model-uuid"
     other.save(Path(rec["path"]))
+    ctx.close()  # a restart: one copy per workspace (#204)
     restarted = AppContext(Settings(workspace=ctx.settings.workspace, device="cpu"))  # no AI model cached
     with pytest.raises(anomaly.ModelFileError) as foreign:
         restarted.load_model("TBOX-A1")

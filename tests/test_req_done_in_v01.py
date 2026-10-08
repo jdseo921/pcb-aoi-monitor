@@ -324,7 +324,8 @@ def test_req_rcp_002_five_roi_types_and_five_fields_save_and_reload(
         qtbot.mouseClick(_button(page, "Apply"), Qt.MouseButton.LeftButton)
     qtbot.mouseClick(_button(page, "Save Recipe"), Qt.MouseButton.LeftButton)
 
-    reopened = engineer(AppContext(Settings(workspace=trained_ctx.settings.workspace, device="cpu")))  # a restart
+    win.close()  # a restart: the app closes first, one copy per workspace (#204)
+    reopened = engineer(AppContext(Settings(workspace=trained_ctx.settings.workspace, device="cpu")))
     want = [ROI(f"R{i + 1}", t, *boxes[i], *fields[i]) for i, t in enumerate(ROI_TYPES)]
     assert reopened.recipe(BOARD)[1].rois == want
     win = _window(qtbot, reopened)

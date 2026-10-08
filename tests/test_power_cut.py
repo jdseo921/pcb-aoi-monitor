@@ -53,6 +53,7 @@ NOT_ATOMIC = {  # (file, call as the scan shows it): why it may write outside at
     ("aoi/logging_setup.py", "open(..., 'a')"): "the log appends line by line; a cut can shorten only its last line",
     ("aoi/data/migrate.py", "os.replace()"): "the schema backup: SQLite's backup API writes a temp copy, renamed whole",
     ("aoi/core/services.py", "model.save()"): "AnomalyModel.save writes the .pt through atomic.write_with",
+    ("aoi/data/workspace_lock.py", "os.open(write)"): "an empty lock file, never written: the OS lock counts (#204)",
 }
 
 
@@ -73,7 +74,7 @@ def test_req_insp_008_writes_are_atomic(tmp_path: Path) -> None:
     atomic.copy_file(target, tmp_path / "sub" / "copy.png")
     assert (tmp_path / "sub" / "copy.png").read_bytes() == b"new"
     (tmp_path / "sub" / ".left.deadbeef.tmp").write_bytes(b"x")
-    assert atomic.sweep_temp_files(tmp_path) == 1 and not (tmp_path / "sub" / ".left.deadbeef.tmp").exists()
+    assert atomic.sweep_temp_files(tmp_path) == (1, []) and not (tmp_path / "sub" / ".left.deadbeef.tmp").exists()
 
 
 def non_atomic_writes(path: Path) -> list[tuple[str, str]]:

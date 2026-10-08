@@ -456,7 +456,8 @@ them (they belong to the replaced file), then start the version upgraded from; r
 only in the replaced file. The app never deletes the copies (nothing is deleted without an Admin action); a one-click
 restore belongs to the installer. A refused workspace (`AOI-SET-001`, `-002`, `-003`, `-005`, `-011` for a folder
 that cannot be created or a database SQLite cannot open or write at start-up, `-012` for one another program holds
-locked; the database and the log closed first, #171) is reported before any window opens, so `open_workspace` in
+locked, and for a workspace another copy of the app has open; the database and the log closed first, #171, #204) is
+reported before any window opens, so `open_workspace` in
 `aoi/ui/errors.py` follows the message with a folder picker: the folder chosen is opened, then saved to `settings.json`
 as the Settings page saves it (logged as `settings.save_failed` if it cannot be), and Cancel closes the app
 (REQ-SET-016). An error at start-up without a code shows `AOI-SET-007`, and its trace goes to the log in the default
@@ -483,8 +484,16 @@ and 20 random kills, each after a saved result, lose no finished result. The two
 through `atomic.write_all`: both are written under temporary names, then moved into place, the file each replaces kept
 until both are in place and put back if the second cannot be, and the export is audited only then (#195). A file the
 user named for an export or Save Image that cannot be written (another program holds it open, a folder of that name) is
-`AOI-LOG-002`, naming the file; a Save Image name with a suffix OpenCV cannot encode is `AOI-INSP-002`. Every error a
-user can see is
+`AOI-LOG-002`, naming the file; a Save Image name with a suffix OpenCV cannot encode is `AOI-INSP-002`. One copy of the
+app opens a workspace at a time: `AppContext` takes an exclusive operating-system lock on `<workspace>/.aoi.lock`
+(`aoi/data/workspace_lock.py`: `fcntl.flock` on POSIX, `msvcrt.locking` on Windows, on a byte past the empty file's end
+so a backup still reads it) before it opens the log or the database, and lets go in `close()` and on every refusal; a
+second copy is refused with `AOI-SET-012` before it touches anything. The system drops the lock when the process ends,
+so a crash or a power cut never blocks the next start. Holding it, the start-up sweep removes every temporary file the
+writer names (`.<name>.<8 hex digits>.tmp`, `atomic.temp_path`, the migration backup's included) as a crash's leftover;
+a file with another program's name is left alone, and one that cannot be deleted (read-only, held open) is logged as
+`sweep.skipped` with its path relative to the workspace and kept, never a start-up failure (#204). Every error a user
+can see is
 an `AoiError` from the catalogue in `aoi/errors.py`, with a code `AOI-<AREA>-<NNN>`, what happened and what to do;
 `docs/error-codes.md` is generated from it (REQ-LOG-004, REQ-SET-019). An error's title, what happened and what to do
 are `Phrase`s (`aoi/errors.py`, no Qt), each catalogue text marked `QT_TRANSLATE_NOOP("Errors", …)` so it is in
