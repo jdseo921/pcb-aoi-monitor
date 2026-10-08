@@ -1,0 +1,71 @@
+# ADR 0007: A one-folder Windows build from CI, unsigned until the installer and the certificate exist
+
+- Status: Proposed. Jay's merge of this record accepts it.
+- Date: 2026-10-08
+- Decides: the product owner (Jay), until a tech lead joins
+- Related: REQ-SET-012 (its build part; the installer and signing are still open); Engineering standard "Build",
+  "Signing", "Scans and SBOM" and "Release 1.0 polish"; Legal & Compliance "Open-source and third-party licenses";
+  Customers & Launch "Demos"; [ADR 0003](0003-dependency-pinning.md); threat model, Spoofing row; plan items J6
+  (code-signing certificate) and J8 (license exceptions, two-person release approval)
+
+## Context
+
+Until now the app ran only from source: Python, a virtual environment and three pip commands on every PC. Jay asked
+for a build on GitHub that a reviewer or the reference station can start without Python. The standards fix the
+shape of a release: PyInstaller's one-folder mode inside an Inno Setup or MSIX installer, code-signed with a trusted
+timestamp, built by CI from a tagged commit after two approvals, with a CycloneDX SBOM, and with every third-party
+notice shipped. The installer, the certificate (J6) and a second approver (J8) do not exist yet.
+
+## Decision
+
+1. **PyInstaller, one folder, no console.** `installer/aoi.spec` builds `dist/AOI-PoC-Inspector/` with
+   `AOI-PoC-Inspector.exe` and its `_internal/` folder, so the Qt libraries stay separate files a user can replace
+   (LGPL). The migrations go in as data. No UPX, which antivirus software often flags. setuptools, pkg_resources,
+   distutils and tkinter stay out: only `torch.utils.cpp_extension`, which builds C++ extensions, imports setuptools.
+2. **Pinned and hashed like everything else.** `requirements-build.txt` pins PyInstaller 6.22.3,
+   pyinstaller-hooks-contrib 2026.8, and pefile and pywin32-ctypes with their Windows marker; `tools/make_lock.py`
+   writes `requirements-build.lock` (the runtime pins plus these) next to the other four locks, CI's lock job checks
+   it, `tests/test_locks.py` checks it offline, and pip-audit scans it.
+3. **Only checked code ships.** While building, the spec names the installed package every bundled file comes from
+   (`tools/third_party_notices.py`) and stops when a file comes from a package outside the shipped set
+   (`requirements.lock` and `requirements-torch-cpu.lock`, whose licenses CI's license gate checks) or from anywhere
+   other than the app, Python, PyInstaller's work folder and Microsoft's Visual C++ runtime, such as a DLL found on
+   the build machine's PATH.
+4. **Notices in the folder.** The spec writes `THIRD_PARTY_NOTICES.txt` beside the .exe: Qt's LGPL notice first,
+   with where Qt's source is, then each bundled package's declared license and every license file it installs, then
+   Python's license, which covers the libraries Python bundles. The PySide6 and Shiboken6 wheels carry no LGPL text,
+   so `installer/licenses/` holds the FSF's LGPL-3.0 and GPL-3.0 texts, copied verbatim from Debian's
+   `/usr/share/common-licenses` (SHA-256 `e3a994d8…` and `3972dc97…`, the hashes published for gnu.org's copies).
+5. **PyInstaller's own parts.** Its bootloader and loader, embedded in every .exe, are under the GPL-2.0-or-later
+   with its Bootloader exception, which allows them in any program without the GPL's terms reaching it; its run-time
+   hooks are under Apache-2.0. The Legal standard does not allow GPL code, yet its own "Packaging" rule requires
+   PyInstaller, so this is listed for Jay's J8 decision rather than decided here.
+6. **CI builds and starts it.** `.github/workflows/build.yml` runs on Windows for every push to main, on demand, and
+   on pull requests that change the build. It installs from the hashed locks, builds, starts the .exe on an empty
+   workspace (`tools/smoke_test_build.py`: "app.start" logged, 15 s with no error, every migration applied), adds
+   `BUILD-INFO.txt` and `SHA256SUMS.txt`, and keeps the folder as the run's artifact for 30 days. After a failed
+   start it rebuilds with a console and starts that, so the log shows the error.
+7. **An internal test build, never a release.** It is unsigned, has no installer and is named `…-unsigned`;
+   `BUILD-INFO.txt` says it must not go to a customer or into a demo. Releases stay as the Engineering standard says.
+
+## Alternatives considered
+
+- **Nuitka or Cython**, which the Legal standard suggests (SHOULD) because bytecode decompiles easily. While the
+  repository is public the source is public too, so this protects nothing yet; it is worth revisiting with the
+  installer, and PyInstaller is what the standards name.
+- **PyInstaller's one-file mode.** One .exe is simpler to hand over, but it unpacks to a temporary folder at every
+  start and puts the Qt libraries inside the .exe, which the LGPL rule forbids.
+- **A GitHub release per build.** It would sit next to the public code as if it were a release; the run's artifact
+  is enough for internal tests, and a pre-release waits for Jay to ask for it.
+- **The dev lock for the build.** It holds test tools (pillow, scikit-image, pytest) that PyInstaller could bundle
+  through optional imports; the build lock holds the runtime and PyInstaller only.
+
+## Consequences
+
+- A reviewer or the reference station can run any main commit without Python: download the run's artifact, unzip it
+  and start the .exe. Windows SmartScreen warns about an unknown publisher until the build is signed.
+- Each build is about 1 GB unzipped, mostly PyTorch. Actions minutes are free in a public repository; if the
+  repository turns private, each Windows build's minutes (counted double) and its artifact count against the plan.
+- Still to do for REQ-SET-012: the Inno Setup or MSIX installer with an uninstaller, signing once J6 lands, the GPU
+  option with the CUDA runtime (blocked on J8's NVIDIA licenses), the CycloneDX SBOM, the About dialog's notices,
+  and a written offer for the Qt source in the EULA and installer.

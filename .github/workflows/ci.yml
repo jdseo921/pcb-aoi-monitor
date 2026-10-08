@@ -141,7 +141,7 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
       - run: python -m pip install --require-hashes -r requirements-dev.lock
-      - name: Regenerate the four lock files from their inputs and compare (prints any difference)
+      - name: Regenerate the five lock files from their inputs and compare (prints any difference)
         run: python tools/make_lock.py --check
 
   perf:
@@ -200,9 +200,10 @@ jobs:
         run: |
           bandit -q -r aoi main.py tools --exit-zero
           bandit -q -r aoi main.py tools --severity-level high
-      - name: pip-audit (known vulnerabilities in every locked package, both PyTorch builds included)
+      - name: pip-audit (known vulnerabilities in every locked package, both PyTorch builds and PyInstaller included)
         run: |
           pip-audit --no-deps -r requirements-dev.lock
+          pip-audit --no-deps -r requirements-build.lock
           # The vulnerability database knows torch by its public version: 2.14.1, not 2.14.1+cpu.
           sed -n -E 's/^([A-Za-z0-9._-]+)==([^+ ;]+).*/\1==\2/p' requirements-torch-*.lock | sort -u > torch-pins.txt
           pip-audit --no-deps -r torch-pins.txt

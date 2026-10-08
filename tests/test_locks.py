@@ -1,6 +1,6 @@
 """The hashed lock files (stage S04, #17): every package is pinned and hashed, and the pins agree with the inputs.
 
-tools/make_lock.py writes the four lock files, and CI's "Lock files match their inputs" job regenerates them from the
+tools/make_lock.py writes the five lock files, and CI's "Lock files match their inputs" job regenerates them from the
 package indexes. These checks need no network, so a hand edit that drops a hash or a pin that drifts from
 requirements.txt fails in every test run.
 """
@@ -15,7 +15,9 @@ import pytest
 from tools import make_lock as ml
 
 ROOT = Path(__file__).resolve().parents[1]
-PYPI_LOCKS = ["requirements.lock", "requirements-dev.lock"]
+PYPI_LOCKS = ["requirements.lock", "requirements-dev.lock", "requirements-build.lock"]
+# Each tool lock: the runtime pins plus its own inputs (the Windows build tools since REQ-SET-012, ADR 0007)
+TOOL_LOCKS = {"requirements-dev.txt": "requirements-dev.lock", "requirements-build.txt": "requirements-build.lock"}
 TORCH_LOCKS = {build: f"requirements-torch-{build}.lock" for build in ml.TORCH_BUILDS}
 HASH = re.compile(r"^    --hash=sha256:[0-9a-f]{64}( \\)?$")
 
@@ -49,15 +51,17 @@ def test_every_locked_package_is_pinned_and_hashed(name: str) -> None:
 
 
 def test_the_pypi_locks_pin_the_direct_requirements_and_agree_with_each_other() -> None:
-    runtime, dev = entries("requirements.lock"), entries("requirements-dev.lock")
+    runtime = entries("requirements.lock")
     for pkg, version in direct_pins("requirements.txt").items():
         if pkg == "torch":
             continue
         assert runtime[pkg][0] == version, f"requirements.lock pins {pkg} {runtime[pkg][0]}, requirements.txt {version}"
-    for pkg, version in direct_pins("requirements-dev.txt").items():
-        assert dev[pkg][0] == version, f"requirements-dev.lock pins {pkg} {dev[pkg][0]}, requirements-dev.txt {version}"
-    for pkg, (version, _) in runtime.items():
-        assert dev[pkg][0] == version, f"{pkg}: requirements-dev.lock {dev[pkg][0]}, requirements.lock {version}"
+    for txt, lock in TOOL_LOCKS.items():
+        tools = entries(lock)
+        for pkg, version in direct_pins(txt).items():
+            assert tools[pkg][0] == version, f"{lock} pins {pkg} {tools[pkg][0]}, {txt} {version}"
+        for pkg, (version, _) in runtime.items():
+            assert tools[pkg][0] == version, f"{pkg}: {lock} {tools[pkg][0]}, requirements.lock {version}"
 
 
 def test_pytorch_and_its_nvidia_libraries_stay_out_of_the_pypi_locks() -> None:
@@ -81,14 +85,15 @@ def test_each_pytorch_lock_holds_the_pinned_version_of_its_own_build() -> None:
             assert pkg not in runtime, f"{name}: {pkg} is also in requirements.lock"
 
 
-def test_windows_only_requirements_keep_their_marker() -> None:
-    dev = entries("requirements-dev.lock")
-    for raw in (ROOT / "requirements-dev.txt").read_text(encoding="utf-8").splitlines():
+@pytest.mark.parametrize("txt", TOOL_LOCKS)
+def test_windows_only_requirements_keep_their_marker(txt: str) -> None:
+    locked = entries(TOOL_LOCKS[txt])
+    for raw in (ROOT / txt).read_text(encoding="utf-8").splitlines():
         line = raw.split("#", 1)[0].strip()
         if ";" in line:
             req, marker = (part.strip() for part in line.split(";", 1))
             pkg, version = req.split("==", 1)
-            assert dev[ml.norm(pkg)] == (version, marker), f"requirements-dev.lock must list {line}"
+            assert locked[ml.norm(pkg)] == (version, marker), f"{TOOL_LOCKS[txt]} must list {line}"
 
 
 def test_a_marker_goes_before_the_hashes() -> None:

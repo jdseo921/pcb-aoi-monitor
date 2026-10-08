@@ -1,0 +1,106 @@
+# Builds the app for Windows with PyInstaller, one folder, and checks that it opens (REQ-SET-012; Engineering standard
+# "Build"; Legal & Compliance "Packaging" and "Notices shipped"; ADR 0007). The folder is kept as the run's artifact
+# for 30 days. It is an internal test build: unsigned, without an installer and not a release, since a release comes
+# only signed, from a tagged commit, after two approvals (Engineering, "Signing").
+name: Windows build
+
+on:
+  pull_request:
+    paths:
+      - installer/**
+      - requirements*.txt
+      - requirements*.lock
+      - tools/third_party_notices.py
+      - tools/smoke_test_build.py
+      - .github/workflows/build.yml
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  PYTHON_VERSION: "3.11"
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
+
+jobs:
+  windows:
+    name: Windows one-folder build
+    runs-on: windows-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: requirements*.lock
+      - name: Install PyTorch's CPU build, the runtime packages and PyInstaller, each file checked against its hash
+        shell: bash
+        run: |
+          python -m pip install --require-hashes --no-deps -r requirements-torch-cpu.lock
+          python -m pip install --require-hashes -r requirements-build.lock
+          python -m pip check
+      - name: Build; stops on a file no license check covers, and writes THIRD_PARTY_NOTICES.txt
+        id: build
+        run: pyinstaller --noconfirm --clean installer/aoi.spec
+      - name: Start the built app on an empty workspace and check that it opens
+        id: smoke
+        run: python tools/smoke_test_build.py dist/AOI-PoC-Inspector/AOI-PoC-Inspector.exe
+      - name: After a failed start, rebuild with a console and start that, so the log shows the error
+        if: failure() && steps.smoke.outcome == 'failure'
+        env:
+          AOI_BUILD_CONSOLE: "1"
+        run: |
+          pyinstaller --noconfirm --distpath dist-console --workpath build-console installer/aoi.spec
+          python tools/smoke_test_build.py dist-console/AOI-PoC-Inspector/AOI-PoC-Inspector.exe
+      - name: Add BUILD-INFO.txt and SHA256SUMS.txt, and name the artifact
+        id: info
+        shell: python
+        env:
+          COMMIT: ${{ github.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          REF: ${{ github.ref }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          import hashlib, os, sys
+          from datetime import UTC, datetime
+          from pathlib import Path
+
+          sys.path.insert(0, ".")
+          from aoi.config import APP_NAME, APP_VERSION
+
+          env, short = os.environ, os.environ["HEAD_SHA"][:7]
+          folder = Path("dist", APP_NAME.replace(" ", "-"))
+          (folder / "BUILD-INFO.txt").write_text(
+              f"{APP_NAME} {APP_VERSION}, internal test build g{short}\n"
+              f"Built by GitHub Actions on {datetime.now(UTC).isoformat(timespec='seconds')} from commit {env['COMMIT']}"
+              f" ({env['REF']}, head {env['HEAD_SHA']}): {env['RUN_URL']}\n\n"
+              "Not a release. It is not signed and has no installer, so Windows may warn that the publisher is unknown,\n"
+              "and it must not go to a customer or into a demo: a release is a signed installer built from a tagged\n"
+              "commit after two approvals (Engineering standard, \"Signing\"; Customers & Launch, \"Demos\").\n\n"
+              "Start AOI-PoC-Inspector.exe. The workspace is %USERPROFILE%\\AOI_Workspace, or the folder AOI_WORKSPACE\n"
+              "names. Third-party licenses: THIRD_PARTY_NOTICES.txt. The hash of every file: SHA256SUMS.txt.\n",
+              encoding="utf-8",
+              newline="\r\n",
+          )
+          sums = []
+          for path in sorted(p for p in folder.rglob("*") if p.is_file()):
+              with path.open("rb") as f:
+                  sums.append(f"{hashlib.file_digest(f, 'sha256').hexdigest()}  {path.relative_to(folder).as_posix()}")
+          (folder / "SHA256SUMS.txt").write_text("\n".join(sums) + "\n", encoding="utf-8", newline="\r\n")
+          name = f"{folder.name}-{APP_VERSION}-g{short}-windows-x64-unsigned"
+          with open(env["GITHUB_OUTPUT"], "a", encoding="utf-8") as out:
+              out.write(f"name={name}\n")
+          print(f"{name}: {len(sums)} files, {sum(p.stat().st_size for p in folder.rglob('*') if p.is_file()) / 1e6:.0f} MB")
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: ${{ steps.info.outputs.name }}
+          path: dist/
+          retention-days: 30
+          if-no-files-found: error
