@@ -6,6 +6,8 @@ register; `{braces}` are filled in when the error is raised.
 
 | Code | Title | What happened | What to do |
 |---|---|---|---|
+| AOI-CMP-001 | Result has no stored heatmaps | The result of {file} was saved without its difference and AI maps, or they were deleted after the retention period of {days} days. | The decision table is the stored one; use Side by side or Boxes only, or inspect the board again on Inspection to see its heatmaps. |
+| AOI-CMP-002 | Result has no stored decision table | Record {id} ({file}) has no stored decision table: it was saved before migration 0006, or no record has that number. | Inspect the board again on Inspection; Compare then opens the new result. |
 | AOI-INSP-001 | Image cannot be read | The file {path} could not be opened as an image. | Check that the file exists and is a PNG, JPG, BMP or TIFF image. |
 | AOI-INSP-002 | Image cannot be written | The image {path} could not be encoded for writing. | Check the file name's extension (.png or .jpg) and try again. |
 | AOI-INSP-003 | Board failed inspection | Board {board} failed inspection with {defects} defect(s). | Review the result on the Compare page before the board moves on. |

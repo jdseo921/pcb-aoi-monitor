@@ -482,6 +482,11 @@ class AppContext:
         them; an id without checks maps to []."""
         return self.db.checks_for_many(inspection_ids)
 
+    def inspection(self, inspection_id: int) -> dict[str, Any] | None:
+        """One inspection record by id (time, board model, the model version and recipe revision with their UUIDs, the
+        paths, verdict and score), or None for an unknown id; Compare opens a stored result from it (REQ-INSP-009)."""
+        return self.db.inspection(inspection_id)
+
     def inspection_result(self, inspection_id: int, with_maps: bool = False) -> InspectionResult | None:
         """One stored result read back without its images (verdict, checks, defects, compare metrics and regions, as
         decided) for Compare (REQ-INSP-008); with `with_maps`, the stored maps too, where their files exist

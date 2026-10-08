@@ -2,14 +2,15 @@
 
 Optional page (reachable from the sidebar or "Compare with Golden" on the
 Inspection screen) that shows the golden reference next to a test board and
-every metric that decided OK / WARN / NG, with what-if thresholds.
+every metric that decided OK / WARN / NG, with what-if thresholds; a stored
+result is shown as it was decided and never inspected again (REQ-CMP-003).
 """
 
 from __future__ import annotations
 
 import copy
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 from PySide6.QtCore import Qt
@@ -35,11 +36,12 @@ from ...core.inspector import Check, InspectionResult
 from ...core.recipe import Recipe
 from ...core.services import AppContext
 from ...errors import AoiError
+from ...times import to_local
 from .. import theme
 from ..widgets.busy import BusyOverlay
 from ..widgets.empty_state import EmptyState
 from ..widgets.image_view import ImageView
-from .base import QT_TRANSLATE_NOOP, Page, button, fill_table, make_table
+from .base import QT_TRANSLATE_NOOP, Page, button, fill_table, make_table, view_text
 
 if TYPE_CHECKING:
     from ..main_window import MainWindow
@@ -83,6 +85,7 @@ class ComparePage(Page):
         self.test_path: str | None = None
         self.ref_override: str | None = None
         self.res: InspectionResult | None = None
+        self.stored: dict[str, Any] | None = None  # the record of the stored result shown; None for a fresh inspection
         self._fitted = False
 
         bar = QHBoxLayout()
@@ -128,6 +131,11 @@ class ComparePage(Page):
         self.verdict.setStyleSheet(theme.verdict_style("INFO"))
         self.verdict.setMinimumHeight(theme.BANNER_H)
         pl.addWidget(self.verdict)
+        self.note = QLabel()  # a stored result's versions, what changed since, and AOI-CMP-001 when its maps are gone
+        self.note.setObjectName("muted")
+        self.note.setWordWrap(True)
+        self.note.hide()
+        pl.addWidget(self.note)
         self.metrics = make_table(
             [
                 self.tr("Check"),
@@ -197,8 +205,10 @@ class ComparePage(Page):
             self.set_test(f)
 
     def use_last(self) -> None:
-        if self.shell.last_inspected:
-            self.set_test(self.shell.last_inspected[0])
+        if (last := self.shell.last_inspected) and last[2] is not None:
+            self.show_stored(last[2])  # the record, as it was decided (REQ-INSP-009)
+        elif last:
+            self.set_test(last[0])  # a preview from AI Model Test is not recorded: inspected again
 
     def pick_ref(self) -> None:
         exts = " ".join(f"*{e}" for e in sorted(IMAGE_EXTS))
@@ -240,6 +250,8 @@ class ComparePage(Page):
         bm = self.board_model
         if not bm:
             return
+        self.stored = None  # a fresh inspection with the form's thresholds, not a stored result
+        self.note.hide()
         if self.test_path:
             self.test_label.setText(self.tr("Test board: {file}").format(file=Path(self.test_path).name))
         recipe = self._form_recipe(bm) if self.test_path else None
@@ -259,6 +271,12 @@ class ComparePage(Page):
 
     def _on_evaluated(self, out: tuple[np.ndarray | None, InspectionResult | None]) -> None:
         ref, res = out
+        self._show_reference(ref)
+        if res is not None:
+            self._show_result(res)
+            self.redraw()
+
+    def _show_reference(self, ref: np.ndarray | None) -> None:
         if self.ref_override:
             self.ref_label.setText(self.tr("Reference: {file}").format(file=Path(self.ref_override).name))
         elif ref is not None:
@@ -272,9 +290,10 @@ class ComparePage(Page):
             self.ref_empty.show_state(heading, *step)
         else:
             self.ref_empty.hide()
-        if res is None:
-            return
-        self.res = r = res
+
+    def _show_result(self, r: InspectionResult) -> None:
+        """The verdict, the decision table with its failing rows highlighted, and the explanation, from `r`'s checks."""
+        self.res = r
         self.verdict.setText(theme.verdict_label(r.verdict))
         self.verdict.setStyleSheet(theme.verdict_style(r.verdict))
         rows, colors = [], []
@@ -295,7 +314,65 @@ class ComparePage(Page):
         colors.append(None)
         fill_table(self.metrics, rows, colors)
         self.why.setHtml(self._explain(r))
+
+    def show_stored(self, inspection_id: int) -> None:
+        """A stored result as it was decided, never inspected again (REQ-CMP-003): the verdict, table and explanation
+        from the record at once (REQ-INSP-009); the pictures and the stored maps follow from the pool thread."""
+        rec = self.ctx.inspection(inspection_id)
+        res = self.ctx.inspection_result(inspection_id)
+        if rec is None or res is None:
+            file = Path(rec["image_path"]).name if rec else "?"
+            self.error(AoiError("AOI-CMP-002", id=inspection_id, file=file))
+            return
+        self.stored, self.test_path, self.ref_override, self._fitted = rec, rec["image_path"], None, False
+        self.test_empty.hide()
+        self.test_view.set_image(None)  # the board shown before goes at once, not when this one's picture arrives
+        self.test_label.setText(self.tr("Test board: {file} (stored result)").format(file=Path(rec["image_path"]).name))
+        self._show_result(res)
+        self._show_note(rec)
+        self.run_in_background(self._load_stored, rec, inspection_id, on_result=self._on_stored_loaded)
+
+    def _load_stored(
+        self, rec: dict[str, Any], inspection_id: int
+    ) -> tuple[np.ndarray | None, InspectionResult | None]:
+        """Pool thread: the golden board, the result with its stored maps, and its stored overlay as the picture, which
+        is aligned to the golden board as judged (the board's own file is not); never a widget."""
+        ref_path = self.ctx.reference_image(rec["board_model"])
+        ref = self.ctx.load_image(ref_path) if ref_path and Path(ref_path).is_file() else None
+        res = self.ctx.inspection_result(inspection_id, with_maps=True)
+        if res is not None and rec["overlay_path"] and Path(rec["overlay_path"]).is_file():
+            res.image = self.ctx.load_image(rec["overlay_path"])
+        return ref, res
+
+    def _on_stored_loaded(self, out: tuple[np.ndarray | None, InspectionResult | None]) -> None:
+        ref, res = out
+        if res is None or self.stored is None:  # a fresh run or a board model change came first: nothing of it shows
+            return
+        self._show_reference(ref)
+        self.res = res  # the table stays as show_stored filled it
+        if res.image is None:  # its overlay was deleted by hand: the verdict and the table still stand
+            sentence = self.tr("The verdict and the decision table are the stored ones.")
+            self.test_empty.show_state(self.tr("Board picture no longer stored"), sentence)
         self.redraw()
+
+    def _show_note(self, rec: dict[str, Any]) -> None:
+        """One line under the verdict: when the result was judged and with which versions, what has changed since
+        (REQ-CMP-003), and AOI-CMP-001 when its maps are gone."""
+        bm = rec["board_model"]
+        line = self.tr("Stored result of {time}: AI model {model}, recipe revision {revision}, view {view}.")
+        then, view = rec["model_version"] or self.tr("none"), view_text(rec["view"]) if rec["view"] else ""
+        parts = [line.format(time=to_local(rec["time"]), model=then, revision=rec["recipe_rev"], view=view)]
+        model, recipes = self.ctx.active_model(bm), self.ctx.recipe_history(bm)  # registry rows: no weights loaded
+        now = (str(model["uuid"]) if model else None, recipes[0]["uuid"] if recipes else None)
+        if now != (rec["model_uuid"], rec["recipe_uuid"]):
+            moved = self.tr("Since then the board model moved to AI model {model} and recipe revision {revision}.")
+            version, revision = model["version"] if model else self.tr("none"), recipes[0]["revision"] if recipes else 0
+            parts.append(moved.format(model=version, revision=revision))
+        if not any(p and Path(p).is_file() for p in (rec["diff_map_path"], rec["ai_map_path"])):
+            e = AoiError("AOI-CMP-001", file=Path(rec["image_path"]).name, days=self.ctx.settings.map_retention_days_ok)
+            parts.append(f"{e.code} {e.message}")
+        self.note.setText(" ".join(parts))
+        self.note.show()
 
     def _check_text(self, c: Check) -> tuple[str, str, str]:
         """A check's name, source and rule in the UI language (CHECK_NAMES, SOURCES, RULES)."""
@@ -333,7 +410,7 @@ class ComparePage(Page):
 
     def redraw(self) -> None:
         r = self.res
-        if r is None:
+        if r is None or r.image is None:  # a stored result whose picture is gone: no boxes in the air
             return
         mode = self.mode.currentIndex()
         img = r.image  # typed Optional; the engine always sets it, so the guards below narrow for mypy only
@@ -360,7 +437,8 @@ class ComparePage(Page):
         self.shell.status(self.tr("Recipe saved as revision {revision}").format(revision=rev))
 
     def on_board_model_changed(self, name: str | None) -> None:
-        self.res = None
+        self.res = self.stored = None
+        self.note.hide()
         self._load_recipe_into_form()
         if name:
             self.run()
