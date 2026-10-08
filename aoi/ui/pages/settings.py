@@ -104,11 +104,10 @@ class SettingsPage(Page):
             self.ws.setText(d)
 
     def save(self) -> None:
-        """Write the page's own settings over settings.json as it is now, so a hand edit of another key stays (#170).
-        Each value is checked first (AOI-SET-008: an empty or relative workspace), and nothing is written on a refusal.
-        The running app follows every value but the workspace: its database, log and folders stay on the open one
-        until the restart, so no file lands in a folder its database does not list (REQ-SET-001)."""
-        s = self.ctx.settings
+        """Write the page's own settings over settings.json as it is now, so a hand edit of another key stays (#170),
+        through `AppContext.save_settings`: an Admin's write, role-checked and audited (#197). Each value is checked
+        first (AOI-SET-008: an empty or relative workspace), and nothing is written on a refusal. The running app
+        follows every value but the workspace until the restart (REQ-SET-001)."""
         values = {
             "workspace": self.ws.text(),
             "device": self.device.currentText(),
@@ -118,13 +117,11 @@ class SettingsPage(Page):
             "language": self.lang.currentData(),
         }
         try:
-            s.save_keys(values)
-        except (AoiError, OSError) as e:
+            self.ctx.save_settings(values)
+        except (AoiError, OSError) as e:  # AOI-USR-001 below the Admin role, AOI-SET-008, AOI-SET-010, a disk error
             self.error(e)
             return
-        s.device, s.image_size, s.default_epochs = values["device"], values["image_size"], values["default_epochs"]
-        s.log_retention_days, s.language = values["log_retention_days"], values["language"]
-        moved = s.workspace != values["workspace"]
+        moved = self.ctx.settings.workspace != values["workspace"]
         saved = self.tr("Saved. Restart the app to switch the workspace.") if moved else self.tr("Saved.")
         QMessageBox.information(self, self.tr("Settings"), saved)
 
@@ -143,8 +140,8 @@ class SettingsPage(Page):
                     self.error(e)
                     return
                 self.on_show()
-                if name == self.ctx.user and chosen != self.ctx.role:  # the signed-in user's own role changed
-                    self.shell.set_role(chosen, name)
+                if name == self.ctx.user and chosen != current:  # the signed-in user's own role changed
+                    self.shell.set_user(name)  # the header and the pages follow the role add_user stored
 
     def on_show(self) -> None:
         fill_table(self.users, [[u["name"], role_text(u["role"])] for u in self.ctx.users()])

@@ -35,8 +35,11 @@ then the app keeps the open workspace, its database, log and folders. The folder
 (`C:\AOI_Workspace`, not `AOI_Workspace`): an empty or relative folder, or a log retention, input size or epoch count
 below 1, is refused with AOI-SET-008, on the page before anything is saved and at start-up from `settings.json`. The
 app writes only the settings it changes into `settings.json`, so a line you edit there while the app runs, such as an
-image limit, stays; it takes effect at the next start. The last user with the Admin role cannot lose it (AOI-USR-002):
-give another user the Admin role first.
+image limit, stays; it takes effect at the next start. Saving needs the Admin role (AOI-USR-001) and writes an audit
+entry, `settings.change`, with the values before and after. The last user with the Admin role cannot lose it
+(AOI-USR-002): give another user the Admin role first. A user's role is the one set under Users & roles, at every
+start too: the app starts with the Admin added first while the workspace has no board model, and with
+`operator` after that, so a role you change holds after a restart.
 
 (to be written: the workspace folder, device, limits, demo workspace)
 

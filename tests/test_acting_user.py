@@ -64,7 +64,7 @@ def test_req_log_004_training_is_audited_as_the_engineer_who_started_it(
     page.input_size.setCurrentText("128")
     page.train()
     assert reached.wait(30)
-    win.set_role("Operator", "operator")  # the next person signs in while the run trains
+    win.set_user("operator")  # the next person signs in while the run trains
     release.set()
     qtbot.waitUntil(lambda: page.worker is None, timeout=60000)
     entry = ctx.audit_entries(action="model.train")[0]
@@ -88,7 +88,7 @@ def test_req_log_004_an_ai_model_test_is_audited_as_the_engineer_who_started_it(
     page.folder = str(synthetic_dataset / "test")
     page.run()
     assert reached.wait(30)
-    win.set_role("Operator", "operator")
+    win.set_user("operator")
     release.set()
     qtbot.waitUntil(lambda: page.btn_run.isEnabled(), timeout=60000)
     (entry,) = ctx.audit_entries(action="test.run")
@@ -118,7 +118,7 @@ def test_req_usr_001_a_folder_import_finishes_as_the_engineer_who_started_it(
     assert win.navigate("Training")
     page.import_from(str(folder))
     assert reached.wait(30)
-    win.set_role("Operator", "operator")  # the import goes on on its own; the Operator lands on Home
+    win.set_user("operator")  # the import goes on on its own; the Operator lands on Home
     release.set()
     qtbot.waitUntil(lambda: page._bg is None, timeout=30000)
     assert dialogs == [] and len(ctx.samples(BOARD, "OK")) == before + 4
@@ -137,7 +137,7 @@ def test_req_usr_001_a_board_is_recorded_under_the_operator_who_inspected_it(
     page._set_queue([Path(ctx.samples(BOARD, "OK")[0]["path"])])
     page.next_board()
     assert reached.wait(30)
-    win.set_role("Engineer", "engineer")
+    win.set_user("engineer")
     release.set()
     qtbot.waitUntil(lambda: page.worker is None and page.last is not None, timeout=30000)
     (record,) = ctx.inspections()
@@ -180,7 +180,7 @@ def test_req_usr_001_a_queued_job_acts_as_the_user_who_submitted_it(ctx: AppCont
         return ctx.export_csv(tmp_path / "rows.csv", [{"a": 1}])
 
     job = ctx.jobs.submit(Job("export", export))
-    ctx.set_user("operator", "Operator")
+    ctx.set_user("operator")
     start.set()
     assert job.wait(30) and job.error is None and job.result == 1
     (entry,) = ctx.audit_entries(action="export.csv")
@@ -191,14 +191,14 @@ def test_req_usr_001_a_queued_job_acts_as_the_user_who_submitted_it(ctx: AppCont
 def test_req_usr_001_the_signed_in_user_is_one_value(ctx: AppContext) -> None:
     """Name, role and UUID change together: a pool thread never reads one user's UUID with another's role. CPython
     cannot be made to switch threads between two attribute stores on demand, so this checks the structure."""
-    ctx.set_user("operator", "Operator")
+    ctx.set_user("operator")
     actor = ctx.actor
     assert (actor.name, actor.role, actor.uuid) == ("operator", "Operator", ctx.db.user_uuid("operator"))
     with pytest.raises(AttributeError):
         setattr(ctx, "role", "Admin")  # noqa: B010  # only set_user changes the user, as a whole
     with pytest.raises(dataclasses.FrozenInstanceError):
         setattr(actor, "role", "Admin")  # noqa: B010
-    ctx.set_user("engineer", "Engineer")
+    ctx.set_user("engineer")
     assert ctx.actor is not actor and actor.role == "Operator" and ctx.role == "Engineer"
 
 

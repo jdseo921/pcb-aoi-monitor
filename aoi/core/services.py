@@ -156,7 +156,7 @@ class AppContext:
         self.device = resolve_device(self.settings.device)
         self.log.info("app.start", extra={"workspace": str(self.settings.root), "device": self.device, "swept": swept})
         try:  # the first writes: another program may hold the database, or the drive refuse them (#171)
-            self._actor = Actor("operator", "Operator", self.db.user_uuid("operator"))
+            self.set_user(self.start_user())  # the role the users table holds, never one written here (#197)
             archived = self.db.archive_old(self.settings.log_retention_days)  # retention is a system action
             self.log.info("retention.archived", extra={"days": self.settings.log_retention_days, "archived": archived})
             self._sweep_ok_maps()  # the map files of OK results past their retention go too (REQ-INSP-012, S25c)
@@ -186,11 +186,28 @@ class AppContext:
         self.db.close()
         logging_setup.close(self.log)
 
-    def set_user(self, name: str, role: str) -> None:
-        """Make `name` with `role` the current user; the UUID comes from the users table. G1 keeps v0.1's user picker
-        (ADR 0002), so this records who was picked, not who proved it. A job already submitted, and a role-checked call
-        already running, go on as the user who started them (#177)."""
-        self._actor = Actor(name, role, self.db.user_uuid(name))
+    def set_user(self, name: str) -> None:
+        """Make `name` the current user, with the UUID and the role the users table holds for them: the table is the
+        only source of a role, so the role check and every audit entry name the stored one (#197). A name the table
+        does not hold is refused with AOI-USR-003. G1 keeps v0.1's user picker (ADR 0002), so this records who was
+        picked, not who proved it. A job already submitted, and a role-checked call already running, go on as the user
+        who started them (#177)."""
+        row = next((u for u in self.db.users() if u["name"] == name), None)
+        if row is None:
+            raise AoiError("AOI-USR-003", name=name)
+        self._actor = Actor(name, str(row["role"]), str(row["uuid"]))
+
+    def start_user(self, setting_up: bool = False) -> str:
+        """The name of the user a start signs in: while the station is set up (no board model yet), the first user
+        the table holds as Admin; otherwise 'operator'. Without either (a table edited outside the app), the first
+        user of the lowest stored role. Its role is the stored one, whatever the name (#197)."""
+        users = self.db.users()  # never empty: the database seeds operator, engineer and admin
+        if setting_up and (admin := next((u for u in users if u["role"] == "Admin"), None)):
+            return str(admin["name"])
+        if any(u["name"] == "operator" for u in users):
+            return "operator"
+        rank = {r: i for i, r in enumerate(ROLES)}
+        return str(min(users, key=lambda u: rank.get(u["role"], len(ROLES)))["name"]) if users else "operator"
 
     @property
     def actor(self) -> Actor:
@@ -823,6 +840,25 @@ class AppContext:
         self.db.add_user(name, role)
         old = {"role": before["role"]} if before else None
         self.audit("user.change", "user", self.db.user_uuid(name), old, {"name": name, "role": role})
+        if name == self._actor.name:  # the signed-in user's own role: the next role check reads the stored one
+            self._actor = Actor(name, role, self.db.user_uuid(name))
+
+    @requires("Admin", "Changing settings")
+    def save_settings(self, values: dict[str, Any]) -> None:
+        """Write the Settings page's values over settings.json (`Settings.save_keys`: each value checked first,
+        AOI-SET-008, every other key kept as the file holds it) and audit `settings.change` with the values the file
+        held before (#197). The running app follows every value but the workspace: its database, log and folders stay
+        on the open one until the restart, so no file lands in a folder its database does not list (REQ-SET-001). When
+        the entry cannot be written, settings.json goes back to what was in effect and the app keeps it (#178)."""
+        before = self.settings.save_keys(values)
+        try:
+            self.audit("settings.change", "settings", None, before, values)
+        except BaseException:
+            self.settings.save_keys(before)
+            raise
+        for name, value in values.items():
+            if name != "workspace":
+                setattr(self.settings, name, value)
 
     @requires("Engineer", "Archiving records")
     @transactional

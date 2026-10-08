@@ -44,7 +44,7 @@ def workspace(tmp_path: Path) -> Settings:
 def engineer(ctx: AppContext) -> AppContext:
     """Sign the context in as the seeded Engineer, so a test writes through it as an Engineer would; the role check
     itself is tested in tests/test_roles_and_audit.py."""
-    ctx.set_user("engineer", "Engineer")
+    ctx.set_user("engineer")
     return ctx
 
 

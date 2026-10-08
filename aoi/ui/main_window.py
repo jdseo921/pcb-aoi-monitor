@@ -232,8 +232,8 @@ class MainWindow(QMainWindow):
         self.nav.currentItemChanged.connect(self._on_nav)
 
         self._reload_board_models()
-        first_run = not ctx.board_models()  # no board model yet: start as Admin to set the station up
-        self.set_role("Admin" if first_run else "Operator", "admin" if first_run else "operator")
+        # no board model yet: start with an Admin to set the station up; the role is the stored one either way (#197)
+        self.set_user(ctx.start_user(setting_up=not ctx.board_models()))
         if not self.navigate(ctx.settings.last_page):  # reopen where the last session was (REQ-LOG-005)
             self.navigate("Home")
 
@@ -301,11 +301,12 @@ class MainWindow(QMainWindow):
         names = [self.tr("{user} ({role})").format(user=u["name"], role=role_text(u["role"])) for u in users]
         sel, ok = QInputDialog.getItem(self, self.tr("Switch user"), self.tr("User"), names, 0, False)
         if ok:
-            u = users[names.index(sel)]
-            self.set_role(u["role"], u["name"])
+            self.set_user(users[names.index(sel)]["name"])
 
-    def set_role(self, role: str, user: str) -> None:
-        self.ctx.set_user(user, role)
+    def set_user(self, user: str) -> None:
+        """Sign `user` in with the role the users table holds for them (#197); the header and the pages follow it."""
+        self.ctx.set_user(user)
+        role = self.ctx.role
         self.user_label.setText(self.tr("{user}  ·  {role}").format(user=user, role=role_text(role)))
         for title, it in self._items.items():
             allowed = role in self.pages[title].roles

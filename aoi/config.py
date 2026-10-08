@@ -141,12 +141,13 @@ class Settings:
                 expected += " above 0" if least else " of 0 or more"
             raise AoiError("AOI-SET-008", name=name, value=json.dumps(value), expected=expected)
 
-    def save_keys(self, values: dict[str, object]) -> None:
+    def save_keys(self, values: dict[str, object]) -> dict[str, object]:
         """Write `values` over settings.json as it is on disk now, so every other key keeps what the file holds, a hand
         edit made while the app runs included (#170); with no file yet, over these settings, every one of which is then
         checked too, so the first write never stores a value the next start refuses. Each value is checked first, as
         `load` checks it (AOI-SET-008), and a file that cannot be read is refused with AOI-SET-010, never overwritten.
-        These settings themselves are left as they are: the caller sets what the running app follows."""
+        These settings themselves are left as they are: the caller sets what the running app follows. Returns what was
+        in effect for each key of `values` before: the value in the file, or the default a start reads (#197)."""
         for name, value in values.items():
             self.check(name, value)
         data = self._read()
@@ -154,10 +155,13 @@ class Settings:
             data = asdict(self)
             for name, value in data.items():
                 self.check(name, values.get(name, value))
+        defaults = asdict(type(self)())  # what a start reads for a key the file does not hold
+        before = {name: data.get(name, defaults.get(name)) for name in values}
         data.update(values)
         from .data import atomic  # settings.json is read at start-up: never leave it half-written
 
         atomic.write_text(self._file(), json.dumps(data, indent=2))
+        return before
 
     def save(self) -> None:
         f = self._file()

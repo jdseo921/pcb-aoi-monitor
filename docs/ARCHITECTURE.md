@@ -355,6 +355,7 @@ The writes, their roles and entries:
 | `archive_old` | Engineer | `inspection.archive` (days, count); the retention run at start-up is a system action: logged, not audited |
 | `_sweep_ok_maps` | system, at start-up; no page calls it | `maps.sweep` (days, swept, skipped): the map files of OK results past `map_retention_days_ok` are deleted and forgotten, NG and WARN maps stay; audited, unlike the start-up archive, because it deletes evidence. A file that cannot be deleted, or lies outside results/, is skipped with a warning and kept for the next start |
 | `add_user` | Admin | `user.change` (role); object = user UUID. The last Admin keeps the role: `AOI-USR-002`, nothing written |
+| `save_settings` | Admin | `settings.change` (the Settings page's values: what settings.json held before → what it holds now); object type `settings`, no object UUID (#197). Two system writes to settings.json go past the check, unaudited, since no user asks for them: the page in use (`last_page`, `MainWindow._on_nav`) and the folder chosen after a refused workspace at start-up (`workspace`, `aoi/ui/errors.py`) |
 
 Reads, inspections (`inspect_file`, `log_result`), alarms and error reports need no role: an Operator inspects boards.
 One call that writes nothing needs a role: `re_evaluate`, judging a stored result with other thresholds (REQ-CMP-005),
@@ -370,6 +371,11 @@ entries and records, and are not refused part-way, whoever signs in with Switch 
 submits each board once the one before is saved, so it stops there when the user signed in is no longer the one who
 pressed Start (`InspectionPage.run_actor`): the user now signed in presses Start to go on, so no board is recorded under
 a user who did not start it.
+
+The role is always the one the users table holds for that user (`AppContext.set_user(name)`; a name it does not hold
+is refused with `AOI-USR-003`), so the check and the entries never name a role the table contradicts (#197). A start
+signs in the first stored Admin while the workspace has no board model, to set the station up, and `operator`
+otherwise, each with the stored role (`AppContext.start_user`).
 
 User switching is a local picker for the PoC; Stage 4 replaces it with MES authentication (`MesClient.authenticate`).
 A switch leaves a page the new role may not open for Home, and shows any other page again (`on_show`), so its

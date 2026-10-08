@@ -201,15 +201,15 @@ def test_req_set_019_empty_states_link_next_step(
     seen["Logs & Export"].link.click()
     assert win.stack.currentWidget() is win.pages["Inspection"]
     # An Operator is told to ask an Engineer, with no link, when the next step is on a page that is not theirs.
-    win.set_role("Operator", "operator")
+    win.set_user("operator")
     win.navigate("Home")
     assert seen["Home"].sentence.text() == "Ask an Engineer to create one." and not seen["Home"].link.isVisibleTo(
         win.pages["Home"]
     )
-    win.set_role("Admin", "admin")  # creating a board model is Engineer or Admin work (REQ-USR-001)
+    win.set_user("admin")  # creating a board model is Engineer or Admin work (REQ-USR-001)
     ctx.ensure_board_model("TBOX-X")
     win._reload_board_models("TBOX-X")
-    win.set_role("Operator", "operator")
+    win.set_user("operator")
     win.navigate("Compare")
     compare = win.pages["Compare"]
     compare.on_board_model_changed("TBOX-X")  # evaluate again as the Operator; the newest run wins
