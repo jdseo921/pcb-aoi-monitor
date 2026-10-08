@@ -569,8 +569,9 @@ def test_req_trn_015_tick_and_note_never_widen_the_window(qtbot: QtBot, trained_
     form. So the AI score threshold never widens the window: its minimum width stays 1616 px, as before the tick, and
     the same as with the AI score threshold's rows hidden on the Recipe Editor and Compare, cleared and ticked (review
     round 1 found 1929 px, wider than a 1920 px screen; Compare's label beside the field, 1779 px). At 1600 x 900 and
-    at 1920 x 1080 each page's note is as tall as its text at its width, so what to do shows whole, and the tick is as
-    tall as the fields (size class F)."""
+    at 1920 x 1080 each page's note is as tall as its text at its width, so what to do shows whole, no row around it is
+    squeezed to make room (on Compare the "why" box gives way first), and the tick is as tall as the fields (size class
+    F)."""
     ctx = trained_ctx
     model = ctx.active_model(BOARD)
     assert model is not None
@@ -615,6 +616,8 @@ def test_req_trn_015_tick_and_note_never_widen_the_window(qtbot: QtBot, trained_
             assert note.isHidden() == (state == "calibrated") == (note.text() == ""), (title, state)
             if not note.isHidden():
                 assert note.height() >= note.heightForWidth(note.width()), (title, size, note.height(), note.text())
+            rows = field.parentWidget()  # on Windows Compare's panel was too short for its rows and squeezed the note
+            assert rows.height() >= rows.heightForWidth(rows.width()), (title, size, rows.height(), "a row squeezed")
             assert field.tick.height() >= theme.FIELD_H, (title, state, size)
 
 
