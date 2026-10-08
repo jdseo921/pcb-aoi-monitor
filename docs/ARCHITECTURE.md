@@ -69,7 +69,10 @@ and no `Inspector` built by a page (REQ-USR-001, since S15). `aoi/times.py`, `ao
 Slow work never runs on the UI thread (REQ-SET-021, since S17): a page wraps it in a `Worker` (`aoi/ui/workers.py`),
 which runs it as a `Job` on the pool `AppContext.jobs` owns (`aoi/core/jobs.py`: progress, cancel and finished callbacks,
 no Qt, so the same jobs run headless) and turns the callbacks into signals; the slots run on the UI thread, the only
-place a widget changes. A job function takes plain values in and returns plain values out, never a widget.
+place a widget changes. A job function takes plain values in and returns plain values out, never a widget. A page runs
+its background action through `Page.run_in_background` (the newest call wins) under a `BusyOverlay` where the result
+will appear (after 1 s the time so far; after 10 s progress, time left, Cancel); `tests/test_no_freeze.py` ticks the UI
+thread every 50 ms through each page's 5 MP action and fails on a gap over 2 s.
 
 ### Workspace on disk
 

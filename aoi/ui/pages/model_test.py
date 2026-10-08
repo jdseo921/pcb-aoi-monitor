@@ -11,6 +11,7 @@ from PySide6.QtGui import QPageLayout, QPageSize, QPdfWriter, QTextDocument
 from PySide6.QtWidgets import QFileDialog, QGridLayout, QHBoxLayout, QLabel, QMessageBox, QProgressBar, QSplitter
 
 from ... import defects as taxonomy
+from ..widgets.busy import BusyOverlay
 from ..widgets.image_view import ImageView
 from ..workers import Worker, start
 from .base import Page, button, fill_table, make_table
@@ -80,6 +81,7 @@ class ModelTestPage(Page):
         self.table.itemSelectionChanged.connect(self._preview)
         split.addWidget(self.table)
         self.view = ImageView(placeholder="Select a row to preview")
+        self.busy = BusyOverlay(self.view, self.tr("Inspecting…"))
         split.addWidget(self.view)
         split.setSizes([800, 800])
         self.root.addWidget(split, 1)
@@ -133,7 +135,12 @@ class ModelTestPage(Page):
         if not rows:
             return
         path = self.table.item(rows[0].row(), 0).toolTip()
-        res = self.ctx.inspect_file(self.board_model, path, save=False)
+        self.run_in_background(
+            self.ctx.inspect_file, self.board_model, path, save=False,
+            on_result=lambda res: self._show_preview(path, res), busy=self.busy,
+        )  # fmt: skip
+
+    def _show_preview(self, path: str, res):
         self.view.set_image(res.image)
         for d in res.defects:
             sev = taxonomy.BY_NAME.get(d.type, taxonomy.ANOMALY).severity

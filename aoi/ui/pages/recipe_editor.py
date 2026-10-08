@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import copy
+
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QCheckBox,
@@ -27,6 +29,7 @@ from ...core.imaging import IMAGE_EXTS, load_image
 from ...core.recipe import ROI, ROI_TYPES, Recipe
 from ...times import to_local
 from ..theme import verdict_style
+from ..widgets.busy import BusyOverlay
 from ..widgets.image_view import ImageView
 from .base import Page, button, fill_table, make_table
 
@@ -67,6 +70,7 @@ class RecipeEditorPage(Page):
         ll.addLayout(tools)
         self.view = ImageView(placeholder="Train a model or set a reference image first")
         self.view.roiDrawn.connect(self.add_roi)
+        self.busy = BusyOverlay(self.view, self.tr("Test run…"))
         ll.addWidget(self.view, 1)
         split.addWidget(left)
 
@@ -319,10 +323,20 @@ class RecipeEditorPage(Page):
             return
         exts = " ".join(f"*{e}" for e in sorted(IMAGE_EXTS))
         f, _ = QFileDialog.getOpenFileName(self, "Test image", "", f"Images ({exts})")
-        if not f:
-            return
-        insp = self.ctx.inspector(self.board_model, recipe=self._collect())
-        res = insp.inspect(load_image(f))
+        if f:
+            self.run_test(f)
+
+    def run_test(self, path: str) -> None:
+        """Inspect `path` with the recipe as edited, on a pool thread (REQ-SET-021); the editor stays usable."""
+        recipe = copy.deepcopy(self._collect())  # the user may keep editing while the test runs
+        bm = self.board_model
+        self.run_in_background(self._inspect_with, bm, path, recipe, on_result=self._show_test, busy=self.busy)
+
+    def _inspect_with(self, board_model, path, recipe):
+        """Pool thread: the engine only, never a widget."""
+        return self.ctx.inspector(board_model, recipe=recipe).inspect(load_image(path))
+
+    def _show_test(self, res):
         self.view.set_image(res.image, keep_view=True)
         for d in res.defects:
             self.view.add_box(d.x, d.y, d.w, d.h, "#e53935", f"{d.no} {d.type}")

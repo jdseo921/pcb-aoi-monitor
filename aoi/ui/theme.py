@@ -43,6 +43,8 @@ QTableCornerButton::section { background: #26323f; border: none; }
 QTabBar::tab { background: #26323f; padding: 8px 18px; min-width: 120px; }
 QTabBar::tab:selected { background: #1e88e5; }
 QStatusBar { background: #15202b; color: #9fb0c0; }
+QWidget#busy { background: rgba(15, 22, 29, 200); }
+QLabel#busyText { font-size: 16pt; font-weight: 600; color: #e6edf3; }
 """
 
 
