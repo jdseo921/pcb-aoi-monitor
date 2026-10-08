@@ -51,8 +51,12 @@ jobs:
           python -m pip install --require-hashes -r requirements-dev.lock
           python -m pip check
       - run: mypy
-      - name: License check of the shipped packages (Legal & Compliance standard)
-        run: pip-licenses --format=json | python tools/check_licenses.py --packages requirements.lock requirements-torch-cpu.lock
+      - name: License check of the shipped packages, each listed with its verdict (Legal & Compliance standard)
+        # --with-system: without it pip-licenses leaves out setuptools, which requirements.lock ships, and the check
+        # fails on a shipped package it cannot see.
+        run: |
+          pip-licenses --with-system --format=json > licenses.json
+          python tools/check_licenses.py --packages requirements.lock requirements-torch-cpu.lock < licenses.json
 
   test:
     name: Tests (${{ matrix.os }})
