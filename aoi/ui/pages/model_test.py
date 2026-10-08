@@ -6,7 +6,7 @@ import html
 from datetime import datetime
 from pathlib import Path
 
-from PySide6.QtCore import QMarginsF, Qt
+from PySide6.QtCore import QT_TRANSLATE_NOOP, QMarginsF, Qt
 from PySide6.QtGui import QPageLayout, QPageSize, QPdfWriter, QTextDocument
 from PySide6.QtWidgets import (
     QFileDialog,
@@ -47,8 +47,8 @@ class MetricTile(QLabel):
 
 
 class ModelTestPage(Page):
-    title = "AI Model Test"
-    subtitle = "Ground truth from sub-folder names: ok/ and ng/"
+    title = QT_TRANSLATE_NOOP("Page", "AI Model Test")
+    subtitle = QT_TRANSLATE_NOOP("Page", "Labels come from the sub-folder names: ok/ and ng/")
     roles = ("Engineer", "Admin")
 
     def __init__(self, ctx, shell):
@@ -58,12 +58,12 @@ class ModelTestPage(Page):
         self.metrics: dict = {}
 
         bar = QHBoxLayout()
-        bar.addWidget(button("Select Test Folder…", slot=self.pick))
-        self.btn_run = button("Run Test", "primary", self.run)
+        bar.addWidget(button(self.tr("Select Test Folder…"), slot=self.pick))
+        self.btn_run = button(self.tr("Run Test"), "primary", self.run)
         bar.addWidget(self.btn_run)
-        bar.addWidget(button("Export CSV", slot=self.export_csv))
-        bar.addWidget(button("Export Report", slot=self.export_report))
-        self.folder_label = QLabel("No folder selected")
+        bar.addWidget(button(self.tr("Export CSV"), slot=self.export_csv))
+        bar.addWidget(button(self.tr("Export Report"), slot=self.export_report))
+        self.folder_label = QLabel(self.tr("No folder selected"))
         self.folder_label.setObjectName("muted")
         bar.addWidget(self.folder_label, 1)
         self.root.addLayout(bar)
@@ -72,10 +72,10 @@ class ModelTestPage(Page):
         self.tiles = {
             k: MetricTile(n)
             for k, n in (
-                ("accuracy", "Accuracy"),
-                ("precision", "Precision"),
-                ("recall", "Recall"),
-                ("false_call_rate", "False Call Rate"),
+                ("accuracy", self.tr("Accuracy")),
+                ("precision", self.tr("Precision")),
+                ("recall", self.tr("Recall")),
+                ("false_call_rate", self.tr("False call rate")),
             )
         }
         for i, t in enumerate(self.tiles.values()):
@@ -89,7 +89,14 @@ class ModelTestPage(Page):
         self.root.addWidget(self.bar)
 
         split = QSplitter(Qt.Horizontal)
-        self.table = make_table(["Image", "GT", "AI Result", "Score", "Pass/Fail"])
+        self.headers = [
+            self.tr("Image"),
+            self.tr("Label"),
+            self.tr("Verdict"),
+            self.tr("AI score"),
+            self.tr("Pass/Fail", "whether the verdict matches the label"),
+        ]
+        self.table = make_table(self.headers)
         self.table.itemSelectionChanged.connect(self._preview)
         self.empty = EmptyState(self.table)
         split.addWidget(self.table)
@@ -98,7 +105,7 @@ class ModelTestPage(Page):
         pl.setContentsMargins(0, 0, 0, 0)
         self.preview_verdict = QLabel("—")  # the previewed board's verdict: colour, shape and word (REQ-INSP-002)
         self.preview_verdict.setStyleSheet(theme.verdict_style("INFO", big=False))
-        self.view = ImageView(placeholder="Select a row to preview")
+        self.view = ImageView(placeholder=self.tr("Select a row to preview"))
         self.busy = BusyOverlay(self.view, self.tr("Inspecting…"))
         pl.addWidget(self.preview_verdict)
         pl.addWidget(self.view, 1)
@@ -107,7 +114,7 @@ class ModelTestPage(Page):
         self.root.addWidget(split, 1)
 
     def pick(self):
-        d = QFileDialog.getExistingDirectory(self, "Test folder (with ok/ and ng/ sub-folders)")
+        d = QFileDialog.getExistingDirectory(self, self.tr("Validation folder (with ok/ and ng/ sub-folders)"))
         if d:
             self.folder = d
             self.folder_label.setText(d)
@@ -118,7 +125,11 @@ class ModelTestPage(Page):
         if not self.folder:
             return self.pick() or (self.folder and self.run())
         if not self.ctx.active_model(self.board_model):
-            QMessageBox.information(self, "No model", "No trained model yet: results use golden comparison only.")
+            QMessageBox.information(
+                self,
+                self.tr("No AI model"),
+                self.tr("No AI model yet: the results use the Golden board comparison only."),
+            )
         self.btn_run.setEnabled(False)
         self.bar.setVisible(True)
         self.bar.setValue(0)
@@ -129,7 +140,11 @@ class ModelTestPage(Page):
         w.signals.result.connect(self._show)
         w.signals.error.connect(self.error)
         w.signals.finished.connect(
-            lambda: (self.btn_run.setEnabled(True), self.btn_run.setText("Run Test Again"), self.bar.setVisible(False))
+            lambda: (
+                self.btn_run.setEnabled(True),
+                self.btn_run.setText(self.tr("Run Test Again")),
+                self.bar.setVisible(False),
+            )
         )
         start(w, self.ctx.jobs)
 
@@ -139,9 +154,11 @@ class ModelTestPage(Page):
         m = self.metrics
         for k, t in self.tiles.items():
             t.set(m[k])
+        counts = self.tr(
+            "{labelled} labelled of {images} images  ·  TP {tp}  FN {fn}  FP {fp}  TN {tn}  ·  WARN counts as NG"
+        )
         self.confusion.setText(
-            f"{m['labelled']} labelled of {m['samples']} images  ·  TP {m['TP']}  FN {m['FN']}  "
-            f"FP {m['FP']}  TN {m['TN']}  ·  WARN counts as flagged (NG)"
+            counts.format(labelled=m["labelled"], images=m["samples"], tp=m["TP"], fn=m["FN"], fp=m["FP"], tn=m["TN"])
         )
         rows = [
             [Path(r["image"]).name, r["gt"], theme.verdict_label(r["ai_result"]), r["score"], r["pass_fail"]]
@@ -175,18 +192,20 @@ class ModelTestPage(Page):
         if self.rows:
             self.empty.hide()
         elif not bm:
-            self.empty.show_state("No board model yet", "Pick a board model in the header first.")
+            self.empty.show_state(*self.no_board_model())
         elif not self.ctx.active_model(bm):
-            self.empty.show_state(f"No AI model for {bm} yet", *self.empty_step("Train one on Training.", "Training"))
+            heading = self.tr("No AI model for {board_model} yet").format(board_model=bm)
+            self.empty.show_state(heading, *self.empty_step(self.tr("Train one on Training."), "Training"))
         else:
-            what = "Select a test folder with ok/ and ng/ sub-folders, then Run Test."
-            self.empty.show_state(f"No test run for {bm} yet", what, "Select Test Folder…", self.pick)
+            what = self.tr("Select a folder with ok/ and ng/ sub-folders, then press Run Test.")
+            heading = self.tr("No validation run for {board_model} yet").format(board_model=bm)
+            self.empty.show_state(heading, what, self.tr("Select Test Folder…"), self.pick)
 
     def export_csv(self):
         if not self.rows:
             return
         f, _ = QFileDialog.getSaveFileName(
-            self, "Export CSV", str(self.ctx.settings.exports_dir / "model_test.csv"), "CSV (*.csv)"
+            self, self.tr("Export CSV"), str(self.ctx.settings.exports_dir / "model_test.csv"), self.tr("CSV (*.csv)")
         )
         if f:
             self.ctx.export_csv(f, self.rows, "test results")
@@ -195,29 +214,48 @@ class ModelTestPage(Page):
         if not self.rows:
             return
         f, _ = QFileDialog.getSaveFileName(
-            self, "Export report", str(self.ctx.settings.exports_dir / "model_test_report.pdf"), "PDF (*.pdf)"
+            self,
+            self.tr("Export report"),
+            str(self.ctx.settings.exports_dir / "model_test_report.pdf"),
+            self.tr("PDF (*.pdf)"),
         )
         if not f:
             return
-        m = self.metrics
-        active = self.ctx.active_model(self.board_model)
-        rows = "".join(
-            f"<tr style='color:{theme.NG_COLOR if r['pass_fail'] == 'FAIL' else theme.PRINT_TEXT}'>"
-            f"<td>{html.escape(Path(r['image']).name)}</td><td>{r['gt']}</td><td>{r['ai_result']}</td><td>{r['score']}</td><td>{r['pass_fail']}</td></tr>"
-            for r in self.rows
-        )
         doc = QTextDocument()
-        doc.setHtml(f"""<h2>AI Model Validation Report</h2>
-            <p>Board model: <b>{html.escape(self.board_model)}</b> · Model: {active["version"] if active else "none"}
-            · Date: {datetime.now():%Y-%m-%d %H:%M}<br>Test folder: {html.escape(self.folder or "")}</p>
-            <table border=1 cellpadding=4 cellspacing=0>
-            <tr><th>Accuracy</th><th>Precision</th><th>Recall</th><th>False Call Rate</th></tr>
-            <tr><td>{m["accuracy"]:.1%}</td><td>{m["precision"]:.1%}</td><td>{m["recall"]:.1%}</td>
-            <td>{m["false_call_rate"]:.1%}</td></tr></table>
-            <p>TP {m["TP"]} · FN {m["FN"]} · FP {m["FP"]} · TN {m["TN"]} (NG = positive class; WARN counted as NG)</p>
-            <table border=1 cellpadding=3 cellspacing=0><tr><th>Image</th><th>GT</th><th>AI Result</th>
-            <th>Score</th><th>Pass/Fail</th></tr>{rows}</table>""")
+        doc.setHtml(self._report_html())
         w = QPdfWriter(f)
         w.setPageLayout(QPageLayout(QPageSize(QPageSize.A4), QPageLayout.Portrait, QMarginsF(15, 15, 15, 15)))
         doc.print_(w)
-        self.shell.status(f"Report saved: {f}")
+        self.shell.status(self.tr("Report saved: {file}").format(file=f))
+
+    def _report_html(self) -> str:
+        """The validation report: every sentence through tr(), the markup and the numbers from the code."""
+        m = self.metrics
+        active = self.ctx.active_model(self.board_model)
+        title = self.tr("AI Model Validation Report")
+        head = self.tr(
+            "Board model: <b>{board_model}</b> · AI model: {version} · Date: {date}<br>Validation folder: {folder}"
+        )
+        head = head.format(
+            board_model=html.escape(self.board_model),
+            version=active["version"] if active else self.tr("none"),
+            date=f"{datetime.now():%Y-%m-%d %H:%M}",
+            folder=html.escape(self.folder or ""),
+        )
+        tiles = "".join(f"<th>{t.name}</th>" for t in self.tiles.values())
+        values = "".join(f"<td>{m[k]:.1%}</td>" for k in self.tiles)
+        counts = self.tr("TP {tp} · FN {fn} · FP {fp} · TN {tn} (NG = positive class; WARN counted as NG)")
+        counts = counts.format(tp=m["TP"], fn=m["FN"], fp=m["FP"], tn=m["TN"])
+        headers = "".join(f"<th>{h}</th>" for h in self.headers)
+        rows = "".join(
+            f"<tr style='color:{theme.NG_COLOR if r['pass_fail'] == 'FAIL' else theme.PRINT_TEXT}'>"
+            f"<td>{html.escape(Path(r['image']).name)}</td><td>{r['gt']}</td><td>{r['ai_result']}</td>"
+            f"<td>{r['score']}</td><td>{r['pass_fail']}</td></tr>"
+            for r in self.rows
+        )
+        return (
+            f"<h2>{title}</h2><p>{head}</p>"
+            f"<table border=1 cellpadding=4 cellspacing=0><tr>{tiles}</tr><tr>{values}</tr></table>"
+            f"<p>{counts}</p>"
+            f"<table border=1 cellpadding=3 cellspacing=0><tr>{headers}</tr>{rows}</table>"
+        )
