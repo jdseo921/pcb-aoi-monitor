@@ -83,7 +83,8 @@ def open_workspace() -> AppContext | None:
     saved to settings.json as the Settings page saves it; a settings.json that cannot be written is logged, and the
     folder still serves this session. Cancel closes the app. Any other coded error is shown and closes the
     app. An error without a code is shown as AOI-SET-007 and its trace goes to the default workspace's log
-    (REQ-SET-019: stack traces go only to the log), since the excepthook is installed only once the window exists."""
+    (REQ-SET-019: stack traces go only to the log), since the excepthook logs to an open workspace's log: it is
+    installed once the workspace is open, before the window is built (``main_window.build_window``, #205)."""
     try:
         return _open_workspace()
     except Exception as e:

@@ -461,7 +461,12 @@ reported before any window opens, so `open_workspace` in
 `aoi/ui/errors.py` follows the message with a folder picker: the folder chosen is opened, then saved to `settings.json`
 as the Settings page saves it (logged as `settings.save_failed` if it cannot be), and Cancel closes the app
 (REQ-SET-016). An error at start-up without a code shows `AOI-SET-007`, and its trace goes to the log in the default
-workspace folder (event `app.start_failed`), since the excepthook is installed only once the window exists (REQ-SET-019).
+workspace folder (event `app.start_failed`), since the excepthook logs to an open workspace's log (REQ-SET-019). Once
+the workspace is open, `build_window` in `aoi/ui/main_window.py` installs the excepthook before it builds the window,
+so a slot that raises while the pages are built is logged and shown too, and again with the window as the dialog's
+parent; an error raised out of building the window (a page that cannot read a damaged database) is shown as
+`AOI-SET-007` with its trace in the workspace's log (`error.shown`, context `start-up`), and `main.py` closes the
+workspace and ends with exit code 2 (#205).
 Records that can leave the station (`users`, `samples`, `models`, `recipes`, `inspections`, and since migration 0009
 `test_runs` and `alarms`) carry a `uuid` beside their integer key; `defects` and `checks` are rows of one inspection and
 are named by its UUID and their `no`. The dataset record, with its UUID, arrives with frozen dataset versions (stage

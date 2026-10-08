@@ -27,7 +27,7 @@ from ..config import APP_NAME, APP_VERSION
 from ..core.services import AppContext
 from ..errors import AoiError
 from . import theme
-from .errors import show_error
+from .errors import install_excepthook, show_error
 from .pages.base import QT_TRANSLATE_NOOP, Page, button, page_text, role_text, size_class
 from .pages.compare import ComparePage
 from .pages.inspection import InspectionPage
@@ -372,3 +372,19 @@ class MainWindow(QMainWindow):
         self.ctx.close()  # every job asked to stop and waited for, then the database and the log file closed
         drop_queued(self.ctx.jobs)  # slots the jobs queued before they stopped would meet the closed context
         event.accept()
+
+
+def build_window(ctx: AppContext) -> MainWindow | None:
+    """The main window at start-up, with the unhandled-error hook in place (REQ-LOG-005, REQ-SET-019), or None when
+    it could not be built. The hook goes in before the window exists, so a slot that raises while the pages are built
+    is logged and shown too, and again with the window as the dialog's parent once it is built. An error raised out of
+    building it (a page that cannot read the database, #205) is shown as one coded dialog with its trace in the log;
+    the caller closes the workspace and ends the app."""
+    install_excepthook(ctx, None)
+    try:
+        win = MainWindow(ctx)
+    except Exception as e:
+        show_error(None, ctx.report_error(e, QT_TRANSLATE_NOOP("Errors", "start-up")))
+        return None
+    install_excepthook(ctx, win)
+    return win
