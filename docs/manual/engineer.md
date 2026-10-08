@@ -23,7 +23,9 @@ After the message a window asks for another workspace folder: the folder you cho
 next start asks again); Cancel closes the app. The refused folder is left as it is. The same window follows AOI-SET-011:
 the workspace folder cannot be created or opened (a USB or network drive that is not connected) or its `aoi.sqlite` is
 not a database the app can open or write (restore the backup, as above); and AOI-SET-012: another program holds
-`aoi.sqlite` (another copy of the app, a database tool): close it, then choose the same folder.
+`aoi.sqlite` (another copy of the app, a database tool): close it, then choose the same folder. If another program
+takes hold of `aoi.sqlite` while the app runs, a change that cannot be stored is refused after 5 s with AOI-SET-013:
+close that program and do the change again.
 
 **Settings the app cannot read.** A `settings.json` that is not valid JSON, not UTF-8 text or not a JSON object stops
 the start with AOI-SET-010, naming the file and, for JSON, the line and column; correct it, or rename it to start with
@@ -172,11 +174,13 @@ count and types, operator, image and overlay paths, then the record's, model's a
 beside it holds one row per check that decided each verdict: the record's time, board model, view, model version and
 recipe revision with their UUIDs, then the check's number, region (the whole board, or an ROI's name and box), metric,
 source, value, threshold, rule and result. Records from before the checks were stored have no rows in the second file.
-Each export is confirmed first and written whole or not at all, and the audit trail records it: a file or folder inside
-the workspace, such as the suggested `exports` folder, relative to the workspace (`exports/inspections.csv`), so the
-entry still holds after the workspace folder moves; a folder outside it, such as a USB drive, with its full path. If
+Each export is confirmed first and written whole or not at all, the two CSV files together, and the audit trail
+records it: a file or folder inside the workspace, such as the suggested `exports` folder, relative to the workspace
+(`exports/inspections.csv`), so the entry still holds after the workspace folder moves; a folder outside it, such as a USB drive, with its full path. If
 that entry cannot be written, the exported file is removed (never the station's own file, when exported onto itself).
-When a `<name>_checks.csv` is already there, the app asks whether to replace it, with No as the default: Enter keeps it.
+A file that cannot be written, such as one still open in Excel, stops the export with AOI-LOG-002, which names it: close
+it, or choose another name or folder, and export again; the files already there stay as they were. When a
+`<name>_checks.csv` is already there, the app asks whether to replace it, with No as the default: Enter keeps it.
 **Export Image Overlays** that stops part-way (the drive full or pulled out, a folder already named like an overlay)
 shows AOI-LOG-001 with how many images were copied, and the audit trail records those, with the file that failed.
 Both exports run in the background (#194): the window keeps answering, and after a second the table shows

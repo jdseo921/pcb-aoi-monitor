@@ -470,7 +470,12 @@ write by the calls it knows (opens for writing, gzip, tarfile and ZipFile too; P
 writers; any `.save(path)`, as a QImage's; a QFile's open, copy or rename; Qt writers such as QPdfWriter given a file
 by position, not a QBuffer), a run checks that every file an inspection and a training run leave went through
 `atomic.write_with`, a kill inside such a write leaves the target absent and a temporary file the next start removes,
-and 20 random kills, each after a saved result, lose no finished result. Every error a user can see is
+and 20 random kills, each after a saved result, lose no finished result. The two files of the Logs & Export CSV go
+through `atomic.write_all`: both are written under temporary names, then moved into place, the file each replaces kept
+until both are in place and put back if the second cannot be, and the export is audited only then (#195). A file the
+user named for an export or Save Image that cannot be written (another program holds it open, a folder of that name) is
+`AOI-LOG-002`, naming the file; a Save Image name with a suffix OpenCV cannot encode is `AOI-INSP-002`. Every error a
+user can see is
 an `AoiError` from the catalogue in `aoi/errors.py`, with a code `AOI-<AREA>-<NNN>`, what happened and what to do;
 `docs/error-codes.md` is generated from it (REQ-LOG-004, REQ-SET-019). An error's title, what happened and what to do
 are `Phrase`s (`aoi/errors.py`, no Qt), each catalogue text marked `QT_TRANSLATE_NOOP("Errors", …)` so it is in
@@ -490,7 +495,9 @@ the one path for an error a user sees: it
 logs the stack trace with the build version, stores an ERROR alarm and returns the plain report that
 `aoi/ui/errors.py` shows (code, title, what happened, what to do), also for unhandled errors through
 `sys.excepthook`; it never raises, so the dialog shows even when the database refuses the alarm (logged as
-`alarm.not_stored`, #171). The Inspection page's own alarms (no AI model yet, a run stopped by a board model change)
+`alarm.not_stored`, #171). SQLite's refusal while another program holds the database's lock during work becomes
+`AOI-SET-013` there, and the alarm of an error caused by that lock waits 200 ms for it, not SQLite's 5 s (#195). The
+Inspection page's own alarms (no AI model yet, a run stopped by a board model change)
 never raise either: one the database refuses is logged as `alarm.not_stored`, and the result, its AOI-INSP-008 or
 the stop goes on (#179). Two coded errors are shown in the page without a dialog or an alarm: Compare's AOI-CMP-001
 note, and a Golden board file that the Recipe Editor or Compare cannot read for its pane, which says the code and

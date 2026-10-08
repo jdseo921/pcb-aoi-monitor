@@ -379,9 +379,19 @@ class InspectionPage(Page):
         f, _ = QFileDialog.getSaveFileName(
             self, self.tr("Save annotated image"), f"{path.stem}_{res.verdict}.png", self.tr("PNG (*.png)")
         )
-        if f:
+        if not f:
+            return
+        try:
             save_image(f, draw_overlay(res))
-            self.shell.status(self.tr("Saved {file}").format(file=Path(f).name))
+        except AoiError as e:  # a name with a suffix no image format has (AOI-INSP-002, #195)
+            self.error(e)
+            return
+        except OSError as e:  # a file another program holds open, a folder of that name
+            err = AoiError("AOI-LOG-002", detail=repr(e), path=f, reason=e.strerror or str(e))
+            err.__cause__ = e
+            self.error(err)
+            return
+        self.shell.status(self.tr("Saved {file}").format(file=Path(f).name))
 
     def open_compare(self) -> None:
         """Compare on the last result in one click: its record as decided (REQ-INSP-009), or its file when not saved."""

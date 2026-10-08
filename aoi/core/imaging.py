@@ -184,7 +184,10 @@ def _read_image(p: Path, max_megapixels: float, max_megabytes: float) -> tuple[n
 
 def save_image(path: str | Path, img: np.ndarray) -> None:
     ext = Path(path).suffix or ".png"
-    ok, buf = cv2.imencode(ext, img)
+    try:
+        ok, buf = cv2.imencode(ext, img)
+    except cv2.error as e:  # OpenCV 5 raises for a suffix it cannot encode, such as "lot.txt" or "board_v1.2" (#195)
+        raise AoiError("AOI-INSP-002", detail=str(e), path=str(path)) from e
     if not ok:
         raise AoiError("AOI-INSP-002", path=str(path))
     atomic.write_bytes(path, buf.tobytes())  # whole file or nothing, and non-ASCII Windows paths work

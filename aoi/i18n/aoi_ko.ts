@@ -413,12 +413,12 @@
 <context>
     <name>Errors</name>
     <message>
-        <location filename="../core/services.py" line="+55"/>
+        <location filename="../core/services.py" line="+56"/>
         <source> ({context})</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+35"/>
+        <location line="+46"/>
         <source>Operator, Engineer or Admin</source>
         <translation type="unfinished"></translation>
     </message>
@@ -473,7 +473,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+73"/>
+        <location line="+81"/>
         <source>Running an AI model test</source>
         <translation type="unfinished"></translation>
     </message>
@@ -568,17 +568,18 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+10"/>
+        <location line="+15"/>
         <source>Exporting overlay images</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location line="+43"/>
+        <location line="+13"/>
         <source>Exporting CSV</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+17"/>
+        <location line="+18"/>
         <source>Exporting a report</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1354,12 +1355,23 @@
     </message>
     <message>
         <location line="+1"/>
+        <location line="+14"/>
         <source>Another program holds the workspace database {path}, so the app could not write to it: {error}.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+4"/>
+        <location line="-10"/>
         <source>Close the other program (another copy of this app, a database tool or a backup), then choose the same folder in the window that opens next; or choose another workspace folder there. Cancel there closes the app.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+9"/>
+        <source>Workspace database busy</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>Close the other program (another copy of this app, a database tool or a backup), then do the last action again.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -1906,7 +1918,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+4"/>
+        <location line="+14"/>
         <source>Saved {file}</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2525,7 +2537,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/inspection.py" line="-389"/>
+        <location filename="../ui/pages/inspection.py" line="-399"/>
         <source>Inspection</source>
         <translation type="unfinished"></translation>
     </message>
