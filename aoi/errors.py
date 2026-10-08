@@ -439,6 +439,21 @@ CODES: dict[str, ErrorCode] = {
             ),
         ),
         ErrorCode(
+            "AOI-TRN-011",
+            QT_TRANSLATE_NOOP("Errors", "Images not imported: path too long"),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "None of the {count} image(s) picked were imported: the system refused the path of the copy of {path}"
+                " in the workspace folder {workspace} as too long.",
+            ),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Ask an Admin to save a workspace folder with a shorter path on Settings and then, with the app closed,"
+                " to copy everything in the folder {workspace} into that folder, or to turn on long paths in Windows;"
+                " then import the images again.",
+            ),
+        ),
+        ErrorCode(
             "AOI-TST-001",
             QT_TRANSLATE_NOOP("Errors", "AI model, recipe or Golden board changed since the run"),
             QT_TRANSLATE_NOOP(

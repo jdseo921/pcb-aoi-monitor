@@ -101,7 +101,11 @@ in an empty sample table) and Start Training are off, "Importing…" stays over 
 and a Switch User does not stop it: the samples are recorded as added by the user who started the import. The line
 over the sample table counts the OK and NG samples and names the reference image (under it, while fewer than 20 OK
 samples are imported, a tip says that 20 or more give a steadier threshold); a name too long for the line is cut at its
-end (…), and pointing at the line shows it whole.
+end (…), and pointing at the line shows it whole. If the system refuses the path of a sample's copy in the workspace as
+too long (a workspace folder with a long path, on Windows with long paths off), + OK Images and + NG Images add none of
+the picked files and show AOI-TRN-011. Import Folder… keeps the images it imported before that file and names
+AOI-TRN-011 in AOI-TRN-010; when that file was the first, it shows AOI-TRN-011 itself, which counts every image in the
+folder. The steps are those of AOI-INSP-014 (section 8, Evidence files).
 
 **Stop** ends a training run without saving anything: no AI model version, golden board or audit entry; the active AI
 model stays. Closing the app while work runs asks whether to stop it; an AI model test finishes its folder first.

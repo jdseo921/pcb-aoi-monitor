@@ -240,7 +240,8 @@ AOI_Workspace/                 (default ~/AOI_Workspace, set in Settings, used f
   logs/aoi-YYYY-MM-DD.jsonl    JSON-lines log, one file per UTC day (REQ-LOG-004)
   settings.json
   images/<board>/<OK|NG>/      uploaded training samples (copied in, so source folders can move), each named
-                               <stem>_<sample UUID>.<ext> (#245)
+                               <stem>_<sample UUID>.<ext>; a copy whose path the system refuses as too long stops
+                               the import with AOI-TRN-011 (#245)
   models/<board>/<board>_vX.Y.pt            trained model + calibration: tensors and plain values only, loaded with
                                             torch.load(weights_only=True) after its zip CRC-32s check; a file that
                                             is cut short, changed or unusable, has an entry flagged as a folder, or
@@ -405,9 +406,11 @@ hiding a page or disabling a button is only a convenience. Every write also appe
 the same transaction as its rows (`Database.transaction()`, `@transactional`): both are stored or neither, on an error
 or a crash (#178). A file cannot join it, so file writes come first and are removed when what records them fails: an
 import's copies, a training run's files, an export whose entry cannot be written (never its own source). An import is all
-or nothing (AOI-TRN-008); a folder import, one file per call, stops at such a file with AOI-TRN-009 naming how many were
-imported, and at any other error after a file went in with AOI-TRN-010 and the same count (#206); an overlay export
-that stops part-way records the files that left (AOI-LOG-001).
+or nothing (AOI-TRN-008, or AOI-TRN-011 for a copy whose path the system refuses as too long, #245); a folder import,
+one file per call, stops at such a file with AOI-TRN-009 naming how many were imported, and at any other error after a
+file went in with AOI-TRN-010 and the same count (#206), which names AOI-TRN-011 as the reason for a copy refused as too
+long (with none imported yet, AOI-TRN-011 itself, counting the whole folder); an overlay export that stops part-way
+records the files that left (AOI-LOG-001).
 The writes, their roles and entries:
 
 | Write | Role | Audit action and object (before → after) |

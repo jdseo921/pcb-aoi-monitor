@@ -278,7 +278,8 @@ class TrainingPage(Page):
     ) -> tuple[int, int, AoiError | None]:
         """Pool thread: files and the service layer only, never a widget. One file per call, so what was imported
         before a file that cannot be copied stays, and the error returned (AOI-TRN-009) says so (#178); any other
-        error after a file went in is returned as AOI-TRN-010 with the same count (#206)."""
+        error after a file went in is returned as AOI-TRN-010 with the same count (#206). A copy refused as too long
+        before any went in raises AOI-TRN-011 for the whole folder (#245)."""
         n_ok = n_ng = 0
         files = list_images(folder)
         for i, p in enumerate(files, 1):
@@ -300,6 +301,9 @@ class TrainingPage(Page):
                     title = QT_TRANSLATE_NOOP("Errors", "{code} {title}")  # the title in the UI language (#198)
                     reason = title.fill(code=e.code, title=e.title) if isinstance(e, AoiError) else type(e).__name__
                     code = "AOI-TRN-010"
+                elif isinstance(e, AoiError) and e.code == "AOI-TRN-011":  # none of the folder's images went in, not 1
+                    workspace, count = e.params["workspace"], len(files)
+                    raise AoiError("AOI-TRN-011", e.detail, path=str(p), workspace=workspace, count=count) from e
                 else:  # nothing imported yet: the error is shown as it is
                     raise
                 detail = e.detail if isinstance(e, AoiError) else str(e)

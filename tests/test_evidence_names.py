@@ -230,11 +230,79 @@ def test_req_insp_008_the_headless_save_names_a_path_too_long_and_nothing_else(
     assert trained_ctx.inspections(board_model=BOARD) == []
 
 
+def test_req_trn_001_a_copy_the_system_refuses_as_too_long_has_its_own_code(
+    ctx: AppContext, ng_board: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """An import whose copy the system refuses as too long stops with AOI-TRN-011: ENAMETOOLONG, or on Windows a file
+    not found at a path of 260 characters or more. It names the picked file and the workspace folder, gives copying the
+    workspace as the step, not AOI-TRN-008's free space, and imports nothing. A picked file whose own path is refused,
+    or a copy not found at 259 characters, stays AOI-TRN-008. Before: AOI-TRN-008 for each."""
+    copy = str(ctx.settings.images_dir / BOARD / "OK" / ".copy.tmp")
+    cases = [
+        (False, OSError(errno.ENAMETOOLONG, os.strerror(errno.ENAMETOOLONG), copy), "AOI-TRN-011"),
+        (True, FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), "x" * 260), "AOI-TRN-011"),
+        (True, FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), "x" * 259), "AOI-TRN-008"),
+        (False, OSError(errno.ENAMETOOLONG, os.strerror(errno.ENAMETOOLONG), str(ng_board)), "AOI-TRN-008"),
+    ]
+    for windows, refusal, code in cases:
+
+        def refused(src: str | Path, dst: str | Path, refusal: OSError = refusal) -> None:
+            raise refusal
+
+        monkeypatch.setattr(atomic, "copy_file", refused)
+        monkeypatch.setattr(services, "WINDOWS", windows)
+        with pytest.raises(AoiError) as caught:
+            ctx.import_samples(BOARD, [str(ng_board)], "OK")
+        assert (caught.value.code, caught.value.__cause__) == (code, refusal)
+        if code == "AOI-TRN-011":
+            assert caught.value.params == {"path": str(ng_board), "workspace": str(ctx.settings.root), "count": 1}
+            assert f"copy everything in the folder {ctx.settings.root} into that folder" in caught.value.message
+            assert "free space" not in caught.value.message
+    assert ctx.samples(BOARD) == []
+
+
+@pytest.mark.parametrize(
+    ("refused", "kept", "title", "says"),
+    [
+        ("ok_2.png", 2, "AOI-TRN-010 Folder import stopped by an error", "image 3 of 5"),
+        ("ok_0.png", 0, "AOI-TRN-011 Images not imported: path too long", "None of the 5 image(s) picked"),
+    ],
+    ids=["third", "first"],
+)
+def test_req_trn_001_a_folder_import_names_a_copy_refused_as_too_long(
+    qtbot: QtBot, ctx: AppContext, synthetic_dataset: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+    dialogs: list[tuple[str, str]], refused: str, kept: int, title: str, says: str,
+) -> None:  # fmt: skip
+    """Import Folder… imports one file per call: when the third file's copy is refused as too long, the two before it
+    stay, and AOI-TRN-010 says so and names AOI-TRN-011, not AOI-TRN-009's free space. When the first is, none went in,
+    and AOI-TRN-011 itself names all five images and its step. Before, that read "None of the 1 image(s) picked"."""
+    for i, p in enumerate(list_images(synthetic_dataset / "train" / "ok")[:5]):
+        (tmp_path / "fold" / "ok").mkdir(parents=True, exist_ok=True)
+        shutil.copy(p, tmp_path / "fold" / "ok" / f"ok_{i}.png")
+    copy = atomic.copy_file
+
+    def copy_or_refuse(src: str | Path, dst: str | Path) -> None:
+        if Path(src).name == refused:
+            raise OSError(errno.ENAMETOOLONG, os.strerror(errno.ENAMETOOLONG), str(dst))
+        copy(src, dst)
+
+    monkeypatch.setattr(atomic, "copy_file", copy_or_refuse)
+    ctx.ensure_board_model(BOARD)
+    page = _window(qtbot, ctx, "Engineer").pages["Training"]
+    page.import_from(str(tmp_path / "fold"))
+    qtbot.waitUntil(lambda: page._bg is None, timeout=30000)
+    assert len(ctx.samples(BOARD)) == kept
+    [(shown, text)] = dialogs
+    assert shown == title and says in text and "free space" not in text, (shown, text)
+    assert "AOI-TRN-011 Images not imported: path too long" in f"{shown} {text}"
+
+
 def test_req_set_001_the_step_for_a_path_too_long_keeps_the_stations_records(
     synthetic_dataset: Path, ng_board: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """AOI-INSP-014's step, as its text says, followed with the default workspace (AOI_WORKSPACE, with settings.json)
-    open: the next start opens the copy with every sample and record. A move, the old step, took settings.json along."""
+    """The step of AOI-INSP-014 and AOI-TRN-011, as their texts say, followed with the default workspace (AOI_WORKSPACE,
+    with settings.json) open: the next start opens the copy with every sample and record. A move, the old step, took
+    settings.json along."""
     monkeypatch.setenv("AOI_WORKSPACE", str(tmp_path / ("long_" + "w" * 40) / "AOI_Workspace"))
     ctx = AppContext(Settings.load())
     ctx.set_user("admin")
@@ -244,7 +312,8 @@ def test_req_set_001_the_step_for_a_path_too_long_keeps_the_stations_records(
     ctx.save_settings({"workspace": str(short)})  # an Admin saves a shorter path on Settings
     kept = [[r["uuid"] for r in rows] for rows in (ctx.samples(BOARD), ctx.inspections(board_model=BOARD))]
     ctx.close()
-    assert "copy everything in the folder {workspace} into that folder" in CODES["AOI-INSP-014"].action  # not a move
+    for code in ("AOI-INSP-014", "AOI-TRN-011"):  # a copy, not a move
+        assert "copy everything in the folder {workspace} into that folder" in CODES[code].action, code
     shutil.copytree(old, short)  # with the app closed, everything in the folder is copied into that folder
     again = AppContext(Settings.load())  # the next start
     samples, records = again.samples(BOARD), again.inspections(board_model=BOARD)
