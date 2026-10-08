@@ -6,6 +6,7 @@ used."""
 from __future__ import annotations
 
 import hashlib
+import json
 import sqlite3
 from pathlib import Path
 from time import perf_counter
@@ -167,7 +168,8 @@ def test_req_cmp_003_note_names_the_versions_and_missing_maps(
     """The note names when and with which versions the result was judged, on the picture judged; inspecting again
     leaves it, and no busy overlay behind; a new recipe revision and model version are named while the table keeps the
     old thresholds and no model loads; AOI-CMP-001 once both maps are gone; a deleted picture says so; Use Last
-    Inspected opens the record or inspects a preview; an unknown record gives AOI-CMP-002."""
+    Inspected opens the record or inspects a preview; an unknown record gives AOI-CMP-002, and so does one whose stored
+    result is damaged, its scale say (S29 review), where AOI-SET-007 said nothing of what to do."""
     ctx = trained_ctx
     res = ctx.inspect_file(BOARD, str(ng_board))
     iid = (rec := ctx.inspections(board_model=BOARD)[0])["id"]  # the record as Logs & Export lists it
@@ -242,6 +244,12 @@ def test_req_cmp_003_note_names_the_versions_and_missing_maps(
     win._on_board_model("")
     qtbot.waitUntil(lambda: ctx.jobs.idle() and compare._bg is None, timeout=10000)
     assert compare.res is None and compare.stored is None and compare.note.isHidden()
+    for damage in ({"px_per_mm": "damaged"}, {"px_per_mm": 0}, {"elapsed_ms": "damaged"}):
+        doc = json.dumps({**res.to_dict(), **damage})
+        ctx.db.execute("UPDATE inspections SET result_json=? WHERE id=?", (doc, iid))
+        compare.show_stored(iid)
+        assert dialogs[-1][0] == "AOI-CMP-002 Result has no stored decision table", dialogs
+        assert f"Record {iid} ({ng_board.name}) has no stored decision table that can be read" in dialogs[-1][1]
 
 
 def test_req_cmp_003_golden_board_as_judged(

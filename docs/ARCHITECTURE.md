@@ -39,7 +39,8 @@ interfaces that Stages 2–4 (cameras, robot, MES/ERP) plug into without changin
 ├──────────────────────────────────────────────────────────────────────────────┤
 │ Application services  (aoi/core/services.py → AppContext): the only door     │
 │  reads   board_models · samples · models · recipe · inspections · users      │
-│  writes  import_samples · train · save_recipe · set_reference · add_user     │
+│  writes  import_samples · train · save_recipe · set_reference · set_scale    │
+│          add_user                                                            │
 │  engine  inspector · inspect · inspect_file · log_result · batch_test        │
 │          re_evaluate (a stored result under other thresholds, Engineer)      │
 │  jobs    the thread pool every slow call runs on (REQ-SET-021)               │
@@ -367,7 +368,7 @@ a board failed. All thresholds live in the recipe and can be tried out live on t
 |---|---|---|---|
 | SSIM similarity | Compare | NG if < 0.80 | Whole-board structural similarity to the golden template (1 = identical) |
 | Changed area % | Compare | NG if ≥ 0.50 % | Share of pixels whose colour differs by ≥ *Pixel difference* (45/255) after a ±2 px tolerance |
-| Difference regions | Compare | NG if > 0 | Number of difference blobs ≥ *Min defect area* (40 px) |
+| Difference regions | Compare | NG if > 0 | Number of difference blobs ≥ *Min defect area* (40 px; at a scale, the area of a round defect *Minimum defect size* mm wide) |
 | Alignment inliers (shown as "Alignment points") | Compare | info; WARN if < 12 | Confidence that the board was registered correctly |
 | AI anomaly score | AI | NG if ≥ AI score threshold (the recipe's override, else the AI model's calibrated value) | 99.9th percentile of the anomaly map (σ above normal variation) |
 | ROI *name* [type] | ROI | NG if ≥ ROI AI Score | Strongest anomaly inside the ROI, as a multiple of the AI score threshold the AI check used |
@@ -407,6 +408,27 @@ defects which make a WARN would be marked by those thresholds and that the boxes
 as the stored board picture has them drawn in, and that their recipe turns the AI check off as "The recipe turns the AI
 check off, so these thresholds judge the board without it", true whether or not it ran when the board was inspected,
 since `re_grade` notes it from that recipe (#246).
+
+Sizes in mm (REQ-RCP-006, since S29): a board model may have a scale, `board_models.px_per_mm` (migration 0012), which
+an Engineer sets from a known length on its Golden board (`AppContext.set_scale`). A recipe then holds its minimum
+defect size in mm (`Recipe.min_defect_mm`, the width of a round defect) and each ROI's place and size in mm (`ROI.mm`),
+and the engine applies them in px at the board model's scale (`Recipe.in_px`, in the `Inspector`): the minimum defect
+area becomes the area of a round defect that wide, rounded up so that a defect of exactly that size is kept
+(`disc_area`; 1.67 mm at 4.27 px/mm is the default 40 px), and an ROI's box is its mm times the scale, to the nearest
+px. A size the recipe holds in px, and every size without a scale, judges exactly as before, and a recipe with no size
+in mm is stored without the new keys. Each result keeps the scale it was judged at (`InspectionResult.px_per_mm`, in
+`result_json`; `from_dict` refuses one that is not a number above 0 with ValueError, as a damaged time, which
+`AppContext.inspection_result` raises as AOI-CMP-002, so that Compare and Re-evaluate say to inspect the board again);
+`re_evaluate` applies the thresholds' sizes in mm at that scale, or at the board model's now for a result judged without
+one (which the result it returns keeps), so a scale set later does not change how a stored result is judged again.
+`set_scale` refuses a scale outside 0.01 to 100000 px/mm, so that no size in mm overflows in px (AOI-RCP-008). The scale
+is a number an Engineer sets, not one read from the images: a Golden board of another size (a new camera) keeps it, so
+after a camera change the scale is calibrated again on the new Golden board before boards are judged, and until then
+sizes in mm keep their px (nothing compares the Golden board's size with the calibration image yet; open with Jay). The
+compare step's 5 × 5 blur, ±2 px shift tolerance and noise clean-up stay in px: on the synthetic regression set at twice
+its size, the scale set to twice its own, the size in mm keeps 38 of the 40 verdicts, and two NG boards that the default
+recipe misses at 1x by a few px are found (`tests/regression/test_resize_verdicts.py`; with the size left in px, seven
+change).
 
 Verdict: **NG** if any check is NG; else **WARN** if any check is within the warning band (default 80 % of a
 threshold) or a non-minor defect region exists; else **OK**. Colours follow GUI §4.1: green OK, red NG, yellow WARN.
@@ -507,6 +529,7 @@ The writes, their roles and entries:
 | Write | Role | Audit action and object (before → after) |
 |---|---|---|
 | `ensure_board_model`, `set_reference`, `import_samples` | Engineer | `board_model.create`, `board_model.reference` (reference path), `sample.import`; object = board model name |
+| `set_scale` | Engineer | `board_model.scale` (px per mm before → after, with the length in px, the distance in mm and the Golden board file it was measured on; S29, REQ-RCP-006); object = board model name. A length or distance that is not a number above 0, a scale outside 0.01 to 100000 px/mm, or an unknown board model, is `AOI-RCP-008`, nothing written |
 | `update_sample`, `delete_sample` | Engineer | `sample.update` (label, defect type), `sample.delete`; object = sample UUID |
 | `train`, `activate_model` | Engineer | `model.train`, `model.activate` (active version; an older one is a rollback; `model.train` also the Golden board before); object = model UUID |
 | `save_recipe` | Engineer | `recipe.save` (recipe body); object = recipe UUID. A revision that sets, changes or clears the AI score threshold's override is also audited as `recipe.ai_threshold` (revision, override, the threshold that judges, the active AI model's version and calibrated value); object = board model name (REQ-TRN-015) |
@@ -570,11 +593,11 @@ any sign-in closes its Save to Recipe sheet, so a revision never carries the rea
 
 | Table | Key columns |
 |---|---|
-| `board_models` | name (a new name that differs from an existing one only in case is refused, AOI-TRN-005: Windows would give both the same model and golden board files), reference_image (golden) |
+| `board_models` | name (a new name that differs from an existing one only in case is refused, AOI-TRN-005: Windows would give both the same model and golden board files), reference_image (golden), px_per_mm (the scale its recipe's sizes in mm are applied at, a finite REAL above 0, which a CHECK holds; NULL until an Engineer sets one, and for rows from before migration 0012) |
 | `samples` | board_model, path, label OK/NG, defect_type (DCT), side |
 | `models` | board_model, version, uuid (also in the `.pt` file's metadata, written there before the file is saved, so an exported file names its record), path (.pt), metrics JSON (thresholds, scores, timing), active (one version per board model, switched in one transaction, so no reader finds none active, #171) |
 | `recipes` | board_model, revision (1 is the default recipe, stored when the board model is created, so every result names a stored revision), uuid, body JSON, user, created_at |
-| `inspections` | time, board_model, model_version, model_uuid (the AI model version active when the board was judged; whether the AI check ran is the recipe revision's to say, and a result judged with it off carries `AI_OFF_NOTE`, #246), recipe_rev, recipe_uuid, image/overlay paths, diff_map_path and ai_map_path (the difference and AI score maps as PNG files beside the overlay, 8-bit exact, and 16-bit within one step: `_ai2.png` since S28a, 0.001 σ steps to 32.767 σ, then 1/8192 of the value to 1789 σ, or `_ai.png` before, 0.001 σ steps to 65.535 σ; NULL for rows from before migration 0007, and for OK results once the retention sweep deleted them), reference_path and reference_sha256 (the golden board file the result was judged against and the SHA-256 of its bytes; NULL for rows from before migration 0008 and for results judged without a golden board), view (Top, Side or Bottom; NULL for rows from before migration 0005), result, score, metrics JSON, result_json (the whole result as `InspectionResult.to_dict` writes it, read back by `from_dict` without the images; NULL before migration 0006), operator, archived |
+| `inspections` | time, board_model, model_version, model_uuid (the AI model version active when the board was judged; whether the AI check ran is the recipe revision's to say, and a result judged with it off carries `AI_OFF_NOTE`, #246), recipe_rev, recipe_uuid, image/overlay paths, diff_map_path and ai_map_path (the difference and AI score maps as PNG files beside the overlay, 8-bit exact, and 16-bit within one step: `_ai2.png` since S28a, 0.001 σ steps to 32.767 σ, then 1/8192 of the value to 1789 σ, or `_ai.png` before, 0.001 σ steps to 65.535 σ; NULL for rows from before migration 0007, and for OK results once the retention sweep deleted them), reference_path and reference_sha256 (the golden board file the result was judged against and the SHA-256 of its bytes; NULL for rows from before migration 0008 and for results judged without a golden board), view (Top, Side or Bottom; NULL for rows from before migration 0005), result, score, metrics JSON, result_json (the whole result as `InspectionResult.to_dict` writes it, read back by `from_dict` without the images, with the scale it was judged at, `px_per_mm`, when there was one; NULL before migration 0006), operator, archived |
 | `defects` | inspection_id, no, type, score, side, x, y, w, h |
 | `checks` | inspection_id, no, region (Board, or the ROI's name and box), metric, source, value, threshold, rule, result, explain: one row per decision variable of a result (REQ-INSP-012; none for rows from before migration 0006) |
 | `test_runs` | uuid, time, board_model, model_version, model_uuid (NULL for runs from before migration 0009), folder, metrics JSON, results JSON (one row per image; its `image` path stored like `folder`, and `ai_check`, RAN, OFF or NO_AI_MODEL, since #246); the AI Model Test CSV and report name the run and the AI model active then by UUID, and say when the recipe turned the AI check off |

@@ -99,12 +99,12 @@
     <message>
         <location line="+3"/>
         <location line="+93"/>
-        <location line="+505"/>
+        <location line="+510"/>
         <source>Golden board</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-597"/>
+        <location line="-602"/>
         <source>AI model</source>
         <translation type="unfinished"></translation>
     </message>
@@ -160,12 +160,12 @@
     </message>
     <message>
         <location line="+15"/>
-        <location line="+814"/>
+        <location line="+819"/>
         <source>Test board</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-808"/>
+        <location line="-813"/>
         <source>Inspecting…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -200,7 +200,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+17"/>
+        <location line="+18"/>
         <source>Re-evaluating…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -241,7 +241,7 @@
     </message>
     <message>
         <location line="+5"/>
-        <location line="+143"/>
+        <location line="+147"/>
         <source>The verdict and the decision table are the stored ones; press Re-evaluate › to inspect the board again from its image file.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -286,7 +286,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-884"/>
+        <location line="-889"/>
         <source>AI score threshold</source>
         <translation type="unfinished"></translation>
     </message>
@@ -311,7 +311,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+163"/>
+        <location line="+164"/>
         <source>Re-evaluate</source>
         <translation type="unfinished"></translation>
     </message>
@@ -379,14 +379,14 @@
     </message>
     <message>
         <location line="+0"/>
-        <location line="+142"/>
+        <location line="+146"/>
         <location line="+212"/>
         <location line="+12"/>
         <source>Re-evaluate ›</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-352"/>
+        <location line="-356"/>
         <source>Train an AI model on Training.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -411,7 +411,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+32"/>
+        <location line="+36"/>
         <source>Test board: {file} (stored result)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -482,7 +482,12 @@
 <context>
     <name>Errors</name>
     <message>
-        <location filename="../core/services.py" line="+64"/>
+        <location filename="../core/services.py" line="+50"/>
+        <source>a length of {length} px over {distance} mm gives no scale: both must be numbers above 0, and the scale from {least} to {most} px per mm</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+21"/>
         <source> ({context})</source>
         <translation type="unfinished"></translation>
     </message>
@@ -532,7 +537,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+68"/>
+        <location line="+70"/>
         <source>{file}: {defects} defect(s)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -542,17 +547,17 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+168"/>
+        <location line="+174"/>
         <source>Re-evaluating a result</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+18"/>
+        <location line="+21"/>
         <source>file unknown</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+18"/>
+        <location line="+21"/>
         <source>difference map</source>
         <translation type="unfinished"></translation>
     </message>
@@ -582,7 +587,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+19"/>
+        <location line="+23"/>
+        <source>Setting a board model&apos;s scale</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+23"/>
         <source>Changing the reference image</source>
         <translation type="unfinished"></translation>
     </message>
@@ -627,12 +637,17 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-629"/>
+        <location line="-1077"/>
+        <source>there is no board model of that name</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+407"/>
         <source>its UUID {found} is not {uuid}, as in the AI model registry</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+644"/>
+        <location line="+685"/>
         <source>Changing settings</source>
         <translation type="unfinished"></translation>
     </message>
@@ -784,7 +799,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+263"/>
+        <location line="+279"/>
         <source>board image</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1024,12 +1039,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1"/>
-        <source>Record {id} ({file}) has no stored decision table: it was saved before migration 0006, or no record has that number or UUID.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+5"/>
+        <location line="+6"/>
         <source>Inspect the board again on Inspection; Compare then opens the new result.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1301,6 +1311,21 @@
     </message>
     <message>
         <location line="+4"/>
+        <source>Scale not set</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>The scale of board model {board_model} was not set: {reason}.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Nothing was changed. On the Recipe Editor, press Calibrate Scale…, click two points on the Golden board a known distance apart, enter that distance in mm and press Set Scale.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+8"/>
         <source>Export stopped part-way</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1565,7 +1590,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-597"/>
+        <location line="-607"/>
         <source>Board judged NG</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1590,7 +1615,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+71"/>
+        <location line="+9"/>
+        <source>Record {id} ({file}) has no stored decision table that can be read: it was saved before migration 0006, it is damaged, or no record has that number or UUID.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+62"/>
         <source>AI model file refused: {path} could not be loaded as a weights-only AI model file this app wrote ({reason}).</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1620,7 +1650,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+191"/>
+        <location line="+201"/>
         <source>Workspace in use</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2291,7 +2321,7 @@
 <context>
     <name>LogsPage</name>
     <message>
-        <location filename="../ui/pages/logs.py" line="+54"/>
+        <location filename="../ui/pages/logs.py" line="+55"/>
         <source>Include archived</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2932,7 +2962,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/compare.py" line="-721"/>
+        <location filename="../ui/pages/compare.py" line="-726"/>
         <source>Compare</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3543,7 +3573,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/services.py" line="-1206"/>
+        <location filename="../core/services.py" line="-1254"/>
         <source>Aligning {count} images to the reference board</source>
         <translation type="unfinished"></translation>
     </message>

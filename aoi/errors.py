@@ -263,8 +263,8 @@ CODES: dict[str, ErrorCode] = {
             QT_TRANSLATE_NOOP("Errors", "Result has no stored decision table"),
             QT_TRANSLATE_NOOP(
                 "Errors",
-                "Record {id} ({file}) has no stored decision table: it was saved before migration 0006, or no record "
-                "has that number or UUID.",
+                "Record {id} ({file}) has no stored decision table that can be read: it was saved before migration"
+                " 0006, it is damaged, or no record has that number or UUID.",
             ),
             QT_TRANSLATE_NOOP("Errors", "Inspect the board again on Inspection; Compare then opens the new result."),
         ),
@@ -519,6 +519,16 @@ CODES: dict[str, ErrorCode] = {
                 " nothing was saved. Compare now shows the thresholds of revision {latest}.",
             ),
             QT_TRANSLATE_NOOP("Errors", "Try your thresholds again on revision {latest}, then press Save to Recipe."),
+        ),
+        ErrorCode(
+            "AOI-RCP-008",
+            QT_TRANSLATE_NOOP("Errors", "Scale not set"),
+            QT_TRANSLATE_NOOP("Errors", "The scale of board model {board_model} was not set: {reason}."),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Nothing was changed. On the Recipe Editor, press Calibrate Scale…, click two points on the Golden"
+                " board a known distance apart, enter that distance in mm and press Set Scale.",
+            ),
         ),
         ErrorCode(
             "AOI-LOG-001",

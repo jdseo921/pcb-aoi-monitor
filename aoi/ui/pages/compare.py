@@ -693,7 +693,11 @@ class ComparePage(Page):
         """A stored result as it was decided, never inspected again (REQ-CMP-003): the verdict, table and explanation
         from the record at once (REQ-INSP-009); the pictures and the stored maps follow from the pool thread."""
         rec = self.ctx.inspection(inspection_id)
-        res = self.ctx.inspection_result(inspection_id)
+        try:
+            res = self.ctx.inspection_result(inspection_id)
+        except AoiError as e:  # AOI-CMP-002: a stored result that cannot be read, damaged (S29 review)
+            self.error(e)
+            return
         if rec is None or res is None:
             file = Path(rec["image_path"]).name if rec else "?"
             self.error(AoiError("AOI-CMP-002", id=inspection_id, file=file))

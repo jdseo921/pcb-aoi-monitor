@@ -46,6 +46,13 @@ ALIGNING = QT_TRANSLATE_NOOP("Training", "Aligning {count} images to the referen
 STEM_CHARS = 40  # how much of a source file's stem names its evidence or sample file (#245)
 WINDOWS = os.name == "nt"
 MAX_PATH = 260  # the UTF-16 units of a path, its ending NUL included, that Windows takes with long paths off
+NO_BOARD_MODEL = QT_TRANSLATE_NOOP("Errors", "there is no board model of that name")  # AOI-RCP-008's reasons (S29)
+SCALE_NUMBERS = QT_TRANSLATE_NOOP(
+    "Errors",
+    "a length of {length} px over {distance} mm gives no scale: both must be numbers above 0, and the scale from"
+    " {least} to {most} px per mm",
+)
+MIN_SCALE, MAX_SCALE = 0.01, 100000  # px per mm a scale set holds, so that no size in mm overflows in px (S29 review)
 
 
 @dataclass(frozen=True)
@@ -570,7 +577,9 @@ class AppContext:
                 why = unreadable if Path(golden).exists() else QT_TRANSLATE_NOOP("Errors", "the file is gone")
                 raise AoiError("AOI-INSP-009", detail=str(e), board=board_model, file=golden, reason=why) from e
         model, version, model_uuid = (mv[1], mv[0], mv[2]) if mv else (None, None, None)
-        return Inspector(recipe or rcp, model, reference, side, version, rev, model_uuid, recipe_uuid, golden, sha)
+        scale = self.db.scale(board_model)  # the recipe's sizes in mm are applied at it (REQ-RCP-006)
+        args = (model, reference, side, version, rev, model_uuid, recipe_uuid, golden, sha, scale)
+        return Inspector(recipe or rcp, *args)
 
     def engine_is_current(self, board_model: str, insp: Inspector | JudgedBy) -> bool:
         """Whether `insp` was built from what `inspector(board_model)` would use now: the active AI model, the latest
@@ -889,9 +898,15 @@ class AppContext:
         """One stored result read back without its images (verdict, checks, defects, compare metrics and regions, as
         decided) for Compare (REQ-INSP-008); with `with_maps`, the stored maps too, where their files exist
         (REQ-INSP-012), and AOI-CMP-003 for one there that cannot be read or is not the map stored (in colour, or not
-        the size of its board picture, #249). None for a record from before migration 0006."""
-        doc = self.db.inspection_result(inspection_id)
-        res = InspectionResult.from_dict(doc) if doc is not None else None
+        the size of its board picture, #249). None for a record from before migration 0006; AOI-CMP-002 for a stored
+        result that cannot be read (damaged: not JSON, or a scale or time that is no number, S29 review)."""
+        try:
+            doc = self.db.inspection_result(inspection_id)
+            res = InspectionResult.from_dict(doc) if doc is not None else None
+        except (ValueError, KeyError, TypeError, AttributeError) as e:  # as Logs & Export's CSV skips one (#246)
+            rec = self.db.inspection(inspection_id)
+            file = Path(rec["image_path"]).name if rec else "?"
+            raise AoiError("AOI-CMP-002", detail=str(e), id=inspection_id, file=file) from e
         if res is None or not with_maps:
             return res
         rec = self.db.inspection(inspection_id)
@@ -934,7 +949,10 @@ class AppContext:
         decision table; AOI-CMP-005 when `thresholds` are another board model's; AOI-CMP-003 when a map it reads is
         there but cannot be read; AOI-CMP-004 when a map, or the AI model's calibration, that a check `thresholds`
         uses was judged on is gone; and AOI-INSP-010 when `thresholds` leave no check that ran on the board. A map that
-        is not the map stored (in colour, or not the size of the result's board picture) cannot be read (#249)."""
+        is not the map stored (in colour, or not the size of the result's board picture) cannot be read (#249). Sizes in
+        mm are applied at the scale the result was judged at, or, for one judged without a scale, at the board model's
+        now, which the result it returns keeps (REQ-RCP-006). A stored result that cannot be read is AOI-CMP-002 too
+        (S29 review)."""
         iid = self.db.inspection_id(result_uuid)
         rec = self.db.inspection(iid) if iid is not None else None
         res = self.inspection_result(iid) if iid is not None else None
@@ -947,6 +965,9 @@ class AppContext:
             raise AoiError("AOI-CMP-005", tried=thresholds.board_model, file=file, judged=rec["board_model"])
         diff_path, ai_path = self.db.map_paths(iid)
         shape = picture_shape(rec["overlay_path"])  # the size the board was judged at: its maps' (#249)
+        if res.px_per_mm is None:  # judged without a scale: judged again at the board model's now, kept with it (S29)
+            res.px_per_mm = self.db.scale(rec["board_model"])
+        thresholds = thresholds.in_px(res.px_per_mm)  # in px before the regions are found while the AI map decodes
         changed: list[tuple[np.ndarray, list[Region], dict[str, Any]]] = []  # found while the AI map decodes (#249)
         load_maps(
             res,
@@ -1019,6 +1040,33 @@ class AppContext:
         same = next((n for n in names if n.casefold() == name.casefold()), None) if name not in names else None
         if same is not None:
             raise AoiError("AOI-TRN-005", name=name, existing=same)
+
+    def scale(self, board_model: str) -> float | None:
+        """The board model's scale in px per mm (REQ-RCP-006), or None until one is set: its recipe's sizes in px."""
+        return self.db.scale(board_model)
+
+    @requires("Engineer", QT_TRANSLATE_NOOP("Errors", "Setting a board model's scale"))
+    @transactional
+    def set_scale(self, board_model: str, length_px: float, distance_mm: float) -> float:
+        """Set the board model's scale from a known length on its calibration image, the Golden board (REQ-RCP-006;
+        Calibrate Scale… on the Recipe Editor): `length_px` px on the image are `distance_mm` mm on the board. Returns
+        the scale in px per mm, at which its recipe's sizes in mm judge every board from then on, so it can change
+        verdicts: audited as board_model.scale with the scale before and after, the length, the distance and the Golden
+        board file. Refused with AOI-RCP-008, before anything is written, unless both are numbers above 0, not true or
+        false, whose ratio is from MIN_SCALE to MAX_SCALE, or for a board model that does not exist."""
+        numbers = all(isinstance(v, int | float) and not isinstance(v, bool) for v in (length_px, distance_mm))
+        scale = length_px / distance_mm if numbers and distance_mm > 0 else math.nan  # a bool is none (S29 review)
+        if board_model not in self.db.board_models():
+            raise AoiError("AOI-RCP-008", board_model=board_model, reason=NO_BOARD_MODEL)
+        if not (numbers and 0 < length_px < math.inf and MIN_SCALE <= scale <= MAX_SCALE):
+            reason = SCALE_NUMBERS.fill(length=length_px, distance=distance_mm, least=MIN_SCALE, most=MAX_SCALE)
+            raise AoiError("AOI-RCP-008", board_model=board_model, reason=reason)
+        before, golden = self.db.scale(board_model), self.db.reference(board_model)
+        self.db.set_scale(board_model, scale)
+        image = to_stored(Path(golden), self.settings.root) if golden else None
+        after = {"px_per_mm": scale, "length_px": length_px, "distance_mm": distance_mm, "image": image}
+        self.audit("board_model.scale", "board_model", board_model, {"px_per_mm": before}, after)
+        return scale
 
     @requires("Engineer", QT_TRANSLATE_NOOP("Errors", "Changing the reference image"))
     @transactional
