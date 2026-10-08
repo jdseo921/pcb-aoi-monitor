@@ -27,7 +27,7 @@
 <context>
     <name>ComparePage</name>
     <message>
-        <location filename="../ui/pages/compare.py" line="+55"/>
+        <location filename="../ui/pages/compare.py" line="+56"/>
         <source>Side by side</source>
         <translation type="unfinished"></translation>
     </message>
@@ -159,12 +159,12 @@
     </message>
     <message>
         <location line="+14"/>
-        <location line="+446"/>
+        <location line="+450"/>
         <source>Test board</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-440"/>
+        <location line="-444"/>
         <source>Inspecting…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -307,13 +307,13 @@
     <message>
         <location line="+0"/>
         <location line="+86"/>
-        <location line="+102"/>
+        <location line="+106"/>
         <location line="+11"/>
         <source>Re-evaluate ›</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-185"/>
+        <location line="-189"/>
         <source>Train an AI model on Training.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -380,7 +380,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+49"/>
+        <location line="+53"/>
         <source>Recipe saved as revision {revision}</source>
         <translation type="unfinished"></translation>
     </message>
@@ -407,6 +407,139 @@
     <message>
         <location line="+1"/>
         <source>No board to compare yet</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>Errors</name>
+    <message>
+        <location filename="../core/services.py" line="+55"/>
+        <source> ({context})</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+35"/>
+        <source>Operator, Engineer or Admin</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Engineer or Admin</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Admin</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+152"/>
+        <source>Importing samples</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+55"/>
+        <source>Training a model</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+111"/>
+        <source>Saving a recipe</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+112"/>
+        <source>{file}: {defects} defect(s)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+73"/>
+        <source>Running an AI model test</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+135"/>
+        <source>Re-evaluating a result</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+68"/>
+        <source>Creating a board model</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+19"/>
+        <source>Changing the reference image</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+15"/>
+        <source>Relabelling a sample</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+12"/>
+        <source>Removing a sample</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+18"/>
+        <source>Activating a model version</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+10"/>
+        <source>Changing users</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+15"/>
+        <source>Changing settings</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+25"/>
+        <source>Archiving records</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+35"/>
+        <source>Exporting a model</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+10"/>
+        <source>Exporting overlay images</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+43"/>
+        <source>Exporting CSV</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/errors.py" line="+67"/>
+        <source>unhandled</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+20"/>
+        <source>start-up</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/pages/compare.py" line="-61"/>
+        <source>Changing recipes</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/pages/recipe_editor.py" line="+361"/>
+        <source>Height</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+0"/>
+        <source>Volume</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -644,7 +777,7 @@
 <context>
     <name>InspectionPage</name>
     <message>
-        <location filename="../ui/pages/inspection.py" line="+89"/>
+        <location filename="../ui/pages/inspection.py" line="+90"/>
         <location line="+81"/>
         <location line="+133"/>
         <source>Load Images…</source>
@@ -944,7 +1077,27 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+200"/>
+        <location line="+52"/>
+        <source>Every record is archived or older than {days} days.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Show All Records</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+123"/>
+        <source>Export CSV stopped: no file was written.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+15"/>
+        <source>Stopped: copied {count} overlay image(s) to {folder}; the others were not copied.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+9"/>
         <source>Archive older than {days} days</source>
         <translation type="unfinished"></translation>
     </message>
@@ -959,17 +1112,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+11"/>
-        <source>Every record is archived or older than {days} days.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+1"/>
-        <source>Show All Records</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+3"/>
+        <location line="+15"/>
         <source>No records match</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1009,12 +1152,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+62"/>
-        <source>Export CSV stopped: no file was written.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+2"/>
+        <location line="+64"/>
         <source>Exported {count} records and {checks} check rows to {folder}: {file}, {checks_file}</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1039,12 +1177,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1"/>
-        <source>Stopped: copied {count} overlay image(s) to {folder}; the others were not copied.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+13"/>
+        <location line="+14"/>
         <source>Archived {count} record(s)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1372,7 +1505,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/base.py" line="+120"/>
+        <location filename="../ui/pages/base.py" line="+114"/>
         <source>No board model yet</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1427,7 +1560,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+16"/>
+        <location line="+17"/>
         <source>Not inspected</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1447,7 +1580,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/compare.py" line="-499"/>
+        <location filename="../ui/pages/compare.py" line="-442"/>
         <source>Compare</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1502,7 +1635,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/recipe_editor.py" line="+64"/>
+        <location filename="../ui/pages/recipe_editor.py" line="-297"/>
         <source>Recipe Editor</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1789,7 +1922,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+97"/>
+        <location line="+98"/>
         <source>Image to try the recipe on</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1828,7 +1961,7 @@
 <context>
     <name>Role</name>
     <message>
-        <location filename="../ui/pages/base.py" line="-240"/>
+        <location filename="../ui/pages/base.py" line="-241"/>
         <source>Operator</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2005,7 +2138,7 @@
 <context>
     <name>Startup</name>
     <message>
-        <location filename="../ui/errors.py" line="+101"/>
+        <location filename="../ui/errors.py" line="+38"/>
         <source>Choose another workspace folder</source>
         <translation type="unfinished"></translation>
     </message>

@@ -358,7 +358,8 @@ class RecipeEditorPage(Page):
             return
         x = self.edited_recipe.rois[i]
         limits = [self._limit(w) for w in (self.r_hmin, self.r_hmax, self.r_vmin, self.r_vmax)]
-        for quantity, (low, high) in (("Height", limits[:2]), ("Volume", limits[2:])):
+        height, volume = QT_TRANSLATE_NOOP("Errors", "Height"), QT_TRANSLATE_NOOP("Errors", "Volume")
+        for quantity, (low, high) in ((height, limits[:2]), (volume, limits[2:])):
             negative = any(v is not None and v < 0 for v in (low, high))
             if negative or (low is not None and high is not None and low > high):
                 shown = ["—" if v is None else f"{v:g}" for v in (low, high)]

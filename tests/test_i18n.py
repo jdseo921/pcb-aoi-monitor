@@ -48,9 +48,11 @@ OWNED_SETTERS = {  # static methods that show text when called on these classes 
 TEXT_CONSTRUCTORS = {
     "QLabel", "QPushButton", "QCheckBox", "QRadioButton", "QGroupBox", "QAction", "QMenu", "QListWidgetItem",
     "QTableWidgetItem", "QMessageBox", "button", "make_table", "BusyOverlay", "ImageView", "MetricTile", "EmptyState",
+    "AoiError",
 }  # fmt: skip
-TEXT_POSITIONS = {"button": 1, "action": 1}  # button(text, kind, slot), action(text, key, slot): text first
-SKIP_KEYWORDS = {"kind", "slot", "parent", "over"}
+# button(text, kind, slot), action(text, key, slot): text first; AoiError(code, detail, **values): the values (#198)
+TEXT_POSITIONS = {"button": 1, "action": 1, "AoiError": 0}
+SKIP_KEYWORDS = {"kind", "slot", "parent", "over", "detail"}  # an error's detail goes to the log only
 ALLOWED_LITERALS = {  # (file, literal): why it is not translated; a stale entry fails the test
     ("aoi/ui/pages/base.py", "Page"): "placeholder title of the base class; every page overrides it",
     ("aoi/ui/pages/settings.py", "auto"): "a torch device name, shown as the value the engine takes",
@@ -260,8 +262,9 @@ def _scan(path: Path) -> set[tuple[int, str]]:
 def test_req_set_005_no_untranslated_literals() -> None:
     """An AST scan of aoi/ui and main.py: a string literal (an f-string, `literal.format()` or a name assigned one in
     the same function count too) passed to a Qt text setter, a text widget constructor, a message box, an input or
-    file dialog, a table header, a tooltip or one of this code's own helpers (`button`, `make_table`, `show_state`,
-    `status`) is wrapped in tr(), QT_TRANSLATE_NOOP or a *_text helper, and every page title and subtitle is marked.
+    file dialog, a table header, a tooltip, one of this code's own helpers (`button`, `make_table`, `show_state`,
+    `status`) or an AoiError as a value of its message (#198) is wrapped in tr(), QT_TRANSLATE_NOOP or a *_text
+    helper, and every page title and subtitle is marked.
     Names the engine or the taxonomy supplies arrive as variables, so they are outside this scan (they stay English
     until a word list exists). ALLOWED_LITERALS lists what may stay a literal, each with its reason."""
     files = [*sorted((ROOT / "aoi" / "ui").rglob("*.py")), ROOT / "main.py"]
@@ -276,8 +279,8 @@ def test_req_set_005_no_untranslated_literals() -> None:
 
 def test_req_set_005_the_scan_catches_a_literal(tmp_path: Path) -> None:
     """The scan itself: it flags a literal, an f-string, a `.format()` on a literal, a name assigned a literal (with or
-    without an annotation), a title (annotated or not) and a dialog's words, and lets through tr(), markup-only text, a
-    file name and a logger's warning."""
+    without an annotation), a title (annotated or not), a dialog's words and a value an AoiError fills its message with
+    (#198), and lets through tr(), markup-only text, a file name, a logger's warning and an AoiError's detail."""
     sample = tmp_path / "sample.py"
     sample.write_text(
         "class P(Page):\n"
@@ -298,7 +301,9 @@ def test_req_set_005_the_scan_catches_a_literal(tmp_path: Path) -> None:
         '        QFileDialog.getSaveFileName(self, self.tr("Save"), "board_0.png", self.tr("PNG (*.png)"))\n'
         '        bar.addWidget(button(self.tr("Go"), "primary"))\n'
         '        self.action(self.tr("Go"), "F5", self.go)\n'  # the key is not text
-        '        self.action("Run", "F6", self.go)\n',
+        '        self.action("Run", "F6", self.go)\n'
+        '        raise AoiError("AOI-USR-001", detail="log", what="Changing recipes", roles=ROLES_FROM[role])\n'
+        '        raise AoiError("AOI-RCP-002", quantity=QT_TRANSLATE_NOOP("Errors", "Height"), low=f"{low:g}")\n',
         encoding="utf-8",
     )
     assert {text for _, text in _scan(sample)} == {
@@ -312,6 +317,7 @@ def test_req_set_005_the_scan_catches_a_literal(tmp_path: Path) -> None:
         "Title",
         "Body",
         "Run",
+        "Changing recipes",
     }
 
 

@@ -74,7 +74,7 @@ fails a screen module that holds one of them once imported (#202). `aoi/times.py
 Types (Code style, since S22): mypy runs strict on `aoi/core`, `aoi/data` and `aoi/times.py`, and since S22a on `aoi/ui`
 and `aoi/hal` too, with no flag relaxed (`pyproject.toml`). PySide6 enums are written in full
 (`Qt.AlignmentFlag.AlignCenter`), pages take `QT_TRANSLATE_NOOP` from `aoi/ui/pages/base.py` (Qt's is typed as returning
-object), and no widget attribute carries a QWidget method's name: `size`, `pos` and `render` hid `QWidget.size()`,
+object; it is the one of `aoi/errors.py`, which returns a `Phrase`), and no widget attribute carries a QWidget method's name: `size`, `pos` and `render` hid `QWidget.size()`,
 `pos()` and `render()` on three pages until S22a, and `tests/test_screen_rules.py` now fails on one. Since S22b every
 page is typed and no module is exempt, and ruff's annotation rules (all but ANN401) require a type hint on every
 function argument and return value across the repository, `tools/`, `main.py` and `tests/` included; mypy does not run
@@ -166,8 +166,9 @@ literal and checks that every page sits in the one frame (REQ-SET-018). A verdic
 removes data is a red `danger` button, last in its row and never the default; a question that removes or overwrites
 data passes its buttons with No as the default, so Enter keeps the data (#182). A board that could not be judged shows
 `Page.not_inspected` on its banner (· Not inspected, in the neutral colour) with its picture and verdict table cleared,
-never the verdict of the board before (#182); `run_in_background(on_error=…)` lets a page clear what the job was to
-replace before the coded dialog opens. Every empty page, list and
+never the verdict of the board before (#182), and its empty state (Inspection, Compare's test pane) names the board, the
+error's code and what happened, translated through `phrase_text()` (#198); `run_in_background(on_error=…)` lets a
+page clear what the job was to replace before the coded dialog opens. Every empty page, list and
 image area shows an `EmptyState` (`aoi/ui/widgets/empty_state.py`): what is missing, what to do next and one link
 button to the page where it is done; `Page.empty_step` turns "do this on <page>" into that link, or into "Ask an
 Engineer …" for a role that cannot open the page (REQ-SET-019, since S18c). With no board model the header list is
@@ -426,7 +427,7 @@ role-gated buttons and links follow the new role at once (#174).
 | `defects` | inspection_id, no, type, score, side, x, y, w, h |
 | `checks` | inspection_id, no, region (Board, or the ROI's name and box), metric, source, value, threshold, rule, result, explain: one row per decision variable of a result (REQ-INSP-012; none for rows from before migration 0006) |
 | `test_runs` | uuid, time, board_model, model_version, model_uuid (NULL for runs from before migration 0009), folder, metrics JSON, results JSON (one row per image; its `image` path stored like `folder`); the AI Model Test CSV and report name the run and the AI model by UUID |
-| `alarms` | uuid, time, level NG/WARN/ERROR, code AOI-<AREA>-<NNN>, message; the newest 1,000 are shown and survive a restart |
+| `alarms` | uuid, time, level NG/WARN/ERROR, code AOI-<AREA>-<NNN>, message (English), phrase (the message's template, translation context and values as JSON, shown in the UI language; NULL for rows from before migration 0011 and for an alarm a page wrote in the UI language of its moment, #198); the newest 1,000 are shown and survive a restart |
 | `users` | — |
 | `audit` | uuid, at_utc, user_uuid, role, action, object_type, object_uuid, before_json, after_json, reason; append only (triggers refuse UPDATE, DELETE and, since migration 0010, an INSERT OR REPLACE or REPLACE INTO that reuses an entry's id or uuid; the connection sets `recursive_triggers`). `audit_entries` gives every entry the same fields, `before` and `after` decoded or None, without the raw JSON columns |
 | `schema_version` | number, name, applied_at, checksum (migration runner) |
@@ -470,7 +471,12 @@ by position, not a QBuffer), a run checks that every file an inspection and a tr
 `atomic.write_with`, a kill inside such a write leaves the target absent and a temporary file the next start removes,
 and 20 random kills, each after a saved result, lose no finished result. Every error a user can see is
 an `AoiError` from the catalogue in `aoi/errors.py`, with a code `AOI-<AREA>-<NNN>`, what happened and what to do;
-`docs/error-codes.md` is generated from it (REQ-LOG-004, REQ-SET-019). `aoi/logging_setup.py` writes the JSON-lines
+`docs/error-codes.md` is generated from it (REQ-LOG-004, REQ-SET-019). An error's title, what happened and what to do
+are `Phrase`s (`aoi/errors.py`, no Qt): the English template with its translation context "Errors" and the values that
+fill it, a value being a phrase in turn where it is words (the action a role check names and the roles it needs, a
+Recipe Editor quantity, the page an unexpected error stopped on). Their str is the English text the log keeps;
+`phrase_text()` in `aoi/ui/errors.py` translates a template first and fills it after, for the dialog, Compare's
+AOI-CMP-001 note, the Golden board pane and the alarm list (#198). `aoi/logging_setup.py` writes the JSON-lines
 log in `<workspace>/logs/`, one file per UTC day, with time, level, module, event, ids and the app version, and never
 an image or a password; a caller's extra never replaces one of those fixed fields (one of the same name is written as
 `extra_<name>`, #171). Alarms (an NG verdict, a missing AI model, every error shown) are stored in `alarms` with
@@ -513,7 +519,7 @@ version) overrides `Page.subtitle_text()`; the "No board model yet" empty state 
 `Page.no_board_model()`, Home's included. A sentence is never glued from pieces: placeholders are named, `{count}`, and filled with
 `.format()` after translation, never with an f-string. `tests/test_i18n.py` scans `aoi/ui` and `main.py` with `ast`
 and fails on a string literal passed to a Qt text setter, a text widget, a dialog, a table header or one of this code's
-helpers outside `tr()`, and on an unmarked page title; `ALLOWED_LITERALS` there names the few literals that stay, each
+helpers outside `tr()`, on a literal value an `AoiError` fills its message with (#198), and on an unmarked page title; `ALLOWED_LITERALS` there names the few literals that stay, each
 with its reason (device names, the base class's placeholder title). `aoi/i18n/aoi_ko.ts` is
 generated by
 `python tools/update_translations.py` (pyside6-lupdate over `aoi/`) and a test fails when it is stale; Korean

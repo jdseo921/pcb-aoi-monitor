@@ -30,6 +30,7 @@ from ...errors import AoiError
 from ...hal import VIEWS
 from ...times import to_local
 from .. import theme
+from ..errors import alarm_text
 from ..widgets.empty_state import EmptyState
 from ..widgets.image_view import ImageView
 from ..workers import Worker, start
@@ -417,7 +418,7 @@ class InspectionPage(Page):
             return
         self.alarms.clear()
         for a in rows:
-            self.alarms.addItem(alarm_line(a["time"], a["level"], a["code"], a["message"]))
+            self.alarms.addItem(alarm_line(a["time"], a["level"], a["code"], alarm_text(a)))
 
     def _update_buttons(self) -> None:
         """Enable the actions, and with them the buttons and the keys, for the state: Start and Next Board wait while a

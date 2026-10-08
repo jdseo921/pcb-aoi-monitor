@@ -8,9 +8,11 @@ default workspace folder.
 
 from __future__ import annotations
 
+import json
 import sys
 import traceback
 from types import TracebackType
+from typing import Any
 
 from PySide6.QtCore import QCoreApplication
 from PySide6.QtWidgets import QFileDialog, QMessageBox, QWidget
@@ -18,16 +20,38 @@ from PySide6.QtWidgets import QFileDialog, QMessageBox, QWidget
 from .. import logging_setup
 from ..config import Settings, default_workspace
 from ..core.services import AppContext, ErrorReport
-from ..errors import AoiError
+from ..errors import QT_TRANSLATE_NOOP, AoiError, Phrase
 
 # Refusals another workspace folder cures: a v0.1 or newer database, a changed migration, a folder without WAL, a
 # folder or database that cannot be opened, a database another program holds (the same folder, once it lets go).
 ANOTHER_WORKSPACE = {"AOI-SET-001", "AOI-SET-002", "AOI-SET-003", "AOI-SET-005", "AOI-SET-011", "AOI-SET-012"}
 
 
+def phrase_text(text: str) -> str:
+    """`text` in the UI language: a phrase (an error's title, what happened and what to do, an alarm, and the phrases
+    that fill them) translated under its context, then filled with its values, themselves shown the same way; any
+    other text as it is. A translation that names other placeholders than its source leaves the English (#198)."""
+    if not isinstance(text, Phrase):
+        return text
+    values = {k: phrase_text(v) if isinstance(v, str) else v for k, v in text.values.items()}
+    try:
+        return QCoreApplication.translate(text.context, text.source).format(**values)
+    except (KeyError, IndexError, ValueError):
+        return text.source.format(**values)
+
+
+def alarm_text(alarm: dict[str, Any]) -> str:
+    """An alarm's message in the UI language: its stored phrase, or the message stored before migration 0011 or in
+    the UI language a page wrote it in."""
+    try:
+        return phrase_text(Phrase.from_json(json.loads(alarm["phrase"]))) if alarm.get("phrase") else alarm["message"]
+    except (ValueError, KeyError, TypeError, AttributeError):  # a phrase that cannot be read: the English stands
+        return str(alarm["message"])
+
+
 def dialog_text(report: ErrorReport) -> tuple[str, str]:
-    """(title, text) of the dialog: "<code> <title>", then what happened and what to do."""
-    return f"{report.code} {report.title}", f"{report.what}\n\n{report.action}"
+    """(title, text) of the dialog: "<code> <title>", then what happened and what to do, in the UI language."""
+    return f"{report.code} {phrase_text(report.title)}", f"{phrase_text(report.what)}\n\n{phrase_text(report.action)}"
 
 
 def show_error(parent: QWidget | None, report: ErrorReport) -> None:
@@ -40,7 +64,7 @@ def install_excepthook(ctx: AppContext, parent: QWidget | None) -> None:
 
     def hook(exc_type: type[BaseException], exc: BaseException, tb: TracebackType | None) -> None:
         try:
-            show_error(parent, ctx.report_error(exc.with_traceback(tb), "unhandled"))
+            show_error(parent, ctx.report_error(exc.with_traceback(tb), QT_TRANSLATE_NOOP("Errors", "unhandled")))
         except Exception:  # the handler itself must never take the app down
             sys.__excepthook__(exc_type, exc, tb)
 
@@ -60,7 +84,7 @@ def open_workspace() -> AppContext | None:
         return _open_workspace()
     except Exception as e:
         _log_start_failure(e)
-        show_error(None, ErrorReport.of(e, "start-up"))
+        show_error(None, ErrorReport.of(e, QT_TRANSLATE_NOOP("Errors", "start-up")))
         return None
 
 

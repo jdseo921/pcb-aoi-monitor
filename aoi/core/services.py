@@ -27,7 +27,7 @@ from ..data import atomic
 from ..data.db import Database, DbError, new_uuid
 from ..data.errors import WorkspaceError
 from ..data.paths import to_stored
-from ..errors import AoiError
+from ..errors import QT_TRANSLATE_NOOP, AoiError
 from ..times import local_date, now_utc
 from . import anomaly
 from .imaging import align_to_reference, list_images, load_image, load_image_sha256, save_image
@@ -51,9 +51,10 @@ class ErrorReport:
     @classmethod
     def of(cls, exc: BaseException, context: str = "") -> ErrorReport:
         """The report for any exception: an AoiError's own code, else AOI-SET-007 naming the exception type."""
-        if not isinstance(exc, AoiError):
-            exc = AoiError("AOI-SET-007", error_type=type(exc).__name__, context=f" ({context})" if context else "")
-        return cls(exc.code, exc.entry.title, exc.what, exc.action)
+        if not isinstance(exc, AoiError):  # the context, a page title or a phrase, is shown in the UI language (#198)
+            where = QT_TRANSLATE_NOOP("Errors", " ({context})").fill(context=context) if context else ""
+            exc = AoiError("AOI-SET-007", error_type=type(exc).__name__, context=where)
+        return cls(exc.code, exc.title, exc.what, exc.action)
 
 
 @dataclass(frozen=True)
@@ -85,6 +86,11 @@ class Actor:
 _ACTING: contextvars.ContextVar[tuple[AppContext, Actor] | None] = contextvars.ContextVar("aoi_acting", default=None)
 
 ROLES = ("Operator", "Engineer", "Admin")  # lowest to highest (GUI §8, docs/ARCHITECTURE.md §5)
+ROLES_FROM = {  # a role and the roles above it, as AOI-USR-001 names them: one phrase each, never joined (#198)
+    "Operator": QT_TRANSLATE_NOOP("Errors", "Operator, Engineer or Admin"),
+    "Engineer": QT_TRANSLATE_NOOP("Errors", "Engineer or Admin"),
+    "Admin": QT_TRANSLATE_NOOP("Errors", "Admin"),
+}
 REQUIRED_ROLE: dict[str, str] = {}  # AppContext write, or Engineer-only call -> the lowest role allowed to call it
 P = ParamSpec("P")
 R = TypeVar("R")
@@ -97,7 +103,8 @@ def requires(
 ) -> Callable[[Callable[Concatenate[AppContext, P], R]], Callable[Concatenate[AppContext, P], R]]:
     """The one role check for every write, and for what only an Engineer does without writing (re-evaluating a result
     with other thresholds, REQ-CMP-005) (ADR 0002, decision 5): refuse with AOI-USR-001 when the current role is below
-    `role`. `what` names the action in the message: "Saving a recipe needs the Engineer or Admin role.".
+    `role`. `what` names the action in the message: "Saving a recipe needs the Engineer or Admin role."; it is a phrase
+    marked QT_TRANSLATE_NOOP("Errors", …), so the dialog shows it in the UI language.
     The user checked is the one acting (`AppContext.actor`), and the call, with every audit entry and record it writes,
     acts as that user to its end, whoever signs in meanwhile (#177)."""
 
@@ -108,7 +115,7 @@ def requires(
         def checked(self: AppContext, *args: P.args, **kwargs: P.kwargs) -> R:
             actor = self.actor
             if actor.role not in ROLES or ROLES.index(actor.role) < ROLES.index(role):
-                raise AoiError("AOI-USR-001", what=what, roles=" or ".join(ROLES[ROLES.index(role) :]))
+                raise AoiError("AOI-USR-001", what=what, roles=ROLES_FROM[role])
             token = _ACTING.set((self, actor))
             try:
                 return fn(self, *args, **kwargs)
@@ -234,7 +241,7 @@ class AppContext:
         context.run(_ACTING.set, (self, self.actor))
         return context
 
-    @requires("Engineer", "Importing samples")
+    @requires("Engineer", QT_TRANSLATE_NOOP("Errors", "Importing samples"))
     def import_samples(
         self,
         board_model: str,
@@ -289,7 +296,7 @@ class AppContext:
         return len(copies)
 
     # --- training ------------------------------------------------------------
-    @requires("Engineer", "Training a model")
+    @requires("Engineer", QT_TRANSLATE_NOOP("Errors", "Training a model"))
     def train(
         self,
         board_model: str,
@@ -400,7 +407,7 @@ class AppContext:
             self.db.add_audit(None, None, "recipe.default", "recipe", uid, None, body, reason)
         self.log.info("recipe.default", extra={"board_model": board_model, "revision": rev})
 
-    @requires("Engineer", "Saving a recipe")
+    @requires("Engineer", QT_TRANSLATE_NOOP("Errors", "Saving a recipe"))
     @transactional
     def save_recipe(self, recipe: Recipe, reason: str | None = None) -> int:
         """Store the next recipe revision and audit it with the revision before (a recipe decides verdicts)."""
@@ -510,7 +517,12 @@ class AppContext:
         diff_map_path, ai_map_path = save_maps(res, overlay.with_suffix(""), pixel_threshold=pixel_threshold)
         doc = res.to_dict()
         ng = res.verdict == NG
-        alarm = ("NG", f"{Path(path).name}: {len(res.defects)} defect(s)", "AOI-INSP-003") if ng else None
+        alarm = None
+        if ng:  # a phrase: the alarm list shows it in the UI language, its message stays English (#198)
+            text = QT_TRANSLATE_NOOP("Errors", "{file}: {defects} defect(s)").fill(
+                file=Path(path).name, defects=len(res.defects)
+            )
+            alarm = ("NG", text, "AOI-INSP-003")
         iid = self.db.add_inspection(
             {
                 "board_model": board_model,
@@ -554,7 +566,8 @@ class AppContext:
 
     # --- alarms and errors (REQ-INSP-006, REQ-LOG-005, REQ-SET-019) -----------
     def alarm(self, level: str, message: str, code: str | None = None) -> None:
-        """Store an alarm (NG, WARN or ERROR) with its code; it survives a restart and reaches the log."""
+        """Store an alarm (NG, WARN or ERROR) with its code; it survives a restart and reaches the log. A `message`
+        that is a phrase is stored with it, so the alarm list shows it in the UI language (#198)."""
         self.db.alarm(level, message, code)
         self.log.info("alarm", extra={"alarm_level": level, "code": code, "text": message})
 
@@ -579,7 +592,7 @@ class AppContext:
         return report
 
     # --- batch test (AI Model Test screen) -----------------------------------
-    @requires("Engineer", "Running an AI model test")
+    @requires("Engineer", QT_TRANSLATE_NOOP("Errors", "Running an AI model test"))
     def batch_test(
         self, board_model: str, folder: str, progress: Callable[[int, int], None] | None = None
     ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
@@ -714,7 +727,7 @@ class AppContext:
         self.log.warning("compare.golden_board_not_as_judged", extra=extra)
         return None, why
 
-    @requires("Engineer", "Re-evaluating a result")
+    @requires("Engineer", QT_TRANSLATE_NOOP("Errors", "Re-evaluating a result"))
     def re_evaluate(self, result_uuid: str, thresholds: Recipe) -> InspectionResult:
         """A stored result judged again by `thresholds` (its board model's recipe with the thresholds an Engineer is
         trying) from the maps stored with it, without aligning, comparing or running the AI model (REQ-CMP-005,
@@ -782,7 +795,7 @@ class AppContext:
         )
 
     # --- what the screens change: each checks the role and appends an audit entry (REQ-USR-001, REQ-LOG-004) ---
-    @requires("Engineer", "Creating a board model")
+    @requires("Engineer", QT_TRANSLATE_NOOP("Errors", "Creating a board model"))
     @transactional
     def ensure_board_model(self, name: str) -> None:
         """Create a board model unless it exists."""
@@ -801,7 +814,7 @@ class AppContext:
         if same is not None:
             raise AoiError("AOI-TRN-005", name=name, existing=same)
 
-    @requires("Engineer", "Changing the reference image")
+    @requires("Engineer", QT_TRANSLATE_NOOP("Errors", "Changing the reference image"))
     @transactional
     def set_reference(self, board_model: str, sample_id: int) -> None:
         """Make a stored OK sample the reference image: inspections compare against it from now on, and the next
@@ -816,7 +829,7 @@ class AppContext:
         old = {"reference": to_stored(Path(before), root) if before else None}
         self.audit("board_model.reference", "board_model", board_model, old, {"reference": to_stored(Path(path), root)})
 
-    @requires("Engineer", "Relabelling a sample")
+    @requires("Engineer", QT_TRANSLATE_NOOP("Errors", "Relabelling a sample"))
     @transactional
     def update_sample(self, sample_id: int, label: str, defect_type: str | None) -> None:
         """Relabel a sample OK or NG and set its defect type. The reference sample cannot be relabelled NG
@@ -828,7 +841,7 @@ class AppContext:
         old = {"label": before["label"], "defect_type": before["defect_type"]}
         self.audit("sample.update", "sample", before["uuid"], old, {"label": label, "defect_type": defect_type})
 
-    @requires("Engineer", "Removing a sample")
+    @requires("Engineer", QT_TRANSLATE_NOOP("Errors", "Removing a sample"))
     @transactional
     def delete_sample(self, sample_id: int) -> None:
         """Remove a sample's record; its image file stays in the workspace. The reference sample cannot be removed
@@ -846,7 +859,7 @@ class AppContext:
         if reference is not None and Path(reference) == Path(sample["path"]):
             raise AoiError("AOI-TRN-007", sample=Path(sample["path"]).name, change=change)
 
-    @requires("Engineer", "Activating a model version")
+    @requires("Engineer", QT_TRANSLATE_NOOP("Errors", "Activating a model version"))
     @transactional
     def activate_model(self, model_id: int) -> None:
         """Make a model version the one inspections use (an older version: a rollback)."""
@@ -856,7 +869,7 @@ class AppContext:
         old = {"active_version": previous["version"] if previous else None}
         self.audit("model.activate", "model", target["uuid"], old, {"active_version": target["version"]})
 
-    @requires("Admin", "Changing users")
+    @requires("Admin", QT_TRANSLATE_NOOP("Errors", "Changing users"))
     @transactional
     def add_user(self, name: str, role: str) -> None:
         """Add a user, or change the role of an existing one. Taking the Admin role from the last Admin is refused with
@@ -871,7 +884,7 @@ class AppContext:
         if name == self._actor.name:  # the signed-in user's own role: the next role check reads the stored one
             self._actor = Actor(name, role, self.db.user_uuid(name))
 
-    @requires("Admin", "Changing settings")
+    @requires("Admin", QT_TRANSLATE_NOOP("Errors", "Changing settings"))
     def save_settings(self, values: dict[str, Any]) -> None:
         """Write the Settings page's values over settings.json (`Settings.save_keys`: each value checked first,
         AOI-SET-008, every other key kept as the file holds it) and audit `settings.change` with the values the file
@@ -896,7 +909,7 @@ class AppContext:
             self.device = device
             self._model_cache.clear()  # weights loaded on the old device; a run in progress keeps the model it holds
 
-    @requires("Engineer", "Archiving records")
+    @requires("Engineer", QT_TRANSLATE_NOOP("Errors", "Archiving records"))
     @transactional
     def archive_old(self, days: int | None = None) -> int:
         """Archive inspections older than `days` (default: the retention setting); returns how many were archived."""
@@ -931,7 +944,7 @@ class AppContext:
         self.log.info("maps.swept", extra={"days": days, "swept": len(swept), "skipped": skipped})
         return len(swept)
 
-    @requires("Engineer", "Exporting a model")
+    @requires("Engineer", QT_TRANSLATE_NOOP("Errors", "Exporting a model"))
     def export_model(self, model_id: int, dest: str | Path) -> Path:
         """Copy a model version's file to `dest`, whole or not at all. The audit entry stores `dest` relative to the
         workspace when inside it (REQ-SET-001), else in full."""
@@ -941,7 +954,7 @@ class AppContext:
         self._audit_files([Path(dest)], "export.model", "model", model["uuid"], after, [Path(model["path"])])
         return Path(dest)
 
-    @requires("Engineer", "Exporting overlay images")
+    @requires("Engineer", QT_TRANSLATE_NOOP("Errors", "Exporting overlay images"))
     def export_overlays(
         self,
         inspections: list[dict[str, Any]],
@@ -984,7 +997,7 @@ class AppContext:
             raise AoiError("AOI-LOG-001", str(failed[1]), reason=why, **params) from failed[1]
         return len(copied)
 
-    @requires("Engineer", "Exporting CSV")
+    @requires("Engineer", QT_TRANSLATE_NOOP("Errors", "Exporting CSV"))
     def export_csv(
         self,
         path: str | Path,

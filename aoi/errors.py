@@ -12,9 +12,53 @@ import argparse
 import sys
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 AREAS = ("INSP", "CMP", "TRN", "TST", "RCP", "LOG", "P3D", "USR", "SET", "CAM", "ROB", "MES")
 DOC_PATH = Path(__file__).resolve().parents[1] / "docs" / "error-codes.md"
+
+
+class Phrase(str):
+    """English text a screen shows in the UI language (#198): `source` is marked for pyside6-lupdate under `context`
+    and filled with `values`, plain values or phrases in turn. The str is the English text filled in, which the log, an
+    alarm's message and the docs keep; aoi/ui/errors.py `phrase_text()` translates the source first and fills it after,
+    so a translation puts the values in its own order and no sentence is glued from English pieces."""
+
+    context: str
+    source: str
+    values: dict[str, object]
+
+    def __new__(cls, context: str, source: str, values: dict[str, object] | None = None) -> Phrase:
+        self = super().__new__(cls, source if values is None else source.format(**values))
+        self.context, self.source, self.values = context, source, values or {}
+        return self
+
+    def __reduce__(self) -> tuple[type[Phrase], tuple[str, str, dict[str, object]]]:
+        return Phrase, (self.context, self.source, self.values)
+
+    def fill(self, **values: object) -> Phrase:
+        """This phrase with its {placeholders} filled in."""
+        return Phrase(self.context, self.source, values)
+
+    def to_json(self) -> dict[str, object]:
+        """The phrase as JSON, so a stored alarm is shown in the UI language of the day it is read; a value that is
+        not a phrase, a number or None is kept as its English text."""
+        values: dict[str, object] = {
+            k: v if isinstance(v, (int, float, type(None))) else str(v) for k, v in self.values.items()
+        }
+        values.update((k, v.to_json()) for k, v in self.values.items() if isinstance(v, Phrase))
+        return {"context": self.context, "source": self.source, "values": values}
+
+    @classmethod
+    def from_json(cls, doc: dict[str, Any]) -> Phrase:
+        values = {k: cls.from_json(v) if isinstance(v, dict) else v for k, v in doc["values"].items()}
+        return cls(doc["context"], doc["source"], values)
+
+
+def QT_TRANSLATE_NOOP(context: str, text: str) -> Phrase:
+    """Mark `text` for pyside6-lupdate, which finds the call by this name, under `context`, as a phrase a screen
+    translates; no Qt here, since the engine raises errors too. Pages take it from aoi/ui/pages/base.py."""
+    return Phrase(context, text)
 
 
 @dataclass(frozen=True)
@@ -356,15 +400,17 @@ CODES: dict[str, ErrorCode] = {
 
 
 class AoiError(Exception):
-    """An error with a code and a plain message. ``str(e)`` is "<code> <what> <action>"."""
+    """An error with a code and a plain message. ``str(e)`` is "<code> <what> <action>" in English, for the log; its
+    title, what and action are phrases a screen shows in the UI language."""
 
     def __init__(self, code: str, detail: str | None = None, **params: object) -> None:
         self.entry = CODES[code]
         self.code = code
         self.detail = detail
-        self.params = params  # what filled the placeholders, for a caller that reports the error in a wider one
-        self.what = self.entry.what.format(**params)
-        self.action = self.entry.action.format(**params)
+        self.params = params  # the values, phrases among them, that a screen fills the translated templates with
+        self.title = Phrase("Errors", self.entry.title)
+        self.what = Phrase("Errors", self.entry.what, params)
+        self.action = Phrase("Errors", self.entry.action, params)
         super().__init__(f"{code} {self.what} {self.action}")
 
     @property

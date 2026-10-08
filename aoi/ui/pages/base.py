@@ -21,21 +21,15 @@ from PySide6.QtWidgets import (
 
 from ...core.explain import Sentence
 from ...core.services import AppContext, ErrorReport
+from ...errors import QT_TRANSLATE_NOOP as QT_TRANSLATE_NOOP  # pages mark text with it: Qt's is typed as object
 from ...errors import AoiError
 from .. import theme
-from ..errors import show_error
+from ..errors import phrase_text, show_error
 from ..widgets.busy import BusyOverlay
 from ..workers import Worker, start
 
 if TYPE_CHECKING:
     from ..main_window import MainWindow
-
-
-def QT_TRANSLATE_NOOP(context: str, text: str) -> str:
-    """Mark `text` for pyside6-lupdate under `context` and hand it back unchanged. Qt's own QT_TRANSLATE_NOOP does the
-    same but is typed as returning object, which a `title: str` class attribute refuses; lupdate finds the call by its
-    name, so pages import this one."""
-    return text
 
 
 def sentence_text(s: Sentence) -> str:
@@ -172,14 +166,14 @@ class Page(QWidget):
         fix = QCoreApplication.translate(
             "Page", "{code} {what} Put the file back, or choose another OK sample with Set Reference on Training."
         )
-        sentence, link, go = self.empty_step(fix.format(code=e.code, what=e.what), "Training")
+        sentence, link, go = self.empty_step(fix.format(code=e.code, what=phrase_text(e.what)), "Training")
         if go is None:  # a role that cannot open Training still reads what happened
             ask = QCoreApplication.translate(
                 "Page",
                 "{code} {what} Ask an Engineer to put the file back, or to choose another OK sample with Set Reference"
                 " on Training.",
             )
-            sentence = ask.format(code=e.code, what=e.what)
+            sentence = ask.format(code=e.code, what=phrase_text(e.what))
         return heading.format(board_model=self.board_model), sentence, link, go
 
     def error(self, exc: BaseException) -> None:
@@ -189,14 +183,15 @@ class Page(QWidget):
     def not_inspected(self, banner: QLabel, file: str, exc: BaseException, big: bool = True) -> tuple[str, str]:
         """A board that could not be judged (its file cannot be read, the engine failed): `banner` shows a shape and
         "Not inspected" in the neutral colour, never the verdict of the board shown before (#182, REQ-INSP-002). Returns
-        the heading and the sentence (the error's code and what happened) of the page's empty state for that board."""
+        the heading and the sentence (the error's code and what happened) of the page's empty state for that board, in
+        the UI language (#198)."""
         word = QCoreApplication.translate("Page", "Not inspected")
         banner.setText(f"{theme.VERDICT_SHAPES['INFO']} {word}")
         banner.setStyleSheet(theme.verdict_style("INFO", big))
         banner.repaint()
         report = ErrorReport.of(exc, self.title)
         heading = QCoreApplication.translate("Page", "{file} was not inspected").format(file=file)
-        return heading, f"{report.code} {report.what}"
+        return heading, f"{report.code} {phrase_text(report.what)}"
 
     def action(self, text: str, key: str | QKeySequence.StandardKey, slot: Callable[[], object]) -> QAction:
         """An action a button and a key share (REQ-INSP-005): `action_button()` makes the button, and the key works

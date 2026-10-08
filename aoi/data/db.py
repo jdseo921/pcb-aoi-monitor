@@ -18,6 +18,7 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
+from ..errors import Phrase
 from ..times import local_day_bounds_utc, now_utc
 from .errors import WorkspaceError
 from .migrate import migrate
@@ -29,6 +30,11 @@ DbError = sqlite3.Error  # what a Database call raises when SQLite refuses it, f
 
 def new_uuid() -> str:
     return str(uuid.uuid4())
+
+
+def _phrase_json(message: str) -> str | None:
+    """An alarm message that is a phrase, as the JSON the alarm list shows it from in the UI language (#198)."""
+    return json.dumps(message.to_json(), ensure_ascii=False) if isinstance(message, Phrase) else None
 
 
 class Database:
@@ -341,9 +347,10 @@ class Database:
                     [(iid, *c) for c in check_rows],
                 )
                 if alarm is not None:  # an NG board's alarm: never a record without it, nor it without the record
+                    level, message, code = alarm
                     self._conn.execute(
-                        "INSERT INTO alarms(uuid, time, level, code, message) VALUES(?,?,?,?,?)",
-                        (new_uuid(), row[1], alarm[0], alarm[2], alarm[1]),
+                        "INSERT INTO alarms(uuid, time, level, code, message, phrase) VALUES(?,?,?,?,?,?)",
+                        (new_uuid(), row[1], level, code, str(message), _phrase_json(message)),
                     )
                 self._commit()
             except BaseException:  # a database error or anything else: the record is whole or absent
@@ -502,9 +509,10 @@ class Database:
         return int(r["n"]), int(r["ng"])
 
     def alarm(self, level: str, message: str, code: str | None = None) -> None:
+        """Store an alarm: its message in English and, for a phrase, the phrase as JSON (migration 0011)."""
         self.execute(
-            "INSERT INTO alarms(uuid, time, level, code, message) VALUES(?,?,?,?,?)",
-            (new_uuid(), now_utc(), level, code, message),
+            "INSERT INTO alarms(uuid, time, level, code, message, phrase) VALUES(?,?,?,?,?,?)",
+            (new_uuid(), now_utc(), level, code, str(message), _phrase_json(message)),
         )
 
     def alarms(self, limit: int = 1000) -> list[dict[str, Any]]:
