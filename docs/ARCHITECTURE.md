@@ -66,7 +66,9 @@ interfaces that Stages 2–4 (cameras, robot, MES/ERP) plug into without changin
 Rules: pages call **only** `AppContext`; the engine has **no Qt imports**, so the same code runs headless
 (tests, a future CLI, the Stage 3 robot cycle, or a Stage 4 MES service). `tests/test_layers.py` enforces both:
 no Qt import under `aoi/core` or `aoi/data`, and under `aoi/ui` no `sqlite3` or `aoi.data` import, no `.db`, no SQL,
-no `Inspector` built by a page (REQ-USR-001, since S15) and no image read outside `AppContext.load_image` (since S23c). `aoi/times.py`, `aoi/errors.py`, `aoi/config.py` and
+no `Inspector` built by a page (REQ-USR-001, since S15) and no image read outside `AppContext.load_image` (since S23c),
+whatever module a name comes through, `Database` and the readers that services imports included, and a second test
+fails a screen module that holds one of them once imported (#202). `aoi/times.py`, `aoi/errors.py`, `aoi/config.py` and
 `aoi/defects.py` are shared by every layer.
 
 Types (Code style, since S22): mypy runs strict on `aoi/core`, `aoi/data` and `aoi/times.py`, and since S22a on `aoi/ui`
@@ -97,7 +99,8 @@ keys it changes over `settings.json` as it is on disk (`Settings.save_keys`, #17
 start to read. `map_retention_days_ok` (7, not below 0) is the third: the map files of OK results older than that go
 at start-up (`_sweep_ok_maps`, audited as `maps.sweep`; NG and WARN maps stay, REQ-INSP-012). Every page and service reads an image
 through `AppContext.load_image`, which applies them; `FolderCamera` takes them when the inspection cycle wires a camera
-(Stage 2); `tests/test_layers.py` fails a page that imports `load_image` or calls it on anything but the context; and
+(Stage 2); `tests/test_layers.py` fails a page that imports `load_image` or `load_image_sha256` from any module,
+calls one by its bare name or on anything but the context, or calls `cv2.imread` or `cv2.imdecode` (#202); and
 `import_samples` still copies sample files without a check (threat model, page 2).
 
 The view an inspection was taken from (REQ-INSP-010, since S23b) travels with its result: `InspectionResult.view` is set
