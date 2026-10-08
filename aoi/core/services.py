@@ -58,7 +58,8 @@ class BoardStatus:
     ok_samples: int
     ng_samples: int
     model_version: str | None  # the active AI model, or None while none is trained
-    recipe_revision: int  # 0 while the defaults are in use
+    recipe_revision: int  # the stored revision in use; revision 1 is the default recipe, stored with the board model
+    recipe_is_default: bool  # the revision in use is that stored default (by "system"): no ROI drawn yet
     last_test: dict[str, Any] | None  # metrics of the latest AI model test run
     inspected: int
     ng: int
@@ -102,6 +103,8 @@ class AppContext:
         self.user, self.role, self.user_uuid = "operator", "Operator", self.db.user_uuid("operator")
         archived = self.db.archive_old(self.settings.log_retention_days)  # retention is a system action, not a user's
         self.log.info("retention.archived", extra={"days": self.settings.log_retention_days, "archived": archived})
+        for board_model in self.db.board_models():
+            self._ensure_recipe(board_model)  # a workspace from before S25: its results name a stored revision too
         self._model_cache: dict[str, tuple[str, anomaly.AnomalyModel, str]] = {}
         self.jobs = Jobs()  # background work (REQ-SET-021): screens submit through aoi/ui/workers, tests directly
 
@@ -131,8 +134,10 @@ class AppContext:
             src = Path(p)
             target = dest / f"{src.stem}_{uuid.uuid4().hex[:6]}{src.suffix.lower()}"
             atomic.copy_file(src, target)
-            self.db.add_sample(board_model, str(target), label, defect_type, side)
+            self.db.add_sample(board_model, str(target), label, defect_type, side)  # creates the board model if new
             n += 1
+        if n:
+            self._ensure_recipe(board_model)
         if not self.db.reference(board_model):
             oks = self.db.samples(board_model, "OK")
             if oks:
@@ -209,11 +214,25 @@ class AppContext:
 
     # --- recipe --------------------------------------------------------------
     def recipe(self, board_model: str) -> tuple[int, Recipe]:
-        """The recipe revision in use: (revision, recipe); revision 0 and the defaults while none is saved."""
+        """The recipe revision in use: (revision, recipe); the defaults as revision 0 only for a board model that was
+        made outside AppContext and so has no stored revision."""
         latest = self.db.latest_recipe(board_model)
         if latest:
             return latest[0], Recipe.from_dict(latest[1])
         return 0, Recipe(board_model=board_model)
+
+    def _ensure_recipe(self, board_model: str) -> None:
+        """Store the default recipe as revision 1 for a board model that has no revision yet, so every result names
+        the stored recipe revision, and its UUID, that decided it (REQ-INSP-012). No verdict changes: the defaults
+        were the recipe in use. Recorded as the system's, with an audit entry, since a recipe decides verdicts."""
+        if self.db.latest_recipe(board_model) is not None:
+            return
+        body = Recipe(board_model=board_model).to_dict()
+        rev, uid = self.db.save_recipe(board_model, body, "system")
+        self.db.add_audit(
+            None, None, "recipe.default", "recipe", uid, None, body, "default recipe stored as revision 1"
+        )
+        self.log.info("recipe.default", extra={"board_model": board_model, "revision": rev})
 
     @requires("Engineer", "Saving a recipe")
     def save_recipe(self, recipe: Recipe, reason: str | None = None) -> int:
@@ -429,7 +448,7 @@ class AppContext:
         return self.db.active_model(board_model)
 
     def recipe_history(self, board_model: str) -> list[dict[str, Any]]:
-        """Recipe revisions (revision, uuid, user, created_at), newest first."""
+        """Recipe revisions (revision, uuid, user, created_at), newest first; revision 1 by "system" is the default."""
         return self.db.recipe_history(board_model)
 
     def inspections(
@@ -466,14 +485,15 @@ class AppContext:
     def board_status(self, board_model: str) -> BoardStatus:
         """Sample counts, active model, recipe revision, last test metrics and inspection counts of a board model."""
         model = self.db.active_model(board_model)
-        latest = self.db.latest_recipe(board_model)
+        history = self.db.recipe_history(board_model)  # newest first
         run = self.db.latest_test_run(board_model)
         inspected, ng = self.db.inspection_counts(board_model)
         return BoardStatus(
             ok_samples=len(self.db.samples(board_model, "OK")),
             ng_samples=len(self.db.samples(board_model, "NG")),
             model_version=model["version"] if model else None,
-            recipe_revision=latest[0] if latest else 0,
+            recipe_revision=history[0]["revision"] if history else 0,
+            recipe_is_default=not history or history[0]["user"] == "system",
             last_test=json.loads(run["metrics"]) if run else None,
             inspected=inspected,
             ng=ng,
@@ -487,6 +507,7 @@ class AppContext:
             return
         self.db.ensure_board_model(name)
         self.audit("board_model.create", "board_model", name, None, {"name": name})
+        self._ensure_recipe(name)
 
     @requires("Engineer", "Changing the reference image")
     def set_reference(self, board_model: str, sample_id: int) -> None:
