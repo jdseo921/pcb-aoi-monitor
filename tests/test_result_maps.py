@@ -6,6 +6,7 @@ from __future__ import annotations
 import os
 import shutil
 import struct
+import threading
 import time
 import zlib
 from datetime import UTC, datetime, timedelta
@@ -139,6 +140,64 @@ def test_req_insp_012_a_map_that_is_not_the_map_written_reads_as_damaged(tmp_pat
     shape = maps.picture_shape(picture)
     assert shape == (4, 6) and [maps.picture_shape(p) for p in (None, tmp_path / "gone.png", junk)] == [None] * 3
     assert loaded(u8, u16, shape) == "loaded" and loaded(small.astype(np.uint8), small, shape) == ai.name
+
+
+def test_req_cmp_005_the_difference_map_is_worked_on_while_the_ai_map_decodes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """`load_maps` hands the difference map, as float32, to `on_diff` while the AI map is still decoding on its own
+    thread, once it passes its checks against the board picture's size, so judging a stored result again finds the
+    difference regions meanwhile (#249); without that size, once both maps pass. A difference map that fails is never
+    handed over, and a map that fails raises as without `on_diff`, the result getting neither map."""
+    diff, ai = tmp_path / "b_diff.png", tmp_path / ("b" + maps.AI_FILE)
+    read_ai, handed, order = maps._read_ai, threading.Event(), list[object]()
+
+    def held(path: str, shape: tuple[int, int] | None) -> tuple[np.ndarray | None, np.ndarray | None]:
+        handed.wait(10)  # the AI map's thread decodes only once the difference map was handed over, or after 10 s
+        order.append("AI map decoded" if handed.is_set() else "AI map decoded first")
+        return read_ai(path, shape)
+
+    def on_diff(d: np.ndarray) -> None:
+        order.append(("difference map", d))
+        handed.set()
+
+    def load(d: np.ndarray, a: np.ndarray, shape: tuple[int, int] | None) -> InspectionResult:
+        save_image(diff, d)
+        save_image(ai, a)
+        handed.clear()
+        order.clear()
+        res = InspectionResult("NG", 0.0, compare=CompareResult())
+        return maps.load_maps(res, str(diff), str(ai), shape, on_diff=on_diff)
+
+    monkeypatch.setattr(maps, "_read_ai", held)
+    res = load(np.full((4, 6), 7, np.uint8), np.full((4, 6), 1235, np.uint16), (4, 6))
+    assert res.compare is not None and order == [("difference map", res.compare.diff_map), "AI map decoded"]
+    assert res.compare.diff_map.dtype == np.float32 and res.compare.diff_map.tolist() == [[7.0] * 6] * 4
+    assert res.anomaly_map is not None and np.allclose(res.anomaly_map, 1.235)
+
+    def late(path: str, shape: tuple[int, int] | None) -> tuple[np.ndarray | None, np.ndarray | None]:
+        early = handed.wait(1)  # a hand-over before the AI map is decoded would come within this second
+        out = read_ai(path, shape)
+        order.append("AI map decoded after a hand-over" if early else "AI map decoded")
+        return out
+
+    monkeypatch.setattr(maps, "_read_ai", late)  # without the board picture's size, the difference map waits for it
+    res = load(np.full((4, 6), 7, np.uint8), np.zeros((4, 6), np.uint16), None)
+    assert res.compare is not None and order == ["AI map decoded", ("difference map", res.compare.diff_map)]
+    monkeypatch.setattr(maps, "_read_ai", read_ai)
+    for d, a, shape, named in (
+        (np.zeros((2, 3), np.uint8), np.zeros((4, 6), np.uint16), (4, 6), diff.name),  # not the board picture's size
+        (np.zeros((2, 3), np.uint8), np.zeros((4, 6), np.uint16), None, diff.name),  # without it, not the AI map's
+        (np.zeros((4, 6), np.uint8), np.zeros((4, 6), np.uint8), (4, 6), ai.name),  # an 8-bit AI map, the other fine
+    ):
+        save_image(diff, d)
+        save_image(ai, a)
+        handed_over: list[np.ndarray] = []
+        res = InspectionResult("NG", 0.0, compare=CompareResult())
+        with pytest.raises(AoiError, match=f"{named} could not be read: the file is damaged"):
+            maps.load_maps(res, str(diff), str(ai), shape, on_diff=handed_over.append)
+        assert len(handed_over) == (named == ai.name) and res.compare is not None
+        assert res.compare.diff_map is None and res.anomaly_map is None, "neither map"
 
 
 def test_req_cmp_005_maps_are_written_to_be_read_fast(tmp_path: Path) -> None:

@@ -9,6 +9,7 @@ import copy
 import json
 import math
 import statistics
+import threading
 from collections.abc import Callable
 from dataclasses import replace
 from pathlib import Path
@@ -19,7 +20,7 @@ import numpy as np
 import pytest
 from torch import nn
 
-from aoi.core import anomaly, compare, explain, inspector, maps
+from aoi.core import anomaly, compare, explain, inspector, maps, services
 from aoi.core.compare import Region
 from aoi.core.imaging import load_image, save_image
 from aoi.core.inspector import (
@@ -443,6 +444,41 @@ def test_req_cmp_005_reevaluate_judges_a_stored_result_as_inspecting_with_those_
         _assert_close(ctx.re_evaluate(uuid, ctx.recipe(BOARD)[1]), as_judged, f"{path.name} as judged")
         for i, thresholds in enumerate(what_if):
             _assert_close(ctx.re_evaluate(uuid, thresholds), fresh[path][i], f"{path.name} what-if {i}")
+
+
+def test_req_cmp_005_reevaluate_finds_the_difference_regions_while_the_ai_map_decodes(
+    trained_ctx: AppContext, ng_board: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """`re_evaluate` finds the difference regions once, with the thresholds asked for, while the AI map's thread is
+    still decoding (it waits here until they are found, at most 10 s), and `re_grade` takes them rather than finding
+    them again (#249); the result is the one judged at inspection, and with other thresholds the one they give."""
+    ctx = trained_ctx
+    uuid, as_judged = _store(ctx, ng_board), ctx.inspection_result(ctx.inspections(board_model=BOARD)[0]["id"])
+    other = copy.deepcopy(ctx.recipe(BOARD)[1])
+    other.diff_threshold, other.min_defect_area = other.diff_threshold + 20, other.min_defect_area + 5
+    want = ctx.inspect(BOARD, ctx.load_image(ng_board), other)
+    read_ai, found, order, again = maps._read_ai, threading.Event(), list[object](), list[object]()
+
+    def held(path: str, shape: tuple[int, int] | None) -> tuple[np.ndarray | None, np.ndarray | None]:
+        order.append("AI map decoded" if found.wait(10) else "AI map decoded first")
+        return read_ai(path, shape)
+
+    def spied(d: np.ndarray, threshold: float, area: int) -> tuple[np.ndarray, list[Region], dict[str, object]]:
+        order.append(("regions found", threshold, area))
+        found.set()
+        return compare.changed_regions(d, threshold, area)
+
+    monkeypatch.setattr(maps, "_read_ai", held)
+    monkeypatch.setattr(services, "changed_regions", spied)
+    monkeypatch.setattr(inspector, "changed_regions", lambda *a: again.append(a) or compare.changed_regions(*a))
+    _refuse_the_engine(monkeypatch)
+    assert as_judged is not None
+    for thresholds, expect in ((ctx.recipe(BOARD)[1], as_judged), (other, want)):
+        found.clear()
+        order.clear()
+        _assert_close(ctx.re_evaluate(uuid, thresholds), expect, f"diff threshold {thresholds.diff_threshold}")
+        assert order == [("regions found", thresholds.diff_threshold, thresholds.min_defect_area), "AI map decoded"]
+    assert again == [], "re_grade found the regions again"
 
 
 def test_req_cmp_005_reevaluate_a_result_without_maps_for_its_checks(trained_ctx: AppContext, ng_board: Path) -> None:
