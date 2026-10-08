@@ -51,6 +51,26 @@ def regions_from_mask(mask: np.ndarray, value_map: np.ndarray, min_area: int, so
     return sorted(out, key=lambda r: -r.peak)
 
 
+def changed_regions(
+    diff: np.ndarray, diff_threshold: int, min_area: int
+) -> tuple[np.ndarray, list[Region], dict[str, Any]]:
+    """The pixels of a difference map that differ by `diff_threshold` or more, cleaned of noise, the difference regions
+    of `min_area` px or more among them, and their metrics: the changed area % and the region count, which the recipe
+    judges, and the largest region's area, shown with them. `compare` and the re-evaluation of a stored result
+    (REQ-CMP-005) both find them here."""
+    mask: np.ndarray = (diff >= diff_threshold).astype(np.uint8) * 255
+    k = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
+    mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, k)
+    mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, k, iterations=2)
+    regions = regions_from_mask(mask, diff, min_area, "compare")
+    metrics = {
+        "changed_pct": float((mask > 0).mean() * 100.0),
+        "compare_regions": len(regions),
+        "largest_region_px": max((r.area for r in regions), default=0),
+    }
+    return mask, regions, metrics
+
+
 def shift_tolerant_diff(a: np.ndarray, b: np.ndarray, tol: int = 2) -> np.ndarray:
     """Per-pixel colour difference, taking the best match within ±tol px.
 
@@ -125,20 +145,13 @@ def compare(
     g2 = cv2.cvtColor(reference, cv2.COLOR_BGR2GRAY)
     score, ssim_map = ssim(g1, g2)
 
-    mask: np.ndarray = (diff >= diff_threshold).astype(np.uint8) * 255
-    k = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
-    mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, k)
-    mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, k, iterations=2)
-    regions = regions_from_mask(mask, diff, min_area, "compare")
-
+    mask, regions, found = changed_regions(diff, diff_threshold, min_area)
     metrics = {
         "alignment_method": align_info["method"],
         "alignment_inliers": align_info["inliers"],
         "ssim": score,
         "mean_abs_diff": float(diff.mean()),
         "max_diff": float(diff.max()),
-        "changed_pct": float((mask > 0).mean() * 100.0),
-        "compare_regions": len(regions),
-        "largest_region_px": max((r.area for r in regions), default=0),
+        **found,
     }
     return CompareResult(aligned, diff, ssim_map, mask, regions, metrics)

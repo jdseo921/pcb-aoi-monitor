@@ -15,7 +15,7 @@ import numpy as np
 
 from .. import defects as taxonomy
 from .anomaly import AnomalyModel
-from .compare import CompareResult, Region, compare, regions_from_mask
+from .compare import CompareResult, Region, changed_regions, compare, regions_from_mask
 from .imaging import align_to_reference
 from .recipe import ROI_DEFECT, Recipe
 
@@ -23,6 +23,9 @@ OK, WARN, NG = "OK", "WARN", "NG"
 # The engine's notes, stored with each result as written; aoi/core/explain.py words them for the screen.
 NO_GOLDEN_NOTE = "No golden reference image set for this board model; comparison skipped."
 NO_AI_NOTE = "No trained model for this board model; AI check skipped."
+# A re-evaluation's (REQ-CMP-005), when the recipe turns on a check that did not run when the board was inspected.
+NOT_COMPARED_NOTE = "Comparison with the golden board did not run at inspection; not judged again."
+NOT_AI_JUDGED_NOTE = "AI check did not run at inspection; not judged again."
 
 
 @dataclass
@@ -63,6 +66,19 @@ class Defect:
             w=self.w,
             h=self.h,
         )
+
+
+@dataclass(frozen=True)
+class AiEvidence:
+    """What the AI model gave a board besides its map: the score, and the calibration of the AI model that made the
+    map: its image threshold (which applies unless the recipe sets its own), its pixel threshold (which marks the pixels
+    of an AI defect) and the rule it was calibrated by. A re-evaluation takes the score from the stored check and the
+    calibration from the model registry (REQ-CMP-005)."""
+
+    score: float
+    image_threshold: float
+    pixel_threshold: float
+    rule: str = ""
 
 
 @dataclass
@@ -189,19 +205,41 @@ class Inspector:
         t0 = time.perf_counter()
         r = self.recipe
         res = InspectionResult(verdict=OK, score=0.0, reference=self.reference, view=self.side)
-        regions: list[Region] = []
         work = img
 
-        # 0) Register onto the golden board so pixels mean the same place on every board.
+        # 0) Register onto the golden board so pixels mean the same place on every board; then the evidence, from the
+        # golden board comparison (its maps and metrics) and from the AI model (its map, score and calibration).
         align_info = None
         if self.reference is not None:
             work, align_info = align_to_reference(img, self.reference)
+        if r.use_compare and self.reference is not None:
+            res.compare = compare(img, self.reference, r.diff_threshold, r.min_defect_area, work, align_info)
+        elif r.use_compare:
+            res.notes.append(NO_GOLDEN_NOTE)
+        ai = None
+        if r.use_ai and self.model is not None:
+            m, res.anomaly_map = self.model, self.model.anomaly_map(work)
+            rule = m.meta.get("threshold_rule", "")
+            ai = AiEvidence(m.score(res.anomaly_map), m.image_threshold, m.pixel_threshold, rule)
+        elif r.use_ai:
+            res.notes.append(NO_AI_NOTE)
+        res.image = work
+        self.judge(res, ai)
+        res.elapsed_ms = (time.perf_counter() - t0) * 1000
+        return res
+
+    def judge(self, res: InspectionResult, ai: AiEvidence | None) -> None:
+        """Steps 1 to 5 on the evidence `res` holds, by this engine's recipe: the checks of its golden board
+        comparison, of its AI map with `ai` and of the recipe's ROIs, then its defects and its verdict. `inspect` calls
+        it on a board just inspected and `re_grade` on a stored result's maps (REQ-CMP-005), so both judge by one set
+        of rules."""
+        r = self.recipe
+        regions: list[Region] = []
+        res.checks, res.defects, res.score = [], [], 0.0  # judged afresh, never added to
 
         # 1) Golden-sample comparison --------------------------------------------
-        if r.use_compare and self.reference is not None:
-            cr = compare(img, self.reference, r.diff_threshold, r.min_defect_area, work, align_info)
-            res.compare = cr
-            m = cr.metrics
+        if res.compare is not None:
+            m = res.compare.metrics
             res.checks.append(
                 Check(
                     "SSIM similarity",
@@ -246,16 +284,13 @@ class Inspector:
                     m["alignment_method"],
                 )
             )
-            regions += cr.regions
-        elif r.use_compare:
-            res.notes.append(NO_GOLDEN_NOTE)
+            regions += res.compare.regions
 
         # 2) Self-trained anomaly model ------------------------------------------
-        if r.use_ai and self.model is not None:
-            amap = self.model.anomaly_map(work)
-            res.anomaly_map = amap
-            thr = r.anomaly_threshold or self.model.image_threshold
-            score = self.model.score(amap)
+        if ai is not None and res.anomaly_map is not None:
+            amap = res.anomaly_map
+            thr = r.anomaly_threshold or ai.image_threshold
+            score = ai.score
             res.score = score / thr
             res.checks.append(
                 Check(
@@ -265,22 +300,19 @@ class Inspector:
                     "≥ thr → NG",
                     _grade(score, thr, r.warn_ratio),
                     "AI",
-                    self.model.meta.get("threshold_rule", ""),
+                    ai.rule,
                 )
             )
-            pix_thr = self.model.pixel_threshold
+            pix_thr = ai.pixel_threshold
             mask: np.ndarray = (amap >= pix_thr).astype(np.uint8) * 255
             mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, np.ones((5, 5), np.uint8))
             regions += regions_from_mask(mask, amap / thr, r.min_defect_area, "ai")
-        elif r.use_ai:
-            res.notes.append(NO_AI_NOTE)
-        res.image = work
 
         # 3) ROI checks ----------------------------------------------------------
         for roi in (x for x in r.rois if x.enabled):
-            if res.anomaly_map is None or self.model is None:
+            if res.anomaly_map is None or ai is None:
                 break
-            thr = r.anomaly_threshold or self.model.image_threshold
+            thr = r.anomaly_threshold or ai.image_threshold
             patch = res.anomaly_map[roi.y : roi.y + roi.h, roi.x : roi.x + roi.w]
             if patch.size == 0:
                 continue
@@ -306,8 +338,6 @@ class Inspector:
         res.verdict = NG if NG in verdicts else WARN if WARN in verdicts else OK
         if res.verdict == OK and res.defects and any(d.severity != "Minor" for d in res.defects):
             res.verdict = WARN
-        res.elapsed_ms = (time.perf_counter() - t0) * 1000
-        return res
 
     def _defects(self, regions: list[Region], res: InspectionResult) -> list[Defect]:
         merged: list[Region] = []
@@ -326,6 +356,39 @@ class Inspector:
             sev = taxonomy.BY_NAME.get(dtype, taxonomy.ANOMALY).severity
             out.append(Defect(i, dtype, float(score), res.view, reg.x, reg.y, reg.w, reg.h, reg.source, sev))
         return out
+
+
+def re_grade(judged: InspectionResult, recipe: Recipe, ai: AiEvidence | None) -> InspectionResult:
+    """The checks, defects and verdict `judged` would get under `recipe`, judged again from the evidence it holds
+    without aligning, comparing or running the AI model (REQ-CMP-005): the difference regions are found again on its
+    difference map with the recipe's pixel difference and minimum area, the AI score in `ai` is graded against the
+    recipe's threshold, and the AI defects and ROI values are read from its AI map. `judged` is a result as inspected or
+    stored, not one this function made; `ai` is its AI evidence (the score of its AI check, the AI model's calibration)
+    when its AI check ran, else None. Similarity, alignment and the AI score keep the values `judged` holds, since no
+    threshold changes them, and so do the inspection time, the view and the picture. A check the recipe turns on that
+    did not run on the board is not judged, with a note saying so, as inspecting with the recipe notes a check it cannot
+    run. `judged` is not changed; the result shares its maps. ValueError when a check the recipe uses ran on the board
+    but its map, or its AI evidence, is not given."""
+    cr, ran_ai = judged.compare, any(c.source == "AI" for c in judged.checks)
+    if (recipe.use_compare and cr is not None and cr.diff_map is None) or (
+        recipe.use_ai and ran_ai and (ai is None or judged.anomaly_map is None)
+    ):
+        raise ValueError("re_grade needs the maps and the AI evidence the result was judged on")
+    res = InspectionResult(OK, 0.0, image=judged.image, reference=judged.reference, view=judged.view)
+    res.elapsed_ms = judged.elapsed_ms
+    if recipe.use_compare and cr is not None and cr.diff_map is not None:
+        mask, regions, found = changed_regions(cr.diff_map, recipe.diff_threshold, recipe.min_defect_area)
+        res.compare = CompareResult(cr.aligned, cr.diff_map, cr.ssim_map, mask, regions, {**cr.metrics, **found})
+    if recipe.use_ai and ran_ai:
+        res.anomaly_map = judged.anomaly_map
+    skipped = {NO_GOLDEN_NOTE, NO_AI_NOTE, NOT_COMPARED_NOTE, NOT_AI_JUDGED_NOTE}  # worked out again, in this order
+    if recipe.use_compare and cr is None:
+        res.notes.append(NO_GOLDEN_NOTE if NO_GOLDEN_NOTE in judged.notes else NOT_COMPARED_NOTE)
+    if recipe.use_ai and not ran_ai:
+        res.notes.append(NO_AI_NOTE if NO_AI_NOTE in judged.notes else NOT_AI_JUDGED_NOTE)
+    res.notes += [n for n in judged.notes if n not in skipped]
+    Inspector(recipe).judge(res, ai)  # without the AI map, as when the recipe turns the AI check off, no AI check
+    return res
 
 
 def draw_overlay(res: InspectionResult) -> np.ndarray:

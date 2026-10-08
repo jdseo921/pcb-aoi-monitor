@@ -8,7 +8,17 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from .inspector import NG, NO_AI_NOTE, NO_GOLDEN_NOTE, OK, WARN, Check, InspectionResult
+from .inspector import (
+    NG,
+    NO_AI_NOTE,
+    NO_GOLDEN_NOTE,
+    NOT_AI_JUDGED_NOTE,
+    NOT_COMPARED_NOTE,
+    OK,
+    WARN,
+    Check,
+    InspectionResult,
+)
 
 
 def QT_TRANSLATE_NOOP(context: str, text: str) -> str:
@@ -75,6 +85,16 @@ NOTES = {
     NO_AI_NOTE: QT_TRANSLATE_NOOP(
         "Explain",
         "No AI model is trained for this board model, so the AI check did not run: an Engineer trains one on Training.",
+    ),
+    NOT_COMPARED_NOTE: QT_TRANSLATE_NOOP(
+        "Explain",
+        "The board was not compared with the Golden board when it was inspected, so the comparison is not judged again"
+        " here: inspect the board again with the Golden board comparison in use.",
+    ),
+    NOT_AI_JUDGED_NOTE: QT_TRANSLATE_NOOP(
+        "Explain",
+        "The AI check did not run when the board was inspected, so it is not judged again here: inspect the board again"
+        " with the AI model in use.",
     ),
 }
 OTHER_NOTE = QT_TRANSLATE_NOOP("Explain", "Note: {note}")
