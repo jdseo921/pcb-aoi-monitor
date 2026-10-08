@@ -16,6 +16,8 @@ import io
 import json
 import math
 import os
+import random
+import secrets
 import threading
 from collections.abc import Callable, Iterator
 from dataclasses import dataclass
@@ -1337,6 +1339,78 @@ class AppContext:
             self._refuse_reference_change(sample, change)
         rows = [b.row() for b in boxes]
         return self.db.add_label(sample["uuid"], label, dtype, rows, self.user_uuid), rows
+
+    # --- second-user label checks (REQ-TRN-004; S34): every NG label and a seeded random 10 % of the OK labels ---
+    @requires("Engineer", QT_TRANSLATE_NOOP("Errors", "Checking a label"))
+    @transactional
+    def check_label(self, sample_uuid: str) -> str:
+        """Record that the user acting checked a sample's current label row; returns the check's UUID, audited as
+        `label.check`. The labeller cannot check it (AOI-TRN-033): a second user does, by name under ADR 0002 until
+        sign-in ships. AOI-TRN-034 refuses a label checked already, an UNSURE label, an NG image with no defect box and
+        a label with no labeller recorded (carried over by migration 0014)."""
+        sample = self._sample(sample_uuid)
+        why = None
+        if sample["checked_by"] is not None:
+            why = QT_TRANSLATE_NOOP("Errors", "it is checked already")
+        elif sample["label"] == "UNSURE":
+            why = QT_TRANSLATE_NOOP("Errors", "an UNSURE image is left out of training, so its label is not checked")
+        elif sample["label"] == "NG" and not self.db.boxes(sample_uuid):
+            why = QT_TRANSLATE_NOOP("Errors", "an NG image needs at least one defect box: draw its boxes first")
+        elif sample["labelled_by"] is None:
+            why = QT_TRANSLATE_NOOP("Errors", "no labeller is recorded for it: label it again first")
+        if why is not None:
+            raise AoiError("AOI-TRN-034", sample=Path(sample["path"]).name, reason=why)
+        if sample["labelled_by"] == self.user_uuid:
+            raise AoiError("AOI-TRN-033", sample=Path(sample["path"]).name)
+        uid = self.db.add_check(sample["label_uuid"], sample_uuid, self.user_uuid)
+        after = {"check_uuid": uid, "label_uuid": sample["label_uuid"], "label": sample["label"]}
+        self.audit("label.check", "sample", sample_uuid, None, after)
+        return uid
+
+    @requires("Engineer", QT_TRANSLATE_NOOP("Errors", "Drawing OK labels for a check"))
+    @transactional
+    def draw_ok_checks(self, board_model: str, view: str, seed: int | None = None) -> dict[str, Any] | None:
+        """Draw at random, with a recorded seed (a new one when None), OK labels of a board model and view for a second
+        user to check, so that the drawn ones still OK number 10 % of its OK labels, rounded up; a draw adds to the
+        earlier ones and never replaces one. Returns the draw (uuid, side, seed, ok_labels, sample_uuids), audited as
+        `label.draw`, or None, writing nothing, when the earlier draws are enough."""
+        status = self.label_check_status(board_model, view)
+        need = status["ok_needed"] - len(status["ok_drawn"])
+        if need <= 0:
+            return None
+        drawn = {u for d in self.db.ok_check_draws(board_model, view) for u in d["sample_uuids"]}
+        pool = [s["uuid"] for s in self._in_view(board_model, view, "OK") if s["uuid"] not in drawn]
+        seed = secrets.randbelow(2**31) if seed is None else seed
+        picked = random.Random(seed).sample(pool, need)  # noqa: S311 - no secret: seed and draw are audited
+        draw = self.db.add_ok_check_draw(board_model, view, seed, status["ok"], picked, self.user_uuid)
+        self.audit("label.draw", "board_model", board_model, None, draw)
+        return draw
+
+    def label_check_status(self, board_model: str, view: str) -> dict[str, Any]:
+        """The second-user checks of a board model and view (REQ-TRN-004): `ok` and `ng`, its OK and NG labels;
+        `ng_unchecked`, the NG samples whose label is not checked; `ok_needed`, 10 % of the OK labels rounded up;
+        `ok_drawn` and `ok_checked`, the drawn samples still OK and those of them checked; and `ready`, never with no OK
+        or NG label. A view other than Top, Side or Bottom is refused with AOI-TRN-038, here and in each call below."""
+        ok, ng = self._in_view(board_model, view, "OK"), self._in_view(board_model, view, "NG")
+        drawn = {u for d in self.db.ok_check_draws(board_model, view) for u in d["sample_uuids"]}
+        ok_drawn = [s for s in ok if s["uuid"] in drawn]
+        status: dict[str, Any] = {"ok": len(ok), "ng": len(ng), "ok_needed": -(-len(ok) // 10)}
+        status["ng_unchecked"] = [s["uuid"] for s in ng if s["checked_by"] is None]
+        status["ok_drawn"] = [s["uuid"] for s in ok_drawn]
+        status["ok_checked"] = [s["uuid"] for s in ok_drawn if s["checked_by"] is not None]
+        enough = len(status["ok_checked"]) >= status["ok_needed"]
+        status["ready"] = bool(ok or ng) and not status["ng_unchecked"] and enough  # no label: nothing to freeze
+        return status
+
+    def labels_ready_to_freeze(self, board_model: str, view: str) -> bool:
+        """True once every NG label of the board model and view, and drawn OK labels numbering at least 10 % of its OK
+        labels, are checked by a second user (REQ-TRN-004); a dataset of that view is frozen only then (S35)."""
+        return bool(self.label_check_status(board_model, view)["ready"])
+
+    def _in_view(self, board_model: str, view: str, label: str) -> list[dict[str, Any]]:
+        if view not in VIEWS:  # a view names a dataset version and its folder, so no other text may reach a path
+            raise AoiError("AOI-TRN-038", view=view)
+        return [s for s in self.db.samples(board_model, label) if s["side"] == view]
 
     @requires("Engineer", QT_TRANSLATE_NOOP("Errors", "Activating an AI model version"))
     @transactional

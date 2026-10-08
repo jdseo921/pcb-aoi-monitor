@@ -158,7 +158,15 @@ Home. A box must lie inside the image (AOI-TRN-031); a label an image cannot tak
 type not one of the 33, is refused (AOI-TRN-030). No screen marks an image UNSURE, draws boxes or lists UNSURE images
 for the customer's quality engineer yet: the label editor comes next.
 
-(to be written: the label editor and UNSURE on the Samples tab, second-person check, freezing a dataset version,
+**A second user checks each label.** The labels of a board model and view are ready to freeze into a dataset only
+once a second Engineer or Admin has checked every NG label and OK labels drawn at random, 10 % of them rounded up; the
+draw's seed, count and labels are stored and audited, and a draw adds to earlier ones as OK images are added. You cannot
+check a label you made (AOI-TRN-033). An NG image needs a defect box before its label is checked, an UNSURE label is
+not checked, and a label from before this version, with no labeller, is labelled again first (AOI-TRN-034). A relabel
+needs a new check. Until sign-in arrives in version 1.0, the second user is the second name picked in the user list,
+which the validation report states. No screen draws or checks labels yet: the services do, and the screen comes later.
+
+(to be written: the label editor and UNSURE on the Samples tab, the check on screen, freezing a dataset version,
 locking the validation set)
 
 ## 4. Training and AI model versions

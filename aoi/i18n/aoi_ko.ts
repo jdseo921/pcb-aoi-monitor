@@ -573,7 +573,7 @@
 <context>
     <name>Errors</name>
     <message>
-        <location filename="../core/services.py" line="+57"/>
+        <location filename="../core/services.py" line="+59"/>
         <source>a length of {length} px over {distance} mm gives no scale: both must be numbers above 0, and the scale from {least} to {most} px per mm</source>
         <translation type="unfinished"></translation>
     </message>
@@ -704,7 +704,37 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+86"/>
+        <location line="+87"/>
+        <source>Checking a label</source>
+        <translation>라벨 검토</translation>
+    </message>
+    <message>
+        <location line="+10"/>
+        <source>it is checked already</source>
+        <translation>이미 검토되었습니다</translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>an UNSURE image is left out of training, so its label is not checked</source>
+        <translation>UNSURE 이미지는 학습에서 빠지므로 라벨을 검토하지 않습니다</translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>an NG image needs at least one defect box: draw its boxes first</source>
+        <translation>NG 이미지에는 결함 박스가 하나 이상 있어야 합니다. 먼저 박스를 그리십시오</translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>no labeller is recorded for it: label it again first</source>
+        <translation>라벨링한 사람이 기록되어 있지 않습니다. 먼저 다시 라벨링하십시오</translation>
+    </message>
+    <message>
+        <location line="+10"/>
+        <source>Drawing OK labels for a check</source>
+        <translation>검토할 OK 라벨 추출</translation>
+    </message>
+    <message>
+        <location line="+45"/>
         <source>Activating an AI model version</source>
         <translation type="unfinished"></translation>
     </message>
@@ -724,7 +754,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1300"/>
+        <location line="-1372"/>
         <source>no defect type was given</source>
         <translation>결함 유형이 지정되지 않았습니다</translation>
     </message>
@@ -759,7 +789,7 @@
         <translation>{label}(으)로 다시 라벨링</translation>
     </message>
     <message>
-        <location line="+30"/>
+        <location line="+102"/>
         <source>Changing settings</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1413,11 +1443,12 @@
     </message>
     <message>
         <location line="+8"/>
+        <location line="+74"/>
         <source>View not known</source>
         <translation>알 수 없는 뷰</translation>
     </message>
     <message>
-        <location line="+1"/>
+        <location line="-73"/>
         <source>{path} was not imported: its view &quot;{view}&quot; is not one of {views}.</source>
         <translation>{path}을(를) 가져오지 않았습니다. 뷰 &quot;{view}&quot;는 {views} 중 하나가 아닙니다.</translation>
     </message>
@@ -1498,6 +1529,46 @@
     </message>
     <message>
         <location line="+6"/>
+        <source>Check refused: you labelled this image</source>
+        <translation>검토 거부: 직접 라벨링한 이미지</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>The label of {sample} was not checked: you labelled it, and a second user checks each label.</source>
+        <translation>{sample}의 라벨이 검토되지 않았습니다. 직접 라벨링한 이미지이며, 각 라벨은 다른 사용자가 검토합니다.</translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>Ask another Engineer or Admin to check the label.</source>
+        <translation>다른 엔지니어 또는 관리자에게 라벨 검토를 요청하십시오.</translation>
+    </message>
+    <message>
+        <location line="+4"/>
+        <source>Label cannot be checked</source>
+        <translation>라벨을 검토할 수 없음</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>The label of {sample} was not checked: {reason}.</source>
+        <translation>{sample}의 라벨이 검토되지 않았습니다: {reason}.</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Do what the reason says, then check the label again; a label checked already needs nothing.</source>
+        <translation>사유에 따라 조치한 뒤 라벨을 다시 검토하십시오. 이미 검토된 라벨은 더 할 일이 없습니다.</translation>
+    </message>
+    <message>
+        <location line="+7"/>
+        <source>{view} is not a camera view of this app, so nothing was read or changed.</source>
+        <translation>{view}은(는) 이 앱의 카메라 뷰가 아니므로 아무것도 읽거나 바꾸지 않았습니다.</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Name the view as the Inspection and Training pages do: Top, Side or Bottom.</source>
+        <translation>검사 및 학습 페이지와 같이 Top, Side, Bottom 중 하나로 뷰를 지정하십시오.</translation>
+    </message>
+    <message>
+        <location line="+4"/>
         <source>AI model, recipe, scale or Golden board changed since the run</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1902,7 +1973,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-788"/>
+        <location line="-810"/>
         <source>Board judged NG</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1982,7 +2053,7 @@
         <translation>{path}에 라벨 &quot;{label}&quot;을(를) 붙이지 않았습니다. {labels} 중 하나가 아닙니다.</translation>
     </message>
     <message>
-        <location line="+78"/>
+        <location line="+100"/>
         <source>ROI thresholds refused</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4179,7 +4250,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/services.py" line="-1474"/>
+        <location filename="../core/services.py" line="-1546"/>
         <source>Aligning {count} images to the reference board</source>
         <translation type="unfinished"></translation>
     </message>
