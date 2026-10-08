@@ -1,28 +1,31 @@
 """Tests for the register rows marked Done in v0.1 (stage S06), so the trace matrix can prove them.
 
-Each test is named for its row in docs/requirements/stage1.md and checks that row's acceptance criteria.
-REQ-INSP-015 lives in tests/regression/test_regression_verdicts.py, where the regression set is.
+Each test is named for its row in docs/requirements/stage1.md and checks that row's acceptance criteria. REQ-INSP-015's
+check of every board lives in tests/regression/test_regression_verdicts.py, where the synthetic regression set is; that
+set holds no WARN board, so the rule itself is tested here, on the engine's own verdict step.
 """
 
 from __future__ import annotations
 
 import hashlib
 from pathlib import Path
-from statistics import median
 from time import perf_counter
 
+import cv2
 import pytest
 from PySide6.QtCore import QPoint, QPointF, QRectF, Qt
-from PySide6.QtGui import QWheelEvent
-from PySide6.QtWidgets import QGraphicsRectItem, QPushButton
+from PySide6.QtGui import QTransform, QWheelEvent
+from PySide6.QtWidgets import QApplication, QFileDialog, QGraphicsRectItem, QMessageBox, QPushButton, QWidget
 from pytestqt.qtbot import QtBot
 
-from aoi.config import resolve_device
+from aoi.config import Settings, resolve_device
+from aoi.core.compare import CompareResult, Region
+from aoi.core.inspector import InspectionResult, Inspector
 from aoi.core.recipe import ROI, ROI_TYPES, Recipe
 from aoi.core.services import AppContext
 from aoi.ui.main_window import MainWindow
 from aoi.ui.pages.inspection import InspectionPage
-from tests.conftest import TrainedModel
+from tests.conftest import TrainedModel, engineer
 
 BOARD = "TINY"
 
@@ -45,6 +48,11 @@ def _inspect_one(qtbot: QtBot, win: MainWindow, path: Path) -> InspectionPage:
     page.next_board()
     qtbot.waitUntil(lambda: page.last is not None, timeout=30000)
     return page
+
+
+def _button(page: QWidget, text: str) -> QPushButton:
+    """The button on `page` labelled `text`, for a test to click as a user would."""
+    return next(b for b in page.findChildren(QPushButton) if b.text() == text)
 
 
 def test_req_insp_003_one_box_per_defect_and_the_file_is_unchanged(
@@ -76,104 +84,210 @@ def test_req_insp_004_columns_in_order_and_selecting_a_row_centres_its_box(
     assert elapsed < 0.3, f"centring took {elapsed * 1000:.0f} ms"
 
 
-def test_req_insp_016_six_step_cards_open_their_pages_and_show_status(qtbot: QtBot, trained_ctx: AppContext) -> None:
+SPOT = Region(100, 120, 20, 20, 400, 90.0, "compare")  # one difference region of 400 px
+OVER_SPOT = ROI("U1", "Presence", 90, 110, 40, 40)  # a Presence ROI over it names it a Missing Component: Critical
+
+
+@pytest.mark.parametrize(
+    ("metrics", "spots", "rois", "verdict", "flagged", "severities"),
+    [
+        pytest.param({}, 0, [], "OK", {}, [], id="ok"),
+        pytest.param({"changed_pct": 0.45}, 0, [], "WARN", {"Changed area %": "WARN"}, [], id="warn-from-a-check"),
+        pytest.param({"alignment_inliers": 5}, 0, [], "WARN", {"Alignment inliers": "WARN"}, [], id="warn-alignment"),
+        pytest.param({}, 1, [], "WARN", {}, ["Major"], id="warn-from-a-major-defect"),
+        pytest.param({}, 1, [OVER_SPOT], "WARN", {}, ["Critical"], id="warn-from-a-critical-defect"),
+        pytest.param(
+            {"ssim": 0.5, "alignment_inliers": 5},
+            1,
+            [OVER_SPOT],
+            "NG",
+            {"SSIM similarity": "NG", "Alignment inliers": "WARN"},
+            ["Critical"],
+            id="ng-before-warn",
+        ),
+    ],
+)
+def test_req_insp_015_ng_then_warn_from_a_check_or_a_major_or_critical_defect_else_ok(
+    metrics: dict[str, float],
+    spots: int,
+    rois: list[ROI],
+    verdict: str,
+    flagged: dict[str, str],
+    severities: list[str],
+) -> None:
+    """The engine's own verdict step, `Inspector.judge` (which `inspect` and `re_grade` call), on golden board evidence
+    made to order: a clean board (SSIM 0.99, no pixel changed, 200 alignment points) but for `metrics`, with `spots`
+    difference regions. The recipe allows one region, so a defect can be found while every check passes. No ROI type
+    names a Minor defect (ROI_DEFECT), so the engine cannot find one; the WARN cases are a WARN check or a defect above
+    Minor."""
+    clean = {"ssim": 0.99, "changed_pct": 0.0, "compare_regions": spots, "alignment_inliers": 200}
+    evidence = CompareResult(regions=[SPOT] * spots, metrics={**clean, **metrics, "alignment_method": "homography"})
+    res = InspectionResult("not judged", 0.0, compare=evidence)
+    Inspector(Recipe(board_model=BOARD, use_ai=False, max_diff_regions=1, rois=rois)).judge(res, None)
+    assert {c.name: c.verdict for c in res.checks if c.verdict not in ("OK", "INFO")} == flagged
+    assert [d.severity for d in res.defects] == severities
+    assert res.verdict == verdict
+
+
+def test_req_insp_016_six_step_cards_open_their_pages_and_show_status(
+    qtbot: QtBot, trained_ctx: AppContext, ng_board: Path, synthetic_dataset: Path
+) -> None:
+    """Each card opens its page in one click; each status is read again whenever Home opens, and shows within 300 ms
+    of Home opening in every one of 11 openings after a warm-up."""
     win = _window(qtbot, trained_ctx)
     home = win.pages["Home"]
     buttons = [b for b in home.findChildren(QPushButton) if b.text().startswith("Open ")]
     assert len(buttons) == 6 == len(home.STEPS)
     for b, (_, name, _, target) in zip(buttons, home.STEPS, strict=True):
         win.navigate("Home")
-        qtbot.mouseClick(b, Qt.LeftButton)
+        qtbot.mouseClick(b, Qt.MouseButton.LeftButton)
         assert win.stack.currentWidget() is win.pages[target], name
-    opens = []
-    for _ in range(5):  # the median: a CI machine's hiccup is not the page's cost, and a slow page is slow every time
+
+    def open_home() -> tuple[float, dict[str, str]]:
+        """Home opened from another page: the seconds until its status is set and painted, and the status shown."""
         win.navigate("Inspection")
         t0 = perf_counter()
         win.navigate("Home")
-        opens.append(perf_counter() - t0)
-    status = {name: label.text() for name, label in home.status_labels.items()}
-    assert all(status.values()), status
-    assert status["Upload samples"].endswith("uploaded") and "Active AI model" in status["Self-train"]
-    assert median(opens) < 0.3, f"Home status took {median(opens) * 1000:.0f} ms (median of 5 openings)"
+        QApplication.processEvents()  # the repaint the new status asked for
+        return perf_counter() - t0, {name: label.text() for name, label in home.status_labels.items()}
+
+    _, before = open_home()  # the warm-up: a first opening's one-off costs are not Home's
+    ok, ng = len(trained_ctx.samples(BOARD, "OK")), len(trained_ctx.samples(BOARD, "NG"))
+    assert before["Upload samples"] == f"{ok} OK · {ng} NG uploaded" and "Active AI model" in before["Self-train"]
+    assert before["Inspect"] == "No boards inspected yet. Load images on Inspection."
+    # The data behind four cards changes between two openings: one more OK sample, a saved recipe, an inspected board.
+    trained_ctx.import_samples(BOARD, [str(next((synthetic_dataset / "test" / "ok").glob("*.png")))], "OK")
+    revision = trained_ctx.save_recipe(Recipe(board_model=BOARD, rois=[ROI("R1")]))
+    res = trained_ctx.inspect_file(BOARD, str(ng_board))
+    first, after = open_home()
+    assert after == {
+        **before,
+        "Upload samples": f"{ok + 1} OK · {ng} NG uploaded",
+        "Tune recipe": f"Recipe revision {revision}",
+        "Inspect": f"1 boards inspected · {int(res.verdict == 'NG')} NG",
+        "Export": "Ready",
+    }
+    opens = [first] + [open_home()[0] for _ in range(10)]  # every opening after the warm-up
+    assert max(opens) < 0.3, f"Home status took up to {max(opens) * 1000:.0f} ms ({len(opens)} openings)"
 
 
 def test_req_cmp_001_linked_views_zoom_and_pan_together_within_1px(
     qtbot: QtBot, trained_ctx: AppContext, tiny_model: TrainedModel
 ) -> None:
-    page = _window(qtbot, trained_ctx).pages["Compare"]
-    page.ref_view.set_image(tiny_model.reference)
-    page.test_view.set_image(tiny_model.reference)
-    page.ref_view.wheelEvent(
+    """A wheel step on one view zooms both, and a pan of either view moves the other to the same board position,
+    within 1 px at 100 % zoom. The board is the golden board at four times its size, so both pans stay inside the
+    scroll range across and down: at its own size a view could pan it 16 px at most before Compare was shown, and not
+    down at all once it was, so a pan the test asked for was clamped before the link was tested."""
+    win = _window(qtbot, trained_ctx)
+    win.navigate("Compare")
+    page = win.pages["Compare"]
+    ref, test = page.ref_view, page.test_view
+    board = cv2.resize(tiny_model.reference, None, fx=4, fy=4, interpolation=cv2.INTER_NEAREST)
+    ref.set_image(board)
+    test.set_image(board)
+
+    def gap() -> float:
+        """How far apart, in board pixels, the two views' centres are."""
+        a, b = (v.mapToScene(v.viewport().rect().center()) for v in (ref, test))
+        return max(abs(a.x() - b.x()), abs(a.y() - b.y()))
+
+    fitted = ref.transform().m11()
+    up = QPoint(0, 120)  # one wheel step away from the user: zoom in
+    ref.wheelEvent(
         QWheelEvent(
             QPointF(10, 10),
             QPointF(10, 10),
             QPoint(),
-            QPoint(0, 120),
-            Qt.NoButton,
-            Qt.NoModifier,
-            Qt.NoScrollPhase,
+            up,
+            Qt.MouseButton.NoButton,
+            Qt.KeyboardModifier.NoModifier,
+            Qt.ScrollPhase.NoScrollPhase,
             False,
         )
     )
-    page.ref_view.resetTransform()  # 100 % zoom
-    page.ref_view.horizontalScrollBar().setValue(137)
-    page.ref_view.verticalScrollBar().setValue(91)
-    assert page.test_view.transform() == page.ref_view.transform()
-    a = page.ref_view.mapToScene(page.ref_view.viewport().rect().center())
-    b = page.test_view.mapToScene(page.test_view.viewport().rect().center())
-    assert abs(a.x() - b.x()) <= 1 and abs(a.y() - b.y()) <= 1
+    assert ref.transform().m11() == pytest.approx(fitted * 1.25)
+    assert test.transform() == ref.transform() and gap() <= 1
+    ref.resetTransform()  # 100 % zoom, where the criterion is measured; the pan below carries it to the other view
+    for view, (x, y) in ((ref, (437, 291)), (test, (1500, 900))):  # a pan of the golden board, then of the test board
+        view.horizontalScrollBar().setValue(x)
+        view.verticalScrollBar().setValue(y)
+        assert (view.horizontalScrollBar().value(), view.verticalScrollBar().value()) == (x, y), "the pan was clamped"
+        assert test.transform() == ref.transform() == QTransform()
+        assert gap() <= 1, f"the views' centres are {gap():.1f} px apart after a pan to {x}, {y}"
 
 
 def test_req_cmp_006_any_stored_ok_sample_can_be_the_reference_and_metrics_recompute(
-    qtbot: QtBot, trained_ctx: AppContext, ng_board: Path
+    qtbot: QtBot, trained_ctx: AppContext, ng_board: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    page = _window(qtbot, trained_ctx).pages["Compare"]
+    """An OK sample of the board model picked with Reference… becomes the reference, and every row of the decision
+    table is then what the engine gives the board against that sample."""
+    win = _window(qtbot, trained_ctx)
+    win.navigate("Compare")
+    page = win.pages["Compare"]
     page.set_test(str(ng_board))
     qtbot.waitUntil(lambda: page.res is not None, timeout=30000)  # the inspection runs on a pool thread (S17b)
-    against_golden = dict(page.res.compare.metrics)
+    against_golden = page.res
     assert page.ref_label.text() == "Reference: Golden board"
-    sample = trained_ctx.db.samples(BOARD, "OK")[0]["path"]
-    first = page.res
-    page.ref_override = sample  # what Reference… does after the file dialog
-    page.run()
-    qtbot.waitUntil(lambda: page.res is not first, timeout=30000)
-    against_sample = page.res.compare.metrics
-    assert page.ref_label.text() == f"Reference: {Path(sample).name}"
-    assert against_sample["ssim"] != against_golden["ssim"]
-    rows = {
-        page.metrics.item(r, 0).text(): page.metrics.item(r, 2).data(Qt.DisplayRole)
+    sample = trained_ctx.samples(BOARD, "OK")[-1]["path"]  # any stored OK sample: here the newest
+    monkeypatch.setattr(QFileDialog, "getOpenFileName", staticmethod(lambda *_: (sample, "")))  # the user picks it
+    qtbot.mouseClick(_button(page, "Reference…"), Qt.MouseButton.LeftButton)
+    qtbot.waitUntil(lambda: page.res is not against_golden, timeout=30000)
+
+    board, reference = trained_ctx.load_image(ng_board), trained_ctx.load_image(sample)
+    want = trained_ctx.inspect(BOARD, board, reference=reference)  # the engine's own result against the sample
+    columns = (0, 2, 3, 5)  # Check, Value, Threshold, Result
+    table = [
+        [page.metrics.item(r, c).data(Qt.ItemDataRole.DisplayRole) for c in columns]
         for r in range(page.metrics.rowCount())
-    }
-    assert rows["Similarity (SSIM)"] == pytest.approx(against_sample["ssim"], abs=1e-4)
-
-
-def test_req_rcp_002_five_roi_types_and_five_fields_save_and_reload(qtbot: QtBot, trained_ctx: AppContext) -> None:
-    rois = [
-        ROI(
-            f"R{i}",
-            t,
-            x=10 * i,
-            y=20 * i,
-            w=30,
-            h=40,
-            ai_score=1.5 + i,
-            height_min=0.1 * i,
-            height_max=1.0 + i,
-            volume_min=2.0 + i,
-            volume_max=3.0 + i,
-        )
-        for i, t in enumerate(ROI_TYPES)
     ]
-    assert [r.type for r in rois] == ["Presence", "Polarity", "Solder Bridge", "Height", "Anomaly"]
-    rev = trained_ctx.save_recipe(Recipe(board_model=BOARD, rois=rois))
-    loaded_rev, loaded = trained_ctx.recipe(BOARD)
-    assert loaded_rev == rev and loaded.rois == rois
-    page = _window(qtbot, trained_ctx).pages["Recipe Editor"]
-    assert [page.r_type.itemText(i) for i in range(page.r_type.count())] == ROI_TYPES
-    page.load()
+    assert len(table) == len(want.checks) + 1 and table[-1][0] == "Inspection time (ms)"  # timed, so not compared
+    for row, c in zip(table, want.checks, strict=False):
+        value, threshold = pytest.approx(c.value, abs=1e-4), pytest.approx(c.threshold, abs=1e-4)
+        assert row == [page._check_text(c)[0], value, threshold, c.verdict], c.name
+    assert page.res.verdict == want.verdict
+    # Not the golden board's table shown again: what measures the board against its reference has moved.
+    golden = {c.name: c.value for c in against_golden.checks}
+    assert {"SSIM similarity", "Changed area %", "Alignment inliers"} <= {
+        c.name for c in want.checks if c.value != golden[c.name]
+    }
+    assert page.ref_label.text() == f"Reference: {Path(sample).name}"
+
+
+def test_req_rcp_002_five_roi_types_and_five_fields_save_and_reload(
+    qtbot: QtBot, trained_ctx: AppContext, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Five ROIs drawn on the Golden board, each given its type and its five fields in the editor's own widgets and
+    stored with Save Recipe, come back the same in a new window on a new context over the same workspace."""
+    monkeypatch.setattr(QMessageBox, "information", staticmethod(lambda *_: QMessageBox.StandardButton.Ok))
+    win = _window(qtbot, trained_ctx)
+    win.navigate("Recipe Editor")
+    page = win.pages["Recipe Editor"]
+    assert ROI_TYPES == ["Presence", "Polarity", "Solder Bridge", "Height", "Anomaly"]
+    assert [page.r_type.itemData(i) for i in range(page.r_type.count())] == ROI_TYPES
+    fields = [(1.25 + i, 0.125 * (i + 1), 1.5 + i, 2.25 + i, 3.75 + i) for i in range(5)]  # exact in binary
+    boxes = [(20 + 60 * i, 30, 40, 50) for i in range(5)]
+    for i, roi_type in enumerate(ROI_TYPES):
+        page.roi_type.setCurrentIndex(page.roi_type.findData(ROI_TYPES[i - 1]))  # drawn as another type, then set
+        page.view.roiDrawn.emit(QRectF(*boxes[i]))  # what a drag on the Golden board in Draw ROI mode gives
+        assert page.r_type.currentData() == ROI_TYPES[i - 1]  # the new ROI is selected in the Selected ROI box
+        page.r_type.setCurrentIndex(page.r_type.findData(roi_type))
+        spins = (page.r_ai, page.r_hmin, page.r_hmax, page.r_vmin, page.r_vmax)  # AI score, height and volume min/max
+        for spin, value in zip(spins, fields[i], strict=True):
+            spin.setValue(value)
+        qtbot.mouseClick(_button(page, "Apply"), Qt.MouseButton.LeftButton)
+    qtbot.mouseClick(_button(page, "Save Recipe"), Qt.MouseButton.LeftButton)
+
+    reopened = engineer(AppContext(Settings(workspace=trained_ctx.settings.workspace, device="cpu")))  # a restart
+    want = [ROI(f"R{i + 1}", t, *boxes[i], *fields[i]) for i, t in enumerate(ROI_TYPES)]
+    assert reopened.recipe(BOARD)[1].rois == want
+    win = _window(qtbot, reopened)
+    win.navigate("Recipe Editor")
+    page = win.pages["Recipe Editor"]
     assert page.roi_table.rowCount() == 5
-    page.roi_table.selectRow(3)
-    assert (page.r_type.currentText(), page.r_hmin.value(), page.r_vmax.value()) == ("Height", 0.3, 6.0)
+    for i, roi_type in enumerate(ROI_TYPES):
+        page.roi_table.selectRow(i)
+        spins = (page.r_ai, page.r_hmin, page.r_hmax, page.r_vmin, page.r_vmax)
+        assert (page.r_type.currentData(), *(s.value() for s in spins)) == (roi_type, *fields[i])
 
 
 def test_req_set_002_auto_picks_cuda_when_present_and_cpu_otherwise(monkeypatch: pytest.MonkeyPatch) -> None:
