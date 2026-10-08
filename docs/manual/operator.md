@@ -28,8 +28,9 @@ list, the View box, a button), and only while that page is shown. Both go grey w
 Start and Next Board until images are queued, while a run is on and while a board is being inspected; Stop while no
 run is on; Save Image… before the first result. Every result is recorded as it arrives, with the checks that decided
 it, before the next board starts; the records are on Logs & Export. If a result cannot be recorded (the disk is full,
-the workspace folder cannot be written) the run stops with AOI-INSP-008: press Next Board to carry on, and inspect that
-board again later.
+the workspace folder cannot be written, another program holds the database) the run stops with AOI-INSP-008: press
+Next Board to carry on, and inspect that board again later. Closing the app while a board is being inspected asks
+whether to stop: No keeps the app open; Yes records the board in hand and closes.
 
 Reading the verdict: while a board is being inspected the banner turns grey and reads "Inspecting…", and the status
 bar at the bottom names the board and its place in the queue, such as "Inspecting board_07.png (3 of 12)…". The

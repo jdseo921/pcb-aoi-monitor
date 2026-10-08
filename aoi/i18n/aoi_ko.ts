@@ -488,7 +488,7 @@
 <context>
     <name>HomePage</name>
     <message>
-        <location filename="../ui/main_window.py" line="+55"/>
+        <location filename="../ui/main_window.py" line="+57"/>
         <source>Upload samples</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1063,6 +1063,21 @@
         <source>{page} needs the {roles} role</source>
         <translation type="unfinished"></translation>
     </message>
+    <message>
+        <location line="+45"/>
+        <source>Work is still running: training, an AI model test or an inspection. Stop it and close the app? Training stops without saving an AI model, so the active one stays; an AI model test finishes its folder first.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+4"/>
+        <source>Stop the running work?</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>Stopping the running work…</source>
+        <translation type="unfinished"></translation>
+    </message>
 </context>
 <context>
     <name>ModelTestPage</name>
@@ -1277,7 +1292,7 @@
 <context>
     <name>Page</name>
     <message>
-        <location filename="../ui/main_window.py" line="-271"/>
+        <location filename="../ui/main_window.py" line="-323"/>
         <source>Home</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1848,7 +1863,7 @@
 <context>
     <name>Startup</name>
     <message>
-        <location filename="../ui/errors.py" line="+92"/>
+        <location filename="../ui/errors.py" line="+101"/>
         <source>Choose another workspace folder</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1867,12 +1882,12 @@
     </message>
     <message>
         <location line="+1"/>
-        <location line="+287"/>
+        <location line="+289"/>
         <source>Import Folder…</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-281"/>
+        <location line="-283"/>
         <location line="+50"/>
         <source>ID</source>
         <translation type="unfinished"></translation>
@@ -2050,7 +2065,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+21"/>
+        <location line="+5"/>
+        <source>Stopped: no AI model was saved; the active AI model is unchanged.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+18"/>
         <source>Export AI model</source>
         <translation type="unfinished"></translation>
     </message>

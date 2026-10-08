@@ -122,6 +122,11 @@ bound once the worker is built), which does not keep the signals; `tests/test_ba
 result is freed once the page shows another, and that a board that fails lets go of its worker's signals with the
 worker. One call starts a thread of its own: `maps.load_maps`, run by a job, decodes a stored result's AI map on a
 helper thread while the job decodes the difference map, and waits for it before it returns.
+Closing the window stops the background work (#171): while a job runs `MainWindow.closeEvent` asks first (No keeps the
+window open), then `AppContext.close` cancels every job, waits for it and closes the database and the log, and the slots
+the jobs queued are dropped unrun, and the workers that waited for them let go (`workers.drop_queued`); `main.py` closes
+the context again after the event loop (a no-op). A stopped training run saves nothing (REQ-TRN-008), and the Training
+page says so; an AI model test has no stop yet, so it finishes its folder first.
 
 A control an operator uses by key and by touch is one `QAction` (`Page.action`, since S24): a window shortcut owned by
 the page, so the key works wherever the focus is on the page and only while the page is shown, behind an
@@ -363,7 +368,7 @@ User switching is a local picker for the PoC; Stage 4 replaces it with MES authe
 |---|---|
 | `board_models` | name (a new name that differs from an existing one only in case is refused, AOI-TRN-005: Windows would give both the same model and golden board files), reference_image (golden) |
 | `samples` | board_model, path, label OK/NG, defect_type (DCT), side |
-| `models` | board_model, version, uuid (also in the `.pt` file's metadata, written there before the file is saved, so an exported file names its record), path (.pt), metrics JSON (thresholds, scores, timing), active |
+| `models` | board_model, version, uuid (also in the `.pt` file's metadata, written there before the file is saved, so an exported file names its record), path (.pt), metrics JSON (thresholds, scores, timing), active (one version per board model, switched in one transaction, so no reader finds none active, #171) |
 | `recipes` | board_model, revision (1 is the default recipe, stored when the board model is created, so every result names a stored revision), uuid, body JSON, user, created_at |
 | `inspections` | time, board_model, model_version, model_uuid, recipe_rev, recipe_uuid, image/overlay paths, diff_map_path and ai_map_path (the difference and AI score maps as PNG files beside the overlay, 8-bit exact, and 16-bit within one step: `_ai2.png` since S28a, 0.001 σ steps to 32.767 σ, then 1/8192 of the value to 1789 σ, or `_ai.png` before, 0.001 σ steps to 65.535 σ; NULL for rows from before migration 0007, and for OK results once the retention sweep deleted them), reference_path and reference_sha256 (the golden board file the result was judged against and the SHA-256 of its bytes; NULL for rows from before migration 0008 and for results judged without a golden board), view (Top, Side or Bottom; NULL for rows from before migration 0005), result, score, metrics JSON, result_json (the whole result as `InspectionResult.to_dict` writes it, read back by `from_dict` without the images; NULL before migration 0006), operator, archived |
 | `defects` | inspection_id, no, type, score, side, x, y, w, h |
@@ -386,12 +391,13 @@ nothing migrated, and a brand-new database gets no copy (Engineering, "Upgrade a
 with the app closed: copy that file over `aoi.sqlite`, deleting `aoi.sqlite-wal` and `aoi.sqlite-shm` if a crash left
 them (they belong to the replaced file), then start the version upgraded from; results recorded since the upgrade are
 only in the replaced file. The app never deletes the copies (nothing is deleted without an Admin action); a one-click
-restore belongs to the installer. A refused workspace (`AOI-SET-001`, `-002`, `-003`, `-005`, and `-011` for a folder
-that cannot be created or a database file SQLite cannot open) is reported before any window opens, so `open_workspace`
-in `aoi/ui/errors.py` follows the message with a folder picker: the folder chosen is saved to `settings.json` as the
-Settings page saves it and opened, and Cancel closes the app (REQ-SET-016). An error at start-up without a code shows
-`AOI-SET-007`, and its trace goes to the log in the default workspace folder (event `app.start_failed`), since the
-excepthook is installed only once the window exists (REQ-SET-019).
+restore belongs to the installer. A refused workspace (`AOI-SET-001`, `-002`, `-003`, `-005`, `-011` for a folder
+that cannot be created or a database SQLite cannot open or write at start-up, `-012` for one another program holds
+locked; the database and the log closed first, #171) is reported before any window opens, so `open_workspace` in
+`aoi/ui/errors.py` follows the message with a folder picker: the folder chosen is opened, then saved to `settings.json`
+as the Settings page saves it (logged as `settings.save_failed` if it cannot be), and Cancel closes the app
+(REQ-SET-016). An error at start-up without a code shows `AOI-SET-007`, and its trace goes to the log in the default
+workspace folder (event `app.start_failed`), since the excepthook is installed only once the window exists (REQ-SET-019).
 Records that can leave the station (`users`, `samples`, `models`, `recipes`, `inspections`, and since migration 0009
 `test_runs` and `alarms`) carry a `uuid` beside their integer key; `defects` and `checks` are rows of one inspection and
 are named by its UUID and their `no`. The dataset record, with its UUID, arrives with frozen dataset versions (stage

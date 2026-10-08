@@ -280,6 +280,14 @@ CODES: dict[str, ErrorCode] = {
             "aoi.sqlite is damaged, restore the backup aoi.sqlite.bak-… (engineer manual, chapter 1). Or choose "
             "another workspace folder in the window that opens next; Cancel there closes the app.",
         ),
+        ErrorCode(
+            "AOI-SET-012",
+            "Workspace database in use",
+            "Another program holds the workspace database {path}, so the app could not write to it: {error}.",
+            "Close the other program (another copy of this app, a database tool or a backup), then choose the same "
+            "folder in the window that opens next; or choose another workspace folder there. Cancel there closes the "
+            "app.",
+        ),
     )
 }
 
