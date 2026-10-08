@@ -2496,7 +2496,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/training.py" line="+406"/>
+        <location filename="../ui/pages/training.py" line="+361"/>
         <location filename="../ui/pages/training_import.py" line="+38"/>
         <source>{code} {title}</source>
         <translation type="unfinished"></translation>
@@ -3856,39 +3856,6 @@
     </message>
 </context>
 <context>
-    <name>NgDialog</name>
-    <message>
-        <location filename="../ui/pages/training.py" line="-301"/>
-        <source>Label NG images</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+3"/>
-        <source>(any)</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+4"/>
-        <source>Pick one of the 33 defect types</source>
-        <translation>33가지 결함 유형 중 하나를 고르세요</translation>
-    </message>
-    <message>
-        <location line="+3"/>
-        <source>Category</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+1"/>
-        <source>Defect type</source>
-        <translation>결함 유형</translation>
-    </message>
-    <message>
-        <location line="+13"/>
-        <source>{type}  [{severity}]</source>
-        <translation type="unfinished"></translation>
-    </message>
-</context>
-<context>
     <name>Page</name>
     <message>
         <location filename="../ui/main_window.py" line="-334"/>
@@ -4036,7 +4003,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/training.py" line="+42"/>
+        <location filename="../ui/pages/training.py" line="-235"/>
         <source>Training</source>
         <translation type="unfinished"></translation>
     </message>

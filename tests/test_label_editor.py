@@ -16,7 +16,7 @@ import pytest
 from PySide6.QtCore import QEvent, QItemSelectionModel, QPoint, QPointF, QRectF, Qt
 from PySide6.QtGui import QInputDevice, QKeyEvent, QPointingDevice, QWheelEvent
 from PySide6.QtTest import QTest
-from PySide6.QtWidgets import QApplication, QGraphicsSimpleTextItem, QMessageBox, QPushButton, QWidget
+from PySide6.QtWidgets import QApplication, QDialog, QGraphicsSimpleTextItem, QMessageBox, QPushButton, QWidget
 from pytestqt.qtbot import QtBot
 
 from aoi import defects
@@ -24,7 +24,7 @@ from aoi.core.labels import DefectBox
 from aoi.core.services import AppContext
 from aoi.ui import theme
 from aoi.ui.pages.base import cell_text
-from aoi.ui.pages.training import NgDialog, TrainingPage
+from aoi.ui.pages.training import TrainingPage
 from tests.test_req_done_in_v01 import BOARD, _window
 
 if TYPE_CHECKING:
@@ -536,7 +536,7 @@ def test_req_trn_003_editor_mark(qtbot: QtBot, trained_ctx: AppContext, monkeypa
     Undo and Ctrl+Z undo a mark too, the images getting back their label and boxes. A letter typed in a text field or
     in the Type list goes to it, and marks nothing. A label carried over with no labeller is labelled again by the
     same mark, so that it can be checked, which Undo does not take back."""
-    monkeypatch.setattr(NgDialog, "exec", lambda self: pytest.fail("Mark NG asks nothing"))
+    monkeypatch.setattr(QDialog, "exec", lambda self: pytest.fail("Mark NG asks nothing"))
     ctx = trained_ctx
     ng = ctx.samples(BOARD, "NG")[0]
     ctx.set_boxes(ng["uuid"], [DefectBox(100, 100, 60, 40, "Scratch")])
