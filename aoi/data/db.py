@@ -53,6 +53,8 @@ class Database:
                 raise WorkspaceError("AOI-SET-005")
             self._conn.execute("PRAGMA synchronous = FULL")
             self._conn.execute("PRAGMA foreign_keys = ON")
+            # REPLACE fires the delete triggers of the row it removes, so it cannot slip past audit_no_delete (#196).
+            self._conn.execute("PRAGMA recursive_triggers = ON")
             migrate(self._conn)
         except sqlite3.Error as e:  # not a database, damaged, or in use: migrate's own errors carry codes
             self._conn.close()
@@ -556,7 +558,8 @@ class Database:
         since: str | None = None,
         limit: int = 1000,
     ) -> list[dict[str, Any]]:
-        """Entries newest first, with before and after decoded from JSON."""
+        """Entries newest first, each with the same fields: `before` and `after` decoded from JSON, or None when the
+        entry has none, in place of the raw `before_json` and `after_json` columns."""
         sql, p = "SELECT * FROM audit WHERE 1=1", []
         for column, value in (("object_type", object_type), ("object_uuid", object_uuid), ("action", action)):
             if value is not None:
@@ -567,8 +570,9 @@ class Database:
             p.append(since)
         rows = self.query(sql + " ORDER BY id DESC LIMIT ?", [*p, int(limit)])
         for r in rows:
-            r["before"] = json.loads(r.pop("before_json")) if r["before_json"] else None
-            r["after"] = json.loads(r.pop("after_json")) if r["after_json"] else None
+            raw_before, raw_after = r.pop("before_json"), r.pop("after_json")
+            r["before"] = None if raw_before is None else json.loads(raw_before)
+            r["after"] = None if raw_after is None else json.loads(raw_after)
         return rows
 
     def add_user(self, name: str, role: str) -> None:

@@ -155,9 +155,11 @@ count and types, operator, image and overlay paths, then the record's, model's a
 beside it holds one row per check that decided each verdict: the record's time, board model, view, model version and
 recipe revision with their UUIDs, then the check's number, region (the whole board, or an ROI's name and box), metric,
 source, value, threshold, rule and result. Records from before the checks were stored have no rows in the second file.
-Each export is confirmed first and written whole or not at all, and the audit trail records it; if that entry cannot
-be written, the exported file is removed (never the station's own file, when exported onto itself). When a
-`<name>_checks.csv` is already there, the app asks whether to replace it, with No as the default: Enter keeps it.
+Each export is confirmed first and written whole or not at all, and the audit trail records it: a file or folder inside
+the workspace, such as the suggested `exports` folder, relative to the workspace (`exports/inspections.csv`), so the
+entry still holds after the workspace folder moves; a folder outside it, such as a USB drive, with its full path. If
+that entry cannot be written, the exported file is removed (never the station's own file, when exported onto itself).
+When a `<name>_checks.csv` is already there, the app asks whether to replace it, with No as the default: Enter keeps it.
 **Export Image Overlays** that stops part-way (the drive full or pulled out, a folder already named like an overlay)
 shows AOI-LOG-001 with how many images were copied, and the audit trail records those, with the file that failed.
 

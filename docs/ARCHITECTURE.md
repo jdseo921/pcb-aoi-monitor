@@ -350,8 +350,8 @@ The writes, their roles and entries:
 | `train`, `activate_model` | Engineer | `model.train`, `model.activate` (active version; an older one is a rollback; `model.train` also the Golden board before); object = model UUID |
 | `save_recipe` | Engineer | `recipe.save` (recipe body); object = recipe UUID |
 | `batch_test` | Engineer | `test.run` (folder, model version, metrics); object = board model name |
-| `export_model`, `export_overlays`, `export_csv` | Engineer | `export.model`, `export.overlays`, `export.csv` (destination, counts) |
-| `export_report` | Engineer | `export.report` (destination, board model, run UUID, AI model version, bytes); object = test run UUID. The page renders the PDF in memory and the service writes it through `atomic.py`; an export that cannot be written is `AOI-LOG-002`, as for `export_csv` (#180) |
+| `export_model`, `export_overlays`, `export_csv` | Engineer | `export.model`, `export.overlays`, `export.csv` (destination, relative to the workspace when inside it, else in full (#196); counts) |
+| `export_report` | Engineer | `export.report` (destination, stored as for the exports above, board model, run UUID, AI model version, bytes); object = test run UUID. The page renders the PDF in memory and the service writes it through `atomic.py`; an export that cannot be written is `AOI-LOG-002`, as for `export_csv` (#180) |
 | `archive_old` | Engineer | `inspection.archive` (days, count); the retention run at start-up is a system action: logged, not audited |
 | `_sweep_ok_maps` | system, at start-up; no page calls it | `maps.sweep` (days, swept, skipped): the map files of OK results past `map_retention_days_ok` are deleted and forgotten, NG and WARN maps stay; audited, unlike the start-up archive, because it deletes evidence. A file that cannot be deleted, or lies outside results/, is skipped with a warning and kept for the next start |
 | `add_user` | Admin | `user.change` (role); object = user UUID. The last Admin keeps the role: `AOI-USR-002`, nothing written |
@@ -405,7 +405,7 @@ role-gated buttons and links follow the new role at once (#174).
 | `test_runs` | uuid, time, board_model, model_version, model_uuid (NULL for runs from before migration 0009), folder, metrics JSON, results JSON (one row per image; its `image` path stored like `folder`); the AI Model Test CSV and report name the run and the AI model by UUID |
 | `alarms` | uuid, time, level NG/WARN/ERROR, code AOI-<AREA>-<NNN>, message; the newest 1,000 are shown and survive a restart |
 | `users` | — |
-| `audit` | uuid, at_utc, user_uuid, role, action, object_type, object_uuid, before_json, after_json, reason; append only (triggers refuse UPDATE and DELETE) |
+| `audit` | uuid, at_utc, user_uuid, role, action, object_type, object_uuid, before_json, after_json, reason; append only (triggers refuse UPDATE, DELETE and, since migration 0010, an INSERT OR REPLACE or REPLACE INTO that reuses an entry's id or uuid; the connection sets `recursive_triggers`). `audit_entries` gives every entry the same fields, `before` and `after` decoded or None, without the raw JSON columns |
 | `schema_version` | number, name, applied_at, checksum (migration runner) |
 
 The schema is created and changed only by the numbered migrations in `aoi/data/migrations/`, which
