@@ -290,6 +290,7 @@ ENGINE_ALLOWED = {  # (file, literal): why it is not a phrase; a stale entry fai
     ("aoi/core/imaging.py", "JPEG"): "an image format's name (AOI-INSP-006's {kind}), the same in every language",
     ("aoi/core/imaging.py", "TIFF"): "an image format's name (AOI-INSP-006's {kind}), the same in every language",
     ("aoi/core/services.py", "operator"): "a user's name in the users table, which start_user returns",
+    ("aoi/core/services.py", "user 0"): "a user's pseudonym in the log (REQ-LOG-004, #195)",
     ("aoi/core/services.py", "same"): "a Judged key Compare never words: it shows the Golden board then",
     ("aoi/core/services.py", "none"): "a Judged key; Compare words it (JUDGED in aoi/ui/pages/compare.py)",
     ("aoi/core/services.py", "unrecorded"): "a Judged key; Compare words it (JUDGED in aoi/ui/pages/compare.py)",

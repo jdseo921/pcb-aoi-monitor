@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import argparse
 import sys
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -81,6 +81,7 @@ class ErrorCode:
     title: str
     what: str  # what happened; {placeholders} are filled at the raise site
     action: str  # what the user does next
+    personal: tuple[str, ...] = ()  # placeholders that hold personal data, which the log never holds (REQ-LOG-004)
 
 
 CODES: dict[str, ErrorCode] = {
@@ -450,6 +451,7 @@ CODES: dict[str, ErrorCode] = {
                 "users or settings.",
             ),
             QT_TRANSLATE_NOOP("Errors", "Give another user the Admin role first, then change this one."),
+            personal=("name",),  # a user's name: the log names the user by UUID (#195)
         ),
         ErrorCode(
             "AOI-USR-003",
@@ -626,6 +628,16 @@ class AoiError(Exception):
     def message(self) -> str:
         """What the user reads: what happened and what to do, without the code."""
         return f"{self.what} {self.action}"
+
+    def log_safe(self, pseudonym: Callable[[object], object]) -> AoiError:
+        """This error as the log may hold it (REQ-LOG-004, #195): each value the catalogue marks personal, such as a
+        user's name, replaced by `pseudonym(value)`, such as that user's UUID, with the same trace; itself when none."""
+        personal = {k: pseudonym(v) for k, v in self.params.items() if k in self.entry.personal}
+        if not personal:
+            return self
+        safe = type(self)(self.code, self.detail, **{**self.params, **personal})
+        safe.__cause__ = self.__cause__
+        return safe.with_traceback(self.__traceback__)
 
 
 def render() -> str:

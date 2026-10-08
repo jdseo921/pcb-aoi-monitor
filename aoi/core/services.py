@@ -13,6 +13,7 @@ import functools
 import io
 import json
 import math
+import threading
 import uuid
 from collections.abc import Callable, Iterator
 from dataclasses import dataclass
@@ -37,7 +38,7 @@ from .maps import load_maps, save_maps
 from .recipe import Recipe
 
 ALARM_LIMIT = 1000  # REQ-INSP-006: the alarms a screen shows and that survive a restart
-BUSY_ALARM_WAIT_MS = 200  # an error that is the database's lock: its alarm waits this long for it, not another 5 s
+BUSY_ALARM_WAIT_MS = 200  # how long the alarm of a locked database's error, or an Inspection alarm, waits, not 5 s
 
 
 @dataclass(frozen=True)
@@ -192,6 +193,8 @@ class AppContext:
         # background work (REQ-SET-021): screens submit through aoi/ui/workers, tests directly; a job acts as the user
         # who submitted it (#177)
         self.jobs = Jobs(context=self._acting_context)
+        self._golden_alarmed: set[tuple[str, str | None, str]] = set()  # each (board model, file, code) alarmed (#195)
+        self._golden_lock = threading.Lock()  # the Recipe Editor reads on the UI thread, Compare on the pool's
         self._closed = False
 
     # --- dataset -------------------------------------------------------------
@@ -582,12 +585,15 @@ class AppContext:
         return iid
 
     # --- alarms and errors (REQ-INSP-006, REQ-LOG-005, REQ-SET-019) -----------
-    def alarm(self, level: str, message: str, code: str | None = None, wait_ms: int | None = None) -> None:
+    def alarm(
+        self, level: str, message: str, code: str | None = None, wait_ms: int | None = None, log_text: str | None = None
+    ) -> None:
         """Store an alarm (NG, WARN or ERROR) with its code; it survives a restart and reaches the log. A `message`
         that is a phrase is stored with it, so the alarm list shows it in the UI language (#198). `wait_ms` bounds the
-        wait for another program's lock on the database (#195)."""
+        wait for another program's lock on the database; `log_text` is what the log holds of a `message` that names a
+        person (#195)."""
         self.db.alarm(level, message, code, wait_ms)
-        self.log.info("alarm", extra={"alarm_level": level, "code": code, "text": message})
+        self.log.info("alarm", extra={"alarm_level": level, "code": code, "text": log_text or message})
 
     def alarms(self, limit: int = ALARM_LIMIT) -> list[dict[str, Any]]:
         """The newest alarms first: time (UTC), level, code and message."""
@@ -604,17 +610,46 @@ class AppContext:
             held = AoiError("AOI-SET-013", detail=str(exc), path=str(self.db.path), error=str(exc))
             held.__cause__ = exc  # the log keeps SQLite's error and its trace
             exc = held.with_traceback(exc.__traceback__)
-        report = ErrorReport.of(exc, context)
+        report = ErrorReport.of(exc, context)  # the dialog and the alarm name a user; the log only by UUID (#195)
+        safe = exc.log_safe(self._pseudonym) if isinstance(exc, AoiError) else exc
         self.log.error(
             "error.shown",
-            exc_info=(type(exc), exc, exc.__traceback__),
-            extra={"code": report.code, "context": context, "detail": getattr(exc, "detail", None) or str(exc)},
+            exc_info=(type(safe), safe, exc.__traceback__),
+            extra={"code": report.code, "context": context, "detail": getattr(safe, "detail", None) or str(safe)},
         )
         try:
-            self.alarm("ERROR", report.what, report.code, BUSY_ALARM_WAIT_MS if busy else None)
+            log_text = safe.what if isinstance(safe, AoiError) else None
+            self.alarm("ERROR", report.what, report.code, BUSY_ALARM_WAIT_MS if busy else None, log_text)
         except Exception:  # #171: the report, and so the coded dialog, must not depend on the database
             self.log.warning("alarm.not_stored", exc_info=True, extra={"code": report.code})
         return report
+
+    def _pseudonym(self, name: object) -> str:
+        """A user named by UUID for the log, which holds no personal data beyond it (REQ-LOG-004, #195)."""
+        try:
+            uid = self.db.user_uuid(str(name))
+        except DbError:
+            uid = None
+        return f"user {uid or '<unknown>'}"
+
+    def golden_board_unreadable(self, board_model: str, error: AoiError) -> None:
+        """Record the error a Golden board pane shows for a file it cannot read (#176): a log warning each time, and an
+        ERROR alarm with the code shown once per board model, file and code, so a page shown again, both panes showing
+        it, or the file going back to a state already alarmed, add no other (#195). It never raises: the page must open
+        either way."""
+        self.log.warning("golden_board.unreadable", extra={"board_model": board_model, "code": error.code})
+        key: tuple[str, str | None, str] | None = None
+        try:
+            key = (board_model, self.db.reference(board_model), error.code)
+            with self._golden_lock:
+                if key in self._golden_alarmed:
+                    return
+                self._golden_alarmed.add(key)
+            self.alarm("ERROR", error.what, error.code, BUSY_ALARM_WAIT_MS)  # a pane reads it on the UI thread
+        except Exception:  # the database refuses the alarm (#171): the next read tries again
+            if key is not None:
+                self._golden_alarmed.discard(key)
+            self.log.warning("alarm.not_stored", exc_info=True, extra={"code": error.code})
 
     # --- batch test (AI Model Test screen) -----------------------------------
     @requires("Engineer", QT_TRANSLATE_NOOP("Errors", "Running an AI model test"))

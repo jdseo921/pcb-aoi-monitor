@@ -413,7 +413,7 @@
 <context>
     <name>Errors</name>
     <message>
-        <location filename="../core/services.py" line="+56"/>
+        <location filename="../core/services.py" line="+57"/>
         <source> ({context})</source>
         <translation type="unfinished"></translation>
     </message>
@@ -433,7 +433,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+152"/>
+        <location line="+154"/>
         <source>Importing samples</source>
         <translation type="unfinished"></translation>
     </message>
@@ -473,7 +473,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+81"/>
+        <location line="+113"/>
         <source>Running an AI model test</source>
         <translation type="unfinished"></translation>
     </message>
@@ -689,7 +689,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../errors.py" line="+91"/>
+        <location filename="../errors.py" line="+92"/>
         <source>Image cannot be read</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1169,7 +1169,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+4"/>
+        <location line="+5"/>
         <source>Unknown user</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1923,7 +1923,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+60"/>
+        <location line="+62"/>
         <source>Run stopped: the board model changed from {old} to {new}. Boards inspected before the change are saved under {old}; press Start to carry on with the queue under {new}.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2537,7 +2537,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/inspection.py" line="-399"/>
+        <location filename="../ui/pages/inspection.py" line="-401"/>
         <source>Inspection</source>
         <translation type="unfinished"></translation>
     </message>

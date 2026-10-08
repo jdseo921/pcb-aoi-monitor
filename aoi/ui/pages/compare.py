@@ -311,8 +311,9 @@ class ComparePage(Page):
     ) -> Evaluated:
         """Pool thread: files and the engine only, never a widget. `ref` is a stored result's golden board as judged.
         Today's Golden board gone or damaged comes back as the error to say on its pane, not raised (it was a dialog
-        and an alarm at every start, #176); a test board it keeps from being judged comes back with its AOI-INSP-009
-        refusal and no result, so the pane says why whether or not a board was to be judged (#176 review)."""
+        at every start, #176), and is alarmed once (#195); a test board it keeps from being judged comes back with its
+        AOI-INSP-009 refusal and no result, so the pane says why whether or not a board was to be judged (#176
+        review)."""
         golden_error = refused = None
         if ref is None and ref_path:
             ref = self.ctx.load_image(ref_path)
@@ -328,9 +329,8 @@ class ComparePage(Page):
                 if e.code != "AOI-INSP-009":
                     raise
                 refused, golden_error = e, e.__cause__ if isinstance(e.__cause__, AoiError) else e
-        if golden_error is not None:
-            extra = {"board_model": board_model, "code": golden_error.code}
-            self.ctx.log.warning("golden_board.unreadable", extra=extra)
+        if golden_error is not None:  # logged, and alarmed once per board model, file and code (#195)
+            self.ctx.golden_board_unreadable(board_model, golden_error)
         test = self.ctx.load_image(test_path) if test_path and refused is None else None
         res = self.ctx.inspect(board_model, test, recipe, reference=ref) if test is not None else None
         return ref, res, golden_error, refused

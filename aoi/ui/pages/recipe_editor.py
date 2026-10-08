@@ -255,13 +255,13 @@ class RecipeEditorPage(Page):
 
     def _read_golden_board(self) -> None:
         """Read the board model's Golden board into the view. A file gone or damaged must not stop the window opening
-        on this board model (#176): its error is kept for the pane, and logged."""
+        on this board model (#176): its error is kept for the pane, logged and alarmed (#195)."""
         self.golden_seen, self.golden_error = self.golden_board_stamp(), None
         try:
             self.ref = self.ctx.load_image(self.golden_seen[0]) if self.golden_seen[0] else None
         except AoiError as e:
             self.ref, self.golden_error = None, e
-            self.ctx.log.warning("golden_board.unreadable", extra={"board_model": self.board_model, "code": e.code})
+            self.ctx.golden_board_unreadable(self.board_model or "", e)
         self.view.set_image(self.ref)
         self._show_golden_board()
 

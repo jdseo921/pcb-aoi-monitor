@@ -114,7 +114,8 @@ damaged refuses every board of its board model with AOI-INSP-009: put the file b
 the Golden board with Set Reference on Training. Training again does not cure it while the Golden board is one of the
 imported samples, since training reads every OK sample. The Recipe Editor and Compare show such a Golden board as one
 that cannot be opened, with the file's error code and the same steps, and the app still opens with no error dialog
-(#176); an Operator reads the same with "Ask an Engineer". When shown again after Set Reference, a training run, or the
+(#176), though the alarm log on Inspection records it once with that code (#195); an Operator reads the same with "Ask
+an Engineer". When shown again after Set Reference, a training run, or the
 file put back or replaced, both read the Golden board again and show it; Compare then judges the test board it could
 not, and the Recipe Editor drops a Try judged against the Golden board before. Until then a test board Compare
 was asked to judge shows "Board not inspected" in place of a verdict.

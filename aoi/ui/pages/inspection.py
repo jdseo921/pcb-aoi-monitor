@@ -25,7 +25,7 @@ from ... import defects as taxonomy
 from ...core.explain import notes
 from ...core.imaging import IMAGE_EXTS, list_images, save_image
 from ...core.inspector import NG, InspectionResult, draw_overlay
-from ...core.services import Actor, AppContext
+from ...core.services import BUSY_ALARM_WAIT_MS, Actor, AppContext
 from ...errors import AoiError
 from ...hal import VIEWS
 from ...times import to_local
@@ -412,9 +412,11 @@ class InspectionPage(Page):
     def _alarm(self, level: str, msg: str, code: str) -> None:
         """Store an alarm with its code, so it survives a restart, and show the list again (REQ-INSP-006). It never
         raises, as report_error since #171: an alarm the database refuses (another program holds its write lock, the
-        disk is full) is logged, and the result, the run's stop or the board model change that raised it goes on."""
+        disk is full) is logged, and the result, the run's stop or the board model change that raised it goes on. It
+        waits BUSY_ALARM_WAIT_MS for that lock, not SQLite's 5 s on the UI thread (#195 review); a board the pool thread
+        is saving at that moment holds the database first, up to 5 s."""
         try:
-            self.ctx.alarm(level, msg, code)
+            self.ctx.alarm(level, msg, code, wait_ms=BUSY_ALARM_WAIT_MS)
         except Exception:  # #179: it replaced the result's own error with AOI-SET-007 and left the run on
             self.ctx.log.warning("alarm.not_stored", exc_info=True, extra={"code": code})
         self._refresh_alarms()

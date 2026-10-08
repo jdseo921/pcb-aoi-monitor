@@ -8,13 +8,14 @@ import re
 import sqlite3
 import sys
 import threading
+import time
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, cast
 
 import numpy as np
 import pytest
-from PySide6.QtWidgets import QMessageBox
+from PySide6.QtWidgets import QInputDialog, QMessageBox
 from pytestqt.qtbot import QtBot
 
 from aoi.config import APP_VERSION, Settings, default_workspace
@@ -193,12 +194,13 @@ def test_req_set_019_the_app_opens_when_the_golden_board_file_is_gone(
     """With the Golden board's file of the board model in use gone or damaged, the main window did not open: the
     Recipe Editor read the file when the board model was selected at start-up, and its error escaped the window, so no
     Engineer could reach Training to set another. Now the window opens as at every start, with the Operator signed in,
-    and shows no error for it: the Recipe Editor and Compare say on their Golden board pane that it cannot be opened,
-    with the code, what happened and the next step for the role signed in, built again when an Engineer signs in, and
-    no alarm is stored. Inspecting a board, on Compare too, still refuses it with AOI-INSP-009; once the step is done
-    (Set Reference on another OK sample), both panes show the new Golden board when shown again, and Compare judges the
-    board it refused (#176 review: Compare showed AOI-INSP-009 and stored an alarm at every start, the Recipe Editor
-    kept the Operator's "Ask an Engineer" text, and both kept the error after the remedy)."""
+    and shows no error dialog for it: the Recipe Editor and Compare say on their Golden board pane that it cannot be
+    opened, with the code, what happened and the next step for the role signed in, built again when an Engineer signs
+    in, and one alarm is stored with that code however often the panes show it (#195). Inspecting a board, on Compare
+    too, still refuses it with AOI-INSP-009; once the step is done (Set Reference on another OK sample), both panes
+    show the new Golden board when shown again, and Compare judges the board it refused (#176 review: Compare showed
+    AOI-INSP-009 and stored an alarm at every start, the Recipe Editor kept the Operator's "Ask an Engineer" text, and
+    both kept the error after the remedy)."""
     fix = "choose another OK sample with Set Reference on Training."
     board = trained_ctx.samples(BOARD, "OK")[-1]["path"]
     for change, code in ((Path.unlink, "AOI-INSP-001"), (lambda p: p.write_bytes(b"no image"), "AOI-INSP-004")):
@@ -221,7 +223,8 @@ def test_req_set_019_the_app_opens_when_the_golden_board_file_is_gone(
             assert empty.sentence.text().startswith(f"{code} ") and empty.sentence.text().endswith(f"or {fix}")
         qtbot.waitUntil(lambda page=compare: trained_ctx.jobs.idle() and page._bg is None, timeout=20000)
         assert compare.ref_empty.isVisible() and compare.ref_empty.link.text() == "Open Training ›"
-        assert trained_ctx.alarms() == alarms
+        stored = trained_ctx.alarms()[: len(trained_ctx.alarms()) - len(alarms)]  # an error shown is alarmed, once
+        assert [(a["level"], a["code"]) for a in stored] == [("ERROR", code)], "#195"
         with pytest.raises(AoiError) as refused:
             trained_ctx.inspect_file(BOARD, board, save=False)
         assert refused.value.code == "AOI-INSP-009"
@@ -247,8 +250,8 @@ def test_req_set_019_compare_says_why_a_board_is_not_judged_and_judges_it_once_i
     AOI-INSP-009, its dialog and alarm, and now also clears the verdict of the board before and says on the Golden
     board pane that the file cannot be opened; once a Golden board can be read again, showing the page judges the
     board. Showing the page while the new Golden board cannot be read either names the new file on the pane, with no
-    dialog or alarm (#176 review: the pane kept the old picture and a stale OK, and the board was never judged again;
-    a later show raised a dialog and an alarm while the pane named the old file)."""
+    dialog and one alarm, for that file (#176 review: the pane kept the old picture and a stale OK, and the board was
+    never judged again; a later show raised a dialog and an alarm while the pane named the old file; #195)."""
     board = trained_ctx.samples(BOARD, "OK")[-1]["path"]
     win = _window(qtbot, trained_ctx)
     compare = win.pages["Compare"]
@@ -272,8 +275,9 @@ def test_req_set_019_compare_says_why_a_board_is_not_judged_and_judges_it_once_i
     win.navigate("Home")
     win.navigate("Compare")
     qtbot.waitUntil(lambda: trained_ctx.jobs.idle() and compare._bg is None, timeout=20000)
-    assert dialogs == [] and trained_ctx.alarms() == alarms and compare.res is None
-    assert Path(oks[0]["path"]).name in compare.ref_empty.sentence.text()
+    stored = trained_ctx.alarms()[: len(trained_ctx.alarms()) - len(alarms)]
+    assert [a["code"] for a in stored] == ["AOI-INSP-001"] and Path(oks[0]["path"]).name in stored[0]["message"]
+    assert dialogs == [] and compare.res is None and Path(oks[0]["path"]).name in compare.ref_empty.sentence.text()
     trained_ctx.set_reference(BOARD, oks[1]["id"])
     win.navigate("Home")
     win.navigate("Compare")
@@ -384,9 +388,11 @@ def test_req_set_019_compare_save_to_recipe_without_a_board_model_asks_for_one(
     assert trained_ctx.recipe_history(BOARD) == before
 
 
-def _hold_write_lock(ctx: AppContext) -> sqlite3.Connection:
-    """Another program takes the database's write lock and keeps it until closed; the app waits 200 ms, not 5 s."""
-    ctx.db._conn.execute("PRAGMA busy_timeout = 200")
+def _hold_write_lock(ctx: AppContext, wait_ms: int | None = 200) -> sqlite3.Connection:
+    """Another program takes the database's write lock and keeps it until closed; the app waits `wait_ms`, not 5 s, or
+    with None as it does in use (#195 review: the 200 ms hid the 5 s an Inspection alarm waited)."""
+    if wait_ms is not None:
+        ctx.db._conn.execute(f"PRAGMA busy_timeout = {wait_ms}")
     other = sqlite3.connect(ctx.db.path, isolation_level=None, check_same_thread=False)
     other.execute("BEGIN IMMEDIATE")
     return other
@@ -449,7 +455,8 @@ def test_req_set_019_a_refused_alarm_never_replaces_the_result_not_saved_error(
     """#179: a board model with a Golden board and no AI model yet, inspected while another program holds the write
     lock: the "No AI model" WARN alarm raised from the result slot, so AOI-SET-007 showed in place of AOI-INSP-008 and
     the run stayed on with Start and Next Board off. The alarm refused, and an alarm list that cannot be read, are now
-    logged; the result and its error show."""
+    logged; the result and its error show. With the app's own wait, the alarm no longer holds the window for SQLite's
+    5 s either: it waits 200 ms, as the error's does (#195 review)."""
     ctx.import_samples("NOAI", [str(p) for p in list_images(synthetic_dataset / "train" / "ok")[:3]], "OK")
     assert ctx.reference_image("NOAI") is not None and ctx.load_model("NOAI") is None
     win = MainWindow(ctx)
@@ -463,7 +470,16 @@ def test_req_set_019_a_refused_alarm_never_replaces_the_result_not_saved_error(
     win.navigate("Inspection")
     page = cast(InspectionPage, win.pages["Inspection"])
     page._set_queue([ng_board])
-    other = _hold_write_lock(ctx)
+    other, took, real_alarm = _hold_write_lock(ctx, None), [], ctx.alarm
+
+    def alarm(*args: Any, **kwargs: Any) -> None:  # on the UI thread: the result slot's error, then its alarm
+        start = time.monotonic()
+        try:
+            real_alarm(*args, **kwargs)
+        finally:
+            took.append(time.monotonic() - start)
+
+    monkeypatch.setattr(ctx, "alarm", alarm)
 
     def unreadable(*_: object) -> list[dict[str, Any]]:
         raise sqlite3.OperationalError("disk I/O error")
@@ -478,6 +494,7 @@ def test_req_set_019_a_refused_alarm_never_replaces_the_result_not_saved_error(
     assert win.statusBar().currentMessage().startswith(f"{ng_board.name}  ·  AI score")
     assert [r["code"] for r in _log_rows(ctx, "alarm.not_stored")] == ["AOI-INSP-008", "AOI-TRN-003"]
     assert _log_rows(ctx, "alarms.not_read")
+    assert len(took) == 2 and sum(took) < 1, f"the result slot's alarms held the window {took} s"
 
 
 @pytest.mark.qt_no_exception_capture
@@ -490,7 +507,8 @@ def test_req_set_019_a_refused_alarm_never_stops_a_board_model_change(
 ) -> None:
     """#179: the header's board model changed during a run while another program holds the write lock: the run-stopped
     WARN alarm (AOI-INSP-012) raised, AOI-SET-007 showed and the pages after Inspection never heard of the change.
-    Now the run stops, every page follows the header, and the alarm refused is logged."""
+    Now the run stops, every page follows the header, and the alarm refused is logged, after 200 ms, not SQLite's 5 s
+    (#195 review)."""
     trained_ctx.ensure_board_model("ZZZ")
     win = _window(qtbot, trained_ctx, "Operator")
     monkeypatch.setattr(sys, "excepthook", sys.excepthook)  # put the original back after the test
@@ -513,8 +531,9 @@ def test_req_set_019_a_refused_alarm_never_stops_a_board_model_change(
     page._set_queue(list_images(synthetic_dataset / "test" / "ok")[:2])
     page.start_run()
     qtbot.waitUntil(lambda: len(started) == 1, timeout=60000)  # the first board is in hand
-    other = _hold_write_lock(trained_ctx)
+    other, start = _hold_write_lock(trained_ctx, None), time.monotonic()
     win.bm_combo.setCurrentText("ZZZ")
+    took = time.monotonic() - start
     other.close()
     gate.set()
     qtbot.waitUntil(lambda: page.worker is None and trained_ctx.jobs.idle(), timeout=60000)
@@ -522,3 +541,90 @@ def test_req_set_019_a_refused_alarm_never_stops_a_board_model_change(
     assert heard == dict.fromkeys(win.pages, "ZZZ") and not page.running
     assert [r["code"] for r in _log_rows(trained_ctx, "alarm.not_stored")] == ["AOI-INSP-012"]
     assert [r["board_model"] for r in trained_ctx.inspections()] == [BOARD], "the board in hand kept TINY"
+    assert took < 1, f"the header change held the window {took:.1f} s"
+
+
+def test_req_insp_006_a_golden_board_pane_error_is_alarmed_once_when_read_again(
+    qtbot: QtBot, trained_ctx: AppContext, dialogs: list[tuple[str, str]], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """#195: the Golden board file gone while the app runs, read again by Save on the Recipe Editor and by Compare when
+    shown: one alarm with the code the panes show, none for showing it again; before, nothing was stored."""
+    monkeypatch.setattr(QMessageBox, "information", staticmethod(lambda *a: QMessageBox.StandardButton.Ok))
+    win = _window(qtbot, trained_ctx)
+    editor, compare = win.pages["Recipe Editor"], win.pages["Compare"]
+    win.navigate("Recipe Editor")
+    alarms = len(trained_ctx.alarms())
+    Path(str(trained_ctx.reference_image(BOARD))).unlink()
+    for _ in range(2):
+        editor.save()
+        win.navigate("Compare")
+        qtbot.waitUntil(lambda: trained_ctx.jobs.idle() and compare._bg is None, timeout=20000)
+        assert compare.ref_empty.isVisible() and editor.view_empty.sentence.text().startswith("AOI-INSP-001 ")
+        win.navigate("Recipe Editor")
+    stored = trained_ctx.alarms()[: len(trained_ctx.alarms()) - alarms]
+    assert [(a["level"], a["code"]) for a in stored] == [("ERROR", "AOI-INSP-001")] and dialogs == []
+    assert [r["code"] for r in _log_rows(trained_ctx, "alarm")][-1:] == ["AOI-INSP-001"]
+
+
+def test_req_insp_006_a_golden_board_alarm_is_stored_once_per_file_and_code(trained_ctx: AppContext) -> None:
+    """#195 review: the Golden board file gone, gone, not an image, gone, not an image while the app runs stored four
+    alarms where the docs say once per board model, file and code: only the last code was remembered. With the codes
+    the panes show and the release note names: AOI-INSP-001 gone, AOI-INSP-004 not an image, AOI-INSP-006 damaged."""
+    golden = Path(str(trained_ctx.reference_image(BOARD)))
+    png, before = golden.read_bytes(), len(trained_ctx.alarms())
+    gone, bad, cut = (
+        lambda: golden.unlink(missing_ok=True),
+        lambda: golden.write_bytes(b"no image"),
+        lambda: golden.write_bytes(png[: len(png) // 2]),  # a PNG cut short: damaged
+    )
+    for change in (gone, gone, bad, gone, bad, cut, cut):
+        change()
+        with pytest.raises(AoiError) as unreadable:
+            trained_ctx.load_image(golden)
+        trained_ctx.golden_board_unreadable(BOARD, unreadable.value)
+    stored = trained_ctx.alarms()[: len(trained_ctx.alarms()) - before]
+    assert [a["code"] for a in stored] == ["AOI-INSP-006", "AOI-INSP-004", "AOI-INSP-001"]
+
+
+def test_req_log_004_refusing_to_remove_the_last_admin_keeps_the_name_out_of_the_log(
+    qtbot: QtBot, trained_ctx: AppContext, dialogs: list[tuple[str, str]], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """#195: AOI-USR-002 names the last Admin in the dialog and in the alarm list; the log names that user by UUID only
+    (REQ-LOG-004: no personal data beyond a user's UUID), in the error's text, its trace and its alarm line. Before,
+    all three held the name, which then outlived the account's removal."""
+    name = "Minsoo Kim"
+    trained_ctx.set_user("admin")
+    trained_ctx.add_user(name, "Admin")
+    trained_ctx.add_user("admin", "Operator")  # the new user is now the only Admin
+    win = _window(qtbot, trained_ctx, "Operator")
+    win.set_user(name)  # the only Admin: a start and a sign-in take the stored role (#197)
+    settings = cast(SettingsPage, win.pages["Settings"])
+    monkeypatch.setattr(QInputDialog, "getText", staticmethod(lambda *a: (name, True)))
+    monkeypatch.setattr(QInputDialog, "getItem", staticmethod(lambda *a: ("Operator", True)))
+    settings.add_user()  # Add / Change User: Minsoo Kim to Operator
+    assert [title for title, _ in dialogs] == ["AOI-USR-002 Last Admin"] and dialogs[0][1].startswith(f"{name} is ")
+    assert trained_ctx.alarms()[0]["message"].startswith(f"{name} is the only user with the Admin role")
+    log = "".join(p.read_text(encoding="utf-8") for p in (trained_ctx.settings.root / "logs").glob("*.jsonl"))
+    assert "Minsoo" not in log
+    uid = str(trained_ctx.db.user_uuid(name))
+    (row,) = _log_rows(trained_ctx, "error.shown")
+    assert row["code"] == "AOI-USR-002" and uid in str(row["detail"]) and uid in str(row["trace"])
+    assert uid in str(_log_rows(trained_ctx, "alarm")[-1]["text"])
+
+
+def test_req_set_019_a_golden_board_alarm_never_holds_the_window_on_a_held_database(trained_ctx: AppContext) -> None:
+    """The Recipe Editor and Compare read the Golden board on the UI thread: with another program holding the database,
+    the alarm of an unreadable Golden board waits BUSY_ALARM_WAIT_MS, not SQLite's 5 s, and is stored at a later read
+    once the lock is gone (#195 review)."""
+    error = AoiError("AOI-INSP-001", path="golden.png")
+    other = _hold_write_lock(trained_ctx, None)  # the app's own busy timeout, as in use
+    try:
+        start = time.monotonic()
+        trained_ctx.golden_board_unreadable(BOARD, error)
+        took = time.monotonic() - start
+    finally:
+        other.close()
+    assert took < 1, f"the pane's read held the window {took:.2f} s"
+    assert not [a for a in trained_ctx.alarms() if a["code"] == "AOI-INSP-001"]
+    trained_ctx.golden_board_unreadable(BOARD, error)  # the next read, the lock gone: stored once
+    assert len([a for a in trained_ctx.alarms() if a["code"] == "AOI-INSP-001"]) == 1
