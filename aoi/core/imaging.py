@@ -87,7 +87,9 @@ def _jpeg_header(data: bytes) -> tuple[str, int, int]:
 def _tiff_header(data: bytes) -> tuple[str, int, int]:
     """ImageWidth (tag 256) and ImageLength (257) from the first directory of a classic or a BigTIFF file; the directory
     may sit anywhere in the file. (TIFF, 0, 0) when it or either tag cannot be read. A size tag counts when it holds one
-    value of an integer type, as libtiff reads it; a value of 0 or less is no size."""
+    value of an integer type, as libtiff reads it; a value of 0 or less is no size, and so is a size tag given twice:
+    libtiff reads the first entry and ignores the rest, so a file listing 8000 then 10 would measure small and decode
+    large wherever the last counted (#169)."""
     order = "<" if data[:2] == b"II" else ">"
     big = data[2:4] in (b"+\x00", b"\x00+")  # BigTIFF: 8-byte offsets and counts, 20-byte entries
     head, count_fmt, values_fmt, entry_len, value_at = (16, "Q", "Q", 20, 12) if big else (8, "H", "I", 12, 8)
@@ -98,13 +100,16 @@ def _tiff_header(data: bytes) -> tuple[str, int, int]:
     if offset + count_len > len(data):
         return "TIFF", 0, 0
     (count,) = struct.unpack(order + count_fmt, data[offset : offset + count_len])
-    size = {256: 0, 257: 0}
+    size, seen = {256: 0, 257: 0}, set[int]()
     for n in range(min(int(count), 65535)):  # a classic count's maximum; libtiff refuses a directory over 4,096 entries
         at = offset + count_len + entry_len * n
         entry = data[at : at + entry_len]
         if len(entry) < entry_len:
             break
         tag, kind = struct.unpack(order + "HH", entry[:4])
+        if tag in size and tag in seen:  # whatever either entry holds: no single size, so the file is refused
+            return "TIFF", 0, 0
+        seen.add(tag)
         fmt = TIFF_INT_TYPES.get(kind)
         if tag not in size or fmt is None or (kind in (16, 17) and not big):  # LONG8 and SLONG8 exist only in BigTIFF
             continue

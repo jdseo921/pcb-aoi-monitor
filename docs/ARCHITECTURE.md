@@ -84,8 +84,9 @@ over the pixel limit with `AOI-INSP-005` before a pixel is decoded, an image wit
 own limit, with `AOI-INSP-007`, a file that holds no PNG, JPG, BMP or TIFF image with `AOI-INSP-004`, and a recognised
 format whose header gives no size, or that the decoder rejects (cut short, damaged, a variant OpenCV does not read), with
 `AOI-INSP-006`. Wherever a file can be read in two ways the header readers follow the decoders (stray bytes between JPEG
-segments are skipped as libjpeg skips them, a TIFF size tag of any integer type counts, classic or BigTIFF, a bitmap is
-known by its header size), so no file measures small here and decodes large; `tests/test_image_input.py` holds the
+segments are skipped as libjpeg skips them, a TIFF size tag of any integer type counts, classic or BigTIFF, a TIFF that
+gives a size tag twice is refused with `AOI-INSP-006` since libtiff reads the first entry (#169), a bitmap is known by
+its header size), so no file measures small here and decodes large; `tests/test_image_input.py` holds the
 crafted files and files from Pillow and tifffile. The limits are the two `max_image_*` values in `settings.json`, in the
 default workspace folder (50 MP and 200 MB, that is 200,000,000 bytes, both proposed, since a 50 MP 24-bit BMP is
 150 MB); `Settings.load` refuses a file it cannot read (not JSON, not UTF-8, not an object) with `AOI-SET-010`, and a
@@ -247,6 +248,13 @@ before filling it in, so the engine stays free of Qt and a translation can put t
 
 Verdict: **NG** if any check is NG; else **WARN** if any check is within the warning band (default 80 % of a
 threshold) or a non-minor defect region exists; else **OK**. Colours follow GUI §4.1: green OK, red NG, yellow WARN.
+A board is never OK on no evidence (#169): a check value that is no number (NaN, infinite) grades NG; a board no check
+judged, inspected or judged again (no Golden board and no AI model, or the recipe turns off what could run) gets no
+verdict but `AOI-INSP-010`, naming why each check did not run; a Golden board the database names whose file is gone or
+cannot be read refuses the board with `AOI-INSP-009` in `AppContext.inspector`, where it was once dropped as if none
+were set; and the engine refuses a board image or Golden board with a side under 11 px (`MIN_SIDE` in
+`aoi/core/compare.py`: a 7 px SSIM window, and 3 px of difference map inside its 4 px border) with `AOI-INSP-011` before
+any work. A stored OK with no check, from before, is explained as "the stored checks do not show why".
 
 A result is judged again with other thresholds without aligning, comparing or running the AI model (REQ-CMP-005, the
 engine since S28a): `Inspector.judge` grades the evidence a result holds, a board's just inspected or a stored one's,

@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import functools
 import struct
+import zlib
 from pathlib import Path
 
 import cv2
@@ -14,6 +16,8 @@ from pytestqt.qtbot import QtBot
 
 from aoi.config import Settings
 from aoi.core.imaging import image_header, load_image
+from aoi.core.inspector import NG, Inspector, _grade
+from aoi.core.recipe import Recipe
 from aoi.core.services import AppContext
 from aoi.errors import AoiError
 from aoi.hal import FolderCamera
@@ -60,6 +64,30 @@ def tiff(width: int, height: int, order: str = "<", kind: int = 4, big: bool = F
         return magic + struct.pack(order + "Q", 2) + entry(256, width) + entry(257, height) + bytes(8)
     magic = (b"II*\x00" if order == "<" else b"MM\x00*") + struct.pack(order + "I", 8)
     return magic + struct.pack(order + "H", 2) + entry(256, width) + entry(257, height) + bytes(4)
+
+
+@functools.cache
+def _black_strip(width: int, height: int) -> bytes:
+    """`width` × `height` black RGB pixels as one Deflate strip, compressed row by row: 8000 × 8000 takes 0.19 MB."""
+    z = zlib.compressobj()
+    return b"".join(z.compress(bytes(width * 3)) for _ in range(height)) + z.flush()
+
+
+def deflate_tiff(sizes: list[tuple[int, int]], width: int, height: int) -> bytes:
+    """A little-endian TIFF of `width` × `height` black RGB pixels in one Deflate strip, as the #169 verifier built it:
+    its first directory lists the ImageWidth and ImageLength entries `sizes`, (tag, value) in that order, then the tags
+    a decoder needs."""
+    strip = _black_strip(width, height)
+    bits_at = 8 + len(strip)  # BitsPerSample's three values follow the strip, then the directory
+    tags = [(t, 4, 1, v) for t, v in sizes] + [(258, 3, 3, bits_at), (259, 3, 1, 8), (262, 3, 1, 2), (273, 4, 1, 8)]
+    tags += [(277, 3, 1, 3), (278, 4, 1, height), (279, 4, 1, len(strip)), (284, 3, 1, 1)]
+
+    def entry(tag: int, kind: int, n: int, value: int) -> bytes:
+        field = struct.pack("<HH", value, 0) if kind == 3 and n == 1 else struct.pack("<I", value)  # left-justified
+        return struct.pack("<HHI", tag, kind, n) + field
+
+    directory = struct.pack("<H", len(tags)) + b"".join(entry(*t) for t in tags) + bytes(4)
+    return b"II*\x00" + struct.pack("<I", bits_at + 6) + strip + struct.pack("<HHH", 8, 8, 8) + directory
 
 
 @pytest.fixture(scope="module")
@@ -169,6 +197,56 @@ def test_req_insp_001_headers_are_read_as_the_decoders_read_them(tmp_path: Path)
     with pytest.raises(AoiError) as e:
         load_image(real, max_megapixels=0.1)
     assert e.value.code == "AOI-INSP-005"
+
+
+def test_req_insp_001_a_tiff_that_gives_its_size_twice_is_refused(tmp_path: Path) -> None:
+    """libtiff reads the first of two ImageWidth or ImageLength entries and ignores the rest, and this reader took the
+    last, so the #169 verifier's 0.19 MB TIFF, listing 8000 then 10 for each, measured 10 × 10 here and decoded to
+    8000 × 8000 (192 MB) past the 50 MP limit. A size tag given twice, in either order, is now refused as damaged before
+    anything is decoded; the same file listing each size once is measured, and refused by the limit."""
+    twice = {
+        "first_large": [(256, 8000), (256, 10), (257, 8000), (257, 10)],  # the verifier's file
+        "first_small": [(256, 10), (256, 8000), (257, 10), (257, 8000)],
+        "width_only": [(256, 8000), (256, 10), (257, 8000)],
+    }
+    for name, sizes in twice.items():
+        p = tmp_path / f"{name}.tif"
+        p.write_bytes(deflate_tiff(sizes, 8000, 8000))
+        assert image_header(p.read_bytes()) == ("TIFF", 0, 0), name
+        with pytest.raises(AoiError) as damaged:
+            load_image(p)
+        assert damaged.value.code == "AOI-INSP-006" and p.name in damaged.value.what, name
+    once = tmp_path / "once.tif"
+    once.write_bytes(deflate_tiff([(256, 8000), (257, 8000)], 8000, 8000))
+    assert image_header(once.read_bytes()) == ("TIFF", 8000, 8000)
+    with pytest.raises(AoiError) as over:
+        load_image(once)
+    assert over.value.code == "AOI-INSP-005" and "64.00 MP (8000 × 8000)" in over.value.what
+
+
+def test_req_insp_001_an_image_too_small_to_inspect_is_refused_and_no_number_grades_ng() -> None:
+    """Under 7 px a side SSIM is the mean of nothing, NaN, which every threshold comparison let pass as OK, and a 1 px
+    side broke ORB with a bare cv2.error (#169). The engine now refuses a board image or a golden board with a side
+    under 11 px (one 7 px SSIM window, and 3 px of difference map inside its 4 px border for the noise clean-up to
+    keep a pixel) with AOI-INSP-011 before any work, and a check value that is no number, NaN or infinite, grades NG
+    whichever way its threshold points."""
+    rng = np.random.default_rng(0)
+    big = rng.integers(0, 255, (400, 600, 3), dtype=np.uint8)
+    for board, golden, refused in (
+        (big, rng.integers(0, 255, (6, 400, 3), dtype=np.uint8), "The Golden board is 400 × 6 px"),  # SSIM was NaN
+        (rng.integers(0, 255, (1, 50, 3), dtype=np.uint8), big, "The board image is 50 × 1 px"),  # ORB broke
+        (rng.integers(0, 255, (400, 10, 3), dtype=np.uint8), big, "The board image is 10 × 400 px"),
+    ):
+        with pytest.raises(AoiError) as small:
+            Inspector(Recipe(board_model="B", use_ai=False), reference=golden).inspect(board)
+        assert small.value.code == "AOI-INSP-011" and small.value.what.startswith(refused), small.value.what
+        assert "at least 11 px on each side" in small.value.what
+    golden = rng.integers(0, 255, (11, 11, 3), dtype=np.uint8)  # the smallest board judged: every check sees pixels
+    res = Inspector(Recipe(board_model="B", use_ai=False), reference=golden).inspect(np.zeros_like(golden))
+    assert res.verdict == NG and all(np.isfinite(c.value) for c in res.checks)
+    assert res.compare is not None and res.compare.metrics["changed_pct"] > 0
+    for value in (float("nan"), float("inf"), float("-inf")):
+        assert _grade(value, 0.8, 0.9) == _grade(value, 0.8, 0.9, higher_is_bad=False) == NG, value
 
 
 def test_req_insp_001_a_file_the_reader_cannot_measure_is_refused_not_decoded(tmp_path: Path) -> None:

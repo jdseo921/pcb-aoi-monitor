@@ -156,36 +156,44 @@ def test_req_cmp_005_judging_again_equals_inspecting_with_those_thresholds(
 def test_req_cmp_005_a_check_that_did_not_run_is_not_judged_again(tiny_model: TrainedModel, ng_board: Path) -> None:
     """A check the recipe turns on that did not run on the board is not judged, and its note (in inspect's order, never
     twice) says why, in plain words; a check turned off loses its check and its note. A check that ran needs its map and
-    its AI evidence, unless the recipe turns it off."""
+    its AI evidence, unless the recipe turns it off. Thresholds that leave no check that ran judge nothing (#169):
+    AOI-INSP-010 gives the reasons, the same as inspecting with them would give."""
     on, off = Recipe(board_model="TINY"), Recipe(board_model="TINY", use_ai=False, use_compare=False)
     ai_off, compare_off = Recipe(board_model="TINY", use_ai=False), Recipe(board_model="TINY", use_compare=False)
     model, golden, img = tiny_model.model, tiny_model.reference, load_image(ng_board)
-    bare = Inspector(off, model, golden).inspect(img)
-    again = re_grade(bare, on, None)
-    assert (again.checks, again.defects, again.verdict, again.compare, again.anomaly_map) == ([], [], "OK", None, None)
-    assert again.notes == [NOT_COMPARED_NOTE, NOT_AI_JUDGED_NOTE] == re_grade(again, on, None).notes
-    said = [explain.NOTES[NOT_COMPARED_NOTE], explain.NOTES[NOT_AI_JUDGED_NOTE]]
-    assert [s.template for s in explain.explain(again)][1:] == said, "in plain words, after the verdict's sentence"
-    assert re_grade(again, off, None).notes == []
-    no_model = Inspector(compare_off, None, golden).inspect(img)
-    assert re_grade(no_model, on, None).notes == [NOT_COMPARED_NOTE, NO_AI_NOTE], "the comparison's note first"
+    compared = Inspector(ai_off, model, golden).inspect(img)  # the golden board comparison alone
+    again = re_grade(compared, on, None)
+    assert {c.source for c in again.checks} == {"Compare"} and again.anomaly_map is None
+    assert again.notes == [NOT_AI_JUDGED_NOTE] == re_grade(again, on, None).notes
+    assert [s.template for s in explain.explain(again)][-1] == explain.NOTES[NOT_AI_JUDGED_NOTE], "in plain words"
+    assert re_grade(again, ai_off, None).notes == []
+    by_ai = Inspector(compare_off, model, golden).inspect(img)  # the AI model alone
+    assert re_grade(by_ai, on, _evidence(by_ai, model)).notes == [NOT_COMPARED_NOTE]
+    with pytest.raises(AoiError) as nothing:  # judged by no check, as a build before #169 stored it
+        re_grade(InspectionResult("OK", 0.0, notes=[NO_AI_NOTE]), on, None)
+    why = "TINY: the Golden board comparison did not run when the board was inspected; no AI model is trained."
+    assert nothing.value.code == "AOI-INSP-010" and why in nothing.value.what, "the comparison's reason first"
 
     full = Inspector(on, model, golden).inspect(img)
     ai = _evidence(full, model)
     assert full.verdict == "NG" and ai.rule == model.meta["threshold_rule"] != "", "the rule it was calibrated by"
     assert re_grade(full, on, ai).verdict == "NG"
-    both_off = re_grade(full, off, ai)
-    assert (both_off.checks, both_off.notes, both_off.compare, both_off.anomaly_map) == ([], [], None, None)
+    with pytest.raises(AoiError, match="AOI-INSP-010"):
+        re_grade(full, off, ai)
+    no_ai_map = replace(full, anomaly_map=None)  # no map is needed for a check the recipe turns off
+    assert re_grade(no_ai_map, ai_off, None).checks == re_grade(full, ai_off, ai).checks
     as_stored = InspectionResult.from_dict(full.to_dict())  # its record, without the maps
-    assert re_grade(as_stored, off, None).checks == [], "no map is needed for a check the recipe turns off"
     for maps_or_evidence_missing in ((full, on, None), (as_stored, on, ai), (as_stored, ai_off, None)):
         with pytest.raises(ValueError, match="needs the maps and the AI evidence"):
             re_grade(*maps_or_evidence_missing)
 
-    unset = Inspector(on, None, None).inspect(img)  # neither a golden board nor an AI model
-    assert re_grade(unset, on, None).notes == unset.notes == [NO_GOLDEN_NOTE, NO_AI_NOTE]
-    assert re_grade(unset, off, None).notes == Inspector(off, None, None).inspect(img).notes == []
-    assert re_grade(unset, ai_off, None).notes == Inspector(ai_off, None, None).inspect(img).notes == [NO_GOLDEN_NOTE]
+    unset = InspectionResult("OK", 0.0, notes=[NO_GOLDEN_NOTE, NO_AI_NOTE])  # neither a golden board nor an AI model
+    for recipe in (on, off, ai_off):
+        with pytest.raises(AoiError) as judged_again:
+            re_grade(unset, recipe, None)
+        with pytest.raises(AoiError) as inspected:
+            Inspector(recipe, None, None).inspect(img)
+        assert judged_again.value.what == inspected.value.what, recipe
 
 
 def test_req_cmp_005_a_stored_result_is_judged_again_as_the_live_one(
@@ -332,20 +340,24 @@ def test_req_cmp_005_reevaluate_judges_a_stored_result_as_inspecting_with_those_
 
 
 def test_req_cmp_005_reevaluate_a_result_without_maps_for_its_checks(trained_ctx: AppContext, ng_board: Path) -> None:
-    """A result stored with the AI check and the comparison turned off has no maps, and needs none to be judged again
-    with both on: neither is judged, with the notes saying so; one stored with both, judged with both off, has
-    neither check."""
+    """A result stored with the AI check turned off has no AI map, and needs none to be judged again with both on: the
+    AI check is not judged, with the note saying so. One stored with both, judged with both off, has no check left to
+    judge it and is refused with AOI-INSP-010, as a board inspected with both off now is (#169)."""
     ctx = trained_ctx
     _, recipe = ctx.recipe(BOARD)
-    off, on = copy.deepcopy(recipe), copy.deepcopy(recipe)
+    ai_off, on, off = copy.deepcopy(recipe), copy.deepcopy(recipe), copy.deepcopy(recipe)
+    ai_off.use_ai = False
     off.use_ai = off.use_compare = False
-    ctx.save_recipe(off)
-    bare = ctx.re_evaluate(_store(ctx, ng_board), on)
-    assert (bare.checks, bare.defects, bare.verdict) == ([], [], "OK")
-    assert bare.notes == [NOT_COMPARED_NOTE, NOT_AI_JUDGED_NOTE]
+    ctx.save_recipe(ai_off)
+    compared = ctx.re_evaluate(_store(ctx, ng_board), on)
+    assert {c.source for c in compared.checks} == {"Compare"} and compared.anomaly_map is None
+    assert compared.notes == [NOT_AI_JUDGED_NOTE]
     ctx.save_recipe(on)
-    full = ctx.re_evaluate(_store(ctx, ng_board), off)
-    assert (full.checks, full.notes, full.compare, full.anomaly_map) == ([], [], None, None)
+    with pytest.raises(AoiError, match="AOI-INSP-010"):
+        ctx.re_evaluate(_store(ctx, ng_board), off)
+    ctx.save_recipe(off)
+    with pytest.raises(AoiError, match="AOI-INSP-010"):
+        _store(ctx, ng_board)
 
 
 def test_req_cmp_005_reevaluate_uses_the_ai_model_that_judged_it(trained_ctx: AppContext, ng_board: Path) -> None:
