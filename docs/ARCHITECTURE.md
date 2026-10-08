@@ -199,7 +199,9 @@ beside their integer key; every stored time is ISO 8601 UTC with an offset and i
 by `aoi/data/paths.py`, so a workspace folder can move (REQ-SET-017, REQ-SET-001).
 Every file the app writes (images, overlays, AI models, exports, settings) goes through `aoi/data/atomic.py`:
 a temporary name in the same folder, flush and fsync, then an atomic rename, and an inspection's row and defects
-commit in one transaction, so a crash leaves a whole result or none (REQ-INSP-008).
+commit in one transaction, so a crash leaves a whole result or none (REQ-INSP-008). Every error a user can see is
+an `AoiError` from the catalogue in `aoi/errors.py`, with a code `AOI-<AREA>-<NNN>`, what happened and what to do;
+`docs/error-codes.md` is generated from it (REQ-LOG-004, REQ-SET-019).
 
 `inspections` already carries everything Stage 4 uploads (lot/model/result/timestamp + images); a `lot_id` column is
 the only addition expected.

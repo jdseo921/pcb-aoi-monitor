@@ -9,16 +9,20 @@ import cv2
 import numpy as np
 
 from ..data import atomic
+from ..errors import AoiError
 
 IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".bmp", ".tif", ".tiff"}
 
 
 def load_image(path: str | Path) -> np.ndarray:
     """Read as BGR uint8. Uses imdecode so non-ASCII (e.g. Korean) Windows paths work."""
-    data = np.fromfile(str(path), dtype=np.uint8)
+    try:
+        data = np.fromfile(str(path), dtype=np.uint8)
+    except OSError as e:  # missing file, folder, or no permission
+        raise AoiError("AOI-INSP-001", detail=str(e), path=str(path)) from e
     img = cv2.imdecode(data, cv2.IMREAD_COLOR)
     if img is None:
-        raise ValueError(f"Cannot read image: {path}")
+        raise AoiError("AOI-INSP-001", path=str(path))
     return img
 
 
@@ -26,7 +30,7 @@ def save_image(path: str | Path, img: np.ndarray) -> None:
     ext = Path(path).suffix or ".png"
     ok, buf = cv2.imencode(ext, img)
     if not ok:
-        raise ValueError(f"Cannot encode image: {path}")
+        raise AoiError("AOI-INSP-002", path=str(path))
     atomic.write_bytes(path, buf.tobytes())  # whole file or nothing, and non-ASCII Windows paths work
 
 
