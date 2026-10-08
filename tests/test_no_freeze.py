@@ -29,7 +29,7 @@ import cv2
 import numpy as np
 import pytest
 from PySide6.QtCore import Qt, QTimer, qInstallMessageHandler
-from PySide6.QtWidgets import QFileDialog, QInputDialog, QMessageBox, QWidget
+from PySide6.QtWidgets import QFileDialog, QMessageBox, QWidget
 from pytestqt.qtbot import QtBot
 
 from aoi.core.imaging import checked_bytes
@@ -37,7 +37,6 @@ from aoi.core.inspector import Inspector
 from aoi.core.services import AppContext, classification_metrics
 from aoi.data import atomic
 from aoi.ui import theme
-from aoi.ui.pages.training import NgDialog
 from aoi.ui.widgets.busy import BusyOverlay
 from aoi.ui.workers import Worker, start
 from tests.conftest import distinct_copies
@@ -219,7 +218,8 @@ def test_req_set_021_training_folder_import_does_not_freeze(
     page = win.pages["Training"]
     before = page.samples.rowCount()
     with heavy_calls(stall="AppContext.import_samples") as calls, gap_meter(qtbot) as g:
-        page.import_from(str(tmp_path / "import"))
+        page.import_from(str(tmp_path / "import"))  # the import sheet, each file labelled by its folder
+        page.sheet.btn_import.click()
         assert page.samples.rowCount() == before, "the import runs on a pool thread: the table waits for the result"
         qtbot.waitUntil(lambda: page.samples.rowCount() == before + 3, timeout=60000)
     assert_off_ui_thread(calls, "AppContext.import_samples")
@@ -372,19 +372,18 @@ def test_req_set_021_logs_export_does_not_freeze(
 def test_req_set_021_training_add_samples_does_not_freeze(
     qtbot: QtBot, trained_ctx: AppContext, board_5mp: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """#194: + OK Images and + NG Images copy the picked files on a pool thread under the dataset's busy overlay; Cancel
-    keeps the samples already added and says how many."""
+    """#194: Add OK Images… and Add NG Images… copy the picked files on a pool thread under the dataset's busy overlay
+    once Import is pressed on the sheet; Cancel keeps the samples already added and says how many."""
     n = _copies_for_a_stall(board_5mp, tmp_path, checked=True)
     picked = {"ok": [str(p) for p in distinct_copies(board_5mp, tmp_path / "ok", n)]}  # each imported once (Q31)
     monkeypatch.setattr(QFileDialog, "getOpenFileNames", staticmethod(lambda *a, **k: (picked["ok"], "")))
-    monkeypatch.setattr(QInputDialog, "getItem", staticmethod(lambda *a, **k: ("Top", True)))
-    monkeypatch.setattr(NgDialog, "exec", lambda self: self.type.setCurrentIndex(1) or 1)  # the first type, Top
     win = _window(qtbot, trained_ctx)
     page = win.pages["Training"]
     win.navigate("Training")
     before = page.samples.rowCount()
     with heavy_calls(stall="AppContext.import_samples") as calls, gap_meter(qtbot) as g:
         page.add_ok()
+        page.sheet.btn_import.click()
         assert page.samples.rowCount() == before, "the copies run on a pool thread: the table waits for the result"
         qtbot.waitUntil(lambda: page.samples.rowCount() == before + n, timeout=120000)
     assert_off_ui_thread(calls, "AppContext.import_samples")
@@ -397,13 +396,17 @@ def test_req_set_021_training_add_samples_does_not_freeze(
     status = win.statusBar().currentMessage
     picked["ok"] = [str(p) for p in distinct_copies(board_5mp, tmp_path / "ng", n)]
     page.add_ng()
+    page.sheet.type_box.setCurrentIndex(0)
+    page.sheet.type_box.activated.emit(0)  # one of the 33 types for all the NG files
+    page.sheet.btn_import.click()
     _cancel_when_started(qtbot, page.busy, lambda: len(list(ng_dir.glob("board_5mp_*.png"))) > files_before)
-    qtbot.waitUntil(lambda: status().startswith("Stopped"), timeout=60000)
+    qtbot.waitUntil(lambda: status().startswith("Import cancelled"), timeout=60000)
     added = len(trained_ctx.samples(BOARD)) - before - n
-    assert 0 < added < n and status() == f"Stopped: added {added} of {n} images; the others were not added."
+    stopped = f"Import cancelled: 0 OK and {added} NG images imported before it stopped"
+    assert 0 < added < n and status() == stopped, status()
     assert len(list(ng_dir.glob("board_5mp_*.png"))) - files_before == added
     assert page.samples.rowCount() == before + n + added, "the table shows the samples kept"
-    entry = trained_ctx.audit_entries(action="sample.import")[0]
-    assert (entry["after"]["added"], entry["after"]["cancelled"]) == (added, True)
+    entries = trained_ctx.audit_entries(action="sample.import")[: added + 1]  # one a file (REQ-TRN-001, S31)
+    assert [e["after"]["label"] for e in entries] == ["NG"] * added + ["OK"]
     for copy in trained_ctx.settings.images_dir.glob(f"{BOARD}/*/board_5mp_*.png"):
         copy.unlink()  # up to 2 GB of copies: free the disk now, not when pytest prunes old runs

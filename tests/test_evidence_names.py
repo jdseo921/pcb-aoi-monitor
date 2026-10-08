@@ -264,7 +264,7 @@ def test_req_trn_001_a_copy_the_system_refuses_as_too_long_has_its_own_code(
 @pytest.mark.parametrize(
     ("refused", "kept", "title", "says"),
     [
-        ("ok_2.png", 2, "AOI-TRN-010 Folder import stopped by an error", "image 3 of 5"),
+        ("ok_2.png", 2, "AOI-TRN-010 Import stopped by an error", "image 3 of 5"),
         ("ok_0.png", 0, "AOI-TRN-011 Images not imported: path too long", "None of the 5 image(s) picked"),
     ],
     ids=["third", "first"],
@@ -290,6 +290,7 @@ def test_req_trn_001_a_folder_import_names_a_copy_refused_as_too_long(
     ctx.ensure_board_model(BOARD)
     page = _window(qtbot, ctx, "Engineer").pages["Training"]
     page.import_from(str(tmp_path / "fold"))
+    page.sheet.btn_import.click()
     qtbot.waitUntil(lambda: page._bg is None, timeout=30000)
     assert len(ctx.samples(BOARD)) == kept
     [(shown, text)] = dialogs
