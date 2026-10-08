@@ -411,14 +411,17 @@ class AppContext:
     def report_error(self, exc: BaseException, context: str = "") -> ErrorReport:
         """The one handler for an error a user will see: log it with the build version and the stack trace,
         store an alarm with its code, and return the plain report the dialog shows. A plain exception becomes
-        AOI-SET-007 (unexpected error); its text stays in the log."""
+        AOI-SET-007 (unexpected error); its text stays in the log. It never raises (an alarm refused is logged)."""
         report = ErrorReport.of(exc, context)
         self.log.error(
             "error.shown",
             exc_info=(type(exc), exc, exc.__traceback__),
             extra={"code": report.code, "context": context, "detail": getattr(exc, "detail", None) or str(exc)},
         )
-        self.alarm("ERROR", report.what, report.code)
+        try:
+            self.alarm("ERROR", report.what, report.code)
+        except Exception:  # #171: the report, and so the coded dialog, must not depend on the database
+            self.log.warning("alarm.not_stored", exc_info=True, extra={"code": report.code})
         return report
 
     # --- batch test (AI Model Test screen) -----------------------------------

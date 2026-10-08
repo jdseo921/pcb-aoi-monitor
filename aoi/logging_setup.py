@@ -22,6 +22,7 @@ from .config import APP_VERSION
 LOGGER = "aoi"
 SECRET_KEYS = ("password", "passwd", "secret", "token", "api_key")
 _RECORD_FIELDS = set(logging.LogRecord("", 0, "", 0, "", None, None).__dict__) | {"message", "asctime", "taskName"}
+FIXED_FIELDS = ("time", "level", "module", "event", "app_version", "trace")  # an extra so named goes in as extra_<name>
 
 
 class JsonLinesHandler(logging.Handler):
@@ -50,7 +51,8 @@ class JsonLinesHandler(logging.Handler):
                 "event": record.getMessage(),
                 "app_version": APP_VERSION,
             }
-            line.update(scrub({k: v for k, v in record.__dict__.items() if k not in _RECORD_FIELDS}))
+            extras = scrub({k: v for k, v in record.__dict__.items() if k not in _RECORD_FIELDS})
+            line.update({f"extra_{k}" if k in FIXED_FIELDS else k: v for k, v in extras.items()})  # #171
             if record.exc_info and record.exc_info[0] is not None:
                 line["trace"] = "".join(traceback.format_exception(*record.exc_info))
             assert self._file is not None
