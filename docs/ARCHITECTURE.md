@@ -66,6 +66,13 @@ no Qt import under `aoi/core` or `aoi/data`, and under `aoi/ui` no `sqlite3` or 
 and no `Inspector` built by a page (REQ-USR-001, since S15). `aoi/times.py`, `aoi/errors.py`, `aoi/config.py` and
 `aoi/defects.py` are shared by every layer.
 
+Types (Code style, since S22): mypy runs strict on `aoi/core`, `aoi/data` and `aoi/times.py`, and since S22a on `aoi/ui`
+and `aoi/hal` too, with no flag relaxed (`pyproject.toml`). PySide6 enums are written in full
+(`Qt.AlignmentFlag.AlignCenter`), pages take `QT_TRANSLATE_NOOP` from `aoi/ui/pages/base.py` (Qt's is typed as returning
+object), and no widget attribute carries a QWidget method's name: `size`, `pos` and `render` hid `QWidget.size()`,
+`pos()` and `render()` on three pages until S22a, and `tests/test_screen_rules.py` now fails on one. The five large pages
+are typed in S22b and their errors are ignored until then.
+
 Slow work never runs on the UI thread (REQ-SET-021, since S17): a page wraps it in a `Worker` (`aoi/ui/workers.py`),
 which runs it as a `Job` on the pool `AppContext.jobs` owns (`aoi/core/jobs.py`: progress, cancel and finished callbacks,
 no Qt, so the same jobs run headless) and turns the callbacks into signals; the slots run on the UI thread, the only

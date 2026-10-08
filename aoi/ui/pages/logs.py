@@ -3,24 +3,29 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import TYPE_CHECKING, Any
 
-from PySide6.QtCore import QT_TRANSLATE_NOOP, QDate, Qt
+from PySide6.QtCore import QDate, Qt
 from PySide6.QtWidgets import QCheckBox, QComboBox, QDateEdit, QFileDialog, QHBoxLayout, QLabel, QMessageBox, QSplitter
 
 from ...core.imaging import load_image
+from ...core.services import AppContext
 from ...times import to_local
 from .. import theme
 from ..widgets.empty_state import EmptyState
 from ..widgets.image_view import ImageView
-from .base import Page, button, fill_table, make_table
+from .base import QT_TRANSLATE_NOOP, Page, button, cell_text, fill_table, make_table
+
+if TYPE_CHECKING:
+    from ..main_window import MainWindow
 
 
 class LogsPage(Page):
     title = QT_TRANSLATE_NOOP("Page", "Logs & Export")
 
-    def __init__(self, ctx, shell):
+    def __init__(self, ctx: AppContext, shell: MainWindow) -> None:
         super().__init__(ctx, shell)
-        self.rows: list[dict] = []
+        self.rows: list[dict[str, Any]] = []
         f = QHBoxLayout()
         self.d_from = QDateEdit(QDate.currentDate().addDays(-7))
         self.d_to = QDateEdit(QDate.currentDate())
@@ -44,7 +49,7 @@ class LogsPage(Page):
         f.addStretch(1)
         self.root.addLayout(f)
 
-        split = QSplitter(Qt.Horizontal)
+        split = QSplitter(Qt.Orientation.Horizontal)
         self.table = make_table(
             [
                 self.tr("ID"),
@@ -78,7 +83,7 @@ class LogsPage(Page):
             b.addWidget(x)
         self.root.addLayout(b)
 
-    def refresh(self):
+    def refresh(self) -> None:
         self.rows = self.ctx.inspections(
             self.d_from.date().toString("yyyy-MM-dd"),
             self.d_to.date().toString("yyyy-MM-dd"),
@@ -123,7 +128,7 @@ class LogsPage(Page):
             step = self.empty_step(self.tr("Run boards on Inspection."), "Inspection")
             self.empty.show_state(self.tr("No inspections yet"), *step)
 
-    def reset_filters(self):
+    def reset_filters(self) -> None:
         self.d_from.setDate(QDate.currentDate().addDays(-7))
         self.d_to.setDate(QDate.currentDate())
         self.model.setCurrentIndex(0)
@@ -131,18 +136,18 @@ class LogsPage(Page):
         self.archived.setChecked(False)
         self.refresh()
 
-    def _preview(self):
+    def _preview(self) -> None:
         rows = self.table.selectionModel().selectedRows()
         if rows:
-            iid = int(self.table.item(rows[0].row(), 0).text())
+            iid = int(cell_text(self.table, rows[0].row(), 0))
             r = next(x for x in self.rows if x["id"] == iid)
             if r["overlay_path"] and Path(r["overlay_path"]).exists():
                 self.view.set_image(load_image(r["overlay_path"]))
 
     def _confirm(self, question: str) -> bool:
-        return QMessageBox.question(self, self.tr("Confirm export"), question) == QMessageBox.Yes
+        return QMessageBox.question(self, self.tr("Confirm export"), question) == QMessageBox.StandardButton.Yes
 
-    def export_csv(self):
+    def export_csv(self) -> None:
         if not self.rows or not self._confirm(
             self.tr("Export CSV for {count} record(s)?").format(count=len(self.rows))
         ):
@@ -174,7 +179,7 @@ class LogsPage(Page):
         self.ctx.export_csv(f, out)
         self.shell.status(self.tr("Exported {count} rows to {file}").format(count=len(out), file=f))
 
-    def export_overlays(self):
+    def export_overlays(self) -> None:
         question = self.tr("Export overlay images for {count} record(s)?").format(count=len(self.rows))
         if not self.rows or not self._confirm(question):
             return
@@ -184,12 +189,12 @@ class LogsPage(Page):
         n = self.ctx.export_overlays(self.rows, d)
         self.shell.status(self.tr("Copied {count} overlay image(s) to {folder}").format(count=n, folder=d))
 
-    def archive(self):
+    def archive(self) -> None:
         n = self.ctx.archive_old()
         self.shell.status(self.tr("Archived {count} record(s)").format(count=n))
         self.refresh()
 
-    def on_show(self):
+    def on_show(self) -> None:
         admin_or_eng = self.ctx.role in ("Engineer", "Admin")
         for b in (self.btn_csv, self.btn_img, self.btn_arch):
             b.setEnabled(admin_or_eng)  # spec 8: Admin exports logs (Engineer allowed for PoC)

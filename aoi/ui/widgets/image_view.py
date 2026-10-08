@@ -5,8 +5,16 @@ from __future__ import annotations
 import cv2
 import numpy as np
 from PySide6.QtCore import QPointF, QRectF, Qt, Signal
-from PySide6.QtGui import QBrush, QColor, QFont, QImage, QPainter, QPen, QPixmap, QTransform
-from PySide6.QtWidgets import QGraphicsRectItem, QGraphicsScene, QGraphicsSimpleTextItem, QGraphicsView
+from PySide6.QtGui import QBrush, QColor, QFont, QImage, QMouseEvent, QPainter, QPen, QPixmap, QTransform, QWheelEvent
+from PySide6.QtWidgets import (
+    QGraphicsItem,
+    QGraphicsPixmapItem,
+    QGraphicsRectItem,
+    QGraphicsScene,
+    QGraphicsSimpleTextItem,
+    QGraphicsView,
+    QWidget,
+)
 
 from .. import theme
 
@@ -23,7 +31,7 @@ def to_qpixmap(img: np.ndarray) -> QPixmap:
         img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
     rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     h, w = rgb.shape[:2]
-    q = QImage(rgb.data, w, h, 3 * w, QImage.Format_RGB888)
+    q = QImage(rgb.data, w, h, 3 * w, QImage.Format.Format_RGB888)
     return QPixmap.fromImage(q.copy())
 
 
@@ -31,16 +39,16 @@ class ImageView(QGraphicsView):
     roiDrawn = Signal(QRectF)  # image coordinates
     viewChanged = Signal()
 
-    def __init__(self, parent=None, placeholder: str = "No image"):
+    def __init__(self, parent: QWidget | None = None, placeholder: str = "No image") -> None:
         super().__init__(parent)
         self.setScene(QGraphicsScene(self))
-        self.setRenderHints(QPainter.Antialiasing | QPainter.SmoothPixmapTransform)
-        self.setDragMode(QGraphicsView.ScrollHandDrag)
-        self.setTransformationAnchor(QGraphicsView.AnchorUnderMouse)
+        self.setRenderHints(QPainter.RenderHint.Antialiasing | QPainter.RenderHint.SmoothPixmapTransform)
+        self.setDragMode(QGraphicsView.DragMode.ScrollHandDrag)
+        self.setTransformationAnchor(QGraphicsView.ViewportAnchor.AnchorUnderMouse)
         self.setBackgroundBrush(QColor(theme.BG_IMAGE))
         self.setMinimumSize(theme.IMAGE_MIN_W, theme.IMAGE_MIN_H)
-        self._pix = None
-        self._overlay_items = []
+        self._pix: QGraphicsPixmapItem | None = None
+        self._overlay_items: list[QGraphicsItem] = []
         self._draw_mode = False
         self._drag_start: QPointF | None = None
         self._rubber: QGraphicsRectItem | None = None
@@ -68,7 +76,7 @@ class ImageView(QGraphicsView):
 
     def fit(self) -> None:
         if self._pix is not None:
-            self.fitInView(self._pix, Qt.KeepAspectRatio)
+            self.fitInView(self._pix, Qt.AspectRatioMode.KeepAspectRatio)
             self._emit_changed()
 
     def clear_overlays(self) -> None:
@@ -77,63 +85,71 @@ class ImageView(QGraphicsView):
         self._overlay_items.clear()
 
     def add_box(
-        self, x, y, w, h, color: str = theme.NG_COLOR, label: str = "", width: float = 2.0, dashed: bool = False
+        self,
+        x: float,
+        y: float,
+        w: float,
+        h: float,
+        color: str = theme.NG_COLOR,
+        label: str = "",
+        width: float = 2.0,
+        dashed: bool = False,
     ) -> None:
         pen = QPen(QColor(color), width)
         pen.setCosmetic(True)
         if dashed:
-            pen.setStyle(Qt.DashLine)
+            pen.setStyle(Qt.PenStyle.DashLine)
         r = self.scene().addRect(QRectF(x, y, w, h), pen)
         self._overlay_items.append(r)
         if label:  # 14 pt text on a dark backing above the box's corner, the same size at every zoom (REQ-SET-004)
             t = QGraphicsSimpleTextItem(label)
             t.setFont(label_font())
             t.setBrush(QBrush(QColor(theme.TEXT)))  # 15:1 on the backing, whatever the board behind it looks like
-            t.setFlag(QGraphicsSimpleTextItem.ItemIgnoresTransformations)
+            t.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIgnoresTransformations)
             t.setPos(x, y)
             t.setTransform(QTransform.fromTranslate(4, -t.boundingRect().height() - 6))  # above the corner, in pixels
             backing = QGraphicsRectItem(t.boundingRect().adjusted(-4, -3, 4, 3), t)
-            backing.setPen(QPen(Qt.NoPen))
+            backing.setPen(QPen(Qt.PenStyle.NoPen))
             backing.setBrush(QBrush(QColor(theme.BG_IMAGE)))
-            backing.setFlag(QGraphicsRectItem.ItemStacksBehindParent)
+            backing.setFlag(QGraphicsItem.GraphicsItemFlag.ItemStacksBehindParent)
             self.scene().addItem(t)
             self._overlay_items.append(t)
 
-    def center_on_box(self, x, y, w, h) -> None:
-        self.fitInView(QRectF(x - w, y - h, w * 3, h * 3), Qt.KeepAspectRatio)
+    def center_on_box(self, x: float, y: float, w: float, h: float) -> None:
+        self.fitInView(QRectF(x - w, y - h, w * 3, h * 3), Qt.AspectRatioMode.KeepAspectRatio)
 
     # --- zoom / pan --------------------------------------------------------------
-    def wheelEvent(self, e):
+    def wheelEvent(self, e: QWheelEvent) -> None:
         f = 1.25 if e.angleDelta().y() > 0 else 0.8
         self.scale(f, f)
         self._emit_changed()
 
-    def mouseDoubleClickEvent(self, e):
+    def mouseDoubleClickEvent(self, e: QMouseEvent) -> None:
         self.fit()
 
     # --- ROI drawing ---------------------------------------------------------------
     def set_draw_mode(self, on: bool) -> None:
         self._draw_mode = on
-        self.setDragMode(QGraphicsView.NoDrag if on else QGraphicsView.ScrollHandDrag)
-        self.setCursor(Qt.CrossCursor if on else Qt.ArrowCursor)
+        self.setDragMode(QGraphicsView.DragMode.NoDrag if on else QGraphicsView.DragMode.ScrollHandDrag)
+        self.setCursor(Qt.CursorShape.CrossCursor if on else Qt.CursorShape.ArrowCursor)
 
-    def mousePressEvent(self, e):
-        if self._draw_mode and e.button() == Qt.LeftButton and self._pix is not None:
+    def mousePressEvent(self, e: QMouseEvent) -> None:
+        if self._draw_mode and e.button() == Qt.MouseButton.LeftButton and self._pix is not None:
             self._drag_start = self.mapToScene(e.position().toPoint())
             pen = QPen(QColor(theme.ROI_SELECTED), 2)
             pen.setCosmetic(True)
-            pen.setStyle(Qt.DashLine)
+            pen.setStyle(Qt.PenStyle.DashLine)
             self._rubber = self.scene().addRect(QRectF(self._drag_start, self._drag_start), pen)
             return
         super().mousePressEvent(e)
 
-    def mouseMoveEvent(self, e):
+    def mouseMoveEvent(self, e: QMouseEvent) -> None:
         if self._rubber is not None and self._drag_start is not None:
             self._rubber.setRect(QRectF(self._drag_start, self.mapToScene(e.position().toPoint())).normalized())
             return
         super().mouseMoveEvent(e)
 
-    def mouseReleaseEvent(self, e):
+    def mouseReleaseEvent(self, e: QMouseEvent) -> None:
         if self._rubber is not None:
             rect = self._rubber.rect().intersected(self.sceneRect())
             self.scene().removeItem(self._rubber)
@@ -149,7 +165,7 @@ class ImageView(QGraphicsView):
         self._peers.append(other)
         other._peers.append(self)
 
-    def _emit_changed(self, *_):
+    def _emit_changed(self, *_: object) -> None:
         self.viewChanged.emit()
         if self._syncing:
             return

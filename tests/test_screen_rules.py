@@ -12,11 +12,12 @@ import ast
 import re
 from pathlib import Path
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import QMetaObject, Qt, Signal, SignalInstance
 from PySide6.QtWidgets import QApplication, QBoxLayout, QFrame, QPushButton, QTableWidget, QWidget
 
 from aoi.ui import theme
 from aoi.ui.main_window import MainWindow
+from aoi.ui.pages.compare import MODE_DIFF
 from aoi.ui.widgets.empty_state import EmptyState
 from tests.test_req_done_in_v01 import BOARD, _inspect_one, _window
 
@@ -28,6 +29,8 @@ POINT_SIZE = re.compile(r"font-size:\s*(\d+)\s*pt")
 QT_COLOURS = {"white", "black", "red", "green", "blue", "yellow", "gray", "darkGray", "lightGray", "cyan", "magenta"}
 COLOUR_CALLS = {"QColor", "QBrush", "QPen"}
 DESTRUCTIVE = re.compile(r"^(Delete|Remove|Reset Demo|Clear)\b")  # Reset Filters only changes a view
+QT_OVERRIDES = re.compile(r"Event$|^event$|^eventFilter$|[sS]izeHint$|^paintEngine$")  # Qt virtuals defined on purpose
+QT_INSTALLED = (Signal, SignalInstance, QMetaObject)
 
 
 def _docstrings(tree: ast.AST) -> set[ast.AST]:
@@ -107,6 +110,9 @@ def test_req_insp_002_verdict_has_shape_and_word(qtbot, trained_ctx, ng_board) -
     qtbot.waitUntil(lambda: compare.res is not None, timeout=30000)
     assert compare.verdict.text() == theme.verdict_label(compare.res.verdict) == "✗ NG"
     assert theme.NG_COLOR in compare.verdict.styleSheet()
+    before = compare.test_view._pix
+    compare.mode.setCurrentIndex(MODE_DIFF)  # the "Show:" switch redraws (#5: it bound QWidget.render until S22a)
+    assert compare.test_view._pix is not before, "the mode switch did not redraw the test view"
     test_page = win.pages["AI Model Test"]
     test_page._show_preview(str(ng_board), res)
     assert test_page.preview_verdict.text() == "✗ NG" and theme.NG_COLOR in test_page.preview_verdict.styleSheet()
@@ -236,3 +242,29 @@ def test_req_p3d_001_profile_page_is_a_stage_2_card(qtbot, trained_ctx) -> None:
     win.navigate("3D Profile")
     next(b for b in buttons if b.text() == "Back to Home").click()
     assert win.stack.currentWidget() is win.pages["Home"]
+
+
+def test_issue_5_no_page_attribute_shadows_a_qt_member(qtbot, trained_ctx) -> None:
+    """An attribute or method named after a Qt member (`size`, `pos`, `render`) hides it from every caller and from the
+    type checker: `self.size = QComboBox()` shipped on two pages and `self.pos = -1` on one until S22a (#5). Checked on
+    the shell, every page and every widget of ours in the window, against each one's own Qt base class."""
+    win = MainWindow(trained_ctx)
+    qtbot.addWidget(win)
+    shadowed = []
+    for widget in (win, *win.findChildren(QWidget)):
+        if not type(widget).__module__.startswith("aoi."):
+            continue  # Qt's own widgets define nothing in Python
+        qt_base = next(c for c in type(widget).__mro__ if c.__module__.startswith("PySide6"))
+        own = {n for n, v in vars(widget).items() if not isinstance(v, QT_INSTALLED)} | {
+            n
+            for cls in type(widget).__mro__
+            if cls not in qt_base.__mro__
+            for n, v in vars(cls).items()
+            if not isinstance(v, QT_INSTALLED)
+        }  # what the Python code defines: PySide6 installs a signal instance per object and a meta-object per class
+        shadowed += [
+            f"{type(widget).__name__}.{n}"
+            for n in sorted(own)
+            if not n.startswith("_") and hasattr(qt_base, n) and not QT_OVERRIDES.search(n)
+        ]
+    assert not shadowed, shadowed

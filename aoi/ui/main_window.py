@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-from PySide6.QtCore import QT_TRANSLATE_NOOP, Qt
+from typing import TYPE_CHECKING, cast
+
+from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor
 from PySide6.QtWidgets import (
     QComboBox,
@@ -25,7 +27,7 @@ from ..core.services import AppContext
 from ..errors import AoiError
 from . import theme
 from .errors import show_error
-from .pages.base import Page, button, page_text, role_text, size_class
+from .pages.base import QT_TRANSLATE_NOOP, Page, button, page_text, role_text, size_class
 from .pages.compare import ComparePage
 from .pages.inspection import InspectionPage
 from .pages.logs import LogsPage
@@ -35,6 +37,9 @@ from .pages.recipe_editor import RecipeEditorPage
 from .pages.settings import SettingsPage
 from .pages.training import TrainingPage
 from .widgets.empty_state import EmptyState
+
+if TYPE_CHECKING:
+    from ..core.inspector import InspectionResult
 
 
 class HomePage(Page):
@@ -85,12 +90,12 @@ class HomePage(Page):
         ),
     ]
 
-    def __init__(self, ctx, shell):
+    def __init__(self, ctx: AppContext, shell: MainWindow) -> None:
         super().__init__(ctx, shell)
         self.cards = QWidget()
         grid = QGridLayout(self.cards)
         grid.setSpacing(theme.SPACE)
-        self.status_labels = {}
+        self.status_labels: dict[str, QLabel] = {}
         for i, (n, name, desc, target) in enumerate(self.STEPS):
             card = QFrame()
             card.setObjectName("card")
@@ -118,7 +123,7 @@ class HomePage(Page):
         self.root.addWidget(self.empty)
         self.root.addStretch(1)
 
-    def on_show(self):
+    def on_show(self) -> None:
         bm = self.board_model
         self.cards.setVisible(bool(bm))
         if not bm:
@@ -182,11 +187,11 @@ NAV = [
 
 
 class MainWindow(QMainWindow):
-    def __init__(self, ctx: AppContext):
+    def __init__(self, ctx: AppContext) -> None:
         super().__init__()
         self.ctx = ctx
         self.board_model: str | None = None
-        self.last_inspected = None  # (path, InspectionResult) shared by Inspection -> Compare
+        self.last_inspected: tuple[str, InspectionResult] | None = None  # shared by Inspection -> Compare
         self.setWindowTitle(f"{APP_NAME} {APP_VERSION}")
         self.resize(1920, 1080)
 
@@ -212,14 +217,14 @@ class MainWindow(QMainWindow):
         for section, cls in NAV:
             if section:
                 sec = QListWidgetItem(self.tr(section))
-                sec.setFlags(Qt.NoItemFlags)
+                sec.setFlags(Qt.ItemFlag.NoItemFlags)
                 sec.setForeground(QColor(theme.TEXT_MUTED))
                 self.nav.addItem(sec)
             page = cls(ctx, self)
             self.pages[cls.title] = page
             self.stack.addWidget(page)
             it = QListWidgetItem(page_text(cls.title))
-            it.setData(Qt.UserRole, cls.title)
+            it.setData(Qt.ItemDataRole.UserRole, cls.title)
             self.nav.addItem(it)
             self._items[cls.title] = it
         self.nav.currentItemChanged.connect(self._on_nav)
@@ -257,7 +262,7 @@ class MainWindow(QMainWindow):
             size_class(control, "T")  # header controls are operator targets (frame sketch, size class T)
         return h
 
-    def _reload_board_models(self, select: str | None = None):
+    def _reload_board_models(self, select: str | None = None) -> None:
         self.bm_combo.blockSignals(True)
         self.bm_combo.clear()
         self.bm_combo.addItems(self.ctx.board_models())
@@ -266,7 +271,7 @@ class MainWindow(QMainWindow):
             self.bm_combo.setCurrentText(select)
         self._on_board_model(self.bm_combo.currentText())
 
-    def new_board_model(self):
+    def new_board_model(self) -> None:
         name, ok = QInputDialog.getText(
             self, self.tr("New board model"), self.tr("Board model name (e.g. TBOX-A1 Rev2)")
         )
@@ -274,10 +279,11 @@ class MainWindow(QMainWindow):
             try:
                 self.ctx.ensure_board_model(name.strip())
             except AoiError as e:  # the service layer refuses an Operator; the dialog names the role it needs
-                return show_error(self, self.ctx.report_error(e, "Board model"))
+                show_error(self, self.ctx.report_error(e, "Board model"))
+                return
             self._reload_board_models(name.strip())
 
-    def _on_board_model(self, name: str):
+    def _on_board_model(self, name: str) -> None:
         self.board_model = name or None
         for p in self.pages.values():
             p.on_board_model_changed(self.board_model)
@@ -286,7 +292,7 @@ class MainWindow(QMainWindow):
             cur.on_show()
 
     # --- users / roles (spec 8) -------------------------------------------------------
-    def switch_user(self):
+    def switch_user(self) -> None:
         users = self.ctx.users()
         names = [self.tr("{user} ({role})").format(user=u["name"], role=role_text(u["role"])) for u in users]
         sel, ok = QInputDialog.getItem(self, self.tr("Switch user"), self.tr("User"), names, 0, False)
@@ -294,12 +300,14 @@ class MainWindow(QMainWindow):
             u = users[names.index(sel)]
             self.set_role(u["role"], u["name"])
 
-    def set_role(self, role: str, user: str):
+    def set_role(self, role: str, user: str) -> None:
         self.ctx.set_user(user, role)
         self.user_label.setText(self.tr("{user}  ·  {role}").format(user=user, role=role_text(role)))
         for title, it in self._items.items():
             allowed = role in self.pages[title].roles
-            it.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable if allowed else Qt.NoItemFlags)
+            it.setFlags(
+                Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable if allowed else Qt.ItemFlag.NoItemFlags
+            )
             it.setToolTip("" if allowed else self._needs_role(title))
         cur = self.stack.currentWidget()
         if isinstance(cur, Page) and role not in cur.roles:
@@ -313,17 +321,17 @@ class MainWindow(QMainWindow):
     # --- navigation -----------------------------------------------------------------
     def navigate(self, title: str) -> bool:
         it = self._items.get(title)
-        if it and it.flags() & Qt.ItemIsEnabled:
+        if it and it.flags() & Qt.ItemFlag.ItemIsEnabled:
             self.nav.setCurrentItem(it)
             return True
         if title in self.pages:
             self.status(self._needs_role(title))
         return False
 
-    def _on_nav(self, cur: QListWidgetItem, _prev):
-        if cur is None or not cur.data(Qt.UserRole):
+    def _on_nav(self, cur: QListWidgetItem | None, _prev: QListWidgetItem | None) -> None:
+        if cur is None or not cur.data(Qt.ItemDataRole.UserRole):
             return
-        page = self.pages[cur.data(Qt.UserRole)]
+        page = self.pages[cur.data(Qt.ItemDataRole.UserRole)]
         self.stack.setCurrentWidget(page)
         page.on_show()
         if self.ctx.settings.last_page != page.title:
@@ -333,9 +341,9 @@ class MainWindow(QMainWindow):
             except OSError:
                 self.ctx.log.warning("settings.save_failed", exc_info=True)
 
-    def open_compare(self, path: str):
+    def open_compare(self, path: str) -> None:
         self.navigate("Compare")
-        self.pages["Compare"].set_test(path)
+        cast(ComparePage, self.pages["Compare"]).set_test(path)
 
-    def status(self, msg: str):
+    def status(self, msg: str) -> None:
         self.statusBar().showMessage(msg, 8000)

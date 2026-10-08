@@ -25,7 +25,7 @@ class Worker:
     """`fn(*args, progress=report, should_stop=flag, **kw)`; the two keywords are passed only when
     `with_progress=True`. Connect the signals, then `start(worker, ctx.jobs)`."""
 
-    def __init__(self, fn: Callable[..., Any], *args: Any, with_progress: bool = False, **kwargs: Any):
+    def __init__(self, fn: Callable[..., Any], *args: Any, with_progress: bool = False, **kwargs: Any) -> None:
         self.signals = WorkerSignals()
         self.job: Job[Any] = Job(getattr(fn, "__name__", "job"), fn, *args, with_progress=with_progress, **kwargs)
         self.job.on_progress(self.signals.progress.emit)

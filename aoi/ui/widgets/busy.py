@@ -7,6 +7,7 @@ after ten seconds a progress bar, the time left when the job reports progress, a
 from __future__ import annotations
 
 import time
+from typing import Any
 
 from PySide6.QtCore import QEvent, QObject, Qt, QTimer
 from PySide6.QtWidgets import QLabel, QProgressBar, QPushButton, QVBoxLayout, QWidget
@@ -22,32 +23,32 @@ class BusyOverlay(QWidget):
     SHOW_AFTER_S = 1.0
     DETAIL_AFTER_S = 10.0
 
-    def __init__(self, over: QWidget, what: str = ""):
+    def __init__(self, over: QWidget, what: str = "") -> None:
         super().__init__(over)
         self._over, self._what = over, what or self.tr("Working…")
-        self._job: Job | None = None
+        self._job: Job[Any] | None = None
         self._t0 = 0.0
         self.setObjectName("busy")
-        self.setAttribute(Qt.WA_StyledBackground, True)
+        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         layout = QVBoxLayout(self)
-        layout.setAlignment(Qt.AlignCenter)
+        layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.label = QLabel(self._what)
         self.label.setObjectName("busyText")
-        self.label.setAlignment(Qt.AlignCenter)
+        self.label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.bar = QProgressBar()
         self.bar.setFixedWidth(theme.PROGRESS_W)
         self.cancel_button = QPushButton(self.tr("Cancel"))
         self.cancel_button.clicked.connect(self._on_cancel)
         layout.addWidget(self.label)
-        layout.addWidget(self.bar, 0, Qt.AlignHCenter)
-        layout.addWidget(self.cancel_button, 0, Qt.AlignHCenter)
+        layout.addWidget(self.bar, 0, Qt.AlignmentFlag.AlignHCenter)
+        layout.addWidget(self.cancel_button, 0, Qt.AlignmentFlag.AlignHCenter)
         self._timer = QTimer(self)
         self._timer.setInterval(200)
         self._timer.timeout.connect(self._tick)
         over.installEventFilter(self)
         self.hide()
 
-    def watch(self, job: Job) -> None:
+    def watch(self, job: Job[Any]) -> None:
         self._job, self._t0 = job, time.monotonic()
         self.bar.setRange(0, 0)  # indeterminate until the job reports a total
         self.bar.hide()
