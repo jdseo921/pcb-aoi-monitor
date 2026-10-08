@@ -9,7 +9,6 @@ result is shown as it was decided and never inspected again (REQ-CMP-003).
 from __future__ import annotations
 
 import copy
-import functools
 import html
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, TypeAlias
@@ -63,8 +62,11 @@ NO_VERDICT = "—"  # the banner with no result shown
 Stored: TypeAlias = "tuple[np.ndarray | None, Judged, InspectionResult | None, list[ErrorReport]] | ErrorReport"
 # golden board, why not, result, and the stored files of it that could not be read; or why none of it could be read.
 # Each error is already logged and alarmed (#247)
-Evaluated: TypeAlias = "tuple[np.ndarray | None, InspectionResult | None, AoiError | None, AoiError | None]"  # golden
-# board, result, why the Golden board cannot be shown, and the refusal of a test board it kept from being judged
+# Evaluated: the golden board, the result, why the Golden board cannot be shown, the refusal of a test board it kept
+# from being judged, and that refusal's report for the dialog of a run that was asked for, already alarmed (#206, #247)
+Evaluated: TypeAlias = (
+    "tuple[np.ndarray | None, InspectionResult | None, AoiError | None, AoiError | None, ErrorReport | None]"
+)
 JUDGED: dict[Judged, str] = {  # why a stored result's golden board is not shown; today's would mislead
     "none": QT_TRANSLATE_NOOP("ComparePage", "This result was judged without a Golden board."),
     "unrecorded": QT_TRANSLATE_NOOP("ComparePage", "This result was saved before results named their Golden board."),
@@ -116,6 +118,8 @@ class ComparePage(Page):
         self.golden_state = False  # the pane says there is no Golden board, or why it cannot be opened
         self.record_board_model: str | None = None  # the board model of the record the test board came from, if any
         self.form_revision: tuple[str, int] | None = None  # the board model and recipe revision the form came from
+        self.shown_board_model: str | None = None  # the header's board model the page last followed (#247)
+        self.judge_on_show = False  # the header changed while the page was hidden: judge its board when shown (#247)
         self._fitted = False
 
         bar = QHBoxLayout()
@@ -281,7 +285,8 @@ class ComparePage(Page):
 
     def _start(self, quiet: bool) -> None:
         """`quiet`: run because the page was shown, not asked for: a Golden board that still cannot be read is said on
-        its pane only, with no dialog or alarm (#176 review)."""
+        its pane only, with no dialog or alarm (#176 review), and so is a board no check can judge (#247)."""
+        self.judge_on_show = False  # this run replaces the one a header change left for on_show
         bm = self.board_model
         if not bm:
             return
@@ -298,8 +303,8 @@ class ComparePage(Page):
         if not self.ref_override:
             self.golden_seen = self.golden_board_stamp()
         self.run_in_background(
-            self._evaluate, bm, self.test_path, self.ref_override, recipe, judged,
-            on_result=functools.partial(self._on_evaluated, quiet=quiet), busy=self.busy if self.test_path else None,
+            self._evaluate, bm, self.test_path, self.ref_override, recipe, judged, quiet,
+            on_result=self._on_evaluated, busy=self.busy if self.test_path else None,
             on_error=self._not_inspected,
         )  # fmt: skip
 
@@ -310,12 +315,14 @@ class ComparePage(Page):
         ref_path: str | None,
         recipe: Recipe | None,
         ref: np.ndarray | None,
+        quiet: bool,
     ) -> Evaluated:
         """Pool thread: files and the engine only, never a widget. `ref` is a stored result's golden board as judged.
         Today's Golden board gone or damaged comes back as the error to say on its pane, not raised (it was a dialog
         at every start, #176), and is alarmed once (#195); a test board it keeps from being judged comes back with its
         AOI-INSP-009 refusal and no result, so the pane says why whether or not a board was to be judged (#176
-        review)."""
+        review); so does AOI-INSP-010, a board model with nothing that can judge it (#247). A refusal is logged here,
+        and alarmed when the run was asked for (not `quiet`), so a run cancelled or replaced loses none (#206)."""
         golden_error = refused = None
         if ref is None and ref_path:
             ref = self.ctx.load_image(ref_path)
@@ -334,20 +341,33 @@ class ComparePage(Page):
         if golden_error is not None:  # logged, and alarmed once per board model, file and code (#195)
             self.ctx.golden_board_unreadable(board_model, golden_error)
         test = self.ctx.load_image(test_path) if test_path and refused is None else None
-        res = self.ctx.inspect(board_model, test, recipe, reference=ref) if test is not None else None
-        return ref, res, golden_error, refused
+        try:
+            res = self.ctx.inspect(board_model, test, recipe, reference=ref) if test is not None else None
+        except AoiError as e:  # no check can judge the board under this board model: said as AOI-INSP-009 is (#247)
+            if e.code != "AOI-INSP-010":
+                raise
+            res, refused = None, e
+        report = None
+        if refused is not None and not quiet:  # asked for: the refusal's alarm, as on Inspection, and its dialog
+            report = self.ctx.report_error(refused, self.title)
+        elif refused is not None:  # not asked for: logged with its trace, with no dialog or alarm (#247)
+            trace = (type(refused), refused, refused.__traceback__)
+            self.ctx.log.warning("compare.not_inspected", exc_info=trace, extra={"code": refused.code})
+        return ref, res, golden_error, refused, report
 
-    def _on_evaluated(self, out: Evaluated, quiet: bool) -> None:
-        ref, res, self.golden_error, refused = out
+    def _on_evaluated(self, out: Evaluated) -> None:
+        ref, res, self.golden_error, refused, report = out
         self._show_reference(ref)
-        if refused is not None:  # the board was not judged: no verdict, table or picture of the board before beside it
+        if refused is not None and refused.code != "AOI-INSP-009":  # nothing can judge it: banner and pane say so
+            self._not_inspected(refused)
+        elif refused is not None:  # the board was not judged: no verdict, table or picture of the board before
             self._clear_result()
             what = self.tr("{file} was not inspected: its Golden board cannot be opened.").format(
                 file=Path(self.test_path or "").name
             )
             self.test_empty.show_state(self.tr("Board not inspected"), what)
-            if not quiet:  # asked for: the refusal's dialog and alarm, as on Inspection
-                self.error(refused)
+        if report is not None:  # asked for: the refusal's dialog, as on Inspection
+            show_error(self, report)
         if res is not None:
             self.test_empty.hide()  # a fresh result: no "Board picture no longer stored" over it (#172)
             self._show_result(res)
@@ -431,6 +451,7 @@ class ComparePage(Page):
         self.golden_error, self.golden_state = None, False  # its pane shows the golden board as judged, not today's
         self.record_board_model = rec["board_model"]  # Re-evaluate judges the board under it (#172)
         self._fitted = False
+        self.judge_on_show = False  # a stored result is never inspected again unasked
         self.test_empty.hide()
         self.test_view.set_image(None)  # the board shown before goes at once, not when this one's picture arrives,
         self.ref_view.set_image(None)  # and so do its golden board and boxes, and why that pane had none (#247)
@@ -621,6 +642,11 @@ class ComparePage(Page):
         self.test_empty.show_state(heading, what, self.tr("Re-evaluate ›"), self.run)
 
     def on_board_model_changed(self, name: str | None) -> None:
+        if name == self.shown_board_model:  # "+ New" with its own name: nothing changed, so nothing goes (#247)
+            return
+        self.shown_board_model = name
+        if self._bg is not None:  # a run of the last board model still going: no verdict or dialog of it shows under
+            self._bg.stop()  # this one; a refusal it was asked for is still logged and alarmed (#206, #247 review)
         self.res = self.stored = self.as_judged = self.golden_error = None  # the last board model's views go with it
         self.golden_state = False
         self.note.hide()
@@ -629,17 +655,21 @@ class ComparePage(Page):
             self.test_label.setText(self.tr("Test board"))
             self._clear_result()
         self._load_recipe_into_form()
-        if name:
-            self.run()
+        self.judge_on_show = bool(name and (self.test_path or self.ref_override))  # a board to judge: when the page
+        if self.judge_on_show:  # is shown (MainWindow calls on_show next), never with a dialog over another page,
+            self._clear_result()  # and no verdict of the last board model meanwhile (#247)
+        elif name:  # only the Golden board to read: now, not asked for, so the pane is ready at start-up
+            self._start(quiet=True)
 
     def on_show(self) -> None:
         self.btn_save.setEnabled(self.ctx.role != "Operator")
         if self.golden_state and self.board_model:
             self._show_golden_state()
         fresh = self.stored is None and not self.ref_override  # a stored result is never inspected again unasked
-        if self.board_model and fresh and (self.golden_error is not None or not self.test_path):
-            if self.golden_board_stamp() != self.golden_seen:  # Set Reference, training, or the file put back,
-                self._start(quiet=True)  # replaced or gone since: the pane, or a board it kept from judging, again
+        again = self.judge_on_show  # the header changed while the page was hidden
+        if self.board_model and (again or fresh and (self.golden_error is not None or not self.test_path)):
+            if again or self.golden_board_stamp() != self.golden_seen:  # Set Reference, training, or the file put
+                self._start(quiet=True)  # back, replaced or gone since: the pane, or a board it kept from judging
         if self.res is None and self.test_path is None:
             step = self.empty_step(self.tr("Inspect a board on Inspection, or pick a test image."), "Inspection")
             self.test_empty.show_state(self.tr("No board to compare yet"), *step)

@@ -25,6 +25,7 @@ from aoi.core.services import ALARM_LIMIT, AppContext
 from aoi.errors import AoiError
 from aoi.ui.errors import install_excepthook
 from aoi.ui.main_window import MainWindow
+from aoi.ui.pages.compare import NO_VERDICT
 from aoi.ui.pages.inspection import InspectionPage
 from aoi.ui.pages.settings import SettingsPage
 from tests.test_req_done_in_v01 import BOARD, _inspect_one, _window
@@ -633,3 +634,55 @@ def test_req_set_019_a_golden_board_alarm_never_holds_the_window_on_a_held_datab
     assert not [a for a in trained_ctx.alarms() if a["code"] == "AOI-INSP-001"]
     trained_ctx.golden_board_unreadable(BOARD, error)  # the next read, the lock gone: stored once
     assert len([a for a in trained_ctx.alarms() if a["code"] == "AOI-INSP-001"]) == 1
+
+
+def _error_codes(ctx: AppContext) -> list[str]:
+    """The codes of the stored ERROR alarms, newest first."""
+    return [a["code"] for a in ctx.alarms() if a["level"] == "ERROR"]
+
+
+@pytest.mark.parametrize("board_model", ["EMPTY", "GONE"])
+def test_req_insp_006_a_header_change_away_from_compare_opens_no_dialog_over_the_page_in_use(
+    qtbot: QtBot,
+    trained_ctx: AppContext,
+    ng_board: Path,
+    synthetic_dataset: Path,
+    dialogs: list[tuple[str, str]],
+    monkeypatch: pytest.MonkeyPatch,
+    board_model: str,
+) -> None:
+    """#247: a test image picked on Compare, then "+ New" on Inspection to a board model with no Golden board and no AI
+    model (EMPTY), or whose Golden board file is gone (GONE): the hidden Compare inspected the image under it as if
+    asked, opened AOI-INSP-010 or AOI-INSP-009 over Inspection and stored its ERROR alarm. Now Compare judges it when
+    shown, quietly: the test pane says why, the log keeps the refusal with its trace, and no alarm is stored but the
+    one the Golden board gets once (#195). Re-evaluate there still shows the refusal's dialog and stores its alarm."""
+    ctx, gone = trained_ctx, board_model == "GONE"
+    win = _window(qtbot, ctx)
+    compare = win.pages["Compare"]
+    win.navigate("Compare")
+    compare.set_test(str(ng_board))
+    qtbot.waitUntil(lambda: compare.res is not None and compare._bg is None, timeout=60000)
+    if gone:
+        ctx.import_samples(board_model, [str(p) for p in list_images(synthetic_dataset / "train" / "ok")[:3]], "OK")
+        Path(str(ctx.reference_image(board_model))).unlink()
+    win.navigate("Inspection")
+    before = len(_error_codes(ctx))
+    monkeypatch.setattr(QInputDialog, "getText", staticmethod(lambda *a, **k: (board_model, True)))
+    win.new_board_model()
+    qtbot.waitUntil(lambda: ctx.jobs.idle() and compare._bg is None, timeout=20000)
+    golden = ["AOI-INSP-001"] if gone else []  # the Golden board pane's own alarm, once per board model and file
+    assert win.board_model == board_model and win.stack.currentWidget() is win.pages["Inspection"]
+    assert dialogs == [] and _error_codes(ctx)[: len(_error_codes(ctx)) - before] in ([], golden)
+    assert compare.verdict.text() == NO_VERDICT and compare.metrics.rowCount() == 0, "the last board model's verdict"
+    win.navigate("Compare")
+    qtbot.waitUntil(lambda: ctx.jobs.idle() and compare._bg is None and compare.test_empty.isVisible(), timeout=20000)
+    code = "AOI-INSP-009" if gone else "AOI-INSP-010"
+    assert dialogs == [] and _error_codes(ctx)[: len(_error_codes(ctx)) - before] == golden
+    assert compare.res is None and compare.verdict.text() != "✗ NG"
+    sentence = compare.test_empty.sentence.text()
+    assert "Golden board cannot be opened" in sentence if gone else sentence.startswith(f"{code} "), sentence
+    assert [r["code"] for r in _log_rows(ctx, "compare.not_inspected")] == [code]
+    compare.run()  # Re-evaluate: asked for, so the refusal's dialog and alarm
+    qtbot.waitUntil(lambda: bool(dialogs) and compare._bg is None, timeout=20000)
+    assert [d[0].split()[0] for d in dialogs] == [code]
+    assert _error_codes(ctx)[: len(_error_codes(ctx)) - before] == [code, *golden]

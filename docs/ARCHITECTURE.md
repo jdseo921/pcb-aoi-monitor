@@ -541,8 +541,9 @@ log in `<workspace>/logs/`, one file per UTC day, with time, level, module, even
 an image or a password; a caller's extra never replaces one of those fixed fields (one of the same name is written as
 `extra_<name>`, #171). An error code's personal values (`ErrorCode.personal`: AOI-USR-002's user name) reach the log
 only as the user's UUID: `report_error` logs `AoiError.log_safe()`, the same error and trace with them replaced, and
-its alarm line that text, while the dialog and the stored alarm keep the name (REQ-LOG-004, #195). Alarms (an NG
-verdict, a missing AI model, every error shown but Compare's AOI-CMP-001 note) are stored in `alarms` with their code
+its alarm line that text, while the dialog and the stored alarm keep the name (REQ-LOG-004, #195).
+Alarms (an NG verdict, a missing AI model, every error shown but Compare's AOI-CMP-001 note and
+the refusals a quiet Compare run says on its test pane) are stored in `alarms` with their code
 through `AppContext.alarm` (an NG verdict's in its record's own transaction, `Database.add_inspection`, so a saved NG
 board always has its alarm and a refused alarm saves neither, #179), and `AppContext.report_error` is the one path for
 an error a dialog shows: it
@@ -566,12 +567,21 @@ read the Golden board again when shown if the file, or which file it is, changed
 (`Page.golden_board_stamp`); inspecting a board of
 that board model is refused with AOI-INSP-009, which is alarmed; Compare then clears the verdict of the board
 before, says on its test pane that the board was not inspected, and judges it when shown again once the Golden board
-can be read (#176). Compare's stored result clears both panes at once; a stored map that cannot be read (AOI-CMP-003)
-takes away only the heat views, and a stored overlay that cannot be read (AOI-CMP-006) only the picture: the pane
-shows the golden board as judged, the dialog names the file and the note under the verdict keeps its code. Any other
-error (a database another program holds: AOI-SET-013) leaves both panes empty, each with the dialog's code. Each is
-logged and alarmed on the pool thread, and nothing of a load shows once the page has moved on (#247). The page in use
-is kept in `settings.json` and reopened at start-up (REQ-INSP-006, REQ-LOG-005);
+can be read (#176). A run Compare starts without being asked (shown again, or a header change) is quiet: when no
+check can judge its test image (AOI-INSP-010) or the Golden board keeps it from being judged (AOI-INSP-009), the test
+pane says so, the log keeps it as `compare.not_inspected` with the trace, and no dialog opens and no alarm is stored
+for it. A run a user asks for (Re-evaluate, Test Image..., Reference..., Golden Board) logs and alarms its refusal on
+the pool thread, so a run cancelled or replaced keeps it (#206), and shows the dialog unless it was left. A header
+change stops a Compare run still going under the last board model (its result and dialog are dropped; a refusal it was
+asked for is still logged and alarmed), takes Compare's verdict, table and picture away at once, and judges its test
+image when Compare is shown (`MainWindow` calls `on_show` next when it is; a link that opens Compare on a record or a
+file skips that judgement), never behind the page in use; "+ New" with the name of the board model in the header changes
+nothing, so a stored result on Compare stays (#247). Compare's stored result clears both panes at once; a stored map
+that cannot be read (AOI-CMP-003) takes away only the heat views, and a stored overlay that cannot be read (AOI-CMP-006)
+only the picture: the pane shows the golden board as judged, the dialog names the file and the note under the verdict
+keeps its code. Any other error (a database another program holds: AOI-SET-013) leaves both panes empty, each with the
+dialog's code. Each is logged and alarmed on the pool thread, and nothing of a load shows once the page has moved on
+(#247). The page in use is kept in `settings.json` and reopened at start-up (REQ-INSP-006, REQ-LOG-005);
 a page change writes that key alone. A workspace saved on Settings goes to `settings.json` only: the running app keeps
 its database, log and folders on the open workspace until the restart (REQ-SET-001, #170). The AI device, the
 default epochs and input size and the log retention apply at once: `save_settings` resolves the AI device again and,

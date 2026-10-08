@@ -186,7 +186,13 @@ Re-evaluate inspects the board again with the form's thresholds and the current 
 that same golden board while it is shown (press Golden Board for today's), and shows that fresh result instead;
 Save to Recipe saves the form's thresholds as a new revision. A stored result is judged again only under its own board
 model: with another board model in the header, Re-evaluate refuses with AOI-CMP-005 and names the board model to pick,
-and changing the header's board model clears the board of a record from Compare. The thresholds form is loaded again
+and changing the header's board model clears the board of a record from Compare. A test image you picked stays,
+without the last verdict (an inspection of it still running stops), and is judged under the new board model at
+once if Compare is shown, or when you next open Compare: a board that no check can judge there (AOI-INSP-010),
+or whose Golden board cannot be opened (AOI-INSP-009), is said on the test pane, with no message box and no
+alarm; Re-evaluate shows the message and stores the alarm, which is kept even when you cancel that inspection
+or start another. "+ New" with the name of the board model already in the header changes nothing: the status
+bar says it is already selected, and a stored result stays as it was. The thresholds form is loaded again
 from the recipe whenever a new revision has been saved since (on Recipe Editor, for example), so Save to Recipe never
 puts back the thresholds of an older revision; values tried and not saved stay while no revision is saved. Cancel on
 the busy overlay clears the verdict, table and picture and says the board named over the picture was not inspected;
