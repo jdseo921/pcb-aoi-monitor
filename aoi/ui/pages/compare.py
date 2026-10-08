@@ -46,7 +46,17 @@ from ..errors import phrase_text, show_error
 from ..widgets.busy import BusyOverlay
 from ..widgets.empty_state import EmptyState
 from ..widgets.image_view import ImageView
-from .base import QT_TRANSLATE_NOOP, Page, button, fill_table, make_table, sentence_text, view_text
+from .base import (
+    QT_TRANSLATE_NOOP,
+    Page,
+    breakable,
+    breakable_names,
+    button,
+    fill_table,
+    make_table,
+    sentence_text,
+    view_text,
+)
 
 if TYPE_CHECKING:
     from ..main_window import MainWindow
@@ -309,7 +319,7 @@ class ComparePage(Page):
         self.stored = None  # a fresh inspection with the form's thresholds, not a stored result
         self.note.hide()
         if self.test_path:
-            self.test_label.setText(self.tr("Test board: {file}").format(file=Path(self.test_path).name))
+            self.test_label.setText(self.tr("Test board: {file}").format(file=breakable(Path(self.test_path).name)))
         recipe = self._form_recipe(bm) if self.test_path else None
         judged = self.as_judged[1] if self.as_judged and not self.ref_override else None
         if not self.ref_override:
@@ -375,7 +385,7 @@ class ComparePage(Page):
         elif refused is not None:  # the board was not judged: no verdict, table or picture of the board before
             self._clear_result()
             what = self.tr("{file} was not inspected: its Golden board cannot be opened.").format(
-                file=Path(self.test_path or "").name
+                file=breakable(Path(self.test_path or "").name)
             )
             self.test_empty.show_state(self.tr("Board not inspected"), what)
         if report is not None:  # asked for: the refusal's dialog, as on Inspection
@@ -392,9 +402,11 @@ class ComparePage(Page):
         stored = self.stored["reference_path"] if self.stored and named else None
         recorded = self.as_judged[0] if self.as_judged else stored
         if self.ref_override:
-            self.ref_label.setText(self.tr("Reference: {file}").format(file=Path(self.ref_override).name))
+            self.ref_label.setText(self.tr("Reference: {file}").format(file=breakable(Path(self.ref_override).name)))
         elif recorded:
-            self.ref_label.setText(self.tr("Golden board as judged: {file}").format(file=Path(recorded).name))
+            self.ref_label.setText(
+                self.tr("Golden board as judged: {file}").format(file=breakable(Path(recorded).name))
+            )
         elif ref is not None or judged in JUDGED or self.golden_error is not None:
             self.ref_label.setText(self.tr("Reference: Golden board"))
         else:
@@ -402,7 +414,7 @@ class ComparePage(Page):
         self.ref_view.set_image(ref)
         self.golden_state = False
         if judged is not None and judged in JUDGED:
-            what = self.tr(JUDGED[judged]).format(file=Path(recorded or "").name)
+            what = self.tr(JUDGED[judged]).format(file=breakable(Path(recorded or "").name))
             do = self.tr(
                 "The verdict and the decision table are the stored ones; press Re-evaluate to inspect the board again"
                 " with today's Golden board."
@@ -469,7 +481,8 @@ class ComparePage(Page):
         self.ref_view.set_image(None)  # and so do its golden board and boxes, and why that pane had none (#247)
         self.ref_empty.hide()
         self.ref_label.setText(self.tr("Golden board"))
-        self.test_label.setText(self.tr("Test board: {file} (stored result)").format(file=Path(rec["image_path"]).name))
+        name = breakable(Path(rec["image_path"]).name)  # the labels over the pictures wrap a long name (#245)
+        self.test_label.setText(self.tr("Test board: {file} (stored result)").format(file=name))
         self._show_result(res)
         self._show_note(rec)
         self.run_in_background(self._load_stored, rec, inspection_id, on_result=self._on_stored_loaded)
@@ -552,10 +565,11 @@ class ComparePage(Page):
             parts.append(moved.format(model=version, revision=revision))
         golden = self.ctx.reference_image(bm)
         if rec["reference_path"] and golden != rec["reference_path"]:  # an Engineer or a training run set another
-            name = Path(golden).name if golden else self.tr("none")
+            name = breakable(Path(golden).name) if golden else self.tr("none")
             parts.append(self.tr("The board model's Golden board is now {file}.").format(file=name))
         if not any(p and Path(p).is_file() for p in (rec["diff_map_path"], rec["ai_map_path"])):
-            e = AoiError("AOI-CMP-001", file=Path(rec["image_path"]).name, days=self.ctx.settings.map_retention_days_ok)
+            name = breakable(Path(rec["image_path"]).name)  # shown only, never raised or logged, so it may wrap
+            e = AoiError("AOI-CMP-001", file=name, days=self.ctx.settings.map_retention_days_ok)
             parts.append(f"{e.code} {phrase_text(e.what)} {phrase_text(e.action)}")
         self.note.setText(" ".join(parts))
         self.note.show()
@@ -649,7 +663,7 @@ class ComparePage(Page):
         """Cancel on the busy overlay: the board named over the picture was not judged, so no verdict, table or picture
         of the board before stays under its name (#172); Re-evaluate inspects it."""
         self._clear_result()
-        file = Path(self.test_path).name if self.test_path else ""
+        file = breakable(Path(self.test_path).name) if self.test_path else ""
         what = self.tr("{file} was not inspected; press Re-evaluate to inspect it.").format(file=file)
         self.test_empty.show_state(self.tr("Inspection cancelled"), what, self.tr("Re-evaluate ›"), self.run)
 
@@ -660,7 +674,8 @@ class ComparePage(Page):
         if not self.test_path:  # only the Golden board was to be read: no result is shown to clear
             return
         self._clear_result()
-        heading, sentence = self.not_inspected(self.verdict, Path(self.test_path).name, e)
+        shown = breakable_names(e) if isinstance(e, AoiError) else e  # the file it names wraps in the pane (#245)
+        heading, sentence = self.not_inspected(self.verdict, breakable(Path(self.test_path).name), shown)
         what = " ".join([sentence, self.tr("Press Re-evaluate to inspect it again.")])
         self.test_empty.show_state(heading, what, self.tr("Re-evaluate ›"), self.run)
 

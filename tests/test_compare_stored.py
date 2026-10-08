@@ -28,6 +28,7 @@ from aoi.times import to_local
 from aoi.ui import theme
 from aoi.ui.pages.base import cell_item
 from aoi.ui.pages.compare import JUDGED, ComparePage
+from tests.conftest import wrapped
 from tests.regression import make_regression_set as rs
 from tests.test_alarms_and_errors import _log_rows
 from tests.test_no_freeze import board_5mp  # noqa: F401  # the 5 MP fixture
@@ -256,7 +257,7 @@ def test_req_cmp_003_golden_board_as_judged(
     qtbot.waitUntil(lambda: ctx.jobs.idle() and compare._bg is None, timeout=10000)
     shown: list[np.ndarray | None] = []
     monkeypatch.setattr(compare.ref_view, "set_image", lambda img, *a: shown.append(img))
-    as_judged = f"Golden board as judged: {golden.name}"
+    as_judged = f"Golden board as judged: {wrapped(golden.name)}"
     for press in (lambda: compare.show_stored(iid), compare.run):  # the stored result, then Re-evaluate
         press()
         qtbot.waitUntil(lambda: compare._bg is None, timeout=10000)
@@ -268,7 +269,7 @@ def test_req_cmp_003_golden_board_as_judged(
     _refuse_inspection(monkeypatch)
     compare.show_stored(iid)
     qtbot.waitUntil(lambda: compare._bg is None, timeout=10000)
-    assert f"Golden board is now {Path(other['path']).name}." in compare.note.text(), compare.note.text()
+    assert f"Golden board is now {wrapped(Path(other['path']).name)}." in compare.note.text(), compare.note.text()
     compare.on_board_model_changed(None)
     assert compare.as_judged is None, "another board model drops the golden board as judged"
     sql = "UPDATE inspections SET {} = NULL WHERE id=?"
@@ -290,7 +291,9 @@ def test_req_cmp_003_golden_board_as_judged(
         assert shown[-1] is None and compare.ref_empty.isVisible(), why
         assert compare.ref_label.text() == (as_judged if named else "Reference: Golden board"), why
         sentence = compare.ref_empty.sentence.text()
-        assert sentence.startswith(compare.tr(JUDGED[why]).format(file=golden.name)) and "Re-evaluate" in sentence
+        assert (
+            sentence.startswith(compare.tr(JUDGED[why]).format(file=wrapped(golden.name))) and "Re-evaluate" in sentence
+        )
         assert compare.ref_empty.link.isVisibleTo(compare.ref_empty), "the next step is one click away"
     assert "Golden board is now" not in compare.note.text(), "a record that names none says nothing of a change"
     logged = [r["reason"] for r in _log_rows(ctx, "compare.golden_board_not_as_judged")]
@@ -435,7 +438,7 @@ def test_req_cmp_003_another_records_golden_board_never_stays_beside_a_stored_re
     qtbot.waitUntil(lambda: ctx.jobs.idle() and compare._bg is None, timeout=20000)
     compare.show_stored(a)
     qtbot.waitUntil(lambda: compare._bg is None and bool(compare.ref_view._overlay_items), timeout=20000)
-    assert compare.ref_label.text() == f"Golden board as judged: {golden.name}"
+    assert compare.ref_label.text() == f"Golden board as judged: {wrapped(golden.name)}"
     boxes = list(compare.ref_view._overlay_items)  # A's dashed defect boxes, on A's golden board
 
     def refused(*args: object) -> None:
@@ -477,7 +480,9 @@ def test_req_cmp_003_another_records_golden_board_never_stays_beside_a_stored_re
         assert compare.ref_empty.sentence.text() == f"{code} {what} {do}", "the next step, as the dialog says (review)"
         assert [d[0].split()[0] for d in dialogs] == [code]
         return
-    assert compare.ref_label.text() == f"Golden board as judged: {judged.name}" and compare.ref_empty.isHidden()
+    assert (
+        compare.ref_label.text() == f"Golden board as judged: {wrapped(judged.name)}" and compare.ref_empty.isHidden()
+    )
     assert compare.as_judged is not None and np.array_equal(compare.as_judged[1], ctx.load_image(judged))
     assert compare.ref_view._pix is not None
     name = Path(str(rec[column])).name

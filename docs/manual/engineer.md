@@ -98,7 +98,10 @@ stays in use. Import photos of several different good boards, then train again.
 "Importing…" after a second and Cancel later; Cancel keeps the samples already added, and the status line says how
 many of the picked files were added. While any import runs, + OK Images, + NG Images, Import Folder… (also the link
 in an empty sample table) and Start Training are off, "Importing…" stays over the table when the page is shown again,
-and a Switch User does not stop it: the samples are recorded as added by the user who started the import.
+and a Switch User does not stop it: the samples are recorded as added by the user who started the import. The line
+over the sample table counts the OK and NG samples and names the reference image (under it, while fewer than 20 OK
+samples are imported, a tip says that 20 or more give a steadier threshold); a name too long for the line is cut at its
+end (…), and pointing at the line shows it whole.
 
 **Stop** ends a training run without saving anything: no AI model version, golden board or audit entry; the active AI
 model stays. Closing the app while work runs asks whether to stop it; an AI model test finishes its folder first.
@@ -130,9 +133,10 @@ board is refused with AOI-INSP-010, which names why each check did not run. A Go
 damaged refuses every board of its board model with AOI-INSP-009: put the file back, or choose another OK sample as
 the Golden board with Set Reference on Training. Training again does not cure it while the Golden board is one of the
 imported samples, since training reads every OK sample. The Recipe Editor and Compare show such a Golden board as one
-that cannot be opened, with the file's error code and the same steps, and the app still opens with no error dialog
-(#176), though the alarm log on Inspection records it once with that code (#195); an Operator reads the same with "Ask
-an Engineer". When shown again after Set Reference, a training run, or the
+that cannot be opened, with the file's error code and the same steps (a long file name in it wraps onto the next line
+after a _ or -), and the app still opens with no error dialog (#176), though the alarm log on Inspection records it
+once with that code (#195); an Operator reads the same with "Ask an Engineer". When shown again after Set Reference, a
+training run, or the
 file put back or replaced, both read the Golden board again and show it; Compare then judges the test board it could
 not, and the Recipe Editor drops a Try judged against the Golden board before. Until then a test board Compare
 was asked to judge shows "Board not inspected" in place of a verdict.
@@ -208,7 +212,9 @@ from the recipe whenever a new revision has been saved since (on Recipe Editor, 
 puts back the thresholds of an older revision; values tried and not saved stay while no revision is saved. Cancel on
 the busy overlay clears the verdict, table and picture and says the board named over the picture was not inspected;
 Re-evaluate inspects it. A test image that cannot be read does the same: the banner reads "· Not inspected" and the
-pane gives the error's code and what happened. (to be written: trying thresholds, picking another reference)
+pane gives the error's code and what happened. A long file name over a picture, in a message on a picture's pane or
+in the line under the verdict wraps onto the next line after a _ or -. (to be written: trying thresholds, picking
+another reference)
 
 ## 8. Logs and audit
 

@@ -95,7 +95,8 @@ inspects the board again from its image file. The Golden board pane names the fi
 that file has changed, cannot be read or is gone, or the result names none (it was judged without one, or saved before
 this version), the pane says "Golden board not available" and why, rather than show today's Golden board, and
 Re-evaluate under it inspects the board again with today's; the line under the verdict names today's when an Engineer
-or a training run has set another.
+or a training run has set another. A long file name over a picture, in a message on its pane or in the line under the
+verdict wraps onto the next line after a _ or -.
 
 ## 4. Alarms and messages
 

@@ -23,7 +23,7 @@ from aoi.core.recipe import Recipe
 from aoi.core.services import AppContext, ErrorReport
 from aoi.errors import CODES, QT_TRANSLATE_NOOP, AoiError, Phrase, joined
 from aoi.ui.errors import dialog_text, phrase_text
-from tests.conftest import TrainedModel
+from tests.conftest import TrainedModel, wrapped
 from tests.test_i18n import _messages
 from tests.test_req_done_in_v01 import _inspect_one, _window
 from tools.update_translations import TS_FILE
@@ -90,7 +90,7 @@ def test_req_set_005_error_dialogs_alarms_and_notes_show_in_the_ui_language(
             Path(str(path)).unlink()
         compare.show_stored(page.last_id)
         qtbot.waitUntil(ctx.jobs.idle, timeout=20000)
-        assert f"AOI-CMP-001 §The result of {ng_board.name} was saved without" in compare.note.text()
+        assert f"AOI-CMP-001 §The result of {wrapped(ng_board.name)} was saved without" in compare.note.text()
         _, pane, _, _ = compare.golden_board_unreadable(AoiError("AOI-INSP-001", path="gone.png"))
         assert pane.startswith("§AOI-INSP-001 §The file gone.png could not be opened as an image. ")
         bad = Path(trained_ctx.settings.workspace).with_name("board_0042.png")
@@ -107,7 +107,8 @@ def test_req_set_005_error_dialogs_alarms_and_notes_show_in_the_ui_language(
         assert page.empty.sentence.text().endswith(
             " §No board is left in the queue. Load Images… or Load Folder… to queue more boards."
         )  # the last board in the queue (#182)
-        assert compare.test_empty.sentence.text().startswith(what), compare.test_empty.sentence.text()
+        shown = what.replace(str(bad), wrapped(str(bad)))  # Compare's pane may break it after each _ and - (#245)
+        assert compare.test_empty.sentence.text().startswith(shown), compare.test_empty.sentence.text()
         win.set_user("engineer")
         win.navigate("Recipe Editor")
         editor = win.pages["Recipe Editor"]

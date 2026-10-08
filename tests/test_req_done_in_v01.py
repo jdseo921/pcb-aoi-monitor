@@ -31,7 +31,7 @@ from aoi.errors import AoiError
 from aoi.ui.main_window import MainWindow
 from aoi.ui.pages.inspection import InspectionPage
 from aoi.ui.workers import _live
-from tests.conftest import TrainedModel, engineer
+from tests.conftest import TrainedModel, engineer, wrapped
 
 BOARD = "TINY"
 
@@ -297,7 +297,7 @@ def test_req_cmp_006_any_stored_ok_sample_can_be_the_reference_and_metrics_recom
     assert {"SSIM similarity", "Changed area %", "Alignment inliers"} <= {
         c.name for c in want.checks if c.value != golden[c.name]
     }
-    assert page.ref_label.text() == f"Reference: {Path(sample).name}"
+    assert page.ref_label.text() == f"Reference: {wrapped(Path(sample).name)}"
 
 
 def test_req_rcp_002_five_roi_types_and_five_fields_save_and_reload(

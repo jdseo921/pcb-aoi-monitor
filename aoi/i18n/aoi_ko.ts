@@ -27,7 +27,7 @@
 <context>
     <name>ComparePage</name>
     <message>
-        <location filename="../ui/pages/compare.py" line="+55"/>
+        <location filename="../ui/pages/compare.py" line="+65"/>
         <source>Side by side</source>
         <translation type="unfinished"></translation>
     </message>
@@ -99,12 +99,12 @@
     <message>
         <location line="+3"/>
         <location line="+51"/>
-        <location line="+328"/>
+        <location line="+330"/>
         <source>Golden board</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-378"/>
+        <location line="-380"/>
         <source>AI model</source>
         <translation type="unfinished"></translation>
     </message>
@@ -160,12 +160,12 @@
     </message>
     <message>
         <location line="+15"/>
-        <location line="+533"/>
+        <location line="+538"/>
         <source>Test board</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-527"/>
+        <location line="-532"/>
         <source>Inspecting…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -281,12 +281,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+2"/>
+        <location line="+3"/>
         <source>Golden board as judged: {file}</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+2"/>
+        <location line="+3"/>
         <source>Reference: Golden board</source>
         <translation type="unfinished"></translation>
     </message>
@@ -307,14 +307,14 @@
     </message>
     <message>
         <location line="+0"/>
-        <location line="+127"/>
-        <location line="+116"/>
-        <location line="+11"/>
+        <location line="+128"/>
+        <location line="+117"/>
+        <location line="+12"/>
         <source>Re-evaluate ›</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-240"/>
+        <location line="-243"/>
         <source>Train an AI model on Training.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -339,7 +339,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+27"/>
+        <location line="+28"/>
         <source>Test board: {file} (stored result)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -386,7 +386,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+16"/>
+        <location line="+17"/>
         <source>Why this board is {verdict}:</source>
         <translation type="unfinished"></translation>
     </message>
@@ -406,7 +406,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+10"/>
+        <location line="+11"/>
         <source>Press Re-evaluate to inspect it again.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -616,7 +616,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/compare.py" line="-70"/>
+        <location filename="../ui/pages/compare.py" line="-71"/>
         <source>Changing recipes</source>
         <translation type="unfinished"></translation>
     </message>
@@ -881,7 +881,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+7"/>
+        <location line="+1"/>
+        <source>The AI model, recipe or Golden board of {board} changed during a run (training ended, a version was activated, a recipe saved or a Golden board set), so {file} and the boards after it are judged with what is active now; the boards before keep what judged them.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+6"/>
         <source>No action is needed: each record names the AI model version, recipe revision and Golden board that judged it.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1407,12 +1412,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+114"/>
-        <source>The AI model, recipe or Golden board of {board} changed during a run (training ended, a version was activated, a recipe saved or a Golden board set), so {file} and the boards after it are judged with what is active now; the boards before keep what judged them.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+20"/>
+        <location line="+134"/>
         <source>The decision table is the stored one; use Side by side or Defect boxes only, or inspect the board again on Inspection to see its heatmaps.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1587,7 +1587,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/training.py" line="+266"/>
+        <location filename="../ui/pages/training.py" line="+300"/>
         <source>{code} {title}</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2436,12 +2436,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+186"/>
-        <source>These results were judged by {run_model}, recipe revision {run_recipe} and {run_golden}; {board_model} now uses {model}, recipe revision {recipe} and {golden}. Rows are not previewed; select one for Run Test Again, which tests the run&apos;s folder with what is in use now.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="-270"/>
+        <location line="-84"/>
         <source>Matches label</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2507,7 +2502,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+74"/>
+        <location line="+16"/>
+        <source>These results were judged by {run_model}, recipe revision {run_recipe} and {run_golden}; {board_model} now uses {model}, recipe revision {recipe} and {golden}. Rows are not previewed; select one for Run Test Again, which tests the run&apos;s folder with what is in use now.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+58"/>
         <source>No AI model for {board_model} yet</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2571,7 +2571,7 @@
 <context>
     <name>NgDialog</name>
     <message>
-        <location filename="../ui/pages/training.py" line="-213"/>
+        <location filename="../ui/pages/training.py" line="-245"/>
         <source>Label NG images</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2619,7 +2619,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/base.py" line="+113"/>
+        <location filename="../ui/pages/base.py" line="+128"/>
         <source>No board model yet</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2649,7 +2649,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+17"/>
+        <location line="+18"/>
         <source>The Golden board for {board_model} cannot be opened</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2659,7 +2659,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+5"/>
+        <location line="+6"/>
         <source>{code} {what} Ask an Engineer to put the file back, or to choose another OK sample with Set Reference on Training.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2684,7 +2684,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/compare.py" line="-523"/>
+        <location filename="../ui/pages/compare.py" line="-527"/>
         <source>Compare</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2729,7 +2729,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/training.py" line="+8"/>
+        <location filename="../ui/pages/training.py" line="+37"/>
         <source>Training</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3065,7 +3065,7 @@
 <context>
     <name>Role</name>
     <message>
-        <location filename="../ui/pages/base.py" line="-249"/>
+        <location filename="../ui/pages/base.py" line="-266"/>
         <source>Operator</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3319,12 +3319,17 @@
     </message>
     <message>
         <location line="+1"/>
-        <location line="+359"/>
+        <location line="+363"/>
         <source>Import Folder…</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-351"/>
+        <location line="-357"/>
+        <source>Tip: 20+ OK images give a steadier threshold</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+5"/>
         <location line="+52"/>
         <source>ID</source>
         <translation type="unfinished"></translation>
@@ -3527,7 +3532,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+31"/>
+        <location line="+32"/>
         <source>Add at least 20 OK boards with + OK Images or Import Folder…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3547,12 +3552,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+4"/>
-        <source>tip: 20+ OK images give a steadier threshold</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+21"/>
+        <location line="+22"/>
         <source>No AI model yet</source>
         <translation type="unfinished"></translation>
     </message>
