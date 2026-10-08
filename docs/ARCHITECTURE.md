@@ -446,7 +446,11 @@ on the Recipe Editor under the size field, the code, the title and what to do (t
 with a ✓ from 4 px), and on Compare in one line, the code, the title and the least size, at the top of the "why" box
 while Try other thresholds shows (`DefectSizeField.noticeChanged`, `ComparePage._show_why`), so it takes no row of the
 panel, which has none to give at 1600 x 900, and the decision table shows as many rows whole as without it.
-`save_recipe` saves the recipe all the same, with the code in its audit entry's reason.
+`save_recipe` saves the recipe all the same, with the code in its audit entry's reason. The Recipe Editor's Thresholds
+tab is a scroll area (`scrolled()` in `aoi/ui/pages/base.py`, as wide as the tab): where the window is too short for
+its rows, it scrolls rather than squeeze one, as at 1600 x 900 with Windows' fonts, taller than DejaVu Sans, while the
+notice and the AI score threshold's note show (597 of the 615 px they need); a field taking the focus, by Tab or a
+click, shows whole.
 
 Verdict: **NG** if any check is NG; else **WARN** if any check is within the warning band (default 80 % of a
 threshold) or a non-minor defect region exists; else **OK**. Colours follow GUI §4.1: green OK, red NG, yellow WARN.

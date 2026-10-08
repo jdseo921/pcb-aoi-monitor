@@ -3098,7 +3098,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/base.py" line="+129"/>
+        <location filename="../ui/pages/base.py" line="+132"/>
         <source>No board model yet</source>
         <translation type="unfinished"></translation>
     </message>
