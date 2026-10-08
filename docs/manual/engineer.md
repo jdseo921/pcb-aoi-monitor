@@ -59,7 +59,8 @@ start too: the app starts with the Admin added first while the workspace has no 
 
 **Names.** A new board model's name must differ from every existing one in more than upper and lower case: `tbox-a1`
 next to `TBOX-A1` is refused with AOI-TRN-005, since Windows would store the AI model and golden board files of both as
-the same files.
+the same files. It is also the name of the board model's folders in the workspace, so a name with `/` or `\`, one of
+`: * ? " < > |`, a dot or space at its end, or a device name such as `CON` or `COM1` is refused with AOI-TRN-019.
 
 Until a board model exists, Home, Inspection, Training, AI Model Test and Recipe Editor say so and offer
 **+ New board model**, which an Engineer or Admin uses; an Operator is told to ask an Engineer. Start and Next Board
@@ -109,16 +110,26 @@ and the sample that is the reference cannot be relabelled NG or removed until an
 with several rows selected, Mark NG and Remove change all the others and leave the reference as it is. Remove asks
 first, with No as the default: Enter keeps the samples.
 
-**Importing images** with + OK or + NG is all or nothing: if one picked file cannot be copied (gone, unreadable, or
-the workspace drive full), AOI-TRN-008 names it and none of the picked images is imported, so importing them again adds
-each once. **Import Folder** imports one image at a time, so Cancel keeps what was imported, and the status bar says
-how many OK and NG images that was. A file it cannot copy stops it with AOI-TRN-009, and any other error after an
-image went in with AOI-TRN-010; both say how many images before it were imported. They are in the sample table, and
-importing the folder again skips them: an import skips every image the board model already has (the same SHA-256),
-under any file name or label, and one picked twice.
-An error in an import you cancelled opens no message, but it is in the log and the alarm list.
+**Importing images.** **Add OK Images…** (Ctrl+O), **Add NG Images…** (Ctrl+N) and **Import Folder…**
+(Ctrl+Shift+O) open the import sheet above the sample table, with the files picked or found in the folder; no dialog
+opens over the file picker. Import Folder… labels each image by its sub-folders: under `ok/` or `good/` OK, under `ng/`,
+`bad/`, `defect/` or `defects/` NG, with the defect type of its folder when that folder is named after one of the 33
+types (`ng/solder_bridge/`, spaces or underscores, any case); an image in neither is "unsorted: pick a label". **View**
+(Top for every new batch) and **Label for all** set every row; **Defect type for NG files** (a category, then a type
+with its severity) sets every NG row; a row's own label, type or view is picked in its cell (tap a selected cell,
+double-click it or press F2). **Import** (Enter) stays grey until every NG file has one of the 33 types; "Unknown" is
+not offered. The files are copied into the workspace one at a time in the background and are never changed where they
+are. Each row then says "copied", "not imported", or the code and title of what refused it (pointing at it shows what
+to do): a file Inspection would refuse (not an image, cut short, over the size limits: AOI-INSP-001, -004 to -007), an
+image the board model already has (the same SHA-256, under any file name or label, and one picked twice: AOI-TRN-015)
+or a file with no label (AOI-TRN-016); the others go in. **Copy List** copies every row with what happened; Import again
+imports the rest and skips the images already imported. **Cancel** (Esc) while it runs keeps the images already copied,
+and the status line says how many OK and NG images that was; once it is done, Cancel or Close (Esc) closes the sheet.
+A file that cannot be copied stops the import with AOI-TRN-009, and any other error after an image went in with
+AOI-TRN-010; both say how many images before it were imported, which stay in the sample table. An error in an import
+you cancelled opens no message, but it is in the log and the alarm list.
 
-(to be written: import, OK/NG/UNSURE labels, defect boxes, second-person check, freezing a dataset version,
+(to be written: OK/NG/UNSURE labels, defect boxes, second-person check, freezing a dataset version,
 locking the validation set)
 
 ## 4. Training and AI model versions
@@ -127,18 +138,16 @@ locking the validation set)
 of 0 because the OK images are copies of one photo, it stops with AOI-TRN-004: nothing is saved and the active AI model
 stays in use. Import photos of several different good boards, then train again.
 
-**+ OK Images** and **+ NG Images** copy the picked files in the background (#194): the sample table shows
-"Importing…" after a second and Cancel later; Cancel keeps the samples already added, and the status line says how
-many of the picked files were added. While any import runs, + OK Images, + NG Images, Import Folder… (also the link
+**An import** runs in the background (#194): the sample table shows "Importing…" after a second, and progress, the
+time left and Cancel after ten. While any import runs, Add OK Images…, Add NG Images…, Import Folder… (also the link
 in an empty sample table) and Start Training are off, "Importing…" stays over the table when the page is shown again,
 and a Switch User does not stop it: the samples are recorded as added by the user who started the import. The line
 over the sample table counts the OK and NG samples and names the reference image (under it, while fewer than 20 OK
 samples are imported, a tip says that 20 or more give a steadier threshold); a name too long for the line is cut at its
 end (…), and pointing at the line shows it whole. If the system refuses the path of a sample's copy in the workspace as
-too long (a workspace folder with a long path, on Windows with long paths off), + OK Images and + NG Images add none of
-the picked files and show AOI-TRN-011. Import Folder… keeps the images it imported before that file and names
-AOI-TRN-011 in AOI-TRN-010; when that file was the first, it shows AOI-TRN-011 itself, which counts every image in the
-folder. The steps are those of AOI-INSP-014 (section 8, Evidence files).
+too long (a workspace folder with a long path, on Windows with long paths off), the import keeps the images it
+imported before that file and names AOI-TRN-011 in AOI-TRN-010; when that file was the first, it shows AOI-TRN-011
+itself, which counts every image it was to import. The steps are those of AOI-INSP-014 (section 8, Evidence files).
 
 **Stop** ends a training run without saving anything: no AI model version, golden board or audit entry; the active AI
 model stays. Closing the app while work runs asks whether to stop it; an AI model test finishes its folder first.

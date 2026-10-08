@@ -30,9 +30,10 @@ from ..config import Settings, resolve_device
 from ..data import atomic
 from ..data.db import Database, DbError, is_busy, new_uuid
 from ..data.errors import WorkspaceError
-from ..data.paths import to_stored
+from ..data.paths import inside, one_folder_name, to_stored
 from ..data.workspace_lock import WorkspaceLock
 from ..errors import QT_TRANSLATE_NOOP, AoiError, Phrase, joined
+from ..hal import VIEWS
 from ..times import local_date, now_utc
 from . import anomaly, imaging
 from .compare import Region, changed_regions
@@ -41,7 +42,7 @@ from .inspector import NG, OK, WARN, AiEvidence, InspectionResult, Inspector, Ju
 from .jobs import JobCancelled, Jobs
 from .maps import load_maps, map_paths, picture_shape, save_maps
 from .recipe import Recipe
-from .sample_import import REFUSED, ImportFile, ImportReport
+from .sample_import import LABELS, REFUSED, ImportFile, ImportReport
 
 ALARM_LIMIT = 1000  # REQ-INSP-006: the alarms a screen shows and that survive a restart
 BUSY_ALARM_WAIT_MS = 200  # how long the alarm of a locked database's error, or an Inspection alarm, waits, not 5 s
@@ -346,9 +347,17 @@ class AppContext:
         true the files not yet copied are left out, the ones copied are added and the audit entry says so
         (`cancelled`); `import_files` passes one file a call and stops between calls, so the entries it writes never
         say so."""
-        self._refuse_case_variant(board_model)  # a new board model is created by its first import
-        self._refuse_untyped(paths[0] if paths else "", label, defect_type)
+        self._refuse_unsafe_name(board_model)  # a new board model is created by its first import
+        self._refuse_case_variant(board_model)
+        first = paths[0] if paths else ""
+        if label not in LABELS:  # the copy's folder is named after it, and the samples table holds no other
+            raise AoiError("AOI-TRN-018", path=first, label=label, labels=", ".join(LABELS))
+        self._refuse_untyped(first, label, defect_type)
+        if side not in VIEWS:  # a dataset version names its folders by view (S35): no other name reaches a path
+            raise AoiError("AOI-TRN-017", path=first, view=side, views=", ".join(VIEWS))
         dest = self.settings.images_dir / board_model / label
+        if not inside(dest, self.settings.images_dir):  # a board model named before names were checked (#112)
+            raise AoiError("AOI-TRN-019", name=board_model)
         known: dict[str, dict[str, Any]] = {}  # each image copied so far, by SHA-256: a second one is skipped too
         copies: list[tuple[Path, str, str]] = []  # each copy, its sample UUID (which its file name carries, #245), hash
         stopped, kept = False, list[tuple[str, dict[str, Any]]]()  # each image skipped: its SHA-256, the sample with it
@@ -401,7 +410,8 @@ class AppContext:
         -007, decision Q30) and hashed; an image already imported, one `board_model` has (one indexed lookup) or one
         of `known`, copies nothing and comes back with that sample (decision Q31). The copy is a crash-safe write; then
         the source and the copy are read again, and a SHA-256 other than the one checked (a writer still at the source)
-        refuses the file with AOI-TRN-014 and removes the copy. A copy that cannot be written raises AOI-TRN-008, or
+        refuses the file with AOI-TRN-014 and removes the copy. A source lost since its check (removed, unreadable) is
+        refused with AOI-INSP-001, as Inspection's check would; a copy that cannot be written raises AOI-TRN-008, or
         AOI-TRN-011 when the system refuses its path as too long (#245)."""
         data = imaging.checked_bytes(src, self.settings.max_image_megapixels, self.settings.max_image_megabytes)
         digest = hashlib.sha256(data).hexdigest()
@@ -411,7 +421,9 @@ class AppContext:
         try:
             atomic.copy_file(src, target)
         except OSError as e:  # gone, unreadable, the workspace drive full, or a path the system refuses
-            if _too_long(e) and str(e.filename) != str(src):  # the copy's path, not the picked file's (#245)
+            if str(e.filename) == str(src):  # the source's own: that file's to fix, listed by import_files
+                raise AoiError("AOI-INSP-001", str(e), path=str(src)) from e
+            if _too_long(e):  # the copy's path (#245)
                 where = {"workspace": str(self.settings.root), "count": count}
                 raise AoiError("AOI-TRN-011", str(e), path=str(src), **where) from e
             why = e.strerror or str(e)
@@ -1126,10 +1138,17 @@ class AppContext:
         """Create a board model unless it exists."""
         if name in self.db.board_models():
             return
+        self._refuse_unsafe_name(name)
         self._refuse_case_variant(name)
         self.db.ensure_board_model(name)
         self.audit("board_model.create", "board_model", name, None, {"name": name})
         self._ensure_recipe(name)
+
+    def _refuse_unsafe_name(self, name: str) -> None:
+        """Refuse a new board model whose name cannot name its folders under images/ and models/ on Windows as on Linux
+        (AOI-TRN-019, `one_folder_name`): a name with / or .., a device name such as CON, one ending with a dot."""
+        if not one_folder_name(name) and name not in self.db.board_models():
+            raise AoiError("AOI-TRN-019", name=name)
 
     def _refuse_case_variant(self, name: str) -> None:
         """Refuse a new board model whose name differs from an existing one's only in case (AOI-TRN-005): on Windows,

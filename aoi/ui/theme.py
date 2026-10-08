@@ -95,6 +95,12 @@ QPushButton { background: $BG_BUTTON; border: 1px solid $LINE_STRONG; border-rad
               min-width: ${BUTTON_W}px; min-height: ${BUTTON_H}px; padding: 0 ${SPACE}px; }
 QPushButton:hover { background: $BG_BUTTON_HOVER; }
 QPushButton[sizeClass="T"], QComboBox[sizeClass="T"], QRadioButton[sizeClass="T"] { min-height: ${TARGET_H}px; }
+QRadioButton[sizeClass="T"] { background: $BG_BUTTON; border: 1px solid $LINE_STRONG; border-radius: ${RADIUS}px;
+                              padding: 0 ${SPACE}px; }
+QRadioButton[sizeClass="T"]::indicator { width: 0; height: 0; }
+QRadioButton[sizeClass="T"]:checked { background: $BG_SELECTED; border-color: $BG_SELECTED; color: $ON_DARK; }
+QRadioButton[sizeClass="T"]:focus { border-color: $TEXT; }
+QRadioButton[sizeClass="T"]:disabled { color: $TEXT_DISABLED; background: $BG_RAISED; }
 QPushButton[sizeClass="T+"] { min-height: ${RUN_CONTROL_H}px; }
 QCheckBox[sizeClass="F"] { min-height: ${FIELD_H}px; }
 QPushButton:disabled { color: $TEXT_DISABLED; background: $BG_RAISED; }

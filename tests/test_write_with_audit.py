@@ -156,7 +156,7 @@ def test_req_trn_001_a_folder_import_that_fails_part_way_says_what_was_imported(
 
     def copy_or_refuse(src: str | Path, dst: str | Path) -> None:
         if Path(src).name == "ok_2.png":
-            raise PermissionError(13, "Permission denied", str(src))
+            raise PermissionError(13, "Permission denied", str(dst))  # the workspace's: the source's is listed
         copy(src, dst)
 
     monkeypatch.setattr(atomic, "copy_file", copy_or_refuse)

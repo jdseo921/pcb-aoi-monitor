@@ -235,14 +235,15 @@ def test_req_trn_001_a_copy_the_system_refuses_as_too_long_has_its_own_code(
 ) -> None:
     """An import whose copy the system refuses as too long stops with AOI-TRN-011: ENAMETOOLONG, or on Windows a file
     not found at a path of 260 characters or more. It names the picked file and the workspace folder, gives copying the
-    workspace as the step, not AOI-TRN-008's free space, and imports nothing. A picked file whose own path is refused,
-    or a copy not found at 259 characters, stays AOI-TRN-008. Before: AOI-TRN-008 for each."""
+    workspace as the step, not AOI-TRN-008's free space, and imports nothing. A copy not found at 259 characters stays
+    AOI-TRN-008, and a picked file whose own path is refused is that file's, AOI-INSP-001 (S31). Before: AOI-TRN-008
+    for each."""
     copy = str(ctx.settings.images_dir / BOARD / "OK" / ".copy.tmp")
     cases = [
         (False, OSError(errno.ENAMETOOLONG, os.strerror(errno.ENAMETOOLONG), copy), "AOI-TRN-011"),
         (True, FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), "x" * 260), "AOI-TRN-011"),
         (True, FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), "x" * 259), "AOI-TRN-008"),
-        (False, OSError(errno.ENAMETOOLONG, os.strerror(errno.ENAMETOOLONG), str(ng_board)), "AOI-TRN-008"),
+        (False, OSError(errno.ENAMETOOLONG, os.strerror(errno.ENAMETOOLONG), str(ng_board)), "AOI-INSP-001"),
     ]
     for windows, refusal, code in cases:
 

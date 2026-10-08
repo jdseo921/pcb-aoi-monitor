@@ -278,6 +278,8 @@ def prepare(win: MainWindow, title: str, dataset: Path) -> None:
             wait_until(lambda: page.res is not None)
             assert page.res.elapsed_ms == FIXED_MS, "the Compare run was not pinned"
     elif title == "Training":
+        page.import_from(str(dataset / "train"))  # the import sheet open on ok/ and ng/, its NG rows waiting for a type
+        page.sheet.table.clearFocus()  # the sheet takes the keys: let go, or the next page drawn shows a field's caret
         page.bar.setRange(0, TINY_EPOCHS)
         page.bar.setValue(TINY_EPOCHS)  # as a finished run leaves it: the percentage on the accent chunk (#203)
     elif title == "Logs & Export":

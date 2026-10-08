@@ -511,6 +511,38 @@ CODES: dict[str, ErrorCode] = {
             ),
         ),
         ErrorCode(
+            "AOI-TRN-017",
+            QT_TRANSLATE_NOOP("Errors", "View not known"),
+            QT_TRANSLATE_NOOP("Errors", '{path} was not imported: its view "{view}" is not one of {views}.'),
+            QT_TRANSLATE_NOOP(
+                "Errors", "Give the image the view it was taken from, one of {views}, and import it again."
+            ),
+        ),
+        ErrorCode(
+            "AOI-TRN-018",
+            QT_TRANSLATE_NOOP("Errors", "Label not known"),
+            QT_TRANSLATE_NOOP(
+                "Errors", '{path} was not taken as a sample: its label "{label}" is not one of {labels}.'
+            ),
+            QT_TRANSLATE_NOOP("Errors", "Give it the label OK or NG, then try again."),
+        ),
+        ErrorCode(
+            "AOI-TRN-019",
+            QT_TRANSLATE_NOOP("Errors", "Board model name not allowed"),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                'The board model name "{name}" cannot be the name of its folders in the workspace: a folder name is'
+                ' not empty, holds none of / : * ? " < > and no backslash, vertical bar or control character, does not'
+                " end with a dot or a space, and is not a name the system keeps for a device (CON, NUL, COM1 and the"
+                " like).",
+            ),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Use another name, such as TBOX-A1 Rev2: create the board model with it and add its images there."
+                " Nothing was written.",
+            ),
+        ),
+        ErrorCode(
             "AOI-TST-001",
             QT_TRANSLATE_NOOP("Errors", "AI model, recipe, scale or Golden board changed since the run"),
             QT_TRANSLATE_NOOP(
