@@ -423,6 +423,11 @@ The requirement register is `docs/requirements/stage1.md`; `tools/trace_matrix.p
 from it on every CI run (the `trace-matrix` artifact). The table below is the v0.1 draft's informal check against
 the source specifications and stays as history.
 
+Speed (REQ-INSP-007): the CI job "Performance (base vs head)" times `Inspector.inspect` on the regression set's 40
+boards at 0.3 MP and 5 MP for the base commit and the head on one runner (`tools/perf_compare.py`) and fails when the
+head's median or 95th percentile at either size is over 1.10 times the base's; `tests/perf/test_timing.py` checks a
+developer machine against its own `baseline.json` entry. Neither is the product's speed (`tests/perf/README.md`).
+
 | Requirement | Where | Status |
 |---|---|---|
 | Image upload PNG/JPG | Training, Inspection | Done (also BMP/TIFF) |
