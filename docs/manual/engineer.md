@@ -78,7 +78,17 @@ damaged refuses every board of its board model with AOI-INSP-009: put the file b
 the Golden board with Set Reference on Training. Training again does not cure it while the Golden board is one of the
 imported samples, since training reads every OK sample.
 
-(to be written: ROIs, thresholds, Test Run, revisions, the AOI checklist)
+The Selected ROI form edits the ROI selected in the ROI table: Apply and Delete are off while none is, and Delete
+leaves none selected. Height and Volume min and max (stored now, checked from Stage 2) are 0 or more, with min not above max; "—",
+one step below 0, leaves a limit unset. Apply refuses other values with AOI-RCP-002 and changes nothing.
+
+Each Save Recipe stores a new revision. When a revision was saved after the Recipe Editor loaded its own, for example
+with Save to Recipe on Compare, the editor shows it when opened again; if the editor holds changes not yet saved, it asks
+first. Choosing No keeps them on screen, but Save Recipe then refuses (AOI-RCP-001) until the newer revision is loaded,
+so a save never undoes another without notice. Picking another board model cancels a Try Recipe… still running and
+clears the last Try's verdict.
+
+(to be written: drawing ROIs, thresholds, Test Run, revision history, the AOI checklist)
 
 ## 6. AI model test and reports
 
