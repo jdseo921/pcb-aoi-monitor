@@ -8,8 +8,13 @@ grab. Contrast is the WCAG 2.1 ratio between a widget's background (its most com
 farthest from the background in luminance); bold or 18 pt text may read at 3:1 (WCAG 1.4.3, large text) and a disabled
 control is exempt, but a disabled button must show the disabled fill, so it never looks ready to press. A progress bar's
 percentage is measured in its centred text, and the prepared states hold a selected row (Inspection) and a bar past
-half (Training). Text drawn on an image (QGraphics items) is measured against the image area's background. The walk
-runs on Linux and Windows: sizes and colours do not depend on the font file.
+half (Training). Text drawn on an image (QGraphics items) is measured against the image area's background. Every list
+item with text is measured, the sidebar's section headings too; only a sidebar entry of a page the role may not open
+is exempt, as a disabled control, and it must be drawn in the disabled grey. The walk opens every drop-down list and
+every date field's calendar on the page, and one text field's right-click menu, which are windows of their own and not
+in the page grab, and measures each entry, day and weekday name, the month and year (at rest and under the pointer) and
+the month list; the calendar's previous and next month arrows, a control's graphic, need 3:1 (WCAG 1.4.11) (#239). The
+walk runs on Linux and Windows: sizes and colours do not depend on the font file.
 """
 
 from __future__ import annotations
@@ -19,14 +24,16 @@ from collections import Counter
 from pathlib import Path
 
 import numpy as np
-from PySide6.QtCore import QRect, Qt
+from PySide6.QtCore import QPoint, QRect, Qt
 from PySide6.QtGui import QColor, QFont, QFontDatabase, QFontInfo, QImage
+from PySide6.QtTest import QTest
 from PySide6.QtWidgets import (
     QAbstractButton,
     QAbstractItemView,
     QAbstractSpinBox,
     QApplication,
     QComboBox,
+    QDateEdit,
     QFrame,
     QGraphicsSimpleTextItem,
     QGraphicsView,
@@ -35,13 +42,18 @@ from PySide6.QtWidgets import (
     QLabel,
     QLineEdit,
     QListWidget,
+    QListWidgetItem,
+    QMenu,
     QPlainTextEdit,
     QProgressBar,
     QPushButton,
     QStatusBar,
     QTabBar,
+    QTableView,
     QTableWidget,
+    QTableWidgetItem,
     QTextEdit,
+    QToolButton,
     QWidget,
 )
 from pytestqt.qtbot import QtBot
@@ -55,6 +67,7 @@ from tools import render_screens
 LINUX = sys.platform == "linux"
 LARGE_PT = 18  # WCAG 2.1: large text is 18 pt, or 14 pt bold
 MIN_RATIO, LARGE_RATIO = 4.5, 3.0
+GRAPHIC_RATIO = 3.0  # WCAG 2.1 1.4.11: the graphic that identifies a control, such as an arrow, against its ground
 TEXT_WIDGETS = (
     QLabel, QAbstractButton, QComboBox, QLineEdit, QAbstractSpinBox, QGroupBox, QTabBar, QHeaderView, QAbstractItemView,
     QProgressBar, QPlainTextEdit, QTextEdit, QStatusBar,
@@ -150,6 +163,16 @@ def _check_contrast(region: np.ndarray | None, font: QFont, name: str, seen: Cou
     return [f"{name}: {fg} on {bg} reads at {ratio:.1f}:1, needs {need}:1"] if need else []
 
 
+def _check_graphic(region: np.ndarray | None, name: str, seen: Counter) -> list[str]:
+    """A control drawn with no text, such as an arrow: its graphic reads at 3:1 or more on its ground (#239)."""
+    seen["contrast"] += 1
+    measured = _contrast(region) if region is not None else None
+    if measured is None:
+        return [f"{name}: no graphic to see"]
+    ratio, bg, fg = measured
+    return [f"{name}: {fg} on {bg} reads at {ratio:.1f}:1, needs {GRAPHIC_RATIO}:1"] if ratio < GRAPHIC_RATIO else []
+
+
 def _covered(win: QWidget, w: QWidget) -> bool:
     """Another widget (an empty state, a busy overlay) is drawn over the middle of `w`: the pixels are not its own."""
     top = win.childAt(w.mapTo(win, w.rect().center()))
@@ -195,11 +218,13 @@ def _check_widget(where: str, win: QWidget, shot: np.ndarray, w: QWidget, seen: 
         items = [w.item(i) for i in range(w.count())] if isinstance(w, QListWidget) else [
             w.item(r, c) for r in range(w.rowCount()) for c in range(w.columnCount())
         ]  # fmt: skip
-        for it in items:
-            if it is not None and it.text() and it.flags() & Qt.ItemFlag.ItemIsEnabled:
-                rect = w.visualItemRect(it) & w.viewport().rect()
-                font = it.font() if it.data(Qt.ItemDataRole.FontRole) is not None else w.font()
-                out += _check_contrast(_region(shot, win, w.viewport(), rect), font, f"{name} item '{it.text()}'", seen)
+        for it in (it for it in items if it is not None and it.text()):
+            region = _region(shot, win, w.viewport(), w.visualItemRect(it) & w.viewport().rect())
+            font = it.font() if it.data(Qt.ItemDataRole.FontRole) is not None else w.font()
+            if not _locked_page(w, it):
+                out += _check_contrast(region, font, f"{name} item '{it.text()}'", seen)
+            elif (measured := _contrast(region) if region is not None else None) and measured[2] != theme.TEXT_DISABLED:
+                out.append(f"{name} item '{it.text()}': locked, but drawn in {measured[2]}, not {theme.TEXT_DISABLED}")
     elif isinstance(w, QGraphicsView):
         bg = w.backgroundBrush().color().name()
         for item in w.scene().items():
@@ -211,6 +236,101 @@ def _check_widget(where: str, win: QWidget, shot: np.ndarray, w: QWidget, seen: 
                 colour = QColor(item.brush().color()).name()
                 if (need := _needs(_ratio(colour, bg), item.font())) is not None:
                     out.append(f"{label}: {colour} on {bg} reads at {_ratio(colour, bg):.1f}:1, needs {need}:1")
+    return out
+
+
+def _locked_page(w: QWidget, it: QListWidgetItem | QTableWidgetItem) -> bool:
+    """A sidebar entry of a page the role may not open: an inactive control, so exempt from contrast (WCAG 1.4.3), but
+    it must look disabled. Every other item with text is measured, the sidebar's section headings included (#239)."""
+    page = it.data(Qt.ItemDataRole.UserRole)
+    return w.objectName() == "nav" and bool(page) and not it.flags() & Qt.ItemFlag.ItemIsEnabled
+
+
+def check_popup(where: str, combo: QComboBox, seen: Counter) -> list[str]:
+    """Every entry of the list a drop-down opens. The list is a window of its own, so it is not in the page grab: the
+    walk opens it, scrolls each entry into view and grabs it, and closes it again (#239)."""
+    combo.showPopup()
+    QApplication.processEvents()
+    view = combo.view()
+    port = view.viewport()
+    out: list[str] = []
+    for r in range(combo.count()):
+        index = combo.model().index(r, combo.modelColumn())
+        view.scrollTo(index)  # an entry below a long list's fold is measured too, never only counted
+        region = _region(_pixels(port.grab().toImage()), port, port, view.visualRect(index))
+        seen["popup_rows"] += 1
+        name = f"{where}: drop-down '{_text(combo)}' entry '{combo.itemText(r)}'"
+        out += _check_contrast(region, view.font(), name, seen) if region is not None else [f"{name}: not shown"]
+    combo.hidePopup()
+    return out
+
+
+def check_calendar(where: str, edit: QDateEdit, seen: Counter) -> list[str]:
+    """Every day and weekday name, the month and year at rest and under the pointer, the previous and next month arrows
+    and the month menu of the calendar a date field opens, clicked open on its arrow as a user does (#239)."""
+    arrow = QPoint(edit.width() - 4, edit.height() // 2)  # the drop-down arrow at the right edge; no key opens it
+    QTest.mouseClick(edit, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, arrow)
+    cal = edit.calendarWidget()
+    QApplication.processEvents()
+    assert cal.isVisible(), f"{where}: the calendar did not open"
+    out: list[str] = []
+    table = cal.findChild(QTableView, "qt_calendar_calendarview")
+    shot, model = _pixels(table.viewport().grab().toImage()), table.model()
+    for r in range(model.rowCount()):
+        for c in range(model.columnCount()):
+            seen["calendar_cells"] += 1
+            index = model.index(r, c)
+            name = f"{where}: calendar cell '{index.data()}' (row {r})"
+            region = _region(shot, table.viewport(), table.viewport(), table.visualRect(index))
+            out += _check_contrast(region, table.font(), name, seen)
+    bar = cal.findChild(QWidget, "qt_calendar_navigationbar")
+    for b in (b for b in bar.findChildren(QToolButton) if b.isVisible()):
+        for hover in (False, True):  # a mouse user's pointer rests on the month or year just before the click
+            b.setAttribute(Qt.WidgetAttribute.WA_UnderMouse, hover)  # what Qt sets on Enter: State_MouseOver, :hover
+            rect = b.geometry().adjusted(4, 4, -4, -4)  # inside a hover panel's frame, which is not the text's ground
+            region = _region(_pixels(bar.grab().toImage()), bar, bar, rect)
+            name = f"{where}: calendar '{b.text() or b.objectName()}'" + (" under the pointer" if hover else "")
+            if b.text():
+                seen["calendar_hover" if hover else "calendar_cells"] += 1
+                out += _check_contrast(region, b.font(), name, seen)
+            else:
+                seen["calendar_arrows"] += 1
+                out += _check_graphic(region, name, seen)
+        b.setAttribute(Qt.WidgetAttribute.WA_UnderMouse, False)
+    month = cal.findChild(QToolButton, "qt_calendar_monthbutton")
+    out += check_menu(f"{where}: calendar month", month.menu(), month.mapToGlobal(QPoint(0, month.height())), seen)
+    cal.window().hide()
+    return out
+
+
+def check_field_menu(where: str, win: QWidget, seen: Counter) -> list[str]:
+    """The right-click menu of the page's first text field: a QMenu, themed for the whole app like the calendar's month
+    list, so one field's menu is measured on every page that has a field (#239)."""
+    fields = [w for w in win.findChildren(QLineEdit) if w.isVisible() and w.isEnabled() and not _covered(win, w)]
+    if not fields:
+        return []
+    seen["field_menus"] += 1
+    menu = fields[0].createStandardContextMenu()
+    out = check_menu(f"{where}: field '{fields[0].text()}'", menu, fields[0].mapToGlobal(QPoint()), seen)
+    menu.deleteLater()
+    return out
+
+
+def check_menu(where: str, menu: QMenu, at: QPoint, seen: Counter) -> list[str]:
+    """Every entry of `menu`, popped up at `at`: an enabled entry reads at 4.5:1 or more, a disabled one is drawn in
+    TEXT_DISABLED, so it never looks ready to pick (#239)."""
+    menu.popup(at)
+    QApplication.processEvents()
+    shot = _pixels(menu.grab().toImage())
+    out: list[str] = []
+    for a in (a for a in menu.actions() if a.isVisible() and not a.isSeparator()):
+        seen["menu_entries"] += 1
+        region, name = _region(shot, menu, menu, menu.actionGeometry(a)), f"{where} menu entry '{a.text()}'"
+        if a.isEnabled():
+            out += _check_contrast(region, menu.font(), name, seen)
+        elif (measured := _contrast(region) if region is not None else None) and measured[2] != theme.TEXT_DISABLED:
+            out.append(f"{name}: disabled, but drawn in {measured[2]}, not {theme.TEXT_DISABLED}")
+    menu.hide()
     return out
 
 
@@ -267,9 +387,17 @@ def test_req_set_004_sizes_and_contrast_on_every_page(
                 for w in win.findChildren(QWidget):
                     if w.isVisible() and w.width() > 0:
                         findings += _check_widget(where, win, shot, w, seen)
+                for w in win.findChildren(QWidget):  # the lists and calendars they open, after the page grab
+                    if isinstance(w, QComboBox) and w.isVisible() and w.isEnabled() and not _covered(win, w):
+                        findings += check_popup(where, w, seen)
+                    elif isinstance(w, QDateEdit) and w.isVisible() and w.calendarPopup() and w.isEnabled():
+                        findings += check_calendar(where, w, seen)
+                findings += check_field_menu(where, win, seen)
                 findings += _check_targets(where, win, title, seen)
         win.close()
     enough = {"pages": 21, "text": 500, "buttons": 100, "contrast": 500, "targets": 200, "image_text": 2}
+    enough |= {"popup_rows": 80, "calendar_cells": 300, "calendar_hover": 12}  # 6 calendars: Logs From and To, 3 roles
+    enough |= {"calendar_arrows": 24, "field_menus": 11, "menu_entries": 72 + 11 * 7}  # 12 months; 7 entries a field
     assert all(seen[k] >= n for k, n in enough.items()), seen
     assert not findings, f"{len(findings)} findings:\n" + "\n".join(sorted(set(findings)))
 
@@ -288,6 +416,7 @@ def test_req_set_004_theme_token_pairs_read() -> None:
         (theme.ON_LIGHT, theme.INFO_COLOR),
     }
     normal |= {(theme.ON_LIGHT, theme.MAJOR_COLOR), (theme.TEXT, theme.BG_IMAGE), (theme.TEXT_MUTED, theme.BG_IMAGE)}
+    normal |= {(theme.TEXT, theme.BG_BUTTON_HOVER), (theme.ON_DARK, theme.BG_BUTTON_HOVER)}  # a calendar's month (#239)
     bold_only = {(theme.ON_DARK, theme.OK_COLOR), (theme.ON_DARK, theme.NG_COLOR), (theme.ON_DARK, theme.ACCENT)}
     low = {(t, s): round(_ratio(t, s), 2) for t, s in normal if _ratio(t, s) < MIN_RATIO}
     assert not low, low

@@ -12,21 +12,25 @@ import ast
 import re
 import sqlite3
 from collections import Counter
+from collections.abc import Iterator
+from contextlib import contextmanager
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import numpy as np
 import pytest
-from PySide6.QtCore import QMetaObject, QRect, Qt, Signal, SignalInstance
+from PySide6.QtCore import QMetaObject, QPoint, QRect, Qt, Signal, SignalInstance
 from PySide6.QtGui import QColor, QPalette
 from PySide6.QtWidgets import (
     QApplication,
     QBoxLayout,
+    QComboBox,
     QFileDialog,
     QFrame,
     QInputDialog,
     QLineEdit,
     QListWidget,
+    QListWidgetItem,
     QPlainTextEdit,
     QPushButton,
     QTableWidget,
@@ -40,7 +44,17 @@ from aoi.ui.main_window import MainWindow
 from aoi.ui.pages.base import button
 from aoi.ui.pages.compare import MODE_DIFF
 from aoi.ui.widgets.empty_state import EmptyState
-from tests.screens.test_sizes_and_contrast import MIN_RATIO, _check_widget, _contrast, _pixels, _region
+from tests.conftest import engineer
+from tests.screens.test_sizes_and_contrast import (
+    MIN_RATIO,
+    _check_widget,
+    _contrast,
+    _pixels,
+    _region,
+    check_calendar,
+    check_menu,
+    check_popup,
+)
 from tests.test_req_done_in_v01 import BOARD, _inspect_one, _window
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -341,6 +355,87 @@ def test_req_set_004_a_selected_row_reads_at_4_5_to_1(qtbot: QtBot, trained_ctx:
             v.palette().color(r).name() for r in (QPalette.ColorRole.Highlight, QPalette.ColorRole.HighlightedText)
         )
         assert tuple(colours) == (theme.BG_SELECTED, theme.ON_DARK), type(v).__name__
+    roles = (QPalette.ColorRole.Base, QPalette.ColorRole.Text)  # and the entries not highlighted read on it (#239)
+    assert tuple(win.bm_combo.view().palette().color(r).name() for r in roles) == (theme.BG_DEEP, theme.TEXT)
+
+
+@contextmanager
+def _app_style(qapp: QApplication, name: str) -> Iterator[None]:
+    """The application in the style `name` with the theme's stylesheet; the style before is put back."""
+    sheet = qapp.styleSheet()
+    qapp.setStyleSheet("")  # with a stylesheet, style() is the stylesheet's own and has no name
+    before = qapp.style().name()
+    qapp.setStyle(name)
+    qapp.setStyleSheet(sheet)
+    try:
+        yield
+    finally:
+        qapp.setStyleSheet("")
+        qapp.setStyle(before)
+        qapp.setStyleSheet(sheet)
+
+
+@pytest.mark.parametrize("style", ["Fusion", "Windows"])
+def test_req_set_004_drop_down_entries_and_calendar_days_read_at_4_5_to_1(
+    qtbot: QtBot, qapp: QApplication, trained_ctx: AppContext, style: str
+) -> None:
+    """An Operator with two board models opens the header Board model drop-down, then the Logs From calendar: every
+    entry, day, weekday name, month and year reads at 4.5:1 or more, the month and year also under the pointer, and the
+    previous and next month arrows at 3:1, under Fusion (the screenshots' style) and the Windows style. Before #239
+    only the highlighted entry and day read: the others were TEXT on the style's light Base (1.03:1 under Fusion,
+    1.18:1 under Windows), the weekday names 1.10:1 and the weekend days Qt's red (4.0:1); under the pointer the month
+    and year were TEXT on the style's light hover panel (1.03 to 1.15:1)."""
+    with _app_style(qapp, style):
+        win = _window(qtbot, trained_ctx, "Operator")
+        engineer(trained_ctx).ensure_board_model("TBOX-A1 Rev2")
+        win._reload_board_models(BOARD)
+        win.set_user("operator")
+        seen: Counter = Counter()
+        findings = check_popup("header", win.bm_combo, seen)
+        assert seen["popup_rows"] == 2 and win.bm_combo.currentText() == BOARD, seen
+        dialog = QInputDialog(win)  # Switch User asks with a fixed list, which Qt shows as a drop-down
+        dialog.setComboBoxItems(["operator (Operator)", "admin (Admin)"])
+        dialog.show()
+        findings += check_popup("Switch User", dialog.findChild(QComboBox), seen)
+        dialog.reject()
+        assert win.navigate("Logs & Export")
+        d_from = win.pages["Logs & Export"].d_from
+        findings += check_calendar("Logs From", d_from, seen)
+        assert seen["calendar_cells"] >= 7 * 7 + 2 and seen["menu_entries"] == 12, seen
+        assert seen["calendar_hover"] == 2 and seen["calendar_arrows"] == 2 * 2, seen  # at rest and under the pointer
+        kinds = ("popup_rows", "calendar_cells", "calendar_hover", "calendar_arrows", "menu_entries")
+        assert seen["contrast"] == sum(seen[k] for k in kinds), seen
+        edit = d_from.findChild(QLineEdit)  # a text field's right-click menu is a menu of the same kind
+        menu = edit.createStandardContextMenu()
+        findings += check_menu("From field", menu, edit.mapToGlobal(QPoint()), seen)
+        menu.deleteLater()
+        assert not findings, "\n".join(findings)
+
+
+@pytest.mark.parametrize("role", ["Operator", "Admin"])
+def test_req_set_004_sidebar_headings_read_at_4_5_to_1(qtbot: QtBot, trained_ctx: AppContext, role: str) -> None:
+    """The sidebar headings PRODUCTION, ENGINEERING, DATA and SYSTEM are TEXT_MUTED on BG_DEEP (7.4:1) for every role,
+    a page the role may not open (Training for an Operator) stays TEXT_DISABLED, and Up and Down never stop on a
+    heading. Before #239 the stylesheet's colour for a disabled item drew the headings in TEXT_DISABLED, 3.85:1."""
+    win = _window(qtbot, trained_ctx, role)
+    nav = win.nav
+    shot = _pixels(win.grab().toImage())
+    items = [nav.item(i) for i in range(nav.count())]
+
+    def measured(it: QListWidgetItem) -> tuple[float, str, str] | None:
+        return _contrast(_region(shot, win, nav.viewport(), nav.visualItemRect(it) & nav.viewport().rect()))
+
+    headings = {it.text(): measured(it) for it in items if not it.data(Qt.ItemDataRole.UserRole)}
+    assert list(headings) == ["PRODUCTION", "ENGINEERING", "DATA", "SYSTEM"]
+    for text, m in headings.items():
+        assert m is not None and m[0] >= MIN_RATIO and m[1:] == (theme.BG_DEEP, theme.TEXT_MUTED), (text, m)
+    if role == "Operator":
+        m = measured(win._items["Training"])
+        assert m is not None and m[1:] == (theme.BG_DEEP, theme.TEXT_DISABLED), m
+    nav.setFocus()
+    for key in [Qt.Key.Key_Down] * len(items) + [Qt.Key.Key_Up] * len(items):
+        qtbot.keyClick(nav, key)
+        assert nav.currentItem().data(Qt.ItemDataRole.UserRole), (key, nav.currentItem().text())
 
 
 def test_req_set_004_a_progress_bar_past_half_reads_and_is_measured(qtbot: QtBot, trained_ctx: AppContext) -> None:
