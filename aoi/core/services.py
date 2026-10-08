@@ -518,11 +518,11 @@ class AppContext:
     ) -> Inspector:
         """The engine for a board model: its latest recipe (or `recipe`), its active AI model and its reference image
         (or `reference`, such as another stored OK board on the Compare page). Screens never build an Inspector.
-        The engine names the model version and recipe revision it applies, with their UUIDs, for the records it
-        produces (REQ-INSP-012); a `recipe` that differs from the stored revision names none. Likewise the golden board
-        file it read, with the SHA-256 of its bytes (REQ-CMP-003); a `reference` passed in names none. AOI-INSP-009 when
-        the database names a golden board whose file is gone or cannot be read: a board is never judged as if none
-        were set (#169)."""
+        The engine names the active AI model version and the recipe revision it applies, with their UUIDs, for the
+        records it produces (REQ-INSP-012; the recipe says whether the AI check runs, #246); a `recipe` that differs
+        from the stored revision names none. Likewise the golden board file it read, with the SHA-256 of its bytes
+        (REQ-CMP-003); a `reference` passed in names none. AOI-INSP-009 when the database names a golden board whose
+        file is gone or cannot be read: a board is never judged as if none were set (#169)."""
         latest = self.db.latest_recipe(board_model)
         rev: int | None
         rev, rcp, recipe_uuid = (latest[0], Recipe.from_dict(latest[1]), latest[2]) if latest else (0, None, None)
@@ -581,8 +581,9 @@ class AppContext:
     def log_result(self, board_model: str, path: str, res: InspectionResult, insp: Inspector) -> int:
         """Save a result with its evidence (REQ-INSP-008, spec 4.1): the overlay PNG and the two maps beside it, then
         one transaction with the row, the whole result as JSON, its checks, its defects and an NG board's alarm
-        (REQ-INSP-006), naming the AI model version and recipe revision that decided it (REQ-INSP-012) and the golden
-        board it was judged against (REQ-CMP-003). The overlay is `<stem>_<record UUID>_<verdict>.png`, the stem cut by
+        (REQ-INSP-006), naming the AI model version active when the board was judged and the recipe revision that judged
+        it, which says whether the AI check ran, as the result's notes do (REQ-INSP-012, #246), and the golden board it
+        was judged against (REQ-CMP-003). The overlay is `<stem>_<record UUID>_<verdict>.png`, the stem cut by
         `_stem`, and never replaces a file: a name already taken refuses the save with FileExistsError, and a path the
         system refuses as too long with AOI-INSP-014 (#245). A save that fails before its row commits removes the files
         it wrote, so none is left that no record names (#246). Called on the pool thread by the Inspection page."""

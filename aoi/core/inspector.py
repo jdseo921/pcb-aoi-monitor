@@ -25,6 +25,7 @@ OK, WARN, NG = "OK", "WARN", "NG"
 # The engine's notes, stored with each result as written; aoi/core/explain.py words them for the screen.
 NO_GOLDEN_NOTE = "No golden reference image set for this board model; comparison skipped."
 NO_AI_NOTE = "No trained model for this board model; AI check skipped."
+AI_OFF_NOTE = "AI check turned off in the recipe; AI check skipped."  # the record names the active AI model (#246)
 # A re-evaluation's (REQ-CMP-005), when the recipe turns on a check that did not run when the board was inspected.
 NOT_COMPARED_NOTE = "Comparison with the golden board did not run at inspection; not judged again."
 NOT_AI_JUDGED_NOTE = "AI check did not run at inspection; not judged again."
@@ -151,6 +152,18 @@ class InspectionResult:
         )
 
 
+def ai_check(res: InspectionResult | None) -> str:
+    """Whether the AI check judged a result as inspected or stored, as the CSV exports write it (#246): RAN; NO_AI_MODEL
+    when none was trained (NO_AI_NOTE); else OFF, the recipe turned it off (AI_OFF_NOTE, or no note on a result stored
+    before #246); "" for no result (a record from before migration 0006). Not for a result `re_grade` gives: one judged
+    again with the AI check on that did not run at inspection (NOT_AI_JUDGED_NOTE) would read OFF."""
+    if res is None:
+        return ""
+    if any(c.source == "AI" for c in res.checks):
+        return "RAN"
+    return "NO_AI_MODEL" if NO_AI_NOTE in res.notes else "OFF"
+
+
 def _known(cls: type[Any], d: dict[str, Any]) -> dict[str, Any]:
     """`d` without the keys the dataclass `cls` has no field for."""
     return {k: v for k, v in d.items() if k in cls.__dataclass_fields__}
@@ -227,10 +240,11 @@ class JudgedBy:
 
 
 class Inspector:
-    """The engine for one board model. `model_version`, `recipe_rev` and their UUIDs name the AI model version and the
-    recipe revision a saved record carries (REQ-INSP-008, REQ-INSP-012), and `reference_path` and `reference_sha256`
-    the golden board file it judges against and the SHA-256 of its bytes (REQ-CMP-003): `AppContext.inspector()` fills
-    them; an Inspector built bare has none."""
+    """The engine for one board model. `model_version`, `recipe_rev` and their UUIDs name the AI model version active
+    when it judges and the recipe revision it judges by, which a saved record carries (REQ-INSP-008, REQ-INSP-012);
+    whether the AI check ran is the recipe's to say, and a result judged with it off carries AI_OFF_NOTE (#246).
+    `reference_path` and `reference_sha256` name the golden board file it judges against and the SHA-256 of its bytes
+    (REQ-CMP-003): `AppContext.inspector()` fills them; an Inspector built bare has none."""
 
     def __init__(
         self,
@@ -296,6 +310,8 @@ class Inspector:
             ai = AiEvidence(m.score(res.anomaly_map), m.image_threshold, m.pixel_threshold, rule)
         elif r.use_ai:
             res.notes.append(NO_AI_NOTE)
+        else:
+            res.notes.append(AI_OFF_NOTE)
         res.image = work
         self.judge(res, ai)
         res.elapsed_ms = (time.perf_counter() - t0) * 1000
@@ -455,11 +471,11 @@ def re_grade(
     when its AI check ran, else None. Similarity, alignment and the AI score keep the values `judged` holds, since no
     threshold changes them, and so do the inspection time, the view and the picture. A check the recipe turns on that
     did not run on the board is not judged, with a note saying so, as inspecting with the recipe notes a check it cannot
-    run. `judged` is not changed; the result shares its maps. `changed`, when given, is what `changed_regions` gives
-    for `judged`'s difference map with the recipe's pixel difference and minimum area, found by the caller
-    (`AppContext.re_evaluate` finds them while the AI map decodes, #249). ValueError when a check the recipe uses ran
-    on the board but its map, or its AI evidence, is not given; AOI-INSP-010 when the recipe leaves no check that ran
-    on it."""
+    run, and the AI check it turns off gets AI_OFF_NOTE (#246). `judged` is not changed; the result shares its maps.
+    `changed`, when given, is what `changed_regions` gives for `judged`'s difference map with the recipe's pixel
+    difference and minimum area, found by the caller (`AppContext.re_evaluate` finds them while the AI map decodes,
+    #249). ValueError when a check the recipe uses ran on the board but its map, or its AI evidence, is not given;
+    AOI-INSP-010 when the recipe leaves no check that ran on it."""
     cr, ran_ai = judged.compare, any(c.source == "AI" for c in judged.checks)
     if (recipe.use_compare and cr is not None and cr.diff_map is None) or (
         recipe.use_ai and ran_ai and (ai is None or judged.anomaly_map is None)
@@ -472,11 +488,14 @@ def re_grade(
         res.compare = CompareResult(cr.aligned, cr.diff_map, cr.ssim_map, mask, regions, {**cr.metrics, **found})
     if recipe.use_ai and ran_ai:
         res.anomaly_map = judged.anomaly_map
-    skipped = {NO_GOLDEN_NOTE, NO_AI_NOTE, NOT_COMPARED_NOTE, NOT_AI_JUDGED_NOTE}  # worked out again, in this order
+    # The notes on checks that did not run, or that the recipe turns off, are worked out again, in this order:
+    skipped = {NO_GOLDEN_NOTE, NO_AI_NOTE, AI_OFF_NOTE, NOT_COMPARED_NOTE, NOT_AI_JUDGED_NOTE}
     if recipe.use_compare and cr is None:
         res.notes.append(NO_GOLDEN_NOTE if NO_GOLDEN_NOTE in judged.notes else NOT_COMPARED_NOTE)
     if recipe.use_ai and not ran_ai:
         res.notes.append(NO_AI_NOTE if NO_AI_NOTE in judged.notes else NOT_AI_JUDGED_NOTE)
+    elif not recipe.use_ai:  # as inspecting with this recipe notes it, whether or not the AI check ran on the board
+        res.notes.append(AI_OFF_NOTE)
     res.notes += [n for n in judged.notes if n not in skipped]
     ai_thr = next((c.threshold for c in judged.checks if c.source == "AI"), None)
     peaks = {  # each ROI's peak as it was judged: its value times the AI threshold it was divided by, in float32

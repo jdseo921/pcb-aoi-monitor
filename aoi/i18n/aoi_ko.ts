@@ -474,7 +474,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+66"/>
+        <location line="+67"/>
         <source>{file}: {defects} defect(s)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -569,12 +569,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-589"/>
+        <location line="-590"/>
         <source>its UUID {found} is not {uuid}, as in the AI model registry</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+604"/>
+        <location line="+605"/>
         <source>Changing settings</source>
         <translation type="unfinished"></translation>
     </message>
@@ -651,7 +651,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/inspector.py" line="+32"/>
+        <location filename="../core/inspector.py" line="+33"/>
         <source>no Golden board is set</source>
         <translation type="unfinished"></translation>
     </message>
@@ -671,7 +671,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+236"/>
+        <location line="+249"/>
         <source>board image</source>
         <translation type="unfinished"></translation>
     </message>
@@ -681,7 +681,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+142"/>
+        <location line="+144"/>
         <source>the recipe turns the Golden board comparison off</source>
         <translation type="unfinished"></translation>
     </message>
@@ -886,12 +886,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+6"/>
-        <source>No action is needed: each record names the AI model version, recipe revision and Golden board that judged it.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+8"/>
+        <location line="+15"/>
         <source>Result not saved: path too long</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1427,7 +1422,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-573"/>
+        <location line="-574"/>
         <source>Board judged NG</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1437,7 +1432,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+149"/>
+        <location line="+120"/>
+        <source>No action is needed: each record names the AI model version active when its board was judged, the recipe revision that judged it, which says whether the AI check ran, and the Golden board it was judged against.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+30"/>
         <source>The decision table is the stored one; use Side by side or Defect boxes only, or inspect the board again on Inspection to see its heatmaps.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1645,7 +1645,7 @@
 <context>
     <name>Explain</name>
     <message>
-        <location filename="../core/explain.py" line="+31"/>
+        <location filename="../core/explain.py" line="+32"/>
         <source>Similarity to the Golden board is {value}, below its threshold of {threshold}.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1696,6 +1696,11 @@
     </message>
     <message>
         <location line="+4"/>
+        <source>The recipe turns the AI check off, so the AI check did not run and no AI model judged the board: an Engineer can turn it on in the Recipe Editor.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+5"/>
         <source>The board was not compared with the Golden board when it was inspected, so the comparison is not judged again here: inspect the board again with the Golden board comparison in use.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1705,7 +1710,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-46"/>
+        <location line="-51"/>
         <source>The AI score is {value}, at or above its threshold of {threshold}.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1740,7 +1745,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+27"/>
+        <location line="+32"/>
         <source>Note: {note}</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2103,7 +2108,7 @@
 <context>
     <name>LogsPage</name>
     <message>
-        <location filename="../ui/pages/logs.py" line="+47"/>
+        <location filename="../ui/pages/logs.py" line="+49"/>
         <source>Include archived</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2201,7 +2206,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+123"/>
+        <location line="+134"/>
         <source>Export CSV stopped: no file was written.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2216,7 +2221,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-161"/>
+        <location line="-172"/>
         <source>{count} inspections · {ng} NG · yield {rate:.1%}</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2266,17 +2271,17 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+64"/>
+        <location line="+75"/>
         <source>Exported {count} records and {checks} check rows to {folder}: {file}, {checks_file}</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-70"/>
+        <location line="-81"/>
         <source>CSV (*.csv)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+76"/>
+        <location line="+87"/>
         <source>Export overlay images for {count} record(s)?</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2709,7 +2714,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/logs.py" line="-281"/>
+        <location filename="../ui/pages/logs.py" line="-292"/>
         <source>Logs &amp; Export</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3330,7 +3335,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/services.py" line="-1154"/>
+        <location filename="../core/services.py" line="-1155"/>
         <source>Aligning {count} images to the reference board</source>
         <translation type="unfinished"></translation>
     </message>

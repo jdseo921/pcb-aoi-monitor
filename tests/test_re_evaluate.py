@@ -159,8 +159,9 @@ def test_req_cmp_005_judging_again_equals_inspecting_with_those_thresholds(
 
 def test_req_cmp_005_a_check_that_did_not_run_is_not_judged_again(tiny_model: TrainedModel, ng_board: Path) -> None:
     """A check the recipe turns on that did not run on the board is not judged, and its note (in inspect's order, never
-    twice) says why, in plain words; a check turned off loses its check and its note. A check that ran needs its map and
-    its AI evidence, unless the recipe turns it off. Thresholds that leave no check that ran judge nothing (#169):
+    twice) says why, in plain words; a check turned off loses its check and its note, and the AI check turned off gets
+    AI_OFF_NOTE in its place, as inspecting with that recipe gives it (#246). A check that ran needs its map and its AI
+    evidence, unless the recipe turns it off. Thresholds that leave no check that ran judge nothing (#169):
     AOI-INSP-010 gives the reasons, the same as inspecting with them would give."""
     on, off = Recipe(board_model="TINY"), Recipe(board_model="TINY", use_ai=False, use_compare=False)
     ai_off, compare_off = Recipe(board_model="TINY", use_ai=False), Recipe(board_model="TINY", use_compare=False)
@@ -170,7 +171,7 @@ def test_req_cmp_005_a_check_that_did_not_run_is_not_judged_again(tiny_model: Tr
     assert {c.source for c in again.checks} == {"Compare"} and again.anomaly_map is None
     assert again.notes == [NOT_AI_JUDGED_NOTE] == re_grade(again, on, None).notes
     assert [s.template for s in explain.explain(again)][-1] == explain.NOTES[NOT_AI_JUDGED_NOTE], "in plain words"
-    assert re_grade(again, ai_off, None).notes == []
+    assert re_grade(again, ai_off, None).notes == [inspector.AI_OFF_NOTE] == compared.notes  # kept, as inspected
     by_ai = Inspector(compare_off, model, golden).inspect(img)  # the AI model alone
     assert re_grade(by_ai, on, _evidence(by_ai, model)).notes == [NOT_COMPARED_NOTE]
     with pytest.raises(AoiError) as nothing:  # judged by no check, as a build before #169 stored it
@@ -182,6 +183,7 @@ def test_req_cmp_005_a_check_that_did_not_run_is_not_judged_again(tiny_model: Tr
     ai = _evidence(full, model)
     assert full.verdict == "NG" and ai.rule == model.meta["threshold_rule"] != "", "the rule it was calibrated by"
     assert re_grade(full, on, ai).verdict == "NG"
+    assert re_grade(full, ai_off, ai).notes == [inspector.AI_OFF_NOTE], "an AI-on result judged again with it off"
     with pytest.raises(AoiError, match="AOI-INSP-010"):
         re_grade(full, off, ai)
     no_ai_map = replace(full, anomaly_map=None)  # no map is needed for a check the recipe turns off
