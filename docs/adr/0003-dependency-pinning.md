@@ -36,8 +36,10 @@ PyPI's Linux wheel pulls in NVIDIA CUDA packages that neither needs in that form
    use until Jay decides them in writing (Stage 1 plan, item J8). A package with no license metadata fails.
 6. Test tooling is pinned the same way (S05): pytest-qt (MIT) drives the Qt pages offscreen
    (`QT_QPA_PLATFORM=offscreen`) on both CI platforms, and pytest-cov (MIT) reports line coverage of `aoi/core`
-   and `aoi/data` on every run. The Engineering standard's 80 % target is reported, not enforced, until the
-   Stage 1 suite has grown; S22 (internal 0.2.0) decides whether the gate turns on.
+   and `aoi/data` on every run. The Engineering standard's 80 % target was reported, not enforced, until the
+   Stage 1 suite had grown; at S22 (internal 0.2.0) the suite measured 97.4 % (1,254 statements, 33 missed; the
+   lowest module, `aoi/core/imaging.py`, at 87.1 %), so the gate is on: `fail_under = 80` in `pyproject.toml` fails
+   a run under it (#114).
 
 ## Alternatives considered
 
