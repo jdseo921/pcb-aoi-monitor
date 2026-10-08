@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import cv2
 import numpy as np
-from PySide6.QtCore import QPointF, QRectF, QSize, Qt, Signal
+from PySide6.QtCore import QLineF, QPointF, QRectF, QSize, Qt, Signal
 from PySide6.QtGui import QBrush, QColor, QFont, QImage, QMouseEvent, QPainter, QPen, QPixmap, QTransform, QWheelEvent
 from PySide6.QtWidgets import (
     QGraphicsItem,
@@ -37,6 +37,7 @@ def to_qpixmap(img: np.ndarray) -> QPixmap:
 
 class ImageView(QGraphicsView):
     roiDrawn = Signal(QRectF)  # image coordinates
+    pointPicked = Signal(QPointF)  # image coordinates, in pick mode
     viewChanged = Signal()
 
     def __init__(self, parent: QWidget | None = None, placeholder: str = "No image") -> None:
@@ -49,7 +50,7 @@ class ImageView(QGraphicsView):
         self.setMinimumSize(theme.IMAGE_MIN_W, theme.IMAGE_MIN_H)
         self._pix: QGraphicsPixmapItem | None = None
         self._overlay_items: list[QGraphicsItem] = []
-        self._draw_mode = False
+        self._draw_mode = self._pick_mode = False
         self._drag_start: QPointF | None = None
         self._rubber: QGraphicsRectItem | None = None
         self._peers: list[ImageView] = []
@@ -122,6 +123,18 @@ class ImageView(QGraphicsView):
             self.scene().addItem(t)
             self._overlay_items.append(t)
 
+    def add_measure(self, points: list[QPointF], color: str = theme.ROI_SELECTED) -> None:
+        """Points picked: a ring theme.MARK_D px across at every zoom each, and the line between the first two."""
+        pen, d = QPen(QColor(color), 2), theme.MARK_D
+        pen.setCosmetic(True)
+        if len(points) > 1:
+            self._overlay_items.append(self.scene().addLine(QLineF(points[0], points[1]), pen))
+        for p in points:
+            ring = self.scene().addEllipse(QRectF(-d / 2, -d / 2, d, d), pen)
+            ring.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIgnoresTransformations)
+            ring.setPos(p)
+            self._overlay_items.append(ring)
+
     def center_on_box(self, x: float, y: float, w: float, h: float) -> None:
         self.fitInView(QRectF(x - w, y - h, w * 3, h * 3), Qt.AspectRatioMode.KeepAspectRatio)
 
@@ -135,12 +148,17 @@ class ImageView(QGraphicsView):
         self.fit()
 
     # --- ROI drawing ---------------------------------------------------------------
-    def set_draw_mode(self, on: bool) -> None:
-        self._draw_mode = on
+    def set_draw_mode(self, on: bool, pick: bool = False) -> None:
+        """Drag draws an ROI (`on`), or, with `pick`, a click picks a point (Calibrate Scale…); else drag pans."""
+        self._draw_mode, self._pick_mode = on and not pick, on and pick
         self.setDragMode(QGraphicsView.DragMode.NoDrag if on else QGraphicsView.DragMode.ScrollHandDrag)
         self.setCursor(Qt.CursorShape.CrossCursor if on else Qt.CursorShape.ArrowCursor)
 
     def mousePressEvent(self, e: QMouseEvent) -> None:
+        if self._pick_mode and e.button() == Qt.MouseButton.LeftButton and self._pix is not None:
+            if self._pix.sceneBoundingRect().contains(p := self.mapToScene(e.position().toPoint())):
+                self.pointPicked.emit(p)  # a click off the image measures nothing
+            return
         if self._draw_mode and e.button() == Qt.MouseButton.LeftButton and self._pix is not None:
             self._drag_start = self.mapToScene(e.position().toPoint())
             pen = QPen(QColor(theme.ROI_SELECTED), 2)

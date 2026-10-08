@@ -1,9 +1,22 @@
 """Sizes at a board model's scale (REQ-RCP-006, S29): the minimum defect size field that the Recipe Editor and Compare
-share, an area in px without a scale and a size in mm with one."""
+share, an area in px without a scale and a size in mm with one, and the Recipe Editor's Calibrate Scale… sheet."""
 
 from __future__ import annotations
 
-from PySide6.QtWidgets import QDoubleSpinBox, QHBoxLayout, QLabel, QSpinBox, QWidget
+import math
+
+from PySide6.QtCore import QPointF, Qt, Signal
+from PySide6.QtGui import QAction, QKeySequence
+from PySide6.QtWidgets import (
+    QDoubleSpinBox,
+    QFormLayout,
+    QGroupBox,
+    QHBoxLayout,
+    QLabel,
+    QPushButton,
+    QSpinBox,
+    QWidget,
+)
 
 from ...core.recipe import Recipe, disc_area, disc_width
 
@@ -64,3 +77,64 @@ class DefectSizeField(QWidget):
         if (s := self.px_per_mm) is not None:  # the px the engine applies, not those of the 0.01 mm shown
             area, mm = self._size()
             self.px.setText(self.tr("= {px:.1f} px").format(px=disc_width(area) if mm is None else mm * s))
+
+
+class CalibrationSheet(QGroupBox):
+    """Calibrate Scale…, a sheet inline on the page (no dialog): the length between two points clicked on the Golden
+    board, or typed, and the distance between them on the board in mm. Set Scale emits both; Cancel closes it."""
+
+    submitted = Signal(float, float)  # length in px, distance in mm
+    cancelled = Signal()
+
+    def __init__(self) -> None:
+        super().__init__(self.tr("Calibrate Scale"))
+        self.points: list[QPointF] = []
+        how = QLabel(
+            self.tr(
+                "Click two points on the Golden board a known distance apart, or type the length between them, then"
+                " enter that distance on the board."
+            )
+        )
+        how.setWordWrap(True)
+        self.length, self.distance, self.result = QDoubleSpinBox(), QDoubleSpinBox(), QLabel()
+        for spin, suffix in ((self.length, self.tr(" px")), (self.distance, self.tr(" mm"))):
+            spin.setRange(0, 1e6)
+            spin.setSuffix(suffix)
+            spin.valueChanged.connect(self._follow)
+        self.set_button, cancel = QPushButton(self.tr("Set Scale")), QPushButton(self.tr("Cancel"))
+        self.set_button.clicked.connect(lambda: self.submitted.emit(self.length.value(), self.distance.value()))
+        cancel.clicked.connect(self.cancelled.emit)
+        esc = QKeySequence(Qt.Key.Key_Escape)  # in the sheet, and on the image the page adds it to: Cancel (S29 review)
+        self.esc = QAction(self, shortcut=esc, shortcutContext=Qt.ShortcutContext.WidgetWithChildrenShortcut)
+        self.esc.triggered.connect(self.cancelled.emit)
+        self.addAction(self.esc)
+        fields, buttons = QFormLayout(self), QHBoxLayout()  # one field a row: the sheet fits the image pane's width
+        fields.addRow(how)
+        fields.addRow(self.tr("Length"), self.length)
+        fields.addRow(self.tr("Distance"), self.distance)
+        fields.addRow(self.result)
+        for w in (self.set_button, cancel):
+            buttons.addWidget(w)
+        buttons.addStretch(1)
+        fields.addRow(buttons)
+        self.start()
+
+    def start(self) -> None:
+        """Empty: no point, no length, no distance."""
+        self.points = []
+        self.length.setValue(0)
+        self.distance.setValue(0)
+        self._follow()
+
+    def add_point(self, p: QPointF) -> None:
+        """A point clicked on the Golden board: the second gives the length between the two; the first, and a third,
+        which starts again, leave Length at 0 until the next."""
+        self.points = [*self.points, p] if len(self.points) < 2 else [p]
+        a, b = self.points[0], self.points[-1]
+        self.length.setValue(math.hypot(b.x() - a.x(), b.y() - a.y()))
+
+    def _follow(self) -> None:
+        length, distance = self.length.value(), self.distance.value()
+        self.set_button.setEnabled(length > 0 and distance > 0)
+        scale = length / distance if distance > 0 else 0.0
+        self.result.setText(self.tr("= {scale:.2f} px/mm").format(scale=scale) if scale > 0 else "")

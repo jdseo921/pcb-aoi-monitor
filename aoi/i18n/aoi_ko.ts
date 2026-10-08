@@ -25,6 +25,54 @@
     </message>
 </context>
 <context>
+    <name>CalibrationSheet</name>
+    <message>
+        <location filename="../ui/widgets/scale.py" line="+90"/>
+        <source>Calibrate Scale</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+4"/>
+        <source>Click two points on the Golden board a known distance apart, or type the length between them, then enter that distance on the board.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+6"/>
+        <source> px</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+0"/>
+        <source> mm</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+4"/>
+        <source>Set Scale</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+0"/>
+        <source>Cancel</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+9"/>
+        <source>Length</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Distance</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+26"/>
+        <source>= {scale:.2f} px/mm</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
     <name>ComparePage</name>
     <message>
         <location filename="../ui/pages/compare.py" line="+76"/>
@@ -492,7 +540,7 @@
 <context>
     <name>DefectSizeField</name>
     <message>
-        <location filename="../ui/widgets/scale.py" line="+41"/>
+        <location filename="../ui/widgets/scale.py" line="-86"/>
         <source>Minimum defect area (px)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -722,7 +770,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/recipe_editor.py" line="+401"/>
+        <location filename="../ui/pages/recipe_editor.py" line="+54"/>
+        <source>its Golden board was replaced after the points were picked on it</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+363"/>
         <source>Height</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1353,12 +1406,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+6"/>
-        <source>To give them in mm, set the board model&apos;s scale from a known distance on its Golden board.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+7"/>
+        <location line="+14"/>
         <source>Scale not set</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1693,7 +1741,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-671"/>
+        <location line="-672"/>
         <source>Board judged NG</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1748,7 +1796,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+71"/>
+        <location line="+26"/>
+        <source>To give them in mm, press Calibrate Scale…, click two points on the Golden board a known distance apart, enter that distance in mm and press Set Scale.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+46"/>
         <source>The {size} of board model {board_model} cannot be {value} mm: a size in mm is a number above 0 and at most {most}, and an ROI&apos;s box is four of them, its x and y 0 or more.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3150,7 +3203,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/recipe_editor.py" line="-335"/>
+        <location filename="../ui/pages/recipe_editor.py" line="-350"/>
         <source>Recipe Editor</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3181,7 +3234,7 @@
 <context>
     <name>RecipeEditorPage</name>
     <message>
-        <location filename="../ui/pages/recipe_editor.py" line="-19"/>
+        <location filename="../ui/pages/recipe_editor.py" line="-20"/>
         <source>Presence</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3206,7 +3259,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+33"/>
+        <location line="+34"/>
         <source>Draw ROI</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3216,7 +3269,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+24"/>
+        <location line="+33"/>
         <source>Trying the recipe…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3272,7 +3325,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1"/>
+        <location line="-47"/>
+        <source>Calibrate Scale…</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+48"/>
         <source>AI score (× AI score threshold)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3402,7 +3460,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+81"/>
+        <location line="+85"/>
         <source>Train an AI model or set a reference image on Training.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3412,7 +3470,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+13"/>
+        <location line="+14"/>
         <source>No ROIs yet</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3442,7 +3500,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+113"/>
+        <location line="+114"/>
         <source>Scale {scale:.2f} px/mm</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3452,7 +3510,17 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+10"/>
+        <location line="+57"/>
+        <source>Scale of {board_model} set: {scale:.2f} px/mm.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>Sizes are shown in mm.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+9"/>
         <source>Image to try the recipe on</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3462,7 +3530,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+22"/>
+        <location line="+24"/>
         <source>Try result: {verdict}  ·  {defects} defect(s)  ·  {ms:.0f} ms</source>
         <translation type="unfinished"></translation>
     </message>
