@@ -31,7 +31,12 @@ the default settings. An error at start-up that has no code of its own shows AOI
 the log in the default workspace folder (`logs/aoi-<date>.jsonl`, event `app.start_failed`) for support.
 
 **Settings and settings.json.** A workspace folder saved on the Settings page is used from the next start; until
-then the app keeps the open workspace, its database, log and folders. The folder must be a full path
+then the app keeps the open workspace, its database, log and folders. The AI device, the default epochs and input
+size and the log retention apply at once: training and inspection use a new AI device from the next run (a training run
+in progress finishes on the device it started with, and the Training page shows the device in use; an inspection run in
+progress takes the new device from its next board once the Inspection page is shown again), the Training page's Epochs
+and Network input size boxes take the new defaults, and the Logs & Export archive button shows and archives by the new
+log retention. The language is stored for the localisation planned for 2H 2027; until then the app shows English. The folder must be a full path
 (`C:\AOI_Workspace`, not `AOI_Workspace`): an empty or relative folder, or a log retention, input size or epoch count
 below 1, is refused with AOI-SET-008, on the page before anything is saved and at start-up from `settings.json`. The
 app writes only the settings it changes into `settings.json`, so a line you edit there while the app runs, such as an

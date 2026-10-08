@@ -138,9 +138,11 @@ class TrainingPage(Page):
         self.input_size = QComboBox()
         self.input_size.addItems(["128", "256", "384", "512"])
         self.input_size.setCurrentText(str(ctx.settings.image_size))
+        self._defaults = (ctx.settings.default_epochs, ctx.settings.image_size)  # the saved defaults the boxes show
         f.addRow(self.tr("Epochs"), self.epochs)
         f.addRow(self.tr("Network input size"), self.input_size)
-        f.addRow(self.tr("Device"), QLabel(ctx.device.upper()))
+        self.device_label = QLabel(ctx.device.upper())  # the device in use, read again on show (#201)
+        f.addRow(self.tr("Device"), self.device_label)
         row = QHBoxLayout()
         self.btn_train = button(self.tr("Start Training"), "primary", self.train)
         self.btn_stop = button(self.tr("Stop"), slot=self.stop)
@@ -365,6 +367,7 @@ class TrainingPage(Page):
         self.btn_train.setEnabled(True)
         self.btn_stop.setEnabled(False)
         self.worker = None
+        self.device_label.setText(self.ctx.device.upper())  # a device saved during the run applies from the next one
 
     # --- model registry ---------------------------------------------------------
     def activate(self) -> None:
@@ -440,4 +443,14 @@ class TrainingPage(Page):
         self.refresh()
 
     def on_show(self) -> None:
+        """Read what Settings may have changed since the last show (#201): the device in use, kept as the run's own
+        while a run goes on, and the default epochs and input size, set in the boxes only when the saved defaults
+        changed, so a value the user chose for the next run stays otherwise."""
+        if self.worker is None:
+            self.device_label.setText(self.ctx.device.upper())
+        defaults = (self.ctx.settings.default_epochs, self.ctx.settings.image_size)
+        if defaults != self._defaults:
+            self._defaults = defaults
+            self.epochs.setValue(defaults[0])
+            self.input_size.setCurrentText(str(defaults[1]))
         self.refresh()

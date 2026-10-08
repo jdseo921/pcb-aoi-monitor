@@ -84,8 +84,8 @@ class LogsPage(Page):
         b.addWidget(self.summary, 1)
         self.btn_csv = button(self.tr("Export CSV"), slot=self.export_csv)
         self.btn_img = button(self.tr("Export Image Overlays"), slot=self.export_overlays)
-        archive = self.tr("Archive older than {days} days").format(days=ctx.settings.log_retention_days)
-        self.btn_arch = button(archive, slot=self.archive)
+        self._arch_days = ctx.settings.log_retention_days  # the day count the button shows and archives by (#201)
+        self.btn_arch = button(self._archive_text(), slot=self.archive)
         for x in (self.btn_csv, self.btn_img, self.btn_arch):
             b.addWidget(x)
         self.root.addLayout(b)
@@ -237,8 +237,11 @@ class LogsPage(Page):
         n = self.ctx.export_overlays(self.rows, d)
         self.shell.status(self.tr("Copied {count} overlay image(s) to {folder}").format(count=n, folder=d))
 
+    def _archive_text(self) -> str:
+        return self.tr("Archive older than {days} days").format(days=self._arch_days)
+
     def archive(self) -> None:
-        n = self.ctx.archive_old()
+        n = self.ctx.archive_old(self._arch_days)  # the number on the button, never another one
         self.shell.status(self.tr("Archived {count} record(s)").format(count=n))
         self.refresh()
 
@@ -246,6 +249,8 @@ class LogsPage(Page):
         admin_or_eng = self.ctx.role in ("Engineer", "Admin")
         for b in (self.btn_csv, self.btn_img, self.btn_arch):
             b.setEnabled(admin_or_eng)  # spec 8: Admin exports logs (Engineer allowed for PoC)
+        self._arch_days = self.ctx.settings.log_retention_days  # a retention saved on Settings applies at once (#201)
+        self.btn_arch.setText(self._archive_text())
         for combo, values in (
             (self.model, self.ctx.board_models()),
             (self.operator, [u["name"] for u in self.ctx.users()]),

@@ -107,7 +107,8 @@ class SettingsPage(Page):
         """Write the page's own settings over settings.json as it is now, so a hand edit of another key stays (#170),
         through `AppContext.save_settings`: an Admin's write, role-checked and audited (#197). Each value is checked
         first (AOI-SET-008: an empty or relative workspace), and nothing is written on a refusal. The running app
-        follows every value but the workspace until the restart (REQ-SET-001)."""
+        follows the device, defaults and retention at once (#201) and the workspace from the restart (REQ-SET-001); the
+        language is stored only until the 2H 2027 localisation."""
         values = {
             "workspace": self.ws.text(),
             "device": self.device.currentText(),

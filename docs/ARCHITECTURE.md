@@ -392,7 +392,7 @@ role-gated buttons and links follow the new role at once (#174).
 | **AI Model Test** | Select labelled folder; Run Test / Run Test Again; **Accuracy, Precision, Recall, False Call Rate** tiles; confusion counts; results table **Image, GT, AI Result, Score, Pass/Fail** with failures in red; preview; **Export CSV / Export Report (PDF)**, the report naming the folder and board model the shown results came from; a run's results are shown only under its board model: changing the header's board model clears them, and a run that ends after such a change is stored, not shown (#180); runs stored in DB | GUI §4.3 |
 | **Recipe Editor** | Draw ROIs on the golden board (zoom/pan); ROI types **Presence, Polarity, Solder Bridge, Height, Anomaly**; parameters **AI Score, Height Min/Max, Volume Min/Max** (each 0 or more, min not above max, "—" for unset; AOI-RCP-002 otherwise); Apply edits the selected ROI only and is off while none is selected (Delete clears the selection); yellow = selected, green = saved; global thresholds; **mandatory AOI set** checklist (DCT §4) marking checks that need Stage 2 3D/side cameras; Test Run, cancelled with its verdict cleared when the board model changes; Save Recipe → revision with user + timestamp. A revision saved after the editor loaded its own (Compare's Save to Recipe) is shown when the editor opens again, after asking when it holds unsaved changes; kept changes cannot be saved over it (AOI-RCP-001) | GUI §4.2, DCT §4 |
 | **3D Profile** | Layout placeholder (height map, defect details, Accept/Reject) until Stage 2 3D data exists | GUI §4.5 |
-| **Logs & Export** | Filter by date (2000-01-01 to 2100-12-31), model, operator; sortable table; overlay preview of the selected record (the placeholder when it has none, and after Filter); Export CSV (two files, UTF-8 with BOM: the records, with their columns as before and the record, model and recipe UUIDs appended, and `<name>_checks.csv` with one row per check: region, metric, source, value, threshold, rule, result and the model and recipe UUIDs, its header written even when no record has checks; REQ-INSP-012) / overlay images with confirmation; auto-archive > 30 days (on start and on demand) | GUI §4.4 |
+| **Logs & Export** | Filter by date (2000-01-01 to 2100-12-31), model, operator; sortable table; overlay preview of the selected record (the placeholder when it has none, and after Filter); Export CSV (two files, UTF-8 with BOM: the records, with their columns as before and the record, model and recipe UUIDs appended, and `<name>_checks.csv` with one row per check: region, metric, source, value, threshold, rule, result and the model and recipe UUIDs, its header written even when no record has checks; REQ-INSP-012) / overlay images with confirmation; auto-archive older than the log retention, 30 days by default (on start, and on demand by the day count the button shows) | GUI §4.4 |
 | **Settings** | Workspace, AI device (auto/CPU/CUDA), defaults, retention, language (en/ko placeholder for 2H 2027 localisation); users & roles; hardware interface status per stage | GUI §6, §8, RM 2H 2027 |
 
 ---
@@ -466,7 +466,17 @@ that board model is refused with AOI-INSP-009, which is alarmed; Compare then cl
 before, says on its test pane that the board was not inspected, and judges it when shown again once the Golden board
 can be read (#176). The page in use is kept in `settings.json` and reopened at start-up (REQ-INSP-006, REQ-LOG-005);
 a page change writes that key alone. A workspace saved on Settings goes to `settings.json` only: the running app keeps
-its database, log and folders on the open workspace until the restart (REQ-SET-001, #170).
+its database, log and folders on the open workspace until the restart (REQ-SET-001, #170). The AI device, the
+default epochs and input size and the log retention apply at once: `save_settings` resolves the AI device again and,
+when it changes, logs `device.change` and drops the cached weights; the cache holds a model with the device it sits
+on and is used only on the device in use, and a load running during the save is not cached, so the next inspection
+loads the weights on the new device. A training run keeps the device read at its start; an Inspection run keeps its
+engine, and so its device, until the page is shown again (`on_show` drops it), and takes the new device from its next
+board. When shown, the Training page reads the device in use (the run's own while one goes on) and the saved default
+epochs and input size (set in its
+boxes only when they changed), and the Logs & Export archive button the retention in effect, archiving by the day
+count it shows (REQ-SET-002, REQ-LOG-003, #201). The language is stored only: no translation is loaded until the
+2H 2027 localisation, so the app shows English whatever is saved.
 Every visible string goes through `self.tr()` in a page class (REQ-SET-005, since S19). PySide takes the
 most-derived class name as the context of `self.tr()`, while `pyside6-lupdate` files a string under the class that
 contains the call, so the base `Page` uses `QCoreApplication.translate("Page", …)`, page titles are marked
