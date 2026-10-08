@@ -9,6 +9,7 @@ standard, "Validation and accuracy claims").
 from __future__ import annotations
 
 import os
+import shutil
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -79,3 +80,12 @@ def tiny_model(tmp_path_factory: pytest.TempPathFactory, synthetic_dataset: Path
     reference = ctx.db.reference(board_model)
     assert reference is not None, "training set no reference image"
     return TrainedModel(ctx, board_model, loaded[0], loaded[1], load_image(reference), meta)
+
+
+@pytest.fixture
+def trained_ctx(tmp_path: Path, tiny_model: TrainedModel) -> AppContext:
+    """A writable copy of the tiny model's workspace: samples, golden board and the active model are registered,
+    no inspection has run yet. Tests that inspect, save recipes or log results use this one."""
+    ws = tmp_path / "trained_workspace"
+    shutil.copytree(tiny_model.ctx.settings.root, ws)
+    return AppContext(Settings(workspace=str(ws), device="cpu"))
