@@ -13,17 +13,28 @@ ALLOWED_USES = ("own", "shared", "demos")  # their own AI models, shared improve
 FOLDER = "datasets"  # under the workspace: <name>/manifest.json
 
 
+def token(board_model: str) -> str:
+    """The board model as a version's name gives it: its ASCII letters and digits in upper case (TBOX-A1: TBOXA1); empty
+    for a name with none, such as one in Korean only, which no version can be named after (open for Jay, ADR 0009)."""
+    return re.sub(r"[^A-Za-z0-9]", "", board_model).upper()
+
+
 def name(board_model: str, revision: str, view: str, version: int) -> str:
-    """DS-<BOARDMODEL>-<REV>-<VIEW>-v<N>: the board model in upper case with only its letters and digits (TBOX-A1:
-    TBOXA1), the revision as entered, the view in upper case, and N."""
-    return f"DS-{re.sub(r'[^A-Za-z0-9]', '', board_model).upper()}-{revision}-{view.upper()}-v{version}"
+    """DS-<BOARDMODEL>-<REV>-<VIEW>-v<N>: the board model's `token`, the revision as entered, the view in upper case,
+    and N."""
+    return f"DS-{token(board_model)}-{revision}-{view.upper()}-v{version}"
+
+
+def sha256(path: str | Path) -> str:
+    """The SHA-256 of a file's bytes in hex, read a block at a time; OSError when the file cannot be read."""
+    with open(path, "rb") as f:
+        return hashlib.file_digest(f, "sha256").hexdigest()
 
 
 def file_sha256(path: str | Path) -> str | None:
-    """The SHA-256 of a file's bytes in hex, read a block at a time; None when the file cannot be read."""
+    """`sha256`, None when the file cannot be read."""
     try:
-        with open(path, "rb") as f:
-            return hashlib.file_digest(f, "sha256").hexdigest()
+        return sha256(path)
     except OSError:
         return None
 

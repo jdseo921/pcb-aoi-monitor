@@ -544,14 +544,15 @@ CODES: dict[str, ErrorCode] = {
         ErrorCode(
             "AOI-TRN-020",
             QT_TRANSLATE_NOOP("Errors", "Dataset not frozen: NG labels not checked"),
-            QT_TRANSLATE_NOOP("Errors", "{name} was not frozen: {count} NG labels are not checked by a second user."),
+            QT_TRANSLATE_NOOP("Errors", "{name} was not frozen: a second user has not checked {count} NG label(s)."),
             QT_TRANSLATE_NOOP("Errors", "Have another Engineer or Admin check each NG label, then freeze again."),
         ),
         ErrorCode(
             "AOI-TRN-021",
             QT_TRANSLATE_NOOP("Errors", "Dataset not frozen: OK labels not checked"),
             QT_TRANSLATE_NOOP(
-                "Errors", "{name} was not frozen: {checked} of {needed} OK labels to check (10 % of {ok}) are checked."
+                "Errors",
+                "{name} was not frozen: {checked} of the {needed} OK label(s) to check (10 % of {ok}) are checked.",
             ),
             QT_TRANSLATE_NOOP(
                 "Errors", "Draw OK labels for a check and have another Engineer or Admin check them, then freeze again."
@@ -651,6 +652,59 @@ CODES: dict[str, ErrorCode] = {
             QT_TRANSLATE_NOOP("Errors", "View not known"),
             QT_TRANSLATE_NOOP("Errors", "{view} is not a camera view of this app, so nothing was read or changed."),
             QT_TRANSLATE_NOOP("Errors", "Name the view as the Inspection and Training pages do: Top, Side or Bottom."),
+        ),
+        ErrorCode(
+            "AOI-TRN-039",
+            QT_TRANSLATE_NOOP("Errors", "Dataset not frozen: no version name"),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Board model {board} was not frozen: its name has no Latin letter or digit, which a dataset version is"
+                " named with.",
+            ),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Import the images under a board model whose name has a Latin letter or digit, such as TBOX-A1, and"
+                " freeze that board model.",
+            ),
+        ),
+        ErrorCode(
+            "AOI-TRN-040",
+            QT_TRANSLATE_NOOP("Errors", "Dataset not frozen: version name taken"),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "{name} was not frozen: board model {other} has frozen versions under the same letters and digits as"
+                " board model {board}, so their names would mix.",
+            ),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Import the images under a board model whose letters and digits differ from those of {other}, and"
+                " freeze that board model.",
+            ),
+        ),
+        ErrorCode(
+            "AOI-TRN-041",
+            QT_TRANSLATE_NOOP("Errors", "Dataset not frozen: manifest not written"),
+            QT_TRANSLATE_NOOP("Errors", "{name} was not frozen: its manifest {path} could not be written ({reason})."),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Check the free space on the workspace drive and that its datasets folder can be written, then freeze"
+                " again; nothing of the version was kept.",
+            ),
+        ),
+        ErrorCode(
+            "AOI-TRN-042",
+            QT_TRANSLATE_NOOP("Errors", "Dataset not frozen: path too long"),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "{name} was not frozen: the system refused the path of its manifest in the workspace folder {workspace}"
+                " as too long.",
+            ),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Ask an Admin to save a workspace folder with a shorter path on Settings and then, with the app closed,"
+                " to copy everything in the folder {workspace} into that folder, or to turn on long paths in Windows;"
+                " then freeze again.",
+            ),
         ),
         ErrorCode(
             "AOI-TST-001",
