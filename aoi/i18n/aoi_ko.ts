@@ -424,7 +424,7 @@
 <context>
     <name>Errors</name>
     <message>
-        <location filename="../core/services.py" line="+60"/>
+        <location filename="../core/services.py" line="+64"/>
         <source> ({context})</source>
         <translation type="unfinished"></translation>
     </message>
@@ -444,12 +444,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+168"/>
+        <location line="+183"/>
         <source>Importing samples</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+55"/>
+        <location line="+58"/>
         <source>Training an AI model</source>
         <translation type="unfinished"></translation>
     </message>
@@ -474,12 +474,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+53"/>
+        <location line="+64"/>
         <source>{file}: {defects} defect(s)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+113"/>
+        <location line="+114"/>
         <source>Running an AI model test</source>
         <translation type="unfinished"></translation>
     </message>
@@ -569,12 +569,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-571"/>
+        <location line="-583"/>
         <source>its UUID {found} is not {uuid}, as in the AI model registry</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+586"/>
+        <location line="+598"/>
         <source>Changing settings</source>
         <translation type="unfinished"></translation>
     </message>
@@ -892,6 +892,21 @@
     </message>
     <message>
         <location line="+8"/>
+        <source>Result not saved: path too long</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>The result of {file} was shown but could not be saved, so it is not in Logs &amp; Export: the system refused the path of its evidence files in the workspace folder {workspace} as too long.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>Ask an Admin to save a workspace folder with a shorter path on Settings and then, with the app closed, to copy everything in the folder {workspace} into that folder, or to turn on long paths in Windows; then inspect {file} again.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+9"/>
         <source>Result has no stored heatmaps</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1402,7 +1417,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-543"/>
+        <location line="-558"/>
         <source>Board judged NG</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1412,7 +1427,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+134"/>
+        <location line="+149"/>
         <source>The decision table is the stored one; use Side by side or Defect boxes only, or inspect the board again on Inspection to see its heatmaps.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2040,7 +2055,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+38"/>
+        <location line="+42"/>
         <source>Save annotated image</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2694,7 +2709,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/inspection.py" line="-468"/>
+        <location filename="../ui/pages/inspection.py" line="-472"/>
         <source>Inspection</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3300,7 +3315,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/services.py" line="-1112"/>
+        <location filename="../core/services.py" line="-1145"/>
         <source>Aligning {count} images to the reference board</source>
         <translation type="unfinished"></translation>
     </message>

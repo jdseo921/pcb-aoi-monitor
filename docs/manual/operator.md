@@ -31,7 +31,9 @@ run is on; Save Image… before the first result and while a picture is being sa
 arrives, with the checks that decided it, before the next board starts; the records are on Logs & Export. If a result
 cannot be recorded (the disk is full, the workspace folder cannot be written, another program holds the database) the
 run stops with AOI-INSP-008: press Next Board to carry on, and inspect that board again later; such a board is not on
-Logs & Export and, if NG, has no alarm. An NG board that is recorded always has its NG alarm (AOI-INSP-003). Closing the
+Logs & Export and, if NG, has no alarm. When the system refuses the path of a result's files as too long, the run
+stops with AOI-INSP-014 instead: ask an Admin to copy the workspace folder's contents into a folder with a shorter
+path. An NG board that is recorded always has its NG alarm (AOI-INSP-003). Closing the
 app while a board is being inspected asks whether to stop: No keeps the app open; Yes records the board in hand and
 closes.
 A run belongs to the board model it was started under. If the board model in the header changes during a run, the run

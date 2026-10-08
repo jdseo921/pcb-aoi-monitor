@@ -250,7 +250,15 @@ When no record matches, the table offers **Reset Filters** (the last 7 days, eve
 records hidden); when every record is older than that or archived, it offers **Show All Records** instead, which sets
 **From** to the oldest record's date, **To** to today and ticks **Include archived** when any record is archived.
 
-**Evidence files.** Beside each record's overlay picture (the results folder, by day) the app keeps the two maps the
+**Evidence files.** Each record's overlay picture is in the results folder, by day, named
+`<stem>_<record UUID>_<verdict>.png`: `<stem>` is the first 40 characters of the board's image file name without its
+extension, and the UUID is the record's own, as the `uuid` column of the CSV export gives it, so two boards with the
+same file name never share a picture. A training sample's copy is named `<stem>_<sample UUID>.<extension>` the same way.
+Records and samples stored before this version keep their names. If the system still refuses an evidence file's path as
+too long (a workspace folder with a long path, on Windows with long paths off), the run stops with AOI-INSP-014: an
+Admin saves a workspace folder with a shorter path on Settings and then, with the app closed, copies everything in the
+workspace folder into it (a move takes along settings.json, which names the folder the app opens), or turns on long
+paths in Windows; the next start opens the copy and all it holds. Beside the overlay the app keeps the two maps the
 verdict was judged on as PNG files named after the overlay: `<overlay name>_diff.png`, the colour difference against the
 golden board, and `<overlay name>_ai2.png`, the AI score map in steps of 0.001 σ up to 32.767 σ and of 1/8192 of the
 value above (`<overlay name>_ai.png` for results stored before this version, in 0.001 σ steps up to 65.535 σ). A map

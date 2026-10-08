@@ -185,12 +185,19 @@ class Database:
 
     # --- samples -----------------------------------------------------------
     def add_sample(
-        self, board_model: str, path: str, label: str, defect_type: str | None = None, side: str = "Top"
+        self,
+        board_model: str,
+        path: str,
+        label: str,
+        defect_type: str | None = None,
+        side: str = "Top",
+        uid: str | None = None,
     ) -> int:
+        """Add a sample; returns its id. `uid` is the UUID its file name already carries (#245); a new one when None."""
         self.ensure_board_model(board_model)
         return self._insert(
             "INSERT INTO samples(uuid, board_model, path, label, defect_type, side, added_at) VALUES(?,?,?,?,?,?,?)",
-            (new_uuid(), board_model, self._stored(path), label, defect_type, side, now_utc()),
+            (uid or new_uuid(), board_model, self._stored(path), label, defect_type, side, now_utc()),
         )
 
     def samples(self, board_model: str, label: str | None = None) -> list[dict[str, Any]]:
@@ -301,9 +308,11 @@ class Database:
         defects: list[dict[str, Any]],
         checks: list[dict[str, Any]] | None = None,
         alarm: tuple[str, str, str | None] | None = None,
+        uid: str | None = None,
     ) -> int:
         """The inspection row, its defects, its checks and its alarm, given as (level, message, code), commit together:
-        a crash or a refused write leaves all or none (REQ-INSP-008, REQ-INSP-006; #179).
+        a crash or a refused write leaves all or none (REQ-INSP-008, REQ-INSP-006; #179). `uid` is the record's UUID,
+        which the names of its overlay and maps already carry (#245); a new one when None.
         `rec["result_json"]` is the whole result as `InspectionResult.to_dict` gives it, `model_uuid` and `recipe_uuid`
         name the AI model version and recipe revision that decided it, `diff_map_path` and `ai_map_path` the map files
         beside the overlay, `reference_path` and `reference_sha256` the golden board file it was judged against and the
@@ -311,7 +320,7 @@ class Database:
         of `Check` (name, value, threshold, rule, verdict, source, explain, region) (REQ-INSP-012)."""
         result_json = rec.get("result_json")
         row = (
-            new_uuid(),
+            uid or new_uuid(),
             now_utc(),
             rec.get("board_model"),
             rec.get("model_version"),

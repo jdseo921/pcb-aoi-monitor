@@ -405,11 +405,15 @@ class InspectionPage(Page):
     def _not_saved(self, path: Path, e: BaseException) -> None:
         """The result was shown but could not be saved (the disk is full, the workspace cannot be written, a database
         error): the run stops before the next board, the coded dialog says what happened and what to do, and the
-        verdict stays on screen (REQ-INSP-008, REQ-SET-019); Next Board carries on with the queue."""
+        verdict stays on screen (REQ-INSP-008, REQ-SET-019); Next Board carries on with the queue. A path too long has
+        its own code and step, AOI-INSP-014 (#245); anything else, AOI-INSP-002 included, is AOI-INSP-008."""
         self.running = False
         self._update_buttons()
-        err = AoiError("AOI-INSP-008", detail=f"{type(e).__name__}: {e}", file=path.name)
-        err.__cause__ = e  # the log keeps the cause with its trace
+        if isinstance(e, AoiError) and e.code == "AOI-INSP-014":
+            err = e
+        else:
+            err = AoiError("AOI-INSP-008", detail=f"{type(e).__name__}: {e}", file=path.name)
+            err.__cause__ = e  # the log keeps the cause with its trace
         self.error(err)
         self._refresh_alarms()
 

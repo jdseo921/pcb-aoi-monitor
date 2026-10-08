@@ -52,6 +52,7 @@ ALLOWED_WORDS = {  # (catalogue code or translation context, Not word): why the 
     ("AOI-SET-011", "window"): FOLDER_WINDOW,
     ("AOI-SET-012", "window"): FOLDER_WINDOW,
     ("AOI-TRN-005", "window"): "the operating system's name, Windows, whose file names ignore case",
+    ("AOI-INSP-014", "window"): "the operating system's name, Windows, whose long paths setting is the step",
     ("AOI-SET-007", "error"): APP_ERROR,
     ("AOI-TRN-010", "error"): APP_ERROR,
     ("AOI-SET-006", "invalid"): "said of the app's migration files, never of a user (the Charter bans 'invalid user')",

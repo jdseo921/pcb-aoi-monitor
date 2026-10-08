@@ -9,12 +9,13 @@ from __future__ import annotations
 import contextlib
 import contextvars
 import csv
+import errno
 import functools
 import io
 import json
 import math
+import os
 import threading
-import uuid
 from collections.abc import Callable, Iterator
 from dataclasses import dataclass
 from pathlib import Path
@@ -36,12 +37,15 @@ from .compare import Region, changed_regions
 from .imaging import align_to_reference, encode_image, list_images, load_image, load_image_sha256, save_image
 from .inspector import NG, OK, WARN, AiEvidence, InspectionResult, Inspector, JudgedBy, draw_overlay, re_grade
 from .jobs import JobCancelled, Jobs
-from .maps import load_maps, picture_shape, save_maps
+from .maps import load_maps, map_paths, picture_shape, save_maps
 from .recipe import Recipe
 
 ALARM_LIMIT = 1000  # REQ-INSP-006: the alarms a screen shows and that survive a restart
 BUSY_ALARM_WAIT_MS = 200  # how long the alarm of a locked database's error, or an Inspection alarm, waits, not 5 s
 ALIGNING = QT_TRANSLATE_NOOP("Training", "Aligning {count} images to the reference board")  # a progress line (#199)
+STEM_CHARS = 40  # how much of a source file's stem names its evidence or sample file (#245)
+WINDOWS = os.name == "nt"
+MAX_PATH = 260  # the UTF-16 units of a path, its ending NUL included, that Windows takes with long paths off
 
 
 @dataclass(frozen=True)
@@ -153,6 +157,21 @@ def transactional(fn: Callable[Concatenate[AppContext, P], R]) -> Callable[Conca
             return fn(self, *args, **kwargs)
 
     return cast("Callable[Concatenate[AppContext, P], R]", run)
+
+
+def _stem(path: str | Path) -> str:
+    """The start of a source file's stem that names the file the app keeps of it, beside its UUID (#245): with the
+    longest ending, `_<UUID>_WARN_diff.png`, and the temporary name around it, a name of at most 225 bytes in UTF-8."""
+    return Path(path).stem[:STEM_CHARS]
+
+
+def _too_long(e: OSError) -> bool:
+    """The system refused a path as too long: ENAMETOOLONG, or on Windows ERROR_FILENAME_EXCED_RANGE or a file not found
+    at a path of MAX_PATH UTF-16 units or more, which is how open() fails there with long paths off (#245)."""
+    if e.errno == errno.ENAMETOOLONG or getattr(e, "winerror", None) == 206:
+        return True
+    units = len(str(e.filename or "").encode("utf-16-le", "surrogatepass")) // 2  # outside the BMP, 2 units
+    return WINDOWS and isinstance(e, FileNotFoundError) and units >= MAX_PATH
 
 
 def _remove(files: list[Path]) -> None:
@@ -293,6 +312,7 @@ class AppContext:
         self._refuse_case_variant(board_model)  # a new board model is created by its first import
         dest = self.settings.images_dir / board_model / label
         copies: list[Path] = []
+        uids: list[str] = []  # each copy's sample UUID, which its file name carries (#245)
         stopped = False
         try:
             for p in paths:
@@ -300,18 +320,20 @@ class AppContext:
                     stopped = True
                     break
                 src = Path(p)
-                target = dest / f"{src.stem}_{uuid.uuid4().hex[:6]}{src.suffix.lower()}"
+                uid = new_uuid()
+                target = dest / f"{_stem(src)}_{uid}{src.suffix.lower()}"
                 try:
                     atomic.copy_file(src, target)
                 except OSError as e:  # gone, unreadable, or the workspace drive full
                     why = e.strerror or str(e)
                     raise AoiError("AOI-TRN-008", str(e), path=str(src), reason=why, count=len(paths)) from e
                 copies.append(target)
+                uids.append(uid)
                 if progress is not None:
                     progress(len(copies), len(paths))
             with self.db.transaction():
-                for target in copies:
-                    self.db.add_sample(board_model, str(target), label, defect_type, side)  # creates a new board model
+                for target, uid in zip(copies, uids, strict=True):  # the first creates a new board model
+                    self.db.add_sample(board_model, str(target), label, defect_type, side, uid)
                 if copies:
                     self._ensure_recipe(board_model)
                 if not self.db.reference(board_model):
@@ -557,12 +579,23 @@ class AppContext:
         """Save a result with its evidence (REQ-INSP-008, spec 4.1): the overlay PNG and the two maps beside it, then
         one transaction with the row, the whole result as JSON, its checks, its defects and an NG board's alarm
         (REQ-INSP-006), naming the AI model version and recipe revision that decided it (REQ-INSP-012) and the golden
-        board it was judged against (REQ-CMP-003). Called on the pool thread by the Inspection page."""
+        board it was judged against (REQ-CMP-003). The overlay is `<stem>_<record UUID>_<verdict>.png`, the stem cut by
+        `_stem`, and never replaces a file: a name already taken refuses the save with FileExistsError, and a path the
+        system refuses as too long with AOI-INSP-014 (#245). Called on the pool thread by the Inspection page."""
         day = local_date()  # the folder is named for the operator's shift date; the stored time is UTC
-        overlay = self.settings.results_dir / day / f"{Path(path).stem}_{uuid.uuid4().hex[:6]}_{res.verdict}.png"
-        save_image(overlay, draw_overlay(res))
+        uid = new_uuid()  # the record's, as the uuid column and the CSV export give it
+        overlay = self.settings.results_dir / day / f"{_stem(path)}_{uid}_{res.verdict}.png"
         pixel_threshold = insp.model.pixel_threshold if insp.model is not None else None  # the AI map's, kept (S28a)
-        diff_map_path, ai_map_path = save_maps(res, overlay.with_suffix(""), pixel_threshold=pixel_threshold)
+        try:
+            taken = [f for f in (overlay, *map_paths(overlay.with_suffix(""))) if os.path.lexists(f)]
+            if taken:  # only a defect gets here; the workspace lock keeps out a second copy of the app (#204)
+                raise FileExistsError(errno.EEXIST, os.strerror(errno.EEXIST), str(taken[0]))
+            save_image(overlay, draw_overlay(res))
+            diff_map_path, ai_map_path = save_maps(res, overlay.with_suffix(""), pixel_threshold=pixel_threshold)
+        except OSError as e:
+            if not _too_long(e):
+                raise
+            raise AoiError("AOI-INSP-014", str(e), file=Path(path).name, workspace=str(self.settings.root)) from e
         doc = res.to_dict()
         ng = res.verdict == NG
         alarm = None
@@ -594,6 +627,7 @@ class AppContext:
             [d.as_row() for d in res.defects],
             doc["checks"],
             alarm,  # in the record's transaction: a saved NG board always has its alarm (REQ-INSP-006, #179)
+            uid=uid,
         )
         if alarm is not None:
             self.log.info("alarm", extra={"alarm_level": alarm[0], "code": alarm[2], "text": alarm[1]})
