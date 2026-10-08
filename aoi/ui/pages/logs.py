@@ -21,6 +21,8 @@ CHECK_COLUMNS = [
     "recipe_uuid", "no", "region", "metric", "source", "value", "threshold", "rule", "result",
 ]  # fmt: skip
 
+DEFAULT_DAYS = 7  # a new page and Reset Filters show the last 7 days
+
 if TYPE_CHECKING:
     from ..main_window import MainWindow
 
@@ -32,7 +34,7 @@ class LogsPage(Page):
         super().__init__(ctx, shell)
         self.rows: list[dict[str, Any]] = []
         f = QHBoxLayout()
-        self.d_from = QDateEdit(QDate.currentDate().addDays(-7))
+        self.d_from = QDateEdit(QDate.currentDate().addDays(-DEFAULT_DAYS))
         self.d_to = QDateEdit(QDate.currentDate())
         for d in (self.d_from, self.d_to):
             d.setCalendarPopup(True)
@@ -128,23 +130,43 @@ class LogsPage(Page):
         )
         if n:
             self.empty.hide()
-        elif self.ctx.inspections(include_archived=True):
-            self.empty.show_state(
-                self.tr("No records match"),
-                self.tr("Widen the dates or the filters."),
-                self.tr("Reset Filters"),
-                self.reset_filters,
-            )
+        elif every := self.ctx.inspections(include_archived=True):
+            if self.ctx.inspections(*self._default_dates()):  # what Reset Filters would show
+                todo = self.tr("Widen the dates or the filters."), self.tr("Reset Filters"), self.reset_filters
+            else:  # Reset Filters would run the same empty query again (#200): the link shows every record instead
+                dates = sorted(to_local(r["time"])[:10] for r in every)  # local dates; the rows come sorted by id
+                archived = any(r["archived"] for r in every)
+                todo = (
+                    self.tr("Every record is archived or older than {days} days.").format(days=DEFAULT_DAYS),
+                    self.tr("Show All Records"),
+                    lambda: self.show_all_records(dates[0], dates[-1], archived),
+                )
+            self.empty.show_state(self.tr("No records match"), *todo)
         else:
             step = self.empty_step(self.tr("Run boards on Inspection."), "Inspection")
             self.empty.show_state(self.tr("No inspections yet"), *step)
 
+    @staticmethod
+    def _default_dates() -> tuple[str, str]:
+        """From and To of a new page and of Reset Filters: the last 7 days to today, as local dates."""
+        today = QDate.currentDate()
+        return today.addDays(-DEFAULT_DAYS).toString("yyyy-MM-dd"), today.toString("yyyy-MM-dd")
+
     def reset_filters(self) -> None:
-        self.d_from.setDate(QDate.currentDate().addDays(-7))
-        self.d_to.setDate(QDate.currentDate())
+        self._set_filters(*self._default_dates(), archived=False)
+
+    def show_all_records(self, oldest: str, newest: str, archived: bool) -> None:
+        """Every record (#200): From the oldest record's local date to today, or to the newest record's date when the
+        clock has gone back, every board model and operator, with archived records when there are any."""
+        today = QDate.currentDate().toString("yyyy-MM-dd")
+        self._set_filters(oldest, max(newest, today), archived)
+
+    def _set_filters(self, date_from: str, date_to: str, archived: bool) -> None:
+        self.d_from.setDate(QDate.fromString(date_from, "yyyy-MM-dd"))
+        self.d_to.setDate(QDate.fromString(date_to, "yyyy-MM-dd"))
         self.model.setCurrentIndex(0)
         self.operator.setCurrentIndex(0)
-        self.archived.setChecked(False)
+        self.archived.setChecked(archived)
         self.refresh()
 
     def _preview(self) -> None:

@@ -160,7 +160,11 @@ never the verdict of the board before (#182); `run_in_background(on_error=…)` 
 replace before the coded dialog opens. Every empty page, list and
 image area shows an `EmptyState` (`aoi/ui/widgets/empty_state.py`): what is missing, what to do next and one link
 button to the page where it is done; `Page.empty_step` turns "do this on <page>" into that link, or into "Ask an
-Engineer …" for a role that cannot open the page (REQ-SET-019, since S18c). The block is as wide as its text would
+Engineer …" for a role that cannot open the page (REQ-SET-019, since S18c). With no board model the header list is
+empty, so `Page.no_board_model()` gives Home, Inspection, Training, AI Model Test and Recipe Editor one next step by
+role: "+ New board model" for an Engineer or Admin, "Ask an Engineer to create one." for an Operator (#200). Logs &
+Export's "No records match" offers Reset Filters only when its last-7-days filter would show rows; when every record is
+older or archived, Show All Records sets the dates around every record and Include archived instead (#200). The block is as wide as its text would
 like within the area and as tall as its text wraps to at that width; a word wider than the area runs past the edge,
 and every line shows while the area is tall enough (since S27a-2).
 
@@ -496,7 +500,7 @@ item data, the key the engine stores). Names the engine stores with a result (ch
 English; Compare shows them through its `CHECK_NAMES`, `SOURCES` and `RULES` maps, and the Show combo's modes are
 chosen by index, so a translation cannot change behaviour. A subtitle that carries a value (Settings shows the
 version) overrides `Page.subtitle_text()`; the "No board model yet" empty state every page shows comes from
-`Page.no_board_model()`. A sentence is never glued from pieces: placeholders are named, `{count}`, and filled with
+`Page.no_board_model()`, Home's included. A sentence is never glued from pieces: placeholders are named, `{count}`, and filled with
 `.format()` after translation, never with an f-string. `tests/test_i18n.py` scans `aoi/ui` and `main.py` with `ast`
 and fails on a string literal passed to a Qt text setter, a text widget, a dialog, a table header or one of this code's
 helpers outside `tr()`, and on an unmarked page title; `ALLOWED_LITERALS` there names the few literals that stay, each
