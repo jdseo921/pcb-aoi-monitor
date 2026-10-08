@@ -83,7 +83,7 @@ def test_req_insp_016_six_step_cards_open_their_pages_and_show_status(qtbot, tra
     elapsed = perf_counter() - t0
     status = {name: label.text() for name, label in home.status_labels.items()}
     assert all(status.values()), status
-    assert status["Upload samples"].endswith("uploaded") and "Active model" in status["Self-train"]
+    assert status["Upload samples"].endswith("uploaded") and "Active AI model" in status["Self-train"]
     assert elapsed < 0.3, f"Home status took {elapsed * 1000:.0f} ms"
 
 
