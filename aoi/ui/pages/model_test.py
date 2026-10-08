@@ -11,7 +11,6 @@ from PySide6.QtGui import QPageLayout, QPageSize, QPdfWriter, QTextDocument
 from PySide6.QtWidgets import QFileDialog, QGridLayout, QHBoxLayout, QLabel, QMessageBox, QProgressBar, QSplitter
 
 from ... import defects as taxonomy
-from ...core.services import export_csv
 from ..widgets.image_view import ImageView
 from ..workers import Worker, start
 from .base import Page, button, fill_table, make_table
@@ -148,7 +147,7 @@ class ModelTestPage(Page):
             self, "Export CSV", str(self.ctx.settings.exports_dir / "model_test.csv"), "CSV (*.csv)"
         )
         if f:
-            export_csv(f, self.rows)
+            self.ctx.export_csv(f, self.rows, "test results")
 
     def export_report(self):
         if not self.rows:

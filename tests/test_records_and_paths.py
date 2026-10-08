@@ -16,7 +16,7 @@ from aoi.config import Settings
 from aoi.core.recipe import Recipe
 from aoi.core.services import AppContext
 from aoi.data import migrate as mg
-from tests.conftest import TrainedModel
+from tests.conftest import TrainedModel, engineer
 
 UUID4 = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$")
 STORED_TIME = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\+00:00$")
@@ -33,7 +33,7 @@ def filled_ctx(tmp_path: Path, tiny_model: TrainedModel, name: str = "ws") -> Ap
     """A private copy of the trained workspace with one inspection logged and one recipe saved."""
     ws = tmp_path / name
     shutil.copytree(tiny_model.ctx.settings.root, ws)
-    ctx = AppContext(Settings(workspace=str(ws), device="cpu"))
+    ctx = engineer(AppContext(Settings(workspace=str(ws), device="cpu")))
     ctx.inspect_file("TINY", ctx.db.samples("TINY", "NG")[0]["path"])
     ctx.save_recipe(Recipe(board_model="TINY"))
     return ctx
