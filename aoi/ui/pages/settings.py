@@ -26,7 +26,10 @@ from .base import QT_TRANSLATE_NOOP, ROLES, Page, button, fill_table, make_table
 if TYPE_CHECKING:
     from ..main_window import MainWindow
 
-_S1, _S2, _S3, _S4 = (QT_TRANSLATE_NOOP("SettingsPage", s) for s in ("Stage 1", "Stage 2", "Stage 3", "Stage 4"))
+_S1 = QT_TRANSLATE_NOOP("SettingsPage", "Stage 1")  # a literal each: pyside6-lupdate extracts no other text (#199)
+_S2 = QT_TRANSLATE_NOOP("SettingsPage", "Stage 2")
+_S3 = QT_TRANSLATE_NOOP("SettingsPage", "Stage 3")
+_S4 = QT_TRANSLATE_NOOP("SettingsPage", "Stage 4")
 _NOT_CONNECTED = QT_TRANSLATE_NOOP("SettingsPage", "Not connected")
 HARDWARE = [  # (interface, stage, status), shown through tr()
     (QT_TRANSLATE_NOOP("SettingsPage", "Image files (folder camera)"), _S1, QT_TRANSLATE_NOOP("SettingsPage", "Ready")),

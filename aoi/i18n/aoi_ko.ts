@@ -413,7 +413,7 @@
 <context>
     <name>Errors</name>
     <message>
-        <location filename="../core/services.py" line="+57"/>
+        <location filename="../core/services.py" line="+58"/>
         <source> ({context})</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1425,7 +1425,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+2"/>
+        <location line="+13"/>
         <source>its image threshold {value} is not a number above 0</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1435,7 +1435,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-7"/>
+        <location line="-18"/>
         <source>{entry} fails its CRC-32</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1445,7 +1445,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+172"/>
+        <location line="+183"/>
         <source>it holds no state_dict and metadata</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1455,7 +1455,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-184"/>
+        <location line="-195"/>
         <source>its input size {size} is not a multiple of {stride} pixels</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1465,7 +1465,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+205"/>
+        <location line="+216"/>
         <source>its err_std holds a spread of 0 or less</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2404,7 +2404,7 @@
 <context>
     <name>NgDialog</name>
     <message>
-        <location filename="../ui/pages/training.py" line="+52"/>
+        <location filename="../ui/pages/training.py" line="+53"/>
         <source>Label NG images</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2567,7 +2567,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/settings.py" line="+42"/>
+        <location filename="../ui/pages/settings.py" line="+45"/>
         <source>Settings</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2926,7 +2926,27 @@
 <context>
     <name>SettingsPage</name>
     <message>
-        <location filename="../ui/pages/settings.py" line="-12"/>
+        <location filename="../ui/pages/settings.py" line="-16"/>
+        <source>Stage 1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Stage 2</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Stage 3</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Stage 4</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
         <source>Not connected</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3091,6 +3111,44 @@
     </message>
 </context>
 <context>
+    <name>Training</name>
+    <message>
+        <location filename="../core/anomaly.py" line="-215"/>
+        <source>Training on {train} OK images ({held_out} held out, {ng} NG for calibration) on {device}</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>Stopped by user; calibrating current weights</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Calibrated image threshold {threshold:.4f} ({rule}); pixel threshold {pixel:.4f}</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>OK-only: max(mean+3σ, 1.05×max OK)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>separable: midpoint of max OK and min NG</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>overlap: OK-based cut, {missed}/{ng} labelled NG below it</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../core/services.py" line="-1072"/>
+        <source>Aligning {count} images to the reference board</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
     <name>TrainingPage</name>
     <message>
         <location filename="../ui/pages/training.py" line="+16"/>
@@ -3104,12 +3162,12 @@
     </message>
     <message>
         <location line="+1"/>
-        <location line="+328"/>
+        <location line="+337"/>
         <source>Import Folder…</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-320"/>
+        <location line="-329"/>
         <location line="+52"/>
         <source>ID</source>
         <translation type="unfinished"></translation>
@@ -3307,7 +3365,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+22"/>
+        <location line="+31"/>
         <source>Add at least 20 OK boards with + OK Images or Import Folder…</source>
         <translation type="unfinished"></translation>
     </message>
