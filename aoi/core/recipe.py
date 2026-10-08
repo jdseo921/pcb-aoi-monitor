@@ -65,6 +65,19 @@ class Recipe:
                 del roi["mm"]
         return d
 
+    def in_mm(self, px_per_mm: float | None) -> Recipe:
+        """The recipe with each size it holds in px given in mm too at `px_per_mm`, as Save Recipe stores it under a
+        scale (REQ-RCP-006): the minimum defect size as the width of a round defect of its area, and each ROI's box.
+        `in_px` at that scale gives back the same sizes in px, so no verdict changes. Without a scale, the recipe."""
+        if px_per_mm is None:
+            return self
+        out = copy.deepcopy(self)
+        if out.min_defect_mm is None:
+            out.min_defect_mm = disc_width(out.min_defect_area) / px_per_mm
+        for roi in out.rois:
+            roi.mm = roi.mm or [v / px_per_mm for v in (roi.x, roi.y, roi.w, roi.h)]
+        return out
+
     def in_px(self, px_per_mm: float | None) -> Recipe:
         """The recipe as the engine applies it at `px_per_mm`, its board model's scale (REQ-RCP-006): a copy whose
         minimum defect area is the area of a round defect `min_defect_mm` wide and whose ROIs sit at their place in mm,

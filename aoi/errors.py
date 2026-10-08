@@ -521,6 +521,20 @@ CODES: dict[str, ErrorCode] = {
             QT_TRANSLATE_NOOP("Errors", "Try your thresholds again on revision {latest}, then press Save to Recipe."),
         ),
         ErrorCode(
+            "AOI-RCP-005",
+            QT_TRANSLATE_NOOP("Errors", "Sizes are shown in px"),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Board model {board_model} has no scale yet, so its recipe's minimum defect size and ROIs are in px of"
+                " its images: a recipe saves so and judges as before, but its sizes keep their px after a camera"
+                " change, where sizes in mm would follow the scale set again on the new Golden board.",
+            ),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "To give them in mm, set the board model's scale from a known distance on its Golden board.",
+            ),
+        ),
+        ErrorCode(
             "AOI-RCP-008",
             QT_TRANSLATE_NOOP("Errors", "Scale not set"),
             QT_TRANSLATE_NOOP("Errors", "The scale of board model {board_model} was not set: {reason}."),
@@ -528,6 +542,21 @@ CODES: dict[str, ErrorCode] = {
                 "Errors",
                 "Nothing was changed. On the Recipe Editor, press Calibrate Scale…, click two points on the Golden"
                 " board a known distance apart, enter that distance in mm and press Set Scale.",
+            ),
+        ),
+        ErrorCode(
+            "AOI-RCP-009",
+            QT_TRANSLATE_NOOP("Errors", "Sizes are held in px"),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Revision {revision} of board model {board_model} holds {count} of its {total} size(s) in px of its"
+                " images (the minimum defect size and each ROI's box): shown in mm at this scale, they keep their px"
+                " when the scale is set again, as after a camera change, while sizes in mm follow it.",
+            ),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Press Save Recipe to store them in mm, so that they follow the scale; that alone changes no verdict"
+                " at this scale.",
             ),
         ),
         ErrorCode(

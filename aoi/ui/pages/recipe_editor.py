@@ -34,9 +34,11 @@ from ...core.services import AppContext
 from ...errors import AoiError
 from ...times import to_local
 from .. import theme
+from ..errors import phrase_text
 from ..widgets.busy import BusyOverlay
 from ..widgets.empty_state import EmptyState
 from ..widgets.image_view import ImageView
+from ..widgets.scale import DefectSizeField
 from .base import QT_TRANSLATE_NOOP, Page, button, fill_table, make_table
 
 if TYPE_CHECKING:
@@ -73,6 +75,7 @@ class RecipeEditorPage(Page):
         self.ref: np.ndarray | None = None
         self.golden_seen: tuple[str | None, int, int] | None = None  # the Golden board file last read (#176)
         self.golden_error: AoiError | None = None  # and why it could not be
+        self.px_per_mm: float | None = None  # the board model's scale, which load() reads (REQ-RCP-006)
 
         split = QSplitter(Qt.Orientation.Horizontal)
         left = QWidget()
@@ -88,6 +91,21 @@ class RecipeEditorPage(Page):
         tools.addWidget(self.roi_type)
         tools.addStretch(1)
         ll.addLayout(tools)
+        scale_row = QHBoxLayout()  # a row of its own: on the tools row it widened the window past 1920 px
+        self.scale_text, self.scale_badge = QLabel(), QLabel()  # the scale, or AOI-RCP-005 in amber (Q21)
+        self.scale_text.setObjectName("muted")
+        self.scale_badge.setObjectName("badge")
+        for part in (self.scale_text, self.scale_badge):
+            scale_row.addWidget(part)
+        scale_row.addStretch(1)
+        ll.addLayout(scale_row)
+        self.held_badge = QLabel()  # AOI-RCP-009, word-wrapped on a row of its own under the scale: no wider window
+        self.held_badge.setObjectName("badge")  # amber, as AOI-RCP-005 (S29 review)
+        self.held_badge.setWordWrap(True)
+        self.held_badge.hide()
+        ll.addWidget(self.held_badge)
+        self.scale_text.hide()  # until load() finds a board model
+        self.scale_badge.hide()
         self.view = ImageView(placeholder="")
         self.view_empty = EmptyState(self.view)
         self.view.roiDrawn.connect(self.add_roi)
@@ -100,8 +118,7 @@ class RecipeEditorPage(Page):
         roi_tab = QWidget()
         roi_tab.setObjectName("page")
         rl = QVBoxLayout(roi_tab)
-        headers = [self.tr("Name"), self.tr("Type"), self.tr("X"), self.tr("Y"), self.tr("W"), self.tr("H")]
-        self.roi_table = make_table([*headers, self.tr("AI score")], sortable=False)  # literals, so lupdate finds them
+        self.roi_table = make_table(self._roi_headers(), sortable=False)
         self.roi_table.itemSelectionChanged.connect(self._select_roi)
         self.roi_empty = EmptyState(self.roi_table)
         rl.addWidget(self.roi_table, 1)
@@ -144,8 +161,8 @@ class RecipeEditorPage(Page):
         self.warn.setSingleStep(0.05)
         self.diff = QSpinBox()
         self.diff.setRange(1, 255)
-        self.area = QSpinBox()
-        self.area.setRange(1, 100000)
+        self.min_size = DefectSizeField()  # in px without a scale, in mm with one
+        self.area = self.min_size.area
         self.ssim = QDoubleSpinBox()
         self.ssim.setRange(0, 1)
         self.ssim.setSingleStep(0.01)
@@ -161,7 +178,7 @@ class RecipeEditorPage(Page):
             (self.warn, self.tr("WARN band (fraction of the threshold)")),
             (self.use_cmp, None),
             (self.diff, self.tr("Pixel difference (0-255)")),
-            (self.area, self.tr("Minimum defect area (px)")),
+            (self.min_size, self.min_size.label),
             (self.ssim, self.tr("Similarity minimum (SSIM)")),
             (self.chg, self.tr("Maximum changed area %")),
             (self.maxreg, self.tr("Allowed difference regions")),
@@ -208,6 +225,18 @@ class RecipeEditorPage(Page):
     def _type_text(self, roi_type: str) -> str:
         return self.tr(ROI_TYPE_NAMES[roi_type]) if roi_type in ROI_TYPE_NAMES else roi_type
 
+    def _roi_headers(self) -> list[str]:
+        unit = self.tr("px") if self.px_per_mm is None else self.tr("mm")
+        box = (self.tr("X"), self.tr("Y"), self.tr("W"), self.tr("H"))  # each a literal, so lupdate finds it (#173)
+        sized = [self.tr("{name} ({unit})").format(name=name, unit=unit) for name in box]
+        return [self.tr("Name"), self.tr("Type"), *sized, self.tr("AI score")]
+
+    def _box(self, x: ROI) -> list[float]:
+        """An ROI's place and size as the table shows them: in px, or in mm at the scale."""
+        if (s := self.px_per_mm) is None:
+            return [x.x, x.y, x.w, x.h]
+        return [round(v, 2) for v in x.mm or [v / s for v in (x.x, x.y, x.w, x.h)]]
+
     @staticmethod
     def _pair(a: QWidget, b: QWidget) -> QWidget:
         w = QWidget()
@@ -233,9 +262,13 @@ class RecipeEditorPage(Page):
         if not self.board_model:
             self.view_empty.show_state(*self.no_board_model())
             self.show_calibrated(self.ai_thr, None)  # nothing to name, never the board model before's value (review)
+            self.scale_text.hide()  # no board model, so no scale and no AOI-RCP-005 to show
+            self.scale_badge.hide()
+            self.held_badge.hide()
             return
         self.rev, r = self.ctx.recipe(self.board_model)
-        self.recipe = r
+        self.px_per_mm = self.ctx.scale(self.board_model)
+        self.recipe = r = r.in_px(self.px_per_mm)  # its sizes in mm as the engine applies them, in px
         self._read_golden_board()
         self.use_ai.setChecked(r.use_ai)
         self.use_cmp.setChecked(r.use_compare)
@@ -243,7 +276,7 @@ class RecipeEditorPage(Page):
         self.ai_thr.set_override(r.anomaly_threshold)
         self.warn.setValue(r.warn_ratio)
         self.diff.setValue(r.diff_threshold)
-        self.area.setValue(r.min_defect_area)
+        self.min_size.show_recipe(r, self.px_per_mm)
         self.ssim.setValue(r.ssim_min)
         self.chg.setValue(r.changed_pct_max)
         self.maxreg.setValue(r.max_diff_regions)
@@ -280,7 +313,9 @@ class RecipeEditorPage(Page):
 
     def _refresh_rois(self) -> None:
         r = self.edited_recipe
-        fill_table(self.roi_table, [[x.name, x.type, x.x, x.y, x.w, x.h, x.ai_score] for x in r.rois])
+        self.roi_table.setHorizontalHeaderLabels(self._roi_headers())
+        fill_table(self.roi_table, [[x.name, x.type, *self._box(x), x.ai_score] for x in r.rois])
+        self._show_scale()
         if r.rois:
             self.roi_empty.hide()
         else:
@@ -391,9 +426,44 @@ class RecipeEditorPage(Page):
         r = self.edited_recipe
         r.use_ai, r.use_compare = self.use_ai.isChecked(), self.use_cmp.isChecked()
         r.anomaly_threshold = self.ai_thr.override()
-        r.warn_ratio, r.diff_threshold, r.min_defect_area = self.warn.value(), self.diff.value(), self.area.value()
+        r.warn_ratio, r.diff_threshold = self.warn.value(), self.diff.value()
+        self.min_size.apply(r)  # a size left in px stays in px until save() stores it in mm (Recipe.in_mm)
         r.ssim_min, r.changed_pct_max, r.max_diff_regions = self.ssim.value(), self.chg.value(), self.maxreg.value()
         return r
+
+    # --- scale (REQ-RCP-006) -----------------------------------------------------
+    def held_in_px(self) -> AoiError | None:
+        """AOI-RCP-009 while the board model has a scale and its latest revision holds its minimum defect size or an
+        ROI in px, which keep their px when the scale is set again (a camera change), until Save Recipe stores them in
+        mm (S29 review); else None."""
+        if self.px_per_mm is None or not (bm := self.board_model):
+            return None
+        rev, r = self.ctx.recipe(bm)
+        count, total = (r.min_defect_mm is None) + sum(x.mm is None for x in r.rois), 1 + len(r.rois)
+        return AoiError("AOI-RCP-009", revision=rev, board_model=bm, count=count, total=total) if count else None
+
+    def _show_scale(self) -> None:
+        """The board model's scale above the Golden board, or, without one, AOI-RCP-005 in amber: sizes in px (Q21);
+        with one, AOI-RCP-009 in amber under it while the latest revision still holds a size in px (`held_in_px`), with
+        what to do, as touch and keys reach no tooltip."""
+        s, bm, held = self.px_per_mm, self.board_model or "", self.held_in_px()
+        self.scale_text.setVisible(s is not None)
+        self.scale_badge.setVisible(s is None)
+        self.held_badge.setVisible(held is not None)
+        if s is not None:
+            self.scale_text.setText(self.tr("Scale {scale:.2f} px/mm").format(scale=s))
+        for label, badge in ((self.scale_badge, AoiError("AOI-RCP-005", board_model=bm)), (self.held_badge, held)):
+            if badge is not None:
+                label.setText(" ".join([badge.code, phrase_text(badge.title)]))
+                label.setToolTip(" ".join([phrase_text(badge.what), phrase_text(badge.action)]))
+        if held is not None:
+            self.held_badge.setText(self._with_action(held))
+
+    def _with_action(self, notice: AoiError) -> str:
+        """A notice's code, title and what to do, in one line (AOI-RCP-009 under the scale; S29 review)."""
+        return self.tr("{code} {title}: {action}").format(
+            code=notice.code, title=phrase_text(notice.title), action=phrase_text(notice.action)
+        )
 
     # --- actions ----------------------------------------------------------------
     def test_run(self) -> None:
@@ -436,7 +506,7 @@ class RecipeEditorPage(Page):
             if not self._show_latest(latest):
                 self.error(AoiError("AOI-RCP-001", board_model=bm, latest=latest, revision=self.rev))
             return
-        rev = self.ctx.save_recipe(self._collect())
+        rev = self.ctx.save_recipe(self._collect().in_mm(self.px_per_mm))  # under a scale, every size in mm
         saved = self.tr("Saved revision {revision} by {user}.").format(revision=rev, user=self.ctx.user)
         QMessageBox.information(self, self.tr("Recipe"), saved)
         self.load()
