@@ -102,7 +102,7 @@ class AppContext:
         self.user, self.role, self.user_uuid = "operator", "Operator", self.db.user_uuid("operator")
         archived = self.db.archive_old(self.settings.log_retention_days)  # retention is a system action, not a user's
         self.log.info("retention.archived", extra={"days": self.settings.log_retention_days, "archived": archived})
-        self._model_cache: dict[str, tuple[str, anomaly.AnomalyModel]] = {}
+        self._model_cache: dict[str, tuple[str, anomaly.AnomalyModel, str]] = {}
         self.jobs = Jobs()  # background work (REQ-SET-021): screens submit through aoi/ui/workers, tests directly
 
     # --- dataset -------------------------------------------------------------
@@ -194,7 +194,9 @@ class AppContext:
         self.log.info("training.finished", extra={"board_model": board_model, "model_version": version})
         return model.meta
 
-    def load_model(self, board_model: str) -> tuple[str, anomaly.AnomalyModel] | None:
+    def load_model(self, board_model: str) -> tuple[str, anomaly.AnomalyModel, str] | None:
+        """The active model of a board model as (version, model, uuid), the three from one row so a record never names
+        one version's UUID with another's weights; the weights are cached by version."""
         rec = self.db.active_model(board_model)
         if not rec:
             return None
@@ -202,11 +204,12 @@ class AppContext:
         if cached and cached[0] == rec["version"]:
             return cached
         m = anomaly.AnomalyModel.load(rec["path"], self.device)
-        self._model_cache[board_model] = (rec["version"], m)
+        self._model_cache[board_model] = (rec["version"], m, str(rec["uuid"]))
         return self._model_cache[board_model]
 
     # --- recipe --------------------------------------------------------------
     def recipe(self, board_model: str) -> tuple[int, Recipe]:
+        """The recipe revision in use: (revision, recipe); revision 0 and the defaults while none is saved."""
         latest = self.db.latest_recipe(board_model)
         if latest:
             return latest[0], Recipe.from_dict(latest[1])
@@ -256,13 +259,21 @@ class AppContext:
         self, board_model: str, recipe: Recipe | None = None, side: str = "Top", reference: np.ndarray | None = None
     ) -> Inspector:
         """The engine for a board model: its latest recipe (or `recipe`), its active AI model and its reference image
-        (or `reference`, such as another stored OK board on the Compare page). Screens never build an Inspector."""
-        rev, rcp = self.recipe(board_model)
+        (or `reference`, such as another stored OK board on the Compare page). Screens never build an Inspector.
+        The engine names the model version and recipe revision it applies, with their UUIDs, for the records it
+        produces (REQ-INSP-012); a `recipe` that differs from the stored revision names none."""
+        latest = self.db.latest_recipe(board_model)
+        rev: int | None
+        rev, rcp, recipe_uuid = (latest[0], Recipe.from_dict(latest[1]), latest[2]) if latest else (0, None, None)
+        rcp = rcp or Recipe(board_model=board_model)
+        if recipe is not None and recipe.to_dict() != rcp.to_dict():
+            rev, recipe_uuid = None, None  # an unsaved recipe (the Compare page's what-if thresholds) has no revision
         mv = self.load_model(board_model)
         if reference is None:
             ref_path = self.db.reference(board_model)
             reference = self.load_image(ref_path) if ref_path and Path(ref_path).exists() else None
-        return Inspector(recipe or rcp, mv[1] if mv else None, reference, side, mv[0] if mv else None, rev)
+        model, version, model_uuid = (mv[1], mv[0], mv[2]) if mv else (None, None, None)
+        return Inspector(recipe or rcp, model, reference, side, version, rev, model_uuid, recipe_uuid)
 
     def inspect(
         self,
@@ -288,24 +299,31 @@ class AppContext:
         return res
 
     def log_result(self, board_model: str, path: str, res: InspectionResult, insp: Inspector) -> int:
-        """Auto-save after each board (spec 4.1): overlay PNG + DB row."""
+        """Save a result with its evidence (REQ-INSP-008, spec 4.1): the overlay PNG, then one transaction with the row,
+        the whole result as JSON, its checks (region, metric, value, threshold, rule, result) and its defects, naming
+        the AI model version and recipe revision that decided it by version and UUID (REQ-INSP-012)."""
         day = local_date()  # the folder is named for the operator's shift date; the stored time is UTC
         overlay = self.settings.results_dir / day / f"{Path(path).stem}_{uuid.uuid4().hex[:6]}_{res.verdict}.png"
         save_image(overlay, draw_overlay(res))
+        doc = res.to_dict()
         iid = self.db.add_inspection(
             {
                 "board_model": board_model,
                 "model_version": insp.model_version,
+                "model_uuid": insp.model_uuid,
                 "recipe_rev": insp.recipe_rev,
+                "recipe_uuid": insp.recipe_uuid,
                 "image_path": path,
                 "overlay_path": str(overlay),
                 "view": res.view,
                 "result": res.verdict,
                 "score": res.score,
                 "metrics": res.metrics_dict(),
+                "result_json": doc,
                 "operator": self.user,
             },
             [d.as_row() for d in res.defects],
+            doc["checks"],
         )
         if res.verdict == NG:
             self.alarm("NG", f"{Path(path).name}: {len(res.defects)} defect(s)", "AOI-INSP-003")
@@ -411,7 +429,7 @@ class AppContext:
         return self.db.active_model(board_model)
 
     def recipe_history(self, board_model: str) -> list[dict[str, Any]]:
-        """Recipe revisions (revision, user, created_at), newest first."""
+        """Recipe revisions (revision, uuid, user, created_at), newest first."""
         return self.db.recipe_history(board_model)
 
     def inspections(
@@ -429,6 +447,17 @@ class AppContext:
     def defects_for(self, inspection_id: int) -> list[dict[str, Any]]:
         """The defects of one inspection (no, type, score, side, x, y, w, h), in order."""
         return self.db.defects_for(inspection_id)
+
+    def checks_for(self, inspection_id: int) -> list[dict[str, Any]]:
+        """The checks that decided one inspection (no, region, metric, source, value, threshold, rule, result,
+        explain), in order; [] for a record from before migration 0006 (REQ-INSP-012)."""
+        return self.db.checks_for(inspection_id)
+
+    def inspection_result(self, inspection_id: int) -> InspectionResult | None:
+        """One stored result read back without its images: the verdict, checks, defects, compare metrics and regions
+        as they were decided, for Compare to show (REQ-INSP-008); None for a record from before migration 0006."""
+        doc = self.db.inspection_result(inspection_id)
+        return InspectionResult.from_dict(doc) if doc is not None else None
 
     def users(self) -> list[dict[str, Any]]:
         """Users (uuid, name, role), oldest first."""

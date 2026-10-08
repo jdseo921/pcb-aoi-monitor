@@ -1,5 +1,5 @@
 """REQ-SET-016: the database is created and changed only through numbered migrations (ADR 0004); REQ-INSP-010 for the
-view column migration 0005 adds."""
+view column migration 0005 adds; REQ-INSP-012 for the evidence columns and the checks table of migration 0006."""
 
 from __future__ import annotations
 
@@ -103,8 +103,53 @@ def test_req_insp_010_rows_from_before_the_view_column_keep_no_view(tmp_path: Pa
     old.commit()
     old.close()
     db = Database(path)
-    assert [r["number"] for r in db.query("SELECT number FROM schema_version ORDER BY number")] == [1, 2, 3, 4, 5]
+    applied = [r["number"] for r in db.query("SELECT number FROM schema_version ORDER BY number")]
+    assert applied == list(range(1, len(files) + 1))  # the rest of the migrations, whatever their number
     db.add_inspection({"result": "NG", "view": "Bottom", "image_path": "x.png"}, [])
     assert [r["view"] for r in db.inspections(include_archived=True)] == ["Bottom", None]  # newest first
     with pytest.raises(sqlite3.IntegrityError, match="CHECK constraint failed"):  # SQLite 3.37 or later names it
         db.add_inspection({"result": "OK", "view": "Left"}, [])
+
+
+def test_req_insp_012_rows_from_before_the_evidence_columns_keep_none(tmp_path: Path) -> None:
+    """Migration 0006 adds `model_uuid`, `recipe_uuid` and `result_json` to inspections and the `checks` table: a record
+    from before it has no checks and no stored result rather than invented ones; a new record's checks come back in
+    order, and the record list leaves the stored result out (it is read one record at a time)."""
+    path = tmp_path / "aoi.sqlite"
+    files = mg.load_migrations()
+    old = sqlite3.connect(path)
+    assert [m.number for m in mg.migrate(old, files[:5])] == [1, 2, 3, 4, 5]
+    old.execute("INSERT INTO inspections(uuid, time, result) VALUES('old', '2026-09-30T01:00:00+00:00', 'OK')")
+    old.commit()
+    old.close()
+    db = Database(path)
+    assert "checks" in table_names(path)
+    (before,) = db.inspections(include_archived=True)
+    assert (before["model_uuid"], before["recipe_uuid"]) == (None, None)
+    assert db.checks_for(before["id"]) == [] and db.inspection_result(before["id"]) is None
+    check = {"name": "AI anomaly score", "value": 1.5, "threshold": 1.0, "rule": "≥ thr → NG", "verdict": "NG"}
+    check.update(source="AI", explain="", region="Board")
+    roi = {**check, "name": "ROI R1 [Presence]", "region": "R1 @ 1,2 3x4", "verdict": "OK"}
+    rec = {"result": "NG", "view": "Top", "model_uuid": "m-1", "recipe_uuid": "r-1", "result_json": {"verdict": "NG"}}
+    iid = db.add_inspection(rec, [], [check, roi])
+    stored = [(c["no"], c["metric"], c["region"], c["threshold"], c["result"]) for c in db.checks_for(iid)]
+    assert stored == [(1, "AI anomaly score", "Board", 1.0, "NG"), (2, "ROI R1 [Presence]", "R1 @ 1,2 3x4", 1.0, "OK")]
+    assert db.inspection_result(iid) == {"verdict": "NG"}
+    new = next(r for r in db.inspections(include_archived=True) if r["id"] == iid)
+    assert (new["model_uuid"], new["recipe_uuid"]) == ("m-1", "r-1") and "result_json" not in new
+
+
+def test_req_insp_008_a_record_the_database_refuses_leaves_nothing_behind(tmp_path: Path) -> None:
+    """The row, its defects and its checks commit together: a check the database refuses (a NULL value) after the
+    inspection row is inserted rolls that row back, and a check dict without a field fails before anything is written;
+    either way the connection is out of its transaction, so the next write cannot commit an orphan row."""
+    db = Database(tmp_path / "aoi.sqlite")
+    check = {"region": "Board", "name": "a", "source": "AI", "value": 1.0, "threshold": 2.0, "rule": "r"}
+    check |= {"verdict": "OK", "explain": ""}
+    with pytest.raises(sqlite3.IntegrityError):
+        db.add_inspection({"result": "OK"}, [], [check, {**check, "value": None}])
+    with pytest.raises(KeyError):
+        db.add_inspection({"result": "OK"}, [], [{"name": "a"}])
+    db.alarm("INFO", "the next write", "AOI-INSP-003")  # would commit a transaction left open
+    assert db.inspections() == [] and not db._conn.in_transaction
+    db.close()

@@ -50,8 +50,8 @@ WRITES: dict[str, tuple[str, Callable[[AppContext, Path, Path], Any]]] = {
 UNCHECKED = {
     "alarm", "alarms", "audit", "audit_entries", "report_error", "close", "set_user", "load_model", "recipe",
     "inspector", "inspect", "inspect_file", "load_image", "log_result", "board_models", "reference_image", "samples",
-    "sample_path", "models", "model", "active_model", "recipe_history", "inspections", "defects_for", "users",
-    "board_status",
+    "sample_path", "models", "model", "active_model", "recipe_history", "inspections", "defects_for", "checks_for",
+    "inspection_result", "users", "board_status",
 }  # fmt: skip
 REFUSED = [(name, role) for name in WRITES for role in ROLES[: ROLES.index(REQUIRED_ROLE[name])]]
 
