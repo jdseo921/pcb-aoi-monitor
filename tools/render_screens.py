@@ -290,6 +290,7 @@ def render_pages(
         for title, page in win.pages.items():
             if role not in page.roles:
                 continue
+            win.statusBar().clearMessage()  # the page before's message is not this page's; what it says itself stays
             assert win.navigate(title), title
             prepare(win, title, dataset)
             QApplication.processEvents()
