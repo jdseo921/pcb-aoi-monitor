@@ -20,6 +20,9 @@ from .imaging import align_to_reference
 from .recipe import ROI_DEFECT, Recipe
 
 OK, WARN, NG = "OK", "WARN", "NG"
+# The engine's notes, stored with each result as written; aoi/core/explain.py words them for the screen.
+NO_GOLDEN_NOTE = "No golden reference image set for this board model; comparison skipped."
+NO_AI_NOTE = "No trained model for this board model; AI check skipped."
 
 
 @dataclass
@@ -245,7 +248,7 @@ class Inspector:
             )
             regions += cr.regions
         elif r.use_compare:
-            res.notes.append("No golden reference image set for this board model; comparison skipped.")
+            res.notes.append(NO_GOLDEN_NOTE)
 
         # 2) Self-trained anomaly model ------------------------------------------
         if r.use_ai and self.model is not None:
@@ -270,7 +273,7 @@ class Inspector:
             mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, np.ones((5, 5), np.uint8))
             regions += regions_from_mask(mask, amap / thr, r.min_defect_area, "ai")
         elif r.use_ai:
-            res.notes.append("No trained model for this board model; AI check skipped.")
+            res.notes.append(NO_AI_NOTE)
         res.image = work
 
         # 3) ROI checks ----------------------------------------------------------

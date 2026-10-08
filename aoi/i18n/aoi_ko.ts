@@ -403,6 +403,99 @@
     </message>
 </context>
 <context>
+    <name>Explain</name>
+    <message>
+        <location filename="../core/explain.py" line="+21"/>
+        <source>Similarity to the Golden board is {value}, below its threshold of {threshold}.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>Similarity to the Golden board is {value}, at or just above its threshold of {threshold}.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>The changed area is {value} of the board, at or above its threshold of {threshold}.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>The changed area is {value} of the board, close to its threshold of {threshold}.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>The number of difference regions is {value}, more than the threshold of {threshold}.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>The number of alignment points is {value}, fewer than the threshold of {threshold}, so the other checks may be off: check that the board lies flat, then inspect it again.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>The AI score is {value}, at or above its threshold of {threshold}.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>The AI score is {value}, close to its threshold of {threshold}.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>In ROI {roi}, the AI score is {value} the AI model&apos;s threshold, at or above the ROI&apos;s threshold of {threshold}.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>In ROI {roi}, the AI score is {value} the AI model&apos;s threshold, close to the ROI&apos;s threshold of {threshold}.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>{check} is {value}, against its threshold of {threshold}.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Every check that decides the verdict is inside its threshold.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>No check failed, but a defect above Minor severity is marked on the board, so a person needs to look.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>No check failed, but {count} defects above Minor severity are marked on the board, so a person needs to look.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+4"/>
+        <source>The stored checks do not show why; inspect the board again.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>No Golden board is set for this board model, so the board was not compared with one: an Engineer makes one by training an AI model on Training.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>No AI model is trained for this board model, so the AI check did not run: an Engineer trains one on Training.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>Note: {note}</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
     <name>HomePage</name>
     <message>
         <location filename="../ui/main_window.py" line="+55"/>
