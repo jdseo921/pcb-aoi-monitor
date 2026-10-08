@@ -562,7 +562,7 @@ def test_req_set_019_empty_state_shows_every_line_in_a_narrow_area(qtbot: QtBot)
 
 def test_req_p3d_001_profile_page_is_a_stage_2_card(qtbot: QtBot, trained_ctx: AppContext) -> None:
     """Until 3D data exists the 3D Profile page is one card that says so and leads to the Recipe Editor, where the
-    height and volume limits already live; nothing on it looks like a working 3D control (sketch profile3d-card.md)."""
+    height and volume thresholds live; nothing on it looks like a working 3D control (sketch profile3d-card.md)."""
     win = _window(qtbot, trained_ctx, "Engineer")
     win.navigate("3D Profile")
     page = win.pages["3D Profile"]

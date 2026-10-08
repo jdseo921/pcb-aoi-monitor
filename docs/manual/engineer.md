@@ -128,8 +128,8 @@ not, and the Recipe Editor drops a Try judged against the Golden board before. U
 was asked to judge shows "Board not inspected" in place of a verdict.
 
 The Selected ROI form edits the ROI selected in the ROI table: Apply and Delete are off while none is, and Delete
-leaves none selected. Height and Volume min and max (stored now, checked from Stage 2) are 0 or more, with min not above max; "—",
-one step below 0, leaves a limit unset. Apply refuses other values with AOI-RCP-002 and changes nothing.
+leaves none selected. The Height and Volume thresholds, min and max (stored now, checked from Stage 2), are 0 or more, with min not above max; "—",
+one step below 0, leaves a threshold unset. Apply refuses other values with AOI-RCP-002 and changes nothing.
 
 Each Save Recipe stores a new revision. When a revision was saved after the Recipe Editor loaded its own, for example
 with Save to Recipe on Compare, the editor shows it when opened again; if the editor holds changes not yet saved, it asks
@@ -145,8 +145,11 @@ clears the last Try's verdict.
 
 Each validation run is stored with a UUID and the UUID of the AI model it tested. **Export CSV** writes one row per
 image (`image`, `gt` the label, `ai_result` the verdict, `score`, `defects`, `pass_fail`), then `run_uuid`,
-`model_version` and `model_uuid`; **Export Report** names the same run and AI model by UUID under the validation folder
-those results came from, even when another folder has been picked since to run next. Results stay on the page only
+`model_version` and `model_uuid`. `gt` is OK or NG from the image's sub-folder (`ok/` or `ng/`), or `?` for an image in
+neither; `pass_fail` is `PASS` when the verdict (WARN counted as NG) matches the label, `FAIL` when it differs and
+`NO_LABEL` for an image with no label, shown in the table and the report's Matches label? column as Matches label,
+Differs from label (in red) and No label. **Export Report** names the same run and AI model by UUID under the
+validation folder those results came from, even when another folder has been picked since to run next. Results stay on the page only
 under the board model they were run for: picking another board model in the header clears them, and a run that
 ends after such a change is stored but not shown. The report is written whole or not at all and recorded in the
 audit trail; when it cannot be written (a folder that cannot be made, a file open in a viewer, a full disk), the

@@ -101,8 +101,8 @@ CODES: dict[str, ErrorCode] = {
         ),
         ErrorCode(
             "AOI-INSP-003",
-            QT_TRANSLATE_NOOP("Errors", "Board failed inspection"),
-            QT_TRANSLATE_NOOP("Errors", "Board {board} failed inspection with {defects} defect(s)."),
+            QT_TRANSLATE_NOOP("Errors", "Board judged NG"),
+            QT_TRANSLATE_NOOP("Errors", "Board {board} was judged NG with {defects} defect(s)."),
             QT_TRANSLATE_NOOP("Errors", "Review the result on the Compare page before the board moves on."),
         ),
         ErrorCode(
@@ -281,10 +281,10 @@ CODES: dict[str, ErrorCode] = {
             QT_TRANSLATE_NOOP("Errors", "AI model file refused"),
             QT_TRANSLATE_NOOP(
                 "Errors",
-                "AI model file refused: {path} could not be loaded as a weights-only model file this app wrote "
+                "AI model file refused: {path} could not be loaded as a weights-only AI model file this app wrote "
                 "({reason}).",
             ),
-            QT_TRANSLATE_NOOP("Errors", "Train the board model again, or import a model file exported by this app."),
+            QT_TRANSLATE_NOOP("Errors", "Train the board model again."),
         ),
         ErrorCode(
             "AOI-TRN-002",
@@ -298,7 +298,7 @@ CODES: dict[str, ErrorCode] = {
             QT_TRANSLATE_NOOP(
                 "Errors", "Board model {board} has no trained AI model, so only the golden-board comparison runs."
             ),
-            QT_TRANSLATE_NOOP("Errors", "Train a model on the Training page when the AI checks are needed."),
+            QT_TRANSLATE_NOOP("Errors", "Train an AI model on the Training page when the AI checks are needed."),
         ),
         ErrorCode(
             "AOI-TRN-004",
@@ -411,16 +411,16 @@ CODES: dict[str, ErrorCode] = {
         ),
         ErrorCode(
             "AOI-RCP-002",
-            QT_TRANSLATE_NOOP("Errors", "ROI limits refused"),
+            QT_TRANSLATE_NOOP("Errors", "ROI thresholds refused"),
             QT_TRANSLATE_NOOP(
                 "Errors",
-                "ROI {roi}: {quantity} min {low} and max {high} cannot be stored; a limit is 0 or more, and min is not"
-                " above max.",
+                "ROI {roi}: {quantity} min {low} and max {high} cannot be stored; a threshold is 0 or more, and min is"
+                " not above max.",
             ),
             QT_TRANSLATE_NOOP(
                 "Errors",
-                "Nothing was applied. Correct the two values, or step a limit down below 0 to — to leave it unset, then"
-                " press Apply again.",
+                "Nothing was applied. Correct the two values, or step a threshold down below 0 to — to leave it unset,"
+                " then press Apply again.",
             ),
         ),
         ErrorCode(

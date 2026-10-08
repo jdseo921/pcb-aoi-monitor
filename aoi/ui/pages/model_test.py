@@ -35,6 +35,12 @@ from .base import QT_TRANSLATE_NOOP, Page, button, cell_item, fill_table, make_t
 if TYPE_CHECKING:
     from ..main_window import MainWindow
 
+MATCHES = {  # a row's pass_fail, stored and exported as this English key -> what its column says (#207)
+    "PASS": QT_TRANSLATE_NOOP("ModelTestPage", "Matches label"),
+    "FAIL": QT_TRANSLATE_NOOP("ModelTestPage", "Differs from label"),
+    "NO_LABEL": QT_TRANSLATE_NOOP("ModelTestPage", "No label"),
+}
+
 
 class MetricTile(QLabel):
     def __init__(self, name: str) -> None:
@@ -103,7 +109,7 @@ class ModelTestPage(Page):
             self.tr("Label"),
             self.tr("Verdict"),
             self.tr("AI score"),
-            self.tr("Pass/Fail", "whether the verdict matches the label"),
+            self.tr("Matches label?", "whether the verdict matches the image's label"),
         ]
         self.table = make_table(self.headers)
         self.table.itemSelectionChanged.connect(self._preview)
@@ -189,11 +195,16 @@ class ModelTestPage(Page):
             counts.format(labelled=m["labelled"], images=m["samples"], tp=m["TP"], fn=m["FN"], fp=m["FP"], tn=m["TN"])
         )
         rows = [
-            [Path(r["image"]).name, r["gt"], theme.verdict_label(r["ai_result"]), r["score"], r["pass_fail"]]
+            [Path(r["image"]).name, r["gt"], theme.verdict_label(r["ai_result"]), r["score"], self._matches(r)]
             for r in self.rows
         ]
         colors = [theme.NG_COLOR if r["pass_fail"] == "FAIL" else None for r in self.rows]
         fill_table(self.table, rows, colors, [r["image"] for r in self.rows])
+
+    def _matches(self, r: dict[str, Any]) -> str:
+        """Whether the verdict matches the label, translated; a "?" label from before #207 (PASS) reads No label."""
+        key = "NO_LABEL" if r["gt"] == "?" else r["pass_fail"]
+        return self.tr(MATCHES[key]) if key in MATCHES else str(key)
 
     def _preview(self) -> None:
         rows = self.table.selectionModel().selectedRows()
@@ -316,8 +327,9 @@ class ModelTestPage(Page):
         headers = "".join(f"<th>{h}</th>" for h in self.headers)
         rows = "".join(
             f"<tr style='color:{theme.NG_COLOR if r['pass_fail'] == 'FAIL' else theme.PRINT_TEXT}'>"
-            f"<td>{html.escape(Path(r['image']).name)}</td><td>{r['gt']}</td><td>{r['ai_result']}</td>"
-            f"<td>{r['score']}</td><td>{r['pass_fail']}</td></tr>"
+            f"<td>{html.escape(Path(r['image']).name)}</td><td>{r['gt']}</td>"
+            f"<td>{theme.verdict_label(r['ai_result'])}</td><td>{r['score']}</td>"
+            f"<td>{html.escape(self._matches(r))}</td></tr>"
             for r in self.rows
         )
         return (

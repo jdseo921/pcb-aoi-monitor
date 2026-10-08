@@ -69,11 +69,13 @@ ROI_CHECK = {  # an ROI's value is the AI score inside it as a multiple of the A
 OTHER_CHECK = QT_TRANSLATE_NOOP("Explain", "{check} is {value}, against its threshold of {threshold}.")  # stored data
 ALL_INSIDE = QT_TRANSLATE_NOOP("Explain", "Every check that decides the verdict is inside its threshold.")
 SEVERE_DEFECT = QT_TRANSLATE_NOOP(
-    "Explain", "No check failed, but a defect above Minor severity is marked on the board, so a person needs to look."
+    "Explain",
+    "No check is NG or WARN, but a defect above Minor severity is marked on the board, so a person needs to look.",
 )
 SEVERE_DEFECTS = QT_TRANSLATE_NOOP(
     "Explain",
-    "No check failed, but {count} defects above Minor severity are marked on the board, so a person needs to look.",
+    "No check is NG or WARN, but {count} defects above Minor severity are marked on the board, so a person needs to"
+    " look.",
 )
 UNEXPLAINED = QT_TRANSLATE_NOOP("Explain", "The stored checks do not show why; inspect the board again.")
 NOTES = {

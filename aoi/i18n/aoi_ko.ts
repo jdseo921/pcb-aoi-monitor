@@ -439,16 +439,11 @@
     </message>
     <message>
         <location line="+55"/>
-        <source>Training a model</source>
+        <source>Training an AI model</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+81"/>
-        <source>its UUID {found} is not {uuid}, the one the model registry names</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+1"/>
+        <location line="+82"/>
         <source>(none)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -478,7 +473,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+135"/>
+        <location line="+136"/>
         <source>Re-evaluating a result</source>
         <translation type="unfinished"></translation>
     </message>
@@ -544,16 +539,26 @@
     </message>
     <message>
         <location line="+12"/>
-        <source>Activating a model version</source>
+        <source>Activating an AI model version</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+10"/>
+        <location line="+85"/>
+        <source>Exporting an AI model</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="-75"/>
         <source>Changing users</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+15"/>
+        <location line="-546"/>
+        <source>its UUID {found} is not {uuid}, as in the AI model registry</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+561"/>
         <source>Changing settings</source>
         <translation type="unfinished"></translation>
     </message>
@@ -563,12 +568,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+35"/>
-        <source>Exporting a model</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+15"/>
+        <location line="+50"/>
         <source>Exporting overlay images</source>
         <translation type="unfinished"></translation>
     </message>
@@ -720,17 +720,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+4"/>
-        <source>Board failed inspection</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+1"/>
-        <source>Board {board} failed inspection with {defects} defect(s).</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+1"/>
+        <location line="+6"/>
         <source>Review the result on the Compare page before the board moves on.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -950,17 +940,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1"/>
-        <source>AI model file refused: {path} could not be loaded as a weights-only model file this app wrote ({reason}).</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+5"/>
-        <source>Train the board model again, or import a model file exported by this app.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+4"/>
+        <location line="+10"/>
         <source>Not enough good boards to train</source>
         <translation type="unfinished"></translation>
     </message>
@@ -985,12 +965,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+3"/>
-        <source>Train a model on the Training page when the AI checks are needed.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+4"/>
+        <location line="+7"/>
         <source>Training gave an AI model that cannot judge boards</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1110,22 +1085,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+8"/>
-        <source>ROI limits refused</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+1"/>
-        <source>ROI {roi}: {quantity} min {low} and max {high} cannot be stored; a limit is 0 or more, and min is not above max.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+5"/>
-        <source>Nothing was applied. Correct the two values, or step a limit down below 0 to — to leave it unset, then press Apply again.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+8"/>
+        <location line="+22"/>
         <source>Export stopped part-way</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1375,7 +1335,47 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-4"/>
+        <location line="-500"/>
+        <source>Board judged NG</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Board {board} was judged NG with {defects} defect(s).</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+177"/>
+        <source>AI model file refused: {path} could not be loaded as a weights-only AI model file this app wrote ({reason}).</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>Train the board model again.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+14"/>
+        <source>Train an AI model on the Training page when the AI checks are needed.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+113"/>
+        <source>ROI thresholds refused</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>ROI {roi}: {quantity} min {low} and max {high} cannot be stored; a threshold is 0 or more, and min is not above max.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>Nothing was applied. Correct the two values, or step a threshold down below 0 to — to leave it unset, then press Apply again.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+180"/>
         <source>Workspace in use</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1440,7 +1440,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+5"/>
+        <location line="+1"/>
+        <source>{entry} does not match its CRC-32</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+4"/>
         <source>its metadata is malformed ({error})</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1455,12 +1460,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-18"/>
-        <source>{entry} fails its CRC-32</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+1"/>
+        <location line="-17"/>
         <source>{entry} is marked as a folder</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1568,17 +1568,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1"/>
-        <source>No check failed, but a defect above Minor severity is marked on the board, so a person needs to look.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+3"/>
-        <source>No check failed, but {count} defects above Minor severity are marked on the board, so a person needs to look.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+4"/>
+        <location line="+10"/>
         <source>The stored checks do not show why; inspect the board again.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1603,7 +1593,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-43"/>
+        <location line="-45"/>
         <source>The AI score is {value}, at or above its threshold of {threshold}.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1618,7 +1608,17 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+31"/>
+        <location line="+2"/>
+        <source>No check is NG or WARN, but a defect above Minor severity is marked on the board, so a person needs to look.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+4"/>
+        <source>No check is NG or WARN, but {count} defects above Minor severity are marked on the board, so a person needs to look.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+27"/>
         <source>Note: {note}</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2255,26 +2255,26 @@
 <context>
     <name>ModelTestPage</name>
     <message>
-        <location filename="../ui/pages/model_test.py" line="+70"/>
-        <location line="+181"/>
+        <location filename="../ui/pages/model_test.py" line="+76"/>
+        <location line="+186"/>
         <source>Select Test Folder…</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-180"/>
+        <location line="-185"/>
         <location line="+91"/>
-        <location line="+75"/>
+        <location line="+80"/>
         <source>Run Test</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-164"/>
-        <location line="+184"/>
+        <location line="-169"/>
+        <location line="+189"/>
         <source>Export CSV</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-183"/>
+        <location line="-188"/>
         <source>Export Report</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2324,9 +2324,24 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <location line="-72"/>
+        <source>Matches label</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <location line="+1"/>
-        <source>Pass/Fail</source>
-        <comment>whether the verdict matches the label</comment>
+        <source>Differs from label</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>No label</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+71"/>
+        <source>Matches label?</source>
+        <comment>whether the verdict matches the image&apos;s label</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -2370,7 +2385,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+60"/>
+        <location line="+65"/>
         <source>No AI model for {board_model} yet</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2577,7 +2592,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/model_test.py" line="-257"/>
+        <location filename="../ui/pages/model_test.py" line="-262"/>
         <source>AI Model Test</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2631,7 +2646,7 @@
     </message>
     <message>
         <location line="+6"/>
-        <source>Height and coplanarity need the 3D camera. Height and volume limits can be entered per ROI in the Recipe Editor; they are stored now and checked from Stage 2.</source>
+        <source>Height and coplanarity need the 3D camera. Height and volume thresholds (min and max) can be entered per ROI in the Recipe Editor; they are stored now and checked from Stage 2.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -2740,12 +2755,12 @@
     </message>
     <message>
         <location line="+1"/>
-        <source>Height min / max (Stage 2)</source>
+        <source>Height thresholds min / max (Stage 2)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location line="+1"/>
-        <source>Volume min / max (Stage 2)</source>
+        <source>Volume thresholds min / max (Stage 2)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -3173,7 +3188,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/services.py" line="-1086"/>
+        <location filename="../core/services.py" line="-1087"/>
         <source>Aligning {count} images to the reference board</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3396,7 +3411,7 @@
     </message>
     <message>
         <location line="+0"/>
-        <source>PyTorch model (*.pt)</source>
+        <source>AI model file (*.pt)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>

@@ -327,7 +327,7 @@ class AppContext:
         return len(copies)
 
     # --- training ------------------------------------------------------------
-    @requires("Engineer", QT_TRANSLATE_NOOP("Errors", "Training a model"))
+    @requires("Engineer", QT_TRANSLATE_NOOP("Errors", "Training an AI model"))
     def train(
         self,
         board_model: str,
@@ -408,7 +408,7 @@ class AppContext:
             return cached[1]
         m = anomaly.AnomalyModel.load(rec["path"], device)
         if m.meta.get("uuid") != rec["uuid"]:  # another AI model's file in its place, such as one written over it
-            why = QT_TRANSLATE_NOOP("Errors", "its UUID {found} is not {uuid}, the one the model registry names").fill(
+            why = QT_TRANSLATE_NOOP("Errors", "its UUID {found} is not {uuid}, as in the AI model registry").fill(
                 found=m.meta.get("uuid") or QT_TRANSLATE_NOOP("Errors", "(none)"), uuid=rec["uuid"]
             )
             raise anomaly.ModelFileError("AOI-TRN-001", path=rec["path"], reason=why)
@@ -673,7 +673,8 @@ class AppContext:
         self, board_model: str, folder: str, progress: Callable[[int, int], None] | None = None
     ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
         """Validate the active AI model on a folder and store the run: (metrics, rows), one row per image. Ground truth
-        comes from sub-folder names: anything under an `ng`/`defect` folder is NG, under `ok`/`good` is OK. Each row
+        comes from sub-folder names: under `ng`/`defect` NG, under `ok`/`good` OK, elsewhere no label ("?"); `pass_fail`
+        is PASS when the verdict (WARN as NG) matches the label, FAIL when not and NO_LABEL without one. Each row
         ends with the run's UUID, the AI model version and its UUID (run_uuid, model_version, model_uuid; None without
         an AI model), as the CSV export writes them (REQ-SET-017)."""
         insp = self.inspector(board_model)
@@ -691,7 +692,7 @@ class AppContext:
                     "ai_result": res.verdict,
                     "score": round(res.score, 3),
                     "defects": len(res.defects),
-                    "pass_fail": "PASS" if gt is None or gt == pred else "FAIL",
+                    "pass_fail": "NO_LABEL" if gt is None else "PASS" if gt == pred else "FAIL",  # vs the label (#207)
                 }
             )
             if progress:
@@ -943,7 +944,7 @@ class AppContext:
         if reference is not None and Path(reference) == Path(sample["path"]):
             raise AoiError("AOI-TRN-007", sample=Path(sample["path"]).name, change=change)
 
-    @requires("Engineer", QT_TRANSLATE_NOOP("Errors", "Activating a model version"))
+    @requires("Engineer", QT_TRANSLATE_NOOP("Errors", "Activating an AI model version"))
     @transactional
     def activate_model(self, model_id: int) -> None:
         """Make a model version the one inspections use (an older version: a rollback)."""
@@ -1028,7 +1029,7 @@ class AppContext:
         self.log.info("maps.swept", extra={"days": days, "swept": len(swept), "skipped": skipped})
         return len(swept)
 
-    @requires("Engineer", QT_TRANSLATE_NOOP("Errors", "Exporting a model"))
+    @requires("Engineer", QT_TRANSLATE_NOOP("Errors", "Exporting an AI model"))
     def export_model(self, model_id: int, dest: str | Path) -> Path:
         """Copy a model version's file to `dest`, whole or not at all. The audit entry stores `dest` relative to the
         workspace when inside it (REQ-SET-001), else in full."""

@@ -33,6 +33,16 @@ BANNED = [
 ]  # fmt: skip
 JARGON = ["SSIM", "inlier"]  # engineering words an Operator's sentence never uses (Charter, "Plain words")
 LONE_MODEL = re.compile(r"(?<!AI )(?<!board )\bmodels?\b", re.IGNORECASE)  # "model" alone: AI model or board model
+PLACEHOLDER = re.compile(r"\{[^{}]*\}")  # a {placeholder} is filled in, so its name never reaches a reader
+
+
+def not_words(text: str) -> list[str]:
+    """The Charter's "Not" words in `text` in any ending, and "model" alone; {placeholder} names left out (#207)."""
+    shown = PLACEHOLDER.sub(" ", text)
+    found = [w for w in BANNED if re.search(rf"\b{re.escape(w)}(?:s|es|ed|d|ing)?\b", shown, re.IGNORECASE)]
+    return found + (["model"] if LONE_MODEL.search(shown) else [])
+
+
 CHECK_TEMPLATES = {*ex.CHECKS.values(), *ex.ROI_CHECK.values(), ex.OTHER_CHECK}
 FAILING = {"< thr → NG": {NG, WARN}, "≥ thr → NG": {NG, WARN}, "> thr → NG": {NG}, "info only": {WARN}}  # by rule
 CASES = [  # (name, value, threshold, rule, verdict, source): the sentence it gets, word for word
@@ -119,6 +129,11 @@ def test_req_cmp_004_every_engine_check_has_its_sentences(tiny_model: TrainedMod
     res = Inspector(recipe, tiny_model.model, tiny_model.reference).inspect(tiny_model.reference)
     assert {(c.name, v) for c in res.checks if c.source != "ROI" for v in FAILING[c.rule]} == set(ex.CHECKS)
     assert {v for c in res.checks if c.source == "ROI" for v in FAILING[c.rule]} == set(ex.ROI_CHECK)
+    severe = InspectionResult(WARN, 0.0, checks=res.checks, defects=[_defect(1, "Critical")])  # with INFO (#207)
+    assert {c.verdict for c in res.checks} == {OK, "INFO"}, [(c.name, c.verdict) for c in res.checks]
+    assert [s.text() for s in ex.explain(severe)] == [
+        "No check is NG or WARN, but a defect above Minor severity is marked on the board, so a person needs to look."
+    ]
 
 
 def test_req_cmp_004_why_without_a_failing_check() -> None:
@@ -128,16 +143,17 @@ def test_req_cmp_004_why_without_a_failing_check() -> None:
     check that did not run, with what to do."""
 
     def why(verdict: str, defects: list[Defect], notes: list[str] | None = None, checked: bool = True) -> list[str]:
-        checks = [_check("SSIM similarity", 0.99, 0.8, "< thr → NG", OK, "Compare")] if checked else []
+        info = _check("Alignment inliers", 40, 12, "info only", "INFO", "Compare")  # as the engine stores it (#207)
+        checks = [_check("SSIM similarity", 0.99, 0.8, "< thr → NG", OK, "Compare"), info] if checked else []
         res = InspectionResult(verdict, 0.0, checks=checks, defects=defects, notes=notes or [])
         return [s.text() for s in ex.explain(res)]
 
-    one = "No check failed, but a defect above Minor severity is marked on the board, so a person needs to look."
+    one = "No check is NG or WARN, but a defect above Minor severity is marked on the board, so a person needs to look."
     assert (
         why(WARN, [_defect(1, "Critical")]) == why(WARN, [_defect(1, "Critical"), *[_defect(2, "Minor")] * 2]) == [one]
     )
     assert why(WARN, [_defect(1, "Major"), _defect(2, "Major")]) == [
-        "No check failed, but 2 defects above Minor severity are marked on the board, so a person needs to look."
+        "No check is NG or WARN, but 2 defects above Minor severity are marked on the board, so a person needs to look."
     ]
     assert (
         why(OK, [])
@@ -168,15 +184,27 @@ def test_req_cmp_004_uses_only_glossary_terms() -> None:
     assert set(ex.TEMPLATES) == marked
     texts = [*ex.TEMPLATES, *CHECK_NAMES.values(), *SOURCES.values(), *RULES.values(), *MODES, *JUDGED.values()]
     for text in texts:
-        for word in BANNED:
-            assert not re.search(rf"\b{re.escape(word)}s?\b", text, re.IGNORECASE), (word, text)
-        assert not LONE_MODEL.search(text), text
+        assert not_words(text) == [], text
     for text in ex.TEMPLATES:
         assert not any(word.lower() in text.lower() for word in JARGON), text
     for text in CHECK_NAMES.values():  # "Similarity (SSIM)": the plain words first, the method only in brackets
         assert not any(word.lower() in re.sub(r"\(.*?\)", "", text).lower() for word in JARGON), text
     for template in CHECK_TEMPLATES:
         assert "{value}" in template and "{threshold}" in template, template
+
+
+def test_req_cmp_004_the_word_gate_sees_every_ending() -> None:
+    """#207: the gate above let "failed" through (only a plural "s" was seen); each ending is caught now, no {name}."""
+    for text, words in (
+        ("The check failed.", ["fail"]),
+        ("The board passed.", ["pass"]),
+        ("Two checks failing.", ["fail"]),
+        ("Every check passed, so the board passed.", ["pass"]),
+        ("Two limits were set; three warnings.", ["warning", "limit"]),
+        ("Train a model, then load the model file.", ["model"]),
+        ("The AI model of {model} and the board model {board_model}.", []),
+    ):
+        assert not_words(text) == words, text
 
 
 def test_req_cmp_004_the_sentences_reach_the_screens(qtbot: QtBot, ctx: AppContext, tmp_path: Path) -> None:
