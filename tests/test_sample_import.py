@@ -393,7 +393,8 @@ def test_req_trn_001_an_import_lists_each_file_it_refuses_with_its_code_and_goes
     folder = tmp_path / "src"
     ok, other = list_images(synthetic_dataset / "train" / "ok")[:2]
     ng = next(synthetic_dataset.glob("train/ng/*solder_bridge*.png"))
-    for src, name in ((ok, "ok/a.png"), (ok, "ok/b.png"), (ng, "ng/Solder_Bridge/c.png"), (ng, "ng/d.png")):
+    # names listed in the same order where paths sort by case (Linux) and where they sort without it (Windows)
+    for src, name in ((ok, "ok/a.png"), (ok, "ok/b.png"), (ng, "ng/Solder_Bridge/c.png"), (ng, "ng/untyped.png")):
         (folder / name).parent.mkdir(parents=True, exist_ok=True)
         shutil.copy(src, folder / name)
     (folder / "loose").mkdir()
@@ -404,7 +405,7 @@ def test_req_trn_001_an_import_lists_each_file_it_refuses_with_its_code_and_goes
     assert named == [
         ("loose/e.png", None, None),
         ("ng/Solder_Bridge/c.png", "NG", "Solder Bridge"),
-        ("ng/d.png", "NG", None),
+        ("ng/untyped.png", "NG", None),
         ("ok/a.png", "OK", None),
         ("ok/b.png", "OK", None),
         ("ok/notes.png", "OK", None),
@@ -415,7 +416,7 @@ def test_req_trn_001_an_import_lists_each_file_it_refuses_with_its_code_and_goes
     refused = [(Path(f.path).name, e.code) for f, e in report.refused]
     assert refused == [
         ("e.png", "AOI-TRN-016"),
-        ("d.png", "AOI-TRN-013"),
+        ("untyped.png", "AOI-TRN-013"),
         ("b.png", "AOI-TRN-015"),
         ("notes.png", "AOI-INSP-004"),
     ]
