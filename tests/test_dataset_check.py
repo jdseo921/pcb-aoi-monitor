@@ -104,7 +104,7 @@ def test_req_insp_014_a_source_file_the_run_changes_is_reported(
 
 
 def test_req_insp_014_min_area_judges_with_another_minimum_defect_area(tmp_path: Path) -> None:
-    """--min-area runs the comparison again with only the Minimum defect area changed, as ADR 0007 asks of the check on
+    """--min-area runs the comparison again with only the Minimum defect area changed, as ADR 0008 asks of the check on
     customer photos: above the drawn defect's area, its box is missed."""
     deeppcb = _deeppcb(tmp_path / "d")
     out = tmp_path / "out"

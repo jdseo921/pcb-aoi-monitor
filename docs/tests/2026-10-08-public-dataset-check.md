@@ -96,7 +96,7 @@ tested).
 
 - REQ-INSP-014: not measurable here (not the locked validation set, not the customer's camera). On this data the
   default 40 px Minimum defect area missed 324 of 3,140 labelled defects, 242 of them opens (176) and mousebites (66);
-  a smaller area found more boxes and left more regions on no box. ADR 0007 (proposed) puts the default to Jay.
+  a smaller area found more boxes and left more regions on no box. ADR 0008 (proposed) puts the default to Jay.
 - REQ-INSP-007: at 0.4 MP, inspection alone stayed under 0.4 s per board at the 95th percentile on this VM, even loaded;
   the budget is set at the customer's resolution on the reference PC, which the resolution test and the CI performance
   job measure.

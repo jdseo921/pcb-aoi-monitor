@@ -757,7 +757,7 @@ checks, and writes counts, times, peak memory and the machine's threads and libr
 the datasets. Both are research-use datasets, used for internal checks only with Jay's written approval of 2026-10-08:
 no image, box or model trained on them enters the repository or ships, and their counts are never an accuracy claim. The
 first run is recorded in `docs/tests/2026-10-08-public-dataset-check.md` (DeepPCB; PKU-Market-PCB waits for Jay's
-laptop), and ADR 0007 (proposed) keeps the default Minimum defect area of 40 px until the customer's size is agreed.
+laptop), and ADR 0008 (proposed) keeps the default Minimum defect area of 40 px until the customer's size is agreed.
 
 | Requirement | Where | Status |
 |---|---|---|

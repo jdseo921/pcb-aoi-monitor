@@ -1,4 +1,4 @@
-# ADR 0007: The default Minimum defect area until the customer's size is agreed
+# ADR 0008: The default Minimum defect area until the customer's size is agreed
 
 - Status: Proposed. Jay's merge of this record accepts it.
 - Date: 2026-10-08
