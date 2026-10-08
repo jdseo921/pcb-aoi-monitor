@@ -70,8 +70,9 @@ notice shipped. The installer, the certificate (J6) and a second approver (J8) d
 
 - A reviewer or the reference station can run any main commit without Python: download the run's artifact, unzip it
   and start the .exe. Windows SmartScreen warns about an unknown publisher until the build is signed.
-- Each build is about 1 GB unzipped, mostly PyTorch. Actions minutes are free in a public repository; if the
-  repository turns private, each Windows build's minutes (counted double) and its artifact count against the plan.
+- Each build is about 660 MB unzipped and a 236 MB download, mostly PyTorch (the first green build, of commit
+  b0e7435). Actions minutes are free in a public repository; if the repository turns private, each Windows build's
+  minutes (counted double) and its artifact count against the plan.
 - Still to do for REQ-SET-012: the Inno Setup or MSIX installer with an uninstaller, signing once J6 lands, the GPU
   option with the CUDA runtime (blocked on J8's NVIDIA licenses), the CycloneDX SBOM, the About dialog's notices,
   and a written offer for the Qt source in the EULA and installer.
