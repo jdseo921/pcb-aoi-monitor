@@ -279,16 +279,23 @@ class TrainingPage(Page):
             self.import_from(d)
 
     def import_from(self, folder: str) -> None:
-        """Open the import sheet on the images under `folder`, each labelled by its sub-folders (REQ-TRN-001)."""
-        if (bm := self.checked_board_model()) is not None:
-            self._open_sheet(bm, folder_files(folder), folder)
+        """Open the import sheet on the images under `folder`, each labelled by its sub-folders (REQ-TRN-001); a folder
+        with none opens no sheet, and the status line says so."""
+        if (bm := self.checked_board_model()) is None:
+            return
+        if not (files := folder_files(folder)):
+            none = self.tr("No images in {folder} or its sub-folders: nothing to import")
+            self.shell.status(none.format(folder=folder))
+            return
+        self._open_sheet(bm, files, folder)
 
     def _open_sheet(self, board_model: str, files: list[ImportFile], base: str | None = None) -> None:
-        """The import sheet in place of nothing: never a dialog over the file picker (sketch). While it is open, its
-        Import is the page's one blue primary and Start Training a plain button. One import at a time (#194)."""
+        """The import sheet in place of nothing: never a dialog over the file picker (sketch), for the board model in
+        the header. While it is open, its Import is the page's one blue primary and Start Training a plain button. One
+        import at a time (#194)."""
         if self._bg is not None:
             return
-        self.sheet.open_files(files, base)
+        self.sheet.open_files(board_model, files, base)
         self._primary(self.sheet.btn_import, self.btn_train)
 
     def _close_sheet(self) -> None:
@@ -306,10 +313,11 @@ class TrainingPage(Page):
             b.style().polish(b)
 
     def _run_import(self, files: list[ImportFile]) -> None:
-        """Import the sheet's files on a pool thread (REQ-SET-021, REQ-TRN-001): one call per file, so Cancel keeps
-        what went in (#194); the busy overlay shows progress, time left and Cancel after 10 s."""
-        if self._bg is not None or (bm := self.checked_board_model()) is None:
-            self.sheet.show_report(ImportReport(left=files), self.coded_text)
+        """Import the sheet's files on a pool thread into the board model the sheet was opened for, never the header's
+        (REQ-SET-021, REQ-TRN-001): one call per file, so Cancel keeps what went in (#194); the busy overlay shows
+        progress, time left and Cancel after 10 s."""
+        if self._bg is not None or (bm := self.sheet.board_model) is None:
+            self._report(ImportReport(left=files))
             return
         self.run_in_background(
             self.ctx.import_files, bm, files, with_progress=True,
@@ -344,8 +352,15 @@ class TrainingPage(Page):
         ok = sum(f.label == "OK" for f in report.added)
         return {"ok": ok, "ng": len(report.added) - ok, "refused": len(report.refused)}
 
-    def _imported(self, report: ImportReport, total: int) -> None:
+    def _report(self, report: ImportReport) -> None:
+        """The sheet shows what became of each file; a sheet whose board model is no longer the header's (another one
+        chosen while the import ran) then closes, so Import again cannot send its files elsewhere."""
         self.sheet.show_report(report, self.coded_text)
+        if self.sheet.board_model != self.board_model:
+            self._close_sheet()
+
+    def _imported(self, report: ImportReport, total: int) -> None:
+        self._report(report)
         n = self._counts(report)
         said = self.tr("Imported {ok} OK and {ng} NG images").format(**n)
         if n["refused"]:
@@ -366,14 +381,14 @@ class TrainingPage(Page):
             self._imported(report, len(files))
             return
         self.refresh()
-        self.sheet.show_report(report, self.coded_text)
+        self._report(report)
         msg = self.tr("Import cancelled: {ok} OK and {ng} NG images imported before it stopped")
         self.shell.status(msg.format(**self._counts(report)))
         if (stopped := self._stop_error(report, len(files))) is not None:
             self.ctx.report_error(stopped, self.title)
 
     def _import_failed(self, files: list[ImportFile]) -> None:
-        self.sheet.show_report(ImportReport(left=files), self.coded_text)
+        self._report(ImportReport(left=files))
         self.refresh()
 
     def _selected_ids(self) -> list[int]:
@@ -544,7 +559,7 @@ class TrainingPage(Page):
         if s:
             self.samples_empty.hide()
         else:
-            what = self.tr("Add at least 20 OK boards with + OK Images or Import Folder…")
+            what = self.tr("Add at least 20 OK boards with Add OK Images… or Import Folder…")
             heading = self.tr("No samples for {board_model} yet").format(board_model=self.board_model)
             self.samples_empty.show_state(heading, what, self.tr("Import Folder…"), self.import_folder)
         n_ok = sum(r["label"] == "OK" for r in s)
@@ -578,8 +593,8 @@ class TrainingPage(Page):
 
     def on_board_model_changed(self, name: str | None) -> None:
         self.preview.set_image(None)
-        if not self.sheet.running:  # the files were picked for the board model shown before
-            self._close_sheet()
+        if not self.sheet.running:  # its files were picked for the board model shown before; an import that runs
+            self._close_sheet()  # goes on into that one, and its sheet closes when it ends (_report)
         self.refresh()
 
     def on_show(self) -> None:

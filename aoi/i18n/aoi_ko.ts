@@ -2092,8 +2092,8 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/training.py" line="+332"/>
-        <location filename="../ui/pages/training_import.py" line="+37"/>
+        <location filename="../ui/pages/training.py" line="+340"/>
+        <location filename="../ui/pages/training_import.py" line="+38"/>
         <source>{code} {title}</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2422,7 +2422,7 @@
 <context>
     <name>ImportSheet</name>
     <message>
-        <location filename="../ui/pages/training_import.py" line="+46"/>
+        <location filename="../ui/pages/training_import.py" line="+51"/>
         <location line="+22"/>
         <source>View</source>
         <translation>뷰</translation>
@@ -2434,18 +2434,18 @@
     </message>
     <message>
         <location line="+1"/>
-        <location line="+94"/>
+        <location line="+102"/>
         <source>OK</source>
         <translation>OK</translation>
     </message>
     <message>
-        <location line="-94"/>
-        <location line="+94"/>
+        <location line="-102"/>
+        <location line="+102"/>
         <source>NG</source>
         <translation>NG</translation>
     </message>
     <message>
-        <location line="-89"/>
+        <location line="-97"/>
         <source>Defect type for NG files</source>
         <translation>NG 파일의 결함 유형</translation>
     </message>
@@ -2480,18 +2480,19 @@
         <translation>상태</translation>
     </message>
     <message>
-        <location line="+15"/>
+        <location line="+22"/>
         <source>Copy List</source>
         <translation>목록 복사</translation>
     </message>
     <message>
         <location line="+1"/>
-        <location line="+51"/>
+        <location line="+53"/>
+        <location line="+82"/>
         <source>Cancel</source>
         <translation>취소</translation>
     </message>
     <message>
-        <location line="-50"/>
+        <location line="-134"/>
         <source>Import</source>
         <translation>가져오기</translation>
     </message>
@@ -2501,12 +2502,22 @@
         <translation>{type} · {severity}</translation>
     </message>
     <message>
-        <location line="+8"/>
-        <source>Import {count} file(s)</source>
-        <translation>파일 {count}개 가져오기</translation>
+        <location line="+9"/>
+        <source>Import {count} file(s) into {board_model}</source>
+        <translation>파일 {count}개를 {board_model}(으)로 가져오기</translation>
     </message>
     <message>
-        <location line="+49"/>
+        <location line="+125"/>
+        <source>Nothing to import: every file is already imported.</source>
+        <translation>가져올 파일이 없습니다. 모든 파일을 이미 가져왔습니다.</translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>{added} imported · {skipped} already imported · {count} not imported</source>
+        <translation>{added}개 가져옴 · {skipped}개 이미 있음 · {count}개 가져오지 않음</translation>
+    </message>
+    <message>
+        <location line="-77"/>
         <source>pick a type</source>
         <translation>유형을 고르세요</translation>
     </message>
@@ -2526,17 +2537,17 @@
         <translation>대기: 유형이 필요합니다</translation>
     </message>
     <message>
-        <location line="+21"/>
+        <location line="+23"/>
         <source>{count} NG file(s) need a defect type</source>
         <translation>NG 파일 {count}개에 결함 유형이 필요합니다</translation>
     </message>
     <message>
-        <location line="+9"/>
+        <location line="+14"/>
         <source>Importing…</source>
         <translation>가져오는 중…</translation>
     </message>
     <message>
-        <location line="+10"/>
+        <location line="+16"/>
         <source>copied</source>
         <translation>복사됨</translation>
     </message>
@@ -2551,12 +2562,7 @@
         <translation>가져올 것이 없습니다. 모든 파일이 거부되었습니다(목록 참조).</translation>
     </message>
     <message>
-        <location line="+2"/>
-        <source>{added} imported · {count} not imported</source>
-        <translation>{added}개 가져옴 · {count}개 가져오지 않음</translation>
-    </message>
-    <message>
-        <location line="+2"/>
+        <location line="+6"/>
         <source>Close</source>
         <translation>닫기</translation>
     </message>
@@ -3309,7 +3315,7 @@
 <context>
     <name>NgDialog</name>
     <message>
-        <location filename="../ui/pages/training.py" line="-252"/>
+        <location filename="../ui/pages/training.py" line="-260"/>
         <source>Label NG images</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4107,12 +4113,12 @@
     </message>
     <message>
         <location line="+1"/>
-        <location line="+382"/>
+        <location line="+397"/>
         <source>Import Folder…</source>
-        <translation type="unfinished"></translation>
+        <translation>폴더 가져오기…</translation>
     </message>
     <message>
-        <location line="-374"/>
+        <location line="-389"/>
         <source>Tip: 20+ OK images give a steadier threshold</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4164,12 +4170,12 @@
     </message>
     <message>
         <location line="+1"/>
-        <location line="+239"/>
+        <location line="+254"/>
         <source>Remove</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-234"/>
+        <location line="-249"/>
         <source>Select a sample to preview</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4259,7 +4265,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+73"/>
+        <location line="+10"/>
+        <source>No images in {folder} or its sub-folders: nothing to import</source>
+        <translation>{folder}와(과) 그 하위 폴더에 이미지가 없어 가져올 것이 없습니다</translation>
+    </message>
+    <message>
+        <location line="+78"/>
         <source>Imported {ok} OK and {ng} NG images</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4315,8 +4326,8 @@
     </message>
     <message>
         <location line="+33"/>
-        <source>Add at least 20 OK boards with + OK Images or Import Folder…</source>
-        <translation type="unfinished"></translation>
+        <source>Add at least 20 OK boards with Add OK Images… or Import Folder…</source>
+        <translation>OK 이미지 추가… 또는 폴더 가져오기…로 OK 보드를 20개 이상 추가하세요</translation>
     </message>
     <message>
         <location line="+1"/>

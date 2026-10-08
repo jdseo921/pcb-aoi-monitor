@@ -16,7 +16,7 @@ from PySide6.QtCore import QDate, Qt
 from PySide6.QtWidgets import QFileDialog, QMessageBox
 from pytestqt.qtbot import QtBot
 
-from aoi.core.sample_import import ImportReport
+from aoi.core.sample_import import ImportFile, ImportReport
 from aoi.core.services import AppContext
 from aoi.data import atomic
 from aoi.ui.main_window import MainWindow
@@ -171,6 +171,11 @@ def test_req_set_021_a_second_export_or_import_waits_for_the_first(
     others = [_button(training, t) for t in ("Add NG Images…", "Import Folder…", "Start Training")]
     ok_before = len(trained_ctx.samples(BOARD, "OK"))
     ng_before, copies = len(trained_ctx.samples(BOARD, "NG")), _imported(trained_ctx)
+    sent: list[ImportFile] = []  # the files the pool imports: copies of the sheet's rows (REQ-TRN-001)
+    run = trained_ctx.import_files
+    monkeypatch.setattr(
+        trained_ctx, "import_files", lambda bm, files, *a, **k: sent.extend(files) or run(bm, files, *a, **k)
+    )
     training.add_ok()
     training.sheet.btn_import.click()
     qtbot.waitUntil(lambda: _imported(trained_ctx) > copies, timeout=30000)
@@ -182,7 +187,7 @@ def test_req_set_021_a_second_export_or_import_waits_for_the_first(
     assert len(trained_ctx.samples(BOARD, "NG")) == ng_before, "the clicked Add NG Images… did not run"
     assert while_running == [False] * 3
     assert all(b.isEnabled() for b in others), "the imports and Start Training come back when the import ends"
-    status_before, sent = status(), training.sheet.files
+    status_before = status()
     training._import_stopped(ImportReport(added=list(sent)), sent)  # Cancel after the last file: no "cancelled" line
     assert status() == status_before
 

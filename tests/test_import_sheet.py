@@ -5,6 +5,7 @@ and per row; Import waits for every NG file's type, and the files not imported a
 from __future__ import annotations
 
 import shutil
+import threading
 from pathlib import Path
 
 import pytest
@@ -16,6 +17,7 @@ from pytestqt.qtbot import QtBot
 from aoi.core.imaging import list_images
 from aoi.core.sample_import import ImportFile, ImportReport
 from aoi.core.services import AppContext
+from aoi.data import atomic
 from aoi.defects import names
 from aoi.errors import AoiError
 from aoi.ui.main_window import MainWindow
@@ -44,9 +46,13 @@ def test_req_trn_001_the_sheet_takes_each_file_with_its_view_and_an_ng_file_with
     """Opened on a folder's files: OK, NG typed by its folder, NG with no type, and no label. Import is off while an
     NG file has no type; the type picker holds the 33 types alone (no "Unknown", no "Anomaly"), none picked. The view,
     label and type for all, then a row's own by F2; an OK file's type, a file's name and its status are not picked.
-    Enter sends the files; while they import nothing can be changed. The report shows each file copied, skipped or
-    refused with its code, or not imported; Import again sends only those not in, Copy List copies every row with what
-    happened; a file stopped at by a plain error shows AOI-SET-007, as the error dialog does; Esc closes the sheet."""
+    The note says how many NG files need a type until none does. Enter sends the files; while they import nothing can
+    be changed. The report shows each file copied, skipped or refused with its code, or not imported, the sheet's
+    counts in the note, and the coded line (what happened and what to do) of the row the keys move to under the table,
+    gone once a change to the row, its own or for all, makes it ready again; Import again sends only those not in, and
+    Close reads Cancel again; Copy List copies every row with what happened; a file stopped at by a plain error shows
+    AOI-SET-007, as the error dialog does; Esc closes the sheet. A file's name shows its end, its whole path in its
+    accessible text."""
     sent: list[list[ImportFile]] = []
     closed: list[bool] = []
     sheet = ImportSheet(sent.append, lambda: closed.append(True))
@@ -57,10 +63,10 @@ def test_req_trn_001_the_sheet_takes_each_file_with_its_view_and_an_ng_file_with
         ImportFile("/src/ng/d.png", "NG"),
         ImportFile("/src/loose/e.png", None),
     )
-    sheet.open_files([a, c, d, e], Path("/src"))
+    sheet.open_files("B", [a, c, d, e], Path("/src"))
     qtbot.waitExposed(sheet)
     qtbot.waitUntil(sheet.isActiveWindow)  # its keys work in the window that has the focus
-    assert sheet.title() == "Import 4 file(s)" and _rows(sheet.table) == [
+    assert sheet.title() == "Import 4 file(s) into B" and _rows(sheet.table) == [
         ["ok/a.png", "OK", "—", "Top", "ready"],
         ["ng/Solder_Bridge/c.png", "NG", "Solder Bridge", "Top", "ready"],
         ["ng/d.png", "NG", "pick a type", "Top", "waiting: type needed"],
@@ -76,14 +82,18 @@ def test_req_trn_001_the_sheet_takes_each_file_with_its_view_and_an_ng_file_with
                 for r in range(4)]  # fmt: skip
     assert [r[FILE] or r[STATUS] for r in editable] == [False] * 4
     assert [r[TYPE] for r in editable] == [False, True, True, False]
+    assert sheet.table.textElideMode() == Qt.TextElideMode.ElideLeft  # two names that differ near their end differ
+    assert cell_item(sheet.table, 1, FILE).data(Qt.ItemDataRole.AccessibleTextRole) == c.path
 
     sheet.type_box.setCurrentIndex(sheet.type_box.findData("Solder Ball"))
     sheet.type_box.activated.emit(sheet.type_box.currentIndex())  # for every NG file, c's folder type too
+    assert sheet.note.text() == ""
     qtbot.mouseClick(sheet.views.button(1), Qt.MouseButton.LeftButton)  # Side for all
     _pick(qtbot, sheet.table, 1, TYPE, "Solder Bridge")
     _pick(qtbot, sheet.table, 3, LABEL, "NG")  # e: NG, so it needs a type again
-    assert not sheet.btn_import.isEnabled()
+    assert not sheet.btn_import.isEnabled() and sheet.note.text() == "1 NG file(s) need a defect type"
     _pick(qtbot, sheet.table, 3, TYPE, "Scratch")
+    assert sheet.note.text() == ""
     _pick(qtbot, sheet.table, 0, VIEW, "Bottom")
     assert [(f.label, f.defect_type, f.side) for f in (a, c, d, e)] == [
         ("OK", None, "Bottom"),
@@ -96,27 +106,37 @@ def test_req_trn_001_the_sheet_takes_each_file_with_its_view_and_an_ng_file_with
     assert not any(w.isEnabled() for w in (*sheet.views.buttons(), *sheet.labels.buttons(), sheet.type_box))
     assert sheet.table.editTriggers() == QTableWidget.EditTrigger.NoEditTriggers
 
+    x = sent[0]  # what the pool imports: copies of the rows, its report shown on the rows they were made from
     skipped = AoiError("AOI-TRN-015", path=d.path, board_model="B", sample="d_1.png", label="NG")
-    sheet.show_report(ImportReport(added=[a, c], refused=[(d, skipped)], left=[e]), lambda x: f"{x.code} {x.what}")
+    report = ImportReport(added=[x[0], x[1]], refused=[(x[2], skipped)], left=[x[3]])
+    sheet.show_report(report, lambda x: f"{x.code} {x.what}")
     assert [r[STATUS] for r in _rows(sheet.table)] == ["copied", "copied", "AOI-TRN-015 Image already imported",
                                                       "not imported"]  # fmt: skip
-    assert sheet.note.text() == "2 imported · 2 not imported" and sheet.btn_cancel.text() == "Close"
+    assert sheet.note.text() == "2 imported · 1 already imported · 1 not imported"
+    assert sheet.btn_cancel.text() == "Close" and not sheet.why.isVisible()
+    sheet.table.setCurrentCell(0, FILE)
+    for key, shown in ((Qt.Key.Key_Down, ""), (Qt.Key.Key_Down, f"{skipped.code} {skipped.what}"), (Qt.Key.Key_Up, "")):
+        qtbot.keyClick(sheet.table, key)  # the row the keys move to: its coded line, which no tooltip has to show
+        assert (sheet.why.text(), sheet.why.isVisible()) == (shown, bool(shown)), sheet.table.currentRow()
     assert sheet.btn_import.isEnabled() and not cell_item(sheet.table, 0, LABEL).flags() & Qt.ItemFlag.ItemIsEditable
     qtbot.mouseClick(sheet.btn_copy, Qt.MouseButton.LeftButton)
     copied = [line.split("\t") for line in QGuiApplication.clipboard().text().splitlines()]
     said = ["AOI-TRN-015 Image already imported", f"{skipped.code} {skipped.what}"]
     assert len(copied) == 4 and copied[2] == [d.path, "NG", "Solder Ball", "Side", *said], copied
     qtbot.mouseClick(sheet.btn_import, Qt.MouseButton.LeftButton)
-    assert sent[1] == [e], "Import again sends only the files not in"
-    sheet.show_report(ImportReport(refused=[(e, AoiError("AOI-TRN-016", path=e.path))]), lambda x: x.code)
-    assert sheet.note.text() == "Nothing to import: every file was refused (see the list)."
+    assert sent[1] == [e] and sheet.btn_cancel.text() == "Cancel", "Import again sends only the files not in"
+    sheet.show_report(ImportReport(refused=[(sent[1][0], AoiError("AOI-TRN-016", path=e.path))]), lambda x: x.code)
+    assert sheet.note.text() == "2 imported · 1 already imported · 1 not imported", "the sheet's, not this pass's"
+    sheet.table.setCurrentCell(3, FILE)
+    assert (sheet.why.text(), sheet.why.isVisible()) == ("AOI-TRN-016", True)
+    sheet.set_cell(3, VIEW, "Bottom")  # the row is ready again: its coded line goes with its status
+    assert (cell_text(sheet.table, 3, STATUS), sheet.why.text(), sheet.why.isVisible()) == ("ready", "", False)
     qtbot.mouseClick(sheet.btn_import, Qt.MouseButton.LeftButton)
-    sheet.show_report(ImportReport(stopped=(e, OSError("the drive went away"))), lambda x: x.code)
+    sheet.show_report(ImportReport(stopped=(sent[2][0], OSError("the drive went away"))), lambda x: x.code)
     assert cell_text(sheet.table, 3, STATUS) == "AOI-SET-007 Unexpected error", "a plain error as its dialog says it"
-    assert (
-        sheet.note.text() == "0 imported · 1 not imported"
-        and cell_item(sheet.table, 3, STATUS).toolTip() == "AOI-SET-007"
-    )
+    assert cell_item(sheet.table, 3, STATUS).toolTip() == sheet.why.text() == "AOI-SET-007"
+    qtbot.mouseClick(sheet.views.button(0), Qt.MouseButton.LeftButton)  # Top for all: the same for a change for all
+    assert (cell_text(sheet.table, 3, STATUS), sheet.why.text(), sheet.why.isVisible()) == ("ready", "", False)
     qtbot.keyClick(sheet.table, Qt.Key.Key_Escape)
     assert closed == [True]
 
@@ -168,3 +188,91 @@ def test_req_trn_001_training_opens_the_sheet_inline_and_imports_on_the_pool(
     assert sheet.isVisible() and sheet.labels.checkedId() == 1 and not sheet.btn_import.isEnabled()
     win._on_board_model("OTHER")
     assert not sheet.isVisible() and not dialogs
+
+
+def test_req_trn_001_the_pool_imports_copies_of_the_rows_as_they_read_at_import(qtbot: QtBot) -> None:
+    """Import with a row's drop-down still open keeps that pick first and closes the drop-down, so each file goes as
+    its row reads; the pool gets copies of the rows, and while they import nothing reaches them (set_cell does nothing
+    then). The report comes back on the copies and shows on the rows they were made from. "Nothing to import: every
+    file was refused" is said only when every file of the sheet was, and a sheet of images already imported says so
+    in its own words."""
+    sent: list[list[ImportFile]] = []
+    sheet = ImportSheet(sent.append, lambda: None)
+    qtbot.addWidget(sheet)
+    a, b = ImportFile("/s/ok/a.png", "OK"), ImportFile("/s/ok/b.png", "OK")
+    sheet.open_files("A", [a, b])
+    qtbot.waitExposed(sheet)
+    sheet.table.setCurrentCell(1, VIEW)
+    qtbot.keyClick(sheet.table, Qt.Key.Key_F2)
+    (box,) = [w for w in sheet.table.viewport().findChildren(QComboBox) if w.isVisible()]
+    box.setCurrentIndex(box.findData("Bottom"))  # picked in the open drop-down, not yet kept
+    sheet.start()
+    assert not [w for w in sheet.table.viewport().findChildren(QComboBox) if w.isVisible()], "closed at Import"
+    assert sent == [[a, b]] and b.side == "Bottom" and not {id(f) for f in sent[0]} & {id(a), id(b)}
+    sheet.set_cell(0, LABEL, "NG")  # as a drop-down left open would, while the files import
+    assert (a.label, sent[0][0].label, cell_text(sheet.table, 0, LABEL)) == ("OK", "OK", "OK")
+    refused = AoiError("AOI-TRN-016", path=a.path)
+    sheet.show_report(ImportReport(refused=[(sent[0][0], refused), (sent[0][1], refused)]), lambda x: x.code)
+    assert sheet.note.text() == "Nothing to import: every file was refused (see the list)."
+    skipped = AoiError("AOI-TRN-015", path=a.path, board_model="A", sample="a_1.png", label="OK")
+    sheet.start()
+    sheet.show_report(ImportReport(refused=[(sent[1][0], skipped), (sent[1][1], skipped)]), lambda x: x.code)
+    assert sheet.note.text() == "Nothing to import: every file is already imported."
+
+
+def test_req_trn_001_the_sheet_imports_into_the_board_model_it_was_opened_for(
+    qtbot: QtBot, ctx: AppContext, synthetic_dataset: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+    dialogs: list[tuple[str, str]],
+) -> None:  # fmt: skip
+    """The review's probe: the sheet names the board model it was opened for, and its Import goes there, never to the
+    header's. Another board model chosen in the header while an import runs lets that import end and then closes the
+    sheet, so Import again cannot send the rest elsewhere; an idle sheet closes at once. A folder with no image opens no
+    sheet, and the status line says so."""
+    folder = tmp_path / "src"
+    oks = list_images(synthetic_dataset / "train" / "ok")[:2]
+    for src, name in ((oks[0], "ok/a.png"), (oks[1], "loose/e.png")):
+        (folder / name).parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy(src, folder / name)
+    for name in ("A", "B"):
+        ctx.ensure_board_model(name)
+    reached, go = threading.Event(), threading.Event()
+    copy = atomic.copy_file
+
+    def held(src: str | Path, dst: str | Path) -> None:
+        reached.set()
+        assert go.wait(30)
+        copy(src, dst)
+
+    monkeypatch.setattr(atomic, "copy_file", held)
+    win = MainWindow(ctx)
+    qtbot.addWidget(win)
+    win.show()
+    win.set_user("engineer")
+    win._reload_board_models("A")
+    win.navigate("Training")
+    page = win.pages["Training"]
+    page.import_from(str(folder))
+    page.sheet.btn_import.click()
+    qtbot.waitUntil(reached.is_set, timeout=30000)
+    win._reload_board_models("B")  # while A's import runs
+    assert page.sheet.isVisible() and page.sheet.running, "the import goes on"
+    go.set()
+    qtbot.waitUntil(lambda: page._bg is None, timeout=30000)
+    assert not page.sheet.isVisible() and page.btn_train.objectName() == "primary", "closed once it ended"
+
+    def names() -> dict[str, list[str]]:
+        return {bm: [Path(r["path"]).name[0] for r in ctx.samples(bm)] for bm in ("A", "B")}
+
+    assert names() == {"A": ["a"], "B": []}
+    page.import_from(str(folder))
+    assert page.sheet.title() == "Import 2 file(s) into B"
+    page.sheet.set_cell(0, LABEL, "OK")  # loose/e.png
+    win.board_model = "A"  # the header read by the page with no change sent to it (white box)
+    page.sheet.btn_import.click()
+    qtbot.waitUntil(lambda: page._bg is None, timeout=30000)
+    assert names() == {"A": ["a"], "B": ["e", "a"]} and not dialogs
+    (folder / "none").mkdir()
+    win.board_model = "B"
+    page.import_from(str(folder / "none"))
+    assert not page.sheet.isVisible()
+    assert win.statusBar().currentMessage() == f"No images in {folder / 'none'} or its sub-folders: nothing to import"
