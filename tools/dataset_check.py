@@ -1,6 +1,7 @@
 """Check the engine on public PCB defect datasets, for an internal test record (plan stage S30, issue #10).
 
-    python tools/dataset_check.py --out <folder> [--deeppcb <PCBData folder>] [--pku <PCB_DATASET folder>] [--ai]
+    python tools/dataset_check.py --out <folder> [--deeppcb <PCBData folder>] [--pku <PCB_DATASET folder>]
+        [--min-area <px>] [--ai]
 
 DeepPCB (PCBData: `*_temp.jpg` defect-free, `*_test.jpg` defective, boxes in `*_not/*.txt`, splits in test.txt and
 trainval.txt) and PKU-Market-PCB (PCB_DATASET: `PCB_USED/<board>.JPG` defect-free, `images/<type>/` defective, VOC boxes
@@ -22,6 +23,7 @@ import csv
 import hashlib
 import json
 import math
+import os
 import platform
 import random
 import sys
@@ -32,7 +34,9 @@ from pathlib import Path
 from time import perf_counter
 from typing import Any
 
+import cv2
 import numpy as np
+import torch
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:  # run as a script: the repository root holds the ``aoi`` package
@@ -139,8 +143,9 @@ def found(box: tuple[int, int, int, int, str], regions: list[tuple[int, int, int
     )
 
 
-def golden_check(items: list[Item]) -> dict[str, Any]:
-    """Each board judged against its own defect-free board by the default recipe with the AI check off."""
+def golden_check(items: list[Item], min_area: int = Recipe.min_defect_area) -> dict[str, Any]:
+    """Each board judged against its own defect-free board by the default recipe with the AI check off, its Minimum
+    defect area min_area px."""
     verdicts: dict[str, int] = {}
     per_type: dict[str, dict[str, int]] = {}
     ms: list[float] = []
@@ -149,7 +154,8 @@ def golden_check(items: list[Item]) -> dict[str, Any]:
     for item in items:
         good, test = load_image(item.good), load_image(item.test)
         t0 = perf_counter()
-        result = Inspector(Recipe(board_model=item.group, use_ai=False), reference=good).inspect(test)
+        recipe = Recipe(board_model=item.group, use_ai=False, min_defect_area=min_area)
+        result = Inspector(recipe, reference=good).inspect(test)
         ms.append((perf_counter() - t0) * 1000)
         verdicts[result.verdict] = verdicts.get(result.verdict, 0) + 1
         regions = [(d.x, d.y, d.w, d.h) for d in result.defects]
@@ -277,24 +283,29 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
     cfg = anomaly.TrainConfig(epochs=args.epochs, steps_per_epoch=args.steps, image_size=args.size, seed=args.seed)
     results: dict[str, Any] = {
         "when_utc": datetime.now(UTC).isoformat(timespec="seconds"),
-        "machine": {"system": platform.platform(), "cpu": platform.processor(), "python": platform.python_version()},
-        "settings": {"margin_px": MARGIN, "recipe": "default, AI check off", "ok_train": args.ok_train, **vars(cfg)},
+        "machine": machine(),
+        "settings": {
+            "margin_px": MARGIN,
+            "recipe": "default, AI check off",
+            "min_defect_area_px": args.min_area,
+            "ok_train": args.ok_train,
+            **vars(cfg),
+        },
         "note": "Counts on public research datasets for an internal check; not validated accuracy.",
     }
-    used: list[Item] = []
+    test = deeppcb_items(Path(args.deeppcb), "test") if args.deeppcb else []
+    train = deeppcb_items(Path(args.deeppcb), "trainval") if args.deeppcb and args.ai else []
+    items = pku_items(Path(args.pku)) if args.pku else []
+    used = test + train + items
+    before = manifest(used)  # before any check reads them, so a change made while they run is caught
+    with open(out / "manifest.csv", "w", newline="", encoding="utf-8") as f:
+        csv.writer(f).writerows([("file", "sha256"), *before.items()])
     if args.deeppcb:
-        test, train = deeppcb_items(Path(args.deeppcb), "test"), deeppcb_items(Path(args.deeppcb), "trainval")
-        used += test + (train if args.ai else [])
-        results["deeppcb"] = {"golden": golden_check(test), "px_per_mm": DEEPPCB_PX_PER_MM}
+        results["deeppcb"] = {"golden": golden_check(test, args.min_area), "px_per_mm": DEEPPCB_PX_PER_MM}
         if args.ai:
             results["deeppcb"]["ai"] = ai_check(train, test, args.ok_train, cfg)
     if args.pku:
-        items = pku_items(Path(args.pku))
-        used += items
-        results["pku"] = {"golden": golden_check(items)}
-    before = manifest(used)
-    with open(out / "manifest.csv", "w", newline="", encoding="utf-8") as f:
-        csv.writer(f).writerows([("file", "sha256"), *before.items()])
+        results["pku"] = {"golden": golden_check(items, args.min_area)}
     results["peak_memory_mb"] = peak_memory_mb()
     results["sources_unchanged"] = manifest(used) == before
     (out / "results.json").write_text(json.dumps(results, indent=2), encoding="utf-8")
@@ -325,11 +336,26 @@ def summary(r: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
+def machine() -> dict[str, Any]:
+    """The machine and libraries the counts and times come from, with the threads each library computes on."""
+    return {
+        "system": platform.platform(),
+        "cpu": platform.processor(),
+        "cpus": os.cpu_count(),
+        "python": platform.python_version(),
+        "numpy": np.__version__,
+        "opencv": cv2.__version__,
+        "torch": torch.__version__,
+        "threads": {"torch": torch.get_num_threads(), "opencv": cv2.getNumThreads()},
+    }
+
+
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     p.add_argument("--out", required=True)
     p.add_argument("--deeppcb", help="DeepPCB's PCBData folder")
     p.add_argument("--pku", help="PKU-Market-PCB's PCB_DATASET folder")
+    p.add_argument("--min-area", type=int, default=Recipe.min_defect_area, help="Minimum defect area in px (a what-if)")
     p.add_argument("--ai", action="store_true", help="also train and test the AI model on DeepPCB")
     p.add_argument("--ok-train", type=int, default=20)
     p.add_argument("--epochs", type=int, default=anomaly.TrainConfig.epochs)

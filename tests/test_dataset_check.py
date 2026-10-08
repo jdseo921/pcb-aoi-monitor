@@ -73,11 +73,44 @@ def test_req_insp_014_counts_each_labelled_box_found_and_leaves_the_sources_unch
         assert golden["boards"] == 1 and golden["verdicts"] == {"NG": 1}, (name, golden)
         assert golden["by_type"][kind]["found"] == 1 and golden["boxes_missed"] == 0, (name, golden)
         assert golden["smallest_box_found_px"] == [BOX[2], BOX[3]]
-    assert results["sources_unchanged"] is True
+    assert results["sources_unchanged"] is True and results["settings"]["min_defect_area_px"] == 40  # the default
+    assert {"threads", "numpy", "opencv", "torch"} <= results["machine"].keys()  # what the record cites, recorded
     assert {**_files(deeppcb), **_files(pku)} == before  # nothing written into either dataset
     rows = (out / "manifest.csv").read_text(encoding="utf-8").splitlines()
     assert rows[0] == "file,sha256" and len(rows) == 1 + 4  # one DeepPCB pair, one PKU pair; rotation/ is left out
     assert "not validated accuracy" in (out / "summary.md").read_text(encoding="utf-8")
+
+
+def test_req_insp_014_a_source_file_the_run_changes_is_reported(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The files are hashed before the checks read them, so a change made while they run is caught: hashed only after
+    the checks, the run reported its own change as none."""
+    deeppcb = _deeppcb(tmp_path / "d")
+    check = dc.golden_check
+
+    def changing(items: list[dc.Item], min_area: int) -> dict[str, object]:
+        with open(items[0].good, "ab") as f:
+            f.write(b"x")
+        return check(items, min_area)
+
+    monkeypatch.setattr(dc, "golden_check", changing)
+    out = tmp_path / "out"
+    assert dc.main(["--out", str(out), "--deeppcb", str(deeppcb)]) == 1
+    results = json.loads((out / "results.json").read_text(encoding="utf-8"))
+    assert results["sources_unchanged"] is False
+
+
+def test_req_insp_014_min_area_judges_with_another_minimum_defect_area(tmp_path: Path) -> None:
+    """--min-area runs the comparison again with only the Minimum defect area changed, as ADR 0007 asks of the check on
+    customer photos: above the drawn defect's area, its box is missed."""
+    deeppcb = _deeppcb(tmp_path / "d")
+    out = tmp_path / "out"
+    area = BOX[2] * BOX[3] + 1
+    assert dc.main(["--out", str(out), "--deeppcb", str(deeppcb), "--min-area", str(area)]) == 0
+    results = json.loads((out / "results.json").read_text(encoding="utf-8"))
+    assert results["settings"]["min_defect_area_px"] == area
+    assert results["deeppcb"]["golden"]["boxes_missed"] == 1
 
 
 def test_req_insp_014_a_box_no_region_reaches_is_missed() -> None:
