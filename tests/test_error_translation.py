@@ -6,6 +6,10 @@ the screen without that mark never went through translation.
 
 from __future__ import annotations
 
+import copy
+import dataclasses
+import json
+import pickle
 from pathlib import Path
 
 import pytest
@@ -14,11 +18,11 @@ from pytestqt.qtbot import QtBot
 
 from aoi.config import Settings
 from aoi.core.anomaly import _unusable
-from aoi.core.inspector import Inspector
+from aoi.core.inspector import NO_AI_NOTE, NO_GOLDEN_NOTE, NOT_RUN, Inspector
 from aoi.core.recipe import Recipe
 from aoi.core.services import AppContext, ErrorReport
-from aoi.errors import CODES, AoiError
-from aoi.ui.errors import dialog_text
+from aoi.errors import CODES, QT_TRANSLATE_NOOP, AoiError, Phrase, joined
+from aoi.ui.errors import dialog_text, phrase_text
 from tests.conftest import TrainedModel
 from tests.test_i18n import _messages
 from tests.test_req_done_in_v01 import _inspect_one, _window
@@ -30,6 +34,17 @@ SIGN_IN = "§Sign in as a user with that role, or ask one to do it."
 class Marking(QTranslator):
     def translate(self, context: str, source: str, disambiguation: str | None = None, n: int = -1) -> str:
         return "§" + source
+
+
+class Broken(Marking):
+    """Marks every string, but translates AOI-INSP-003's what as `text`, a translation with a faulty placeholder."""
+
+    def __init__(self, text: str) -> None:
+        super().__init__()
+        self.text = text
+
+    def translate(self, context: str, source: str, disambiguation: str | None = None, n: int = -1) -> str:
+        return self.text if source == CODES["AOI-INSP-003"].what.source else super().translate(context, source)
 
 
 def test_req_set_005_error_dialogs_alarms_and_notes_show_in_the_ui_language(
@@ -152,3 +167,40 @@ def test_req_set_005_every_error_code_reaches_the_translation_file(ctx: AppConte
     )
     assert texts[1] == "§The setting log_retention_days is 0; it must be §a whole number above 0."
     assert texts[2].startswith("§Training made an AI model that cannot judge boards (§its input size 7 is not a mult")
+
+
+def test_req_set_005_a_phrase_survives_copy_pickle_asdict_and_json() -> None:
+    """Review of #198: a catalogue template (no values), a list joint, a filled error text holding phrases and a joint,
+    and a whole ErrorCode copy, deep-copy, pickle, go through dataclasses.asdict and JSON as on the base, and come
+    back the same, a template still a template."""
+    reasons = joined(QT_TRANSLATE_NOOP("Errors", "{first}; {rest}"), [NOT_RUN[NO_GOLDEN_NOTE], NOT_RUN[NO_AI_NOTE]])
+    filled = AoiError("AOI-INSP-010", board="B", reason=reasons).what
+    phrases = [CODES["AOI-INSP-001"].what, QT_TRANSLATE_NOOP("Errors", "{first}; {rest}"), filled]
+    for phrase in phrases:
+        assert isinstance(phrase, Phrase)
+        json_back = Phrase.from_json(json.loads(json.dumps(phrase.to_json())))
+        for back in (copy.copy(phrase), copy.deepcopy(phrase), pickle.loads(pickle.dumps(phrase)), json_back):
+            assert isinstance(back, Phrase) and back == phrase and back.values == phrase.values
+            assert (back.context, back.source, back.filled) == (phrase.context, phrase.source, phrase.filled)
+    assert not phrases[0].filled and filled.filled and str(filled).startswith("No check can judge this board of")
+    assert dataclasses.asdict(CODES["AOI-INSP-001"])["what"] == "The file {path} could not be opened as an image."
+    assert copy.deepcopy(CODES["AOI-INSP-001"]) == CODES["AOI-INSP-001"]
+
+
+@pytest.mark.parametrize("translation", ["{board.x}", "{defects[0]}", "{board", "{nope}", "{0}"])
+def test_req_set_005_a_faulty_translation_leaves_the_english(qtbot: QtBot, translation: str) -> None:
+    """Review of #198: a translation whose placeholder names another value, reads an attribute or an index its value
+    lacks, or is malformed leaves the English sentence instead of stopping the dialog; a template not yet filled shows
+    translated, its {placeholders} as they are."""
+    translator = Broken(translation)
+    assert QCoreApplication.installTranslator(translator)
+    try:
+        failed = AoiError("AOI-INSP-003", board="B7", defects=3)
+        assert dialog_text(ErrorReport.of(failed)) == (
+            "AOI-INSP-003 §Board failed inspection",
+            "Board B7 failed inspection with 3 defect(s).\n\n§Review the result on the Compare page before the board"
+            " moves on.",
+        )
+        assert phrase_text(CODES["AOI-INSP-001"].what) == "§The file {path} could not be opened as an image."
+    finally:
+        QCoreApplication.removeTranslator(translator)

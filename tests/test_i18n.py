@@ -277,6 +277,121 @@ def test_req_set_005_no_untranslated_literals() -> None:
     assert not stale, f"allow-list entries no longer needed: {sorted(stale)}"
 
 
+ENGINE_ERRORS = {"AoiError", "ModelFileError", "WorkspaceError", "fill"}  # the errors and a phrase's fill (#198)
+ENGINE_ALLOWED = {  # (file, literal): why it is not a phrase; a stale entry fails the test
+    ("aoi/core/imaging.py", "0 MB"): "a number and a unit symbol, written the same in every language",
+    ("aoi/core/imaging.py", "0 MP"): "a number and a unit symbol, written the same in every language",
+    ("aoi/core/imaging.py", "0 MP (0 × 0)"): "numbers and a unit symbol, written the same in every language",
+    # what a function returns (#198): names the same in every language, and keys a screen words itself
+    ("aoi/config.py", "cpu"): "a torch device name",
+    ("aoi/config.py", "cuda"): "a torch device name",
+    ("aoi/core/imaging.py", "PNG"): "an image format's name (AOI-INSP-006's {kind}), the same in every language",
+    ("aoi/core/imaging.py", "BMP"): "an image format's name (AOI-INSP-006's {kind}), the same in every language",
+    ("aoi/core/imaging.py", "JPEG"): "an image format's name (AOI-INSP-006's {kind}), the same in every language",
+    ("aoi/core/imaging.py", "TIFF"): "an image format's name (AOI-INSP-006's {kind}), the same in every language",
+    ("aoi/core/services.py", "operator"): "a user's name in the users table, which start_user returns",
+    ("aoi/core/services.py", "same"): "a Judged key Compare never words: it shows the Golden board then",
+    ("aoi/core/services.py", "none"): "a Judged key; Compare words it (JUDGED in aoi/ui/pages/compare.py)",
+    ("aoi/core/services.py", "unrecorded"): "a Judged key; Compare words it (JUDGED in aoi/ui/pages/compare.py)",
+    ("aoi/core/services.py", "missing"): "a Judged key; Compare words it (JUDGED in aoi/ui/pages/compare.py)",
+    ("aoi/core/services.py", "unreadable"): "a Judged key; Compare words it (JUDGED in aoi/ui/pages/compare.py)",
+    ("aoi/core/services.py", "changed"): "a Judged key; Compare words it (JUDGED in aoi/ui/pages/compare.py)",
+    # calibrate()'s rule: the AI model file and its AI checks keep it as English; the Training log line is issue #199
+    ("aoi/core/anomaly.py", "OK-only: max(mean+3σ, 1.05×max OK)"): "an AI model's stored calibration rule",
+    ("aoi/core/anomaly.py", "separable: midpoint of max OK and min NG"): "an AI model's stored calibration rule",
+    ("aoi/core/anomaly.py", "overlap: OK-based cut, 0/0 labelled NG below it"): "an AI model's stored calibration rule",
+}
+
+
+def _engine_literals(path: Path) -> set[tuple[int, str]]:
+    """(line, text) of every literal the engine fills an error's message with: a value of AoiError or a subclass, or
+    of a phrase's fill(), that is a string literal, an f-string, `literal.format()`, a name assigned one in the same
+    file (with or without an annotation), or one of them inside `a or b` or `a if c else b`; an error's detail goes to
+    the log and is let through. A function's return value counts too, alone or in a tuple, since a helper's reason
+    reaches an error through a call this scan does not follow (`reason=_unusable(...)` in anomaly.py, #198)."""
+    tree = ast.parse(path.read_text(encoding="utf-8"))
+    parents = {child: node for node in ast.walk(tree) for child in ast.iter_child_nodes(node)}
+
+    def scope(node: ast.AST) -> ast.AST:  # a class body too: its names are not the module's, nor its methods'
+        while not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda, ast.ClassDef, ast.Module)):
+            node = parents[node]
+        return node
+
+    assigned: dict[tuple[ast.AST, str], list[ast.AST]] = {}  # (scope, name) -> the literals it is given
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.Assign, ast.AnnAssign)) and node.value and _literal_text(node.value) is not None:
+            for t in node.targets if isinstance(node, ast.Assign) else [node.target]:
+                if isinstance(t, ast.Name):
+                    assigned.setdefault((scope(node), t.id), []).append(node.value)
+    found: set[tuple[int, str]] = set()
+
+    def check(arg: ast.AST, where: ast.AST) -> None:
+        if isinstance(arg, ast.BoolOp):
+            for value in arg.values:
+                check(value, where)
+        elif isinstance(arg, ast.IfExp):
+            check(arg.body, where)
+            check(arg.orelse, where)
+        elif isinstance(arg, ast.Tuple):
+            for value in arg.elts:
+                check(value, where)
+        elif isinstance(arg, ast.Name):
+            for value in assigned.get((where, arg.id), assigned.get((tree, arg.id), [])):
+                check(value, where)
+        elif (text := _literal_text(arg)) is not None and _visible(text):
+            found.add((arg.lineno, text))
+
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Return) and node.value is not None:
+            check(node.value, scope(node))
+        if isinstance(node, ast.Call) and _callee(node)[1] in ENGINE_ERRORS:
+            for kw in node.keywords:
+                if kw.arg not in SKIP_KEYWORDS:
+                    check(kw.value, scope(node))
+    return found
+
+
+def test_req_set_005_the_engine_fills_errors_with_phrases_only(tmp_path: Path) -> None:
+    """Outside aoi/ui (which the scan above covers), an error's message is filled with phrases and data, never with an
+    English literal a screen could not translate, and no function returns one (#198): the sample shows what the scan
+    flags and lets through. ENGINE_ALLOWED lists what may stay a literal, each with its reason."""
+    files = sorted(p for p in (ROOT / "aoi").rglob("*.py") if "ui" not in p.relative_to(ROOT / "aoi").parts[:1])
+    hits = {(p.relative_to(ROOT).as_posix(), line, text) for p in files for line, text in _engine_literals(p)}
+    untranslated = sorted(f"{file}:{line}: {text!r}" for file, line, text in hits if (file, text) not in ENGINE_ALLOWED)
+    assert not untranslated, 'fill these through QT_TRANSLATE_NOOP("Errors", …):\n' + "\n".join(untranslated)
+    stale = set(ENGINE_ALLOWED) - {(file, text) for file, _, text in hits}
+    assert not stale, f"allow-list entries no longer needed: {sorted(stale)}"
+    sample = tmp_path / "sample.py"
+    sample.write_text(
+        'WHY = "a reason"\n'
+        'raise AoiError("AOI-SET-008", detail="log only", name=name, expected="a number")\n'
+        "def f(p):\n"
+        '    why = QT_TRANSLATE_NOOP("Errors", "a phrase")\n'
+        "    raise ModelFileError('AOI-TRN-001', path=p, reason=why)\n"
+        "def g(p):\n"
+        '    why = "bad"\n'
+        "    raise ModelFileError('AOI-TRN-001', path=p, reason=WHY if p else why)\n"
+        'raise AoiError("AOI-SET-010", path=p, reason=e.strerror or f"{kind} failed")\n'
+        'raise AoiError("AOI-TRN-004", reason=QT_TRANSLATE_NOOP("Errors", "{n} bad").fill(n=n or "none"))\n'
+        'raise AoiError("AOI-INSP-005", path="board.png", size=size if size else "huge")\n'
+        "def _unusable(meta):\n"  # a helper whose return an error takes as its reason, as anomaly._unusable (#198)
+        "    if meta:\n"
+        '        return QT_TRANSLATE_NOOP("Errors", "a marked reason")\n'
+        '    return "its weights hold numbers that are not finite"\n'
+        "def h(p):\n"
+        '    why: str = "noted"\n'
+        '    return (None, why or "") if p else f"{p:.1f}"\n'
+        "class C:\n"
+        '    kind: str = "a field default"\n'
+        "def k(kind):\n"
+        "    return kind\n",
+        encoding="utf-8",
+    )
+    returned = {"its weights hold numbers that are not finite", "noted"}  # what a function returns (#198)
+    found = {text for _, text in _engine_literals(sample)}
+    assert found == {"a number", "a reason", "bad", "0 failed", "none", "huge", *returned}
+
+
 def test_req_set_005_the_scan_catches_a_literal(tmp_path: Path) -> None:
     """The scan itself: it flags a literal, an f-string, a `.format()` on a literal, a name assigned a literal (with or
     without an annotation), a title (annotated or not), a dialog's words and a value an AoiError fills its message with

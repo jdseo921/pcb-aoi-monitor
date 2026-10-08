@@ -448,7 +448,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+32"/>
+        <location line="+1"/>
+        <source>(none)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+31"/>
         <source>Saving a recipe</source>
         <translation type="unfinished"></translation>
     </message>
@@ -583,7 +588,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/errors.py" line="+67"/>
+        <location filename="../ui/errors.py" line="+71"/>
         <source>unhandled</source>
         <translation type="unfinished"></translation>
     </message>
@@ -608,7 +613,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/imaging.py" line="+161"/>
+        <location filename="../core/imaging.py" line="+150"/>
+        <source>{megabytes} MB ({count} bytes)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+12"/>
         <source>its header holds no image size</source>
         <translation type="unfinished"></translation>
     </message>
@@ -678,7 +688,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../errors.py" line="+87"/>
+        <location filename="../errors.py" line="+91"/>
         <source>Image cannot be read</source>
         <translation type="unfinished"></translation>
     </message>

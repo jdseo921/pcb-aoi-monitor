@@ -28,14 +28,16 @@ class Phrase(str):
     context: str
     source: str
     values: dict[str, object]
+    filled: bool  # False for a template such as a catalogue text: its {placeholders} stay as they are
 
     def __new__(cls, context: str, source: str, values: dict[str, object] | None = None) -> Phrase:
         self = super().__new__(cls, source if values is None else source.format(**values))
-        self.context, self.source, self.values = context, source, values or {}
+        self.context, self.source, self.values, self.filled = context, source, values or {}, values is not None
         return self
 
-    def __reduce__(self) -> tuple[type[Phrase], tuple[str, str, dict[str, object]]]:
-        return Phrase, (self.context, self.source, self.values)
+    def __reduce__(self) -> tuple[type[Phrase], tuple[str, str, dict[str, object] | None]]:
+        """How copy, deepcopy and pickle rebuild the phrase: a template without values, so it is not filled."""
+        return Phrase, (self.context, self.source, self.values if self.filled else None)
 
     def fill(self, **values: object) -> Phrase:
         """This phrase with its {placeholders} filled in."""
@@ -48,10 +50,12 @@ class Phrase(str):
             k: v if isinstance(v, (int, float, type(None))) else str(v) for k, v in self.values.items()
         }
         values.update((k, v.to_json()) for k, v in self.values.items() if isinstance(v, Phrase))
-        return {"context": self.context, "source": self.source, "values": values}
+        return {"context": self.context, "source": self.source, "values": values if self.filled else None}
 
     @classmethod
     def from_json(cls, doc: dict[str, Any]) -> Phrase:
+        if doc["values"] is None:
+            return cls(doc["context"], doc["source"])
         values = {k: cls.from_json(v) if isinstance(v, dict) else v for k, v in doc["values"].items()}
         return cls(doc["context"], doc["source"], values)
 

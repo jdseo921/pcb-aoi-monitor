@@ -30,13 +30,17 @@ ANOTHER_WORKSPACE = {"AOI-SET-001", "AOI-SET-002", "AOI-SET-003", "AOI-SET-005",
 def phrase_text(text: str) -> str:
     """`text` in the UI language: a phrase (an error's title, what happened and what to do, an alarm, and the phrases
     that fill them) translated under its context, then filled with its values, themselves shown the same way; any
-    other text as it is. A translation that names other placeholders than its source leaves the English (#198)."""
+    other text as it is; a template not yet filled, translated with its {placeholders}. A translation that names
+    other placeholders than its source, or uses one in a way its value does not allow, leaves the English (#198)."""
     if not isinstance(text, Phrase):
         return text
+    translated = QCoreApplication.translate(text.context, text.source)
+    if not text.filled:
+        return translated
     values = {k: phrase_text(v) if isinstance(v, str) else v for k, v in text.values.items()}
     try:
-        return QCoreApplication.translate(text.context, text.source).format(**values)
-    except (KeyError, IndexError, ValueError):
+        return translated.format(**values)
+    except (KeyError, IndexError, ValueError, AttributeError, TypeError):
         return text.source.format(**values)
 
 

@@ -147,7 +147,8 @@ def _read_image(p: Path, max_megapixels: float, max_megabytes: float) -> tuple[n
     try:
         size = p.stat().st_size
         if size > max_megabytes * 1e6:
-            found = f"{size / 1e6:.1f} MB ({size:,} bytes)"
+            in_bytes = QT_TRANSLATE_NOOP("Errors", "{megabytes} MB ({count} bytes)")
+            found = in_bytes.fill(megabytes=f"{size / 1e6:.1f}", count=f"{size:,}")
             raise AoiError("AOI-INSP-005", path=str(p), size=found, limit=f"{max_megabytes:g} MB")
         data = p.read_bytes()
     except OSError as e:  # missing file, folder, or no permission
@@ -161,8 +162,8 @@ def _read_image(p: Path, max_megapixels: float, max_megabytes: float) -> tuple[n
             "AOI-INSP-006", path=str(p), kind=kind, reason=QT_TRANSLATE_NOOP("Errors", "its header holds no image size")
         )
     if w * h > max_megapixels * 1e6:
-        found = f"{w * h / 1e6:.2f} MP ({w} × {h})"
-        raise AoiError("AOI-INSP-005", path=str(p), size=found, limit=f"{max_megapixels:g} MP")
+        pixels = f"{w * h / 1e6:.2f} MP ({w} × {h})"
+        raise AoiError("AOI-INSP-005", path=str(p), size=pixels, limit=f"{max_megapixels:g} MP")
     if max(w, h) > MAX_SIDE:
         raise AoiError("AOI-INSP-007", path=str(p), width=w, height=h, limit=f"{MAX_SIDE:,}")
     try:
