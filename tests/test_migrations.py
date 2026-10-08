@@ -4,6 +4,7 @@ migration 0005 adds; REQ-INSP-012 for the evidence columns and the checks table 
 
 from __future__ import annotations
 
+import json
 import logging
 import re
 import shutil
@@ -17,8 +18,11 @@ from PySide6.QtWidgets import QFileDialog, QWidget
 
 from aoi import logging_setup
 from aoi.config import Settings, default_workspace
+from aoi.core.services import AppContext
 from aoi.data import migrate as mg
 from aoi.data.db import Database
+from aoi.data.errors import WorkspaceError
+from aoi.errors import AoiError
 from aoi.ui import errors as ui_errors
 
 V01_TABLES = {"users", "board_models", "samples", "models", "recipes", "inspections", "defects", "test_runs", "alarms"}
@@ -164,6 +168,81 @@ def test_req_set_016_refused_workspace_offers_another(
     (default_workspace() / "settings.json").write_text('{"max_image_megabytes": 0}', encoding="utf-8")
     assert ui_errors.open_workspace() is None and len(asked) == 2
     assert dialogs[-1][0] == "AOI-SET-008 Setting invalid"
+
+
+def test_req_set_019_a_settings_file_that_cannot_be_read_is_refused_with_a_code(
+    dialogs: list[tuple[str, str]], capsys: pytest.CaptureFixture[str]
+) -> None:
+    """A settings.json that is not JSON, not UTF-8 text or not a JSON object is refused at start-up with AOI-SET-010,
+    naming the file and what is wrong, in the coded dialog and with no Python traceback; the app closes."""
+    f = default_workspace() / "settings.json"
+    f.parent.mkdir(parents=True, exist_ok=True)
+    cases = (
+        (b'{"device": "cpu",}', "it is not valid JSON (line 1, column 18: "),
+        (b"\xff\xfe{}", "it is not UTF-8 text"),
+        (b'["cpu"]', "it does not hold a JSON object of settings"),
+    )
+    for content, reason in cases:
+        f.write_bytes(content)
+        with pytest.raises(AoiError) as refused:
+            Settings.load()
+        assert refused.value.code == "AOI-SET-010" and str(f) in refused.value.what and reason in refused.value.what
+        assert ui_errors.open_workspace() is None
+        assert dialogs[-1] == (
+            "AOI-SET-010 Settings file cannot be read",
+            f"{refused.value.what}\n\n{refused.value.action}",
+        )
+    assert len(dialogs) == 3 and "Traceback" not in capsys.readouterr().err
+
+
+def test_req_set_019_a_workspace_that_cannot_be_opened_offers_another(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, dialogs: list[tuple[str, str]]
+) -> None:
+    """A workspace whose aoi.sqlite is not a database, or whose folder cannot be created (a file stands where a folder
+    must go, as on a drive letter with no drive behind it), is refused with AOI-SET-011 naming the folder, and the
+    folder picker follows, as for the other refusals another folder cures. The damaged file is left as it was."""
+    damaged = tmp_path / "damaged"
+    damaged.mkdir()
+    (damaged / "aoi.sqlite").write_bytes(b"not a database " * 300)
+    blocked = tmp_path / "blocked"
+    blocked.write_text("a file, not a folder", encoding="utf-8")
+    answers = iter(["", "", str(tmp_path / "new")])
+    monkeypatch.setattr(QFileDialog, "getExistingDirectory", staticmethod(lambda *_: next(answers)))
+    for workspace in (damaged, blocked / "workspace"):
+        Settings(workspace=str(workspace), device="cpu").save()
+        with pytest.raises(WorkspaceError) as refused:
+            AppContext(Settings.load())
+        assert refused.value.code == "AOI-SET-011" and str(workspace) in refused.value.what
+        assert ui_errors.open_workspace() is None  # Cancel in the picker closes the app
+        assert dialogs[-1][0] == "AOI-SET-011 Workspace cannot be opened"
+        assert "in the window that opens next" in dialogs[-1][1]
+    ctx = ui_errors.open_workspace()  # the blocked workspace again; this time another folder is chosen
+    assert ctx is not None and ctx.settings.root == tmp_path / "new"
+    ctx.close()
+    assert (damaged / "aoi.sqlite").read_bytes() == b"not a database " * 300
+    assert [p.name for p in damaged.iterdir() if p.name.startswith("aoi.sqlite")] == ["aoi.sqlite"]
+
+
+def test_req_set_019_an_unexpected_error_at_start_up_shows_a_code_and_logs_its_trace(
+    monkeypatch: pytest.MonkeyPatch, dialogs: list[tuple[str, str]], capsys: pytest.CaptureFixture[str]
+) -> None:
+    """An error at start-up that no refusal names shows AOI-SET-007 with the exception's type and no trace; the trace
+    goes to the log in the default workspace (stack traces go only to the log), and the log file is closed again."""
+
+    def broken(settings: Settings) -> AppContext:
+        raise RuntimeError("the disk controller stopped answering")
+
+    monkeypatch.setattr(ui_errors, "AppContext", broken)
+    assert ui_errors.open_workspace() is None
+    (title, text) = dialogs[-1]
+    assert title == "AOI-SET-007 Unexpected error" and "(RuntimeError)" in text and "(start-up)" in text
+    assert "Traceback" not in text and "disk controller" not in text
+    lines = [json.loads(line) for f in (default_workspace() / "logs").glob("aoi-*.jsonl") for line in f.open()]
+    (failed,) = [line for line in lines if line["event"] == "app.start_failed"]
+    assert "RuntimeError: the disk controller stopped answering" in failed["trace"]
+    handlers = logging.getLogger(logging_setup.LOGGER).handlers
+    assert not [h for h in handlers if isinstance(h, logging_setup.JsonLinesHandler)]
+    assert "Traceback" not in capsys.readouterr().err
 
 
 def test_req_set_016_migration_files_are_checked(tmp_path: Path) -> None:

@@ -88,8 +88,8 @@ segments are skipped as libjpeg skips them, a TIFF size tag of any integer type 
 known by its header size), so no file measures small here and decodes large; `tests/test_image_input.py` holds the
 crafted files and files from Pillow and tifffile. The limits are the two `max_image_*` values in `settings.json`, in the
 default workspace folder (50 MP and 200 MB, that is 200,000,000 bytes, both proposed, since a 50 MP 24-bit BMP is
-150 MB); `Settings.load` refuses a value of the wrong type, or a limit not above 0, with `AOI-SET-008` before the app
-starts, and the Settings page does not show them yet (an Admin edits the file); `map_retention_days_ok` (7, not below
+150 MB); `Settings.load` refuses a file it cannot read (not JSON, not UTF-8, not an object) with `AOI-SET-010`, and a
+value of the wrong type, or a limit not above 0, with `AOI-SET-008`, before the app starts, and the Settings page does not show them yet (an Admin edits the file); `map_retention_days_ok` (7, not below
 0) is the third: the map files of OK results older than that go at start-up (`_sweep_ok_maps`, audited as `maps.sweep`;
 NG and WARN maps stay, REQ-INSP-012). Every page and service reads an image
 through `AppContext.load_image`, which applies them; `FolderCamera` takes them when the inspection cycle wires a camera
@@ -369,9 +369,12 @@ nothing migrated, and a brand-new database gets no copy (Engineering, "Upgrade a
 with the app closed: copy that file over `aoi.sqlite`, deleting `aoi.sqlite-wal` and `aoi.sqlite-shm` if a crash left
 them (they belong to the replaced file), then start the version upgraded from; results recorded since the upgrade are
 only in the replaced file. The app never deletes the copies (nothing is deleted without an Admin action); a one-click
-restore belongs to the installer. A refused workspace (`AOI-SET-001`, `-002`, `-003`, `-005`) is reported before any
-window opens, so `open_workspace` in `aoi/ui/errors.py` follows the message with a folder picker: the folder chosen is
-saved to `settings.json` as the Settings page saves it and opened, and Cancel closes the app (REQ-SET-016).
+restore belongs to the installer. A refused workspace (`AOI-SET-001`, `-002`, `-003`, `-005`, and `-011` for a folder
+that cannot be created or a database file SQLite cannot open) is reported before any window opens, so `open_workspace`
+in `aoi/ui/errors.py` follows the message with a folder picker: the folder chosen is saved to `settings.json` as the
+Settings page saves it and opened, and Cancel closes the app (REQ-SET-016). An error at start-up without a code shows
+`AOI-SET-007`, and its trace goes to the log in the default workspace folder (event `app.start_failed`), since the
+excepthook is installed only once the window exists (REQ-SET-019).
 Records that can leave the station (`users`, `samples`, `models`, `recipes`, `inspections`, and since migration 0009
 `test_runs` and `alarms`) carry a `uuid` beside their integer key; `defects` and `checks` are rows of one inspection and
 are named by its UUID and their `no`. The dataset record, with its UUID, arrives with frozen dataset versions (stage

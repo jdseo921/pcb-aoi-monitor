@@ -76,17 +76,28 @@ class Settings:
 
     @classmethod
     def load(cls) -> Settings:
+        """The settings in settings.json, or the defaults when there is none. A file that cannot be read is refused
+        with AOI-SET-010 and a wrong value with AOI-SET-008, before the app starts (REQ-SET-019). The workspace folder
+        is created by AppContext, which refuses one that cannot be (AOI-SET-011) and so offers another."""
         f = cls._file()
-        if f.exists():
+        if not f.exists():
+            return cls()
+        try:
             data = json.loads(f.read_text(encoding="utf-8"))
-            known = {k: v for k, v in data.items() if k in cls.__dataclass_fields__}
-            for name, value in known.items():
-                cls.check(name, value)
-            s = cls(**known)
-        else:
-            s = cls()
-        s.ensure_dirs()
-        return s
+        except json.JSONDecodeError as e:
+            raise AoiError(
+                "AOI-SET-010", path=str(f), reason=f"it is not valid JSON (line {e.lineno}, column {e.colno}: {e.msg})"
+            ) from e
+        except UnicodeDecodeError as e:
+            raise AoiError("AOI-SET-010", path=str(f), reason="it is not UTF-8 text") from e
+        except OSError as e:
+            raise AoiError("AOI-SET-010", path=str(f), reason=e.strerror or type(e).__name__) from e
+        if not isinstance(data, dict):
+            raise AoiError("AOI-SET-010", path=str(f), reason="it does not hold a JSON object of settings")
+        known = {k: v for k, v in data.items() if k in cls.__dataclass_fields__}
+        for name, value in known.items():
+            cls.check(name, value)
+        return cls(**known)
 
     @classmethod
     def check(cls, name: str, value: object) -> None:
