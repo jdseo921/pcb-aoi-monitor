@@ -224,6 +224,9 @@ Upload OK images (+ optional NG)                         Training page
 Re-training after more uploads creates a new version; older versions stay selectable (model version control, GUI §6).
 An AI model the loader would refuse, such as one with an image threshold of 0 from OK images that are copies of one
 photo, is refused at step 5 with AOI-TRN-004: nothing is saved, registered or audited, and the active version stays.
+Step 6 sets the new golden board as the reference, registers and activates the version and writes `model.train` in one
+transaction: if it fails, the reference and the active version stay and the run's two files are removed. A version
+never takes a name whose `.pt` or `_golden.png` is on disk, so a golden board a result names is never written over (#178).
 The reference image an Engineer sets (Set Reference) must be an OK sample (AOI-TRN-006): inspections compare against it
 at once, and step 1 aligns to it. While a sample is the reference, it cannot be relabelled NG or removed (AOI-TRN-007).
 
@@ -328,13 +331,17 @@ VM the tests run on. `tests/test_re_evaluate.py` checks this.
 
 Since S16 the check lives in the service layer (ADR 0002, decision 5): every `AppContext` write is decorated with
 `@requires(role, what)` in `aoi/core/services.py` and raises `AOI-USR-001` when the current user's role is lower, so
-hiding a page or disabling a button is only a convenience. Every write also appends an audit entry (REQ-LOG-004):
+hiding a page or disabling a button is only a convenience. Every write also appends an audit entry (REQ-LOG-004), in
+the same transaction as its rows (`Database.transaction()`, `@transactional`): both are stored or neither, on an error
+or a crash (#178). A file cannot join it, so file writes come first and are removed when what records them fails: an
+import's copies, a training run's files, an export whose entry cannot be written. An import is all or nothing.
+The writes, their roles and entries:
 
 | Write | Role | Audit action and object (before → after) |
 |---|---|---|
 | `ensure_board_model`, `set_reference`, `import_samples` | Engineer | `board_model.create`, `board_model.reference` (reference path), `sample.import`; object = board model name |
 | `update_sample`, `delete_sample` | Engineer | `sample.update` (label, defect type), `sample.delete`; object = sample UUID |
-| `train`, `activate_model` | Engineer | `model.train`, `model.activate` (active version; an older one is a rollback); object = model UUID |
+| `train`, `activate_model` | Engineer | `model.train`, `model.activate` (active version; an older one is a rollback; `model.train` also the Golden board before); object = model UUID |
 | `save_recipe` | Engineer | `recipe.save` (recipe body); object = recipe UUID |
 | `batch_test` | Engineer | `test.run` (folder, model version, metrics); object = board model name |
 | `export_model`, `export_overlays`, `export_csv` | Engineer | `export.model`, `export.overlays`, `export.csv` (destination, counts) |
