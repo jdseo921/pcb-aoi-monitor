@@ -20,6 +20,7 @@ from PySide6.QtCore import Qt, QTimer, qInstallMessageHandler
 from PySide6.QtWidgets import QWidget
 
 from aoi.core.services import AppContext, classification_metrics
+from aoi.ui import theme
 from aoi.ui.widgets.busy import BusyOverlay
 from aoi.ui.workers import Worker, start
 from tests.test_jobs import count_to
@@ -86,7 +87,8 @@ def test_req_set_021_compare_does_not_freeze(qtbot, trained_ctx: AppContext, boa
         assert page.res is None, "the inspection runs on a pool thread: no result before the action returns"
         qtbot.waitUntil(lambda: page.res is not None, timeout=60000)
     assert g["longest_s"] < BUDGET_S, g
-    assert page.verdict.text() == page.res.verdict and page.metrics.rowCount() == len(page.res.checks) + 1
+    assert page.verdict.text() == theme.verdict_label(page.res.verdict)
+    assert page.metrics.rowCount() == len(page.res.checks) + 1
 
 
 def test_req_set_021_model_test_preview_does_not_freeze(qtbot, trained_ctx: AppContext, board_5mp: Path) -> None:

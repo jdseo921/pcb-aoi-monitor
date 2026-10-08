@@ -1,7 +1,8 @@
-"""Screen rules of the Engineering standard, "Look" and "Sizes" (REQ-SET-004, REQ-SET-018; stage S18a).
+"""Screen rules of the Engineering standard, "Look" and "Sizes" (REQ-SET-004, REQ-SET-018, REQ-INSP-002; S18a, S18b).
 
-Static scans keep every colour and point size in aoi/ui/theme.py; a widget check opens the shell offscreen and looks
-at the one frame every page sits in. The verdict shapes and the button rules follow in S18b.
+Static scans keep every colour and point size in aoi/ui/theme.py. Widget checks open the shell offscreen and look at
+the one frame every page sits in, the one blue primary button per page, the red destructive buttons and the verdict
+banner with its shape and word.
 """
 
 from __future__ import annotations
@@ -11,10 +12,10 @@ import re
 from pathlib import Path
 
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QFrame
+from PySide6.QtWidgets import QApplication, QBoxLayout, QFrame, QPushButton, QWidget
 
 from aoi.ui import theme
-from tests.test_req_done_in_v01 import BOARD, _window
+from tests.test_req_done_in_v01 import BOARD, _inspect_one, _window
 
 ROOT = Path(__file__).resolve().parents[1]
 UI_DIR = ROOT / "aoi" / "ui"
@@ -23,6 +24,8 @@ COLOUR_LITERAL = re.compile(r"#[0-9a-fA-F]{3,8}\b|\brgba?\(")
 POINT_SIZE = re.compile(r"font-size:\s*(\d+)\s*pt")
 QT_COLOURS = {"white", "black", "red", "green", "blue", "yellow", "gray", "darkGray", "lightGray", "cyan", "magenta"}
 COLOUR_CALLS = {"QColor", "QBrush", "QPen"}
+DESTRUCTIVE = re.compile(r"^(Delete|Remove|Reset|Clear)\b")
+PRIMARY_PENDING = {"3D Profile"}  # its card and one link button arrive with the empty states (S18c, REQ-SET-019)
 
 
 def _docstrings(tree: ast.AST) -> set[ast.AST]:
@@ -85,3 +88,61 @@ def test_req_set_018_frame_header_and_sidebar_groups(qtbot, trained_ctx) -> None
     for title in win.pages:
         win.navigate(title)
         assert header.isVisible() and win.nav.isVisible() and win.statusBar().isVisible(), title
+
+
+def test_req_insp_002_verdict_has_shape_and_word(qtbot, trained_ctx, ng_board) -> None:
+    """A verdict is its colour with a shape and the word: Inspection (40 pt), Compare, the AI Model Test preview."""
+    assert [theme.verdict_label(v) for v in ("OK", "NG", "WARN")] == ["✓ OK", "✗ NG", "▲ WARN"]
+    assert len(set(theme.VERDICT_SHAPES.values())) == len(theme.VERDICT_SHAPES), "each verdict has its own shape"
+    win = _window(qtbot, trained_ctx, "Engineer")
+    page = _inspect_one(qtbot, win, ng_board)
+    res = page.last
+    assert page.verdict.text() == theme.verdict_label(res.verdict) == "✗ NG"
+    assert theme.NG_COLOR in page.verdict.styleSheet() and "font-size:40pt" in page.verdict.styleSheet()
+    assert page.verdict.height() >= theme.BANNER_H
+    compare = win.pages["Compare"]
+    win.open_compare(str(ng_board))
+    qtbot.waitUntil(lambda: compare.res is not None, timeout=30000)
+    assert compare.verdict.text() == theme.verdict_label(compare.res.verdict) == "✗ NG"
+    assert theme.NG_COLOR in compare.verdict.styleSheet()
+    test_page = win.pages["AI Model Test"]
+    test_page._show_preview(str(ng_board), res)
+    assert test_page.preview_verdict.text() == "✗ NG" and theme.NG_COLOR in test_page.preview_verdict.styleSheet()
+
+
+def test_req_set_018_one_primary_button(qtbot, trained_ctx) -> None:
+    """Exactly one blue primary button per page, the action the page is for; none of them is checkable."""
+    win = _window(qtbot, trained_ctx, "Admin")
+    for title, page in win.pages.items():
+        primaries = [b for b in page.findChildren(QPushButton) if b.objectName() == "primary"]
+        assert len(primaries) == (0 if title in PRIMARY_PENDING else 1), (title, [b.text() for b in primaries])
+        assert not any(b.isCheckable() for b in primaries), title
+    assert f"QPushButton#primary {{ background: {theme.ACCENT};" in theme.QSS
+
+
+def _row_of(page: QWidget, b: QPushButton) -> list[QWidget]:
+    """The widgets of the box layout that holds `b`, in order."""
+    for lay in page.findChildren(QBoxLayout):
+        if lay.indexOf(b) >= 0:
+            return [w for w in (lay.itemAt(i).widget() for i in range(lay.count())) if w is not None]
+    raise AssertionError(f"{b.text()} is not in a box layout")
+
+
+def test_req_set_018_destructive_buttons_red_not_default(qtbot, trained_ctx) -> None:
+    """Delete and Remove are red "danger" buttons, last in their row, never the default and never focused on open."""
+    assert re.search(r"QPushButton#danger \{ background: " + theme.NG_COLOR, theme.QSS)
+    win = _window(qtbot, trained_ctx, "Admin")
+    red: list[str] = []
+    for title, page in win.pages.items():
+        win.navigate(title)
+        QApplication.processEvents()
+        for b in page.findChildren(QPushButton):
+            if DESTRUCTIVE.match(b.text()):
+                assert b.objectName() == "danger", f"{title}: '{b.text()}' removes data and must be a red danger button"
+            if b.objectName() in ("danger", "stop"):
+                red.append(f"{title}: {b.text()}")
+                assert not b.isDefault() and not b.autoDefault(), red[-1]
+                assert QApplication.focusWidget() is not b, f"{red[-1]} has the focus when the page opens"
+            if b.objectName() == "danger":
+                assert _row_of(page, b)[-1] is b, f"{red[-1]} is not the last button in its row"
+    assert {"Training: Remove", "Recipe Editor: Delete", "Inspection: ■  Stop"} <= set(red), red

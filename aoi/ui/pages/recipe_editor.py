@@ -59,7 +59,7 @@ class RecipeEditorPage(Page):
         ll = QVBoxLayout(left)
         ll.setContentsMargins(0, 0, 0, 0)
         tools = QHBoxLayout()
-        self.draw_btn = button("Draw ROI", "primary", self.toggle_draw)
+        self.draw_btn = button("Draw ROI", slot=self.toggle_draw)  # Save Recipe is the page's one blue primary
         self.draw_btn.setCheckable(True)
         tools.addWidget(self.draw_btn)
         tools.addWidget(QLabel("Type:"))
@@ -100,7 +100,7 @@ class RecipeEditorPage(Page):
         f.addRow(self.r_enabled)
         row = QHBoxLayout()
         row.addWidget(button("Apply", slot=self.apply_roi))
-        row.addWidget(button("Delete", slot=self.delete_roi))
+        row.addWidget(button("Delete", "danger", self.delete_roi))  # red, last in its row, never the default
         f.addRow(row)
         rl.addWidget(g)
         tabs.addTab(roi_tab, "ROIs")
@@ -344,7 +344,7 @@ class RecipeEditorPage(Page):
         for x in self.recipe.rois:
             self.view.add_box(x.x, x.y, x.w, x.h, theme.ROI_COLOR, dashed=True)
         self.test_verdict.setText(
-            f"Test run: {res.verdict}  ·  {len(res.defects)} defect(s)  ·  {res.elapsed_ms:.0f} ms"
+            f"Test run: {theme.verdict_label(res.verdict)}  ·  {len(res.defects)} defect(s)  ·  {res.elapsed_ms:.0f} ms"
         )
         self.test_verdict.setStyleSheet(theme.verdict_style(res.verdict, big=False))
 
