@@ -34,6 +34,7 @@ if TYPE_CHECKING:
 
     from ...core.services import AppContext
 
+ZOOM_STEP = 1.25  # each Zoom In, as a notch of the wheel
 State = tuple[str, str, str | None, list[DefectBox]]  # a sample's uuid, label, defect type and boxes, as stored
 
 
@@ -126,6 +127,12 @@ class LabelEditor(QWidget):
         self.draw_btn.setToolTip(self.act_draw.shortcut().toString(QKeySequence.SequenceFormat.NativeText))
         tools.addWidget(self.draw_btn)
         tools.addStretch(1)
+        self.view = BoxEditor(placeholder=placeholder)
+        # Zoom with no wheel, for a hand with no mouse: a button or a key each, and Z for the selected box (a key only)
+        self.act_zoom_in = page.action(self.tr("Zoom In"), "+", lambda: self.view.zoom(ZOOM_STEP))
+        self.act_zoom_out = page.action(self.tr("Zoom Out"), "-", lambda: self.view.zoom(1 / ZOOM_STEP))
+        self.act_fit = page.action(self.tr("Fit"), "0", self.view.fit)
+        self.act_to_box = page.action(self.tr("Zoom to Box"), "Z", self.view.zoom_to_box)
         lay.addLayout(tools)
         form = QFormLayout()
         form.setRowWrapPolicy(QFormLayout.RowWrapPolicy.DontWrapRows)  # a row that wrapped moved the image mid-drag
@@ -140,14 +147,22 @@ class LabelEditor(QWidget):
         form.addRow(self.tr("Type"), self.type_box)
         form.addRow(self.tr("Severity"), self.severity)
         lay.addLayout(form)
-        self.view = BoxEditor(placeholder=placeholder)
         lay.addWidget(self.view, 1)
+        zoom = QHBoxLayout()  # under the image: beside Draw Box they made the page and the window wider than Compare's
+        zooms = [action_button(a, show_key=False) for a in (self.act_zoom_in, self.act_zoom_out, self.act_fit)]
+        for b in zooms[:2]:
+            zoom.addWidget(b)
+        zoom.addStretch(1)
+        tools.addWidget(zooms[2])  # Fit above: three in a row cut the training panel's buttons with S31's import sheet
+        lay.addLayout(zoom)
         lay.addWidget(QLabel(self.tr("Boxes")))
         self.box_list = QListWidget()
         self.box_list.setWordWrap(True)
         self.box_list.setFixedHeight(4 * theme.TARGET_H)
         self.box_list_empty = EmptyState(self.box_list)
         lay.addWidget(self.box_list)
+        for a, b in zip([self.box_list, *zooms[:-1]], zooms, strict=True):  # Tab: the image, its list, then the zoom
+            QWidget.setTabOrder(a, b)
         self.act_undo = page.action(self.tr("Undo"), QKeySequence.StandardKey.Undo, self._undo)
         self.act_delete = page.action(self.tr("Delete Box"), "Delete", self._delete)  # no question: Undo brings it back
         under = QHBoxLayout()
@@ -238,9 +253,11 @@ class LabelEditor(QWidget):
 
     def _sync(self) -> None:
         """Draw Box on an NG image shown, and Draw mode left on any other; Delete Box while a box of it is selected;
-        Undo while a change can be undone. No change on the image while it is read or a change is stored."""
+        Undo while a change can be undone; the zoom with an image shown. No change on the image while it is read or a
+        change is stored."""
         self.view.locked = self.busy()
-        ng = self.sample is not None and self.sample["label"] == "NG" and self.view._pix is not None
+        shown = self.view._pix is not None
+        ng = self.sample is not None and self.sample["label"] == "NG" and shown
         self.draw_btn.setEnabled(ng)
         if not ng and self.draw_btn.isChecked():
             self.draw_btn.setChecked(False)
@@ -249,6 +266,9 @@ class LabelEditor(QWidget):
         self.act_draw.setEnabled(ng)
         self.act_leave.setEnabled(self.draw_btn.isChecked())
         self.act_undo.setEnabled(bool(self._history))
+        for a in (self.act_zoom_in, self.act_zoom_out, self.act_fit):
+            a.setEnabled(shown)
+        self.act_to_box.setEnabled(shown and self.view.chosen >= 0)
 
     def _fill_list(self, boxes: list[DefectBox] | None = None) -> None:
         """List `boxes`, by default those shown; with no picture shown the list and the Type list are off."""

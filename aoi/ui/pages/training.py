@@ -290,7 +290,9 @@ class TrainingPage(Page):
         mrow.addWidget(button(self.tr("Export AI Model…"), slot=self.export_model))
         rl.addLayout(mrow)
         split.addWidget(right)
-        split.setSizes([740, 400, 560])  # the four dataset buttons with their text; a box's label across the image
+        # the table as wide as its reference line needs at 1920 px, the editor next; with S31's import sheet open the
+        # table takes 750 px and the training panel keeps 418 px, its buttons whole
+        split.setSizes([650, 500, 460])
         self.root.addWidget(split, 1)
 
     # --- dataset ----------------------------------------------------------------

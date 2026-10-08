@@ -257,7 +257,9 @@ def test_req_trn_003_editor_move(qtbot: QtBot, trained_ctx: AppContext) -> None:
 def test_req_trn_003_editor_real_size(qtbot: QtBot, trained_ctx: AppContext, tmp_path: Path) -> None:
     """On a 5472 x 3648 px image at the editor's fit, a 40 x 32 px box is a few screen pixels: a finger's drag inside
     the selected box moves it and keeps its size, its handles sit outside it, and a drag on one resizes it; a finger
-    draws a box with Draw Box, and Enter places one 64 px a side on screen."""
+    draws a box with Draw Box, and Enter places one 64 px a side on screen. Zoom In, Zoom Out and Fit, by a click or
+    a tap and by the keys +, - and 0, zoom with no wheel, and Z fills the view with the selected box. None of the
+    page's keys does anything typed in Epochs, whose line edit takes each."""
     ctx = trained_ctx
     sample = _big(ctx, tmp_path)
     ctx.set_boxes(sample["uuid"], [DefectBox(2000, 1500, 40, 32, "Polarity Error")])
@@ -280,6 +282,42 @@ def test_req_trn_003_editor_real_size(qtbot: QtBot, trained_ctx: AppContext, tmp
     _key(view, Qt.Key.Key_Return)
     placed = _stored(page, sample["uuid"])[2]
     assert abs(placed[2] * view.transform().m11() - 64) <= 1 and placed[2] > 900, "64 px on screen, 1000 of the image"
+
+    def scale() -> float:
+        return view.transform().m11()
+
+    fit = scale()
+    zoom_in, zoom_out, whole = (
+        next(b for b in page.findChildren(QPushButton) if b.text() == name) for name in ("Zoom In", "Zoom Out", "Fit")
+    )
+    qtbot.mouseClick(zoom_in, LEFT)
+    assert scale() == pytest.approx(fit * 1.25)
+    _key(view, Qt.Key.Key_Plus)
+    assert scale() == pytest.approx(fit * 1.25**2)
+    qtbot.mouseClick(zoom_out, LEFT)
+    _key(view, Qt.Key.Key_Minus)
+    assert scale() == pytest.approx(fit / 1.25 * 1.25)
+    editor.box_list.setCurrentRow(0)
+    _key(view, Qt.Key.Key_Z)
+    x, y, w, h = _stored(page, sample["uuid"])[0][:4]
+    shown, port = view.mapFromScene(QRectF(x, y, w, h)).boundingRect(), view.viewport().rect()
+    assert shown.width() > port.width() / 4 and port.contains(shown), "the selected box filling the view"
+    qtbot.mouseClick(whole, LEFT)
+    assert scale() == pytest.approx(fit)
+    qtbot.mouseClick(zoom_in, LEFT)
+    _key(page.samples, Qt.Key.Key_0)
+    assert scale() == pytest.approx(fit)
+    editor.box_list.setCurrentRow(0)
+
+    def state() -> tuple[object, ...]:
+        _wait(page)
+        rows = len(ctx.label_history(sample["uuid"]))
+        return rows, editor.draw_btn.isChecked(), scale(), view.chosen, page.samples.currentRow()
+
+    before = state()
+    for key in "ONUDZ+-0":  # Mark OK, NG and UNSURE, Draw Box, Zoom to Box, Zoom In, Zoom Out and Fit
+        _key(page.epochs, Qt.Key(ord(key)))
+    assert state() == before
 
 
 def test_req_trn_003_editor_resize(qtbot: QtBot, trained_ctx: AppContext) -> None:

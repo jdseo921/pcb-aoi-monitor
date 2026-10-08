@@ -4,7 +4,7 @@
 <context>
     <name>BoxEditor</name>
     <message>
-        <location filename="../ui/widgets/box_editor.py" line="+107"/>
+        <location filename="../ui/widgets/box_editor.py" line="+122"/>
         <source>{number} {type} ◆ {severity}</source>
         <translation>{number} {type} ◆ {severity}</translation>
     </message>
@@ -2496,7 +2496,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/training.py" line="+404"/>
+        <location filename="../ui/pages/training.py" line="+406"/>
         <location filename="../ui/pages/training_import.py" line="+38"/>
         <source>{code} {title}</source>
         <translation type="unfinished"></translation>
@@ -3246,7 +3246,7 @@
 <context>
     <name>LabelEditor</name>
     <message>
-        <location filename="../ui/pages/training_labels.py" line="+122"/>
+        <location filename="../ui/pages/training_labels.py" line="+123"/>
         <location line="+2"/>
         <source>Draw Box</source>
         <translation>박스 그리기</translation>
@@ -3257,7 +3257,27 @@
         <translation>그리기 모드 끝내기</translation>
     </message>
     <message>
-        <location line="+15"/>
+        <location line="+6"/>
+        <source>Zoom In</source>
+        <translation>확대</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Zoom Out</source>
+        <translation>축소</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Fit</source>
+        <translation>화면에 맞춤</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Zoom to Box</source>
+        <translation>박스로 확대</translation>
+    </message>
+    <message>
+        <location line="+12"/>
         <source>Type</source>
         <translation>유형</translation>
     </message>
@@ -3267,12 +3287,12 @@
         <translation>심각도</translation>
     </message>
     <message>
-        <location line="+4"/>
+        <location line="+10"/>
         <source>Boxes</source>
         <translation>박스</translation>
     </message>
     <message>
-        <location line="+6"/>
+        <location line="+8"/>
         <source>Undo</source>
         <translation>실행 취소</translation>
     </message>
@@ -3297,7 +3317,7 @@
         <translation>{file} · {label} · {view}</translation>
     </message>
     <message>
-        <location line="+49"/>
+        <location line="+54"/>
         <source>{number} {type} ({severity}) {x},{y} {w}×{h} px</source>
         <translation>{number} {type} ({severity}) {x},{y} {w}×{h} px</translation>
     </message>
@@ -3838,7 +3858,7 @@
 <context>
     <name>NgDialog</name>
     <message>
-        <location filename="../ui/pages/training.py" line="-299"/>
+        <location filename="../ui/pages/training.py" line="-301"/>
         <source>Label NG images</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4636,12 +4656,12 @@
     </message>
     <message>
         <location line="+1"/>
-        <location line="+533"/>
+        <location line="+535"/>
         <source>Import Folder…</source>
         <translation>폴더 가져오기…</translation>
     </message>
     <message>
-        <location line="-525"/>
+        <location line="-527"/>
         <source>Tip: 20+ OK images give a steadier threshold</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4708,12 +4728,12 @@
     </message>
     <message>
         <location line="+1"/>
-        <location line="+328"/>
+        <location line="+330"/>
         <source>Remove</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-322"/>
+        <location line="-324"/>
         <source>Select a sample to preview</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4788,7 +4808,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+10"/>
+        <location line="+12"/>
         <source>Select PCB images</source>
         <translation type="unfinished"></translation>
     </message>
