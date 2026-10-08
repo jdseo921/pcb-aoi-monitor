@@ -36,7 +36,11 @@ A run belongs to the board model it was started under. If the board model in the
 stops after the board in hand, which is saved under the run's board model, and the status bar and the alarm log say so
 with AOI-INSP-012; the remaining boards are not inspected. Check the board model in the header, then press Start to
 carry on with the queue. The board shown before the change is cleared, so "Compare with Golden board ›" never opens it
-as a board of the new board model.
+as a board of the new board model. The board in hand, from Start or Next Board, is cleared too when its result arrives:
+the line under the banner names it, its verdict and the board model it was saved under, until the next board, and its
+record is on Logs & Export when it was saved (a failed save shows AOI-INSP-008); in a run with boards left, the line
+also says to press Start to carry on with the queue. "Compare with Golden board ›" is grey while there is no result to open: before the first
+board, after a board that was not inspected and after a board model change.
 A run also belongs to the user who pressed Start. If another user signs in with Switch User during a run, the run stops
 after the board in hand, which is recorded under the user who pressed Start, and the status bar says so; the user now
 signed in presses Start to carry on with the queue, and those boards are recorded under their name.

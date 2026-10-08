@@ -138,7 +138,8 @@ class InspectionPage(Page):
         self.table.verticalHeader().setDefaultSectionSize(theme.TARGET_H)  # a defect row is an operator target
         self.table.itemSelectionChanged.connect(self._focus_defect)
         sl.addWidget(self.table, 1)
-        sl.addWidget(button(self.tr("Compare with Golden board ›"), slot=self.open_compare))
+        self.btn_compare = button(self.tr("Compare with Golden board ›"), slot=self.open_compare)
+        sl.addWidget(self.btn_compare)
         split.addWidget(side)
         split.setSizes([1100, 520])
         self.root.addWidget(split, 1)
@@ -284,13 +285,10 @@ class InspectionPage(Page):
                     board_model=bm
                 )
                 self._alarm("WARN", msg, "AOI-TRN-003")
-            if moved:
+            if bm != self.board_model:  # the header moved on meanwhile: saved under bm, not the current board (#172)
+                self._not_current(out, bm, in_run)
+            if moved:  # after _not_current, whose line it is added to
                 self._run_moved(out[0], engine)
-            if bm != self.board_model:  # the header moved on meanwhile: shown and saved under bm, not current (#172)
-                self.last = self.last_path = self.last_id = self.shell.last_inspected = None
-                self._update_buttons()
-                note = self.tr("{file} was inspected under board model {board_model}; the header now shows {header}.")
-                self.shell.status(note.format(file=out[0].name, board_model=bm, header=self.board_model or NO_VERDICT))
 
         def done() -> None:
             if (worker := ref()) is not None and self.worker is worker:
@@ -327,6 +325,34 @@ class InspectionPage(Page):
         self._show_empty()
         self.error(e)
         self._refresh_alarms()
+
+    def _not_current(self, out: Outcome, bm: str, in_run: bool) -> None:
+        """A board whose result arrived after the header's board model changed is saved under `bm`, the board model it
+        was inspected under, and is not the current board: the page clears it as on_board_model_changed clears the
+        board shown, so no verdict, picture or defect row is left with a Compare and rows that do nothing, and the line
+        under the banner names the board, its verdict and `bm` until the next board; the status line says the same
+        until the next line (#243). Its record is on Logs & Export; a failed save said so with AOI-INSP-008. The board
+        of a run, which the change stopped, adds how to carry on with the queue, as the "Run stopped" line it replaces
+        in the status bar said."""
+        path, res, _engine, iid, _error = out
+        self.last = self.last_path = self.last_id = self.last_board_model = self.shell.last_inspected = None
+        self.view.set_image(None)
+        fill_table(self.table, [])
+        self._show_verdict(None)
+        note = self.tr(
+            "{file} was inspected under board model {board_model} and judged {verdict}; the header now shows {header}."
+        ).format(file=path.name, board_model=bm, verdict=res.verdict, header=self.board_model or NO_VERDICT)
+        parts = [note]
+        if iid is not None:
+            parts.append(self.tr("Its record is on Logs & Export under {board_model}.").format(board_model=bm))
+        if in_run and self.queue_pos + 1 < len(self.queue):
+            step = self.tr("The run stopped; press Start to carry on with the queue under {header}.")
+            parts.append(step.format(header=self.board_model or NO_VERDICT))
+        note = " ".join(parts)
+        self.summary.setText(note)
+        self.shell.status(note, ms=0)
+        self._update_buttons()
+        self._show_empty()
 
     def _show_busy(self, path: Path) -> None:
         """The banner turns grey with "Inspecting…" the moment a board starts (sketch: the busy pattern), painted at
@@ -449,12 +475,15 @@ class InspectionPage(Page):
 
     def _update_buttons(self) -> None:
         """Enable the actions, and with them the buttons and the keys, for the state: Start and Next Board wait while a
-        board is being inspected (#120), Stop acts while a run is on, Save Image… once there is a result."""
+        board is being inspected (#120), Stop acts while a run is on, Save Image… once there is a result, and Compare
+        while there is a record or a file to open (#243): not before the first board, after a board that was not
+        inspected, or after a board model change."""
         has, busy = bool(self.queue), self.worker is not None
         self.act_start.setEnabled(has and not self.running and not busy)
         self.act_stop.setEnabled(self.running)
         self.act_next.setEnabled(has and not self.running and not busy)
         self.act_save.setEnabled(self.last is not None)
+        self.btn_compare.setEnabled(self.last_id is not None or self.last_path is not None)
 
     def _drop_engine(self) -> None:
         """The next board builds the engine again, and an engine a board is building at this moment is not kept when

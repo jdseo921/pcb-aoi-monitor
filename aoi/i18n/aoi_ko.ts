@@ -1770,13 +1770,13 @@
     <name>InspectionPage</name>
     <message>
         <location filename="../ui/pages/inspection.py" line="+92"/>
-        <location line="+81"/>
-        <location line="+146"/>
+        <location line="+82"/>
+        <location line="+143"/>
         <source>Load Images…</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-226"/>
+        <location line="-224"/>
         <source>Load Folder…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1792,12 +1792,12 @@
     </message>
     <message>
         <location line="+6"/>
-        <location line="+67"/>
+        <location line="+68"/>
         <source>No images loaded</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-43"/>
+        <location line="-44"/>
         <source>No</source>
         <comment>defect number</comment>
         <translation type="unfinished"></translation>
@@ -1833,7 +1833,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+6"/>
+        <location line="+7"/>
         <source>▶  Start</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1858,12 +1858,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+143"/>
+        <location line="+140"/>
         <source>Next Board ›</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-132"/>
+        <location line="-129"/>
         <source>Select PCB images</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1913,12 +1913,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+9"/>
-        <source>{file} was inspected under board model {board_model}; the header now shows {header}.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+24"/>
+        <location line="+30"/>
         <source>Press Next Board to carry on with the queue.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1930,6 +1925,21 @@
     <message>
         <location line="+5"/>
         <source>{file}  ·  not inspected</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+22"/>
+        <source>{file} was inspected under board model {board_model} and judged {verdict}; the header now shows {header}.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+4"/>
+        <source>Its record is on Logs &amp; Export under {board_model}.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>The run stopped; press Start to carry on with the queue under {header}.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -1968,7 +1978,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+62"/>
+        <location line="+65"/>
         <source>Run stopped: the board model changed from {old} to {new}. Boards inspected before the change are saved under {old}; press Start to carry on with the queue under {new}.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2602,7 +2612,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/inspection.py" line="-434"/>
+        <location filename="../ui/pages/inspection.py" line="-463"/>
         <source>Inspection</source>
         <translation type="unfinished"></translation>
     </message>

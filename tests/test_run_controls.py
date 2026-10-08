@@ -26,10 +26,10 @@ from aoi.core.inspector import InspectionResult, Inspector
 from aoi.core.services import AppContext
 from aoi.ui import theme
 from aoi.ui.main_window import MainWindow
-from aoi.ui.pages.inspection import InspectionPage
+from aoi.ui.pages.inspection import NO_VERDICT, InspectionPage
 from aoi.ui.widgets.image_view import ImageView
 from tests.conftest import TINY_EPOCHS, TINY_IMAGE_SIZE
-from tests.test_req_done_in_v01 import BOARD, _window
+from tests.test_req_done_in_v01 import BOARD, _button, _window
 
 BUDGET_S = 0.1  # REQ-INSP-005: a response within 100 ms; REQ-INSP-002: the verdict within 100 ms of the result
 MIN_W, MIN_H = 120, theme.RUN_CONTROL_H  # the plan's 120 px wide; the sketch's T+, 56 px tall
@@ -365,9 +365,106 @@ def test_req_insp_005_a_board_model_change_stops_the_run(
     assert len(started) == 2 and page.queue_pos == 1 and not page.running
     assert page.last is None and page.last_id is None and win.last_inspected is None, "not ZZZ's last board"
     assert "inspected under board model TINY" in win.statusBar().currentMessage()
+    assert page.verdict.text() == NO_VERDICT and page.view._pix is None, "the board in hand is cleared too (#243)"
+    assert not _button(page, "Compare with Golden board ›").isEnabled() and not page.act_save.isEnabled()
     page.running, page.run_board_model = True, BOARD  # a run of TINY, should one reach Next Board under ZZZ
     page.next_board()
     assert page.worker is None and not page.running and len(started) == 2, "no board of it starts under ZZZ"
+
+
+@pytest.mark.parametrize("press", ["next_board", "start_run"])
+def test_req_insp_009_a_board_judged_after_a_board_model_change_is_cleared_with_a_lasting_line(
+    qtbot: QtBot, trained_ctx: AppContext, synthetic_dataset: Path, monkeypatch: pytest.MonkeyPatch, press: str
+) -> None:
+    """#243: an NG board whose result arrives after the header's board model changed, by Next Board or in a run, is
+    saved under the board model it was inspected under and cleared from the page as the board shown at the change is:
+    the banner is idle, the picture and the defect list are empty, Compare with Golden board › and Save Image… are off,
+    and the line under the banner names the board, its verdict and its board model, and in a run how to carry on with
+    the queue, still on screen after the status bar's 8 s. Before, the board was painted in full under the new header
+    while Compare and its defect rows did nothing, and the only explanation left the status bar after 8 s."""
+    trained_ctx.ensure_board_model("ZZZ")
+    win = _window(qtbot, trained_ctx, "Operator")
+    page = win.pages["Inspection"]
+    assert isinstance(page, InspectionPage)
+    win.navigate("Inspection")
+    qtbot.waitUntil(trained_ctx.jobs.idle, timeout=10000)
+    gate, started, real = threading.Event(), [], Inspector.inspect
+
+    def inspect(engine: Inspector, image: np.ndarray) -> InspectionResult:
+        started.append(perf_counter())
+        assert gate.wait(30), "the test did not release the board"
+        return real(engine, image)
+
+    monkeypatch.setattr(Inspector, "inspect", inspect)
+    page._set_queue(list_images(synthetic_dataset / "test" / "ng")[:2])
+    getattr(page, press)()
+    qtbot.waitUntil(lambda: len(started) == 1, timeout=60000)  # the first board is in hand
+    win.bm_combo.setCurrentText("ZZZ")
+    gate.set()
+    qtbot.waitUntil(lambda: page.worker is None and trained_ctx.jobs.idle(), timeout=60000)
+    (rec,) = trained_ctx.inspections()
+    assert (rec["board_model"], rec["result"]) == (BOARD, "NG") and rec["defect_count"] > 0, "a row to check"
+    note = (
+        f"{Path(rec['image_path']).name} was inspected under board model {BOARD} and judged NG; the header now shows"
+        f" ZZZ. Its record is on Logs & Export under {BOARD}."
+    )
+    if press == "start_run":  # the change stopped the run, and the "Run stopped" line is replaced: how to carry on
+        note += " The run stopped; press Start to carry on with the queue under ZZZ."
+    qtbot.wait(8500)  # past the status bar's 8 s default
+    compare = _button(page, "Compare with Golden board ›")
+    shown = (page.verdict.text(), page.view._pix is None, page.table.rowCount(), compare.isEnabled())
+    assert shown == (NO_VERDICT, True, 0, False), "the TINY board is not left on screen under ZZZ"
+    assert not page.act_save.isEnabled() and page.last is None and page.last_id is None and win.last_inspected is None
+    assert page.summary.text() == note and win.statusBar().currentMessage() == note
+    qtbot.mouseClick(compare, Qt.MouseButton.LeftButton)
+    assert win.stack.currentWidget() is page and len(started) == 1 and not page.running
+
+
+def test_req_insp_009_a_board_cleared_after_a_board_model_change_keeps_the_line_of_a_run_that_moved(
+    qtbot: QtBot, trained_ctx: AppContext, synthetic_dataset: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """#243 review: the last board of a run, in hand at a board model change, is also the run's first board judged
+    against a new Golden board: it is cleared with both lines under the banner, the board model change's (no step to
+    carry on, no board is left) and then the AOI-INSP-013 line, which the alarm log keeps too."""
+    trained_ctx.ensure_board_model("ZZZ")
+    win = _window(qtbot, trained_ctx, "Engineer")  # an Engineer sets the Golden board with Set Reference on Training
+    page = win.pages["Inspection"]
+    assert isinstance(page, InspectionPage)
+    win.navigate("Inspection")
+    qtbot.waitUntil(trained_ctx.jobs.idle, timeout=10000)
+    started: list[str | None] = []
+    held, real = {1: threading.Event(), 2: threading.Event()}, Inspector.inspect
+
+    def inspect(engine: Inspector, image: np.ndarray) -> InspectionResult:
+        started.append(engine.reference_path)
+        assert held[len(started)].wait(30), "the test did not release the board"
+        return real(engine, image)
+
+    monkeypatch.setattr(Inspector, "inspect", inspect)
+    boards = list_images(synthetic_dataset / "test" / "ok")[:2]
+    page._set_queue(boards)
+    page.start_run()
+    qtbot.waitUntil(lambda: len(started) == 1, timeout=60000)  # board 1 is in hand
+    golden = trained_ctx.samples(BOARD, "OK")[-1]
+    trained_ctx.set_reference(BOARD, golden["id"])  # board 2 is judged against it
+    held[1].set()
+    qtbot.waitUntil(lambda: len(started) == 2, timeout=60000)  # board 2 is in hand
+    win.bm_combo.setCurrentText("ZZZ")
+    held[2].set()
+    qtbot.waitUntil(lambda: page.worker is None and trained_ctx.jobs.idle(), timeout=60000)
+    rec = trained_ctx.inspections()[0]
+    assert Path(rec["image_path"]).name == boards[1].name and started[1] != started[0]
+    cleared = (
+        f"{boards[1].name} was inspected under board model {BOARD} and judged {rec['result']}; the header now shows"
+        f" ZZZ. Its record is on Logs & Export under {BOARD}."
+    )
+    moved = (
+        f"The AI model, recipe or Golden board changed during this run: {boards[1].name} was judged with AI model v1.0,"
+        f" recipe revision 1 and Golden board {Path(golden['path']).name}; each record names what judged it."
+    )
+    assert page.summary.text() == f"{cleared}\n{moved}" and win.statusBar().currentMessage() == cleared
+    codes = [a["code"] for a in trained_ctx.alarms()]
+    assert codes.count("AOI-INSP-013") == 1 and codes.count("AOI-INSP-012") == 1
 
 
 def test_req_trn_010_a_board_started_after_an_activation_is_judged_by_the_active_ai_model(
