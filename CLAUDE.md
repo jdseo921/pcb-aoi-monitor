@@ -57,6 +57,9 @@ State the result of each line in the change note; mark a line that does not appl
   `aoi/i18n/aoi_ko.ts`, or a test fails. A second test scans `aoi/ui` for a string literal passed to a Qt text setter,
   widget, dialog or table header outside `tr()`; a literal that must stay goes in `ALLOWED_LITERALS` in
   `tests/test_i18n.py` with its reason.
+- A change that shows on a screen changes its approved screenshot: run `python tools/render_screens.py --approve` (on
+  Linux, with DejaVu Sans installed) and commit `tests/screens/approved/`, or `tests/screens/test_screens.py` fails; the
+  diff images it leaves in `tests/screens/actual/` show what moved.
 - No GPL, AGPL, non-commercial or unlicensed code, weights or data; only LGPL Qt modules (no Qt Charts).
 - Results on synthetic boards are never quoted as accuracy; every accuracy claim carries counts.
 - Every error a user can see is an `AoiError` with a code from `aoi/errors.py` (what happened, what to do);
