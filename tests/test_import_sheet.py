@@ -96,7 +96,7 @@ def test_req_trn_001_the_sheet_takes_each_file_with_its_view_and_an_ng_file_with
     assert not any(w.isEnabled() for w in (*sheet.views.buttons(), *sheet.labels.buttons(), sheet.type_box))
     assert sheet.table.editTriggers() == QTableWidget.EditTrigger.NoEditTriggers
 
-    skipped = AoiError("AOI-TRN-015", path=d.path, board_model="B")
+    skipped = AoiError("AOI-TRN-015", path=d.path, board_model="B", sample="d_1.png", label="NG")
     sheet.show_report(ImportReport(added=[a, c], refused=[(d, skipped)], left=[e]), lambda x: f"{x.code} {x.what}")
     assert [r[STATUS] for r in _rows(sheet.table)] == ["copied", "copied", "AOI-TRN-015 Image already imported",
                                                       "not imported"]  # fmt: skip

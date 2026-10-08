@@ -5,6 +5,7 @@ links that would start a second one, and stop the first, are off until it ends, 
 from __future__ import annotations
 
 import shutil
+import threading
 from collections.abc import Callable
 from pathlib import Path
 from time import sleep
@@ -194,19 +195,23 @@ def test_req_set_021_an_empty_state_neither_stops_an_import_nor_hides_the_busy_o
     pickers: Path,
     tmp_path: Path,
     dialogs: list[tuple[str, str]],
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """On a board model with no samples, Add OK Images… and Import Folder… each add all their files and nothing else
-    while the empty table's Import Folder… link is clicked and an import is started again; the page shown again, or
+    while the empty table's Import Folder… link is clicked and an import is started again; the page shown again, with
+    the empty state on view (the first file held until then, since an import adds one file at a time, REQ-TRN-001), or
     Filter on days with no records during Export Image Overlays, leaves "Importing…" or "Exporting…" and Cancel on
-    top. Both add their samples one file at a time (REQ-TRN-001, S31), so the empty state shows only before the
-    first."""
+    top."""
     distinct_copies(ng_board, pickers / "ok", N)  # Import Folder… picks this folder: N images, each imported once (Q31)
     win = _window(qtbot, trained_ctx)
     training, logs = win.pages["Training"], win.pages["Logs & Export"]
     for page in (training, logs):
         page.busy.SHOW_AFTER_S, page.busy.DETAIL_AFTER_S = 0.1, 0.1  # the 1 s and 10 s of the product, shortened
     seen: list[object] = []
+    gate, copy = threading.Event(), atomic.copy_file  # slow_copies' copy, held until the page is shown again
+    monkeypatch.setattr(atomic, "copy_file", lambda *a, **k: gate.wait(30) and copy(*a, **k))
     for name, start in (("EMPTY-OK", training.add_ok), ("EMPTY-FOLDER", training.import_folder)):
+        gate.clear()
         trained_ctx.ensure_board_model(name)
         win._reload_board_models(name)
         win.navigate("Training")
@@ -215,11 +220,12 @@ def test_req_set_021_an_empty_state_neither_stops_an_import_nor_hides_the_busy_o
         qtbot.waitUntil(training.busy.cancel_button.isVisible, timeout=30000)  # after 0.2 s of an import's 1.2 s
         win.navigate("Home")
         win.navigate("Training")  # shown again: the table is refreshed under "Importing…"
-        seen.append(_on_top(training.busy))
+        seen.append((training.samples_empty.isVisible(), _on_top(training.busy)))
         link_on = training.samples_empty.link.isEnabled()
         qtbot.mouseClick(training.samples_empty.link, Qt.MouseButton.LeftButton)  # would start a second import
         training.import_folder()  # as Space on the link, or a click before it turned off, would
         training.add_ok()
+        gate.set()
         qtbot.waitUntil(lambda: training._bg is None, timeout=60000)
         after = _last(trained_ctx, "sample.import")["after"]
         seen.append((name, len(trained_ctx.samples(name)), after["cancelled"], link_on))
@@ -232,5 +238,6 @@ def test_req_set_021_an_empty_state_neither_stops_an_import_nor_hides_the_busy_o
     qtbot.mouseClick(_button(logs, "Filter"), Qt.MouseButton.LeftButton)  # no records on these days
     seen.append(("Logs", logs.empty.isVisible(), _on_top(logs.busy)))
     qtbot.waitUntil(lambda: logs._bg is None, timeout=60000)
-    expected = [[True, True], ("EMPTY-OK", N, False, False), [True, True], ("EMPTY-FOLDER", N, False, False)]
+    shown = (True, [True, True])  # the empty state on view, "Importing…" and Cancel on top
+    expected = [shown, ("EMPTY-OK", N, False, False), shown, ("EMPTY-FOLDER", N, False, False)]
     assert seen == [*expected, ("Logs", True, [True, True])] and _copied(pickers) == N and not dialogs

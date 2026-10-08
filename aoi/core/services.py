@@ -334,6 +334,7 @@ class AppContext:
         side: str = "Top",
         progress: Callable[[int, int], None] | None = None,
         should_stop: Callable[[], bool] | None = None,
+        already: list[dict[str, Any]] | None = None,
     ) -> int:
         """Copy uploads into the workspace so training data survives the source folder moving; returns how many were
         added. Each file goes through `_copy_checked` (REQ-TRN-001): checked as Inspection checks an image, never
@@ -346,7 +347,7 @@ class AppContext:
         and SHA-256 (`samples`), commit together. `progress(done, total)` follows each file, and once `should_stop()` is
         true the files not yet copied are left out, the ones copied are added and the audit entry says so
         (`cancelled`); `import_files` passes one file a call and stops between calls, so the entries it writes never
-        say so."""
+        say so. `already`, when given, gets the sample each skipped image is already (`import_files` names it)."""
         self._refuse_unsafe_name(board_model)  # a new board model is created by its first import
         self._refuse_case_variant(board_model)
         first = paths[0] if paths else ""
@@ -393,6 +394,8 @@ class AppContext:
         except BaseException:
             _remove([target for target, _, _ in copies])
             raise
+        if already is not None:
+            already.extend(had for _, had in kept)
         return len(copies)
 
     def _refuse_untyped(self, path: str, label: str, defect_type: str | None) -> None:
@@ -447,11 +450,12 @@ class AppContext:
     ) -> ImportReport:
         """Import each file with its own label, defect type and view, one `import_samples` call each, so what went in
         stays when Cancel or an error stops the rest (#178, #206); the import sheet on Training runs it on the pool
-        (REQ-TRN-001). A file refused with a code in `REFUSED` (Inspection's checks, an NG with no type, a source
-        changed while copied), one with no label (AOI-TRN-016) and an image the board model already has (AOI-TRN-015,
-        decision Q31) is listed with its error and the import goes on; any other error, such as a copy the workspace
-        refuses or the database, stops it at that file. `progress(done, total)` follows each file, and once
-        `should_stop()` is true the files not yet imported are left."""
+        (REQ-TRN-001). A file refused with a code in `REFUSED` (Inspection's checks, a source lost before its copy
+        among them, an NG with no type, a source changed while copied, a view or a label not known), one with no label
+        (AOI-TRN-016) and an image the board model already has (AOI-TRN-015, naming that sample and its label, decision
+        Q31) is listed with its error and the import goes on; any other error, such as a copy the workspace refuses or
+        the database, stops it at that file. `progress(done, total)` follows each file, and once `should_stop()` is
+        true the files not yet imported are left."""
         report = ImportReport()
         for i, f in enumerate(files):
             if should_stop is not None and should_stop():
@@ -460,8 +464,10 @@ class AppContext:
             try:
                 if f.label is None:
                     raise AoiError("AOI-TRN-016", path=f.path)
-                if not self.import_samples(board_model, [f.path], f.label, f.defect_type, f.side):
-                    raise AoiError("AOI-TRN-015", path=f.path, board_model=board_model)
+                had: list[dict[str, Any]] = []
+                if not self.import_samples(board_model, [f.path], f.label, f.defect_type, f.side, already=had):
+                    sample = {"sample": Path(had[0]["path"]).name, "label": had[0]["label"]}
+                    raise AoiError("AOI-TRN-015", path=f.path, board_model=board_model, **sample)
                 report.added.append(f)
             except Exception as e:
                 if not (isinstance(e, AoiError) and e.code in REFUSED):
@@ -1209,11 +1215,17 @@ class AppContext:
     @requires("Engineer", QT_TRANSLATE_NOOP("Errors", "Relabelling a sample"))
     @transactional
     def update_sample(self, sample_id: int, label: str, defect_type: str | None) -> None:
-        """Relabel a sample OK or NG and set its defect type. The reference sample cannot be relabelled NG
-        (AOI-TRN-007): inspections would compare against a defective board."""
+        """Relabel a sample OK or NG (else AOI-TRN-018) and set its defect type as an import does (REQ-TRN-001): one of
+        the 33 DCT types for NG (else AOI-TRN-013), none for OK, whatever is given. The reference sample cannot be
+        relabelled NG (AOI-TRN-007): inspections would compare against a defective board."""
         before = self.db.sample(sample_id)
+        name = Path(before["path"]).name
+        if label not in LABELS:
+            raise AoiError("AOI-TRN-018", path=name, label=label, labels=", ".join(LABELS))
         if label != "OK":
             self._refuse_reference_change(before, QT_TRANSLATE_NOOP("Errors", "relabelled NG"))
+        self._refuse_untyped(name, label, defect_type)
+        defect_type = defect_type if label == "NG" else None
         self.db.update_sample(sample_id, label, defect_type)
         old = {"label": before["label"], "defect_type": before["defect_type"]}
         self.audit("sample.update", "sample", before["uuid"], old, {"label": label, "defect_type": defect_type})
