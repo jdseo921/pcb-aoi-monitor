@@ -821,7 +821,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/imaging.py" line="+252"/>
+        <location filename="../core/imaging.py" line="+368"/>
         <source>it has {count} tiles, more than the {most} this app decodes</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2208,7 +2208,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/labels.py" line="+42"/>
+        <location filename="../core/labels.py" line="+44"/>
         <source>{label} is not OK, NG or UNSURE</source>
         <translation>{label}은(는) OK, NG, UNSURE 중 하나가 아닙니다</translation>
     </message>
