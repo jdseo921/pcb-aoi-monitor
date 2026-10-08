@@ -154,8 +154,9 @@ def _overlap(r: Region, x: int, y: int, w: int, h: int) -> bool:
 
 class Inspector:
     """The engine for one board model. `model_version`, `recipe_rev` and their UUIDs name the AI model version and the
-    recipe revision a saved record carries (REQ-INSP-008, REQ-INSP-012): `AppContext.inspector()` fills them; an
-    Inspector built bare has none."""
+    recipe revision a saved record carries (REQ-INSP-008, REQ-INSP-012), and `reference_path` and `reference_sha256`
+    the golden board file it judges against and the SHA-256 of its bytes (REQ-CMP-003): `AppContext.inspector()` fills
+    them; an Inspector built bare has none."""
 
     def __init__(
         self,
@@ -167,6 +168,8 @@ class Inspector:
         recipe_rev: int | None = None,
         model_uuid: str | None = None,
         recipe_uuid: str | None = None,
+        reference_path: str | None = None,
+        reference_sha256: str | None = None,
     ) -> None:
         self.recipe = recipe
         self.model = model
@@ -176,6 +179,8 @@ class Inspector:
         self.recipe_rev = recipe_rev
         self.model_uuid = model_uuid
         self.recipe_uuid = recipe_uuid
+        self.reference_path = reference_path
+        self.reference_sha256 = reference_sha256
 
     def inspect(self, img: np.ndarray) -> InspectionResult:
         t0 = time.perf_counter()

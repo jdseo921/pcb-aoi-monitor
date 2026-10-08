@@ -160,6 +160,27 @@ def test_req_insp_012_rows_from_before_the_map_columns_keep_none(tmp_path: Path)
     db.close()
 
 
+def test_req_cmp_003_rows_from_before_0008_name_no_golden_board(tmp_path: Path) -> None:
+    """Migration 0008: a record from before it names no golden board; a new one stores the file relative to the
+    workspace with the SHA-256 of its bytes, and reads them back with the path absolute."""
+    path = tmp_path / "aoi.sqlite"
+    old = sqlite3.connect(path)
+    assert [m.number for m in mg.migrate(old, mg.load_migrations()[:7])] == list(range(1, 8))
+    old.execute("INSERT INTO inspections(uuid, time, result) VALUES('old', '2026-10-01T01:00:00+00:00', 'OK')")
+    old.commit()
+    old.close()
+    db = Database(path, tmp_path)
+    before = db.inspection(db.inspections(include_archived=True)[0]["id"])
+    assert before is not None and (before["reference_path"], before["reference_sha256"]) == (None, None)
+    golden, sha = tmp_path / "models" / "B" / "B_v1_golden.png", "0f" * 32
+    iid = db.add_inspection({"result": "NG", "reference_path": str(golden), "reference_sha256": sha}, [], None)
+    stored = db.query("SELECT reference_path, reference_sha256 FROM inspections WHERE id=?", (iid,))[0]
+    assert stored == {"reference_path": "models/B/B_v1_golden.png", "reference_sha256": sha}
+    new = db.inspection(iid)
+    assert new is not None and (new["reference_path"], new["reference_sha256"]) == (str(golden), sha)
+    db.close()
+
+
 def test_req_insp_008_a_record_the_database_refuses_leaves_nothing_behind(tmp_path: Path) -> None:
     """The row, its defects and its checks commit together: a check the database refuses (a NULL value) after the
     inspection row is inserted rolls that row back, and a check dict without a field fails before anything is written;

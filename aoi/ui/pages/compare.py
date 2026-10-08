@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import copy
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, TypeAlias
 
 import numpy as np
 from PySide6.QtCore import Qt
@@ -19,6 +19,7 @@ from PySide6.QtWidgets import (
     QDoubleSpinBox,
     QFileDialog,
     QFormLayout,
+    QGridLayout,
     QGroupBox,
     QHBoxLayout,
     QHeaderView,
@@ -34,7 +35,7 @@ from ... import defects as taxonomy
 from ...core.imaging import IMAGE_EXTS, heat_overlay
 from ...core.inspector import Check, InspectionResult
 from ...core.recipe import Recipe
-from ...core.services import AppContext
+from ...core.services import AppContext, Judged
 from ...errors import AoiError
 from ...times import to_local
 from .. import theme
@@ -53,6 +54,18 @@ MODES = [  # the Show combo, in this order; shown through tr()
     QT_TRANSLATE_NOOP("ComparePage", "Defect boxes only"),
 ]
 MODE_DIFF, MODE_AI = 1, 2
+Stored: TypeAlias = "tuple[np.ndarray | None, Judged, InspectionResult | None]"  # golden board, why not, result
+JUDGED: dict[Judged, str] = {  # why a stored result's golden board is not shown; today's would mislead
+    "none": QT_TRANSLATE_NOOP("ComparePage", "This result was judged without a Golden board."),
+    "unrecorded": QT_TRANSLATE_NOOP("ComparePage", "This result was saved before results named their Golden board."),
+    "missing": QT_TRANSLATE_NOOP("ComparePage", "The Golden board this result was judged against, {file}, is gone."),
+    "unreadable": QT_TRANSLATE_NOOP(
+        "ComparePage", "The Golden board this result was judged against, {file}, cannot be read."
+    ),
+    "changed": QT_TRANSLATE_NOOP(
+        "ComparePage", "The Golden board this result was judged against, {file}, has changed since."
+    ),
+}
 
 # The engine names its checks, their sources and rules in English and stores them with the result; the page shows
 # them in the UI language. An ROI check is named after the ROI and shows as the engine wrote it.
@@ -86,6 +99,7 @@ class ComparePage(Page):
         self.ref_override: str | None = None
         self.res: InspectionResult | None = None
         self.stored: dict[str, Any] | None = None  # the record of the stored result shown; None for a fresh inspection
+        self.as_judged: tuple[str, np.ndarray] | None = None  # its golden board, which Re-evaluate keeps (REQ-CMP-003)
         self._fitted = False
 
         bar = QHBoxLayout()
@@ -103,10 +117,8 @@ class ComparePage(Page):
 
         split = QSplitter(Qt.Orientation.Horizontal)
         views = QWidget()
-        vl = QHBoxLayout(views)
-        vl.setContentsMargins(0, 0, 0, 0)
-        left = QVBoxLayout()
-        right = QVBoxLayout()
+        grid = QGridLayout(views)  # the labels share a row, so one wrapped to two lines never shifts its view down
+        grid.setContentsMargins(0, 0, 0, 0)
         self.ref_label = QLabel(self.tr("Golden board"))
         self.ref_label.setObjectName("muted")
         self.test_label = QLabel(self.tr("Test board"))
@@ -116,12 +128,13 @@ class ComparePage(Page):
         self.ref_empty, self.test_empty = EmptyState(self.ref_view), EmptyState(self.test_view)
         self.ref_view.link(self.test_view)  # zoom/pan stay in sync
         self.busy = BusyOverlay(self.test_view, self.tr("Inspecting…"))  # where the result will appear
-        left.addWidget(self.ref_label)
-        left.addWidget(self.ref_view, 1)
-        right.addWidget(self.test_label)
-        right.addWidget(self.test_view, 1)
-        vl.addLayout(left, 1)
-        vl.addLayout(right, 1)
+        for column, (label, view) in enumerate(((self.ref_label, self.ref_view), (self.test_label, self.test_view))):
+            label.setWordWrap(True)  # a long file name wraps rather than widen its pane: the two stay the same width
+            label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignBottom)  # each label over its view
+            grid.addWidget(label, 0, column)
+            grid.addWidget(view, 1, column)
+            grid.setColumnStretch(column, 1)
+        grid.setRowStretch(1, 1)
         split.addWidget(views)
 
         panel = QWidget()
@@ -149,8 +162,7 @@ class ComparePage(Page):
         )
         hh = self.metrics.horizontalHeader()
         hh.setStretchLastSection(False)
-        hh.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
-        hh.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
+        hh.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)  # a stretched Check column shrank to "C…"
         self.metrics.setWordWrap(True)
         pl.addWidget(self.metrics, 2)
         self.why = QTextEdit()
@@ -191,7 +203,7 @@ class ComparePage(Page):
 
     # --- inputs ------------------------------------------------------------------
     def set_test(self, path: str) -> None:
-        self.test_path = path
+        self.test_path, self.as_judged = path, None
         self.test_empty.hide()
         self._fitted = False
         self.run()
@@ -220,7 +232,7 @@ class ComparePage(Page):
             self.run()
 
     def use_golden(self) -> None:
-        self.ref_override = None
+        self.ref_override = self.as_judged = None  # today's golden board
         self.run()
 
     def _load_recipe_into_form(self) -> None:
@@ -255,16 +267,23 @@ class ComparePage(Page):
         if self.test_path:
             self.test_label.setText(self.tr("Test board: {file}").format(file=Path(self.test_path).name))
         recipe = self._form_recipe(bm) if self.test_path else None
+        judged = self.as_judged[1] if self.as_judged and not self.ref_override else None
         self.run_in_background(
-            self._evaluate, bm, self.test_path, self.ref_override, recipe,
+            self._evaluate, bm, self.test_path, self.ref_override, recipe, judged,
             on_result=self._on_evaluated, busy=self.busy if self.test_path else None,
         )  # fmt: skip
 
     def _evaluate(
-        self, board_model: str, test_path: str | None, ref_path: str | None, recipe: Recipe | None
+        self,
+        board_model: str,
+        test_path: str | None,
+        ref_path: str | None,
+        recipe: Recipe | None,
+        ref: np.ndarray | None,
     ) -> tuple[np.ndarray | None, InspectionResult | None]:
-        """Pool thread: files and the engine only, never a widget."""
-        ref = self.ctx.load_image(ref_path) if ref_path else self.ctx.inspector(board_model).reference
+        """Pool thread: files and the engine only, never a widget. `ref` is a stored result's golden board as judged."""
+        if ref is None:
+            ref = self.ctx.load_image(ref_path) if ref_path else self.ctx.inspector(board_model).reference
         test = self.ctx.load_image(test_path) if test_path else None
         res = self.ctx.inspect(board_model, test, recipe, reference=ref) if test is not None else None
         return ref, res
@@ -276,15 +295,31 @@ class ComparePage(Page):
             self._show_result(res)
             self.redraw()
 
-    def _show_reference(self, ref: np.ndarray | None) -> None:
+    def _show_reference(self, ref: np.ndarray | None, judged: Judged | None = None) -> None:
+        """The golden board pane: a reference picked by hand, a stored result's golden board as judged (`judged` says
+        whether it is shown, and why not, with the next step), or the board model's golden board today."""
+        named = judged in ("missing", "unreadable", "changed")
+        stored = self.stored["reference_path"] if self.stored and named else None
+        recorded = self.as_judged[0] if self.as_judged else stored
         if self.ref_override:
             self.ref_label.setText(self.tr("Reference: {file}").format(file=Path(self.ref_override).name))
-        elif ref is not None:
+        elif recorded:
+            self.ref_label.setText(self.tr("Golden board as judged: {file}").format(file=Path(recorded).name))
+        elif ref is not None or judged in JUDGED:
             self.ref_label.setText(self.tr("Reference: Golden board"))
         else:
             self.ref_label.setText(self.tr("Reference: none set"))
         self.ref_view.set_image(ref)
-        if ref is None and self.board_model:
+        if judged is not None and judged in JUDGED:
+            what = self.tr(JUDGED[judged]).format(file=Path(recorded or "").name)
+            do = self.tr(
+                "The verdict and the decision table are the stored ones; press Re-evaluate to inspect the board again"
+                " with today's Golden board."
+            )
+            self.ref_empty.show_state(
+                self.tr("Golden board not available"), f"{what} {do}", self.tr("Re-evaluate ›"), self.run
+            )
+        elif ref is None and self.board_model:
             step = self.empty_step(self.tr("Train an AI model on Training."), "Training")
             heading = self.tr("No Golden board for {board_model} yet").format(board_model=self.board_model)
             self.ref_empty.show_state(heading, *step)
@@ -324,7 +359,8 @@ class ComparePage(Page):
             file = Path(rec["image_path"]).name if rec else "?"
             self.error(AoiError("AOI-CMP-002", id=inspection_id, file=file))
             return
-        self.stored, self.test_path, self.ref_override, self._fitted = rec, rec["image_path"], None, False
+        self.stored, self.test_path, self.ref_override, self.as_judged = rec, rec["image_path"], None, None
+        self._fitted = False
         self.test_empty.hide()
         self.test_view.set_image(None)  # the board shown before goes at once, not when this one's picture arrives
         self.test_label.setText(self.tr("Test board: {file} (stored result)").format(file=Path(rec["image_path"]).name))
@@ -332,27 +368,30 @@ class ComparePage(Page):
         self._show_note(rec)
         self.run_in_background(self._load_stored, rec, inspection_id, on_result=self._on_stored_loaded)
 
-    def _load_stored(
-        self, rec: dict[str, Any], inspection_id: int
-    ) -> tuple[np.ndarray | None, InspectionResult | None]:
-        """Pool thread: the golden board, the result with its stored maps, and its stored overlay as the picture, which
-        is aligned to the golden board as judged (the board's own file is not); never a widget."""
-        ref_path = self.ctx.reference_image(rec["board_model"])
-        ref = self.ctx.load_image(ref_path) if ref_path and Path(ref_path).is_file() else None
+    def _load_stored(self, rec: dict[str, Any], inspection_id: int) -> Stored:
+        """Pool thread: the golden board the result was judged against (REQ-CMP-003), the result with its stored maps,
+        and its stored overlay as the picture, aligned to that golden board as judged (the board's own file is not);
+        never a widget."""
+        ref, judged = self.ctx.judged_reference(inspection_id)
         res = self.ctx.inspection_result(inspection_id, with_maps=True)
         if res is not None and rec["overlay_path"] and Path(rec["overlay_path"]).is_file():
             res.image = self.ctx.load_image(rec["overlay_path"])
-        return ref, res
+        return ref, judged, res
 
-    def _on_stored_loaded(self, out: tuple[np.ndarray | None, InspectionResult | None]) -> None:
-        ref, res = out
+    def _on_stored_loaded(self, out: Stored) -> None:
+        ref, judged, res = out
         if res is None or self.stored is None:  # a fresh run or a board model change came first: nothing of it shows
             return
-        self._show_reference(ref)
+        self.as_judged = (self.stored["reference_path"], ref) if ref is not None else None
+        self._show_reference(ref, judged)
         self.res = res  # the table stays as show_stored filled it
         if res.image is None:  # its overlay was deleted by hand: the verdict and the table still stand
-            sentence = self.tr("The verdict and the decision table are the stored ones.")
-            self.test_empty.show_state(self.tr("Board picture no longer stored"), sentence)
+            sentence = self.tr(
+                "The verdict and the decision table are the stored ones; press Re-evaluate to inspect the board again"
+                " from its image file."
+            )
+            heading = self.tr("Board picture no longer stored")
+            self.test_empty.show_state(heading, sentence, self.tr("Re-evaluate ›"), self.run)
         self.redraw()
 
     def _show_note(self, rec: dict[str, Any]) -> None:
@@ -368,6 +407,10 @@ class ComparePage(Page):
             moved = self.tr("Since then the board model moved to AI model {model} and recipe revision {revision}.")
             version, revision = model["version"] if model else self.tr("none"), recipes[0]["revision"] if recipes else 0
             parts.append(moved.format(model=version, revision=revision))
+        golden = self.ctx.reference_image(bm)
+        if rec["reference_path"] and golden != rec["reference_path"]:  # an Engineer or a training run set another
+            name = Path(golden).name if golden else self.tr("none")
+            parts.append(self.tr("The board model's Golden board is now {file}.").format(file=name))
         if not any(p and Path(p).is_file() for p in (rec["diff_map_path"], rec["ai_map_path"])):
             e = AoiError("AOI-CMP-001", file=Path(rec["image_path"]).name, days=self.ctx.settings.map_retention_days_ok)
             parts.append(f"{e.code} {e.message}")
@@ -437,7 +480,7 @@ class ComparePage(Page):
         self.shell.status(self.tr("Recipe saved as revision {revision}").format(revision=rev))
 
     def on_board_model_changed(self, name: str | None) -> None:
-        self.res = self.stored = None
+        self.res = self.stored = self.as_judged = None
         self.note.hide()
         self._load_recipe_into_form()
         if name:

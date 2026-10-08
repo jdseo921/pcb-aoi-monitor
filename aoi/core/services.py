@@ -14,7 +14,7 @@ import uuid
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Concatenate, ParamSpec, TypeVar, cast
+from typing import Any, Concatenate, Literal, ParamSpec, TypeVar, cast
 
 import numpy as np
 
@@ -26,7 +26,7 @@ from ..data.paths import to_stored
 from ..errors import AoiError
 from ..times import local_date, now_utc
 from . import anomaly
-from .imaging import align_to_reference, list_images, load_image, save_image
+from .imaging import align_to_reference, list_images, load_image, load_image_sha256, save_image
 from .inspector import NG, OK, WARN, InspectionResult, Inspector, draw_overlay
 from .jobs import Jobs
 from .maps import load_maps, save_maps
@@ -70,6 +70,8 @@ ROLES = ("Operator", "Engineer", "Admin")  # lowest to highest (GUI §8, docs/AR
 REQUIRED_ROLE: dict[str, str] = {}  # AppContext write -> the lowest role allowed to call it
 P = ParamSpec("P")
 R = TypeVar("R")
+# A stored result's golden board, as `judged_reference` finds it.
+Judged = Literal["same", "none", "unrecorded", "missing", "unreadable", "changed"]
 
 
 def requires(
@@ -276,13 +278,17 @@ class AppContext:
         itself."""
         return load_image(path, self.settings.max_image_megapixels, self.settings.max_image_megabytes)
 
+    def _load_image_sha256(self, path: str | Path) -> tuple[np.ndarray, str]:
+        return load_image_sha256(path, self.settings.max_image_megapixels, self.settings.max_image_megabytes)
+
     def inspector(
         self, board_model: str, recipe: Recipe | None = None, side: str = "Top", reference: np.ndarray | None = None
     ) -> Inspector:
         """The engine for a board model: its latest recipe (or `recipe`), its active AI model and its reference image
         (or `reference`, such as another stored OK board on the Compare page). Screens never build an Inspector.
         The engine names the model version and recipe revision it applies, with their UUIDs, for the records it
-        produces (REQ-INSP-012); a `recipe` that differs from the stored revision names none."""
+        produces (REQ-INSP-012); a `recipe` that differs from the stored revision names none. Likewise the golden board
+        file it read, with the SHA-256 of its bytes (REQ-CMP-003); a `reference` passed in names none."""
         latest = self.db.latest_recipe(board_model)
         rev: int | None
         rev, rcp, recipe_uuid = (latest[0], Recipe.from_dict(latest[1]), latest[2]) if latest else (0, None, None)
@@ -290,11 +296,14 @@ class AppContext:
         if recipe is not None and recipe.to_dict() != rcp.to_dict():
             rev, recipe_uuid = None, None  # an unsaved recipe (the Compare page's what-if thresholds) has no revision
         mv = self.load_model(board_model)
-        if reference is None:
-            ref_path = self.db.reference(board_model)
-            reference = self.load_image(ref_path) if ref_path and Path(ref_path).exists() else None
+        golden = self.db.reference(board_model) if reference is None else None
+        sha: str | None = None
+        if golden and Path(golden).exists():
+            reference, sha = self._load_image_sha256(golden)  # one read: the bytes hashed are the bytes judged
+        else:
+            golden = None
         model, version, model_uuid = (mv[1], mv[0], mv[2]) if mv else (None, None, None)
-        return Inspector(recipe or rcp, model, reference, side, version, rev, model_uuid, recipe_uuid)
+        return Inspector(recipe or rcp, model, reference, side, version, rev, model_uuid, recipe_uuid, golden, sha)
 
     def inspect(
         self,
@@ -322,7 +331,8 @@ class AppContext:
     def log_result(self, board_model: str, path: str, res: InspectionResult, insp: Inspector) -> int:
         """Save a result with its evidence (REQ-INSP-008, spec 4.1): the overlay PNG and the two maps beside it, then
         one transaction with the row, the whole result as JSON, its checks and its defects, naming the AI model version
-        and recipe revision that decided it (REQ-INSP-012). Called on the pool thread by the Inspection page."""
+        and recipe revision that decided it (REQ-INSP-012) and the golden board it was judged against (REQ-CMP-003).
+        Called on the pool thread by the Inspection page."""
         day = local_date()  # the folder is named for the operator's shift date; the stored time is UTC
         overlay = self.settings.results_dir / day / f"{Path(path).stem}_{uuid.uuid4().hex[:6]}_{res.verdict}.png"
         save_image(overlay, draw_overlay(res))
@@ -339,6 +349,8 @@ class AppContext:
                 "overlay_path": str(overlay),
                 "diff_map_path": diff_map_path,
                 "ai_map_path": ai_map_path,
+                "reference_path": insp.reference_path,
+                "reference_sha256": insp.reference_sha256,
                 "view": res.view,
                 "result": res.verdict,
                 "score": res.score,
@@ -484,7 +496,8 @@ class AppContext:
 
     def inspection(self, inspection_id: int) -> dict[str, Any] | None:
         """One inspection record by id (time, board model, the model version and recipe revision with their UUIDs, the
-        paths, verdict and score), or None for an unknown id; Compare opens a stored result from it (REQ-INSP-009)."""
+        paths, the golden board's SHA-256, verdict and score), or None for an unknown id; Compare opens a stored result
+        from it (REQ-INSP-009)."""
         return self.db.inspection(inspection_id)
 
     def inspection_result(self, inspection_id: int, with_maps: bool = False) -> InspectionResult | None:
@@ -494,6 +507,30 @@ class AppContext:
         doc = self.db.inspection_result(inspection_id)
         res = InspectionResult.from_dict(doc) if doc is not None else None
         return load_maps(res, *self.db.map_paths(inspection_id)) if res is not None and with_maps else res
+
+    def judged_reference(self, inspection_id: int) -> tuple[np.ndarray | None, Judged]:
+        """The golden board a stored result was judged against (REQ-CMP-003): its image and "same" while its file holds
+        the bytes it had then; else None and why not: "none" (judged without one: no Compare check is stored),
+        "unrecorded" (saved before migration 0008), "missing" (no file at that path), "unreadable" (AOI-INSP-001 to
+        -007 now) or "changed" (other bytes there); the last three are logged. Compare calls it on the pool thread."""
+        rec = self.db.inspection(inspection_id)
+        path, sha = (rec["reference_path"], rec["reference_sha256"]) if rec else (None, None)
+        if not (path and sha):
+            compared = any(c["source"] == "Compare" for c in self.db.checks_for(inspection_id))
+            return None, "unrecorded" if compared else "none"
+        why: Judged = "missing"
+        if Path(path).is_file():
+            try:
+                img, now = self._load_image_sha256(path)
+            except AoiError:  # locked, refused or damaged: the stored picture and maps still show
+                why = "unreadable"
+            else:
+                if now == sha:
+                    return img, "same"
+                why = "changed"
+        extra = {"inspection_id": inspection_id, "reason": why, "file": Path(path).name}
+        self.log.warning("compare.golden_board_not_as_judged", extra=extra)
+        return None, why
 
     def users(self) -> list[dict[str, Any]]:
         """Users (uuid, name, role), oldest first."""

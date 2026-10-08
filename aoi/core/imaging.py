@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import re
 import struct
 from pathlib import Path
@@ -124,7 +125,20 @@ def load_image(
     on either side; all three are checked before a pixel is decoded, so a huge or forged file costs nothing, and a
     recognised format whose header gives no size is refused, never decoded. Decoding the bytes with `imdecode` keeps
     non-ASCII (Korean) Windows paths working."""
-    p = Path(path)
+    return _read_image(Path(path), max_megapixels, max_megabytes)[0]
+
+
+def load_image_sha256(
+    path: str | Path, max_megapixels: float = MAX_MEGAPIXELS, max_megabytes: float = MAX_MEGABYTES
+) -> tuple[np.ndarray, str]:
+    """`load_image`, with the SHA-256 of the very bytes decoded, in hex: a record names the golden board it was judged
+    against by its content, read once, so no second read of the file can race a writer (REQ-CMP-003)."""
+    img, data = _read_image(Path(path), max_megapixels, max_megabytes)
+    return img, hashlib.sha256(data).hexdigest()
+
+
+def _read_image(p: Path, max_megapixels: float, max_megabytes: float) -> tuple[np.ndarray, bytes]:
+    """The image and the bytes it was decoded from, after `load_image`'s checks."""
     try:
         size = p.stat().st_size
         if size > max_megabytes * 1e6:
@@ -151,7 +165,7 @@ def load_image(
     if img is None:
         reason = "it is cut short, damaged, or a variant this app does not read"
         raise AoiError("AOI-INSP-006", path=str(p), kind=kind, reason=reason)
-    return img
+    return img, data
 
 
 def save_image(path: str | Path, img: np.ndarray) -> None:

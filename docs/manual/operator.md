@@ -43,14 +43,19 @@ queue".
 
 The defect list under the banner names each defect with its number, type, score, side and position; click a row to
 zoom the picture to it. Press "Compare with Golden board ›" (or open Compare from the sidebar and press Use Last
-Inspected) to see the board as it was judged, lined up with the Golden board beside it, and the decision table that
+Inspected) to see the board as it was judged, lined up with the Golden board it was judged against, and the decision table that
 produced the verdict: every check with its source, value, threshold, rule and result, the failing rows in red or amber,
 exactly as they were decided and stored; the board is not inspected again. The "why" box says, one sentence per failing check, which value crossed
 which threshold. A line under the verdict says when the result was judged and with which AI model version and recipe
 revision; when an Engineer has changed either since, it says so, and the table still shows the thresholds that applied
 at the time. When the result's heatmaps are no longer stored (OK results lose them after the retention period), the
 line says so with the code AOI-CMP-001, and the Side by side and Boxes only views still work. When the stored picture
-itself was deleted, the page says "Board picture no longer stored" and the table still stands.
+itself was deleted, the page says "Board picture no longer stored", the table still stands, and Re-evaluate inspects
+the board again from its image file. The Golden board
+pane names the file the result was judged against. When that file has changed, cannot be read or is gone, or the
+result names none (it was judged without one, or saved before this version), the pane says "Golden board not
+available" and why, rather than show today's Golden board, and Re-evaluate under it inspects the board again with
+today's; the line under the verdict names today's when an Engineer or a training run has set another.
 
 ## 4. Alarms and messages
 
