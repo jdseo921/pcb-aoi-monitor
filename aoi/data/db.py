@@ -9,6 +9,7 @@ is created and changed only by the numbered migrations in ``migrations/``
 from __future__ import annotations
 
 import json
+import math
 import sqlite3
 import threading
 import uuid
@@ -18,7 +19,7 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
-from ..errors import Phrase
+from ..errors import AoiError, Phrase
 from ..times import local_day_bounds_utc, now_utc
 from .errors import WorkspaceError
 from .migrate import migrate
@@ -180,9 +181,13 @@ class Database:
         self.execute("UPDATE board_models SET reference_image=? WHERE name=?", (self._stored(path), board_model))
 
     def scale(self, board_model: str) -> float | None:
-        """The board model's px per mm (migration 0012), or None while it has none."""
+        """The board model's px per mm (migration 0012), or None while it has none; AOI-RCP-012 for a stored value that
+        is no number above 0, which its CHECK keeps out unless turned off by hand (S29 review)."""
         r = self.query("SELECT px_per_mm FROM board_models WHERE name=?", (board_model,))
-        return float(r[0]["px_per_mm"]) if r and r[0]["px_per_mm"] is not None else None
+        value = r[0]["px_per_mm"] if r else None
+        if value is not None and not (isinstance(value, float) and 0 < value < math.inf):
+            raise AoiError("AOI-RCP-012", board_model=board_model, value=value)
+        return value
 
     def set_scale(self, board_model: str, px_per_mm: float) -> None:
         self.execute("UPDATE board_models SET px_per_mm=? WHERE name=?", (px_per_mm, board_model))

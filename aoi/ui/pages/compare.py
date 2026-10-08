@@ -44,7 +44,7 @@ from ... import defects as taxonomy
 from ...core.explain import explain
 from ...core.imaging import IMAGE_EXTS
 from ...core.inspector import Check, InspectionResult, ai_check
-from ...core.recipe import Recipe, scale_digits
+from ...core.recipe import Recipe, disc_width, scale_digits
 from ...core.services import REQUIRED_ROLE, ROLES, ROLES_FROM, AppContext, ErrorReport, Judged
 from ...core.views import ai_view, difference_view
 from ...errors import AoiError
@@ -127,6 +127,7 @@ THRESHOLDS = {  # the recipe's thresholds the panel holds, in its order: field -
     "anomaly_threshold": QT_TRANSLATE_NOOP("ComparePage", "AI score threshold"),
     "diff_threshold": QT_TRANSLATE_NOOP("ComparePage", "Pixel difference (0-255)"),
     "min_defect_area": QT_TRANSLATE_NOOP("ComparePage", "Minimum defect area (px)"),
+    "min_defect_mm": QT_TRANSLATE_NOOP("ComparePage", "Minimum defect size (mm)"),  # with a scale (REQ-RCP-006)
     "ssim_min": QT_TRANSLATE_NOOP("ComparePage", "Similarity minimum (SSIM)"),
     "max_diff_regions": QT_TRANSLATE_NOOP("ComparePage", "Allowed difference regions"),
 }
@@ -401,7 +402,7 @@ class ComparePage(Page):
         self.form_revision = (self.board_model, rev)  # on_show loads the form again once another revision is saved
         self.ai_thr.set_override(r.anomaly_threshold)
         self.diff_thr.setValue(r.diff_threshold)
-        self.min_size.show_recipe(r, self.ctx.scale(self.board_model))
+        self.min_size.show_recipe(r, self._scale(self.board_model))
         self.ssim_min.setValue(r.ssim_min)
         self.max_regions.setValue(r.max_diff_regions)
         self.form_recipe = r
@@ -418,6 +419,16 @@ class ComparePage(Page):
             self.show_calibrated(self.ai_thr, stored["board_model"], stored["model_uuid"], stored["model_version"])
         else:
             self.show_calibrated(self.ai_thr, self.board_model)
+
+    def _scale(self, board_model: str) -> float | None:
+        """The board model's scale for the form and the note; None while the one stored cannot be read (AOI-RCP-012,
+        which the Recipe Editor says and every judging and saving refuses with), so that Compare still opens (S29)."""
+        try:
+            return self.ctx.scale(board_model)
+        except AoiError as e:
+            if e.code == "AOI-RCP-012":
+                return None
+            raise
 
     def _form_recipe(self, board_model: str, saved: Recipe | None = None) -> Recipe:
         """The board model's recipe (`saved`, when read already) with the thresholds from the form."""
@@ -539,7 +550,7 @@ class ComparePage(Page):
         if self.test_path:  # what judges it, which an Operator's sign-in holds against the recipe then (review)
             saved = self.ctx.recipe(bm)[1]
             recipe = None if self.ctx.role == "Operator" else self._form_recipe(bm, saved)
-            self.judged_by = (saved if recipe is None else recipe).in_px(self.ctx.scale(bm))  # as the engine applies it
+            self.judged_by = (saved if recipe is None else recipe).in_px(self._scale(bm))  # as the engine applies it
         self._sync_roles()  # Re-evaluate, waiting for a stored result's maps, now inspects again
         judged = self.as_judged[1] if self.as_judged and not self.ref_override else None
         if not self.ref_override:
@@ -811,7 +822,7 @@ class ComparePage(Page):
         if rec["reference_path"] and golden != rec["reference_path"]:  # an Engineer or a training run set another
             name = breakable(Path(golden).name) if golden else self.tr("none")
             parts.append(self.tr("The board model's Golden board is now {file}.").format(file=name))
-        judged_at, scale = self.res.px_per_mm if self.res is not None else None, self.ctx.scale(bm)
+        judged_at, scale = self.res.px_per_mm if self.res is not None else None, self._scale(bm)
         if judged_at is not None and scale is not None and scale != judged_at:  # Re-evaluate applies its own (ADR 0006)
             line = self.tr(
                 "It was judged at a scale of {then:.{digits}f} px/mm, at which Re-evaluate applies sizes in mm; the"
@@ -918,10 +929,16 @@ class ComparePage(Page):
 
     def _changes(self) -> list[tuple[str, Any, Any]]:
         """Each threshold the form holds otherwise than the recipe it came from, as the engine reads them (`_as_read`):
-        the recipe field, the recipe's value and the form's."""
+        the recipe field, the recipe's value and the form's. With a scale the minimum defect size counts in mm, as its
+        field shows it (a size held in px as its width at the scale, to the field's decimals), and its area, which
+        follows it, is not listed apart (S29)."""
         if (saved := self.form_recipe) is None:
             return []
         was, now = _as_read(saved), _as_read(self._form_recipe(saved.board_model, saved))
+        if (s := self.min_size.px_per_mm) is not None:
+            for r in (was, now):
+                mm = round(disc_width(r.min_defect_area) / s, self.min_size.mm.decimals())
+                r.min_defect_area, r.min_defect_mm = 0, mm if r.min_defect_mm is None else r.min_defect_mm
         return [(k, getattr(was, k), getattr(now, k)) for k in THRESHOLDS if getattr(was, k) != getattr(now, k)]
 
     def _shown(self, field: str, value: object, board_model: str) -> str:
@@ -929,7 +946,8 @@ class ComparePage(Page):
         judges by, read from `board_model`'s active AI model, not from the panel, which names the AI model of when
         Compare was shown, or of a stored result: "the AI model's calibrated value" while its calibration can be read,
         else "none", as the audit entry of the save then names no threshold; a number shows as its field does, or with
-        every decimal the recipe holds where the field shows fewer."""
+        every decimal the recipe holds where the field shows fewer; the minimum defect size in mm as its own field does
+        (S29)."""
         if value is None:
             try:
                 named = self.ctx.calibrated_threshold(board_model) is not None
@@ -937,7 +955,8 @@ class ComparePage(Page):
                 named = False
             return self.tr("the AI model's calibrated value") if named else self.tr("none")
         if isinstance(value, float):
-            places = self.ai_thr.field.decimals() if field == "anomaly_threshold" else self.ssim_min.decimals()
+            fields = {"anomaly_threshold": self.ai_thr.field, "min_defect_mm": self.min_size.mm}
+            places = fields.get(field, self.ssim_min).decimals()
             exact = np.format_float_positional(value, trim="-")  # shortest that reads back the same, never 1e-05
             return f"{value:.{places}f}" if round(value, places) == value else exact
         return str(value)
@@ -946,13 +965,13 @@ class ComparePage(Page):
         """Save Revision, or Enter in the reason: the form's thresholds on the recipe the sheet listed them against,
         stored through AppContext as the next revision with its audit entry of before, after, user, time and reason
         (REQ-CMP-005, REQ-LOG-004). A refusal (AOI-USR-001 for a role that may not save, say) is the coded dialog, and
-        the sheet stays with its reason; a revision saved since the sheet opened closes it with AOI-RCP-004, nothing
-        stored. Inspection and the Recipe Editor take the revision up as they do one the Recipe Editor saves: at the
-        next board, and when the editor is shown again."""
+        the sheet stays with its reason; a revision saved since the sheet opened closes it with AOI-RCP-004, and a
+        scale set since with AOI-RCP-010 (S29), nothing stored. Inspection and the Recipe Editor take the revision up
+        as they do one the Recipe Editor saves: at the next board, and when the editor is shown again."""
         reason, saved = self.reason.text().strip(), self.form_recipe
         if not (self._asking and reason) or saved is None:
             return
-        if (moved := self._take_up_revision()) is not None:  # one saved since the sheet opened: never undone (sketch)
+        if (moved := self._take_up_revision()) is not None:  # one saved, or a scale set, since: never undone (sketch)
             self.error(moved)
             return
         try:
@@ -1090,7 +1109,7 @@ class ComparePage(Page):
             self.redraw()
         going = self._bg is not None and not self._bg.job.cancelled  # a run stopped, by Cancel say, is not judged again
         by, judged = self.judged_by, None if going else self.res  # a run still going: not its result yet
-        now = saved.in_px(self.ctx.scale(saved.board_model)) if saved is not None else None  # read now, at the scale
+        now = saved.in_px(self._scale(saved.board_model)) if saved is not None else None  # read now, at the scale
         stale = by is not None and now is not None and _judging(by, judged) != _judging(now, judged)  # now (S29)
         if stale and self.stored is None and (self.res is not None or going):
             if self._bg is not None:
@@ -1120,12 +1139,16 @@ class ComparePage(Page):
     def _take_up_revision(self) -> AoiError | None:
         """The form takes up a revision of the header's board model saved since it was loaded (on the Recipe Editor,
         or anywhere through AppContext), and a scale set since, at which it shows its sizes (S29). A Save to Recipe
-        sheet open then closes, and for a revision AOI-RCP-004 for the page to show is returned, nothing stored: its
-        changes were listed against the revision before (sketch, Errors)."""
+        sheet open then closes, nothing stored, and the error for the page to show is returned: AOI-RCP-004 for a
+        revision, as its changes were listed against the revision before (sketch, Errors), else AOI-RCP-010 for a
+        scale, as they were listed at the scale before."""
         asked = self.form_revision if self._asking else None  # the revision Save to Recipe's open sheet lists against
+        at = self.min_size.px_per_mm  # and the scale it lists the sizes at
         bm = self.board_model
-        if bm and (self.form_revision != (bm, self.ctx.recipe(bm)[0]) or self.min_size.px_per_mm != self.ctx.scale(bm)):
+        if bm and (self.form_revision != (bm, self.ctx.recipe(bm)[0]) or self.min_size.px_per_mm != self._scale(bm)):
             self._load_recipe_into_form()
         if asked and (now := self.form_revision) and now != asked:
             return AoiError("AOI-RCP-004", board_model=now[0], latest=now[1], revision=asked[1])
+        if asked and (scale := self.min_size.px_per_mm) is not None and scale != at:  # set since (never unset)
+            return AoiError("AOI-RCP-010", board_model=asked[0], scale=scale, revision=asked[1])
         return None

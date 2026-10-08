@@ -12,6 +12,7 @@ from pytestqt.qtbot import QtBot
 
 from aoi.core.recipe import ROI, disc_area, disc_width
 from aoi.core.services import AppContext
+from aoi.errors import AoiError
 from aoi.ui.pages.compare import ComparePage
 from aoi.ui.pages.recipe_editor import RecipeEditorPage
 from tests.test_compare_reevaluate import _stored_on_compare
@@ -103,7 +104,8 @@ def test_req_rcp_006_compare_follows_a_scale_set_without_a_new_revision(
     revision was saved since it was filled, with the px the engine applies beside it; left untouched, it is no change
     (Save to Recipe stays off, S28d), and Save to Recipe of another threshold keeps the size the recipe holds, in px, so
     nothing changes unseen, and the Recipe Editor then shows AOI-RCP-009. A size typed in mm is the one Re-evaluate
-    judges by, and Save to Recipe stores it in mm with its area at the scale."""
+    judges by, and Save to Recipe stores it in mm with its area at the scale; left untouched after a scale set again,
+    it is no change either (S29 review)."""
     ctx = trained_ctx
     win = _window(qtbot, ctx, "Engineer")
     compare = win.pages["Compare"]
@@ -138,6 +140,11 @@ def test_req_rcp_006_compare_follows_a_scale_set_without_a_new_revision(
     save_to_recipe(compare)
     saved = ctx.recipe(BOARD)
     assert saved[0] == rev + 2 and (saved[1].min_defect_area, saved[1].min_defect_mm) == (disc_area(3.0 * scale), 3.0)
+    ctx.set_scale(BOARD, 476, 10)  # set again: 3.0 mm spans 16016 px of area, where the revision holds 64063
+    win.navigate("Recipe Editor")
+    win.navigate("Compare")
+    qtbot.waitUntil(lambda: ctx.jobs.idle() and compare._bg is None, timeout=20000)
+    assert size.mm.value() == 3.0 and not compare.btn_save.isEnabled(), "the size in mm as the recipe holds it"
 
 
 def test_req_rcp_006_a_size_typed_in_mm_on_compare_changes_a_threshold(
@@ -157,3 +164,27 @@ def test_req_rcp_006_a_size_typed_in_mm_on_compare_changes_a_threshold(
     assert compare.would_be.isHidden() and compare.btn_save.isEnabled()
     size.mm.setValue(shown)
     assert not compare.btn_save.isEnabled(), "the size shown again is the recipe's own: nothing to save"
+
+
+def test_req_rcp_006_a_scale_that_cannot_be_read_is_set_again(
+    qtbot: QtBot, trained_ctx: AppContext, dialogs: list[tuple[str, str]]
+) -> None:
+    """A stored scale damaged past its CHECK, by hand: the window opens, Compare showing the sizes without a scale, the
+    Recipe Editor says AOI-RCP-012 as it loads and shows the recipe without a scale, Save Recipe stores nothing, and a
+    scale set again replaces it (S29 review)."""
+    ctx = trained_ctx
+    ctx.db.execute("PRAGMA ignore_check_constraints = ON")
+    ctx.db.execute("UPDATE board_models SET px_per_mm = 'abc' WHERE name = ?", (BOARD,))
+    win = _window(qtbot, ctx, "Engineer")
+    page, compare, rev = win.pages["Recipe Editor"], win.pages["Compare"], ctx.recipe(BOARD)[0]
+    assert isinstance(compare, ComparePage) and win.navigate("Compare") and compare.min_size.px_per_mm is None
+    assert isinstance(page, RecipeEditorPage) and win.navigate("Recipe Editor") and page.px_per_mm is None
+    assert {title for title, _ in dialogs} == {"AOI-RCP-012 Scale cannot be read"}
+    with pytest.raises(AoiError) as unread:  # Save Recipe, which the window's excepthook says
+        page.save()
+    assert unread.value.code == "AOI-RCP-012" and ctx.recipe(BOARD)[0] == rev
+    ctx.set_scale(BOARD, 476, 10)  # as Set Scale stores it
+    for name in ("", BOARD):  # the editor loads the board model again
+        win._on_board_model(name)
+    assert page.px_per_mm == 47.6 and page.min_size.label.text() == "Minimum defect size (mm)"
+    assert win.navigate("Compare") and compare.min_size.px_per_mm == 47.6

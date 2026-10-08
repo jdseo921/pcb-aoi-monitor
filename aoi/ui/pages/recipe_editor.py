@@ -267,7 +267,11 @@ class RecipeEditorPage(Page):
             self.held_badge.hide()
             return
         self.rev, r = self.ctx.recipe(self.board_model)
-        self.px_per_mm = self.ctx.scale(self.board_model)
+        try:
+            self.px_per_mm = self.ctx.scale(self.board_model)
+        except AoiError as e:  # AOI-RCP-012: said, and the page left for Set Scale to replace it (S29 review)
+            self.px_per_mm = None
+            self.error(e)
         self.recipe = r = r.in_px(self.px_per_mm)  # its sizes in mm as the engine applies them, in px
         self._read_golden_board()
         self.use_ai.setChecked(r.use_ai)

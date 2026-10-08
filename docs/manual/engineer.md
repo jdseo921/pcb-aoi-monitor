@@ -75,8 +75,9 @@ the ROI table gives X, Y, W and H in mm, and the minimum defect size, on Thresho
 (that of a round defect), with the px it spans beside it; the next Save Recipe stores the sizes in mm, and boards are
 judged as before at that scale. Until then, AOI-RCP-009 in amber under the scale counts the sizes the latest revision
 still holds in px and says to press Save Recipe: shown in mm, they keep their px when the scale is set again, while
-sizes in mm follow it. Save to Recipe on Compare keeps a size left untouched as the recipe holds it, so AOI-RCP-009
-stays after it. Without a scale, sizes stay in px beside AOI-RCP-005 in amber, and a recipe saves all the same.
+sizes in mm follow it. Save to Recipe on Compare stores a size typed in mm and keeps one left untouched as the recipe
+holds it, so AOI-RCP-009 stays after it. Without a scale, sizes stay in px beside AOI-RCP-005 in amber, and a recipe
+saves all the same. A stored scale that cannot be read, AOI-RCP-012, judges and saves nothing until it is set again.
 
 (to be written: creating a board model in full, calibrating px per mm)
 
@@ -295,6 +296,9 @@ try your values again on it. When the sheet closes, the focus goes back to the p
 explanation while a stored result is still loading, Save to Recipe and Re-evaluate both off, and on to Re-evaluate once
 it has loaded); moved elsewhere, to the board model in the header say, it stays there. A long board model name in the
 sheet's heading wraps after each _ and -; a part with neither stays whole.
+With a scale, the sheet lists the minimum defect size in mm, as its field shows it, and a scale set after Compare
+showed the recipe closes it as a revision saved elsewhere does (AOI-RCP-010 says so), the form then holding the
+recipe at the new scale.
 
 A stored result is judged again only under its own board
 model: with another board model in the header, Re-evaluate refuses with AOI-CMP-005 and names the board model to pick,

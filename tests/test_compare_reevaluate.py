@@ -896,7 +896,7 @@ def test_req_set_021_however_a_re_evaluation_starts_and_ends_a_further_space_wri
     in, never on a control of the panel that writes (Save to Recipe, a threshold, the tick), and a further Space saves
     no recipe revision and sets no tick (second and third verification, review). With no run, an Operator's sign-in puts
     a focus on any control of the panel in the "why" box too, where an Admin's leaves it, and leaves one on Show: there
-    (review)."""
+    (review), without a scale and with one, where the size field shows its mm spin box (S29 review)."""
     ctx = trained_ctx
     win, compare, first = _stored_on_compare(qtbot, ctx, ng_board, "Engineer")
     ctx.inspect_file(BOARD, str(ng_board))  # a second stored result, for the ends that show another
@@ -988,10 +988,22 @@ def test_req_set_021_however_a_re_evaluation_starts_and_ends_a_further_space_wri
             win.set_user("engineer")  # Re-evaluate on again: the focus the sign-in put in the "why" box stays there
             if QApplication.focusWidget() is not compare.why:
                 wrong.append(f"{start}, ended by {end}: an Engineer's sign-in after it moved the focus")
-    for control in (*panel.findChildren(QAbstractSpinBox), *panel.findChildren(QAbstractButton), compare.mode):
+    pair, visited = (compare.min_size.area, compare.min_size.mm), []  # DefectSizeField shows one: mm at a scale (S29)
+
+    def passes() -> Iterator[QWidget]:
+        """The panel's controls without a scale, then with one, which Compare takes up when shown again (S29 review)."""
+        controls = (*panel.findChildren(QAbstractSpinBox), *panel.findChildren(QAbstractButton), compare.mode)
+        yield from controls
+        ctx.set_scale(BOARD, 476, 10)
+        win.navigate("Recipe Editor")
+        win.navigate("Compare")
+        yield from controls
+
+    for control in passes():
         compare.ai_thr.tick.setChecked(True)  # its field takes the focus only then
-        if control is compare.min_size.mm and control.isHidden():  # DefectSizeField's mm, hidden without a scale (S29)
+        if control in pair and control.isHidden():  # the size field's other spin box, which takes no focus
             continue
+        visited.append(control)
         control.setFocus(Qt.FocusReason.TabFocusReason)
         win.set_user("admin")
         kept, revisions = QApplication.focusWidget() is control, len(ctx.recipe_history(BOARD))
@@ -1003,7 +1015,7 @@ def test_req_set_021_however_a_re_evaluation_starts_and_ends_a_further_space_wri
             on = [f"{type(w).__name__} {getattr(w, 'text', str)()!r}" for w in (control, focus)]
             wrong.append(f"no run, the focus on {on[0]}, kept by an Admin's sign-in {kept}, an Operator's: on {on[1]}")
         win.set_user("engineer")
-    assert not wrong, "\n".join(wrong)
+    assert not wrong and set(pair) <= set(visited), "\n".join(wrong)
 
 
 def test_req_set_021_a_stored_result_opened_from_inspection_never_leaves_the_focus_on_save_to_recipe(
