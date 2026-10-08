@@ -8,6 +8,7 @@ standard, "Validation and accuracy claims").
 
 from __future__ import annotations
 
+import gc
 import os
 import shutil
 from collections.abc import Iterator
@@ -179,6 +180,21 @@ def _no_key_held(qapp: Any) -> None:
     row to the selection instead of selecting it alone (the AI Model Test preview test's another_row failed so on
     Linux CI, after the import sheet's Ctrl+N)."""
     let_go_of_keys()
+
+
+@pytest.fixture
+def settled_collector() -> Iterator[None]:
+    """For a test that times the app against a budget: Python's collector first frees what earlier tests left, then
+    leaves every object that exists by then out of its passes until the test ends, so a pass that falls inside a timed
+    step walks the test's own objects only. A local run of the whole suite made 38 full passes of 60 to 354 ms, at
+    points no test chooses; one landing in a Home opening fails REQ-INSP-016's 300 ms budget (Linux CI on PR 334: 550
+    ms in one opening of 11, the others 4 to 13 ms)."""
+    gc.collect()
+    gc.freeze()
+    try:
+        yield
+    finally:
+        gc.unfreeze()
 
 
 @pytest.fixture
