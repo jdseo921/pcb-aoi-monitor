@@ -44,7 +44,8 @@ notice shipped. The installer, the certificate (J6) and a second approver (J8) d
 5. **PyInstaller's own parts.** Its bootloader and loader, embedded in every .exe, are under the GPL-2.0-or-later
    with its Bootloader exception, which allows them in any program without the GPL's terms reaching it; its run-time
    hooks are under Apache-2.0. The Legal standard does not allow GPL code, yet its own "Packaging" rule requires
-   PyInstaller, so this is listed for Jay's J8 decision rather than decided here.
+   PyInstaller. Jay left this J8 line to Claude on 2026-10-08 ("Decide the best one for yourself."), and it is
+   allowed by name, for the Windows build only.
 6. **CI builds and starts it.** `.github/workflows/build.yml` runs on Windows for every push to main, on demand, and
    on pull requests that change the build. It installs from the hashed locks, builds, starts the .exe on an empty
    workspace with only Windows' folders on PATH, as on a station (`tools/smoke_test_build.py`: "app.start" logged,
@@ -53,6 +54,8 @@ notice shipped. The installer, the certificate (J6) and a second approver (J8) d
    the error.
 7. **An internal test build, never a release.** It is unsigned, has no installer and is named `…-unsigned`;
    `BUILD-INFO.txt` says it must not go to a customer or into a demo. Releases stay as the Engineering standard says.
+   The repository is public, so any signed-in GitHub user can download the artifact. Under the same delegation of
+   2026-10-08, the build is used for internal tests only until a signed installer exists (J6).
 
 ## Alternatives considered
 
