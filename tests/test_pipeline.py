@@ -38,8 +38,9 @@ def test_train_and_detect(tmp_path: Path) -> None:
     assert meta["image_threshold"] > 0
     assert Path(ctx.db.active_model("TEST")["path"]).exists()
 
-    metrics, rows = ctx.batch_test("TEST", str(data / "test"))
+    metrics, rows, judged_by = ctx.batch_test("TEST", str(data / "test"))
     assert metrics["labelled"] == len(rows) > 0
+    assert judged_by.model_uuid == rows[0]["model_uuid"] and ctx.engine_is_current("TEST", judged_by)
     assert metrics["recall"] >= 0.8  # defects must be caught
     assert metrics["false_call_rate"] <= 0.5  # loose bound: tiny CPU training run
 

@@ -181,7 +181,8 @@ def test_req_set_021_model_test_preview_does_not_freeze(qtbot: QtBot, trained_ct
     win = _window(qtbot, trained_ctx)
     page = win.pages["AI Model Test"]
     rows = [{"image": str(board_5mp), "gt": "NG", "ai_result": "NG", "score": 1.0, "defects": 1, "pass_fail": "PASS"}]
-    page._show((classification_metrics(rows), rows), str(board_5mp.parent), BOARD)  # the table a finished run leaves
+    judged_by = trained_ctx.inspector(BOARD).judged_by  # judged by what is in use, so the row is previewed (#250)
+    page._show((classification_metrics(rows), rows, judged_by), str(board_5mp.parent), BOARD)  # a finished run's table
     with heavy_calls() as calls, gap_meter(qtbot) as g:
         page.table.selectRow(0)  # the row preview inspects the board again
         assert win.last_inspected is None, "the preview runs on a pool thread: nothing shown before the action returns"

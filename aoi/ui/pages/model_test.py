@@ -22,10 +22,11 @@ from PySide6.QtWidgets import (
 )
 
 from ... import defects as taxonomy
-from ...core.inspector import InspectionResult
+from ...core.inspector import InspectionResult, JudgedBy
 from ...core.services import AppContext
 from ...errors import AoiError
 from .. import theme
+from ..errors import phrase_text
 from ..widgets.busy import BusyOverlay
 from ..widgets.empty_state import EmptyState
 from ..widgets.image_view import ImageView
@@ -71,6 +72,7 @@ class ModelTestPage(Page):
         self.metrics: dict[str, Any] = {}
         self.run_folder = ""  # the folder the rows and metrics came from, which the report names (#174)
         self.run_board_model: str | None = None  # and the board model they were run for, while shown (#180)
+        self.run_judged: JudgedBy | None = None  # and what judged them: AI model, recipe revision, Golden board (#250)
 
         bar = QHBoxLayout()
         bar.addWidget(button(self.tr("Select Test Folder…"), slot=self.pick))
@@ -99,6 +101,11 @@ class ModelTestPage(Page):
         self.confusion = QLabel("")
         self.confusion.setObjectName("muted")
         self.root.addWidget(self.confusion)
+        self.run_note = QLabel("")  # what judged the run and what is in use now, once they differ (#250)
+        self.run_note.setObjectName("muted")
+        self.run_note.setWordWrap(True)
+        self.run_note.hide()
+        self.root.addWidget(self.run_note)
         self.bar = QProgressBar()
         self.bar.setVisible(False)
         self.root.addWidget(self.bar)
@@ -122,6 +129,7 @@ class ModelTestPage(Page):
         self.preview_verdict.setStyleSheet(theme.verdict_style("INFO", big=False))
         self.view = ImageView(placeholder=self.tr("Select a row to preview"))
         self.busy = BusyOverlay(self.view, self.tr("Inspecting…"))
+        self.preview_empty = EmptyState(self.view)  # a row that is not previewed, and why (#250)
         pl.addWidget(self.preview_verdict)
         pl.addWidget(self.view, 1)
         split.addWidget(preview)
@@ -135,6 +143,8 @@ class ModelTestPage(Page):
             self.folder_label.setText(d)
 
     def run(self) -> None:
+        if not self.btn_run.isEnabled():  # a run is going: the preview pane's Run Test Again starts no second one
+            return
         if (bm := self.checked_board_model()) is None:
             return
         folder = self.folder
@@ -174,7 +184,7 @@ class ModelTestPage(Page):
         w.signals.finished.connect(finished)
         start(w, self.ctx.jobs)
 
-    def _show(self, out: tuple[dict[str, Any], list[dict[str, Any]]], folder: str, board_model: str) -> None:
+    def _show(self, out: tuple[dict[str, Any], list[dict[str, Any]], JudgedBy], folder: str, board_model: str) -> None:
         if board_model != self.board_model:  # the header changed while it ran: its rows are not shown under the
             status = self.tr(  # new board model's name (#180); the run is stored, as every run
                 "The AI model test of {board_model} is stored; its results are not shown here, since the board model"
@@ -182,9 +192,13 @@ class ModelTestPage(Page):
             )
             self.shell.status(status.format(board_model=board_model))
             return
-        self.metrics, self.rows = out
+        self.metrics, self.rows, self.run_judged = out
         self.run_folder, self.run_board_model = folder, board_model
         self.empty.hide()
+        self._drop_preview()  # a preview of the run before, still being inspected, never lands beside these (#250)
+        self.table.clearSelection()  # nor does a row stay selected beside an empty pane
+        self._clear_preview()  # nor a row of the run before, or why it was not previewed
+        self._show_note()
         m = self.metrics
         for k, t in self.tiles.items():
             t.set(m[k])
@@ -212,20 +226,83 @@ class ModelTestPage(Page):
             return  # a row is judged under the board model of its run (#180), never the header's after a switch
         path = cell_item(self.table, rows[0].row(), 0).toolTip()
         self._clear_preview()  # the row before never stands beside this one, even when it cannot be inspected (#182)
+        if (changed := self._judged_now()) is not None:  # never judged by what did not judge its row (#250)
+            self._drop_preview()  # nor the row before, still being inspected
+            self._refuse_preview(path, changed)
+            return
+        run = self.run_judged
         self.run_in_background(
             self.ctx.inspect_file, bm, path, save=False,
-            on_result=lambda res: self._show_preview(path, res, bm), busy=self.busy,
+            on_result=lambda res: self._show_preview(path, res, bm, run), busy=self.busy,
             on_error=lambda e: self.not_inspected(self.preview_verdict, Path(path).name, e, big=False),
         )  # fmt: skip
+
+    def _drop_preview(self) -> None:
+        """Cancel a preview still being inspected: run_in_background drops a cancelled job's result and shows no dialog
+        for its error, as the Recipe Editor's _drop_try does (#250)."""
+        if self._bg is not None:
+            self._bg.stop()
+            self._bg = None
+            self.busy.finish()
 
     def _clear_preview(self) -> None:
         self.preview_verdict.setText("—")
         self.preview_verdict.setStyleSheet(theme.verdict_style("INFO", big=False))
         self.view.set_image(None)
+        self.preview_empty.hide()
 
-    def _show_preview(self, path: str, res: InspectionResult, board_model: str) -> None:
+    def _judged_now(self) -> dict[str, object] | None:
+        """None while the run is current: its board model still uses the AI model, recipe revision and Golden board
+        that judged it (`AppContext.engine_is_current`, the comparison Inspection makes, #243). Otherwise those and the
+        ones in use now, by version, revision and file name, for the note and AOI-TST-001 (#250)."""
+        bm, run = self.run_board_model, self.run_judged
+        if bm is None or run is None or self.ctx.engine_is_current(bm, run):
+            return None
+        model, recipes, golden = self.ctx.active_model(bm), self.ctx.recipe_history(bm), self.ctx.reference_image(bm)
+        none = self.tr("none")
+        return {
+            "board_model": bm,
+            "run_model": run.model_version or none,
+            "run_recipe": run.recipe_rev or 0,
+            "run_golden": Path(run.reference_path).name if run.reference_path else none,
+            "model": model["version"] if model else none,
+            "recipe": recipes[0]["revision"] if recipes else 0,
+            "golden": Path(golden).name if golden else none,
+        }
+
+    def _refuse_preview(self, path: str, changed: dict[str, object]) -> None:
+        """A row of a run that is no longer current is not inspected (#250): the banner reads Not inspected, the pane
+        shows AOI-TST-001 (what judged the run, what is in use now, what to do), Use Last Inspected keeps the board it
+        had, and the note above the table shows."""
+        name = Path(path).name
+        e = AoiError("AOI-TST-001", None, file=name, **changed)
+        heading, sentence = self.not_inspected(self.preview_verdict, name, e, big=False)
+        what = " ".join([sentence, phrase_text(e.action)])
+        self.preview_empty.show_state(heading, what, self.tr("Run Test Again ›"), self.run)
+        self._note(changed)
+
+    def _show_note(self) -> None:
+        """The line above the table while the run's AI model, recipe or Golden board is no longer in use (#250)."""
+        self._note(self._judged_now() if self.rows else None)
+
+    def _note(self, changed: dict[str, object] | None) -> None:
+        if changed is not None:
+            note = self.tr(
+                "These results were judged by AI model {run_model}, recipe revision {run_recipe} and Golden board"
+                " {run_golden}; {board_model} now uses AI model {model}, recipe revision {recipe} and Golden board"
+                " {golden}. Rows are not previewed: Run Test Again tests the folder with what is in use now."
+            )
+            self.run_note.setText(note.format(**changed))
+        self.run_note.setVisible(changed is not None)
+
+    def _show_preview(self, path: str, res: InspectionResult, board_model: str, run: JudgedBy | None) -> None:
         if board_model != self.run_board_model or board_model != self.board_model:
             return  # the run went with a board model change while this row was inspected (#180)
+        if run is not self.run_judged:  # or a new run replaced it (#250)
+            return
+        if (changed := self._judged_now()) is not None:  # an AI model trained or activated while it was inspected
+            self._refuse_preview(path, changed)  # neither shows nor reaches Compare (#250)
+            return
         self.preview_verdict.setText(theme.verdict_label(res.verdict))
         self.preview_verdict.setStyleSheet(theme.verdict_style(res.verdict, big=False))
         self.view.set_image(res.image)
@@ -239,7 +316,8 @@ class ModelTestPage(Page):
             self._clear_run()  # under this one's name (#180)
 
     def _clear_run(self) -> None:
-        self.rows, self.metrics, self.run_folder, self.run_board_model = [], {}, "", None
+        self.rows, self.metrics, self.run_folder, self.run_board_model, self.run_judged = [], {}, "", None, None
+        self.run_note.hide()
         for t in self.tiles.values():
             t.set(None)
         self.confusion.clear()
@@ -249,6 +327,7 @@ class ModelTestPage(Page):
 
     def on_show(self) -> None:
         bm = self.board_model
+        self._show_note()  # an AI model trained or activated, a recipe saved or a Golden board set elsewhere (#250)
         if self.rows:
             self.empty.hide()
         elif not bm:
