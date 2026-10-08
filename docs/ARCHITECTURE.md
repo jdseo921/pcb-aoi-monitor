@@ -474,7 +474,8 @@ an `AoiError` from the catalogue in `aoi/errors.py`, with a code `AOI-<AREA>-<NN
 `docs/error-codes.md` is generated from it (REQ-LOG-004, REQ-SET-019). An error's title, what happened and what to do
 are `Phrase`s (`aoi/errors.py`, no Qt): the English template with its translation context "Errors" and the values that
 fill it, a value being a phrase in turn where it is words (the action a role check names and the roles it needs, a
-Recipe Editor quantity, the page an unexpected error stopped on). Their str is the English text the log keeps;
+Recipe Editor quantity, the page an unexpected error stopped on, the reason the engine gives; a list of reasons is
+joined by a phrase too, `joined()`). Their str is the English text the log keeps;
 `phrase_text()` in `aoi/ui/errors.py` translates a template first and fills it after, for the dialog, Compare's
 AOI-CMP-001 note, the Golden board pane and the alarm list (#198). `aoi/logging_setup.py` writes the JSON-lines
 log in `<workspace>/logs/`, one file per UTC day, with time, level, module, event, ids and the app version, and never

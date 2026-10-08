@@ -13,10 +13,15 @@ from PySide6.QtCore import QCoreApplication, QRectF, QTranslator
 from pytestqt.qtbot import QtBot
 
 from aoi.config import Settings
+from aoi.core.inspector import Inspector
+from aoi.core.recipe import Recipe
 from aoi.core.services import AppContext, ErrorReport
-from aoi.errors import AoiError
+from aoi.errors import CODES, AoiError
 from aoi.ui.errors import dialog_text
+from tests.conftest import TrainedModel
+from tests.test_i18n import _messages
 from tests.test_req_done_in_v01 import _inspect_one, _window
+from tools.update_translations import TS_FILE
 
 SIGN_IN = "§Sign in as a user with that role, or ask one to do it."
 
@@ -93,3 +98,29 @@ def test_req_set_005_error_dialogs_alarms_and_notes_show_in_the_ui_language(
         assert dialogs[-1][1].startswith("§ROI R1: §Height min 5 and max 1 cannot be stored"), dialogs[-1]
     finally:
         QCoreApplication.removeTranslator(translator)
+
+
+def _in_translation_file(*areas: str) -> None:
+    """Every title, what and action of the catalogue's codes in `areas` is in aoi_ko.ts under the context Errors."""
+    listed = {source for context, source in _messages(TS_FILE) if context == "Errors"}
+    texts = {t for c in CODES.values() if c.code.startswith(areas) for t in (c.title, c.what, c.action)}
+    assert texts and texts <= listed, sorted(texts - listed)
+
+
+def test_req_set_005_image_and_compare_errors_reach_the_translation_file(tiny_model: TrainedModel) -> None:
+    """#198: the AOI-INSP and AOI-CMP texts are marked for pyside6-lupdate, and the reasons the engine fills them with
+    are phrases too: AOI-INSP-010's reasons and the joint between them come out translated."""
+    _in_translation_file("AOI-INSP-", "AOI-CMP-")
+    recipe = Recipe(board_model=tiny_model.board_model, use_compare=False, use_ai=False)
+    with pytest.raises(AoiError) as e:
+        Inspector(recipe, tiny_model.model, tiny_model.reference).inspect(tiny_model.reference)
+    translator = Marking()
+    assert QCoreApplication.installTranslator(translator)
+    try:
+        what = dialog_text(ErrorReport.of(e.value))[1].split("\n\n")[0]
+    finally:
+        QCoreApplication.removeTranslator(translator)
+    assert what == (
+        f"§No check can judge this board of board model {tiny_model.board_model}: §§the recipe turns the Golden board"
+        " comparison off; §the recipe turns the AI model off. The board was given no verdict."
+    )

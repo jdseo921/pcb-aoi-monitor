@@ -12,7 +12,7 @@ import cv2
 import numpy as np
 
 from ..data import atomic
-from ..errors import AoiError
+from ..errors import QT_TRANSLATE_NOOP, AoiError
 
 IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".bmp", ".tif", ".tiff"}
 # Limits an image must stay within to be decoded (REQ-INSP-001), at the register's proposed values; a station's own
@@ -157,7 +157,9 @@ def _read_image(p: Path, max_megapixels: float, max_megabytes: float) -> tuple[n
         raise AoiError("AOI-INSP-004", path=str(p))
     kind, w, h = header
     if w <= 0 or h <= 0:
-        raise AoiError("AOI-INSP-006", path=str(p), kind=kind, reason="its header holds no image size")
+        raise AoiError(
+            "AOI-INSP-006", path=str(p), kind=kind, reason=QT_TRANSLATE_NOOP("Errors", "its header holds no image size")
+        )
     if w * h > max_megapixels * 1e6:
         found = f"{w * h / 1e6:.2f} MP ({w} × {h})"
         raise AoiError("AOI-INSP-005", path=str(p), size=found, limit=f"{max_megapixels:g} MP")
@@ -166,9 +168,15 @@ def _read_image(p: Path, max_megapixels: float, max_megabytes: float) -> tuple[n
     try:
         img = cv2.imdecode(np.frombuffer(data, dtype=np.uint8), cv2.IMREAD_COLOR)
     except cv2.error as e:  # the decoder's own limits, which hold whatever the settings say
-        raise AoiError("AOI-INSP-006", detail=str(e), path=str(p), kind=kind, reason="the decoder refused it") from e
+        raise AoiError(
+            "AOI-INSP-006",
+            detail=str(e),
+            path=str(p),
+            kind=kind,
+            reason=QT_TRANSLATE_NOOP("Errors", "the decoder refused it"),
+        ) from e
     if img is None:
-        reason = "it is cut short, damaged, or a variant this app does not read"
+        reason = QT_TRANSLATE_NOOP("Errors", "it is cut short, damaged, or a variant this app does not read")
         raise AoiError("AOI-INSP-006", path=str(p), kind=kind, reason=reason)
     return img, data
 

@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 import sys
+from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -55,6 +56,15 @@ class Phrase(str):
         return cls(doc["context"], doc["source"], values)
 
 
+def joined(joint: Phrase, items: Sequence[str]) -> str:
+    """`items` joined pairwise by `joint`, a phrase such as "{first}; {rest}", so a translation joins them its own way;
+    "" for none (#198)."""
+    text = items[-1] if items else ""
+    for item in reversed(items[:-1]):
+        text = joint.fill(first=item, rest=text)
+    return text
+
+
 def QT_TRANSLATE_NOOP(context: str, text: str) -> Phrase:
     """Mark `text` for pyside6-lupdate, which finds the call by this name, under `context`, as a phrase a screen
     translates; no Qt here, since the engine raises errors too. Pages take it from aoi/ui/pages/base.py."""
@@ -74,124 +84,192 @@ CODES: dict[str, ErrorCode] = {
     for c in (
         ErrorCode(
             "AOI-INSP-001",
-            "Image cannot be read",
-            "The file {path} could not be opened as an image.",
-            "Check that the file exists and is a PNG, JPG, BMP or TIFF image.",
+            QT_TRANSLATE_NOOP("Errors", "Image cannot be read"),
+            QT_TRANSLATE_NOOP("Errors", "The file {path} could not be opened as an image."),
+            QT_TRANSLATE_NOOP("Errors", "Check that the file exists and is a PNG, JPG, BMP or TIFF image."),
         ),
         ErrorCode(
             "AOI-INSP-002",
-            "Image cannot be written",
-            "The image {path} could not be encoded for writing.",
-            "Check the file name's extension (.png or .jpg) and try again.",
+            QT_TRANSLATE_NOOP("Errors", "Image cannot be written"),
+            QT_TRANSLATE_NOOP("Errors", "The image {path} could not be encoded for writing."),
+            QT_TRANSLATE_NOOP("Errors", "Check the file name's extension (.png or .jpg) and try again."),
         ),
         ErrorCode(
             "AOI-INSP-003",
-            "Board failed inspection",
-            "Board {board} failed inspection with {defects} defect(s).",
-            "Review the result on the Compare page before the board moves on.",
+            QT_TRANSLATE_NOOP("Errors", "Board failed inspection"),
+            QT_TRANSLATE_NOOP("Errors", "Board {board} failed inspection with {defects} defect(s)."),
+            QT_TRANSLATE_NOOP("Errors", "Review the result on the Compare page before the board moves on."),
         ),
         ErrorCode(
             "AOI-INSP-004",
-            "File format not supported",
-            "The file {path} does not hold a PNG, JPG, BMP or TIFF image; the format is read from the file's content, "
-            "not its name.",
-            "Save the image as PNG, JPG, BMP or TIFF with an image tool and load that file.",
+            QT_TRANSLATE_NOOP("Errors", "File format not supported"),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "The file {path} does not hold a PNG, JPG, BMP or TIFF image; the format is read from the file's "
+                "content, not its name.",
+            ),
+            QT_TRANSLATE_NOOP(
+                "Errors", "Save the image as PNG, JPG, BMP or TIFF with an image tool and load that file."
+            ),
         ),
         ErrorCode(
             "AOI-INSP-005",
-            "Image over the size limit",
-            "The image {path} is {size}, over the limit of {limit}.",
-            "Use a smaller image, or ask an Admin to raise the limit: max_image_megapixels or max_image_megabytes in "
-            "settings.json, in the default workspace folder.",
+            QT_TRANSLATE_NOOP("Errors", "Image over the size limit"),
+            QT_TRANSLATE_NOOP("Errors", "The image {path} is {size}, over the limit of {limit}."),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Use a smaller image, or ask an Admin to raise the limit: max_image_megapixels or max_image_megabytes "
+                "in settings.json, in the default workspace folder.",
+            ),
         ),
         ErrorCode(
             "AOI-INSP-006",
-            "Image file cannot be decoded",
-            "The {kind} image {path} could not be decoded: {reason}.",
-            "Copy the file again from the camera or its source; if it fails again, save it as PNG or JPG with an image "
-            "tool and load that file.",
+            QT_TRANSLATE_NOOP("Errors", "Image file cannot be decoded"),
+            QT_TRANSLATE_NOOP("Errors", "The {kind} image {path} could not be decoded: {reason}."),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Copy the file again from the camera or its source; if it fails again, save it as PNG or JPG with an "
+                "image tool and load that file.",
+            ),
         ),
         ErrorCode(
             "AOI-INSP-007",
-            "Image side too long",
-            "The image {path} is {width} × {height} px; a side over {limit} px is beyond what this app decodes.",
-            "Crop or scale the image so that no side is over {limit} px; this limit is the decoder's and cannot be "
-            "raised.",
+            QT_TRANSLATE_NOOP("Errors", "Image side too long"),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "The image {path} is {width} × {height} px; a side over {limit} px is beyond what this app decodes.",
+            ),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Crop or scale the image so that no side is over {limit} px; this limit is the decoder's and cannot be "
+                "raised.",
+            ),
         ),
         ErrorCode(
             "AOI-INSP-008",
-            "Result not saved",
-            "The result of {file} was shown but could not be saved, so it is not in Logs & Export.",
-            "Check the free disk space and that the workspace folder can be written, then press Next Board to carry on"
-            " and inspect {file} again later.",
+            QT_TRANSLATE_NOOP("Errors", "Result not saved"),
+            QT_TRANSLATE_NOOP(
+                "Errors", "The result of {file} was shown but could not be saved, so it is not in Logs & Export."
+            ),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Check the free disk space and that the workspace folder can be written, then press Next Board to "
+                "carry on and inspect {file} again later.",
+            ),
         ),
         ErrorCode(
             "AOI-INSP-009",
-            "Golden board file not available",
-            "Board model {board} names {file} as its Golden board, but {reason}, so no board of it can be compared"
-            " with the Golden board. The board was not inspected.",
-            "Put the file back, for example from a backup of the workspace, or have an Engineer choose another OK"
-            " sample as the Golden board with Set Reference on Training; then inspect the board again.",
+            QT_TRANSLATE_NOOP("Errors", "Golden board file not available"),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Board model {board} names {file} as its Golden board, but {reason}, so no board of it can be compared"
+                " with the Golden board. The board was not inspected.",
+            ),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Put the file back, for example from a backup of the workspace, or have an Engineer choose another OK"
+                " sample as the Golden board with Set Reference on Training; then inspect the board again.",
+            ),
         ),
         ErrorCode(
             "AOI-INSP-010",
-            "Nothing can judge the board",
-            "No check can judge this board of board model {board}: {reason}. The board was given no verdict.",
-            "An Engineer sets a Golden board or trains an AI model on Training, or turns on the Golden board"
-            " comparison or the AI model in the Recipe Editor; then inspect the board again.",
+            QT_TRANSLATE_NOOP("Errors", "Nothing can judge the board"),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "No check can judge this board of board model {board}: {reason}. The board was given no verdict.",
+            ),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "An Engineer sets a Golden board or trains an AI model on Training, or turns on the Golden board"
+                " comparison or the AI model in the Recipe Editor; then inspect the board again.",
+            ),
         ),
         ErrorCode(
             "AOI-INSP-011",
-            "Image too small to inspect",
-            "The {image} is {width} × {height} px; inspecting needs at least {minimum} px on each side.",
-            "Load a picture of the whole board as the camera takes it; if the Golden board is the small one, an"
-            " Engineer sets another on Training.",
+            QT_TRANSLATE_NOOP("Errors", "Image too small to inspect"),
+            QT_TRANSLATE_NOOP(
+                "Errors", "The {image} is {width} × {height} px; inspecting needs at least {minimum} px on each side."
+            ),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Load a picture of the whole board as the camera takes it; if the Golden board is the small one, an"
+                " Engineer sets another on Training.",
+            ),
         ),
         ErrorCode(
             "AOI-INSP-012",
-            "Run stopped: board model changed",
-            "The board model changed from {old} to {new} during a run, so the run stopped after the board in hand; the"
-            " boards inspected before the change are saved under {old}.",
-            "Check the board model in the header, then press Start to carry on with the queue under it.",
+            QT_TRANSLATE_NOOP("Errors", "Run stopped: board model changed"),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "The board model changed from {old} to {new} during a run, so the run stopped after the board in "
+                "hand; the boards inspected before the change are saved under {old}.",
+            ),
+            QT_TRANSLATE_NOOP(
+                "Errors", "Check the board model in the header, then press Start to carry on with the queue under it."
+            ),
         ),
         ErrorCode(
             "AOI-CMP-001",
-            "Result has no stored heatmaps",
-            "The result of {file} was saved without its difference and AI maps, or they were deleted after the"
-            " retention period of {days} days.",
-            "The decision table is the stored one; use Side by side or Boxes only, or inspect the board again on"
-            " Inspection to see its heatmaps.",
+            QT_TRANSLATE_NOOP("Errors", "Result has no stored heatmaps"),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "The result of {file} was saved without its difference and AI maps, or they were deleted after the"
+                " retention period of {days} days.",
+            ),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "The decision table is the stored one; use Side by side or Boxes only, or inspect the board again on"
+                " Inspection to see its heatmaps.",
+            ),
         ),
         ErrorCode(
             "AOI-CMP-002",
-            "Result has no stored decision table",
-            "Record {id} ({file}) has no stored decision table: it was saved before migration 0006, or no record has"
-            " that number or UUID.",
-            "Inspect the board again on Inspection; Compare then opens the new result.",
+            QT_TRANSLATE_NOOP("Errors", "Result has no stored decision table"),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Record {id} ({file}) has no stored decision table: it was saved before migration 0006, or no record "
+                "has that number or UUID.",
+            ),
+            QT_TRANSLATE_NOOP("Errors", "Inspect the board again on Inspection; Compare then opens the new result."),
         ),
         ErrorCode(
             "AOI-CMP-003",
-            "Stored map cannot be read",
-            "The stored map {file} could not be read: {reason}.",
-            "The stored verdict and decision table still stand. Close any program that has the file open and open the"
-            " result again; if the file is damaged, inspect the board again on Inspection.",
+            QT_TRANSLATE_NOOP("Errors", "Stored map cannot be read"),
+            QT_TRANSLATE_NOOP("Errors", "The stored map {file} could not be read: {reason}."),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "The stored verdict and decision table still stand. Close any program that has the file open and open "
+                "the result again; if the file is damaged, inspect the board again on Inspection.",
+            ),
         ),
         ErrorCode(
             "AOI-CMP-004",
-            "Result cannot be judged again",
-            "The result of {file} cannot be judged again with other thresholds: what it was judged on is no longer"
-            " stored ({missing}).",
-            "Its stored verdict and decision table still stand. Inspect the board again on Inspection, then try the"
-            " thresholds on the new result. The maps of OK results are deleted {days} days after inspection; NG and"
-            " WARN maps are kept.",
+            QT_TRANSLATE_NOOP("Errors", "Result cannot be judged again"),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "The result of {file} cannot be judged again with other thresholds: what it was judged on is no longer"
+                " stored ({missing}).",
+            ),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Its stored verdict and decision table still stand. Inspect the board again on Inspection, then try the"
+                " thresholds on the new result. The maps of OK results are deleted {days} days after inspection; NG and"
+                " WARN maps are kept.",
+            ),
         ),
         ErrorCode(
             "AOI-CMP-005",
-            "Thresholds of another board model",
-            "The thresholds tried are board model {tried}'s, but the result of {file} was judged for board model"
-            " {judged}.",
-            "Nothing was judged. Open the result on Compare with its own board model picked, then try the thresholds"
-            " again.",
+            QT_TRANSLATE_NOOP("Errors", "Thresholds of another board model"),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "The thresholds tried are board model {tried}'s, but the result of {file} was judged for board model"
+                " {judged}.",
+            ),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Nothing was judged. Open the result on Compare with its own board model picked, then try the "
+                "thresholds again.",
+            ),
         ),
         ErrorCode(
             "AOI-TRN-001",

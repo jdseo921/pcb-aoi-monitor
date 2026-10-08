@@ -17,7 +17,7 @@ from pathlib import Path
 import cv2
 import numpy as np
 
-from ..errors import AoiError
+from ..errors import QT_TRANSLATE_NOOP, AoiError
 from .imaging import save_image
 from .inspector import InspectionResult
 
@@ -94,7 +94,7 @@ def read_map(path: str | Path) -> np.ndarray | None:
     except cv2.error:  # a header claiming more pixels than OpenCV decodes
         img = None
     if img is None:
-        raise AoiError("AOI-CMP-003", file=Path(path).name, reason="the file is damaged")
+        raise AoiError("AOI-CMP-003", file=Path(path).name, reason=QT_TRANSLATE_NOOP("Errors", "the file is damaged"))
     return img
 
 

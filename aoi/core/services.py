@@ -27,7 +27,7 @@ from ..data import atomic
 from ..data.db import Database, DbError, new_uuid
 from ..data.errors import WorkspaceError
 from ..data.paths import to_stored
-from ..errors import QT_TRANSLATE_NOOP, AoiError
+from ..errors import QT_TRANSLATE_NOOP, AoiError, joined
 from ..times import local_date, now_utc
 from . import anomaly
 from .imaging import align_to_reference, list_images, load_image, load_image_sha256, save_image
@@ -477,7 +477,10 @@ class AppContext:
             try:
                 reference, sha = self._load_image_sha256(golden)  # one read: the bytes hashed are the bytes judged
             except AoiError as e:  # the comparison and the alignment the AI model was trained on would silently go
-                why = f"it cannot be read ({e.code} {e.entry.title})" if Path(golden).exists() else "the file is gone"
+                unreadable = QT_TRANSLATE_NOOP("Errors", "it cannot be read ({code} {title})").fill(
+                    code=e.code, title=e.title
+                )
+                why = unreadable if Path(golden).exists() else QT_TRANSLATE_NOOP("Errors", "the file is gone")
                 raise AoiError("AOI-INSP-009", detail=str(e), board=board_model, file=golden, reason=why) from e
         model, version, model_uuid = (mv[1], mv[0], mv[2]) if mv else (None, None, None)
         return Inspector(recipe or rcp, model, reference, side, version, rev, model_uuid, recipe_uuid, golden, sha)
@@ -743,7 +746,9 @@ class AppContext:
         iid = self.db.inspection_id(result_uuid)
         rec = self.db.inspection(iid) if iid is not None else None
         res = self.inspection_result(iid) if iid is not None else None
-        file = Path(rec["image_path"]).name if rec and rec["image_path"] else "file unknown"
+        file = (
+            Path(rec["image_path"]).name if rec and rec["image_path"] else QT_TRANSLATE_NOOP("Errors", "file unknown")
+        )
         if rec is None or res is None or iid is None:
             raise AoiError("AOI-CMP-002", id=result_uuid, file=file)
         if thresholds.board_model != rec["board_model"]:
@@ -752,7 +757,7 @@ class AppContext:
         load_maps(res, diff_path if thresholds.use_compare else None, ai_path if thresholds.use_ai else None)
         missing: list[str] = []  # only what the thresholds use, as re_grade asks for it
         if thresholds.use_compare and res.compare is not None and res.compare.diff_map is None:
-            missing.append("difference map")
+            missing.append(QT_TRANSLATE_NOOP("Errors", "difference map"))
         ai, check = None, next((c for c in res.checks if c.source == "AI"), None)
         if thresholds.use_ai and check is not None:
             model = next((m for m in self.db.models(rec["board_model"]) if m["uuid"] == rec["model_uuid"]), None)
@@ -765,12 +770,18 @@ class AppContext:
                 ai = AiEvidence(check.value, image_thr, pixel_thr, check.explain)
             else:
                 version = rec["model_version"] or rec["model_uuid"]
-                missing.append(f"the calibration of AI model {version}" if version else "the AI model's calibration")
+                calibration = QT_TRANSLATE_NOOP("Errors", "the calibration of AI model {version}").fill(version=version)
+                missing.append(calibration if version else QT_TRANSLATE_NOOP("Errors", "the AI model's calibration"))
             if res.anomaly_map is None:
-                missing.append("AI score map")
+                missing.append(QT_TRANSLATE_NOOP("Errors", "AI score map"))
         if missing:
             days = self.settings.map_retention_days_ok
-            raise AoiError("AOI-CMP-004", file=file, missing=", ".join(missing), days=days)
+            raise AoiError(
+                "AOI-CMP-004",
+                file=file,
+                missing=joined(QT_TRANSLATE_NOOP("Errors", "{first}, {rest}"), missing),
+                days=days,
+            )
         return re_grade(res, thresholds, ai)
 
     def users(self) -> list[dict[str, Any]]:
