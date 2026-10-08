@@ -5,7 +5,7 @@ and its AI model on DeepPCB, a public research dataset of PCB defects, against R
 (REQ-INSP-007) and training time and memory (REQ-TRN-007) measured on the way.
 
 **Research data, internal check only.** Jay approved this use in writing on 2026-10-08 (04:06Z): "Only use those files
-to train for now - i will add customer photos later." His words name training; reading them as covering these checks
+to train for now - i will add customer photos later." Jay's words name training; reading them as covering these checks
 too is our interpretation, as the checks are internal and nothing from them ships. No image, box or trained model is
 in this repository. These are counts on someone else's boards, scanned and thresholded to black and white, and
 DeepPCB's README says its authors "manually argument some artificial defects on each tested image": most labelled
