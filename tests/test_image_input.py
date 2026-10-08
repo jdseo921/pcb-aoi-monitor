@@ -414,6 +414,120 @@ def test_req_insp_001_the_scan_tile_and_strip_bounds_sit_at_their_values(tmp_pat
         assert e.value.code == "AOI-INSP-006" and reason in e.value.what, (name, e.value.what)
 
 
+def pillow_tiff(compression: str) -> bytes:
+    """board(64, 64) saved by Pillow as a TIFF of eight strips of 8 rows each, compressed as named."""
+    buf = io.BytesIO()
+    rgb = Image.fromarray(np.ascontiguousarray(board(64, 64)[:, :, ::-1]))
+    rgb.save(buf, "TIFF", compression=compression, strip_size=64 * 3 * 8)
+    return buf.getvalue()
+
+
+def tifffile_tiff(rows: int = 0, tile: tuple[int, int] | None = None, compression: str | None = None) -> bytes:
+    """board(64, 64) written by tifffile, in strips of `rows` rows or in tiles of `tile` (rows, columns)."""
+    buf = io.BytesIO()
+    rgb = np.ascontiguousarray(board(64, 64)[:, :, ::-1])
+    tifffile.imwrite(buf, rgb, rowsperstrip=rows or None, tile=tile, compression=compression)
+    return buf.getvalue()
+
+
+def repoint(data: bytes, how: str) -> bytes:
+    """`data`, a little-endian TIFF of several strips or tiles, rewritten so they share their bytes: "offsets" points
+    every strip or tile at the first one's offset, keeping its own byte count; "first" also gives each the first one's
+    byte count, as the #242 review built its file; "one_offset" leaves only the first offset, which libtiff pads with 0
+    for the other strips, so they read from the start of the file; "last_listed" turns the PlanarConfiguration entry,
+    listed after StripOffsets, into TileOffsets pointing at the first one's offset n times, which libtiff takes as the
+    strips' offsets since it is listed last. "counts_are_offsets" instead writes the offsets into the byte counts, a
+    vendor fault libtiff works around in an uncompressed file by reading each strip at its size."""
+    with tifffile.TiffFile(io.BytesIO(data)) as tif:
+        tags = tif.pages[0].tags
+        where = tags.get("StripOffsets") or tags["TileOffsets"]
+        held = tags.get("StripByteCounts") or tags["TileByteCounts"]
+        assert int(where.dtype) == 4 and len(where.value) > 2  # LONG offsets, as Pillow and tifffile write them
+        n, offsets, first, first_held = len(where.value), where.value, where.value[0], held.value[0]
+        entry, at, held_at, held_fmt = where.offset, where.valueoffset, held.valueoffset, {3: "H", 4: "I"}[held.dtype]
+        planar = tags["PlanarConfiguration"].offset if how == "last_listed" else 0
+    out = bytearray(data)
+    if how == "last_listed":
+        struct.pack_into("<HHII", out, planar, 324, 4, n, len(out))  # TileOffsets: n LONGs at the end of the file
+        return bytes(out + struct.pack(f"<{n}I", *[first] * n))
+    if how == "one_offset":
+        struct.pack_into("<HII", out, entry + 2, 4, 1, first)  # one LONG, held in the entry itself
+        return bytes(out)
+    if how == "counts_are_offsets":
+        struct.pack_into(f"<{n}{held_fmt}", out, held_at, *offsets)
+        return bytes(out)
+    struct.pack_into(f"<{n}I", out, at, *[first] * n)
+    if how == "first":
+        struct.pack_into(f"<{n}{held_fmt}", out, held_at, *[first_held] * n)
+    return bytes(out)
+
+
+SHARED = {  # file: (what builds it, what AOI-INSP-006 says of it)
+    "jpeg_offsets.tif": (lambda: repoint(pillow_tiff("jpeg"), "offsets"), "its strips 1 and 2 share bytes of the file"),
+    "jpeg_first.tif": (lambda: repoint(pillow_tiff("jpeg"), "first"), "its 8 strips add up to more than the"),
+    "raw_one_offset.tif": (lambda: repoint(tifffile_tiff(rows=8), "one_offset"), "its strips 2 and 3 share bytes"),
+    "jpeg_last_listed.tif": (lambda: repoint(pillow_tiff("jpeg"), "last_listed"), "its strips 1 and 2 share bytes"),
+    "deflate.tif": (lambda: repoint(pillow_tiff("tiff_adobe_deflate"), "offsets"), "its strips 1 and 2 share bytes"),
+    "raw.tif": (lambda: repoint(tifffile_tiff(rows=8), "offsets"), "its strips 1 and 2 share bytes of the file"),
+    "tiles.tif": (
+        lambda: repoint(tifffile_tiff(tile=(32, 32)), "offsets"),
+        "its tiles 1 and 2 share bytes of the file",
+    ),
+}
+
+
+@pytest.mark.parametrize("name", SHARED)
+def test_req_insp_001_a_tiff_whose_strips_or_tiles_share_bytes_is_refused_before_decoding(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, name: str
+) -> None:
+    """The #242 review: libtiff reads and decodes each strip or tile from its own offset and byte count, so strips that
+    all point at the same bytes cost the decoder those bytes once per strip. A 49 MP TIFF of 8 MB with JPEG compression,
+    its 1,048,576 one-row strips all pointing at one stream of 99 scans, passed every check and held load_image about
+    69 s; strips sharing a 1 MB block cost about as much uncompressed or with Deflate, and far more with PackBits. Each
+    file here, a Pillow or tifffile TIFF of eight strips or four tiles rewritten so they share their bytes or add up to
+    more than the file, is now refused with AOI-INSP-006 before cv2.imdecode is called; the decoder is patched to fail
+    the test, so the code before fails at once."""
+
+    def no_decode(buf: np.ndarray, flags: int) -> np.ndarray:
+        pytest.fail(f"cv2.imdecode was called for {name} ({len(buf):,} bytes)")
+
+    monkeypatch.setattr(cv2, "imdecode", no_decode)
+    build, reason = SHARED[name]
+    p = tmp_path / name
+    p.write_bytes(build())
+    with pytest.raises(AoiError) as refused:
+        load_image(p)
+    print(name, f"{p.stat().st_size:,} bytes:", refused.value.what)
+    assert refused.value.code == "AOI-INSP-006" and p.name in refused.value.what and reason in refused.value.what
+
+
+def test_req_insp_001_tiffs_of_many_strips_or_tiles_still_open(tmp_path: Path) -> None:
+    """The shared-bytes check of the #242 review leaves TIFFs as writers lay them out, each strip or tile in its own
+    bytes: Pillow's JPEG and Deflate TIFFs of eight strips, tifffile's uncompressed TIFF of eight strips, and its
+    uncompressed and Deflate TIFFs of four tiles open at their size, the lossless ones pixel for pixel; so does the
+    uncompressed TIFF whose byte counts hold its offsets, which libtiff ignores, reading each strip at its size. This
+    passed before the fix too: it guards against a check that refuses too much."""
+    img = board(64, 64)
+    files = {
+        "jpeg.tif": pillow_tiff("jpeg"),
+        "deflate.tif": pillow_tiff("tiff_adobe_deflate"),
+        "raw.tif": tifffile_tiff(rows=8),
+        "tiles.tif": tifffile_tiff(tile=(32, 32)),
+        "tiles_deflate.tif": tifffile_tiff(tile=(32, 32), compression="zlib"),
+        "counts_are_offsets.tif": repoint(tifffile_tiff(rows=8), "counts_are_offsets"),
+    }
+    for name, data in files.items():
+        with tifffile.TiffFile(io.BytesIO(data)) as tif:
+            assert len(tif.pages[0].dataoffsets) == (4 if name.startswith("tiles") else 8), name
+        (tmp_path / name).write_bytes(data)
+        got = load_image(tmp_path / name)
+        assert got.shape == (64, 64, 3), name
+        if name == "jpeg.tif":
+            assert np.abs(got.astype(int) - img).mean() < 2, name  # lossy, yet the same board
+        else:
+            assert np.array_equal(got, img), name
+
+
 def test_req_insp_001_an_image_too_small_to_inspect_is_refused_and_no_number_grades_ng() -> None:
     """Under 7 px a side SSIM is the mean of nothing, NaN, which every threshold comparison let pass as OK, and a 1 px
     side broke ORB with a bare cv2.error (#169). The engine now refuses a board image or a golden board with a side

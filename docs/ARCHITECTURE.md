@@ -91,21 +91,31 @@ segments are skipped as libjpeg skips them, a TIFF size tag of any integer type 
 file the 8 bytes of a LONG8 or SLONG8 are read where its entry points, as libtiff reads them), a TIFF that gives a size
 tag twice is refused with `AOI-INSP-006` since libtiff reads the first entry (#169), a bitmap is known by its header
 size), so the size measured is the size of the image the decoder returns. That bounds the image, not the decoder's work,
-which two more checks bound before decoding, both refusing with `AOI-INSP-006` (#242): a JPEG with more than 100 scans
+which three more checks bound before decoding, each refusing with `AOI-INSP-006` (#242): a JPEG with more than 100 scans
 (`JPEG_MAX_SCANS`, libtiff's default for a JPEG inside a TIFF; libjpeg decodes every scan, each a pass over the image,
 and its progression writes 10 for a colour image), counted as libjpeg reaches them, from marker to marker up to the
 first end-of-image marker, so that no scan libjpeg decodes is missed while the scans of an EXIF thumbnail inside a
-segment and the bytes after the image (where a phone's motion photo keeps its video) do not count; and a TIFF whose tile
+segment and the bytes after the image (where a phone's motion photo keeps its video) do not count; a TIFF whose tile
 or strip, by which OpenCV allocates its buffer up to 1 GiB, holds more pixels than the larger of 1024 × 1024 and the
 image with each side rounded up to a multiple of 16 (TIFF 6.0 makes tile sides multiples of 16, so a 64 × 64 image with
-256 × 256 tiles opens), or that gives RowsPerStrip, TileWidth or TileLength twice. libtiff fills a whole tile, so a
+256 × 256 tiles opens), or that gives RowsPerStrip, TileWidth or TileLength twice; and a TIFF whose strips or tiles
+share bytes of the file, or whose byte counts add up to more than the file holds. libtiff fills a whole tile, so a
 64 × 64 TIFF declaring one 16000 × 16000 tile took about 1 GB of memory; of a strip it fills only the image's rows, so
 for a strip the bound limits what OpenCV allocates (about 1 GB of address space for a 64 × 4,000,000 strip) rather than
 the memory in use, which stayed near 56 MB on Linux. A RowsPerStrip of 0 or 4,294,967,295 reads as the image height, as
 OpenCV reads it. The strip bound also refuses a short image whose RowsPerStrip is a constant well above its height, such
 as 2,048 rows per strip for 640 × 480 px (a buffer of about 5 MB), although it decodes cheaply; no TIFF that Pillow,
-tifffile or OpenCV wrote in testing was refused, and whether such a file must open is for Jay to decide. Both checks run
-in `_decoder_work` before `cv2.imdecode` is called, and `tests/test_image_input.py` holds the
+tifffile or OpenCV wrote in testing was refused, and whether such a file must open is for Jay to decide. libtiff reads
+and decodes each strip or tile from its own offset and byte count, whatever its compression, so strips that point at
+the same bytes cost them once per strip: a 49 MP TIFF of 8 MB whose 1,048,576 one-row strips all pointed at one JPEG
+stream of 99 scans held the decode about 69 s (the #242 review), and one-row strips sharing a 1 MB block about 70 s
+uncompressed, as long with Deflate and far longer with PackBits. The offsets and byte counts are read as libtiff reads
+them (StripOffsets and TileOffsets fill one list, the one listed last counting, and the shorter list is padded with 0),
+and an uncompressed TIFF of more than two strips whose first two byte counts differ is not checked, since libtiff then
+ignores its byte counts and reads each strip at its size. Within the three bounds the decoder's work still grows with
+the file: the costliest crafted files found, a 199 MB TIFF of one-row JPEG strips of 99 scans each, each in its own
+bytes, and a 192 MB TIFF of 16,000,000 tiles of 1 × 1 px, took about 10 s and 12 s in `load_image` on a busy
+4-core VM. The checks run in `_decoder_work` before `cv2.imdecode` is called, and `tests/test_image_input.py` holds the
 crafted files and files from Pillow and tifffile. The limits are the two `max_image_*` values in `settings.json`, in the
 default workspace folder (50 MP and 200 MB, that is 200,000,000 bytes, both proposed, since a 50 MP 24-bit BMP is
 150 MB); `Settings.load` refuses a file it cannot read (not JSON, not UTF-8, not an object) with `AOI-SET-010`, and a
