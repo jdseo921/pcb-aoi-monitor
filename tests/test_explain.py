@@ -314,5 +314,7 @@ def test_req_cmp_004_a_stored_results_notes_speak_of_the_day_it_was_inspected() 
         " judged the board: inspect the board again once the recipe turns it on.",
     ]
     assert stored[3:] == fresh[3:] == [ex.NOTES[NOT_COMPARED_NOTE], ex.NOTES[NOT_AI_JUDGED_NOTE], "Note: x"]
+    tried = [s.text() for s in ex.explain(res, stored=True, tried=True)][1:]  # AI check off: by the thresholds tried
+    assert tried == [*stored[:2], ex.TRIED_AI_OFF, *stored[3:]] == [s.text() for s in ex.notes(res, True, True)]
     assert all(not_words(t) == [] for t in ex.STORED_NOTES.values())
     assert set(ex.STORED_NOTES.values()) <= set(ex.TEMPLATES), "marked for translation, as every template is"

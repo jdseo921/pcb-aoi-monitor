@@ -47,6 +47,7 @@ SIZE_5MP = (2592, 1944)
 STALL_S = BUDGET_S + 0.5  # longer than the budget: on the UI thread it is one gap the meter cannot miss
 HEAVY: dict[type, tuple[str, ...]] = {
     AppContext: ("load_image", "inspector", "inspect", "inspect_file", "log_result", "import_samples")
+    + ("re_evaluate",)  # Compare's Re-evaluate on a stored result (REQ-CMP-005)
     + ("checks_for_many", "export_csv_files", "export_overlays"),  # the Logs exports' work (#194)
     Inspector: ("inspect",),
 }
