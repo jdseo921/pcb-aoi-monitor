@@ -659,7 +659,7 @@
 <context>
     <name>InspectionPage</name>
     <message>
-        <location filename="../ui/pages/inspection.py" line="+85"/>
+        <location filename="../ui/pages/inspection.py" line="+86"/>
         <location line="+81"/>
         <source>Load Images…</source>
         <translation type="unfinished"></translation>
@@ -792,7 +792,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+34"/>
+        <location line="+37"/>
         <source>No AI model for {board_model} yet: only the Golden board comparison runs</source>
         <translation type="unfinished"></translation>
     </message>
@@ -844,6 +844,11 @@
     <message>
         <location line="+49"/>
         <source>Run stopped: the board model changed from {old} to {new}. Boards inspected before the change are saved under {old}; press Start to carry on with the queue under {new}.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+12"/>
+        <source>Run stopped: {user} signed in. The boards of the run so far are recorded under {starter}; press Start to carry on with the queue as {user}.</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -1399,7 +1404,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/inspection.py" line="-339"/>
+        <location filename="../ui/pages/inspection.py" line="-355"/>
         <source>Inspection</source>
         <translation type="unfinished"></translation>
     </message>

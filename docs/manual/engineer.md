@@ -67,6 +67,11 @@ stays in use. Import photos of several different good boards, then train again.
 **Stop** ends a training run without saving anything: no AI model version, golden board or audit entry; the active AI
 model stays. Closing the app while work runs asks whether to stop it; an AI model test finishes its folder first.
 
+**Switch User while work runs.** Training, an AI model test, a folder import and the board being inspected finish as the
+user who started them, whoever signs in meanwhile: the audit trail and the inspection record name that user, and a
+folder import is not refused part-way. An inspection run (Start) stops after that board, and the status bar says so; the
+user now signed in presses Start to carry on with the queue, so no board is recorded under a user who did not start it.
+
 (to be written: training, progress and cancel, versions, activation and rollback, the model card)
 
 ## 5. Recipes

@@ -6,6 +6,7 @@ and later a Stage 3 robot cycle or Stage 4 MES hook).
 
 from __future__ import annotations
 
+import contextvars
 import csv
 import functools
 import io
@@ -68,6 +69,20 @@ class BoardStatus:
     ng: int
 
 
+@dataclass(frozen=True)
+class Actor:
+    """A user as one value: name, role and UUID (None for a picked name with no users row). `set_user` replaces it as
+    a whole, so a reader on another thread never pairs one user's UUID with another's role (#177)."""
+
+    name: str
+    role: str
+    uuid: str | None
+
+
+# Who acts in this thread or job: set by `requires` for the call it checks, and by `AppContext.jobs` for each job from
+# the moment it is submitted, so a job acts as the user who started it whoever signs in meanwhile (#177).
+_ACTING: contextvars.ContextVar[tuple[AppContext, Actor] | None] = contextvars.ContextVar("aoi_acting", default=None)
+
 ROLES = ("Operator", "Engineer", "Admin")  # lowest to highest (GUI §8, docs/ARCHITECTURE.md §5)
 REQUIRED_ROLE: dict[str, str] = {}  # AppContext write, or Engineer-only call -> the lowest role allowed to call it
 P = ParamSpec("P")
@@ -81,16 +96,23 @@ def requires(
 ) -> Callable[[Callable[Concatenate[AppContext, P], R]], Callable[Concatenate[AppContext, P], R]]:
     """The one role check for every write, and for what only an Engineer does without writing (re-evaluating a result
     with other thresholds, REQ-CMP-005) (ADR 0002, decision 5): refuse with AOI-USR-001 when the current role is below
-    `role`. `what` names the action in the message: "Saving a recipe needs the Engineer or Admin role."."""
+    `role`. `what` names the action in the message: "Saving a recipe needs the Engineer or Admin role.".
+    The user checked is the one acting (`AppContext.actor`), and the call, with every audit entry and record it writes,
+    acts as that user to its end, whoever signs in meanwhile (#177)."""
 
     def wrap(fn: Callable[Concatenate[AppContext, P], R]) -> Callable[Concatenate[AppContext, P], R]:
         REQUIRED_ROLE[fn.__name__] = role
 
         @functools.wraps(fn)
         def checked(self: AppContext, *args: P.args, **kwargs: P.kwargs) -> R:
-            if self.role not in ROLES or ROLES.index(self.role) < ROLES.index(role):
+            actor = self.actor
+            if actor.role not in ROLES or ROLES.index(actor.role) < ROLES.index(role):
                 raise AoiError("AOI-USR-001", what=what, roles=" or ".join(ROLES[ROLES.index(role) :]))
-            return fn(self, *args, **kwargs)
+            token = _ACTING.set((self, actor))
+            try:
+                return fn(self, *args, **kwargs)
+            finally:
+                _ACTING.reset(token)
 
         return cast("Callable[Concatenate[AppContext, P], R]", checked)
 
@@ -114,7 +136,7 @@ class AppContext:
         self.device = resolve_device(self.settings.device)
         self.log.info("app.start", extra={"workspace": str(self.settings.root), "device": self.device, "swept": swept})
         try:  # the first writes: another program may hold the database, or the drive refuse them (#171)
-            self.user, self.role, self.user_uuid = "operator", "Operator", self.db.user_uuid("operator")
+            self._actor = Actor("operator", "Operator", self.db.user_uuid("operator"))
             archived = self.db.archive_old(self.settings.log_retention_days)  # retention is a system action
             self.log.info("retention.archived", extra={"days": self.settings.log_retention_days, "archived": archived})
             self._sweep_ok_maps()  # the map files of OK results past their retention go too (REQ-INSP-012, S25c)
@@ -127,7 +149,9 @@ class AppContext:
                 raise self.db.refusal(e) from e
             raise
         self._model_cache: dict[str, tuple[str, anomaly.AnomalyModel, str]] = {}
-        self.jobs = Jobs()  # background work (REQ-SET-021): screens submit through aoi/ui/workers, tests directly
+        # background work (REQ-SET-021): screens submit through aoi/ui/workers, tests directly; a job acts as the user
+        # who submitted it (#177)
+        self.jobs = Jobs(context=self._acting_context)
         self._closed = False
 
     # --- dataset -------------------------------------------------------------
@@ -144,8 +168,33 @@ class AppContext:
 
     def set_user(self, name: str, role: str) -> None:
         """Make `name` with `role` the current user; the UUID comes from the users table. G1 keeps v0.1's user picker
-        (ADR 0002), so this records who was picked, not who proved it."""
-        self.user, self.role, self.user_uuid = name, role, self.db.user_uuid(name)
+        (ADR 0002), so this records who was picked, not who proved it. A job already submitted, and a role-checked call
+        already running, go on as the user who started them (#177)."""
+        self._actor = Actor(name, role, self.db.user_uuid(name))
+
+    @property
+    def actor(self) -> Actor:
+        """The user acting now: in a role-checked call, or in a job, the one it started as; else the signed-in user."""
+        acting = _ACTING.get()
+        return acting[1] if acting is not None and acting[0] is self else self._actor
+
+    @property
+    def user(self) -> str:
+        return self.actor.name
+
+    @property
+    def role(self) -> str:
+        return self.actor.role
+
+    @property
+    def user_uuid(self) -> str | None:
+        return self.actor.uuid
+
+    def _acting_context(self) -> contextvars.Context:
+        """The context a job runs in: the submitter's, acting as the user acting at submit (#177)."""
+        context = contextvars.copy_context()
+        context.run(_ACTING.set, (self, self.actor))
+        return context
 
     @requires("Engineer", "Importing samples")
     def import_samples(
@@ -284,9 +333,10 @@ class AppContext:
         after: dict[str, Any] | None,
         reason: str | None = None,
     ) -> str:
-        """Append an audit entry as the current user: who did `action` to which object, with the object before and
-        after, and why. Returns the entry's UUID. Entries can never be changed or removed (migration 0003)."""
-        return self.db.add_audit(self.user_uuid, self.role, action, object_type, object_uuid, before, after, reason)
+        """Append an audit entry as the user acting (`actor`): who did `action` to which object, with the object before
+        and after, and why. Returns the entry's UUID. Entries can never be changed or removed (migration 0003)."""
+        actor = self.actor  # one read: the UUID and the role are one user's
+        return self.db.add_audit(actor.uuid, actor.role, action, object_type, object_uuid, before, after, reason)
 
     def audit_entries(
         self,
