@@ -211,8 +211,9 @@ an export runs both export buttons are off, "Exporting…" stays over the table 
 stop it: the audit trail names the user who started it. **Save Image…** (F9) on Inspection, which every role may
 use, records each picture in the audit trail as `export.image`, with who saved it, the record it shows, its board model,
 board file and verdict, and where it went, stored as above. F9 pressed during a run records the board shown when it
-was pressed, even if the run moves on while the file is named. A picture whose entry cannot be written is removed,
-and with it a file of that name it replaced.
+was pressed, even if the run moves on while the file is named. A picture goes into place only with its entry: when
+the entry cannot be written, the destination is left exactly as it was, a file of that name unchanged and no picture
+or new folder left.
 
 The **From** and **To** boxes take days from 2000-01-01 to 2100-12-31. The picture beside the table is the selected
 record's overlay; it is empty when the record's overlay file is gone, when no row is selected and after **Filter**.

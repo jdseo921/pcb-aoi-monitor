@@ -32,7 +32,7 @@ from ..data.workspace_lock import WorkspaceLock
 from ..errors import QT_TRANSLATE_NOOP, AoiError, Phrase, joined
 from ..times import local_date, now_utc
 from . import anomaly
-from .imaging import align_to_reference, list_images, load_image, load_image_sha256, save_image
+from .imaging import align_to_reference, encode_image, list_images, load_image, load_image_sha256, save_image
 from .inspector import NG, OK, WARN, AiEvidence, InspectionResult, Inspector, draw_overlay, re_grade
 from .jobs import JobCancelled, Jobs
 from .maps import load_maps, save_maps
@@ -1160,18 +1160,20 @@ class AppContext:
         it as `export.image` (#241, REQ-LOG-004). The object is the UUID of record `inspection_id`, None for a result
         that was not saved; the entry holds `dest`, stored as the exports store it (#196), `board_model`, the board's
         file name `board_file` and the verdict. A name whose suffix no image format has is AOI-INSP-002, a file that
-        cannot be written AOI-LOG-002 naming it; a picture whose entry cannot be written is removed (#178), and with it
-        a file of that name it replaced. The record is read before the write, so a read that fails leaves no picture.
+        cannot be written AOI-LOG-002 naming it. The picture is written beside `dest` first, then its entry and its
+        move into place commit together: when the entry cannot be written, the move fails or the commit fails, `dest`
+        is left as it was, a file of that name unchanged and no folder made for it left (#178, #241).
         Every role may save (REQ-INSP-005; who may export is open in #151); a page runs it on the pool (REQ-SET-021)."""
         record = self.inspection(inspection_id) if inspection_id is not None else None
         after = {
             "path": to_stored(Path(dest).absolute(), self.settings.root), "board_model": board_model,
             "board": board_file, "verdict": res.verdict,
         }  # fmt: skip
-        picture = draw_overlay(res)
-        with _export_write(dest):  # every read is done: after the write, only the entry is left (#241 review)
-            save_image(dest, picture)
-        self._audit_files([Path(dest)], "export.image", "inspection", record["uuid"] if record else None, after)
+        data = encode_image(dest, draw_overlay(res))
+        with _export_write(dest), atomic.staged(dest, data) as move_in:  # a refused entry never touches `dest` (#241)
+            with self.db.transaction():  # a failed move rolls the entry back; a failed commit puts `dest` back
+                self.audit("export.image", "inspection", record["uuid"] if record else None, None, after)
+                move_in()
         return Path(dest)
 
     def _audit_files(
