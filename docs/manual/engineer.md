@@ -138,8 +138,11 @@ not, and the Recipe Editor drops a Try judged against the Golden board before. U
 was asked to judge shows "Board not inspected" in place of a verdict.
 
 The Selected ROI form edits the ROI selected in the ROI table: Apply and Delete are off while none is, and Delete
-leaves none selected. The Height and Volume thresholds, min and max (stored now, checked from Stage 2), are 0 or more, with min not above max; "—",
-one step below 0, leaves a threshold unset. Apply refuses other values with AOI-RCP-002 and changes nothing.
+leaves none selected. Its AI score field, "AI score (× AI score threshold)", is the ROI's threshold as a multiple of
+the AI score threshold the AI check uses: the recipe's when the recipe sets one, otherwise the AI model's (the
+Threshold column on Training). An ROI is NG when the highest AI score inside it reaches that multiple. The Height and
+Volume thresholds, min and max (stored now, checked from Stage 2), are 0 or more, with min not above max; "—", one step
+below 0, leaves a threshold unset. Apply refuses other values with AOI-RCP-002 and changes nothing.
 
 Each Save Recipe stores a new revision. When a revision was saved after the Recipe Editor loaded its own, for example
 with Save to Recipe on Compare, the editor shows it when opened again; if the editor holds changes not yet saved, it asks

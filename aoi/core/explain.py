@@ -55,15 +55,16 @@ CHECKS = {
         "Explain", "The AI score is {value}, close to its threshold of {threshold}."
     ),
 }
-ROI_CHECK = {  # an ROI's value is the AI score inside it as a multiple of the AI model's threshold
+ROI_CHECK = {  # an ROI's value is the AI score inside it as a multiple of the AI score threshold the AI check used:
+    # the recipe's when it sets one, else the AI model's; a stored result does not say which, so the sentence names
+    # neither (#248)
     NG: QT_TRANSLATE_NOOP(
         "Explain",
-        "In ROI {roi}, the AI score is {value} the AI model's threshold, at or above the ROI's threshold of"
-        " {threshold}.",
+        "In ROI {roi}, the AI score is {value} the AI score threshold, at or above the ROI's threshold of {threshold}.",
     ),
     WARN: QT_TRANSLATE_NOOP(
         "Explain",
-        "In ROI {roi}, the AI score is {value} the AI model's threshold, close to the ROI's threshold of {threshold}.",
+        "In ROI {roi}, the AI score is {value} the AI score threshold, close to the ROI's threshold of {threshold}.",
     ),
 }
 OTHER_CHECK = QT_TRANSLATE_NOOP("Explain", "{check} is {value}, against its threshold of {threshold}.")  # stored data

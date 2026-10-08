@@ -7,6 +7,7 @@ import gc
 import statistics
 import threading
 import weakref
+from collections.abc import Callable
 from pathlib import Path
 from time import perf_counter
 from typing import Any
@@ -14,7 +15,7 @@ from typing import Any
 import cv2
 import numpy as np
 import pytest
-from PySide6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication, QFileDialog, QGraphicsRectItem
 from pytestqt.qtbot import QtBot
 
 from aoi.core.imaging import heat_overlay
@@ -23,6 +24,7 @@ from aoi.core.services import AppContext
 from aoi.core.views import difference_view
 from aoi.ui import theme
 from aoi.ui.pages.compare import MODE_AI, MODE_BOXES, MODE_DIFF, MODE_SIDE, MODES, ComparePage
+from aoi.ui.widgets.image_view import ImageView
 from tests.test_no_freeze import SIZE_5MP, board_5mp  # noqa: F401  # the 5 MP fixture
 from tests.test_req_done_in_v01 import BOARD, _window
 
@@ -69,7 +71,8 @@ def test_req_cmp_002_each_view_under_300_ms(
 ) -> None:
     """A stored 5 MP NG result with both maps, opened on Compare five times: for each of the four views, the median
     time from choosing it until both panes are painted is under 300 ms the first time (a heat view is drawn) and the
-    second (it is shown again: the same picture); each heat view is drawn from its own map at its own scale."""
+    second (it is shown again: the same picture); each heat view is drawn from its own map at its own scale; Side by
+    side and Defect boxes only show the board's own picture, the second without the Golden board pane (#248)."""
     ctx = trained_ctx
     golden = Path(str(ctx.reference_image(BOARD)))
     big = golden.with_name("golden_5mp.png")  # the customer's golden board is taken by the same 5 MP camera
@@ -79,11 +82,13 @@ def test_req_cmp_002_each_view_under_300_ms(
     iid = ctx.inspections(board_model=BOARD)[0]["id"]
     page, shown = _compare(qtbot, ctx, monkeypatch)
     took: dict[tuple[int, int], list[float]] = {}
+    pane_shown: dict[int, set[bool]] = {}  # each view: whether the Golden board pane was shown
     for _ in range(5):  # the median: a CI machine's hiccup is not the page's cost, and a slow page is slow every time
         res = _open(qtbot, page, iid)
         for n in (1, 2):
             for mode in VIEWS:
                 took.setdefault((n, mode), []).append(_switch(page, mode))
+                pane_shown.setdefault(mode, set()).add(page.ref_view.isVisible())
     medians = {f"{MODES[m]} pass {n}": statistics.median(s) for (n, m), s in took.items()}
     print({k: f"{s * 1000:.0f} ms" for k, s in medians.items()}, f"worst {max(map(max, took.values())) * 1000:.0f} ms")
     assert max(medians.values()) < BUDGET_S, medians
@@ -91,6 +96,8 @@ def test_req_cmp_002_each_view_under_300_ms(
     first, second = shown[-8:-4], shown[-4:]
     assert first[0] is second[0] and first[1] is second[1], "a heat view is drawn once for the result shown"
     assert first[2] is second[2] is first[3] is res.image, "Defect boxes only and Side by side show the board"
+    shown_in = {MODE_DIFF: {True}, MODE_AI: {True}, MODE_BOXES: {False}, MODE_SIDE: {True}}
+    assert pane_shown == shown_in, "they differ (#248)"
     assert res.compare is not None and res.compare.diff_map is not None and res.anomaly_map is not None
     thr = next(c.threshold for c in res.checks if c.source == "AI")  # each from its own map, at its own scale
     assert np.array_equal(first[0], heat_overlay(res.image, res.compare.diff_map, 1.5 * page.diff_thr.value()))
@@ -140,6 +147,94 @@ def test_req_cmp_002_views_go_with_their_result(
     page.on_board_model_changed(None)
     gc.collect()
     assert all(w() is None for w in drawn), "another board model drops the views"
+
+
+def _boxes(view: ImageView) -> int:
+    """The defect boxes drawn over a pane (a label is an item of its own)."""
+    return sum(isinstance(item, QGraphicsRectItem) for item in view._overlay_items)
+
+
+def test_req_cmp_002_defect_boxes_only_shows_the_test_board_alone(
+    qtbot: QtBot, trained_ctx: AppContext, ng_board: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """#248: "Defect boxes only" showed exactly what "Side by side" showed, both panes to the pixel, so Compare offered
+    four views and had three. On a stored NG result, Side by side shows the Golden board pane, its label and its dashed
+    boxes beside the test board; Defect boxes only hides that pane and its label, and the test board, with one box per
+    defect, takes the width of both, fitted to it; a fresh result (Re-evaluate) keeps the view chosen and the board's
+    scale; after a zoom, every other view brings the Golden board pane back, with the board fitted to its half as
+    before (#248 review: Re-evaluate gave the board the hidden pane's fit, and a fit after a zoom measured the pane with
+    the zoom's scroll bars in it, 5 % short)."""
+    ctx = trained_ctx
+    ctx.inspect_file(BOARD, str(ng_board))
+    page, _ = _compare(qtbot, ctx, monkeypatch)
+    res = _open(qtbot, page, ctx.inspections(board_model=BOARD)[0]["id"])
+    assert res.verdict == "NG" and res.defects
+    _switch(page, MODE_SIDE)
+    side, scale = page.test_view.width(), page.test_view.transform().m11()
+    assert page.ref_view.isVisible() and page.ref_label.isVisible()
+    assert _boxes(page.test_view) == _boxes(page.ref_view) == len(res.defects)
+    _switch(page, MODE_BOXES)
+    assert page.ref_view.isHidden() and page.ref_label.isHidden(), "Defect boxes only shows the test board alone"
+    assert _boxes(page.test_view) == len(res.defects) and page.test_view._pix is not None
+    assert page.test_view.width() > 1.5 * side, "the test board takes the width of both panes"
+    wide = page.test_view.transform().m11()  # not bound by := in an assert: pytest then passes approx(wide) (9.1.1)
+    assert wide > 1.5 * scale, "and the board is fitted to it"
+    page.run()  # Re-evaluate: a fresh result, shown in the view chosen
+    qtbot.waitUntil(lambda: page._bg is None and page.res is not res and page.res is not None, timeout=20000)
+    assert page.res is not None and page.res.defects
+    assert page.ref_view.isHidden() and _boxes(page.test_view) == len(page.res.defects)
+    assert page.test_view.transform().m11() == pytest.approx(wide), "the hidden pane's fit leaves the board as it is"
+    page.test_view.scale(2, 2)  # zoomed in, as the mouse wheel does: both scroll bars show, until the next fit
+    QApplication.processEvents()
+    assert page.test_view.horizontalScrollBar().isVisible() and page.test_view.verticalScrollBar().isVisible()
+    for mode in (MODE_DIFF, MODE_AI, MODE_SIDE):
+        _switch(page, mode)
+        assert page.ref_view.isVisible() and page.ref_label.isVisible(), MODES[mode]
+        assert _boxes(page.ref_view) == len(page.res.defects), MODES[mode]
+    assert page.test_view.width() == side and page.test_view.transform().m11() == pytest.approx(scale)
+
+
+def test_req_cmp_002_asking_for_a_golden_board_shows_its_pane(
+    qtbot: QtBot, trained_ctx: AppContext, ng_board: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """#248 review: Defect boxes only stays chosen, but each way of asking for a Golden board or a reference to compare
+    with switches it to Side by side, with the Golden board's pane, picture and label shown: "Compare with Golden board
+    ›" on Inspection (MainWindow.open_stored for a record, open_compare for a file), and Compare's Use Last Inspected (a
+    record or a preview), Golden Board and Reference…. Test Image…, Re-evaluate and Reference… closed without a file
+    ask for no Golden board and keep Defect boxes only."""
+    ctx = trained_ctx
+    ctx.inspect_file(BOARD, str(ng_board))
+    iid = ctx.inspections(board_model=BOARD)[0]["id"]
+    page, _ = _compare(qtbot, ctx, monkeypatch)
+    win, stored, answer = page.shell, ctx.inspection_result(iid), [""]  # the file the next file dialog gives
+    monkeypatch.setattr(QFileDialog, "getOpenFileName", lambda *a, **k: (answer[0], ""))
+    assert stored is not None
+
+    def last(record: int | None) -> None:
+        win.last_inspected = (str(ng_board), stored, record)
+        page.use_last()
+
+    steps: list[tuple[str, str, Callable[[], None], bool]] = [  # name, file picked, action, Golden board pane shown
+        ("Compare with Golden board › (record)", "", lambda: win.open_stored(iid), True),
+        ("Compare with Golden board › (file)", "", lambda: win.open_compare(str(ng_board)), True),
+        ("Use Last Inspected (record)", "", lambda: last(iid), True),
+        ("Use Last Inspected (preview)", "", lambda: last(None), True),
+        ("Golden Board", "", page.use_golden, True),
+        ("Reference…", str(ctx.reference_image(BOARD)), page.pick_ref, True),
+        ("Test Image…", str(ng_board), page.pick_test, False),
+        ("Re-evaluate", "", page.run, False),
+        ("Reference… closed without a file", "", page.pick_ref, False),
+    ]
+    for name, file, ask, shows in steps:
+        _switch(page, MODE_BOXES)
+        assert page.ref_view.isHidden() and page.ref_label.isHidden(), name
+        answer[0] = file
+        ask()
+        qtbot.waitUntil(lambda: page._bg is None and ctx.jobs.idle() and page.test_view._pix is not None, timeout=20000)
+        assert page.ref_view.isVisible() == page.ref_label.isVisible() == shows, name
+        assert page.mode.currentIndex() == (MODE_SIDE if shows else MODE_BOXES), name
+        assert page.res is not None and page.ref_view._pix is not None, name
+        assert _boxes(page.test_view) == len(page.res.defects) > 0, name
 
 
 def test_req_cmp_002_heat_overlay_draws_what_it_drew_before() -> None:

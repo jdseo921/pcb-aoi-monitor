@@ -6,7 +6,7 @@ register; `{braces}` are filled in when the error is raised.
 
 | Code | Title | What happened | What to do |
 |---|---|---|---|
-| AOI-CMP-001 | Result has no stored heatmaps | The result of {file} was saved without its difference and AI maps, or they were deleted after the retention period of {days} days. | The decision table is the stored one; use Side by side or Boxes only, or inspect the board again on Inspection to see its heatmaps. |
+| AOI-CMP-001 | Result has no stored heatmaps | The result of {file} was saved without its difference and AI maps, or they were deleted after the retention period of {days} days. | The decision table is the stored one; use Side by side or Defect boxes only, or inspect the board again on Inspection to see its heatmaps. |
 | AOI-CMP-002 | Result has no stored decision table | Record {id} ({file}) has no stored decision table: it was saved before migration 0006, or no record has that number or UUID. | Inspect the board again on Inspection; Compare then opens the new result. |
 | AOI-CMP-003 | Stored map cannot be read | The stored map {file} could not be read: {reason}. | The stored verdict and decision table still stand. Close any program that has the file open and open the result again; if the file is damaged, inspect the board again on Inspection. |
 | AOI-CMP-004 | Result cannot be judged again | The result of {file} cannot be judged again with other thresholds: what it was judged on is no longer stored ({missing}). | Its stored verdict and decision table still stand. Inspect the board again on Inspection, then try the thresholds on the new result. The maps of OK results are deleted {days} days after inspection; NG and WARN maps are kept. |
