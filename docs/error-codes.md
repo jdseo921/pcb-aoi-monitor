@@ -9,6 +9,9 @@ register; `{braces}` are filled in when the error is raised.
 | AOI-INSP-001 | Image cannot be read | The file {path} could not be opened as an image. | Check that the file exists and is a PNG, JPG, BMP or TIFF image. |
 | AOI-INSP-002 | Image cannot be written | The image {path} could not be encoded for writing. | Check the file name's extension (.png or .jpg) and try again. |
 | AOI-INSP-003 | Board failed inspection | Board {board} failed inspection with {defects} defect(s). | Review the result on the Compare page before the board moves on. |
+| AOI-INSP-004 | File format not supported | The file {path} does not hold a PNG, JPG, BMP or TIFF image; the format is read from the file's content, not its name. | Save the image as PNG, JPG, BMP or TIFF with an image tool and load that file. |
+| AOI-INSP-005 | Image over the size limit | The image {path} is {size}, over the limit of {limit}. | Use a smaller image, or ask an Admin whether the limit can be raised. |
+| AOI-INSP-006 | Image file cannot be decoded | The {kind} image {path} could not be decoded: {reason}. | Copy the file again from the camera or its source; if it fails again, save it as PNG or JPG with an image tool and load that file. |
 | AOI-SET-001 | Workspace from version 0.1 | This workspace was created by AOI PoC Inspector 0.1 and cannot be upgraded. | Choose a new workspace folder in Settings. |
 | AOI-SET-002 | Workspace newer than the app | The workspace database was written by a newer build of the app: it records migration {migration}, which this build does not have. | Update the app, or choose another workspace folder in Settings. |
 | AOI-SET-003 | Migration file changed | Migration {file} differs from the one recorded in the workspace database; a shipped migration is never edited. | Reinstall the app to restore the file, or choose another workspace folder in Settings. |

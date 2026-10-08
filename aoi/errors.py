@@ -47,6 +47,26 @@ CODES: dict[str, ErrorCode] = {
             "Review the result on the Compare page before the board moves on.",
         ),
         ErrorCode(
+            "AOI-INSP-004",
+            "File format not supported",
+            "The file {path} does not hold a PNG, JPG, BMP or TIFF image; the format is read from the file's content, "
+            "not its name.",
+            "Save the image as PNG, JPG, BMP or TIFF with an image tool and load that file.",
+        ),
+        ErrorCode(
+            "AOI-INSP-005",
+            "Image over the size limit",
+            "The image {path} is {size}, over the limit of {limit}.",
+            "Use a smaller image, or ask an Admin whether the limit can be raised.",
+        ),
+        ErrorCode(
+            "AOI-INSP-006",
+            "Image file cannot be decoded",
+            "The {kind} image {path} could not be decoded: {reason}.",
+            "Copy the file again from the camera or its source; if it fails again, save it as PNG or JPG with an image "
+            "tool and load that file.",
+        ),
+        ErrorCode(
             "AOI-TRN-001",
             "AI model file refused",
             "AI model file refused: {path} is not a weights-only model file this app wrote ({reason}).",
