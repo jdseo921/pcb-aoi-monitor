@@ -22,6 +22,7 @@ from aoi.core.services import AppContext
 from aoi.ui.pages.inspection import InspectionPage
 from aoi.ui.pages.model_test import ModelTestPage
 from aoi.ui.pages.training import TrainingPage
+from tests.conftest import distinct_copies
 from tests.test_req_done_in_v01 import BOARD, _window
 
 Held = tuple[threading.Event, threading.Event]
@@ -109,8 +110,8 @@ def test_req_usr_001_a_folder_import_finishes_as_the_engineer_who_started_it(
     ctx = trained_ctx
     folder = tmp_path / "imp"
     (folder / "ok").mkdir(parents=True)
-    for i in range(4):
-        shutil.copy(synthetic_dataset / "golden.png", folder / "ok" / f"board_{i}.png")
+    for i, board in enumerate(distinct_copies(synthetic_dataset / "golden.png", tmp_path / "boards", 4)):
+        shutil.copy(board, folder / "ok" / f"board_{i}.png")  # four images: one is imported once (Q31)
     win = _window(qtbot, ctx, "Engineer")
     before = len(ctx.samples(BOARD, "OK"))
     reached, release = _hold(monkeypatch, ctx, "import_samples", call=2)

@@ -20,6 +20,7 @@ from aoi.data import atomic
 from aoi.ui.main_window import MainWindow
 from aoi.ui.pages.training import NgDialog
 from aoi.ui.widgets.busy import BusyOverlay
+from tests.conftest import distinct_copies
 from tests.test_req_done_in_v01 import BOARD, _button, _window
 
 N = 24  # files per action; each copy is slowed to 50 ms, so an action runs for about 1.2 s
@@ -36,7 +37,8 @@ def pickers(monkeypatch: pytest.MonkeyPatch, ng_board: Path, tmp_path: Path) -> 
     """Every dialog answered: N copies of `ng_board` picked, Top, Yes, and exports into the returned folder."""
     out = tmp_path / "out"
     out.mkdir()
-    monkeypatch.setattr(QFileDialog, "getOpenFileNames", staticmethod(lambda *a, **k: ([str(ng_board)] * N, "")))
+    picked = [str(p) for p in distinct_copies(ng_board, tmp_path / "picked", N)]  # one image is imported once (Q31)
+    monkeypatch.setattr(QFileDialog, "getOpenFileNames", staticmethod(lambda *a, **k: (picked, "")))
     monkeypatch.setattr(QInputDialog, "getItem", staticmethod(lambda *a, **k: ("Top", True)))
     monkeypatch.setattr(NgDialog, "exec", lambda self: 1)  # OK on "Unknown / mixed", Top
     monkeypatch.setattr(QMessageBox, "question", staticmethod(lambda *a, **k: QMessageBox.StandardButton.Yes))
@@ -196,9 +198,7 @@ def test_req_set_021_an_empty_state_neither_stops_an_import_nor_hides_the_busy_o
     """On a board model with no samples, + OK Images and Import Folder… each add all their files and nothing else while
     the empty table's Import Folder… link is clicked and an import is started again; the page shown again, or Filter on
     days with no records during Export Image Overlays, leaves "Importing…" or "Exporting…" and Cancel on top."""
-    (pickers / "ok").mkdir()  # Import Folder… picks this folder
-    for i in range(N):
-        shutil.copyfile(ng_board, pickers / "ok" / f"board_{i:02d}.png")
+    distinct_copies(ng_board, pickers / "ok", N)  # Import Folder… picks this folder: N images, each imported once (Q31)
     win = _window(qtbot, trained_ctx)
     training, logs = win.pages["Training"], win.pages["Logs & Export"]
     for page in (training, logs):

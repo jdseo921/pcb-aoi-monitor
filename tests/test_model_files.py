@@ -26,6 +26,7 @@ from aoi.core import anomaly
 from aoi.core.imaging import list_images
 from aoi.core.services import AppContext
 from aoi.errors import AoiError
+from tests.conftest import distinct_copies
 
 
 class _RunsCodeWhenUnpickled:
@@ -227,7 +228,7 @@ def test_req_trn_014_malformed_model_files_are_refused_with_a_code(
 
 
 def test_req_trn_007_a_model_that_cannot_judge_is_refused_before_it_is_saved(
-    ctx: AppContext, synthetic_dataset: Path
+    ctx: AppContext, synthetic_dataset: Path, tmp_path: Path
 ) -> None:
     """OK images that are copies of one photo all score 0, so calibration gives an image threshold of 0, which the
     loader refuses (#168): training refuses that AI model with AOI-TRN-004 before anything is saved, registered,
@@ -243,7 +244,8 @@ def test_req_trn_007_a_model_that_cannot_judge_is_refused_before_it_is_saved(
     before = state()
     for sample in ctx.samples("B"):
         ctx.delete_sample(sample["id"])
-    ctx.import_samples("B", [str(oks[0])] * 2, "OK")  # one good board imported twice passes the 2-OK minimum
+    twice = distinct_copies(oks[0], tmp_path / "twice", 2)  # one photo under two SHA-256s: no import skips either
+    ctx.import_samples("B", [str(p) for p in twice], "OK")  # one good board imported twice passes the 2-OK minimum
     with pytest.raises(AoiError) as refused:
         ctx.train("B", epochs=1, image_size=64)
     assert refused.value.code == "AOI-TRN-004", refused.value

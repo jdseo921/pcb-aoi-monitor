@@ -136,7 +136,10 @@ through `AppContext.load_image`, which applies them; `FolderCamera` takes them w
 (Stage 2); `tests/test_layers.py` fails a page that imports `load_image` or `load_image_sha256` from any module,
 calls one by its bare name or on anything but the context, or calls `cv2.imread` or `cv2.imdecode` (#202); and
 `import_samples` copies a sample only once `imaging.checked_bytes` has made these checks and decoded the very bytes it
-hashes (REQ-TRN-001, S31; the codes are Inspection's, decision Q30).
+hashes (REQ-TRN-001, S31; the codes are Inspection's, decision Q30). `import_files` imports a batch one `import_samples`
+call per file, each `ImportFile` with its own label, defect type and view (`aoi/core/sample_import.py`), and returns an
+`ImportReport`: the files added, each file refused or skipped with its `AoiError` (a code in `REFUSED`: Inspection's
+checks, AOI-TRN-013 to -016), the file another error stopped it at, and the files left by that error or Cancel.
 
 The view an inspection was taken from (REQ-INSP-010, since S23b) travels with its result: `InspectionResult.view` is set
 by the engine from the view it inspected under, and every defect's side is taken from it, so a change of the Inspection
@@ -551,7 +554,7 @@ The writes, their roles and entries:
 
 | Write | Role | Audit action and object (before → after) |
 |---|---|---|
-| `ensure_board_model`, `set_reference`, `import_samples` | Engineer | `board_model.create`, `board_model.reference` (reference path), `sample.import`; object = board model name |
+| `ensure_board_model`, `set_reference`, `import_samples`, `import_files` | Engineer | `board_model.create`, `board_model.reference` (reference path), `sample.import` (one per `import_files` file, with `skipped`); object = board model name |
 | `set_scale` | Engineer | `board_model.scale` (px per mm before → after, with the length in px, the distance in mm and the Golden board file it was measured on; S29, REQ-RCP-006); object = board model name. A length or distance that is not a number above 0, a scale outside 2 to 100000 px/mm, or an unknown board model, is `AOI-RCP-008`, nothing written; a stored scale that cannot be read (`AOI-RCP-012`) is replaced |
 | `update_sample`, `delete_sample` | Engineer | `sample.update` (label, defect type), `sample.delete`; object = sample UUID |
 | `train`, `activate_model` | Engineer | `model.train`, `model.activate` (active version; an older one is a rollback; `model.train` also the Golden board before); object = model UUID |
@@ -617,7 +620,7 @@ any sign-in closes its Save to Recipe sheet, so a revision never carries the rea
 | Table | Key columns |
 |---|---|
 | `board_models` | name (a new name that differs from an existing one only in case is refused, AOI-TRN-005: Windows would give both the same model and golden board files), reference_image (golden), px_per_mm (the scale its recipe's sizes in mm are applied at, a finite REAL above 0, which a CHECK holds; NULL until an Engineer sets one, and for rows from before migration 0012) |
-| `samples` | board_model, path, label OK/NG, defect_type (DCT; one of the 33 for NG, else the import refuses it with AOI-TRN-013, S31), side, sha256 (the source file's, as checked before the copy and found again in the source and the copy after it, else AOI-TRN-014; NULL for rows from before migration 0013) |
+| `samples` | board_model, path, label OK/NG, defect_type (DCT; one of the 33 for NG, else the import refuses it with AOI-TRN-013, S31), side, sha256 (the source file's, as checked before the copy and found again in the source and the copy after it, else AOI-TRN-014; NULL for rows from before migration 0013; an import skips an image whose SHA-256 the board model has, decision Q31) |
 | `models` | board_model, version, uuid (also in the `.pt` file's metadata, written there before the file is saved, so an exported file names its record), path (.pt), metrics JSON (thresholds, scores, timing), active (one version per board model, switched in one transaction, so no reader finds none active, #171) |
 | `recipes` | board_model, revision (1 is the default recipe, stored when the board model is created, so every result names a stored revision), uuid, body JSON, user, created_at |
 | `inspections` | time, board_model, model_version, model_uuid (the AI model version active when the board was judged; whether the AI check ran is the recipe revision's to say, and a result judged with it off carries `AI_OFF_NOTE`, #246), recipe_rev, recipe_uuid, image/overlay paths, diff_map_path and ai_map_path (the difference and AI score maps as PNG files beside the overlay, 8-bit exact, and 16-bit within one step: `_ai2.png` since S28a, 0.001 σ steps to 32.767 σ, then 1/8192 of the value to 1789 σ, or `_ai.png` before, 0.001 σ steps to 65.535 σ; NULL for rows from before migration 0007, and for OK results once the retention sweep deleted them), reference_path and reference_sha256 (the golden board file the result was judged against and the SHA-256 of its bytes; NULL for rows from before migration 0008 and for results judged without a golden board), view (Top, Side or Bottom; NULL for rows from before migration 0005), result, score, metrics JSON, result_json (the whole result as `InspectionResult.to_dict` writes it, read back by `from_dict` without the images, with the scale it was judged at, `px_per_mm`, when there was one; NULL before migration 0006), operator, archived |

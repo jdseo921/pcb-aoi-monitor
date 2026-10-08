@@ -419,9 +419,8 @@ CODES: dict[str, ErrorCode] = {
             ),
             QT_TRANSLATE_NOOP(
                 "Errors",
-                "Check that the file is still there and can be opened and that the workspace drive has free space."
-                " Importing the folder again would add those {imported} a second time: import the images not yet"
-                " imported with + OK or + NG, or first remove the {imported} from the sample table.",
+                "Check that the file is still there and can be opened and that the workspace drive has free space,"
+                " then import the folder again: the {imported} image(s) already imported are skipped.",
             ),
         ),
         ErrorCode(
@@ -435,9 +434,8 @@ CODES: dict[str, ErrorCode] = {
             QT_TRANSLATE_NOOP(
                 "Errors",
                 "Fix what stopped it (the log file in the workspace's logs folder has the details; send it to support"
-                " if the cause is unclear). Importing the folder again would add those {imported} a second time:"
-                " import the images not yet imported with + OK or + NG, or first remove the {imported} from the sample"
-                " table.",
+                " if the cause is unclear), then import the folder again: the {imported} image(s) already imported are"
+                " skipped.",
             ),
         ),
         ErrorCode(
@@ -488,6 +486,28 @@ CODES: dict[str, ErrorCode] = {
             QT_TRANSLATE_NOOP(
                 "Errors",
                 "Wait until the file is complete (a camera or a copy may still be writing it), then import it again.",
+            ),
+        ),
+        ErrorCode(
+            "AOI-TRN-015",
+            QT_TRANSLATE_NOOP("Errors", "Image already imported"),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "{path} was skipped: board model {board_model} already has a sample of the same image (the same"
+                " SHA-256).",
+            ),
+            QT_TRANSLATE_NOOP("Errors", "Nothing to do: the image is in the sample table once."),
+        ),
+        ErrorCode(
+            "AOI-TRN-016",
+            QT_TRANSLATE_NOOP("Errors", "Image has no label"),
+            QT_TRANSLATE_NOOP(
+                "Errors", "{path} was not imported: it is in neither an ok/ nor an ng/ folder, so it has no label."
+            ),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Pick OK or NG in its row of the import sheet, then press Import again: the images already imported"
+                " are skipped.",
             ),
         ),
         ErrorCode(

@@ -216,6 +216,14 @@ class Database:
             (uid or new_uuid(), board_model, self._stored(path), label, defect_type, side, now_utc(), sha256),
         )
 
+    def sample_with_sha256(self, board_model: str, sha256: str) -> dict[str, Any] | None:
+        """The first sample of `board_model` whose source had `sha256`, or None: one lookup through the index of the
+        sample SHA-256 migration (no sample imported before it has a SHA-256)."""
+        rows = self.query(
+            "SELECT id FROM samples WHERE board_model=? AND sha256=? ORDER BY id LIMIT 1", (board_model, sha256)
+        )
+        return self.sample(rows[0]["id"]) if rows else None
+
     def samples(self, board_model: str, label: str | None = None) -> list[dict[str, Any]]:
         if label:
             rows = self.query("SELECT * FROM samples WHERE board_model=? AND label=? ORDER BY id", (board_model, label))

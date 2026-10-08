@@ -573,7 +573,7 @@
 <context>
     <name>Errors</name>
     <message>
-        <location filename="../core/services.py" line="+54"/>
+        <location filename="../core/services.py" line="+55"/>
         <source>a length of {length} px over {distance} mm gives no scale: both must be numbers above 0, and the scale from {least} to {most} px per mm</source>
         <translation type="unfinished"></translation>
     </message>
@@ -599,11 +599,12 @@
     </message>
     <message>
         <location line="+200"/>
+        <location line="+102"/>
         <source>Importing samples</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+89"/>
+        <location line="+36"/>
         <source>Training an AI model</source>
         <translation type="unfinished"></translation>
     </message>
@@ -728,7 +729,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1132"/>
+        <location line="-1181"/>
         <source>no defect type was given</source>
         <translation>결함 유형이 지정되지 않았습니다</translation>
     </message>
@@ -743,7 +744,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+442"/>
+        <location line="+491"/>
         <source>its UUID {found} is not {uuid}, as in the AI model registry</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1316,12 +1317,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+5"/>
-        <source>Check that the file is still there and can be opened and that the workspace drive has free space. Importing the folder again would add those {imported} a second time: import the images not yet imported with + OK or + NG, or first remove the {imported} from the sample table.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+9"/>
+        <location line="+13"/>
         <source>Folder import stopped by an error</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1331,12 +1327,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+5"/>
-        <source>Fix what stopped it (the log file in the workspace&apos;s logs folder has the details; send it to support if the cause is unclear). Importing the folder again would add those {imported} a second time: import the images not yet imported with + OK or + NG, or first remove the {imported} from the sample table.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+10"/>
+        <location line="+14"/>
         <source>Images not imported: path too long</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1366,7 +1357,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-247"/>
+        <location line="-245"/>
         <source>AI model, recipe, scale or Golden board changed during a run</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1376,7 +1367,17 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+253"/>
+        <location line="+201"/>
+        <source>Check that the file is still there and can be opened and that the workspace drive has free space, then import the folder again: the {imported} image(s) already imported are skipped.</source>
+        <translation>파일이 아직 그 자리에 있고 열 수 있는지, 작업 공간 드라이브에 여유 공간이 있는지 확인한 뒤 폴더를 다시 가져오세요. 이미 가져온 이미지 {imported}개는 건너뜁니다.</translation>
+    </message>
+    <message>
+        <location line="+14"/>
+        <source>Fix what stopped it (the log file in the workspace&apos;s logs folder has the details; send it to support if the cause is unclear), then import the folder again: the {imported} image(s) already imported are skipped.</source>
+        <translation>가져오기를 멈춘 원인을 해결한 뒤(작업 공간 logs 폴더의 로그 파일에 자세한 내용이 있습니다. 원인이 분명하지 않으면 지원팀에 보내세요) 폴더를 다시 가져오세요. 이미 가져온 이미지 {imported}개는 건너뜁니다.</translation>
+    </message>
+    <message>
+        <location line="+36"/>
         <source>NG image needs a defect type</source>
         <translation>NG 이미지에는 결함 유형이 필요합니다</translation>
     </message>
@@ -1407,6 +1408,36 @@
     </message>
     <message>
         <location line="+7"/>
+        <source>Image already imported</source>
+        <translation>이미 가져온 이미지</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>{path} was skipped: board model {board_model} already has a sample of the same image (the same SHA-256).</source>
+        <translation>{path}을(를) 건너뛰었습니다. 보드 모델 {board_model}에 같은 이미지(같은 SHA-256)의 샘플이 이미 있습니다.</translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>Nothing to do: the image is in the sample table once.</source>
+        <translation>할 일이 없습니다. 이 이미지는 샘플 표에 한 번 있습니다.</translation>
+    </message>
+    <message>
+        <location line="+4"/>
+        <source>Image has no label</source>
+        <translation>라벨이 없는 이미지</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>{path} was not imported: it is in neither an ok/ nor an ng/ folder, so it has no label.</source>
+        <translation>{path}을(를) 가져오지 않았습니다. ok/ 폴더에도 ng/ 폴더에도 없어서 라벨이 없습니다.</translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>Pick OK or NG in its row of the import sheet, then press Import again: the images already imported are skipped.</source>
+        <translation>가져오기 시트의 해당 행에서 OK 또는 NG를 고른 뒤 가져오기를 다시 누르세요. 이미 가져온 이미지는 건너뜁니다.</translation>
+    </message>
+    <message>
+        <location line="+8"/>
         <source>AI model, recipe, scale or Golden board changed since the run</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1811,7 +1842,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-709"/>
+        <location line="-729"/>
         <source>Board judged NG</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1851,7 +1882,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+178"/>
+        <location line="+198"/>
         <source>ROI thresholds refused</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3874,7 +3905,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/services.py" line="-1306"/>
+        <location filename="../core/services.py" line="-1355"/>
         <source>Aligning {count} images to the reference board</source>
         <translation type="unfinished"></translation>
     </message>
