@@ -148,33 +148,37 @@ CODES: dict[str, ErrorCode] = {
             "AOI-SET-001",
             "Workspace from version 0.1",
             "This workspace was created by AOI PoC Inspector 0.1 and cannot be upgraded.",
-            "Choose a new workspace folder in Settings.",
+            "Choose a new workspace folder in the window that opens next; Cancel there closes the app.",
         ),
         ErrorCode(
             "AOI-SET-002",
             "Workspace newer than the app",
             "The workspace database was written by a newer build of the app: it records migration {migration}, "
             "which this build does not have.",
-            "Update the app, or choose another workspace folder in Settings.",
+            "Update the app, or choose another workspace folder in the window that opens next; Cancel there closes "
+            "the app.",
         ),
         ErrorCode(
             "AOI-SET-003",
             "Migration file changed",
             "Migration {file} differs from the one recorded in the workspace database; a shipped migration is never "
             "edited.",
-            "Reinstall the app to restore the file, or choose another workspace folder in Settings.",
+            "Reinstall the app to restore the file, or choose another workspace folder in the window that opens next; "
+            "Cancel there closes the app.",
         ),
         ErrorCode(
             "AOI-SET-004",
             "Migration failed",
             "Migration {file} failed and was rolled back: {error}.",
-            "Restart the app; if it happens again, report it with the log file.",
+            "Restart the app; if it happens again, report it with the log file. To go back to the version you "
+            "upgraded from, close the app and copy the backup aoi.sqlite.bak-… in the workspace folder over aoi.sqlite "
+            "(engineer manual, chapter 1).",
         ),
         ErrorCode(
             "AOI-SET-005",
             "Workspace folder cannot hold the database",
             "The workspace folder does not support the database's write-ahead log (is it on a network drive?).",
-            "Choose a folder on this computer in Settings.",
+            "Choose a folder on this computer in the window that opens next; Cancel there closes the app.",
         ),
         ErrorCode(
             "AOI-SET-006",
@@ -194,6 +198,14 @@ CODES: dict[str, ErrorCode] = {
             "Setting invalid",
             "The setting {name} in settings.json is {value}; it must be {expected}.",
             "Fix or remove that line in settings.json, in the default workspace folder, and start the app again.",
+        ),
+        ErrorCode(
+            "AOI-SET-009",
+            "Backup before upgrade failed",
+            "The workspace database could not be copied to {file} before this version upgrades it: {error}. Nothing "
+            "was changed.",
+            "Free disk space on the workspace folder's drive and check that the folder can be written, then start the "
+            "app again.",
         ),
     )
 }

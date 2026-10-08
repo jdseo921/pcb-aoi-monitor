@@ -1845,6 +1845,14 @@
     </message>
 </context>
 <context>
+    <name>Startup</name>
+    <message>
+        <location filename="../ui/errors.py" line="+64"/>
+        <source>Choose another workspace folder</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
     <name>TrainingPage</name>
     <message>
         <location filename="../ui/pages/training.py" line="+16"/>

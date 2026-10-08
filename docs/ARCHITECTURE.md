@@ -361,6 +361,17 @@ The schema is created and changed only by the numbered migrations in `aoi/data/m
 `aoi/data/migrate.py` applies at start-up and records in `schema_version` with a checksum (ADR 0004). The
 connection runs in write-ahead-log mode with a full sync on every commit, and a v0.1 workspace (no
 `schema_version` table) is refused rather than upgraded.
+Before it applies pending migrations to a database that already has some, the runner copies the database beside itself
+with SQLite's online backup as `aoi.sqlite.bak-<from>-to-<to>-<UTC time>`, for example
+`aoi.sqlite.bak-0004-to-0009-20261002T051500Z` (the last migration applied, the last this build ships, ISO 8601 basic
+time), written under a temporary name and renamed once whole; a copy that fails stops the start with `AOI-SET-009`,
+nothing migrated, and a brand-new database gets no copy (Engineering, "Upgrade and rollback"). Rolling back is one step
+with the app closed: copy that file over `aoi.sqlite`, deleting `aoi.sqlite-wal` and `aoi.sqlite-shm` if a crash left
+them (they belong to the replaced file), then start the version upgraded from; results recorded since the upgrade are
+only in the replaced file. The app never deletes the copies (nothing is deleted without an Admin action); a one-click
+restore belongs to the installer. A refused workspace (`AOI-SET-001`, `-002`, `-003`, `-005`) is reported before any
+window opens, so `open_workspace` in `aoi/ui/errors.py` follows the message with a folder picker: the folder chosen is
+saved to `settings.json` as the Settings page saves it and opened, and Cancel closes the app (REQ-SET-016).
 Records that can leave the station (`users`, `samples`, `models`, `recipes`, `inspections`) carry a `uuid`
 beside their integer key; every stored time is ISO 8601 UTC with an offset and is shown in local time
 (`aoi/times.py`); image, overlay and model paths inside the workspace are stored relative to it and resolved

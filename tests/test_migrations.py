@@ -1,16 +1,25 @@
-"""REQ-SET-016: the database is created and changed only through numbered migrations (ADR 0004); REQ-INSP-010 for the
-view column migration 0005 adds; REQ-INSP-012 for the evidence columns and the checks table of migration 0006."""
+"""REQ-SET-016: the database is created and changed only through numbered migrations (ADR 0004), backed up before
+they run, and a workspace the app refuses can be swapped for another at start-up; REQ-INSP-010 for the view column
+migration 0005 adds; REQ-INSP-012 for the evidence columns and the checks table of migration 0006."""
 
 from __future__ import annotations
 
+import logging
+import re
+import shutil
 import sqlite3
+from contextlib import closing
 from dataclasses import replace
 from pathlib import Path
 
 import pytest
+from PySide6.QtWidgets import QFileDialog, QWidget
 
+from aoi import logging_setup
+from aoi.config import Settings, default_workspace
 from aoi.data import migrate as mg
 from aoi.data.db import Database
+from aoi.ui import errors as ui_errors
 
 V01_TABLES = {"users", "board_models", "samples", "models", "recipes", "inspections", "defects", "test_runs", "alarms"}
 
@@ -74,6 +83,87 @@ def test_req_set_016_failed_migration_leaves_no_trace(tmp_path: Path) -> None:
         mg.migrate(sqlite3.connect(db.path), [*files, bad])
     assert "half_done" not in table_names(db.path)
     assert db.query("SELECT MAX(number) n FROM schema_version")[0]["n"] == len(files)
+
+
+def test_req_set_016_backup_before_migrating(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Engineering, "Upgrade and rollback": a database at an older schema version is copied whole beside itself before
+    the pending migrations run, and putting the copy back is the rollback; a brand-new database and one with nothing
+    pending get no copy; a copy that fails stops the start with AOI-SET-009, leaving the database as it was and no
+    half copy behind."""
+    path = tmp_path / "aoi.sqlite"
+    files = mg.load_migrations()
+    with closing(sqlite3.connect(path)) as old:
+        mg.migrate(old, files[:4])
+        old.execute("INSERT INTO inspections(uuid, time, result) VALUES('old', '2026-09-30T01:00:00+00:00', 'NG')")
+        old.commit()
+    Database(path).close()
+    Database(path).close()  # nothing pending at the second start: no second copy
+    (backup,) = [p for p in tmp_path.iterdir() if p.name != "aoi.sqlite"]
+    assert re.fullmatch(rf"aoi\.sqlite\.bak-0004-to-{len(files):04d}-\d{{8}}T\d{{6}}Z", backup.name)  # UTC, no colon
+    with closing(sqlite3.connect(backup)) as copy:
+        assert copy.execute("SELECT MAX(number) FROM schema_version").fetchone() == (4,)
+        assert copy.execute("SELECT uuid, result FROM inspections").fetchall() == [("old", "NG")]
+    with closing(sqlite3.connect(path)) as live:
+        assert live.execute("SELECT MAX(number) FROM schema_version").fetchone() == (len(files),)
+    assert sorted(p.name for p in tmp_path.iterdir()) == ["aoi.sqlite", backup.name]
+    shutil.copyfile(backup, path)  # the rollback, as docs/manual/engineer.md gives it: the build upgraded from opens it
+    with closing(sqlite3.connect(path)) as rolled_back:
+        assert mg.migrate(rolled_back, files[:4]) == []
+        assert rolled_back.execute("SELECT uuid, result FROM inspections").fetchall() == [("old", "NG")]
+    Database(tmp_path / "new" / "aoi.sqlite").close()
+    assert [p.name for p in (tmp_path / "new").iterdir()] == ["aoi.sqlite"]
+
+    def disk_full(conn: sqlite3.Connection, target: Path) -> None:
+        target.write_bytes(b"half a copy")
+        raise sqlite3.OperationalError("database or disk is full")
+
+    path = tmp_path / "full" / "aoi.sqlite"
+    path.parent.mkdir()
+    with closing(sqlite3.connect(path)) as old:
+        mg.migrate(old, files[:4])
+    monkeypatch.setattr(mg, "copy_database", disk_full)
+    with pytest.raises(mg.MigrationError) as refused:
+        Database(path)
+    assert refused.value.code == "AOI-SET-009" and "database or disk is full" in refused.value.what
+    with closing(sqlite3.connect(path)) as live:
+        assert live.execute("SELECT MAX(number) FROM schema_version").fetchone() == (4,)
+    assert [p.name for p in path.parent.iterdir()] == ["aoi.sqlite"]
+
+
+def test_req_set_016_refused_workspace_offers_another(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, dialogs: list[tuple[str, str]]
+) -> None:
+    """A workspace the app cannot open is refused at start-up, before any window and so before the Settings page: its
+    coded message says to choose another folder in the window that opens next, and a folder picker does open. The folder
+    chosen is saved to settings.json as the Settings page saves it, and opened; Cancel closes the app as before, and an
+    error another folder cannot fix (a wrong setting) opens no picker."""
+    v01 = tmp_path / "v01"
+    v01.mkdir()
+    with closing(sqlite3.connect(v01 / "aoi.sqlite")) as c:
+        c.execute("CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT UNIQUE NOT NULL, role TEXT NOT NULL)")
+    Settings(workspace=str(v01), device="cpu").save()
+    answers, asked = iter(["", str(tmp_path / "new")]), list[tuple[str, str]]()
+
+    def pick(parent: QWidget | None, title: str, folder: str) -> str:
+        asked.append((title, folder))
+        return next(answers)
+
+    monkeypatch.setattr(QFileDialog, "getExistingDirectory", staticmethod(pick))
+    assert ui_errors.open_workspace() is None  # Cancel: the app closes, settings.json unchanged
+    assert Settings.load().workspace == str(v01)
+    handlers = logging.getLogger(logging_setup.LOGGER).handlers
+    assert not [h for h in handlers if isinstance(h, logging_setup.JsonLinesHandler)]  # no file of it is held open
+    ctx = ui_errors.open_workspace()
+    assert ctx is not None and ctx.settings.root == tmp_path / "new" and ctx.db.board_models() == []
+    ctx.close()
+    assert Settings.load().workspace == str(tmp_path / "new") and Settings.load().device == "cpu"
+    assert asked == [("Choose another workspace folder", str(v01))] * 2
+    assert [title for title, _ in dialogs] == ["AOI-SET-001 Workspace from version 0.1"] * 2
+    assert "in the window that opens next" in dialogs[0][1] and "Settings" not in dialogs[0][1]
+    assert table_names(v01 / "aoi.sqlite") == {"users"}  # the 0.1 workspace is left as it was
+    (default_workspace() / "settings.json").write_text('{"max_image_megabytes": 0}', encoding="utf-8")
+    assert ui_errors.open_workspace() is None and len(asked) == 2
+    assert dialogs[-1][0] == "AOI-SET-008 Setting invalid"
 
 
 def test_req_set_016_migration_files_are_checked(tmp_path: Path) -> None:

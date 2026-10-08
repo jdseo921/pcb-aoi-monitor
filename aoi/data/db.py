@@ -40,13 +40,17 @@ class Database:
         self._lock = threading.Lock()
         self._conn = sqlite3.connect(self.path, check_same_thread=False)
         self._conn.row_factory = sqlite3.Row
-        # Write-ahead log with a full sync on every commit: a finished write survives a power cut (ADR 0004).
-        mode = str(self._conn.execute("PRAGMA journal_mode = WAL").fetchone()[0])
-        if mode.lower() != "wal":
-            raise WorkspaceError("AOI-SET-005")
-        self._conn.execute("PRAGMA synchronous = FULL")
-        self._conn.execute("PRAGMA foreign_keys = ON")
-        migrate(self._conn)
+        try:
+            # Write-ahead log with a full sync on every commit: a finished write survives a power cut (ADR 0004).
+            mode = str(self._conn.execute("PRAGMA journal_mode = WAL").fetchone()[0])
+            if mode.lower() != "wal":
+                raise WorkspaceError("AOI-SET-005")
+            self._conn.execute("PRAGMA synchronous = FULL")
+            self._conn.execute("PRAGMA foreign_keys = ON")
+            migrate(self._conn)
+        except BaseException:
+            self._conn.close()  # a refused database is not held open while another workspace is chosen (REQ-SET-016)
+            raise
         if not self.query("SELECT 1 FROM users LIMIT 1"):
             for n, r in (("operator", "Operator"), ("engineer", "Engineer"), ("admin", "Admin")):
                 self.execute("INSERT INTO users(uuid, name, role) VALUES(?,?,?)", (new_uuid(), n, r))
