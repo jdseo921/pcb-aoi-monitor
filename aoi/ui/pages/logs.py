@@ -8,7 +8,6 @@ from typing import TYPE_CHECKING, Any
 from PySide6.QtCore import QDate, Qt
 from PySide6.QtWidgets import QCheckBox, QComboBox, QDateEdit, QFileDialog, QHBoxLayout, QLabel, QMessageBox, QSplitter
 
-from ...core.imaging import load_image
 from ...core.services import AppContext
 from ...times import to_local
 from .. import theme
@@ -142,7 +141,7 @@ class LogsPage(Page):
             iid = int(cell_text(self.table, rows[0].row(), 0))
             r = next(x for x in self.rows if x["id"] == iid)
             if r["overlay_path"] and Path(r["overlay_path"]).exists():
-                self.view.set_image(load_image(r["overlay_path"]))
+                self.view.set_image(self.ctx.load_image(r["overlay_path"]))
 
     def _confirm(self, question: str) -> bool:
         return QMessageBox.question(self, self.tr("Confirm export"), question) == QMessageBox.StandardButton.Yes

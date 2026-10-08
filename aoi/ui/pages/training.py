@@ -28,7 +28,7 @@ from PySide6.QtWidgets import (
 )
 
 from ... import defects as taxonomy
-from ...core.imaging import IMAGE_EXTS, list_images, load_image
+from ...core.imaging import IMAGE_EXTS, list_images
 from ...core.services import AppContext
 from ...errors import AoiError
 from ...hal import VIEWS
@@ -281,7 +281,7 @@ class TrainingPage(Page):
         if rows:
             p = cell_item(self.samples, rows[0].row(), 4).toolTip()
             if Path(p).exists():
-                self.preview.set_image(load_image(p))
+                self.preview.set_image(self.ctx.load_image(p))
 
     # --- training ---------------------------------------------------------------
     def train(self) -> None:

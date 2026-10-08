@@ -20,7 +20,7 @@ from PySide6.QtWidgets import (
 )
 
 from ... import defects as taxonomy
-from ...core.imaging import IMAGE_EXTS, list_images, load_image, save_image
+from ...core.imaging import IMAGE_EXTS, list_images, save_image
 from ...core.inspector import InspectionResult, draw_overlay
 from ...core.services import AppContext
 from ...hal import VIEWS
@@ -193,7 +193,7 @@ class InspectionPage(Page):
                 self._alarm("WARN", msg, "AOI-TRN-003")
         insp.side = str(self.view_combo.currentData())  # the English key the engine stores on every defect
         self.btn_next.setEnabled(False)
-        w = Worker(lambda: (path, insp.inspect(load_image(path)), insp))
+        w = Worker(lambda: (path, insp.inspect(self.ctx.load_image(path)), insp))
 
         def failed(e: BaseException) -> None:
             self.error(e)

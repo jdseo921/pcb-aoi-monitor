@@ -10,8 +10,9 @@ register; `{braces}` are filled in when the error is raised.
 | AOI-INSP-002 | Image cannot be written | The image {path} could not be encoded for writing. | Check the file name's extension (.png or .jpg) and try again. |
 | AOI-INSP-003 | Board failed inspection | Board {board} failed inspection with {defects} defect(s). | Review the result on the Compare page before the board moves on. |
 | AOI-INSP-004 | File format not supported | The file {path} does not hold a PNG, JPG, BMP or TIFF image; the format is read from the file's content, not its name. | Save the image as PNG, JPG, BMP or TIFF with an image tool and load that file. |
-| AOI-INSP-005 | Image over the size limit | The image {path} is {size}, over the limit of {limit}. | Use a smaller image, or ask an Admin whether the limit can be raised. |
+| AOI-INSP-005 | Image over the size limit | The image {path} is {size}, over the limit of {limit}. | Use a smaller image, or ask an Admin to raise the limit: max_image_megapixels or max_image_megabytes in settings.json, in the default workspace folder. |
 | AOI-INSP-006 | Image file cannot be decoded | The {kind} image {path} could not be decoded: {reason}. | Copy the file again from the camera or its source; if it fails again, save it as PNG or JPG with an image tool and load that file. |
+| AOI-INSP-007 | Image side too long | The image {path} is {width} × {height} px; a side over {limit} px is beyond what this app decodes. | Crop or scale the image so that no side is over {limit} px; this limit is the decoder's and cannot be raised. |
 | AOI-SET-001 | Workspace from version 0.1 | This workspace was created by AOI PoC Inspector 0.1 and cannot be upgraded. | Choose a new workspace folder in Settings. |
 | AOI-SET-002 | Workspace newer than the app | The workspace database was written by a newer build of the app: it records migration {migration}, which this build does not have. | Update the app, or choose another workspace folder in Settings. |
 | AOI-SET-003 | Migration file changed | Migration {file} differs from the one recorded in the workspace database; a shipped migration is never edited. | Reinstall the app to restore the file, or choose another workspace folder in Settings. |
@@ -19,6 +20,7 @@ register; `{braces}` are filled in when the error is raised.
 | AOI-SET-005 | Workspace folder cannot hold the database | The workspace folder does not support the database's write-ahead log (is it on a network drive?). | Choose a folder on this computer in Settings. |
 | AOI-SET-006 | Migration files invalid | The app's migration files are not valid: {problem}. | Reinstall the app and report it; this is a defect in the build. |
 | AOI-SET-007 | Unexpected error | An unexpected error ({error_type}) stopped the last action{context}. | Try again; if it happens again, restart the app and send the log file (the workspace's logs folder) to support. |
+| AOI-SET-008 | Setting invalid | The setting {name} in settings.json is {value}; it must be {expected}. | Fix or remove that line in settings.json, in the default workspace folder, and start the app again. |
 | AOI-TRN-001 | AI model file refused | AI model file refused: {path} is not a weights-only model file this app wrote ({reason}). | Train the board model again, or import a model file exported by this app. |
 | AOI-TRN-002 | Not enough good boards to train | Training needs at least 2 OK (good board) images; {found} found. | Upload more OK images for this board model, then train again. |
 | AOI-TRN-003 | No trained AI model | Board model {board} has no trained AI model, so only the golden-board comparison runs. | Train a model on the Training page when the AI checks are needed. |

@@ -13,6 +13,8 @@ import os
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
+from .errors import AoiError
+
 APP_NAME = "AOI PoC Inspector"
 APP_VERSION = "0.2.0"
 
@@ -28,6 +30,8 @@ class Settings:
     image_size: int = 256  # network input size (square)
     default_epochs: int = 60
     log_retention_days: int = 30  # spec 4.4: inspection records older than this are archived at start-up (REQ-LOG-003)
+    max_image_megapixels: int = 50  # REQ-INSP-001: an image over either limit is refused before it is decoded
+    max_image_megabytes: int = 200  # (the register's proposed values; an Admin edits them in settings.json)
     language: str = "en"  # en | ko (localization planned for 2H 2027)
     last_page: str = "Home"  # the page to reopen after a restart (REQ-LOG-005)
 
@@ -75,11 +79,25 @@ class Settings:
         if f.exists():
             data = json.loads(f.read_text(encoding="utf-8"))
             known = {k: v for k, v in data.items() if k in cls.__dataclass_fields__}
+            for name, value in known.items():
+                cls.check(name, value)
             s = cls(**known)
         else:
             s = cls()
         s.ensure_dirs()
         return s
+
+    @classmethod
+    def check(cls, name: str, value: object) -> None:
+        """Refuse a value of the wrong JSON type for a known setting, and an image limit that is not above 0, with
+        AOI-SET-008 before the app starts (REQ-INSP-001, S23c: a typo there used to fail every image load with
+        AOI-SET-007). An unknown key is still ignored, so an old or a newer settings.json loads."""
+        want = type(getattr(cls(), name))
+        positive = name in ("max_image_megapixels", "max_image_megabytes")
+        typed = isinstance(value, want) and not (want is int and isinstance(value, bool))
+        if not typed or (positive and isinstance(value, int) and value <= 0):
+            expected = {int: "a whole number", str: "text"}.get(want, want.__name__) + (" above 0" if positive else "")
+            raise AoiError("AOI-SET-008", name=name, value=json.dumps(value), expected=expected)
 
     def save(self) -> None:
         f = self._file()

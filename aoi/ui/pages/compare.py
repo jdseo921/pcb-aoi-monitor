@@ -30,7 +30,7 @@ from PySide6.QtWidgets import (
 )
 
 from ... import defects as taxonomy
-from ...core.imaging import IMAGE_EXTS, heat_overlay, load_image
+from ...core.imaging import IMAGE_EXTS, heat_overlay
 from ...core.inspector import Check, InspectionResult
 from ...core.recipe import Recipe
 from ...core.services import AppContext
@@ -252,8 +252,9 @@ class ComparePage(Page):
         self, board_model: str, test_path: str | None, ref_path: str | None, recipe: Recipe | None
     ) -> tuple[np.ndarray | None, InspectionResult | None]:
         """Pool thread: files and the engine only, never a widget."""
-        ref = load_image(ref_path) if ref_path else self.ctx.inspector(board_model).reference
-        res = self.ctx.inspect(board_model, load_image(test_path), recipe, reference=ref) if test_path else None
+        ref = self.ctx.load_image(ref_path) if ref_path else self.ctx.inspector(board_model).reference
+        test = self.ctx.load_image(test_path) if test_path else None
+        res = self.ctx.inspect(board_model, test, recipe, reference=ref) if test is not None else None
         return ref, res
 
     def _on_evaluated(self, out: tuple[np.ndarray | None, InspectionResult | None]) -> None:

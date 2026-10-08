@@ -27,7 +27,7 @@ from PySide6.QtWidgets import (
 )
 
 from ... import defects as taxonomy
-from ...core.imaging import IMAGE_EXTS, load_image
+from ...core.imaging import IMAGE_EXTS
 from ...core.inspector import InspectionResult
 from ...core.recipe import ROI, ROI_TYPES, Recipe
 from ...core.services import AppContext
@@ -229,7 +229,7 @@ class RecipeEditorPage(Page):
         self.rev, r = self.ctx.recipe(self.board_model)
         self.recipe = r
         ref_path = self.ctx.reference_image(self.board_model)
-        self.ref = load_image(ref_path) if ref_path else None
+        self.ref = self.ctx.load_image(ref_path) if ref_path else None
         self.view.set_image(self.ref)
         if self.ref is None:
             step = self.empty_step(self.tr("Train an AI model or set a reference image on Training."), "Training")
@@ -387,7 +387,7 @@ class RecipeEditorPage(Page):
 
     def _inspect_with(self, board_model: str, path: str, recipe: Recipe) -> InspectionResult:
         """Pool thread: the engine only, never a widget."""
-        return self.ctx.inspector(board_model, recipe=recipe).inspect(load_image(path))
+        return self.ctx.inspector(board_model, recipe=recipe).inspect(self.ctx.load_image(path))
 
     def _show_test(self, res: InspectionResult) -> None:
         self.view.set_image(res.image, keep_view=True)

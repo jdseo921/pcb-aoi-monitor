@@ -62,8 +62,8 @@ interfaces that Stages 2–4 (cameras, robot, MES/ERP) plug into without changin
 
 Rules: pages call **only** `AppContext`; the engine has **no Qt imports**, so the same code runs headless
 (tests, a future CLI, the Stage 3 robot cycle, or a Stage 4 MES service). `tests/test_layers.py` enforces both:
-no Qt import under `aoi/core` or `aoi/data`, and under `aoi/ui` no `sqlite3` or `aoi.data` import, no `.db`, no SQL
-and no `Inspector` built by a page (REQ-USR-001, since S15). `aoi/times.py`, `aoi/errors.py`, `aoi/config.py` and
+no Qt import under `aoi/core` or `aoi/data`, and under `aoi/ui` no `sqlite3` or `aoi.data` import, no `.db`, no SQL,
+no `Inspector` built by a page (REQ-USR-001, since S15) and no image read outside `AppContext.load_image` (since S23c). `aoi/times.py`, `aoi/errors.py`, `aoi/config.py` and
 `aoi/defects.py` are shared by every layer.
 
 Types (Code style, since S22): mypy runs strict on `aoi/core`, `aoi/data` and `aoi/times.py`, and since S22a on `aoi/ui`
@@ -77,14 +77,19 @@ there, so those hints are present, not verified.
 
 An image file from outside is checked before it is decoded (REQ-INSP-001, since S23): `aoi/core/imaging.load_image` reads
 the format and the size from the file's bytes, never from its name, and refuses a file over the byte limit or an image
-over the pixel limit with `AOI-INSP-005` before a pixel is decoded, a file that holds no PNG, JPG, BMP or TIFF image with
-`AOI-INSP-004`, and a recognised format whose header gives no size, or that the decoder rejects (cut short, damaged, a
-variant OpenCV does not read), with `AOI-INSP-006`. Wherever a file can be read in two ways the header readers follow the
-decoders (stray bytes between JPEG segments are skipped as libjpeg skips them, a TIFF size tag of any integer type
-counts, classic or BigTIFF, a bitmap is known by its header size), so no file measures small here and decodes large;
-`tests/test_image_input.py` holds the crafted files. The limits are the module's `MAX_MEGAPIXELS` 50 and `MAX_MEGABYTES`
-200 (200,000,000 bytes), the register's proposed values (a 50 MP 24-bit BMP is 150 MB); S23c makes them settings applied
-through `AppContext`, and `import_samples` still copies sample files without a check (threat model, page 2).
+over the pixel limit with `AOI-INSP-005` before a pixel is decoded, an image with a side over 1,048,576 px, the decoder's
+own limit, with `AOI-INSP-007`, a file that holds no PNG, JPG, BMP or TIFF image with `AOI-INSP-004`, and a recognised
+format whose header gives no size, or that the decoder rejects (cut short, damaged, a variant OpenCV does not read), with
+`AOI-INSP-006`. Wherever a file can be read in two ways the header readers follow the decoders (stray bytes between JPEG
+segments are skipped as libjpeg skips them, a TIFF size tag of any integer type counts, classic or BigTIFF, a bitmap is
+known by its header size), so no file measures small here and decodes large; `tests/test_image_input.py` holds the
+crafted files and files from Pillow and tifffile. The limits are the two `max_image_*` values in `settings.json`, in the
+default workspace folder (50 MP and 200 MB, that is 200,000,000 bytes, both proposed, since a 50 MP 24-bit BMP is
+150 MB); `Settings.load` refuses a value of the wrong type, or a limit not above 0, with `AOI-SET-008` before the app
+starts, and the Settings page does not show them yet (an Admin edits the file). Every page and service reads an image
+through `AppContext.load_image`, which applies them; `FolderCamera` takes them when the inspection cycle wires a camera
+(Stage 2); `tests/test_layers.py` fails a page that imports `load_image` or calls it on anything but the context; and
+`import_samples` still copies sample files without a check (threat model, page 2).
 
 Slow work never runs on the UI thread (REQ-SET-021, since S17): a page wraps it in a `Worker` (`aoi/ui/workers.py`),
 which runs it as a `Job` on the pool `AppContext.jobs` owns (`aoi/core/jobs.py`: progress, cancel and finished callbacks,
