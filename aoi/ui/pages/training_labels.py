@@ -49,10 +49,15 @@ def _read(ctx: AppContext, uuid: str, path: str | None) -> tuple[np.ndarray | Ao
         return e, boxes
 
 
-def _restore(ctx: AppContext, states: list[State]) -> None:
-    """On a pool thread: each sample back to the label, defect type and boxes it had (Undo)."""
-    for uuid, label, dtype, boxes in states:
-        ctx.set_label(uuid, label, dtype, boxes if label == "NG" else None)
+def _restore(ctx: AppContext, states: list[State]) -> Exception | None:
+    """On a pool thread: each sample back to the label, defect type and boxes it had (Undo), until one cannot take them
+    or another error stops it, which is returned, so that the samples put back before it are shown first (review)."""
+    try:
+        for uuid, label, dtype, boxes in states:
+            ctx.set_label(uuid, label, dtype, boxes if label == "NG" else None)
+    except Exception as e:
+        return e
+    return None
 
 
 class TypeList(QComboBox):
@@ -172,6 +177,7 @@ class LabelEditor(QWidget):
         under.addStretch(1)
         lay.addLayout(under)
         self._history: list[list[State]] = []  # for each change stored, the samples it changed as they were before
+        self.forgotten = 0  # times `forget` emptied Undo: a store begun before the last one adds nothing to it (review)
         self.reading = BusyOverlay(self.view, self.tr("Opening the image…"))
         self.saving = BusyOverlay(self.view, self.tr("Storing the change…"))
         self._reading: Worker | None = None  # the read of the sample shown, the newest asked for
@@ -341,23 +347,33 @@ class LabelEditor(QWidget):
 
     def _undo(self) -> None:
         """Undo (Ctrl+Z): the samples the last change stored changed get back the label and boxes they had, each
-        stored as a new label, and are shown. One that cannot take them now, such as a sample removed since, is the
-        coded dialog, and that change is not offered again."""
+        stored as a new label, and are shown. One that cannot take them now, such as a sample removed since, or any
+        other error stops it there: the samples put back before it are shown, then the coded dialog, and that change is
+        not offered again."""
         if self._history:
             states = self._history.pop()
-            if self.write(lambda _r: self.undone.emit([s[0] for s in states]), _restore, self.ctx, states):
+
+            def done(stopped: Exception | None) -> None:
+                self.undone.emit([s[0] for s in states])
+                if stopped is not None:
+                    self.owner.error(stopped)
+
+            if self.write(done, _restore, self.ctx, states):
                 self._sync()
             else:
                 self._history.append(states)
 
-    def remember(self, states: list[State]) -> None:
-        """A change stored: these samples as they were before it, for Undo."""
-        self._history.append(states)
+    def remember(self, states: list[State], since: int) -> None:
+        """A change stored: these samples as they were before it, for Undo, unless Undo was emptied after the store
+        began, `since` being `forgotten` as it read then: a change of the user before, or of another board model."""
+        if since == self.forgotten:
+            self._history.append(states)
         self._sync()
 
     def forget(self) -> None:
-        """Nothing to undo: another user signed in, or another board model is shown."""
+        """Nothing to undo: another user signed in, or another board model is shown; nor a store that ends later."""
         self._history.clear()
+        self.forgotten += 1
         self._sync()
 
     def _store(self) -> bool:
@@ -370,15 +386,15 @@ class LabelEditor(QWidget):
             self.view.show_boxes(self._kept, self.view.chosen)
             self._picked(self.view.chosen)
             return False
-        boxes, s = list(self.view.boxes), self.sample
+        boxes, s, since = list(self.view.boxes), self.sample, self.forgotten
         before: State = (s["uuid"], s["label"], s["defect_type"], self._kept)
-        self.write(lambda _uid: self._stored(before), self.ctx.set_boxes, s["uuid"], boxes)
+        self.write(lambda _uid: self._stored(before, since), self.ctx.set_boxes, s["uuid"], boxes)
         self._kept = boxes
         return True
 
-    def _stored(self, before: State) -> None:
+    def _stored(self, before: State, since: int) -> None:
         self._fill_list()
-        self.remember([before])
+        self.remember([before], since)
         self.stored.emit(before[0], self._kept)
 
     def write(self, done: Callable[[Any], None], fn: Callable[..., Any], *args: Any) -> bool:

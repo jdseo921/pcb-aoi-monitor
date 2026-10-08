@@ -34,6 +34,7 @@ from ...core.imaging import IMAGE_EXTS
 from ...core.labels import DefectBox
 from ...core.sample_import import ImportFile, ImportReport, folder_files
 from ...core.services import AppContext
+from ...defects import names
 from ...errors import AoiError
 from ...times import to_local
 from .. import theme
@@ -64,11 +65,12 @@ NOT_TYPING = Qt.KeyboardModifier.ControlModifier | Qt.KeyboardModifier.AltModifi
 EDIT_ON_KEY = QAbstractItemView.EditTrigger.AnyKeyPressed
 
 
-def _each(ids: list[int], write: Callable[[int], None]) -> AoiError | None:
+def _each(ids: list[int], write: Callable[[int], None]) -> Exception | None:
     """Write each sample but the reference, which stays as it is and is named once the others are written (AOI-TRN-007),
     so which rows change never depends on the order they were selected in (#168); any other refusal stops at the sample
-    it names. Returns the refusal to show, if any."""
-    refused: AoiError | None = None
+    it names, and so does any other error, such as a database another program holds, the samples written before it
+    staying written (review). Returns the refusal or error to show, if any."""
+    refused: Exception | None = None
     try:
         for i in ids:
             try:
@@ -77,7 +79,7 @@ def _each(ids: list[int], write: Callable[[int], None]) -> AoiError | None:
                 if e.code != "AOI-TRN-007":
                     raise
                 refused = e
-    except AoiError as e:
+    except Exception as e:  # what was written before it is shown, and a mark can be undone, whatever stopped it
         refused = e
     return refused
 
@@ -469,28 +471,33 @@ class TrainingPage(Page):
         """Mark OK, Mark NG, Mark UNSURE (O, N, U): each selected image not already so labelled, on a pool thread, with
         no question and no defect type, which the boxes give; the rows stay selected, and Undo puts back each image's
         label and boxes. Mark NG then puts the focus on the image, for its boxes (labels sketch). A label carried over
-        with no labeller is labelled again, keeping its type, so that it can be checked (S32), which Undo leaves. The
-        marks write through set_label, which takes UNSURE and an NG with no type until its boxes are drawn, where
-        update_sample keeps the import's rule, OK or NG with one of the 33 types (S31)."""
+        with no labeller is labelled again, keeping its type if it is one of the 33, so that it can be checked (S32),
+        which Undo leaves; a type an earlier version stored that is not one of the 33 goes, with no other in its place
+        (the boxes give the types), and Undo puts back none either (review). The marks write through set_label, which
+        takes UNSURE and an NG with no type until its boxes are drawn, where update_sample keeps the import's rule, OK
+        or NG with one of the 33 types (S31). A batch an error stops part-way shows what it stored, which Undo puts
+        back, then the error (review)."""
         ctx = self.ctx
         before = [s for i in self._selected_ids() if (s := self.shown[i])["label"] != label or not s["labelled_by"]]
         if not before:
             return
         changed: list[State] = []
+        since = self.editor.forgotten  # a sign-in or another board model meanwhile: nothing to undo
 
         def write(i: int) -> None:  # on a pool thread: the sample as it was, for Undo, then its new label
             s = next(s for s in before if s["id"] == i)
+            kind = s["defect_type"] if s["defect_type"] in names() else None
             boxes = [DefectBox(b["x"], b["y"], b["w"], b["h"], b["dct_type"]) for b in ctx.boxes(s["uuid"])]
-            ctx.set_label(s["uuid"], label, s["defect_type"] if s["label"] == label else None)
+            ctx.set_label(s["uuid"], label, kind if s["label"] == label else None)
             if s["label"] != label:
-                changed.append((s["uuid"], s["label"], s["defect_type"], boxes))
+                changed.append((s["uuid"], s["label"], kind, boxes))
 
-        def done(refused: AoiError | None) -> None:
+        def done(refused: Exception | None) -> None:
             if changed:
-                self.editor.remember(changed)
+                self.editor.remember(changed, since)
+            self.refresh()  # what was stored, before the dialog says why the rest was not
             if refused is not None:
                 self.error(refused)
-            self.refresh()
             if label == "NG":
                 self.editor.view.setFocus()
 

@@ -2496,7 +2496,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/training.py" line="+363"/>
+        <location filename="../ui/pages/training.py" line="+365"/>
         <location filename="../ui/pages/training_import.py" line="+38"/>
         <source>{code} {title}</source>
         <translation type="unfinished"></translation>
@@ -2568,11 +2568,11 @@
     </message>
     <message>
         <location line="+3"/>
-        <source>the image&apos;s defect type, {type}, is not one of the 33 defect types: give the image one of the 33 with Mark NG, then draw its boxes again</source>
-        <translation>이미지의 결함 유형 {type}은(는) 33가지 결함 유형 중 하나가 아닙니다. Mark NG로 이미지에 33가지 중 하나를 지정한 뒤 박스를 다시 그리십시오</translation>
+        <source>the image&apos;s defect type, {type}, is not one of the 33 defect types (an earlier version stored it): press Mark NG, which labels the image NG again with no defect type, as its boxes give the types, then draw its boxes again</source>
+        <translation>이미지의 결함 유형 {type}은(는) 이전 버전에서 저장된 것으로, 33가지 결함 유형 중 하나가 아닙니다. NG로 표시를 누르면 이미지가 결함 유형 없이 다시 NG로 라벨링되며 유형은 박스가 정합니다. 그런 다음 박스를 다시 그리십시오</translation>
     </message>
     <message>
-        <location line="+6"/>
+        <location line="+7"/>
         <source>{type} is not one of the 33 defect types</source>
         <translation>{type}은(는) 33가지 결함 유형 중 하나가 아닙니다</translation>
     </message>
@@ -3246,7 +3246,7 @@
 <context>
     <name>LabelEditor</name>
     <message>
-        <location filename="../ui/pages/training_labels.py" line="+123"/>
+        <location filename="../ui/pages/training_labels.py" line="+128"/>
         <location line="+2"/>
         <source>Draw Box</source>
         <translation>박스 그리기</translation>
@@ -3302,7 +3302,7 @@
         <translation>박스 삭제</translation>
     </message>
     <message>
-        <location line="+8"/>
+        <location line="+9"/>
         <source>Opening the image…</source>
         <translation>이미지를 여는 중…</translation>
     </message>
@@ -3347,7 +3347,7 @@
         <translation>박스 {number}을(를) 삭제했습니다. 실행 취소 또는 Ctrl+Z로 되돌릴 수 있습니다</translation>
     </message>
     <message>
-        <location line="+57"/>
+        <location line="+67"/>
         <source>Wait until the image is open and the last change is stored</source>
         <translation>이미지가 열리고 마지막 변경 사항이 저장될 때까지 기다리십시오</translation>
     </message>
@@ -4623,12 +4623,12 @@
     </message>
     <message>
         <location line="+1"/>
-        <location line="+544"/>
+        <location line="+549"/>
         <source>Import Folder…</source>
         <translation>폴더 가져오기…</translation>
     </message>
     <message>
-        <location line="-536"/>
+        <location line="-541"/>
         <source>Tip: 20+ OK images give a steadier threshold</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4695,12 +4695,12 @@
     </message>
     <message>
         <location line="+1"/>
-        <location line="+339"/>
+        <location line="+344"/>
         <source>Remove</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-333"/>
+        <location line="-338"/>
         <source>Select a sample to preview</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4820,7 +4820,7 @@
         <translation>가져오기 취소됨: 멈추기 전에 OK 이미지 {ok}개와 NG 이미지 {ng}개를 {board_model}(으)로 가져왔습니다</translation>
     </message>
     <message>
-        <location line="+81"/>
+        <location line="+86"/>
         <source>Reference image set: inspections compare against it now, until training learns a Golden board</source>
         <translation type="unfinished"></translation>
     </message>

@@ -50,8 +50,9 @@ def check(sample: str, size: Size, label: str, defect_type: str | None, boxes: l
     elif defect_type and defect_type not in known:  # an older label's type, Anomaly for one
         why = QT_TRANSLATE_NOOP(
             "Errors",
-            "the image's defect type, {type}, is not one of the 33 defect types: give the image one of the 33 with"
-            " Mark NG, then draw its boxes again",
+            "the image's defect type, {type}, is not one of the 33 defect types (an earlier version stored it): press"
+            " Mark NG, which labels the image NG again with no defect type, as its boxes give the types, then draw its"
+            " boxes again",
         ).fill(type=defect_type)
     elif unknown:
         why = QT_TRANSLATE_NOOP("Errors", "{type} is not one of the 33 defect types").fill(type=unknown[0])

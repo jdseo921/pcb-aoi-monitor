@@ -225,6 +225,10 @@ def test_req_trn_003_severity_matches_dct(trained_ctx: AppContext, monkeypatch: 
     with pytest.raises(AoiError) as old:
         ctx.set_boxes(sample["uuid"], [edge])
     assert old.value.code == "AOI-TRN-030" and re.search("defect type, Anomaly, is not .* Mark NG", old.value.what)
+    assert "NG again with no defect type" in old.value.what
+    ctx.set_label(sample["uuid"], "NG")  # what Mark NG does on Training: NG with no type, its boxes giving the types
+    ctx.set_boxes(sample["uuid"], [edge])
+    assert [b["dct_type"] for b in ctx.boxes(sample["uuid"])] == ["Scratch"]
 
 
 def test_req_trn_002_migration_carries_every_label_over(tmp_path: Path) -> None:
@@ -268,10 +272,12 @@ def test_req_trn_002_every_sample_has_a_current_label(ctx: AppContext, synthetic
     assert ctx.db.query(f"{orphans} WHERE l.id IS NULL") == [] and len(ctx.samples("B")) == 2
 
 
-def test_req_trn_002_mark_skips_rows_labelled_so(ctx: AppContext) -> None:
-    """Mark OK on an OK image, or Mark NG with its own type on an NG image, adds no label row and no audit entry when
-    the label has a labeller, so the labeller and any check of it stay; another type is a relabel. A label carried
-    over with no labeller is labelled again, with the user acting as its labeller, so it can be checked."""
+def test_req_trn_002_update_sample_skips_rows_labelled_so(ctx: AppContext) -> None:
+    """AppContext.update_sample to OK on an OK image, or to NG with its own type on an NG image, adds no label row and
+    no audit entry when the label has a labeller, so the labeller and any check of it stay; another type is a relabel.
+    A label carried over with no labeller is labelled again, with the user acting as its labeller, so it can be checked.
+    (Training's marks do not call it: they skip an image so labelled already through set_label, as
+    test_req_trn_003_editor_mark shows.)"""
     me = ctx.user_uuid
     ok = ctx.db.add_sample("B", "images/B/1.png", "OK", labelled_by=me)
     ng = ctx.db.add_sample("B", "images/B/2.png", "NG", "Scratch", labelled_by=me)
