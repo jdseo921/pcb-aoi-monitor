@@ -31,9 +31,10 @@ GNU_TEXTS = [ROOT / "installer" / "licenses" / "LGPL-3.0.txt", ROOT / "installer
 EMBEDDED_TOOLS = {"pyinstaller", "pyinstaller-hooks-contrib"}  # their loader and run-time hooks go into the .exe
 QT_PACKAGES = {"pyside6-essentials", "shiboken6"}
 LICENSE_FILE = re.compile(r"^(licen[cs]e|copying|notice|authors|copyright)", re.IGNORECASE)
-# Microsoft's Visual C++ runtime, which Python and the wheels are built against; redistributable, and covered by
-# Python's license text on Windows. PyInstaller may take it from the Windows folder.
-VC_RUNTIME = re.compile(r"^(msvcp|vcruntime|concrt|vcomp|vccorlib)140(_[0-9a-z]+)?\.dll$", re.IGNORECASE)
+# Microsoft's Visual C++ runtime (msvcp140.dll, msvcp140_atomic_wait.dll, vcruntime140_1.dll ...), which Python and
+# the wheels are built against; redistributable, and covered by Python's license text on Windows. PyInstaller may
+# take it from the Windows folder.
+VC_RUNTIME = re.compile(r"^(msvcp|vcruntime|concrt|vcomp|vccorlib)140(_[0-9a-z]+)*\.dll$", re.IGNORECASE)
 RULE = "=" * 100
 
 

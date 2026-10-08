@@ -3,10 +3,12 @@
 
     python tools/smoke_test_build.py dist/AOI-PoC-Inspector/AOI-PoC-Inspector.exe
 
-The app runs as a user would start it, on a new workspace folder (AOI_WORKSPACE). It passes when the app's log
-records "app.start", the app then keeps running for HOLD seconds with no error in its log, and its database holds
-every migration in aoi/data/migrations. It fails (exit 1) when the app exits, logs an error, has not logged
-"app.start" after TIMEOUT seconds, or applied other migrations. The app is closed either way and its log printed.
+The app runs as a user would start it: on a new workspace folder (AOI_WORKSPACE), and on Windows with only Windows'
+own folders on PATH, as on a station, so a DLL missing from the build is not found in a build tool's folder instead.
+It passes when the app's log records "app.start", the app then keeps running for HOLD seconds with no error in its
+log, and its database holds every migration in aoi/data/migrations. It fails (exit 1) when the app exits, logs an
+error, has not logged "app.start" after TIMEOUT seconds, or applied other migrations. The app is closed either way
+and its log printed.
 """
 
 from __future__ import annotations
@@ -48,6 +50,9 @@ def migrations_applied(workspace: Path) -> list[str]:
 def check(exe: Path, workspace: Path) -> str | None:
     """None when the app opens and keeps running; otherwise why not."""
     env = {**os.environ, "AOI_WORKSPACE": str(workspace)}
+    if sys.platform == "win32":
+        windows = os.environ["SystemRoot"]
+        env["PATH"] = os.pathsep.join([os.path.join(windows, "System32"), windows])
     proc = subprocess.Popen([str(exe)], env=env)  # noqa: S603 (the build under test, started without a shell)
     started = time.monotonic()
     opened_at: float | None = None

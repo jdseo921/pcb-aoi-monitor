@@ -40,7 +40,8 @@ def site(tmp_path: Path) -> Path:
 
 def test_req_set_012_a_file_from_an_unchecked_package_or_elsewhere_stops_the_build(site: Path, tmp_path: Path) -> None:
     app, elsewhere = tmp_path / "app", tmp_path / "Program Files" / "Git" / "bin"
-    sources = [site / "shipped/__init__.py", app / "main.py", elsewhere / "VCRUNTIME140_1.dll"]
+    runtime = [elsewhere / "VCRUNTIME140_1.dll", elsewhere / "MSVCP140_ATOMIC_WAIT.dll"]  # Microsoft's, from anywhere
+    sources = [site / "shipped/__init__.py", app / "main.py", *runtime]
     refusals = [site / "tool/__init__.py", site / "stray.dll", elsewhere / "zlib1.dll"]
     used, refused = tpn.bundled_packages(map(str, sources + refusals), {"shipped"}, [app], installed(site))
     assert used == {"shipped", "tool"}

@@ -22,6 +22,9 @@ notice shipped. The installer, the certificate (J6) and a second approver (J8) d
    `AOI-PoC-Inspector.exe` and its `_internal/` folder, so the Qt libraries stay separate files a user can replace
    (LGPL). The migrations go in as data. No UPX, which antivirus software often flags. setuptools, pkg_resources,
    distutils and tkinter stay out: only `torch.utils.cpp_extension`, which builds C++ extensions, imports setuptools.
+   The QtNetwork module stays out too: only PySide6's own `__init__` imports it, and the app makes no network call
+   (Engineering standard, "Offline and least privilege"), so PyInstaller looks for no OpenSSL and none ships. The
+   Universal C Runtime is left out, because Windows 10 and 11 include it and always use their own copy.
 2. **Pinned and hashed like everything else.** `requirements-build.txt` pins PyInstaller 6.22.3,
    pyinstaller-hooks-contrib 2026.8, and pefile and pywin32-ctypes with their Windows marker; `tools/make_lock.py`
    writes `requirements-build.lock` (the runtime pins plus these) next to the other four locks, CI's lock job checks
@@ -30,7 +33,9 @@ notice shipped. The installer, the certificate (J6) and a second approver (J8) d
    (`tools/third_party_notices.py`) and stops when a file comes from a package outside the shipped set
    (`requirements.lock` and `requirements-torch-cpu.lock`, whose licenses CI's license gate checks) or from anywhere
    other than the app, Python, PyInstaller's work folder and Microsoft's Visual C++ runtime, such as a DLL found on
-   the build machine's PATH.
+   the build machine's PATH. PyInstaller looks along PATH for a DLL it finds in no package, so the spec limits PATH to
+   Python's folder and Windows' own while it builds; the first CI build had stopped on DLLs from MySQL's, Java's and
+   ImageMagick's folders on the runner's PATH.
 4. **Notices in the folder.** The spec writes `THIRD_PARTY_NOTICES.txt` beside the .exe: Qt's LGPL notice first,
    with where Qt's source is, then each bundled package's declared license and every license file it installs, then
    Python's license, which covers the libraries Python bundles. The PySide6 and Shiboken6 wheels carry no LGPL text,
@@ -42,9 +47,10 @@ notice shipped. The installer, the certificate (J6) and a second approver (J8) d
    PyInstaller, so this is listed for Jay's J8 decision rather than decided here.
 6. **CI builds and starts it.** `.github/workflows/build.yml` runs on Windows for every push to main, on demand, and
    on pull requests that change the build. It installs from the hashed locks, builds, starts the .exe on an empty
-   workspace (`tools/smoke_test_build.py`: "app.start" logged, 15 s with no error, every migration applied), adds
-   `BUILD-INFO.txt` and `SHA256SUMS.txt`, and keeps the folder as the run's artifact for 30 days. After a failed
-   start it rebuilds with a console and starts that, so the log shows the error.
+   workspace with only Windows' folders on PATH, as on a station (`tools/smoke_test_build.py`: "app.start" logged,
+   15 s with no error, every migration applied), adds `BUILD-INFO.txt` and `SHA256SUMS.txt`, and keeps the folder as
+   the run's artifact for 30 days. After a failed start it rebuilds with a console and starts that, so the log shows
+   the error.
 7. **An internal test build, never a release.** It is unsigned, has no installer and is named `…-unsigned`;
    `BUILD-INFO.txt` says it must not go to a customer or into a demo. Releases stay as the Engineering standard says.
 
