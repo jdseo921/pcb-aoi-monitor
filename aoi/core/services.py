@@ -584,54 +584,60 @@ class AppContext:
         (REQ-INSP-006), naming the AI model version and recipe revision that decided it (REQ-INSP-012) and the golden
         board it was judged against (REQ-CMP-003). The overlay is `<stem>_<record UUID>_<verdict>.png`, the stem cut by
         `_stem`, and never replaces a file: a name already taken refuses the save with FileExistsError, and a path the
-        system refuses as too long with AOI-INSP-014 (#245). Called on the pool thread by the Inspection page."""
+        system refuses as too long with AOI-INSP-014 (#245). A save that fails before its row commits removes the files
+        it wrote, so none is left that no record names (#246). Called on the pool thread by the Inspection page."""
         day = local_date()  # the folder is named for the operator's shift date; the stored time is UTC
         uid = new_uuid()  # the record's, as the uuid column and the CSV export give it
         overlay = self.settings.results_dir / day / f"{_stem(path)}_{uid}_{res.verdict}.png"
+        files = [overlay, *map_paths(overlay.with_suffix(""))]  # every file this save may write
+        taken = [f for f in files if os.path.lexists(f)]
+        if taken:  # only a defect gets here; the workspace lock keeps out a second copy of the app (#204)
+            raise FileExistsError(errno.EEXIST, os.strerror(errno.EEXIST), str(taken[0]))
         pixel_threshold = insp.model.pixel_threshold if insp.model is not None else None  # the AI map's, kept (S28a)
-        try:
-            taken = [f for f in (overlay, *map_paths(overlay.with_suffix(""))) if os.path.lexists(f)]
-            if taken:  # only a defect gets here; the workspace lock keeps out a second copy of the app (#204)
-                raise FileExistsError(errno.EEXIST, os.strerror(errno.EEXIST), str(taken[0]))
-            save_image(overlay, draw_overlay(res))
-            diff_map_path, ai_map_path = save_maps(res, overlay.with_suffix(""), pixel_threshold=pixel_threshold)
-        except OSError as e:
-            if not _too_long(e):
-                raise
-            raise AoiError("AOI-INSP-014", str(e), file=Path(path).name, workspace=str(self.settings.root)) from e
-        doc = res.to_dict()
-        ng = res.verdict == NG
-        alarm = None
-        if ng:  # a phrase: the alarm list shows it in the UI language, its message stays English (#198)
-            text = QT_TRANSLATE_NOOP("Errors", "{file}: {defects} defect(s)").fill(
-                file=Path(path).name, defects=len(res.defects)
+        try:  # until the row commits, a failure takes back what this save wrote (#246)
+            try:
+                save_image(overlay, draw_overlay(res))
+                diff_map_path, ai_map_path = save_maps(res, overlay.with_suffix(""), pixel_threshold=pixel_threshold)
+            except OSError as e:
+                if not _too_long(e):
+                    raise
+                raise AoiError("AOI-INSP-014", str(e), file=Path(path).name, workspace=str(self.settings.root)) from e
+            doc = res.to_dict()
+            alarm = None
+            if res.verdict == NG:  # a phrase: the alarm list shows it in the UI language, its message stays English
+                text = QT_TRANSLATE_NOOP("Errors", "{file}: {defects} defect(s)").fill(
+                    file=Path(path).name, defects=len(res.defects)
+                )
+                alarm = ("NG", text, "AOI-INSP-003")
+            iid = self.db.add_inspection(
+                {
+                    "board_model": board_model,
+                    "model_version": insp.model_version,
+                    "model_uuid": insp.model_uuid,
+                    "recipe_rev": insp.recipe_rev,
+                    "recipe_uuid": insp.recipe_uuid,
+                    "image_path": path,
+                    "overlay_path": str(overlay),
+                    "diff_map_path": diff_map_path,
+                    "ai_map_path": ai_map_path,
+                    "reference_path": insp.reference_path,
+                    "reference_sha256": insp.reference_sha256,
+                    "view": res.view,
+                    "result": res.verdict,
+                    "score": res.score,
+                    "metrics": res.metrics_dict(),
+                    "result_json": doc,
+                    "operator": self.user,
+                },
+                [d.as_row() for d in res.defects],
+                doc["checks"],
+                alarm,  # in the record's transaction: a saved NG board always has its alarm (REQ-INSP-006, #179)
+                uid=uid,
             )
-            alarm = ("NG", text, "AOI-INSP-003")
-        iid = self.db.add_inspection(
-            {
-                "board_model": board_model,
-                "model_version": insp.model_version,
-                "model_uuid": insp.model_uuid,
-                "recipe_rev": insp.recipe_rev,
-                "recipe_uuid": insp.recipe_uuid,
-                "image_path": path,
-                "overlay_path": str(overlay),
-                "diff_map_path": diff_map_path,
-                "ai_map_path": ai_map_path,
-                "reference_path": insp.reference_path,
-                "reference_sha256": insp.reference_sha256,
-                "view": res.view,
-                "result": res.verdict,
-                "score": res.score,
-                "metrics": res.metrics_dict(),
-                "result_json": doc,
-                "operator": self.user,
-            },
-            [d.as_row() for d in res.defects],
-            doc["checks"],
-            alarm,  # in the record's transaction: a saved NG board always has its alarm (REQ-INSP-006, #179)
-            uid=uid,
-        )
+        except BaseException:
+            _remove(files)
+            raise
+        # The row has committed: its files are named now and stay, whatever the log lines below meet.
         if alarm is not None:
             self.log.info("alarm", extra={"alarm_level": alarm[0], "code": alarm[2], "text": alarm[1]})
         self.log.info(

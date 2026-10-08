@@ -15,7 +15,7 @@ from pytestqt.qtbot import QtBot
 
 from aoi.config import Settings
 from aoi.core.imaging import list_images
-from aoi.core.inspector import NG, Check, InspectionResult, Inspector
+from aoi.core.inspector import NG, NO_GOLDEN_NOTE, Check, InspectionResult, Inspector
 from aoi.core.recipe import ROI, Recipe
 from aoi.core.services import AppContext, export_csv
 from aoi.data.db import Database
@@ -41,17 +41,20 @@ def _engine(tiny_model: TrainedModel) -> Inspector:
 
 def test_results_round_trip_json(tiny_model: TrainedModel, ng_board: Path, synthetic_dataset: Path) -> None:
     """`to_dict` holds plain values only, so JSON writes it unchanged, and `from_dict` gives back the same verdict,
-    score, checks, defects, compare metrics and regions, notes, view and time; only the images are left behind."""
+    score, checks, defects, compare metrics and regions, notes, view and time; only the images are left behind. The
+    second result is a Side board with the no-golden-board note, so neither can pass on `from_dict`'s defaults (#246:
+    before, `to_dict` without its notes or its view passed, as both sides of `back.to_dict() == d` then lacked it)."""
     engine = _engine(tiny_model)
     results = [engine.inspect(tiny_model.ctx.load_image(ng_board))]
-    engine.reference = None  # no golden board: the comparison is skipped with a note
+    engine.reference, engine.side = None, "Side"  # no golden board: the comparison is skipped with a note
     results.append(engine.inspect(tiny_model.ctx.load_image(ng_board)))
-    assert results[0].compare is not None and results[1].compare is None and results[1].notes
+    assert results[0].compare is not None and results[1].compare is None and results[1].notes == [NO_GOLDEN_NOTE]
     for res in results:
         d = res.to_dict()
         text = json.dumps(d, allow_nan=False)  # a NumPy scalar or a NaN would be refused here
         back = InspectionResult.from_dict(json.loads(text))
-        assert back.to_dict() == d
+        assert back.to_dict() == d and {"notes", "view", "elapsed_ms"} <= d.keys()
+        assert (back.notes, back.view, back.elapsed_ms) == (res.notes, res.view, res.elapsed_ms)
         assert back.checks == res.checks and back.defects == res.defects and back.metrics_dict() == res.metrics_dict()
         assert [c.region for c in back.checks] == ["Board"] * (len(back.checks) - 1) + [ROI_REGION]
         assert back.image is None and back.reference is None and back.anomaly_map is None
@@ -240,7 +243,8 @@ def test_req_insp_008_a_result_that_cannot_be_saved_stops_the_run_with_its_code(
 ) -> None:
     """The disk is full (or the workspace cannot be written, or the database fails) while a result is saved: the verdict
     stays on screen, the run stops before the next board, the dialog carries AOI-INSP-008 with the file name, the
-    alarm is listed, nothing half-written is in the database, and Next Board carries on with the queue."""
+    alarm is listed, nothing half-written is in the database or in results/ (#246: the overlay and maps stayed there),
+    and Next Board carries on with the queue."""
     boards = list_images(synthetic_dataset / "test" / "ng")[:2]
     win = _window(qtbot, trained_ctx, "Operator")
     page = win.pages["Inspection"]
@@ -258,4 +262,5 @@ def test_req_insp_008_a_result_that_cannot_be_saved_stops_the_run_with_its_code(
     assert not page.running and page.worker is None and page.queue_pos == 0, "the run stopped before the next board"
     assert page.last is not None and page.verdict.text() == theme.verdict_label(page.last.verdict)
     assert "AOI-INSP-008" in page.alarms.item(0).text() and trained_ctx.inspections(board_model=BOARD) == []
+    assert [p.name for p in trained_ctx.settings.results_dir.rglob("*") if p.is_file()] == []
     assert page.act_next.isEnabled() and not page.act_stop.isEnabled()
