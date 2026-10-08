@@ -106,11 +106,28 @@ NOTES = {
         " with the AI model in use.",
     ),
 }
+STORED_NOTES = {  # on a stored result, said of the day it was inspected rather than of today (S28b)
+    NO_GOLDEN_NOTE: QT_TRANSLATE_NOOP(
+        "Explain",
+        "No Golden board was in use for this board model when the board was inspected, so it was not compared with one:"
+        " inspect the board again once one is set.",
+    ),
+    NO_AI_NOTE: QT_TRANSLATE_NOOP(
+        "Explain",
+        "No AI model was trained for this board model when the board was inspected, so the AI check did not run:"
+        " inspect the board again once one is trained.",
+    ),
+    AI_OFF_NOTE: QT_TRANSLATE_NOOP(  # an Engineer may have turned it on since (#246)
+        "Explain",
+        "The recipe turned the AI check off when the board was inspected, so the AI check did not run and no AI model"
+        " judged the board: inspect the board again once the recipe turns it on.",
+    ),
+}
 OTHER_NOTE = QT_TRANSLATE_NOOP("Explain", "Note: {note}")
 UNITS = {"Changed area %": "%", "Difference regions": "", "Alignment inliers": "", "ROI": "×"}  # "" = a count
 TEMPLATES = [  # every template a screen may translate, for the tests
     *CHECKS.values(), *ROI_CHECK.values(), OTHER_CHECK, ALL_INSIDE, SEVERE_DEFECT, SEVERE_DEFECTS, UNEXPLAINED,
-    *NOTES.values(), OTHER_NOTE,
+    *NOTES.values(), *STORED_NOTES.values(), OTHER_NOTE,
 ]  # fmt: skip
 
 
@@ -140,9 +157,10 @@ def numbers(c: Check) -> tuple[str, str]:
     return (f"{value} {unit}", f"{threshold} {unit}") if unit else (value, threshold)
 
 
-def explain(res: InspectionResult) -> list[Sentence]:
+def explain(res: InspectionResult, stored: bool = False) -> list[Sentence]:
     """The sentences for `res`: one per NG check, then one per WARN check, each in the order the engine ran them (or,
-    with none, why the verdict is what it is), then one per check that did not run (`notes`)."""
+    with none, why the verdict is what it is), then one per check that did not run (`notes`; `stored` for a stored
+    result)."""
     out = []
     for c in [c for c in res.checks if c.verdict == NG] + [c for c in res.checks if c.verdict == WARN]:
         value, threshold = numbers(c)
@@ -156,10 +174,12 @@ def explain(res: InspectionResult) -> list[Sentence]:
         out.append(Sentence(SEVERE_DEFECT) if severe == 1 else Sentence(SEVERE_DEFECTS, {"count": str(severe)}))
     elif not out:  # an OK with no check at all, stored before #169, had nothing inside a threshold
         out.append(Sentence(ALL_INSIDE if res.verdict == OK and res.checks else UNEXPLAINED))
-    return out + notes(res)
+    return out + notes(res, stored)
 
 
-def notes(res: InspectionResult) -> list[Sentence]:
+def notes(res: InspectionResult, stored: bool = False) -> list[Sentence]:
     """One sentence per check that did not run, from the notes the engine stored with `res`, in plain words with what
-    to do; a note this build does not know shows as written."""
-    return [Sentence(NOTES[n]) if n in NOTES else Sentence(OTHER_NOTE, {"note": n}) for n in res.notes]
+    to do (for a `stored` result, what was set when it was inspected); a note this build does not know shows as
+    written."""
+    said = {**NOTES, **STORED_NOTES} if stored else NOTES
+    return [Sentence(said[n]) if n in said else Sentence(OTHER_NOTE, {"note": n}) for n in res.notes]

@@ -21,7 +21,7 @@ from pytestqt.qtbot import QtBot
 from aoi.core import anomaly
 from aoi.core.explain import explain
 from aoi.core.imaging import save_image
-from aoi.core.inspector import Check, InspectionResult, Inspector, draw_overlay
+from aoi.core.inspector import NO_AI_NOTE, NO_GOLDEN_NOTE, Check, InspectionResult, Inspector, draw_overlay
 from aoi.core.recipe import Recipe
 from aoi.core.services import AppContext
 from aoi.times import to_local
@@ -398,6 +398,95 @@ def test_req_cmp_003_re_evaluate_hides_board_picture_no_longer_stored(
     compare.test_empty.link.click()  # Re-evaluate ›
     qtbot.waitUntil(lambda: compare._bg is None and compare.test_view._pix is not None, timeout=20000)
     assert compare.stored is None and compare.test_empty.isHidden(), "the fresh result is not under the block"
+
+
+def test_req_cmp_004_a_stored_results_notes_on_compare_speak_of_the_day_it_was_inspected(
+    qtbot: QtBot, ctx: AppContext, synthetic_dataset: Path, ng_board: Path, dialogs: list[tuple[str, str]]
+) -> None:
+    """A board inspected while its board model had a Golden board and no AI model is stored with the note that the AI
+    check did not run. Opened on Compare, the "why" box said "No AI model is trained for this board model", of today
+    (review B of S28a, N7); it now says that none was trained when the board was inspected. Re-evaluate gives a fresh
+    result, whose note speaks of today again. The next test has an AI model trained since."""
+    ok = sorted(synthetic_dataset.glob("train/ok/*.png"))[:2]
+    ctx.import_samples(BOARD, [str(p) for p in ok], "OK")  # a new board model: its Golden board, and no AI model
+    ctx.inspect_file(BOARD, str(ng_board))
+    iid = ctx.inspections(board_model=BOARD)[0]["id"]
+    stored = ctx.inspection_result(iid)
+    assert stored is not None and stored.notes == [NO_AI_NOTE], "the record keeps that the AI check did not run"
+    win = _window(qtbot, ctx, "Operator")
+    compare = win.pages["Compare"]
+    assert isinstance(compare, ComparePage)
+    win.navigate("Compare")
+    qtbot.waitUntil(lambda: ctx.jobs.idle() and compare._bg is None, timeout=20000)
+    compare.show_stored(iid)
+    qtbot.waitUntil(lambda: compare._bg is None and compare.test_view._pix is not None, timeout=20000)
+    then = (
+        "• No AI model was trained for this board model when the board was inspected, so the AI check did not run:"
+        " inspect the board again once one is trained."
+    )
+    assert compare.why.toPlainText().split("\n")[-1] == then, compare.why.toPlainText()
+    assert compare.test_empty.isHidden() and compare.ref_empty.isHidden(), "both pictures show: no pane's link"
+    compare.run()  # Re-evaluate: a fresh result, with today's board model
+    qtbot.waitUntil(lambda: compare._bg is None and compare.stored is None and compare.res is not None, timeout=20000)
+    today = "• No AI model is trained for this board model, so the AI check did not run: an Engineer trains one on"
+    assert compare.why.toPlainText().split("\n")[-1].startswith(today), compare.why.toPlainText()
+    assert not dialogs
+
+
+def test_req_cmp_004_a_board_inspected_before_its_ai_model_was_trained_says_so_once_one_is(
+    qtbot: QtBot,
+    trained_ctx: AppContext,
+    ng_board: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    dialogs: list[tuple[str, str]],
+) -> None:
+    """N7 itself (review B of S28a): a board inspected before its board model had an AI model, opened on Compare once
+    one is active, says that none was trained when it was inspected, and the note names the AI model the board model
+    moved to; Re-evaluate judges it with that AI model. A board inspected without a Golden board says so too; while
+    the board model still has none, the Golden board pane promises none (Re-evaluate inspects the board again from its
+    image file, and does so without one), and once one is set it names today's (S28b review)."""
+    ctx = trained_ctx
+    golden = ctx.reference_image(BOARD)
+    with monkeypatch.context() as m:
+        m.setattr(ctx, "load_model", lambda *_: None)  # no AI model yet when this board was inspected
+        ctx.inspect_file(BOARD, str(ng_board))
+    no_ai = ctx.inspections(board_model=BOARD)[0]["id"]
+    ctx.db.execute("UPDATE board_models SET reference_image=NULL WHERE name=?", (BOARD,))  # nor a Golden board
+    ctx.inspect_file(BOARD, str(ng_board))
+    no_golden = ctx.inspections(board_model=BOARD)[0]["id"]
+    notes = [r.notes if (r := ctx.inspection_result(i)) else None for i in (no_ai, no_golden)]
+    assert notes == [[NO_AI_NOTE], [NO_GOLDEN_NOTE]] and ctx.active_model(BOARD) is not None, notes
+    win = _window(qtbot, ctx, "Operator")
+    compare = win.pages["Compare"]
+    assert isinstance(compare, ComparePage)
+    win.navigate("Compare")
+    qtbot.waitUntil(lambda: ctx.jobs.idle() and compare._bg is None, timeout=20000)
+
+    def last(stored: int | None) -> str:
+        """The last line of the "why" box once the stored result `stored`, or a fresh one (None), shows."""
+        qtbot.waitUntil(lambda: compare._bg is None and (compare.stored or {}).get("id") == stored, timeout=20000)
+        return compare.why.toPlainText().split("\n")[-1]
+
+    compare.show_stored(no_ai)
+    assert last(no_ai).startswith("• No AI model was trained for this board model when the board was inspected")
+    assert "Since then the board model moved to AI model v1.0" in compare.note.text(), compare.note.text()
+    compare.run()  # Re-evaluate: judged with the AI model active today
+    assert "No AI model" not in last(None) and compare.res is not None and compare.res.notes == []
+    compare.show_stored(no_golden)
+    assert last(no_golden).startswith("• No Golden board was in use for this board model when the board was inspected")
+    judged_without = "This result was judged without a Golden board. The verdict and the decision table are the stored"
+    from_file = f"{judged_without} ones; press Re-evaluate to inspect the board again from its image file."
+    assert compare.ref_empty.sentence.text() == from_file and compare.ref_empty.link.text() == "Re-evaluate ›"
+    compare.ref_empty.link.click()  # still no Golden board today: the board is judged without one
+    assert last(None).startswith("• No Golden board is set for this board model"), compare.why.toPlainText()
+    assert golden is not None
+    ctx.db.set_reference(BOARD, golden)
+    compare.show_stored(no_golden)
+    assert last(no_golden).startswith("• No Golden board was in use for this board model when the board was inspected")
+    assert compare.ref_empty.sentence.text().endswith(
+        "press Re-evaluate to inspect the board again with today's Golden board."
+    )
+    assert not dialogs
 
 
 @pytest.mark.parametrize(

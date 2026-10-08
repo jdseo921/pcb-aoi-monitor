@@ -145,7 +145,8 @@ def test_req_insp_012_a_record_judged_with_the_ai_check_off_says_so_and_re_evalu
 
 def test_req_cmp_003_compare_says_the_ai_check_was_off(qtbot: QtBot, trained_ctx: AppContext, ng_board: Path) -> None:
     """On Compare, a record judged with the AI check off reads as what it is: the line under the verdict names the AI
-    model active then and the AI-off recipe revision, and the explanation says the AI check was off. Before, the line
+    model active then and the AI-off recipe revision, and the explanation says the AI check was off when the board was
+    inspected (REQ-CMP-004), and that the recipe turns it off once the board is inspected again. Before, the line
     named the AI model and nothing on the page said that it had not judged the board."""
     ctx = trained_ctx
     active = ctx.active_model(BOARD)
@@ -160,7 +161,11 @@ def test_req_cmp_003_compare_says_the_ai_check_was_off(qtbot: QtBot, trained_ctx
     compare.show_stored(rec["id"])
     line = f": AI model {active['version']}, recipe revision {rec['recipe_rev']},"
     assert line in compare.note.text(), compare.note.text()
-    assert AI_OFF_TEXT in compare.why.toPlainText(), compare.why.toPlainText()
+    then = compare.why.toPlainText().split("\n")[-1]
+    assert then.startswith("• The recipe turned the AI check off when the board was inspected, so the AI check"), then
+    compare.run()  # Golden Board, or a pane's Re-evaluate ›: the board inspected again, the AI check still off
+    qtbot.waitUntil(lambda: compare._bg is None and compare.stored is None and compare.res is not None, timeout=20000)
+    assert compare.why.toPlainText().endswith(AI_OFF_TEXT), compare.why.toPlainText()
     qtbot.waitUntil(ctx.jobs.idle, timeout=20000)
 
 

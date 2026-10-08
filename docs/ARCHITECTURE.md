@@ -375,9 +375,13 @@ sets one, otherwise the AI model's, as the Recipe Editor's ROI field says; a sto
 sentence names neither, #248); with no failing check, that every check that decides the verdict is inside its threshold,
 or that defects above Minor severity make the board a WARN; then one sentence per check that did not run, with what to
 do, which the Inspection page shows under its summary too; a result judged with the AI check turned off in the recipe
-says so (`AI_OFF_NOTE`, #246), since its record still names the AI model version active then. Each sentence is an
-English template with named values, which a screen translates under the context "Explain" before filling it in, so the
-engine stays free of Qt and a translation can put the values in its own order.
+says so (`AI_OFF_NOTE`, #246), since its record still names the AI model version active then; for a board they inspect,
+both pages say what is set today. On a stored result, which "Compare with Golden board ›" and Use Last Inspected open
+even right after an inspection, Compare asks for them with `explain(res, stored=True)`, which says what was set when the
+board was inspected ("No AI model was trained for this board model when the board was inspected", "The recipe turned the
+AI check off when the board was inspected"), since an Engineer may have trained one, or turned the AI check on, since
+then. Each sentence is an English template with named values, which a screen translates under the context "Explain"
+before filling it in, so the engine stays free of Qt and a translation can put the values in its own order.
 
 Verdict: **NG** if any check is NG; else **WARN** if any check is within the warning band (default 80 % of a
 threshold) or a non-minor defect region exists; else **OK**. Colours follow GUI §4.1: green OK, red NG, yellow WARN.

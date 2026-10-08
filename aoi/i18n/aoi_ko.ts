@@ -99,12 +99,12 @@
     <message>
         <location line="+3"/>
         <location line="+51"/>
-        <location line="+330"/>
+        <location line="+336"/>
         <source>Golden board</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-380"/>
+        <location line="-386"/>
         <source>AI model</source>
         <translation type="unfinished"></translation>
     </message>
@@ -160,12 +160,12 @@
     </message>
     <message>
         <location line="+15"/>
-        <location line="+541"/>
+        <location line="+548"/>
         <source>Test board</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-535"/>
+        <location line="-542"/>
         <source>Inspecting…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -296,25 +296,25 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+6"/>
+        <location line="+7"/>
         <source>The verdict and the decision table are the stored ones; press Re-evaluate to inspect the board again with today&apos;s Golden board.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+4"/>
+        <location line="+9"/>
         <source>Golden board not available</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location line="+0"/>
         <location line="+131"/>
-        <location line="+117"/>
+        <location line="+118"/>
         <location line="+12"/>
         <source>Re-evaluate ›</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-246"/>
+        <location line="-247"/>
         <source>Train an AI model on Training.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -354,7 +354,8 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+23"/>
+        <location line="-109"/>
+        <location line="+132"/>
         <source>The verdict and the decision table are the stored ones; press Re-evaluate to inspect the board again from its image file.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -391,7 +392,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+64"/>
+        <location line="+65"/>
         <source>Recipe saved as revision {revision}</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1805,7 +1806,22 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+16"/>
+        <location line="+17"/>
+        <source>No Golden board was in use for this board model when the board was inspected, so it was not compared with one: inspect the board again once one is set.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>No AI model was trained for this board model when the board was inspected, so the AI check did not run: inspect the board again once one is trained.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>The recipe turned the AI check off when the board was inspected, so the AI check did not run and no AI model judged the board: inspect the board again once the recipe turns it on.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+6"/>
         <source>Note: {note}</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2789,7 +2805,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/compare.py" line="-530"/>
+        <location filename="../ui/pages/compare.py" line="-537"/>
         <source>Compare</source>
         <translation type="unfinished"></translation>
     </message>
