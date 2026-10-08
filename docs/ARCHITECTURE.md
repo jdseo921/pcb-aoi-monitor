@@ -71,7 +71,9 @@ and `aoi/hal` too, with no flag relaxed (`pyproject.toml`). PySide6 enums are wr
 (`Qt.AlignmentFlag.AlignCenter`), pages take `QT_TRANSLATE_NOOP` from `aoi/ui/pages/base.py` (Qt's is typed as returning
 object), and no widget attribute carries a QWidget method's name: `size`, `pos` and `render` hid `QWidget.size()`,
 `pos()` and `render()` on three pages until S22a, and `tests/test_screen_rules.py` now fails on one. Since S22b every
-page is typed and no module is exempt.
+page is typed and no module is exempt, and ruff's annotation rules (all but ANN401) require a type hint on every
+function argument and return value across the repository, `tools/`, `main.py` and `tests/` included; mypy does not run
+there, so those hints are present, not verified.
 
 Slow work never runs on the UI thread (REQ-SET-021, since S17): a page wraps it in a `Worker` (`aoi/ui/workers.py`),
 which runs it as a `Job` on the pool `AppContext.jobs` owns (`aoi/core/jobs.py`: progress, cancel and finished callbacks,

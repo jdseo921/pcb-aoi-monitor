@@ -76,7 +76,9 @@ def regression(tmp_path_factory: pytest.TempPathFactory) -> tuple[list[np.ndarra
     return ok, ng, cv2.imread(str(out / "golden.png"))
 
 
-def test_req_insp_007_inspect_timing_against_the_baseline(regression) -> None:
+def test_req_insp_007_inspect_timing_against_the_baseline(
+    regression: tuple[list[np.ndarray], list[np.ndarray], np.ndarray],
+) -> None:
     ok, ng, golden = regression
     report: dict[str, object] = {"recorded": datetime.now(UTC).isoformat(timespec="seconds"), "machine": machine()}
     for label, ((w, h), count) in SIZES.items():

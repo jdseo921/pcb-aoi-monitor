@@ -11,6 +11,7 @@ from pathlib import Path
 
 import pytest
 from PySide6.QtWidgets import QMessageBox
+from pytestqt.qtbot import QtBot
 
 from aoi.config import APP_VERSION, Settings, default_workspace
 from aoi.core.services import ALARM_LIMIT, AppContext
@@ -40,7 +41,7 @@ def _alarm_lines(win: MainWindow) -> list[str]:
 
 
 def test_req_insp_006_alarms_show_time_level_code_message_and_survive_restart(
-    qtbot, trained_ctx: AppContext, ng_board: Path, dialogs: list[tuple[str, str]]
+    qtbot: QtBot, trained_ctx: AppContext, ng_board: Path, dialogs: list[tuple[str, str]]
 ) -> None:
     page = _inspect_one(qtbot, _window(qtbot, trained_ctx, "Operator"), ng_board)
     assert page.last.verdict == "NG"
@@ -66,7 +67,7 @@ def test_req_insp_006_the_last_1000_alarms_survive(ctx: AppContext) -> None:
 
 
 def test_req_log_005_unhandled_error_is_logged_with_the_version_and_shown_with_its_code(
-    ctx: AppContext, dialogs: list[tuple[str, str]], monkeypatch
+    ctx: AppContext, dialogs: list[tuple[str, str]], monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setattr(sys, "excepthook", sys.excepthook)  # put the original back after the test
     install_excepthook(ctx, None)
@@ -88,7 +89,7 @@ def test_req_log_005_unhandled_error_is_logged_with_the_version_and_shown_with_i
     assert alarm["level"] == "ERROR" and alarm["code"] == "AOI-SET-007" and "secret detail" not in alarm["message"]
 
 
-def test_req_log_005_reopens_on_the_last_page(qtbot, trained_ctx: AppContext) -> None:
+def test_req_log_005_reopens_on_the_last_page(qtbot: QtBot, trained_ctx: AppContext) -> None:
     _window(qtbot, trained_ctx, "Operator").navigate("Inspection")
     saved = json.loads((default_workspace() / "settings.json").read_text(encoding="utf-8"))
     assert saved["last_page"] == "Inspection" and saved["workspace"] == trained_ctx.settings.workspace
@@ -107,7 +108,7 @@ def test_req_log_005_reopens_on_the_last_page(qtbot, trained_ctx: AppContext) ->
 
 
 def test_req_set_019_page_errors_show_code_what_and_action_never_a_trace(
-    qtbot, trained_ctx: AppContext, tmp_path: Path, dialogs: list[tuple[str, str]]
+    qtbot: QtBot, trained_ctx: AppContext, tmp_path: Path, dialogs: list[tuple[str, str]]
 ) -> None:
     win = _window(qtbot, trained_ctx, "Operator")
     win.pages["Compare"].save_recipe()
@@ -133,7 +134,7 @@ def test_req_set_019_page_errors_show_code_what_and_action_never_a_trace(
 
 
 def test_req_set_019_compare_save_to_recipe_without_a_board_model_asks_for_one(
-    qtbot, trained_ctx: AppContext, monkeypatch: pytest.MonkeyPatch
+    qtbot: QtBot, trained_ctx: AppContext, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Before S22b the save reached the database with no board model and came back as an unexpected-error dialog."""
     win = _window(qtbot, trained_ctx)

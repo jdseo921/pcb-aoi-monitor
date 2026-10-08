@@ -42,6 +42,7 @@ from PySide6.QtWidgets import (
     QTextEdit,
     QWidget,
 )
+from pytestqt.qtbot import QtBot
 
 from aoi.core.services import AppContext
 from aoi.ui import theme
@@ -218,7 +219,9 @@ def _check_targets(where: str, win: MainWindow, title: str, seen: Counter) -> li
     return out
 
 
-def test_req_set_004_sizes_and_contrast_on_every_page(screens: tuple[AppContext, Path], qtbot, qapp) -> None:
+def test_req_set_004_sizes_and_contrast_on_every_page(
+    screens: tuple[AppContext, Path], qtbot: QtBot, qapp: QApplication
+) -> None:
     """Every visible widget of every page, for every role: the font, the size and the contrast rules above."""
     assert QFontDatabase.families(), "no fonts loaded, so no text to measure (Windows offscreen: set QT_QPA_FONTDIR)"
     ctx, dataset = screens

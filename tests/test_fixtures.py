@@ -9,6 +9,7 @@ from aoi.core.imaging import list_images
 from aoi.core.inspector import Inspector
 from aoi.core.recipe import Recipe
 from aoi.core.services import AppContext
+from tests.conftest import TrainedModel
 
 
 def test_workspace_fixture_is_temporary_and_empty(workspace: Settings, ctx: AppContext, tmp_path: Path) -> None:
@@ -24,7 +25,7 @@ def test_synthetic_dataset_fixture_has_the_seeded_splits(synthetic_dataset: Path
     assert len(list_images(synthetic_dataset / "test")) == 21
 
 
-def test_tiny_model_fixture_scores_its_own_golden_board_as_normal(tiny_model) -> None:  # type: ignore[no-untyped-def]
+def test_tiny_model_fixture_scores_its_own_golden_board_as_normal(tiny_model: TrainedModel) -> None:
     assert tiny_model.model.image_threshold > 0
     assert tiny_model.ctx.db.active_model(tiny_model.board_model)["version"] == tiny_model.version
     recipe = Recipe(board_model=tiny_model.board_model, use_compare=False)
