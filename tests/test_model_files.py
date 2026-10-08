@@ -6,6 +6,7 @@ with ``torch.load(weights_only=True)`` and its own files hold only tensors and p
 
 from __future__ import annotations
 
+import io
 import math
 import random
 import re
@@ -20,7 +21,11 @@ import numpy as np
 import pytest
 import torch
 
+from aoi.config import Settings
 from aoi.core import anomaly
+from aoi.core.imaging import list_images
+from aoi.core.services import AppContext
+from aoi.errors import AoiError
 
 
 class _RunsCodeWhenUnpickled:
@@ -168,3 +173,112 @@ def test_req_trn_014_damaged_model_files_are_refused_with_a_code(tmp_path: Path)
     assert "err_std" in _refused(saved("std-missing", err_std=None))
     assert "spread" in _refused(saved("std-zero", err_std=torch.zeros(64, 64)))
     assert anomaly.AnomalyModel.load(saved("unchanged")).image_threshold == 1.5, "the control loads"
+
+
+def _flag_as_folder(data: bytes, suffix: str) -> bytes:
+    """`data` with the MS-DOS folder bit (0x10) set in the external attributes of the central-directory record of the
+    entry whose name ends with `suffix`: one bit that no CRC-32 covers."""
+    out = bytearray(data)
+    with zipfile.ZipFile(io.BytesIO(data)) as z:
+        at = z.start_dir
+        for info in z.infolist():
+            if info.filename.endswith(suffix):
+                out[at + 38] |= 0x10
+                return bytes(out)
+            names, extra, comment = struct.unpack("<HHH", data[at + 28 : at + 34])
+            at += 46 + names + extra + comment
+    raise AssertionError(f"no entry ends with {suffix}")
+
+
+def _raises(error: Exception) -> Any:
+    def fail(*args: Any, **kwargs: Any) -> Any:
+        raise error
+
+    return fail
+
+
+def test_req_trn_014_malformed_model_files_are_refused_with_a_code(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """An entry flagged as a folder in the zip's central directory, one bit outside every CRC-32, is refused: torch
+    would not read its bytes, so its weights would be stray memory (#168). Any other error the reader, the metadata or
+    the weights raise on a malformed file is AOI-TRN-001 too, never an uncoded error."""
+    model = _tiny_model()
+    good = tmp_path / "model.pt"
+    model.save(good)
+    for suffix in ("data/0", "data.pkl"):
+        flagged = tmp_path / f"folder-{suffix.replace('/', '-')}.pt"
+        flagged.write_bytes(_flag_as_folder(good.read_bytes(), suffix))
+        with zipfile.ZipFile(flagged) as z:
+            assert z.testzip() is None, "the CRC-32 check alone does not see the change"
+        assert f"{suffix} is marked as a folder" in _refused(flagged)
+    bf16 = tmp_path / "bf16-map.pt"
+    meta = {**anomaly._to_safe(model.meta), "err_mean": torch.zeros(64, 64, dtype=torch.bfloat16)}
+    torch.save({"state_dict": model.net.state_dict(), "meta": meta}, bf16)
+    assert "metadata is malformed (TypeError)" in _refused(bf16)
+    for error in (IndexError("list index out of range"), struct.error("unpack"), TypeError("x"), AttributeError("y")):
+        monkeypatch.setattr(torch, "load", _raises(error))
+        assert f"({type(error).__name__})" in _refused(good)
+    monkeypatch.undo()
+    monkeypatch.setattr(anomaly.ConvAutoencoder, "load_state_dict", _raises(ValueError("not a tensor")))
+    assert "do not fit" in _refused(good)
+    monkeypatch.undo()
+    assert anomaly.AnomalyModel.load(good).image_threshold == 1.5, "the control loads"
+
+
+def test_req_trn_007_a_model_that_cannot_judge_is_refused_before_it_is_saved(
+    ctx: AppContext, synthetic_dataset: Path
+) -> None:
+    """OK images that are copies of one photo all score 0, so calibration gives an image threshold of 0, which the
+    loader refuses (#168): training refuses that AI model with AOI-TRN-004 before anything is saved, registered,
+    activated or audited, and the AI model in use stays active and loads."""
+    oks = list_images(synthetic_dataset / "train" / "ok")
+    ctx.import_samples("B", [str(p) for p in oks[:3]], "OK")
+    ctx.train("B", epochs=1, image_size=64)
+
+    def state() -> tuple[object, ...]:
+        files = sorted(p.name for p in (ctx.settings.models_dir / "B").iterdir())
+        return ctx.models("B"), ctx.audit_entries(action="model.train"), ctx.reference_image("B"), files
+
+    before = state()
+    for sample in ctx.samples("B"):
+        ctx.delete_sample(sample["id"])
+    ctx.import_samples("B", [str(oks[0])] * 2, "OK")  # one good board imported twice passes the 2-OK minimum
+    with pytest.raises(AoiError) as refused:
+        ctx.train("B", epochs=1, image_size=64)
+    assert refused.value.code == "AOI-TRN-004", refused.value
+    assert "(its image threshold 0.0 is not a number above 0)" in refused.value.what
+    assert state() == before
+    loaded = ctx.load_model("B")
+    assert loaded is not None and loaded[0] == "v1.0" == ctx.models("B")[0]["version"]
+
+
+def test_req_trn_014_case_variant_names_and_another_models_file_are_refused(
+    ctx: AppContext, synthetic_dataset: Path
+) -> None:
+    """Board model names that differ only in case would share their AI model and golden board files on Windows, where
+    file names ignore case (#168): a new one is refused with AOI-TRN-005, from New board model and from a first import.
+    A model file that holds another AI model than its registry row names, as one written over it does, is refused with
+    AOI-TRN-001 instead of judging boards."""
+    oks = [str(p) for p in list_images(synthetic_dataset / "train" / "ok")[:3]]
+    ctx.ensure_board_model("TBOX-A1")
+    for create in (lambda: ctx.ensure_board_model("tbox-a1"), lambda: ctx.import_samples("Tbox-A1", oks, "OK")):
+        with pytest.raises(AoiError) as taken:
+            create()
+        assert taken.value.code == "AOI-TRN-005", taken.value
+        assert taken.value.what.startswith("Board model TBOX-A1 already exists, and ")
+    assert ctx.board_models() == ["TBOX-A1"] and not (ctx.settings.images_dir / "Tbox-A1").exists()
+    ctx.ensure_board_model("TBOX-A1")  # the same name again: nothing to create, nothing refused
+    ctx.import_samples("TBOX-A1", oks, "OK")
+    ctx.train("TBOX-A1", epochs=1, image_size=64)
+    rec = ctx.active_model("TBOX-A1")
+    assert rec is not None and (loaded := ctx.load_model("TBOX-A1")) is not None and loaded[2] == rec["uuid"]
+    other = anomaly.AnomalyModel.load(rec["path"])  # another AI model, saved over this one's file
+    other.meta["uuid"] = "another-model-uuid"
+    other.save(Path(rec["path"]))
+    restarted = AppContext(Settings(workspace=ctx.settings.workspace, device="cpu"))  # no AI model cached
+    with pytest.raises(anomaly.ModelFileError) as foreign:
+        restarted.load_model("TBOX-A1")
+    assert foreign.value.code == "AOI-TRN-001" and f"(its UUID another-model-uuid is not {rec['uuid']}," in str(
+        foreign.value
+    )

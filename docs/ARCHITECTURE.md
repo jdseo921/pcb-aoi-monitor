@@ -179,7 +179,9 @@ AOI_Workspace/                 (default ~/AOI_Workspace, set in Settings or AOI_
   images/<board>/<OK|NG>/      uploaded training samples (copied in, so source folders can move)
   models/<board>/<board>_vX.Y.pt            trained model + calibration: tensors and plain values only, loaded with
                                             torch.load(weights_only=True) after its zip CRC-32s check; a file that
-                                            is cut short, changed or unusable is refused, AOI-TRN-001 (REQ-TRN-014)
+                                            is cut short, changed or unusable, has an entry flagged as a folder, or
+                                            holds another AI model than the UUID its registry row names is refused,
+                                            AOI-TRN-001 (REQ-TRN-014)
   models/<board>/<board>_vX.Y_golden.png    learned golden template
   results/<date>/*.png         overlay per inspected board, with its *_diff.png and *_ai2.png maps (REQ-INSP-012;
                                *_ai.png before S28a)
@@ -208,6 +210,10 @@ Upload OK images (+ optional NG)                         Training page
 ```
 
 Re-training after more uploads creates a new version; older versions stay selectable (model version control, GUI §6).
+An AI model the loader would refuse, such as one with an image threshold of 0 from OK images that are copies of one
+photo, is refused at step 5 with AOI-TRN-004: nothing is saved, registered or audited, and the active version stays.
+The reference image an Engineer sets (Set Reference) must be an OK sample (AOI-TRN-006): inspections compare against it
+at once, and step 1 aligns to it. While a sample is the reference, it cannot be relabelled NG or removed (AOI-TRN-007).
 
 **Next AI step (not in this draft):** once enough labelled NG crops exist per type, add a small supervised
 classifier that names the defect (Solder Bridge, Tombstone, …) for each flagged region. Today a region is named by
@@ -344,7 +350,7 @@ User switching is a local picker for the PoC; Stage 4 replaces it with MES authe
 
 | Table | Key columns |
 |---|---|
-| `board_models` | name, reference_image (golden) |
+| `board_models` | name (a new name that differs from an existing one only in case is refused, AOI-TRN-005: Windows would give both the same model and golden board files), reference_image (golden) |
 | `samples` | board_model, path, label OK/NG, defect_type (DCT), side |
 | `models` | board_model, version, uuid (also in the `.pt` file's metadata, written there before the file is saved, so an exported file names its record), path (.pt), metrics JSON (thresholds, scores, timing), active |
 | `recipes` | board_model, revision (1 is the default recipe, stored when the board model is created, so every result names a stored revision), uuid, body JSON, user, created_at |
