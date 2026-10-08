@@ -27,10 +27,9 @@ from PySide6.QtWidgets import (
 
 from ... import defects as taxonomy
 from ...core.imaging import IMAGE_EXTS, list_images, load_image
-from ...data import atomic
-from ...data.times import to_local
 from ...errors import AoiError
 from ...hal import VIEWS
+from ...times import to_local
 from ..widgets.image_view import ImageView
 from ..workers import Worker, start
 from .base import Page, button, fill_table, make_table
@@ -201,16 +200,13 @@ class TrainingPage(Page):
                 return
             dtype = dlg.value()[0]
         for i in ids:
-            self.ctx.db.update_sample(i, label, dtype)
+            self.ctx.update_sample(i, label, dtype)
         self.refresh()
 
     def _set_reference(self):
         ids = self._selected_ids()
         if ids:
-            path = self.ctx.db.resolve_path(
-                self.ctx.db.query("SELECT path FROM samples WHERE id=?", (ids[0],))[0]["path"]
-            )
-            self.ctx.db.set_reference(self.board_model, path)
+            self.ctx.set_reference(self.board_model, ids[0])
             self.shell.status("Reference image set; the next training run re-learns the golden template from it")
 
     def _remove(self):
@@ -221,7 +217,7 @@ class TrainingPage(Page):
             == QMessageBox.Yes
         ):
             for i in ids:
-                self.ctx.db.delete_sample(i)
+                self.ctx.delete_sample(i)
             self.refresh()
 
     def _preview(self):
@@ -235,7 +231,7 @@ class TrainingPage(Page):
     def train(self):
         if not self.need_board_model():
             return
-        n_ok = len(self.ctx.db.samples(self.board_model, "OK"))
+        n_ok = len(self.ctx.samples(self.board_model, "OK"))
         if n_ok < 2:
             return self.error(AoiError("AOI-TRN-002", found=n_ok))
         self.log.clear()
@@ -280,7 +276,7 @@ class TrainingPage(Page):
     def activate(self):
         rows = self.models.selectionModel().selectedRows()
         if rows:
-            self.ctx.db.activate_model(int(self.models.item(rows[0].row(), 0).text()))
+            self.ctx.activate_model(int(self.models.item(rows[0].row(), 0).text()))
             self.refresh()
 
     def export_model(self):
@@ -288,11 +284,10 @@ class TrainingPage(Page):
         if not rows:
             return
         mid = int(self.models.item(rows[0].row(), 0).text())
-        rec = self.ctx.db.query("SELECT * FROM models WHERE id=?", (mid,))[0]
-        src = Path(self.ctx.db.resolve_path(rec["path"]))
+        src = Path(self.ctx.model(mid)["path"])
         f, _ = QFileDialog.getSaveFileName(self, "Export model", src.name, "PyTorch model (*.pt)")
         if f:
-            atomic.copy_file(src, f)
+            self.ctx.export_model(mid, f)
 
     def refresh(self):
         if not self.board_model:
@@ -300,7 +295,7 @@ class TrainingPage(Page):
             self.models.setRowCount(0)
             self.counts.setText("")
             return
-        s = self.ctx.db.samples(self.board_model)
+        s = self.ctx.samples(self.board_model)
         fill_table(
             self.samples,
             [[r["id"], r["label"], r["defect_type"] or "", r["side"], Path(r["path"]).name] for r in s],
@@ -309,12 +304,12 @@ class TrainingPage(Page):
         for i, r in enumerate(s):
             self.samples.item(i, 4).setToolTip(r["path"])
         n_ok = sum(r["label"] == "OK" for r in s)
-        ref = self.ctx.db.reference(self.board_model)
+        ref = self.ctx.reference_image(self.board_model)
         self.counts.setText(
             f"{n_ok} OK · {len(s) - n_ok} NG · reference: {Path(ref).name if ref else 'none'}"
             + ("" if n_ok >= 20 else "  ·  tip: 20+ OK images give a steadier threshold")
         )
-        ms = self.ctx.db.models(self.board_model)
+        ms = self.ctx.models(self.board_model)
         rows = []
         for m in ms:
             meta = json.loads(m["metrics"] or "{}")

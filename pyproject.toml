@@ -15,7 +15,7 @@ known-first-party = ["aoi", "tests", "tools"]
 [tool.mypy]
 python_version = "3.11"
 # Strict on the engine and data layers, as the standard requires; the UI is not type-checked yet.
-files = ["aoi/core", "aoi/data"]
+files = ["aoi/core", "aoi/data", "aoi/times.py"]
 strict = true
 warn_unreachable = true
 # scikit-image functions carry no annotations, so calling them is allowed.

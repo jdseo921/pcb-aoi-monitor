@@ -21,8 +21,8 @@ from PySide6.QtWidgets import (
 from ... import defects as taxonomy
 from ...core.imaging import IMAGE_EXTS, list_images, load_image, save_image
 from ...core.inspector import InspectionResult, draw_overlay
-from ...data.times import to_local
 from ...hal import VIEWS
+from ...times import to_local
 from ..theme import verdict_style
 from ..widgets.image_view import ImageView
 from ..workers import Worker, start

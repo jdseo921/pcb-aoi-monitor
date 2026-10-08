@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import json
-
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QComboBox,
@@ -79,29 +77,27 @@ class HomePage(Page):
 
     def on_show(self):
         bm = self.board_model
-        db = self.ctx.db
         if not bm:
             for label in self.status_labels.values():
                 label.setText("Create a board model in the top bar to begin.")
             return
-        ok = len(db.samples(bm, "OK"))
-        ng = len(db.samples(bm, "NG"))
-        m = db.active_model(bm)
-        rev = db.latest_recipe(bm)
-        runs = db.query("SELECT metrics FROM test_runs WHERE board_model=? ORDER BY id DESC LIMIT 1", (bm,))
-        insp = db.query("SELECT COUNT(*) n, SUM(result='NG') ng FROM inspections WHERE board_model=?", (bm,))[0]
-        tm = json.loads(runs[0]["metrics"]) if runs else None
-        self.status_labels["Upload samples"].setText(f"{ok} OK · {ng} NG uploaded")
-        self.status_labels["Self-train"].setText(f"Active model {m['version']}" if m else "Not trained yet")
-        self.status_labels["Tune recipe"].setText(f"Recipe revision {rev[0]}" if rev else "Using defaults")
+        st = self.ctx.board_status(bm)
+        tm = st.last_test
+        self.status_labels["Upload samples"].setText(f"{st.ok_samples} OK · {st.ng_samples} NG uploaded")
+        self.status_labels["Self-train"].setText(
+            f"Active model {st.model_version}" if st.model_version else "Not trained yet"
+        )
+        self.status_labels["Tune recipe"].setText(
+            f"Recipe revision {st.recipe_revision}" if st.recipe_revision else "Using defaults"
+        )
         self.status_labels["Validate"].setText(
             f"Last test: accuracy {tm['accuracy']:.0%}, recall {tm['recall']:.0%}, "
             f"false calls {tm['false_call_rate']:.0%}"
             if tm
             else "No test run yet"
         )
-        self.status_labels["Inspect"].setText(f"{insp['n']} boards inspected · {insp['ng'] or 0} NG")
-        self.status_labels["Export"].setText("Ready" if insp["n"] else "Nothing to export yet")
+        self.status_labels["Inspect"].setText(f"{st.inspected} boards inspected · {st.ng} NG")
+        self.status_labels["Export"].setText("Ready" if st.inspected else "Nothing to export yet")
 
 
 # Sidebar: (section, page class). Order = navigation order.
@@ -162,12 +158,11 @@ class MainWindow(QMainWindow):
         self.nav.currentItemChanged.connect(self._on_nav)
 
         self._reload_board_models()
-        self.set_role(
-            "Admin" if not ctx.db.board_models() else "Operator", "admin" if not ctx.db.board_models() else "operator"
-        )
+        first_run = not ctx.board_models()  # no board model yet: start as Admin to set the station up
+        self.set_role("Admin" if first_run else "Operator", "admin" if first_run else "operator")
         if not self.navigate(ctx.settings.last_page):  # reopen where the last session was (REQ-LOG-005)
             self.navigate("Home")
-        ctx.db.archive_old(ctx.settings.log_retention_days)
+        ctx.archive_old()
 
     # --- header -------------------------------------------------------------------
     def _header(self) -> QWidget:
@@ -195,7 +190,7 @@ class MainWindow(QMainWindow):
     def _reload_board_models(self, select: str | None = None):
         self.bm_combo.blockSignals(True)
         self.bm_combo.clear()
-        self.bm_combo.addItems(self.ctx.db.board_models())
+        self.bm_combo.addItems(self.ctx.board_models())
         self.bm_combo.blockSignals(False)
         if select:
             self.bm_combo.setCurrentText(select)
@@ -204,7 +199,7 @@ class MainWindow(QMainWindow):
     def new_board_model(self):
         name, ok = QInputDialog.getText(self, "New board model", "Board model name (e.g. TBOX-A1 Rev2)")
         if ok and name.strip():
-            self.ctx.db.ensure_board_model(name.strip())
+            self.ctx.ensure_board_model(name.strip())
             self._reload_board_models(name.strip())
 
     def _on_board_model(self, name: str):
@@ -217,7 +212,7 @@ class MainWindow(QMainWindow):
 
     # --- users / roles (spec 8) -------------------------------------------------------
     def switch_user(self):
-        users = self.ctx.db.users()
+        users = self.ctx.users()
         names = [f"{u['name']} ({u['role']})" for u in users]
         sel, ok = QInputDialog.getItem(self, "Switch user", "User", names, 0, False)
         if ok:
