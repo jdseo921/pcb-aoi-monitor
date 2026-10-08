@@ -21,7 +21,10 @@ import pytest
 # Qt pages render offscreen in tests (CI runners have no display). Set before any Qt import.
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from PySide6.QtWidgets import QMessageBox  # noqa: E402
+from PySide6.QtCore import Qt  # noqa: E402
+from PySide6.QtGui import QGuiApplication  # noqa: E402
+from PySide6.QtTest import QTest  # noqa: E402
+from PySide6.QtWidgets import QMessageBox, QWidget  # noqa: E402
 
 from aoi.config import Settings  # noqa: E402
 from aoi.core import anomaly  # noqa: E402
@@ -161,6 +164,21 @@ def _questions_answer_yes(monkeypatch: pytest.MonkeyPatch) -> None:
     """Yes in place of a modal question that would block offscreen: a window closed at a test's end while work runs
     asks whether to stop it (#171). A test that answers otherwise patches QMessageBox.question itself."""
     monkeypatch.setattr(QMessageBox, "question", staticmethod(lambda *_: QMessageBox.StandardButton.Yes))
+
+
+def let_go_of_keys() -> None:
+    """Qt reads no key as held after this. QTest's click with Ctrl lets go of Ctrl in an event that still carries Ctrl,
+    so Qt reads Ctrl as held until the next key event."""
+    if QGuiApplication.keyboardModifiers() != Qt.KeyboardModifier.NoModifier:
+        QTest.keyRelease(QWidget(), Qt.Key.Key_Control)  # an event with no modifier: Qt reads none held after it
+
+
+@pytest.fixture(autouse=True)
+def _no_key_held(qapp: Any) -> None:
+    """Each test starts with no key held: with Ctrl read as held from an earlier test, a test's selectRow() adds its
+    row to the selection instead of selecting it alone (the AI Model Test preview test's another_row failed so on
+    Linux CI, after the import sheet's Ctrl+N)."""
+    let_go_of_keys()
 
 
 @pytest.fixture
