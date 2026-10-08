@@ -213,6 +213,12 @@ class Inspector:
         self.reference_path = reference_path
         self.reference_sha256 = reference_sha256
 
+    @property
+    def inputs(self) -> tuple[str | None, str | None, str | None]:
+        """What the engine was built from: the AI model's UUID, the recipe revision's UUID and the Golden board's path,
+        each None when it has none. `AppContext.engine_is_current` compares them with what is active now (#243)."""
+        return self.model_uuid, self.recipe_uuid, self.reference_path
+
     def inspect(self, img: np.ndarray) -> InspectionResult:
         """The board in `img` aligned, compared and judged. AOI-INSP-011 before any work when it, or the golden board,
         has a side under MIN_SIDE px; AOI-INSP-010 when no check could judge it (`judge`)."""

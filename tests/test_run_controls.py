@@ -9,7 +9,7 @@ shown. #120: one board is inspected at a time per page.
 from __future__ import annotations
 
 import threading
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from pathlib import Path
 from time import perf_counter, sleep
 from typing import Any
@@ -28,6 +28,7 @@ from aoi.ui import theme
 from aoi.ui.main_window import MainWindow
 from aoi.ui.pages.inspection import InspectionPage
 from aoi.ui.widgets.image_view import ImageView
+from tests.conftest import TINY_EPOCHS, TINY_IMAGE_SIZE
 from tests.test_req_done_in_v01 import BOARD, _window
 
 BUDGET_S = 0.1  # REQ-INSP-005: a response within 100 ms; REQ-INSP-002: the verdict within 100 ms of the result
@@ -308,7 +309,7 @@ def test_issue_120_start_waits_while_a_board_is_inspected(
     press(qtbot, win, page.act_next)
     assert page.worker is not None and page.queue_pos == 1
     qtbot.waitUntil(lambda: page.worker is None, timeout=30000)
-    assert len(engine.done) == 2
+    assert len(engine.done) == 2 and len(engine.builds) == 1, "the kept engine, still current, is used again (#243)"
 
 
 def test_req_insp_005_an_engine_built_for_the_state_before_is_dropped(
@@ -367,3 +368,120 @@ def test_req_insp_005_a_board_model_change_stops_the_run(
     page.running, page.run_board_model = True, BOARD  # a run of TINY, should one reach Next Board under ZZZ
     page.next_board()
     assert page.worker is None and not page.running and len(started) == 2, "no board of it starts under ZZZ"
+
+
+def test_req_trn_010_a_board_started_after_an_activation_is_judged_by_the_active_ai_model(
+    qtbot: QtBot, trained_ctx: AppContext, synthetic_dataset: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """#243: an AI model trained or activated while Inspection stays shown judges every board that starts after it,
+    against the Golden board then in use: Next Board and Start on the queue already loaded, Start on a new queue. The
+    board in hand at that moment keeps the engine it started with; a run in progress moves at its next board, with a
+    line under the banner, while the status bar keeps the next board's busy line, and a WARN alarm AOI-INSP-013 naming
+    the AI model now judging. An engine that is still current is used again, not built for each board. Before, the page
+    kept its first board's engine until a revisit or a board model change, so every later board was judged by v1.0 and
+    its Golden board while v1.1 was active."""
+    win = _window(qtbot, trained_ctx, "Engineer")  # an Engineer trains and activates; the page stays on Inspection
+    page = win.pages["Inspection"]
+    assert isinstance(page, InspectionPage)
+    win.navigate("Inspection")
+    qtbot.waitUntil(trained_ctx.jobs.idle, timeout=10000)
+    started: list[str | None] = []
+    held = {6: threading.Event(), 8: threading.Event()}  # boards 6 and 8 wait for the test
+    real, build = Inspector.inspect, AppContext.inspector
+
+    def inspect(engine: Inspector, image: np.ndarray) -> InspectionResult:
+        started.append(engine.model_version)
+        if (gate := held.get(len(started))) is not None:
+            assert gate.wait(30), "the test did not release the board"
+        return real(engine, image)
+
+    built_for: list[int] = []  # the board each engine build was for
+
+    def built(ctx: AppContext, *args: Any, **kwargs: Any) -> Inspector:
+        built_for.append(len(started) + 1)
+        return build(ctx, *args, **kwargs)
+
+    monkeypatch.setattr(Inspector, "inspect", inspect)
+    monkeypatch.setattr(AppContext, "inspector", built)
+
+    def run(press: Callable[[], None]) -> None:
+        press()
+        qtbot.waitUntil(lambda: page.worker is None and not page.running and trained_ctx.jobs.idle(), timeout=60000)
+
+    def activate(version: str) -> None:  # one click on Training's version list, as an Engineer rolls back
+        trained_ctx.activate_model(next(m["id"] for m in trained_ctx.models(BOARD) if m["version"] == version))
+
+    boards = list_images(synthetic_dataset / "test" / "ok")[:8]
+    page._set_queue(boards[:3])
+    run(page.next_board)  # board 1 builds the engine with v1.0, and the page keeps it
+    trained_ctx.train(BOARD, epochs=TINY_EPOCHS, image_size=TINY_IMAGE_SIZE)  # v1.1 and its Golden board are active
+    run(page.next_board)  # board 2: Next Board on the queue already loaded
+    activate("v1.0")  # v1.0 with v1.1's Golden board (a rollback keeps the newest Golden board, REQ-TRN-010 Partial)
+    run(page.start_run)  # board 3: Start on the queue already loaded
+    activate("v1.1")
+    page._set_queue(boards[3:5])
+    run(page.start_run)  # boards 4 and 5: Start on a new queue
+    page._set_queue(boards[5:])
+    page.start_run()
+    qtbot.waitUntil(lambda: len(started) == 6, timeout=60000)  # board 6 is in hand
+    activate("v1.0")
+    held[6].set()
+    qtbot.waitUntil(lambda: len(started) == 8, timeout=60000)  # board 7 is judged, board 8 is in hand
+    g10, g11 = f"{BOARD}_v1.0_golden.png", f"{BOARD}_v1.1_golden.png"
+    note = (
+        f"The AI model, recipe or Golden board changed during this run: {boards[6].name} was judged with AI model v1.0,"
+        f" recipe revision 1 and Golden board {g11}; each record names what judged it."
+    )
+    assert page.summary.text() == f"Inspecting {boards[7].name}…\n{note}", "the run says it moved to v1.0"
+    assert win.statusBar().currentMessage() == f"Inspecting {boards[7].name} (3 of 3)…", "the busy line stays"
+    held[8].set()
+    qtbot.waitUntil(lambda: page.worker is None and not page.running and trained_ctx.jobs.idle(), timeout=60000)
+
+    def golden(iid: int) -> str:
+        rec = trained_ctx.inspection(iid)
+        return Path(rec["reference_path"]).name if rec and rec["reference_path"] else "none"
+
+    judged = [(Path(r["image_path"]).name, r["model_version"], golden(r["id"])) for r in trained_ctx.inspections()]
+    by = [("v1.0", g10), ("v1.1", g11), ("v1.0", g11), ("v1.1", g11), ("v1.1", g11), ("v1.1", g11)] + [
+        ("v1.0", g11)
+    ] * 2
+    assert judged[::-1] == [(b.name, *v) for b, v in zip(boards, by, strict=True)], "board 6 was in hand at activation"
+    assert built_for == [1, 2, 3, 4, 6, 7], "boards 5 and 8 use the kept engine, which is still current"
+    codes = [a["code"] for a in trained_ctx.alarms()]
+    assert codes.count("AOI-INSP-013") == 1 and codes[0] == "AOI-INSP-013", "only the run that moved is alarmed"
+    assert page.alarms.item(0).text().endswith(f"[WARN]  AOI-INSP-013  {note}")
+
+
+def test_req_insp_006_a_board_model_with_no_ai_model_is_alarmed_once_per_page_visit(
+    qtbot: QtBot, trained_ctx: AppContext, synthetic_dataset: Path
+) -> None:
+    """#243 review: on a board model with a Golden board and no AI model, AOI-TRN-003 is stored once per page visit, as
+    before #243, and not again for the engine each new queue builds: Load Images… or Load Folder… on such a board model
+    would otherwise add a WARN row each time and push real alarms out of the alarm log's ALARM_LIMIT rows."""
+    trained_ctx.ensure_board_model("ZZZ")
+    trained_ctx.set_reference("ZZZ", trained_ctx.samples(BOARD, "OK")[0]["id"])
+    win = _window(qtbot, trained_ctx, "Operator")
+    page = win.pages["Inspection"]
+    assert isinstance(page, InspectionPage)
+    win.navigate("Inspection")
+    win.bm_combo.setCurrentText("ZZZ")
+    qtbot.waitUntil(trained_ctx.jobs.idle, timeout=10000)
+    oks = list_images(synthetic_dataset / "test" / "ok")
+
+    def queue(*boards: Path) -> None:  # a new queue, each board by Next Board
+        page._set_queue(list(boards))
+        for _ in boards:
+            page.next_board()
+            qtbot.waitUntil(lambda: page.worker is None and trained_ctx.jobs.idle(), timeout=60000)
+
+    def warned() -> int:
+        return [a["code"] for a in trained_ctx.alarms()].count("AOI-TRN-003")
+
+    queue(oks[0], oks[1])
+    queue(oks[2])
+    queue(oks[3])
+    assert len(trained_ctx.inspections()) == 4 and warned() == 1, "one AOI-TRN-003 for three queues on one visit"
+    win.navigate("Home")
+    win.navigate("Inspection")
+    queue(oks[4])
+    assert warned() == 2, "a new visit says it once more"

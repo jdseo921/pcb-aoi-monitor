@@ -463,7 +463,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+42"/>
+        <location line="+52"/>
         <source>{file}: {defects} defect(s)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -553,12 +553,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-546"/>
+        <location line="-556"/>
         <source>its UUID {found} is not {uuid}, as in the AI model registry</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+561"/>
+        <location line="+571"/>
         <source>Changing settings</source>
         <translation type="unfinished"></translation>
     </message>
@@ -655,7 +655,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+182"/>
+        <location line="+188"/>
         <source>board image</source>
         <translation type="unfinished"></translation>
     </message>
@@ -861,6 +861,16 @@
     </message>
     <message>
         <location line="+6"/>
+        <source>AI model, recipe or Golden board changed during a run</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+7"/>
+        <source>No action is needed: each record names the AI model version, recipe revision and Golden board that judged it.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+8"/>
         <source>Result has no stored heatmaps</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1335,7 +1345,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-500"/>
+        <location line="-515"/>
         <source>Board judged NG</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1345,7 +1355,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+177"/>
+        <location line="+114"/>
+        <source>The AI model, recipe or Golden board of {board} changed during a run (training ended, a version was activated, a recipe saved or a Golden board set), so {file} and the boards after it are judged with what is active now; the boards before keep what judged them.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+78"/>
         <source>AI model file refused: {path} could not be loaded as a weights-only AI model file this app wrote ({reason}).</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1754,14 +1769,14 @@
 <context>
     <name>InspectionPage</name>
     <message>
-        <location filename="../ui/pages/inspection.py" line="+90"/>
+        <location filename="../ui/pages/inspection.py" line="+92"/>
         <location line="+81"/>
-        <location line="+133"/>
+        <location line="+146"/>
         <source>Load Images…</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-213"/>
+        <location line="-226"/>
         <source>Load Folder…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1843,12 +1858,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+130"/>
+        <location line="+143"/>
         <source>Next Board ›</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-119"/>
+        <location line="-132"/>
         <source>Select PCB images</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1863,7 +1878,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+6"/>
+        <location line="+7"/>
         <source>{count} image(s) queued</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1873,7 +1888,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+17"/>
+        <location line="+18"/>
         <source>Stopping after this board…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1893,12 +1908,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+40"/>
+        <location line="+49"/>
         <source>No AI model for {board_model} yet: only the Golden board comparison runs</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+7"/>
+        <location line="+9"/>
         <source>{file} was inspected under board model {board_model}; the header now shows {header}.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1958,7 +1973,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+12"/>
+        <location line="+13"/>
+        <source>The AI model, recipe or Golden board changed during this run: {file} was judged with AI model {version}, recipe revision {revision} and Golden board {golden}; each record names what judged it.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+17"/>
         <source>Run stopped: {user} signed in. The boards of the run so far are recorded under {starter}; press Start to carry on with the queue as {user}.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2582,7 +2602,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/inspection.py" line="-401"/>
+        <location filename="../ui/pages/inspection.py" line="-434"/>
         <source>Inspection</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3188,7 +3208,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/services.py" line="-1087"/>
+        <location filename="../core/services.py" line="-1097"/>
         <source>Aligning {count} images to the reference board</source>
         <translation type="unfinished"></translation>
     </message>

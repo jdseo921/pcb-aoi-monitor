@@ -214,6 +214,21 @@ CODES: dict[str, ErrorCode] = {
             ),
         ),
         ErrorCode(
+            "AOI-INSP-013",
+            QT_TRANSLATE_NOOP("Errors", "AI model, recipe or Golden board changed during a run"),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "The AI model, recipe or Golden board of {board} changed during a run (training ended, a version was"
+                " activated, a recipe saved or a Golden board set), so {file} and the boards after it are judged with"
+                " what is active now; the boards before keep what judged them.",
+            ),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "No action is needed: each record names the AI model version, recipe revision and Golden board that"
+                " judged it.",
+            ),
+        ),
+        ErrorCode(
             "AOI-CMP-001",
             QT_TRANSLATE_NOOP("Errors", "Result has no stored heatmaps"),
             QT_TRANSLATE_NOOP(
