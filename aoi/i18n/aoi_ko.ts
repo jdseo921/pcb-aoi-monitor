@@ -573,7 +573,7 @@
 <context>
     <name>Errors</name>
     <message>
-        <location filename="../core/services.py" line="+59"/>
+        <location filename="../core/services.py" line="+60"/>
         <source>a length of {length} px over {distance} mm gives no scale: both must be numbers above 0, and the scale from {least} to {most} px per mm</source>
         <translation type="unfinished"></translation>
     </message>
@@ -598,7 +598,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+200"/>
+        <location line="+210"/>
         <location line="+118"/>
         <source>Importing samples</source>
         <translation type="unfinished"></translation>
@@ -834,7 +834,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1592"/>
+        <location line="-1603"/>
         <source>no defect type was given</source>
         <translation>결함 유형이 지정되지 않았습니다</translation>
     </message>
@@ -844,12 +844,12 @@
         <translation>{name}은(는) 그중 하나가 아닙니다</translation>
     </message>
     <message>
-        <location line="+4"/>
+        <location line="+5"/>
         <source>there is no board model of that name</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+515"/>
+        <location line="+525"/>
         <source>its UUID {found} is not {uuid}, as in the AI model registry</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4520,7 +4520,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/services.py" line="-1766"/>
+        <location filename="../core/services.py" line="-1777"/>
         <source>Aligning {count} images to the reference board</source>
         <translation type="unfinished"></translation>
     </message>

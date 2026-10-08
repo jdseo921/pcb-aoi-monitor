@@ -4,6 +4,7 @@ new version, and the frozen one's rows and manifest never change."""
 
 from __future__ import annotations
 
+import errno
 import hashlib
 import json
 import sqlite3
@@ -14,7 +15,7 @@ import pytest
 
 from aoi.core import datasets
 from aoi.core.labels import DefectBox
-from aoi.core.services import AppContext
+from aoi.core.services import AppContext, _manifest_write
 from aoi.errors import AoiError
 from tests.conftest import distinct_copies
 from tests.test_labeller_agreement import CAL, calibration_workspace, label_blind
@@ -202,8 +203,31 @@ def test_req_trn_005_manifest_not_written(ctx: AppContext, tmp_path: Path, monke
     monkeypatch.setattr(datasets, "FOLDER", "d" * 300)  # a folder name longer than any file system takes
     with pytest.raises(AoiError) as long_path:
         ctx.freeze_dataset(CAL, "Top", "R3", "Acme")
-    assert long_path.value.code == "AOI-TRN-042" and str(root) in long_path.value.what
+    assert long_path.value.code == "AOI-TRN-042" and str(root) in long_path.value.what, long_path.value.__cause__
     assert ctx.datasets(CAL) == [] and ctx.audit_entries() == entries and {p.name for p in root.iterdir()} == names
+
+
+def test_req_trn_005_a_name_over_255_units_on_windows_is_a_path_too_long(monkeypatch: pytest.MonkeyPatch) -> None:
+    """On Windows a manifest path holding a name of more than 255 UTF-16 units is AOI-TRN-042, path too long, as the
+    test above has it on Linux, whatever error Windows gives for it: with long paths on, Windows refuses such a name as
+    not valid (EINVAL, WinError 123), not as too long. A name of 255 units, that error for a name with a character
+    Windows refuses, and a long name on Linux, where ENAMETOOLONG says so itself, stay AOI-TRN-041. Before, the test
+    above failed on Windows CI with AOI-TRN-041."""
+    folder = Path("C:/aoi/datasets")
+    cases = [
+        (True, "d" * 256, "AOI-TRN-042"),
+        (True, "\U0001f600" * 128, "AOI-TRN-042"),  # 256 units: outside the BMP, each is 2
+        (True, "d" * 255, "AOI-TRN-041"),
+        (True, "DS-?", "AOI-TRN-041"),
+        (False, "d" * 256, "AOI-TRN-041"),
+    ]
+    for windows, name, code in cases:
+        monkeypatch.setattr("aoi.core.services.WINDOWS", windows)
+        invalid = "The filename, directory name, or volume label syntax is incorrect"
+        refusal = OSError(errno.EINVAL, invalid, str(folder / name / "manifest.json"), 123)  # 123: Windows only
+        with pytest.raises(AoiError) as caught, _manifest_write(name, f"datasets/{name}/manifest.json", folder.parent):
+            raise refusal
+        assert (caught.value.code, caught.value.__cause__) == (code, refusal), (windows, len(name))
 
 
 def test_req_trn_005_relabel_while_hashing_is_refused(
