@@ -10,7 +10,7 @@ target-version = "py311"
 select = ["E", "F", "W", "I", "UP", "B"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["aoi"]
+known-first-party = ["aoi", "tests", "tools"]
 
 [tool.mypy]
 python_version = "3.11"
@@ -25,3 +25,13 @@ untyped_calls_exclude = ["skimage"]
 testpaths = ["tests"]
 # Tests import the app as a package from the repository root.
 pythonpath = ["."]
+qt_api = "pyside6"
+
+[tool.coverage.run]
+# Line coverage of the engine and data layers (Engineering standard, "Tests": 80 % target). CI reports it on
+# every run; the gate is not enforced until the Stage 1 suite has grown (ADR 0003).
+source = ["aoi/core", "aoi/data"]
+
+[tool.coverage.report]
+show_missing = true
+precision = 1

@@ -34,6 +34,10 @@ PyPI's Linux wheel pulls in NVIDIA CUDA packages that neither needs in that form
    carries (Zlib and CC0-1.0 parts of numpy, Boost parts of torch, PSF-2.0 for typing_extensions, MPL-2.0 for
    certifi, Unlicense for filelock). Exceptions count as allowed so CI can pass, but every run prints the ones in
    use until Jay decides them in writing (Stage 1 plan, item J8). A package with no license metadata fails.
+6. Test tooling is pinned the same way (S05): pytest-qt (MIT) drives the Qt pages offscreen
+   (`QT_QPA_PLATFORM=offscreen`) on both CI platforms, and pytest-cov (MIT) reports line coverage of `aoi/core`
+   and `aoi/data` on every run. The Engineering standard's 80 % target is reported, not enforced, until the
+   Stage 1 suite has grown; S22 (internal 0.2.0) decides whether the gate turns on.
 
 ## Alternatives considered
 

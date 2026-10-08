@@ -1,0 +1,81 @@
+"""Shared fixtures (stage S05): a temporary workspace, an AppContext on it, the seeded synthetic dataset,
+and a tiny model trained once per session.
+
+The synthetic boards come from tools/make_synthetic_dataset.py with a fixed seed, so every machine gets the
+same images. Results on them prove a code path works; they are never quoted as accuracy (Customers & Launch
+standard, "Validation and accuracy claims").
+"""
+
+from __future__ import annotations
+
+import os
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any
+
+import numpy as np
+import pytest
+
+# Qt pages render offscreen in tests (CI runners have no display). Set before any Qt import.
+os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+
+from aoi.config import Settings  # noqa: E402
+from aoi.core import anomaly  # noqa: E402
+from aoi.core.imaging import list_images, load_image  # noqa: E402
+from aoi.core.services import AppContext  # noqa: E402
+from tools.make_synthetic_dataset import write_dataset  # noqa: E402
+
+DATASET_SEED = 7  # the generator's default seed, so the fixture matches `python tools/make_synthetic_dataset.py`
+DATASET_OK, DATASET_NG = 30, 14
+TINY_EPOCHS, TINY_IMAGE_SIZE = 6, 64  # seconds on a CPU; enough for tests of the training and model code paths
+
+
+@pytest.fixture
+def workspace(tmp_path: Path) -> Settings:
+    """Settings on a fresh temporary workspace; nothing in the tests touches ~/AOI_Workspace."""
+    return Settings(workspace=str(tmp_path / "workspace"), device="cpu")
+
+
+@pytest.fixture
+def ctx(workspace: Settings) -> AppContext:
+    """An AppContext on the temporary workspace: the layer the screens call, with an empty database."""
+    return AppContext(workspace)
+
+
+@pytest.fixture(scope="session")
+def synthetic_dataset(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    """The synthetic dataset (golden.png, train/ and test/ splits, labels.csv), written once per session."""
+    out = tmp_path_factory.mktemp("synthetic")
+    write_dataset(out, DATASET_OK, DATASET_NG, DATASET_SEED)
+    return out
+
+
+@dataclass(frozen=True)
+class TrainedModel:
+    """A tiny model trained once per session on the synthetic dataset.
+
+    Read-only by convention: `ctx` here is shared by every test in the session, so tests that write to a
+    workspace use the function-scoped `ctx` fixture instead.
+    """
+
+    ctx: AppContext
+    board_model: str
+    version: str
+    model: anomaly.AnomalyModel
+    reference: np.ndarray  # the golden board learned from the OK images, as the inspector uses it
+    meta: dict[str, Any]
+
+
+@pytest.fixture(scope="session")
+def tiny_model(tmp_path_factory: pytest.TempPathFactory, synthetic_dataset: Path) -> TrainedModel:
+    settings = Settings(workspace=str(tmp_path_factory.mktemp("model_workspace")), device="cpu")
+    ctx = AppContext(settings)
+    board_model = "TINY"
+    ctx.import_samples(board_model, [str(p) for p in list_images(synthetic_dataset / "train" / "ok")], "OK")
+    ctx.import_samples(board_model, [str(p) for p in list_images(synthetic_dataset / "train" / "ng")], "NG")
+    meta = ctx.train(board_model, epochs=TINY_EPOCHS, image_size=TINY_IMAGE_SIZE)
+    loaded = ctx.load_model(board_model)
+    assert loaded is not None, "training registered no active model"
+    reference = ctx.db.reference(board_model)
+    assert reference is not None, "training set no reference image"
+    return TrainedModel(ctx, board_model, loaded[0], loaded[1], load_image(reference), meta)
