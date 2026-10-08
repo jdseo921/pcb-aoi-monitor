@@ -1,13 +1,14 @@
 #!/usr/bin/env python
 """Fail when an installed dependency carries a license the Legal & Compliance standard does not allow.
 
-    pip-licenses --format=json | python tools/check_licenses.py [--packages requirements.lock]
+    pip-licenses --format=json | python tools/check_licenses.py [--packages requirements.lock ...]
 
 Reads pip-licenses' JSON from stdin, compares every package against tools/allowed_licenses.txt
 and exits 1 on the first package whose license is not allowed, listed by name. With --packages
-only the packages named in that requirements file (the shipped set) are checked; the rest are
-reported. Licenses marked "exception:" count as allowed but are printed, so the pending decision
-(Stage 1 plan, J8) stays visible in every CI run.
+only the packages named in those requirements files (the shipped set: requirements.lock and the
+PyTorch lock file installed with it) are checked; the rest are reported. Licenses marked
+"exception:" count as allowed but are printed, so the pending decision (Stage 1 plan, J8) stays
+visible in every CI run.
 """
 
 from __future__ import annotations
@@ -85,11 +86,13 @@ def verdict(license_text: str, allowed: set[str], exceptions: set[str]) -> tuple
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--packages", type=Path, help="requirements file naming the packages to check (the shipped set)")
+    ap.add_argument(
+        "--packages", type=Path, nargs="+", help="requirements files naming the packages to check (the shipped set)"
+    )
     args = ap.parse_args()
     rows = json.load(sys.stdin)
     allowed, exceptions, allowed_packages = load_allow_list()
-    shipped = requirement_names(args.packages) if args.packages else None
+    shipped = set().union(*(requirement_names(path) for path in args.packages)) if args.packages else None
 
     failures: list[str] = []
     used_exceptions: dict[str, list[str]] = {}
