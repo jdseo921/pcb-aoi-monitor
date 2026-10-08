@@ -190,6 +190,31 @@ def test_req_cmp_004_why_without_a_failing_check() -> None:
     )
 
 
+def test_req_cmp_005_thresholds_tried_say_the_boxes_on_the_board_are_the_stored_results() -> None:
+    """Compare's board picture keeps a stored result's boxes, drawn into it, while other thresholds are tried on it: a
+    WARN that defects make is said of the defects the thresholds would mark, and the boxes are said to be the stored
+    result's, never that the defects are marked on the board (review of S28b part 2); every other sentence is as on
+    the result shown, the AI-off note aside (the stored-notes test below)."""
+    checks = [
+        _check("SSIM similarity", 0.99, 0.8, "< thr → NG", OK, "Compare"),
+        _check("Alignment inliers", 40, 12, "info only", "INFO", "Compare"),
+    ]
+    for defects, which in (
+        ([_defect(1, "Critical"), _defect(2, "Minor")], "a defect"),
+        ([_defect(1, "Major"), _defect(2, "Major")], "2 defects"),
+    ):
+        res = InspectionResult(WARN, 0.0, checks=checks, defects=defects, notes=[NO_AI_NOTE])
+        assert [s.text() for s in ex.explain(res, stored=True, tried=True)] == [
+            f"No check is NG or WARN with these thresholds, but they would mark {which} above Minor severity, so a"
+            " person would need to look; the boxes on the board are the stored result's.",
+            *(s.text() for s in ex.notes(res, stored=True)),
+        ]
+    failing = InspectionResult(NG, 0.0, checks=[_check(*CASES[0][0])], defects=[_defect(1, "Major")])
+    assert ex.explain(failing, stored=True, tried=True) == ex.explain(failing, stored=True)
+    tried = [ex.TRIED_SEVERE_DEFECT, ex.TRIED_SEVERE_DEFECTS]
+    assert set(tried) <= set(ex.TEMPLATES) and all(not_words(t) == [] for t in tried), "marked, in the Charter's words"
+
+
 def test_req_cmp_004_roi_sentence_names_the_threshold_used(qtbot: QtBot, ctx: AppContext) -> None:
     """#248: an ROI's value is its AI score peak divided by the threshold the AI check used, the recipe's AI score
     threshold when an Engineer sets one, but its sentence named the AI model's threshold: with the AI model's at 2.00

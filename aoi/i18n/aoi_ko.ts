@@ -99,12 +99,12 @@
     <message>
         <location line="+3"/>
         <location line="+56"/>
-        <location line="+387"/>
+        <location line="+390"/>
         <source>Golden board</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-442"/>
+        <location line="-445"/>
         <source>AI model</source>
         <translation type="unfinished"></translation>
     </message>
@@ -160,12 +160,12 @@
     </message>
     <message>
         <location line="+15"/>
-        <location line="+604"/>
+        <location line="+607"/>
         <source>Test board</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-598"/>
+        <location line="-601"/>
         <source>Inspecting…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -205,7 +205,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+123"/>
+        <location line="+126"/>
         <source>Would be: {verdict}</source>
         <translation type="unfinished"></translation>
     </message>
@@ -236,7 +236,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-535"/>
+        <location line="-538"/>
         <source>AI model default</source>
         <translation type="unfinished"></translation>
     </message>
@@ -292,7 +292,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+96"/>
+        <location line="+99"/>
         <source>Test board: {file}</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1752,6 +1752,16 @@
     </message>
     <message>
         <location line="+10"/>
+        <source>No check is NG or WARN with these thresholds, but they would mark a defect above Minor severity, so a person would need to look; the boxes on the board are the stored result&apos;s.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>No check is NG or WARN with these thresholds, but they would mark {count} defects above Minor severity, so a person would need to look; the boxes on the board are the stored result&apos;s.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+5"/>
         <source>The stored checks do not show why; inspect the board again.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1776,7 +1786,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-51"/>
+        <location line="-61"/>
         <source>The AI score is {value}, at or above its threshold of {threshold}.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1811,7 +1821,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+16"/>
+        <location line="+26"/>
         <source>The recipe turns the AI check off, so the AI check did not run and no AI model judged the board: an Engineer can turn it on in the Recipe Editor.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2820,7 +2830,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/compare.py" line="-598"/>
+        <location filename="../ui/pages/compare.py" line="-601"/>
         <source>Compare</source>
         <translation type="unfinished"></translation>
     </message>

@@ -6,20 +6,24 @@ give shows beside Re-evaluate while the banner keeps the stored one."""
 
 from __future__ import annotations
 
+import sqlite3
 import statistics
 import sys
 import threading
 from collections import Counter
+from collections.abc import Iterator
 from dataclasses import asdict
 from pathlib import Path
 from time import perf_counter
 from typing import Any
 
 import pytest
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QGuiApplication
 from PySide6.QtWidgets import QApplication, QPushButton, QWidget
 from pytestqt.qtbot import QtBot
 
-from aoi.core.explain import TRIED_AI_OFF
+from aoi.core.explain import TRIED_AI_OFF, explain
 from aoi.core.inspector import InspectionResult
 from aoi.core.services import AppContext
 from aoi.errors import AoiError
@@ -35,6 +39,14 @@ from tests.test_stored_result import _ai_off
 from tools import render_screens
 
 Dialogs = list[tuple[str, str]]  # the `dialogs` fixture: each error dialog shown, as (title, text)
+
+
+@pytest.fixture(autouse=True)
+def _no_key_left_held() -> Iterator[None]:
+    """Each test here lets go of the keys it pressed: Qt keeps a modifier held from one test to the next, and a Ctrl
+    left held turns a later test's selectRow() into a Ctrl+click, which adds the row to the selection (review)."""
+    yield
+    assert QGuiApplication.keyboardModifiers() == Qt.KeyboardModifier.NoModifier, "a key is still held"
 
 
 def _stored_on_compare(qtbot: QtBot, ctx: AppContext, board: Path, role: str) -> tuple[MainWindow, ComparePage, int]:
@@ -90,10 +102,11 @@ def test_req_cmp_005_reevaluate_on_compare_shows_what_the_stored_result_would_be
 ) -> None:
     """On a stored NG result, Ctrl+R with thresholds that pass every check judges it again from its stored maps, with no
     inspection and no AI model loaded: the banner keeps the stored verdict, "Would be" beside Re-evaluate shows the one
-    those thresholds give, and the table and the explanation show their checks; nothing is stored; "Would be" and the
-    panel's buttons meet the screen tests' size, font and contrast rules. A threshold changed, or the result opened
-    again, brings back its own checks; a result whose AI map is gone is refused with AOI-CMP-004 and keeps its own,
-    and the answer before goes at the press (review)."""
+    those thresholds give, and the table and the explanation show their checks; the board keeps its stored boxes, so
+    defects that make the WARN are said to be ones the thresholds would mark, not ones marked on the board (review);
+    nothing is stored; "Would be" and the panel's buttons meet the screen tests' size, font and contrast rules. A
+    threshold changed, or the result opened again, brings back its own checks; a result whose AI map is gone is refused
+    with AOI-CMP-004, keeps its own and holds no worker (#132), and the answer before goes at the press (review)."""
     ctx = trained_ctx
     win, compare, iid = _stored_on_compare(qtbot, ctx, ng_board, "Engineer")
     rec = ctx.inspection(iid)
@@ -110,7 +123,12 @@ def test_req_cmp_005_reevaluate_on_compare_shows_what_the_stored_result_would_be
     assert compare.verdict.text() == theme.verdict_label("NG") and compare.note.isVisible(), "the stored verdict stays"
     rows = [{**asdict(c), "metric": c.name, "result": c.verdict} for c in want.checks]
     assert _table(compare)[:-1] == _expected(compare, rows) != stored[:-1]
-    assert compare.why.toPlainText().startswith(f"Why this board would be {want.verdict} with these thresholds:")
+    tried = compare.why.toPlainText()
+    assert want.verdict == "WARN" and {c.verdict for c in want.checks} <= {"OK", "INFO"}, "a WARN from defects alone"
+    assert "marked on the board" not in tried, "the board shows the stored result's boxes, not these (review)"
+    sentences = [f"• {s.text()}" for s in explain(want, stored=True, tried=True)]
+    assert tried.split("\n") == ["Why this board would be WARN with these thresholds:", *sentences]
+    assert "the boxes on the board are the stored result's" in sentences[0], sentences
     assert (ctx.inspections(), ctx.audit_entries(), ctx.recipe_history(BOARD)) == before, "nothing is stored"
     found, seen = _walk(win, [compare.would_be, *compare.tryout.findChildren(QPushButton)])
     assert not found and seen["text"] >= 1 and seen["buttons"] == 2 and seen["contrast"] >= 3, (found, seen)
@@ -130,6 +148,7 @@ def test_req_cmp_005_reevaluate_on_compare_shows_what_the_stored_result_would_be
     title, text = dialogs.pop()
     assert title.startswith("AOI-CMP-004") and "AI score map" in text, text
     assert _table(compare) == stored and compare.would_be.isHidden() and not dialogs
+    assert compare._trying is None, "a refusal holds no worker past its end (#132)"
 
 
 def test_req_cmp_005_what_was_tried_goes_once_it_no_longer_applies(
@@ -138,8 +157,9 @@ def test_req_cmp_005_what_was_tried_goes_once_it_no_longer_applies(
     """The checks other thresholds gave go once they no longer apply, and the result's own show: when an Operator
     signs in, after the answer or while it is worked out (stopped: its answer never shows, and the job, which acts as
     the Engineer who started it, #177, is not refused; an error of it shows no dialog but is alarmed, #206); when a
-    threshold changes while it is worked out; when the board model changes; and when inspecting the board again fails
-    (the table then goes too, #182). Re-evaluate's key is Ctrl+R."""
+    threshold changes while it is worked out; when a revision saved elsewhere keeps the form's thresholds but judges
+    otherwise (review); when the board model changes; and when inspecting the board again fails (the table then goes
+    too, #182). Re-evaluate's key is Ctrl+R."""
     ctx = trained_ctx
     win, compare, iid = _stored_on_compare(qtbot, ctx, ng_board, "Engineer")
     assert compare.act_try.shortcut().toString() == "Ctrl+R"
@@ -188,6 +208,13 @@ def test_req_cmp_005_what_was_tried_goes_once_it_no_longer_applies(
     compare.min_area.setValue(compare.min_area.value() + 1)  # changed while the answer is worked out
     shows_its_own_checks()
     try_thresholds(hold=False)
+    revision = compare._form_recipe(BOARD)  # saved elsewhere with the form's five thresholds, so no field changes,
+    revision.warn_ratio /= 2  # and another warn ratio, which judges too: what was tried no longer applies
+    ctx.save_recipe(revision)
+    win.navigate("Home")
+    win.navigate("Compare")
+    assert compare.would_be.isHidden() and _table(compare) == stored and compare.why.toPlainText() == why
+    try_thresholds(hold=False)
     ctx.ensure_board_model("OTHER")
     win._reload_board_models("OTHER")  # another board model: the record's board goes, and what was tried with it
     assert compare.would_be.isHidden() and not compare.tried and compare.stored is None
@@ -208,13 +235,15 @@ def test_req_cmp_005_what_was_tried_goes_once_it_no_longer_applies(
 
 
 def test_req_cmp_005_reevaluate_on_what_compare_shows(
-    qtbot: QtBot, trained_ctx: AppContext, ng_board: Path, dialogs: Dialogs
+    qtbot: QtBot, trained_ctx: AppContext, ng_board: Path, monkeypatch: pytest.MonkeyPatch, dialogs: Dialogs
 ) -> None:
     """Re-evaluate is ready on a fresh result after Golden Board is pressed while a stored one loads; a result of
     another board model than the header's is refused with AOI-CMP-005, not judged by the header's thresholds; a result
     whose stored picture cannot be read (AOI-CMP-006, its pane "Board picture no longer stored") is still judged again
     from its maps, and once the recipe turns the AI check off, the explanation says those thresholds judge it without
-    the AI check (#246). On a board not stored, Re-evaluate inspects it again with the form's thresholds (review)."""
+    the AI check (#246); and one none of whose pictures load because another program holds the database (AOI-SET-013,
+    #247) is still judged again from its maps once that load has ended (review). On a board not stored, Re-evaluate
+    inspects it again with the form's thresholds (review)."""
     ctx = trained_ctx
     win, compare, iid = _stored_on_compare(qtbot, ctx, ng_board, "Engineer")
     compare.show_stored(iid)
@@ -257,6 +286,20 @@ def test_req_cmp_005_reevaluate_on_what_compare_shows(
     compare.re_evaluate()
     qtbot.waitUntil(compare.would_be.isVisible, timeout=10000)
     assert compare.why.toPlainText().endswith(f"• {TRIED_AI_OFF}"), compare.why.toPlainText()
+
+    def busy(*args: object) -> None:
+        held = sqlite3.OperationalError("database is locked")
+        held.sqlite_errorcode = sqlite3.SQLITE_BUSY  # type: ignore[attr-defined]
+        raise held
+
+    monkeypatch.setattr(ctx, "judged_reference", busy)
+    compare.show_stored(iid)
+    qtbot.waitUntil(lambda: compare._bg is None and bool(dialogs), timeout=10000)
+    assert dialogs.pop()[0].startswith("AOI-SET-013") and compare.would_be.isHidden()
+    assert compare.act_try.isEnabled(), "its load has ended, read or not: Re-evaluate no longer stops it"
+    compare.re_evaluate()
+    qtbot.waitUntil(compare.would_be.isVisible, timeout=10000)
+    assert compare.verdict.text() == theme.verdict_label("NG") and not dialogs
 
 
 def test_req_cmp_005_an_operator_does_not_see_the_threshold_panel(
