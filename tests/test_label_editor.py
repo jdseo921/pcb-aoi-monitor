@@ -14,7 +14,7 @@ import cv2
 import numpy as np
 import pytest
 from PySide6.QtCore import QEvent, QItemSelectionModel, QPoint, QPointF, QRectF, Qt
-from PySide6.QtGui import QInputDevice, QPointingDevice, QWheelEvent
+from PySide6.QtGui import QInputDevice, QKeyEvent, QPointingDevice, QWheelEvent
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication, QGraphicsSimpleTextItem, QMessageBox, QPushButton, QWidget
 from pytestqt.qtbot import QtBot
@@ -32,6 +32,7 @@ if TYPE_CHECKING:
 
 LEFT, NONE, CTRL = Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, Qt.KeyboardModifier.ControlModifier
 NO_BUTTON = Qt.MouseButton.NoButton
+PRESS, RELEASE, SHIFT = QEvent.Type.KeyPress, QEvent.Type.KeyRelease, Qt.KeyboardModifier.ShiftModifier
 FINGER = (QInputDevice.DeviceType.TouchScreen, QPointingDevice.PointerType.Finger, QInputDevice.Capability.Position)
 
 
@@ -256,7 +257,7 @@ def test_req_trn_003_editor_move(qtbot: QtBot, trained_ctx: AppContext) -> None:
 def test_req_trn_003_editor_real_size(qtbot: QtBot, trained_ctx: AppContext, tmp_path: Path) -> None:
     """On a 5472 x 3648 px image at the editor's fit, a 40 x 32 px box is a few screen pixels: a finger's drag inside
     the selected box moves it and keeps its size, its handles sit outside it, and a drag on one resizes it; a finger
-    draws a box with Draw Box."""
+    draws a box with Draw Box, and Enter places one 64 px a side on screen."""
     ctx = trained_ctx
     sample = _big(ctx, tmp_path)
     ctx.set_boxes(sample["uuid"], [DefectBox(2000, 1500, 40, 32, "Polarity Error")])
@@ -276,6 +277,9 @@ def test_req_trn_003_editor_real_size(qtbot: QtBot, trained_ctx: AppContext, tmp
     editor.draw_btn.click()
     _finger(view, _at(view, 500, 500), _at(view, 1500, 1000))
     assert len(_stored(page, sample["uuid"])) == 2
+    _key(view, Qt.Key.Key_Return)
+    placed = _stored(page, sample["uuid"])[2]
+    assert abs(placed[2] * view.transform().m11() - 64) <= 1 and placed[2] > 900, "64 px on screen, 1000 of the image"
 
 
 def test_req_trn_003_editor_resize(qtbot: QtBot, trained_ctx: AppContext) -> None:
@@ -639,3 +643,90 @@ def test_req_trn_003_editor_next_and_previous(qtbot: QtBot, trained_ctx: AppCont
     _wait(page)
     assert editor.sample is None
     key(table, Qt.Key.Key_PageDown, seen[0])
+
+
+def test_req_trn_003_editor_keyboard_only(qtbot: QtBot, trained_ctx: AppContext) -> None:
+    """Every step of labelling an image by keys alone, each sent to the widget with the focus: PgDn to an OK image, N to
+    mark it NG, the focus then on the image; D for Draw mode and Enter for a box of the Type list's type, 64 px a side
+    on screen, at the middle of the image shown; the arrows move it 1 px, Shift 10 px, and Ctrl sizes it from its bottom
+    right corner, the keys of a burst, or a key held down, stored once half a second after the last; Shift+Tab to the
+    Type list, Down and Enter for the next type, D typed there going to the list; Tab to the Boxes list and Down to
+    select a box; Delete and Ctrl+Z; Esc to leave Draw mode; U and O to mark the image. A page key on Enter, as the
+    sketch's Check Label will be, takes neither the image's Enter nor the Type list's."""
+    ctx, page = trained_ctx, _page(qtbot, trained_ctx)
+    editor, view = page.editor, page.editor.view
+    page.action("Check", "Return", lambda: pytest.fail("the page took the image's or the Type list's Enter"))
+
+    def press(key: Qt.Key, modifier: Qt.KeyboardModifier = NONE) -> None:
+        QTest.keyClick(QApplication.focusWidget(), key, modifier)
+
+    def box() -> tuple[int, int, int, int, str, str]:
+        assert editor.sample is not None
+        [stored] = _stored(page, editor.sample["uuid"])
+        return stored
+
+    def rows() -> int:
+        _wait(page)
+        assert editor.sample is not None
+        return len(ctx.label_history(editor.sample["uuid"]))
+
+    page.samples.setFocus()
+    for _ in range(page.samples.rowCount()):
+        press(Qt.Key.Key_PageDown)
+        _wait(page)
+        if editor.sample is not None and editor.sample["label"] == "OK":
+            break
+    assert editor.sample is not None and editor.sample["label"] == "OK" and editor.draw_btn.toolTip() == "D"
+    press(Qt.Key.Key_N)
+    _wait(page)
+    assert editor.sample["label"] == "NG" and QApplication.focusWidget() is view and not editor.draw_btn.isChecked()
+    press(Qt.Key.Key_D)
+    assert editor.draw_btn.isChecked() and QApplication.focusWidget() is view
+    middle = view.mapToScene(view.viewport().rect().center())
+    press(Qt.Key.Key_Return)
+    x, y, w, h, kind, severity = box()
+    assert abs(w * view.transform().m11() - 64) <= 1 and w == h, "64 px a side on screen"
+    assert (kind, severity) == (editor.type_box.currentData(), defects.BY_NAME[kind].severity)
+    assert abs(x + w / 2 - middle.x()) <= 1 and abs(y + h / 2 - middle.y()) <= 1 and view.chosen == 0
+    before = rows()
+    press(Qt.Key.Key_Right)
+    press(Qt.Key.Key_Down)
+    press(Qt.Key.Key_Left, SHIFT)
+    assert box()[:4] == (x - 9, y + 1, w, h) and rows() == before + 1, "three keys, one burst, one label row"
+    press(Qt.Key.Key_Right, CTRL)
+    press(Qt.Key.Key_Down, CTRL | SHIFT)
+    assert box()[:4] == (x - 9, y + 1, w + 1, h + 10) and rows() == before + 2
+    for kind_of, repeat in [(PRESS, False)] + [(t, True) for _ in range(3) for t in (RELEASE, PRESS)]:
+        QApplication.sendEvent(view, QKeyEvent(kind_of, Qt.Key.Key_Up, NONE, "", repeat))
+    QApplication.sendEvent(view, QKeyEvent(RELEASE, Qt.Key.Key_Up, NONE, "", False))
+    assert box()[:4] == (x - 9, y - 3, w + 1, h + 10) and rows() == before + 3, "a key held down, one label row"
+    press(Qt.Key.Key_Tab, SHIFT)
+    assert QApplication.focusWidget() is editor.type_box
+    press(Qt.Key.Key_D)  # typed in the list: it shows Damaged Component, and Draw mode stays on
+    assert editor.type_box.currentData() == "Damaged Component" and editor.draw_btn.isChecked()
+    assert box()[4] == kind, "shown, not picked"
+    editor.type_box.setCurrentIndex(editor.type_box.findData(kind))
+    press(Qt.Key.Key_Down)
+    press(Qt.Key.Key_Return)
+    after = defects.names()[defects.names().index(kind) + 1]
+    assert box()[4:] == (after, defects.BY_NAME[after].severity)
+    press(Qt.Key.Key_Tab)
+    assert QApplication.focusWidget() is view
+    press(Qt.Key.Key_Delete)
+    assert _stored(page, editor.sample["uuid"]) == []
+    press(Qt.Key.Key_Z, CTRL)
+    assert box()[4] == after and view.chosen == -1
+    press(Qt.Key.Key_Tab)
+    press(Qt.Key.Key_Down)
+    assert QApplication.focusWidget() is editor.box_list and view.chosen == 0
+    press(Qt.Key.Key_Tab, SHIFT)
+    press(Qt.Key.Key_Right, SHIFT)
+    assert QApplication.focusWidget() is view and box()[:4] == (x + 1, y - 3, w + 1, h + 10)
+    press(Qt.Key.Key_Escape)
+    assert not editor.draw_btn.isChecked()
+    press(Qt.Key.Key_U)
+    _wait(page)
+    assert editor.sample["label"] == "UNSURE" and not editor.draw_btn.isEnabled()
+    press(Qt.Key.Key_O)
+    _wait(page)
+    assert editor.sample["label"] == "OK"

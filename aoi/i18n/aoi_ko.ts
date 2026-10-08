@@ -4,7 +4,7 @@
 <context>
     <name>BoxEditor</name>
     <message>
-        <location filename="../ui/widgets/box_editor.py" line="+92"/>
+        <location filename="../ui/widgets/box_editor.py" line="+107"/>
         <source>{number} {type} ◆ {severity}</source>
         <translation>{number} {type} ◆ {severity}</translation>
     </message>
@@ -3246,9 +3246,15 @@
 <context>
     <name>LabelEditor</name>
     <message>
-        <location filename="../ui/pages/training_labels.py" line="+116"/>
+        <location filename="../ui/pages/training_labels.py" line="+122"/>
+        <location line="+2"/>
         <source>Draw Box</source>
         <translation>박스 그리기</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Leave Draw Mode</source>
+        <translation>그리기 모드 끝내기</translation>
     </message>
     <message>
         <location line="+15"/>
@@ -3291,7 +3297,7 @@
         <translation>{file} · {label} · {view}</translation>
     </message>
     <message>
-        <location line="+47"/>
+        <location line="+49"/>
         <source>{number} {type} ({severity}) {x},{y} {w}×{h} px</source>
         <translation>{number} {type} ({severity}) {x},{y} {w}×{h} px</translation>
     </message>
@@ -3316,7 +3322,7 @@
         <translation>결함 박스는 NG 이미지에만 그립니다.</translation>
     </message>
     <message>
-        <location line="+35"/>
+        <location line="+47"/>
         <source>Box {number} deleted; Undo or Ctrl+Z brings it back</source>
         <translation>박스 {number}을(를) 삭제했습니다. 실행 취소 또는 Ctrl+Z로 되돌릴 수 있습니다</translation>
     </message>

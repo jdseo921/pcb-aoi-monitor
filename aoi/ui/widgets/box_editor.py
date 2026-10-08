@@ -2,14 +2,16 @@
 
 `BoxEditor` is an `ImageView` (zoom, pan, fit and its Draw mode) that holds the image's boxes, each a `DefectBox` in
 image pixels. A finger works as the mouse does: Qt turns a touch the view does not take into the same mouse events.
+With the focus on it, the keys do what the mouse does: Enter in Draw mode places a box, and the arrows move and size
+the selected one.
 """
 
 from __future__ import annotations
 
 from dataclasses import replace
 
-from PySide6.QtCore import QEvent, QPoint, QPointF, QRectF, Qt, Signal
-from PySide6.QtGui import QBrush, QColor, QFocusEvent, QMouseEvent, QPen, QTransform
+from PySide6.QtCore import QEvent, QPoint, QPointF, QRectF, Qt, QTimer, Signal
+from PySide6.QtGui import QBrush, QColor, QFocusEvent, QKeyEvent, QMouseEvent, QPen, QTransform
 from PySide6.QtWidgets import QGraphicsItem, QGraphicsRectItem, QWidget
 
 from ...core.labels import DefectBox
@@ -19,6 +21,11 @@ from .image_view import ImageView
 
 MIN_SIDE = 4  # px of the image: a resize leaves a box at least this wide and tall, as ImageView draws none smaller
 OUTWARD = ((-1, -1), (1, -1), (1, 1), (-1, 1))  # each corner's way out of its box, in the order of `_corners`
+KEY_SIDE_PX = 64  # px on screen, at any zoom: the side of the box Enter places, which the arrows then move and size
+BURST_MS = 500  # arrow keys pressed within this of each other, or of the last one let go, are one change
+ARROWS = {Qt.Key.Key_Left: (-1, 0), Qt.Key.Key_Right: (1, 0), Qt.Key.Key_Up: (0, -1), Qt.Key.Key_Down: (0, 1)}
+SHIFT, CTRL = Qt.KeyboardModifier.ShiftModifier, Qt.KeyboardModifier.ControlModifier
+ENTER = (Qt.Key.Key_Return, Qt.Key.Key_Enter)
 
 
 def _corners(b: DefectBox) -> list[QPointF]:
@@ -52,10 +59,12 @@ class BoxEditor(ImageView):
     """An image with its defect boxes: the selected one yellow with a handle at each corner, the others green, each
     labelled with its number, type and severity. In Draw mode a drag adds a box of `new_type`; otherwise a drag on a
     box moves it and a drag on a handle of the selected box resizes it, and a drag elsewhere pans. A selected box under
-    two handles across on screen has its handles outside it, so a press inside it still moves it. Each gesture that
-    changes the boxes ends in one `edited`, at its release, so a drag is stored once, not at every move; `settled`
-    follows the end of every gesture. While `locked` (the image read or a change stored) a press that would change a
-    box only says `refused`."""
+    two handles across on screen has its handles outside it, so a press inside it still moves it. By keys, Enter in Draw
+    mode places a box 64 px a side on screen at the middle of the image shown, the arrows move the selected box by 1
+    px (Shift: 10 px) and Ctrl with them moves its bottom right corner. Each gesture that changes the boxes ends in one
+    `edited`, at its release, so a drag is stored once, not at every move, and a burst of arrow keys half a second
+    after its last key; `settled` follows the end of every gesture. While `locked` (the image read or a change stored)
+    a press or a key that would change a box only says `refused`."""
 
     edited = Signal()  # the boxes changed: the page stores them
     picked = Signal(int)  # the selected box, -1 for none
@@ -69,12 +78,18 @@ class BoxEditor(ImageView):
         self.new_type = names()[0]
         self._grab: tuple[int, int, QPointF, DefectBox] | None = None  # box, corner (-1: the box), start, box before
         self.locked = False
+        self._keyed: tuple[int, DefectBox] | None = None  # the box the arrows move, as it was before them
+        self._burst = QTimer(self)
+        self._burst.setSingleShot(True)
+        self._burst.setInterval(BURST_MS)
+        self._burst.timeout.connect(self._keys_done)
         self.roiDrawn.connect(self._drawn)
         self.viewChanged.connect(self.redraw)  # the handles and labels follow the zoom
 
     def show_boxes(self, boxes: list[DefectBox], chosen: int = -1) -> None:
         """Show `boxes`, `chosen` selected (-1 or past the end: none)."""
-        self.boxes, self._grab = list(boxes), None
+        self.boxes, self._grab, self._keyed = list(boxes), None, None
+        self._burst.stop()
         self.chosen = chosen if 0 <= chosen < len(self.boxes) else -1
         self.redraw()
 
@@ -165,6 +180,7 @@ class BoxEditor(ImageView):
         self.redraw()
 
     def mousePressEvent(self, e: QMouseEvent) -> None:
+        self._keys_done()  # the arrows' change, stored before the mouse makes another
         left = e.button() == Qt.MouseButton.LeftButton
         hit = None if self._draw_mode or not left else self._hit(e.position().toPoint())
         if left and self.locked and (self._draw_mode or hit is not None):
@@ -198,8 +214,8 @@ class BoxEditor(ImageView):
         self._let_go()
 
     def dragging(self) -> bool:
-        """A box or a Draw mode box is being dragged."""
-        return self._grab is not None or self._rubber is not None
+        """A box or a Draw mode box is being dragged, or moved by arrow keys not yet stored."""
+        return self._grab is not None or self._rubber is not None or self._keyed is not None
 
     def _let_go(self) -> None:
         """The end of a drag on a box, at its release or when that never comes: one `edited` if it changed the box."""
@@ -213,7 +229,60 @@ class BoxEditor(ImageView):
     def focusOutEvent(self, e: QFocusEvent) -> None:
         super().focusOutEvent(e)
         self._let_go()  # the window went away mid-drag: the release will not come
+        self._keys_done()
 
     def leaveEvent(self, e: QEvent) -> None:
         super().leaveEvent(e)
         self._let_go()
+
+    def _takes(self, e: QKeyEvent) -> bool:
+        """A key this view acts on now: an arrow while a box is selected, Enter in Draw mode on an image."""
+        if e.key() in ARROWS:
+            return self.chosen >= 0
+        return e.key() in ENTER and self._draw_mode and self._pix is not None
+
+    def event(self, e: QEvent) -> bool:
+        if e.type() == QEvent.Type.ShortcutOverride and isinstance(e, QKeyEvent) and self._takes(e):
+            e.accept()  # the image's own keys before the page's (a page key on Enter, as the sketch's Check Label)
+            return True
+        return super().event(e)
+
+    def keyPressEvent(self, e: QKeyEvent) -> None:
+        if not self._takes(e):
+            super().keyPressEvent(e)  # with no box selected the arrows scroll the image, as before
+            return
+        if self.locked:
+            self.refused.emit()
+            return
+        width, height = self._bounds()
+        if e.key() in ENTER:
+            self._keys_done()
+            side = max(MIN_SIDE, min(round(KEY_SIDE_PX / self.transform().m11()), width, height))
+            corner = self.mapToScene(self.viewport().rect().center()) - QPointF(side / 2, side / 2)
+            b = _moved(DefectBox(0, 0, side, side, self.new_type), corner, width, height)  # inside the image
+            self._drawn(QRectF(b.x, b.y, b.w, b.h))
+            return
+        if self._keyed is None or self._keyed[0] != self.chosen:
+            self._keys_done()
+            self._keyed = (self.chosen, self.boxes[self.chosen])
+        b, (dx, dy), step = self.boxes[self.chosen], ARROWS[Qt.Key(e.key())], 10 if e.modifiers() & SHIFT else 1
+        d = QPointF(dx * step, dy * step)
+        resize = bool(e.modifiers() & CTRL)  # its bottom right corner, the top left one staying
+        self.boxes[self.chosen] = _resized(b, 2, d, width, height) if resize else _moved(b, d, width, height)
+        self.redraw()
+        self._burst.start()
+
+    def keyReleaseEvent(self, e: QKeyEvent) -> None:
+        if e.key() in ARROWS and self._keyed is not None and not e.isAutoRepeat():
+            self._burst.start()  # half a second after the last key let go
+        super().keyReleaseEvent(e)
+
+    def _keys_done(self) -> None:
+        """The end of a burst of arrow keys: the box they moved stored once, if it changed."""
+        self._burst.stop()
+        if self._keyed is not None:
+            n, before = self._keyed
+            self._keyed = None
+            if n < len(self.boxes) and self.boxes[n] != before:
+                self.edited.emit()
+            self.settled.emit()
