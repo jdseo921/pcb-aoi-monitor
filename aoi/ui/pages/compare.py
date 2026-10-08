@@ -189,6 +189,7 @@ class ComparePage(Page):
         self.tried = False  # the table and the "why" box show the checks the form's thresholds give, not the result's
         self._trying: Worker | None = None  # the re-evaluation running, if any
         self._refocus = False  # the focus waits in the "why" box while Re-evaluate is off, for it to take back (review)
+        self._why = self._noticed = ""  # the explanation the "why" box shows, and AOI-RCP-007 above it (_show_why)
         self._fitted = False
 
         bar = QHBoxLayout()
@@ -261,7 +262,7 @@ class ComparePage(Page):
         dl.addWidget(self.metrics, 1)
         self.why = QTextEdit()
         self.why.setReadOnly(True)
-        self.why.setMaximumHeight(150)
+        self.why.setMaximumHeight(theme.WHY_H)
         self.why.setMinimumHeight(theme.WHY_MIN_H)  # at 1600 x 900 the panel is too short for all of it at full height
         dl.addWidget(self.why)
         pl.addWidget(self.decision, 2)
@@ -273,7 +274,8 @@ class ComparePage(Page):
         self.ai_thr = self.ai_threshold_field(self.tr("Override the AI model's value {value}"), own_row=True)
         self.diff_thr = QSpinBox()
         self.diff_thr.setRange(1, 255)
-        self.min_size = DefectSizeField()  # in px without a scale, in mm with one (REQ-RCP-006)
+        self.min_size = DefectSizeField(compact=True)  # in px without a scale, in mm with one (REQ-RCP-006)
+        self.min_size.noticeChanged.connect(lambda _: self._show_why())
         self.min_area = self.min_size.area
         self.ssim_min = QDoubleSpinBox()
         self.ssim_min.setRange(0, 1)
@@ -429,6 +431,18 @@ class ComparePage(Page):
             if e.code == "AOI-RCP-012":
                 return None
             raise
+
+    def _show_why(self, explanation: str | None = None) -> None:
+        """The "why" box: `explanation` (`_explain`; None keeps the one shown), under AOI-RCP-007 in amber in one line
+        while Try other thresholds shows the size it is about (REQ-INSP-014), so never to an Operator, who has no panel,
+        nor over Save to Recipe's sheet (S29 review). It takes no row: at 1600 x 900 the panel has none to give, and at
+        1920 x 1080 it would cost the decision table one (S29 review); the box's text scrolls instead."""
+        notice = self.min_size.notice.text() if self.tryout.isVisibleTo(self) else ""
+        if explanation is None and notice == self._noticed:
+            return  # nothing new: the text stays where it was scrolled to
+        self._why, self._noticed = self._why if explanation is None else explanation, notice
+        said = f'<p style="background: {theme.WARN_COLOR}; color: {theme.ON_LIGHT}">{html.escape(notice)}</p>'
+        self.why.setHtml((said if notice else "") + self._why)
 
     def _form_recipe(self, board_model: str, saved: Recipe | None = None) -> Recipe:
         """The board model's recipe (`saved`, when read already) with the thresholds from the form."""
@@ -701,7 +715,7 @@ class ComparePage(Page):
         )
         colors.append(None)
         fill_table(self.metrics, rows, colors)
-        self.why.setHtml(self._explain(r, tried))
+        self._show_why(self._explain(r, tried))
 
     def show_stored(self, inspection_id: int) -> None:
         """A stored result as it was decided, never inspected again (REQ-CMP-003): the verdict, table and explanation
@@ -1020,7 +1034,7 @@ class ComparePage(Page):
         self.verdict.setText(NO_VERDICT)
         self.verdict.setStyleSheet(theme.verdict_style("INFO"))
         fill_table(self.metrics, [])
-        self.why.clear()
+        self._show_why("")
         self.test_view.set_image(None)
         self.ref_view.clear_overlays()
 
@@ -1080,6 +1094,7 @@ class ComparePage(Page):
             self.why.setFocus(Qt.FocusReason.OtherFocusReason)
             self._refocus = True
         self.tryout.setVisible(engineer and not self._asking)
+        self._show_why()  # AOI-RCP-007 with the panel only
         self.sheet.setVisible(engineer and self._asking)
         self.act_try.setEnabled(on)
         self._sync_save()

@@ -11,6 +11,7 @@ from pytestqt.qtbot import QtBot
 
 from aoi.core.recipe import disc_area
 from aoi.core.services import AppContext
+from aoi.ui import theme
 from aoi.ui.pages.compare import NO_VERDICT, ComparePage
 from tests.test_compare_reevaluate import _stored_on_compare
 from tests.test_req_done_in_v01 import BOARD, _window
@@ -161,3 +162,31 @@ def test_req_rcp_006_a_scale_set_after_compare_showed_the_recipe_saves_nothing(
     compare.reason.setText("opened after the scale was set")
     compare.btn_confirm.click()
     assert ctx.recipe(BOARD)[0] == rev and [title for title, _ in dialogs[2:]] == [TITLE]
+
+
+def test_req_insp_014_the_notice_on_compare_is_the_panels_alone(
+    qtbot: QtBot, trained_ctx: AppContext, ng_board: Path
+) -> None:
+    """AOI-RCP-007 on Compare is about the minimum defect size in Try other thresholds: an Operator, who has no panel,
+    finds the "why" box at its full height with nothing of the notice, and so does an Engineer while Save to Recipe's
+    sheet takes the panel's place; the Engineer finds it again after (S29 review)."""
+    ctx = trained_ctx
+    _, small = ctx.recipe(BOARD)
+    small.min_defect_area = 12  # under 4 px
+    ctx.save_recipe(small)
+    win, compare, _ = _stored_on_compare(qtbot, ctx, ng_board, "Engineer")
+
+    def noticed() -> bool:
+        return compare.why.maximumHeight() < theme.WHY_H or "AOI-RCP-007" in compare.why.toPlainText()
+
+    assert noticed(), "the Engineer's panel says it"
+    compare.diff_thr.setValue(compare.diff_thr.value() + 1)
+    compare.btn_save.click()
+    assert compare.sheet.isVisible() and not noticed(), "the sheet in the panel's place"
+    compare.btn_cancel.click()
+    assert noticed()
+    win.set_user("operator")
+    qtbot.waitUntil(lambda: ctx.jobs.idle() and compare._bg is None, timeout=60000)
+    assert not compare.tryout.isVisible() and not noticed(), "an Operator has no panel"
+    win.set_user("engineer")
+    assert noticed()

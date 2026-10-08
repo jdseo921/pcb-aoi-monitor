@@ -490,7 +490,8 @@ class AppContext:
     @requires("Engineer", QT_TRANSLATE_NOOP("Errors", "Saving a recipe"))
     @transactional
     def save_recipe(self, recipe: Recipe, reason: str | None = None) -> int:
-        """Store the next recipe revision and audit it with the revision before (a recipe decides verdicts). A revision
+        """Store the next recipe revision and audit it with the revision before (a recipe decides verdicts); a minimum
+        defect size under 4 px (AOI-RCP-007) is saved all the same, the notice added to the entry's reason. A revision
         that sets, changes or clears the override of the AI score threshold is also audited as `recipe.ai_threshold`
         of the board model (REQ-TRN-015): before and after, the revision, the override (None: none), the threshold
         that judges (the override, else the active AI model's calibrated value; None with neither), that AI model's
@@ -499,8 +500,10 @@ class AppContext:
         model's scale cannot be read with AOI-RCP-012, nothing stored (S29 review)."""
         if (refused := recipe.mm_refusal()) is not None:
             raise refused
-        self.db.scale(recipe.board_model)  # AOI-RCP-012 for one that cannot be read
+        scale = self.db.scale(recipe.board_model)  # AOI-RCP-012 for one that cannot be read
         latest = self.db.latest_recipe(recipe.board_model)
+        if (notice := recipe.size_notice(scale)) is not None:  # saved, and kept with it
+            reason = f"{reason} {notice}" if reason else str(notice)  # in the audit entry (REQ-INSP-014)
         rev, uid = self.db.save_recipe(recipe.board_model, recipe.to_dict(), self.user)
         self.audit("recipe.save", "recipe", uid, latest[1] if latest else None, recipe.to_dict(), reason)
         old = (latest[1].get("anomaly_threshold") if latest else None) or None  # 0 judges as none: the engine's `or`

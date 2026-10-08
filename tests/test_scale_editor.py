@@ -1,23 +1,35 @@
-"""REQ-RCP-006 (S29, parts 2 and 3): the sizes the Recipe Editor and Compare show in mm at the board model's scale, and
+"""REQ-RCP-006 (S29, parts 2 and 5): the sizes the Recipe Editor and Compare show in mm at the board model's scale, and
 Calibrate Scale… on the Recipe Editor (sketch recipe-editor.md; Q21: without a scale a recipe saves with its sizes in
-px, under AOI-RCP-005)."""
+px, under AOI-RCP-005); REQ-INSP-014 (part 6): AOI-RCP-007 for a minimum defect size under 4 px."""
 
 from __future__ import annotations
 
+import json
 import math
 from pathlib import Path
 
 import pytest
 from PySide6.QtCore import QPoint, QPointF, QRectF, Qt
-from PySide6.QtWidgets import QGraphicsEllipseItem, QGraphicsItem, QGraphicsLineItem, QGraphicsRectItem, QMessageBox
+from PySide6.QtWidgets import (
+    QApplication,
+    QGraphicsEllipseItem,
+    QGraphicsItem,
+    QGraphicsLineItem,
+    QGraphicsRectItem,
+    QMessageBox,
+    QTabWidget,
+)
 from pytestqt.qtbot import QtBot
 
-from aoi.core.recipe import ROI, disc_area, disc_width
+from aoi.core.recipe import ROI, Recipe, disc_area, disc_width
 from aoi.core.services import AppContext
 from aoi.errors import AoiError
+from aoi.ui import theme
 from aoi.ui.pages.compare import ComparePage
 from aoi.ui.pages.recipe_editor import RecipeEditorPage
 from aoi.ui.widgets.image_view import ImageView, to_qpixmap
+from aoi.ui.widgets.scale import DefectSizeField
+from tests.test_ai_threshold_override import MIN_WIDTH
 from tests.test_compare_reevaluate import _stored_on_compare
 from tests.test_compare_stored import save_to_recipe
 from tests.test_req_done_in_v01 import BOARD, _button, _window
@@ -83,7 +95,7 @@ def test_req_rcp_006_sizes_show_in_mm_at_the_board_models_scale(
     assert _headers(page)[2:6] == ["X (mm)", "Y (mm)", "W (mm)", "H (mm)"] and _row(page) == ["2.31"] * 4
     size = page.min_size
     assert size.label.text() == "Minimum defect size (mm)" and not size.mm.isHidden() and size.area.isHidden()
-    assert size.mm.value() == 0.15 and size.px.text() == "= 7.1 px"  # 40 px of area: a round defect 7.1 px wide
+    assert size.mm.value() == 0.15 and size.px.text() == "= 7.1 px ✓"  # 40 px of area: a round defect 7.1 px wide
 
     assert (page._collect().min_defect_mm, page._collect().rois[0].mm) == (None, None)  # in px until saved
     page.save()  # untouched: the same sizes, now in mm, and the same verdict
@@ -94,7 +106,7 @@ def test_req_rcp_006_sizes_show_in_mm_at_the_board_models_scale(
     after = ctx.inspect(BOARD, ctx.load_image(ng_board))
     assert (after.verdict, after.checks, after.defects) == (before.verdict, before.checks, before.defects)
     page.min_size.mm.setValue(2.0)
-    assert page.min_size.px.text() == "= 95.2 px"
+    assert page.min_size.px.text() == "= 95.2 px ✓"
     page.save()
     saved = ctx.recipe(BOARD)[1]
     assert (saved.min_defect_mm, saved.min_defect_area) == (2.0, disc_area(2 * scale))
@@ -134,7 +146,7 @@ def test_req_rcp_006_compare_follows_a_scale_set_without_a_new_revision(
     win.navigate("Recipe Editor")
     win.navigate("Compare")
     assert size.label.text() == "Minimum defect size (mm)" and not size.mm.isHidden() and size.area.isHidden()
-    assert size.mm.value() == round(disc_width(40) / scale, 2) == 0.07 and size.px.text() == "= 7.1 px"  # not 6.7
+    assert size.mm.value() == round(disc_width(40) / scale, 2) == 0.07 and size.px.text() == "= 7.1 px ✓"  # not 6.7
     qtbot.waitUntil(lambda: ctx.jobs.idle() and compare._bg is None, timeout=20000)
     assert not compare.btn_save.isEnabled()
     compare.diff_thr.setValue(compare.diff_thr.value() + 1)
@@ -329,7 +341,8 @@ def test_req_rcp_006_setting_the_scale_again_moves_only_sizes_in_mm(
     """Set Scale on a board model that has a scale: what the recipe holds in px stays in px and what it holds in mm
     moves to its px at the new scale, as the engine applies it, so the editor and Compare show the sizes the engine
     uses. Left unedited, the editor has no unsaved change, so a revision saved meanwhile on Compare loads without a
-    question, and Save Recipe untouched then judges the board as before."""
+    question, and Save Recipe untouched then judges the board as before. Set Scale to a scale at which the minimum
+    defect size, now held in mm, spans under 4 px says AOI-RCP-007 in the status bar (part 6)."""
     ctx = trained_ctx
     _, recipe = ctx.recipe(BOARD)
     recipe.rois = [ROI("R1", "Presence", 110, 110, 110, 110), ROI("R2", "Presence", mm=[4.0, 3.0, 1.0, 1.0])]
@@ -348,10 +361,10 @@ def test_req_rcp_006_setting_the_scale_again_moves_only_sizes_in_mm(
     shown, engine = page._collect(), ctx.inspector(BOARD).recipe
     boxes = [(110, 110, 110, 110), (381, 286, 95, 95)]  # R2: its mm × 95.2, to the nearest px
     assert [(r.x, r.y, r.w, r.h) for r in shown.rois] == [(r.x, r.y, r.w, r.h) for r in engine.rois] == boxes
-    assert shown.min_defect_area == engine.min_defect_area == 40 and page.min_size.px.text() == "= 7.1 px"
+    assert shown.min_defect_area == engine.min_defect_area == 40 and page.min_size.px.text() == "= 7.1 px ✓"
     assert _row(page) == ["1.16"] * 4 and shown.to_dict() == page._loaded  # the edit undone
     win.navigate("Compare")
-    assert (compare.min_size.mm.value(), compare.min_size.px.text()) == (page.min_size.mm.value(), "= 7.1 px")
+    assert (compare.min_size.mm.value(), compare.min_size.px.text()) == (page.min_size.mm.value(), "= 7.1 px ✓")
     qtbot.waitUntil(lambda: ctx.jobs.idle() and compare._bg is None, timeout=20000)
     compare.diff_thr.setValue(compare.diff_thr.value() + 1)  # Save to Recipe stores a threshold changed (S28d)
     saved_on_compare = save_to_recipe(compare)  # a revision saved meanwhile, its sizes untouched
@@ -364,3 +377,100 @@ def test_req_rcp_006_setting_the_scale_again_moves_only_sizes_in_mm(
     assert (saved.min_defect_area, [(r.x, r.y, r.w, r.h) for r in saved.rois]) == (40, boxes)
     after = ctx.inspect(BOARD, ctx.load_image(ng_board))
     assert (after.verdict, after.checks, after.defects) == (before.verdict, before.checks, before.defects)
+    page.set_scale(476, 20)  # 23.8 px/mm: the size held in mm since Save Recipe, 0.07 mm, spans 1.8 px (S29 review)
+    small = "23.80 px/mm. AOI-RCP-007 Minimum defect size under 4 px: Raise it to 0.17 mm or more"
+    assert small in win.statusBar().currentMessage() and not page.min_size.notice.isHidden()
+
+
+def test_req_insp_014_under_4px_warns(qtbot: QtBot, trained_ctx: AppContext, monkeypatch: pytest.MonkeyPatch) -> None:
+    """REQ-INSP-014 (S29, part 6): a minimum defect size that spans under 4 px at the board model's scale (without one,
+    an area under the 13 px of a round defect 4 px wide) gets AOI-RCP-007, which names the size, the px it spans and
+    the least size to give: in amber while it is so, under the field with what to do on the Recipe Editor and in one
+    line in the "why" box on Compare, from the size the engine applies, and in full in the audit entry of a recipe saved
+    so, which saves all the same (sketch: saving is allowed). At 4 px or more, as with the default recipe, there is
+    none, and the px carry a ✓."""
+    assert Recipe(board_model=BOARD).size_notice(None) is None
+    assert Recipe(board_model=BOARD, min_defect_area=13).size_notice(None) is None
+    small = Recipe(board_model=BOARD, min_defect_area=12).size_notice(None)
+    assert small is not None and small.code == "AOI-RCP-007"
+    assert small.what.startswith("The minimum defect size, 12 px of area, spans 3.9 px in the board images: under 4 px")
+    assert small.action.startswith("Raise it to 13 px of area or more")
+    assert Recipe(board_model=BOARD, min_defect_mm=4 / 47.6).size_notice(47.6) is None
+    tiny = Recipe(board_model=BOARD, min_defect_mm=0.05).size_notice(47.6)
+    assert tiny is not None and "0.05 mm, spans 2.4 px" in tiny.what and "Raise it to 0.09 mm" in tiny.action
+    assert Recipe(board_model=BOARD, min_defect_area=12).size_notice(47.6) is not None  # a size in px, shown in mm
+    field, told = DefectSizeField(compact=True), []
+    field.noticeChanged.connect(lambda shown: told.append(field.notice.text() if shown else ""))
+    field.show_recipe(Recipe(board_model=BOARD, min_defect_area=12), None)  # a page measures the line it is told of
+    assert told == ["AOI-RCP-007 Minimum defect size under 4 px: raise it to 13 px of area or more."]
+
+    ctx = trained_ctx
+    ctx.set_scale(BOARD, 476, 10)
+    _, edge = ctx.recipe(BOARD)
+    edge.min_defect_mm = 4.02 / 47.6  # shown as 0.08 mm, 3.8 px: the notice follows the 4.02 px applied
+    ctx.save_recipe(edge)
+    assert ctx.audit_entries(action="recipe.save")[0]["reason"] is None
+    monkeypatch.setattr(QMessageBox, "information", lambda *a: QMessageBox.StandardButton.Ok)
+    win = _window(qtbot, ctx, "Engineer")
+    compare = win.pages["Compare"]
+    assert isinstance(compare, ComparePage)
+    compact = "AOI-RCP-007 Minimum defect size under 4 px: raise it to 0.09 mm or more."  # one line on Compare
+    for name, text in (("Compare", compact), ("Recipe Editor", f"AOI-RCP-007 {tiny.title}: {tiny.action}")):
+        win.navigate(name)
+        field = win.pages[name].min_size
+        assert isinstance(field, DefectSizeField) and field.notice.isHidden(), name
+        assert (field.mm.value(), field.px.text()) == (0.08, "= 4.0 px ✓"), name
+        field.mm.setValue(0.05)
+        assert field.notice.text() == text and field.px.text() == "= 2.4 px", name
+        in_why = text in compare.why.toPlainText()  # on Compare, in the "why" box, the field's own label hidden
+        assert field.notice.isHidden() == in_why == (name == "Compare"), name
+        field.mm.setValue(0.1)
+        assert field.notice.isHidden() and field.px.text() == "= 4.8 px ✓", name
+        assert "AOI-RCP-007" not in compare.why.toPlainText(), name
+    editor = win.pages["Recipe Editor"]
+    assert isinstance(editor, RecipeEditorPage)
+    editor.min_size.mm.setValue(0.05)
+    editor.save()
+    entry = ctx.audit_entries(action="recipe.save")[0]
+    assert entry["after"]["min_defect_mm"] == 0.05 and entry["reason"] == str(tiny)
+    assert ctx.recipe(BOARD)[1].min_defect_mm == 0.05 and not editor.min_size.notice.isHidden()
+    ctx.save_recipe(ctx.recipe(BOARD)[1], reason="Kept for a trial.")  # a reason given comes first, the notice after
+    assert ctx.audit_entries(action="recipe.save")[0]["reason"] == f"Kept for a trial. {tiny}"
+    qtbot.waitUntil(lambda: ctx.jobs.idle() and compare._bg is None, timeout=20000)
+
+
+@pytest.mark.parametrize("state", ["calibrated", "unreadable", "none-trained"])
+def test_req_insp_014_the_notice_squeezes_no_row_at_1600_by_900(
+    qtbot: QtBot, trained_ctx: AppContext, state: str
+) -> None:
+    """AOI-RCP-007 on the Recipe Editor and Compare at 1600 x 900 and 1920 x 1080, in each state of the AI score
+    threshold's note: no row of either page's thresholds is squeezed for it, the window is no wider, and Compare's "why"
+    box keeps theme.WHY_MIN_H (S29 review: on Windows the panel was too short for its rows, which
+    test_req_trn_015_tick_and_note_never_widen_the_window checks without the notice)."""
+    ctx = trained_ctx
+    model = ctx.active_model(BOARD)
+    assert model is not None
+    if state == "unreadable":
+        metrics = {**json.loads(model["metrics"]), "image_threshold": "damaged"}
+        ctx.db.execute("UPDATE models SET metrics=? WHERE uuid=?", (json.dumps(metrics), model["uuid"]))
+    elif state == "none-trained":
+        ctx.db.execute("DELETE FROM models WHERE board_model=?", (BOARD,))
+    _, small = ctx.recipe(BOARD)
+    small.min_defect_area = 12  # under 4 px: AOI-RCP-007 on both pages
+    ctx.save_recipe(small)
+    win = _window(qtbot, ctx, "Engineer")
+    editor, compare = win.pages["Recipe Editor"], win.pages["Compare"]
+    assert isinstance(editor, RecipeEditorPage) and isinstance(compare, ComparePage)
+    tabs = editor.findChild(QTabWidget)
+    assert tabs is not None
+    tabs.setCurrentWidget(editor.ai_thr.parentWidget())  # the Thresholds tab, where the field is
+    for size in ((1600, 900), (1920, 1080)):
+        win.resize(*size)
+        for page in (editor, compare):
+            win.navigate(page.title)
+            QApplication.processEvents()
+            rows = page.ai_thr.parentWidget()
+            assert rows.height() >= rows.heightForWidth(rows.width()), (page.title, size, rows.height(), "squeezed")
+            said = page.min_size.notice.isVisible() if page is editor else "AOI-RCP-007" in compare.why.toPlainText()
+            assert said and win.width() <= max(size[0], MIN_WIDTH), (page.title, size)
+        assert compare.why.height() >= theme.WHY_MIN_H, size
