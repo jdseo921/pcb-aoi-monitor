@@ -2496,7 +2496,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/training.py" line="+367"/>
+        <location filename="../ui/pages/training.py" line="+371"/>
         <location filename="../ui/pages/training_import.py" line="+38"/>
         <source>{code} {title}</source>
         <translation type="unfinished"></translation>
@@ -3246,7 +3246,7 @@
 <context>
     <name>LabelEditor</name>
     <message>
-        <location filename="../ui/pages/training_labels.py" line="+102"/>
+        <location filename="../ui/pages/training_labels.py" line="+114"/>
         <source>Draw Box</source>
         <translation>박스 그리기</translation>
     </message>
@@ -3267,6 +3267,16 @@
     </message>
     <message>
         <location line="+6"/>
+        <source>Undo</source>
+        <translation>실행 취소</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Delete Box</source>
+        <translation>박스 삭제</translation>
+    </message>
+    <message>
+        <location line="+7"/>
         <source>Opening the image…</source>
         <translation>이미지를 여는 중…</translation>
     </message>
@@ -3281,7 +3291,7 @@
         <translation>{file} · {label} · {view}</translation>
     </message>
     <message>
-        <location line="+45"/>
+        <location line="+47"/>
         <source>{number} {type} ({severity}) {x},{y} {w}×{h} px</source>
         <translation>{number} {type} ({severity}) {x},{y} {w}×{h} px</translation>
     </message>
@@ -3306,7 +3316,12 @@
         <translation>결함 박스는 NG 이미지에만 그립니다.</translation>
     </message>
     <message>
-        <location line="+51"/>
+        <location line="+35"/>
+        <source>Box {number} deleted; Undo or Ctrl+Z brings it back</source>
+        <translation>박스 {number}을(를) 삭제했습니다. 실행 취소 또는 Ctrl+Z로 되돌릴 수 있습니다</translation>
+    </message>
+    <message>
+        <location line="+53"/>
         <source>Wait until the image is open and the last change is stored</source>
         <translation>이미지가 열리고 마지막 변경 사항이 저장될 때까지 기다리십시오</translation>
     </message>
@@ -3817,7 +3832,7 @@
 <context>
     <name>NgDialog</name>
     <message>
-        <location filename="../ui/pages/training.py" line="-288"/>
+        <location filename="../ui/pages/training.py" line="-290"/>
         <source>Label NG images</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4615,23 +4630,23 @@
     </message>
     <message>
         <location line="+1"/>
-        <location line="+453"/>
+        <location line="+470"/>
         <source>Import Folder…</source>
         <translation>폴더 가져오기…</translation>
     </message>
     <message>
-        <location line="-445"/>
+        <location line="-462"/>
         <source>Tip: 20+ OK images give a steadier threshold</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location line="+10"/>
-        <location line="+53"/>
+        <location line="+54"/>
         <source>ID</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-53"/>
+        <location line="-54"/>
         <source>Label</source>
         <translation>라벨</translation>
     </message>
@@ -4672,17 +4687,17 @@
     </message>
     <message>
         <location line="+1"/>
-        <location line="+307"/>
+        <location line="+309"/>
         <source>Remove</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-301"/>
+        <location line="-303"/>
         <source>Select a sample to preview</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+7"/>
+        <location line="+8"/>
         <source>Self-training</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4772,7 +4787,7 @@
         <translation>{folder}와(과) 그 하위 폴더에 이미지가 없어 가져올 것이 없습니다</translation>
     </message>
     <message>
-        <location line="+116"/>
+        <location line="+117"/>
         <source>Imported {ok} OK and {ng} NG images into {board_model}</source>
         <translation>OK 이미지 {ok}개와 NG 이미지 {ng}개를 {board_model}(으)로 가져왔습니다</translation>
     </message>
@@ -4807,7 +4822,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+45"/>
+        <location line="+60"/>
         <source>epoch {epoch}/{total}  loss {loss:.4f}</source>
         <translation type="unfinished"></translation>
     </message>

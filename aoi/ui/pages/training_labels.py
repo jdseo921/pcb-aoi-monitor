@@ -1,7 +1,8 @@
 """Training's label editor (REQ-TRN-003, the screen half; stage S33): the box editor of docs/sketches/training-labels.md
-beside the samples table. It shows the selected image with its defect boxes; on an NG image boxes are drawn, each of
-one of the 33 defect types, whose severity the defect table gives, and the selected box takes the type picked. Every
-change is stored at once through `AppContext.set_boxes`, which keeps the boxes before in the image's history and
+beside the samples table. It shows the selected image with its defect boxes; on an NG image boxes are drawn, moved,
+resized and deleted, each of one of the 33 defect types, whose severity the defect table gives, the selected box taking
+the type picked, and Undo (Ctrl+Z) puts back what the last change replaced, on any image. Every change is stored at once
+through `AppContext.set_boxes` (an Undo through `set_label`), which keeps the boxes before in the image's history and
 audits the change (S32); nothing here reads or writes the database itself. The image and its boxes are read, and each
 change stored, on a pool thread (REQ-SET-021), one at a time: until it ends the editor takes no other change."""
 
@@ -15,7 +16,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QFocusEvent, QKeyEvent, QWheelEvent
+from PySide6.QtGui import QFocusEvent, QKeyEvent, QKeySequence, QWheelEvent
 from PySide6.QtWidgets import QComboBox, QFormLayout, QHBoxLayout, QLabel, QListWidget, QVBoxLayout, QWidget
 
 from ...core.labels import DefectBox
@@ -26,12 +27,14 @@ from ..widgets.box_editor import BoxEditor
 from ..widgets.busy import BusyOverlay
 from ..widgets.empty_state import EmptyState
 from ..workers import Worker, start
-from .base import Page, breakable, button, view_text
+from .base import Page, action_button, breakable, button, view_text
 
 if TYPE_CHECKING:
     import numpy as np
 
     from ...core.services import AppContext
+
+State = tuple[str, str, str | None, list[DefectBox]]  # a sample's uuid, label, defect type and boxes, as stored
 
 
 def _read(ctx: AppContext, uuid: str, path: str | None) -> tuple[np.ndarray | AoiError | None, list[DefectBox]]:
@@ -43,6 +46,12 @@ def _read(ctx: AppContext, uuid: str, path: str | None) -> tuple[np.ndarray | Ao
         return ctx.load_image(path), boxes
     except AoiError as e:  # gone or damaged since it was imported: said under the heading, with no dialog per row
         return e, boxes
+
+
+def _restore(ctx: AppContext, states: list[State]) -> None:
+    """On a pool thread: each sample back to the label, defect type and boxes it had (Undo)."""
+    for uuid, label, dtype, boxes in states:
+        ctx.set_label(uuid, label, dtype, boxes if label == "NG" else None)
 
 
 class TypeList(QComboBox):
@@ -86,7 +95,10 @@ class TypeList(QComboBox):
 
 
 class LabelEditor(QWidget):
-    """The selected image, its label and its defect boxes, beside Training's samples table (labels sketch)."""
+    """The selected image, its label and its defect boxes, beside Training's samples table (labels sketch). `undone`
+    names the samples an Undo changed back, for the page to select and show."""
+
+    undone = Signal(list)
 
     def __init__(self, page: Page, placeholder: str) -> None:
         super().__init__()
@@ -125,6 +137,14 @@ class LabelEditor(QWidget):
         self.box_list.setFixedHeight(4 * theme.TARGET_H)
         self.box_list_empty = EmptyState(self.box_list)
         lay.addWidget(self.box_list)
+        self.act_undo = page.action(self.tr("Undo"), QKeySequence.StandardKey.Undo, self._undo)
+        self.act_delete = page.action(self.tr("Delete Box"), "Delete", self._delete)  # no question: Undo brings it back
+        under = QHBoxLayout()
+        under.addWidget(action_button(self.act_undo, show_key=False))  # for a hand with no keyboard
+        under.addWidget(action_button(self.act_delete, "danger", show_key=False))  # red, the last in its row
+        under.addStretch(1)
+        lay.addLayout(under)
+        self._history: list[list[State]] = []  # for each change stored, the samples it changed as they were before
         self.reading = BusyOverlay(self.view, self.tr("Opening the image…"))
         self.saving = BusyOverlay(self.view, self.tr("Storing the change…"))
         self._reading: Worker | None = None  # the read of the sample shown, the newest asked for
@@ -205,14 +225,16 @@ class LabelEditor(QWidget):
             self.show_sample(self._later.pop())
 
     def _sync(self) -> None:
-        """Draw Box on an NG image shown, and Draw mode left on any other; no change on the image while it is read or
-        a change is stored."""
+        """Draw Box on an NG image shown, and Draw mode left on any other; Delete Box while a box of it is selected;
+        Undo while a change can be undone. No change on the image while it is read or a change is stored."""
         self.view.locked = self.busy()
         ng = self.sample is not None and self.sample["label"] == "NG" and self.view._pix is not None
         self.draw_btn.setEnabled(ng)
         if not ng and self.draw_btn.isChecked():
             self.draw_btn.setChecked(False)
             self._toggle_draw()
+        self.act_delete.setEnabled(ng and self.view.chosen >= 0)
+        self.act_undo.setEnabled(bool(self._history))
 
     def _fill_list(self, boxes: list[DefectBox] | None = None) -> None:
         """List `boxes`, by default those shown; with no picture shown the list and the Type list are off."""
@@ -242,6 +264,7 @@ class LabelEditor(QWidget):
         self.box_list.blockSignals(False)
         if chosen >= 0:
             self.type_box.setCurrentIndex(self.type_box.findData(self.view.boxes[chosen].dct_type))
+        self._sync()
 
     # --- what is changed -------------------------------------------------------------
     def _toggle_draw(self) -> None:
@@ -261,16 +284,52 @@ class LabelEditor(QWidget):
             self.view.redraw()
             self._store()
 
-    def _store(self) -> None:
+    def _delete(self) -> None:
+        """Delete Box (Delete): the selected box goes at once, with no question (the sketch); Undo brings it back."""
+        chosen = self.view.chosen
+        if chosen >= 0:
+            self.view.show_boxes(self.view.boxes[:chosen] + self.view.boxes[chosen + 1 :])
+            if self._store():
+                gone = self.tr("Box {number} deleted; Undo or Ctrl+Z brings it back")
+                self.owner.shell.status(gone.format(number=chosen + 1))
+
+    def _undo(self) -> None:
+        """Undo (Ctrl+Z): the samples the last change stored changed get back the label and boxes they had, each
+        stored as a new label, and are shown. One that cannot take them now, such as a sample removed since, is the
+        coded dialog, and that change is not offered again."""
+        if self._history:
+            states = self._history.pop()
+            if self.write(lambda _r: self.undone.emit([s[0] for s in states]), _restore, self.ctx, states):
+                self._sync()
+            else:
+                self._history.append(states)
+
+    def remember(self, states: list[State]) -> None:
+        """A change stored: these samples as they were before it, for Undo."""
+        self._history.append(states)
+        self._sync()
+
+    def forget(self) -> None:
+        """Nothing to undo: another user signed in, or another board model is shown."""
+        self._history.clear()
+        self._sync()
+
+    def _store(self) -> bool:
         """Store the boxes shown, on a pool thread; while another change is stored the boxes as stored come back."""
         if self.sample is None:
-            return
-        boxes = list(self.view.boxes)
-        if self.write(lambda _uid: self._fill_list(), self.ctx.set_boxes, self.sample["uuid"], boxes):
-            self._kept = boxes
-        else:
+            return False
+        boxes, s = list(self.view.boxes), self.sample
+        before: State = (s["uuid"], s["label"], s["defect_type"], self._kept)
+        if not self.write(lambda _uid: self._stored(before), self.ctx.set_boxes, s["uuid"], boxes):
             self.view.show_boxes(self._kept, self.view.chosen)
             self._picked(self.view.chosen)
+            return False
+        self._kept = boxes
+        return True
+
+    def _stored(self, before: State) -> None:
+        self._fill_list()
+        self.remember([before])
 
     def write(self, done: Callable[[Any], None], fn: Callable[..., Any], *args: Any) -> bool:
         """Store a change, `fn(*args)`, on a pool thread, `done` getting what it returns here: one at a time, and none
