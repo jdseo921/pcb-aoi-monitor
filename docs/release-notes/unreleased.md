@@ -17,7 +17,7 @@ None. / 없음.
 
 ## Improved / 개선 (draft)
 
-- (none yet)
+- [REQ-INSP-007] The golden-board comparison step is rewritten for speed: about 20 times faster at 5 MP and 12 times at 0.3 MP on a 4-core test VM (not the reference PC), with identical difference maps, masks and regions and the same verdicts on the synthetic regression set (#12). / 골든 보드 비교 단계를 더 빠르게 다시 작성했습니다: 4코어 테스트 VM(기준 PC 아님)에서 5 MP 기준 약 20배, 0.3 MP 기준 약 12배 빠르며, 합성 회귀 세트에서 차이 지도, 마스크, 영역과 판정이 동일합니다 (#12).
 
 ## Fixed / 수정 (draft)
 
