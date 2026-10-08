@@ -35,12 +35,13 @@ interfaces that Stages 2–4 (cameras, robot, MES/ERP) plug into without changin
 │  Pages: Home · Inspection · Compare · Training · AI Model Test ·             │
 │         Recipe Editor · 3D Profile · Logs & Export · Settings                │
 │  Widgets: ImageView (zoom/pan, overlays, ROI drawing, linked views)          │
-│  Workers: QThreadPool runners so training / batch tests never freeze the UI  │
+│  Workers: Worker wraps a core Job; its callbacks arrive as signals on the UI │
 ├──────────────────────────────────────────────────────────────────────────────┤
 │ Application services  (aoi/core/services.py → AppContext): the only door     │
 │  reads   board_models · samples · models · recipe · inspections · users      │
 │  writes  import_samples · train · save_recipe · set_reference · add_user     │
 │  engine  inspector · inspect · inspect_file · log_result · batch_test        │
+│  jobs    the thread pool every slow call runs on (REQ-SET-021)               │
 ├──────────────────────────────────────────────────────────────────────────────┤
 │ Inspection engine  (aoi/core)                                                │
 │  imaging.py   I/O (Unicode paths), ORB+RANSAC registration, heatmaps         │
@@ -48,6 +49,7 @@ interfaces that Stages 2–4 (cameras, robot, MES/ERP) plug into without changin
 │  compare.py   golden-sample diff (shift-tolerant Lab ΔE), SSIM, blobs        │
 │  inspector.py pipeline → Checks (decision variables) + Defects + verdict     │
 │  recipe.py    ROIs + thresholds per board model                              │
+│  jobs.py      background jobs: progress, cancel, finished callbacks; no Qt   │
 │  defects.py   DCT taxonomy, severities, mandatory AOI set                    │
 ├──────────────────────────────────────────────────────────────────────────────┤
 │ Data  (aoi/data/db.py)  SQLite: samples · models · recipes · inspections ·   │
@@ -63,6 +65,11 @@ Rules: pages call **only** `AppContext`; the engine has **no Qt imports**, so th
 no Qt import under `aoi/core` or `aoi/data`, and under `aoi/ui` no `sqlite3` or `aoi.data` import, no `.db`, no SQL
 and no `Inspector` built by a page (REQ-USR-001, since S15). `aoi/times.py`, `aoi/errors.py`, `aoi/config.py` and
 `aoi/defects.py` are shared by every layer.
+
+Slow work never runs on the UI thread (REQ-SET-021, since S17): a page wraps it in a `Worker` (`aoi/ui/workers.py`),
+which runs it as a `Job` on the pool `AppContext.jobs` owns (`aoi/core/jobs.py`: progress, cancel and finished callbacks,
+no Qt, so the same jobs run headless) and turns the callbacks into signals; the slots run on the UI thread, the only
+place a widget changes. A job function takes plain values in and returns plain values out, never a widget.
 
 ### Workspace on disk
 

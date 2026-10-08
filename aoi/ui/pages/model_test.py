@@ -109,7 +109,7 @@ class ModelTestPage(Page):
         w.signals.finished.connect(
             lambda: (self.btn_run.setEnabled(True), self.btn_run.setText("Run Test Again"), self.bar.setVisible(False))
         )
-        start(w)
+        start(w, self.ctx.jobs)
 
     def _show(self, out):
         self.metrics, self.rows = out

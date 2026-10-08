@@ -159,7 +159,7 @@ class InspectionPage(Page):
         w.signals.result.connect(self._on_result)
         w.signals.error.connect(lambda e: (self.error(e), self.stop_run(), self._refresh_alarms()))
         w.signals.finished.connect(self._update_buttons)
-        start(w)
+        start(w, self.ctx.jobs)
 
     def _on_result(self, out):
         path, res = out
