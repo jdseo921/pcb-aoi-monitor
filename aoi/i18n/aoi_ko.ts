@@ -631,7 +631,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/imaging.py" line="+150"/>
+        <location filename="../core/imaging.py" line="+151"/>
         <source>{megabytes} MB ({count} bytes)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -671,7 +671,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+188"/>
+        <location line="+213"/>
         <source>board image</source>
         <translation type="unfinished"></translation>
     </message>
@@ -701,7 +701,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/maps.py" line="+28"/>
+        <location filename="../core/maps.py" line="+37"/>
         <source>the file is damaged</source>
         <translation type="unfinished"></translation>
     </message>

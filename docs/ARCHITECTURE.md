@@ -342,8 +342,15 @@ Engineer judges a stored result again through `AppContext.re_evaluate(result_uui
 0006](adr/0006-judging-a-stored-result-again.md)): it reads only the maps the thresholds use, the AI score from the
 result's stored AI check and the AI model's calibration from the model registry row the result names by UUID; it refuses
 with AOI-CMP-004 a result whose map or AI model calibration is gone when a check the thresholds use needs it, and with
-AOI-CMP-005 thresholds of another board model; it stores nothing, and takes about 130 ms at 5 MP on the 4-core cloud
-VM the tests run on. `tests/test_re_evaluate.py` checks this.
+AOI-CMP-005 thresholds of another board model; it stores nothing, and takes about 90 ms at 5 MP on the 4-core cloud
+VM the tests run on, about 120 ms with thresholds that leave thousands of difference regions (Pixel difference 10 and
+Minimum defect area 1 leave about 5,600 on the 5 MP test board). Three things keep it there (#249):
+`inspector.merge_regions`, which merges the regions into defects for every inspection too, tests a region only against
+the defects kept in the 64 px cells it covers (testing every one kept took 1.5 s); `compare.regions_from_mask` reads the
+peaks of regions up to 8 px a side together; and both maps are written at zlib level 1 with deflate's default strategy
+and PNG's Up filter (`maps.PNG_SETTINGS`) where OpenCV's own settings take the run-length strategy and the Sub filter, so
+on the test board they read back in about two thirds of the time (maps written before still read, at the old speed).
+`tests/test_re_evaluate.py` checks both cases against 300 ms.
 
 ---
 
