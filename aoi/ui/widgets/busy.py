@@ -12,6 +12,7 @@ from PySide6.QtCore import QEvent, QObject, Qt, QTimer
 from PySide6.QtWidgets import QLabel, QProgressBar, QPushButton, QVBoxLayout, QWidget
 
 from ...core.jobs import Job
+from .. import theme
 
 
 class BusyOverlay(QWidget):
@@ -34,7 +35,7 @@ class BusyOverlay(QWidget):
         self.label.setObjectName("busyText")
         self.label.setAlignment(Qt.AlignCenter)
         self.bar = QProgressBar()
-        self.bar.setFixedWidth(360)
+        self.bar.setFixedWidth(theme.PROGRESS_W)
         self.cancel_button = QPushButton(self.tr("Cancel"))
         self.cancel_button.clicked.connect(self._on_cancel)
         layout.addWidget(self.label)

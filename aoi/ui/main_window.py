@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QColor
 from PySide6.QtWidgets import (
     QComboBox,
     QFrame,
@@ -22,6 +23,7 @@ from PySide6.QtWidgets import (
 from ..config import APP_NAME, APP_VERSION
 from ..core.services import AppContext
 from ..errors import AoiError
+from . import theme
 from .errors import show_error
 from .pages.base import Page, button
 from .pages.compare import ComparePage
@@ -56,11 +58,11 @@ class HomePage(Page):
         self.status_labels = {}
         for i, (n, name, desc, target) in enumerate(self.STEPS):
             card = QFrame()
-            card.setStyleSheet("QFrame{background:#26323f;border-radius:10px;}")
+            card.setObjectName("card")
             cl = QVBoxLayout(card)
             h = QLabel(
-                f"<span style='font-size:22pt;font-weight:700;color:#1e88e5'>{n}</span>"
-                f"&nbsp;&nbsp;<span style='font-size:16pt;font-weight:600'>{name}</span>"
+                f"<span style='font-size:{theme.FONT_STEP_PT}pt;font-weight:700;color:{theme.ACCENT}'>{n}</span>"
+                f"&nbsp;&nbsp;<span style='font-size:{theme.FONT_LARGE_PT}pt;font-weight:600'>{name}</span>"
             )
             d = QLabel(desc)
             d.setWordWrap(True)
@@ -134,7 +136,7 @@ class MainWindow(QMainWindow):
         body.setSpacing(0)
         self.nav = QListWidget()
         self.nav.setObjectName("nav")
-        self.nav.setFixedWidth(250)
+        self.nav.setFixedWidth(theme.NAV_W)
         self.stack = QStackedWidget()
         body.addWidget(self.nav)
         body.addWidget(self.stack, 1)
@@ -148,7 +150,7 @@ class MainWindow(QMainWindow):
             if section:
                 sec = QListWidgetItem(section)
                 sec.setFlags(Qt.NoItemFlags)
-                sec.setForeground(Qt.gray)
+                sec.setForeground(QColor(theme.TEXT_MUTED))
                 self.nav.addItem(sec)
             page = cls(ctx, self)
             self.pages[cls.title] = page
@@ -169,16 +171,16 @@ class MainWindow(QMainWindow):
     def _header(self) -> QWidget:
         h = QFrame()
         h.setObjectName("header")
-        h.setFixedHeight(64)
+        h.setFixedHeight(theme.HEADER_H)
         layout = QHBoxLayout(h)
         layout.setContentsMargins(18, 0, 18, 0)
         logo = QLabel(f"<b>{APP_NAME}</b>")
-        logo.setStyleSheet("font-size:16pt;")
+        logo.setObjectName("logo")
         layout.addWidget(logo)
         layout.addSpacing(30)
         layout.addWidget(QLabel("Board model:"))
         self.bm_combo = QComboBox()
-        self.bm_combo.setMinimumWidth(240)
+        self.bm_combo.setMinimumWidth(theme.FIELD_W)
         self.bm_combo.currentTextChanged.connect(self._on_board_model)
         layout.addWidget(self.bm_combo)
         layout.addWidget(button("+ New", slot=self.new_board_model))

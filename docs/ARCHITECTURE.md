@@ -74,6 +74,11 @@ its background action through `Page.run_in_background` (the newest call wins) un
 will appear (after 1 s the time so far; after 10 s progress, time left, Cancel); `tests/test_no_freeze.py` ticks the UI
 thread every 50 ms through each page's 5 MP action and fails on a gap over 2 s.
 
+Colours, point sizes and size classes are tokens in `aoi/ui/theme.py` (REQ-SET-004, since S18): the stylesheet is
+built from them with `theme.stylesheet()`, so another theme is a set of overrides (REQ-SET-008); a page never writes a
+colour or a point size of its own, nothing is below 14 pt, and `tests/test_screen_rules.py` scans aoi/ui for a
+literal and checks that every page sits in the one frame (REQ-SET-018).
+
 ### Workspace on disk
 
 ```

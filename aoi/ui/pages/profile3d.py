@@ -22,7 +22,7 @@ class Profile3DPage(Page):
             "colour-coded height maps, rotate / zoom / pan,\nand height-slice graphs with peak markers."
         )
         canvas.setAlignment(Qt.AlignCenter)
-        canvas.setStyleSheet("background:#0f161d; border:1px dashed #3f5a75; color:#6c7c8c; border-radius:8px;")
+        canvas.setObjectName("canvas")
         body.addWidget(canvas, 3)
         side = QWidget()
         sl = QVBoxLayout(side)
