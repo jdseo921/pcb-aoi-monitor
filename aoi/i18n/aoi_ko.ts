@@ -3246,7 +3246,7 @@
 <context>
     <name>LabelEditor</name>
     <message>
-        <location filename="../ui/pages/training_labels.py" line="+37"/>
+        <location filename="../ui/pages/training_labels.py" line="+80"/>
         <source>Draw Box</source>
         <translation>박스 그리기</translation>
     </message>
@@ -3266,7 +3266,7 @@
         <translation>박스</translation>
     </message>
     <message>
-        <location line="+23"/>
+        <location line="+25"/>
         <source>{file} · {label} · {view}</source>
         <translation>{file} · {label} · {view}</translation>
     </message>

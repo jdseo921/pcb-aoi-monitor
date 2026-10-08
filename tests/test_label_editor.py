@@ -1,6 +1,6 @@
 """REQ-TRN-003, the screen half (stage S33): the label editor beside Training's samples table, where an Engineer draws
-the defect boxes of an NG image, each of one of the 33 types, whose severity the defect table fills in; every change is
-stored through `AppContext.set_boxes`, which keeps the boxes before in the image's history (labels sketch,
+the defect boxes of an NG image and gives each one of the 33 types, whose severity the defect table fills in; every
+change is stored through `AppContext.set_boxes`, which keeps the boxes before in the image's history (labels sketch,
 docs/sketches/training-labels.md)."""
 
 from __future__ import annotations
@@ -9,10 +9,12 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from PySide6.QtCore import QItemSelectionModel, QPoint, QPointF, QRectF, Qt
+from PySide6.QtGui import QWheelEvent
 from PySide6.QtTest import QTest
-from PySide6.QtWidgets import QApplication, QGraphicsSimpleTextItem
+from PySide6.QtWidgets import QApplication, QGraphicsSimpleTextItem, QWidget
 from pytestqt.qtbot import QtBot
 
+from aoi import defects
 from aoi.core.labels import DefectBox
 from aoi.core.services import AppContext
 from aoi.ui.pages.base import cell_text
@@ -23,6 +25,7 @@ if TYPE_CHECKING:
     from aoi.ui.widgets.box_editor import BoxEditor
 
 LEFT, NONE = Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier
+NO_BUTTON = Qt.MouseButton.NoButton
 
 
 def _page(qtbot: QtBot, ctx: AppContext) -> TrainingPage:
@@ -67,6 +70,14 @@ def _drag(view: BoxEditor, a: QPoint, b: QPoint) -> None:
     QTest.mouseMove(port, (a + b) / 2)
     QTest.mouseMove(port, b)
     QTest.mouseRelease(port, LEFT, NONE, b)
+
+
+def _wheel(w: QWidget, down: int) -> None:
+    """`down` notches of the mouse wheel turned towards the user, the pointer over the middle of `w`."""
+    at, step = QPointF(w.width() / 2, w.height() / 2), QPoint(0, -120 if down > 0 else 120)
+    for _ in range(abs(down)):
+        e = QWheelEvent(at, w.mapToGlobal(at), QPoint(), step, NO_BUTTON, NONE, Qt.ScrollPhase.NoScrollPhase, False)
+        QApplication.sendEvent(w, e)
 
 
 def test_req_trn_003_editor_draw(qtbot: QtBot, trained_ctx: AppContext) -> None:
@@ -128,3 +139,55 @@ def test_req_trn_003_editor_draw(qtbot: QtBot, trained_ctx: AppContext) -> None:
     assert "AOI-INSP-001" in editor.heading.text() and view._pix is None and not editor.draw_btn.isEnabled()
     assert view.boxes == [] and editor.box_list.count() == 1, "listed, not drawn over the placeholder"
     assert not editor.box_list.isEnabled() and not editor.type_box.isEnabled()
+
+
+def test_req_trn_003_editor_type_and_severity(qtbot: QtBot, trained_ctx: AppContext) -> None:
+    """The Type field offers the 33 defect types of aoi/defects.py, by category and with no Anomaly; the selected box
+    takes the type picked, by Enter on the type shown or by a choice in the open list, stored with the severity the
+    defect table gives it, shown beside the field, in the list and on the image. The arrow keys only show a type, which
+    leaving the list puts back; the wheel turns it only while the list has the focus, and stores nothing. With no box
+    selected, the type picked goes to the next box drawn and nothing is stored."""
+    ctx = trained_ctx
+    sample = ctx.samples(BOARD, "NG")[0]
+    ctx.set_boxes(sample["uuid"], [DefectBox(50, 60, 40, 30, "Scratch")])
+    page = _open(qtbot, ctx, sample)
+    editor, view, types = page.editor, page.editor.view, page.editor.type_box
+    offered = [types.itemData(i) for i in range(types.count())]
+    assert offered == defects.names() and len(offered) == 33 and "Anomaly" not in offered
+    editor.box_list.setCurrentRow(0)
+    assert view.chosen == 0 and types.currentData() == "Scratch" and editor.severity.text() == "Minor"
+    rows = len(ctx.label_history(sample["uuid"]))
+    _wheel(types, 3)  # three notches down with the pointer over the list and the focus elsewhere
+    assert types.currentData() == "Scratch" and len(ctx.label_history(sample["uuid"])) == rows, "the wheel on the way"
+    types.setFocus()
+    for _ in range(3):
+        QTest.keyClick(types, Qt.Key.Key_Down)
+    third = defects.names()[defects.names().index("Scratch") + 3]
+    assert types.currentData() == third and _stored(ctx, sample["uuid"])[0][4] == "Scratch", "shown, not picked"
+    editor.box_list.setFocus()
+    assert types.currentData() == "Scratch", "leaving the list puts back the type picked"
+    for kind in defects.DEFECT_TYPES:
+        types.setFocus()
+        types.setCurrentIndex(types.findData(kind.name))  # as the arrow keys or a letter show it
+        QTest.keyClick(types, Qt.Key.Key_Return)
+        assert _stored(ctx, sample["uuid"]) == [(50, 60, 40, 30, kind.name, kind.severity)]
+        assert editor.severity.text() == kind.severity
+        assert editor.box_list.item(0).text() == f"1 {kind.name} ({kind.severity}) 50,60 40×30 px"
+    assert len(ctx.label_history(sample["uuid"])) == rows + 33, "one label row per type picked, each a change"
+    on_image = [i.text() for i in view.scene().items() if isinstance(i, QGraphicsSimpleTextItem) and i.isVisible()]
+    last = defects.DEFECT_TYPES[-1]
+    assert f"1 {last.name} ◆ {last.severity}" in on_image
+    types.showPopup()  # the open list, by mouse or finger: the type above the one shown
+    above = defects.DEFECT_TYPES[-2]
+    spot = types.view().visualRect(types.model().index(len(offered) - 2, 0)).center()
+    QTest.mouseClick(types.view().viewport(), LEFT, NONE, spot)
+    assert _stored(ctx, sample["uuid"])[0][4:] == (above.name, above.severity) and not types.view().isVisible()
+    rows = len(ctx.label_history(sample["uuid"]))
+    editor.box_list.setCurrentRow(-1)
+    assert view.chosen == -1
+    types.setCurrentIndex(types.findData("Solder Ball"))
+    QTest.keyClick(types, Qt.Key.Key_Return)
+    assert len(ctx.label_history(sample["uuid"])) == rows and editor.severity.text() == "Minor"
+    editor.draw_btn.click()
+    _drag(view, _at(view, 300, 300), _at(view, 340, 330))
+    assert [b[4:] for b in _stored(ctx, sample["uuid"])] == [(above.name, above.severity), ("Solder Ball", "Minor")]

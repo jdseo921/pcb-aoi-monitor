@@ -1,14 +1,17 @@
 """Training's label editor (REQ-TRN-003, the screen half; stage S33): the box editor of docs/sketches/training-labels.md
 beside the samples table. It shows the selected image with its defect boxes; on an NG image boxes are drawn, each of
-one of the 33 defect types, whose severity the defect table gives. Every change is stored at once through
-`AppContext.set_boxes`, which keeps the boxes before in the image's history and audits the change (S32); nothing here
-reads or writes the database itself."""
+one of the 33 defect types, whose severity the defect table gives, and the selected box takes the type picked. Every
+change is stored at once through `AppContext.set_boxes`, which keeps the boxes before in the image's history and
+audits the change (S32); nothing here reads or writes the database itself."""
 
 from __future__ import annotations
 
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
+from PySide6.QtCore import Qt, Signal
+from PySide6.QtGui import QFocusEvent, QKeyEvent, QWheelEvent
 from PySide6.QtWidgets import QComboBox, QFormLayout, QHBoxLayout, QLabel, QListWidget, QVBoxLayout, QWidget
 
 from ...core.labels import DefectBox
@@ -18,6 +21,46 @@ from .. import theme
 from ..widgets.box_editor import BoxEditor
 from ..widgets.empty_state import EmptyState
 from .base import Page, breakable, button, view_text
+
+
+class TypeList(QComboBox):
+    """The Type list: a type is picked by a choice in the open list, by mouse, finger or keys, or by Enter on the type
+    shown, never by the arrow keys, a letter or the wheel, which only show one; the wheel turns it only while it has the
+    focus. `left` says the focus went elsewhere, so the editor can show the type picked again."""
+
+    picked = Signal()
+    left = Signal()
+
+    def __init__(self) -> None:
+        super().__init__()
+        self._showing = False  # a key or the wheel turning the type shown
+        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+        self.activated.connect(self._chosen)
+
+    def _chosen(self, _index: int) -> None:
+        if not self._showing:
+            self.picked.emit()
+
+    def keyPressEvent(self, e: QKeyEvent) -> None:
+        if e.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter):
+            self.picked.emit()
+            return
+        self._showing = True
+        super().keyPressEvent(e)
+        self._showing = False
+
+    def wheelEvent(self, e: QWheelEvent) -> None:
+        if not self.hasFocus():
+            e.ignore()  # to the page under the pointer, as a wheel turned on the way to the image
+            return
+        self._showing = True
+        super().wheelEvent(e)
+        self._showing = False
+
+    def focusOutEvent(self, e: QFocusEvent) -> None:
+        super().focusOutEvent(e)
+        if e.reason() != Qt.FocusReason.PopupFocusReason:  # the open list keeps it
+            self.left.emit()
 
 
 class LabelEditor(QWidget):
@@ -41,7 +84,7 @@ class LabelEditor(QWidget):
         lay.addLayout(tools)
         form = QFormLayout()
         form.setRowWrapPolicy(QFormLayout.RowWrapPolicy.DontWrapRows)  # a row that wrapped moved the image mid-drag
-        self.type_box = QComboBox()
+        self.type_box = TypeList()
         self.type_box.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
         # 14 widths of X: the Type row then asks no more room than the image below it (IMAGE_MIN_W), so Training
         # fits a 1600 px window beside the import buttons; a longer name shows cut there, whole in the drop-down
@@ -63,8 +106,10 @@ class LabelEditor(QWidget):
         self.view.picked.connect(self._picked)
         self.view.edited.connect(self._store)
         self.box_list.currentRowChanged.connect(self.view.choose)
-        self.type_box.currentIndexChanged.connect(self._typed)
-        self._typed()
+        self.type_box.currentIndexChanged.connect(self._shown_type)
+        self.type_box.picked.connect(self._typed)
+        self.type_box.left.connect(lambda: self._picked(self.view.chosen))  # the selected box's type, not one shown
+        self._shown_type()
         self.show_sample(None)
 
     # --- what is shown -------------------------------------------------------------
@@ -121,20 +166,30 @@ class LabelEditor(QWidget):
             self.box_list_empty.show_state(self.tr("No defect boxes"), self.tr("Only an NG image takes defect boxes."))
 
     def _picked(self, chosen: int) -> None:
-        """A box selected on the image: its row in the list."""
+        """A box selected on the image: its row in the list, and its type in the Type field."""
         self.box_list.blockSignals(True)
         self.box_list.setCurrentRow(chosen)
         self.box_list.blockSignals(False)
+        if chosen >= 0:
+            self.type_box.setCurrentIndex(self.type_box.findData(self.view.boxes[chosen].dct_type))
 
     # --- what is changed -------------------------------------------------------------
     def _toggle_draw(self) -> None:
         self.view.set_draw_mode(self.draw_btn.isChecked())
 
-    def _typed(self) -> None:
-        """The type picked: its severity beside it, and the type of the next box drawn."""
+    def _shown_type(self) -> None:
+        """The type the Type list shows: its severity beside it, and the type of the next box drawn."""
         kind = str(self.type_box.currentData())
         self.severity.setText(BY_NAME[kind].severity)
         self.view.new_type = kind
+
+    def _typed(self) -> None:
+        """The type picked: the selected box's type, stored."""
+        kind, chosen = str(self.type_box.currentData()), self.view.chosen
+        if chosen >= 0 and self.view.boxes[chosen].dct_type != kind:
+            self.view.boxes[chosen] = replace(self.view.boxes[chosen], dct_type=kind)
+            self.view.redraw()
+            self._store()
 
     def _store(self) -> None:
         """Store the boxes shown; a refusal, or any other error, is shown and the stored boxes come back."""
