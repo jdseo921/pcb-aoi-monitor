@@ -157,8 +157,11 @@ class LogsPage(Page):
         overlay = r["overlay_path"] if r else None
         self.view.set_image(self.ctx.load_image(overlay) if overlay and Path(overlay).exists() else None)
 
-    def _confirm(self, question: str) -> bool:
-        return QMessageBox.question(self, self.tr("Confirm export"), question) == QMessageBox.StandardButton.Yes
+    def _confirm(self, question: str, overwrites: bool = False) -> bool:
+        """Yes to `question`; for one that `overwrites` a file, No is the default, so Enter keeps it (REQ-SET-018)."""
+        yes, no = QMessageBox.StandardButton.Yes, QMessageBox.StandardButton.No
+        default = no if overwrites else yes  # Qt left the default to the focus, which fell on Yes (#182)
+        return QMessageBox.question(self, self.tr("Confirm export"), question, yes | no, default) == yes
 
     def export_csv(self) -> None:
         question = self.tr(
@@ -174,7 +177,7 @@ class LogsPage(Page):
             return
         checks_file = Path(f).with_name(f"{Path(f).stem}_checks.csv")
         if checks_file.exists() and not self._confirm(
-            self.tr("{file} exists. Replace it?").format(file=checks_file.name)
+            self.tr("{file} exists. Replace it?").format(file=checks_file.name), overwrites=True
         ):
             return
         # Two files: the records, and beside them one row per check with the evidence that decided each verdict

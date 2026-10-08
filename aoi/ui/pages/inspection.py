@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import weakref
+from collections.abc import Callable
 from pathlib import Path
 from typing import TYPE_CHECKING, TypeAlias
 
@@ -76,6 +77,8 @@ class InspectionPage(Page):
         self.last_path: Path | None = None
         self.last_id: int | None = None  # the record of the last result, for Compare (REQ-INSP-009)
         self.last_board_model: str | None = None  # the board model it was inspected under
+        # The empty state of a board that was not inspected (#182): heading, sentence, link and where it leads
+        self.skipped: tuple[str, str, str, Callable[[], None]] | None = None
         self.inspector: Inspector | None = None  # built on the first board for the board model, recipe and reference
         self._engine_gen = 0  # counts the times the engine was dropped, so a board's engine from before is not kept
         # The board being inspected, if one is: Start and Next Board wait for it (#120).
@@ -165,6 +168,8 @@ class InspectionPage(Page):
         elif not self.queue:
             what = self.tr("Load Images… or Load Folder… to queue boards. In Stage 2 the camera fills this view.")
             self.empty.show_state(self.tr("No images loaded"), what, self.tr("Load Images…"), self.load_files)
+        elif self.skipped is not None:  # until the next board starts: which board was not inspected, why, what next
+            self.empty.show_state(*self.skipped)
         else:
             self.empty.hide()
 
@@ -183,7 +188,7 @@ class InspectionPage(Page):
             self._set_queue(list_images(d))
 
     def _set_queue(self, paths: list[Path]) -> None:
-        self.queue, self.queue_pos = paths, -1
+        self.queue, self.queue_pos, self.skipped = paths, -1, None
         self.queue_label.setText(self.tr("{count} image(s) queued").format(count=len(paths)))
         self.shell.status(self.tr("Loaded {count} image(s)").format(count=len(paths)))
         self._update_buttons()
@@ -283,13 +288,27 @@ class InspectionPage(Page):
         start(w, self.ctx.jobs)
 
     def _not_inspected(self, path: Path, e: BaseException) -> None:
-        """The board was not inspected: the run stops, the banner goes back to the last verdict, and the coded dialog
-        says what happened and what to do (REQ-SET-019); Next Board carries on with the queue."""
+        """The board was not inspected: the run stops, and the page shows that board, not the one before (#182): the
+        banner reads "Not inspected" with its shape, the picture and the defect list go, Save Image… and Compare… have
+        no result to act on, and the empty state names the board, the error's code and what happened, with Next Board
+        to carry on with the queue, or Load Images… when it was the last board. The coded dialog says what happened and
+        what to do (REQ-SET-019)."""
         self.running = False
-        self._show_verdict(self.last)
+        self.last = self.last_path = self.last_id = self.last_board_model = None
+        heading, sentence = self.not_inspected(self.verdict, path.name, e)
+        link, go = self.tr("Next Board ›"), self.next_board
+        step = self.tr("Press Next Board to carry on with the queue.")
+        if self.queue_pos + 1 >= len(self.queue):  # the last board: Next Board would only say "End of queue"
+            step = self.tr("No board is left in the queue. Load Images… or Load Folder… to queue more boards.")
+            link, go = self.tr("Load Images…"), self.load_files
+        self.skipped = heading, " ".join([sentence, step]), link, go
+        self.view.set_image(None)
+        fill_table(self.table, [])
         summary = self.tr("{file}  ·  not inspected").format(file=path.name)
         self.summary.setText(summary)
         self.shell.status(summary)
+        self._update_buttons()
+        self._show_empty()
         self.error(e)
         self._refresh_alarms()
 
@@ -299,6 +318,9 @@ class InspectionPage(Page):
         self.verdict.setText(self.tr("Inspecting…"))
         self.verdict.setStyleSheet(theme.verdict_style("INFO"))
         self.verdict.repaint()
+        if self.skipped is not None:  # the board that was not inspected is no longer the one in hand
+            self.skipped = None
+            self._show_empty()
         self.summary.setText(self.tr("Inspecting {file}…").format(file=path.name))
         status = self.tr("Inspecting {file} ({n} of {total})…")
         busy = status.format(file=path.name, n=self.queue_pos + 1, total=len(self.queue))

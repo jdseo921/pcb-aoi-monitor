@@ -305,7 +305,8 @@ class TrainingPage(Page):
         if not ids:
             return
         question = self.tr("Remove {count} sample(s) from the dataset?").format(count=len(ids))
-        if QMessageBox.question(self, self.tr("Remove"), question) == QMessageBox.StandardButton.Yes:
+        yes, no = QMessageBox.StandardButton.Yes, QMessageBox.StandardButton.No
+        if QMessageBox.question(self, self.tr("Remove"), question, yes | no, no) == yes:  # Enter keeps them (#182)
             self._each_sample(ids, self.ctx.delete_sample)
 
     def _preview(self) -> None:
