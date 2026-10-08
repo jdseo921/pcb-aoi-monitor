@@ -1498,18 +1498,23 @@ class AppContext:
         boxes, labeller, checker); stores the version with its SHA-256, the customer, the uses (own by default, each
         once) and the agreement check that decides (`_newest_check`); audited as `dataset.freeze`. Refused, writing
         nothing, in this order: a view not in aoi.hal.VIEWS (AOI-TRN-038), a board model name with no Latin letter or
-        digit (AOI-TRN-039), then as `_refuse_input` and `_refuse_freeze` give. The files are hashed first, with no
-        lock held (AOI-INSP-001 for one that cannot be read); then one write transaction finds N, checks the name and
-        the gate and reads the files' labels, stores the rows and the audit entry, and moves the manifest into place
-        (atomic.staged) just before it commits. A freeze that dies before the move leaves no manifest; one that dies
-        between the move and the commit leaves a manifest no row names, which the next freeze of that name replaces.
-        A second freeze of the view waits for the first. AOI-TRN-041 for a manifest that cannot be written,
-        AOI-TRN-042 for one whose path the system refuses as too long."""
+        digit (AOI-TRN-039), then as `_refuse_input` and `_refuse_freeze` give; `_refuse_freeze` runs once before any
+        file is read, so a freeze it refuses reads no image file first. The files are hashed next, with no lock held
+        (AOI-INSP-001 for one that cannot be read). Then, with the database lock held, one write transaction finds N,
+        checks the name and the gate again and reads the files' labels and boxes, stores the rows and the audit entry,
+        and moves the manifest into place (atomic.staged) just before it commits; a failed commit puts back the manifest
+        it replaced before the lock is released, so no other freeze comes between. A freeze that dies before the move
+        leaves no manifest; one that dies between the move and the commit leaves a manifest no row names, which the next
+        freeze of that name replaces. A second freeze of the view waits for the first. AOI-TRN-041 for a manifest that
+        cannot be written, AOI-TRN-042 for one whose path the system refuses as too long."""
         uses = list(dict.fromkeys(allowed_uses))  # a use given twice is kept once
         paths = [s["path"] for label in ("OK", "NG") for s in self._in_view(board_model, view, label)]  # AOI-TRN-038
         self._refuse_input(board_model, view, revision, customer, uses)
-        hashes = {p: self._sha256(p) for p in paths}
-        with contextlib.ExitStack() as manifest, self.db.transaction():  # the manifest's exit runs after the commit
+        name = datasets.name(board_model, revision, view, self._next_version(board_model, view))
+        self._refuse_freeze(name, board_model, view)  # before any file is read, and again in the transaction
+        known = {p: (self._sha256(p), to_stored(p, self.settings.root)) for p in paths}  # file work, before the lock
+        # the manifest's exit runs after the commit and before the lock is released
+        with self.db.locked(), contextlib.ExitStack() as manifest, self.db.transaction():
             n = self._next_version(board_model, view)  # again, in the transaction that stores it
             name = datasets.name(board_model, revision, view, n)
             agreed = self._refuse_freeze(name, board_model, view)
@@ -1523,7 +1528,8 @@ class AppContext:
                 "ok_check_draws": draws,
             }
             in_view = [s for s in self.db.samples(board_model) if s["side"] == view and s["label"] != "UNSURE"]
-            files = [self._frozen_file(s, hashes) for s in in_view]
+            boxes = self.db.current_boxes(board_model)  # one query, not one per file, while the lock is held
+            files = [self._frozen_file(s, known, boxes.get(s["uuid"], [])) for s in in_view]
             data, sha = datasets.manifest(head, files)
             rel = f"{datasets.FOLDER}/{name}/manifest.json"
             manifest.enter_context(_manifest_write(name, rel, self.settings.root))
@@ -1625,12 +1631,17 @@ class AppContext:
         except OSError as e:
             raise AoiError("AOI-INSP-001", detail=str(e), path=path) from e
 
-    def _frozen_file(self, sample: dict[str, Any], hashes: dict[str, str]) -> dict[str, Any]:
-        """One file of a version as its manifest lists it, its SHA-256 from `hashes` (a file added since, now)."""
-        sha = hashes.get(sample["path"]) or self._sha256(sample["path"])
+    def _frozen_file(
+        self, sample: dict[str, Any], known: dict[str, tuple[str, str]], boxes: list[dict[str, Any]]
+    ) -> dict[str, Any]:
+        """One file of a version as its manifest lists it: its SHA-256 and stored path from `known`, read before the
+        lock (a file added since, now), and its current `boxes` as `_label_state` gives them."""
+        path = sample["path"]
+        sha, stored = known.get(path) or (self._sha256(path), to_stored(path, self.settings.root))
         keys = ("label_uuid", "label", "defect_type", "labelled_by", "checked_by")
-        head = {"path": to_stored(sample["path"], self.settings.root), "sha256": sha, "sample_uuid": sample["uuid"]}
-        return head | {k: sample[k] for k in keys} | {"boxes": self._label_state(sample)["boxes"]}
+        head = {"path": stored, "sha256": sha, "sample_uuid": sample["uuid"]}
+        drawn = [{k: b[k] for k in ("x", "y", "w", "h", "dct_type", "severity")} for b in boxes]
+        return head | {k: sample[k] for k in keys} | {"boxes": drawn}
 
     @requires("Engineer", QT_TRANSLATE_NOOP("Errors", "Activating an AI model version"))
     @transactional
