@@ -50,6 +50,7 @@ tests on both Windows and Linux. Run them locally before pushing:
 pip install -r requirements-dev.txt
 ruff check .            # lint
 ruff format --check .   # formatting
+mypy                    # strict types on aoi/core and aoi/data
 pytest -q               # tests
 ```
 
