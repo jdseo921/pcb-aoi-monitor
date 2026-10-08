@@ -179,6 +179,8 @@ class TrainingPage(Page):
         self.sheet = ImportSheet(self._run_import, self._close_sheet)
         ll.addWidget(self.sheet, 2)
         self._listed: tuple[str, str] | None = None  # the status line naming the sheet's list, and once it is gone
+        self._left = False  # the user who started the import that runs has signed out: its sheet closes as it ends
+        self._by = ""  # the user who pressed Import: only they get the dialog of an error that stops it (#206)
         self.samples = make_table(
             [self.tr("ID"), self.tr("Label"), self.tr("Defect type"), self.tr("View"), self.tr("File")]
         )
@@ -308,7 +310,20 @@ class TrainingPage(Page):
             return
         self.sheet.hide()
         self._unlist()
+        self._left = False
         self._primary(self.btn_train, self.sheet.btn_import)
+
+    def on_user_changed(self) -> None:
+        """A sign-in closes the sheet the user before left, so the next user never imports its files (review); an
+        import that runs goes on as the user who started it (#177), and its sheet closes once that import ends."""
+        if self.sheet.running:
+            self._left = True
+        else:
+            self._close_sheet()
+
+    def _close_if_left(self) -> None:
+        if self._left:
+            self._close_sheet()
 
     def _unlist(self) -> None:
         """The status line says "(see the list)" only while the sheet shows that list."""
@@ -329,6 +344,7 @@ class TrainingPage(Page):
         if self._bg is not None or (bm := self.sheet.board_model) is None:
             self._report(ImportReport(left=files))
             return
+        self._by = self.ctx.user
         self.run_in_background(
             self.ctx.import_files, bm, files, with_progress=True,
             on_result=lambda report: self._imported(report, len(files)), busy=self.busy,
@@ -381,7 +397,10 @@ class TrainingPage(Page):
             self._primary(self.btn_train, self.sheet.btn_import)
 
     def _imported(self, report: ImportReport, total: int) -> None:
-        """The status line names the board model the files went into and, while the sheet shows them, its list."""
+        """The status line names the board model the files went into and, while the sheet shows them, its list. The
+        error the import stopped at opens its dialog for the user who pressed Import; for anyone signed in since, it is
+        logged and alarmed with no dialog, as for an import cancelled (#206), and the status line points at the alarm
+        list (review)."""
         self._report(report)
         n, bm = self._counts(report), self.sheet.board_model
         said = self.tr("Imported {ok} OK and {ng} NG images into {board_model}").format(board_model=bm, **n)
@@ -394,8 +413,15 @@ class TrainingPage(Page):
             said = self._listed[0]
         self.shell.status(said)
         self.refresh()  # the table shows what was imported before the dialog says how far it went
-        if (stopped := self._stop_error(report, total)) is not None:
+        self._close_if_left()
+        if (stopped := self._stop_error(report, total)) is None or report.stopped is None:
+            return
+        if self.ctx.user == self._by:
             self.error(stopped)
+            return
+        self.ctx.report_error(stopped, self.title)  # logged and alarmed, as for an import cancelled (#206)
+        msg = self.tr("Import into {board_model} stopped at {file}: see the alarm list")
+        self.shell.status(msg.format(board_model=self.sheet.board_model, file=Path(report.stopped[0].path).name))
 
     def _import_stopped(self, report: ImportReport | None, files: list[ImportFile]) -> None:
         """Cancel stopped the import: the sheet, the table and the status line show what it imported, and a file it
@@ -411,12 +437,14 @@ class TrainingPage(Page):
         self._report(report)
         msg = self.tr("Import cancelled: {ok} OK and {ng} NG images imported into {board_model} before it stopped")
         self.shell.status(msg.format(board_model=self.sheet.board_model, **self._counts(report)))
+        self._close_if_left()
         if (stopped := self._stop_error(report, len(files))) is not None:
             self.ctx.report_error(stopped, self.title)
 
     def _import_failed(self, files: list[ImportFile]) -> None:
         self._report(ImportReport(left=files))
         self.refresh()
+        self._close_if_left()
 
     def _selected_ids(self) -> list[int]:
         return [int(cell_text(self.samples, i.row(), 0)) for i in self.samples.selectionModel().selectedRows()]

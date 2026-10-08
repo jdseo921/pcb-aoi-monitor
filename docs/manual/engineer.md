@@ -119,7 +119,8 @@ so no sample is NG without one (AOI-TRN-013). **Mark OK** clears the type. Neith
 opens over the file picker. Its title names the board model the files go to, the one in the header when it opened;
 another one picked there closes the sheet if it has not imported yet. A sheet that has imported, or is importing, stays
 with its list: its Import is off and a line names the board model its files are for until that one is back in the
-header, and Close (Esc) closes it. A folder with no image
+header, and Close (Esc) closes it. A sign-in closes the sheet too; an import that runs then goes on as the user
+who started it, and the sheet closes once it ends. A folder with no image
 opens no sheet, and the status line says so. A name too long for its cell is cut at its start, so its end shows, and a
 screen reader reads its whole path. Import Folder… labels each image by its sub-folders: under `ok/` or `good/` OK,
 under `ng/`, `bad/`, `defect/` or `defects/` NG, with the defect type of its folder when that folder is named after one
@@ -141,7 +142,8 @@ files of the sheet imported, already imported and not imported. A file that cann
 AOI-TRN-009, and any other error after an image went in with AOI-TRN-010; both say how many images before it were
 imported, which stay in the sample table, and which board model to pick in the header before you press Import again.
 An error in an import you cancelled opens no message, but it is in the log and
-the alarm list.
+the alarm list. The same goes for an import that stops after its user has signed out: the status line then names the
+board model and the file it stopped at; the user who pressed Import, if signed in again by then, gets the message.
 
 (to be written: OK/NG/UNSURE labels, defect boxes, second-person check, freezing a dataset version,
 locking the validation set)
