@@ -108,7 +108,14 @@ no Qt, so the same jobs run headless) and turns the callbacks into signals; the 
 place a widget changes. A job function takes plain values in and returns plain values out, never a widget. A page runs
 its background action through `Page.run_in_background` (the newest call wins) under a `BusyOverlay` where the result
 will appear (after 1 s the time so far; after 10 s progress, time left, Cancel); `tests/test_no_freeze.py` ticks the UI
-thread every 50 ms through each page's 5 MP action and fails on a gap over 2 s.
+thread every 50 ms through each page's 5 MP action and fails on a gap over 2 s. No slot and no job function holds its
+own worker or the worker's signals (#132): Qt keeps a slot as long as the signals, which the worker holds, so a worker
+its slot held would stay, with its job and the job's result, for as long as the app runs; and signals a job held would
+be deleted with the job, on whichever thread let go of it last, where Qt forbids deleting an object of another thread.
+The slots hold the worker by weak reference and a job function reports through a bound emit (`w.signals.progress.emit`,
+bound once the worker is built), which does not keep the signals; `tests/test_background_results.py` checks that a
+result is freed once the page shows another, and that a board that fails lets go of its worker's signals with the
+worker.
 
 A control an operator uses by key and by touch is one `QAction` (`Page.action`, since S24): a window shortcut owned by
 the page, so the key works wherever the focus is on the page and only while the page is shown, behind an

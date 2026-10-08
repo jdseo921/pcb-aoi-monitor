@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import weakref
 from pathlib import Path
 from typing import TYPE_CHECKING, TypeAlias
 
@@ -227,7 +228,7 @@ class InspectionPage(Page):
             engine = insp if insp is not None else self.ctx.inspector(bm, side=view)
             engine.side = view  # one worker at a time per page, so nothing else reads it meanwhile
             res = engine.inspect(self.ctx.load_image(path))
-            w.signals.progress.emit(res)  # the verdict first, while the save runs; w is bound before the job starts
+            report(res)  # the verdict first, while the save runs; bound before the job starts
             try:  # saved here, on the pool thread, before the result slot can start the next board (REQ-INSP-008)
                 iid = self.ctx.log_result(bm, str(path), res, engine)
             except Exception as e:  # the verdict is still shown; the missing record stops the run (_not_saved)
@@ -235,11 +236,14 @@ class InspectionPage(Page):
             return path, res, engine, iid, None
 
         w = self.worker = Worker(inspect)
+        report, ref = w.signals.progress.emit, weakref.ref(w)  # the job and the slots never hold the worker or its
+        # signals (#132): Qt keeps the slots as long as the signals, so the worker, its job and the board's result would
+        # stay as long as the app runs, and signals the job held could be deleted on a pool thread, which Qt forbids
         self._show_busy(path)  # the response to the action, before the pool thread has started (REQ-INSP-005)
         self._update_buttons()
 
         def result(out: Outcome) -> None:
-            if self.worker is w:
+            if (worker := ref()) is not None and self.worker is worker:
                 self.worker = None  # before _on_result, which may start the next board of a run
                 self._update_buttons()  # the controls follow the worker at once, not at the finished signal
             if insp is None and self.inspector is None and gen == self._engine_gen and bm == self.board_model:
@@ -252,7 +256,7 @@ class InspectionPage(Page):
             self._on_result(out)
 
         def done() -> None:
-            if self.worker is w:
+            if (worker := ref()) is not None and self.worker is worker:
                 self.worker = None
             self._update_buttons()
 

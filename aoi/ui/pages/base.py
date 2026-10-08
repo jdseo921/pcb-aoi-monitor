@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import weakref
 from collections.abc import Callable, Sequence
 from typing import TYPE_CHECKING, Any, TypeVar
 
@@ -178,20 +179,24 @@ class Page(QWidget):
                 self._bg_busy.finish()
         w = self._bg = Worker(fn, *args, **kwargs)
         self._bg_busy = busy
+        ref = weakref.ref(w)  # Qt keeps a slot as long as the worker's signals, so a slot that held the worker would
+        # keep it, its job and the job's result for as long as the app runs (#132): the slots hold it weakly
 
         def current(slot: Callable[..., None]) -> Callable[..., None]:
             def guarded(*a: Any) -> None:
-                if w is self._bg and not w.job.cancelled:
+                worker = ref()
+                if worker is not None and worker is self._bg and not worker.job.cancelled:
                     slot(*a)
 
             return guarded
 
         def finished() -> None:
-            if w is self._bg:
+            worker = ref()
+            if worker is not None and worker is self._bg:
                 self._bg = None
                 if busy is not None:
                     busy.finish()
-            if w.job.cancelled and on_cancel is not None:
+            if worker is not None and worker.job.cancelled and on_cancel is not None:
                 on_cancel()
 
         w.signals.result.connect(current(on_result))

@@ -627,7 +627,7 @@
 <context>
     <name>InspectionPage</name>
     <message>
-        <location filename="../ui/pages/inspection.py" line="+82"/>
+        <location filename="../ui/pages/inspection.py" line="+83"/>
         <location line="+81"/>
         <source>Load Images…</source>
         <translation type="unfinished"></translation>
@@ -760,7 +760,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+31"/>
+        <location line="+34"/>
         <source>No AI model for {board_model} yet: only the Golden board comparison runs</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1058,23 +1058,23 @@
     <name>ModelTestPage</name>
     <message>
         <location filename="../ui/pages/model_test.py" line="+67"/>
-        <location line="+146"/>
+        <location line="+151"/>
         <source>Select Test Folder…</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-145"/>
+        <location line="-150"/>
         <source>Run Test</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location line="+2"/>
-        <location line="+149"/>
+        <location line="+154"/>
         <source>Export CSV</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-148"/>
+        <location line="-153"/>
         <source>Export Report</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1155,7 +1155,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+13"/>
+        <location line="+18"/>
         <source>Run Test Again</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1276,7 +1276,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/base.py" line="+116"/>
+        <location filename="../ui/pages/base.py" line="+117"/>
         <source>No board model yet</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1306,7 +1306,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+89"/>
+        <location line="+93"/>
         <source>{action}  {key}</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1326,7 +1326,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/inspection.py" line="-277"/>
+        <location filename="../ui/pages/inspection.py" line="-280"/>
         <source>Inspection</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1336,7 +1336,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/model_test.py" line="-206"/>
+        <location filename="../ui/pages/model_test.py" line="-211"/>
         <source>AI Model Test</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1660,7 +1660,7 @@
 <context>
     <name>Role</name>
     <message>
-        <location filename="../ui/pages/base.py" line="-179"/>
+        <location filename="../ui/pages/base.py" line="-183"/>
         <source>Operator</source>
         <translation type="unfinished"></translation>
     </message>
