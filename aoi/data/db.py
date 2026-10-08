@@ -136,13 +136,22 @@ class Database:
 
     # --- model registry ----------------------------------------------------
     def register_model(
-        self, board_model: str, version: str, path: str, metrics: dict[str, Any], activate: bool = True
+        self,
+        board_model: str,
+        version: str,
+        path: str,
+        metrics: dict[str, Any],
+        activate: bool = True,
+        uid: str | None = None,
     ) -> int:
+        """Add a model version to the registry and return its id. `uid` is the UUID the model file's metadata already
+        holds (training writes it there before the file is saved, REQ-SET-017); a new one when None."""
         if activate:
             self.execute("UPDATE models SET active=0 WHERE board_model=?", (board_model,))
+        uid = uid or new_uuid()
         return self._insert(
             "INSERT INTO models(uuid, board_model, version, path, created_at, metrics, active) VALUES(?,?,?,?,?,?,?)",
-            (new_uuid(), board_model, version, self._stored(path), now_utc(), json.dumps(metrics), int(activate)),
+            (uid, board_model, version, self._stored(path), now_utc(), json.dumps(metrics), int(activate)),
         )
 
     def models(self, board_model: str) -> list[dict[str, Any]]:
@@ -374,15 +383,32 @@ class Database:
         folder: str,
         metrics: dict[str, Any],
         results: list[dict[str, Any]],
-    ) -> int:
-        return self._insert(
-            "INSERT INTO test_runs(time, board_model, model_version, folder, metrics, results) VALUES(?,?,?,?,?,?)",
-            (now_utc(), board_model, model_version, folder, json.dumps(metrics), json.dumps(results)),
+        model_uuid: str | None = None,
+    ) -> str:
+        """Store one validation run of the AI Model Test screen, naming the AI model it tested by UUID, and return the
+        run's UUID (REQ-SET-017). The folder and each result's "image" are stored relative to the workspace when inside
+        it, else absolute: a folder on a USB drive or a share is not part of the workspace and does not move with it
+        (REQ-SET-001)."""
+        uid = new_uuid()
+        stored = [{**r, "image": self._stored(str(Path(r["image"]).absolute()))} for r in results]
+        row = (uid, now_utc(), board_model, model_version, model_uuid, self._stored(str(Path(folder).absolute())))
+        self._insert(
+            "INSERT INTO test_runs(uuid, time, board_model, model_version, model_uuid, folder, metrics, results)"
+            " VALUES(?,?,?,?,?,?,?,?)",
+            (*row, json.dumps(metrics), json.dumps(stored)),
         )
+        return uid
 
     def latest_test_run(self, board_model: str) -> dict[str, Any] | None:
+        """The newest validation run of a board model, with metrics and results decoded and the folder and each result's
+        image absolute for this workspace; a run stored before migration 0009 holds absolute paths, read as written."""
         r = self.query("SELECT * FROM test_runs WHERE board_model=? ORDER BY id DESC LIMIT 1", (board_model,))
-        return r[0] if r else None
+        if not r:
+            return None
+        run = self._resolved(r[0], "folder")
+        run["metrics"] = json.loads(run["metrics"] or "{}")
+        run["results"] = [self._resolved(x, "image") for x in json.loads(run["results"] or "[]")]
+        return run
 
     def inspection_counts(self, board_model: str) -> tuple[int, int]:
         """(inspections, NG inspections) of a board model, archived ones included."""
@@ -392,7 +418,8 @@ class Database:
 
     def alarm(self, level: str, message: str, code: str | None = None) -> None:
         self.execute(
-            "INSERT INTO alarms(time, level, code, message) VALUES(?,?,?,?)", (now_utc(), level, code, message)
+            "INSERT INTO alarms(uuid, time, level, code, message) VALUES(?,?,?,?,?)",
+            (new_uuid(), now_utc(), level, code, message),
         )
 
     def alarms(self, limit: int = 1000) -> list[dict[str, Any]]:

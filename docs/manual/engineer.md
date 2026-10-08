@@ -45,6 +45,12 @@ locking the validation set)
 
 (to be written: running a test, rates with counts and bounds, exports, the validation report)
 
+Each validation run is stored with a UUID and the UUID of the AI model it tested. **Export CSV** writes one row per
+image (`image`, `gt` the label, `ai_result` the verdict, `score`, `defects`, `pass_fail`), then `run_uuid`,
+`model_version` and `model_uuid`; **Export Report** names the same run and AI model by UUID under the validation folder.
+A folder inside the workspace is stored relative to it, so a moved workspace still finds the run's folder and images; a
+folder elsewhere is stored as its full path.
+
 ## 7. Compare
 
 Opened from Inspection, or with Use Last Inspected, Compare shows the stored result as it was decided: the table's

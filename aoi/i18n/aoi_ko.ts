@@ -1221,16 +1221,17 @@
     </message>
     <message>
         <location line="+2"/>
-        <source>Board model: &lt;b&gt;{board_model}&lt;/b&gt; · AI model: {version} · Date: {date}&lt;br&gt;Validation folder: {folder}</source>
+        <source>Board model: &lt;b&gt;{board_model}&lt;/b&gt; · AI model: {version} · Date: {date}&lt;br&gt;Validation folder: {folder}&lt;br&gt;Validation run UUID: {run_uuid} · AI model UUID: {model_uuid}</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <location line="+5"/>
         <location line="+4"/>
         <source>none</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+6"/>
+        <location line="+4"/>
         <source>TP {tp} · FN {fn} · FP {fp} · TN {tn} (NG = positive class; WARN counted as NG)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1346,7 +1347,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/model_test.py" line="-211"/>
+        <location filename="../ui/pages/model_test.py" line="-214"/>
         <source>AI Model Test</source>
         <translation type="unfinished"></translation>
     </message>

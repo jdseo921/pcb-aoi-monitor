@@ -251,16 +251,19 @@ class ModelTestPage(Page):
         """The validation report: every sentence through tr(), the markup and the numbers from the code."""
         m = self.metrics
         bm = self.board_model or ""  # the rows come from a run, which needs a board model
-        active = self.ctx.active_model(bm) if bm else None
+        run = self.rows[0] if self.rows else {}  # each row names the run and the AI model it tested (REQ-SET-017)
         title = self.tr("AI Model Validation Report")
         head = self.tr(
             "Board model: <b>{board_model}</b> · AI model: {version} · Date: {date}<br>Validation folder: {folder}"
+            "<br>Validation run UUID: {run_uuid} · AI model UUID: {model_uuid}"
         )
         head = head.format(
             board_model=html.escape(bm),
-            version=active["version"] if active else self.tr("none"),
+            version=html.escape(run.get("model_version") or self.tr("none")),
             date=f"{datetime.now():%Y-%m-%d %H:%M}",
             folder=html.escape(self.folder or ""),
+            run_uuid=run.get("run_uuid") or "—",
+            model_uuid=run.get("model_uuid") or self.tr("none"),
         )
         tiles = "".join(f"<th>{t.name}</th>" for t in self.tiles.values())
         values = "".join(f"<td>{m[k]:.1%}</td>" for k in self.tiles)
