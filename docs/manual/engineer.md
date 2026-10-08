@@ -155,8 +155,18 @@ before this version keep their label, with no labeller recorded. Marking an imag
 nothing, unless no labeller is recorded for its label: then it is labelled again, by you, so that a second user can
 check it. An UNSURE image is left out of training and its calibration and counted as neither OK nor NG on Training and
 Home. A box must lie inside the image (AOI-TRN-031); a label an image cannot take, such as a box on an OK image or a
-type not one of the 33, is refused (AOI-TRN-030). No screen marks an image UNSURE, draws boxes or lists UNSURE images
-for the customer's quality engineer yet: the label editor comes next.
+type not one of the 33, is refused (AOI-TRN-030). The label editor draws boxes (below); no screen marks an image
+UNSURE or lists UNSURE images for the customer's quality engineer yet.
+
+**Drawing defect boxes on the label editor (the S33 screen).** Select an image in Training's sample table and it opens
+in the label editor beside the table: its file name, label and view above it, its boxes on it and listed under it. On
+an NG image, press **Draw Box**, which stays blue while it is on, and drag around a defect: the box takes the type in
+the **Type** list, and **Severity** beside it shows what the defect table gives that type; you cannot pick a severity
+of your own. A box stays inside the image and is at least 4 by 4 pixels of the image; a shorter drag draws nothing.
+Each box is saved when you let go, in whole pixels, as a new label in the image's history with the boxes before kept.
+An OK or UNSURE image takes no boxes, so Draw Box is off there. An image that cannot be read shows its error code
+under its name; its boxes are listed but cannot be changed. Changing, moving, resizing and deleting a box, marking an
+image and the editor's keys are not on this screen yet.
 
 **A second user checks each label.** The labels of a board model and view are ready to freeze into a dataset only
 once a second Engineer or Admin has checked every NG label and OK labels drawn at random, 10 % of them rounded up; the

@@ -41,6 +41,7 @@ BG_RAISED = "#26323f"  # cards, tiles, table headers, disabled buttons
 BG_IMAGE = "#0f161d"  # behind board images
 BG_BUTTON, BG_BUTTON_HOVER, BG_NAV_HOVER = "#2d4257", "#36506a", "#24394f"
 BG_SELECTED = "#1565c0"  # the selected sidebar entry, tab, row and text: 14 pt white reads at 5.7:1, 3.7:1 on ACCENT
+BG_ON = BG_SELECTED  # a toggle button while it is on, such as Draw Box in Draw mode, with white text and border
 BG_BUSY = "rgba(15, 22, 29, 200)"
 LINE, LINE_STRONG = "#2f3e4e", "#3f5a75"
 TEXT, TEXT_MUTED, TEXT_DISABLED = "#e6edf3", "#9fb0c0", "#6c7c8c"
@@ -94,6 +95,7 @@ QListWidget#nav::item:hover:!selected { background: $BG_NAV_HOVER; }
 QPushButton { background: $BG_BUTTON; border: 1px solid $LINE_STRONG; border-radius: ${RADIUS}px;
               min-width: ${BUTTON_W}px; min-height: ${BUTTON_H}px; padding: 0 ${SPACE}px; }
 QPushButton:hover { background: $BG_BUTTON_HOVER; }
+QPushButton:checked, QPushButton:checked:hover { background: $BG_ON; border-color: $ON_DARK; color: $ON_DARK; }
 QPushButton[sizeClass="T"], QComboBox[sizeClass="T"], QRadioButton[sizeClass="T"] { min-height: ${TARGET_H}px; }
 QRadioButton[sizeClass="T"] { background: $BG_BUTTON; border: 1px solid $LINE_STRONG; border-radius: ${RADIUS}px;
                               padding: 0 ${SPACE}px; }

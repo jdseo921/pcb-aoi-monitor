@@ -131,6 +131,7 @@ def build_workspace(root: Path) -> AppContext:
     """The synthetic workspace the pages are rendered on; see the module docstring."""
     from aoi.config import Settings
     from aoi.core.imaging import list_images
+    from aoi.core.labels import DefectBox
     from aoi.core.recipe import ROI
     from aoi.core.services import AppContext
     from tools.make_synthetic_dataset import ng_type, write_dataset
@@ -150,6 +151,8 @@ def build_workspace(root: Path) -> AppContext:
         ctx.save_recipe(recipe)
         with pinned_engine():
             ctx.inspect_file(BOARD_MODEL, str(ng_board(dataset)))  # one record for Logs, one alarm for Inspection
+        missing = ctx.samples(BOARD_MODEL, "NG")[0]  # ng_000: the seed leaves out its first IC (LAYOUT[0])
+        ctx.set_boxes(missing["uuid"], [DefectBox(110, 110, 110, 110, "Missing Component")])  # Training's editor
     for table, column in (
         ("board_models", "created_at"),
         ("samples", "added_at"),
@@ -262,6 +265,8 @@ def prepare(win: MainWindow, title: str, dataset: Path) -> None:
     the real ones would change from run to run."""
     from PySide6.QtCore import QDate
 
+    from aoi.ui.pages.base import cell_text
+
     page: Any = win.pages[title]
     if title == "Inspection":
         if page.last is None:
@@ -282,6 +287,12 @@ def prepare(win: MainWindow, title: str, dataset: Path) -> None:
         page.sheet.table.clearFocus()  # the sheet takes the keys: let go, or the next page drawn shows a field's caret
         page.bar.setRange(0, TINY_EPOCHS)
         page.bar.setValue(TINY_EPOCHS)  # as a finished run leaves it: the percentage on the accent chunk (#203)
+        missing = str(page.ctx.samples(BOARD_MODEL, "NG")[0]["id"])  # the label editor on its box, selected
+        rows = range(page.samples.rowCount())
+        page.samples.selectRow(next(r for r in rows if cell_text(page.samples, r, 0) == missing))
+        page.editor.view.choose(0)
+        if not page.editor.draw_btn.isChecked():  # Draw mode on: the button's on look in the shot and the size walk
+            page.editor.draw_btn.click()
     elif title == "Logs & Export":
         page.d_from.setDate(QDate(2025, 12, 25))
         page.d_to.setDate(QDate(2026, 1, 8))
