@@ -197,6 +197,9 @@ Records that can leave the station (`users`, `samples`, `models`, `recipes`, `in
 beside their integer key; every stored time is ISO 8601 UTC with an offset and is shown in local time
 (`aoi/data/times.py`); image, overlay and model paths inside the workspace are stored relative to it and resolved
 by `aoi/data/paths.py`, so a workspace folder can move (REQ-SET-017, REQ-SET-001).
+Every file the app writes (images, overlays, AI models, exports, settings) goes through `aoi/data/atomic.py`:
+a temporary name in the same folder, flush and fsync, then an atomic rename, and an inspection's row and defects
+commit in one transaction, so a crash leaves a whole result or none (REQ-INSP-008).
 
 `inspections` already carries everything Stage 4 uploads (lot/model/result/timestamp + images); a `lot_id` column is
 the only addition expected.
