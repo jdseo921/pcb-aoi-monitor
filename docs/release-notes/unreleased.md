@@ -22,6 +22,8 @@ None. / 없음.
 ## Fixed / 수정 (draft)
 
 - [REQ-SET-016] The database is created and changed only through numbered migrations recorded in the workspace, and it runs in write-ahead-log mode with a full sync on every commit, so a finished write survives a power cut (#2, part). / 데이터베이스는 작업 폴더에 기록되는 번호 매긴 마이그레이션으로만 생성·변경되며, 매 커밋마다 완전 동기화하는 WAL 모드로 동작하여 완료된 기록이 전원 차단에도 남습니다 (#2, 일부).
+- [REQ-SET-017] Inspections, AI models, recipes, samples and users carry a UUID beside their local number, and every time is stored in UTC with an offset and shown in local time (#2, part). / 검사, AI 모델, 레시피, 샘플, 사용자 기록에 로컬 번호와 함께 UUID가 붙고, 모든 시각은 오프셋이 있는 UTC로 저장되어 현지 시각으로 표시됩니다 (#2, 일부).
+- [REQ-SET-001] Image, overlay and AI model paths are stored relative to the workspace, so a workspace folder can be moved or restored from a backup and every image, model and result still opens (#2). / 이미지, 오버레이, AI 모델 경로를 작업 폴더 기준 상대 경로로 저장하므로 작업 폴더를 옮기거나 백업에서 복원해도 모든 이미지, 모델, 결과가 열립니다 (#2).
 
 ## Security / 보안 (draft)
 
