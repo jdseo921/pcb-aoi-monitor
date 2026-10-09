@@ -104,7 +104,7 @@ def test_req_insp_014_a_source_file_the_run_changes_is_reported(
 
 
 def test_req_insp_014_min_area_judges_with_another_minimum_defect_area(tmp_path: Path) -> None:
-    """--min-area runs the comparison again with only the Minimum defect area changed, as ADR 0007 asks of the check on
+    """--min-area runs the comparison again with only the Minimum defect area changed, as ADR 0008 asks of the check on
     customer photos: above the drawn defect's area, its box is missed."""
     deeppcb = _deeppcb(tmp_path / "d")
     out = tmp_path / "out"
@@ -145,6 +145,18 @@ def test_req_insp_014_upper_bound_of_a_rate() -> None:
     assert dc.upper_95(0, 500) == pytest.approx(1 - 0.05 ** (1 / 500), abs=1e-6)
     assert dc.upper_95(3, 100) == pytest.approx(0.075711, abs=1e-5)  # Beta(4, 97) at 0.95, as SciPy gives it
     assert dc.upper_95(5, 5) == 1.0 and dc.upper_95(0, 0) == 1.0
+
+
+def test_req_trn_007_peak_memory_is_read() -> None:
+    """Windows CI runs this too: there the read failed, and the summary said 0.0 MB, until the handle had its type."""
+    peak = dc.peak_memory_mb()
+    assert peak is not None and peak > 0
+
+
+def test_req_trn_007_summary_says_when_peak_memory_was_not_read() -> None:
+    r = {"when_utc": "t", "note": "n", "machine": {}, "settings": {"recipe": "r"}, "arguments": []}
+    assert "Peak memory not read;" in dc.summary({**r, "peak_memory_mb": None, "sources_unchanged": True})
+    assert "Peak memory 12.5 MB;" in dc.summary({**r, "peak_memory_mb": 12.5, "sources_unchanged": True})
 
 
 def test_req_insp_014_ai_model_trained_per_group_and_scored_on_the_test_split(tmp_path: Path) -> None:
