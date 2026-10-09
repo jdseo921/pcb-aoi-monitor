@@ -2496,7 +2496,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/training.py" line="+361"/>
+        <location filename="../ui/pages/training.py" line="+363"/>
         <location filename="../ui/pages/training_import.py" line="+38"/>
         <source>{code} {title}</source>
         <translation type="unfinished"></translation>
@@ -2851,7 +2851,7 @@
 <context>
     <name>ImportSheet</name>
     <message>
-        <location filename="../ui/pages/training_import.py" line="+55"/>
+        <location filename="../ui/pages/training_import.py" line="+59"/>
         <location line="+22"/>
         <source>View</source>
         <translation>뷰</translation>
@@ -2863,18 +2863,18 @@
     </message>
     <message>
         <location line="+1"/>
-        <location line="+104"/>
+        <location line="+116"/>
         <source>OK</source>
         <translation>OK</translation>
     </message>
     <message>
-        <location line="-104"/>
-        <location line="+104"/>
+        <location line="-116"/>
+        <location line="+116"/>
         <source>NG</source>
         <translation>NG</translation>
     </message>
     <message>
-        <location line="-99"/>
+        <location line="-111"/>
         <source>Defect type for NG files</source>
         <translation>NG 파일의 결함 유형</translation>
     </message>
@@ -2915,18 +2915,18 @@
     </message>
     <message>
         <location line="+1"/>
-        <location line="+55"/>
+        <location line="+67"/>
         <location line="+96"/>
         <source>Cancel</source>
         <translation>취소</translation>
     </message>
     <message>
-        <location line="-150"/>
+        <location line="-162"/>
         <source>Import</source>
         <translation>가져오기</translation>
     </message>
     <message>
-        <location line="+31"/>
+        <location line="+43"/>
         <source>{type} · {severity}</source>
         <translation>{type} · {severity}</translation>
     </message>
@@ -4623,12 +4623,12 @@
     </message>
     <message>
         <location line="+1"/>
-        <location line="+535"/>
+        <location line="+544"/>
         <source>Import Folder…</source>
         <translation>폴더 가져오기…</translation>
     </message>
     <message>
-        <location line="-527"/>
+        <location line="-536"/>
         <source>Tip: 20+ OK images give a steadier threshold</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4695,12 +4695,12 @@
     </message>
     <message>
         <location line="+1"/>
-        <location line="+330"/>
+        <location line="+339"/>
         <source>Remove</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-324"/>
+        <location line="-333"/>
         <source>Select a sample to preview</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4820,7 +4820,7 @@
         <translation>가져오기 취소됨: 멈추기 전에 OK 이미지 {ok}개와 NG 이미지 {ng}개를 {board_model}(으)로 가져왔습니다</translation>
     </message>
     <message>
-        <location line="+72"/>
+        <location line="+81"/>
         <source>Reference image set: inspections compare against it now, until training learns a Golden board</source>
         <translation type="unfinished"></translation>
     </message>

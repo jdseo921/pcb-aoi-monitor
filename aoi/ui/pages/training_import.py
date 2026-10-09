@@ -8,8 +8,8 @@ from collections.abc import Callable
 from dataclasses import replace
 from pathlib import Path
 
-from PySide6.QtCore import QAbstractItemModel, QModelIndex, QPersistentModelIndex, Qt
-from PySide6.QtGui import QAction, QGuiApplication, QKeySequence
+from PySide6.QtCore import QAbstractItemModel, QEvent, QModelIndex, QPersistentModelIndex, Qt
+from PySide6.QtGui import QAction, QGuiApplication, QKeyEvent, QKeySequence
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QButtonGroup,
@@ -37,6 +37,10 @@ from .base import QT_TRANSLATE_NOOP, button, cell_item, cell_text, make_table, s
 FILE, LABEL, TYPE, VIEW, STATUS = range(5)
 CODE_TITLE = QT_TRANSLATE_NOOP("Errors", "{code} {title}")  # the status of a file not imported, in the UI language
 Choices = list[tuple[str, str]]
+
+
+def _is_esc(e: QKeyEvent) -> bool:
+    return e.key() == Qt.Key.Key_Escape and e.modifiers() == Qt.KeyboardModifier.NoModifier
 
 
 class _RowChoice(QStyledItemDelegate):
@@ -140,17 +144,29 @@ class ImportSheet(QGroupBox):
         for b in (self.btn_copy, self.btn_cancel, self.btn_import):
             foot.addWidget(b)
         lay.addLayout(foot)
-        for key, slot in (
-            (Qt.Key.Key_Escape, self._cancel),
-            (Qt.Key.Key_Return, self.start),
-            (Qt.Key.Key_Enter, self.start),
-        ):
+        for key, slot in ((Qt.Key.Key_Return, self.start), (Qt.Key.Key_Enter, self.start)):  # Esc: keyPressEvent
             act = QAction(self)
             act.setShortcut(QKeySequence(key))
             act.setShortcutContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)  # in the sheet, not over the page
             act.triggered.connect(slot)
             self.addAction(act)
         self.hide()
+
+    def event(self, e: QEvent) -> bool:
+        """Esc typed in the sheet is the sheet's, before any page key on Esc, such as the label editor's Leave Draw
+        Mode, which would otherwise meet it as an ambiguous shortcut that neither takes (review): an open cell's
+        drop-down still takes its own Esc first."""
+        if e.type() == QEvent.Type.ShortcutOverride and isinstance(e, QKeyEvent) and _is_esc(e):
+            e.accept()
+            return True
+        return super().event(e)
+
+    def keyPressEvent(self, e: QKeyEvent) -> None:
+        """Esc, as Cancel or Close."""
+        if _is_esc(e):
+            self._cancel()
+            return
+        super().keyPressEvent(e)
 
     def _choice_row(self, row: QHBoxLayout, choices: Choices, chosen: Callable[[str], None]) -> QButtonGroup:
         group = QButtonGroup(self)
