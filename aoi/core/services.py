@@ -1719,6 +1719,48 @@ class AppContext:
             self._encrypt_in_place(store, key, f)
         return {"moved": len(plain), "already": len(files) - len(plain)}
 
+    @requires("Admin", QT_TRANSLATE_NOOP("Errors", "Shredding a customer's dataset store"))
+    def shred_store(self, store_uuid: str) -> dict[str, int]:
+        """End a store for good when its engagement ends (ADR 0010, decision 9). Its key is deleted from this
+        station's key store first, which alone leaves every copy of its files unreadable, a backup's included, once
+        the recovery sheet is destroyed too. Then a row of `store_shreds` and the audit entry `store.shred` record it,
+        with the key id and the counts, and the files of its board models are deleted: under images/, each frozen
+        version's folder under datasets/, and their AI models and golden boards under models/. Rows stay (ADR 0009),
+        and a file of the store is refused from then on with AOI-TRN-025. Calling this again finishes a shred stopped
+        part-way, deleting what is left, and is audited too. Returns the counts `files` (images and manifests) and
+        `models`. AOI-TRN-044 for a store the workspace does not hold, a key the key store would not delete (nothing
+        changed) and a file that would not go (the rest went, and the shred stays recorded)."""
+        if (store := self.db.store(store_uuid)) is None:
+            why = QT_TRANSLATE_NOOP("Errors", "the workspace holds no such store")
+            raise AoiError("AOI-TRN-044", store=store_uuid, reason=why)
+        root, models = self.settings.root, self.settings.models_dir
+        boards = [(b, [d["name"] for d in self.db.datasets(b)]) for b in store["board_models"]]
+        files = [f for b, versions in boards for f in stores.files_of(root, b, versions)]
+        derived = [
+            f for b, _ in boards if (models / b).is_dir() for f in sorted((models / b).rglob("*")) if f.is_file()
+        ]
+        if not store["shredded_at"]:
+            try:
+                self.credentials.delete(credentials.STORE_PREFIX + store_uuid)  # first: from here nothing of it opens
+            except OSError as e:
+                why = QT_TRANSLATE_NOOP("Errors", "this station's key store did not delete the key ({reason})")
+                raise AoiError("AOI-TRN-044", str(e), store=store["customer"], reason=why.fill(reason=str(e))) from e
+            self._keys.pop(store_uuid, None)
+        with self.db.transaction():
+            if not store["shredded_at"]:
+                row = {"uuid": new_uuid(), "store_uuid": store_uuid, "key_id": store["key_id"], "files": len(files)}
+                self.db.add_shred(row | {"shredded_by": self.user_uuid, "shredded_at": now_utc()})
+            after = {"customer": store["customer"], "key_id": store["key_id"], "board_models": store["board_models"]}
+            after |= {"files": len(files), "models": len(derived), "resumed": bool(store["shredded_at"])}
+            self.audit("store.shred", "dataset_store", store_uuid, None, after)
+        folders = [root / stores.IMAGES / b for b, _ in boards] + [models / b for b, _ in boards]
+        folders += [root / datasets.FOLDER / name for _, versions in boards for name in versions]
+        if left := _deleted(files + derived, folders):
+            why = QT_TRANSLATE_NOOP("Errors", "{count} file(s) would not go, {file} first ({detail}); shred it again")
+            reason = why.fill(count=len(left), file=to_stored(left[0][0], root), detail=str(left[0][1]))
+            raise AoiError("AOI-TRN-044", store=store["customer"], reason=reason)
+        return {"files": len(files), "models": len(derived)}
+
     def stores(self) -> list[dict[str, Any]]:
         """Every dataset store, oldest first: uuid, customer, key_id, created_by, created_at, shredded_at (None while
         it is not shredded) and its board_models. No key."""
@@ -1809,14 +1851,18 @@ class AppContext:
 
     def _open(self, path: str | Path) -> bytes:
         """`_plain_bytes`, with crypto.NotOpened for a store file that does not decrypt."""
-        data = Path(path).read_bytes()
         if (found := self._store_for(path)) is None:
-            return data
+            return Path(path).read_bytes()
         store, stored = found
+        key = self._live_key(store)  # a shredded store's files are gone: that, not a missing file, is the reason
+        return crypto.decrypt(key, bytes.fromhex(store["key_id"]), store["uuid"], stored, Path(path).read_bytes())
+
+    def _live_key(self, store: dict[str, Any]) -> bytes:
+        """`_key` of a store that is not shredded; AOI-TRN-025 naming the day it was."""
         if store["shredded_at"]:
             why = QT_TRANSLATE_NOOP("Errors", "it was shredded on {date}").fill(date=store["shredded_at"][:10])
             raise AoiError("AOI-TRN-025", store=store["customer"], reason=why)
-        return crypto.decrypt(self._key(store), bytes.fromhex(store["key_id"]), store["uuid"], stored, data)
+        return self._key(store)
 
     def _image_size(self, path: str) -> tuple[int, int]:
         """`labels.image_size`: a file of a customer's dataset store decrypted whole first, any other with only its
@@ -1829,7 +1875,7 @@ class AppContext:
         if (found := self._store_for(self.settings.root / stored)) is None:
             return None
         store = found[0]
-        return crypto.encrypt(self._key(store), bytes.fromhex(store["key_id"]), store["uuid"], stored, data)
+        return crypto.encrypt(self._live_key(store), bytes.fromhex(store["key_id"]), store["uuid"], stored, data)
 
     def _file_sha256(self, path: str | Path) -> str:
         """The SHA-256 of a file's plain bytes: read a block at a time when it is plain, decrypted in memory when it
@@ -1873,8 +1919,8 @@ class AppContext:
         freeze: another board model whose name gives the same letters and digits has frozen versions (AOI-TRN-040), a
         version of that name exists or the view holds no OK or NG image (AOI-TRN-027), an NG label not checked
         (AOI-TRN-020), too few drawn OK labels checked (AOI-TRN-021), the newest agreement check missing or short of
-        its targets, and the board model in no customer's dataset store or in another customer's than `customer`
-        (AOI-TRN-027; REQ-TRN-017)."""
+        its targets, and the board model in no customer's dataset store, in a shredded one or in another customer's
+        than `customer` (AOI-TRN-027; REQ-TRN-017)."""
         frozen = self.db.dataset_names()
         token = datasets.token(board_model)
         other = next((d for d in frozen if d != board_model and datasets.token(d) == token), None)
@@ -1896,8 +1942,11 @@ class AppContext:
             why = QT_TRANSLATE_NOOP("Errors", "no agreement check of the board model holds images of this view")
         elif not newest["agreed"]:
             why = QT_TRANSLATE_NOOP("Errors", "the newest agreement check of the view did not reach the targets")
-        elif (store := self.db.board_model_store(board_model)) is None or store["shredded_at"]:
+        elif (store := self.db.board_model_store(board_model)) is None:
             why = QT_TRANSLATE_NOOP("Errors", "its images are in no customer's dataset store; an Admin moves them in")
+        elif store["shredded_at"]:  # its images are gone, and its board model never joins another store
+            why = QT_TRANSLATE_NOOP("Errors", "its dataset store was shredded on {date}")
+            why = why.fill(date=store["shredded_at"][:10])
         elif store["customer"] != customer.strip():
             why = QT_TRANSLATE_NOOP("Errors", "its images are in the dataset store of {store}, not of {customer}")
             why = why.fill(store=store["customer"], customer=customer.strip())
@@ -2183,6 +2232,24 @@ def _export_write(path: str | Path) -> Iterator[None]:
         yield
     except OSError as e:
         raise _not_written(e, path) from e
+
+
+def _deleted(files: list[Path], folders: list[Path]) -> list[tuple[Path, OSError]]:
+    """Delete `files`, then whatever is left in `folders` once they are empty, deepest first; the files that would not
+    go, with why. A file already gone counts as deleted."""
+    left = []
+    for f in files:
+        try:
+            f.unlink(missing_ok=True)
+        except OSError as e:  # held open by another program, or read-only
+            left.append((f, e))
+    for folder in folders:
+        for d in sorted((p for p in folder.rglob("*") if p.is_dir()), key=lambda p: len(p.parts), reverse=True):
+            with contextlib.suppress(OSError):
+                d.rmdir()
+        with contextlib.suppress(OSError):
+            folder.rmdir()
+    return left
 
 
 @contextlib.contextmanager

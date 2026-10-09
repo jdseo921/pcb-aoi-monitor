@@ -872,7 +872,27 @@
         <translation>그 파일 하나를 읽을 수 없습니다({reason})</translation>
     </message>
     <message>
-        <location line="+30"/>
+        <location line="+16"/>
+        <source>Shredding a customer&apos;s dataset store</source>
+        <translation>고객 데이터셋 저장소 파기</translation>
+    </message>
+    <message>
+        <location line="+12"/>
+        <source>the workspace holds no such store</source>
+        <translation>작업 공간에 해당 저장소가 없습니다</translation>
+    </message>
+    <message>
+        <location line="+12"/>
+        <source>this station&apos;s key store did not delete the key ({reason})</source>
+        <translation>이 스테이션의 키 저장소가 키를 삭제하지 않았습니다 ({reason})</translation>
+    </message>
+    <message>
+        <location line="+13"/>
+        <source>{count} file(s) would not go, {file} first ({detail}); shred it again</source>
+        <translation>파일 {count}개가 삭제되지 않았습니다. 첫 파일: {file} ({detail}). 다시 파기하십시오</translation>
+    </message>
+    <message>
+        <location line="+19"/>
         <source>the workspace holds no such store, or it is shredded</source>
         <translation>작업 공간에 그런 저장소가 없거나 파기되었습니다</translation>
     </message>
@@ -907,7 +927,7 @@
         <translation>{file}을(를) 쓴 그대로 다시 읽을 수 없어 암호화하지 않은 채로 두었습니다({detail})</translation>
     </message>
     <message>
-        <location line="+32"/>
+        <location line="+36"/>
         <source>it was shredded on {date}</source>
         <translation>{date}에 파기되었습니다</translation>
     </message>
@@ -938,6 +958,11 @@
     </message>
     <message>
         <location line="+2"/>
+        <source>its dataset store was shredded on {date}</source>
+        <translation>이 데이터셋 저장소는 {date}에 파기되었습니다</translation>
+    </message>
+    <message>
+        <location line="+3"/>
         <source>its images are in the dataset store of {store}, not of {customer}</source>
         <translation>이미지가 {customer}이(가) 아니라 {store}의 데이터셋 저장소에 있습니다</translation>
     </message>
@@ -962,7 +987,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1890"/>
+        <location line="-1939"/>
         <source>no defect type was given</source>
         <translation>결함 유형이 지정되지 않았습니다</translation>
     </message>
@@ -997,7 +1022,7 @@
         <translation>{label}(으)로 다시 라벨링</translation>
     </message>
     <message>
-        <location line="+526"/>
+        <location line="+572"/>
         <source>no agreement check of the board model holds images of this view</source>
         <translation>이 보드 모델의 일치도 검사 중 이 뷰의 이미지를 담은 것이 없습니다</translation>
     </message>
@@ -1007,7 +1032,7 @@
         <translation>이 뷰의 가장 최근 일치도 검사가 목표에 도달하지 못했습니다</translation>
     </message>
     <message>
-        <location line="+63"/>
+        <location line="+66"/>
         <source>Changing settings</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4799,7 +4824,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/services.py" line="-2064"/>
+        <location filename="../core/services.py" line="-2113"/>
         <source>Aligning {count} images to the reference board</source>
         <translation type="unfinished"></translation>
     </message>

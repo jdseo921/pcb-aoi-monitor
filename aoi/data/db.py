@@ -443,6 +443,9 @@ class Database:
     def add_board_model_store(self, row: dict[str, Any]) -> None:
         self.insert("board_model_stores", row)
 
+    def add_shred(self, row: dict[str, Any]) -> None:
+        self.insert("store_shreds", row)
+
     def stores(self) -> list[dict[str, Any]]:
         """Every dataset store, oldest first, with `shredded_at` (None while it is not shredded) and the
         `board_models` in it."""

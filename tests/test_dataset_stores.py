@@ -9,6 +9,7 @@ import hashlib
 import json
 import shutil
 import sqlite3
+import tempfile
 from pathlib import Path
 from typing import Any
 
@@ -263,3 +264,124 @@ def test_req_trn_017_mixed_customers_refused(ctx: AppContext, tmp_path: Path) ->
         assert refusal(station.verify_dataset, v1["uuid"]) == ("AOI-TRN-025", NO_KEY)
     finally:
         station.close()
+
+
+def test_req_trn_017_shred_ends_store_for_good(
+    ctx: AppContext, keys: credentials.MemoryCredentials, tmp_path: Path
+) -> None:
+    """Shredding a store deletes its key, records it (a row and store.shred with the key id and counts) and deletes its
+    board model's images, its frozen versions' folders and its AI models and Golden boards; the rows stay. From then on
+    a file of it, a copy put back included, does not open: reading, verifying, importing and freezing are refused with
+    the day it was shredded, and the store takes no move-in or key. Another customer's store is untouched, the customer
+    may have a new store, and shredding it again deletes what was put back, audited."""
+    samples, cal = ready(ctx, tmp_path / "boards")
+    agree(ctx, cal, samples)
+    v1 = ctx.freeze_dataset(CAL, "Top", "R3", "Acme")
+    board(ctx, "B2", tmp_path / "b2", 1, 9)
+    beta = moved_in(ctx, "B2", "Beta")
+    acme, root, models = ctx.store_of(CAL) or {}, ctx.settings.root, ctx.settings.models_dir / CAL
+    models.mkdir(parents=True)
+    (models / f"{CAL}_v1.pt").write_bytes(b"weights")  # an AI model of the board model, plain under models/
+    path = Path(ctx.samples(CAL)[0]["path"])
+    shutil.copyfile(path, tmp_path / "backup")
+    count = len(ctx.samples(CAL)) + 1  # its images and v1's manifest
+    assert as_admin(ctx, ctx.shred_store, acme["uuid"]) == {"files": count, "models": 1}
+    assert keys.read(credentials.STORE_PREFIX + acme["uuid"]) is None
+    assert [(root / f).exists() for f in (f"images/{CAL}", f"datasets/{v1['name']}", models)] == [False] * 3
+    day = str((ctx.store_of(CAL) or {})["shredded_at"])[:10]
+    path.parent.mkdir(parents=True)
+    shutil.copyfile(tmp_path / "backup", path)  # a copy kept elsewhere, put back
+    assert refusal(ctx.load_image, path) == ("AOI-TRN-025", f"it was shredded on {day}")
+    assert refusal(ctx.verify_dataset, v1["uuid"]) == ("AOI-TRN-025", f"it was shredded on {day}")
+    assert refusal(ctx.import_samples, CAL, [str(tmp_path / "b2" / "B2_0.png")], "OK")[0] == "AOI-TRN-025"
+    assert refusal(ctx.freeze_dataset, CAL, "Top", "R3", "Acme") == (
+        "AOI-TRN-027",
+        f"its dataset store was shredded on {day}",
+    )
+    assert refusal(as_admin, ctx, ctx.move_in, CAL, acme["uuid"]) == ("AOI-TRN-044", GONE)
+    assert refusal(as_admin, ctx, ctx.restore_store_key, acme["uuid"], crypto.sheet(bytes(32))) == ("AOI-TRN-044", GONE)
+    assert ctx.load_image(ctx.samples("B2")[0]["path"]).shape == (32, 32, 3)
+    assert keys.read(credentials.STORE_PREFIX + beta["uuid"]) is not None
+    assert as_admin(ctx, ctx.create_store, "acme")["customer"] == "acme"  # a new engagement, a new key
+    [entry] = ctx.audit_entries(action="store.shred")
+    assert entry["role"] == "Admin" and entry["after"] == {
+        "customer": "Acme", "key_id": acme["key_id"], "board_models": [CAL], "files": count, "models": 1,
+        "resumed": False,
+    }  # fmt: skip
+    assert as_admin(ctx, ctx.shred_store, acme["uuid"]) == {"files": 1, "models": 0}  # the copy put back
+    assert not path.exists()
+    assert ctx.audit_entries(action="store.shred")[0]["after"]["resumed"] is True
+    assert ctx.db.query("SELECT key_id, files FROM store_shreds") == [{"key_id": acme["key_id"], "files": count}]
+    for sql in ("UPDATE store_shreds SET files=0", "DELETE FROM store_shreds"):
+        with pytest.raises(sqlite3.DatabaseError, match="never"):
+            ctx.db.execute(sql)
+    assert refusal(as_admin, ctx, ctx.shred_store, "no-such-store") == (
+        "AOI-TRN-044",
+        "the workspace holds no such store",
+    )
+
+
+def test_req_trn_017_interrupted_shred_resumes(
+    ctx: AppContext, keys: credentials.MemoryCredentials, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A key store that will not delete the key refuses the shred with AOI-TRN-044, changing nothing. A shred stopped
+    after the key went and before it was recorded leaves nothing of the store readable, and the next call records it; a
+    file that would not go is named, the rest are gone and the shred stays recorded, and the next call deletes it."""
+    board(ctx, "SHR", tmp_path / "shr", 3, 5)
+    store, root = moved_in(ctx, "SHR", "Acme"), ctx.settings.root
+    paths, name = [Path(s["path"]) for s in ctx.samples("SHR")], credentials.STORE_PREFIX + store["uuid"]
+    delete = keys.delete
+    monkeypatch.setattr(keys, "delete", lambda n: (_ for _ in ()).throw(OSError("Access is denied")))
+    refused = refusal(as_admin, ctx, ctx.shred_store, store["uuid"])
+    assert refused == ("AOI-TRN-044", "this station's key store did not delete the key (Access is denied)")
+    assert keys.read(name) is not None and not ctx.stores()[0]["shredded_at"] and all(p.exists() for p in paths)
+    assert ctx.load_image(paths[0]).shape == (32, 32, 3) and ctx.audit_entries(action="store.shred") == []
+    monkeypatch.setattr(keys, "delete", delete)
+    add = ctx.db.add_audit
+    monkeypatch.setattr(ctx.db, "add_audit", lambda *a: (_ for _ in ()).throw(sqlite3.OperationalError("disk full")))
+    with pytest.raises(sqlite3.OperationalError):
+        as_admin(ctx, ctx.shred_store, store["uuid"])
+    assert keys.read(name) is None and not ctx.stores()[0]["shredded_at"] and all(p.exists() for p in paths)
+    assert refusal(ctx.load_image, paths[0]) == ("AOI-TRN-025", NO_KEY)
+    monkeypatch.setattr(ctx.db, "add_audit", add)
+    unlink = Path.unlink
+
+    def held(self: Path, missing_ok: bool = False) -> None:
+        if self == paths[1]:
+            raise PermissionError(errno.EACCES, "The file is open in another program", str(self))
+        unlink(self, missing_ok=missing_ok)
+
+    monkeypatch.setattr(Path, "unlink", held)
+    code, reason = refusal(as_admin, ctx, ctx.shred_store, store["uuid"])
+    stuck = paths[1].relative_to(root).as_posix()
+    assert code == "AOI-TRN-044" and reason.startswith(f"1 file(s) would not go, {stuck} first ([Errno 13] The file")
+    assert reason.endswith("; shred it again") and [p.exists() for p in paths] == [False, True, False]
+    assert ctx.stores()[0]["shredded_at"]
+    monkeypatch.setattr(Path, "unlink", unlink)
+    assert as_admin(ctx, ctx.shred_store, store["uuid"]) == {"files": 1, "models": 0}
+    assert not (root / "images" / "SHR").exists()
+    shreds = ctx.audit_entries(action="store.shred")
+    assert [(e["after"]["files"], e["after"]["resumed"]) for e in shreds] == [(1, True), (3, False)]
+
+
+def test_req_trn_017_no_plain_file_while_training(
+    ctx: AppContext, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Training an AI model of a board model in a store reads its images decrypted in memory only (ADR 0010, decision
+    11): no file in the workspace or the temp folder after the run holds an image's plain bytes or its pixels, and the
+    images stay encrypted."""
+    sources = board(ctx, "TRN", tmp_path / "trn", 3, 6)
+    moved_in(ctx, "TRN", "Acme")
+    temp = tmp_path / "temp"
+    temp.mkdir()
+    monkeypatch.setattr(tempfile, "tempdir", str(temp))
+    ctx.train("TRN", epochs=1, image_size=32)
+    secrets = [s.read_bytes() for s in sources] + [
+        np.asarray(ctx.load_image(s["path"])).tobytes() for s in ctx.samples("TRN")
+    ]
+    written = [p for p in [*ctx.settings.root.rglob("*"), *temp.rglob("*")] if p.is_file()]
+    assert any(p.suffix == ".pt" for p in written)
+    for f in written:
+        data = f.read_bytes()
+        assert not any(s in data for s in secrets), f
+    assert all(Path(s["path"]).read_bytes().startswith(crypto.MAGIC) for s in ctx.samples("TRN"))

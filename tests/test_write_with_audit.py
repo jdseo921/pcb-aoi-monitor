@@ -95,6 +95,7 @@ SETUP: dict[str, Callable[[AppContext], object]] = {
     "lock_validation_set": frozen_for_lock,
     "restore_store_key": lambda ctx: a_store(ctx, "Gamma"),
     "move_in": lambda ctx: a_store(ctx, "Acme Electronics"),
+    "shred_store": lambda ctx: a_store(ctx, "Delta"),
 }
 
 
