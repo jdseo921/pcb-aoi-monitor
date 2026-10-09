@@ -238,9 +238,10 @@ other board, and on a stored result judged with the AI check off, it names the a
 once the load of its pictures and maps has ended, Re-evaluate (Ctrl+R) judges it again
 with the form's thresholds from its stored maps and the calibration of the AI model that judged it, without running the
 AI model: the banner keeps the stored verdict, "Would be" beside Re-evaluate shows the verdict they give, and the table
-and the explanation show their checks until you change a threshold, the form takes a revision saved on another page, you
-open another result, inspect a board or change the board model, or an Operator signs in. The board keeps the stored
-result's defect boxes: when defects make the verdict WARN, the explanation says how many the thresholds would mark.
+and the explanation show their checks until you change a threshold, the form takes a revision saved on another page,
+you open another result, inspect a board or change the board model, or an Operator signs in on any page. The board
+keeps the stored result's defect boxes: when defects make the verdict WARN, the explanation says how many the thresholds
+would mark.
 Nothing is stored. A result whose map is gone gives AOI-CMP-004, naming it: inspect the board again and try the
 thresholds on the new result. Any other board, and a pane's Re-evaluate › on a stored result, is inspected again from
 its image file with the form's thresholds and the current AI model, against the golden board as judged while it is shown
@@ -256,14 +257,20 @@ or start another. "+ New" with the name of the board model already in the header
 bar says it is already selected, and a stored result stays as it was. The thresholds form is loaded again
 from the recipe whenever a new revision has been saved since (on Recipe Editor, for example), so Save to Recipe never
 puts back the thresholds of an older revision; values tried and not saved stay while no revision is saved and no
-Operator signs in. When an Operator signs in, the form goes back to the recipe's thresholds, and a board you inspected
-with values not saved is cleared and inspected again by the recipe, even while your inspection still runs, so the
-Operator never sees its verdict, decision table or explanation, even after signing in on another page; an inspection
-you cancelled stays cancelled, and a stored result stays as it was decided. Cancel on
-the busy overlay clears the verdict, table and picture and says the board named over the picture was not inspected;
-Re-evaluate inspects it. A test image that cannot be read does the same: the banner reads "· Not inspected" and the
-pane gives the error's code and what happened. A long file name over a picture, in a message on a picture's pane or
-in the line under the verdict wraps onto the next line after a _ or -. (to be written: picking another reference)
+Operator signs in. When an Operator signs in, on Compare or on any other page, the form goes back to the recipe's
+thresholds, which you find there when you sign in again, and a board inspected with values the recipe does not hold at
+that sign-in (values you left unsaved, or a revision saved since the board was inspected; values that did not judge
+the board are not counted: the AI score threshold, and an ROI's AI score and name, when its AI check did not run;
+Pixel difference, Similarity minimum and Allowed difference regions when its Golden board comparison did not run; a
+disabled ROI; and an ROI's Height and Volume thresholds, not checked before Stage 2) is cleared, even while your
+inspection still runs, and inspected again by the recipe once Compare is shown, so the Operator never sees its verdict,
+decision table or explanation; a board inspected with the values the recipe then holds keeps its verdict (values you
+saved with Save to Recipe after inspecting are the recipe's), an inspection you cancelled stays cancelled, and a stored
+result stays as it was decided. Cancel on the busy overlay clears the verdict, table and picture and says the board
+named over the picture was not inspected; Re-evaluate inspects it. A test image that cannot be read does the same: the
+banner reads "· Not inspected" and the pane gives the error's code and what happened. A long file name over a picture,
+in a message on a picture's pane or in the line under the verdict wraps onto the next line after a _ or -. (to be
+written: picking another reference)
 
 ## 8. Logs and audit
 

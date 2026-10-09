@@ -12,7 +12,7 @@ import sys
 import threading
 from collections import Counter
 from collections.abc import Iterator
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from pathlib import Path
 from time import perf_counter
 from typing import Any
@@ -24,7 +24,8 @@ from PySide6.QtWidgets import QApplication, QPushButton, QWidget
 from pytestqt.qtbot import QtBot
 
 from aoi.core.explain import TRIED_AI_OFF, explain
-from aoi.core.inspector import InspectionResult
+from aoi.core.inspector import InspectionResult, ai_check
+from aoi.core.recipe import ROI
 from aoi.core.services import AppContext
 from aoi.errors import AoiError
 from aoi.ui import theme
@@ -156,7 +157,9 @@ def test_req_cmp_005_what_was_tried_goes_once_it_no_longer_applies(
 ) -> None:
     """The checks other thresholds gave go once they no longer apply, and the result's own show: when an Operator
     signs in, after the answer or while it is worked out (stopped: its answer never shows, and the job, which acts as
-    the Engineer who started it, #177, is not refused; an error of it shows no dialog but is alarmed, #206); when a
+    the Engineer who started it, #177, is not refused; an error of it shows no dialog but is alarmed, #206), also on
+    another page with Compare never opened, so the next Engineer finds the recipe's thresholds (review), while an
+    Admin's or an Engineer's sign-in keeps it and the values tried (review); when a
     threshold changes while it is worked out; when a revision saved elsewhere keeps the form's thresholds but judges
     otherwise (review); when the board model changes; and when inspecting the board again fails (the table then goes
     too, #182). Re-evaluate's key is Ctrl+R."""
@@ -197,6 +200,20 @@ def test_req_cmp_005_what_was_tried_goes_once_it_no_longer_applies(
         shows_its_own_checks()
         win.set_user("engineer")
     assert "AOI-USR-001" not in [a["code"] for a in ctx.alarms()], "the stopped job acted as the Engineer"
+    try_thresholds(hold=False)
+    tried, form = _table(compare), compare._form_recipe(BOARD)
+    win.navigate("Home")
+    win.set_user("admin")  # an Admin, then an Engineer, signs in: what was tried stays, as no Operator did (review)
+    win.set_user("engineer")
+    win.navigate("Compare")
+    assert compare.would_be.isVisible() and _table(compare) == tried != stored and compare.why.toPlainText() != why
+    assert compare._form_recipe(BOARD) == form != ctx.recipe(BOARD)[1], "the form keeps the values tried, not saved"
+    win.navigate("Home")
+    win.set_user("operator")  # on another page, and Compare is not opened before an Engineer signs in again (review)
+    win.set_user("engineer")
+    win.navigate("Compare")
+    assert compare.would_be.isHidden() and _table(compare) == stored and compare.why.toPlainText() == why
+    assert compare._form_recipe(BOARD) == ctx.recipe(BOARD)[1], "the form holds the recipe's thresholds again"
     fail[0] = True
     try_thresholds(hold=True)
     win.set_user("operator")  # signs in while it is worked out, and it fails: no dialog, but alarmed (#206)
@@ -345,6 +362,199 @@ def test_req_cmp_005_an_operators_inspection_on_compare_takes_the_recipe_as_stor
     assert ssim.threshold == 0.805, ssim
 
 
+def test_req_cmp_005_one_threshold_not_saved_is_enough_to_have_an_operator_s_board_judged_again(
+    qtbot: QtBot, trained_ctx: AppContext, ng_board: Path, dialogs: list[tuple[str, str]]
+) -> None:
+    """Each of the five thresholds, changed alone by an Engineer (the AI score threshold by its tick, and Similarity
+    minimum, a float, among them), makes Golden Board's board one judged by thresholds the recipe does not hold: an
+    Operator signing in clears it at once and has it judged again by the recipe, ✗ NG row for row (review). The recipe
+    is the one saved when the Operator signs in, not when the board was inspected (review): thresholds saved with Save
+    to Recipe after the board was judged by the recipe's own have it judged again, by the new ones; a board judged by
+    values not saved then, and saved since, keeps its verdict and is not inspected again; so does one judged with the
+    form untouched while the recipe holds an AI score threshold of 0, which judges as none; and another value saved
+    since an Operator's own board was inspected (a warn ratio, as the Recipe Editor saves) has it judged again too.
+    With the recipe's AI check off no AI model judges, so neither does an AI score threshold not saved: the board
+    judged with one keeps its verdict (#243, #246); so does one judged with it and no AI model active, or with a Pixel
+    difference not saved and the Golden board comparison off or no Golden board set: a value that did not judge the
+    board is no change (review). A board still worked out is held by the recipe's switches, not the result before it,
+    the AI check off included. Nor do an ROI's AI score and name judge with the AI check off, nor a disabled ROI, the
+    AI check on or off, nor an ROI's Stage 2 values and side, which nothing reads yet; an ROI moved or given another
+    type with the AI check off and two ROIs over the defects swapped, which name the defects otherwise (their type and
+    severity, never the verdict), an ROI's AI score and name with the AI check on, and Minimum defect area with the
+    comparison off, which sizes the AI model's defects, do count (verification, and the second)."""
+    ctx = trained_ctx
+    win, compare, _ = _stored_on_compare(qtbot, ctx, ng_board, "Engineer")
+    _, recipe = ctx.recipe(BOARD)
+    want = ctx.inspect(BOARD, ctx.load_image(str(ng_board)))
+    rows = [{**asdict(c), "metric": c.name, "result": c.verdict} for c in want.checks]
+    assert want.verdict == "NG" and recipe.anomaly_threshold is None and 0.01 <= recipe.ssim_min <= 0.99
+    edits = {
+        "anomaly_threshold": lambda: (compare.ai_thr.tick.setChecked(True), compare.ai_thr.field.setValue(500.0)),
+        "diff_threshold": lambda: compare.diff_thr.setValue(recipe.diff_threshold + 1),
+        "min_defect_area": lambda: compare.min_area.setValue(recipe.min_defect_area + 1),
+        "ssim_min": lambda: compare.ssim_min.setValue(recipe.ssim_min - 0.01),
+        "max_diff_regions": lambda: compare.max_regions.setValue(recipe.max_diff_regions + 1),
+    }
+    for field, edit in edits.items():
+        win.set_user("engineer")
+        edit()
+        form = compare._form_recipe(BOARD)
+        assert [f for f in edits if getattr(form, f) != getattr(recipe, f)] == [field], "that one alone"
+        compare.use_golden()
+        qtbot.waitUntil(lambda: ctx.jobs.idle() and compare._bg is None and compare.res is not None, timeout=20000)
+        engineers = compare.res
+        win.set_user("operator")
+        cleared = (compare.verdict.text(), compare.metrics.rowCount(), compare._bg is not None)
+        assert cleared == (NO_VERDICT, 0, True), f"only {field} not saved: cleared and judged again by the recipe"
+        qtbot.waitUntil(lambda: ctx.jobs.idle() and compare._bg is None, timeout=20000)
+        assert compare.res is not engineers and compare.verdict.text() == theme.verdict_label("NG"), field
+        assert _table(compare)[:-1] == _expected(compare, rows) and not dialogs, field
+
+    def golden_board() -> InspectionResult:
+        """Golden Board pressed: the board judged by the form's thresholds, or for an Operator by the recipe."""
+        compare.use_golden()
+        qtbot.waitUntil(lambda: ctx.jobs.idle() and compare._bg is None and compare.res is not None, timeout=20000)
+        assert compare.res is not None
+        return compare.res
+
+    def operator_signs_in(step: str, again: bool) -> None:
+        """An Operator signs in on Compare: the board is cleared and judged by the recipe saved now (`again`), or it
+        keeps its verdict with no run started, a run still going left to end; either way the verdict and table end as
+        that recipe gives them."""
+        engineers, going, now = compare.res, compare._bg, ctx.inspect(BOARD, ctx.load_image(str(ng_board)))
+        win.set_user("operator")
+        cleared = (compare.verdict.text(), compare.metrics.rowCount(), compare._bg is not None)
+        if again:
+            assert cleared == (NO_VERDICT, 0, True), f"{step}: cleared and judged again by the recipe saved now"
+        else:
+            kept = compare._bg is going and (going is None or not going.job.cancelled) and compare.res is engineers
+            assert kept, f"{step}: its verdict kept, not inspected again"
+        qtbot.waitUntil(lambda: ctx.jobs.idle() and compare._bg is None, timeout=20000)
+        assert compare.verdict.text() == theme.verdict_label(now.verdict) and not dialogs, step
+        rows = [{**asdict(c), "metric": c.name, "result": c.verdict} for c in now.checks]
+        assert _table(compare)[:-1] == _expected(compare, rows), step
+
+    win.set_user("engineer")
+    assert golden_board().verdict == "NG", "the recipe's own thresholds"
+    _pass_every_check(compare)
+    compare.save_recipe()  # saved after the board was judged, which is not judged again here
+    assert ctx.recipe(BOARD)[1].diff_threshold == 255 and compare.verdict.text() == theme.verdict_label("NG")
+    operator_signs_in("saved since by Save to Recipe", again=True)
+    assert compare.verdict.text() == theme.verdict_label("WARN"), "the thresholds saved since judge it"
+    win.set_user("engineer")
+    compare.diff_thr.setValue(200)
+    golden_board()
+    assert compare._form_recipe(BOARD) != ctx.recipe(BOARD)[1], "judged by values not saved"
+    compare.save_recipe()
+    operator_signs_in("values not saved when inspected, saved since", again=False)
+    win.set_user("engineer")
+    zero = ctx.recipe(BOARD)[1]
+    zero.anomaly_threshold = 0.0
+    ctx.save_recipe(zero)
+    win.navigate("Home")
+    win.navigate("Compare")  # the form takes the revision saved since, its AI score threshold as none
+    assert compare._form_recipe(BOARD).anomaly_threshold is None and ctx.recipe(BOARD)[1].anomaly_threshold == 0.0
+    golden_board()
+    operator_signs_in("an AI score threshold of 0 saved, the form untouched", again=False)
+    golden_board()  # by the Operator: judged by the recipe
+    win.set_user("engineer")
+    ratio = ctx.recipe(BOARD)[1]
+    ratio.warn_ratio /= 2  # saved on the Recipe Editor, say: a value the form does not hold, which judges too
+    ctx.save_recipe(ratio)
+    operator_signs_in("a warn ratio saved since an Operator's board was inspected", again=True)
+    win.set_user("engineer")
+    _ai_off(ctx)
+    win.navigate("Home")
+    win.navigate("Compare")  # the form takes the revision with the AI check off
+    compare.ai_thr.tick.setChecked(True)
+    compare.ai_thr.field.setValue(500.0)
+    golden_board()
+    operator_signs_in("an AI score threshold not saved, the AI check off", again=False)
+    win.set_user("engineer")
+    compare.ai_thr.tick.setChecked(True)
+    compare.ai_thr.field.setValue(500.0)
+    compare.use_golden()  # still worked out at the sign-in: the recipe's AI check off, so its threshold judges nothing
+    operator_signs_in("an AI score threshold not saved, the AI check off, the board still worked out", again=False)
+    win.set_user("engineer")
+    roi = ctx.recipe(BOARD)[1]  # the AI check off: no ROI check, so an ROI only names the defects in it, by its type
+    roi.rois = [ROI("U1", "Presence", 0, 0, 4000, 4000), ROI("off", enabled=False)]
+    ctx.save_recipe(roi)
+    win.navigate("Home")
+    win.navigate("Compare")
+    golden_board()
+    stage_2 = {"height_min": 0.5, "height_max": 1.0, "volume_min": 2.0, "volume_max": 3.0, "side": "Bottom"}
+    for i, values, again in (
+        (0, {"ai_score": 0.5}, False),
+        (0, {"name": "U2"}, False),
+        (0, stage_2, False),  # which nothing reads in this build, the AI check on or off
+        (1, {"x": 9, "ai_score": 0.5}, False),  # a disabled ROI judges nothing
+        (0, {"type": "Height"}, True),  # its defects named Pin Height Error, Major, not Missing Component, Critical
+        (0, {"x": 3000}, True),  # moved off the defects it named: they are named Anomaly now
+    ):
+        win.set_user("engineer")
+        roi.rois[i] = replace(roi.rois[i], **values)
+        ctx.save_recipe(roi)
+        operator_signs_in(f"ROI {i + 1}'s {', '.join(values)} saved since, the AI check off", again)
+    win.set_user("engineer")
+    roi.use_ai, roi.rois[0].x = True, 0  # ROI 1 over the board again, now checked by the AI model's map
+    roi.rois.append(ROI("U9", "Polarity", w=4000, h=4000))  # over the defects too, behind ROI 1, which names them
+    ctx.save_recipe(roi)
+    win.navigate("Home")
+    win.navigate("Compare")
+    golden_board()
+    for i, values, again in (  # ROI 1's AI score and name judge the board now, its Stage 2 values and ROI 2 still not
+        (0, {"height_max": 4.0, "side": "Top"}, False),
+        (1, {"x": 5, "ai_score": 0.3}, False),  # a disabled ROI judges nothing with the AI check on either
+        (0, {"ai_score": 0.7}, True),
+        (0, {"name": "U3"}, True),
+    ):
+        win.set_user("engineer")
+        roi.rois[i] = replace(roi.rois[i], **values)
+        ctx.save_recipe(roi)
+        operator_signs_in(f"ROI {i + 1}'s {', '.join(values)} saved since, the AI check on", again)
+    win.set_user("engineer")
+    roi.rois.reverse()  # ROI 3 now first over the defects: they are named Polarity Error, not Pin Height Error
+    ctx.save_recipe(roi)
+    operator_signs_in("ROI 1 and ROI 3, both over the defects, swapped, the AI check on", again=True)
+    win.set_user("engineer")
+    switched = ctx.recipe(BOARD)[1]
+    switched.use_ai, switched.use_compare = True, False  # the AI model alone judges (review)
+    ctx.save_recipe(switched)
+    win.navigate("Home")
+    win.navigate("Compare")  # the form takes that revision
+    compare.diff_thr.setValue(compare.diff_thr.value() + 7)
+    assert golden_board().compare is None and ai_check(compare.res) == "RAN"
+    operator_signs_in("a Pixel difference not saved, the Golden board comparison off", again=False)
+    win.set_user("engineer")
+    compare.min_area.setValue(compare.min_area.value() + 1)  # it also sizes the AI model's defects (verification)
+    golden_board()
+    operator_signs_in("a Minimum defect area not saved, the Golden board comparison off", again=True)
+    win.set_user("engineer")
+    switched.use_compare = True
+    ctx.save_recipe(switched)
+    win.navigate("Home")
+    win.navigate("Compare")
+    compare.diff_thr.setValue(compare.diff_thr.value() + 7)
+    compare.use_golden()  # still worked out at the sign-in: held by the recipe, not by the result shown before it
+    operator_signs_in("a Pixel difference not saved, the comparison on again, the board still worked out", again=True)
+    win.set_user("engineer")
+    ctx.db.execute("UPDATE models SET active=0 WHERE board_model=?", (BOARD,))  # the AI check on, but it cannot run
+    win.navigate("Home")
+    win.navigate("Compare")
+    compare.ai_thr.tick.setChecked(True)
+    compare.ai_thr.field.setValue(500.0)
+    assert ai_check(golden_board()) == "NO_AI_MODEL"
+    operator_signs_in("an AI score threshold not saved, no AI model active", again=False)
+    win.set_user("engineer")
+    ctx.db.execute("UPDATE models SET active=1 WHERE board_model=?", (BOARD,))  # its one AI model again
+    ctx.db.execute("UPDATE board_models SET reference_image=NULL WHERE name=?", (BOARD,))  # the comparison on, no
+    win.navigate("Home")  # Golden board to compare with
+    win.navigate("Compare")
+    compare.diff_thr.setValue(compare.diff_thr.value() + 7)
+    assert golden_board().compare is None and ai_check(compare.res) == "RAN"
+    operator_signs_in("a Pixel difference not saved, no Golden board set", again=False)
+
+
 def test_req_cmp_005_an_operator_never_sees_a_board_judged_by_thresholds_not_saved(
     qtbot: QtBot,
     trained_ctx: AppContext,
@@ -355,8 +565,11 @@ def test_req_cmp_005_an_operator_never_sees_a_board_judged_by_thresholds_not_sav
     """When an Operator signs in, the hidden form goes back to the recipe's thresholds, which the Difference heatmap
     shown follows, and a board an Engineer inspected on Compare with thresholds not saved is cleared and judged again by
     the recipe: after its verdict shows, or while it is worked out, and also when the Operator signs in on another page
-    and then opens Compare. From the sign-in the page never shows its verdict, table or "why" (review). The form is
-    read at the sign-in only, and an Engineer's run stopped by Cancel stays cancelled (review round 3)."""
+    and then opens Compare, or an Engineer does after the Operator (review round 4), the Engineer's run then stopped
+    even when it ends before Compare is opened (review). From the sign-in the page, shown or hidden, never shows its
+    verdict, table or "why" (review). The form is read at the sign-in only, and an Engineer's run stopped by
+    Cancel stays cancelled (review round 3); a board an Engineer inspected with the recipe's own thresholds keeps its
+    verdict when an Operator signs in, and is not inspected again (review round 4)."""
     ctx = trained_ctx
     win, compare, _ = _stored_on_compare(qtbot, ctx, ng_board, "Engineer")
     _, recipe = ctx.recipe(BOARD)
@@ -379,30 +592,53 @@ def test_req_cmp_005_an_operator_never_sees_a_board_judged_by_thresholds_not_sav
     monkeypatch.setattr(ComparePage, "_show_result", showing)
     seen: list[tuple[str, int, str]] = []
 
+    def now() -> tuple[str, int, str]:
+        return compare.verdict.text(), compare.metrics.rowCount(), compare.why.toPlainText()
+
     def judged() -> bool:
         """What the Operator sees, each change of it, until the recipe's run ends."""
-        now = (compare.verdict.text(), compare.metrics.rowCount(), compare.why.toPlainText())
-        seen.extend([now] if now != seen[-1] else [])
+        seen.extend([now()] if now() != seen[-1] else [])
         return ctx.jobs.idle() and compare._bg is None
 
-    for in_flight, elsewhere in ((False, False), (True, False), (False, True)):
+    gate, started, inspect = threading.Event(), threading.Event(), AppContext.inspect
+
+    def held(self: AppContext, *args: Any, **kwargs: Any) -> InspectionResult:
+        started.set()
+        assert gate.wait(20)
+        return inspect(self, *args, **kwargs)
+
+    monkeypatch.setattr(AppContext, "inspect", held)
+    steps = ((0, 0, 0), (1, 0, 0), (1, 1, 0), (1, 1, 1), (0, 1, 1), (0, 1, 0))
+    for in_flight, elsewhere, engineer_next in steps:
+        step = f"in flight {in_flight}, on another page {elsewhere}, an Engineer next {engineer_next}"
         win.set_user("engineer")
         _pass_every_check(compare)
         shown.clear()
+        gate.clear() if in_flight and elsewhere else gate.set()  # held: it ends after the sign-ins on Home (review)
+        started.clear()
         if in_flight:
             compare._clear_result()  # nothing shown, as after Cancel: the run is all there is to replace
         compare.use_golden()
         if in_flight:
             assert compare._bg is not None and not shown, "the Engineer's inspection is still worked out"
+            assert gate.is_set() or started.wait(20), "in the engine, not still queued"
         else:
             qtbot.waitUntil(lambda: compare._bg is None and bool(shown), timeout=20000)
             assert shown == ["WARN"], "the Engineer's thresholds judge the board WARN"
         win.navigate("Home" if elsewhere else "Compare")
         win.set_user("operator")
+        if engineer_next:  # an Engineer signs in next, before Compare is opened (review round 4)
+            win.set_user("engineer")
+        if elsewhere:  # the Engineer's run ends while Compare is hidden: none of it lands there (review)
+            gate.set()
+            qtbot.waitUntil(lambda: ctx.jobs.idle() and compare._bg is None, timeout=20000)
+            qtbot.wait(50)  # a result still on its way lands now
+            no_more = [] if in_flight else ["WARN"]  # what was shown before the sign-in
+            assert now() == (NO_VERDICT, 0, "") and shown == no_more, f"hidden Compare shows none of it: {step}"
         win.navigate("Compare")
-        seen[:] = [(compare.verdict.text(), compare.metrics.rowCount(), compare.why.toPlainText())]
+        seen[:] = [now()]
         qtbot.waitUntil(judged, timeout=20000)
-        assert seen[0] == (NO_VERDICT, 0, ""), "from the sign-in, no verdict, table or why of the Engineer's thresholds"
+        assert seen[0] == (NO_VERDICT, 0, ""), f"from the sign-in, no verdict, table or why of the Engineer's: {step}"
         assert [banner for banner, _, _ in seen] == [NO_VERDICT, theme.verdict_label("NG")], seen
         assert shown == (["NG"] if in_flight else ["WARN", "NG"]), "judged again by the recipe, the run replaced unseen"
         assert compare.verdict.text() == theme.verdict_label("NG") and compare.stored is None
@@ -422,6 +658,12 @@ def test_req_cmp_005_an_operator_never_sees_a_board_judged_by_thresholds_not_sav
     qtbot.waitUntil(lambda: ctx.jobs.idle() and compare._bg is None, timeout=20000)
     assert compare.verdict.text() == NO_VERDICT and compare.test_empty.heading.text() == "Inspection cancelled"
     assert shown == ["WARN", "NG"] and not dialogs, "nothing inspected again: the Engineer cancelled it"
+    win.set_user("engineer")
+    compare.use_golden()  # with the recipe's own thresholds, which the form holds since the sign-in
+    qtbot.waitUntil(lambda: ctx.jobs.idle() and compare._bg is None, timeout=20000)
+    assert shown == ["WARN", "NG", "NG"]
+    win.set_user("operator")  # the recipe judged it: its verdict stays, and it is not inspected again (review)
+    assert compare._bg is None and compare.verdict.text() == theme.verdict_label("NG") and shown == ["WARN", "NG", "NG"]
 
 
 def test_req_cmp_005_reevaluate_at_5_mp_answers_within_300_ms_off_the_window_thread(
