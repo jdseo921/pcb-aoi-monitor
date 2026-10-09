@@ -24,15 +24,16 @@ are never quoted as accuracy.
   with the same thread settings on the same VM, recorded PyTorch on 2 threads and OpenCV on 4. It is not the
   reference PC.
 - Data: DeepPCB from its GitHub repository (last change 2018-12-19), assumed to be the source of the copy in Jay's
-  pcb-dataset folder (the laptop run will confirm it). Its test split: 500 pairs of a defect-free template and a
+  pcb-dataset folder: the laptop run below found the same 500 pairs, 3,140 boxes and misses per type there (not
+  compared file by file). Its test split: 500 pairs of a defect-free template and a
   defective board, 640 × 640 px, aligned and thresholded by the dataset's authors, about 48 px per mm (its README),
   with 3,140 labelled boxes in six types. The smallest box is 24 px (0.5 mm) on its longer side, the median 38 px
   (0.8 mm), so the run cannot test REQ-INSP-014's floor of 4 px.
 - Sources unchanged: the run hashed the 3,000 images of both splits twice, both times after its checks, so that
   comparison could not catch a change the run made; `git status` in the dataset's clone is clean after all the runs.
   The tool now hashes before the checks too (S30 part 2's review fix), and its reruns below found no file changed.
-- PKU-Market-PCB, on Jay's laptop only, has not run yet: the laptop step is in the project thread. It has one
-  defect-free photo per board, so it gets the golden-board comparison only.
+- PKU-Market-PCB is on Jay's laptop only and ran there on 2026-10-09 (below). It has one defect-free photo per board,
+  so it gets the golden-board comparison only.
 - A labelled box counts as found when a difference region lies within 10 px of it.
 
 ## Golden-board comparison, AI check off
@@ -92,16 +93,59 @@ The AI model misses most of these defects, which says little about real boards: 
 while v0.1's model learns each pixel's normal variation over repeated photos of one board model (inferred, not
 tested).
 
+## Second run, on Jay's laptop, 2026-10-09
+
+The tool from #297 at its last commit before main's S28c to S35 were merged into it, with `--deeppcb --pku --ai` and
+its defaults (Minimum defect area 40 px, 20 OK images per training, seed 0), read Jay's pcb-dataset folder in place.
+Its hashes after the checks matched those before, so no source file changed. The laptop: Intel Core Ultra 7 255H (16
+threads), 31.5 GB of memory, no GPU, Windows 11 Home 25H2, Python 3.14.2, PyTorch 2.14.1 on the CPU, OpenCV 5.0.0; not
+the reference PC. Its `results.json` and `summary.md` stay on the laptop, and the counts below are copied from the
+summary reported from it. S28c to S35 changed no verdict on the synthetic regression set
+(`tests/regression/expected.json` is unchanged), and the tool sets neither judging input they added: a board model's
+scale and its override of the AI score threshold.
+
+DeepPCB, golden board, AI check off: the same as the cloud run, all 500 boards NG and 324 of 3,140 boxes missed with the
+same misses per type, but 793 regions on no box against 786 (the difference was not traced). Time per board: median 53
+ms, 95th percentile 82 ms.
+
+PKU-Market-PCB, golden board, AI check off: 693 defective photos, about 2,240 to 3,056 px wide (4 to 7 MP), each judged
+against its board's defect-free photo. 517 were NG and **176 OK** (one-sided 95 % upper bound on boards called OK
+0.283). Of 2,953 labelled boxes, **1,424 were missed** (upper bound 0.498), and 25 regions lay on no box. Time per
+board: median 754 ms, 95th percentile 993 ms.
+
+| Type | Boxes | Found | Missed | 95 % upper bound on misses |
+|---|---|---|---|---|
+| Missing hole | 497 | 487 | 10 | 0.034 |
+| Mouse bite | 492 | 205 | 287 | 0.620 |
+| Open circuit | 482 | 190 | 292 | 0.643 |
+| Short | 491 | 227 | 264 | 0.575 |
+| Spur | 488 | 186 | 302 | 0.655 |
+| Spurious copper | 503 | 234 | 269 | 0.572 |
+
+Why each box was missed was not traced. The laptop run's reading (inferred): these defects are about 30 to 70 px
+across, and many fall under the 40 px Minimum defect area or within the comparison's alignment tolerance. The
+`--min-area` what-if was not run on PKU-Market-PCB.
+
+DeepPCB, AI model alone, trained as in the cloud run with the same seed: of the 168 templates, 148 OK, 17 Warning and 3
+NG (upper bound 0.046 on NG); of the 168 defective boards, **107 OK**, 15 Warning and 46 NG (upper bound 0.699 on OK),
+against 115 OK, 31 Warning and 22 NG in the cloud, so training did not repeat across the two machines (cause not
+traced). Training per group: median 75 s. Peak memory was not read: on Windows the tool's read failed and its summary
+said 0.0 MB, fixed in the same PR as this section.
+
 ## What it means
 
 - REQ-INSP-014: not measurable here (not the locked validation set, not the customer's camera). On this data the
   default 40 px Minimum defect area missed 324 of 3,140 labelled defects, 242 of them opens (176) and mousebites (66);
-  a smaller area found more boxes and left more regions on no box. ADR 0008 (proposed) puts the default to Jay.
+  a smaller area found more boxes and left more regions on no box. On PKU-Market-PCB's 4 to 7 MP photos, the weak
+  case, it missed 1,424 of 2,953 and called 176 of 693 defective boards OK; only missing holes were found most of the
+  time (487 of 497). ADR 0008 (proposed) puts the default to Jay.
 - REQ-INSP-007: at 0.4 MP, inspection alone stayed under 0.4 s per board at the 95th percentile on this VM, even loaded;
   the budget is set at the customer's resolution on the reference PC, which the resolution test and the CI performance
-  job measure.
+  job measure. On Jay's laptop, inspection alone of PKU-Market-PCB's 4 to 7 MP photos, AI check off, took a median 754
+  ms and 993 ms at the 95th percentile: inside 1 s, with nothing left for the AI check or for showing the verdict, which
+  the budget also covers (inferred).
 - REQ-TRN-007: 20 images, 640 px resized to 256 px, trained in a median of 142 s per group (95th percentile 308 s) on
   2 PyTorch threads of this VM, in at most 1,027 MB; the budget's 50 images at the customer's resolution on the
-  reference PC is still unmeasured.
+  reference PC is still unmeasured. On Jay's laptop the same training took a median 75 s per group.
 
 The tool's output (counts, manifest, summary) and the analysis scripts stay in the session scratchpad and out of git.

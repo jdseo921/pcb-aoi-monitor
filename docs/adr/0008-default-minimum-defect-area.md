@@ -24,6 +24,10 @@ No defect-free board went through the comparison, so a region on no box is not a
 or an unlabelled defect was not checked. Keeping regions by their longer side instead of their area did worse at
 about the same number of regions on no box.
 
+On PKU-Market-PCB, a public research dataset of photos of 4 to 7 MP, run on Jay's laptop on 2026-10-09, the same
+default missed 1,424 of 2,953 labelled defects and called 176 of 693 defective boards OK, with 25 regions on no box;
+only missing holes were found most of the time (487 of 497). The what-if on a lower area was not run there.
+
 ## Decision
 
 1. **The default stays 40 px.** DeepPCB cannot set a default that judges a customer's boards: what a lower area does
