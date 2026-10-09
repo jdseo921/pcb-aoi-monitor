@@ -62,7 +62,7 @@ from .base import (
     time_left_text,
     view_text,
 )
-from .training_agreement import AgreementPanel
+from .training_agreement import AgreementPanel, BlindPanel
 from .training_import import ImportSheet
 from .training_labels import LabelEditor, State
 
@@ -309,7 +309,7 @@ class TrainingPage(Page):
         mrow.addWidget(button(self.tr("Export AI Model…"), slot=self.export_model))
         rl.addLayout(mrow)
         # the table as wide as its reference line needs at 1920 px, the editor next; with S31's import sheet open the
-        # table takes 750 px and the training panel keeps 418 px, its buttons whole
+        # table takes 742 px and the editor 407 px, its buttons whole, the training panel keeping its 457 px (outer)
         split.setSizes([650, 500])
         kl = QVBoxLayout(self.keys)
         kl.setContentsMargins(0, 0, 0, 0)
@@ -326,9 +326,13 @@ class TrainingPage(Page):
         self.tabs.addTab(self.tr("Samples"))
         self.tabs.addTab(self.tr("Datasets"))
         self.head.addWidget(self.tabs, 0, Qt.AlignmentFlag.AlignBottom)
-        self.stack = QStackedWidget()  # the tab shown
+        # Label Blind… shows the blind panel in the tabs' place, the tab bar hidden: none of their keys acts meanwhile
+        self.blind = BlindPanel(self)
+        self.blind.closed.connect(self._blind_closed)
+        self.stack = QStackedWidget()  # the tab shown, or the blind panel
         self.stack.addWidget(self.keys)
         self.stack.addWidget(datasets)
+        self.stack.addWidget(self.blind)
         self.tabs.currentChanged.connect(self.stack.setCurrentIndex)
         outer = QSplitter(Qt.Orientation.Horizontal)
         outer.addWidget(self.stack)
@@ -343,6 +347,26 @@ class TrainingPage(Page):
         self.removeAction(a)
         self.keys.addAction(a)
         return a
+
+    def open_blind(self, set_uuid: str, images: list[str], paths: dict[str, str]) -> None:
+        """Label Blind…: the blind panel in the tabs' place, from the set's first image the user has not labelled."""
+        self.tabs.hide()
+        self.stack.setCurrentWidget(self.blind)
+        self.blind.label_set(set_uuid, images, paths)
+
+    def _blind_closed(self) -> None:
+        """The tabs back, the focus on Label Blind…, or on the set once the user has labelled every image of it."""
+        self.tabs.show()
+        self.stack.setCurrentIndex(self.tabs.currentIndex())
+        self.refresh()
+        if self.isVisible():
+            panel = self.agreement
+            (panel.btn_blind if panel.btn_blind.isEnabled() else panel.sets).setFocus()
+
+    def _stop_blind(self) -> None:
+        """A sign-in or another board model ends blind labelling: the next user never labels as the one before."""
+        if self.stack.currentWidget() is self.blind:
+            self.blind.stop()
 
     # --- dataset ----------------------------------------------------------------
     def _pick(self) -> list[str]:
@@ -404,6 +428,7 @@ class TrainingPage(Page):
         """A sign-in closes the sheet the user before left, so the next user never imports its files (review); an
         import that runs goes on as the user who started it (#177), and its sheet closes once that import ends."""
         self.editor.forget()  # and the next user never undoes what the user before changed
+        self._stop_blind()
         if self.sheet.running:
             self._left = True
         else:
@@ -1030,6 +1055,7 @@ class TrainingPage(Page):
             )
 
     def on_board_model_changed(self, name: str | None) -> None:
+        self._stop_blind()
         self.editor.show_sample(None)
         self.editor.forget()  # Undo never changes another board model's image
         if self.sheet.running or self.sheet.reported:  # an import goes on into its board model, and a list stays,

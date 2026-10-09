@@ -4,7 +4,7 @@
 <context>
     <name>AgreementPanel</name>
     <message>
-        <location filename="../ui/pages/training_agreement.py" line="+32"/>
+        <location filename="../ui/pages/training_agreement.py" line="+45"/>
         <source>Labeller agreement</source>
         <translation>라벨러 일치도</translation>
     </message>
@@ -25,6 +25,11 @@
     </message>
     <message>
         <location line="+7"/>
+        <source>Label Blind…</source>
+        <translation>블라인드 라벨링…</translation>
+    </message>
+    <message>
+        <location line="+2"/>
         <source>Run Agreement Check</source>
         <translation>일치도 검사 실행</translation>
     </message>
@@ -41,7 +46,7 @@
     <message>
         <location line="+14"/>
         <source>No calibration set yet: New Set draws {size} images labelled OK or NG.</source>
-        <translation>아직 캘리브레이션 세트가 없습니다. 새 세트는 OK 또는 NG로 라벨이 지정된 이미지 {size}개를 추출합니다.</translation>
+        <translation>아직 보정 세트가 없습니다. 새 세트는 OK 또는 NG로 라벨이 지정된 이미지 {size}개를 추출합니다.</translation>
     </message>
     <message>
         <location line="+3"/>
@@ -71,12 +76,12 @@
     <message>
         <location line="+7"/>
         <source>Defect type {n} of {of} ({percent} %) {mark} target {target} %</source>
-        <translation>불량 유형 {of}개 중 {n}개 ({percent} %) {mark} 목표 {target} %</translation>
+        <translation>결함 유형 {of}개 중 {n}개 ({percent} %) {mark} 목표 {target} %</translation>
     </message>
     <message>
         <location line="+3"/>
         <source>Defect type: no image both labelled NG ✗ target {target} %</source>
-        <translation>불량 유형: 두 사람 모두 NG로 라벨을 지정한 이미지 없음 ✗ 목표 {target} %</translation>
+        <translation>결함 유형: 두 사람 모두 NG로 라벨을 지정한 이미지 없음 ✗ 목표 {target} %</translation>
     </message>
     <message>
         <location line="+5"/>
@@ -84,7 +89,12 @@
         <translation>{a}, {b}: {when}에 {user}이(가) 검사함</translation>
     </message>
     <message>
-        <location line="+8"/>
+        <location line="+10"/>
+        <source>You have labelled every image of this set blind</source>
+        <translation>이 세트의 모든 이미지를 블라인드 라벨링했습니다</translation>
+    </message>
+    <message>
+        <location line="+4"/>
         <source>Two users must each label every image of the set blind first</source>
         <translation>먼저 두 사용자가 각각 세트의 모든 이미지를 블라인드로 라벨링해야 합니다</translation>
     </message>
@@ -96,10 +106,10 @@
     <message>
         <location line="+17"/>
         <source>Made a calibration set of {size} images. Each labeller now labels it blind.</source>
-        <translation>이미지 {size}개의 캘리브레이션 세트를 만들었습니다. 이제 각 라벨러가 블라인드로 라벨을 지정합니다.</translation>
+        <translation>이미지 {size}개의 보정 세트를 만들었습니다. 이제 각 라벨러가 블라인드로 라벨을 지정합니다.</translation>
     </message>
     <message>
-        <location line="+12"/>
+        <location line="+20"/>
         <source>The labellers agree</source>
         <translation>라벨러들이 일치합니다</translation>
     </message>
@@ -107,6 +117,64 @@
         <location line="+0"/>
         <source>The labellers fall short of the targets</source>
         <translation>라벨러들이 목표에 미치지 못합니다</translation>
+    </message>
+</context>
+<context>
+    <name>BlindPanel</name>
+    <message>
+        <location line="+35"/>
+        <source>Stop</source>
+        <translation>중지</translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>Label each image as you see it. Its file name, label, defect boxes and history stay hidden, and only the agreement check counts these labels.</source>
+        <translation>보이는 대로 각 이미지에 라벨을 지정하십시오. 파일 이름, 라벨, 결함 박스와 이력은 숨겨지며, 이 라벨은 일치도 검사에만 반영됩니다.</translation>
+    </message>
+    <message>
+        <location line="+13"/>
+        <source>Opening the image…</source>
+        <translation>이미지를 여는 중…</translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>Label OK</source>
+        <translation>OK로 라벨링</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Label NG</source>
+        <translation>NG로 라벨링</translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>Type</source>
+        <translation>유형</translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>Pick its defect type</source>
+        <translation>결함 유형 선택</translation>
+    </message>
+    <message>
+        <location line="+35"/>
+        <source>You have labelled all {size} images of the set blind</source>
+        <translation>세트의 이미지 {size}개를 모두 블라인드 라벨링했습니다</translation>
+    </message>
+    <message>
+        <location line="+4"/>
+        <source>Image {n} of {size}</source>
+        <translation>이미지 {size}개 중 {n}번째</translation>
+    </message>
+    <message>
+        <location line="+38"/>
+        <source>Pick its defect type first</source>
+        <translation>먼저 결함 유형을 선택하십시오</translation>
+    </message>
+    <message>
+        <location line="+17"/>
+        <source>Stopped with {n} of {size} images labelled blind</source>
+        <translation>이미지 {size}개 중 {n}개를 블라인드 라벨링하고 중지했습니다</translation>
     </message>
 </context>
 <context>
@@ -2889,7 +2957,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/training.py" line="+455"/>
+        <location filename="../ui/pages/training.py" line="+480"/>
         <location filename="../ui/pages/training_import.py" line="+38"/>
         <source>{code} {title}</source>
         <translation type="unfinished"></translation>
@@ -4436,7 +4504,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/training.py" line="-307"/>
+        <location filename="../ui/pages/training.py" line="-332"/>
         <source>Training</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5086,12 +5154,12 @@
     </message>
     <message>
         <location line="+1"/>
-        <location line="+533"/>
+        <location line="+558"/>
         <source>Import Folder…</source>
         <translation>폴더 가져오기…</translation>
     </message>
     <message>
-        <location line="-521"/>
+        <location line="-546"/>
         <source>Training needs 20 OK images or more in a dataset version&apos;s training set</source>
         <translation>학습에는 데이터셋 버전의 학습 세트에 OK 이미지가 20장 이상 필요합니다</translation>
     </message>
@@ -5158,12 +5226,12 @@
     </message>
     <message>
         <location line="+3"/>
-        <location line="+393"/>
+        <location line="+418"/>
         <source>Remove</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-384"/>
+        <location line="-409"/>
         <source>Select a sample to preview</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5203,7 +5271,7 @@
         <translation type="unfinished">취소</translation>
     </message>
     <message>
-        <location line="+617"/>
+        <location line="+642"/>
         <source>{phase} · {percent} % · {left}</source>
         <translation>{phase} · {percent} % · {left}</translation>
     </message>
@@ -5213,7 +5281,7 @@
         <translation>취소됨: AI 모델을 저장하지 않았으며 활성 AI 모델은 바뀌지 않았습니다.</translation>
     </message>
     <message>
-        <location line="-616"/>
+        <location line="-641"/>
         <source>AI model versions</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5313,7 +5381,7 @@
         <translation>데이터셋</translation>
     </message>
     <message>
-        <location line="+24"/>
+        <location line="+48"/>
         <source>Select PCB images</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5333,7 +5401,7 @@
         <translation>{folder}와(과) 그 하위 폴더에 이미지가 없어 가져올 것이 없습니다</translation>
     </message>
     <message>
-        <location line="+117"/>
+        <location line="+118"/>
         <source>Imported {ok} OK and {ng} NG images into {board_model}</source>
         <translation>OK 이미지 {ok}개와 NG 이미지 {ng}개를 {board_model}(으)로 가져왔습니다</translation>
     </message>

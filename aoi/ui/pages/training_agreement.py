@@ -1,21 +1,34 @@
 """Training › Datasets' Labeller agreement panel (REQ-TRN-016, the screen half; Datasets stage 2 of 4): the labels
 sketch's panel, on the Datasets tab beside what a freeze needs (sketch decision Q60). New Set makes a calibration set
 of 100 labelled images (proposed) that AppContext draws; the panel says who has labelled how many of its images blind;
-Run Agreement Check compares two users who have labelled every image of it, and the newest check of the set is shown
-against its targets. Nothing here reads or writes the database itself."""
+Label Blind… shows the set's images one by one in the blind panel, which takes the tabs' place; Run Agreement Check
+compares two users who have labelled every image of it, and the newest check of the set is shown against its targets.
+Nothing here reads or writes the database itself."""
 
 from __future__ import annotations
 
+import weakref
+from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
-from PySide6.QtWidgets import QComboBox, QFormLayout, QGroupBox, QHBoxLayout, QLabel
+from PySide6.QtCore import Qt, Signal
+from PySide6.QtGui import QAction, QKeySequence
+from PySide6.QtWidgets import QComboBox, QFormLayout, QGroupBox, QHBoxLayout, QLabel, QVBoxLayout, QWidget
 
 from ...core import labels
+from ...defects import names
 from ...errors import AoiError
 from ...times import to_local
-from .base import button
+from .. import theme
+from ..widgets.busy import BusyOverlay
+from ..widgets.image_view import ImageView
+from ..workers import Worker, start
+from .base import action_button, button
 
 if TYPE_CHECKING:
+    import numpy as np
+
+    from ...core.services import AppContext
     from .training import TrainingPage
 
 
@@ -56,7 +69,9 @@ class AgreementPanel(QGroupBox):
             line.setWordWrap(True)
             form.addRow(line)
         self.by_line.setObjectName("muted")
-        run = QHBoxLayout()
+        run = QHBoxLayout()  # the sketch's [Label Blind…]  [Run Agreement Check]
+        self.btn_blind = button(self.tr("Label Blind…"), slot=self._label_blind)
+        run.addWidget(self.btn_blind)
         self.btn_run = button(self.tr("Run Agreement Check"), slot=self._run)
         run.addWidget(self.btn_run)
         run.addStretch(1)
@@ -147,7 +162,13 @@ class AgreementPanel(QGroupBox):
         self.by_line.setText(by_line.format(a=a, b=b, when=to_local(check["at_utc"]), user=by))
 
     def _sync(self) -> None:
-        """Run Agreement Check needs two different users who have each labelled every image of the set blind."""
+        """Label Blind… needs a set with images the user has not labelled blind yet; Run Agreement Check needs two
+        different users who have each labelled every image of the set blind."""
+        uid = self.sets.currentData()
+        mine = self.ctx.blind_labelled(uid).get(str(self.ctx.user_uuid), []) if uid else []
+        done = uid is not None and len(mine) == len(self._images.get(uid, []))
+        self.btn_blind.setEnabled(uid is not None and not done)
+        self.btn_blind.setToolTip(self.tr("You have labelled every image of this set blind") if done else "")
         a, b = self.labeller_a.currentData(), self.labeller_b.currentData()
         why = ""
         if self.labeller_b.count() < 2:
@@ -173,6 +194,14 @@ class AgreementPanel(QGroupBox):
         made = self.tr("Made a calibration set of {size} images. Each labeller now labels it blind.")
         self.page.shell.status(made.format(size=labels.CALIBRATION_IMAGES))
 
+    def _label_blind(self) -> None:
+        """The blind panel takes the tabs' place, from the set's first image the user has not labelled blind."""
+        uid = self.sets.currentData()
+        if uid is None or self.board_model is None:
+            return
+        paths = {s["uuid"]: str(s["path"]) for s in self.ctx.samples(self.board_model)}
+        self.page.open_blind(uid, self._images[uid], paths)
+
     def _run(self) -> None:
         """Compare the two labellers' blind labels of the set; the check is stored and shown."""
         uid, a, b = self.sets.currentData(), self.labeller_a.currentData(), self.labeller_b.currentData()
@@ -183,4 +212,171 @@ class AgreementPanel(QGroupBox):
             return
         self.show_set()
         said = self.tr("The labellers agree") if check["agreed"] else self.tr("The labellers fall short of the targets")
+        self.page.shell.status(said)
+
+
+def _load(ctx: AppContext, path: str) -> np.ndarray | AoiError:
+    """On a pool thread: the image, or the error that refused it, said under the heading with no dialog."""
+    try:
+        return ctx.load_image(path)
+    except AoiError as e:
+        return e
+
+
+class BlindPanel(QWidget):
+    """Blind labelling of a calibration set (REQ-TRN-016): its images one by one, each the next the user has not
+    labelled blind, shown with no file name, label, defect box or history; Label OK (O), or Label NG (N) with a defect
+    type, records the user's own label through `AppContext.label_blind` and shows the next; Stop (Esc) leaves, keeping
+    every label made. The panel takes the Samples and Datasets tabs' place while it is shown, so none of their keys
+    acts; each image is read on a pool thread."""
+
+    closed = Signal()
+
+    def __init__(self, page: TrainingPage) -> None:
+        super().__init__()
+        self.page, self.ctx = page, page.ctx
+        self.set_uuid: str | None = None
+        self.shown: str | None = None  # the image on screen, once read
+        self._todo: list[str] = []  # the set's images the user has not labelled blind yet, in the set's order
+        self._paths: dict[str, str] = {}
+        self._size = 0
+        self._reading: Worker | None = None
+        lay = QVBoxLayout(self)
+        lay.setContentsMargins(0, theme.SPACE_S, 0, 0)
+        head = QHBoxLayout()
+        self.heading = QLabel()  # "Image 12 of 100": never its file name, which can name its label
+        head.addWidget(self.heading, 1)
+        self.act_stop = self._action(self.tr("Stop"), "Esc", self.stop)
+        head.addWidget(action_button(self.act_stop, show_key=False))
+        lay.addLayout(head)
+        note = QLabel(
+            self.tr(
+                "Label each image as you see it. Its file name, label, defect boxes and history stay hidden, and only"
+                " the agreement check counts these labels."
+            )
+        )
+        note.setObjectName("muted")
+        note.setWordWrap(True)
+        lay.addWidget(note)
+        self.unread = QLabel()  # the coded line of an image that cannot be read
+        self.unread.setWordWrap(True)
+        self.unread.hide()
+        lay.addWidget(self.unread)
+        self.view = ImageView(placeholder="")
+        lay.addWidget(self.view, 1)
+        self.busy = BusyOverlay(self.view, self.tr("Opening the image…"))
+        row = QHBoxLayout()
+        self.act_ok = self._action(self.tr("Label OK"), "O", lambda: self._label("OK"))
+        self.act_ng = self._action(self.tr("Label NG"), "N", lambda: self._label("NG"))
+        row.addWidget(action_button(self.act_ok, show_key=False))
+        row.addWidget(QLabel(self.tr("Type")))
+        self.type_box = QComboBox()  # the label editor's 33 types, by category; none picked for each new image
+        self.type_box.setMinimumContentsLength(14)
+        self.type_box.addItem(self.tr("Pick its defect type"), None)
+        for name in names():
+            self.type_box.addItem(name, name)
+        self.type_box.currentIndexChanged.connect(self._sync)
+        row.addWidget(self.type_box, 1)
+        self.btn_ng = action_button(self.act_ng, show_key=False)
+        self._ng_key = self.btn_ng.toolTip()  # "N", as action_button gives it
+        self.type_box.activated.connect(lambda _i: self.btn_ng.setFocus())  # then N, Enter or Space labels it NG
+        row.addWidget(self.btn_ng)
+        lay.addLayout(row)
+        self._sync()
+
+    def _action(self, text: str, key: str, slot: Callable[[], object]) -> QAction:
+        """A key of the panel's, acting only while the panel is shown, with the button that shares it."""
+        a = QAction(text, self)
+        a.setShortcut(QKeySequence(key))
+        a.setShortcutContext(Qt.ShortcutContext.WindowShortcut)
+        a.triggered.connect(slot)
+        self.addAction(a)
+        return a
+
+    def label_set(self, set_uuid: str, images: list[str], paths: dict[str, str]) -> None:
+        """Label the set's `images` blind, from the first the user has not labelled; `paths` by sample UUID."""
+        mine = set(self.ctx.blind_labelled(set_uuid).get(str(self.ctx.user_uuid), []))
+        self.set_uuid, self._paths, self._size = set_uuid, paths, len(images)
+        self._todo = [u for u in images if u not in mine]
+        self._next()
+
+    def _next(self) -> None:
+        """The next image to label, read on a pool thread; with none left the panel closes and says so."""
+        self.shown = None
+        self.view.set_image(None)
+        self.unread.hide()
+        self.type_box.setCurrentIndex(0)
+        if not self._todo:
+            done = self.tr("You have labelled all {size} images of the set blind").format(size=self._size)
+            self._close(done)
+            return
+        uuid = self._todo[0]
+        self.heading.setText(self.tr("Image {n} of {size}").format(n=self._size - len(self._todo) + 1, size=self._size))
+        if self._reading is not None:
+            self._reading.stop()
+        w = self._reading = Worker(_load, self.ctx, self._paths[uuid])
+        ref = weakref.ref(w)  # the slots hold the worker weakly, as Page.run_in_background's do (#132)
+
+        def result(image: np.ndarray | AoiError) -> None:
+            if ref() is self._reading:
+                self._show(uuid, image)
+
+        def finished() -> None:
+            if ref() is self._reading:
+                self._reading = None
+                self.busy.finish()
+                self._sync()
+
+        w.signals.result.connect(result)
+        w.signals.error.connect(self.page.error)
+        w.signals.finished.connect(finished)
+        self.busy.watch(w.job)
+        start(w, self.ctx.jobs)
+        self._sync()
+
+    def _show(self, uuid: str, image: np.ndarray | AoiError) -> None:
+        if isinstance(image, AoiError):  # not labelled unseen: Stop, and the image is put right or the set made again
+            self.unread.setText(self.page.coded_text(image))
+            self.unread.show()
+            return
+        self.shown = uuid
+        self.view.set_image(image)
+        if self.isVisible():  # the focus on the image: O and N label it, even after a type typed in the Type list
+            self.view.setFocus()
+
+    def _sync(self) -> None:
+        """Label OK needs the image read; Label NG its defect type too, its tooltip saying so."""
+        self.act_ok.setEnabled(self.shown is not None)
+        typed = self.type_box.currentData() is not None
+        self.act_ng.setEnabled(self.shown is not None and typed)
+        self.btn_ng.setToolTip(self._ng_key if typed else self.tr("Pick its defect type first"))
+
+    def _label(self, label: str) -> None:
+        """Record the user's blind label of the image shown, then show the next."""
+        if self.shown is None or self.set_uuid is None:
+            return
+        dtype = self.type_box.currentData() if label == "NG" else None
+        try:
+            self.ctx.label_blind(self.set_uuid, self.shown, label, dtype)
+        except AoiError as e:
+            self.page.error(e)
+            return
+        self._todo.pop(0)
+        self._next()
+
+    def stop(self) -> None:
+        """Leave, every label made kept; Label Blind… goes on from the next image."""
+        left = self.tr("Stopped with {n} of {size} images labelled blind").format(
+            n=self._size - len(self._todo), size=self._size
+        )
+        self._close(left)
+
+    def _close(self, said: str) -> None:
+        if self._reading is not None:
+            self._reading.stop()
+            self._reading = None
+            self.busy.finish()
+        self.set_uuid, self.shown, self._todo = None, None, []
+        self.view.set_image(None)
+        self.closed.emit()
         self.page.shell.status(said)

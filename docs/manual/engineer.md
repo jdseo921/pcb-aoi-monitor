@@ -210,14 +210,20 @@ not checked yet. The second user signs in with Switch User, selects the images a
 checks each selected label they can check and says how many it left and why. It is off, its tooltip saying why, for an
 image you labelled yourself; Enter typed in a field or a drop-down list stays the field's.
 
-**Two labellers agree before a customer validation.** Pick 100 images of the board model, each labelled OK or NG, as a
-calibration set. Two Engineers each label every image of the set blind, OK, or NG with one of the 33 defect types, once
-per image; no screen hides an image's own label yet, so not looking at it is up to each labeller. The agreement check
-then counts the images on which the two agree on OK or NG, at least 98 of 100, and the images both labelled NG on which
-they agree on the defect type, at least 90 % (both targets proposed). Every check is stored with its counts, and the
-newest one decides whether a dataset version can be frozen. A set that is not 100 such images (AOI-TRN-035), a second
-blind label (AOI-TRN-036) and a labeller who has not labelled every image (AOI-TRN-037) are refused. None of this has a
-screen yet.
+**Two labellers agree before a customer validation.** On Training, open the **Datasets** tab. **New Set** draws a
+calibration set of 100 images of the board model, each labelled OK or NG: 30 NG images, or all when fewer, among the OK
+ones, in a random order. It is off, its tooltip giving the count, while fewer than 100 images are so labelled. Each of
+two Engineers then signs in with Switch User and presses **Label Blind…**: the set's images show one by one, "Image 1 of
+100", with no file name, label, box or history, in place of the tabs. Press **Label OK** or O, or pick the defect type
+and press **Label NG** or N; the next image follows. **Stop** or Esc leaves, keeping every label made, and Label Blind…
+goes on from the next image; a sign-in or another board model in the header stops it too. The line under the set says
+who has labelled how many images. Once two users have labelled every image, pick them under Labellers and press **Run
+Agreement Check**: it counts the images on which the two agree on OK or NG, at least 98 of 100, and the images both
+labelled NG on which they agree on the defect type, at least 90 % (both targets proposed), and shows both with ✓ or ✗.
+Every check is stored with its counts, and the newest one decides whether a dataset version can be frozen. A set that is
+not 100 such images (AOI-TRN-035), a second blind label (AOI-TRN-036) and a labeller who has not labelled every image
+(AOI-TRN-037) are refused. Until sign-in arrives in version 1.0, each labeller is a name picked in the user list (ADR
+0002).
 
 **A frozen dataset version keeps its record.** Freezing takes the OK and NG images of one board model and view, with the
 board revision, the customer and the allowed uses (their own AI models by default), as DS-TBOXA1-R3-TOP-v4: the board
@@ -247,7 +253,7 @@ which says why. When an engagement ends, an Admin shreds the store: its key goes
 models and Golden boards; nothing of it opens afterwards, a backup included, once the sheet is destroyed. These are
 service calls until the Settings screen comes (ADR 0010).
 
-(to be written: the blind labels on screen, the Datasets tab, locking the validation set)
+(to be written: the Datasets tab's freeze, versions and validation set lock)
 
 ## 4. Training and AI model versions
 

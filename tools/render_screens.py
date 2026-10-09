@@ -55,7 +55,7 @@ BOARD_MODEL = "TINY"
 FIXED_TIME = "2026-01-01T09:00:00+00:00"  # every stored time, so a render does not change with the clock
 FIXED_MS = 480.0  # the inspection time Inspection and Compare show
 FIXED_SSIM, FIXED_INLIERS = 0.95, 400  # the similarity and alignment points Compare shows (module docstring)
-PAGE_VIEWS = {"Training": ("datasets",)}  # a page's other views, each rendered as <page>-<view>-<role>: Training's tabs
+PAGE_VIEWS = {"Training": ("datasets", "blind")}  # a page's other views, rendered as <page>-<view>-<role>
 STORED_STATES = (  # Compare
     "compare-stored-operator", "compare-golden-changed-operator", "compare-tried-engineer", "compare-save-engineer",
 )  # fmt: skip
@@ -306,10 +306,23 @@ def prepare(win: MainWindow, title: str, dataset: Path) -> None:
 
 
 def show_view(win: MainWindow, title: str, view: str | None) -> None:
-    """`title` with its `view` shown (PAGE_VIEWS), as a click on its tab shows it; None, the view it opens on."""
+    """`title` with its `view` shown (PAGE_VIEWS); None, the view it opens on. Training's are its Datasets tab, as a
+    click on the tab shows it, and the blind labelling panel on its first image, the board model's images standing in
+    for a calibration set of 100 (the workspace holds fewer): Stop closes it, the status line saying so until the next
+    page clears it, and with None the focus is cleared, as Training opens with none, so the pages after render alike."""
+    from PySide6.QtWidgets import QApplication
+
     page: Any = win.pages[title]
     if title == "Training":
-        page.tabs.setCurrentIndex(1 if view == "datasets" else 0)
+        if view == "blind":
+            samples = page.ctx.samples(page.board_model)
+            page.open_blind("", [s["uuid"] for s in samples], {s["uuid"]: str(s["path"]) for s in samples})
+            wait_until(lambda: page.blind.shown is not None and page.blind._reading is None)
+        else:
+            page._stop_blind()
+        page.tabs.setCurrentIndex(0 if view is None else 1)
+        if view is None and (focus := QApplication.focusWidget()) is not None:
+            focus.clearFocus()
 
 
 def render_stored(win: Any, ctx: AppContext, out: Path) -> dict[str, Path]:
