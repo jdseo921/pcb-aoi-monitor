@@ -6,6 +6,7 @@ give shows beside Re-evaluate while the banner keeps the stored one."""
 
 from __future__ import annotations
 
+import itertools
 import sqlite3
 import statistics
 import sys
@@ -19,18 +20,20 @@ from typing import Any
 
 import pytest
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QGuiApplication
-from PySide6.QtWidgets import QApplication, QPushButton, QWidget
+from PySide6.QtGui import QColor, QGuiApplication, QPalette
+from PySide6.QtWidgets import QAbstractButton, QAbstractSpinBox, QApplication, QPushButton, QWidget
 from pytestqt.qtbot import QtBot
 
 from aoi.core.explain import TRIED_AI_OFF, explain
 from aoi.core.inspector import InspectionResult, ai_check
+from aoi.core.jobs import Job
 from aoi.core.recipe import ROI
 from aoi.core.services import AppContext
 from aoi.errors import AoiError
 from aoi.ui import theme
 from aoi.ui.main_window import MainWindow
 from aoi.ui.pages.compare import MODE_DIFF, MODE_SIDE, NO_VERDICT, ComparePage
+from aoi.ui.widgets.busy import BusyOverlay
 from tests.screens.test_sizes_and_contrast import _check_widget, _pixels
 from tests.test_compare_stored import _expected, _refuse_inspection, _table
 from tests.test_no_freeze import BUDGET_S, assert_off_ui_thread, board_5mp, gap_meter, heavy_calls  # noqa: F401
@@ -91,6 +94,13 @@ def _walk(win: MainWindow, widgets: list[QWidget]) -> tuple[list[str], Counter[s
     return found, seen
 
 
+def _ink(widget: QWidget, color: QColor) -> float:
+    """How much of `widget`, as drawn, is `color`: one pixel in 16 sampled."""
+    img = widget.grab().toImage()
+    seen = [img.pixelColor(x, y) for x in range(0, img.width(), 4) for y in range(0, img.height(), 4)]
+    return sum(c == color for c in seen) / len(seen)
+
+
 def _press(qtbot: QtBot, win: MainWindow, compare: ComparePage) -> None:
     """Re-evaluate's key, as an Engineer presses it, then let go: QTest's click leaves Qt holding Ctrl (review)."""
     key = compare.act_try.shortcut()[0]
@@ -105,9 +115,11 @@ def test_req_cmp_005_reevaluate_on_compare_shows_what_the_stored_result_would_be
     inspection and no AI model loaded: the banner keeps the stored verdict, "Would be" beside Re-evaluate shows the one
     those thresholds give, and the table and the explanation show their checks; the board keeps its stored boxes, so
     defects that make the WARN are said to be ones the thresholds would mark, not ones marked on the board (review);
-    nothing is stored; "Would be" and the panel's buttons meet the screen tests' size, font and contrast rules. A
+    nothing is stored; "Would be", a bar of the verdict's colour beside words in the theme's text colour (review), and
+    the panel's buttons meet the screen tests' size, font and contrast rules. A
     threshold changed, or the result opened again, brings back its own checks; a result whose AI map is gone is refused
-    with AOI-CMP-004, keeps its own and holds no worker (#132), and the answer before goes at the press (review)."""
+    with AOI-CMP-004, keeps its own and holds no worker (#132), the answer before going at the press (review), and
+    Re-evaluate is on again after the refusal (review)."""
     ctx = trained_ctx
     win, compare, iid = _stored_on_compare(qtbot, ctx, ng_board, "Engineer")
     rec = ctx.inspection(iid)
@@ -121,6 +133,17 @@ def test_req_cmp_005_reevaluate_on_compare_shows_what_the_stored_result_would_be
     _press(qtbot, win, compare)
     qtbot.waitUntil(compare.would_be.isVisible, timeout=10000)
     assert compare.would_be.text() == f"Would be: {theme.verdict_label(want.verdict)}"
+    inked = _ink(compare.would_be, QColor(theme.VERDICT_COLORS[want.verdict]))
+    assert 0 < inked < 0.2, f"the verdict's colour as a bar beside it, not a filled box like a button: {inked:.0%}"
+    app, text = QApplication.instance(), QColor("#203040")
+    assert isinstance(app, QApplication)
+    qss = app.styleSheet()
+    try:  # a theme with another text colour, as the presenter theme will be (REQ-SET-008), colours its words (review)
+        app.setStyleSheet(theme.stylesheet(TEXT=text.name()))
+        QApplication.processEvents()
+        assert compare.would_be.palette().color(QPalette.ColorRole.WindowText) == text
+    finally:
+        app.setStyleSheet(qss)
     assert compare.verdict.text() == theme.verdict_label("NG") and compare.note.isVisible(), "the stored verdict stays"
     rows = [{**asdict(c), "metric": c.name, "result": c.verdict} for c in want.checks]
     assert _table(compare)[:-1] == _expected(compare, rows) != stored[:-1]
@@ -150,6 +173,7 @@ def test_req_cmp_005_reevaluate_on_compare_shows_what_the_stored_result_would_be
     assert title.startswith("AOI-CMP-004") and "AI score map" in text, text
     assert _table(compare) == stored and compare.would_be.isHidden() and not dialogs
     assert compare._trying is None, "a refusal holds no worker past its end (#132)"
+    assert compare.act_try.isEnabled(), "Re-evaluate is on again after a refusal"
 
 
 def test_req_cmp_005_what_was_tried_goes_once_it_no_longer_applies(
@@ -260,7 +284,7 @@ def test_req_cmp_005_reevaluate_on_what_compare_shows(
     from its maps, and once the recipe turns the AI check off, the explanation says those thresholds judge it without
     the AI check (#246); and one none of whose pictures load because another program holds the database (AOI-SET-013,
     #247) is still judged again from its maps once that load has ended (review). On a board not stored, Re-evaluate
-    inspects it again with the form's thresholds (review)."""
+    inspects it again with the form's thresholds (review). After a refusal Re-evaluate is on again (review)."""
     ctx = trained_ctx
     win, compare, iid = _stored_on_compare(qtbot, ctx, ng_board, "Engineer")
     compare.show_stored(iid)
@@ -285,6 +309,7 @@ def test_req_cmp_005_reevaluate_on_what_compare_shows(
     compare.re_evaluate()
     qtbot.waitUntil(lambda: bool(dialogs), timeout=10000)
     assert dialogs.pop()[0].startswith("AOI-CMP-005") and compare.would_be.isHidden()
+    assert compare._trying is None and compare.act_try.isEnabled(), "Re-evaluate is on again after a refusal"
     win._reload_board_models(BOARD)
     qtbot.waitUntil(lambda: ctx.jobs.idle() and compare._bg is None, timeout=30000)
     rec = ctx.inspection(iid)
@@ -664,6 +689,242 @@ def test_req_cmp_005_an_operator_never_sees_a_board_judged_by_thresholds_not_sav
     assert shown == ["WARN", "NG", "NG"]
     win.set_user("operator")  # the recipe judged it: its verdict stays, and it is not inspected again (review)
     assert compare._bg is None and compare.verdict.text() == theme.verdict_label("NG") and shown == ["WARN", "NG", "NG"]
+
+
+def test_req_set_021_a_re_evaluation_over_a_second_shows_a_busy_indicator_over_the_decision_table(
+    qtbot: QtBot,
+    trained_ctx: AppContext,
+    ng_board: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    dialogs: list[tuple[str, str]],
+) -> None:
+    """REQ-SET-021, and the sketch's busy indicator for any recompute over 1 s (review): Re-evaluate on a stored result
+    that takes over a second shows "Re-evaluating…" and the seconds so far over the decision table and the "why" box,
+    where the checks tried will appear, and nothing in its first second; Re-evaluate is off meanwhile, so a second
+    press starts no second job (the sketch's busy pattern, review); at the window's least size the indicator's text,
+    bar and Cancel, shown from 10 s, fit inside it (review). Pressed with Space, its focus waits in the "why" box, one
+    Tab before Cancel once that shows, so a second Space presses nothing, Save to Recipe next in the Tab order included,
+    and comes back when the run ends, unless moved (review). It goes when "Would be" shows, and at once when a threshold
+    changes or Cancel is pressed, the stored checks then showing, no answer landing after and no worker held. Cancel,
+    by Tab and Space after Ctrl+R in the "why" box or by a click after Ctrl+R on Show, gives the focus to Re-evaluate,
+    so a second Space never sets the AI score threshold's tick, next after Cancel in the Tab order; and Ctrl+R in the
+    "why" box leaves the focus there when the answer comes (verification)."""
+    ctx = trained_ctx
+    win, compare, _ = _stored_on_compare(qtbot, ctx, ng_board, "Engineer")
+    win.resize(win.minimumSizeHint())  # the panel at its least height (review)
+    stored = _table(compare)
+    _pass_every_check(compare)
+    gate, judge_again = threading.Event(), AppContext.re_evaluate
+
+    def held(self: AppContext, *args: Any) -> InspectionResult:
+        assert gate.wait(20)
+        return judge_again(self, *args)
+
+    monkeypatch.setattr(AppContext, "re_evaluate", held)
+    monkeypatch.setattr(BusyOverlay, "DETAIL_AFTER_S", 1.2)  # what shows from 10 s, sooner
+    end, call = threading.Event(), Job._call
+
+    def ending(job: Job[Any], event: str, *args: Any) -> None:
+        if event == "finished":
+            end.wait(20)  # on the pool thread, which, loaded, may signal a job's end well after its answer
+        call(job, event, *args)
+
+    end.set()
+    monkeypatch.setattr(Job, "_call", ending)
+
+    def over_the_checks() -> list[BusyOverlay]:
+        """The busy indicators shown over the decision table."""
+        found = [(o, o.parentWidget()) for o in compare.findChildren(BusyOverlay) if o.isVisible()]
+        return [o for o, on in found if on is compare.metrics or on is not None and on.isAncestorOf(compare.metrics)]
+
+    revisions = len(ctx.recipe_history(BOARD))
+    for then in ("the answer", "a threshold changed", "Cancel"):
+        gate.clear()
+        compare.btn_try.setFocus(Qt.FocusReason.TabFocusReason)  # by keyboard (review)
+        qtbot.keyClick(compare.btn_try, Qt.Key.Key_Space)
+        trying = compare._trying
+        assert trying is not None and not over_the_checks(), "nothing in the first second, so quick work never flickers"
+        try:
+            qtbot.waitUntil(lambda: any(o.cancel_button.isVisible() for o in over_the_checks()), timeout=10000)
+        except qtbot.TimeoutError:
+            pytest.fail(f"no busy indicator with Cancel over the decision table, before {then}")
+        qtbot.wait(100)  # laid out with Cancel shown
+        (busy,) = over_the_checks()
+        for part in (busy.label, busy.bar, busy.cancel_button):  # none cut off or squeezed (review)
+            fits = busy.rect().contains(part.geometry()) and part.height() >= part.sizeHint().height()
+            assert fits, (type(part).__name__, part.geometry(), part.sizeHint(), busy.size())
+        over = busy.parentWidget()
+        assert over is not None and over.isAncestorOf(compare.why) and busy.geometry() == over.rect(), "and the why"
+        assert busy.label.text().startswith("Re-evaluating…")
+        assert compare.would_be.isHidden() and _table(compare) == stored
+        assert not compare.act_try.isEnabled(), "Re-evaluate is off while it runs"
+        focus = QApplication.focusWidget()
+        assert focus is not None
+        qtbot.keyClick(focus, Qt.Key.Key_Space)  # a second Space, where the focus went
+        assert len(ctx.recipe_history(BOARD)) == revisions, "a second Space saves no recipe revision (review)"
+        assert QApplication.focusWidget() is compare.why, "the focus waits under the indicator, one Tab before Cancel"
+        _press(qtbot, win, compare)
+        assert compare._trying is trying is compare._bg, "a second press starts no second job"
+        if then == "the answer":
+            end.clear()  # the job's end signalled only after the checks below: the indicator goes with the answer
+            gate.set()
+            qtbot.waitUntil(compare.would_be.isVisible, timeout=20000)
+            assert not over_the_checks() and _table(compare) != stored and compare.act_try.isEnabled()
+            assert QApplication.focusWidget() is compare.btn_try, "the focus back on Re-evaluate with the answer"
+            end.set()
+            qtbot.waitUntil(lambda: compare._bg is None, timeout=20000)
+            continue
+        if then == "Cancel":
+            qtbot.keyClick(compare.why, Qt.Key.Key_Tab)
+            assert QApplication.focusWidget() is busy.cancel_button, "one Tab from the focus to Cancel"
+            qtbot.keyClick(busy.cancel_button, Qt.Key.Key_Space)
+        else:
+            compare.min_area.setFocus(Qt.FocusReason.TabFocusReason)  # the Engineer moves the focus there
+            qtbot.keyClick(compare.min_area, Qt.Key.Key_Up)
+        assert not over_the_checks() and _table(compare) == stored, f"the indicator goes at once with {then}"
+        assert compare.act_try.isEnabled(), f"Re-evaluate is on again at once with {then}"
+        back, where = (compare.btn_try, "back on Re-evaluate") if then == "Cancel" else (compare.min_area, "kept")
+        assert QApplication.focusWidget() is back, f"the focus {where} after {then}"
+        gate.set()
+        qtbot.waitUntil(lambda: ctx.jobs.idle() and compare._bg is None, timeout=20000)
+        qtbot.wait(50)  # an answer still on its way lands now
+        assert compare.would_be.isHidden() and _table(compare) == stored and not over_the_checks() and not dialogs
+        assert compare._trying is None, f"no worker held past its end after {then} (#132)"
+    compare.ai_thr.tick.setChecked(False)  # next after Cancel in the Tab order: a Space there would set it
+    for start, how in ((compare.why, "by Tab and Space"), (compare.mode, "by a click")):  # Ctrl+R pressed elsewhere
+        gate.clear()
+        start.setFocus(Qt.FocusReason.TabFocusReason)
+        _press(qtbot, win, compare)
+        qtbot.waitUntil(lambda: any(o.cancel_button.isVisible() for o in over_the_checks()), timeout=10000)
+        (busy,) = over_the_checks()
+        if start is compare.why:
+            qtbot.keyClick(compare.why, Qt.Key.Key_Tab)
+            assert QApplication.focusWidget() is busy.cancel_button, "one Tab from the why box to Cancel once it shows"
+            qtbot.keyClick(busy.cancel_button, Qt.Key.Key_Space)
+        else:
+            qtbot.mouseClick(busy.cancel_button, Qt.MouseButton.LeftButton)
+        focus = QApplication.focusWidget()
+        assert focus is not None
+        qtbot.keyClick(focus, Qt.Key.Key_Space)  # a second Space, where Cancel left the focus
+        assert not compare.ai_thr.tick.isChecked(), f"a second Space after Cancel {how} sets no tick (verification)"
+        assert focus is compare.btn_try and compare._trying is not None, f"Cancel {how}: the focus on Re-evaluate"
+        gate.set()
+        qtbot.waitUntil(compare.would_be.isVisible, timeout=20000)
+        assert QApplication.focusWidget() is compare.btn_try and len(ctx.recipe_history(BOARD)) == revisions, how
+    compare.why.setFocus(Qt.FocusReason.TabFocusReason)
+    _press(qtbot, win, compare)  # after a run pressed with Space, which takes its focus back at the end
+    qtbot.waitUntil(compare.would_be.isVisible, timeout=20000)
+    assert QApplication.focusWidget() is compare.why, "Ctrl+R in the why box: the focus stays there (verification)"
+
+
+def test_req_set_021_however_a_re_evaluation_starts_and_ends_a_further_space_writes_nothing(
+    qtbot: QtBot, trained_ctx: AppContext, ng_board: Path, monkeypatch: pytest.MonkeyPatch, dialogs: Dialogs
+) -> None:
+    """Each way a re-evaluation of a stored result starts (Space on Re-evaluate, a click on it, Ctrl+R with the focus in
+    the "why" box, in Show: or in the decision table) with each way it ends (its answer, an error, Cancel by Space or by
+    a click, its answer or an error landing while Cancel holds the focus, an Operator signing in while Cancel or the AI
+    score threshold's tick does, and its answer while another window is in front, with Cancel holding the focus or not,
+    when no control has hasFocus()): the focus ends on Re-evaluate, where Ctrl+R found it, or, once the sign-in hides
+    the panel, in the "why" box, never on a control of the panel that writes (Save to Recipe, a threshold, the tick),
+    and a further Space saves no recipe revision and sets no tick (second verification, review). With no run, an
+    Operator's sign-in puts a focus on any control of the panel in the "why" box too, where an Admin's leaves it, and
+    leaves one on Show: there (review)."""
+    ctx = trained_ctx
+    win, compare, _ = _stored_on_compare(qtbot, ctx, ng_board, "Engineer")
+    other = QWidget()  # another window, in front while a run ends
+    qtbot.addWidget(other)
+    gate, judge_again, fail = threading.Event(), AppContext.re_evaluate, [False]
+
+    def held(self: AppContext, *args: Any) -> InspectionResult:
+        assert gate.wait(20)
+        if fail[0]:
+            raise AoiError("AOI-CMP-004", file=ng_board.name, missing="AI score map", days=7)
+        return judge_again(self, *args)
+
+    monkeypatch.setattr(AppContext, "re_evaluate", held)
+    monkeypatch.setattr(BusyOverlay, "SHOW_AFTER_S", 0.0)  # the indicator and its Cancel at its first tick, not at 10 s
+    monkeypatch.setattr(BusyOverlay, "DETAIL_AFTER_S", 0.0)
+    cancel, panel = compare.try_busy.cancel_button, _panel(compare)
+    writes = set(panel.findChildren(QWidget)) - {compare.btn_try}
+    starts = {
+        "Space on Re-evaluate": compare.btn_try,  # where the focus is before
+        "a click on Re-evaluate": compare.why,
+        "Ctrl+R in the why box": compare.why,
+        "Ctrl+R in Show:": compare.mode,
+        "Ctrl+R in the decision table": compare.metrics,
+    }
+    ends = ("answer", "error", "Cancel by Space", "Cancel by a click", "answer on Cancel", "error on Cancel")
+    ends += ("Operator's sign-in on Cancel", "Operator's sign-in on the tick")
+    ends += ("answer behind another window", "answer on Cancel behind another window")  # hasFocus() False for all
+    wrong = []
+
+    def space(focus: QWidget) -> None:
+        """A further Space where the focus is, and a list it opened, Show:'s say, closed."""
+        qtbot.keyClick(focus, Qt.Key.Key_Space)
+        if (popup := QApplication.activePopupWidget()) is not None:
+            popup.close()
+            win.activateWindow()  # which the offscreen platform leaves inactive once a popup closes
+            qtbot.waitUntil(lambda: QApplication.activeWindow() is win, timeout=5000)
+
+    for (start, before), end in itertools.product(starts.items(), ends):
+        gate.clear()
+        fail[0], revisions = "error" in end, len(ctx.recipe_history(BOARD))
+        compare.ai_thr.tick.setChecked(False)  # a Space on it would set it
+        before.setFocus(Qt.FocusReason.TabFocusReason)
+        if start.startswith("Ctrl+R"):
+            _press(qtbot, win, compare)
+        elif start.startswith("Space"):
+            qtbot.keyClick(compare.btn_try, Qt.Key.Key_Space)
+        else:
+            qtbot.mouseClick(compare.btn_try, Qt.MouseButton.LeftButton)
+        qtbot.waitUntil(cancel.isVisible, timeout=10000)
+        if "Cancel" in end:
+            cancel.setFocus(Qt.FocusReason.TabFocusReason)  # reached by Tab, one from the "why" box
+        elif "tick" in end:
+            compare.ai_thr.tick.setFocus(Qt.FocusReason.TabFocusReason)  # moved to the panel while it runs
+        if end == "Cancel by Space":
+            qtbot.keyClick(cancel, Qt.Key.Key_Space)
+        elif end == "Cancel by a click":
+            qtbot.mouseClick(cancel, Qt.MouseButton.LeftButton)
+        elif "sign-in" in end:
+            win.set_user("operator")
+        if "behind" in end:
+            other.show()
+            other.activateWindow()
+            qtbot.waitUntil(lambda: not win.isActiveWindow(), timeout=5000)
+        gate.set()
+        qtbot.waitUntil(lambda: ctx.jobs.idle() and compare._bg is None, timeout=20000)
+        if "behind" in end:
+            other.hide()
+            win.activateWindow()  # in front again: the focus is the control the window holds it on
+            qtbot.waitUntil(win.isActiveWindow, timeout=5000)
+        back = "Re-evaluate" in start or "Cancel" in end  # pressed, or Cancel, which hides: back on Re-evaluate
+        want = compare.why if "sign-in" in end else compare.btn_try if back else before
+        focus, shown = QApplication.focusWidget(), [title.split()[0] for title, _ in dialogs]
+        assert focus is not None, (start, end)
+        space(focus)
+        qtbot.waitUntil(lambda: ctx.jobs.idle() and compare._bg is None, timeout=20000)  # a run it started
+        saved, ticked = len(ctx.recipe_history(BOARD)) - revisions, compare.ai_thr.tick.isChecked()
+        if focus is not want or focus in writes or saved or ticked or shown != ["AOI-CMP-004"] * fail[0]:
+            name = f"{type(focus).__name__} {getattr(focus, 'text', str)()!r}"
+            wrong.append(f"{start}, ended by {end}: focus on {name}, revisions +{saved}, ticked {ticked}, {shown}")
+        dialogs.clear()
+        if "sign-in" in end:
+            win.set_user("engineer")
+    for control in (*panel.findChildren(QAbstractSpinBox), *panel.findChildren(QAbstractButton), compare.mode):
+        compare.ai_thr.tick.setChecked(True)  # its field takes the focus only then
+        control.setFocus(Qt.FocusReason.TabFocusReason)
+        win.set_user("admin")
+        kept, revisions = QApplication.focusWidget() is control, len(ctx.recipe_history(BOARD))
+        win.set_user("operator")  # with no run
+        focus, want = QApplication.focusWidget(), compare.why if panel.isAncestorOf(control) else control
+        assert focus is not None, control
+        space(focus)
+        if focus is not want or not kept or len(ctx.recipe_history(BOARD)) != revisions:
+            on = [f"{type(w).__name__} {getattr(w, 'text', str)()!r}" for w in (control, focus)]
+            wrong.append(f"no run, the focus on {on[0]}, kept by an Admin's sign-in {kept}, an Operator's: on {on[1]}")
+        win.set_user("engineer")
+    assert not wrong, "\n".join(wrong)
 
 
 def test_req_cmp_005_reevaluate_at_5_mp_answers_within_300_ms_off_the_window_thread(

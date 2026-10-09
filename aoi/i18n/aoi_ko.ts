@@ -98,13 +98,13 @@
     </message>
     <message>
         <location line="+3"/>
-        <location line="+77"/>
-        <location line="+405"/>
+        <location line="+78"/>
+        <location line="+452"/>
         <source>Golden board</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-481"/>
+        <location line="-529"/>
         <source>AI model</source>
         <translation type="unfinished"></translation>
     </message>
@@ -134,7 +134,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+52"/>
+        <location line="+53"/>
         <source>Test Image…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -160,12 +160,12 @@
     </message>
     <message>
         <location line="+15"/>
-        <location line="+623"/>
+        <location line="+670"/>
         <source>Test board</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-617"/>
+        <location line="-664"/>
         <source>Inspecting…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -200,17 +200,22 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+14"/>
+        <location line="+17"/>
+        <source>Re-evaluating…</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+3"/>
         <source>Try other thresholds (nothing is saved until you press Save to Recipe)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+135"/>
+        <location line="+174"/>
         <source>Would be: {verdict}</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+142"/>
+        <location line="+144"/>
         <source>The verdict and the decision table are the stored ones; press Re-evaluate › to inspect the board again with today&apos;s Golden board.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -236,7 +241,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-547"/>
+        <location line="-588"/>
         <source>AI score threshold</source>
         <translation type="unfinished"></translation>
     </message>
@@ -266,7 +271,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+2"/>
+        <location line="+3"/>
         <source>Save to Recipe</source>
         <translation type="unfinished"></translation>
     </message>
@@ -287,7 +292,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+111"/>
+        <location line="+151"/>
         <source>Test board: {file}</source>
         <translation type="unfinished"></translation>
     </message>
@@ -417,7 +422,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+76"/>
+        <location line="+81"/>
         <source>Inspect a board on Inspection, or pick a test image.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -622,7 +627,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/compare.py" line="-103"/>
+        <location filename="../ui/pages/compare.py" line="-108"/>
         <source>Changing recipes</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2865,7 +2870,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/compare.py" line="-616"/>
+        <location filename="../ui/pages/compare.py" line="-664"/>
         <source>Compare</source>
         <translation type="unfinished"></translation>
     </message>
