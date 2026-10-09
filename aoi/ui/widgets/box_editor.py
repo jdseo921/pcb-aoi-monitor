@@ -54,11 +54,13 @@ class BoxEditor(ImageView):
     box moves it and a drag on a handle of the selected box resizes it, and a drag elsewhere pans. A selected box under
     two handles across on screen has its handles outside it, so a press inside it still moves it. Each gesture that
     changes the boxes ends in one `edited`, at its release, so a drag is stored once, not at every move; `settled`
-    follows the end of every gesture."""
+    follows the end of every gesture. While `locked` (the image read or a change stored) a press that would change a
+    box only says `refused`."""
 
     edited = Signal()  # the boxes changed: the page stores them
     picked = Signal(int)  # the selected box, -1 for none
     settled = Signal()  # a drag ended, stored or not
+    refused = Signal()  # a change asked for while `locked`
 
     def __init__(self, parent: QWidget | None = None, placeholder: str = "") -> None:
         super().__init__(parent, placeholder)
@@ -66,6 +68,7 @@ class BoxEditor(ImageView):
         self.chosen = -1
         self.new_type = names()[0]
         self._grab: tuple[int, int, QPointF, DefectBox] | None = None  # box, corner (-1: the box), start, box before
+        self.locked = False
         self.roiDrawn.connect(self._drawn)
         self.viewChanged.connect(self.redraw)  # the handles and labels follow the zoom
 
@@ -163,7 +166,11 @@ class BoxEditor(ImageView):
 
     def mousePressEvent(self, e: QMouseEvent) -> None:
         left = e.button() == Qt.MouseButton.LeftButton
-        if self._draw_mode or not left or (hit := self._hit(e.position().toPoint())) is None:
+        hit = None if self._draw_mode or not left else self._hit(e.position().toPoint())
+        if left and self.locked and (self._draw_mode or hit is not None):
+            self.refused.emit()
+            return
+        if hit is None:
             super().mousePressEvent(e)  # Draw mode's drag, or a pan
             return
         self.choose(hit[0])

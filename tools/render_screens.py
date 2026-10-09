@@ -290,6 +290,7 @@ def prepare(win: MainWindow, title: str, dataset: Path) -> None:
         missing = str(page.ctx.samples(BOARD_MODEL, "NG")[0]["id"])  # the label editor on its box, selected
         rows = range(page.samples.rowCount())
         page.samples.selectRow(next(r for r in rows if cell_text(page.samples, r, 0) == missing))
+        wait_until(page.editor.idle)  # its image and boxes, read on a pool thread
         page.editor.view.choose(0)
         if not page.editor.draw_btn.isChecked():  # Draw mode on: the button's on look in the shot and the size walk
             page.editor.draw_btn.click()
