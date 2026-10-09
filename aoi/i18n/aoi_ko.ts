@@ -2631,6 +2631,21 @@
         <source>a defect box&apos;s position and size are not whole pixels</source>
         <translation>결함 박스의 위치와 크기가 정수 픽셀이 아닙니다</translation>
     </message>
+    <message>
+        <location filename="../core/crypto.py" line="+33"/>
+        <source>{file} is not encrypted</source>
+        <translation>{file}이(가) 암호화되어 있지 않습니다</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>{file} is encrypted under another store&apos;s key</source>
+        <translation>{file}이(가) 다른 저장소의 키로 암호화되어 있습니다</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>{file} was changed, moved or damaged since it was written</source>
+        <translation>{file}이(가) 기록된 뒤 변경, 이동 또는 손상되었습니다</translation>
+    </message>
 </context>
 <context>
     <name>Explain</name>
