@@ -51,7 +51,7 @@ from .imaging import (
     warp_to,
 )
 from .inspector import NG, OK, WARN, AiEvidence, InspectionResult, Inspector, JudgedBy, ai_check, draw_overlay, re_grade
-from .jobs import JobCancelled, Jobs
+from .jobs import Job, JobCancelled, Jobs
 from .labels import DefectBox
 from .maps import load_maps, map_paths, picture_shape, save_maps
 from .recipe import Recipe
@@ -294,6 +294,8 @@ class AppContext:
         # background work (REQ-SET-021): screens submit through aoi/ui/workers, tests directly; a job acts as the user
         # who submitted it (#177)
         self.jobs = Jobs(context=self._acting_context)
+        self.training: Job[dict[str, Any]] | None = None  # the run start_training began last, running or ended
+        self.training_progress: run_progress.RunProgress | None = None  # its latest report, for the header and Home
         self._golden_alarmed: set[tuple[str, str | None, str]] = set()  # each (board model, file, code) alarmed (#195)
         self._golden_lock = threading.Lock()  # the Recipe Editor reads on the UI thread, Compare on the pool's
         self._closed = False
@@ -522,6 +524,34 @@ class AppContext:
         return report
 
     # --- training ------------------------------------------------------------
+    @requires("Engineer", QT_TRANSLATE_NOOP("Errors", "Training an AI model"))
+    def start_training(
+        self,
+        dataset_uuid: str,
+        epochs: int | None = None,
+        image_size: int | None = None,
+        use: str = "own",
+        listen: Callable[[Job[dict[str, Any]]], None] | None = None,
+    ) -> Job[dict[str, Any]]:
+        """Train in the background as a job of the context, not of a page, so the run goes on whatever page is shown
+        (REQ-TRN-008): `train` on the pool, its latest report kept as `training_progress` for the header and Home,
+        Cancel through the job's `cancel()`. One run at a time: a second while one goes on is refused with AOI-TRN-047.
+        `listen(job)` registers listeners before the job is submitted, so none misses a report."""
+        if self.training is not None and not self.training.done:
+            raise AoiError("AOI-TRN-047")
+        job: Job[dict[str, Any]] = Job(
+            "train", self.train, dataset_uuid, epochs, image_size, use=use, with_progress=True
+        )
+
+        def keep(values: tuple[Any, ...]) -> None:  # on the pool thread; the header reads it on the UI thread
+            self.training_progress = values[0]
+
+        job.on_progress(keep)
+        if listen is not None:
+            listen(job)
+        self.training, self.training_progress = job, None
+        return self.jobs.submit(job)
+
     @requires("Engineer", QT_TRANSLATE_NOOP("Errors", "Training an AI model"))
     def train(
         self,

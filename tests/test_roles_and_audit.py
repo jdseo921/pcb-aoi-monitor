@@ -185,9 +185,11 @@ WRITES: dict[str, tuple[str, Callable[[AppContext, Path, Path], Any]]] = {
     "add_user": ("user.change", lambda ctx, data, tmp: ctx.add_user("kim", "Engineer")),
     "save_settings": ("settings.change", lambda ctx, data, tmp: ctx.save_settings({"default_epochs": 7})),
 }
-# what only an Engineer does that writes nothing, so no audit entry: re-evaluating a result (REQ-CMP-005, since S28a)
+# what only an Engineer does that writes no audit entry itself: re-evaluating a result (REQ-CMP-005, since S28a), and
+# starting a training run, whose job writes model.train once it ends (REQ-TRN-008, S40)
 CHECKED_READS: dict[str, Callable[[AppContext, Path, Path], Any]] = {
     "re_evaluate": lambda ctx, data, tmp: ctx.re_evaluate("a-result-uuid", Recipe(board_model="TINY")),
+    "start_training": lambda ctx, data, tmp: ctx.start_training(ctx.training_version("TINY")["uuid"], 5, 32).wait(60),
 }
 # every public AppContext call that is not role-checked: reads, what an Operator does, and the lifecycle
 UNCHECKED = {

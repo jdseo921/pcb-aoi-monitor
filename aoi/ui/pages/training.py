@@ -31,6 +31,7 @@ from PySide6.QtWidgets import (
 )
 
 from ...core.imaging import IMAGE_EXTS
+from ...core.jobs import Job
 from ...core.labels import DefectBox
 from ...core.run_progress import RunProgress
 from ...core.sample_import import ImportFile, ImportReport, folder_files
@@ -42,7 +43,7 @@ from .. import theme
 from ..errors import phrase_text
 from ..widgets.busy import BusyOverlay
 from ..widgets.empty_state import EmptyState
-from ..workers import Worker, start
+from ..workers import Worker, keep
 from .base import (
     QT_TRANSLATE_NOOP,
     Page,
@@ -599,21 +600,30 @@ class TrainingPage(Page):
 
     # --- training ---------------------------------------------------------------
     def train(self) -> None:
-        """Train from the dataset version picked; the run refuses one it cannot train from before reading an image."""
+        """Train from the dataset version picked, as a job of the context that goes on whatever page is shown
+        (REQ-TRN-008); the run refuses a version it cannot train from before reading an image."""
         if self.checked_board_model() is None or (version := self.dataset_version.currentData()) is None:
             return
-        self.log.clear()
+        size = int(self.input_size.currentText())
+        try:
+            self.ctx.start_training(version, self.epochs.value(), size, listen=self._follow)
+        except AoiError as e:  # a run already going on (AOI-TRN-047)
+            self.error(e)
+            return
+        self.log.clear()  # the run's first report is still queued for this thread
         self.bar.setValue(0)
         self.phase_line.setText("")
         self.btn_train.setEnabled(False)
         self.btn_stop.setEnabled(True)
-        size = int(self.input_size.currentText())
-        self.worker = Worker(self.ctx.train, version, self.epochs.value(), size, with_progress=True)
+
+    def _follow(self, job: Job[dict[str, Any]]) -> None:
+        """Show the run `job` here: its reports, result and end reach this page's slots on the UI thread."""
+        self.worker = Worker.of(job)
         self.worker.signals.progress.connect(self._on_progress)
         self.worker.signals.result.connect(self._on_done)
         self.worker.signals.error.connect(self.error)
         self.worker.signals.finished.connect(self._finished)
-        start(self.worker, self.ctx.jobs)
+        keep(self.worker, self.ctx.jobs)
 
     def stop(self) -> None:
         """Cancel: the run stops after the image, training step or map in hand, and saves nothing (REQ-TRN-008)."""

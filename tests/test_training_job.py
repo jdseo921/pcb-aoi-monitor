@@ -1,25 +1,32 @@
-"""REQ-TRN-008 (stage S40): a training run reports its progress and time left at least every 10 s through every phase,
-and Cancel stops it within 10 s with the active AI model kept. A fake clock stands for a slow station, each step taking
-over twice what it took at 20 MP on a 4-core cloud VM (an image read 0.86 s, docs/tests/2026-10-01-resolution-test.md; a
-step of the Golden board's median of 50 images 0.85 s; a training step at 256 px 0.22 s; a map 0.53 s). Results on the
-synthetic boards prove a code path; they are never quoted as accuracy."""
+"""REQ-TRN-008 (stage S40): training runs as a job of the AppContext, not of a page, with its progress and time left
+reported at least every 10 s through every phase, Cancel stopping it within 10 s with the active AI model kept, and
+going on whatever page is shown. A fake clock stands for a slow station, each step taking over twice what it took at
+20 MP on a 4-core cloud VM (an image read 0.86 s, docs/tests/2026-10-01-resolution-test.md; a step of the Golden
+board's median of 50 images 0.85 s; a training step at 256 px 0.22 s; a map 0.53 s). Results on the synthetic boards
+prove a code path; they are never quoted as accuracy."""
 
 from __future__ import annotations
 
+import re
+import threading
 from collections.abc import Callable
 from functools import partial
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
 import pytest
 import torch
+from pytestqt.qtbot import QtBot
 
 from aoi.core import anomaly, golden, run_progress
 from aoi.core.imaging import list_images, load_image
 from aoi.core.jobs import Job
 from aoi.core.run_progress import RunProgress
 from aoi.core.services import ALIGNING, AppContext
+from aoi.errors import AoiError
+from aoi.ui.main_window import HomePage, MainWindow
+from aoi.ui.pages.training import TrainingPage
 from tests.test_train_from_version import BOARD, boards
 from tools.trainable import trainable
 
@@ -63,19 +70,21 @@ def slow(ctx: AppContext, monkeypatch: pytest.MonkeyPatch) -> Clock:
 
 
 def run(ctx: AppContext, version: str, clock: Clock, cancel_at: str = "") -> tuple[Job[Any], Reports]:
-    """Train `version` as a job, as the Training page does, 2 epochs at 32 px: each report with the fake time it came
-    at. With `cancel_at`, Cancel at the first report whose phase starts with it, recorded as "cancel"."""
+    """Train `version` as the Training page does, 2 epochs at 32 px: each report with the fake time it came at. With
+    `cancel_at`, Cancel at the first report whose phase starts with it, recorded as "cancel"."""
     reports: Reports = []
-    job: Job[Any] = Job("train", ctx.train, version, 2, 32, with_progress=True)
 
-    def got(values: tuple[RunProgress]) -> None:
-        reports.append((clock.now, values[0]))
-        if cancel_at and values[0].phase.startswith(cancel_at) and not job.cancelled:
-            reports.append((clock.now, "cancel"))
-            job.cancel()
+    def listen(job: Job[Any]) -> None:
+        def got(values: tuple[RunProgress]) -> None:
+            reports.append((clock.now, values[0]))
+            if cancel_at and values[0].phase.startswith(cancel_at) and not job.cancelled:
+                reports.append((clock.now, "cancel"))
+                job.cancel()
 
-    job.on_progress(got)
-    assert ctx.jobs.submit(job).wait(300)
+        job.on_progress(got)
+
+    job = ctx.start_training(version, 2, 32, listen=listen)
+    assert job.wait(300)
     return job, reports
 
 
@@ -177,7 +186,69 @@ def test_req_trn_008_cancel_keeps_active_model(
     job, reports = run(ctx, version, clock, cancel_at=phase)
     cancelled = next(t for t, p in reports if p == "cancel")
     assert reports[-1] == (cancelled, "cancel") and clock.now - cancelled <= 10, (phase, clock.now - cancelled)
-    assert job.cancelled and job.result is None and job.error is None
+    assert job.cancelled and job.result is None and job.error is None and ctx.training is job
     assert ctx.models(BOARD) == models and ctx.db.active_model(BOARD) == active
     assert ctx.db.reference(BOARD) == reference and sorted(ctx.settings.models_dir.rglob("*")) == files
     assert ctx.audit_entries() == audit
+
+
+def test_req_trn_008_one_run_at_a_time(
+    ctx: AppContext, synthetic_dataset: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A second run while one goes on is refused with AOI-TRN-047 and leaves the first going on to its end; once it
+    has ended, a run starts again."""
+    boards(ctx, synthetic_dataset, 20)
+    version = trainable(ctx, BOARD)
+    go = threading.Event()
+    read = ctx._read_frozen
+    monkeypatch.setattr(ctx, "_read_frozen", lambda *a: go.wait(60) and read(*a))
+    first = ctx.start_training(version, 2, 32)
+    with pytest.raises(AoiError) as second:
+        ctx.start_training(version, 2, 32)
+    assert second.value.code == "AOI-TRN-047" and ctx.training is first
+    go.set()
+    assert first.wait(300) and first.result is not None and len(ctx.models(BOARD)) == 1
+    assert ctx.start_training(version, 2, 32).wait(300) and len(ctx.models(BOARD)) == 2
+
+
+def test_req_trn_008_survives_page_change(
+    qtbot: QtBot, ctx: AppContext, synthetic_dataset: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A run started on Training goes on while another page is shown: the header shows it on every page, and Home's
+    Self-train card too, and the header opens Training; once it ends, the header and the card hide it and Training
+    shows the AI model saved."""
+    boards(ctx, synthetic_dataset, 20)
+    trainable(ctx, BOARD)
+    go = threading.Event()
+    read = ctx._read_frozen
+    monkeypatch.setattr(ctx, "_read_frozen", lambda *a: go.wait(60) and read(*a))  # the run goes on until let go
+    win = MainWindow(ctx)
+    qtbot.addWidget(win)
+    win.show()
+    win.set_user("engineer")
+    win._on_board_model(BOARD)
+    win.navigate("Training")
+    page = cast(TrainingPage, win.pages["Training"])
+    page.epochs.setValue(page.epochs.minimum())
+    page.input_size.setCurrentIndex(0)
+    try:
+        page.btn_train.click()
+        win.navigate("Inspection")
+        qtbot.waitUntil(lambda: win.training_link.isVisible(), timeout=10000)
+        assert re.fullmatch(
+            r"Training \d+ % · (estimating…|less than a minute left|about \d+ min left)", win.training_link.text()
+        )
+        win.navigate("Home")
+        home = cast(HomePage, win.pages["Home"])
+        qtbot.waitUntil(lambda: home.training_line.isVisible(), timeout=10000)
+        assert re.fullmatch(r"Training running \d+ % · .+", home.training_line.text())
+        win.training_link.click()
+        assert win.stack.currentWidget() is page and page.btn_stop.isEnabled()
+        win.navigate("Inspection")
+    finally:
+        go.set()
+    qtbot.waitUntil(lambda: page.worker is None, timeout=300000)
+    qtbot.waitUntil(lambda: not win.training_link.isVisible(), timeout=5000)
+    assert not home.training_line.isVisible() and len(ctx.models(BOARD)) == 1
+    win.navigate("Training")
+    assert "Saved AI model v1.0" in page.log.toPlainText() and page.bar.value() == 100

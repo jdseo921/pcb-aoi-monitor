@@ -606,13 +606,14 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+213"/>
+        <location line="+215"/>
         <location line="+125"/>
         <source>Importing samples</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location line="+39"/>
+        <location line="+28"/>
         <source>Training an AI model</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1016,7 +1017,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-2078"/>
+        <location line="-2108"/>
         <source>no defect type was given</source>
         <translation>결함 유형이 지정되지 않았습니다</translation>
     </message>
@@ -1031,7 +1032,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+606"/>
+        <location line="+636"/>
         <source>its UUID {found} is not {uuid}, as in the AI model registry</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1098,7 +1099,7 @@
     </message>
     <message>
         <location line="+21"/>
-        <location filename="../ui/main_window.py" line="+401"/>
+        <location filename="../ui/main_window.py" line="+433"/>
         <source>start-up</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2091,6 +2092,21 @@
     </message>
     <message>
         <location line="+8"/>
+        <source>Training already running</source>
+        <translation>학습이 이미 실행 중</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>An AI model is already training on this station, so a second training run was not started.</source>
+        <translation>이 스테이션에서 AI 모델이 이미 학습 중이므로 두 번째 학습을 시작하지 않았습니다.</translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>Wait for the run to end, or press Cancel on the Training page, then start again; the header shows how far the run is.</source>
+        <translation>학습이 끝날 때까지 기다리거나 학습 페이지에서 취소를 누른 뒤 다시 시작하세요. 헤더에 학습 진행 상황이 표시됩니다.</translation>
+    </message>
+    <message>
+        <location line="+8"/>
         <source>AI model, recipe, scale or Golden board changed since the run</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2495,7 +2511,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-984"/>
+        <location line="-996"/>
         <source>Board judged NG</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2595,7 +2611,7 @@
         <translation>새 버전을 고정하고 검증 세트를 잠그면 해당 이미지는 잠긴 채로 유지됩니다. 그 버전으로 학습하십시오. 아무것도 저장되지 않았으며, 활성 AI 모델은 바뀌지 않았습니다.</translation>
     </message>
     <message>
-        <location line="+62"/>
+        <location line="+74"/>
         <source>ROI thresholds refused</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2760,7 +2776,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/training.py" line="+378"/>
+        <location filename="../ui/pages/training.py" line="+379"/>
         <location filename="../ui/pages/training_import.py" line="+38"/>
         <source>{code} {title}</source>
         <translation type="unfinished"></translation>
@@ -3002,7 +3018,7 @@
 <context>
     <name>HomePage</name>
     <message>
-        <location filename="../ui/main_window.py" line="-344"/>
+        <location filename="../ui/main_window.py" line="-375"/>
         <source>Upload samples</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3062,12 +3078,17 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+30"/>
+        <location line="+35"/>
         <source>Open {page} ›</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+18"/>
+        <location line="+12"/>
+        <source>Training running {percent} % · {left}</source>
+        <translation>학습 중 {percent} % · {left}</translation>
+    </message>
+    <message>
+        <location line="+14"/>
         <source>{ok} OK · {ng} NG uploaded</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3855,7 +3876,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+64"/>
+        <location line="+67"/>
         <source>Board model:</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3865,12 +3886,17 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+5"/>
+        <location line="+8"/>
         <source>Switch User</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+17"/>
+        <location line="+13"/>
+        <source>Training {percent} % · {left}</source>
+        <translation>학습 {percent} % · {left}</translation>
+    </message>
+    <message>
+        <location line="+16"/>
         <source>New board model</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4137,7 +4163,7 @@
 <context>
     <name>Page</name>
     <message>
-        <location filename="../ui/main_window.py" line="-334"/>
+        <location filename="../ui/main_window.py" line="-365"/>
         <source>Home</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4898,7 +4924,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/services.py" line="-2259"/>
+        <location filename="../core/services.py" line="-2289"/>
         <source>Aligning {count} images to the reference board</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4947,12 +4973,12 @@
     </message>
     <message>
         <location line="+1"/>
-        <location line="+605"/>
+        <location line="+614"/>
         <source>Import Folder…</source>
         <translation>폴더 가져오기…</translation>
     </message>
     <message>
-        <location line="-597"/>
+        <location line="-606"/>
         <source>Training needs 20 OK images or more in a dataset version&apos;s training set</source>
         <translation>학습에는 데이터셋 버전의 학습 세트에 OK 이미지가 20장 이상 필요합니다</translation>
     </message>
@@ -5064,7 +5090,7 @@
         <translation type="unfinished">취소</translation>
     </message>
     <message>
-        <location line="+400"/>
+        <location line="+409"/>
         <source>{phase} · {percent} % · {left}</source>
         <translation>{phase} · {percent} % · {left}</translation>
     </message>
@@ -5074,7 +5100,7 @@
         <translation>취소됨: AI 모델을 저장하지 않았으며 활성 AI 모델은 바뀌지 않았습니다.</translation>
     </message>
     <message>
-        <location line="-399"/>
+        <location line="-408"/>
         <source>AI model versions</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5174,7 +5200,7 @@
         <translation>{type} ×{count}</translation>
     </message>
     <message>
-        <location line="+44"/>
+        <location line="+53"/>
         <source>Saved AI model {version} ({seconds} s). Golden board updated.</source>
         <translation type="unfinished"></translation>
     </message>
