@@ -697,15 +697,13 @@ class AppContext:
             atomic.write_text(card_md, model_card.markdown(card))
             check()  # the last chance to stop: once registered, the run ends with it; the files go below
             summary = {k: v for k, v in model.meta.items() if k not in ("loss_history", "err_mean", "err_std")}
-            with self.db.transaction():  # the Golden board in use, the active version and the entry change together
-                before = self.db.reference(board_model)
-                self.db.set_reference(board_model, str(golden_path))
-                self.db.register_model(board_model, version, str(path), summary, activate=True, uid=model_uuid)
-                old = {
-                    "active_version": previous["version"] if previous else None,
-                    "reference": to_stored(Path(before), self.settings.root) if before else None,
-                }
-                self.audit("model.train", "model", model_uuid, old, {"version": version, "metrics": summary})
+            # The version installs inactive, its Golden board with it: the Engineer activates it, with its card, on
+            # Training (REQ-TRN-010, Engineering "Go-live gate"); boards stay judged by the active version until then.
+            with self.db.transaction():  # the version and its entry together
+                self.db.register_model(board_model, version, str(path), summary, activate=False, uid=model_uuid)
+                old = {"active_version": previous["version"] if previous else None}
+                after = {"version": version, "activated": False, "metrics": summary}
+                self.audit("model.train", "model", model_uuid, old, after)
         except BaseException:
             _remove(files(version))  # not registered: no file is left for a later run to take for its own
             raise
@@ -2317,7 +2315,9 @@ class AppContext:
             if entry["object_uuid"] not in rows or entry["action"] not in SWITCHES:
                 continue
             after, before = entry["after"] or {}, entry["before"] or {}
-            made = after.get("active_version", after.get("version"))  # model.train's entry names the version it made
+            if not after.get("activated", True):  # a training that installed its version inactive (S43) switched none
+                continue
+            made = after.get("active_version", after.get("version"))  # an earlier model.train activated its version
             if made == active["version"]:
                 previous = before.get("active_version")
                 return by_version.get(previous) if previous and previous != made else None
@@ -2329,6 +2329,8 @@ class AppContext:
         it was recorded) keeps the board model's. A recorded Golden board that cannot be read is refused with
         AOI-TRN-048 before anything changes: inspections would otherwise judge with another version's board."""
         board_model = target["board_model"]
+        if not self.card_files(int(target["id"]))[1].is_file():  # no AI model goes live without its card (REQ-TRN-011)
+            raise AoiError("AOI-TRN-049", version=target["version"], board=board_model)
         previous = self.db.active_model(board_model)
         before_ref = self.db.reference(board_model)
         stored = json.loads(target["metrics"] or "{}").get("golden_image")
@@ -2438,6 +2440,14 @@ class AppContext:
         except (OSError, ValueError):
             return None
         return card
+
+    def card_text(self, model_id: int) -> str | None:
+        """The model card of a model version as Markdown, as Training shows and prints it (REQ-TRN-011), or None when it
+        has none or its file cannot be read."""
+        try:
+            return self.card_files(model_id)[0].read_text(encoding="utf-8")
+        except OSError:
+            return None
 
     @requires("Engineer", QT_TRANSLATE_NOOP("Errors", "Exporting an AI model"))
     def export_model(self, model_id: int, dest: str | Path) -> Path:

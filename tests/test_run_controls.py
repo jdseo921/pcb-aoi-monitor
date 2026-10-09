@@ -30,7 +30,7 @@ from aoi.ui import theme
 from aoi.ui.main_window import MainWindow
 from aoi.ui.pages.inspection import NO_VERDICT, InspectionPage
 from aoi.ui.widgets.image_view import ImageView
-from tests.conftest import TINY_EPOCHS, TINY_IMAGE_SIZE, another_version
+from tests.conftest import TINY_EPOCHS, TINY_IMAGE_SIZE, activated, another_version
 from tests.test_req_done_in_v01 import BOARD, _button, _window
 from tools.trainable import trainable
 
@@ -556,7 +556,9 @@ def test_req_trn_010_a_board_started_after_an_activation_is_judged_by_the_active
     page._set_queue(boards[:3])
     run(page.next_board)  # board 1 builds the engine with v1.0, and the page keeps it
     version = trainable(trained_ctx, BOARD)
-    trained_ctx.train(version, epochs=TINY_EPOCHS, image_size=TINY_IMAGE_SIZE)  # v1.1 and its Golden board are active
+    activated(
+        trained_ctx, trained_ctx.train(version, epochs=TINY_EPOCHS, image_size=TINY_IMAGE_SIZE)
+    )  # v1.1 and its Golden board are active
     run(page.next_board)  # board 2: Next Board on the queue already loaded
     activate("v1.0")  # v1.0 with its own Golden board (an activation switches both, REQ-TRN-010, S42)
     run(page.start_run)  # board 3: Start on the queue already loaded

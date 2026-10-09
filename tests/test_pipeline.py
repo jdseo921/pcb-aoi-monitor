@@ -13,7 +13,7 @@ sys.path.insert(0, str(ROOT))
 from aoi.config import Settings  # noqa: E402
 from aoi.core.imaging import list_images  # noqa: E402
 from aoi.core.services import AppContext  # noqa: E402
-from tests.conftest import engineer  # noqa: E402
+from tests.conftest import activated, engineer  # noqa: E402
 from tools.make_synthetic_dataset import ng_type  # noqa: E402
 from tools.trainable import trainable  # noqa: E402
 
@@ -37,7 +37,7 @@ def test_train_and_detect(tmp_path: Path) -> None:
     ctx.import_samples("TEST", [str(p) for p in list_images(data / "train" / "ok")], "OK")
     for p in list_images(data / "train" / "ng"):
         ctx.import_samples("TEST", [str(p)], "NG", ng_type(p))
-    meta = ctx.train(trainable(ctx, "TEST"), epochs=15, image_size=128)
+    meta = activated(ctx, ctx.train(trainable(ctx, "TEST"), epochs=15, image_size=128))
     assert meta["image_threshold"] > 0
     assert Path(ctx.db.active_model("TEST")["path"]).exists()
 

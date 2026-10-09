@@ -70,7 +70,7 @@ def test_req_log_004_training_is_audited_as_the_engineer_who_started_it(
     qtbot.waitUntil(lambda: page.worker is None, timeout=60000)
     entry = ctx.audit_entries(action="model.train")[0]
     assert _who(entry) == ("Engineer", ctx.db.user_uuid("engineer"))
-    assert cast(dict[str, Any], ctx.active_model(BOARD))["version"] == entry["after"]["version"] != active
+    assert cast(dict[str, Any], ctx.active_model(BOARD))["version"] == active != entry["after"]["version"]  # inactive
     assert dialogs == [] and ctx.role == "Operator"
 
 

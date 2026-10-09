@@ -337,8 +337,8 @@ and the Golden board it was judged against: the CSV export of Logs & Export list
 shows a stored board beside the Golden board it was judged against. A run whose recipe turns the AI check off moves only
 when the recipe, the scale or the Golden board changes, as no AI model judges its boards: an activation or a rollback
 during it
-raises no AOI-INSP-013, though the boards after it name the version now active, while a training run still does, as it
-sets a new Golden board, and the line names no AI model but says the AI check was off.
+raises no AOI-INSP-013, though the boards after it name the version now active, and neither does a training run, which
+installs its version inactive with its Golden board (section 4, Versions).
 A scale set changes nothing that judges a board while the recipe holds its sizes in px, so it then moves no run, with
 the AI check on or off.
 
@@ -349,7 +349,19 @@ and in a line under the table: for the next boards, train again or activate anot
 own for the board model (section 5). Where such a row's sample counts cannot be read either, its OK/NG cell stays
 empty.
 
-(to be written: versions, activation and rollback, the model card)
+**Versions, activation and rollback.** Each training run adds a version to the AI models list with its Golden board
+and its AI model card, inactive: boards stay judged by the active version until you select the new one and press
+Activate Selected. Activating a version makes its own Golden board the one boards are compared with, in the same step.
+Roll Back goes back, in one click, to the version that was active before the active one, with its Golden board; its
+label names that version ("Roll Back to v1.0") and it is off while there is none. Every activation and rollback is in
+the audit trail with the version and Golden board before and after. A version without an AI model card cannot be made
+active (AOI-TRN-049), nor one whose Golden board cannot be read (AOI-TRN-048); the version in use stays.
+
+**AI model card.** Select a version and press AI Model Card to read its card under the list: what it is and what it
+was trained on (dataset version, customer, seed, code, settings, who trained it and when), the set-up, its thresholds,
+its known limits and the sign-off lines for the AI lead and the quality lead. Until it is tested on its locked
+validation set, its first line says so and it gives no rate. Export AI Model… writes the weights-only `.pt` with its
+card beside it, as `.card.md` and `.card.json`.
 
 ## 5. Recipes
 
