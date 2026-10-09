@@ -18,6 +18,7 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QProgressBar,
     QSplitter,
+    QTabWidget,
     QVBoxLayout,
     QWidget,
 )
@@ -28,6 +29,7 @@ from ...core.inspector import InspectionResult, JudgedBy
 from ...core.recipe import scale_digits
 from ...core.services import AppContext
 from ...errors import AoiError, Phrase
+from ...times import to_local
 from .. import theme
 from ..errors import phrase_text
 from ..widgets.busy import BusyOverlay
@@ -92,6 +94,10 @@ class ModelTestPage(Page):
         self.run_board_model: str | None = None  # and the board model they were run for, while shown (#180)
         self.run_judged: JudgedBy | None = None  # and what judged them: AI model, recipe revision, Golden board (#250)
 
+        self.tabs = QTabWidget()  # Run, and History: every stored run, reopened in Run (REQ-TST-005)
+        run_tab = QWidget()
+        run_layout = QVBoxLayout(run_tab)
+        run_layout.setContentsMargins(0, 0, 0, 0)
         bar = QHBoxLayout()
         bar.addWidget(button(self.tr("Select Test Folder…"), slot=self.pick))
         self.btn_run = button(self.tr("Run Test"), "primary", self.run)
@@ -101,13 +107,13 @@ class ModelTestPage(Page):
         self.folder_label = QLabel(self.tr("No folder selected"))
         self.folder_label.setObjectName("muted")
         bar.addWidget(self.folder_label, 1)
-        self.root.addLayout(bar)
+        run_layout.addLayout(bar)
         src = QHBoxLayout()  # a frozen dataset version's locked validation set, or a labelled folder (REQ-TST-001)
         src.addWidget(QLabel(self.tr("Source")))
         self.source = QComboBox()
         self.source.currentIndexChanged.connect(self._source_changed)
         src.addWidget(self.source, 1)
-        self.root.addLayout(src)
+        run_layout.addLayout(src)
 
         tiles = QGridLayout()
         self.tiles = {
@@ -122,18 +128,18 @@ class ModelTestPage(Page):
         }
         for i, t in enumerate(self.tiles.values()):
             tiles.addWidget(t, 0, i)
-        self.root.addLayout(tiles)
+        run_layout.addLayout(tiles)
         self.confusion = QLabel("")
         self.confusion.setObjectName("muted")
-        self.root.addWidget(self.confusion)
+        run_layout.addWidget(self.confusion)
         self.run_note = QLabel("")  # what judged the run and what is in use now, once they differ (#250)
         self.run_note.setObjectName("muted")
         self.run_note.setWordWrap(True)
         self.run_note.hide()
-        self.root.addWidget(self.run_note)
+        run_layout.addWidget(self.run_note)
         self.bar = QProgressBar()
         self.bar.setVisible(False)
-        self.root.addWidget(self.bar)
+        run_layout.addWidget(self.bar)
 
         split = QSplitter(Qt.Orientation.Horizontal)
         self.headers = [
@@ -159,7 +165,69 @@ class ModelTestPage(Page):
         pl.addWidget(self.view, 1)
         split.addWidget(preview)
         split.setSizes([800, 800])
-        self.root.addWidget(split, 1)
+        run_layout.addWidget(split, 1)
+        self.tabs.addTab(run_tab, self.tr("Run"))
+        self.tabs.addTab(self._history_tab(), self.tr("History"))
+        self.tabs.currentChanged.connect(lambda i: self._fill_history() if i == 1 else None)
+        self.root.addWidget(self.tabs, 1)
+
+    def _history_tab(self) -> QWidget:
+        """Every stored run of the board model, newest first: its time, AI model, dataset version or folder, what
+        judged it, missed defects and false calls; Open shows it on Run (REQ-TST-005)."""
+        tab = QWidget()
+        hl = QVBoxLayout(tab)
+        hl.setContentsMargins(0, 0, 0, 0)
+        self.history = make_table(
+            [
+                self.tr("Time"),
+                self.tr("AI model"),
+                self.tr("Dataset or folder"),
+                self.tr("Settings"),
+                self.tr("Missed defects"),
+                self.tr("False calls"),
+            ]
+        )
+        self.history.doubleClicked.connect(lambda _i: self.open_run())
+        self.history_empty = EmptyState(self.history)
+        hl.addWidget(self.history, 1)
+        row = QHBoxLayout()
+        row.addWidget(button(self.tr("Open"), slot=self.open_run))
+        row.addStretch(1)
+        hl.addLayout(row)
+        self._runs: list[dict[str, Any]] = []
+        return tab
+
+    def _fill_history(self) -> None:
+        bm = self.board_model
+        self._runs = self.ctx.test_runs(bm) if bm else []
+        names = {d["uuid"]: d["name"] for d in self.ctx.datasets(bm)} if bm else {}
+        rows = []
+        for run in self._runs:
+            source = names.get(run["dataset_uuid"], run["dataset_uuid"]) if run.get("dataset_uuid") else run["folder"]
+            judged = run["judged_by"]
+            settings = self.tr("recipe revision {revision}").format(revision=judged.recipe_rev or 0) if judged else "—"
+            rates = run["metrics"].get("rates") or stats.validation_rates(run["results"])
+            rows.append([
+                to_local(run["time"]), run["model_version"] or "—", source, settings,
+                phrase_text(stats.text(rates["missed_defects"])), phrase_text(stats.text(rates["false_calls"])),
+            ])  # fmt: skip
+        fill_table(self.history, rows)
+        if self._runs:
+            self.history_empty.hide()
+        else:
+            self.history_empty.show_state(self.tr("No runs stored yet"), self.tr("Run Test stores each run here."))
+
+    def open_run(self) -> None:
+        """The run selected on History, shown on Run as it was stored: rows, tiles and previews (REQ-TST-005)."""
+        sel = self.history.selectionModel().selectedRows()
+        if not sel or (bm := self.board_model) is None:
+            return
+        run = self.ctx.test_run(self._runs[sel[0].row()]["uuid"])
+        if run is None:
+            return
+        source = str(run["folder"])
+        self._show((run["metrics"], run["results"], run["judged_by"]), source, bm)
+        self.tabs.setCurrentIndex(0)
 
     def _fill_sources(self) -> None:
         """The board model's frozen versions whose validation set is locked, newest first and picked, then a labelled
@@ -239,6 +307,7 @@ class ModelTestPage(Page):
             self.btn_run.setEnabled(True)
             self.btn_run.setText(self.tr("Run Test Again") if self.rows else self.tr("Run Test"))
             self.bar.setVisible(False)
+            self._fill_history()  # the run just stored heads the list
 
         w.signals.progress.connect(on_progress)
         w.signals.result.connect(lambda out: self._show(out, folder, bm))  # folder and board model go with them
@@ -444,6 +513,7 @@ class ModelTestPage(Page):
 
     def on_board_model_changed(self, name: str | None) -> None:
         self._fill_sources()
+        self._fill_history()
         if self.run_board_model not in (None, name):  # another board model's run is not shown, previewed or reported
             self._clear_run()  # under this one's name (#180)
 
