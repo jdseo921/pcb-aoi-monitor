@@ -69,6 +69,24 @@ tab." with [Open Samples ›].
 | AOI-TRN-023 | The manifest does not match | n files changed or missing since the freeze | The version is marked; train from another version; Copy Details lists the files |
 | AOI-TRN-024 | The dataset cannot be frozen | No customer set | Pick the customer |
 | AOI-TRN-025 | The dataset store cannot be opened | Encrypted store key missing or wrong | Check the station's key in Settings (Admin); details in the log |
+| AOI-TRN-044 | The dataset store was not changed | The reason names it: no such store, a board model in another store, a key the key store refused, a file that would not go | Do what the reason says, then try again |
+
+## Dataset stores (S38 builds the calls; screens proposed, not built)
+
+Settings › Dataset stores, Admin only. A table of the stores: customer, key id (first 8 hex digits), created, board
+models, shredded on. Actions, each an inline sheet, never a dialog over a dialog:
+
+- **New Store…**: the customer (F). On Create the sheet shows the recovery sheet (52 characters in 13 groups of
+  four, the store UUID and key id) with Print Sheet…; Close enables once "I have printed it and will keep it apart
+  from the station" is ticked, since the sheet is never shown again.
+- **Restore Key…**: the 13 groups typed (any case, spaces or hyphens); a wrong sheet says to check each group.
+- **Move Board Model In…**: a board model in no store; progress over 10 s with the file count; a move that stopped is
+  finished by the same button, which then reads Finish Moving In.
+- **Shred Store…**: red, never the primary. The sheet names the customer, the board models and the file and AI model
+  counts, says the step cannot be undone and that the sheet's holder destroys the sheet, and enables Shred once the
+  customer's name is typed.
+
+Open for Jay: whether the store is picked at a board model's first import (ADR 0010, As built in S38).
 
 ## Requirements served
 
