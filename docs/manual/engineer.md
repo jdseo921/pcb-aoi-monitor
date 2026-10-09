@@ -410,10 +410,22 @@ activate another version on Training, or set a value of your own.
 
 ## 6. AI model test and reports
 
-(to be written: running a test, rates with counts and bounds, exports, the validation report)
+**Source.** Pick what to test in **Source**: a frozen dataset version's locked validation set, listed first and picked
+when the board model has one ("DS-…: its locked validation set, 51 images"), or a labelled folder with `ok/` and `ng/`
+sub-folders (Select Test Folder… picks it). A dataset version's images keep the labels they were frozen with and are
+checked against their SHA-256 as they are read; only a locked validation set counts as a validation (AOI-TST-003 when a
+version has none). Run Test Again with the same AI model, recipe and data gives the same verdicts and scores.
+
+**Rates with counts.** The five tiles lead with **Missed defects** (NG boards called OK, of the NG boards) and **False
+calls** (OK boards called NG, of the OK boards), then Recall, Precision and Accuracy. Each reads its count, such as "0 of
+50", with its exact one-sided 95 % bound under it ("95 % upper bound 5.8 %"): a rate is never a percent alone. A
+validation on a dataset version also stores recall per defect type, by the type each image was frozen with.
+
+(to be written: exports in full, the validation report)
 
 Each validation run is stored with a UUID and the UUID of the AI model active when it ran. **Export CSV** writes one row
-per image (`image`, `gt` the label, `ai_result` the verdict, `score`, `defects`, `pass_fail`, `ai_check`), then
+per image (`image`, `gt` the label, `ai_result` the verdict, `score`, `defects`, `pass_fail`, `ai_check`, `defect_type` as
+frozen, empty for a folder), then
 `run_uuid`, `model_version` and `model_uuid`. `ai_check` is `RAN`, `OFF` or `NO_AI_MODEL`, as on Logs & Export: with
 `OFF` the recipe turned the AI check off, so the AI model named did not judge the images, and the report says so under
 its head. `gt` is OK or NG from the image's sub-folder (`ok/` or `ng/`), or `?` for an image in neither; `pass_fail` is
