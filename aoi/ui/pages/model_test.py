@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING, Any
 from PySide6.QtCore import QBuffer, QIODevice, QMarginsF, Qt
 from PySide6.QtGui import QPageLayout, QPageSize, QPdfWriter, QTextDocument
 from PySide6.QtWidgets import (
+    QComboBox,
     QFileDialog,
     QGridLayout,
     QHBoxLayout,
@@ -22,6 +23,7 @@ from PySide6.QtWidgets import (
 )
 
 from ... import defects as taxonomy
+from ...core import stats
 from ...core.inspector import InspectionResult, JudgedBy
 from ...core.recipe import scale_digits
 from ...core.services import AppContext
@@ -55,6 +57,9 @@ NO_SCALE = QT_TRANSLATE_NOOP("Errors", "no scale")
 
 
 class MetricTile(QLabel):
+    """A rate as the sketch shows it: its name, its count "n of N" large, and its one-sided 95 % bound under it, never a
+    percent alone (REQ-TST-002)."""
+
     def __init__(self, name: str) -> None:
         super().__init__()
         self.name = name
@@ -63,11 +68,13 @@ class MetricTile(QLabel):
         self.setMinimumHeight(theme.BANNER_H)
         self.set(None)
 
-    def set(self, v: float | None) -> None:
-        val = "—" if v is None else f"{v * 100:.1f}%"
+    def set(self, rate: dict[str, Any] | None) -> None:
+        count = "—" if rate is None else phrase_text(stats.COUNT_ONLY.fill(n=rate["n"], of=rate["of"]))
+        bound = stats.bound_text(rate) if rate else None
         self.setText(
             f"<div style='font-size:{theme.FONT_PT}pt;color:{theme.TEXT_MUTED}'>{self.name}</div>"
-            f"<div style='font-size:{theme.FONT_TILE_PT}pt;font-weight:700'>{val}</div>"
+            f"<div style='font-size:{theme.FONT_TILE_PT}pt;font-weight:700'>{count}</div>"
+            f"<div style='font-size:{theme.FONT_PT}pt'>{phrase_text(bound) if bound else '&nbsp;'}</div>"
         )
 
 
@@ -95,15 +102,22 @@ class ModelTestPage(Page):
         self.folder_label.setObjectName("muted")
         bar.addWidget(self.folder_label, 1)
         self.root.addLayout(bar)
+        src = QHBoxLayout()  # a frozen dataset version's locked validation set, or a labelled folder (REQ-TST-001)
+        src.addWidget(QLabel(self.tr("Source")))
+        self.source = QComboBox()
+        self.source.currentIndexChanged.connect(self._source_changed)
+        src.addWidget(self.source, 1)
+        self.root.addLayout(src)
 
         tiles = QGridLayout()
         self.tiles = {
             k: MetricTile(n)
-            for k, n in (
-                ("accuracy", self.tr("Accuracy")),
-                ("precision", self.tr("Precision")),
+            for k, n in (  # missed defects and false calls lead (sketch Q45)
+                ("missed_defects", self.tr("Missed defects")),
+                ("false_calls", self.tr("False calls")),
                 ("recall", self.tr("Recall")),
-                ("false_call_rate", self.tr("False call rate")),
+                ("precision", self.tr("Precision")),
+                ("accuracy", self.tr("Accuracy")),
             )
         }
         for i, t in enumerate(self.tiles.values()):
@@ -147,10 +161,33 @@ class ModelTestPage(Page):
         split.setSizes([800, 800])
         self.root.addWidget(split, 1)
 
+    def _fill_sources(self) -> None:
+        """The board model's frozen versions whose validation set is locked, newest first and picked, then a labelled
+        folder (sketch: the dataset version by default)."""
+        self.source.blockSignals(True)
+        self.source.clear()
+        bm = self.board_model
+        for d in self.ctx.datasets(bm) if bm else []:
+            split = self.ctx.validation_split(d["uuid"])
+            if split is not None and split["validation"]:  # a version split with nothing held out has no validation
+                line = self.tr("{name}: its locked validation set, {count} images")
+                self.source.addItem(line.format(name=d["name"], count=len(split["validation"])), d["uuid"])
+        self.source.addItem(self.tr("Labelled folder (ok/ and ng/ sub-folders)"), None)
+        self.source.setCurrentIndex(0)
+        self.source.blockSignals(False)
+        self._source_changed()
+
+    def _source_changed(self) -> None:
+        dataset = self.source.currentData()
+        self.folder_label.setText(
+            self.source.currentText() if dataset else self.folder or self.tr("No folder selected")
+        )
+
     def pick(self) -> None:
         d = QFileDialog.getExistingDirectory(self, self.tr("Validation folder (with ok/ and ng/ sub-folders)"))
         if d:
             self.folder = d
+            self.source.setCurrentIndex(self.source.count() - 1)  # the folder picked is the source now
             self.folder_label.setText(d)
 
     def run(self) -> None:
@@ -158,12 +195,14 @@ class ModelTestPage(Page):
             return
         if (bm := self.checked_board_model()) is None:
             return
-        folder = self.folder
-        if not folder:
+        dataset = self.source.currentData()
+        picked = self.source.currentText() if dataset else self.folder  # what the report names as the run's source
+        if not dataset and not picked:
             self.pick()
-            folder = self.folder
-            if not folder:
-                return
+            picked = self.folder
+        if not picked:
+            return
+        folder = picked
         if not self.ctx.active_model(bm):
             QMessageBox.information(
                 self,
@@ -177,7 +216,10 @@ class ModelTestPage(Page):
         def progress(done: int, total: int) -> None:
             report((done, total))  # the worker's emit, bound below before the job starts
 
-        w = Worker(self.ctx.batch_test, bm, folder, progress=progress)
+        if dataset:  # its locked validation set, labelled as frozen
+            w = Worker(self.ctx.test_dataset, dataset, progress=progress)
+        else:
+            w = Worker(self.ctx.batch_test, bm, folder, progress=progress)
         report = w.signals.progress.emit  # the job holds this emit, never the worker or its signals (#132)
 
         def on_progress(a: tuple[int, int]) -> None:
@@ -211,8 +253,9 @@ class ModelTestPage(Page):
         self._clear_preview()  # nor a row of the run before, or why it was not previewed
         self._show_note()
         m = self.metrics
+        rates = m.get("rates") or stats.validation_rates(self.rows)  # a run stored before rates were (S45)
         for k, t in self.tiles.items():
-            t.set(m[k])
+            t.set(rates[k])
         counts = self.tr(
             "{labelled} labelled of {images} images  ·  TP {tp}  FN {fn}  FP {fp}  TN {tn}  ·  WARN counts as NG"
         )
@@ -361,6 +404,7 @@ class ModelTestPage(Page):
         self.shell.last_inspected = (path, res, None)  # a preview is not recorded
 
     def on_board_model_changed(self, name: str | None) -> None:
+        self._fill_sources()
         if self.run_board_model not in (None, name):  # another board model's run is not shown, previewed or reported
             self._clear_run()  # under this one's name (#180)
 
@@ -376,6 +420,8 @@ class ModelTestPage(Page):
 
     def on_show(self) -> None:
         bm = self.board_model
+        if self.btn_run.isEnabled():  # a version frozen or locked on Training since; never in the middle of a run
+            self._fill_sources()
         # An AI model trained or activated, a recipe saved or a Golden board set on another page (#250): the note says
         # so, and the pane drops the row previewed before; a row still selected is refused, as selecting it now would be
         changed = self._judged_now() if self.rows else None
@@ -465,7 +511,8 @@ class ModelTestPage(Page):
         )
         head += f"<br>{html.escape(off)}" if run.get("ai_check") == "OFF" else ""  # the AI model named did not (#246)
         tiles = "".join(f"<th>{t.name}</th>" for t in self.tiles.values())
-        values = "".join(f"<td>{m[k]:.1%}</td>" for k in self.tiles)
+        rates = m.get("rates") or stats.validation_rates(self.rows)
+        values = "".join(f"<td>{html.escape(phrase_text(stats.text(rates[k])))}</td>" for k in self.tiles)
         counts = self.tr("TP {tp} · FN {fn} · FP {fp} · TN {tn} (NG = positive class; WARN counted as NG)")
         counts = counts.format(tp=m["TP"], fn=m["FN"], fp=m["FP"], tn=m["TN"])
         headers = "".join(f"<th>{h}</th>" for h in self.headers)

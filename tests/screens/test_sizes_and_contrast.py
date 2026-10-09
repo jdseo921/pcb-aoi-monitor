@@ -81,6 +81,7 @@ from PySide6.QtWidgets import (
 from pytestqt.qtbot import QtBot
 
 from aoi.config import Settings
+from aoi.core import stats
 from aoi.core.services import AppContext
 from aoi.ui import theme
 from aoi.ui.main_window import MainWindow
@@ -708,7 +709,7 @@ def test_req_set_004_the_walk_measures_every_text_colour_of_a_label(
         assert len(headings) == 6 and not [f for w in headings for f in _check_widget("Home", win, shot, w, Counter())]
         _show(win, "AI Model Test", dataset)
         tile = win.pages["AI Model Test"].findChildren(MetricTile)[0]
-        tile.set(0.5)
+        tile.set(stats.rate(1, 2))  # a rate: its count and its bound, as a run sets them (REQ-TST-002)
         QApplication.processEvents()
         assert not _check_widget("tile", win, _pixels(win.grab().toImage()), tile, Counter())
         tile.setText(tile.text().replace(theme.TEXT_MUTED, theme.LINE_STRONG))  # MetricTile.set with another caption
