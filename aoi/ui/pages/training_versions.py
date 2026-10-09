@@ -3,17 +3,19 @@ Datasets stage 4 of 4): the datasets sketch's working set, view by view with its
 dataset store holds the board model and the allowed uses; Freeze Dataset… shows the Freeze sheet in place of the
 labeller agreement, the version it would make and a line for each thing a freeze needs, ✓ or ✗ with the fix, and
 Freeze freezes the version on the pool, with progress and Cancel. The Versions table lists the board model's frozen
-versions, and Verify Manifest re-hashes the one picked on the pool. Nothing here reads or writes the database
-itself."""
+versions; Split and Lock Validation Set… shows its sheet in the same place, and Verify Manifest re-hashes the version
+picked on the pool. Nothing here reads or writes the database itself."""
 
 from __future__ import annotations
 
+import math
+import secrets
 from collections import Counter
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QAction, QKeySequence
+from PySide6.QtGui import QAction, QIntValidator, QKeySequence
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QCheckBox,
@@ -26,7 +28,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
-from ...core.datasets import ALLOWED_USES, mismatch
+from ...core.datasets import ALLOWED_USES, VALIDATION_NG, VALIDATION_OK, mismatch, stratum
 from ...errors import AoiError
 from ...hal import VIEWS
 from ...times import to_local
@@ -116,7 +118,7 @@ class WorkingSetPanel(QGroupBox):
     def _sync(self) -> None:
         """Freeze Dataset… needs a view with an image labelled OK or NG, and no job of the page's running."""
         idle = self.page.idle()
-        self.act_freeze.setEnabled(bool(self.views) and idle and not self.sheet.isVisible())
+        self.act_freeze.setEnabled(bool(self.views) and idle and not self.page.sheet_open())
         self.btn_freeze.setToolTip("" if self.views else self.tr("Label images OK or NG on the Samples tab first"))
         for box in self.uses.values():
             box.setEnabled(idle)
@@ -197,7 +199,7 @@ class FreezeSheet(QGroupBox):
         self.revision.blockSignals(True)
         self.revision.setText(versions[0]["revision"] if versions else "")
         self.revision.blockSignals(False)
-        self.page.show_freeze_sheet(True)  # the panels under it hidden first, so the page keeps its height
+        self.page.show_sheet(self)  # the agreement hidden first, so the page keeps its height
         self.read_gate()
         self.revision.setFocus()
         self.panel.sync()
@@ -266,7 +268,7 @@ class FreezeSheet(QGroupBox):
             return
         self.hide()
         self.gate = None
-        self.page.show_freeze_sheet(False)
+        self.page.show_sheet(None)
         self.panel.sync()
 
     def freeze(self) -> None:
@@ -316,6 +318,7 @@ USES_SHORT = {  # the Versions table's Uses cell, as the sketch writes it
     "demos": QT_TRANSLATE_NOOP("VersionsPanel", "demos"),
 }
 FOUND_SHOWN = 5  # the changed or missing files named under the table; the rest are counted
+SEED_TOP = 2**31 - 1  # a split's seed is 0 to this, as AppContext.lock_validation_set draws one
 
 
 class VersionsPanel(QGroupBox):
@@ -328,6 +331,7 @@ class VersionsPanel(QGroupBox):
         self.page, self.ctx = page, page.ctx
         self.board_model: str | None = None
         self.rows: list[dict[str, Any]] = []
+        self.counts: dict[str, dict[str, int]] = {}  # dataset_counts, by version UUID
         self.verified: dict[str, dict[str, Any]] = {}  # what Verify Manifest found, by version UUID, this session
         lay = QVBoxLayout(self)
         heads = [self.tr("Version"), self.tr("Frozen"), self.tr("By"), self.tr("OK"), self.tr("NG")]
@@ -344,11 +348,14 @@ class VersionsPanel(QGroupBox):
         self.found.hide()
         lay.addWidget(self.found)
         row = QHBoxLayout()
+        self.btn_split = button(self.tr("Split and Lock Validation Set…"), slot=self.open_split)
         self.btn_verify = button(self.tr("Verify Manifest"), slot=self.verify)
+        row.addWidget(self.btn_split)
         row.addWidget(self.btn_verify)
         row.addStretch(1)
         lay.addLayout(row)
         self.busy = BusyOverlay(self.table, self.tr("Checking each file against its manifest…"))
+        self.split = SplitSheet(self)  # the page lays it out in the labeller agreement's place
 
     def show_board_model(self, board_model: str | None, picked: str | None = None) -> None:
         """The board model's versions: `picked` selected, else the one picked before while the board model is the
@@ -357,7 +364,7 @@ class VersionsPanel(QGroupBox):
             picked = self.picked()
         self.board_model = board_model
         self.rows = self.ctx.datasets(board_model) if board_model else []
-        counts = self.ctx.dataset_counts(board_model) if board_model else {}
+        counts = self.counts = self.ctx.dataset_counts(board_model) if board_model else {}
         names = {u["uuid"]: u["name"] for u in self.ctx.users()}
         table = []
         for v in self.rows:
@@ -369,6 +376,7 @@ class VersionsPanel(QGroupBox):
             by = names.get(v["frozen_by"], v["frozen_by"])
             table.append([v["name"], to_local(v["frozen_at"]), by, n["ok"], n["ng"], val, v["customer"], uses,
                           self._manifest(v["uuid"])])  # fmt: skip
+        self.table.blockSignals(True)  # the pick shown once the table is whole, by show_found below
         fill_table(self.table, table)
         if self.rows:
             self.empty.hide()
@@ -380,6 +388,7 @@ class VersionsPanel(QGroupBox):
             self.empty.show_state(none, then, link, self.page.working.open_sheet)
         else:
             self.empty.hide()
+        self.table.blockSignals(False)
         self.show_found()
 
     def picked(self) -> str | None:
@@ -407,6 +416,8 @@ class VersionsPanel(QGroupBox):
         """Under the table, what Verify Manifest found wrong in the version picked, if anything: the coded line and
         the files changed or missing, the first few named."""
         uuid = self.picked()
+        if self.split.version is not None and self.split.version["uuid"] != uuid:
+            self.split.close_sheet()  # the sheet splits the version picked, and only that one
         e = self._mismatch(uuid) if uuid is not None else None
         if e is not None:
             r = self.verified[uuid or ""]
@@ -420,8 +431,20 @@ class VersionsPanel(QGroupBox):
         self.sync()
 
     def sync(self) -> None:
-        """Verify Manifest needs a version picked and no job of the page's running."""
-        self.btn_verify.setEnabled(self.picked() is not None and self.page.idle())
+        """Verify Manifest needs a version picked and no job of the page's running; Split and Lock Validation Set…, a
+        version not split, and no sheet of the tab open."""
+        uuid, idle = self.picked(), self.page.idle()
+        self.btn_verify.setEnabled(uuid is not None and idle)
+        locked = uuid is not None and bool(self.counts.get(uuid, {}).get("locked"))
+        self.btn_split.setEnabled(uuid is not None and not locked and idle and not self.page.sheet_open())
+        said = self.tr("Its validation set is locked: a new split needs a new dataset version")
+        self.btn_split.setToolTip(said if locked else "")
+        self.split.sync()
+
+    def open_split(self) -> None:
+        uuid = self.picked()
+        if uuid is not None and self.btn_split.isEnabled():
+            self.split.open_for(next(v for v in self.rows if v["uuid"] == uuid), self.counts[uuid])
 
     def verify(self) -> None:
         """Re-hash the version picked and each of its files on the pool; a Cancel marks nothing."""
@@ -450,5 +473,126 @@ class VersionsPanel(QGroupBox):
 
         self.page.run_in_background(
             self.ctx.verify_dataset, uuid, with_progress=True, on_result=checked, on_cancel=stopped, busy=self.busy,
+        )  # fmt: skip
+        self.sync()
+
+
+class SplitSheet(QGroupBox):
+    """Split and Lock Validation Set…'s sheet: what the version picked holds against what a validation set takes, the
+    seed, random and editable, Cancel and Lock, which splits the version once, for good."""
+
+    def __init__(self, panel: VersionsPanel) -> None:
+        super().__init__()
+        self.panel, self.page, self.ctx = panel, panel.page, panel.ctx
+        self.version: dict[str, Any] | None = None
+        self.enough = False  # the version holds the OK files a validation set takes
+        esc = QAction(self, shortcut=QKeySequence(Qt.Key.Key_Escape))
+        esc.setShortcutContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
+        esc.triggered.connect(self.close_sheet)
+        self.addAction(esc)
+        lay = QVBoxLayout(self)
+        self.what = QLabel()  # the version's OK and NG files and what its validation set takes, or why it cannot
+        self.what.setWordWrap(True)
+        lay.addWidget(self.what)
+        self.kinds = QLabel()  # its NG files by defect type, which the validation set's NG are spread over
+        self.kinds.setWordWrap(True)
+        lay.addWidget(self.kinds)
+        fields = QHBoxLayout()
+        fields.addWidget(QLabel(self.tr("Seed")))
+        self.seed = QLineEdit()
+        self.seed.setValidator(QIntValidator(0, SEED_TOP, self))
+        self.seed.textChanged.connect(self.sync)
+        self.seed.returnPressed.connect(self.lock)
+        fields.addWidget(self.seed, 1)
+        lay.addLayout(fields)
+        once = QLabel(
+            self.tr(
+                "The lock is audited and never undone: a version is split once, and a new split needs a new dataset"
+                " version. Training reads only the training set."
+            )
+        )
+        once.setObjectName("muted")
+        once.setWordWrap(True)
+        lay.addWidget(once)
+        row = QHBoxLayout()
+        row.addStretch(1)
+        row.addWidget(button(self.tr("Cancel"), slot=self.close_sheet))
+        self.btn_lock = button(self.tr("Lock"), slot=self.lock)
+        row.addWidget(self.btn_lock)
+        lay.addLayout(row)
+        lay.addStretch(1)
+        self.busy = BusyOverlay(self, self.tr("Locking the validation set…"))
+        self.hide()
+
+    def open_for(self, version: dict[str, Any], counts: dict[str, int]) -> None:
+        """The sheet for `version` in the labeller agreement's place, with a new random seed, the focus on it."""
+        self.version = version
+        self.setTitle(self.tr("Split and lock the validation set of {name}").format(name=version["name"]))
+        n = {"ok": counts["ok"], "ng_all": counts["ng"], "least": VALIDATION_OK, "share": round(VALIDATION_NG * 100)}
+        self.enough = counts["ok"] >= VALIDATION_OK
+        if self.enough:
+            what = self.tr(
+                "✓ {ok} OK and {ng_all} NG files. The validation set takes {least} OK and {ng} NG ({share} % of the NG,"
+                " rounded up), by defect type where it can, and the training set the rest."
+            )
+        else:
+            what = self.tr(
+                "✗ {ok} OK and {ng_all} NG files: a validation set takes {least} OK files. Freeze a version with more"
+                " OK images, then split that."
+            )
+        self.what.setText(what.format(ng=math.ceil(VALIDATION_NG * counts["ng"]), **n))
+        types = Counter(stratum(i) for i in self.ctx.dataset_items(version["uuid"]) if i["label"] == "NG")
+        untyped = self.tr("no type")
+        kinds = ", ".join(f"{kind or untyped} {k}" for kind, k in sorted(types.items()))
+        self.kinds.setText(self.tr("NG by defect type: {kinds}").format(kinds=kinds))
+        self.kinds.setVisible(bool(types))
+        self.seed.setText(str(secrets.randbelow(SEED_TOP + 1)))
+        self.page.show_sheet(self)
+        self.seed.setFocus()
+        self.seed.selectAll()
+
+    def sync(self) -> None:
+        """Lock needs enough OK files, a seed and no job of the page's running."""
+        ready = self.version is not None and self.enough and self.seed.hasAcceptableInput()
+        self.btn_lock.setEnabled(ready and self.page.idle())
+
+    def close_sheet(self) -> None:
+        if not self.isVisible():
+            return
+        self.version = None
+        self.page.show_sheet(None)
+
+    def lock(self) -> None:
+        """Split and lock on the pool, the busy overlay over the sheet; the sheet closes and the status line counts both
+        sets. A Cancel before the lock began writes nothing and keeps the sheet for another try, as the Freeze sheet
+        does; the lock checks no Cancel, so one after it began comes too late, and the lock is said as without it."""
+        v = self.version
+        if v is None or not self.btn_lock.isEnabled():
+            return
+        seed = int(self.seed.text())
+
+        def locked(split: dict[str, Any] | None) -> None:
+            if not split:  # stopped before it began, or refused after a Cancel: nothing written
+                self.page.shell.status(self.tr("Lock of {name} cancelled: nothing was written").format(name=v["name"]))
+                return
+            self.close_sheet()
+            self.page.refresh()
+            n = self.ctx.dataset_counts(v["board_model"])[v["uuid"]]  # the page may show another board model by now
+            said = self.tr(
+                "Locked the validation set of {name}: {val_ok} OK / {val_ng} NG, the training set {ok} OK / {ng} NG,"
+                " seed {seed}"
+            )
+            self.page.shell.status(said.format(
+                name=v["name"], val_ok=n["val_ok"], val_ng=n["val_ng"], ok=n["ok"] - n["val_ok"],
+                ng=n["ng"] - n["val_ng"], seed=seed,
+            ))  # fmt: skip
+
+        def failed(_e: BaseException) -> None:
+            self.close_sheet()  # the coded dialog says what to do; the version may be split by now
+            self.page.refresh()
+
+        self.page.run_in_background(
+            self.ctx.lock_validation_set, v["uuid"], seed, on_result=locked, on_cancel=locked, on_error=failed,
+            busy=self.busy,
         )  # fmt: skip
         self.sync()

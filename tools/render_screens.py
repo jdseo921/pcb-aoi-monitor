@@ -56,7 +56,7 @@ FIXED_TIME = "2026-01-01T09:00:00+00:00"  # every stored time, so a render does 
 FIXED_MS = 480.0  # the inspection time Inspection and Compare show
 FIXED_SSIM, FIXED_INLIERS = 0.95, 400  # the similarity and alignment points Compare shows (module docstring)
 PAGE_VIEWS = {  # <page>-<view>-<role>
-    "Training": ("datasets", "freeze", "blind"),
+    "Training": ("datasets", "freeze", "split", "blind"),
     "Settings": ("restore", "move-in", "shred"),
 }
 STORED_STATES = (  # Compare
@@ -315,7 +315,9 @@ def prepare(win: MainWindow, title: str, dataset: Path) -> None:
 
 def show_view(win: MainWindow, title: str, view: str | None) -> None:
     """`title` with its `view` shown (PAGE_VIEWS); None, the view it opens on. Training's are its Datasets tab, as a
-    click on the tab shows it, Freeze Dataset…'s sheet for the version after the workspace's, and the blind labelling
+    click on the tab shows it, Freeze Dataset…'s sheet for the version after the workspace's, the Split sheet on the
+    workspace's version, opened as Split and Lock Validation Set… opens it on a version not split (that one is, with no
+    validation file, so the sheet is opened for it directly) with seed 7, and the blind labelling
     panel on its first image, the board model's images standing in for a calibration set of 100 (the workspace holds
     fewer): Stop closes it, the status line saying so until the next page clears it, and with None the focus is
     cleared, as Training opens with none, so the pages after render alike.
@@ -332,9 +334,14 @@ def show_view(win: MainWindow, title: str, view: str | None) -> None:
         else:
             page._stop_blind()
         page.working.sheet.close_sheet()
+        page.versions.split.close_sheet()
         page.tabs.setCurrentIndex(0 if view is None else 1)
         if view == "freeze":
             page.working.open_sheet()
+        if view == "split":
+            version = page.versions.rows[0]
+            page.versions.split.open_for(version, page.versions.counts[version["uuid"]])
+            page.versions.split.seed.setText(str(DATASET_SEED))  # not a random one, so a render does not change
         if view is None and (focus := QApplication.focusWidget()) is not None:
             focus.clearFocus()
     if title == "Settings":
