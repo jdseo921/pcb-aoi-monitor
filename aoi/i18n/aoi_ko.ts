@@ -794,7 +794,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+158"/>
+        <location line="+161"/>
         <location line="+1571"/>
         <source>(none)</source>
         <translation type="unfinished"></translation>
@@ -1200,7 +1200,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-2268"/>
+        <location line="-2271"/>
         <source>no earlier version of this board model was active</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1225,7 +1225,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+636"/>
+        <location line="+639"/>
         <source>its UUID {found} is not {uuid}, as in the AI model registry</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5576,7 +5576,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/services.py" line="-2450"/>
+        <location filename="../core/services.py" line="-2453"/>
         <source>Aligning {count} images to the reference board</source>
         <translation type="unfinished"></translation>
     </message>
