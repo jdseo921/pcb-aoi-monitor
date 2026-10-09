@@ -553,7 +553,8 @@ class AppContext:
             anchor = self._read_frozen(frozen, ok_items[0])
         size = (anchor.shape[1], anchor.shape[0])
         say(0, 1, 0.0, ALIGNING.fill(count=len(ok_items) + len(ng_items)))
-        board = golden.Median(len(ok_items), (anchor.shape[0], anchor.shape[1]))
+        band = golden.BAND_BYTES  # read here rather than as Median's default, so the memory test can set it
+        board = golden.Median(len(ok_items), (anchor.shape[0], anchor.shape[1]), band)
         kept: list[np.ndarray | None] = []
         ok_in: list[anomaly.Prepared] = []
         for item in ok_items:

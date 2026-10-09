@@ -7,7 +7,10 @@ boards prove a code path; they are never quoted as accuracy.
 
 from __future__ import annotations
 
+import json
 import random
+import subprocess
+import sys
 import tracemalloc
 from collections.abc import Iterator
 from pathlib import Path
@@ -19,6 +22,8 @@ import pytest
 from aoi.core import anomaly, golden
 from aoi.core.imaging import align_to_reference, list_images, load_image, registration, warp_to
 from tests.regression import make_regression_set as rs
+
+ROOT = Path(__file__).resolve().parents[1]
 
 
 @pytest.mark.parametrize("q", [anomaly.PIXEL_PERCENTILE, 99.9, 50.0, 100.0, 0.0])
@@ -125,3 +130,22 @@ def test_req_trn_007_golden_board_matches_exact_median(tmp_path: Path) -> None:
         for im in noise:
             median.add(im)
     assert median.done and np.array_equal(median.board, np.median(np.stack(noise), axis=0).astype(np.uint8))
+
+
+def test_req_trn_007_peak_memory_under_budget(tmp_path: Path) -> None:
+    """Training on 50 OK boards at 5 MP peaks under the 8 GB budget and holds no more than training on 20 does: each
+    run, in a process of its own (the process's peak is the run's), holds one board at the camera's resolution at a
+    time, one band of the Golden board's median of a fixed size (here 200 MB, so each later band reads the boards again)
+    and a tensor per board at the network's input size. The 30 boards more take 453 MB decoded; the runs' growth
+    differs by under an eighth of that. Time and memory at 5, 12 and 20 MP are in
+    docs/tests/2026-10-09-training-memory.md. Synthetic boards measure memory, never accuracy."""
+    runs = []
+    for ok in (20, 50):
+        cmd = [sys.executable, "-m", "tests.training_memory_worker", str(tmp_path / str(ok))]
+        cmd += [str(v) for v in (2592, 1944, ok, 3, 200_000_000, 1, 64)] + [".jpg"]
+        run = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True, timeout=900)
+        assert run.returncode == 0, run.stderr[-3000:]
+        runs.append(json.loads(run.stdout.splitlines()[-1]))
+    few, many = runs
+    grown = [r["peak"] - r["baseline"] for r in runs]
+    assert grown[1] - grown[0] < (many["raw"] - few["raw"]) / 8 and many["peak"] < 8e9, runs
