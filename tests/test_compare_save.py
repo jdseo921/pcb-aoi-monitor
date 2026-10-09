@@ -8,6 +8,7 @@ as they do one the Recipe Editor saves (sketch docs/sketches/compare-decision-ta
 from __future__ import annotations
 
 import copy
+import threading
 from collections.abc import Callable, Iterator
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -25,6 +26,7 @@ from aoi.ui.main_window import MainWindow
 from aoi.ui.pages.compare import ComparePage
 from aoi.ui.pages.inspection import InspectionPage
 from aoi.ui.pages.recipe_editor import RecipeEditorPage
+from tests.conftest import wrapped
 from tests.test_compare_reevaluate import _pass_every_check, _press, _stored_on_compare, _walk
 from tests.test_compare_stored import save_to_recipe
 from tests.test_req_done_in_v01 import BOARD, _button, _inspect_one, _window
@@ -214,10 +216,11 @@ def test_req_cmp_005_nothing_is_stored_until_save_revision(
     dialogs: list[tuple[str, str]],
 ) -> None:
     """With all five thresholds tried, the sheet lists all five. Cancel and Esc close it and store nothing, the
-    thresholds tried staying in the form and the focus going back to Save to Recipe. A board model change closes it
-    too. Compare left and shown again keeps it open with its reason while no revision was saved; a revision saved on the
-    Recipe Editor while it is open closes it, the form then holding that revision and AOI-RCP-004 saying, once Compare
-    shows it, that nothing was saved and what to do (sketch, Errors)."""
+    thresholds tried staying in the form and the focus going back to Save to Recipe. A board model change closes it too,
+    the focus left where it was moved, in the header, as a run's end leaves it. Compare left and shown again keeps it
+    open with its reason while no revision was saved; a revision saved on the Recipe Editor while it is open closes it,
+    the form then holding that revision and AOI-RCP-004 saying, once Compare shows it, that nothing was saved and what
+    to do (sketch, Errors)."""
     ctx = trained_ctx
     monkeypatch.setattr(QMessageBox, "information", staticmethod(lambda *_: QMessageBox.StandardButton.Ok))
     win, compare, _ = _stored_on_compare(qtbot, ctx, ng_board, "Engineer")
@@ -246,8 +249,10 @@ def test_req_cmp_005_nothing_is_stored_until_save_revision(
     assert compare.sheet.isHidden() and compare.btn_save.isEnabled() and _stored(ctx) == stored
     assert compare.btn_save.hasFocus(), "the focus back on the panel, not lost with the sheet"
     compare.btn_save.click()
-    win._on_board_model("")  # the header's board model cleared: the form follows it
+    win.bm_combo.setFocus(Qt.FocusReason.MouseFocusReason)  # the Engineer goes to the header's board model
+    win._on_board_model("")  # and clears it: the form follows it
     assert compare.sheet.isHidden() and not compare.act_save.isEnabled()
+    assert QApplication.focusWidget() is win.bm_combo, "the focus stays where it was moved, as at a run's end"
     win._on_board_model(BOARD)
     compare.diff_thr.setValue(255)
     compare.btn_save.click()
@@ -399,3 +404,176 @@ def test_req_cmp_005_save_to_recipe_follows_the_role_its_service_requires(
     assert dialogs == [("AOI-USR-001 Not allowed for this role", refused)] and ctx.recipe(BOARD)[0] == 1
     win.set_user("admin")
     assert compare.btn_save.isEnabled(), "after Switch User to the Admin"
+
+
+def test_req_cmp_005_save_revision_never_undoes_a_revision_saved_since(
+    qtbot: QtBot, trained_ctx: AppContext, ng_board: Path, dialogs: list[tuple[str, str]]
+) -> None:
+    """A revision saved while the sheet is open and Compare stays shown (through AppContext, as another window's page
+    would) is never undone: Save Revision then stores nothing, the sheet closes with its reason, the form takes that
+    revision up, and AOI-RCP-004 says so, as when Compare is shown again (sketch, Errors: nothing was overwritten)."""
+    ctx = trained_ctx
+    win, compare, _ = _stored_on_compare(qtbot, ctx, ng_board, "Engineer")
+    compare.diff_thr.setValue(255)
+    compare.btn_save.click()
+    compare.reason.setText(REASON)
+    other = ctx.recipe(BOARD)[1]
+    other.min_defect_area = 99
+    rev = ctx.save_recipe(other, "saved elsewhere")
+    compare.btn_confirm.click()
+    assert ctx.recipe(BOARD) == (rev, other), f"revision {rev} stands"
+    assert compare.sheet.isHidden() and compare.reason.text() == "" and compare.form_revision == (BOARD, rev)
+    assert (compare.min_area.value(), compare.diff_thr.value()) == (99, other.diff_threshold)
+    assert [title for title, _ in dialogs] == ["AOI-RCP-004 Recipe saved while Save to Recipe was open"]
+    assert dialogs[0][1].startswith(f"Revision {rev} of board model {BOARD} was saved after revision {rev - 1}, ")
+
+
+def test_req_cmp_005_any_board_opened_closes_the_sheet(
+    qtbot: QtBot, trained_ctx: AppContext, ng_board: Path, dialogs: list[tuple[str, str]]
+) -> None:
+    """Any board opened on Compare, a stored result (Inspection's link, Last Inspected), the one shown included, or an
+    image file, closes the sheet with nothing stored, so a reason typed before never goes with what is opened; the
+    values tried stay. A record that cannot be read leaves the page as it was, the sheet and its reason included."""
+    ctx = trained_ctx
+    win, compare, iid = _stored_on_compare(qtbot, ctx, ng_board, "Engineer")
+    stored = _stored(ctx)[:2]
+    compare.diff_thr.setValue(255)
+    compare.btn_save.click()
+    compare.reason.setText("for the board shown")
+    compare.show_stored(iid + 1)  # no record has that number: AOI-CMP-002
+    assert [title for title, _ in dialogs] == ["AOI-CMP-002 Result has no stored decision table"]
+    assert compare.sheet.isVisible() and compare.reason.text() == "for the board shown" and compare.stored is not None
+    assert compare.stored["id"] == iid and compare.diff_thr.value() == 255, "the page as it was"
+    win.open_stored(iid)  # the record shown, opened again by Inspection's link
+    assert compare.sheet.isHidden() and compare.reason.text() == "" and compare.diff_thr.value() == 255
+    qtbot.waitUntil(lambda: compare.loaded and compare._bg is None, timeout=10000)
+    compare.btn_save.click()
+    compare.reason.setText("for the board before")
+    ctx.inspect_file(BOARD, str(ng_board))
+    compare.show_stored(ctx.inspections(board_model=BOARD)[0]["id"])  # the newest record, as Inspection's link opens
+    assert compare.sheet.isHidden() and compare.reason.text() == "" and compare.diff_thr.value() == 255
+    qtbot.waitUntil(lambda: compare.loaded and compare._bg is None, timeout=10000)
+    compare.btn_save.click()
+    compare.reason.setText("for the board before")
+    compare.set_test(str(ng_board))  # an image file, as Test Image… opens
+    assert compare.sheet.isHidden() and compare.reason.text() == "" and compare.diff_thr.value() == 255
+    qtbot.waitUntil(lambda: ctx.jobs.idle() and compare._bg is None, timeout=20000)
+    assert _stored(ctx)[:2] == stored and len(dialogs) == 1
+
+
+def test_req_cmp_005_the_sheet_names_values_as_the_recipe_holds_them(
+    qtbot: QtBot, ctx: AppContext, dialogs: list[tuple[str, str]]
+) -> None:
+    """The sheet lists a value with more decimals than its field shows with every decimal the recipe holds, 15 here,
+    never in exponent form, and the AI score threshold without an override as what the saved revision judges by, read
+    from the board model's active AI model as the sheet opens, whatever the panel names (it names the AI model of when
+    Compare was shown, or of a stored result): "none" with no AI model active, or one whose calibration cannot be read,
+    as the audit entry of the save then names no threshold, else "the AI model's calibrated value"."""
+    ctx.ensure_board_model(BOARD)
+    recipe = ctx.recipe(BOARD)[1]
+    recipe.anomaly_threshold, recipe.ssim_min = 1.23e-05, 0.812345678901234
+    ctx.save_recipe(recipe)
+    win = _window(qtbot, ctx, "Engineer")
+    compare = win.pages["Compare"]
+    assert isinstance(compare, ComparePage) and win.navigate("Compare")
+    assert compare.ai_thr.tick.text() == "Set my own value" and compare.ai_thr.override() == 1.23e-05, "none named"
+    compare.ai_thr.tick.setChecked(False)
+    compare.btn_save.click()
+    ssim = "Similarity minimum (SSIM): 0.812345678901234 → 0.81"
+    assert compare.sheet_changes.text().splitlines() == ["AI score threshold: 0.0000123 → none", ssim]
+    compare.btn_cancel.click()
+    models = ctx.settings.root / "models"
+    calibrated = {"image_threshold": 3.0, "pixel_threshold": 2.0}
+    ctx.db.register_model(BOARD, "v1.0", str(models / "v1.pt"), calibrated, activate=True)  # as training, meanwhile
+    compare.btn_save.click()
+    assert compare.ai_thr.tick.text() == "Set my own value", "the panel names none until Compare is shown again"
+    named = "AI score threshold: 0.0000123 → the AI model's calibrated value"
+    assert compare.sheet_changes.text().splitlines() == [named, ssim]
+    compare.reason.setText(REASON)
+    compare.btn_confirm.click()
+    assert ctx.audit_entries(action="recipe.ai_threshold")[0]["after"]["threshold"] == 3.0, "what the sheet named"
+    compare.ai_thr.tick.setChecked(True)  # by hand: the panel names v1.0's value, which the field starts from
+    ctx.db.register_model(BOARD, "v2.0", str(models / "v2.pt"), {}, activate=True)  # no calibration to read
+    compare.btn_save.click()
+    assert compare.ai_thr.tick.text() == "Override the AI model's value 3.000"
+    assert compare.sheet_changes.text().splitlines() == ["AI score threshold: none → 3.000"]
+    assert dialogs == []
+
+
+def test_req_cmp_005_the_sheet_breaks_a_board_model_name_after_each_underscore_and_hyphen(
+    qtbot: QtBot, ctx: AppContext
+) -> None:
+    """The sheet's heading names the board model with a break after each _ and each - and nowhere else, as Compare's
+    file names (#245), so a name of 120 characters in short parts leaves the window within a 1920 px screen with the
+    sheet open; its - comes before a digit, where Qt itself never breaks. Unbroken, it made the window 2305 px wide."""
+    name = "PANEL_SIDE-1" * 10
+    ctx.ensure_board_model(BOARD)
+    win = _window(qtbot, ctx, "Engineer")
+    ctx.ensure_board_model(name)
+    win._reload_board_models(name)  # as "+ New board model" selects it
+    compare = win.pages["Compare"]
+    assert isinstance(compare, ComparePage) and win.navigate("Compare")
+    compare.diff_thr.setValue(compare.diff_thr.value() + 1)
+    compare.btn_save.click()
+    for _ in range(10):  # each layout asks the one above it by a posted event: passes of the event loop, not time
+        QApplication.processEvents()
+    assert win.minimumSizeHint().width() <= 1920, "the open sheet asks for more than a 1920 px screen"
+    assert compare.sheet_heading.text() == f"Save these thresholds as revision 2 of the recipe of {wrapped(name)}?"
+
+
+def test_req_cmp_005_save_revision_while_a_stored_result_loads_leaves_the_focus_in_the_why_box(
+    qtbot: QtBot, trained_ctx: AppContext, ng_board: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Save Revision pressed with Space while a stored result's pictures and maps still load, so Re-evaluate is off, and
+    with nothing differing then Save to Recipe too: the focus goes to the "why" box, where a run puts it, so a
+    second Space presses nothing. Qt passed it on to the header's board model, whose list a second Space opened. Once it
+    has loaded, the focus goes on to Re-evaluate, as at a run's end, unless moved, to Show: say; an Operator's sign-in
+    with the focus in the sheet while it loads closes the sheet first, the focus then in the "why" box, out of the panel
+    the sign-in hides, where the load's end leaves it, Re-evaluate being off for an Operator (S28d, review). With
+    nothing loading, it is there for no one to take back: Ctrl+R there once an Engineer signs in leaves it there, as
+    a run started from the "why" box always does (S28d, review)."""
+    ctx = trained_ctx
+    win, compare, iid = _stored_on_compare(qtbot, ctx, ng_board, "Engineer")
+    gate, judged_reference = threading.Event(), AppContext.judged_reference
+    monkeypatch.setattr(AppContext, "judged_reference", lambda c, i: gate.wait(20) and judged_reference(c, i))
+    compare.diff_thr.setValue(255)
+    compare.show_stored(iid)  # its pictures and maps held on the pool thread
+    _press_save(qtbot, win, compare)
+    qtbot.keyClicks(compare.reason, "while it loads")
+    compare.btn_confirm.setFocus(Qt.FocusReason.TabFocusReason)
+    revisions = len(ctx.recipe_history(BOARD))
+    qtbot.keyClick(compare.btn_confirm, Qt.Key.Key_Space)  # Save Revision: nothing differs afterwards
+    assert compare.sheet.isHidden() and len(ctx.recipe_history(BOARD)) == revisions + 1, "the revision saved"
+    assert not compare.act_save.isEnabled() and not compare.act_try.isEnabled(), "both off while it loads"
+    assert QApplication.focusWidget() is compare.why, "the focus in the why box while both buttons are off"
+    qtbot.keyClick(compare.why, Qt.Key.Key_Space)  # a second Space
+    assert QApplication.focusWidget() is compare.why and QApplication.activePopupWidget() is None
+    assert len(ctx.recipe_history(BOARD)) == revisions + 1 and compare.diff_thr.value() == 255
+    gate.set()
+    qtbot.waitUntil(lambda: compare.loaded and compare._bg is None, timeout=20000)
+    assert QApplication.focusWidget() is compare.btn_try, "on to Re-evaluate once it has loaded (S28d, review)"
+    for then in ("moved", "an Operator's sign-in"):  # the focus moved from the why box, or in the sheet at a sign-in
+        gate.clear()
+        compare.diff_thr.setValue(250 if then == "moved" else 245)
+        compare.show_stored(iid)
+        _press_save(qtbot, win, compare)
+        if then == "moved":
+            qtbot.keyClicks(compare.reason, then)
+            qtbot.keyClick(compare.reason, Qt.Key.Key_Return)  # Save Revision by Enter: the focus to the why box
+            compare.mode.setFocus(Qt.FocusReason.TabFocusReason)  # and the Engineer moves it, to Show: say
+        else:
+            win.set_user("operator")  # the sheet closes first, the focus in the why box, out of the panel it hides
+        kept = compare.mode if then == "moved" else compare.why
+        assert QApplication.focusWidget() is kept and compare.sheet.isHidden() and not compare.loaded, then
+        gate.set()
+        qtbot.waitUntil(lambda: compare.loaded and compare._bg is None, timeout=20000)
+        assert QApplication.focusWidget() is kept, f"the focus stays after {then} when it has loaded"
+    win.set_user("engineer")
+    compare.diff_thr.setValue(240)
+    _press_save(qtbot, win, compare)
+    win.set_user("operator")  # with nothing loading: the focus in the why box, for no one to take back
+    win.set_user("engineer")
+    assert QApplication.focusWidget() is compare.why
+    _press(qtbot, win, compare)  # Ctrl+R in the why box
+    qtbot.waitUntil(compare.would_be.isVisible, timeout=20000)
+    assert QApplication.focusWidget() is compare.why, "Ctrl+R in the why box leaves the focus there, as ever"

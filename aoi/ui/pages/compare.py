@@ -342,6 +342,7 @@ class ComparePage(Page):
 
     # --- inputs ------------------------------------------------------------------
     def set_test(self, path: str) -> None:
+        self._close_sheet()  # any board opened, the one shown too, closes it with its reason, as Cancel does
         self.test_path, self.as_judged, self.record_board_model = path, None, None  # a file: the header's board model
         self.test_empty.hide()
         self._fitted = False
@@ -434,8 +435,8 @@ class ComparePage(Page):
         them. The service refuses the header's board model's thresholds for another's result. The focus rule: a focus
         on Re-evaluate or on any other control the run turns off waits in the "why" box under the indicator, one Tab
         before Cancel once that shows, and goes to Re-evaluate when the run ends if it is still there (`_sync_roles`);
-        Qt would pass it on to the next control in the Tab order, Save to Recipe after Re-evaluate, where a second Space
-        would act (review)."""
+        Qt would pass it on to the next control in the Tab order that is on, the header's board model list, where Down
+        would pick another board model (review)."""
         if self.stored is None:
             self.run()
             return
@@ -698,6 +699,7 @@ class ComparePage(Page):
             self.error(AoiError("AOI-CMP-002", id=inspection_id, file=file))
             return
         self._drop_tried()
+        self._close_sheet()  # any board opened, the one shown too, closes it with its reason, as Cancel does
         self.stored, self.test_path, self.ref_override, self.as_judged = rec, rec["image_path"], None, None
         self.golden_error, self.golden_state = None, False  # its pane shows the golden board as judged, not today's
         self.record_board_model = rec["board_model"]  # Re-evaluate judges the board under it (#172)
@@ -887,8 +889,8 @@ class ComparePage(Page):
         revision = (self.form_revision[1] if self.form_revision else 0) + 1  # the revision the save will make
         line = self.tr("{threshold}: {before} → {after}")
         heading = self.tr("Save these thresholds as revision {revision} of the recipe of {board_model}?")
-        self.sheet_heading.setText(heading.format(revision=revision, board_model=bm))
-        shown = [(self.tr(THRESHOLDS[k]), self._shown(k, was), self._shown(k, now)) for k, was, now in changes]
+        self.sheet_heading.setText(heading.format(revision=revision, board_model=breakable(bm)))  # wraps (#245)
+        shown = [(self.tr(THRESHOLDS[k]), self._shown(k, was, bm), self._shown(k, now, bm)) for k, was, now in changes]
         self.sheet_changes.setText("\n".join(line.format(threshold=t, before=b, after=a) for t, b, a in shown))
         note = self.tr(
             "Boards inspected after the save are judged by revision {revision}; stored results keep their verdicts."
@@ -908,24 +910,36 @@ class ComparePage(Page):
         was, now = _as_read(saved), _as_read(self._form_recipe(saved.board_model, saved))
         return [(k, getattr(was, k), getattr(now, k)) for k in THRESHOLDS if getattr(was, k) != getattr(now, k)]
 
-    def _shown(self, field: str, value: object) -> str:
-        """A threshold's value as the sheet lists it: none of the recipe's own is the AI model's calibrated value; a
-        number shows as its field does, or with the decimals the recipe holds where the field shows fewer."""
+    def _shown(self, field: str, value: object, board_model: str) -> str:
+        """A threshold's value as the sheet lists it as it opens: none of the recipe's own is what the saved revision
+        judges by, read from `board_model`'s active AI model, not from the panel, which names the AI model of when
+        Compare was shown, or of a stored result: "the AI model's calibrated value" while its calibration can be read,
+        else "none", as the audit entry of the save then names no threshold; a number shows as its field does, or with
+        every decimal the recipe holds where the field shows fewer."""
         if value is None:
-            return self.tr("the AI model's calibrated value")
+            try:
+                named = self.ctx.calibrated_threshold(board_model) is not None
+            except AoiError:  # AOI-TRN-012: a calibration that cannot be read names no value
+                named = False
+            return self.tr("the AI model's calibrated value") if named else self.tr("none")
         if isinstance(value, float):
             places = self.ai_thr.field.decimals() if field == "anomaly_threshold" else self.ssim_min.decimals()
-            return f"{value:.{places}f}" if round(value, places) == value else f"{value:g}"
+            exact = np.format_float_positional(value, trim="-")  # shortest that reads back the same, never 1e-05
+            return f"{value:.{places}f}" if round(value, places) == value else exact
         return str(value)
 
     def _confirm_save(self) -> None:
         """Save Revision, or Enter in the reason: the form's thresholds on the recipe the sheet listed them against,
         stored through AppContext as the next revision with its audit entry of before, after, user, time and reason
         (REQ-CMP-005, REQ-LOG-004). A refusal (AOI-USR-001 for a role that may not save, say) is the coded dialog, and
-        the sheet stays with its reason. Inspection and the Recipe Editor take the revision up as they do one the
-        Recipe Editor saves: at the next board, and when the editor is shown again."""
+        the sheet stays with its reason; a revision saved since the sheet opened closes it with AOI-RCP-004, nothing
+        stored. Inspection and the Recipe Editor take the revision up as they do one the Recipe Editor saves: at the
+        next board, and when the editor is shown again."""
         reason, saved = self.reason.text().strip(), self.form_recipe
         if not (self._asking and reason) or saved is None:
+            return
+        if (moved := self._take_up_revision()) is not None:  # one saved since the sheet opened: never undone (sketch)
+            self.error(moved)
             return
         try:
             rev = self.ctx.save_recipe(self._form_recipe(saved.board_model, saved), reason)
@@ -938,16 +952,23 @@ class ComparePage(Page):
 
     def _close_sheet(self) -> None:
         """The sheet goes, with its reason, and the panel is back, nothing stored: Cancel, Esc, a save, any sign-in (a
-        revision never carries the reason of a user it does not name), a board model change or a recipe reloaded. With
-        none open, nothing changes: the panel shown or hidden while the page is not is a minimum size the window never
-        learns (the stack keeps the size its hidden page had)."""
+        revision never carries the reason of a user it does not name), any board opened, a board model change or a
+        recipe reloaded. With none open, nothing changes: the panel shown or hidden while the page is not is a minimum
+        size the window never learns (the stack keeps the size its hidden page had). The focus, if in the sheet, goes
+        back to the panel, or to the "why" box while Save to Recipe and Re-evaluate are both off (a stored result still
+        loading), where a run puts it, and on to Re-evaluate when the load ends if it is still there (`_sync_roles`),
+        as at a run's end; moved out of the sheet, to the header's board model say, it stays, as a run's end leaves
+        it."""
         if not self._asking:
             return
+        held = self.sheet.isAncestorOf(self.window().focusWidget())  # read before the sheet hides and Qt moves it
         self._asking = False
         self.reason.clear()
         self._sync_roles()
-        if self.isVisible():  # the focus back on the panel, not lost with the sheet
-            (self.btn_save if self.btn_save.isEnabled() else self.btn_try).setFocus(Qt.FocusReason.OtherFocusReason)
+        if held and self.isVisible():  # the focus back on the panel, not lost with the sheet
+            back = next((b for b in (self.btn_save, self.btn_try) if b.isEnabled()), self.why)
+            back.setFocus(Qt.FocusReason.OtherFocusReason)
+            self._refocus = back is self.why and self.ctx.role != "Operator"  # for Re-evaluate once on (_sync_roles)
 
     def _sync_save(self) -> None:
         """Save to Recipe on for a role that may save a recipe while a threshold differs, no sheet is open and no
@@ -1075,9 +1096,18 @@ class ComparePage(Page):
         if self.res is None and self.test_path is None:
             step = self.empty_step(self.tr("Inspect a board on Inspection, or pick a test image."), "Inspection")
             self.test_empty.show_state(self.tr("No board to compare yet"), *step)
+        moved = self._take_up_revision()  # a revision saved since, on Recipe Editor: Save to Recipe never reverts it
+        self._show_calibration()  # an AI model trained or activated since: its value
+        if moved is not None:  # nor does a sheet left open: it closed (sketch)
+            self.error(moved)
+
+    def _take_up_revision(self) -> AoiError | None:
+        """The form takes up a revision of the header's board model saved since it was loaded (on the Recipe Editor,
+        or anywhere through AppContext). A Save to Recipe sheet open then closes, nothing stored, and AOI-RCP-004 for
+        the page to show is returned: its changes were listed against the revision before (sketch, Errors)."""
         asked = self.form_revision if self._asking else None  # the revision Save to Recipe's open sheet lists against
         if self.board_model and self.form_revision != (self.board_model, self.ctx.recipe(self.board_model)[0]):
-            self._load_recipe_into_form()  # a revision saved since, on Recipe Editor: Save to Recipe never reverts it
-        self._show_calibration()  # an AI model trained or activated since: its value
-        if asked and (now := self.form_revision) and now != asked:  # nor does a sheet left open: it closed (sketch)
-            self.error(AoiError("AOI-RCP-004", board_model=now[0], latest=now[1], revision=asked[1]))
+            self._load_recipe_into_form()
+        if asked and (now := self.form_revision) and now != asked:
+            return AoiError("AOI-RCP-004", board_model=now[0], latest=now[1], revision=asked[1])
+        return None
