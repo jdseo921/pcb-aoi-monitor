@@ -5,6 +5,7 @@ and view, set for all at once and per row, and after Import what became of each 
 from __future__ import annotations
 
 from collections.abc import Callable
+from dataclasses import replace
 from pathlib import Path
 
 from PySide6.QtCore import QAbstractItemModel, QModelIndex, QPersistentModelIndex, Qt
@@ -67,16 +68,21 @@ class _RowChoice(QStyledItemDelegate):
 
 
 class ImportSheet(QGroupBox):
-    """The files of one import and what to import them as. `on_import(files)` runs the import (the page puts it on
-    the pool) and `on_close()` closes the sheet; Import is off until every NG file has one of the 33 DCT types, and
-    the files left without a label are listed as such (AOI-TRN-016)."""
+    """The files of one import, picked for one board model, and what to import them as. `on_import(files)` runs the
+    import of copies of the rows (the page puts it on the pool, into `board_model`) and `on_close()` closes the sheet;
+    Import is off until every NG file has one of the 33 DCT types, and the files left without a label are listed as
+    such (AOI-TRN-016)."""
 
     def __init__(self, on_import: Callable[[list[ImportFile]], None], on_close: Callable[[], None]) -> None:
         super().__init__()
         self._on_import, self._on_close = on_import, on_close
         self.files: list[ImportFile] = []
+        self.board_model: str | None = None  # the files go there, whatever the header shows by then
         self.done: set[int] = set()  # rows imported or skipped as already there: Import again sends the others
+        self.copied: set[int] = set()  # the rows of `done` imported by this sheet
         self.running = False
+        self._sent: dict[int, int] = {}  # each copy the pool imports (its id), with the row it was made from
+        self._said = ""  # the last report's line, in the note while no NG file waits for a type
         self._base: Path | None = None
         lay = QVBoxLayout(self)
         row = QHBoxLayout()
@@ -104,15 +110,22 @@ class ImportSheet(QGroupBox):
         lay.addLayout(types)
         heads = [self.tr("File"), self.tr("Label"), self.tr("Defect type"), self.tr("View"), self.tr("Status")]
         self.table = make_table(heads, sortable=False)
-        self.table.setItemDelegate(_RowChoice(self))
+        self.delegate = _RowChoice(self)
+        self.table.setItemDelegate(self.delegate)
         head = self.table.horizontalHeader()
         head.setStretchLastSection(False)
         head.setSectionResizeMode(FILE, QHeaderView.ResizeMode.Stretch)  # the file takes what the others leave
-        self.table.setWordWrap(False)  # one line a file: a long path is cut in the middle, keeping its folder and name
-        self.table.setTextElideMode(Qt.TextElideMode.ElideMiddle)
+        self.table.setWordWrap(False)  # one line a file: a long path is cut at its start, keeping its name's end
+        self.table.setTextElideMode(Qt.TextElideMode.ElideLeft)  # where two names of a batch differ
         edit = QAbstractItemView.EditTrigger
         self._edits = edit.SelectedClicked | edit.DoubleClicked | edit.EditKeyPressed | edit.AnyKeyPressed
         lay.addWidget(self.table, 1)
+        self.why = QLabel()  # the current row's coded line, which a tooltip gives no touch or key to read
+        self.why.setObjectName("muted")
+        self.why.setWordWrap(True)
+        self.why.hide()
+        lay.addWidget(self.why)
+        self.table.currentCellChanged.connect(lambda *_: self._show_why())
         foot = QHBoxLayout()
         self.note = QLabel()
         self.note.setWordWrap(True)
@@ -154,11 +167,13 @@ class ImportSheet(QGroupBox):
         self.type_box.setCurrentIndex(-1)  # a pick, not a category change, sets the NG rows' type
 
     # --- the files ------------------------------------------------------------------------------------------------
-    def open_files(self, files: list[ImportFile], base: str | Path | None = None) -> None:
-        """Show `files` (named relative to `base`, the folder they were found in, when given), with Top checked for
-        all (decision Q32) and their labels and types as given."""
-        self.files, self.done, self._base = files, set(), Path(base) if base else None
-        self.setTitle(self.tr("Import {count} file(s)").format(count=len(files)))
+    def open_files(self, board_model: str, files: list[ImportFile], base: str | Path | None = None) -> None:
+        """Show `files`, picked for `board_model`, which the title names (named relative to `base`, the folder they
+        were found in, when given), with Top checked for all (decision Q32) and their labels and types as given."""
+        self.files, self.done, self.copied, self._base = files, set(), set(), Path(base) if base else None
+        self.board_model, self._said = board_model, ""
+        said = self.tr("Import {count} file(s) into {board_model}")
+        self.setTitle(said.format(count=len(files), board_model=board_model))
         self.views.button(0).setChecked(True)
         labels = {f.label for f in files}
         self.labels.setExclusive(False)  # a mixed folder has no label for all until one is picked
@@ -170,7 +185,6 @@ class ImportSheet(QGroupBox):
         for i in range(len(files)):
             self._show_row(i, None)
         self.btn_cancel.setText(self.tr("Cancel"))
-        self.note.setText("")
         self._sync()
         self.show()
         self.table.setFocus()
@@ -184,8 +198,9 @@ class ImportSheet(QGroupBox):
         return [(view_text(v), v) for v in VIEWS] if column == VIEW else []
 
     def set_cell(self, row: int, column: int, key: str) -> None:
-        self._set(row, column, key)
-        self._sync()
+        if not self.running:  # nothing reaches the files while the pool imports them
+            self._set(row, column, key)
+            self._sync()
 
     def _set(self, row: int, column: int, key: str) -> None:
         f = self.files[row]
@@ -221,6 +236,8 @@ class ImportSheet(QGroupBox):
             item = QTableWidgetItem(text)
             item.setData(Qt.ItemDataRole.UserRole, keys[column])
             item.setToolTip(f.path if column == FILE else "")
+            if column == FILE:
+                item.setData(Qt.ItemDataRole.AccessibleTextRole, f.path)  # the whole path, which the cell may cut
             editable = flag.ItemIsEditable if picked[column] and row not in self.done else flag.NoItemFlags
             item.setFlags(flag.ItemIsEnabled | flag.ItemIsSelectable | editable)
             self.table.setItem(row, column, item)
@@ -233,26 +250,37 @@ class ImportSheet(QGroupBox):
         self.table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers if self.running else self._edits)
         for w in (*self.views.buttons(), *self.labels.buttons(), self.category, self.type_box):
             w.setEnabled(not self.running)  # the files are the pool's while they are imported
-        if untyped and not self.running:
-            self.note.setText(self.tr("{count} NG file(s) need a defect type").format(count=untyped))
+        if not self.running:
+            need = self.tr("{count} NG file(s) need a defect type").format(count=untyped)
+            self.note.setText(need if untyped else self._said)
         for column in range(LABEL, STATUS + 1):  # once a change, not once a cell; the file name takes what is left
             self.table.resizeColumnToContents(column)
+        self._show_why()  # a row made ready again by a change has no coded line left
 
     # --- the import -----------------------------------------------------------------------------------------------
     def start(self) -> None:
+        if (editor := self.table.indexWidget(self.table.currentIndex())) is not None:  # a pick left open: kept first
+            self.delegate.commitData.emit(editor)
+            self.delegate.closeEditor.emit(editor)
         if self.btn_import.isEnabled():
             self.running = True
             self._sync()
             self.note.setText(self.tr("Importing…"))
-            self._on_import([f for i, f in enumerate(self.files) if i not in self.done])
+            self.btn_cancel.setText(self.tr("Cancel"))  # Close after a report, until this import ends
+            rows = [i for i in range(len(self.files)) if i not in self.done]
+            sent = [replace(self.files[i]) for i in rows]  # the pool's own copies: no edit reaches them
+            self._sent = {id(f): i for f, i in zip(sent, rows, strict=True)}
+            self._on_import(sent)
 
     def show_report(self, report: ImportReport, coded: Callable[[AoiError], str]) -> None:
-        """What became of each file sent: copied, skipped or refused with its code and title (the row's tooltip, and
-        Copy List, hold what happened and what to do), stopped at, or not imported (`coded(e)` is that line)."""
+        """What became of each file sent, on the row it was made from: copied, skipped or refused with its code and
+        title (the row's tooltip, the line under the table while it is the current row, and Copy List hold what
+        happened and what to do), stopped at, or not imported (`coded(e)` is that line); the note counts the sheet's."""
         self.running = False
-        rows = {id(f): i for i, f in enumerate(self.files)}
+        rows = self._sent
         for f in report.added:
             self.done.add(rows[id(f)])
+            self.copied.add(rows[id(f)])
             self._show_row(rows[id(f)], self.tr("copied"))
         problems = [*report.refused, *([report.stopped] if report.stopped else [])]
         for f, e in problems:
@@ -265,14 +293,23 @@ class ImportSheet(QGroupBox):
             cell_item(self.table, i, STATUS).setToolTip(coded(e))
         for f in report.left:
             self._show_row(rows[id(f)], self.tr("not imported"))
-        n = len(problems) + len(report.left)
-        if report.refused and not (report.added or report.stopped or report.left):  # the sketch's empty state
-            self.note.setText(self.tr("Nothing to import: every file was refused (see the list)."))
+        n, skipped = len(self.files), len(self.done) - len(self.copied)
+        if not self.done and len(report.refused) == n:  # every file of the sheet: the sketch's empty state
+            self._said = self.tr("Nothing to import: every file was refused (see the list).")
+        elif skipped == n:
+            self._said = self.tr("Nothing to import: every file is already imported.")
         else:
-            said = self.tr("{added} imported · {count} not imported")
-            self.note.setText(said.format(added=len(report.added), count=n))
+            said = self.tr("{added} imported · {skipped} already imported · {count} not imported")
+            self._said = said.format(added=len(self.copied), skipped=skipped, count=n - len(self.done))
         self.btn_cancel.setText(self.tr("Close"))
         self._sync()
+
+    def _show_why(self) -> None:
+        """Under the table, the current row's coded line: what happened to its file and what to do."""
+        item = self.table.item(self.table.currentRow(), STATUS)
+        said = item.toolTip() if item is not None else ""
+        self.why.setText(said)
+        self.why.setVisible(bool(said))
 
     def copy_list(self) -> None:
         """Every row as a line, its file, label, type, view and status with what happened, to paste into a report."""
