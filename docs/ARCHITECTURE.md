@@ -441,7 +441,9 @@ the key as 52 base32 characters, and `restore_store_key` takes it back on a new 
 value agrees. `move_in(board_model, store)` puts a board model in a store for good and encrypts each file under
 images/<board model>/ and each of its manifests where it is, in file format 1 (`aoi/core/crypto.py`: a 34-byte header,
 AES-256-GCM, the header, store UUID and workspace-relative path as associated data); each file is read back and
-decrypted before it replaces the plain one, and calling it again finishes an interrupted move. From then on an import
+decrypted before it replaces the plain one, and calling it again finishes an interrupted move: `progress(done, total)`
+follows each file, and once `should_stop()` is true the rest stay plain and the result counts them (`left`) until the
+move is finished. From then on an import
 writes its copy encrypted, and every read of a store's file (`_plain_bytes`: an image loaded, hashed for a freeze or a
 verify, sized for a box, read for training) decrypts it in memory. A file that does not open is AOI-TRN-025 naming why
 (no key, another key, not encrypted, another store's key, changed, moved or damaged), never read as plain. The plaintext
@@ -449,7 +451,9 @@ SHA-256 stays each file's identity. A board model in no store stays plain, and `
 another customer's store than the version names (AOI-TRN-027), so a frozen version is one customer's, encrypted.
 `shred_store` ends a store: it deletes the key first, records the shred (`store_shreds`, `store.shred`), then deletes
 the board models' images, their versions' folders and their AI models and golden boards under models/. A file of it is
-AOI-TRN-025 "it was shredded on <day>" from then on, and calling it again finishes a shred stopped part-way. The rest of
+AOI-TRN-025 "it was shredded on <day>" from then on, and calling it again finishes a shred stopped part-way;
+`store_contents(store)`, a read, names what it would delete now (the customer, the board models, and the file and AI
+model counts, 0 once deleted), for Shred Store… to say before it does. The rest of
 models/, results/ and `aoi.sqlite` stay plain (ADR 0010, Consequences).
 
 `lock_validation_set(dataset_uuid, seed)` (REQ-TRN-006, S36) splits a frozen version once into its training set and
