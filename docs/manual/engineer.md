@@ -423,6 +423,8 @@ validation on a dataset version also stores recall per defect type, by the type 
 
 **Results as they come.** The table grows as each board is judged, so the first row shows within a moment of Run Test. Selecting a row shows the overlay kept as the run judged it, with its verdict: it is never judged again, so a retrain, an activation or a new recipe since changes nothing it shows; the line above the table then names what judged the run and what is in use now, and Run Test Again tests the run's source with what is in use. A preview from a kept overlay leaves Compare's Use Last Inspected as it was. A run stored before this release keeps no overlay; its rows are judged again, as below.
 
+**History.** The History tab lists every run of the board model, newest first: its time, AI model, dataset version or folder, recipe revision, missed defects and false calls. Select one and press Open (or double-click it) to show it on Run as it was stored, rows, tiles and previews.
+
 (to be written: exports in full, the validation report)
 
 Each validation run is stored with a UUID and the UUID of the AI model active when it ran. **Export CSV** writes one row
