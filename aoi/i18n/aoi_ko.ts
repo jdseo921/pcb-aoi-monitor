@@ -1307,12 +1307,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/recipe_editor.py" line="+56"/>
+        <location filename="../ui/pages/recipe_editor.py" line="+57"/>
         <source>its Golden board was replaced after the points were picked on it</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+402"/>
+        <location line="+408"/>
         <source>Height</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4699,7 +4699,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/recipe_editor.py" line="-389"/>
+        <location filename="../ui/pages/recipe_editor.py" line="-395"/>
         <source>Recipe Editor</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4771,12 +4771,27 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+126"/>
+        <location line="+84"/>
+        <source>The 10 mandatory AOI checks (defect classification table, section 4):</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>• whole board: the AI model and the Golden board comparison cover it without an ROI.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+4"/>
+        <source>AOI checks</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+41"/>
         <source>AI score</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-113"/>
+        <location line="-119"/>
         <source>Selected ROI</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4787,7 +4802,7 @@
     </message>
     <message>
         <location line="+1"/>
-        <location line="+103"/>
+        <location line="+109"/>
         <source>Name</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4817,7 +4832,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-100"/>
+        <location line="-106"/>
         <source>ROI type</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4887,7 +4902,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+20"/>
+        <location line="+22"/>
         <source>AI score threshold</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4922,17 +4937,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+6"/>
-        <source>Mandatory AOI defect set (every recipe must cover it):</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+3"/>
-        <source>Mandatory Set</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+6"/>
+        <location line="+19"/>
         <source>Revision</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5027,22 +5032,27 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+14"/>
-        <source>◌  needs Stage 2 (3D / side camera)</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+2"/>
-        <source>✓  ROI defined</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+2"/>
-        <source>•  covered by the whole-board AI model and the Golden board comparison</source>
+        <location line="+11"/>
+        <source>✓  ROI {names}</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location line="+1"/>
+        <source>•  whole board</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>○  not covered</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>◌  needs Stage 2 (3D / side camera)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+5"/>
         <source>{defect:&lt;24}  {mark}</source>
         <translation type="unfinished"></translation>
     </message>

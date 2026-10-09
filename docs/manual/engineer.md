@@ -425,7 +425,13 @@ the board shows its defects in red with the ROIs, the line under the tabs gives 
 the time taken, and the table under it lists each check behind the verdict as Compare's decision table does (value,
 threshold, rule and result), with the inspection time against the 1 s budget.
 
-(to be written: the other thresholds, revision history, the AOI checklist)
+**AOI checks** tab. The 10 mandatory AOI checks of the defect classification table, each marked by how the recipe
+on screen covers it: ✓ ROI R1 for Missing Component, Polarity Error and Solder Bridge when an enabled ROI of the
+matching type (Presence, Polarity, Solder Bridge) covers it; • whole board for Misalignment, Tombstone and Cold Joint
+while the AI check or the Golden board comparison is on; ○ not covered; and ◌ needs Stage 2 for the 4 checks a 3D or
+side camera makes. The marks follow each edit before it is saved.
+
+(to be written: the other thresholds, revision history)
 
 ## 6. AI model test and reports
 

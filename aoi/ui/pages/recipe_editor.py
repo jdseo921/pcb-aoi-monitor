@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import copy
+from dataclasses import replace
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -27,7 +28,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from ... import defects as taxonomy
+from ...core import checklist
 from ...core.imaging import IMAGE_EXTS
 from ...core.inspector import InspectionResult
 from ...core.recipe import ROI, ROI_TYPES, Recipe
@@ -180,6 +181,8 @@ class RecipeEditorPage(Page):
         tf = QFormLayout(thr_tab)
         self.use_ai = QCheckBox(self.tr("Use the self-trained AI model"))
         self.use_cmp = QCheckBox(self.tr("Use the Golden board comparison"))
+        for tick in (self.use_ai, self.use_cmp):
+            tick.toggled.connect(self._show_coverage)  # a whole-board check is covered by either
         self.ai_thr = self.ai_threshold_field()
         self.ai_thr.ticking.connect(lambda: self.show_calibrated(self.ai_thr, self.board_model))  # trained since shown
         self.warn = QDoubleSpinBox()
@@ -213,14 +216,18 @@ class RecipeEditorPage(Page):
             tf.addRow(label, w) if label else tf.addRow(w)
         tabs.addTab(scrolled(thr_tab), self.tr("Thresholds"))  # scrolls where the window is too short for its rows
 
-        # Mandatory defect set tab (classification table §4)
+        # AOI checks tab: the 10 mandatory checks of the classification table (§4) and how the recipe covers each
         mand = QWidget()
         mand.setObjectName("page")
         ml = QVBoxLayout(mand)
-        ml.addWidget(QLabel(self.tr("Mandatory AOI defect set (every recipe must cover it):")))
+        ml.addWidget(QLabel(self.tr("The 10 mandatory AOI checks (defect classification table, section 4):")))
         self.mand_list = QListWidget()
         ml.addWidget(self.mand_list, 1)
-        tabs.addTab(mand, self.tr("Mandatory Set"))
+        whole = QLabel(self.tr("• whole board: the AI model and the Golden board comparison cover it without an ROI."))
+        whole.setObjectName("muted")
+        whole.setWordWrap(True)
+        ml.addWidget(whole)
+        tabs.addTab(mand, self.tr("AOI checks"))
 
         # History tab
         hist = QWidget()
@@ -370,24 +377,24 @@ class RecipeEditorPage(Page):
         else:
             self.roi_empty.show_state(self.tr("No ROIs yet"), self.tr("Press Draw ROI and drag on the Golden board."))
         self._draw_rois()
-        covered = {x.type for x in r.rois}
-        self.mand_list.clear()
-        roi_for = {
-            "Missing Component": "Presence",
-            "Polarity Error": "Polarity",
-            "Solder Bridge": "Solder Bridge",
-            "Connector Pin Height": "Height",
-            "3D Coplanarity": "Height",
-            "Solder Volume": "Height",
+        self._show_coverage()
+
+    def _show_coverage(self, *_: object) -> None:
+        """The AOI checks tab (REQ-RCP-005): each mandatory check with how the recipe as edited covers it, its ROIs
+        and the two ticks that turn the AI check and the Golden board comparison on, as the sketch marks them."""
+        if self.recipe is None:
+            return
+        r = replace(self.recipe, use_ai=self.use_ai.isChecked(), use_compare=self.use_cmp.isChecked())
+        marks = {
+            checklist.ROI: self.tr("✓  ROI {names}"),
+            checklist.WHOLE_BOARD: self.tr("•  whole board"),
+            checklist.NOT_COVERED: self.tr("○  not covered"),
+            checklist.STAGE_2: self.tr("◌  needs Stage 2 (3D / side camera)"),
         }
-        for name in taxonomy.MANDATORY_AOI_SET:
-            if name in taxonomy.REQUIRES_3D_OR_SIDE:
-                mark = self.tr("◌  needs Stage 2 (3D / side camera)")
-            elif roi_for.get(name) in covered:
-                mark = self.tr("✓  ROI defined")
-            else:
-                mark = self.tr("•  covered by the whole-board AI model and the Golden board comparison")
-            self.mand_list.addItem(self.tr("{defect:<24}  {mark}").format(defect=name, mark=mark))
+        self.mand_list.clear()
+        for c in checklist.coverage(r):
+            mark = marks[c.how].format(names=", ".join(c.rois))
+            self.mand_list.addItem(self.tr("{defect:<24}  {mark}").format(defect=c.check, mark=mark))
 
     def _sel_index(self) -> int:
         rows = self.roi_table.selectionModel().selectedRows() if self.roi_table.selectionModel() else []
