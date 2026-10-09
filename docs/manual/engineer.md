@@ -275,8 +275,18 @@ the freeze stops the run with AOI-TRN-045 naming the file. The new AI model name
 screen freezes a version or locks its validation set yet (the Datasets tab comes next), so until then the list holds
 only versions made through the app's service calls.
 
-**Stop** ends a training run without saving anything: no AI model version, golden board or audit entry; the active AI
-model stays. Closing the app while work runs asks whether to stop it; an AI model test finishes its folder first.
+**While a run goes on**, the line under the bar names what it does now, with its percent and the time left: "Aligning
+image 12 of 53", "Building the Golden board: step 3 of 16", "Training epoch 23 of 60", "Calibrating: map 4 of 16", then
+"Saving AI model v1.3". The time left reads "estimating…" for the run's first image only, then "about 6 min left", or
+"less than a minute left"; the line and the bar change at least every 10 s. The run goes on whichever page you open: the
+header shows "Training 38 % · about 6 min left" on every page, and Home's Self-train card "Training running 38 % · about
+6 min left"; press the header's button to come back to Training. Start Training stays off while a run goes on, one run
+at a time (AOI-TRN-047).
+
+**Cancel** ends a training run without saving anything: no AI model version, golden board or audit entry; the active AI
+model stays. The run stops after the image, step or map in hand, within seconds, or as it saves, before the new AI model
+is registered, and the log says "Cancelled: no AI model was saved; the active AI model is unchanged." Closing the app
+while work runs asks whether to stop it; an AI model test finishes its folder first.
 
 **A run that fails as it is registered** (the disk full, the database held by another program) leaves the Golden board
 and the AI model in use as they were, with no new version, file or audit entry; train again once the cause is fixed.
@@ -310,7 +320,7 @@ and in a line under the table: for the next boards, train again or activate anot
 own for the board model (section 5). Where such a row's sample counts cannot be read either, its OK/NG cell stays
 empty.
 
-(to be written: training, progress and cancel, versions, activation and rollback, the model card)
+(to be written: versions, activation and rollback, the model card)
 
 ## 5. Recipes
 
