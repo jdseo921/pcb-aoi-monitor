@@ -440,7 +440,15 @@ calls** (OK boards called NG, of the OK boards), then Recall, Precision and Accu
 50", with its exact one-sided 95 % bound under it ("95 % upper bound 5.8 %"): a rate is never a percent alone. A
 validation on a dataset version also stores recall per defect type, by the type each image was frozen with.
 
-(to be written: exports in full, the validation report)
+**Results as they come.** The table grows as each board is judged, so the first row shows within a moment of Run Test. Selecting a row shows the overlay kept as the run judged it, with its verdict: it is never judged again, so a retrain, an activation or a new recipe since changes nothing it shows; the line above the table then names what judged the run and what is in use now, and Run Test Again tests the run's source with what is in use. A preview from a kept overlay leaves Compare's Use Last Inspected as it was. A run stored before this release keeps no overlay; its rows are judged again, as below.
+
+**History.** The History tab lists every run of the board model, newest first: its time, AI model, dataset version or folder, recipe revision, missed defects and false calls. Select one and press Open (or double-click it) to show it on Run as it was stored, rows, tiles and previews.
+
+**Export Report.** Asks first, naming how many images, missed defects and false calls the report holds; the PDF then gives the rates with their counts and bounds, recall per defect type, each missed defect and false call with its overlay, every row, and the card of the AI model that judged the run. It is written whole or not at all and recorded in the audit trail.
+
+**Validation Report.** On History, select a run made on a frozen dataset version's locked validation set and press Validation Report…: the PDF follows the validation steps a customer signs: the data and the labeller agreement check, the targets agreed before testing beside the results, the locked set's manifest SHA-256, the results with counts and bounds, a page for each missed defect and false call, the AI model card, known limits and signature lines for the customer and the AI lead. A run on a folder, or a board model with no agreement check, has none (AOI-TST-007). The Korean headings are drafts for native review.
+
+(to be written: Export Overlays)
 
 Each validation run is stored with a UUID and the UUID of the AI model active when it ran. **Export CSV** writes one row
 per image (`image`, `gt` the label, `ai_result` the verdict, `score`, `defects`, `pass_fail`, `ai_check`, `defect_type` as

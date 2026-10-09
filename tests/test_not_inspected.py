@@ -117,6 +117,8 @@ def test_req_insp_002_a_failed_preview_never_shows_the_row_before(
     page.folder = str(folder)
     page.run()
     qtbot.waitUntil(lambda: bool(page.rows) and page.btn_run.isEnabled(), timeout=60000)
+    for r in page.rows:  # as a run stored before S46: no overlay, so a preview judges its row again (#250)
+        r.pop("overlay", None)
     row = {Path(cell_item(page.table, i, 0).toolTip()).name: i for i in range(page.table.rowCount())}
     page.table.selectRow(row["ng_board.png"])
     qtbot.waitUntil(lambda: page._bg is None and page.view._pix is not None, timeout=30000)
