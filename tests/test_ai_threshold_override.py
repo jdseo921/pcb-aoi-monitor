@@ -31,6 +31,7 @@ OWN = "Set my own value"  # the tick's text with no calibrated value to name
 UNTRAINED = "No AI model is trained yet: there is no calibrated value."
 INACTIVE = "No AI model version is active: there is no calibrated value."
 MIN_WIDTH = 1616  # the window's minimum width before the tick (S28b): the review found 1729 to 1929 px with it
+OTHER = "OTHER"  # a board model with no AI model trained
 
 
 def _ai_threshold(res: InspectionResult) -> float:
@@ -267,7 +268,7 @@ def test_req_trn_015_a_calibration_that_cannot_be_read_says_so_with_a_code(
     tick, with the code and what to do, on Compare and on the Recipe Editor, never as "no AI model" and with no dialog;
     an override can still be set and saved. With AI model versions but none active, and with none trained, the note
     says which, and the field shows once the tick is set; with no board model, the tick names nothing and no note
-    shows."""
+    shows, on either page (review)."""
     ctx = trained_ctx
     model = ctx.active_model(BOARD)
     assert model is not None
@@ -297,10 +298,79 @@ def test_req_trn_015_a_calibration_that_cannot_be_read_says_so_with_a_code(
         editor.ai_thr.tick.setChecked(True)
         assert editor.ai_thr.field.isVisibleTo(editor.ai_thr) and editor.ai_thr.field.isEnabled(), none
         ctx.db.execute("DELETE FROM models WHERE board_model=?", (BOARD,))  # none trained, for the next turn
-    win.navigate("Compare")
-    win._on_board_model("")  # no board model: nothing to name, and nothing to say why
-    assert compare.ai_thr.tick.text() == OWN and compare.ai_thr.note.isHidden()
+    for title, field in (("Recipe Editor", editor.ai_thr), ("Compare", compare.ai_thr)):  # the editor too (review)
+        win.navigate(title)
+        win._on_board_model("")  # no board model: nothing to name, and nothing to say why
+        assert field.tick.text() == OWN and field.note.isHidden(), title
+        win._on_board_model(BOARD)
     assert not dialogs, "the field says it; no dialog when a page is shown"
+
+
+def test_req_trn_015_set_my_own_value_starts_from_none_not_another_board_models_value(
+    qtbot: QtBot, trained_ctx: AppContext, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """With no calibrated value to name, ticking "Set my own value" starts the field from 0, which is no override, on
+    the Recipe Editor and on Compare: never from the value the field showed for another board model's AI model, none
+    selected included (review), or for this board model's own AI model before its calibration could no longer be read,
+    which a save stored as this board model's override. A save before a value is typed keeps no override and writes no
+    entry of it; a value typed is saved and audited, and clearing the tick starts the next tick from 0 again. An Admin
+    clears and sets the override as an Engineer does, each audited with the Admin's user and role."""
+    ctx = trained_ctx
+    cal = ctx.calibrated_threshold(BOARD)
+    assert cal is not None
+    win, editor = _editor(qtbot, ctx, monkeypatch)
+    compare = win.pages["Compare"]
+    assert isinstance(compare, ComparePage) and win.navigate("Compare") and win.navigate("Recipe Editor")
+    assert _shows_calibrated(compare.ai_thr, cal) and _shows_calibrated(editor.ai_thr, cal)
+    win._on_board_model("")  # none selected (review)
+    for title, field in (("Compare", compare.ai_thr), ("Recipe Editor", editor.ai_thr)):
+        win.navigate(title)
+        assert field.tick.text() == OWN and field.note.isHidden(), title
+        field.tick.setChecked(True)
+        assert (field.field.value(), field.override()) == (0, None), title
+        field.tick.setChecked(False)
+    ctx.ensure_board_model(OTHER)  # no AI model trained
+    win._on_board_model(OTHER)
+    for title, field in (("Compare", compare.ai_thr), ("Recipe Editor", editor.ai_thr)):
+        win.navigate(title)
+        assert field.tick.text() == OWN and field.note.text() == UNTRAINED, title
+        field.tick.setChecked(True)
+        assert field.field.isVisibleTo(field) and (field.field.value(), field.override()) == (0, None), title
+    rev = ctx.recipe(OTHER)[0]
+    editor.save()  # nothing typed
+    assert ctx.recipe(OTHER)[0] == rev + 1 and ctx.recipe(OTHER)[1].anomaly_threshold is None
+    assert not ctx.audit_entries(object_uuid=OTHER, action="recipe.ai_threshold")
+    editor.ai_thr.tick.setChecked(True)
+    editor.ai_thr.field.setValue(4.25)
+    editor.save()
+    (entry,) = ctx.audit_entries(object_uuid=OTHER, action="recipe.ai_threshold")
+    assert (entry["before"]["override"], entry["after"]["override"], entry["after"]["calibrated"]) == (None, 4.25, None)
+    editor.ai_thr.tick.setChecked(False)
+    editor.ai_thr.tick.setChecked(True)
+    assert (editor.ai_thr.field.value(), editor.ai_thr.override()) == (0, None), "cleared: no value to restore"
+    editor.ai_thr.tick.setChecked(False)
+    win.set_user("admin")
+    assert win.navigate("Recipe Editor")
+    editor.save()
+    editor.ai_thr.tick.setChecked(True)
+    editor.ai_thr.field.setValue(5.5)
+    editor.save()
+    admin = ctx.db.user_uuid("admin")
+    entries = ctx.audit_entries(object_uuid=OTHER, action="recipe.ai_threshold")[:2]  # newest first
+    assert [(e["user_uuid"], e["role"], e["before"]["override"], e["after"]["override"]) for e in entries] == [
+        (admin, "Admin", None, 5.5), (admin, "Admin", 4.25, None)
+    ]  # fmt: skip
+    assert ctx.recipe(OTHER)[1].anomaly_threshold == 5.5
+    model = ctx.active_model(BOARD)
+    assert model is not None
+    metrics = {**json.loads(model["metrics"]), "image_threshold": "damaged"}
+    ctx.db.execute("UPDATE models SET metrics=? WHERE uuid=?", (json.dumps(metrics), model["uuid"]))  # by hand
+    win._on_board_model(BOARD)  # its calibration, named before, can no longer be read
+    for title, field in (("Compare", compare.ai_thr), ("Recipe Editor", editor.ai_thr)):
+        win.navigate(title)
+        assert field.tick.text() == OWN and field.note.text().startswith("AOI-TRN-012 "), title
+        field.tick.setChecked(True)
+        assert (field.field.value(), field.override()) == (0, None), title
 
 
 def _without_rows(fields: list[AiThresholdField]) -> int:
@@ -372,9 +442,10 @@ def test_req_trn_015_tick_and_note_never_widen_the_window(qtbot: QtBot, trained_
 
 def test_req_trn_015_the_field_keeps_what_the_recipe_holds(qtbot: QtBot) -> None:
     """`changed` fires when the tick moves and when a ticked value is edited, not when a calibrated value is shown; an
-    override the field cannot show as it is (more decimals than 3, or outside 0.001 to 10000) is given back as the
-    recipe holds it until it is edited, so opening and saving a recipe never changes it, and ticking by hand starts
-    from the calibrated value to every decimal. 0, which the engine reads as no override, shows as none."""
+    override the field cannot show as it is (more decimals than 3, or outside 0 to 10000) is given back as the
+    recipe holds it until first edited, so opening and saving a recipe never changes it; once edited, the value typed,
+    even typed back to what the field showed (review); and ticking by hand starts from the calibrated value to every
+    decimal. 0, which the engine reads as no override, shows as none."""
     field = AiThresholdField(("Override {value}", "None to name"))
     qtbot.addWidget(field)
     said: list[None] = []
@@ -387,9 +458,14 @@ def test_req_trn_015_the_field_keeps_what_the_recipe_holds(qtbot: QtBot) -> None
     assert len(said) == 2 and field.override() == 5.0
     field.set_override(None)
     assert field.override() is None and field.field.value() == 3.063 and not field.tick.isChecked()
-    for kept, shown in ((2.99837, 2.998), (20000.0, 10000.0), (0.0004, 0.001), (12345.6789, 10000.0)):
+    for kept, shown in ((2.99837, 2.998), (20000.0, 10000.0), (0.0004, 0.0), (12345.6789, 10000.0)):
         field.set_override(kept)
         assert field.override() == kept and field.field.value() == shown, f"{kept} kept until edited"
+    for kept, away, back in ((2.99837, 3.0, 2.998), (20000.0, 9999.0, 10000.0)):
+        field.set_override(kept)
+        field.field.setValue(away)
+        field.field.setValue(back)  # typed back to what the field showed: the value typed, not the one kept (review)
+        assert field.override() == back, f"{back} typed after {kept}"
     field.field.setValue(2.5)
     assert field.override() == 2.5
     field.tick.setChecked(False)
