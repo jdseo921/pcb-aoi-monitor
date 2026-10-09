@@ -757,7 +757,7 @@
 <context>
     <name>Errors</name>
     <message>
-        <location filename="../core/services.py" line="+81"/>
+        <location filename="../core/services.py" line="+86"/>
         <source>a length of {length} px over {distance} mm gives no scale: both must be numbers above 0, and the scale from {least} to {most} px per mm</source>
         <translation type="unfinished"></translation>
     </message>
@@ -795,12 +795,12 @@
     </message>
     <message>
         <location line="+170"/>
-        <location line="+1571"/>
+        <location line="+1613"/>
         <source>(none)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1540"/>
+        <location line="-1582"/>
         <source>Saving a recipe</source>
         <translation type="unfinished"></translation>
     </message>
@@ -821,11 +821,12 @@
     </message>
     <message>
         <location line="+118"/>
+        <location line="+20"/>
         <source>Running an AI model test</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+176"/>
+        <location line="+198"/>
         <source>Re-evaluating a result</source>
         <translation type="unfinished"></translation>
     </message>
@@ -990,13 +991,19 @@
         <translation>검증 세트 잠금</translation>
     </message>
     <message>
-        <location line="+14"/>
+        <location line="-1769"/>
+        <location line="+1783"/>
         <location line="+39"/>
         <source>the workspace holds no such dataset version</source>
         <translation>작업 공간에 그런 데이터셋 버전이 없습니다</translation>
     </message>
     <message>
-        <location line="-37"/>
+        <location line="-1821"/>
+        <source>its validation set is not split and locked</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1784"/>
         <source>its validation set is locked already, and a version is split only once</source>
         <translation>검증 세트가 이미 잠겨 있으며, 버전은 한 번만 분할됩니다</translation>
     </message>
@@ -1200,7 +1207,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-2284"/>
+        <location line="-2331"/>
         <source>no earlier version of this board model was active</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1210,7 +1217,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+2"/>
+        <location line="+7"/>
         <source>no defect type was given</source>
         <translation>결함 유형이 지정되지 않았습니다</translation>
     </message>
@@ -1230,7 +1237,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+699"/>
+        <location line="+741"/>
         <source>Labelling an image</source>
         <translation>이미지 라벨링</translation>
     </message>
@@ -2334,7 +2341,17 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+12"/>
+        <location line="+8"/>
+        <source>Activation refused: no AI model card</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>AI model {version} of board model {board} was not made active: it has no AI model card.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+3"/>
         <source>Train again, so the new version has its card, or activate a version that has one; the active AI model and its Golden board are unchanged.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2351,6 +2368,21 @@
     <message>
         <location line="+6"/>
         <source>Press Run Test Again in the preview pane to test the run&apos;s folder with what is in use now; the run&apos;s rows, CSV and report keep the verdicts it gave.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+8"/>
+        <source>The validation did not start</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Dataset version {name} was not tested: {reason}.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Split and lock its validation set on Training&apos;s Datasets tab, or pick another dataset version; nothing was stored.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -2744,7 +2776,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1028"/>
+        <location line="-1038"/>
         <source>Board judged NG</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2844,17 +2876,7 @@
         <translation>새 버전을 고정하고 검증 세트를 잠그면 해당 이미지는 잠긴 채로 유지됩니다. 그 버전으로 학습하십시오. 아무것도 저장되지 않았으며, 활성 AI 모델은 바뀌지 않았습니다.</translation>
     </message>
     <message>
-        <location line="+55"/>
-        <source>Activation refused: no AI model card</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+1"/>
-        <source>AI model {version} of board model {board} was not made active: it has no AI model card.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+40"/>
+        <location line="+106"/>
         <source>ROI thresholds refused</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3019,7 +3041,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/training.py" line="+522"/>
+        <location filename="../ui/pages/training.py" line="+524"/>
         <location filename="../ui/pages/training_import.py" line="+38"/>
         <source>{code} {title}</source>
         <translation type="unfinished"></translation>
@@ -4689,7 +4711,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/training.py" line="-373"/>
+        <location filename="../ui/pages/training.py" line="-375"/>
         <source>Training</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5591,7 +5613,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/services.py" line="-2498"/>
+        <location filename="../core/services.py" line="-2545"/>
         <source>Aligning {count} images to the reference board</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5640,12 +5662,12 @@
     </message>
     <message>
         <location line="+1"/>
-        <location line="+599"/>
+        <location line="+601"/>
         <source>Import Folder…</source>
         <translation>폴더 가져오기…</translation>
     </message>
     <message>
-        <location line="-587"/>
+        <location line="-589"/>
         <source>Training needs 20 OK images or more in a dataset version&apos;s training set</source>
         <translation>학습에는 데이터셋 버전의 학습 세트에 OK 이미지가 20장 이상 필요합니다</translation>
     </message>
@@ -5712,12 +5734,12 @@
     </message>
     <message>
         <location line="+3"/>
-        <location line="+459"/>
+        <location line="+461"/>
         <source>Remove</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-450"/>
+        <location line="-452"/>
         <source>Select a sample to preview</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5757,7 +5779,7 @@
         <translation type="unfinished">취소</translation>
     </message>
     <message>
-        <location line="+683"/>
+        <location line="+685"/>
         <source>{phase} · {percent} % · {left}</source>
         <translation>{phase} · {percent} % · {left}</translation>
     </message>
@@ -5777,7 +5799,7 @@
         <translation>취소됨: AI 모델을 저장하지 않았으며 활성 AI 모델은 바뀌지 않았습니다.</translation>
     </message>
     <message>
-        <location line="-683"/>
+        <location line="-685"/>
         <source>AI model versions</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5863,7 +5885,7 @@
     </message>
     <message>
         <location line="+1"/>
-        <location line="+768"/>
+        <location line="+770"/>
         <location line="+40"/>
         <source>Roll Back</source>
         <translation type="unfinished"></translation>

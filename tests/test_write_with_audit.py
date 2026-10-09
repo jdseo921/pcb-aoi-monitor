@@ -31,6 +31,7 @@ from tests.test_roles_and_audit import (
     frozen_for_lock,
     labelled_blind,
     ready_to_freeze,
+    validation_version,
 )
 from tools.trainable import trainable
 
@@ -93,6 +94,7 @@ def _labelled_set(ctx: AppContext) -> None:
 # a write that would change nothing on the trained workspace gets something to change, or its case proves nothing
 SETUP: dict[str, Callable[[AppContext], object]] = {
     "activate_model": _second_version,
+    "test_dataset": validation_version,
     "rollback_model": _rolled_back_to_v10,
     "archive_old": _a_result,
     "export_overlays": _a_result,
