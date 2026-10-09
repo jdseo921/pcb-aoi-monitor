@@ -413,7 +413,9 @@ file), so a file changed or removed outside the app is what `verify_dataset` rep
 every file against the stored SHA-256 and lists the files that match, changed or are missing, and writes nothing.
 The old bytes of such a file cannot be recovered from the workspace, which therefore needs a backup. How labels,
 checks, agreement checks and frozen versions are stored, and why, is
-[ADR 0009](adr/0009-labels-checks-and-dataset-versions.md) (proposed).
+[ADR 0009](adr/0009-labels-checks-and-dataset-versions.md) (proposed). How S38 will encrypt each customer's dataset
+store at rest, with one key per store kept in Windows Credential Manager, is
+[ADR 0010](adr/0010-customer-dataset-encryption.md) (proposed); nothing is encrypted yet.
 An AI model the loader would refuse, such as one with an image threshold of 0 from OK images that are copies of one
 photo, is refused at step 5 with AOI-TRN-004: nothing is saved, registered or audited, and the active version stays.
 Step 6 sets the new golden board as the reference, registers and activates the version and writes `model.train` in one

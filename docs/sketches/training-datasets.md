@@ -84,7 +84,7 @@ glossary (Validation, Board model, Master sample is not used here); sizes; every
 
 - Q37: `<REV>` is the board revision entered with the board model ("R3"). Reason: The Charter's glossary: a board model is one PCB design and revision ("TBOX-A1 rev 3").
 - Q39: Nobody unlocks a validation set; a new split needs a new dataset version. Reason: S36: locking is audited and cannot be undone (the sketch's Admin unlock and AOI-TRN-026 are removed).
-- Q40: A per-station key in Windows Credential Manager is the direction for S37's design record (ADR 0010, the next free number: 0006 is S28's, 0007 the Windows build's (#283), 0008 S30's and 0009 S32 to S35's). Reason: Keeps the key off the workspace disk with no new dependency; S37's ADR decides the details.
+- Q40: [ADR 0010](../adr/0010-customer-dataset-encryption.md) decides: one key per customer store (not per station), in Windows Credential Manager, with AES-256-GCM from the `cryptography` package (a new dependency). Reason: One customer's data can then be shredded alone, and a cipher binding of our own would cost more to trust than three permissive packages.
 
 Still for Jay: Q38, the allowed uses. The three check boxes (default: their own AI models only) stand in until Jay
 names the uses the customer contracts allow; that is a contract term, not a screen decision.
