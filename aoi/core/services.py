@@ -770,6 +770,8 @@ class AppContext:
         model's scale cannot be read with AOI-RCP-012, nothing stored (S29 review)."""
         if (refused := recipe.mm_refusal()) is not None:
             raise refused
+        if (uncovered := recipe.uncovered_checks()) and not (reason or "").strip():  # REQ-RCP-005: kept in its entry
+            raise AoiError("AOI-RCP-013", board_model=recipe.board_model, checks=", ".join(uncovered))
         scale = self.db.scale(recipe.board_model)  # AOI-RCP-012 for one that cannot be read
         latest = self.db.latest_recipe(recipe.board_model)
         if (notice := recipe.size_notice(scale)) is not None:  # saved, and kept with it
@@ -1142,6 +1144,17 @@ class AppContext:
         if (cal := _calibration(model)) is None:
             raise AoiError("AOI-TRN-012", version=model["version"], board=model["board_model"])
         return cal[0]
+
+    def recipe_revision(self, board_model: str, revision: int) -> dict[str, Any] | None:
+        """One stored recipe revision, to view read-only (REQ-RCP-004): revision, uuid, user, created_at, the recipe
+        and the reason its save gave (from its `recipe.save` entry; None without one); None when there is no such
+        revision."""
+        found = self.db.recipe_at(board_model, revision)
+        if found is None:
+            return None
+        entries = self.db.audit_entries("recipe", found["uuid"], None, None, 10)
+        reason = next((e["reason"] for e in entries if e["action"] in ("recipe.save", "recipe.default")), None)
+        return found | {"recipe": Recipe.from_dict(found["body"]), "reason": reason}
 
     def recipe_history(self, board_model: str) -> list[dict[str, Any]]:
         """Recipe revisions (revision, uuid, user, created_at), newest first; revision 1 by "system" is the default."""

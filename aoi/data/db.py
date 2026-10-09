@@ -580,6 +580,14 @@ class Database:
         )
         return (r[0]["revision"], json.loads(r[0]["body"]), str(r[0]["uuid"])) if r else None
 
+    def recipe_at(self, board_model: str, revision: int) -> dict[str, Any] | None:
+        """One revision (revision, uuid, user, created_at, body decoded), or None when there is no such revision."""
+        r = self.query(
+            "SELECT revision, uuid, user, created_at, body FROM recipes WHERE board_model=? AND revision=?",
+            (board_model, revision),
+        )
+        return r[0] | {"body": json.loads(r[0]["body"])} if r else None
+
     def recipe_history(self, board_model: str) -> list[dict[str, Any]]:
         return self.query(
             "SELECT revision, uuid, user, created_at FROM recipes WHERE board_model=? ORDER BY revision DESC",

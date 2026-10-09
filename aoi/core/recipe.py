@@ -7,6 +7,7 @@ import math
 from dataclasses import asdict, dataclass, field
 from typing import Any
 
+from ..defects import MANDATORY_AOI_SET, REQUIRES_3D_OR_SIDE
 from ..errors import QT_TRANSLATE_NOOP, AoiError
 
 ROI_TYPES = ["Presence", "Polarity", "Solder Bridge", "Height", "Anomaly"]
@@ -25,6 +26,17 @@ ROI_DEFECT = {
     "Height": "Pin Height Error",
     "Anomaly": "Anomaly",
 }
+# The ROI type that checks one of the 10 mandatory AOI checks (classification table section 4) by itself; the others are
+# covered by the whole-board AI check and the Golden board comparison (REQ-RCP-005).
+ROI_FOR_CHECK = {
+    "Missing Component": "Presence",
+    "Polarity Error": "Polarity",
+    "Solder Bridge": "Solder Bridge",
+    "Connector Pin Height": "Height",
+    "3D Coplanarity": "Height",
+    "Solder Volume": "Height",
+}
+STAGE1_CHECKS = [c for c in MANDATORY_AOI_SET if c not in REQUIRES_3D_OR_SIDE]  # the 6 a Stage 1 station can cover
 
 
 @dataclass
@@ -72,6 +84,16 @@ class Recipe:
             if roi["mm"] is None:
                 del roi["mm"]
         return d
+
+    def uncovered_checks(self) -> list[str]:
+        """The Stage 1 mandatory AOI checks the recipe leaves uncovered, in the classification table's order: a check is
+        covered by an enabled ROI of its type, or by the whole board, while the AI check or the Golden board comparison
+        is on. A save that leaves one uncovered needs a reason (REQ-RCP-005); the 4 that need Stage 2 hardware are not
+        counted."""
+        types = {r.type for r in self.rois if r.enabled}
+        if self.use_ai or self.use_compare:
+            return []
+        return [c for c in STAGE1_CHECKS if ROI_FOR_CHECK.get(c) not in types]
 
     def in_mm(self, px_per_mm: float | None) -> Recipe:
         """The recipe with each size it holds in px given in mm too at `px_per_mm`, as Save Recipe stores it under a
@@ -170,3 +192,22 @@ def _mm(value: object, place: bool = False) -> bool:
 def scale_digits(a: float | None, b: float | None) -> int:
     """The decimals, 2 or more, that print two scales apart when they differ (S29 review), else 2."""
     return next((d for d in range(2, 17) if a and b and f"{a:.{d}f}" != f"{b:.{d}f}"), 2)
+
+
+def changes(before: dict[str, Any] | None, after: dict[str, Any]) -> list[tuple[str, Any, Any]]:
+    """What a save changes, as (field, before, after), in the stored recipe's order: each setting, and each ROI by name
+    (added: before None; removed: after None), so a confirmation can list before -> after (REQ-RCP-004)."""
+    old = before or {}
+    out: list[tuple[str, Any, Any]] = []
+    for key, value in after.items():
+        if key not in ("rois", "board_model") and old.get(key) != value:
+            out.append((key, old.get(key), value))
+    if "min_defect_mm" in old and "min_defect_mm" not in after:
+        out.append(("min_defect_mm", old["min_defect_mm"], None))
+    rois_before = {r["name"]: r for r in old.get("rois", [])}
+    rois_after = {r["name"]: r for r in after.get("rois", [])}
+    for name in [*rois_after, *[n for n in rois_before if n not in rois_after]]:
+        b, a = rois_before.get(name), rois_after.get(name)
+        if b != a:
+            out.append((f"ROI {name}", b, a))
+    return out

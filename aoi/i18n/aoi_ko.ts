@@ -795,17 +795,17 @@
     </message>
     <message>
         <location line="+170"/>
-        <location line="+1571"/>
+        <location line="+1584"/>
         <source>(none)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1540"/>
+        <location line="-1553"/>
         <source>Saving a recipe</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+96"/>
+        <location line="+98"/>
         <source>it cannot be read ({code} {title})</source>
         <translation type="unfinished"></translation>
     </message>
@@ -825,7 +825,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+176"/>
+        <location line="+187"/>
         <source>Re-evaluating a result</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1200,7 +1200,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-2284"/>
+        <location line="-2297"/>
         <source>no earlier version of this board model was active</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1230,7 +1230,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+699"/>
+        <location line="+712"/>
         <source>Labelling an image</source>
         <translation>이미지 라벨링</translation>
     </message>
@@ -2334,7 +2334,17 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+12"/>
+        <location line="+8"/>
+        <source>Activation refused: no AI model card</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>AI model {version} of board model {board} was not made active: it has no AI model card.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+3"/>
         <source>Train again, so the new version has its card, or activate a version that has one; the active AI model and its Golden board are unchanged.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2476,6 +2486,21 @@
     <message>
         <location line="+3"/>
         <source>Nothing was judged or saved with it. On the Recipe Editor, press Calibrate Scale… and set the scale again; Set Scale replaces it.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+8"/>
+        <source>Recipe not saved: a reason is needed</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>The recipe of {board_model} leaves these mandatory AOI checks uncovered: {checks}.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>Add an ROI for each check, or turn the AI check or the Golden board comparison on; or type why in Reason and save again: the reason is kept with the revision.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -2744,7 +2769,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1028"/>
+        <location line="-1040"/>
         <source>Board judged NG</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2844,17 +2869,7 @@
         <translation>새 버전을 고정하고 검증 세트를 잠그면 해당 이미지는 잠긴 채로 유지됩니다. 그 버전으로 학습하십시오. 아무것도 저장되지 않았으며, 활성 AI 모델은 바뀌지 않았습니다.</translation>
     </message>
     <message>
-        <location line="+55"/>
-        <source>Activation refused: no AI model card</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+1"/>
-        <source>AI model {version} of board model {board} was not made active: it has no AI model card.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+40"/>
+        <location line="+96"/>
         <source>ROI thresholds refused</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2879,7 +2894,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+193"/>
+        <location line="+205"/>
         <source>Workspace in use</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3019,7 +3034,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/training.py" line="+522"/>
+        <location filename="../ui/pages/training.py" line="+524"/>
         <location filename="../ui/pages/training_import.py" line="+38"/>
         <source>{code} {title}</source>
         <translation type="unfinished"></translation>
@@ -3060,7 +3075,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/recipe.py" line="+14"/>
+        <location filename="../core/recipe.py" line="+15"/>
         <source>minimum defect size</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4689,7 +4704,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/training.py" line="-373"/>
+        <location filename="../ui/pages/training.py" line="-375"/>
         <source>Training</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5591,7 +5606,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/services.py" line="-2498"/>
+        <location filename="../core/services.py" line="-2511"/>
         <source>Aligning {count} images to the reference board</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5640,12 +5655,12 @@
     </message>
     <message>
         <location line="+1"/>
-        <location line="+599"/>
+        <location line="+601"/>
         <source>Import Folder…</source>
         <translation>폴더 가져오기…</translation>
     </message>
     <message>
-        <location line="-587"/>
+        <location line="-589"/>
         <source>Training needs 20 OK images or more in a dataset version&apos;s training set</source>
         <translation>학습에는 데이터셋 버전의 학습 세트에 OK 이미지가 20장 이상 필요합니다</translation>
     </message>
@@ -5712,12 +5727,12 @@
     </message>
     <message>
         <location line="+3"/>
-        <location line="+459"/>
+        <location line="+461"/>
         <source>Remove</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-450"/>
+        <location line="-452"/>
         <source>Select a sample to preview</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5757,7 +5772,7 @@
         <translation type="unfinished">취소</translation>
     </message>
     <message>
-        <location line="+683"/>
+        <location line="+685"/>
         <source>{phase} · {percent} % · {left}</source>
         <translation>{phase} · {percent} % · {left}</translation>
     </message>
@@ -5777,7 +5792,7 @@
         <translation>취소됨: AI 모델을 저장하지 않았으며 활성 AI 모델은 바뀌지 않았습니다.</translation>
     </message>
     <message>
-        <location line="-683"/>
+        <location line="-685"/>
         <source>AI model versions</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5863,7 +5878,7 @@
     </message>
     <message>
         <location line="+1"/>
-        <location line="+768"/>
+        <location line="+770"/>
         <location line="+40"/>
         <source>Roll Back</source>
         <translation type="unfinished"></translation>

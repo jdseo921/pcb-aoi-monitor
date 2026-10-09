@@ -952,6 +952,18 @@ CODES: dict[str, ErrorCode] = {
             ),
         ),
         ErrorCode(
+            "AOI-RCP-013",
+            QT_TRANSLATE_NOOP("Errors", "Recipe not saved: a reason is needed"),
+            QT_TRANSLATE_NOOP(
+                "Errors", "The recipe of {board_model} leaves these mandatory AOI checks uncovered: {checks}."
+            ),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Add an ROI for each check, or turn the AI check or the Golden board comparison on; or type why in"
+                " Reason and save again: the reason is kept with the revision.",
+            ),
+        ),
+        ErrorCode(
             "AOI-LOG-001",
             QT_TRANSLATE_NOOP("Errors", "Export stopped part-way"),
             QT_TRANSLATE_NOOP(
