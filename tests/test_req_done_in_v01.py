@@ -29,6 +29,7 @@ from aoi.core.recipe import ROI, ROI_TYPES, Recipe
 from aoi.core.services import AppContext
 from aoi.errors import AoiError
 from aoi.ui.main_window import MainWindow
+from aoi.ui.pages.compare import check_text
 from aoi.ui.pages.inspection import InspectionPage
 from aoi.ui.workers import _live
 from tests.conftest import TrainedModel, engineer, wrapped
@@ -291,7 +292,7 @@ def test_req_cmp_006_any_stored_ok_sample_can_be_the_reference_and_metrics_recom
     assert len(table) == len(want.checks) + 1 and table[-1][0] == "Inspection time (ms)"  # timed, so not compared
     for row, c in zip(table, want.checks, strict=False):
         value, threshold = pytest.approx(c.value, abs=1e-4), pytest.approx(c.threshold, abs=1e-4)
-        assert row == [page._check_text(c)[0], value, threshold, c.verdict], c.name
+        assert row == [check_text(c)[0], value, threshold, c.verdict], c.name
     assert page.res.verdict == want.verdict
     # Not the golden board's table shown again: what measures the board against its reference has moved.
     golden = {c.name: c.value for c in against_golden.checks}
@@ -439,16 +440,18 @@ def test_req_rcp_004_a_revision_saved_since_is_shown_and_never_reverted_by_save(
 def test_req_rcp_003_a_board_model_switch_cancels_the_try_and_clears_its_verdict(
     qtbot: QtBot, trained_ctx: AppContext, ng_board: Path
 ) -> None:
-    """Picking another board model clears the last Try's verdict and cancels a Try still running, so a result of the
-    board model before never shows, or paints its board, under the new one (#173)."""
+    """Picking another board model clears the last Try's verdict, checks and defects and cancels a Try still running,
+    so a result of the board model before never shows, or paints its board, under the new one (#173, REQ-RCP-003)."""
     win = _window(qtbot, trained_ctx)
     win.navigate("Recipe Editor")
     page = win.pages["Recipe Editor"]
     page.run_test(str(ng_board))
     qtbot.waitUntil(lambda: page.test_verdict.text().startswith("Try result:"), timeout=60000)
+    assert not page.try_checks.isHidden() and page.view.extra, "the Try's checks and defects shown"
     trained_ctx.ensure_board_model("BM2")
     win._reload_board_models("BM2")
     assert page.test_verdict.text() == "", "a finished Try's verdict goes with its board model"
+    assert page.try_checks.isHidden() and page.view.extra == [], "and its checks and defects with it"
     win._reload_board_models(BOARD)
     page.run_test(str(ng_board))
     win._reload_board_models("BM2")  # while the Try runs

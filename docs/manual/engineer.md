@@ -406,7 +406,14 @@ removes the selected ROI without asking, since Ctrl+Z undoes each change to the 
 board away from an ROI pans, as does a middle-button drag or a drag with Space held (in Draw ROI too); Home or a
 double-click fits the board. Save Recipe stores each ROI where it is shown, its box in mm under a scale (section 2).
 
-(to be written: the other thresholds, Test Run, revision history, the AOI checklist)
+**Try Recipe…** (Ctrl+T) judges a board with the recipe as it stands on screen, changes not saved included, and
+stores nothing: no result and no file. The file dialog opens on the board last inspected under this board model, so
+Enter tries that one, or pick another image. The Try runs off the screen with a busy indicator over the board; then
+the board shows its defects in red with the ROIs, the line under the tabs gives the verdict, the number of defects and
+the time taken, and the table under it lists each check behind the verdict as Compare's decision table does (value,
+threshold, rule and result), with the inspection time against the 1 s budget.
+
+(to be written: the other thresholds, revision history, the AOI checklist)
 
 ## 6. AI model test and reports
 

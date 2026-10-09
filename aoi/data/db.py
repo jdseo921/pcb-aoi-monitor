@@ -700,6 +700,12 @@ class Database:
         rows = self.query(sql + " ORDER BY id DESC", p)
         return [self._resolved(r, "image_path", "overlay_path", "diff_map_path", "ai_map_path") for r in rows]
 
+    def last_board(self, board_model: str) -> str | None:
+        """The image file of the newest inspection of `board_model` not archived, absolute; None without one."""
+        sql = "SELECT image_path FROM inspections WHERE board_model=? AND archived=0 ORDER BY id DESC LIMIT 1"
+        rows = self.query(sql, (board_model,))
+        return self._resolved(rows[0], "image_path")["image_path"] if rows else None
+
     def defects_for(self, inspection_id: int) -> list[dict[str, Any]]:
         return self.query("SELECT * FROM defects WHERE inspection_id=? ORDER BY no", (inspection_id,))
 

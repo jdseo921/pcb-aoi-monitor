@@ -259,7 +259,7 @@
 <context>
     <name>ComparePage</name>
     <message>
-        <location filename="../ui/pages/compare.py" line="+78"/>
+        <location filename="../ui/pages/compare.py" line="+79"/>
         <source>Side by side</source>
         <translation type="unfinished"></translation>
     </message>
@@ -330,13 +330,13 @@
     </message>
     <message>
         <location line="+3"/>
-        <location line="+97"/>
-        <location line="+580"/>
+        <location line="+126"/>
+        <location line="+564"/>
         <source>Golden board</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-676"/>
+        <location line="-689"/>
         <source>AI model</source>
         <translation type="unfinished"></translation>
     </message>
@@ -366,7 +366,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+6"/>
+        <location line="+35"/>
         <source>Minimum defect size (mm)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -397,12 +397,12 @@
     </message>
     <message>
         <location line="+15"/>
-        <location line="+905"/>
+        <location line="+884"/>
         <source>Test board</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-899"/>
+        <location line="-878"/>
         <source>Inspecting…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -478,12 +478,12 @@
     </message>
     <message>
         <location line="+5"/>
-        <location line="+157"/>
+        <location line="+141"/>
         <source>The verdict and the decision table are the stored ones; press Re-evaluate › to inspect the board again from its image file.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+48"/>
+        <location line="+43"/>
         <source>Why this board would be {verdict} with these thresholds:</source>
         <translation type="unfinished"></translation>
     </message>
@@ -523,7 +523,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-979"/>
+        <location line="-958"/>
         <source>AI score threshold</source>
         <translation type="unfinished"></translation>
     </message>
@@ -616,14 +616,14 @@
     </message>
     <message>
         <location line="+0"/>
-        <location line="+156"/>
-        <location line="+228"/>
+        <location line="+140"/>
+        <location line="+223"/>
         <location line="+12"/>
         <source>Re-evaluate ›</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-382"/>
+        <location line="-361"/>
         <source>Train an AI model on Training.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -633,7 +633,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+28"/>
+        <location line="-607"/>
         <source>Inspection time (ms)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -643,12 +643,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+3"/>
+        <location line="+1"/>
         <source>spec &lt; 1 s</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+37"/>
+        <location line="+658"/>
         <source>Test board: {file} (stored result)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -676,12 +676,12 @@
         <location line="+1"/>
         <location line="+6"/>
         <location line="+4"/>
-        <location line="+133"/>
+        <location line="+128"/>
         <source>none</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-138"/>
+        <location line="-133"/>
         <source>Since then the board model moved to AI model {model} and recipe revision {revision}.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -696,7 +696,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+21"/>
+        <location line="+16"/>
         <source>Why this board is {verdict}:</source>
         <translation type="unfinished"></translation>
     </message>
@@ -795,12 +795,12 @@
     </message>
     <message>
         <location line="+161"/>
-        <location line="+1571"/>
+        <location line="+1576"/>
         <source>(none)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1540"/>
+        <location line="-1545"/>
         <source>Saving a recipe</source>
         <translation type="unfinished"></translation>
     </message>
@@ -825,7 +825,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+176"/>
+        <location line="+181"/>
         <source>Re-evaluating a result</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1200,7 +1200,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-2271"/>
+        <location line="-2276"/>
         <source>no earlier version of this board model was active</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1230,7 +1230,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+699"/>
+        <location line="+704"/>
         <source>Labelling an image</source>
         <translation>이미지 라벨링</translation>
     </message>
@@ -1307,12 +1307,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/recipe_editor.py" line="+55"/>
+        <location filename="../ui/pages/recipe_editor.py" line="+56"/>
         <source>its Golden board was replaced after the points were picked on it</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+397"/>
+        <location line="+402"/>
         <source>Height</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4629,7 +4629,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/compare.py" line="-804"/>
+        <location filename="../ui/pages/compare.py" line="-783"/>
         <source>Compare</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4684,7 +4684,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/recipe_editor.py" line="-384"/>
+        <location filename="../ui/pages/recipe_editor.py" line="-389"/>
         <source>Recipe Editor</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4756,12 +4756,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+121"/>
+        <location line="+126"/>
         <source>AI score</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-108"/>
+        <location line="-113"/>
         <source>Selected ROI</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4772,7 +4772,7 @@
     </message>
     <message>
         <location line="+1"/>
-        <location line="+98"/>
+        <location line="+103"/>
         <source>Name</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4802,7 +4802,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-95"/>
+        <location line="-100"/>
         <source>ROI type</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4937,12 +4937,42 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+10"/>
-        <source>Try Recipe…</source>
+        <location line="+9"/>
+        <source>Check</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+0"/>
+        <source>Source</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+0"/>
+        <source>Value</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+0"/>
+        <source>Threshold</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+0"/>
+        <source>Rule</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location line="+1"/>
+        <source>Result</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+4"/>
+        <source>Try Recipe…</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+2"/>
         <source>Save Recipe</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5022,7 +5052,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+10"/>
+        <location line="+13"/>
         <source>Image to try the recipe on</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5037,7 +5067,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+14"/>
+        <location line="+19"/>
         <source>Saved revision {revision} by {user}.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5597,7 +5627,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/services.py" line="-2453"/>
+        <location filename="../core/services.py" line="-2458"/>
         <source>Aligning {count} images to the reference board</source>
         <translation type="unfinished"></translation>
     </message>

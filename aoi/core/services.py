@@ -1150,6 +1150,11 @@ class AppContext:
         each with its defect_count and absolute image and overlay paths."""
         return self.db.inspections(date_from, date_to, board_model, operator, include_archived)
 
+    def last_board(self, board_model: str) -> str | None:
+        """The image file of the board last inspected under `board_model` (its newest record not archived), which the
+        Recipe Editor's Try Recipe… picks first (Q23, REQ-RCP-003); None when none has been."""
+        return self.db.last_board(board_model)
+
     def defects_for(self, inspection_id: int) -> list[dict[str, Any]]:
         """The defects of one inspection (no, type, score, side, x, y, w, h), in order."""
         return self.db.defects_for(inspection_id)

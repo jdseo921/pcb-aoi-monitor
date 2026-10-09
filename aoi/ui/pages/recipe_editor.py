@@ -40,7 +40,8 @@ from ..widgets.box_editor import RoiEditor
 from ..widgets.busy import BusyOverlay
 from ..widgets.empty_state import EmptyState
 from ..widgets.scale import CalibrationSheet, DefectSizeField
-from .base import QT_TRANSLATE_NOOP, Page, button, fill_table, make_table, scrolled
+from .base import QT_TRANSLATE_NOOP, Page, action_button, button, fill_table, make_table, scrolled
+from .compare import check_rows
 
 if TYPE_CHECKING:
     from ..main_window import MainWindow
@@ -236,8 +237,13 @@ class RecipeEditorPage(Page):
         self.test_verdict = QLabel("")
         self.test_verdict.setMinimumHeight(theme.FIELD_H)
         rv.addWidget(self.test_verdict)
+        checks = [self.tr("Check"), self.tr("Source"), self.tr("Value"), self.tr("Threshold"), self.tr("Rule")]
+        self.try_checks = make_table([*checks, self.tr("Result")], sortable=False)  # the Try's checks (REQ-RCP-003)
+        self.try_checks.hide()
+        rv.addWidget(self.try_checks)
         b = QHBoxLayout()
-        b.addWidget(button(self.tr("Try Recipe…"), slot=self.test_run))
+        self.act_try = self.action(self.tr("Try Recipe…"), "Ctrl+T", self.test_run)
+        b.addWidget(action_button(self.act_try, show_key=False))
         b.addWidget(button(self.tr("Save Recipe"), "primary", self.save))
         rv.addLayout(b)
         split.addWidget(right)
@@ -614,11 +620,14 @@ class RecipeEditorPage(Page):
 
     # --- actions ----------------------------------------------------------------
     def test_run(self) -> None:
-        if not self.need_board_model():
+        """Try Recipe… (Ctrl+T): pick the board to try the recipe on, the last one inspected under this board model
+        picked already (Q23)."""
+        if not self.need_board_model() or (bm := self.board_model) is None:
             return
         exts = " ".join(f"*{e}" for e in sorted(IMAGE_EXTS))
+        last = self.ctx.last_board(bm) or ""
         f, _ = QFileDialog.getOpenFileName(
-            self, self.tr("Image to try the recipe on"), "", self.tr("Images ({extensions})").format(extensions=exts)
+            self, self.tr("Image to try the recipe on"), last, self.tr("Images ({extensions})").format(extensions=exts)
         )
         if f:
             self.run_test(f)
@@ -645,6 +654,11 @@ class RecipeEditorPage(Page):
             result.format(verdict=theme.verdict_label(res.verdict), defects=len(res.defects), ms=res.elapsed_ms)
         )
         self.test_verdict.setStyleSheet(theme.verdict_style(res.verdict, big=False))
+        fill_table(self.try_checks, *check_rows(res))
+        t = self.try_checks  # tall enough for its rows, up to theme.TRY_ROWS of them; more scroll
+        rows = sum(t.rowHeight(r) for r in range(min(t.rowCount(), theme.TRY_ROWS)))
+        t.setFixedHeight(t.horizontalHeader().sizeHint().height() + rows + 2 * t.frameWidth())
+        t.show()
 
     def save(self) -> None:
         if (bm := self.checked_board_model()) is None:
@@ -689,6 +703,7 @@ class RecipeEditorPage(Page):
             self.busy.finish()
         self.test_verdict.clear()
         self.test_verdict.setStyleSheet("")
+        self.try_checks.hide()
         self.view.extra = []
 
     def _draw_rois(self) -> None:
