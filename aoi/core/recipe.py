@@ -93,6 +93,11 @@ class Recipe:
                 roi.x, roi.y, roi.w, roi.h = (round(v * px_per_mm) for v in roi.mm)
         return out
 
+    @property
+    def sized_in_mm(self) -> bool:
+        """Whether the recipe holds a size in mm, its minimum defect size or an enabled ROI's box: one a scale sizes."""
+        return self.min_defect_mm is not None or any(roi.mm is not None and roi.enabled for roi in self.rois)
+
     @classmethod
     def from_dict(cls, d: dict[str, Any]) -> Recipe:
         d = dict(d)
@@ -110,3 +115,8 @@ def disc_area(width_px: float) -> int:
 def disc_width(area_px: float) -> float:
     """The width in px of a round defect of `area_px` px of area: a minimum defect area as a size (`disc_area` back)."""
     return math.sqrt(4 * area_px / math.pi)
+
+
+def scale_digits(a: float | None, b: float | None) -> int:
+    """The decimals, 2 or more, that print two scales apart when they differ (S29 review), else 2."""
+    return next((d for d in range(2, 17) if a and b and f"{a:.{d}f}" != f"{b:.{d}f}"), 2)

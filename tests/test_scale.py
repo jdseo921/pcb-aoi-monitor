@@ -72,7 +72,8 @@ def test_req_rcp_006_sizes_in_mm_are_applied_at_the_board_models_scale(trained_c
     """The engine applies a size in mm at the board model's scale: the minimum defect size as the area of a round
     defect that wide, rounded up so that a defect of exactly that size is kept, and an ROI's place and size to the
     nearest px; px sizes back to mm and in again give the same px. The record keeps the scale it was judged at, and an
-    engine built after a new scale judges at it."""
+    engine built before a new scale is no longer the current one, so Inspection builds another for its next board, nor
+    is what it judged an AI Model Test run with (its JudgedBy, #250), which counts the scale as the engine does."""
     recipe = Recipe(board_model=BOARD, min_defect_mm=0.8, rois=[ROI("R1", w=1, h=1, mm=[2.0, 2.5, 5.0, 1.3])])
     px = recipe.in_px(47.6)
     assert px.min_defect_area == math.ceil(math.pi / 4 * 38.08**2) == 1139
@@ -83,6 +84,7 @@ def test_req_rcp_006_sizes_in_mm_are_applied_at_the_board_models_scale(trained_c
     ctx.set_scale(BOARD, 640, 150)
     engine = ctx.inspector(BOARD)
     assert engine.recipe.min_defect_area == 40 and ctx.engine_is_current(BOARD, engine)
+    assert ctx.engine_is_current(BOARD, engine.judged_by)  # an AI Model Test run judged at this scale is current
     _, saved = ctx.recipe(BOARD)
     saved.min_defect_mm = 3.0  # 12.8 px at 4.27 px/mm: a round region of 129 px of area or more
     ctx.save_recipe(saved)
@@ -92,8 +94,10 @@ def test_req_rcp_006_sizes_in_mm_are_applied_at_the_board_models_scale(trained_c
     assert stored is not None and stored.px_per_mm == pytest.approx(640 / 150)
     regions = next(c for c in stored.checks if c.name == "Difference regions")
     assert regions.explain == "blobs ≥ 129 px after noise clean-up"
+    engine = ctx.inspector(BOARD)
     ctx.set_scale(BOARD, 1280, 150)
-    assert ctx.inspector(BOARD).recipe.min_defect_area == 515
+    assert not ctx.engine_is_current(BOARD, engine) and ctx.inspector(BOARD).recipe.min_defect_area == 515
+    assert not ctx.engine_is_current(BOARD, engine.judged_by)
 
 
 def test_req_rcp_006_a_stored_result_is_judged_again_at_its_own_scale(trained_ctx: AppContext, ng_board: Path) -> None:

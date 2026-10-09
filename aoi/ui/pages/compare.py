@@ -44,7 +44,7 @@ from ... import defects as taxonomy
 from ...core.explain import explain
 from ...core.imaging import IMAGE_EXTS
 from ...core.inspector import Check, InspectionResult, ai_check
-from ...core.recipe import Recipe
+from ...core.recipe import Recipe, scale_digits
 from ...core.services import REQUIRED_ROLE, ROLES, ROLES_FROM, AppContext, ErrorReport, Judged
 from ...core.views import ai_view, difference_view
 from ...errors import AoiError
@@ -139,16 +139,18 @@ def _judging(r: Recipe, res: InspectionResult | None) -> Recipe:
     runs then (`Inspector.judge`: an ROI only names the defects in it, by its type); the Golden board comparison's own
     thresholds judge nothing when the board was judged without it (Minimum defect area also sizes the AI model's
     defects: it counts); a disabled ROI, and an ROI's Stage 2 heights and volumes and its side, which nothing reads yet,
-    never judge (verification). `res` None, a board still being worked out: `r`'s switches say what judges it."""
+    never judge (verification). `res` None, a board still being worked out: `r`'s switches say what judges it. `r`
+    comes in px at the scale the board is judged at (`Recipe.in_px`): a size in mm judges by the px it gives (S29)."""
     ai, compared = (ai_check(res) == "RAN", res.compare is not None) if res is not None else (r.use_ai, r.use_compare)
     rois = [
-        dataclasses.replace(x, height_min=None, height_max=None, volume_min=None, volume_max=None, side="")
+        dataclasses.replace(x, height_min=None, height_max=None, volume_min=None, volume_max=None, side="", mm=None)
         for x in r.rois
         if x.enabled
     ]
     if not ai:
         rois = [dataclasses.replace(x, name="", ai_score=0.0) for x in rois]
     r = dataclasses.replace(r, anomaly_threshold=(r.anomaly_threshold or None) if ai else None, rois=rois)
+    r.min_defect_mm = None  # judged by its area at the scale, as each ROI by its box
     if compared:
         return r
     return dataclasses.replace(r, diff_threshold=0, ssim_min=0.0, changed_pct_max=0.0, max_diff_regions=0)
@@ -537,7 +539,7 @@ class ComparePage(Page):
         if self.test_path:  # what judges it, which an Operator's sign-in holds against the recipe then (review)
             saved = self.ctx.recipe(bm)[1]
             recipe = None if self.ctx.role == "Operator" else self._form_recipe(bm, saved)
-            self.judged_by = saved if recipe is None else recipe
+            self.judged_by = (saved if recipe is None else recipe).in_px(self.ctx.scale(bm))  # as the engine applies it
         self._sync_roles()  # Re-evaluate, waiting for a stored result's maps, now inspects again
         judged = self.as_judged[1] if self.as_judged and not self.ref_override else None
         if not self.ref_override:
@@ -809,6 +811,13 @@ class ComparePage(Page):
         if rec["reference_path"] and golden != rec["reference_path"]:  # an Engineer or a training run set another
             name = breakable(Path(golden).name) if golden else self.tr("none")
             parts.append(self.tr("The board model's Golden board is now {file}.").format(file=name))
+        judged_at, scale = self.res.px_per_mm if self.res is not None else None, self.ctx.scale(bm)
+        if judged_at is not None and scale is not None and scale != judged_at:  # Re-evaluate applies its own (ADR 0006)
+            line = self.tr(
+                "It was judged at a scale of {then:.{digits}f} px/mm, at which Re-evaluate applies sizes in mm; the"
+                " board model's scale, at which Try other thresholds shows them, is now {now:.{digits}f} px/mm."
+            )
+            parts.append(line.format(then=judged_at, now=scale, digits=scale_digits(judged_at, scale)))
         if not any(p and Path(p).is_file() for p in (rec["diff_map_path"], rec["ai_map_path"])):
             name = breakable(Path(rec["image_path"]).name)  # shown only, never raised or logged, so it may wrap
             e = AoiError("AOI-CMP-001", file=name, days=self.ctx.settings.map_retention_days_ok)
@@ -1063,8 +1072,9 @@ class ComparePage(Page):
         """An Operator signs in, on Compare or on any other page (review): the hidden form goes back to the recipe's
         thresholds, which the Difference heatmap follows, and what was tried with values an Engineer left unsaved goes,
         so the next Engineer finds the recipe's thresholds too; a board inspected with thresholds or other values the
-        recipe does not hold now (an Engineer's not saved, or a revision saved since it was inspected) is cleared, a run
-        of it still going stopped, and judged by the recipe when Compare is shown (`on_show`, next if it is shown now).
+        recipe does not hold now (an Engineer's not saved, or a revision saved since it was inspected, or a scale set
+        since that changes the px of a size in mm, S29) is cleared, a run of it still going stopped, and judged by the
+        recipe when Compare is shown (`on_show`, next if it is shown now).
         A run stopped by Cancel stays so, and a stored result as it was decided; a value that did not judge the board is
         no change (`_judging`). A focus in the panel, which the sign-in hides, waits in the "why" box, which every role
         sees, as one on the indicator's Cancel does (`_not_trying`), where Qt would pass it on to the header's board
@@ -1080,7 +1090,8 @@ class ComparePage(Page):
             self.redraw()
         going = self._bg is not None and not self._bg.job.cancelled  # a run stopped, by Cancel say, is not judged again
         by, judged = self.judged_by, None if going else self.res  # a run still going: not its result yet
-        stale = by is not None and saved is not None and _judging(by, judged) != _judging(saved, judged)  # read now
+        now = saved.in_px(self.ctx.scale(saved.board_model)) if saved is not None else None  # read now, at the scale
+        stale = by is not None and now is not None and _judging(by, judged) != _judging(now, judged)  # now (S29)
         if stale and self.stored is None and (self.res is not None or going):
             if self._bg is not None:
                 self._bg.stop()  # its verdict never shows; an error of it is still logged and alarmed (#206)

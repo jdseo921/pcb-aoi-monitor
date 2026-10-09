@@ -98,13 +98,13 @@
     </message>
     <message>
         <location line="+3"/>
-        <location line="+93"/>
+        <location line="+95"/>
         <location line="+510"/>
         <source>Golden board</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-602"/>
+        <location line="-604"/>
         <source>AI model</source>
         <translation type="unfinished"></translation>
     </message>
@@ -134,7 +134,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+68"/>
+        <location line="+70"/>
         <source>Test Image…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -160,12 +160,12 @@
     </message>
     <message>
         <location line="+15"/>
-        <location line="+819"/>
+        <location line="+826"/>
         <source>Test board</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-813"/>
+        <location line="-820"/>
         <source>Inspecting…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -246,7 +246,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+41"/>
+        <location line="+48"/>
         <source>Why this board would be {verdict} with these thresholds:</source>
         <translation type="unfinished"></translation>
     </message>
@@ -286,7 +286,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-889"/>
+        <location line="-898"/>
         <source>AI score threshold</source>
         <translation type="unfinished"></translation>
     </message>
@@ -311,7 +311,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+164"/>
+        <location line="+166"/>
         <source>Re-evaluate</source>
         <translation type="unfinished"></translation>
     </message>
@@ -380,13 +380,13 @@
     <message>
         <location line="+0"/>
         <location line="+146"/>
-        <location line="+212"/>
+        <location line="+219"/>
         <location line="+12"/>
         <source>Re-evaluate ›</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-356"/>
+        <location line="-363"/>
         <source>Train an AI model on Training.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -439,12 +439,12 @@
         <location line="+1"/>
         <location line="+6"/>
         <location line="+4"/>
-        <location line="+119"/>
+        <location line="+126"/>
         <source>none</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-124"/>
+        <location line="-131"/>
         <source>Since then the board model moved to AI model {model} and recipe revision {revision}.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -454,7 +454,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+18"/>
+        <location line="+4"/>
+        <source>It was judged at a scale of {then:.{digits}f} px/mm, at which Re-evaluate applies sizes in mm; the board model&apos;s scale, at which Try other thresholds shows them, is now {now:.{digits}f} px/mm.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+21"/>
         <source>Why this board is {verdict}:</source>
         <translation type="unfinished"></translation>
     </message>
@@ -469,7 +474,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+97"/>
+        <location line="+99"/>
         <source>Inspect a board on Inspection, or pick a test image.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -555,7 +560,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+70"/>
+        <location line="+71"/>
         <source>{file}: {defects} defect(s)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -655,7 +660,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1077"/>
+        <location line="-1078"/>
         <source>there is no board model of that name</source>
         <translation type="unfinished"></translation>
     </message>
@@ -665,7 +670,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+685"/>
+        <location line="+686"/>
         <source>Changing settings</source>
         <translation type="unfinished"></translation>
     </message>
@@ -707,7 +712,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/compare.py" line="-213"/>
+        <location filename="../ui/pages/compare.py" line="-215"/>
         <source>Changing recipes</source>
         <translation type="unfinished"></translation>
     </message>
@@ -817,7 +822,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+279"/>
+        <location line="+283"/>
         <source>board image</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1022,12 +1027,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+6"/>
-        <source>AI model, recipe or Golden board changed during a run</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+16"/>
+        <location line="+23"/>
         <source>Result not saved: path too long</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1283,13 +1283,23 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+7"/>
-        <source>AI model, recipe or Golden board changed since the run</source>
+        <location line="-247"/>
+        <source>AI model, recipe, scale or Golden board changed during a run</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location line="+1"/>
-        <source>{file} was judged in this run by {run_model}, recipe revision {run_recipe} and {run_golden}; {board_model} now uses {model}, recipe revision {recipe} and {golden}, so a preview could show another verdict than its row.</source>
+        <source>The AI model, recipe, scale or Golden board of {board} changed during a run (training ended, a version was activated while the recipe has the AI check on, a recipe saved, a scale set while it holds a size in mm, or a Golden board set), so {file} and the boards after it are judged with what is active now; the boards before keep what judged them.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+253"/>
+        <source>AI model, recipe, scale or Golden board changed since the run</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>{file} was judged in this run by {run_model}, recipe revision {run_recipe}, {run_golden} and {run_scale}; {board_model} now uses {model}, recipe revision {recipe}, {golden} and {scale}, so a preview could show another verdict than its row.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -1638,7 +1648,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-636"/>
+        <location line="-637"/>
         <source>Board judged NG</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1648,12 +1658,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+114"/>
-        <source>The AI model, recipe or Golden board of {board} changed during a run (training ended, a version was activated while the recipe has the AI check on, a recipe saved or a Golden board set), so {file} and the boards after it are judged with what is active now; the boards before keep what judged them.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+6"/>
+        <location line="+121"/>
         <source>No action is needed: each record names the AI model version active when its board was judged, the recipe revision that judged it, which says whether the AI check ran, and the Golden board it was judged against.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1843,7 +1848,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/model_test.py" line="+47"/>
+        <location filename="../ui/pages/model_test.py" line="+48"/>
         <source>AI model {version}</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1865,6 +1870,16 @@
     <message>
         <location line="+1"/>
         <source>no Golden board</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>a scale of {scale:.{digits}f} px/mm</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>no scale</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -2351,17 +2366,27 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+16"/>
-        <source>The AI model, recipe or Golden board changed during this run: {file} was judged with AI model {version}, recipe revision {revision} and Golden board {golden}; each record names the recipe revision and Golden board that judged it and the AI model version active then.</source>
+        <location line="+17"/>
+        <source>The AI model, recipe, scale or Golden board changed during this run: {file} was judged with AI model {version}, recipe revision {revision}, Golden board {golden} and {scale}; each record names the recipe revision and Golden board that judged it and the AI model version active then.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location line="+6"/>
-        <source>The recipe or Golden board changed during this run: {file} was judged with the AI check off, recipe revision {revision} and Golden board {golden}; each record names the recipe revision and Golden board that judged it and the AI model version active then.</source>
+        <source>The recipe, scale or Golden board changed during this run: {file} was judged with the AI check off, recipe revision {revision}, Golden board {golden} and {scale}; each record names the recipe revision and Golden board that judged it and the AI model version active then.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+19"/>
+        <location line="+10"/>
+        <source>no scale</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+0"/>
+        <source>a scale of {scale:.2f} px/mm</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+11"/>
         <source>Run stopped: {user} signed in. The boards of the run so far are recorded under {starter}; press Start to carry on with the queue as {user}.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2664,25 +2689,25 @@
     <name>ModelTestPage</name>
     <message>
         <location filename="../ui/pages/model_test.py" line="+35"/>
-        <location line="+304"/>
+        <location line="+312"/>
         <source>Select Test Folder…</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-303"/>
+        <location line="-311"/>
         <location line="+99"/>
-        <location line="+178"/>
+        <location line="+186"/>
         <source>Run Test</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-275"/>
-        <location line="+307"/>
+        <location line="-283"/>
+        <location line="+315"/>
         <source>Export CSV</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-306"/>
+        <location line="-314"/>
         <source>Export Report</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2732,7 +2757,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-86"/>
+        <location line="+209"/>
+        <source>These results were judged by {run_model}, recipe revision {run_recipe}, {run_golden} and {run_scale}; {board_model} now uses {model}, recipe revision {recipe}, {golden} and {scale}. Rows are not previewed; select one for Run Test Again, which tests the run&apos;s folder with what is in use now.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="-297"/>
         <source>Matches label</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2747,7 +2777,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+85"/>
+        <location line="+87"/>
         <source>Matches label?</source>
         <comment>whether the verdict matches the image&apos;s label</comment>
         <translation type="unfinished"></translation>
@@ -2793,17 +2823,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+97"/>
+        <location line="+105"/>
         <source>Run Test Again ›</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+16"/>
-        <source>These results were judged by {run_model}, recipe revision {run_recipe} and {run_golden}; {board_model} now uses {model}, recipe revision {recipe} and {golden}. Rows are not previewed; select one for Run Test Again, which tests the run&apos;s folder with what is in use now.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+58"/>
+        <location line="+74"/>
         <source>No AI model for {board_model} yet</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3010,7 +3035,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/compare.py" line="-726"/>
+        <location filename="../ui/pages/compare.py" line="-733"/>
         <source>Compare</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3020,7 +3045,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/inspection.py" line="-485"/>
+        <location filename="../ui/pages/inspection.py" line="-488"/>
         <source>Inspection</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3030,7 +3055,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/model_test.py" line="-386"/>
+        <location filename="../ui/pages/model_test.py" line="-394"/>
         <source>AI Model Test</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3641,7 +3666,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/services.py" line="-1254"/>
+        <location filename="../core/services.py" line="-1255"/>
         <source>Aligning {count} images to the reference board</source>
         <translation type="unfinished"></translation>
     </message>

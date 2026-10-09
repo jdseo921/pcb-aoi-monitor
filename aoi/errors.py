@@ -215,12 +215,13 @@ CODES: dict[str, ErrorCode] = {
         ),
         ErrorCode(
             "AOI-INSP-013",
-            QT_TRANSLATE_NOOP("Errors", "AI model, recipe or Golden board changed during a run"),
+            QT_TRANSLATE_NOOP("Errors", "AI model, recipe, scale or Golden board changed during a run"),
             QT_TRANSLATE_NOOP(
                 "Errors",
-                "The AI model, recipe or Golden board of {board} changed during a run (training ended, a version was"
-                " activated while the recipe has the AI check on, a recipe saved or a Golden board set), so {file} and"
-                " the boards after it are judged with what is active now; the boards before keep what judged them.",
+                "The AI model, recipe, scale or Golden board of {board} changed during a run (training ended, a version"
+                " was activated while the recipe has the AI check on, a recipe saved, a scale set while it holds a size"
+                " in mm, or a Golden board set), so {file} and the boards after it are judged with what is active now;"
+                " the boards before keep what judged them.",
             ),
             QT_TRANSLATE_NOOP(
                 "Errors",
@@ -468,12 +469,12 @@ CODES: dict[str, ErrorCode] = {
         ),
         ErrorCode(
             "AOI-TST-001",
-            QT_TRANSLATE_NOOP("Errors", "AI model, recipe or Golden board changed since the run"),
+            QT_TRANSLATE_NOOP("Errors", "AI model, recipe, scale or Golden board changed since the run"),
             QT_TRANSLATE_NOOP(
                 "Errors",
-                "{file} was judged in this run by {run_model}, recipe revision {run_recipe} and {run_golden};"
-                " {board_model} now uses {model}, recipe revision {recipe} and {golden}, so a preview could show"
-                " another verdict than its row.",
+                "{file} was judged in this run by {run_model}, recipe revision {run_recipe}, {run_golden} and"
+                " {run_scale}; {board_model} now uses {model}, recipe revision {recipe}, {golden} and {scale}, so a"
+                " preview could show another verdict than its row.",
             ),
             QT_TRANSLATE_NOOP(
                 "Errors",
