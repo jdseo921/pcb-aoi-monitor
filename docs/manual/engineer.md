@@ -183,7 +183,11 @@ the table's Defect type column shows, each with its count; Mark NG asks for no t
 for you to draw its boxes. An image marked OK or UNSURE loses its boxes, which stay in its history, and Undo or Ctrl+Z
 gives them back with its label. While you type in a field, such as Epochs, or in a drop-down list, such as the Type
 list, the letters go there instead. **PgDn** and **PgUp** open the next and previous image of the table, in the order
-it is sorted. The editor's keys for drawing, moving and resizing a box are not on this screen yet.
+it is sorted. By keys alone: **D** presses Draw Box and puts the focus on the image, where Enter places a box 64
+pixels a side on screen at the middle of the image shown; the arrow keys move the selected box by 1 pixel, 10 with
+Shift, and with Ctrl move its bottom right corner; keys pressed one after another are saved once, half a second after
+the last. **Esc** leaves Draw mode. Tab moves between the image, the Type list and the Boxes list, where the up and
+down arrows select a box.
 
 **A second user checks each label.** The labels of a board model and view are ready to freeze into a dataset only
 once a second Engineer or Admin has checked every NG label and OK labels drawn at random, 10 % of them rounded up; the

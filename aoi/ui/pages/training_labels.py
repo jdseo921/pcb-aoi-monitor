@@ -15,7 +15,7 @@ from functools import partial
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import QEvent, Qt, Signal
 from PySide6.QtGui import QFocusEvent, QKeyEvent, QKeySequence, QWheelEvent
 from PySide6.QtWidgets import QComboBox, QFormLayout, QHBoxLayout, QLabel, QListWidget, QVBoxLayout, QWidget
 
@@ -23,7 +23,7 @@ from ...core.labels import DefectBox
 from ...defects import BY_NAME, names
 from ...errors import AoiError
 from .. import theme
-from ..widgets.box_editor import BoxEditor
+from ..widgets.box_editor import ENTER, BoxEditor
 from ..widgets.busy import BusyOverlay
 from ..widgets.empty_state import EmptyState
 from ..workers import Worker, start
@@ -72,8 +72,14 @@ class TypeList(QComboBox):
         if not self._showing:
             self.picked.emit()
 
+    def event(self, e: QEvent) -> bool:
+        if e.type() == QEvent.Type.ShortcutOverride and isinstance(e, QKeyEvent) and e.key() in ENTER:
+            e.accept()  # its Enter before a page key on Enter (the sketch's Check Label)
+            return True
+        return super().event(e)
+
     def keyPressEvent(self, e: QKeyEvent) -> None:
-        if e.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter):
+        if e.key() in ENTER:
             self.picked.emit()
             return
         self._showing = True
@@ -115,6 +121,9 @@ class LabelEditor(QWidget):
         tools = QHBoxLayout()
         self.draw_btn = button(self.tr("Draw Box"), slot=self._toggle_draw)
         self.draw_btn.setCheckable(True)
+        self.act_draw = page.action(self.tr("Draw Box"), "D", self._draw_key)  # the button's key (labels sketch)
+        self.act_leave = page.action(self.tr("Leave Draw Mode"), "Esc", self._leave)
+        self.draw_btn.setToolTip(self.act_draw.shortcut().toString(QKeySequence.SequenceFormat.NativeText))
         tools.addWidget(self.draw_btn)
         tools.addStretch(1)
         lay.addLayout(tools)
@@ -221,7 +230,7 @@ class LabelEditor(QWidget):
 
     def idle(self) -> bool:
         """Nothing read or stored, or waiting to be shown: what a test, or a screenshot, waits for."""
-        return not self.busy() and not self._later
+        return not self.busy() and not self._later and not self.view.dragging()
 
     def _settled(self) -> None:
         if self._later:
@@ -237,6 +246,8 @@ class LabelEditor(QWidget):
             self.draw_btn.setChecked(False)
             self._toggle_draw()
         self.act_delete.setEnabled(ng and self.view.chosen >= 0)
+        self.act_draw.setEnabled(ng)
+        self.act_leave.setEnabled(self.draw_btn.isChecked())
         self.act_undo.setEnabled(bool(self._history))
 
     def _fill_list(self, boxes: list[DefectBox] | None = None) -> None:
@@ -272,6 +283,18 @@ class LabelEditor(QWidget):
     # --- what is changed -------------------------------------------------------------
     def _toggle_draw(self) -> None:
         self.view.set_draw_mode(self.draw_btn.isChecked())
+        self.act_leave.setEnabled(self.draw_btn.isChecked())
+
+    def _draw_key(self) -> None:
+        """D: Draw Box pressed, and in Draw mode the focus on the image, where Enter places a box."""
+        self.draw_btn.click()
+        if self.draw_btn.isChecked():
+            self.view.setFocus()
+
+    def _leave(self) -> None:
+        """Esc: Draw mode left (labels sketch)."""
+        self.draw_btn.setChecked(False)
+        self._toggle_draw()
 
     def _shown_type(self) -> None:
         """The type the Type list shows: its severity beside it, and the type of the next box drawn."""
