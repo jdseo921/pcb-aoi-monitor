@@ -1,6 +1,7 @@
 """Settings › Dataset stores (REQ-TRN-017, ADR 0010; Datasets stage 3 of 4): the customers' encrypted dataset stores,
 Admin only as the page is, and the steps on them, each an inline sheet in the table's place, never a dialog over the
-page. New Store… shows the new store's recovery sheet this once, with Print Sheet…."""
+page. New Store… shows the new store's recovery sheet this once, with Print Sheet…; Restore Key… takes it back on a
+new PC or Windows account."""
 
 from __future__ import annotations
 
@@ -18,6 +19,13 @@ from .base import button, fill_table, make_table
 
 if TYPE_CHECKING:
     from .settings import SettingsPage
+
+KEY_LETTERS = 52  # a recovery sheet's base32 letters and digits, in 13 groups of four (aoi/core/crypto.py, sheet)
+
+
+def typed_letters(text: str) -> int:
+    """How many of a recovery sheet's letters and digits `text` holds, spaces and hyphens aside, as the key is read."""
+    return sum(c not in " -\t\n" for c in text)
 
 
 class StoresPanel(QGroupBox):
@@ -49,12 +57,15 @@ class StoresPanel(QGroupBox):
         row = QHBoxLayout(self.steps)
         row.setContentsMargins(0, 0, 0, 0)
         self.btn_new = button(self.tr("New Store…"), slot=self._new)
-        row.addWidget(self.btn_new)
+        self.btn_restore = button(self.tr("Restore Key…"), slot=self._restore)
+        for b in (self.btn_new, self.btn_restore):
+            row.addWidget(b)
         row.addStretch(1)
         lay.addWidget(self.steps)
         self.sheets: list[QGroupBox] = []
         self._new_sheet(lay)
         self._recovery_sheet(lay)
+        self._restore_sheet(lay)
         self.close_sheet()
 
     def _sheet(self, lay: QVBoxLayout, title: str, esc: bool = True) -> tuple[QGroupBox, QVBoxLayout]:
@@ -111,6 +122,25 @@ class StoresPanel(QGroupBox):
         self.btn_done = button(self.tr("Close"), slot=self.close_sheet)
         self._buttons(sl, button(self.tr("Print Sheet…"), slot=self._print), self.btn_done)
 
+    def _restore_sheet(self, lay: QVBoxLayout) -> None:
+        self.restore_sheet, sl = self._sheet(lay, "")
+        how = QLabel(
+            self.tr(
+                "Type the 13 groups of four from its recovery sheet, in any case, with or without spaces or hyphens."
+            )
+        )
+        how.setWordWrap(True)
+        sl.addWidget(how)
+        self.typed = QLineEdit()
+        self.typed.textChanged.connect(self._sync)
+        self.typed.returnPressed.connect(self._restore_key)
+        sl.addWidget(self.typed)
+        self.typed_count = QLabel()
+        self.typed_count.setObjectName("muted")
+        sl.addWidget(self.typed_count)
+        self.btn_restore_key = button(self.tr("Restore"), slot=self._restore_key)
+        self._buttons(sl, self.btn_restore_key, button(self.tr("Cancel"), slot=self.close_sheet))
+
     def refresh(self) -> None:
         """The table again, the same store selected; the first when none was."""
         picked = self.picked()
@@ -135,8 +165,15 @@ class StoresPanel(QGroupBox):
         return self.rows[i] if 0 <= i < len(self.rows) and self.table.selectionModel().hasSelection() else None
 
     def _sync(self) -> None:
+        store = self.picked()
+        live = store is not None and not store["shredded_at"]
+        self.btn_restore.setEnabled(live)
+        self.btn_restore.setToolTip("" if live else self.tr("Pick a store that is not shredded"))
         self.btn_create.setEnabled(bool(self.customer.text().strip()))
         self.btn_done.setEnabled(self.kept.isChecked())
+        n = typed_letters(self.typed.text())
+        self.typed_count.setText(self.tr("{n} of {all} characters").format(n=n, all=KEY_LETTERS))
+        self.btn_restore_key.setEnabled(n == KEY_LETTERS)
 
     def _open(self, sheet: QGroupBox, focus: QWidget) -> None:
         """`sheet` in the table's place: the table hidden first, as a sheet shown beside it grew the window (923 px)."""
@@ -152,6 +189,7 @@ class StoresPanel(QGroupBox):
         self.recovery_ids.clear()
         self.kept.setChecked(False)
         self.customer.clear()
+        self.typed.clear()
         for g in self.sheets:
             g.hide()
         self.table.show()
@@ -206,3 +244,24 @@ class StoresPanel(QGroupBox):
         printer = QPrinter(QPrinter.PrinterMode.HighResolution)
         if self.made is not None and QPrintDialog(printer, self).exec() == QDialog.DialogCode.Accepted:
             self.recovery_document(self.made).print_(printer)
+
+    def _restore(self) -> None:
+        store = self.picked()
+        if store is None:
+            return
+        title = self.tr("Restore the key for {customer}").format(customer=store["customer"])
+        self.restore_sheet.setTitle(title)
+        self._open(self.restore_sheet, self.typed)
+
+    def _restore_key(self) -> None:
+        store = self.picked()
+        if store is None or not self.btn_restore_key.isEnabled():
+            return
+        try:
+            self.ctx.restore_store_key(store["uuid"], self.typed.text())
+        except AoiError as e:  # a key that is not the store's: the typed text stays, to check each group
+            self.page.error(e)
+            return
+        self.close_sheet()
+        said = self.tr("The key for {customer} is saved on this station again")
+        self.page.shell.status(said.format(customer=store["customer"]))

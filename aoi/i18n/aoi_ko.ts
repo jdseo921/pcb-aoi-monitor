@@ -5076,18 +5076,18 @@
 <context>
     <name>StoresPanel</name>
     <message>
-        <location filename="../ui/pages/settings_stores.py" line="+30"/>
+        <location filename="../ui/pages/settings_stores.py" line="+38"/>
         <source>Dataset stores</source>
         <translation>데이터셋 저장소</translation>
     </message>
     <message>
         <location line="+5"/>
-        <location line="+49"/>
+        <location line="+52"/>
         <source>Customer</source>
         <translation>고객</translation>
     </message>
     <message>
-        <location line="-49"/>
+        <location line="-52"/>
         <source>Key id</source>
         <translation>키 ID</translation>
     </message>
@@ -5117,7 +5117,12 @@
         <translation>새 저장소…</translation>
     </message>
     <message>
-        <location line="+31"/>
+        <location line="+1"/>
+        <source>Restore Key…</source>
+        <translation>키 복원…</translation>
+    </message>
+    <message>
+        <location line="+33"/>
         <source>New dataset store</source>
         <translation>새 데이터셋 저장소</translation>
     </message>
@@ -5128,11 +5133,12 @@
     </message>
     <message>
         <location line="+1"/>
+        <location line="+40"/>
         <source>Cancel</source>
         <translation type="unfinished">취소</translation>
     </message>
     <message>
-        <location line="+7"/>
+        <location line="-33"/>
         <source>Shown this once. Print it and keep it apart from the station: with it, Restore Key… opens the store on another PC, and anyone who holds it and a copy of the files can read them.</source>
         <translation>이번 한 번만 표시됩니다. 인쇄하여 스테이션과 떨어진 곳에 보관하십시오. 이 시트로 키 복원…을 하면 다른 PC에서 저장소를 열 수 있으며, 이 시트와 파일의 사본을 가진 사람은 누구나 파일을 읽을 수 있습니다.</translation>
     </message>
@@ -5152,7 +5158,27 @@
         <translation>시트 인쇄…</translation>
     </message>
     <message>
-        <location line="+65"/>
+        <location line="+6"/>
+        <source>Type the 13 groups of four from its recovery sheet, in any case, with or without spaces or hyphens.</source>
+        <translation>복구 시트의 네 글자씩 13개 그룹을 입력하십시오. 대소문자, 공백, 하이픈은 상관없습니다.</translation>
+    </message>
+    <message>
+        <location line="+12"/>
+        <source>Restore</source>
+        <translation>복원</translation>
+    </message>
+    <message>
+        <location line="+30"/>
+        <source>Pick a store that is not shredded</source>
+        <translation>파기되지 않은 저장소를 고르십시오</translation>
+    </message>
+    <message>
+        <location line="+4"/>
+        <source>{n} of {all} characters</source>
+        <translation>{all}자 중 {n}자</translation>
+    </message>
+    <message>
+        <location line="+40"/>
         <source>Recovery sheet for {customer}</source>
         <translation>{customer}의 복구 시트</translation>
     </message>
@@ -5165,6 +5191,16 @@
         <location line="+15"/>
         <source>Keep this sheet locked away, apart from the station. With it, an Admin types the key into Restore Key… on another PC or Windows account. Anyone who holds it and a copy of the store&apos;s files can read them. Destroy it when the store is shredded.</source>
         <translation>이 시트는 스테이션과 떨어진 곳에 잠가 보관하십시오. 관리자는 이 시트로 다른 PC나 Windows 계정의 키 복원…에 키를 입력합니다. 이 시트와 저장소 파일의 사본을 가진 사람은 누구나 파일을 읽을 수 있습니다. 저장소를 파기하면 이 시트도 폐기하십시오.</translation>
+    </message>
+    <message>
+        <location line="+20"/>
+        <source>Restore the key for {customer}</source>
+        <translation>{customer}의 키 복원</translation>
+    </message>
+    <message>
+        <location line="+14"/>
+        <source>The key for {customer} is saved on this station again</source>
+        <translation>{customer}의 키를 이 스테이션에 다시 저장했습니다</translation>
     </message>
 </context>
 <context>
