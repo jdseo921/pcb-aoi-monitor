@@ -16,6 +16,7 @@ import cv2
 import numpy as np
 import pytest
 from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QDialogButtonBox
 from pytestqt.qtbot import QtBot
 
 from aoi.core.imaging import list_images
@@ -25,6 +26,7 @@ from aoi.data import atomic
 from aoi.defects import names
 from aoi.errors import AoiError
 from aoi.ui.main_window import MainWindow
+from aoi.ui.pages.training import NgDialog
 from tests.conftest import distinct_copies
 from tests.test_no_freeze import BUDGET_S, gap_meter
 
@@ -128,6 +130,43 @@ def test_req_trn_001_ng_has_dct_type(
     ctx.import_samples(BOARD, [str(ng_board)], "NG", "Missing Component")
     ctx.import_samples(BOARD, [str(list_images(synthetic_dataset / "train" / "ok")[0])], "OK")
     assert [(r["label"], r["defect_type"]) for r in ctx.samples(BOARD)] == [("NG", "Missing Component"), ("OK", None)]
+
+
+def test_req_trn_001_a_sample_marked_ng_has_one_of_the_33_types(
+    qtbot: QtBot, ctx: AppContext, synthetic_dataset: Path
+) -> None:
+    """Mark NG… holds to the import's rule: update_sample refuses NG without one of the 33 types (none, "Unknown /
+    mixed", "Anomaly") with AOI-TRN-013, and a label other than OK or NG with AOI-TRN-018, which says the sample was
+    not given that label, leaving the sample as it was; Mark OK clears the type, so no sample is NG without a type or
+    OK with one. Its dialog offers the 33 types alone, none picked, and holds OK until one is; another category clears
+    the pick. It asks no view, which Mark NG… never changed."""
+    ctx.import_samples(BOARD, [str(p) for p in list_images(synthetic_dataset / "train" / "ok")[:2]], "OK")
+    sample = ctx.samples(BOARD)[1]["id"]  # not the reference, which is never relabelled NG (AOI-TRN-007)
+
+    def kept() -> tuple[str, str | None]:
+        return [(r["label"], r["defect_type"]) for r in ctx.samples(BOARD)][1]
+
+    for label, kind, code in [("NG", None, "AOI-TRN-013"), ("NG", "Unknown / mixed", "AOI-TRN-013"),
+                              ("NG", "Anomaly", "AOI-TRN-013"), ("ng", "Scratch", "AOI-TRN-018")]:  # fmt: skip
+        with pytest.raises(AoiError) as refused:
+            ctx.update_sample(sample, label, kind)
+        assert refused.value.code == code, refused.value
+    name = Path(ctx.samples(BOARD)[1]["path"]).name
+    assert refused.value.what == f'{name} was not given the label "ng": it is not one of OK, NG.', refused.value.what
+    assert kept() == ("OK", None)
+    ctx.update_sample(sample, "NG", "Scratch")
+    assert kept() == ("NG", "Scratch")
+    ctx.update_sample(sample, "OK", "Scratch")
+    assert kept() == ("OK", None)
+    dialog = NgDialog()
+    qtbot.addWidget(dialog)
+    ok = dialog.buttons.button(QDialogButtonBox.StandardButton.Ok)
+    kinds = [dialog.type.itemData(i) for i in range(dialog.type.count())]
+    assert kinds == names() and dialog.type.currentIndex() == -1 and not ok.isEnabled() and dialog.value() is None
+    dialog.type.setCurrentIndex(dialog.type.findData("Scratch"))
+    assert ok.isEnabled() and dialog.value() == "Scratch"
+    dialog.cat.setCurrentIndex(dialog.cat.findData("Solder"))
+    assert dialog.type.currentIndex() == -1 and not ok.isEnabled()
 
 
 @pytest.mark.parametrize("side", ["Front", "", "top", "../../outside", "Top/../.."])
@@ -320,8 +359,8 @@ def test_req_trn_001_an_import_lists_each_file_it_refuses_with_its_code_and_goes
 ) -> None:
     """The import sheet's import (`import_files`): a folder's files are labelled by their sub-folders, with the type of
     ng/<type>/ (any case, spaces or underscores); each goes in with its own label, type and view, and a file with no
-    label, an NG with no type, an image already imported and a file that is not an image are each listed with their
-    code (AOI-TRN-016, -013, -015, AOI-INSP-004) while the others go in."""
+    label, an NG with no type, an image already imported (with the sample that has it and its label) and a file that is
+    not an image are each listed with their code (AOI-TRN-016, -013, -015, AOI-INSP-004) while the others go in."""
     folder = tmp_path / "src"
     ok, other = list_images(synthetic_dataset / "train" / "ok")[:2]
     ng = next(synthetic_dataset.glob("train/ng/*solder_bridge*.png"))
@@ -354,6 +393,8 @@ def test_req_trn_001_an_import_lists_each_file_it_refuses_with_its_code_and_goes
     ]
     rows = [(r["label"], r["defect_type"], r["side"]) for r in ctx.samples(BOARD)]
     assert rows == [("NG", "Solder Bridge", "Side"), ("OK", None, "Top")]
+    has = {"sample": Path(ctx.samples(BOARD)[1]["path"]).name, "label": "OK"}  # a.png's: b.png names the sample
+    assert report.refused[2][1].params | has == report.refused[2][1].params, report.refused[2][1].params
 
 
 def test_req_trn_001_an_import_stopped_by_an_error_or_cancel_keeps_what_went_in(

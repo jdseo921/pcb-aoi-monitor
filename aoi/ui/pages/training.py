@@ -34,7 +34,6 @@ from ...core.imaging import IMAGE_EXTS
 from ...core.sample_import import ImportFile, ImportReport, folder_files
 from ...core.services import AppContext
 from ...errors import AoiError
-from ...hal import VIEWS
 from ...times import to_local
 from .. import theme
 from ..errors import phrase_text
@@ -73,7 +72,8 @@ def _sample_counts(model: dict[str, Any]) -> str:
 
 
 class NgDialog(QDialog):
-    """Ask which defect type an uploaded NG batch shows (taxonomy from the classification table)."""
+    """Ask which of the 33 defect types of the classification table the samples marked NG show: no "Unknown"
+    (REQ-TRN-001), and OK stays grey until a type is picked. No view: Mark NG… keeps each sample's."""
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -84,30 +84,33 @@ class NgDialog(QDialog):
         for category in taxonomy.categories():  # names from the classification table, English until it is translated
             self.cat.addItem(category, category)
         self.type = QComboBox()
-        self.side = QComboBox()
-        for view in VIEWS:
-            self.side.addItem(view_text(view), view)  # the English name is the key the services store
+        self.type.setPlaceholderText(self.tr("Pick one of the 33 defect types"))
         self.cat.currentIndexChanged.connect(self._fill)
         self._fill()
         f.addRow(self.tr("Category"), self.cat)
         f.addRow(self.tr("Defect type"), self.type)
-        f.addRow(self.tr("View"), self.side)
-        bb = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
-        bb.accepted.connect(self.accept)
-        bb.rejected.connect(self.reject)
-        f.addRow(bb)
+        self.buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
+        self.buttons.accepted.connect(self.accept)
+        self.buttons.rejected.connect(self.reject)
+        f.addRow(self.buttons)
+        self.type.currentIndexChanged.connect(self._allow)
+        self._allow()
 
     def _fill(self, _index: int = 0) -> None:
         cat = self.cat.currentData()
         self.type.clear()
-        self.type.addItem(self.tr("Unknown / mixed"))
-        for d in taxonomy.DEFECT_TYPES:
+        for d in taxonomy.DEFECT_TYPES:  # the 33: never "Unknown", never the AI model's "Anomaly"
             if cat is None or d.category == cat:
                 self.type.addItem(self.tr("{type}  [{severity}]").format(type=d.name, severity=d.severity), d.name)
+        self.type.setCurrentIndex(-1)  # a type is picked, never taken by default
 
-    def value(self) -> tuple[str | None, str]:
-        """The defect type (None for "Unknown / mixed") and the camera view, as the services store them."""
-        return self.type.currentData(), self.side.currentData()
+    def _allow(self, _index: int = 0) -> None:
+        self.buttons.button(QDialogButtonBox.StandardButton.Ok).setEnabled(self.type.currentIndex() >= 0)
+
+    def value(self) -> str | None:
+        """The defect type picked, as the services store it (None until one is, which they refuse for NG)."""
+        type_name: str | None = self.type.currentData()
+        return type_name
 
 
 class _Counts(QLabel):
@@ -385,7 +388,7 @@ class TrainingPage(Page):
             dlg = NgDialog(self)
             if not dlg.exec():
                 return
-            dtype = dlg.value()[0]
+            dtype = dlg.value()
         self._each_sample(ids, lambda i: self.ctx.update_sample(i, label, dtype))
 
     def _each_sample(self, ids: list[int], write: Callable[[int], None]) -> None:

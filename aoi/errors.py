@@ -470,10 +470,10 @@ CODES: dict[str, ErrorCode] = {
             QT_TRANSLATE_NOOP("Errors", "NG image needs a defect type"),
             QT_TRANSLATE_NOOP(
                 "Errors",
-                "{path} was not imported: an NG sample needs one of the 33 defect types of the defect classification"
-                " table, and {why}.",
+                "{path} was not taken as an NG sample: an NG sample needs one of the 33 defect types of the defect"
+                " classification table, and {why}.",
             ),
-            QT_TRANSLATE_NOOP("Errors", "Pick the defect type the image shows, then import it again."),
+            QT_TRANSLATE_NOOP("Errors", "Pick the defect type the image shows, then try again."),
         ),
         ErrorCode(
             "AOI-TRN-014",
@@ -493,8 +493,8 @@ CODES: dict[str, ErrorCode] = {
             QT_TRANSLATE_NOOP("Errors", "Image already imported"),
             QT_TRANSLATE_NOOP(
                 "Errors",
-                "{path} was skipped: board model {board_model} already has a sample of the same image (the same"
-                " SHA-256).",
+                "{path} was skipped: board model {board_model} already has the same image (the same SHA-256) as"
+                " sample {sample}, labelled {label}.",
             ),
             QT_TRANSLATE_NOOP("Errors", "Nothing to do: the image is in the sample table once."),
         ),
@@ -521,9 +521,7 @@ CODES: dict[str, ErrorCode] = {
         ErrorCode(
             "AOI-TRN-018",
             QT_TRANSLATE_NOOP("Errors", "Label not known"),
-            QT_TRANSLATE_NOOP(
-                "Errors", '{path} was not taken as a sample: its label "{label}" is not one of {labels}.'
-            ),
+            QT_TRANSLATE_NOOP("Errors", '{path} was not given the label "{label}": it is not one of {labels}.'),
             QT_TRANSLATE_NOOP("Errors", "Give it the label OK or NG, then try again."),
         ),
         ErrorCode(

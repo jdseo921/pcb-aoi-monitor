@@ -11,7 +11,7 @@
     <message>
         <location line="+12"/>
         <source>Cancel</source>
-        <translation type="unfinished">취소</translation>
+        <translation>취소</translation>
     </message>
     <message>
         <location line="+36"/>
@@ -275,7 +275,7 @@
     <message>
         <location line="+5"/>
         <source>Cancel</source>
-        <translation type="unfinished">취소</translation>
+        <translation>취소</translation>
     </message>
     <message>
         <location line="+2"/>
@@ -599,12 +599,12 @@
     </message>
     <message>
         <location line="+200"/>
-        <location line="+113"/>
+        <location line="+116"/>
         <source>Importing samples</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+36"/>
+        <location line="+39"/>
         <source>Training an AI model</source>
         <translation type="unfinished"></translation>
     </message>
@@ -694,12 +694,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+7"/>
+        <location line="+11"/>
         <source>relabelled NG</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+5"/>
+        <location line="+7"/>
         <source>Removing a sample</source>
         <translation type="unfinished"></translation>
     </message>
@@ -729,7 +729,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1199"/>
+        <location line="-1211"/>
         <source>no defect type was given</source>
         <translation>결함 유형이 지정되지 않았습니다</translation>
     </message>
@@ -744,12 +744,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+502"/>
+        <location line="+508"/>
         <source>its UUID {found} is not {uuid}, as in the AI model registry</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+707"/>
+        <location line="+713"/>
         <source>Changing settings</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1352,17 +1352,7 @@
         <translation>NG 이미지에는 결함 유형이 필요합니다</translation>
     </message>
     <message>
-        <location line="+1"/>
-        <source>{path} was not imported: an NG sample needs one of the 33 defect types of the defect classification table, and {why}.</source>
-        <translation>{path}을(를) 가져오지 않았습니다. NG 샘플에는 결함 분류표의 결함 유형 33개 중 하나가 필요하지만 {why}.</translation>
-    </message>
-    <message>
-        <location line="+5"/>
-        <source>Pick the defect type the image shows, then import it again.</source>
-        <translation>이미지에 보이는 결함 유형을 고른 다음 다시 가져오십시오.</translation>
-    </message>
-    <message>
-        <location line="+4"/>
+        <location line="+10"/>
         <source>Image changed while it was copied</source>
         <translation>복사하는 동안 이미지가 바뀌었습니다</translation>
     </message>
@@ -1382,12 +1372,7 @@
         <translation>이미 가져온 이미지</translation>
     </message>
     <message>
-        <location line="+1"/>
-        <source>{path} was skipped: board model {board_model} already has a sample of the same image (the same SHA-256).</source>
-        <translation>{path}을(를) 건너뛰었습니다. 보드 모델 {board_model}에 같은 이미지(같은 SHA-256)의 샘플이 이미 있습니다.</translation>
-    </message>
-    <message>
-        <location line="+5"/>
+        <location line="+6"/>
         <source>Nothing to do: the image is in the sample table once.</source>
         <translation>할 일이 없습니다. 이 이미지는 샘플 표에 한 번 있습니다.</translation>
     </message>
@@ -1427,12 +1412,7 @@
         <translation>알 수 없는 라벨</translation>
     </message>
     <message>
-        <location line="+1"/>
-        <source>{path} was not taken as a sample: its label &quot;{label}&quot; is not one of {labels}.</source>
-        <translation>{path}을(를) 샘플로 받지 않았습니다. 라벨 &quot;{label}&quot;이(가) {labels} 중 하나가 아닙니다.</translation>
-    </message>
-    <message>
-        <location line="+3"/>
+        <location line="+2"/>
         <source>Give it the label OK or NG, then try again.</source>
         <translation>라벨을 OK 또는 NG로 정한 뒤 다시 시도하세요.</translation>
     </message>
@@ -1857,7 +1837,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-761"/>
+        <location line="-759"/>
         <source>Board judged NG</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1927,7 +1907,27 @@
         <translation>가져오기를 멈춘 원인을 해결한 뒤(작업 공간 logs 폴더의 로그 파일에 자세한 내용이 있습니다. 원인이 분명하지 않으면 지원팀에 보내세요) 가져오기를 다시 누르세요. 이미 가져온 이미지 {imported}개는 건너뜁니다.</translation>
     </message>
     <message>
-        <location line="+142"/>
+        <location line="+37"/>
+        <source>{path} was not taken as an NG sample: an NG sample needs one of the 33 defect types of the defect classification table, and {why}.</source>
+        <translation>{path}을(를) NG 샘플로 받지 않았습니다. NG 샘플에는 결함 분류표의 결함 유형 33개 중 하나가 필요하지만 {why}.</translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>Pick the defect type the image shows, then try again.</source>
+        <translation>이미지에 보이는 결함 유형을 고른 다음 다시 시도하십시오.</translation>
+    </message>
+    <message>
+        <location line="+18"/>
+        <source>{path} was skipped: board model {board_model} already has the same image (the same SHA-256) as sample {sample}, labelled {label}.</source>
+        <translation>{path}을(를) 건너뛰었습니다. 보드 모델 {board_model}에 같은 이미지(같은 SHA-256)가 샘플 {sample}(라벨 {label})로 이미 있습니다.</translation>
+    </message>
+    <message>
+        <location line="+30"/>
+        <source>{path} was not given the label &quot;{label}&quot;: it is not one of {labels}.</source>
+        <translation>{path}에 라벨 &quot;{label}&quot;을(를) 붙이지 않았습니다. {labels} 중 하나가 아닙니다.</translation>
+    </message>
+    <message>
+        <location line="+50"/>
         <source>ROI thresholds refused</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2092,7 +2092,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/training.py" line="+329"/>
+        <location filename="../ui/pages/training.py" line="+332"/>
         <location filename="../ui/pages/training_import.py" line="+37"/>
         <source>{code} {title}</source>
         <translation type="unfinished"></translation>
@@ -2865,7 +2865,7 @@
     <message>
         <location line="+2"/>
         <source>View</source>
-        <translation type="unfinished">뷰</translation>
+        <translation>뷰</translation>
     </message>
     <message>
         <location line="+1"/>
@@ -3156,7 +3156,7 @@
     <message>
         <location line="+1"/>
         <source>Label</source>
-        <translation type="unfinished">라벨</translation>
+        <translation>라벨</translation>
     </message>
     <message>
         <location line="+1"/>
@@ -3309,7 +3309,7 @@
 <context>
     <name>NgDialog</name>
     <message>
-        <location filename="../ui/pages/training.py" line="-249"/>
+        <location filename="../ui/pages/training.py" line="-252"/>
         <source>Label NG images</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3319,27 +3319,22 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+9"/>
+        <location line="+4"/>
+        <source>Pick one of the 33 defect types</source>
+        <translation>33가지 결함 유형 중 하나를 고르세요</translation>
+    </message>
+    <message>
+        <location line="+3"/>
         <source>Category</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Defect type</source>
-        <translation type="unfinished">결함 유형</translation>
+        <translation>결함 유형</translation>
     </message>
     <message>
-        <location line="+1"/>
-        <source>View</source>
-        <translation type="unfinished">뷰</translation>
-    </message>
-    <message>
-        <location line="+9"/>
-        <source>Unknown / mixed</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+3"/>
+        <location line="+13"/>
         <source>{type}  [{severity}]</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3492,7 +3487,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/training.py" line="+37"/>
+        <location filename="../ui/pages/training.py" line="+42"/>
         <source>Training</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4019,7 +4014,7 @@
     <message>
         <location line="+0"/>
         <source>Status</source>
-        <translation type="unfinished">상태</translation>
+        <translation>상태</translation>
     </message>
     <message>
         <location line="+7"/>
@@ -4093,7 +4088,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/services.py" line="-1373"/>
+        <location filename="../core/services.py" line="-1385"/>
         <source>Aligning {count} images to the reference board</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4130,27 +4125,27 @@
     <message>
         <location line="-52"/>
         <source>Label</source>
-        <translation type="unfinished">라벨</translation>
+        <translation>라벨</translation>
     </message>
     <message>
         <location line="+0"/>
         <source>Defect type</source>
-        <translation type="unfinished">결함 유형</translation>
+        <translation>결함 유형</translation>
     </message>
     <message>
         <location line="+0"/>
         <source>View</source>
-        <translation type="unfinished">뷰</translation>
+        <translation>뷰</translation>
     </message>
     <message>
         <location line="+0"/>
         <source>File</source>
-        <translation type="unfinished">파일</translation>
+        <translation>파일</translation>
     </message>
     <message>
         <location line="+4"/>
         <source>Importing…</source>
-        <translation type="unfinished">가져오는 중…</translation>
+        <translation>가져오는 중…</translation>
     </message>
     <message>
         <location line="+3"/>

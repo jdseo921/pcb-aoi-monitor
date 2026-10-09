@@ -103,7 +103,7 @@ def test_req_trn_007_the_reference_sample_is_never_relabelled_ng_or_removed(
     first = ctx.samples("B", "OK")[0]
     assert ctx.reference_image("B") == first["path"]
     entries = ctx.audit_entries()
-    for change, call in (("relabelled NG", lambda: ctx.update_sample(first["id"], "NG", "Missing")),
+    for change, call in (("relabelled NG", lambda: ctx.update_sample(first["id"], "NG", "Missing Component")),
                          ("removed", lambda: ctx.delete_sample(first["id"]))):  # fmt: skip
         with pytest.raises(AoiError) as refused:
             call()
@@ -122,7 +122,7 @@ def test_req_trn_007_the_reference_sample_is_never_relabelled_ng_or_removed(
     page._remove()
     assert [d[0] for d in dialogs] == ["AOI-TRN-007 Reference sample cannot change"]
     ctx.set_reference("B", ctx.samples("B", "OK")[1]["id"])
-    ctx.update_sample(first["id"], "NG", "Missing")
+    ctx.update_sample(first["id"], "NG", "Missing Component")
     ctx.delete_sample(first["id"])
     assert all(s["id"] != first["id"] for s in ctx.samples("B"))
 
@@ -146,7 +146,7 @@ def test_req_trn_007_mark_ng_and_remove_skip_only_the_reference_whatever_the_sel
     win._on_board_model("B")
     win.navigate("Training")
     page = win.pages["Training"]
-    monkeypatch.setattr(NgDialog, "exec", lambda self: 1)
+    monkeypatch.setattr(NgDialog, "exec", lambda self: self.type.setCurrentIndex(self.type.findData("Scratch")) or 1)
     monkeypatch.setattr(QMessageBox, "question", lambda *a, **k: QMessageBox.StandardButton.Yes)
 
     def select(*ids: int) -> None:  # in this order: the reference first
