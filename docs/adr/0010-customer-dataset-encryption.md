@@ -130,9 +130,12 @@ per run; frozen versions name files by workspace-relative path and SHA-256 in ap
   cryptography 50.0.2 with OpenSSL 4.0.3, opencv-python-headless 5.0.0.93. One synthetic board-like PNG of 2592 × 1944
   pixels (5.04 MP, 8,683,001 bytes), 200 times in memory, two runs: encrypting took 3.0 to 3.1 ms per file (0.60 to
   0.63 s for 200), decrypting 2.6 to 2.7 ms (0.54 s), and `cv2.imdecode` of the same PNG 118.5 to 118.8 ms (23.8 s), so
-  decryption adds 2.2 % to decoding. From disk (page cache warm, four passes), 20 different boards of 8.66 to 8.71 MB
-  took 2.45 to 2.59 s to read, decrypt and decode against 2.41 to 2.53 s to read and decode, 0.5 % to 2.9 % more. Over
-  200 such files a run gains about 0.5 s; `verify_dataset` adds 2.6 to 2.7 ms a file to its 6.5 to 6.6 ms of SHA-256.
+  decryption adds 2.2 % to decoding. Then 200 different boards (8.65 to 8.72 MB each, 1.74 GB in all), each made,
+  encrypted, decrypted and decoded once: encrypting took a median 2.8 ms (0.63 s for the 200), decrypting 2.7 ms
+  (0.61 s) and decoding 119.6 ms (24.0 s), so decryption adds 2.6 % over the 200 files. From disk (page cache warm,
+  four passes), 20 different boards of 8.66 to 8.71 MB took 2.45 to 2.59 s to read, decrypt and decode against 2.41 to
+  2.53 s to read and decode, 0.5 % to 2.9 % more. Over 200 such files a run gains about 0.6 s; `verify_dataset` adds
+  2.6 to 2.7 ms a file to its 6.5 to 6.6 ms of SHA-256.
 - **Three new runtime packages** to pin, lock, audit and list in `THIRD_PARTY_NOTICES.txt` with their license texts; a
   security release of cryptography or its OpenSSL is a pin change under the Security rule's fix deadlines.
 - **What the store does not cover.** `aoi.sqlite` (names, labels and boxes; no pixels), the golden boards and AI models
