@@ -22,7 +22,7 @@ import random
 import time
 import zipfile
 from collections.abc import Callable, Iterable, Sequence
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
@@ -33,7 +33,7 @@ from torch import nn
 
 from ..data import atomic
 from ..errors import QT_TRANSLATE_NOOP, AoiError, Phrase
-from . import run_progress
+from . import lineage, run_progress
 from .jobs import JobCancelled
 
 # Why an AI model file or a trained AI model is refused (AOI-TRN-001, AOI-TRN-004), as phrases shown translated (#198)
@@ -376,12 +376,28 @@ def train(
 
     `progress` hears of the start of training and of every training step and calibration map as it ends, and
     `should_stop()` is asked after each report: once it is true the run raises JobCancelled there, so it stops within
-    a step and returns no AI model (REQ-TRN-008)."""
+    a step and returns no AI model (REQ-TRN-008).
+
+    Lineage (REQ-TRN-009): the run seeds every random source it draws from with `cfg.seed` and uses PyTorch's
+    deterministic algorithms, so the same images and `cfg` give the same AI model on the same machine; its metadata
+    records the seed and every setting of `cfg`."""
     if len(ok_images) < 2:
         raise AoiError("AOI-TRN-002", found=len(ok_images))
-    random.seed(cfg.seed)
-    np.random.seed(cfg.seed)
-    torch.manual_seed(cfg.seed)
+    with lineage.deterministic():
+        model = _train(ok_images, ng_images, cfg, progress, should_stop)
+    model.meta.update(seed=cfg.seed, settings=asdict(cfg), deterministic=True)
+    return model
+
+
+def _train(
+    ok_images: Sequence[Prepared],
+    ng_images: Sequence[Prepared],
+    cfg: TrainConfig,
+    progress: ProgressFn | None,
+    should_stop: Callable[[], bool] | None,
+) -> AnomalyModel:
+    """`train`'s run, inside PyTorch's deterministic algorithms."""
+    lineage.seed_everything(cfg.seed)
     say = progress or (lambda *a: None)
 
     def stop() -> None:  # Cancel, or the window closing: nothing of the run is kept (#171)
