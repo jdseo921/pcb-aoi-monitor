@@ -19,6 +19,7 @@ from aoi.errors import AoiError
 from aoi.ui.pages.base import cell_item, cell_text
 from aoi.ui.pages.training import TrainingPage
 from tests.test_req_done_in_v01 import BOARD, _window
+from tools.trainable import trainable
 
 
 def _judged_by(ctx: AppContext, board: Path) -> float:
@@ -67,7 +68,7 @@ def test_req_trn_015_setting_and_clearing_an_override_are_audited(trained_ctx: A
     assert refused.value.code == "AOI-USR-001" and ctx.recipe(BOARD)[0] == rev + 4
     assert len(ctx.audit_entries(action="recipe.ai_threshold")) == 2
     ctx.set_user("engineer")
-    ctx.train(BOARD, epochs=1, image_size=32)  # a newly trained AI model, calibrated afresh
+    ctx.train(trainable(ctx, BOARD), epochs=1, image_size=32)  # a newly trained AI model, calibrated afresh
     newer = ctx.calibrated_threshold(BOARD)
     assert newer is not None and newer != cal and _judged_by(ctx, ng_board) == pytest.approx(newer)
     assert ctx.calibrated_threshold(BOARD, model["uuid"]) == cal, "the AI model a stored result names keeps its own"
@@ -140,7 +141,7 @@ def test_req_trn_015_training_says_aoi_trn_012_for_every_ai_model_it_cannot_read
     AOI-TRN-012 line, the row's tooltip, never only the first (review round 3); with no board model picked there is no
     table, and no line under it."""
     ctx = trained_ctx
-    ctx.train(BOARD, epochs=1, image_size=32)  # a second AI model version
+    ctx.train(trainable(ctx, BOARD), epochs=1, image_size=32)  # a second AI model version
     models = ctx.models(BOARD)
     assert len(models) == 2
     for m in models:  # both registry rows changed by hand

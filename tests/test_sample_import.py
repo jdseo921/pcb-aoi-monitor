@@ -27,6 +27,7 @@ from aoi.errors import AoiError
 from aoi.ui.main_window import MainWindow
 from tests.conftest import distinct_copies
 from tests.test_no_freeze import BUDGET_S, gap_meter
+from tools.trainable import trainable
 
 BOARD = "TBOX-A1"
 
@@ -265,20 +266,20 @@ def test_req_trn_001_set_reference_and_training_meet_the_name_rule(
     ctx.db.ensure_board_model("TBOX.")
     ctx.db.ensure_board_model("../../escape")
     ctx.ensure_board_model("TBOX-A1")
-    oks = [str(p) for p in list_images(synthetic_dataset / "train" / "ok")[:2]]
-    assert ctx.import_samples("TBOX.", oks, "OK") == 2
+    oks = [str(p) for p in list_images(synthetic_dataset / "train" / "ok")[:20]]  # the 20 OK training needs
+    assert ctx.import_samples("TBOX.", oks, "OK") == 20
     held = ctx.samples("TBOX.", "OK")[1]["id"]
     ctx.set_reference("TBOX.", held)
-    assert ctx.train("TBOX.", epochs=1, image_size=32)["board_model"] == "TBOX."
+    assert ctx.train(trainable(ctx, "TBOX."), epochs=1, image_size=32)["board_model"] == "TBOX."
     before = outside(ctx, tmp_path)
-    writes = (lambda n: ctx.set_reference(n, held), lambda n: ctx.train(n, epochs=1, image_size=32))
+    writes = (lambda n: ctx.set_reference(n, held), lambda n: ctx.train(trainable(ctx, n), epochs=1, image_size=32))
     for name, code in (("CON", "AOI-TRN-019"), ("TBOX2.", "AOI-TRN-019"), ("tbox-a1", "AOI-TRN-005")):
         for write in writes:
             with pytest.raises(AoiError) as refused:
                 write(name)
             assert refused.value.code == code, (name, refused.value)
     with pytest.raises(AoiError) as refused:
-        ctx.train("../../escape", epochs=1, image_size=32)
+        ctx.train(trainable(ctx, "../../escape"), epochs=1, image_size=32)
     assert (refused.value.code, refused.value.params["name"]) == ("AOI-TRN-019", "../../escape"), refused.value
     assert sorted(ctx.db.board_models()) == ["../../escape", "TBOX-A1", "TBOX."] and outside(ctx, tmp_path) == before
 

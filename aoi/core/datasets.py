@@ -16,6 +16,7 @@ REVISION = re.compile(r"[A-Za-z0-9]{1,16}")  # a board revision as entered with 
 ALLOWED_USES = ("own", "shared", "demos")  # their own AI models, shared improvement, demos: placeholders until Q38
 FOLDER = "datasets"  # under the workspace: <name>/manifest.json
 VALIDATION_OK = 50  # OK files a validation set holds at least: the 50 held out (Customers & Launch, Validation)
+TRAIN_OK = 20  # OK files a training set holds at least, per board model and view (REQ-TRN-007)
 VALIDATION_NG = Fraction(3, 10)  # and at least 30 % of the version's NG files, rounded up
 
 

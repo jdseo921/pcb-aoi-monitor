@@ -379,10 +379,11 @@ def train(
     model = AnomalyModel(
         net, {"image_size": cfg.image_size, "image_threshold": 1.0, "pixel_threshold": 1.0}, cfg.device
     )
-    # Per-pixel error statistics of good boards (the learned "normal variation").
+    # Per-pixel error statistics of good boards (the learned "normal variation"), summed in float64: the mean of equal
+    # errors is then that error to the bit, whatever their count, so a board like every training board scores 0 (#168).
     errs = np.stack([model._raw(tensors[i]) for i in train_idx])
-    sd = errs.std(axis=0)
-    model.meta["err_mean"] = errs.mean(axis=0).astype(np.float32)
+    sd = errs.std(axis=0, dtype=np.float64)
+    model.meta["err_mean"] = errs.mean(axis=0, dtype=np.float64).astype(np.float32)
     model.meta["err_std"] = np.maximum(sd, max(float(np.median(sd)), SPREAD_FLOOR)).astype(np.float32)
     # Calibrate on held-out OK images when we have them, otherwise on training images.
     cal_ok = [ok_images[i] for i in (val_idx or train_idx)]

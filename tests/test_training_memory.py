@@ -83,7 +83,7 @@ def test_req_trn_007_calibration_as_from_whole_images(synthetic_dataset: Path) -
     random.shuffle(idx)
     held, trained = idx[:2], idx[2:]
     errs = np.stack([model.raw_error(ok[i]) for i in trained])
-    assert np.array_equal(model.meta["err_mean"], errs.mean(axis=0).astype(np.float32))
+    assert np.array_equal(model.meta["err_mean"], errs.mean(axis=0, dtype=np.float64).astype(np.float32))
     maps = [model.anomaly_map(ok[i]) for i in held]
     assert model.meta["ok_scores"] == [model.score(m) for m in maps]
     assert model.meta["ng_scores"] == [model.score(model.anomaly_map(im)) for im in ng]

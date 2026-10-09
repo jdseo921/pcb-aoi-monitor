@@ -24,6 +24,7 @@ from aoi.errors import AoiError
 from tests.conftest import plain
 from tests.test_datasets import agree, ready
 from tests.test_labeller_agreement import CAL
+from tools.trainable import trainable
 
 TWICE = "the customer has a store already, and has one at a time"
 GONE = "the workspace holds no such store, or it is shredded"
@@ -370,12 +371,12 @@ def test_req_trn_017_no_plain_file_while_training(
     """Training an AI model of a board model in a store reads its images decrypted in memory only (ADR 0010, decision
     11): no file in the workspace or the temp folder after the run holds an image's plain bytes or its pixels, and the
     images stay encrypted."""
-    sources = board(ctx, "TRN", tmp_path / "trn", 3, 6)
+    sources = board(ctx, "TRN", tmp_path / "trn", 20, 6)  # the 20 OK training needs
     moved_in(ctx, "TRN", "Acme")
     temp = tmp_path / "temp"
     temp.mkdir()
     monkeypatch.setattr(tempfile, "tempdir", str(temp))
-    ctx.train("TRN", epochs=1, image_size=32)
+    ctx.train(trainable(ctx, "TRN", "Acme"), epochs=1, image_size=32)
     secrets = [s.read_bytes() for s in sources] + [
         np.asarray(ctx.load_image(s["path"])).tobytes() for s in ctx.samples("TRN")
     ]

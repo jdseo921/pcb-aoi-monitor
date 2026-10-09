@@ -42,6 +42,6 @@ def test_req_set_019_engine_errors_a_user_can_see_have_codes(tmp_path: Path, ctx
     with pytest.raises(AoiError) as unreadable:
         load_image(tmp_path / "missing.png")
     assert unreadable.value.code == "AOI-INSP-001" and "missing.png" in unreadable.value.what
-    with pytest.raises(AoiError) as no_boards:
-        ctx.train("EMPTY", epochs=1, image_size=32)
-    assert no_boards.value.code == "AOI-TRN-002" and "0 found" in no_boards.value.what
+    with pytest.raises(AoiError) as no_version:
+        ctx.train("00000000-0000-4000-8000-000000000000", epochs=1, image_size=32)
+    assert no_version.value.code == "AOI-TRN-045" and "no such dataset version" in no_version.value.what

@@ -19,6 +19,7 @@ from aoi.errors import AoiError
 from tests.conftest import plain
 from tests.test_datasets import agree, ready
 from tests.test_labeller_agreement import CAL
+from tools.trainable import trainable
 
 
 def frozen(ctx: AppContext, tmp_path: Path) -> dict[str, Any]:
@@ -106,29 +107,35 @@ def test_req_trn_006_split_is_reproducible(ctx: AppContext, tmp_path: Path) -> N
             ctx.db.execute(sql)
 
 
-def test_req_trn_006_overlap_by_hash_refused(ctx: AppContext, tmp_path: Path) -> None:
-    """Once a validation set is locked, a run that would read one of its images, by the SHA-256 of the bytes read, is
-    refused with AOI-TRN-043 before it aligns anything: CAL-1's own samples, and a copy of a locked image under another
-    name in another board model. Nothing is saved; with the copy's sample deleted, that board model trains."""
+def test_req_trn_006_overlap_by_hash_refused(ctx: AppContext, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Training reads only a version's training set, never a locked validation image (REQ-TRN-006, REQ-TRN-007): CAL-1's
+    version 1 trains and reads none of its 56 locked files. A training set holding a locked image by its SHA-256, a copy
+    under another name in another board model, is refused with AOI-TRN-043 before any image is read, and nothing is
+    saved; a version without the copy trains."""
     v1 = frozen(ctx, tmp_path)
     split = ctx.lock_validation_set(v1["uuid"], seed=7)
     files = {i["uuid"]: i for i in ctx.dataset_items(v1["uuid"])}
+    read: list[str] = []
+    real = ctx._load_image_sha256
+    monkeypatch.setattr(ctx, "_load_image_sha256", lambda path: read.append(Path(path).name) or real(path))
+    ctx.train(v1["uuid"], epochs=1, image_size=32)
+    locked = {Path(files[u]["path"]).name for u in split["validation"]}
+    assert len(locked) == 56 and len(set(read)) == 44 and not locked & set(read)  # its 30 OK and 14 NG, each read
     (folder := tmp_path / "copy").mkdir()
     copy = folder / "another_name.png"
     copy.write_bytes(plain(ctx, files[split["validation"][0]]["path"], CAL))  # its bytes as CAL-1's store holds them
     rng = np.random.default_rng(43)
-    for name in ("new_1.png", "new_2.png"):
-        save_image(folder / name, rng.integers(0, 256, (32, 32, 3), dtype=np.uint8))
-    ctx.import_samples("COPY", [str(folder / "new_1.png"), str(folder / "new_2.png")], "OK")  # new_1: the reference
+    new = [folder / f"new_{i:02d}.png" for i in range(datasets.TRAIN_OK)]
+    for name in new:
+        save_image(name, rng.integers(0, 256, (32, 32, 3), dtype=np.uint8))
+    ctx.import_samples("COPY", [str(n) for n in new], "OK")  # new_00: the reference
     ctx.import_samples("COPY", [str(copy)], "OK")
-    with pytest.raises(AoiError) as own:
-        ctx.train(CAL, epochs=1, image_size=32)
+    read.clear()
     with pytest.raises(AoiError) as copied:
-        ctx.train("COPY", epochs=1, image_size=32)
-    assert (own.value.code, own.value.params["count"]) == ("AOI-TRN-043", 56)
-    assert (copied.value.code, copied.value.params["count"]) == ("AOI-TRN-043", 1)
-    assert ctx.models(CAL) == ctx.models("COPY") == [] and ctx.audit_entries(action="model.train") == []
+        ctx.train(trainable(ctx, "COPY"), epochs=1, image_size=32)
+    assert (copied.value.code, copied.value.params["count"], read) == ("AOI-TRN-043", 1, [])
+    assert ctx.models("COPY") == [] and len(ctx.audit_entries(action="model.train")) == 1  # CAL-1's alone
     [held] = [s for s in ctx.samples("COPY") if Path(s["path"]).name.startswith("another_name")]
     ctx.delete_sample(held["id"])
-    ctx.train("COPY", epochs=1, image_size=32)
+    ctx.train(trainable(ctx, "COPY"), epochs=1, image_size=32)
     assert len(ctx.models("COPY")) == 1

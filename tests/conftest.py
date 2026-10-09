@@ -37,6 +37,7 @@ from aoi.data.db import new_uuid  # noqa: E402
 from aoi.ui import workers  # noqa: E402
 from aoi.ui.theme import QSS  # noqa: E402
 from tools.make_synthetic_dataset import ng_type, write_dataset  # noqa: E402
+from tools.trainable import trainable  # noqa: E402
 
 DATASET_SEED = 7  # the generator's default seed, so the fixture matches `python tools/make_synthetic_dataset.py`
 DATASET_OK, DATASET_NG = 30, 14
@@ -132,7 +133,7 @@ def tiny_model(tmp_path_factory: pytest.TempPathFactory, synthetic_dataset: Path
     ctx.import_samples(board_model, [str(p) for p in list_images(synthetic_dataset / "train" / "ok")], "OK")
     for p in list_images(synthetic_dataset / "train" / "ng"):  # one call each: an NG sample is imported with its type
         ctx.import_samples(board_model, [str(p)], "NG", ng_type(p))
-    meta = ctx.train(board_model, epochs=TINY_EPOCHS, image_size=TINY_IMAGE_SIZE)
+    meta = ctx.train(trainable(ctx, board_model), epochs=TINY_EPOCHS, image_size=TINY_IMAGE_SIZE)
     loaded = ctx.load_model(board_model)
     assert loaded is not None, "training registered no active model"
     reference = ctx.db.reference(board_model)

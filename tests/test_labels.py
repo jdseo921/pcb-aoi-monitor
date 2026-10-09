@@ -26,6 +26,7 @@ from aoi.data import migrate as mg
 from aoi.data.db import Database
 from aoi.errors import AoiError
 from tests.test_req_done_in_v01 import BOARD, _window
+from tools.trainable import trainable
 
 TAIL = "-0000-4000-8000-000000000000"  # the end of a well-formed UUID4
 UUID4 = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$")
@@ -81,13 +82,16 @@ def _rows(ctx: AppContext) -> tuple[int, int]:
     return count[0], count[1]
 
 
-def test_req_trn_002_unsure_excluded(qtbot: QtBot, trained_ctx: AppContext, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_req_trn_002_unsure_excluded(
+    qtbot: QtBot, trained_ctx: AppContext, synthetic_dataset: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """An image labelled UNSURE is in no list training or validation reads, nor in the Home and Training counts; it is
     listed for the customer's quality engineer with who labelled it and when. Training loads only OK and NG images, and
     the OK images it holds back to calibrate (its validation part) come from those."""
     ctx = trained_ctx
+    ctx.import_samples(BOARD, [str(imaging.list_images(synthetic_dataset / "test" / "ok")[0])], "OK")  # 20 OK left
     ok, ng = ctx.samples(BOARD, "OK"), ctx.samples(BOARD, "NG")
-    unsure = [ok[-1], ng[-1]]  # not the reference, which is the first OK sample
+    unsure = [ng[-1], ok[-1]]  # in the order imported, the 21st OK last; not the reference, the first OK sample
     for s in unsure:
         assert UUID4.match(ctx.set_label(s["uuid"], "UNSURE"))
     assert [s["uuid"] for s in ctx.samples(BOARD, "OK")] == [s["uuid"] for s in ok[:-1]]
@@ -113,7 +117,7 @@ def test_req_trn_002_unsure_excluded(qtbot: QtBot, trained_ctx: AppContext, monk
     monkeypatch.setattr(ctx, "_load_image_sha256", load)
     monkeypatch.setattr(anomaly, "train", train)
     with pytest.raises(Stop):
-        ctx.train(BOARD, epochs=1, image_size=32)
+        ctx.train(trainable(ctx, BOARD), epochs=1, image_size=32)
     assert seen == {"ok": len(ok) - 1, "ng": len(ng) - 1}
     assert loaded and not {s["path"] for s in unsure} & set(loaded)
     win = _window(qtbot, ctx)

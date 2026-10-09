@@ -588,9 +588,10 @@ class TrainingPage(Page):
     def train(self) -> None:
         if (bm := self.checked_board_model()) is None:
             return
-        n_ok = len(self.ctx.samples(bm, "OK"))
-        if n_ok < 2:
-            self.error(AoiError("AOI-TRN-002", found=n_ok))
+        try:
+            version = self.ctx.training_version(bm)  # its training set; the run checks it before reading an image
+        except AoiError as e:
+            self.error(e)
             return
         self.log.clear()
         self.bar.setRange(0, self.epochs.value())
@@ -598,7 +599,7 @@ class TrainingPage(Page):
         self.btn_train.setEnabled(False)
         self.btn_stop.setEnabled(True)
         size = int(self.input_size.currentText())
-        self.worker = Worker(self.ctx.train, bm, self.epochs.value(), size, with_progress=True)
+        self.worker = Worker(self.ctx.train, version["uuid"], self.epochs.value(), size, with_progress=True)
         self.worker.signals.progress.connect(self._on_progress)
         self.worker.signals.result.connect(self._on_done)
         self.worker.signals.error.connect(self.error)

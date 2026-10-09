@@ -200,7 +200,7 @@ def test_req_trn_008_a_stopped_training_run_saves_registers_activates_and_audits
     ctx = trained_ctx
     models, active, reference = ctx.models("TINY"), ctx.db.active_model("TINY"), ctx.db.reference("TINY")
     files, audit = sorted(ctx.settings.models_dir.rglob("*")), ctx.audit_entries()
-    job: Job[dict] = Job("train", ctx.train, "TINY", 3, 32, with_progress=True)
+    job: Job[dict] = Job("train", ctx.train, ctx.training_version("TINY")["uuid"], 3, 32, with_progress=True)
     messages: list[str] = []
     job.on_progress(lambda v: (messages.append(v[-1]), job.cancel()))  # Stop, once the run is under way
     outcome: list[object] = []

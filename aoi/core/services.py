@@ -38,9 +38,18 @@ from ..data.workspace_lock import WorkspaceLock
 from ..errors import QT_TRANSLATE_NOOP, AoiError, Phrase, joined
 from ..hal import VIEWS
 from ..times import local_date, now_utc
-from . import anomaly, crypto, datasets, imaging, labels, stores
+from . import anomaly, crypto, datasets, golden, imaging, labels, stores
 from .compare import Region, changed_regions
-from .imaging import align_to_reference, encode_image, list_images, load_image, load_image_sha256, save_image
+from .imaging import (
+    align_to_reference,
+    encode_image,
+    list_images,
+    load_image,
+    load_image_sha256,
+    registration,
+    save_image,
+    warp_to,
+)
 from .inspector import NG, OK, WARN, AiEvidence, InspectionResult, Inspector, JudgedBy, ai_check, draw_overlay, re_grade
 from .jobs import JobCancelled, Jobs
 from .labels import DefectBox
@@ -509,47 +518,58 @@ class AppContext:
     @requires("Engineer", QT_TRANSLATE_NOOP("Errors", "Training an AI model"))
     def train(
         self,
-        board_model: str,
+        dataset_uuid: str,
         epochs: int | None = None,
         image_size: int | None = None,
         progress: anomaly.ProgressFn | None = None,
         should_stop: Callable[[], bool] | None = None,
     ) -> dict[str, Any]:
-        """Train an AI model of `board_model` on its samples, then save, register, activate and audit it. The run reads
-        the device once, before it loads anything, and keeps it to the end: a device saved on Settings while the run
-        loads, aligns or trains applies from the next run (#201). Its name meets the rule a new board model meets
-        (AOI-TRN-019, AOI-TRN-005), as its folder under models/ does, before anything is loaded. A run that reads an
-        image whose SHA-256, of the bytes read, any split locked for validation is refused with AOI-TRN-043 before it
-        aligns anything (REQ-TRN-006)."""
+        """Train an AI model of a frozen dataset version's board model on the version's training set, then save,
+        register, activate and audit it (REQ-TRN-007). The OK images
+        train it and make the Golden board; the NG images only calibrate its threshold; the locked validation set is
+        never read. Refused, before any image is read, as `_training_set` gives. A file whose SHA-256, of the bytes
+        read, is not the one frozen stops the run with AOI-TRN-045. The run reads the device once, before it loads
+        anything, and keeps it to the end (#201).
+
+        Memory (REQ-TRN-007): each image is read, registered onto the board model's reference board (else the first OK
+        image) and warped, then kept only as its tensor at the network's input size and its band of the Golden board's
+        median (aoi/core/golden.py); each later band reads the OK images again and warps them with the homography kept.
+        So a run holds one image at the camera's resolution at a time, one band of every OK image, and the tensors."""
         device = self.device  # not self.device later: save_settings may change it while the samples load and align
         say = progress or (lambda *a: None)
-        self._refuse_unsafe_name(board_model)  # the run writes the board model's row and its folder
-        self._refuse_case_variant(board_model)
+        frozen, ok_items, ng_items = self._training_set(dataset_uuid)
+        board_model = frozen["board_model"]
         out = self.settings.models_dir / board_model
-        if not inside(out, self.settings.models_dir):  # a board model named before names were checked (#112)
-            raise AoiError("AOI-TRN-019", name=board_model)
-        ok_read = [self._load_image_sha256(s["path"]) for s in self.db.samples(board_model, "OK")]
-        ng_read = [self._load_image_sha256(s["path"]) for s in self.db.samples(board_model, "NG")]
-        locked = self.db.split_sha256("validation")  # never trained on: by the bytes read, not the path (REQ-TRN-006)
-        if held := [sha for _, sha in ok_read + ng_read if sha in locked]:
-            raise AoiError("AOI-TRN-043", board=board_model, count=len(held))
-        ok, ng = [image for image, _ in ok_read], [image for image, _ in ng_read]
-        if len(ok) < 2:
-            raise AoiError("AOI-TRN-002", found=len(ok))
-        # Register every sample onto one board, then learn a golden template as the
-        # per-pixel median of good boards: less noise than any single photo.
-        ref_path = self.db.reference(board_model)
-        anchor = self.load_image(ref_path) if ref_path and Path(ref_path).exists() else ok[0]
-        say(0, 1, 0.0, ALIGNING.fill(count=len(ok) + len(ng)))
-        ok = [align_to_reference(im, anchor)[0] for im in ok]
-        ng = [align_to_reference(im, anchor)[0] for im in ng]
-        golden = np.median(np.stack(ok), axis=0).astype(np.uint8)
         cfg = anomaly.TrainConfig(
             image_size=image_size or self.settings.image_size,
             epochs=epochs or self.settings.default_epochs,
             device=device,
         )
-        ok_in, ng_in = ([anomaly.prepare(im, cfg.image_size) for im in images] for images in (ok, ng))
+        ref_path = self.db.reference(board_model)
+        if ref_path and Path(ref_path).exists():  # the board model's reference board, as Inspection aligns to it
+            anchor = self.load_image(ref_path)
+        else:
+            anchor = self._read_frozen(frozen, ok_items[0])
+        size = (anchor.shape[1], anchor.shape[0])
+        say(0, 1, 0.0, ALIGNING.fill(count=len(ok_items) + len(ng_items)))
+        board = golden.Median(len(ok_items), (anchor.shape[0], anchor.shape[1]))
+        kept: list[np.ndarray | None] = []
+        ok_in: list[anomaly.Prepared] = []
+        for item in ok_items:
+            image = self._read_frozen(frozen, item)
+            homography = registration(image, anchor)[0]
+            warped = warp_to(image, homography, size)
+            del image  # the image at the camera's resolution goes; its tensor and its first band stay
+            kept.append(homography)
+            ok_in.append(anomaly.prepare(warped, cfg.image_size))
+            board.add(warped)
+        ng_in = [
+            anomaly.prepare(align_to_reference(self._read_frozen(frozen, item), anchor)[0], cfg.image_size)
+            for item in ng_items
+        ]
+        while not board.done:  # each later band of the median: every OK image read again, warped as the first time
+            for item, homography in zip(ok_items, kept, strict=True):
+                board.add(warp_to(self._read_frozen(frozen, item), homography, size))
         model = anomaly.train(ok_in, ng_in, cfg, progress, should_stop)
         if should_stop is not None and should_stop():  # Stop, or the window closing: the active model stays (TRN-008)
             raise JobCancelled(f"training {board_model}")  # nothing saved, registered, activated or audited (#171)
@@ -564,9 +584,10 @@ class AppContext:
         path, golden_path = files(version)
         model_uuid = new_uuid()  # in the file's metadata and in the registry row, so an exported .pt names its record
         model.meta.update(board_model=board_model, version=version, uuid=model_uuid, created_at=now_utc())
+        model.meta.update(dataset=frozen["name"], dataset_uuid=dataset_uuid)
         try:
             model.save(path)
-            save_image(golden_path, golden)
+            save_image(golden_path, board.board)
             model.meta["golden_image"] = to_stored(golden_path, self.settings.root)
             summary = {k: v for k, v in model.meta.items() if k not in ("loss_history", "err_mean", "err_std")}
             with self.db.transaction():  # the Golden board in use, the active version and the entry change together
@@ -1638,6 +1659,58 @@ class AppContext:
         """A frozen version's split as the database holds it: uuid, dataset_uuid, seed, locked_by, locked_at, and the
         dataset item UUIDs of its "train" and "validation" parts; None while it is not split."""
         return self.db.validation_split(dataset_uuid)
+
+    # --- training from a frozen version (REQ-TRN-007; S39) ------------------------------------------------------
+    def _training_set(self, dataset_uuid: str) -> tuple[dict[str, Any], list[dict[str, Any]], list[dict[str, Any]]]:
+        """A frozen version and the OK and NG files of its training set, in the manifest's order; else, from the rows
+        alone, the first reason not to train: no such version (AOI-TRN-045); a board model name the rule for a new one
+        refuses (AOI-TRN-019, AOI-TRN-005), as its folder under models/ does; no locked validation set, or fewer than
+        datasets.TRAIN_OK OK files in its training set (AOI-TRN-045); a file of the training set whose SHA-256 any
+        split locked for validation (AOI-TRN-043, REQ-TRN-006). The validation set's files are never listed."""
+        found = self.db.datasets("", dataset_uuid)
+        if not found:
+            none = QT_TRANSLATE_NOOP("Errors", "the workspace holds no such dataset version")
+            raise AoiError("AOI-TRN-045", name=dataset_uuid, reason=none)
+        version, why = found[0], cast(Phrase | None, None)
+        board_model = version["board_model"]
+        self._refuse_unsafe_name(board_model)  # the run writes the board model's row and its folder
+        self._refuse_case_variant(board_model)
+        if not inside(self.settings.models_dir / board_model, self.settings.models_dir):  # named before the rule (#112)
+            raise AoiError("AOI-TRN-019", name=board_model)
+        split = self.db.validation_split(dataset_uuid)
+        train = set(split["train"]) if split else set()
+        items = [i for i in self.db.dataset_items(dataset_uuid) if i["uuid"] in train]
+        ok, ng = ([i for i in items if i["label"] == label] for label in ("OK", "NG"))
+        if split is None:
+            why = QT_TRANSLATE_NOOP("Errors", "its validation set is not locked; training reads only a training set")
+        elif len(ok) < datasets.TRAIN_OK:
+            why = QT_TRANSLATE_NOOP("Errors", "its training set holds {ok} OK image(s), and training needs {least}")
+            why = why.fill(ok=len(ok), least=datasets.TRAIN_OK)
+        if why is not None:
+            raise AoiError("AOI-TRN-045", name=version["name"], reason=why)
+        locked = self.db.split_sha256("validation")  # by content, whatever its path or version (REQ-TRN-006)
+        if held := [i for i in items if i["sha256"] in locked]:
+            raise AoiError("AOI-TRN-043", name=version["name"], count=len(held))
+        return version, ok, ng
+
+    def training_version(self, board_model: str) -> dict[str, Any]:
+        """The newest frozen version of `board_model` whose validation set is locked: the one Training trains from
+        (REQ-TRN-007). AOI-TRN-045 when no version of it is."""
+        for version in self.db.datasets(board_model):
+            if self.db.validation_split(version["uuid"]) is not None:
+                return version
+        why = QT_TRANSLATE_NOOP("Errors", "no frozen dataset version of it has a locked validation set")
+        raise AoiError("AOI-TRN-045", name=board_model, reason=why)
+
+    def _read_frozen(self, version: dict[str, Any], item: dict[str, Any]) -> np.ndarray:
+        """A file of a frozen version, decoded (decrypted in memory first when in a store); AOI-TRN-045 when the
+        SHA-256 of the bytes read is not the one frozen: the file changed since the freeze, or another is in its
+        place."""
+        image, sha = self._load_image_sha256(resolve(item["path"], self.settings.root))
+        if sha != item["sha256"]:
+            why = QT_TRANSLATE_NOOP("Errors", "{file} is not the file frozen, by its SHA-256").fill(file=item["path"])
+            raise AoiError("AOI-TRN-045", name=version["name"], reason=why)
+        return image
 
     # --- customer dataset stores (REQ-TRN-017; S38; ADR 0010) ---------------------------------------------------
     @requires("Admin", QT_TRANSLATE_NOOP("Errors", "Creating a customer's dataset store"))

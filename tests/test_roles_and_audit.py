@@ -184,7 +184,8 @@ WRITES: dict[str, tuple[str, Callable[[AppContext, Path, Path], Any]]] = {
     ),
     "move_in": ("store.move_in", lambda ctx, data, tmp: ctx.move_in("TINY", a_store(ctx, "Acme Electronics"))),
     "shred_store": ("store.shred", lambda ctx, data, tmp: ctx.shred_store(a_store(ctx, "Delta"))),
-    "train": ("model.train", lambda ctx, data, tmp: ctx.train("TINY", epochs=1, image_size=32)),
+    # the version TINY was trained from (tests/conftest.py), so the call under test writes the only rows
+    "train": ("model.train", lambda ctx, data, tmp: ctx.train(ctx.training_version("TINY")["uuid"], 1, 32)),
     "activate_model": ("model.activate", lambda ctx, data, tmp: ctx.activate_model(ctx.models("TINY")[-1]["id"])),
     "save_recipe": ("recipe.save", lambda ctx, data, tmp: ctx.save_recipe(Recipe(board_model="TINY"))),
     "batch_test": ("test.run", lambda ctx, data, tmp: ctx.batch_test("TINY", str(data / "test" / "ng"))),
@@ -228,6 +229,7 @@ UNCHECKED = {
     "golden_board_unreadable", "engine_is_current", "calibrated_threshold", "calibration_of", "scale", "label_history",
     "boxes", "box_history", "unsure_samples", "label_check_status", "labels_ready_to_freeze", "calibration_sets",
     "agreement_checks", "datasets", "dataset_items", "verify_dataset", "validation_split", "stores", "store_of",
+    "training_version",
 }  # fmt: skip
 CALLS = {**{name: call for name, (_, call) in WRITES.items()}, **CHECKED_READS}
 # The lowest role allowed each call, copied from the write table of docs/ARCHITECTURE.md §5 and REQ-CMP-005, never read

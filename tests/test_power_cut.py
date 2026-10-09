@@ -33,6 +33,7 @@ from aoi.core.services import AppContext
 from aoi.data import atomic
 from aoi.data.db import Database
 from tests.conftest import TrainedModel
+from tools.trainable import trainable
 
 ROOT = Path(__file__).resolve().parents[1]
 KILLS = 20
@@ -214,7 +215,7 @@ def test_req_insp_008_results_and_the_golden_board_go_through_atomic(
     monkeypatch.setattr(atomic, "write_with", record)
     before = stamps()
     trained_ctx.inspect_file("TINY", trained_ctx.db.samples("TINY")[0]["path"])
-    trained_ctx.train("TINY", epochs=1, image_size=64)
+    trained_ctx.train(trainable(trained_ctx, "TINY"), epochs=1, image_size=64)
     changed = {p for p, s in stamps().items() if before.get(p) != s}
     files = {p for p in changed if not p.name.startswith("aoi.sqlite") and p.parent != root / "logs"}
     assert len([p for p in files if p.is_relative_to(root / "results")]) == 3, files  # overlay, difference and AI map
