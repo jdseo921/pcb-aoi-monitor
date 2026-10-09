@@ -315,11 +315,12 @@ class TrainingPage(Page):
         kl = QVBoxLayout(self.keys)
         kl.setContentsMargins(0, 0, 0, 0)
         kl.addWidget(split)
-        self.datasets_tab = QWidget()  # the working set and the labeller agreement (Datasets stage)
+        self.datasets_tab = QWidget()  # the working set, Freeze Dataset… and the labeller agreement (Datasets stage)
         dl = QVBoxLayout(self.datasets_tab)
         dl.setContentsMargins(0, 0, 0, 0)
         self.working = WorkingSetPanel(self)
         dl.addWidget(self.working)
+        dl.addWidget(self.working.sheet)  # in place of the panels under the working set while it is open
         self.agreement = AgreementPanel(self)
         dl.addWidget(self.agreement)
         dl.addStretch(1)
@@ -350,6 +351,26 @@ class TrainingPage(Page):
         self.removeAction(a)
         self.keys.addAction(a)
         return a
+
+    def dataset_action(self, text: str, key: str, slot: Callable[[], object]) -> QAction:
+        """A key of the Datasets tab's, acting only while the tab is shown, as `action` makes the Samples tab's."""
+        a = super().action(text, key, slot)
+        self.removeAction(a)
+        self.datasets_tab.addAction(a)
+        return a
+
+    def idle(self) -> bool:
+        """No import or draw of the page's runs: one job of the page's at a time (#194)."""
+        return self._bg is None
+
+    def show_freeze_sheet(self, shown: bool) -> None:
+        """The Freeze sheet in place of the panels under the working set: those hidden first, so the page keeps the
+        height a 1600 x 900 screen gives it."""
+        if shown:
+            self.agreement.hide()
+        self.working.sheet.setVisible(shown)
+        if not shown:
+            self.agreement.show()
 
     def open_blind(self, set_uuid: str, images: list[str], paths: dict[str, str]) -> None:
         """Label Blind…: the blind panel in the tabs' place, from the set's first image the user has not labelled."""
@@ -432,6 +453,7 @@ class TrainingPage(Page):
         import that runs goes on as the user who started it (#177), and its sheet closes once that import ends."""
         self.editor.forget()  # and the next user never undoes what the user before changed
         self._stop_blind()
+        self.working.sheet.close_sheet()  # the Freeze sheet too
         if self.sheet.running:
             self._left = True
         else:
@@ -945,6 +967,7 @@ class TrainingPage(Page):
             a.setEnabled(idle)  # its button and its key
         self.btn_draw.setEnabled(idle)  # a draw would stop the import that runs: one job of the page's at a time
         self.samples_empty.link.setEnabled(idle)
+        self.working.sync()  # Freeze Dataset…, off while a job runs
         self.btn_train.setEnabled(idle and self.worker is None and self.dataset_version.currentData() is not None)
 
     def _fill_versions(self) -> None:

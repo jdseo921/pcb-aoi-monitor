@@ -2958,7 +2958,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/training.py" line="+483"/>
+        <location filename="../ui/pages/training.py" line="+505"/>
         <location filename="../ui/pages/training_import.py" line="+38"/>
         <source>{code} {title}</source>
         <translation type="unfinished"></translation>
@@ -3195,6 +3195,94 @@
         <location line="+5"/>
         <source>Note: {note}</source>
         <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>FreezeSheet</name>
+    <message>
+        <location filename="../ui/pages/training_versions.py" line="+127"/>
+        <source>Freeze dataset</source>
+        <translation>데이터셋 동결</translation>
+    </message>
+    <message>
+        <location line="+10"/>
+        <source>View</source>
+        <translation>뷰</translation>
+    </message>
+    <message>
+        <location line="+4"/>
+        <source>Board revision</source>
+        <translation>보드 리비전</translation>
+    </message>
+    <message>
+        <location line="+22"/>
+        <source>Cancel</source>
+        <translation type="unfinished">취소</translation>
+    </message>
+    <message>
+        <location line="+32"/>
+        <source>Name: type the board revision, 1 to 16 letters and digits, such as R3</source>
+        <translation>이름: 보드 리비전을 1~16자의 영문자와 숫자로 입력하십시오(예: R3)</translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>Name {name}</source>
+        <translation>이름 {name}</translation>
+    </message>
+    <message>
+        <location line="+4"/>
+        <source>{n} of {need} OK labels checked (10 % of {ok})</source>
+        <translation>OK 라벨 {need}개({ok}개의 10 %) 중 {n}개 검토함</translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>Every NG label checked by a second user</source>
+        <translation>모든 NG 라벨을 다른 사용자가 검토함</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>{n} of {ng} NG labels not checked: check them on the Samples tab</source>
+        <translation>NG 라벨 {ng}개 중 {n}개 미검토: 샘플 탭에서 검토하십시오</translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>{line}: draw and check them on the Samples tab</source>
+        <translation>{line}: 샘플 탭에서 뽑아 검토하십시오</translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>Customer {customer}, whose dataset store holds it</source>
+        <translation>고객 {customer}: 이 고객의 데이터셋 저장소에 있음</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>In no customer&apos;s dataset store: an Admin moves it in on Settings</source>
+        <translation>어느 고객의 데이터셋 저장소에도 없음: 관리자가 설정에서 옮겨 넣습니다</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Agreement check reached its targets</source>
+        <translation>일치도 검사가 목표에 도달함</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>No agreement check of this view reached its targets: run one under Labeller agreement</source>
+        <translation>이 뷰의 일치도 검사가 목표에 도달하지 않았음: 라벨러 일치도에서 검사를 실행하십시오</translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>✓ {line}</source>
+        <translation>✓ {line}</translation>
+    </message>
+    <message>
+        <location line="+0"/>
+        <source>✗ {line}</source>
+        <translation>✗ {line}</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>{files} files · a SHA-256 manifest is written · the version never changes afterwards</source>
+        <translation>파일 {files}개 · SHA-256 매니페스트를 기록 · 이후 버전은 바뀌지 않음</translation>
     </message>
 </context>
 <context>
@@ -4505,7 +4593,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/training.py" line="-334"/>
+        <location filename="../ui/pages/training.py" line="-356"/>
         <source>Training</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5393,12 +5481,12 @@
     </message>
     <message>
         <location line="+1"/>
-        <location line="+560"/>
+        <location line="+582"/>
         <source>Import Folder…</source>
         <translation>폴더 가져오기…</translation>
     </message>
     <message>
-        <location line="-548"/>
+        <location line="-570"/>
         <source>Training needs 20 OK images or more in a dataset version&apos;s training set</source>
         <translation>학습에는 데이터셋 버전의 학습 세트에 OK 이미지가 20장 이상 필요합니다</translation>
     </message>
@@ -5465,12 +5553,12 @@
     </message>
     <message>
         <location line="+3"/>
-        <location line="+420"/>
+        <location line="+442"/>
         <source>Remove</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-411"/>
+        <location line="-433"/>
         <source>Select a sample to preview</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5510,7 +5598,7 @@
         <translation type="unfinished">취소</translation>
     </message>
     <message>
-        <location line="+644"/>
+        <location line="+666"/>
         <source>{phase} · {percent} % · {left}</source>
         <translation>{phase} · {percent} % · {left}</translation>
     </message>
@@ -5520,7 +5608,7 @@
         <translation>취소됨: AI 모델을 저장하지 않았으며 활성 AI 모델은 바뀌지 않았습니다.</translation>
     </message>
     <message>
-        <location line="-643"/>
+        <location line="-665"/>
         <source>AI model versions</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5610,7 +5698,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+19"/>
+        <location line="+20"/>
         <source>Samples</source>
         <translation>샘플</translation>
     </message>
@@ -5620,7 +5708,7 @@
         <translation>데이터셋</translation>
     </message>
     <message>
-        <location line="+48"/>
+        <location line="+68"/>
         <source>Select PCB images</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5640,7 +5728,7 @@
         <translation>{folder}와(과) 그 하위 폴더에 이미지가 없어 가져올 것이 없습니다</translation>
     </message>
     <message>
-        <location line="+118"/>
+        <location line="+119"/>
         <source>Imported {ok} OK and {ng} NG images into {board_model}</source>
         <translation>OK 이미지 {ok}개와 NG 이미지 {ng}개를 {board_model}(으)로 가져왔습니다</translation>
     </message>
@@ -5795,7 +5883,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+48"/>
+        <location line="+49"/>
         <source>No frozen dataset version of {board_model} yet; training reads only a frozen version&apos;s training set, once its validation set is locked.</source>
         <translation>{board_model}의 고정된 데이터셋 버전이 아직 없습니다. 학습은 검증 세트가 잠긴 고정 버전의 학습 세트만 읽습니다.</translation>
     </message>
@@ -5820,7 +5908,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-278"/>
+        <location line="-279"/>
         <source>Add at least 20 OK boards with Add OK Images… or Import Folder…</source>
         <translation>OK 이미지 추가… 또는 폴더 가져오기…로 OK 보드를 20개 이상 추가하세요</translation>
     </message>
@@ -5830,7 +5918,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+304"/>
+        <location line="+305"/>
         <source>none</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5871,7 +5959,7 @@
 <context>
     <name>WorkingSetPanel</name>
     <message>
-        <location filename="../ui/pages/training_versions.py" line="+26"/>
+        <location filename="../ui/pages/training_versions.py" line="-183"/>
         <source>Their own AI models</source>
         <translation>고객 자체 AI 모델</translation>
     </message>
@@ -5886,7 +5974,7 @@
         <translation>데모</translation>
     </message>
     <message>
-        <location line="+9"/>
+        <location line="+10"/>
         <source>Working set</source>
         <translation>작업 세트</translation>
     </message>
@@ -5897,16 +5985,21 @@
     </message>
     <message>
         <location line="+5"/>
+        <source>Freeze Dataset…</source>
+        <translation>데이터셋 동결…</translation>
+    </message>
+    <message>
+        <location line="+3"/>
         <source>Customer</source>
         <translation>고객</translation>
     </message>
     <message>
-        <location line="+8"/>
+        <location line="+9"/>
         <source>Allowed uses</source>
         <translation>허용된 용도</translation>
     </message>
     <message>
-        <location line="+11"/>
+        <location line="+14"/>
         <source>{view}: {ok} OK · {ng} NG · {unsure} UNSURE · {ng_checked} of {ng} NG checked · {ok_checked} of {need} OK checked (10 %)</source>
         <translation>{view}: OK {ok} · NG {ng} · UNSURE {unsure} · NG {ng}개 중 {ng_checked}개 검토 · OK {need}개 중 {ok_checked}개 검토(10 %)</translation>
     </message>
@@ -5924,6 +6017,11 @@
         <location line="+5"/>
         <source>in no customer&apos;s dataset store yet</source>
         <translation>아직 어느 고객의 데이터셋 저장소에도 없음</translation>
+    </message>
+    <message>
+        <location line="+11"/>
+        <source>Label images OK or NG on the Samples tab first</source>
+        <translation>먼저 샘플 탭에서 이미지를 OK 또는 NG로 라벨링하십시오</translation>
     </message>
 </context>
 </TS>
