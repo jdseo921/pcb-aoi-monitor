@@ -31,7 +31,9 @@ from PySide6.QtWidgets import (
 )
 
 from ...core.imaging import IMAGE_EXTS
+from ...core.jobs import Job
 from ...core.labels import DefectBox
+from ...core.run_progress import RunProgress
 from ...core.sample_import import ImportFile, ImportReport, folder_files
 from ...core.services import AppContext
 from ...defects import names
@@ -41,7 +43,7 @@ from .. import theme
 from ..errors import phrase_text
 from ..widgets.busy import BusyOverlay
 from ..widgets.empty_state import EmptyState
-from ..workers import Worker, start
+from ..workers import Worker, keep
 from .base import (
     QT_TRANSLATE_NOOP,
     Page,
@@ -51,6 +53,7 @@ from .base import (
     cell_text,
     fill_table,
     make_table,
+    time_left_text,
     view_text,
 )
 from .training_import import ImportSheet
@@ -221,13 +224,17 @@ class TrainingPage(Page):
         f.addRow(self.tr("Device"), self.device_label)
         row = QHBoxLayout()
         self.btn_train = button(self.tr("Start Training"), "primary", self.train)
-        self.btn_stop = button(self.tr("Stop"), slot=self.stop)
+        self.btn_stop = button(self.tr("Cancel"), slot=self.stop)  # stops the run within a step (REQ-TRN-008)
         self.btn_stop.setEnabled(False)
         row.addWidget(self.btn_train)
         row.addWidget(self.btn_stop)
         f.addRow(row)
-        self.bar = QProgressBar()
+        self.bar = QProgressBar()  # the percent of the run's time gone, as estimated
+        self.bar.setRange(0, 100)
         f.addRow(self.bar)
+        self.phase_line = QLabel()  # what the run does now and its time left
+        self.phase_line.setWordWrap(True)
+        f.addRow(self.phase_line)
         rl.addWidget(g)
         self.log = QPlainTextEdit()
         self.log.setReadOnly(True)
@@ -593,47 +600,56 @@ class TrainingPage(Page):
 
     # --- training ---------------------------------------------------------------
     def train(self) -> None:
-        """Train from the dataset version picked; the run refuses one it cannot train from before reading an image."""
+        """Train from the dataset version picked, as a job of the context that goes on whatever page is shown
+        (REQ-TRN-008); the run refuses a version it cannot train from before reading an image."""
         if self.checked_board_model() is None or (version := self.dataset_version.currentData()) is None:
             return
-        self.log.clear()
-        self.bar.setRange(0, self.epochs.value())
+        size = int(self.input_size.currentText())
+        try:
+            self.ctx.start_training(version, self.epochs.value(), size, listen=self._follow)
+        except AoiError as e:  # a run already going on (AOI-TRN-047)
+            self.error(e)
+            return
+        self.log.clear()  # the run's first report is still queued for this thread
         self.bar.setValue(0)
+        self.phase_line.setText("")
         self.btn_train.setEnabled(False)
         self.btn_stop.setEnabled(True)
-        size = int(self.input_size.currentText())
-        self.worker = Worker(self.ctx.train, version, self.epochs.value(), size, with_progress=True)
+
+    def _follow(self, job: Job[dict[str, Any]]) -> None:
+        """Show the run `job` here: its reports, result and end reach this page's slots on the UI thread."""
+        self.worker = Worker.of(job)
         self.worker.signals.progress.connect(self._on_progress)
         self.worker.signals.result.connect(self._on_done)
         self.worker.signals.error.connect(self.error)
         self.worker.signals.finished.connect(self._finished)
-        start(self.worker, self.ctx.jobs)
+        keep(self.worker, self.ctx.jobs)
 
     def stop(self) -> None:
+        """Cancel: the run stops after the image, training step or map in hand, and saves nothing (REQ-TRN-008)."""
         if self.worker:
             self.worker.stop()
 
-    def _on_progress(self, a: tuple[int, int, float, str]) -> None:
-        ep, total, loss, msg = a
-        if total > 1:
-            self.bar.setMaximum(total)
-            self.bar.setValue(ep)
-        if msg:  # a phrase of the engine, shown in the UI language (#199)
-            self.log.appendPlainText(phrase_text(msg))
-        elif ep % 5 == 0 or ep == 1:
-            self.log.appendPlainText(
-                self.tr("epoch {epoch}/{total}  loss {loss:.4f}").format(epoch=ep, total=total, loss=loss)
-            )
+    def _on_progress(self, values: tuple[RunProgress]) -> None:
+        p = values[0]
+        self.bar.setValue(p.percent)
+        line = self.tr("{phase} · {percent} % · {left}")  # the engine's phrases, shown in the UI language (#199)
+        left = time_left_text(p.left_s)
+        self.phase_line.setText(line.format(phase=phrase_text(p.phase), percent=p.percent, left=left))
+        if p.note:
+            self.log.appendPlainText(phrase_text(p.note))
 
     def _on_done(self, meta: dict[str, Any]) -> None:
+        self.bar.setValue(self.bar.maximum())
         saved = self.tr("Saved AI model {version} ({seconds} s). Golden board updated.")
         self.log.appendPlainText(saved.format(version=meta["version"], seconds=meta["train_seconds"]))
         self.shell.status(self.tr("AI model {version} trained and activated").format(version=meta["version"]))
         self.refresh()
 
     def _finished(self) -> None:
-        if self.worker is not None and self.worker.job.cancelled and self.worker.job.result is None:  # Stop (#171)
-            self.log.appendPlainText(self.tr("Stopped: no AI model was saved; the active AI model is unchanged."))
+        if self.worker is not None and self.worker.job.cancelled and self.worker.job.result is None:  # Cancel (#171)
+            self.log.appendPlainText(self.tr("Cancelled: no AI model was saved; the active AI model is unchanged."))
+        self.phase_line.setText("")
         self.btn_stop.setEnabled(False)
         self.worker = None
         self.device_label.setText(self.ctx.device.upper())  # a device saved during the run applies from the next one

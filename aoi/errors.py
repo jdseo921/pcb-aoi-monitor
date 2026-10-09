@@ -766,6 +766,18 @@ CODES: dict[str, ErrorCode] = {
             ),
         ),
         ErrorCode(
+            "AOI-TRN-047",
+            QT_TRANSLATE_NOOP("Errors", "Training already running"),
+            QT_TRANSLATE_NOOP(
+                "Errors", "An AI model is already training on this station, so a second training run was not started."
+            ),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Wait for the run to end, or press Cancel on the Training page, then start again; the header shows how"
+                " far the run is.",
+            ),
+        ),
+        ErrorCode(
             "AOI-TST-001",
             QT_TRANSLATE_NOOP("Errors", "AI model, recipe, scale or Golden board changed since the run"),
             QT_TRANSLATE_NOOP(

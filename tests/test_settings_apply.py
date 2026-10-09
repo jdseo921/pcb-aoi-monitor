@@ -31,6 +31,19 @@ from tests.test_req_done_in_v01 import BOARD, _window
 from tools.trainable import trainable
 
 
+def _probed(monkeypatch: pytest.MonkeyPatch) -> list[str]:
+    """The devices a run times its first training step and map on (anomaly.probe, REQ-TRN-008), recorded and timed
+    at nothing: the container has no GPU."""
+    devices: list[str] = []
+
+    def probe(image: anomaly.Prepared, cfg: anomaly.TrainConfig) -> tuple[float, float]:
+        devices.append(cfg.device)
+        return 0.0, 0.0
+
+    monkeypatch.setattr(anomaly, "probe", probe)
+    return devices
+
+
 def _shown_device(win: MainWindow) -> list[str]:
     """The device the Training page shows, read from its labels as the user sees them."""
     win.navigate("Training")
@@ -69,6 +82,7 @@ def test_req_set_002_a_saved_ai_device_is_used_at_once(
         raise RuntimeError("stopped by the test once the device is known")
 
     monkeypatch.setattr(anomaly, "train", train)
+    probed_on = _probed(monkeypatch)
     said: list[str] = []
     monkeypatch.setattr(QMessageBox, "information", staticmethod(lambda _p, _t, text: said.append(text)))
     trained_ctx.close()
@@ -87,7 +101,7 @@ def test_req_set_002_a_saved_ai_device_is_used_at_once(
     assert loaded_on == [before, after]  # the weights cached on the old device were loaded again
     with pytest.raises(RuntimeError, match="stopped by the test"):
         ctx.train(trainable(ctx, BOARD), epochs=5, image_size=64)
-    assert trained_on == [after]
+    assert trained_on == probed_on == [after]
     assert _shown_device(win) == [after.upper()]
 
 
@@ -188,6 +202,7 @@ def test_req_set_002_a_run_keeps_the_device_it_started_with(
             time.sleep(0.01)
 
     monkeypatch.setattr(anomaly, "train", train)
+    probed_on = _probed(monkeypatch)
     trained_ctx.close()
     ctx = AppContext(Settings(workspace=trained_ctx.settings.workspace, device="auto"))
     win = _window(qtbot, ctx, "Admin")
@@ -202,7 +217,8 @@ def test_req_set_002_a_run_keeps_the_device_it_started_with(
         assert ctx.device == "cpu"
         release.set()
         qtbot.waitUntil(lambda: bool(trained_on))
-        assert (trained_on, _shown_device(win)) == (["cuda"], ["CUDA"]), "the run trains on another device than shown"
+        shown = (trained_on, probed_on, _shown_device(win))
+        assert shown == (["cuda"], ["cuda"], ["CUDA"]), "the run trains on another device than shown"
     finally:
         release.set()
         training.stop()

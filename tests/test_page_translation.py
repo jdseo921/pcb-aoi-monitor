@@ -7,6 +7,7 @@ so a string shows marked only when it reaches translate() and is in the translat
 
 from __future__ import annotations
 
+import re
 import subprocess
 import xml.etree.ElementTree as ET
 from collections.abc import Iterator
@@ -18,6 +19,7 @@ from PySide6.QtCore import QCoreApplication, QTranslator
 from pytestqt.qtbot import QtBot
 
 from aoi.core.jobs import Job
+from aoi.core.run_progress import RunProgress
 from aoi.core.services import AppContext
 from aoi.ui.pages.settings import SettingsPage
 from aoi.ui.pages.training import TrainingPage
@@ -48,32 +50,49 @@ def marked(tmp_path: Path) -> Iterator[None]:
 def test_req_set_005_every_training_log_line_is_translated(
     qtbot: QtBot, trained_ctx: AppContext, marked: None, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """#199 defect 1: a training run stopped after its first epoch fills the log with the engine's progress lines
-    (aligning, training on, stopped, calibrated with its rule) and the page's own; every line, and the calibration
-    rule inside it, is in the UI language. Before, only the epoch and "Stopped:" lines were."""
+    """#199 defect 1: a training run fills the log with the engine's progress lines (aligning, training on, the epochs,
+    calibrated with its rule) and the page's own, and the line under the bar with what it does and its time left
+    (REQ-TRN-008); every line, and the phrases inside it, is in the UI language. A run cancelled at its first report
+    says so in the UI language too. Before, only the epoch and "Stopped:" lines were."""
     win = _window(qtbot, trained_ctx, "Engineer")
     win.navigate("Training")
     page = win.pages["Training"]
     assert isinstance(page, TrainingPage)
     page.epochs.setValue(page.epochs.minimum())
     page.input_size.setCurrentIndex(0)
-    submit = trained_ctx.jobs.submit
+    shown, show = [], page._on_progress
 
-    def stop_after_epoch_1(job: Job[Any]) -> Job[Any]:  # a listener goes on before the job is submitted (jobs.py)
-        job.on_progress(lambda a: job.cancel() if a[0] >= 1 else None)  # on the training thread: the engine sees it
-        return submit(job)
+    def on_progress(values: tuple[RunProgress]) -> None:  # the slot the page connects as the run starts
+        show(values)
+        shown.append(page.phase_line.text())
 
-    monkeypatch.setattr(trained_ctx.jobs, "submit", stop_after_epoch_1)
+    monkeypatch.setattr(page, "_on_progress", on_progress)
     page.train()
     assert page.worker is not None
     qtbot.waitUntil(lambda: page.worker is None, timeout=120000)
     lines = page.log.toPlainText().splitlines()
-    assert len(lines) >= 5, lines
-    assert [line for line in lines if not line.startswith("§")] == []
-    calibrated = next(line for line in lines if line.startswith("§Calibrated image threshold"))
-    assert "(§" in calibrated, calibrated  # the rule is a phrase of its own
-    assert "§Stopped by user; calibrating current weights" in lines and lines[0].startswith("§Aligning")
-    assert lines[-1] == "§Stopped: no AI model was saved; the active AI model is unchanged."
+    assert len(lines) == 6 and [line for line in lines if not line.startswith("§")] == [], lines
+    assert [line.split(" ")[0] for line in lines] == [
+        "§Aligning",
+        "§Training",
+        "§Epoch",
+        "§Epoch",
+        "§Calibrated",
+        "§Saved",
+    ]
+    assert "(§" in lines[4], lines[4]  # the rule is a phrase of its own
+    assert shown and all(re.fullmatch(r"§§\S.* · \d+ % · §.+", line) for line in shown), shown
+    submit = trained_ctx.jobs.submit
+
+    def cancel_at_once(job: Job[Any]) -> Job[Any]:  # a listener goes on before the job is submitted (jobs.py)
+        job.on_progress(lambda _: job.cancel())  # on the training thread: the run sees it after that report
+        return submit(job)
+
+    monkeypatch.setattr(trained_ctx.jobs, "submit", cancel_at_once)
+    page.train()
+    qtbot.waitUntil(lambda: page.worker is None, timeout=120000)
+    lines = page.log.toPlainText().splitlines()
+    assert lines[-1] == "§Cancelled: no AI model was saved; the active AI model is unchanged.", lines
 
 
 def test_req_set_005_the_training_samples_table_shows_the_view_translated(

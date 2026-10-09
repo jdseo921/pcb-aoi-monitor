@@ -288,8 +288,7 @@ def prepare(win: MainWindow, title: str, dataset: Path) -> None:
     elif title == "Training":
         page.import_from(str(dataset / "train"))  # the import sheet open on ok/ and ng/, its NG rows waiting for a type
         page.sheet.table.clearFocus()  # the sheet takes the keys: let go, or the next page drawn shows a field's caret
-        page.bar.setRange(0, TINY_EPOCHS)
-        page.bar.setValue(TINY_EPOCHS)  # as a finished run leaves it: the percentage on the accent chunk (#203)
+        page.bar.setValue(page.bar.maximum())  # as a finished run leaves it: the percentage on the accent chunk (#203)
         missing = str(page.ctx.samples(BOARD_MODEL, "NG")[0]["id"])  # the label editor on its box, selected
         rows = range(page.samples.rowCount())
         page.samples.selectRow(next(r for r in rows if cell_text(page.samples, r, 0) == missing))

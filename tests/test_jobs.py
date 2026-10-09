@@ -195,14 +195,15 @@ def test_req_set_021_appcontext_owns_the_pool_and_close_shuts_it_down(ctx: AppCo
 def test_req_trn_008_a_stopped_training_run_saves_registers_activates_and_audits_nothing(
     trained_ctx: AppContext,
 ) -> None:
-    """#171: a training run stopped (Stop on the Training page, or the window closing) ends as a cancelled job, with
-    no AI model file, version, golden board or audit entry; the active AI model stays. Before, it was activated."""
+    """#171: a training run stopped (Cancel on the Training page, Stop before S40, or the window closing) ends as a
+    cancelled job, with no AI model file, version, golden board or audit entry; the active AI model stays. Before, it
+    was activated."""
     ctx = trained_ctx
     models, active, reference = ctx.models("TINY"), ctx.db.active_model("TINY"), ctx.db.reference("TINY")
     files, audit = sorted(ctx.settings.models_dir.rglob("*")), ctx.audit_entries()
     job: Job[dict] = Job("train", ctx.train, ctx.training_version("TINY")["uuid"], 3, 32, with_progress=True)
     messages: list[str] = []
-    job.on_progress(lambda v: (messages.append(v[-1]), job.cancel()))  # Stop, once the run is under way
+    job.on_progress(lambda v: (messages.append(v[-1]), job.cancel()))  # Cancel, once the run is under way
     outcome: list[object] = []
     job.on_result(outcome.append).on_error(outcome.append)
     assert ctx.jobs.submit(job).wait(120) and job.cancelled and outcome == [] and job.result is None
@@ -228,7 +229,7 @@ def test_req_trn_008_the_training_page_says_a_stopped_run_saved_nothing(qtbot: Q
     start(page.worker, trained_ctx.jobs)
     page.stop()
     qtbot.waitUntil(lambda: page.worker is None, timeout=10000)
-    said = "Stopped: no AI model was saved; the active AI model is unchanged."
+    said = "Cancelled: no AI model was saved; the active AI model is unchanged."  # "Stopped: …" before S40
     assert page.log.toPlainText().splitlines()[-1] == said
 
 

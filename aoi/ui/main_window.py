@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, cast
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QCloseEvent, QColor
 from PySide6.QtWidgets import (
     QComboBox,
@@ -24,11 +24,12 @@ from PySide6.QtWidgets import (
 )
 
 from ..config import APP_NAME, APP_VERSION
+from ..core.run_progress import RunProgress
 from ..core.services import AppContext
 from ..errors import AoiError
 from . import theme
 from .errors import install_excepthook, show_error
-from .pages.base import QT_TRANSLATE_NOOP, Page, button, page_text, role_text, size_class
+from .pages.base import QT_TRANSLATE_NOOP, Page, button, page_text, role_text, size_class, time_left_text
 from .pages.compare import ComparePage
 from .pages.inspection import InspectionPage
 from .pages.logs import LogsPage
@@ -98,6 +99,9 @@ class HomePage(Page):
         grid = QGridLayout(self.cards)
         grid.setSpacing(theme.SPACE)
         self.status_labels: dict[str, QLabel] = {}
+        self.training_line = QLabel()  # on Self-train's card while a training run goes on (REQ-TRN-008)
+        self.training_line.setWordWrap(True)
+        self.training_line.hide()
         for i, (n, name, desc, target) in enumerate(self.STEPS):
             card = QFrame()
             card.setObjectName("card")
@@ -116,6 +120,8 @@ class HomePage(Page):
             cl.addWidget(d)
             cl.addStretch(1)
             cl.addWidget(st)
+            if name == "Self-train":
+                cl.addWidget(self.training_line)
             kind = "primary" if target == "Inspection" else ""  # the page's one blue primary: the Inspect card
             link = self.tr("Open {page} ›").format(page=page_text(target))
             cl.addWidget(button(link, kind, lambda _=False, t=target: shell.navigate(t)))
@@ -124,6 +130,14 @@ class HomePage(Page):
         self.empty = EmptyState()  # no board model yet: one block in place of the cards (REQ-SET-019)
         self.root.addWidget(self.empty)
         self.root.addStretch(1)
+
+    def show_training(self, progress: RunProgress | None, running: bool) -> None:
+        """Self-train's line while a training run goes on, with its latest report; hidden once it ends."""
+        if running:
+            percent, left = (progress.percent, progress.left_s) if progress else (0, None)
+            line = self.tr("Training running {percent} % · {left}")
+            self.training_line.setText(line.format(percent=percent, left=time_left_text(left)))
+        self.training_line.setVisible(running)
 
     def on_show(self) -> None:
         bm = self.board_model
@@ -223,6 +237,9 @@ class MainWindow(QMainWindow):
             self._items[cls.title] = it
         self.nav.currentItemChanged.connect(self._on_nav)
 
+        self._training_timer = QTimer(self)  # the header and Home follow a training run on every page (REQ-TRN-008)
+        self._training_timer.timeout.connect(self.show_training)
+        self._training_timer.start(1000)
         self._reload_board_models()
         # no board model yet: start with an Admin to set the station up; the role is the stored one either way (#197)
         self.set_user(ctx.start_user(setting_up=not ctx.board_models()))
@@ -248,13 +265,28 @@ class MainWindow(QMainWindow):
         new = button(self.tr("+ New"), slot=self.new_board_model)
         layout.addWidget(new)
         layout.addStretch(1)
+        self.training_link = button("", slot=lambda: self.navigate("Training"))  # while a training run goes on
+        self.training_link.hide()
+        layout.addWidget(self.training_link)
         self.user_label = QLabel("")
         layout.addWidget(self.user_label)
         switch = button(self.tr("Switch User"), slot=self.switch_user)
         layout.addWidget(switch)
-        for control in (self.bm_combo, new, switch):
+        for control in (self.bm_combo, new, self.training_link, switch):
             size_class(control, "T")  # header controls are operator targets (frame sketch, size class T)
         return h
+
+    def show_training(self) -> None:
+        """The header's training indicator and Home's line, read each second from the context's run, whichever page
+        started it: shown while it goes on, with its percent and time left; a click opens Training (REQ-TRN-008)."""
+        job, progress = self.ctx.training, self.ctx.training_progress
+        running = job is not None and not job.done
+        if running:
+            percent, left = (progress.percent, progress.left_s) if progress else (0, None)
+            text = self.tr("Training {percent} % · {left}").format(percent=percent, left=time_left_text(left))
+            self.training_link.setText(text)
+        self.training_link.setVisible(running)
+        cast(HomePage, self.pages["Home"]).show_training(progress, running)
 
     def _reload_board_models(self, select: str | None = None) -> None:
         self.bm_combo.blockSignals(True)

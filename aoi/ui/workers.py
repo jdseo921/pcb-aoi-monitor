@@ -17,7 +17,7 @@ from ..core.jobs import Job, Jobs
 
 
 class WorkerSignals(QObject):
-    progress = Signal(object)  # the tuple the function reported: (done, total) or training's (epoch, total, loss, msg)
+    progress = Signal(object)  # the tuple the function reported: (done, total), or training's (RunProgress,)
     result = Signal(object)
     error = Signal(object)  # the exception itself; Page.run_in_background logs and alarms it, with a coded dialog
     # unless the run was cancelled or replaced (#206)
@@ -29,13 +29,24 @@ class Worker:
     `with_progress=True`. Connect the signals, then `start(worker, ctx.jobs)`."""
 
     def __init__(self, fn: Callable[..., Any], *args: Any, with_progress: bool = False, **kwargs: Any) -> None:
+        self._follow(Job(getattr(fn, "__name__", "job"), fn, *args, with_progress=with_progress, **kwargs))
+
+    @classmethod
+    def of(cls, job: Job[Any]) -> Worker:
+        """A worker whose signals follow `job`, a job another owner made and submits (AppContext.start_training,
+        REQ-TRN-008): made before the job is submitted, its slots connected, then `keep(worker, jobs)`."""
+        worker = cls.__new__(cls)
+        worker._follow(job)
+        return worker
+
+    def _follow(self, job: Job[Any]) -> None:
         self.signals = WorkerSignals()
-        self.jobs: Jobs | None = None  # the pool `start` submitted it to
-        self.job: Job[Any] = Job(getattr(fn, "__name__", "job"), fn, *args, with_progress=with_progress, **kwargs)
-        self.job.on_progress(self.signals.progress.emit)
-        self.job.on_result(self.signals.result.emit)
-        self.job.on_error(self.signals.error.emit)
-        self.job.on_finished(self.signals.finished.emit)
+        self.jobs: Jobs | None = None  # the pool its job is submitted to
+        self.job: Job[Any] = job
+        job.on_progress(self.signals.progress.emit)
+        job.on_result(self.signals.result.emit)
+        job.on_error(self.signals.error.emit)
+        job.on_finished(self.signals.finished.emit)
 
     def stop(self) -> None:
         """Ask the job to stop; a function that checks `should_stop()` returns what it has done so far."""
@@ -48,11 +59,18 @@ _live: dict[int, Worker] = {}  # workers whose finished slot has not run yet, by
 def start(worker: Worker, jobs: Jobs) -> Worker:
     """Submit the worker's job. Connect every slot first: the worker is kept alive until its last `finished` slot has
     run on the UI thread, so the signals outlive the pool thread and no queued slot is lost; then it is released."""
+    keep(worker, jobs)
+    jobs.submit(worker.job)
+    return worker
+
+
+def keep(worker: Worker, jobs: Jobs) -> Worker:
+    """Keep the worker alive until its last `finished` slot has run, as `start` does, for a job submitted to `jobs` by
+    its own owner (`Worker.of`): call it once every slot is connected, before the job is submitted."""
     key = id(worker)
     _live[key] = worker
     worker.jobs = jobs
     worker.signals.finished.connect(lambda: _live.pop(key, None))
-    jobs.submit(worker.job)
     return worker
 
 
