@@ -984,7 +984,7 @@
         <translation>데이터셋 버전 동결</translation>
     </message>
     <message>
-        <location line="+79"/>
+        <location line="+124"/>
         <source>Locking a validation set</source>
         <translation>검증 세트 잠금</translation>
     </message>
@@ -1199,7 +1199,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-2159"/>
+        <location line="-2204"/>
         <source>no defect type was given</source>
         <translation>결함 유형이 지정되지 않았습니다</translation>
     </message>
@@ -1234,7 +1234,7 @@
         <translation>{label}(으)로 다시 라벨링</translation>
     </message>
     <message>
-        <location line="+697"/>
+        <location line="+742"/>
         <source>no agreement check of the board model holds images of this view</source>
         <translation>이 보드 모델의 일치도 검사 중 이 뷰의 이미지를 담은 것이 없습니다</translation>
     </message>
@@ -2958,7 +2958,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/training.py" line="+480"/>
+        <location filename="../ui/pages/training.py" line="+483"/>
         <location filename="../ui/pages/training_import.py" line="+38"/>
         <source>{code} {title}</source>
         <translation type="unfinished"></translation>
@@ -4505,7 +4505,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/training.py" line="-332"/>
+        <location filename="../ui/pages/training.py" line="-334"/>
         <source>Training</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5344,7 +5344,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/services.py" line="-2340"/>
+        <location filename="../core/services.py" line="-2385"/>
         <source>Aligning {count} images to the reference board</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5393,12 +5393,12 @@
     </message>
     <message>
         <location line="+1"/>
-        <location line="+558"/>
+        <location line="+560"/>
         <source>Import Folder…</source>
         <translation>폴더 가져오기…</translation>
     </message>
     <message>
-        <location line="-546"/>
+        <location line="-548"/>
         <source>Training needs 20 OK images or more in a dataset version&apos;s training set</source>
         <translation>학습에는 데이터셋 버전의 학습 세트에 OK 이미지가 20장 이상 필요합니다</translation>
     </message>
@@ -5465,12 +5465,12 @@
     </message>
     <message>
         <location line="+3"/>
-        <location line="+418"/>
+        <location line="+420"/>
         <source>Remove</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-409"/>
+        <location line="-411"/>
         <source>Select a sample to preview</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5510,7 +5510,7 @@
         <translation type="unfinished">취소</translation>
     </message>
     <message>
-        <location line="+642"/>
+        <location line="+644"/>
         <source>{phase} · {percent} % · {left}</source>
         <translation>{phase} · {percent} % · {left}</translation>
     </message>
@@ -5520,7 +5520,7 @@
         <translation>취소됨: AI 모델을 저장하지 않았으며 활성 AI 모델은 바뀌지 않았습니다.</translation>
     </message>
     <message>
-        <location line="-641"/>
+        <location line="-643"/>
         <source>AI model versions</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5610,7 +5610,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+17"/>
+        <location line="+19"/>
         <source>Samples</source>
         <translation>샘플</translation>
     </message>
@@ -5830,7 +5830,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+302"/>
+        <location line="+304"/>
         <source>none</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5866,6 +5866,64 @@
         <location line="+0"/>
         <source>Bottom</source>
         <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>WorkingSetPanel</name>
+    <message>
+        <location filename="../ui/pages/training_versions.py" line="+26"/>
+        <source>Their own AI models</source>
+        <translation>고객 자체 AI 모델</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Shared improvement</source>
+        <translation>공동 개선</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Demos</source>
+        <translation>데모</translation>
+    </message>
+    <message>
+        <location line="+9"/>
+        <source>Working set</source>
+        <translation>작업 세트</translation>
+    </message>
+    <message>
+        <location line="+8"/>
+        <source>Open Samples ›</source>
+        <translation>샘플 열기 ›</translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>Customer</source>
+        <translation>고객</translation>
+    </message>
+    <message>
+        <location line="+8"/>
+        <source>Allowed uses</source>
+        <translation>허용된 용도</translation>
+    </message>
+    <message>
+        <location line="+11"/>
+        <source>{view}: {ok} OK · {ng} NG · {unsure} UNSURE · {ng_checked} of {ng} NG checked · {ok_checked} of {need} OK checked (10 %)</source>
+        <translation>{view}: OK {ok} · NG {ng} · UNSURE {unsure} · NG {ng}개 중 {ng_checked}개 검토 · OK {need}개 중 {ok_checked}개 검토(10 %)</translation>
+    </message>
+    <message>
+        <location line="+6"/>
+        <source>{line} ✓</source>
+        <translation>{line} ✓</translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>No samples labelled OK or NG yet. Add OK boards on the Samples tab.</source>
+        <translation>아직 OK 또는 NG로 라벨링된 샘플이 없습니다. 샘플 탭에서 OK 보드를 추가하십시오.</translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>in no customer&apos;s dataset store yet</source>
+        <translation>아직 어느 고객의 데이터셋 저장소에도 없음</translation>
     </message>
 </context>
 </TS>

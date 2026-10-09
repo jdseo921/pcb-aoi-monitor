@@ -65,6 +65,7 @@ from .base import (
 from .training_agreement import AgreementPanel, BlindPanel
 from .training_import import ImportSheet
 from .training_labels import LabelEditor, State
+from .training_versions import WorkingSetPanel
 
 if TYPE_CHECKING:
     from ..main_window import MainWindow
@@ -314,9 +315,11 @@ class TrainingPage(Page):
         kl = QVBoxLayout(self.keys)
         kl.setContentsMargins(0, 0, 0, 0)
         kl.addWidget(split)
-        datasets = QWidget()  # what a freeze needs: the labeller agreement for now (Datasets stage, 2 of 4)
-        dl = QVBoxLayout(datasets)
+        self.datasets_tab = QWidget()  # the working set and the labeller agreement (Datasets stage)
+        dl = QVBoxLayout(self.datasets_tab)
         dl.setContentsMargins(0, 0, 0, 0)
+        self.working = WorkingSetPanel(self)
+        dl.addWidget(self.working)
         self.agreement = AgreementPanel(self)
         dl.addWidget(self.agreement)
         dl.addStretch(1)
@@ -331,7 +334,7 @@ class TrainingPage(Page):
         self.blind.closed.connect(self._blind_closed)
         self.stack = QStackedWidget()  # the tab shown, or the blind panel
         self.stack.addWidget(self.keys)
-        self.stack.addWidget(datasets)
+        self.stack.addWidget(self.datasets_tab)
         self.stack.addWidget(self.blind)
         self.tabs.currentChanged.connect(self.stack.setCurrentIndex)
         outer = QSplitter(Qt.Orientation.Horizontal)
@@ -1017,9 +1020,11 @@ class TrainingPage(Page):
             self.samples_empty.show_state(*self.no_board_model())
             self.models_empty.hide()
             self.agreement.show_board_model(None, [])
+            self.working.show_board_model(None, [])
             return
         s = self.ctx.samples(self.board_model)
         self.agreement.show_board_model(self.board_model, s)
+        self.working.show_board_model(self.board_model, s)
         self.shown = {r["id"]: r for r in s}
         self._boxes = {r["id"]: [b["dct_type"] for b in self.ctx.boxes(r["uuid"])] for r in s if r["label"] == "NG"}
         self._check_status()
