@@ -798,6 +798,18 @@ CODES: dict[str, ErrorCode] = {
             ),
         ),
         ErrorCode(
+            "AOI-TRN-049",
+            QT_TRANSLATE_NOOP("Errors", "Activation refused: no AI model card"),
+            QT_TRANSLATE_NOOP(
+                "Errors", "AI model {version} of board model {board} was not made active: it has no AI model card."
+            ),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Train again, so the new version has its card, or activate a version that has one; the active AI model"
+                " and its Golden board are unchanged.",
+            ),
+        ),
+        ErrorCode(
             "AOI-TST-001",
             QT_TRANSLATE_NOOP("Errors", "AI model, recipe, scale or Golden board changed since the run"),
             QT_TRANSLATE_NOOP(

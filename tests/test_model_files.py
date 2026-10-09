@@ -26,7 +26,7 @@ from aoi.core import anomaly
 from aoi.core.imaging import list_images
 from aoi.core.services import AppContext
 from aoi.errors import AoiError
-from tests.conftest import distinct_copies
+from tests.conftest import activated, distinct_copies
 from tools.trainable import trainable
 
 
@@ -236,7 +236,7 @@ def test_req_trn_007_a_model_that_cannot_judge_is_refused_before_it_is_saved(
     activated or audited, and the AI model in use stays active and loads."""
     oks = list_images(synthetic_dataset / "train" / "ok")
     ctx.import_samples("B", [str(p) for p in oks[:20]], "OK")
-    ctx.train(trainable(ctx, "B"), epochs=1, image_size=64)
+    activated(ctx, ctx.train(trainable(ctx, "B"), epochs=1, image_size=64))
 
     def state() -> tuple[object, ...]:
         files = sorted(p.name for p in (ctx.settings.models_dir / "B").iterdir())
@@ -248,7 +248,7 @@ def test_req_trn_007_a_model_that_cannot_judge_is_refused_before_it_is_saved(
     twice = distinct_copies(oks[0], tmp_path / "twice", 20)  # one photo under 20 SHA-256s: no import skips one
     ctx.import_samples("B", [str(p) for p in twice], "OK")  # one good board imported 20 times passes the 20-OK minimum
     with pytest.raises(AoiError) as refused:
-        ctx.train(trainable(ctx, "B"), epochs=1, image_size=64)
+        activated(ctx, ctx.train(trainable(ctx, "B"), epochs=1, image_size=64))
     assert refused.value.code == "AOI-TRN-004", refused.value
     assert "(its image threshold 0.0 is not a number above 0)" in refused.value.what
     assert state() == before
@@ -273,7 +273,7 @@ def test_req_trn_014_case_variant_names_and_another_models_file_are_refused(
     assert ctx.board_models() == ["TBOX-A1"] and not (ctx.settings.images_dir / "Tbox-A1").exists()
     ctx.ensure_board_model("TBOX-A1")  # the same name again: nothing to create, nothing refused
     ctx.import_samples("TBOX-A1", oks, "OK")
-    ctx.train(trainable(ctx, "TBOX-A1"), epochs=1, image_size=64)
+    activated(ctx, ctx.train(trainable(ctx, "TBOX-A1"), epochs=1, image_size=64))
     rec = ctx.active_model("TBOX-A1")
     assert rec is not None and (loaded := ctx.load_model("TBOX-A1")) is not None and loaded[2] == rec["uuid"]
     other = anomaly.AnomalyModel.load(rec["path"])  # another AI model, saved over this one's file

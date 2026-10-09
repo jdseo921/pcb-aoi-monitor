@@ -26,6 +26,7 @@ from aoi.ui.pages.inspection import InspectionPage
 from aoi.ui.pages.model_test import ModelTestPage
 from aoi.ui.pages.recipe_editor import RecipeEditorPage
 from aoi.ui.widgets.ai_threshold import AiThresholdField
+from tests.conftest import activated
 from tests.test_compare_stored import _table, save_to_recipe
 from tests.test_req_done_in_v01 import BOARD, _button, _inspect_one, _window
 from tools.trainable import trainable
@@ -134,7 +135,7 @@ def test_req_trn_015_override_and_clear(
     editor.save()  # nothing of the AI score threshold changes: the revision's own entry, none of the override
     assert ctx.recipe(BOARD)[0] == rev + 3 and len(ctx.audit_entries(action="recipe.ai_threshold")) == 2
     # a newly trained AI model, calibrated afresh, as the page stays shown
-    ctx.train(trainable(ctx, BOARD), epochs=1, image_size=32)
+    activated(ctx, ctx.train(trainable(ctx, BOARD), epochs=1, image_size=32))
     newer = ctx.calibrated_threshold(BOARD)
     assert newer is not None and newer != cal and _judged_by(ctx, ng_board) == pytest.approx(newer)
     editor.ai_thr.tick.setChecked(True)  # by hand: from the value that judges now, never the replaced AI model's
@@ -261,7 +262,7 @@ def test_req_trn_015_compare_names_the_value_that_judges_its_board(
         _shows_calibrated(compare.ai_thr, cal, COMPARE_TICK) and compare._form_recipe(BOARD).anomaly_threshold is None
     )
     # a newer AI model, calibrated afresh, judges the next board
-    ctx.train(trainable(ctx, BOARD), epochs=1, image_size=32)
+    activated(ctx, ctx.train(trainable(ctx, BOARD), epochs=1, image_size=32))
     newer = ctx.calibrated_threshold(BOARD)
     assert newer is not None and round(newer, 3) != round(cal, 3)
     win.navigate("Home")
@@ -334,7 +335,7 @@ def test_req_trn_015_compare_names_no_value_of_an_ai_model_that_judged_nothing(
     qtbot.waitUntil(lambda: compare.loaded and compare._bg is None, timeout=10000)
     win.navigate("Home")
     # a newer AI model, calibrated afresh, judges the next board
-    ctx.train(trainable(ctx, BOARD), epochs=1, image_size=32)
+    activated(ctx, ctx.train(trainable(ctx, BOARD), epochs=1, image_size=32))
     newer = ctx.calibrated_threshold(BOARD)
     assert cal is not None and newer is not None and round(newer, 3) != round(cal, 3)
     win.navigate("Compare")

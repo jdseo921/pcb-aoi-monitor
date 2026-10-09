@@ -27,7 +27,7 @@ from aoi.ui import workers
 from aoi.ui.main_window import MainWindow
 from aoi.ui.pages.base import cell_item, cell_text
 from aoi.ui.pages.model_test import ModelTestPage
-from tests.conftest import another_version, wrapped
+from tests.conftest import activated, another_version, wrapped
 from tests.test_error_translation import Marking
 from tests.test_req_done_in_v01 import BOARD, _window
 from tools.make_synthetic_dataset import ng_type
@@ -82,7 +82,10 @@ def test_req_tst_003_a_preview_is_judged_by_what_judged_its_row_or_not_at_all(
     preview is judged and matches its row, as it is once the run's AI model is activated again ("activate_back"), when
     the row still selected is previewed again in place of its refusal. Before (#250), after a retrain 2 of 21 previews
     read OK beside a row the run judged NG, and nothing on the page said why."""
-    ctx, train = trained_ctx, lambda: trained_ctx.train(trainable(trained_ctx, BOARD), epochs=1, image_size=64)
+    ctx, train = (
+        trained_ctx,
+        lambda: activated(trained_ctx, trained_ctx.train(trainable(trained_ctx, BOARD), epochs=1, image_size=64)),
+    )
     if change in ("activate", "activate_back"):  # the run is judged by v1.1; v1.0 is activated after it, which keeps
         train()  # the Golden board
     win = _window(qtbot, ctx)
@@ -198,7 +201,7 @@ def test_req_tst_003_a_preview_inspected_across_a_change_is_not_shown(
     qtbot.waitUntil(lambda: len(inspected) == 1, timeout=10000)
     last = 0
     if row == "same_row":
-        trained_ctx.train(trainable(trained_ctx, BOARD), epochs=1, image_size=64)
+        activated(trained_ctx, trained_ctx.train(trainable(trained_ctx, BOARD), epochs=1, image_size=64))
     elif row == "another_row":
         trained_ctx.save_recipe(trained_ctx.recipe(BOARD)[1])
         page.table.selectRow(last := 1)
@@ -251,7 +254,7 @@ def test_req_tst_003_a_preview_of_the_run_before_is_not_shown_beside_a_new_run(
     page.table.selectRow(target)
     qtbot.waitUntil(lambda: len(built) == 1, timeout=10000)
     if change == "retrain":
-        trained_ctx.train(trainable(trained_ctx, BOARD), epochs=1, image_size=64)
+        activated(trained_ctx, trained_ctx.train(trainable(trained_ctx, BOARD), epochs=1, image_size=64))
     else:
         page.folder = str(synthetic_dataset / "test" / "ng")
     run_uuid = page.rows[0]["run_uuid"]
@@ -384,7 +387,7 @@ def test_req_tst_003_a_run_with_no_ai_model_says_so_once_one_is_trained(
     page.table.selectRow(0)
     qtbot.waitUntil(lambda: page._bg is None and win.last_inspected is not None, timeout=30000)
     win.navigate("Training")
-    ctx.train(trainable(ctx, BOARD), epochs=1, image_size=64)
+    activated(ctx, ctx.train(trainable(ctx, BOARD), epochs=1, image_size=64))
     win.navigate("AI Model Test")
     note, said = page.run_note.text(), page.preview_empty.sentence.text()
     print(note, said, sep="\n")
