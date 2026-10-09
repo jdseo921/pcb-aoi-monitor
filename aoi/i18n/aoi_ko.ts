@@ -5076,18 +5076,18 @@
 <context>
     <name>StoresPanel</name>
     <message>
-        <location filename="../ui/pages/settings_stores.py" line="+38"/>
+        <location filename="../ui/pages/settings_stores.py" line="+50"/>
         <source>Dataset stores</source>
         <translation>데이터셋 저장소</translation>
     </message>
     <message>
-        <location line="+5"/>
-        <location line="+52"/>
+        <location line="+6"/>
+        <location line="+59"/>
         <source>Customer</source>
         <translation>고객</translation>
     </message>
     <message>
-        <location line="-52"/>
+        <location line="-59"/>
         <source>Key id</source>
         <translation>키 ID</translation>
     </message>
@@ -5122,7 +5122,27 @@
         <translation>키 복원…</translation>
     </message>
     <message>
-        <location line="+33"/>
+        <location line="+1"/>
+        <source>Move Board Model In…</source>
+        <translation>보드 모델 옮기기…</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Shred Store…</source>
+        <translation>저장소 파기…</translation>
+    </message>
+    <message>
+        <location line="+12"/>
+        <source>Moving the files in…</source>
+        <translation>파일을 옮기는 중…</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Shredding the store…</source>
+        <translation>저장소를 파기하는 중…</translation>
+    </message>
+    <message>
+        <location line="+25"/>
         <source>New dataset store</source>
         <translation>새 데이터셋 저장소</translation>
     </message>
@@ -5134,11 +5154,13 @@
     <message>
         <location line="+1"/>
         <location line="+40"/>
+        <location line="+19"/>
+        <location line="+14"/>
         <source>Cancel</source>
         <translation type="unfinished">취소</translation>
     </message>
     <message>
-        <location line="-33"/>
+        <location line="-66"/>
         <source>Shown this once. Print it and keep it apart from the station: with it, Restore Key… opens the store on another PC, and anyone who holds it and a copy of the files can read them.</source>
         <translation>이번 한 번만 표시됩니다. 인쇄하여 스테이션과 떨어진 곳에 보관하십시오. 이 시트로 키 복원…을 하면 다른 PC에서 저장소를 열 수 있으며, 이 시트와 파일의 사본을 가진 사람은 누구나 파일을 읽을 수 있습니다.</translation>
     </message>
@@ -5168,17 +5190,58 @@
         <translation>복원</translation>
     </message>
     <message>
-        <location line="+30"/>
+        <location line="+7"/>
+        <source>Its images and its frozen versions&apos; manifests are encrypted under the store&apos;s key where they are. A board model never leaves its store.</source>
+        <translation>보드 모델의 이미지와 동결 버전의 매니페스트는 지금 있는 곳에서 저장소의 키로 암호화됩니다. 보드 모델은 한 번 들어간 저장소를 떠나지 않습니다.</translation>
+    </message>
+    <message>
+        <location line="+7"/>
+        <source>Board model</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <location line="+61"/>
+        <source>Move In</source>
+        <translation>옮기기</translation>
+    </message>
+    <message>
+        <location line="-52"/>
+        <source>Type the customer&apos;s name to shred it</source>
+        <translation>파기하려면 고객 이름을 입력하십시오</translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>Shred</source>
+        <translation>파기</translation>
+    </message>
+    <message>
+        <location line="+40"/>
         <source>Pick a store that is not shredded</source>
         <translation>파기되지 않은 저장소를 고르십시오</translation>
     </message>
     <message>
+        <location line="+3"/>
+        <source>Shredded; nothing of it is left</source>
+        <translation>파기됨: 남은 것이 없습니다</translation>
+    </message>
+    <message>
         <location line="+4"/>
+        <source>Finish Moving In</source>
+        <translation>옮기기 마치기</translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>Every board model is in a store</source>
+        <translation>모든 보드 모델이 저장소에 있습니다</translation>
+    </message>
+    <message>
+        <location line="+6"/>
         <source>{n} of {all} characters</source>
         <translation>{all}자 중 {n}자</translation>
     </message>
     <message>
-        <location line="+40"/>
+        <location line="+41"/>
         <source>Recovery sheet for {customer}</source>
         <translation>{customer}의 복구 시트</translation>
     </message>
@@ -5201,6 +5264,51 @@
         <location line="+14"/>
         <source>The key for {customer} is saved on this station again</source>
         <translation>{customer}의 키를 이 스테이션에 다시 저장했습니다</translation>
+    </message>
+    <message>
+        <location line="+8"/>
+        <source>Move a board model into the store for {customer}</source>
+        <translation>{customer}의 저장소로 보드 모델 옮기기</translation>
+    </message>
+    <message>
+        <location line="+8"/>
+        <source>{board} (finish moving in)</source>
+        <translation>{board} (옮기기 마치기)</translation>
+    </message>
+    <message>
+        <location line="+17"/>
+        <source>Stopped with {moved} files of {board} moved; Finish Moving In moves the other {left}</source>
+        <translation>{board}의 파일 {moved}개를 옮기고 멈췄습니다. 옮기기 마치기로 나머지 {left}개를 옮깁니다</translation>
+    </message>
+    <message>
+        <location line="+4"/>
+        <source>{moved} files of {board} moved into the store for {customer}, {already} there already</source>
+        <translation>{board}의 파일 {moved}개를 {customer}의 저장소로 옮겼습니다. {already}개는 이미 옮겨져 있었습니다</translation>
+    </message>
+    <message>
+        <location line="+24"/>
+        <source>Shred the store for {customer}</source>
+        <translation>{customer}의 저장소 파기</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>no board model</source>
+        <translation>보드 모델 없음</translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>The shred of this store stopped part-way: {files} file(s) of {boards} and {models} file(s) of their AI models are left. Shred deletes them.</source>
+        <translation>이 저장소의 파기가 중간에 멈췄습니다: {boards}의 파일 {files}개와 해당 AI 모델 파일 {models}개가 남아 있습니다. 파기하면 이 파일을 삭제합니다.</translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>Shred deletes this station&apos;s key, then {files} image and manifest file(s) of {boards} and {models} file(s) of their AI models and golden boards. Nothing of the store opens again, a backup&apos;s copies included, once whoever holds its recovery sheet destroys it. This cannot be undone.</source>
+        <translation>파기하면 이 스테이션의 키를 먼저 삭제한 뒤 {boards}의 이미지 및 매니페스트 파일 {files}개와 해당 AI 모델 및 골든 보드 파일 {models}개를 삭제합니다. 복구 시트를 가진 사람이 시트를 폐기하면 백업 사본을 포함해 저장소의 어떤 파일도 다시 열리지 않습니다. 되돌릴 수 없습니다.</translation>
+    </message>
+    <message>
+        <location line="+18"/>
+        <source>The store for {customer} is shredded: {files} file(s) and {models} AI model file(s) deleted. Whoever holds its recovery sheet destroys it now.</source>
+        <translation>{customer}의 저장소를 파기했습니다: 파일 {files}개와 AI 모델 파일 {models}개를 삭제했습니다. 복구 시트를 가진 사람은 이제 시트를 폐기하십시오.</translation>
     </message>
 </context>
 <context>

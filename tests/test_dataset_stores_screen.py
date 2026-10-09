@@ -1,10 +1,13 @@
 """REQ-TRN-017 on screen (Datasets stage, 3 of 4): Settings › Dataset stores, Admin only as the page is, lists the
 customers' encrypted dataset stores and takes the steps on them in inline sheets in the table's place (ADR 0010): New
-Store… shows the new store's recovery sheet this once, and Restore Key… takes the key back from it on a new PC."""
+Store… shows the new store's recovery sheet this once, Restore Key… takes the key back from it on a new PC, Move
+Board Model In… encrypts a board model's files on the pool and finishes a move that stopped, and Shred Store… names what
+it deletes before it does."""
 
 from __future__ import annotations
 
-from typing import cast
+from pathlib import Path
+from typing import Any, cast
 
 import pytest
 from PySide6.QtCore import Qt
@@ -13,12 +16,13 @@ from PySide6.QtPrintSupport import QPrintDialog
 from PySide6.QtWidgets import QApplication, QDialog, QTableWidget
 from pytestqt.qtbot import QtBot
 
-from aoi.core import crypto
+from aoi.core import crypto, stores
 from aoi.core.services import AppContext
 from aoi.data import credentials
 from aoi.times import to_local
 from aoi.ui.pages.base import cell_text
 from aoi.ui.pages.settings import SettingsPage
+from tests.test_dataset_stores import board
 from tests.test_req_done_in_v01 import _window
 
 
@@ -140,3 +144,122 @@ def test_req_trn_017_restore_key_from_the_sheet(
     assert _rows(panel.table)[0][4] == to_local(trained_ctx.stores()[0]["shredded_at"])
     assert not panel.btn_restore.isEnabled()
     assert panel.btn_restore.toolTip() == "Pick a store that is not shredded"
+
+
+def _idle(qtbot: QtBot, page: SettingsPage) -> None:
+    qtbot.waitUntil(page.idle, timeout=30000)
+
+
+def test_req_trn_017_move_board_model_in(
+    qtbot: QtBot, trained_ctx: AppContext, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Move Board Model In… lists the board models in no store, then the store's own to finish a move that stopped, its
+    button then reading Finish Moving In. Move In encrypts the board model's files on the pool and says how many; Cancel
+    leaves the rest plain and says how many are left, and Finish Moving In moves them. A shredded store takes none."""
+    ctx = trained_ctx
+    page = _settings(qtbot, ctx)
+    panel = page.stores
+    board(ctx, "MOV", tmp_path / "mov", 3, 11)
+    board(ctx, "STP", tmp_path / "stp", 4, 12)
+    page.on_show()
+    panel.btn_move.click()
+    assert panel.move_sheet.title() == "Move a board model into the store for Acme Electronics"
+    _fits(page)
+    items = [panel.board_box.itemText(i) for i in range(panel.board_box.count())]
+    assert items == ["MOV", "STP", "TINY (finish moving in)"] and panel.btn_move_in.text() == "Move In"
+    panel.board_box.setCurrentIndex(2)
+    assert panel.btn_move_in.text() == "Finish Moving In"
+    panel.board_box.setCurrentIndex(0)
+    panel.btn_move_in.click()
+    steps = (panel.btn_move_in, panel.btn_move, panel.btn_restore, panel.btn_shred)
+    assert not any(b.isEnabled() for b in steps)  # off while the move runs: its result has not come back yet
+    _idle(qtbot, page)
+    assert all(b.isEnabled() for b in steps)
+    acme = ctx.stores()[0]
+    assert (ctx.store_of("MOV") or {})["uuid"] == acme["uuid"] and not panel.move_sheet.isVisible()
+    assert all(stores.header_of(Path(s["path"])) is not None for s in ctx.samples("MOV"))
+    said = page.shell.statusBar().currentMessage()
+    assert said == "3 files of MOV moved into the store for Acme Electronics, 0 there already"
+    assert _rows(panel.table)[0][3] == ", ".join(acme["board_models"]) and "MOV" in acme["board_models"]
+    encrypt, done = ctx._encrypt_in_place, []
+
+    def cancelled_after_two(store: dict[str, Any], key: bytes, path: Path) -> None:
+        encrypt(store, key, path)
+        done.append(path)
+        if len(done) == 2 and page._bg is not None:
+            page._bg.job.cancel()  # as Cancel on the busy overlay does
+
+    monkeypatch.setattr(ctx, "_encrypt_in_place", cancelled_after_two)
+    panel.btn_move.click()
+    assert panel.board_box.currentData() == "STP"
+    panel.btn_move_in.click()
+    _idle(qtbot, page)
+    said = page.shell.statusBar().currentMessage()
+    assert said == "Stopped with 2 files of STP moved; Finish Moving In moves the other 2"
+    assert panel.move_sheet.isVisible() and panel.board_box.currentText() == "STP (finish moving in)"
+    assert panel.btn_move_in.text() == "Finish Moving In"
+    panel.btn_move_in.click()
+    _idle(qtbot, page)
+    said = page.shell.statusBar().currentMessage()
+    assert said == "2 files of STP moved into the store for Acme Electronics, 2 there already"
+    assert all(stores.header_of(Path(s["path"])) is not None for s in ctx.samples("STP"))
+    ctx.shred_store(acme["uuid"])
+    page.on_show()
+    assert not panel.btn_move.isEnabled() and panel.btn_move.toolTip() == "Pick a store that is not shredded"
+
+
+def test_req_trn_017_shred_store_on_screen(
+    qtbot: QtBot, trained_ctx: AppContext, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+    dialogs: list[tuple[str, str]],
+) -> None:  # fmt: skip
+    """Shred Store…, red and last in its row, names the customer, the board models and the counts the shred deletes,
+    and Shred, red too, waits for the customer's name typed as it is. The shred runs on the pool, says what it deleted,
+    and the row shows when. A file that would not go is refused (AOI-TRN-044); Shred Store… then finishes the shred,
+    and is off once nothing of the store is left. Esc closes the sheet, and so does a refusal."""
+    ctx = trained_ctx
+    page = _settings(qtbot, ctx)
+    panel = page.stores
+    board(ctx, "SHB", tmp_path / "shb", 3, 13)
+    beta = ctx.create_store("Beta")
+    ctx.move_in("SHB", beta["uuid"])
+    page.on_show()
+    row = panel.btn_shred.parentWidget().layout()
+    assert panel.btn_shred.objectName() == "danger" and row.indexOf(panel.btn_shred) == row.count() - 1
+    panel.table.selectRow(1)
+    panel.btn_shred.click()
+    assert panel.shred_sheet.title() == "Shred the store for Beta"
+    _fits(page)
+    assert panel.shred_what.text().startswith(
+        "Shred deletes this station's key, then 3 image and manifest file(s) of SHB and 0 file(s) of their AI models"
+    )
+    assert panel.btn_shred_now.objectName() == "danger" and not panel.btn_shred_now.isEnabled()
+    qtbot.keyClick(panel.confirm, Qt.Key.Key_Escape)
+    assert not panel.shred_sheet.isVisible() and panel.steps.isVisible()
+    panel.btn_shred.click()
+    qtbot.keyClicks(panel.confirm, "beta")
+    assert not panel.btn_shred_now.isEnabled()
+    panel.confirm.setText("Beta")
+    paths = [Path(s["path"]) for s in ctx.samples("SHB")]
+    unlink = Path.unlink
+
+    def held(self: Path, missing_ok: bool = False) -> None:
+        if self == paths[1]:
+            raise PermissionError(13, "The file is open in another program", str(self))
+        unlink(self, missing_ok=missing_ok)
+
+    monkeypatch.setattr(Path, "unlink", held)
+    panel.btn_shred_now.click()
+    _idle(qtbot, page)
+    assert dialogs[-1][0].startswith("AOI-TRN-044") and ctx.stores()[1]["shredded_at"]
+    assert not panel.shred_sheet.isVisible() and panel.steps.isVisible()  # the sheet closes on the table as it is
+    assert _rows(panel.table)[1][4] == to_local(ctx.stores()[1]["shredded_at"]) and panel.btn_shred.isEnabled()
+    monkeypatch.setattr(Path, "unlink", unlink)
+    panel.btn_shred.click()
+    assert panel.shred_what.text().startswith("The shred of this store stopped part-way: 1 file(s) of SHB")
+    panel.confirm.setText("Beta")
+    panel.btn_shred_now.click()
+    _idle(qtbot, page)
+    said = page.shell.statusBar().currentMessage()
+    assert said.startswith("The store for Beta is shredded: 1 file(s) and 0 AI model file(s) deleted.")
+    assert not any(p.exists() for p in paths) and not panel.shred_sheet.isVisible()
+    assert not panel.btn_shred.isEnabled() and panel.btn_shred.toolTip() == "Shredded; nothing of it is left"

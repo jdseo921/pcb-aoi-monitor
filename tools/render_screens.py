@@ -55,7 +55,7 @@ BOARD_MODEL = "TINY"
 FIXED_TIME = "2026-01-01T09:00:00+00:00"  # every stored time, so a render does not change with the clock
 FIXED_MS = 480.0  # the inspection time Inspection and Compare show
 FIXED_SSIM, FIXED_INLIERS = 0.95, 400  # the similarity and alignment points Compare shows (module docstring)
-PAGE_VIEWS = {"Training": ("datasets", "blind"), "Settings": ("restore",)}  # rendered as <page>-<view>-<role>
+PAGE_VIEWS = {"Training": ("datasets", "blind"), "Settings": ("restore", "move-in", "shred")}  # <page>-<view>-<role>
 STORED_STATES = (  # Compare
     "compare-stored-operator", "compare-golden-changed-operator", "compare-tried-engineer", "compare-save-engineer",
 )  # fmt: skip
@@ -315,7 +315,8 @@ def show_view(win: MainWindow, title: str, view: str | None) -> None:
     click on the tab shows it, and the blind labelling panel on its first image, the board model's images standing in
     for a calibration set of 100 (the workspace holds fewer): Stop closes it, the status line saying so until the next
     page clears it, and with None the focus is cleared, as Training opens with none, so the pages after render alike.
-    Settings' is Restore Key… on the store the screenshot workspace's version is in."""
+    Settings' are Restore Key…, Move Board Model In… and Shred Store… on the store the screenshot workspace's version
+    is in."""
     from PySide6.QtWidgets import QApplication
 
     page: Any = win.pages[title]
@@ -331,8 +332,9 @@ def show_view(win: MainWindow, title: str, view: str | None) -> None:
             focus.clearFocus()
     if title == "Settings":
         page.stores.close_sheet()
-        if view == "restore":
-            page.stores.btn_restore.click()
+        steps = {"restore": page.stores.btn_restore, "move-in": page.stores.btn_move, "shred": page.stores.btn_shred}
+        if view is not None:
+            steps[view].click()
         elif (focus := QApplication.focusWidget()) is not None:
             focus.clearFocus()
 

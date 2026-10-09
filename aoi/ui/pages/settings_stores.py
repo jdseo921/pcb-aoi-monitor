@@ -1,7 +1,8 @@
 """Settings › Dataset stores (REQ-TRN-017, ADR 0010; Datasets stage 3 of 4): the customers' encrypted dataset stores,
 Admin only as the page is, and the steps on them, each an inline sheet in the table's place, never a dialog over the
 page. New Store… shows the new store's recovery sheet this once, with Print Sheet…; Restore Key… takes it back on a
-new PC or Windows account."""
+new PC or Windows account; Move Board Model In… encrypts a board model's files in a store, on the pool, and finishes a
+move that stopped; Shred Store…, red, names what it deletes and waits for the customer's name typed."""
 
 from __future__ import annotations
 
@@ -11,10 +12,21 @@ from typing import TYPE_CHECKING, Any
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QAction, QKeySequence, QTextDocument
 from PySide6.QtPrintSupport import QPrintDialog, QPrinter
-from PySide6.QtWidgets import QCheckBox, QDialog, QGroupBox, QHBoxLayout, QLabel, QLineEdit, QVBoxLayout, QWidget
+from PySide6.QtWidgets import (
+    QCheckBox,
+    QComboBox,
+    QDialog,
+    QGroupBox,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QVBoxLayout,
+    QWidget,
+)
 
 from ...errors import AoiError
 from ...times import to_local
+from ..widgets.busy import BusyOverlay
 from .base import button, fill_table, make_table
 
 if TYPE_CHECKING:
@@ -39,6 +51,7 @@ class StoresPanel(QGroupBox):
         self.page, self.ctx = page, page.ctx
         self.rows: list[dict[str, Any]] = []
         self.made: dict[str, str] | None = None  # the store New Store… made, with its sheet, until Close
+        self.left: dict[str, int] = {}  # by store UUID: the files a shred stopped part-way left (store_contents)
         lay = QVBoxLayout(self)
         heads = [self.tr("Customer"), self.tr("Key id"), self.tr("Created"), self.tr("Board models")]
         self.table = make_table([*heads, self.tr("Shredded")], sortable=False)
@@ -58,14 +71,21 @@ class StoresPanel(QGroupBox):
         row.setContentsMargins(0, 0, 0, 0)
         self.btn_new = button(self.tr("New Store…"), slot=self._new)
         self.btn_restore = button(self.tr("Restore Key…"), slot=self._restore)
-        for b in (self.btn_new, self.btn_restore):
+        self.btn_move = button(self.tr("Move Board Model In…"), slot=self._move)
+        self.btn_shred = button(self.tr("Shred Store…"), "danger", self._shred)  # red, last, never the default
+        for b in (self.btn_new, self.btn_restore, self.btn_move):
             row.addWidget(b)
         row.addStretch(1)
+        row.addWidget(self.btn_shred)
         lay.addWidget(self.steps)
         self.sheets: list[QGroupBox] = []
         self._new_sheet(lay)
         self._recovery_sheet(lay)
         self._restore_sheet(lay)
+        self._move_sheet(lay)
+        self._shred_sheet(lay)
+        self.busy_move = BusyOverlay(self, self.tr("Moving the files in…"))
+        self.busy_shred = BusyOverlay(self, self.tr("Shredding the store…"))
         self.close_sheet()
 
     def _sheet(self, lay: QVBoxLayout, title: str, esc: bool = True) -> tuple[QGroupBox, QVBoxLayout]:
@@ -141,6 +161,39 @@ class StoresPanel(QGroupBox):
         self.btn_restore_key = button(self.tr("Restore"), slot=self._restore_key)
         self._buttons(sl, self.btn_restore_key, button(self.tr("Cancel"), slot=self.close_sheet))
 
+    def _move_sheet(self, lay: QVBoxLayout) -> None:
+        self.move_sheet, sl = self._sheet(lay, "")
+        how = QLabel(
+            self.tr(
+                "Its images and its frozen versions' manifests are encrypted under the store's key where they are. A"
+                " board model never leaves its store."
+            )
+        )
+        how.setWordWrap(True)
+        sl.addWidget(how)
+        fields = QHBoxLayout()
+        fields.addWidget(QLabel(self.tr("Board model")))
+        self.board_box = QComboBox()  # those in no store, then the store's own, to finish a move that stopped
+        self.board_box.currentIndexChanged.connect(self._sync)
+        fields.addWidget(self.board_box, 1)
+        sl.addLayout(fields)
+        self.btn_move_in = button(self.tr("Move In"), slot=self._move_in)
+        self._buttons(sl, self.btn_move_in, button(self.tr("Cancel"), slot=self.close_sheet))
+
+    def _shred_sheet(self, lay: QVBoxLayout) -> None:
+        self.shred_sheet, sl = self._sheet(lay, "")
+        self.shred_what = QLabel()
+        self.shred_what.setWordWrap(True)
+        sl.addWidget(self.shred_what)
+        fields = QHBoxLayout()
+        fields.addWidget(QLabel(self.tr("Type the customer's name to shred it")))
+        self.confirm = QLineEdit()
+        self.confirm.textChanged.connect(self._sync)
+        fields.addWidget(self.confirm, 1)
+        sl.addLayout(fields)
+        self.btn_shred_now = button(self.tr("Shred"), "danger", self._shred_now)
+        self._buttons(sl, button(self.tr("Cancel"), slot=self.close_sheet), self.btn_shred_now)
+
     def refresh(self) -> None:
         """The table again, the same store selected; the first when none was."""
         picked = self.picked()
@@ -157,6 +210,11 @@ class StoresPanel(QGroupBox):
             self.table.selectRow(uuids.index(picked["uuid"]) if picked and picked["uuid"] in uuids else 0)
         self.table.blockSignals(False)
         self.none.setVisible(not self.rows)
+        self.left = {}
+        for s in self.rows:  # a shred that stopped part-way is finished by Shred Store… again
+            if s["shredded_at"]:
+                c = self.ctx.store_contents(s["uuid"])
+                self.left[s["uuid"]] = c["files"] + c["models"]
         self._sync()
 
     def picked(self) -> dict[str, Any] | None:
@@ -164,11 +222,27 @@ class StoresPanel(QGroupBox):
         i = self.table.currentRow()
         return self.rows[i] if 0 <= i < len(self.rows) and self.table.selectionModel().hasSelection() else None
 
+    def sync(self) -> None:
+        self._sync()
+
     def _sync(self) -> None:
         store = self.picked()
         live = store is not None and not store["shredded_at"]
-        self.btn_restore.setEnabled(live)
-        self.btn_restore.setToolTip("" if live else self.tr("Pick a store that is not shredded"))
+        idle = self.page.idle()
+        for b in (self.btn_restore, self.btn_move):
+            b.setEnabled(live and idle)
+            b.setToolTip("" if live else self.tr("Pick a store that is not shredded"))
+        left = store is not None and self.left.get(store["uuid"], 0) > 0
+        self.btn_shred.setEnabled((live or left) and idle)
+        gone = self.tr("Shredded; nothing of it is left")
+        self.btn_shred.setToolTip(gone if store is not None and not live and not left else "")
+        board = self.board_box.currentData()
+        mine = store is not None and board in store["board_models"]
+        self.btn_move_in.setText(self.tr("Finish Moving In") if mine else self.tr("Move In"))
+        self.btn_move_in.setEnabled(board is not None and idle)
+        self.btn_move_in.setToolTip("" if self.board_box.count() else self.tr("Every board model is in a store"))
+        typed = self.confirm.text().strip()
+        self.btn_shred_now.setEnabled(store is not None and typed == store["customer"] and idle)
         self.btn_create.setEnabled(bool(self.customer.text().strip()))
         self.btn_done.setEnabled(self.kept.isChecked())
         n = typed_letters(self.typed.text())
@@ -190,6 +264,7 @@ class StoresPanel(QGroupBox):
         self.kept.setChecked(False)
         self.customer.clear()
         self.typed.clear()
+        self.confirm.clear()
         for g in self.sheets:
             g.hide()
         self.table.show()
@@ -265,3 +340,98 @@ class StoresPanel(QGroupBox):
         self.close_sheet()
         said = self.tr("The key for {customer} is saved on this station again")
         self.page.shell.status(said.format(customer=store["customer"]))
+
+    def _move(self) -> None:
+        """The board models in no store, then the store's own, whose move Finish Moving In finishes."""
+        store = self.picked()
+        if store is None:
+            return
+        title = self.tr("Move a board model into the store for {customer}").format(customer=store["customer"])
+        self.move_sheet.setTitle(title)
+        self.board_box.blockSignals(True)
+        self.board_box.clear()
+        for b in self.ctx.board_models():
+            if self.ctx.store_of(b) is None:
+                self.board_box.addItem(b, b)
+        for b in store["board_models"]:
+            self.board_box.addItem(self.tr("{board} (finish moving in)").format(board=b), b)
+        self.board_box.blockSignals(False)
+        self._open(self.move_sheet, self.board_box)
+
+    def _move_in(self) -> None:
+        store, board = self.picked(), self.board_box.currentData()
+        if store is None or board is None or not self.page.idle():
+            return
+        customer = store["customer"]
+
+        def moved(n: dict[str, int] | None) -> None:
+            self.refresh()
+            if n is None:  # stopped before it began
+                self._move()
+            elif n["left"]:  # Cancel: the board model is in the store, the rest of its files plain until finished
+                self._move()
+                self.board_box.setCurrentIndex(self.board_box.findData(board))
+                said = self.tr("Stopped with {moved} files of {board} moved; Finish Moving In moves the other {left}")
+                self.page.shell.status(said.format(moved=n["moved"], board=board, left=n["left"]))
+            else:
+                self.close_sheet()
+                said = self.tr("{moved} files of {board} moved into the store for {customer}, {already} there already")
+                self.page.shell.status(said.format(board=board, customer=customer, **n))
+
+        self.page.run_in_background(
+            self.ctx.move_in, board, store["uuid"], with_progress=True, on_result=moved, on_cancel=moved,
+            on_error=self._failed, busy=self.busy_move,
+        )  # fmt: skip
+
+    def _failed(self, _e: BaseException) -> None:
+        """A move or shred refused part-way (AOI-TRN-044): the sheet closes on the table as the step left it, and the
+        same step finishes it."""
+        self.close_sheet()
+        self.refresh()
+
+    def _shred(self) -> None:
+        """What the shred deletes, as `store_contents` counts it now, and the name to type."""
+        store = self.picked()
+        if store is None:
+            return
+        try:
+            c = self.ctx.store_contents(store["uuid"])
+        except AoiError as e:
+            self.page.error(e)
+            return
+        self.shred_sheet.setTitle(self.tr("Shred the store for {customer}").format(customer=store["customer"]))
+        boards = ", ".join(c["board_models"]) or self.tr("no board model")
+        if store["shredded_at"]:
+            what = self.tr(
+                "The shred of this store stopped part-way: {files} file(s) of {boards} and {models} file(s) of their AI"
+                " models are left. Shred deletes them."
+            )
+        else:
+            what = self.tr(
+                "Shred deletes this station's key, then {files} image and manifest file(s) of {boards} and {models}"
+                " file(s) of their AI models and golden boards. Nothing of the store opens again, a backup's copies"
+                " included, once whoever holds its recovery sheet destroys it. This cannot be undone."
+            )
+        self.shred_what.setText(what.format(files=c["files"], models=c["models"], boards=boards))
+        self._open(self.shred_sheet, self.confirm)
+
+    def _shred_now(self) -> None:
+        store = self.picked()
+        if store is None or not self.btn_shred_now.isEnabled():
+            return
+        customer = store["customer"]
+
+        def shredded(n: dict[str, int] | None) -> None:  # Cancel hides the wait: the key is gone, the shred goes on
+            self.close_sheet()
+            self.refresh()
+            if n is not None:
+                said = self.tr(
+                    "The store for {customer} is shredded: {files} file(s) and {models} AI model file(s) deleted."
+                    " Whoever holds its recovery sheet destroys it now."
+                )
+                self.page.shell.status(said.format(customer=customer, **n), 0)
+
+        self.page.run_in_background(
+            self.ctx.shred_store, store["uuid"], on_result=shredded, on_cancel=shredded,
+            on_error=self._failed, busy=self.busy_shred,
+        )  # fmt: skip

@@ -157,7 +157,7 @@ per run; frozen versions name files by workspace-relative path and SHA-256 in ap
   the store at a board model's first import stays in the sketch.
 - **No screen yet** (decision 11): creating a store, printing its sheet, restoring a key, moving a board model in and
   shredding are `AppContext` calls, Admin only and audited; `docs/sketches/training-datasets.md` proposes their
-  screens.
+  screens. The Datasets stage (3 of 4) built them as Settings › Dataset stores.
 - **A shred deletes the key from the station it runs on.** A station that restored the key from the sheet holds it
   until that station's workspace shreds the store too, so the written confirmation of decision 9 follows the shred on
   every station that holds the store.

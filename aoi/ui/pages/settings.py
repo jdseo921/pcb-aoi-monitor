@@ -152,6 +152,13 @@ class SettingsPage(Page):
                 if name == self.ctx.user and chosen != current:  # the signed-in user's own role changed
                     self.shell.set_user(name)  # the header and the pages follow the role add_user stored
 
+    def idle(self) -> bool:
+        """No move or shred of a dataset store runs: the panel's steps wait for it."""
+        return self._bg is None
+
+    def update_actions(self) -> None:
+        self.stores.sync()
+
     def on_user_changed(self) -> None:
         self.stores.close_sheet()  # the recovery sheet, or a key half typed, never stays for the next user
 
