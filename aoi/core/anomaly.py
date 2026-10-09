@@ -33,6 +33,7 @@ from torch import nn
 
 from ..data import atomic
 from ..errors import QT_TRANSLATE_NOOP, AoiError, Phrase
+from . import run_progress
 
 # Why an AI model file or a trained AI model is refused (AOI-TRN-001, AOI-TRN-004), as phrases shown translated (#198)
 DAMAGED = QT_TRANSLATE_NOOP("Errors", "the file is damaged ({damaged})")
@@ -179,6 +180,40 @@ class TrainConfig:
 
 
 ProgressFn = Callable[[int, int, float, str], None]  # epoch, total, loss, message: "" or a Phrase (#199)
+
+
+def held_out(n: int, fraction: float) -> int:
+    """How many of `n` OK images a run holds out to calibrate on rather than train on: none under 5."""
+    return max(1, int(round(n * fraction))) if n >= 5 else 0
+
+
+def probe(image: Prepared, cfg: TrainConfig) -> tuple[float, float]:
+    """The seconds one training step and one calibration map of `image` take on `cfg.device`, timed on a throwaway
+    network, so a run's time left is known before its first training step (REQ-TRN-008). The step is timed the second
+    time: the first in a process also starts PyTorch's threads, about 1.2 s against a step's 0.15 s on a 4-core VM at
+    256 px. It draws from the random sources before `train` seeds them, so the AI model trained is the same with or
+    without it."""
+    net = ConvAutoencoder().to(cfg.device)
+    opt = torch.optim.Adam(net.parameters(), lr=cfg.lr)
+
+    def step() -> None:
+        batch = torch.stack([augment(image.tensor) for _ in range(cfg.batch_size)]).to(cfg.device)
+        rec = net(batch)
+        loss = nn.L1Loss()(rec, batch) + 0.5 * ((rec - batch) ** 2).mean()
+        opt.zero_grad()
+        loss.backward()
+        opt.step()
+        loss.item()  # the step is done once its loss is on the CPU, as a run's is
+
+    step()
+    start = run_progress.clock()
+    step()
+    stepped = run_progress.clock()
+    model = AnomalyModel(
+        net, {"image_size": cfg.image_size, "image_threshold": 1.0, "pixel_threshold": 1.0}, cfg.device
+    )
+    model.score(model.prepared_map(image))
+    return stepped - start, run_progress.clock() - stepped
 
 
 class AnomalyModel:
@@ -345,7 +380,7 @@ def train(
     tensors = [p.tensor for p in ok_images]
     idx = list(range(len(tensors)))
     random.shuffle(idx)
-    n_val = max(1, int(round(len(idx) * cfg.val_fraction))) if len(idx) >= 5 else 0
+    n_val = held_out(len(idx), cfg.val_fraction)
     val_idx, train_idx = idx[:n_val], idx[n_val:]
     train_set = [tensors[i] for i in train_idx]
 
