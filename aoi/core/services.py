@@ -38,7 +38,7 @@ from ..data.workspace_lock import WorkspaceLock
 from ..errors import QT_TRANSLATE_NOOP, AoiError, Phrase, joined
 from ..hal import VIEWS
 from ..times import local_date, now_utc
-from . import anomaly, crypto, datasets, golden, imaging, labels, lineage, run_progress, stores
+from . import anomaly, crypto, datasets, golden, imaging, labels, lineage, model_card, run_progress, stores
 from .compare import Region, changed_regions
 from .imaging import (
     align_to_reference,
@@ -668,22 +668,33 @@ class AppContext:
         out.mkdir(parents=True, exist_ok=True)
 
         def files(v: str) -> list[Path]:
-            return [out / f"{board_model}_{v}.pt", out / f"{board_model}_{v}_golden.png"]
+            pt = out / f"{board_model}_{v}.pt"  # the AI model, its Golden board and its model card (REQ-TRN-011)
+            return [pt, out / f"{board_model}_{v}_golden.png", *model_card.paths(pt)]
 
         # never a name whose file is on disk: a result may name a Golden board that a run left unregistered (#178)
         version = self.db.next_model_version(board_model, lambda v: any(f.exists() for f in files(v)))
-        path, golden_path = files(version)
+        path, golden_path, card_md, card_json = files(version)
         say(eta.report(SAVING.fill(version=version)))
         model_uuid = new_uuid()  # in the file's metadata and in the registry row, so an exported .pt names its record
         model.meta.update(board_model=board_model, version=version, uuid=model_uuid, created_at=now_utc())
         model.meta.update(dataset=frozen["name"], dataset_uuid=dataset_uuid, use=use)
         # lineage (REQ-TRN-009): the code that trained it, and the Golden board's settings beside the network's
-        model.meta.update(code=lineage.code_version())
+        model.meta.update(code=lineage.code_version(), trained_by=self.user)
         model.meta["settings"].update(golden_band_bytes=band, golden_step_bytes=golden.STEP_BYTES)
         try:
             model.save(path)
             save_image(golden_path, board.board)
             model.meta["golden_image"] = to_stored(golden_path, self.settings.root)
+            card = model_card.build(
+                model.meta,
+                trained_by=self.user,
+                customer=frozen.get("customer"),
+                view=frozen.get("view"),
+                golden_size=(board.board.shape[1], board.board.shape[0]),
+                px_per_mm=self.db.scale(board_model),
+            )
+            atomic.write_text(card_json, json.dumps(card, indent=1))  # each whole or absent; a failed run removes both
+            atomic.write_text(card_md, model_card.markdown(card))
             check()  # the last chance to stop: once registered, the run ends with it; the files go below
             summary = {k: v for k, v in model.meta.items() if k not in ("loss_history", "err_mean", "err_std")}
             with self.db.transaction():  # the Golden board in use, the active version and the entry change together
@@ -2414,19 +2425,43 @@ class AppContext:
         self.log.info("maps.swept", extra={"days": days, "swept": len(swept), "skipped": skipped})
         return len(swept)
 
+    def card_files(self, model_id: int) -> tuple[Path, Path]:
+        """The model card files of a model version, Markdown and JSON, beside its AI model file (REQ-TRN-011); a
+        version trained before cards were written has neither."""
+        return model_card.paths(Path(self.model(model_id)["path"]))
+
+    def model_card(self, model_id: int) -> dict[str, Any] | None:
+        """The model card of a model version as written when it was trained (REQ-TRN-011), or None when it has none
+        or its file cannot be read."""
+        try:
+            card: dict[str, Any] = json.loads(self.card_files(model_id)[1].read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            return None
+        return card
+
     @requires("Engineer", QT_TRANSLATE_NOOP("Errors", "Exporting an AI model"))
     def export_model(self, model_id: int, dest: str | Path) -> Path:
-        """Copy a model version's file to `dest`, whole or not at all. The audit entry stores `dest` relative to the
-        workspace when inside it (REQ-SET-001), else in full."""
+        """Copy a model version's weights-only file to `dest` and its model card beside it, `<name>.card.md` and
+        `<name>.card.json`, when it has one (REQ-TRN-013), each whole or not at all. The audit entry names every file,
+        stored relative to the workspace when inside it (REQ-SET-001), else in full."""
         model = self.model(model_id)
+        pairs = [(Path(model["path"]), Path(dest))]
+        pairs += [
+            (s, d) for s, d in zip(self.card_files(model_id), model_card.paths(Path(dest)), strict=True) if s.exists()
+        ]
+        written: list[Path] = []
         try:
-            atomic.copy_file(model["path"], dest)
+            for src, dst in pairs:
+                atomic.copy_file(src, dst)
+                written.append(dst)
         except OSError as e:
-            if e.filename == model["path"]:  # the AI model's own file, not the destination
+            _remove(written)
+            if e.filename in {str(s) for s, _ in pairs}:  # one of the version's own files, not a destination
                 raise
             raise _not_written(e, dest) from e
-        after = {"version": model["version"], "dest": to_stored(Path(dest).absolute(), self.settings.root)}
-        self._audit_files([Path(dest)], "export.model", "model", model["uuid"], after, [Path(model["path"])])
+        files = [to_stored(p.absolute(), self.settings.root) for p in written]
+        after = {"version": model["version"], "dest": files[0], "files": files}
+        self._audit_files(written, "export.model", "model", model["uuid"], after, [s for s, _ in pairs])
         return Path(dest)
 
     @requires("Engineer", QT_TRANSLATE_NOOP("Errors", "Exporting overlay images"))
