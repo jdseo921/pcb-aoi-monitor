@@ -501,7 +501,7 @@ def test_req_cmp_005_reevaluate_a_result_without_maps_for_its_checks(trained_ctx
     ctx.save_recipe(on)
     with pytest.raises(AoiError, match="AOI-INSP-010"):
         ctx.re_evaluate(_store(ctx, ng_board), off)
-    ctx.save_recipe(off)
+    ctx.save_recipe(off, "both whole-board checks off, for this test")  # no check covers a board (REQ-RCP-005)
     with pytest.raises(AoiError, match="AOI-INSP-010"):
         _store(ctx, ng_board)
 
