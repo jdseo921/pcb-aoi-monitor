@@ -100,9 +100,9 @@ def test_req_trn_002_unsure_excluded(qtbot: QtBot, trained_ctx: AppContext, monk
     assert all(s["labelled_at"].endswith("+00:00") and Path(s["path"]).is_absolute() for s in listed)
     loaded: list[str] = []
     seen: dict[str, int] = {}
-    real_load = ctx.load_image
+    real_load = ctx._load_image_sha256
 
-    def load(path: str | Path) -> np.ndarray:
+    def load(path: str | Path) -> tuple[np.ndarray, str]:  # training reads each image with its SHA-256 (REQ-TRN-006)
         loaded.append(str(path))
         return real_load(path)
 
@@ -110,12 +110,12 @@ def test_req_trn_002_unsure_excluded(qtbot: QtBot, trained_ctx: AppContext, monk
         seen.update(ok=len(ok_images), ng=len(ng_images))
         raise Stop
 
-    monkeypatch.setattr(ctx, "load_image", load)
+    monkeypatch.setattr(ctx, "_load_image_sha256", load)
     monkeypatch.setattr(anomaly, "train", train)
     with pytest.raises(Stop):
         ctx.train(BOARD, epochs=1, image_size=32)
     assert seen == {"ok": len(ok) - 1, "ng": len(ng) - 1}
-    assert not {s["path"] for s in unsure} & set(loaded)
+    assert loaded and not {s["path"] for s in unsure} & set(loaded)
     win = _window(qtbot, ctx)
     win.navigate("Training")
     page = win.pages["Training"]

@@ -74,6 +74,22 @@ def ready_to_freeze(ctx: AppContext) -> str:
     return "TINY"
 
 
+def frozen_for_lock(ctx: AppContext) -> str:
+    """A frozen version of board model LOCK with 60 OK files, stored through the database where missing, so that only
+    the lock under test is role-checked and audited; its files are no workspace image's, so no training meets them."""
+    if found := ctx.db.datasets("LOCK"):
+        return str(found[0]["uuid"])
+    who, uid = str(ctx.db.user_uuid("engineer")), "00000000-0000-4000-8000-00000000000c"
+    version = {"uuid": uid, "name": "DS-LOCK-R1-TOP-v1", "board_model": "LOCK", "revision": "R1", "view": "Top"}
+    version |= {"version": 1, "customer": "Acme", "allowed_uses": ["own"], "agreement_check_uuid": uid}
+    version |= {"manifest_path": "datasets/DS-LOCK-R1-TOP-v1/manifest.json", "manifest_sha256": "0" * 64}
+    files = [{"path": f"images/LOCK/OK/{i}.png", "sha256": f"{i:064x}", "sample_uuid": uid, "label_uuid": uid,
+              "label": "OK", "defect_type": None, "boxes": [], "labelled_by": who, "checked_by": who}
+             for i in range(60)]  # fmt: skip
+    ctx.db.add_dataset(version | {"frozen_by": who, "frozen_at": "2026-10-09T00:00:00+00:00"}, files)
+    return uid
+
+
 # every AppContext write: method -> (its audit action, a call that works on the trained workspace), in a runnable order
 WRITES: dict[str, tuple[str, Callable[[AppContext, Path, Path], Any]]] = {
     "ensure_board_model": ("board_model.create", lambda ctx, data, tmp: ctx.ensure_board_model("NEW")),
@@ -125,6 +141,7 @@ WRITES: dict[str, tuple[str, Callable[[AppContext, Path, Path], Any]]] = {
         "dataset.freeze",
         lambda ctx, data, tmp: ctx.freeze_dataset(ready_to_freeze(ctx), "Top", "R1", "Acme Electronics"),
     ),
+    "lock_validation_set": ("dataset.lock", lambda ctx, data, tmp: ctx.lock_validation_set(frozen_for_lock(ctx), 1)),
     "train": ("model.train", lambda ctx, data, tmp: ctx.train("TINY", epochs=1, image_size=32)),
     "activate_model": ("model.activate", lambda ctx, data, tmp: ctx.activate_model(ctx.models("TINY")[-1]["id"])),
     "save_recipe": ("recipe.save", lambda ctx, data, tmp: ctx.save_recipe(Recipe(board_model="TINY"))),
@@ -168,7 +185,7 @@ UNCHECKED = {
     "checks_for_many", "inspection_result", "inspection", "judged_reference", "users", "board_status", "start_user",
     "golden_board_unreadable", "engine_is_current", "calibrated_threshold", "calibration_of", "scale", "label_history",
     "boxes", "box_history", "unsure_samples", "label_check_status", "labels_ready_to_freeze", "calibration_sets",
-    "agreement_checks", "datasets", "dataset_items", "verify_dataset",
+    "agreement_checks", "datasets", "dataset_items", "verify_dataset", "validation_split",
 }  # fmt: skip
 CALLS = {**{name: call for name, (_, call) in WRITES.items()}, **CHECKED_READS}
 # The lowest role allowed each call, copied from the write table of docs/ARCHITECTURE.md §5 and REQ-CMP-005, never read
