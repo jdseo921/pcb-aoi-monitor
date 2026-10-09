@@ -375,6 +375,14 @@ def load_image_sha256(
     return img, hashlib.sha256(data).hexdigest()
 
 
+def checked_bytes(
+    path: str | Path, max_megapixels: float = MAX_MEGAPIXELS, max_megabytes: float = MAX_MEGABYTES
+) -> bytes:
+    """The bytes of an image file once `load_image` has checked and decoded them, read once: a sample import copies
+    only a file Inspection would open, and hashes the very bytes checked (REQ-TRN-001, REQ-INSP-001)."""
+    return _read_image(Path(path), max_megapixels, max_megabytes)[1]
+
+
 def _read_image(p: Path, max_megapixels: float, max_megabytes: float) -> tuple[np.ndarray, bytes]:
     """The image and the bytes it was decoded from, after `load_image`'s checks."""
     try:

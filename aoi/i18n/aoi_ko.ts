@@ -573,7 +573,7 @@
 <context>
     <name>Errors</name>
     <message>
-        <location filename="../core/services.py" line="+50"/>
+        <location filename="../core/services.py" line="+54"/>
         <source>a length of {length} px over {distance} mm gives no scale: both must be numbers above 0, and the scale from {least} to {most} px per mm</source>
         <translation type="unfinished"></translation>
     </message>
@@ -598,12 +598,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+195"/>
+        <location line="+200"/>
         <source>Importing samples</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+61"/>
+        <location line="+89"/>
         <source>Training an AI model</source>
         <translation type="unfinished"></translation>
     </message>
@@ -728,12 +728,22 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1094"/>
+        <location line="-1132"/>
+        <source>no defect type was given</source>
+        <translation>결함 유형이 지정되지 않았습니다</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>{name} is not one of them</source>
+        <translation>{name}은(는) 그중 하나가 아닙니다</translation>
+    </message>
+    <message>
+        <location line="+4"/>
         <source>there is no board model of that name</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+409"/>
+        <location line="+442"/>
         <source>its UUID {found} is not {uuid}, as in the AI model registry</source>
         <translation type="unfinished"></translation>
     </message>
@@ -855,7 +865,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+34"/>
+        <location line="+42"/>
         <source>{megabytes} MB ({count} bytes)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1367,6 +1377,36 @@
     </message>
     <message>
         <location line="+253"/>
+        <source>NG image needs a defect type</source>
+        <translation>NG 이미지에는 결함 유형이 필요합니다</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>{path} was not imported: an NG sample needs one of the 33 defect types of the defect classification table, and {why}.</source>
+        <translation>{path}을(를) 가져오지 않았습니다. NG 샘플에는 결함 분류표의 결함 유형 33개 중 하나가 필요하지만 {why}.</translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>Pick the defect type the image shows, then import it again.</source>
+        <translation>이미지에 보이는 결함 유형을 고른 다음 다시 가져오십시오.</translation>
+    </message>
+    <message>
+        <location line="+4"/>
+        <source>Image changed while it was copied</source>
+        <translation>복사하는 동안 이미지가 바뀌었습니다</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>{path} changed while it was copied into the workspace: its SHA-256 after the copy differs from the one checked before it, so it was not imported.</source>
+        <translation>{path}이(가) 작업 폴더로 복사되는 동안 바뀌었습니다. 복사 후의 SHA-256이 복사 전에 확인한 값과 달라 가져오지 않았습니다.</translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>Wait until the file is complete (a camera or a copy may still be writing it), then import it again.</source>
+        <translation>파일이 완성될 때까지(카메라나 복사 작업이 아직 쓰고 있을 수 있음) 기다린 다음 다시 가져오십시오.</translation>
+    </message>
+    <message>
+        <location line="+7"/>
         <source>AI model, recipe, scale or Golden board changed since the run</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1771,7 +1811,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-686"/>
+        <location line="-709"/>
         <source>Board judged NG</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1811,7 +1851,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+155"/>
+        <location line="+178"/>
         <source>ROI thresholds refused</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3834,7 +3874,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/services.py" line="-1271"/>
+        <location filename="../core/services.py" line="-1306"/>
         <source>Aligning {count} images to the reference board</source>
         <translation type="unfinished"></translation>
     </message>

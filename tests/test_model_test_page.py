@@ -30,6 +30,7 @@ from aoi.ui.pages.model_test import ModelTestPage
 from tests.conftest import another_version, wrapped
 from tests.test_error_translation import Marking
 from tests.test_req_done_in_v01 import BOARD, _window
+from tools.make_synthetic_dataset import ng_type
 
 
 def _tested_page(qtbot: QtBot, win: MainWindow, folder: Path) -> ModelTestPage:
@@ -371,8 +372,9 @@ def test_req_tst_003_a_run_with_no_ai_model_says_so_once_one_is_trained(
     then an AI model trained on Training. Shown again, the page says that the run was judged by no AI model, in the note
     and in AOI-TST-001 for the row previewed before, and names the AI model in use now."""
     monkeypatch.setattr(QMessageBox, "information", staticmethod(lambda *a: QMessageBox.StandardButton.Ok))
-    for label in ("OK", "NG"):
-        ctx.import_samples(BOARD, [str(p) for p in list_images(synthetic_dataset / "train" / label.lower())], label)
+    ctx.import_samples(BOARD, [str(p) for p in list_images(synthetic_dataset / "train" / "ok")], "OK")
+    for p in list_images(synthetic_dataset / "train" / "ng"):
+        ctx.import_samples(BOARD, [str(p)], "NG", ng_type(p))
     ctx.set_reference(BOARD, ctx.samples(BOARD, "OK")[0]["id"])
     golden = Path(ctx.reference_image(BOARD) or "").name
     win = _window(qtbot, ctx)

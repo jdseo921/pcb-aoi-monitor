@@ -122,8 +122,8 @@ def test_req_trn_001_an_import_that_fails_part_way_stores_nothing(
     monkeypatch.setattr(QInputDialog, "getItem", staticmethod(lambda *a: (a[3][0], True)))
     page.add_ok()  # the copies run on the pool (#194); the error reaches the coded dialog
     qtbot.waitUntil(lambda: page._bg is None, timeout=30000)
-    [(title, text)] = dialogs
-    assert title == "AOI-TRN-008 Images not imported" and "ok2.png" in text, (title, text)
+    [(title, text)] = dialogs  # refused as Inspection refuses it (REQ-TRN-001, S31); the copies made are removed
+    assert title == "AOI-INSP-001 Image cannot be read" and "ok2.png" in text, (title, text)
     assert ctx.samples("NEWB") == [] and ctx.audit_entries(action="sample.import") == []
     assert not any((ctx.settings.images_dir / "NEWB").rglob("*.png"))  # no copy left behind
     shutil.copy(list_images(synthetic_dataset / "train" / "ok")[2], files[2])  # the file put back: Try again
