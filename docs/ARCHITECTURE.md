@@ -413,7 +413,10 @@ digit (AOI-TRN-039) or gives the letters and digits another board model's versio
 while the newest agreement check of the board model whose set holds images of the view is missing or short of its
 targets (AOI-TRN-027); else it names the version `DS-<BOARDMODEL>-<REV>-<VIEW>-v<N>` (`aoi/core/datasets.py`). The
 refusals that need no file come first, so a freeze they refuse reads no image file first; then it hashes the files and
-works out their stored paths with no lock held. Then, holding the database lock, one transaction finds N, checks the
+works out their stored paths with no lock held, `progress(done, total)` following each file, and once `should_stop()`
+is true it hashes no other and returns None, nothing written. `freeze_gate` gives what Freeze Dataset… shows before a
+freeze, writing nothing: the name it would make, its files, the label checks, the newest agreement check, the store and
+the refusal those same checks would raise now. Then, holding the database lock, one transaction finds N, checks the
 gate again, reads the labels and, in one query, the boxes, stores the version and its files with the manifest's SHA-256
 and the audit entry, and moves `datasets/<name>/manifest.json` (each OK and NG file's relative path, SHA-256, label row,
 boxes, labeller and checker; the agreement check; the OK draws) into place just before the commit (`atomic.staged`); a
@@ -427,7 +430,8 @@ version's rows and manifest never change, and a later label change reaches only 
 workspace's image files rather than copying them, and the app changes one only to encrypt it where it is, to the same
 plain bytes (`move_in`), and removes one only when its store is shredded (`delete_sample` keeps the file), so a file
 changed or removed outside the app is what `verify_dataset` reports: it re-hashes the manifest and every file against
-the stored SHA-256 and lists the files that match, changed or are missing, and writes nothing.
+the stored SHA-256 and lists the files that match, changed or are missing, and writes nothing; it takes `progress` and
+`should_stop` too, `left` counting the files a stop left unhashed.
 The old bytes of such a file cannot be recovered from the workspace, which therefore needs a backup. How labels,
 checks, agreement checks and frozen versions are stored, and why, is
 [ADR 0009](adr/0009-labels-checks-and-dataset-versions.md) (proposed). How each customer's dataset store is encrypted at

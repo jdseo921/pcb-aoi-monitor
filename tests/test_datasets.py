@@ -155,6 +155,7 @@ def test_req_trn_005_verify_detects_tampered_file(ctx: AppContext, tmp_path: Pat
         "matched": paths,
         "changed": [],
         "missing": [],
+        "left": 0,
     }
     with open(root / paths[3], "ab") as f:
         f.write(b"\0")  # one byte added, as a program that rewrites the image would
@@ -397,3 +398,60 @@ def test_req_trn_005_failed_commit_puts_the_workspace_back(
     assert free and not any(free)
     v1 = ctx.freeze_dataset(CAL, "Top", "R3", "Acme")
     assert ctx.verify_dataset(v1["uuid"])["manifest"] == "same" and not any(free)
+
+
+def test_req_trn_005_freeze_gate_names_what_a_freeze_needs(ctx: AppContext, tmp_path: Path) -> None:
+    """freeze_gate, a read for Freeze Dataset…, gives the version a freeze would make, its files, the label checks,
+    the newest agreement check, the store and the refusal freeze_dataset would raise, writing nothing: with no agreed
+    check, the agreement refusal; with a revision that is not 1 to 16 letters and digits, no name and that refusal;
+    agreed, none; with the board model in no store, the store's refusal. A view not in the three is AOI-TRN-038."""
+    samples, cal = ready(ctx, tmp_path / "boards")
+    gate = ctx.freeze_gate(CAL, "Top", "R3")
+    assert (gate["name"], gate["files"]) == ("DS-CAL1-R3-TOP-v1", 100)
+    assert gate["labels"]["ready"] and gate["check"] is None and (gate["store"] or {})["customer"] == "Acme"
+    assert gate["refused"].code == "AOI-TRN-027"
+    assert gate["refused"].params["reason"] == "no agreement check of the board model holds images of this view"
+    bad = ctx.freeze_gate(CAL, "Top", "R-3")
+    assert bad["name"] is None and "the board revision R-3" in bad["refused"].params["reason"]
+    agree(ctx, cal, samples)
+    entries = ctx.audit_entries()
+    gate = ctx.freeze_gate(CAL, "Top", "R3")
+    assert gate["refused"] is None and gate["check"]["agreed"] and ctx.audit_entries() == entries
+    v1 = ctx.freeze_dataset(CAL, "Top", "R3", "Acme") or {}
+    assert ctx.freeze_gate(CAL, "Top", "R3")["name"] == "DS-CAL1-R3-TOP-v2" and v1["name"] == "DS-CAL1-R3-TOP-v1"
+    with pytest.raises(AoiError) as view:
+        ctx.freeze_gate(CAL, "Front", "R3")
+    assert view.value.code == "AOI-TRN-038"
+
+
+def test_req_trn_005_freeze_gate_names_the_missing_store(ctx: AppContext, tmp_path: Path) -> None:
+    samples, cal = ready(ctx, tmp_path / "boards", customer=None)
+    agree(ctx, cal, samples)
+    gate = ctx.freeze_gate(CAL, "Top", "R3")
+    assert gate["store"] is None and gate["refused"].code == "AOI-TRN-027"
+    assert gate["refused"].params["reason"] == "its images are in no customer's dataset store; an Admin moves them in"
+
+
+def test_req_trn_005_freeze_and_verify_follow_and_stop(ctx: AppContext, tmp_path: Path) -> None:
+    """freeze_dataset and verify_dataset report each file hashed (progress) and stop on request (should_stop): a
+    stopped freeze returns None and writes nothing, no row, manifest or audit entry; a stopped verify counts the files
+    it left. Unstopped, both reach the last file."""
+    samples, cal = ready(ctx, tmp_path / "boards")
+    agree(ctx, cal, samples)
+    entries, seen = ctx.audit_entries(), []
+
+    def follow(done: int, total: int) -> None:
+        seen.append((done, total))
+
+    stop = ctx.freeze_dataset(CAL, "Top", "R3", "Acme", progress=follow, should_stop=lambda: len(seen) == 3)
+    assert stop is None and seen == [(1, 100), (2, 100), (3, 100)] and ctx.datasets(CAL) == []
+    assert ctx.audit_entries() == entries and not (ctx.settings.root / datasets.FOLDER).exists()
+    seen.clear()
+    v1 = ctx.freeze_dataset(CAL, "Top", "R3", "Acme", progress=follow) or {}
+    assert seen[-1] == (100, 100) and len(seen) == 100 and ctx.datasets(CAL)[0]["uuid"] == v1["uuid"]
+    seen.clear()
+    part = ctx.verify_dataset(v1["uuid"], progress=follow, should_stop=lambda: len(seen) == 2)
+    assert (len(part["matched"]), part["left"], part["files"], seen) == (2, 98, 100, [(1, 100), (2, 100)])
+    seen.clear()
+    whole = ctx.verify_dataset(v1["uuid"], progress=follow)
+    assert (len(whole["matched"]), whole["left"], seen[-1]) == (100, 0, (100, 100))
