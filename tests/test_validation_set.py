@@ -139,3 +139,17 @@ def test_req_trn_006_overlap_by_hash_refused(ctx: AppContext, tmp_path: Path, mo
     ctx.delete_sample(held["id"])
     ctx.train(trainable(ctx, "COPY"), epochs=1, image_size=32)
     assert len(ctx.models("COPY")) == 1
+
+
+def test_req_trn_006_dataset_counts(ctx: AppContext, tmp_path: Path) -> None:
+    """dataset_counts reads each frozen version of a board model at once: its OK and NG files, those of its locked
+    validation set, 0 until the version is split, and whether it is split; a board model with no version gives none."""
+    v1 = frozen(ctx, tmp_path)
+    assert ctx.dataset_counts(CAL) == {v1["uuid"]: {"ok": 80, "ng": 20, "val_ok": 0, "val_ng": 0, "locked": False}}
+    ctx.lock_validation_set(v1["uuid"], seed=1)
+    v2 = ctx.freeze_dataset(CAL, "Top", "R4", "Acme")
+    assert ctx.dataset_counts(CAL) == {
+        v1["uuid"]: {"ok": 80, "ng": 20, "val_ok": 50, "val_ng": 6, "locked": True},
+        v2["uuid"]: {"ok": 80, "ng": 20, "val_ok": 0, "val_ng": 0, "locked": False},
+    }
+    assert ctx.dataset_counts("NO-SUCH") == {}

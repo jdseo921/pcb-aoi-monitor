@@ -569,6 +569,16 @@ CODES: dict[str, ErrorCode] = {
             ),
         ),
         ErrorCode(
+            "AOI-TRN-023",
+            QT_TRANSLATE_NOOP("Errors", "Manifest does not match"),
+            QT_TRANSLATE_NOOP("Errors", "{name} does not match what was frozen: {reason}."),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Train from another version, or freeze the working set again; the files are named under the Versions"
+                " table.",
+            ),
+        ),
+        ErrorCode(
             "AOI-TRN-024",
             QT_TRANSLATE_NOOP("Errors", "Dataset not frozen: no customer"),
             QT_TRANSLATE_NOOP("Errors", "{name} was not frozen: no customer is set."),

@@ -65,7 +65,7 @@ from .base import (
 from .training_agreement import AgreementPanel, BlindPanel
 from .training_import import ImportSheet
 from .training_labels import LabelEditor, State
-from .training_versions import WorkingSetPanel
+from .training_versions import VersionsPanel, WorkingSetPanel
 
 if TYPE_CHECKING:
     from ..main_window import MainWindow
@@ -315,7 +315,7 @@ class TrainingPage(Page):
         kl = QVBoxLayout(self.keys)
         kl.setContentsMargins(0, 0, 0, 0)
         kl.addWidget(split)
-        self.datasets_tab = QWidget()  # the working set, Freeze Dataset… and the labeller agreement (Datasets stage)
+        self.datasets_tab = QWidget()  # the working set, the labeller agreement and the versions (Datasets stage)
         dl = QVBoxLayout(self.datasets_tab)
         dl.setContentsMargins(0, 0, 0, 0)
         self.working = WorkingSetPanel(self)
@@ -323,7 +323,8 @@ class TrainingPage(Page):
         dl.addWidget(self.working.sheet)  # in place of the panels under the working set while it is open
         self.agreement = AgreementPanel(self)
         dl.addWidget(self.agreement)
-        dl.addStretch(1)
+        self.versions = VersionsPanel(self)
+        dl.addWidget(self.versions, 1)  # the table takes the height left
         # the sketches' Samples and Datasets tabs, on the title row as they draw them, so the page is no taller than
         # before them (Training fits a 1600 x 900 screen); the training panel stays beside both
         self.tabs = QTabBar()
@@ -968,6 +969,7 @@ class TrainingPage(Page):
         self.btn_draw.setEnabled(idle)  # a draw would stop the import that runs: one job of the page's at a time
         self.samples_empty.link.setEnabled(idle)
         self.working.sync()  # Freeze Dataset… and Freeze, off while a job runs
+        self.versions.sync()  # and Verify Manifest
         self.btn_train.setEnabled(idle and self.worker is None and self.dataset_version.currentData() is not None)
 
     def _fill_versions(self) -> None:
@@ -1044,10 +1046,12 @@ class TrainingPage(Page):
             self.models_empty.hide()
             self.agreement.show_board_model(None, [])
             self.working.show_board_model(None, [])
+            self.versions.show_board_model(None)
             return
         s = self.ctx.samples(self.board_model)
         self.agreement.show_board_model(self.board_model, s)
         self.working.show_board_model(self.board_model, s)
+        self.versions.show_board_model(self.board_model)  # after the working set, whose views its empty state reads
         self.shown = {r["id"]: r for r in s}
         self._boxes = {r["id"]: [b["dct_type"] for b in self.ctx.boxes(r["uuid"])] for r in s if r["label"] == "NG"}
         self._check_status()

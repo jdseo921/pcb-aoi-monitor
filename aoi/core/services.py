@@ -1740,6 +1740,12 @@ class AppContext:
         """A board model's frozen versions, newest first, as the datasets table holds them (docs/ARCHITECTURE.md)."""
         return self.db.datasets(board_model)
 
+    def dataset_counts(self, board_model: str) -> dict[str, dict[str, int]]:
+        """Each frozen version of a board model, by UUID, as the Datasets tab's Versions table counts it: `ok` and `ng`,
+        its files labelled so, `val_ok` and `val_ng`, those of its locked validation set (0 while it is not split), and
+        `locked`, whether it is split, read at once rather than file list by file list."""
+        return self.db.dataset_counts(board_model)
+
     def dataset_items(self, dataset_uuid: str) -> list[dict[str, Any]]:
         """A frozen version's files as its manifest lists them, each with its row's id, uuid and dataset_uuid."""
         return self.db.dataset_items(dataset_uuid)

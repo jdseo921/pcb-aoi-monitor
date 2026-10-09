@@ -455,3 +455,24 @@ def test_req_trn_005_freeze_and_verify_follow_and_stop(ctx: AppContext, tmp_path
     seen.clear()
     whole = ctx.verify_dataset(v1["uuid"], progress=follow)
     assert (len(whole["matched"]), whole["left"], seen[-1]) == (100, 0, (100, 100))
+
+
+def test_req_trn_005_mismatch_names_what_changed() -> None:
+    """A manifest check that found everything as frozen is no error; one that found a file changed or missing, or the
+    manifest itself changed or missing, is AOI-TRN-023 naming the version and the counts."""
+    found = {"manifest": "same", "matched": ["a", "b"], "changed": [], "missing": [], "files": 2, "left": 0}
+    assert datasets.mismatch("DS-CAL1-R3-TOP-v1", found) is None
+    said = []
+    for manifest, changed, missing in (("same", ["a"], []), ("changed", [], []), ("missing", ["a"], ["b"])):
+        e = datasets.mismatch(
+            "DS-CAL1-R3-TOP-v1", found | {"manifest": manifest, "changed": changed, "missing": missing}
+        )
+        assert e is not None and e.code == "AOI-TRN-023"
+        said.append(str(e.what))
+    assert said == [
+        "DS-CAL1-R3-TOP-v1 does not match what was frozen: 1 file(s) changed and 0 missing since the freeze.",
+        "DS-CAL1-R3-TOP-v1 does not match what was frozen: its manifest changed since the freeze, and 0 file(s) changed"
+        " and 0 missing.",
+        "DS-CAL1-R3-TOP-v1 does not match what was frozen: its manifest is missing, and 1 file(s) changed and 1"
+        " missing.",
+    ]

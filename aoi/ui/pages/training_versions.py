@@ -1,17 +1,21 @@
-"""Training › Datasets' Working set panel and its Freeze sheet (REQ-TRN-005, the screen half; Datasets stage 4 of 4):
-the datasets sketch's working set, view by view with its labels checked, the customer whose dataset store holds the
-board model and the allowed uses; Freeze Dataset… shows the Freeze sheet in place of the panels under it, the version
-it would make and a line for each thing a freeze needs, ✓ or ✗ with the fix, and Freeze freezes the version on the
-pool, with progress and Cancel. Nothing here reads or writes the database itself."""
+"""Training › Datasets' Working set panel, its Freeze sheet and the Versions table (REQ-TRN-005, the screen half;
+Datasets stage 4 of 4): the datasets sketch's working set, view by view with its labels checked, the customer whose
+dataset store holds the board model and the allowed uses; Freeze Dataset… shows the Freeze sheet in place of the
+labeller agreement, the version it would make and a line for each thing a freeze needs, ✓ or ✗ with the fix, and
+Freeze freezes the version on the pool, with progress and Cancel. The Versions table lists the board model's frozen
+versions, and Verify Manifest re-hashes the one picked on the pool. Nothing here reads or writes the database
+itself."""
 
 from __future__ import annotations
 
 from collections import Counter
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QAction, QKeySequence
 from PySide6.QtWidgets import (
+    QAbstractItemView,
     QCheckBox,
     QComboBox,
     QFormLayout,
@@ -22,10 +26,13 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
-from ...core.datasets import ALLOWED_USES
+from ...core.datasets import ALLOWED_USES, mismatch
+from ...errors import AoiError
 from ...hal import VIEWS
+from ...times import to_local
 from ..widgets.busy import BusyOverlay
-from .base import QT_TRANSLATE_NOOP, action_button, button
+from ..widgets.empty_state import EmptyState
+from .base import QT_TRANSLATE_NOOP, action_button, button, fill_table, make_table
 
 if TYPE_CHECKING:
     from .training import TrainingPage
@@ -274,6 +281,7 @@ class FreezeSheet(QGroupBox):
             self.close_sheet()
             self.page.refresh()
             if version is not None:
+                self.page.versions.show_board_model(bm, version["uuid"])  # picked, as the newest
                 said = self.tr("Froze {name}: {files} files and their manifest")
                 self.page.shell.status(said.format(name=version["name"], files=g["files"]))
 
@@ -298,5 +306,149 @@ class FreezeSheet(QGroupBox):
         self.page.run_in_background(
             self.ctx.freeze_dataset, bm, view, revision, g["store"]["customer"], self.panel.picked_uses(),
             with_progress=True, on_result=done, on_cancel=stopped, on_error=failed, busy=self.panel.busy,
+        )  # fmt: skip
+        self.sync()
+
+
+USES_SHORT = {  # the Versions table's Uses cell, as the sketch writes it
+    "own": QT_TRANSLATE_NOOP("VersionsPanel", "own"),
+    "shared": QT_TRANSLATE_NOOP("VersionsPanel", "shared"),
+    "demos": QT_TRANSLATE_NOOP("VersionsPanel", "demos"),
+}
+FOUND_SHOWN = 5  # the changed or missing files named under the table; the rest are counted
+
+
+class VersionsPanel(QGroupBox):
+    """The board model's frozen versions, newest first: what each holds, its locked validation set and what Verify
+    Manifest found this session; Verify Manifest re-hashes the one picked on the pool, with progress and Cancel."""
+
+    def __init__(self, page: TrainingPage) -> None:
+        super().__init__()
+        self.setTitle(self.tr("Versions"))
+        self.page, self.ctx = page, page.ctx
+        self.board_model: str | None = None
+        self.rows: list[dict[str, Any]] = []
+        self.verified: dict[str, dict[str, Any]] = {}  # what Verify Manifest found, by version UUID, this session
+        lay = QVBoxLayout(self)
+        heads = [self.tr("Version"), self.tr("Frozen"), self.tr("By"), self.tr("OK"), self.tr("NG")]
+        heads += [self.tr("Validation OK / NG"), self.tr("Customer"), self.tr("Uses"), self.tr("Manifest")]
+        self.table = make_table(heads, sortable=False)  # newest first, as Self-training's Dataset version list
+        self.table.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
+        self.table.itemSelectionChanged.connect(self.show_found)
+        lay.addWidget(self.table, 1)
+        self.empty = EmptyState(self.table)
+        self.empty.link.setEnabled(page.working.act_freeze.isEnabled())
+        page.working.act_freeze.enabledChanged.connect(self.empty.link.setEnabled)  # on and off as Freeze Dataset… is
+        self.found = QLabel()  # what Verify Manifest found wrong in the version picked: the coded line and the files
+        self.found.setWordWrap(True)
+        self.found.hide()
+        lay.addWidget(self.found)
+        row = QHBoxLayout()
+        self.btn_verify = button(self.tr("Verify Manifest"), slot=self.verify)
+        row.addWidget(self.btn_verify)
+        row.addStretch(1)
+        lay.addLayout(row)
+        self.busy = BusyOverlay(self.table, self.tr("Checking each file against its manifest…"))
+
+    def show_board_model(self, board_model: str | None, picked: str | None = None) -> None:
+        """The board model's versions: `picked` selected, else the one picked before while the board model is the
+        same, else the newest."""
+        if board_model == self.board_model and picked is None:
+            picked = self.picked()
+        self.board_model = board_model
+        self.rows = self.ctx.datasets(board_model) if board_model else []
+        counts = self.ctx.dataset_counts(board_model) if board_model else {}
+        names = {u["uuid"]: u["name"] for u in self.ctx.users()}
+        table = []
+        for v in self.rows:
+            n = counts.get(v["uuid"], {"ok": 0, "ng": 0, "val_ok": 0, "val_ng": 0, "locked": False})
+            val = (
+                self.tr("{ok} / {ng}").format(ok=n["val_ok"], ng=n["val_ng"]) if n["locked"] else self.tr("not locked")
+            )
+            uses = ", ".join(self.tr(USES_SHORT[u]) for u in v["allowed_uses"] if u in USES_SHORT)
+            by = names.get(v["frozen_by"], v["frozen_by"])
+            table.append([v["name"], to_local(v["frozen_at"]), by, n["ok"], n["ng"], val, v["customer"], uses,
+                          self._manifest(v["uuid"])])  # fmt: skip
+        fill_table(self.table, table)
+        if self.rows:
+            self.empty.hide()
+            self.table.selectRow(next((i for i, v in enumerate(self.rows) if v["uuid"] == picked), 0))
+        elif board_model is not None:
+            none = self.tr("No frozen dataset for {board_model} yet").format(board_model=board_model)
+            then = self.tr("Check the labels, Freeze Dataset, then split and lock its validation set.")
+            link = self.tr("Freeze Dataset…") if self.page.working.views else ""
+            self.empty.show_state(none, then, link, self.page.working.open_sheet)
+        else:
+            self.empty.hide()
+        self.show_found()
+
+    def picked(self) -> str | None:
+        """The UUID of the version picked in the table, if any."""
+        rows = self.table.selectionModel().selectedRows()
+        return self.rows[rows[0].row()]["uuid"] if rows and rows[0].row() < len(self.rows) else None
+
+    def _manifest(self, uuid: str) -> str:
+        """The Manifest cell: blank until Verify Manifest has checked the version this session."""
+        r = self.verified.get(uuid)
+        if r is None:
+            return ""
+        if self._mismatch(uuid) is None:
+            return self.tr("✓ {n}/{files}").format(n=len(r["matched"]), files=r["files"])
+        return self.tr("✗ {changed} changed, {missing} missing").format(
+            changed=len(r["changed"]), missing=len(r["missing"])
+        )
+
+    def _mismatch(self, uuid: str) -> AoiError | None:
+        """AOI-TRN-023 for a version Verify Manifest found changed this session, or None."""
+        r = self.verified.get(uuid)
+        return None if r is None else mismatch(next(v["name"] for v in self.rows if v["uuid"] == uuid), r)
+
+    def show_found(self) -> None:
+        """Under the table, what Verify Manifest found wrong in the version picked, if anything: the coded line and
+        the files changed or missing, the first few named."""
+        uuid = self.picked()
+        e = self._mismatch(uuid) if uuid is not None else None
+        if e is not None:
+            r = self.verified[uuid or ""]
+            bad = [Path(p).name for p in r["changed"] + r["missing"]]
+            files = ", ".join(bad[:FOUND_SHOWN])
+            if len(bad) > FOUND_SHOWN:
+                files = self.tr("{files} and {n} more").format(files=files, n=len(bad) - FOUND_SHOWN)
+            said = self.tr("{line} Changed or missing: {files}").format(line=self.page.coded_text(e), files=files)
+            self.found.setText(said if bad else self.page.coded_text(e))
+        self.found.setVisible(e is not None)
+        self.sync()
+
+    def sync(self) -> None:
+        """Verify Manifest needs a version picked and no job of the page's running."""
+        self.btn_verify.setEnabled(self.picked() is not None and self.page.idle())
+
+    def verify(self) -> None:
+        """Re-hash the version picked and each of its files on the pool; a Cancel marks nothing."""
+        uuid = self.picked()
+        if uuid is None or not self.btn_verify.isEnabled():
+            return
+        name = next(v["name"] for v in self.rows if v["uuid"] == uuid)
+
+        def checked(r: dict[str, Any]) -> None:
+            if r["left"]:  # stopped: the files not hashed may differ too
+                said = self.tr("Verify Manifest of {name} stopped after {done} of {files} files; nothing was marked")
+                self.page.shell.status(said.format(name=name, done=r["files"] - r["left"], files=r["files"]))
+                return
+            self.verified[uuid] = r
+            self.show_board_model(self.board_model)
+            if self._mismatch(uuid) is None:
+                self.page.shell.status(self.tr("{name}: all {files} files match its manifest").format(
+                    name=name, files=r["files"]))  # fmt: skip
+
+        def stopped(r: dict[str, Any] | None) -> None:
+            if r is None:
+                said = self.tr("Verify Manifest of {name} stopped; nothing was marked")
+                self.page.shell.status(said.format(name=name))
+            else:
+                checked(r)
+
+        self.page.run_in_background(
+            self.ctx.verify_dataset, uuid, with_progress=True, on_result=checked, on_cancel=stopped, busy=self.busy,
         )  # fmt: skip
         self.sync()

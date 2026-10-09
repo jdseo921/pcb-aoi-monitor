@@ -12,6 +12,8 @@ from fractions import Fraction
 from pathlib import Path
 from typing import Any
 
+from ..errors import QT_TRANSLATE_NOOP, AoiError, Phrase
+
 REVISION = re.compile(r"[A-Za-z0-9]{1,16}")  # a board revision as entered with the board model, such as R3 (Q37)
 ALLOWED_USES = ("own", "shared", "demos")  # their own AI models, shared improvement, demos: placeholders until Q38
 FOLDER = "datasets"  # under the workspace: <name>/manifest.json
@@ -44,6 +46,26 @@ def file_sha256(path: str | Path) -> str | None:
         return sha256(path)
     except OSError:
         return None
+
+
+MISMATCH = {  # what a manifest check found, by what it found of the manifest itself
+    "same": QT_TRANSLATE_NOOP("Errors", "{changed} file(s) changed and {missing} missing since the freeze"),
+    "changed": QT_TRANSLATE_NOOP(
+        "Errors", "its manifest changed since the freeze, and {changed} file(s) changed and {missing} missing"
+    ),
+    "missing": QT_TRANSLATE_NOOP(
+        "Errors", "its manifest is missing, and {changed} file(s) changed and {missing} missing"
+    ),
+}
+
+
+def mismatch(name: str, checked: dict[str, Any]) -> AoiError | None:
+    """AOI-TRN-023 for a version whose manifest check (AppContext.verify_dataset, run to its end) found its manifest
+    or a file changed or missing, or None when everything matches."""
+    if checked["manifest"] == "same" and not checked["changed"] and not checked["missing"]:
+        return None
+    n: dict[str, object] = {"changed": len(checked["changed"]), "missing": len(checked["missing"])}
+    return AoiError("AOI-TRN-023", name=name, reason=Phrase("Errors", MISMATCH[checked["manifest"]], n))
 
 
 def manifest(head: dict[str, Any], files: list[dict[str, Any]]) -> tuple[bytes, str]:
