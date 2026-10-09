@@ -1,8 +1,10 @@
 """The power-cut test's victim: inspect boards in a loop, saving every result, until killed.
 
-    python -m tests.power_cut_worker <workspace>   (from the repository root)
+    python -m tests.power_cut_worker <workspace> <folder>   (from the repository root)
 
-Prints "ready" once the model is loaded, then "done ..." for each finished inspection, after its row is committed.
+Inspects the images under <folder>'s ok/ and ng/, as a station inspects boards it has not seen: TINY's samples are in
+its customer's dataset store, whose key this process does not hold. Prints "ready" once the model is loaded, then
+"done ..." for each finished inspection, after its row is committed.
 Two test-only switches in the environment: AOI_POWER_CUT_SLOW_S adds that many seconds inside every inspection (a
 busy PC), and AOI_POWER_CUT_IN_WRITE=<n> ends the process inside the n-th file write once half of its bytes are on
 disk, after printing "dying <path>".
@@ -21,6 +23,7 @@ from typing import BinaryIO
 import numpy as np
 
 from aoi.config import Settings
+from aoi.core.imaging import list_images
 from aoi.core.inspector import InspectionResult, Inspector
 from aoi.core.services import AppContext
 from aoi.data import atomic
@@ -60,9 +63,9 @@ def die_inside_write(n: int) -> None:
     atomic.write_with = write_with  # write_bytes, write_text and copy_file call it through the module
 
 
-def main(workspace: str) -> None:
+def main(workspace: str, folder: str) -> None:
     ctx = AppContext(Settings(workspace=workspace, device="cpu"))
-    boards = [s["path"] for s in ctx.db.samples("TINY")]
+    boards = [*list_images(Path(folder) / "ok"), *list_images(Path(folder) / "ng")]
     inspector = ctx.inspector("TINY")
     if os.environ.get("AOI_POWER_CUT_SLOW_S"):
         slow_inspections(inspector, float(os.environ["AOI_POWER_CUT_SLOW_S"]))
@@ -77,4 +80,4 @@ def main(workspace: str) -> None:
 
 
 if __name__ == "__main__":
-    main(sys.argv[1])
+    main(sys.argv[1], sys.argv[2])

@@ -228,11 +228,11 @@ class Worker:
     """One run of tests/power_cut_worker.py, killed on leaving the `with`; a thread reads its lines, so waiting for one
     can time out on any OS (a pipe has no timeout on Windows)."""
 
-    def __init__(self, ws: Path, err: Path, **env: str) -> None:
+    def __init__(self, ws: Path, boards: Path, err: Path, **env: str) -> None:
         self.err, self.killed = err, False
         with open(err, "w", encoding="utf-8") as stderr:
             self.proc = subprocess.Popen(
-                [sys.executable, "-m", "tests.power_cut_worker", str(ws)],
+                [sys.executable, "-m", "tests.power_cut_worker", str(ws), str(boards)],
                 cwd=ROOT,
                 stdout=subprocess.PIPE,
                 stderr=stderr,
@@ -274,8 +274,8 @@ class Worker:
         self.reader.join()
         assert self.proc.stdout is not None
         self.proc.stdout.close()
-        rest = []
-        while (line := self.lines.get()) is not None:
+        rest = []  # every line is queued once the reader has ended; a failed next_line took the None already
+        while not self.lines.empty() and (line := self.lines.get()) is not None:
             rest.append(line)
         return rest
 
@@ -300,14 +300,14 @@ def check_workspace(ws: Path) -> int:
     return len(rows)
 
 
-def kill_runs(ws: Path, kills: int, err: Path, **env: str) -> int:
+def kill_runs(ws: Path, boards: Path, kills: int, err: Path, **env: str) -> int:
     """Start the worker `kills` times; each time wait for its first saved result, then kill it at a random point of
     the next inspection or its save, timed by the first, so the kill lands there on a fast or a slow PC (#202). Every
     result it said it saved must be in the workspace, whole, and no row ever goes; returns the number of rows."""
     rng = random.Random(SEED)
     finished = 0
     for run in range(kills):
-        with Worker(ws, err, **env) as worker:
+        with Worker(ws, boards, err, **env) as worker:
             assert (line := worker.next_line()) == "ready", line
             start = time.monotonic()
             assert (line := worker.next_line()).startswith("done"), line  # printed once its row is committed
@@ -319,29 +319,35 @@ def kill_runs(ws: Path, kills: int, err: Path, **env: str) -> int:
     return finished
 
 
-def test_req_insp_008_no_finished_result_lost(tmp_path: Path, tiny_model: TrainedModel) -> None:
+def test_req_insp_008_no_finished_result_lost(
+    tmp_path: Path, tiny_model: TrainedModel, synthetic_dataset: Path
+) -> None:
     ws = tmp_path / "station"
     shutil.copytree(tiny_model.ctx.settings.root, ws)
-    assert kill_runs(ws, KILLS, tmp_path / "worker.err") >= KILLS
+    assert kill_runs(ws, synthetic_dataset / "train", KILLS, tmp_path / "worker.err") >= KILLS
     ctx = AppContext(Settings(workspace=str(ws), device="cpu"))  # the next start sweeps the temp files away
     assert not list(ws.rglob(f".*{atomic.TEMP_SUFFIX}")) and ctx.load_model("TINY") is not None
 
 
-def test_req_insp_008_kills_follow_a_saved_result_on_a_slow_pc(tmp_path: Path, tiny_model: TrainedModel) -> None:
+def test_req_insp_008_kills_follow_a_saved_result_on_a_slow_pc(
+    tmp_path: Path, tiny_model: TrainedModel, synthetic_dataset: Path
+) -> None:
     """With every inspection 2 s longer than the longest wait the test once had (1.5 s), each kill still comes after a
     saved result, and the run does not fail for want of one (#202)."""
     ws = tmp_path / "station"
     shutil.copytree(tiny_model.ctx.settings.root, ws)
-    assert kill_runs(ws, 3, tmp_path / "worker.err", AOI_POWER_CUT_SLOW_S="2") >= 3
+    assert kill_runs(ws, synthetic_dataset / "train", 3, tmp_path / "worker.err", AOI_POWER_CUT_SLOW_S="2") >= 3
 
 
-def test_req_insp_008_a_kill_inside_a_write_leaves_no_part_file(tmp_path: Path, tiny_model: TrainedModel) -> None:
+def test_req_insp_008_a_kill_inside_a_write_leaves_no_part_file(
+    tmp_path: Path, tiny_model: TrainedModel, synthetic_dataset: Path
+) -> None:
     """The kill a random time seldom hits: inside the second file write of an inspection (one of its maps), with half
     of the bytes on disk. The map is absent, not cut short, no row names it, and the next start removes the
     temporary file."""
     ws = tmp_path / "station"
     shutil.copytree(tiny_model.ctx.settings.root, ws)
-    with Worker(ws, tmp_path / "worker.err", AOI_POWER_CUT_IN_WRITE="2") as worker:
+    with Worker(ws, synthetic_dataset / "train", tmp_path / "worker.err", AOI_POWER_CUT_IN_WRITE="2") as worker:
         assert (line := worker.next_line()) == "ready", line
         line = worker.next_line()
         assert line.startswith("dying "), f"the second file write did not go through atomic.write_with: {line}"

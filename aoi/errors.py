@@ -756,6 +756,16 @@ CODES: dict[str, ErrorCode] = {
             ),
         ),
         ErrorCode(
+            "AOI-TRN-046",
+            QT_TRANSLATE_NOOP("Errors", "Training not started: customer or use not allowed"),
+            QT_TRANSLATE_NOOP("Errors", "{name} was not trained for the use {use}: {reason}."),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Train from a version of one customer's dataset store that allows this use; the refusal is in the audit"
+                " log, and the active AI model is unchanged.",
+            ),
+        ),
+        ErrorCode(
             "AOI-TST-001",
             QT_TRANSLATE_NOOP("Errors", "AI model, recipe, scale or Golden board changed since the run"),
             QT_TRANSLATE_NOOP(

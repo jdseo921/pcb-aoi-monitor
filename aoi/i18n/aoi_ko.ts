@@ -617,7 +617,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+106"/>
+        <location line="+107"/>
         <source>(none)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -808,12 +808,12 @@
     </message>
     <message>
         <location line="+14"/>
-        <location line="+35"/>
+        <location line="+39"/>
         <source>the workspace holds no such dataset version</source>
         <translation>작업 공간에 그런 데이터셋 버전이 없습니다</translation>
     </message>
     <message>
-        <location line="-33"/>
+        <location line="-37"/>
         <source>its validation set is locked already, and a version is split only once</source>
         <translation>검증 세트가 이미 잠겨 있으며, 버전은 한 번만 분할됩니다</translation>
     </message>
@@ -823,7 +823,12 @@
         <translation>OK 이미지가 {ok}개이며, 검증 세트에는 {least}개가 들어갑니다</translation>
     </message>
     <message>
-        <location line="+44"/>
+        <location line="+52"/>
+        <source>{customer} allowed only {uses}</source>
+        <translation>{customer}이(가) {uses}만 허용했습니다</translation>
+    </message>
+    <message>
+        <location line="+12"/>
         <source>its validation set is not locked; training reads only a training set</source>
         <translation>검증 세트가 잠겨 있지 않습니다. 학습은 학습 세트만 읽습니다</translation>
     </message>
@@ -973,17 +978,20 @@
         <translation>이 뷰에 OK 또는 NG로 라벨링된 이미지가 없습니다</translation>
     </message>
     <message>
-        <location line="+11"/>
+        <location line="-344"/>
+        <location line="+355"/>
         <source>its images are in no customer&apos;s dataset store; an Admin moves them in</source>
         <translation>이미지가 어느 고객의 데이터셋 저장소에도 없습니다. 관리자가 옮겨 넣습니다</translation>
     </message>
     <message>
-        <location line="+2"/>
+        <location line="-353"/>
+        <location line="+355"/>
         <source>its dataset store was shredded on {date}</source>
         <translation>이 데이터셋 저장소는 {date}에 파기되었습니다</translation>
     </message>
     <message>
-        <location line="+3"/>
+        <location line="-352"/>
+        <location line="+355"/>
         <source>its images are in the dataset store of {store}, not of {customer}</source>
         <translation>이미지가 {customer}이(가) 아니라 {store}의 데이터셋 저장소에 있습니다</translation>
     </message>
@@ -1008,7 +1016,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-2006"/>
+        <location line="-2027"/>
         <source>no defect type was given</source>
         <translation>결함 유형이 지정되지 않았습니다</translation>
     </message>
@@ -1023,7 +1031,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+554"/>
+        <location line="+555"/>
         <source>its UUID {found} is not {uuid}, as in the AI model registry</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1043,7 +1051,7 @@
         <translation>{label}(으)로 다시 라벨링</translation>
     </message>
     <message>
-        <location line="+626"/>
+        <location line="+646"/>
         <source>no agreement check of the board model holds images of this view</source>
         <translation>이 보드 모델의 일치도 검사 중 이 뷰의 이미지를 담은 것이 없습니다</translation>
     </message>
@@ -2068,6 +2076,21 @@
     </message>
     <message>
         <location line="+7"/>
+        <source>Training not started: customer or use not allowed</source>
+        <translation>학습이 시작되지 않음: 허용되지 않은 고객 또는 용도</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>{name} was not trained for the use {use}: {reason}.</source>
+        <translation>{name}이(가) {use} 용도로 학습되지 않았습니다: {reason}.</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Train from a version of one customer&apos;s dataset store that allows this use; the refusal is in the audit log, and the active AI model is unchanged.</source>
+        <translation>이 용도를 허용하는 한 고객의 데이터셋 저장소 버전으로 학습하십시오. 거부 내역은 감사 로그에 있으며, 활성 AI 모델은 바뀌지 않았습니다.</translation>
+    </message>
+    <message>
+        <location line="+8"/>
         <source>AI model, recipe, scale or Golden board changed since the run</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2472,7 +2495,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-974"/>
+        <location line="-984"/>
         <source>Board judged NG</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2572,7 +2595,7 @@
         <translation>새 버전을 고정하고 검증 세트를 잠그면 해당 이미지는 잠긴 채로 유지됩니다. 그 버전으로 학습하십시오. 아무것도 저장되지 않았으며, 활성 AI 모델은 바뀌지 않았습니다.</translation>
     </message>
     <message>
-        <location line="+52"/>
+        <location line="+62"/>
         <source>ROI thresholds refused</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4860,7 +4883,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/services.py" line="-2180"/>
+        <location filename="../core/services.py" line="-2201"/>
         <source>Aligning {count} images to the reference board</source>
         <translation type="unfinished"></translation>
     </message>

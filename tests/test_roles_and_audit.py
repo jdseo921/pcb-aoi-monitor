@@ -16,17 +16,16 @@ from PySide6.QtWidgets import QInputDialog, QMessageBox
 from pytestqt.qtbot import QtBot
 
 from aoi.config import Settings, default_workspace
-from aoi.core import crypto, stores
+from aoi.core import crypto
 from aoi.core.labels import DefectBox
 from aoi.core.recipe import Recipe
 from aoi.core.sample_import import ImportFile, ImportReport
 from aoi.core.services import REQUIRED_ROLE, ROLES, AppContext, CsvFile
-from aoi.data import credentials
-from aoi.data.db import new_uuid
 from aoi.errors import AoiError
 from aoi.ui.main_window import MainWindow
 from aoi.ui.pages.base import role_text
 from aoi.ui.pages.settings import SettingsPage
+from tools.trainable import a_store, in_store, key_of
 
 
 def _raising(report: ImportReport) -> ImportReport:
@@ -58,36 +57,6 @@ def labelled_blind(ctx: AppContext) -> str:
             if image not in ctx.db.blind_labels(uid, user):
                 ctx.db.add_row("blind_labels", set_uuid=uid, sample_uuid=image, label="OK", labelled_by=user)
     return uid
-
-
-def key_of(ctx: AppContext, store_uuid: str) -> bytes:
-    """The key the key store holds for a store."""
-    return ctx.credentials.read(credentials.STORE_PREFIX + store_uuid) or b""
-
-
-def a_store(ctx: AppContext, customer: str) -> str:
-    """The UUID of `customer`'s dataset store, its row and key stored through the database and the key store when
-    missing, so that only the call under test is role-checked and audited."""
-    if found := [s for s in ctx.db.stores() if s["customer"] == customer and not s["shredded_at"]]:
-        return str(found[0]["uuid"])
-    (key, key_id), uid, who = crypto.new_key(), new_uuid(), str(ctx.db.user_uuid("admin"))
-    ctx.db.add_store({"uuid": uid, "customer": customer, "key_id": key_id.hex(), "check_value": crypto.check_value(key),
-                      "created_by": who, "created_at": "2026-10-09T00:00:00+00:00"})  # fmt: skip
-    ctx.credentials.write(credentials.STORE_PREFIX + uid, key)
-    return uid
-
-
-def in_store(ctx: AppContext, board_model: str, customer: str) -> None:
-    """`board_model` in `customer`'s store with its files encrypted, as move_in leaves it, stored through the database
-    where missing, so that only the call under test is role-checked and audited."""
-    if ctx.db.board_model_store(board_model) is None:
-        row = {"uuid": new_uuid(), "board_model": board_model, "store_uuid": a_store(ctx, customer)}
-        ctx.db.add_board_model_store(row | {"set_by": "admin", "set_at": "2026-10-09T00:00:00+00:00"})
-    store = ctx.db.board_model_store(board_model) or {}
-    key = key_of(ctx, store["uuid"])
-    for f in stores.files_of(ctx.settings.root, board_model, [d["name"] for d in ctx.db.datasets(board_model)]):
-        if stores.header_of(f) is None:
-            ctx._encrypt_in_place(store, key, f)
 
 
 def ready_to_freeze(ctx: AppContext) -> str:
