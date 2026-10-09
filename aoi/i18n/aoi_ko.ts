@@ -3230,7 +3230,7 @@
 <context>
     <name>FreezeSheet</name>
     <message>
-        <location filename="../ui/pages/training_versions.py" line="+141"/>
+        <location filename="../ui/pages/training_versions.py" line="+144"/>
         <source>Freeze dataset</source>
         <translation>데이터셋 동결</translation>
     </message>
@@ -5206,7 +5206,7 @@
 <context>
     <name>SplitSheet</name>
     <message>
-        <location filename="../ui/pages/training_versions.py" line="+204"/>
+        <location filename="../ui/pages/training_versions.py" line="+247"/>
         <source>Seed</source>
         <translation>시드</translation>
     </message>
@@ -6054,7 +6054,7 @@
 <context>
     <name>VersionsPanel</name>
     <message>
-        <location filename="../ui/pages/training_versions.py" line="-266"/>
+        <location filename="../ui/pages/training_versions.py" line="-309"/>
         <source>own</source>
         <translation>자체</translation>
     </message>
@@ -6069,7 +6069,7 @@
         <translation>데모</translation>
     </message>
     <message>
-        <location line="+12"/>
+        <location line="+13"/>
         <source>Versions</source>
         <translation>버전</translation>
     </message>
@@ -6129,6 +6129,11 @@
         <translation>매니페스트 검증</translation>
     </message>
     <message>
+        <location line="+1"/>
+        <source>Export Manifest…</source>
+        <translation>매니페스트 내보내기…</translation>
+    </message>
+    <message>
         <location line="+5"/>
         <source>Checking each file against its manifest…</source>
         <translation>각 파일을 매니페스트와 대조하는 중…</translation>
@@ -6179,7 +6184,7 @@
         <translation>{line} 변경되었거나 없는 파일: {files}</translation>
     </message>
     <message>
-        <location line="+12"/>
+        <location line="+13"/>
         <source>Its validation set is locked: a new split needs a new dataset version</source>
         <translation>검증 세트가 잠겨 있습니다: 새로 분할하려면 새 데이터셋 버전이 필요합니다</translation>
     </message>
@@ -6197,6 +6202,31 @@
         <location line="+5"/>
         <source>Verify Manifest of {name} stopped; nothing was marked</source>
         <translation>{name}의 매니페스트 검증을 중지했습니다. 아무것도 표시하지 않았습니다</translation>
+    </message>
+    <message>
+        <location line="+20"/>
+        <source>Export the manifest of {name}: {files} files, one row each?</source>
+        <translation>{name}의 매니페스트를 내보낼까요? 파일 {files}개, 파일당 한 행입니다.</translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>Confirm export</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>Export Manifest</source>
+        <translation>매니페스트 내보내기</translation>
+    </message>
+    <message>
+        <location line="+0"/>
+        <source>CSV (*.csv)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+21"/>
+        <source>Exported the manifest of {name}: {files} files to {file}</source>
+        <translation>{name}의 매니페스트를 내보냈습니다: 파일 {files}개, {file}</translation>
     </message>
 </context>
 <context>
@@ -6220,7 +6250,7 @@
 <context>
     <name>WorkingSetPanel</name>
     <message>
-        <location filename="../ui/pages/training_versions.py" line="-426"/>
+        <location filename="../ui/pages/training_versions.py" line="-476"/>
         <source>Their own AI models</source>
         <translation>고객 자체 AI 모델</translation>
     </message>

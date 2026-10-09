@@ -1,13 +1,17 @@
 """REQ-TRN-005 and -006 on screen (Datasets stage 4 of 4): Training › Datasets' Versions table, the board model's
-frozen versions newest first, and Verify Manifest, which re-hashes the version picked on the pool. Results on synthetic
+frozen versions newest first; Verify Manifest, which re-hashes the version picked on the pool; and Export Manifest…,
+which writes it as CSV. Results on synthetic
 boards prove a code path; they are never quoted as accuracy."""
 
 from __future__ import annotations
 
+import csv
+import json
 import threading
 from pathlib import Path
 
 import pytest
+from PySide6.QtWidgets import QFileDialog, QMessageBox
 from pytestqt.qtbot import QtBot
 
 from aoi.core.services import AppContext
@@ -119,3 +123,56 @@ def test_req_trn_005_verify_manifest(
     said = page.shell.statusBar().currentMessage()
     assert said == f"Verify Manifest of {v1['name']} stopped after 2 of 100 files; nothing was marked"
     assert _row(page, 0)[8] == "✗ 1 changed, 1 missing" and versions.found.isVisible()
+
+
+def test_req_trn_005_export_manifest(
+    qtbot: QtBot,
+    ctx: AppContext,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    dialogs: list[tuple[str, str]],
+) -> None:
+    """Export Manifest… asks first, naming the version and its file count, and No writes nothing. Yes and a file name
+    write the version picked as CSV, one row per file in the manifest's order: path, SHA-256, label, defect type,
+    boxes, labeller and checker by name and its part of the split; the export is audited and the status line says so.
+    A file that cannot be written is AOI-LOG-002's dialog. Off with no version picked."""
+    samples, cal = ready(ctx, tmp_path / "boards")
+    agree(ctx, cal, samples)
+    v1 = ctx.freeze_dataset(CAL, "Top", "R3", "Acme")
+    split = ctx.lock_validation_set(v1["uuid"], seed=1)
+    page = _datasets(qtbot, ctx)
+    asked, answers = [], [QMessageBox.StandardButton.No, QMessageBox.StandardButton.Yes, QMessageBox.StandardButton.Yes]
+
+    def question(_parent: object, title: str, text: str, *_rest: object) -> QMessageBox.StandardButton:
+        asked.append((title, text))
+        return answers[len(asked) - 1]
+
+    out = tmp_path / "out" / "manifest.csv"
+    out.parent.mkdir()
+    picked = [str(out), str(out.parent)]  # the second, a folder, cannot be written as a file
+    monkeypatch.setattr(QMessageBox, "question", staticmethod(question))
+    monkeypatch.setattr(QFileDialog, "getSaveFileName", staticmethod(lambda *_a: (picked.pop(0), "")))
+    page.versions.btn_export.click()
+    assert asked == [("Confirm export", f"Export the manifest of {v1['name']}: 100 files, one row each?")]
+    assert not out.exists() and len(picked) == 2
+    page.versions.btn_export.click()
+    with out.open(encoding="utf-8-sig", newline="") as f:
+        reader = csv.DictReader(f)
+        rows = list(reader)
+    assert reader.fieldnames == ["path", "sha256", "label", "defect_type", "boxes", "labelled_by", "checked_by", "part"]
+    items = ctx.dataset_items(v1["uuid"])
+    assert [(r["path"], r["sha256"], r["label"]) for r in rows] == [(i["path"], i["sha256"], i["label"]) for i in items]
+    ng = [(r, i) for r, i in zip(rows, items, strict=True) if i["label"] == "NG"]
+    assert {r["defect_type"] for r, _ in ng} == {"Scratch"} and {r["checked_by"] for r, _ in ng} == {"kim"}
+    assert all(json.loads(r["boxes"]) == i["boxes"] for r, i in ng)
+    assert {r["labelled_by"] for r in rows} <= {u["name"] for u in ctx.users()}
+    parts = {i["uuid"]: r["part"] for r, i in zip(rows, items, strict=True)}
+    assert sorted(u for u, p in parts.items() if p == "validation") == sorted(split["validation"])
+    [entry] = ctx.audit_entries(action="export.csv")
+    assert (entry["object_type"], entry["after"]["rows"]) == ("dataset manifest", 100)
+    said = page.shell.statusBar().currentMessage()
+    assert said == f"Exported the manifest of {v1['name']}: 100 files to manifest.csv"
+    page.versions.btn_export.click()
+    assert [title.split()[0] for title, _ in dialogs] == ["AOI-LOG-002"] and not picked
+    page.shell._on_board_model("")
+    assert not page.versions.btn_export.isEnabled()

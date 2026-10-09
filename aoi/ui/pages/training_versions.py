@@ -3,11 +3,12 @@ Datasets stage 4 of 4): the datasets sketch's working set, view by view with its
 dataset store holds the board model and the allowed uses; Freeze Dataset… shows the Freeze sheet in place of the
 labeller agreement, the version it would make and a line for each thing a freeze needs, ✓ or ✗ with the fix, and
 Freeze freezes the version on the pool, with progress and Cancel. The Versions table lists the board model's frozen
-versions; Split and Lock Validation Set… shows its sheet in the same place, and Verify Manifest re-hashes the version
-picked on the pool. Nothing here reads or writes the database itself."""
+versions; Split and Lock Validation Set… shows its sheet in the same place, Verify Manifest re-hashes the version
+picked on the pool, and Export Manifest… writes its files as CSV. Nothing here reads or writes the database itself."""
 
 from __future__ import annotations
 
+import json
 import math
 import secrets
 from collections import Counter
@@ -20,11 +21,13 @@ from PySide6.QtWidgets import (
     QAbstractItemView,
     QCheckBox,
     QComboBox,
+    QFileDialog,
     QFormLayout,
     QGroupBox,
     QHBoxLayout,
     QLabel,
     QLineEdit,
+    QMessageBox,
     QVBoxLayout,
 )
 
@@ -318,6 +321,7 @@ USES_SHORT = {  # the Versions table's Uses cell, as the sketch writes it
     "demos": QT_TRANSLATE_NOOP("VersionsPanel", "demos"),
 }
 FOUND_SHOWN = 5  # the changed or missing files named under the table; the rest are counted
+MANIFEST_COLUMNS = ["path", "sha256", "label", "defect_type", "boxes", "labelled_by", "checked_by", "part"]
 SEED_TOP = 2**31 - 1  # a split's seed is 0 to this, as AppContext.lock_validation_set draws one
 
 
@@ -350,8 +354,9 @@ class VersionsPanel(QGroupBox):
         row = QHBoxLayout()
         self.btn_split = button(self.tr("Split and Lock Validation Set…"), slot=self.open_split)
         self.btn_verify = button(self.tr("Verify Manifest"), slot=self.verify)
-        row.addWidget(self.btn_split)
-        row.addWidget(self.btn_verify)
+        self.btn_export = button(self.tr("Export Manifest…"), slot=self.export_manifest)
+        for b in (self.btn_split, self.btn_verify, self.btn_export):
+            row.addWidget(b)
         row.addStretch(1)
         lay.addLayout(row)
         self.busy = BusyOverlay(self.table, self.tr("Checking each file against its manifest…"))
@@ -431,10 +436,11 @@ class VersionsPanel(QGroupBox):
         self.sync()
 
     def sync(self) -> None:
-        """Verify Manifest needs a version picked and no job of the page's running; Split and Lock Validation Set…, a
-        version not split, and no sheet of the tab open."""
+        """Verify Manifest and Export Manifest… need a version picked and no job of the page's running; Split and Lock
+        Validation Set…, a version not split, and no sheet of the tab open."""
         uuid, idle = self.picked(), self.page.idle()
         self.btn_verify.setEnabled(uuid is not None and idle)
+        self.btn_export.setEnabled(uuid is not None and idle)
         locked = uuid is not None and bool(self.counts.get(uuid, {}).get("locked"))
         self.btn_split.setEnabled(uuid is not None and not locked and idle and not self.page.sheet_open())
         said = self.tr("Its validation set is locked: a new split needs a new dataset version")
@@ -475,6 +481,46 @@ class VersionsPanel(QGroupBox):
             self.ctx.verify_dataset, uuid, with_progress=True, on_result=checked, on_cancel=stopped, busy=self.busy,
         )  # fmt: skip
         self.sync()
+
+    def export_manifest(self) -> None:
+        """Export Manifest…: once a question naming the version and its file count is answered Yes, the version
+        picked as CSV, one row per file as its manifest lists it: path, SHA-256, label, defect type, boxes, labeller and
+        checker by name, and its part of the split ("train" or "validation", blank while it is not split). Audited as
+        an export; a file that cannot be written is the coded error's dialog, and nothing is written."""
+        uuid = self.picked()
+        if uuid is None or not self.btn_export.isEnabled():
+            return
+        version = next(v for v in self.rows if v["uuid"] == uuid)
+        items = self.ctx.dataset_items(uuid)
+        question = self.tr("Export the manifest of {name}: {files} files, one row each?")
+        yes, no = QMessageBox.StandardButton.Yes, QMessageBox.StandardButton.No
+        asked = question.format(name=version["name"], files=len(items))
+        if QMessageBox.question(self, self.tr("Confirm export"), asked, yes | no, yes) != yes:
+            return
+        start = str(self.ctx.settings.exports_dir / f"{version['name']}.csv")
+        f, _ = QFileDialog.getSaveFileName(self, self.tr("Export Manifest"), start, self.tr("CSV (*.csv)"))
+        if not f:
+            return
+        names = {u["uuid"]: u["name"] for u in self.ctx.users()}
+        split = self.ctx.validation_split(uuid) or {}
+        part = {i: p for p in ("train", "validation") for i in split.get(p, [])}
+
+        def who(user: str | None) -> str:
+            return names.get(user, user) if user else ""  # a label carried over by migration 0014 names nobody
+
+        rows = [
+            {"path": i["path"], "sha256": i["sha256"], "label": i["label"], "defect_type": stratum(i),
+             "boxes": json.dumps(i["boxes"], sort_keys=True), "labelled_by": who(i["labelled_by"]),
+             "checked_by": who(i["checked_by"]), "part": part.get(i["uuid"], "")}
+            for i in items
+        ]  # fmt: skip
+        try:
+            self.ctx.export_csv(f, rows, "dataset manifest", MANIFEST_COLUMNS)
+        except AoiError as e:
+            self.page.error(e)
+            return
+        said = self.tr("Exported the manifest of {name}: {files} files to {file}")
+        self.page.shell.status(said.format(name=version["name"], files=len(rows), file=Path(f).name))
 
 
 class SplitSheet(QGroupBox):
