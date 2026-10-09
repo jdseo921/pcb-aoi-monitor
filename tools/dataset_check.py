@@ -259,7 +259,12 @@ def peak_memory_mb() -> float | None:
             c = Counters()
             c.cb = ctypes.sizeof(c)
             k32, psapi = ctypes.WinDLL("kernel32"), ctypes.WinDLL("psapi")
-            psapi.GetProcessMemoryInfo(k32.GetCurrentProcess(), ctypes.byref(c), c.cb)
+            # Without these types ctypes cuts the 64-bit process handle to a 32-bit int and the call fails.
+            k32.GetCurrentProcess.restype = wintypes.HANDLE
+            psapi.GetProcessMemoryInfo.argtypes = [wintypes.HANDLE, ctypes.POINTER(Counters), wintypes.DWORD]
+            psapi.GetProcessMemoryInfo.restype = wintypes.BOOL
+            if not psapi.GetProcessMemoryInfo(k32.GetCurrentProcess(), ctypes.byref(c), c.cb):
+                return None
             return round(c.peak / 2**20, 1)
         import resource
 
@@ -338,7 +343,8 @@ def summary(r: dict[str, Any]) -> str:
             f"NG {a['ng']}: {a['ng_called_ok']} OK, {a['ng_called_warning']} Warning; training {a['train_s']} s.",
             "",
         ]
-    lines += [f"Peak memory {r['peak_memory_mb']} MB; sources unchanged: {r['sources_unchanged']}.", ""]
+    peak = "not read" if r["peak_memory_mb"] is None else f"{r['peak_memory_mb']} MB"
+    lines += [f"Peak memory {peak}; sources unchanged: {r['sources_unchanged']}.", ""]
     return "\n".join(lines)
 
 

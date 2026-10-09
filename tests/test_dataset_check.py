@@ -147,6 +147,18 @@ def test_req_insp_014_upper_bound_of_a_rate() -> None:
     assert dc.upper_95(5, 5) == 1.0 and dc.upper_95(0, 0) == 1.0
 
 
+def test_req_trn_007_peak_memory_is_read() -> None:
+    """Windows CI runs this too: there the read failed, and the summary said 0.0 MB, until the handle had its type."""
+    peak = dc.peak_memory_mb()
+    assert peak is not None and peak > 0
+
+
+def test_req_trn_007_summary_says_when_peak_memory_was_not_read() -> None:
+    r = {"when_utc": "t", "note": "n", "machine": {}, "settings": {"recipe": "r"}, "arguments": []}
+    assert "Peak memory not read;" in dc.summary({**r, "peak_memory_mb": None, "sources_unchanged": True})
+    assert "Peak memory 12.5 MB;" in dc.summary({**r, "peak_memory_mb": 12.5, "sources_unchanged": True})
+
+
 def test_req_insp_014_ai_model_trained_per_group_and_scored_on_the_test_split(tmp_path: Path) -> None:
     deeppcb = _deeppcb(tmp_path / "d", boards=4)
     out = tmp_path / "out"
