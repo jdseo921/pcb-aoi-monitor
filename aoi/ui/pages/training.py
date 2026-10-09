@@ -65,6 +65,7 @@ from .base import (
 from .training_agreement import AgreementPanel, BlindPanel
 from .training_import import ImportSheet
 from .training_labels import LabelEditor, State
+from .training_versions import VersionsPanel, WorkingSetPanel
 
 if TYPE_CHECKING:
     from ..main_window import MainWindow
@@ -314,12 +315,15 @@ class TrainingPage(Page):
         kl = QVBoxLayout(self.keys)
         kl.setContentsMargins(0, 0, 0, 0)
         kl.addWidget(split)
-        datasets = QWidget()  # what a freeze needs: the labeller agreement for now (Datasets stage, 2 of 4)
-        dl = QVBoxLayout(datasets)
+        self.datasets_tab = QWidget()  # the working set, the labeller agreement and the versions (Datasets stage)
+        dl = QVBoxLayout(self.datasets_tab)
         dl.setContentsMargins(0, 0, 0, 0)
+        self.working = WorkingSetPanel(self)
         self.agreement = AgreementPanel(self)
-        dl.addWidget(self.agreement)
-        dl.addStretch(1)
+        self.versions = VersionsPanel(self)
+        for w in (self.working, self.working.sheet, self.versions.split, self.agreement):
+            dl.addWidget(w)  # a sheet in the agreement's place while it is open (show_sheet)
+        dl.addWidget(self.versions, 1)  # the table takes the height left
         # the sketches' Samples and Datasets tabs, on the title row as they draw them, so the page is no taller than
         # before them (Training fits a 1600 x 900 screen); the training panel stays beside both
         self.tabs = QTabBar()
@@ -331,7 +335,7 @@ class TrainingPage(Page):
         self.blind.closed.connect(self._blind_closed)
         self.stack = QStackedWidget()  # the tab shown, or the blind panel
         self.stack.addWidget(self.keys)
-        self.stack.addWidget(datasets)
+        self.stack.addWidget(self.datasets_tab)
         self.stack.addWidget(self.blind)
         self.tabs.currentChanged.connect(self.stack.setCurrentIndex)
         outer = QSplitter(Qt.Orientation.Horizontal)
@@ -347,6 +351,33 @@ class TrainingPage(Page):
         self.removeAction(a)
         self.keys.addAction(a)
         return a
+
+    def dataset_action(self, text: str, key: str, slot: Callable[[], object]) -> QAction:
+        """A key of the Datasets tab's, acting only while the tab is shown, as `action` makes the Samples tab's."""
+        a = super().action(text, key, slot)
+        self.removeAction(a)
+        self.datasets_tab.addAction(a)
+        return a
+
+    def idle(self) -> bool:
+        """No import, draw or freeze of the page's runs: one job of the page's at a time (#194)."""
+        return self._bg is None
+
+    def show_sheet(self, sheet: QWidget | None) -> None:
+        """A sheet of the Datasets tab, Freeze or Split and Lock, in the labeller agreement's place, or with None the
+        agreement back: what it replaces hidden first, so the page keeps the height a 1600 x 900 screen gives it."""
+        if sheet is not None:
+            self.agreement.hide()
+        for s in (self.working.sheet, self.versions.split):
+            s.setVisible(s is sheet)
+        if sheet is None:
+            self.agreement.show()
+        self.working.sync()  # Freeze Dataset… and Split and Lock Validation Set…, off while a sheet is open
+        self.versions.sync()
+
+    def sheet_open(self) -> bool:
+        """Whether a sheet of the Datasets tab is open: one at a time."""
+        return self.working.sheet.isVisible() or self.versions.split.isVisible()
 
     def open_blind(self, set_uuid: str, images: list[str], paths: dict[str, str]) -> None:
         """Label Blind…: the blind panel in the tabs' place, from the set's first image the user has not labelled."""
@@ -429,6 +460,8 @@ class TrainingPage(Page):
         import that runs goes on as the user who started it (#177), and its sheet closes once that import ends."""
         self.editor.forget()  # and the next user never undoes what the user before changed
         self._stop_blind()
+        self.working.sheet.leave()  # the Freeze sheet too; a freeze that runs goes on, as an import does
+        self.versions.split.close_sheet()  # and the Split sheet; a lock that runs ends as the user who started it
         if self.sheet.running:
             self._left = True
         else:
@@ -942,6 +975,8 @@ class TrainingPage(Page):
             a.setEnabled(idle)  # its button and its key
         self.btn_draw.setEnabled(idle)  # a draw would stop the import that runs: one job of the page's at a time
         self.samples_empty.link.setEnabled(idle)
+        self.working.sync()  # Freeze Dataset… and Freeze, off while a job runs
+        self.versions.sync()  # and Split and Lock Validation Set…, Lock and Verify Manifest
         self.btn_train.setEnabled(idle and self.worker is None and self.dataset_version.currentData() is not None)
 
     def _fill_versions(self) -> None:
@@ -1017,9 +1052,13 @@ class TrainingPage(Page):
             self.samples_empty.show_state(*self.no_board_model())
             self.models_empty.hide()
             self.agreement.show_board_model(None, [])
+            self.working.show_board_model(None, [])
+            self.versions.show_board_model(None)
             return
         s = self.ctx.samples(self.board_model)
         self.agreement.show_board_model(self.board_model, s)
+        self.working.show_board_model(self.board_model, s)
+        self.versions.show_board_model(self.board_model)  # after the working set, whose views its empty state reads
         self.shown = {r["id"]: r for r in s}
         self._boxes = {r["id"]: [b["dct_type"] for b in self.ctx.boxes(r["uuid"])] for r in s if r["label"] == "NG"}
         self._check_status()

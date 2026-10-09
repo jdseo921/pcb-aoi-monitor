@@ -241,8 +241,7 @@ and manifest never change, and a later label change goes into the next version. 
 files rather than copying them; the app changes one only to encrypt it in its customer's store, and removes one only
 when that store is shredded, but a file changed or removed outside the app cannot be recovered from the workspace, so
 back the workspace up. Verifying a version hashes its manifest and every file
-again and lists each file that changed or is missing since the freeze; train from another version when one did. No
-screen freezes or verifies a version yet.
+again and lists each file that changed or is missing since the freeze; train from another version when one did.
 
 **Each customer's images are in a store of their own.** A version is frozen only from a board model in the dataset
 store of the customer it names (AOI-TRN-027). An Admin keeps the stores under Settings › Dataset stores, one per
@@ -257,7 +256,23 @@ deletes and waits for the customer's name typed: its key goes first, then its im
 boards; nothing of it opens afterwards, a backup included, once the sheet is destroyed. A file that would not go is
 AOI-TRN-044, and Shred Store… again deletes what is left (ADR 0010).
 
-(to be written: the Datasets tab's freeze, versions and validation set lock)
+**Training › Datasets freezes, splits and checks versions.** The Working set panel counts each view's OK, NG and UNSURE
+images and the checks a freeze needs, with ✓ once the view can be frozen, and names the customer whose dataset store
+holds the board model; tick the allowed uses under it. **Freeze Dataset…** (Ctrl+F) shows the Freeze sheet in place of
+the labeller agreement: pick the view and type the board revision, and the sheet names the version and shows a line for
+each thing a freeze needs, ✓ or ✗ with the fix. **Freeze**, or Enter in the revision, freezes it in the background with
+progress and Cancel; Cancel or Esc stops it, writes nothing and keeps the sheet. The **Versions** table lists the board
+model's versions, newest first: when each was frozen and by whom, its OK and NG images, its locked validation set
+("50 / 6") or "not locked", the customer, the uses and what Verify Manifest found. **Split and Lock Validation Set…**
+shows a sheet for the version picked: its images against the 50 OK and 30 % of the NG that its validation set takes, its
+NG images by defect type, and a random seed you may change. **Lock**, or Enter in the seed, splits the version once, for
+good, and the status line counts both sets; the button is then off for that version, since a new split needs a new
+version, and a version with fewer than 50 OK images cannot be locked. **Verify Manifest** hashes the version picked and
+each of its files again, with progress and Cancel: ✓ when every file matches, else ✗ and, under the table, AOI-TRN-023
+naming the files changed or missing; train from another version, or freeze the working set again. **Export Manifest…**
+asks first, naming the file count, then writes the version as a CSV file, one row per image: its path, SHA-256, label,
+defect type, boxes, labeller, checker and part of the split. Open Version, the sketch's read-only view of a version's
+labels and boxes, comes later.
 
 ## 4. Training and AI model versions
 
@@ -286,9 +301,8 @@ saves nothing, when the version's validation set is not locked or its training s
 (AOI-TRN-045), when an image of its training set is locked in any validation set (AOI-TRN-043), or when its images are
 not in the dataset store of the customer it names or it does not allow the use (AOI-TRN-046, written to the audit log).
 Locking keeps at least 50 OK images for validation, so a board model and view needs 70 or more. An image changed since
-the freeze stops the run with AOI-TRN-045 naming the file. The new AI model names the version it was trained from. No
-screen freezes a version or locks its validation set yet (the Datasets tab comes next), so until then the list holds
-only versions made through the app's service calls.
+the freeze stops the run with AOI-TRN-045 naming the file. The new AI model names the version it was trained from.
+Freeze a version and lock its validation set on the Datasets tab (section 3).
 
 **While a run goes on**, the line under the bar names what it does now, with its percent and the time left: "Aligning
 image 12 of 53", "Building the Golden board: step 3 of 16", "Training epoch 23 of 60", "Calibrating: map 4 of 16", then

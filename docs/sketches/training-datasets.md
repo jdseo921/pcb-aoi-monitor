@@ -71,6 +71,16 @@ tab." with [Open Samples ›].
 | AOI-TRN-025 | The dataset store cannot be opened | Encrypted store key missing or wrong | Check the station's key in Settings (Admin); details in the log |
 | AOI-TRN-044 | The dataset store was not changed | The reason names it: no such store, a board model in another store, a key the key store refused, a file that would not go | Do what the reason says, then try again |
 
+## Built (Datasets stage 4 of 4)
+
+Training › Datasets builds the working set, the Freeze sheet, the Versions table, the Split sheet, Verify Manifest and
+Export Manifest… as drawn, with these differences. Freeze Dataset… and Lock are plain, not blue: Start Training stays
+the page's one blue primary. The Split sheet counts the version's NG by defect type and the share of all NG the
+validation set takes; the draw per type depends on the seed and earlier splits, which only the lock works out.
+AOI-TRN-023 names the files changed or missing under the table, the first five and a count of the rest, in place of Copy
+Details, and its mark, the Manifest cell, lasts the session, as Verify Manifest stores nothing. Open Version is not
+built yet.
+
 ## Dataset stores (S38 builds the calls; the Datasets stage, 3 of 4, builds the screens)
 
 Settings › Dataset stores, Admin only. A table of the stores: customer, key id (first 8 hex digits), created, board

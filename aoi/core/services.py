@@ -1650,8 +1650,15 @@ class AppContext:
     # --- frozen dataset versions (REQ-TRN-005; S35): rows and manifest never change; a change goes into v<N+1> ---
     @requires("Engineer", QT_TRANSLATE_NOOP("Errors", "Freezing a dataset version"))
     def freeze_dataset(
-        self, board_model: str, view: str, revision: str, customer: str, allowed_uses: Sequence[str] = ("own",)
-    ) -> dict[str, Any]:
+        self,
+        board_model: str,
+        view: str,
+        revision: str,
+        customer: str,
+        allowed_uses: Sequence[str] = ("own",),
+        progress: Callable[[int, int], None] | None = None,
+        should_stop: Callable[[], bool] | None = None,
+    ) -> dict[str, Any] | None:
         """Freeze the OK and NG images of a board model and view as version N, one more than the view's last, named by
         `datasets.name`: writes datasets/<name>/manifest.json (each file's relative path, SHA-256, label row and label,
         boxes, labeller, checker); stores the version with its SHA-256, the customer, the uses (own by default, each
@@ -1665,13 +1672,21 @@ class AppContext:
         it replaced before the lock is released, so no other freeze comes between. A freeze that dies before the move
         leaves no manifest; one that dies between the move and the commit leaves a manifest no row names, which the next
         freeze of that name replaces. A second freeze of the view waits for the first. AOI-TRN-041 for a manifest that
-        cannot be written, AOI-TRN-042 for one whose path the system refuses as too long."""
+        cannot be written, AOI-TRN-042 for one whose path the system refuses as too long. `progress(done, total)`
+        follows the files hashed, and once `should_stop()` is true no other file is hashed and None is returned, nothing
+        written (the Datasets tab's Cancel)."""
         uses = list(dict.fromkeys(allowed_uses))  # a use given twice is kept once
         paths = [s["path"] for label in ("OK", "NG") for s in self._in_view(board_model, view, label)]  # AOI-TRN-038
         self._refuse_input(board_model, view, revision, customer, uses)
         name = datasets.name(board_model, revision, view, self._next_version(board_model, view))
         self._refuse_freeze(name, board_model, view, customer)  # before any file is read, and again in the transaction
-        known = {p: (self._sha256(p), to_stored(p, self.settings.root)) for p in paths}  # file work, before the lock
+        known: dict[str, tuple[str, str]] = {}  # file work, before the lock
+        for i, p in enumerate(paths):
+            if should_stop is not None and should_stop():
+                return None
+            known[p] = (self._sha256(p), to_stored(p, self.settings.root))
+            if progress is not None:
+                progress(i + 1, len(paths))
         # the manifest's exit runs after the commit and before the lock is released
         with self.db.locked(), contextlib.ExitStack() as manifest, self.db.transaction():
             n = self._next_version(board_model, view)  # again, in the transaction that stores it
@@ -1701,31 +1716,67 @@ class AppContext:
             move_in()
         return self.db.datasets(board_model, version["uuid"])[0]
 
+    def freeze_gate(self, board_model: str, view: str, revision: str) -> dict[str, Any]:
+        """What Freeze Dataset… shows before it freezes, writing nothing (REQ-TRN-005; Datasets stage 4 of 4): `name`,
+        the version a freeze would make now (None while `revision` is not 1 to 16 letters and digits); `files`, the
+        view's images labelled OK or NG; `labels`, as `label_check_status` gives them; `check`, the newest agreement
+        check of the view, which decides, or None; `store`, as `store_of` gives it, whose customer the freeze names;
+        and `refused`, the error `freeze_dataset` would raise now before reading a file, or None. AOI-TRN-038 for a
+        view other than Top, Side or Bottom."""
+        labels = self.label_check_status(board_model, view)  # AOI-TRN-038
+        store, n = self.store_of(board_model), self._next_version(board_model, view)
+        customer = store["customer"] if store else "-"  # none: `_refuse_freeze` names the missing store
+        name = datasets.name(board_model, revision, view, n) if datasets.REVISION.fullmatch(revision) else None
+        refused = None
+        try:
+            self._refuse_input(board_model, view, revision, customer, ["own"])
+            self._refuse_freeze(datasets.name(board_model, revision, view, n), board_model, view, customer)
+        except AoiError as e:
+            refused = e
+        gate = {"name": name, "files": labels["ok"] + labels["ng"], "labels": labels, "store": store}
+        return gate | {"check": self._newest_check(board_model, view), "refused": refused}
+
     def datasets(self, board_model: str) -> list[dict[str, Any]]:
         """A board model's frozen versions, newest first, as the datasets table holds them (docs/ARCHITECTURE.md)."""
         return self.db.datasets(board_model)
+
+    def dataset_counts(self, board_model: str) -> dict[str, dict[str, int]]:
+        """Each frozen version of a board model, by UUID, as the Datasets tab's Versions table counts it: `ok` and `ng`,
+        its files labelled so, `val_ok` and `val_ng`, those of its locked validation set (0 while it is not split), and
+        `locked`, whether it is split, read at once rather than file list by file list."""
+        return self.db.dataset_counts(board_model)
 
     def dataset_items(self, dataset_uuid: str) -> list[dict[str, Any]]:
         """A frozen version's files as its manifest lists them, each with its row's id, uuid and dataset_uuid."""
         return self.db.dataset_items(dataset_uuid)
 
-    def verify_dataset(self, dataset_uuid: str) -> dict[str, Any]:
+    def verify_dataset(
+        self,
+        dataset_uuid: str,
+        progress: Callable[[int, int], None] | None = None,
+        should_stop: Callable[[], bool] | None = None,
+    ) -> dict[str, Any]:
         """Re-hash a frozen version's manifest and each of its files against the SHA-256 stored at the freeze
         (REQ-TRN-005), writing nothing: `manifest` is same, changed or missing; `files` counts the files, and `matched`,
         `changed` and `missing` list their relative paths in the manifest's order. AOI-TRN-028 for a version the
         workspace does not hold. Hashes on this thread; the Datasets tab runs it on the pool. A file of a customer's
         dataset store is hashed decrypted, and one that does not decrypt (changed, moved, damaged) is changed; a key
-        this station does not hold is AOI-TRN-025 (REQ-TRN-017)."""
+        this station does not hold is AOI-TRN-025 (REQ-TRN-017). `progress(done, total)` follows the files, and once
+        `should_stop()` is true the rest are not hashed: `left` counts them (0 unless stopped)."""
         if not (found := self.db.datasets("", dataset_uuid)):
             raise AoiError("AOI-TRN-028", dataset=dataset_uuid)
         sha = self._verified_sha256(self.settings.root / found[0]["manifest_path"])
         result: dict[str, Any] = {"matched": [], "changed": [], "missing": []}
         result["manifest"] = "missing" if sha is None else "same" if sha == found[0]["manifest_sha256"] else "changed"
         items = self.db.dataset_items(dataset_uuid)
-        for item in items:
+        for i, item in enumerate(items):
+            if should_stop is not None and should_stop():
+                return result | {"files": len(items), "left": len(items) - i}
             sha = self._verified_sha256(resolve(item["path"], self.settings.root))
             result["missing" if sha is None else "matched" if sha == item["sha256"] else "changed"].append(item["path"])
-        return result | {"files": len(items)}
+            if progress is not None:
+                progress(i + 1, len(items))
+        return result | {"files": len(items), "left": 0}
 
     @requires("Engineer", QT_TRANSLATE_NOOP("Errors", "Locking a validation set"))
     @transactional

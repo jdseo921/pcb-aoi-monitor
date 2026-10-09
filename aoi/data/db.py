@@ -419,6 +419,29 @@ class Database:
         rows = self.query("SELECT * FROM dataset_items WHERE dataset_uuid=? ORDER BY id", (dataset_uuid,))
         return [{**r, "boxes": json.loads(r["boxes"])} for r in rows]
 
+    def dataset_counts(self, board_model: str) -> dict[str, dict[str, int]]:
+        """Each frozen version of a board model, by UUID: its OK and NG files, those of its locked validation set, and
+        whether it is split, in two queries."""
+        counts: dict[str, dict[str, int]] = {}
+        sql = (
+            "SELECT i.dataset_uuid, i.label, s.part, COUNT(*) AS n FROM dataset_items i"
+            " JOIN datasets d ON d.uuid = i.dataset_uuid LEFT JOIN validation_split_items s ON s.item_uuid = i.uuid"
+            " WHERE d.board_model=? GROUP BY i.dataset_uuid, i.label, s.part"
+        )
+        for r in self.query(sql, (board_model,)):
+            c = counts.setdefault(r["dataset_uuid"], {"ok": 0, "ng": 0, "val_ok": 0, "val_ng": 0, "locked": False})
+            c[r["label"].lower()] += r["n"]
+            if r["part"] == "validation":
+                c["val_" + r["label"].lower()] += r["n"]
+        sql = (
+            "SELECT s.dataset_uuid FROM validation_splits s JOIN datasets d ON d.uuid = s.dataset_uuid"
+            " WHERE d.board_model=?"
+        )
+        for r in self.query(sql, (board_model,)):
+            if r["dataset_uuid"] in counts:
+                counts[r["dataset_uuid"]]["locked"] = True
+        return counts
+
     def add_split(self, split: dict[str, Any], parts: dict[str, list[dict[str, Any]]]) -> None:
         """Store a frozen version's split and the part ("train" or "validation") each of its files is in, in the
         caller's transaction."""

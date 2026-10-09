@@ -74,6 +74,7 @@ register; `{braces}` are filled in when the error is raised.
 | AOI-TRN-020 | Dataset not frozen: NG labels not checked | {name} was not frozen: a second user has not checked {count} NG label(s). | Have another Engineer or Admin check each NG label, then freeze again. |
 | AOI-TRN-021 | Dataset not frozen: OK labels not checked | {name} was not frozen: {checked} of the {needed} OK label(s) to check (10 % of {ok}) are checked. | Draw OK labels for a check and have another Engineer or Admin check them, then freeze again. |
 | AOI-TRN-022 | Validation set not locked | The validation set of {name} was not locked: {reason}. | Add OK images if there are too few, freeze a new dataset version and lock its validation set; nothing was written. |
+| AOI-TRN-023 | Manifest does not match | {name} does not match what was frozen: {reason}. | Train from another version, or freeze the working set again; the files are named under the Versions table. |
 | AOI-TRN-024 | Dataset not frozen: no customer | {name} was not frozen: no customer is set. | Enter the customer the dataset is for, then freeze it again. |
 | AOI-TRN-025 | Dataset store not opened | The dataset store of {store} was not opened: {reason}. | An Admin types the store's recovery sheet into this station when its key is missing or wrong; a file changed outside the app comes back only from a backup. Nothing was changed. |
 | AOI-TRN-027 | Dataset not frozen | {name} was not frozen: {reason}. | Do what the reason says, then freeze the dataset again; nothing was written. |
