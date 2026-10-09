@@ -922,7 +922,7 @@
         <translation>허용 용도는 own, shared, demos 중 하나 이상입니다</translation>
     </message>
     <message>
-        <location line="+22"/>
+        <location line="+23"/>
         <source>a dataset version of that name is in the workspace already</source>
         <translation>같은 이름의 데이터셋 버전이 이미 작업 공간에 있습니다</translation>
     </message>
@@ -932,7 +932,17 @@
         <translation>이 뷰에 OK 또는 NG로 라벨링된 이미지가 없습니다</translation>
     </message>
     <message>
-        <location line="+42"/>
+        <location line="+11"/>
+        <source>its images are in no customer&apos;s dataset store; an Admin moves them in</source>
+        <translation>이미지가 어느 고객의 데이터셋 저장소에도 없습니다. 관리자가 옮겨 넣습니다</translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>its images are in the dataset store of {store}, not of {customer}</source>
+        <translation>이미지가 {customer}이(가) 아니라 {store}의 데이터셋 저장소에 있습니다</translation>
+    </message>
+    <message>
+        <location line="+34"/>
         <source>Activating an AI model version</source>
         <translation type="unfinished"></translation>
     </message>
@@ -952,7 +962,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1884"/>
+        <location line="-1890"/>
         <source>no defect type was given</source>
         <translation>결함 유형이 지정되지 않았습니다</translation>
     </message>
@@ -987,7 +997,7 @@
         <translation>{label}(으)로 다시 라벨링</translation>
     </message>
     <message>
-        <location line="+525"/>
+        <location line="+526"/>
         <source>no agreement check of the board model holds images of this view</source>
         <translation>이 보드 모델의 일치도 검사 중 이 뷰의 이미지를 담은 것이 없습니다</translation>
     </message>
@@ -997,7 +1007,7 @@
         <translation>이 뷰의 가장 최근 일치도 검사가 목표에 도달하지 못했습니다</translation>
     </message>
     <message>
-        <location line="+58"/>
+        <location line="+63"/>
         <source>Changing settings</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4789,7 +4799,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/services.py" line="-2058"/>
+        <location filename="../core/services.py" line="-2064"/>
         <source>Aligning {count} images to the reference board</source>
         <translation type="unfinished"></translation>
     </message>

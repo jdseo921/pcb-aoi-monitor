@@ -16,7 +16,7 @@ from PySide6.QtWidgets import QInputDialog, QMessageBox
 from pytestqt.qtbot import QtBot
 
 from aoi.config import Settings, default_workspace
-from aoi.core import crypto
+from aoi.core import crypto, stores
 from aoi.core.labels import DefectBox
 from aoi.core.recipe import Recipe
 from aoi.core.sample_import import ImportFile, ImportReport
@@ -77,9 +77,24 @@ def a_store(ctx: AppContext, customer: str) -> str:
     return uid
 
 
+def in_store(ctx: AppContext, board_model: str, customer: str) -> None:
+    """`board_model` in `customer`'s store with its files encrypted, as move_in leaves it, stored through the database
+    where missing, so that only the call under test is role-checked and audited."""
+    if ctx.db.board_model_store(board_model) is None:
+        row = {"uuid": new_uuid(), "board_model": board_model, "store_uuid": a_store(ctx, customer)}
+        ctx.db.add_board_model_store(row | {"set_by": "admin", "set_at": "2026-10-09T00:00:00+00:00"})
+    store = ctx.db.board_model_store(board_model) or {}
+    key = key_of(ctx, store["uuid"])
+    for f in stores.files_of(ctx.settings.root, board_model, [d["name"] for d in ctx.db.datasets(board_model)]):
+        if stores.header_of(f) is None:
+            ctx._encrypt_in_place(store, key, f)
+
+
 def ready_to_freeze(ctx: AppContext) -> str:
-    """TINY, with every Top OK and NG label checked and drawn and an agreed check, stored through the database where
-    missing, so that only the call under test is role-checked and audited."""
+    """TINY, with every Top OK and NG label checked and drawn, an agreed check, and its files in the store of Acme
+    Electronics, stored through the database where missing, so that only the call under test is role-checked and
+    audited."""
+    in_store(ctx, "TINY", "Acme Electronics")
     who, labelled = str(ctx.db.user_uuid("engineer")), [s for s in ctx.samples("TINY") if s["label"] != "UNSURE"]
     for s in [s for s in labelled if s["checked_by"] is None]:  # TINY's samples are all Top
         ctx.db.add_check(s["label_uuid"], s["uuid"], who)

@@ -6,6 +6,8 @@ from __future__ import annotations
 
 import errno
 import hashlib
+import json
+import shutil
 import sqlite3
 from pathlib import Path
 from typing import Any
@@ -19,6 +21,8 @@ from aoi.core.services import AppContext
 from aoi.data import atomic, credentials
 from aoi.errors import AoiError
 from tests.conftest import plain
+from tests.test_datasets import agree, ready
+from tests.test_labeller_agreement import CAL
 
 TWICE = "the customer has a store already, and has one at a time"
 GONE = "the workspace holds no such store, or it is shredded"
@@ -190,3 +194,72 @@ def test_req_trn_017_interrupted_move_in_resumes(
         )
     moves = ctx.audit_entries(action="store.move_in")
     assert [(e["after"]["files"], e["after"]["resumed"]) for e in moves] == [(4, True), (6, False)]
+
+
+def test_req_trn_017_changed_moved_or_foreign_file_refused(ctx: AppContext, tmp_path: Path) -> None:
+    """A file of a store swapped with another of its files, one with a bit changed, a plain image put in its place and
+    another store's file put in its place are each refused with AOI-TRN-025 naming the file, verify_dataset lists them
+    changed, and the freeze is refused; moving the board model in again refuses the other store's file."""
+    samples, cal = ready(ctx, tmp_path / "boards")
+    agree(ctx, cal, samples)
+    v1 = ctx.freeze_dataset(CAL, "Top", "R3", "Acme")
+    board(ctx, "B2", tmp_path / "b2", 1, 9)
+    moved_in(ctx, "B2", "Beta")
+    paths, root = [i["path"] for i in ctx.dataset_items(v1["uuid"])], ctx.settings.root
+    a, b = root / paths[3], root / paths[4]
+    swap = a.read_bytes()
+    a.write_bytes(b.read_bytes())
+    b.write_bytes(swap)
+    data = bytearray((root / paths[5]).read_bytes())
+    data[len(data) // 2] ^= 1
+    (root / paths[5]).write_bytes(bytes(data))
+    shutil.copyfile(tmp_path / "boards" / "board_000.png", root / paths[6])
+    shutil.copyfile(ctx.samples("B2")[0]["path"], root / paths[7])
+    damaged = "{file} was changed, moved or damaged since it was written"
+    expected = [damaged, damaged, damaged, "{file} is not encrypted", "{file} is encrypted under another store's key"]
+    for path, reason in zip(paths[3:8], expected, strict=True):
+        assert refusal(ctx.load_image, root / path) == ("AOI-TRN-025", reason.format(file=path))
+    checked = ctx.verify_dataset(v1["uuid"])
+    assert (checked["manifest"], checked["changed"], checked["missing"]) == ("same", paths[3:8], [])
+    assert refusal(ctx.freeze_dataset, CAL, "Top", "R3", "Acme")[0] == "AOI-TRN-025" and len(ctx.datasets(CAL)) == 1
+    again = refusal(as_admin, ctx, ctx.move_in, CAL, (ctx.store_of(CAL) or {})["uuid"])
+    assert again == ("AOI-TRN-044", f"{paths[7]} is encrypted under another store's key")
+    assert ctx.audit_entries(action="store.move_in")[0]["after"]["board_model"] == "B2"  # the refusal wrote nothing
+
+
+def test_req_trn_017_mixed_customers_refused(ctx: AppContext, tmp_path: Path) -> None:
+    """A version is frozen only from a board model in the store of the customer it names: in no store, or in another
+    customer's, it is refused with AOI-TRN-027 writing nothing. A board model joins one store and never leaves it, and
+    the rows refuse to change or go. The version's manifest is encrypted in the store too, and a station without the
+    key cannot verify it (AOI-TRN-025)."""
+    samples, cal = ready(ctx, tmp_path / "boards", customer=None)
+    agree(ctx, cal, samples)
+    none = "its images are in no customer's dataset store; an Admin moves them in"
+    assert refusal(ctx.freeze_dataset, CAL, "Top", "R3", "Acme") == ("AOI-TRN-027", none)
+    acme, beta = (as_admin(ctx, ctx.create_store, name)["uuid"] for name in ("Acme", "Beta"))
+    as_admin(ctx, ctx.move_in, CAL, acme)
+    left = f"{CAL} is in the store of Acme, and a board model never leaves it"
+    assert refusal(as_admin, ctx, ctx.move_in, CAL, beta) == ("AOI-TRN-044", left)
+    assert refusal(as_admin, ctx, ctx.move_in, "NOPE", acme) == (
+        "AOI-TRN-044",
+        "the workspace holds no board model NOPE",
+    )
+    assert refusal(as_admin, ctx, ctx.move_in, CAL, "no-such-store") == ("AOI-TRN-044", GONE)
+    other = "its images are in the dataset store of Acme, not of Beta"
+    assert refusal(ctx.freeze_dataset, CAL, "Top", "R3", "Beta") == ("AOI-TRN-027", other)
+    assert ctx.datasets(CAL) == [] and ctx.audit_entries(action="dataset.freeze") == []
+    assert len(ctx.audit_entries(action="store.move_in")) == 1
+    v1 = ctx.freeze_dataset(CAL, "Top", "R3", " Acme ")
+    manifest = (ctx.settings.root / v1["manifest_path"]).read_bytes()
+    assert v1["customer"] == "Acme" and manifest.startswith(crypto.MAGIC) and b'"files"' not in manifest
+    assert json.loads(plain(ctx, v1["manifest_path"], CAL))["name"] == v1["name"]
+    for sql in ("UPDATE dataset_stores SET customer='Beta'", "DELETE FROM dataset_stores",
+                "UPDATE board_model_stores SET store_uuid='x'", "DELETE FROM board_model_stores"):  # fmt: skip
+        with pytest.raises(sqlite3.DatabaseError, match="never|shredded"):
+            ctx.db.execute(sql)
+    ctx.close()
+    station = AppContext(ctx.settings, key_store=credentials.MemoryCredentials())
+    try:
+        assert refusal(station.verify_dataset, v1["uuid"]) == ("AOI-TRN-025", NO_KEY)
+    finally:
+        station.close()

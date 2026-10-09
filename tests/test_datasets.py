@@ -17,19 +17,24 @@ from typing import Any
 import numpy as np
 import pytest
 
-from aoi.core import datasets
+from aoi.core import crypto, datasets
 from aoi.core.imaging import save_image
 from aoi.core.labels import DefectBox
 from aoi.core.services import AppContext, _manifest_write
 from aoi.errors import AoiError
-from tests.conftest import distinct_copies
+from tests.conftest import distinct_copies, plain, seal
 from tests.test_labeller_agreement import CAL, calibration_workspace, label_blind
 from tests.test_labels import UUID4
 
 
-def ready(ctx: AppContext, folder: Path) -> tuple[list[dict[str, object]], str]:
-    """CAL-1's 100 images, each NG one boxed, every NG and drawn OK label checked by kim, and a calibration set."""
+def ready(ctx: AppContext, folder: Path, customer: str | None = "Acme") -> tuple[list[dict[str, object]], str]:
+    """CAL-1's 100 images, each NG one boxed, every NG and drawn OK label checked by kim, and a calibration set; its
+    files moved into a new dataset store of `customer` by the admin, unless None (REQ-TRN-017)."""
     samples = calibration_workspace(ctx, folder)
+    if customer is not None:
+        ctx.set_user("admin")
+        ctx.move_in(CAL, ctx.create_store(customer)["uuid"])
+        ctx.set_user("engineer")
     for s in ctx.samples(CAL, "NG"):
         ctx.set_boxes(s["uuid"], [DefectBox(1, 2, 8, 6, "Scratch")])
     ctx.set_user("kim")
@@ -79,7 +84,7 @@ def test_req_trn_005_name_format(ctx: AppContext, tmp_path: Path) -> None:
     assert (v1["customer"], v1["allowed_uses"], v1["agreement_check_uuid"]) == ("Acme", ["own"], agreed)
     assert UUID4.match(v1["uuid"]) and str(v1["frozen_at"]).endswith("+00:00")
     assert (v1["frozen_by"], v1["manifest_path"]) == (ctx.user_uuid, "datasets/DS-CAL1-R3-TOP-v1/manifest.json")
-    manifest = json.loads(data := (ctx.settings.root / v1["manifest_path"]).read_bytes())
+    manifest = json.loads(data := plain(ctx, v1["manifest_path"], CAL))
     assert hashlib.sha256(data).hexdigest() == v1["manifest_sha256"] and manifest["agreement_check"]["uuid"] == agreed
     head = ("uuid", "name", "board_model", "revision", "view", "version", "customer")
     assert [manifest[k] for k in head] == [v1["uuid"], v1["name"], CAL, "R3", "Top", 1, "Acme"]
@@ -90,7 +95,7 @@ def test_req_trn_005_name_format(ctx: AppContext, tmp_path: Path) -> None:
     for f, s in zip(manifest["files"], samples, strict=True):  # all 100
         path = Path(str(s["path"]))
         assert f["path"] == path.relative_to(ctx.settings.root).as_posix() and f["sample_uuid"] == s["uuid"]
-        assert f["sha256"] == hashlib.sha256(path.read_bytes()).hexdigest()
+        assert f["sha256"] == hashlib.sha256(plain(ctx, path, CAL)).hexdigest()
         assert [f[k] for k in keys] + [f["boxes"]] == [s[k] for k in keys] + [box if s["label"] == "NG" else []]
     entry = ctx.audit_entries(action="dataset.freeze")[-1]
     assert (entry["object_uuid"], entry["after"]["name"], entry["after"]["files"]) == (v1["uuid"], v1["name"], 100)
@@ -114,7 +119,9 @@ def test_req_trn_005_change_makes_new_version(ctx: AppContext, tmp_path: Path) -
     old, new = ({i["sample_uuid"]: i for i in ctx.dataset_items(v["uuid"])}[ng] for v in (v1, v2))
     assert (old["boxes"][0]["dct_type"], new["boxes"][0]["dct_type"]) == ("Scratch", "Solder Bridge")
     assert new["label_uuid"] != old["label_uuid"] and v2["name"] == "DS-CAL1-R3-TOP-v2"
-    ctx.import_samples(CAL, [str(distinct_copies(Path(str(samples[0]["path"])), tmp_path / "added", 1)[0])], "OK")
+    ctx.import_samples(
+        CAL, [str(distinct_copies(tmp_path / "boards" / "board_000.png", tmp_path / "added", 1)[0])], "OK"
+    )
     with pytest.raises(AoiError) as short:  # a file added, new bytes (Q31): 81 OK, so 9 to check
         ctx.freeze_dataset(CAL, "Top", "R3", "Acme")
     assert (short.value.code, short.value.params["checked"], short.value.params["needed"]) == ("AOI-TRN-021", 8, 9)
@@ -153,7 +160,7 @@ def test_req_trn_005_verify_detects_tampered_file(ctx: AppContext, tmp_path: Pat
         f.write(b"\0")  # one byte added, as a program that rewrites the image would
     (root / paths[7]).unlink()
     manifest, entries = root / v1["manifest_path"], ctx.audit_entries()
-    manifest.write_bytes(manifest.read_bytes().replace(b'"label": "NG"', b'"label": "OK"', 1))
+    manifest.write_bytes((sealed := manifest.read_bytes())[:-1] + bytes([sealed[-1] ^ 1]))  # one bit of its tag
     tampered = ctx.verify_dataset(v1["uuid"])
     assert [tampered[k] for k in ("manifest", "files", "changed", "missing")] == [
         "changed",
@@ -181,7 +188,7 @@ def test_req_trn_005_orphan_manifest_is_replaced(ctx: AppContext, tmp_path: Path
     orphan.parent.mkdir(parents=True)
     orphan.write_bytes(b"left by a freeze that stopped before its commit")
     v1 = ctx.freeze_dataset(CAL, "Top", "R3", "Acme", ["own", "demos", "own"])
-    manifest = json.loads(data := orphan.read_bytes())
+    manifest = json.loads(data := plain(ctx, orphan, CAL))
     assert hashlib.sha256(data).hexdigest() == v1["manifest_sha256"] and v1["allowed_uses"] == ["own", "demos"]
     items, entry = ctx.dataset_items(v1["uuid"]), ctx.audit_entries(action="dataset.freeze")[-1]
     assert len(items) == len(manifest["files"]) == entry["after"]["files"] == 99
@@ -238,19 +245,19 @@ def test_req_trn_005_a_name_over_255_units_on_windows_is_a_path_too_long(monkeyp
 def test_req_trn_005_relabel_while_hashing_is_refused(
     ctx: AppContext, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """The files are hashed before the freeze's transaction, and the gate and the file list are read inside it, so a
-    label changed while the files are hashed is seen: an NG label changed then is unchecked (AOI-TRN-020)."""
+    """The files are read and hashed before the freeze's transaction, and the gate and the file list are read inside
+    it, so a label changed while the files are hashed is seen: an NG label changed then is unchecked (AOI-TRN-020)."""
     samples, cal = ready(ctx, tmp_path / "boards")
     agree(ctx, cal, samples)
-    ng, digest, once = ctx.samples(CAL, "NG")[0]["uuid"], hashlib.file_digest, [True]
+    ng, decrypt, once = ctx.samples(CAL, "NG")[0]["uuid"], crypto.decrypt, [True]
 
-    def relabel(f: Any, name: str) -> Any:
+    def relabel(*a: Any) -> bytes:  # each file of CAL-1's store is decrypted to be hashed
         if once:
             once.clear()
             ctx.set_boxes(ng, [DefectBox(3, 3, 5, 5, "Scratch")])  # as the UI thread may while the pool hashes
-        return digest(f, name)
+        return decrypt(*a)
 
-    monkeypatch.setattr(hashlib, "file_digest", relabel)
+    monkeypatch.setattr(crypto, "decrypt", relabel)
     with pytest.raises(AoiError) as unchecked:
         ctx.freeze_dataset(CAL, "Top", "R3", "Acme")
     assert (unchecked.value.code, unchecked.value.params["count"]) == ("AOI-TRN-020", 1) and ctx.datasets(CAL) == []
@@ -281,11 +288,13 @@ def test_req_trn_005_newest_agreement_check_decides(ctx: AppContext, tmp_path: P
     assert still.value.code == "AOI-TRN-027" and "newest agreement check" in still.value.what
     passed = ctx.run_agreement_check(cal, kim, lee)
     path = ctx.settings.root / ctx.dataset_items(v1["uuid"])[3]["path"]
-    path.write_bytes(path.read_bytes() + b"\0")  # changed outside the app
+    seal(ctx, path, CAL, plain(ctx, path, CAL) + b"\0")  # changed outside the app, by someone who holds the key
     v2 = ctx.freeze_dataset(CAL, "Top", "R3", "Acme")
     assert v2["agreement_check_uuid"] == passed["uuid"] != v1["agreement_check_uuid"]
     new = ctx.dataset_items(v2["uuid"])[3]
-    assert new["sha256"] == hashlib.sha256(path.read_bytes()).hexdigest() != ctx.dataset_items(v1["uuid"])[3]["sha256"]
+    assert (
+        new["sha256"] == hashlib.sha256(plain(ctx, path, CAL)).hexdigest() != ctx.dataset_items(v1["uuid"])[3]["sha256"]
+    )
     assert ctx.verify_dataset(v1["uuid"])["changed"] == [new["path"]] and not ctx.verify_dataset(v2["uuid"])["changed"]
 
 
@@ -300,17 +309,19 @@ def test_req_trn_005_refused_freeze_reads_no_image(
     agree(ctx, cal, samples)
     ctx.freeze_dataset(CAL, "Top", "R3", "Acme")
     ctx.import_samples("CAL_1", [str(p) for p in sorted((tmp_path / "boards").glob("*.png"))[:3]], "OK")
-    hashed, real = [], datasets.sha256
-    monkeypatch.setattr(datasets, "sha256", lambda path: hashed.append(path) or real(path))
+    hashed, real, decrypt = [], datasets.sha256, crypto.decrypt
+    monkeypatch.setattr(datasets, "sha256", lambda path: hashed.append(path) or real(path))  # a plain file
+    monkeypatch.setattr(crypto, "decrypt", lambda *a: hashed.append(a[3]) or decrypt(*a))  # a file of a store
     with pytest.raises(AoiError) as taken:
         ctx.freeze_dataset("CAL_1", "Top", "R3", "Acme")
-    ng = ctx.samples(CAL, "NG")[0]["uuid"]
+    ng, first = ctx.samples(CAL, "NG")[0]["uuid"], hashed.copy()
     ctx.set_boxes(ng, [DefectBox(3, 3, 5, 5, "Scratch")])  # a new label row, not checked
+    hashed.clear()  # the box read its image's size; what the freezes read is counted
     gone = Path(ctx.samples(CAL, "OK")[5]["path"])
     gone.unlink()
     with pytest.raises(AoiError) as unchecked:
         ctx.freeze_dataset(CAL, "Top", "R3", "Acme")
-    assert (taken.value.code, unchecked.value.code, unchecked.value.params.get("count"), hashed) == (
+    assert (taken.value.code, unchecked.value.code, unchecked.value.params.get("count"), first + hashed) == (
         "AOI-TRN-040", "AOI-TRN-020", 1, []
     )  # fmt: skip
     ctx.set_user("kim")

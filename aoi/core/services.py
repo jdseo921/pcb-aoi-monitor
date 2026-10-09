@@ -1541,13 +1541,13 @@ class AppContext:
         paths = [s["path"] for label in ("OK", "NG") for s in self._in_view(board_model, view, label)]  # AOI-TRN-038
         self._refuse_input(board_model, view, revision, customer, uses)
         name = datasets.name(board_model, revision, view, self._next_version(board_model, view))
-        self._refuse_freeze(name, board_model, view)  # before any file is read, and again in the transaction
+        self._refuse_freeze(name, board_model, view, customer)  # before any file is read, and again in the transaction
         known = {p: (self._sha256(p), to_stored(p, self.settings.root)) for p in paths}  # file work, before the lock
         # the manifest's exit runs after the commit and before the lock is released
         with self.db.locked(), contextlib.ExitStack() as manifest, self.db.transaction():
             n = self._next_version(board_model, view)  # again, in the transaction that stores it
             name = datasets.name(board_model, revision, view, n)
-            agreed = self._refuse_freeze(name, board_model, view)
+            agreed = self._refuse_freeze(name, board_model, view, customer)
             version: dict[str, Any] = {"uuid": new_uuid(), "name": name, "board_model": board_model}
             version |= {"revision": revision, "view": view, "version": n, "customer": customer.strip()}
             version |= {"allowed_uses": uses, "agreement_check_uuid": agreed["uuid"], "frozen_by": self.user_uuid}
@@ -1868,12 +1868,13 @@ class AppContext:
     def _next_version(self, board_model: str, view: str) -> int:
         return 1 + max((d["version"] for d in self.db.datasets(board_model) if d["view"] == view), default=0)
 
-    def _refuse_freeze(self, name: str, board_model: str, view: str) -> dict[str, Any]:
+    def _refuse_freeze(self, name: str, board_model: str, view: str, customer: str) -> dict[str, Any]:
         """The agreement check a version is frozen with; else, read in the freeze's transaction, the first reason not to
         freeze: another board model whose name gives the same letters and digits has frozen versions (AOI-TRN-040), a
         version of that name exists or the view holds no OK or NG image (AOI-TRN-027), an NG label not checked
-        (AOI-TRN-020), too few drawn OK labels checked (AOI-TRN-021), and the newest agreement check missing or short
-        of its targets (AOI-TRN-027)."""
+        (AOI-TRN-020), too few drawn OK labels checked (AOI-TRN-021), the newest agreement check missing or short of
+        its targets, and the board model in no customer's dataset store or in another customer's than `customer`
+        (AOI-TRN-027; REQ-TRN-017)."""
         frozen = self.db.dataset_names()
         token = datasets.token(board_model)
         other = next((d for d in frozen if d != board_model and datasets.token(d) == token), None)
@@ -1895,6 +1896,11 @@ class AppContext:
             why = QT_TRANSLATE_NOOP("Errors", "no agreement check of the board model holds images of this view")
         elif not newest["agreed"]:
             why = QT_TRANSLATE_NOOP("Errors", "the newest agreement check of the view did not reach the targets")
+        elif (store := self.db.board_model_store(board_model)) is None or store["shredded_at"]:
+            why = QT_TRANSLATE_NOOP("Errors", "its images are in no customer's dataset store; an Admin moves them in")
+        elif store["customer"] != customer.strip():
+            why = QT_TRANSLATE_NOOP("Errors", "its images are in the dataset store of {store}, not of {customer}")
+            why = why.fill(store=store["customer"], customer=customer.strip())
         if why is not None or newest is None:
             raise AoiError("AOI-TRN-027", name=name, reason=why)
         return newest
