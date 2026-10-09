@@ -52,7 +52,9 @@ SCALE_NUMBERS = QT_TRANSLATE_NOOP(
     "a length of {length} px over {distance} mm gives no scale: both must be numbers above 0, and the scale from"
     " {least} to {most} px per mm",
 )
-MIN_SCALE, MAX_SCALE = 0.01, 100000  # px per mm a scale set holds, so that no size in mm overflows in px (S29 review)
+# px per mm a scale set holds: from 2, so that no ROI of an image up to 20000 px wide is over MAX_MM (AOI-RCP-011),
+# and up to 100000, so that no size in mm overflows in px (S29 review)
+MIN_SCALE, MAX_SCALE = 2, 100000
 
 
 @dataclass(frozen=True)
@@ -492,7 +494,12 @@ class AppContext:
         that sets, changes or clears the override of the AI score threshold is also audited as `recipe.ai_threshold`
         of the board model (REQ-TRN-015): before and after, the revision, the override (None: none), the threshold
         that judges (the override, else the active AI model's calibrated value; None with neither), that AI model's
-        version and its calibrated value (None while none is active or its calibration cannot be read)."""
+        version and its calibrated value (None while none is active or its calibration cannot be read). A size in mm
+        the engine cannot apply is refused with AOI-RCP-011 (`Recipe.mm_refusal`), and any recipe while the board
+        model's scale cannot be read with AOI-RCP-012, nothing stored (S29 review)."""
+        if (refused := recipe.mm_refusal()) is not None:
+            raise refused
+        self.db.scale(recipe.board_model)  # AOI-RCP-012 for one that cannot be read
         latest = self.db.latest_recipe(recipe.board_model)
         rev, uid = self.db.save_recipe(recipe.board_model, recipe.to_dict(), self.user)
         self.audit("recipe.save", "recipe", uid, latest[1] if latest else None, recipe.to_dict(), reason)
@@ -1043,7 +1050,8 @@ class AppContext:
             raise AoiError("AOI-TRN-005", name=name, existing=same)
 
     def scale(self, board_model: str) -> float | None:
-        """The board model's scale in px per mm (REQ-RCP-006), or None until one is set: its recipe's sizes in px."""
+        """The board model's scale in px per mm (REQ-RCP-006), or None until one is set: its recipe's sizes in px;
+        AOI-RCP-012 for one stored that cannot be read, as for every reader of it (`Database.scale`)."""
         return self.db.scale(board_model)
 
     @requires("Engineer", QT_TRANSLATE_NOOP("Errors", "Setting a board model's scale"))
@@ -1054,7 +1062,8 @@ class AppContext:
         the scale in px per mm, at which its recipe's sizes in mm judge every board from then on, so it can change
         verdicts: audited as board_model.scale with the scale before and after, the length, the distance and the Golden
         board file. Refused with AOI-RCP-008, before anything is written, unless both are numbers above 0, not true or
-        false, whose ratio is from MIN_SCALE to MAX_SCALE, or for a board model that does not exist."""
+        false, whose ratio is from MIN_SCALE to MAX_SCALE, or for a board model that does not exist. It replaces a
+        stored scale that cannot be read (AOI-RCP-012), which its entry keeps as it was stored (S29 review)."""
         numbers = all(isinstance(v, int | float) and not isinstance(v, bool) for v in (length_px, distance_mm))
         scale = length_px / distance_mm if numbers and distance_mm > 0 else math.nan  # a bool is none (S29 review)
         if board_model not in self.db.board_models():
@@ -1062,7 +1071,11 @@ class AppContext:
         if not (numbers and 0 < length_px < math.inf and MIN_SCALE <= scale <= MAX_SCALE):
             reason = SCALE_NUMBERS.fill(length=length_px, distance=distance_mm, least=MIN_SCALE, most=MAX_SCALE)
             raise AoiError("AOI-RCP-008", board_model=board_model, reason=reason)
-        before, golden = self.db.scale(board_model), self.db.reference(board_model)
+        try:
+            before: object = self.db.scale(board_model)
+        except AoiError as e:  # AOI-RCP-012: replaced
+            before = e.params["value"]
+        golden = self.db.reference(board_model)
         self.db.set_scale(board_model, scale)
         image = to_stored(Path(golden), self.settings.root) if golden else None
         after = {"px_per_mm": scale, "length_px": length_px, "distance_mm": distance_mm, "image": image}

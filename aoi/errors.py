@@ -561,6 +561,40 @@ CODES: dict[str, ErrorCode] = {
             ),
         ),
         ErrorCode(
+            "AOI-RCP-010",
+            QT_TRANSLATE_NOOP("Errors", "Scale set after Compare showed the recipe"),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "The scale of board model {board_model} was set to {scale:.2f} px/mm after Compare showed revision"
+                " {revision}, so Save to Recipe listed its changes at the scale before, or in px without one; the"
+                " sheet closed and nothing was saved. Compare now shows the thresholds of revision {revision} at the"
+                " new scale.",
+            ),
+            QT_TRANSLATE_NOOP("Errors", "Try your thresholds again at this scale, then press Save to Recipe."),
+        ),
+        ErrorCode(
+            "AOI-RCP-011",
+            QT_TRANSLATE_NOOP("Errors", "Size in mm refused"),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "The {size} of board model {board_model} cannot be {value} mm: a size in mm is a number above 0 and at"
+                " most {most}, and an ROI's box is four of them, its x and y 0 or more.",
+            ),
+            QT_TRANSLATE_NOOP("Errors", "Nothing was saved. Correct the size, then save the recipe again."),
+        ),
+        ErrorCode(
+            "AOI-RCP-012",
+            QT_TRANSLATE_NOOP("Errors", "Scale cannot be read"),
+            QT_TRANSLATE_NOOP(
+                "Errors", "The stored scale of board model {board_model}, {value}, is not a finite number above 0."
+            ),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Nothing was judged or saved with it. On the Recipe Editor, press Calibrate Scale… and set the scale"
+                " again; Set Scale replaces it.",
+            ),
+        ),
+        ErrorCode(
             "AOI-LOG-001",
             QT_TRANSLATE_NOOP("Errors", "Export stopped part-way"),
             QT_TRANSLATE_NOOP(

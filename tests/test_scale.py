@@ -23,9 +23,10 @@ BOARD_PX_PER_MM = 640 / 150  # the synthetic boards are 640 px wide; taken as 15
 def test_req_rcp_006_a_board_model_stores_its_scale_from_a_known_length(trained_ctx: AppContext) -> None:
     """Migration 0012 adds board_models.px_per_mm, NULL until an Engineer measures a known length on the Golden board:
     set_scale stores length / distance and audits it with the scale before, the length, the distance and the Golden
-    board file it was measured on. A length or distance that is not a number above 0, a scale outside 0.01 to 100000
+    board file it was measured on. A length or distance that is not a number above 0, a scale outside 2 to 100000
     px/mm, or an unknown board model, is refused with AOI-RCP-008 before anything is written or audited; the database
-    refuses 0 or less, text and inf."""
+    refuses 0 or less, text and inf, and a value stored past its CHECK is AOI-RCP-012 wherever it is read, no recipe
+    saved, until Set Scale replaces it (S29 review)."""
     ctx = trained_ctx
     assert "px_per_mm" in {r["name"] for r in ctx.db.query("PRAGMA table_info(board_models)")}
     assert ctx.scale(BOARD) is None
@@ -33,7 +34,7 @@ def test_req_rcp_006_a_board_model_stores_its_scale_from_a_known_length(trained_
     for board, length, distance in (
         (BOARD, 0, 10), (BOARD, 476, 0), (BOARD, -476, 10), (BOARD, math.nan, 10), (BOARD, 476, math.inf),
         (BOARD, 1e308, 1e-308), (BOARD, True, 10), (BOARD, 476, True), ("NO_SUCH_BOARD", 476, 10),
-        (BOARD, "476", 10), (BOARD, 476, None), (BOARD, 1, 1000), (BOARD, 2e6, 10),  # S29 review: text, None, range
+        (BOARD, "476", 10), (BOARD, 476, None), (BOARD, 19, 10), (BOARD, 2e6, 10),  # S29 review: text, None, range
     ):  # fmt: skip
         with pytest.raises(AoiError) as refused:
             ctx.set_scale(board, length, distance)
@@ -49,6 +50,15 @@ def test_req_rcp_006_a_board_model_stores_its_scale_from_a_known_length(trained_
     for damaged in (0, -47.6, "abc", math.inf):  # text too, which SQLite would order above any number (S29 review)
         with pytest.raises(sqlite3.IntegrityError):
             ctx.db.execute("UPDATE board_models SET px_per_mm = ? WHERE name = ?", (damaged, BOARD))
+    ctx.db.execute("PRAGMA ignore_check_constraints = ON")  # damaged past the CHECK, by hand
+    for damaged in ("abc", 0.0, -5.0, math.inf):
+        ctx.db.execute("UPDATE board_models SET px_per_mm = ? WHERE name = ?", (damaged, BOARD))
+        for read in (ctx.scale, ctx.inspector, lambda bm: ctx.save_recipe(ctx.recipe(bm)[1])):
+            with pytest.raises(AoiError) as unread:
+                read(BOARD)
+            assert unread.value.code == "AOI-RCP-012", damaged
+        assert ctx.set_scale(BOARD, 476, 10) == ctx.scale(BOARD) == 47.6, damaged  # Set Scale replaces it
+        assert ctx.audit_entries(action="board_model.scale")[0]["before"] == {"px_per_mm": damaged}
 
 
 def test_req_rcp_006_a_recipe_in_px_judges_as_before(trained_ctx: AppContext, ng_board: Path) -> None:
@@ -73,7 +83,8 @@ def test_req_rcp_006_sizes_in_mm_are_applied_at_the_board_models_scale(trained_c
     defect that wide, rounded up so that a defect of exactly that size is kept, and an ROI's place and size to the
     nearest px; px sizes back to mm and in again give the same px. The record keeps the scale it was judged at, and an
     engine built before a new scale is no longer the current one, so Inspection builds another for its next board, nor
-    is what it judged an AI Model Test run with (its JudgedBy, #250), which counts the scale as the engine does."""
+    is what it judged an AI Model Test run with (its JudgedBy, #250), which counts the scale as the engine does. A size
+    in mm the engine cannot apply is refused with AOI-RCP-011 (S29 review)."""
     recipe = Recipe(board_model=BOARD, min_defect_mm=0.8, rois=[ROI("R1", w=1, h=1, mm=[2.0, 2.5, 5.0, 1.3])])
     px = recipe.in_px(47.6)
     assert px.min_defect_area == math.ceil(math.pi / 4 * 38.08**2) == 1139
@@ -98,6 +109,14 @@ def test_req_rcp_006_sizes_in_mm_are_applied_at_the_board_models_scale(trained_c
     ctx.set_scale(BOARD, 1280, 150)
     assert not ctx.engine_is_current(BOARD, engine) and ctx.inspector(BOARD).recipe.min_defect_area == 515
     assert not ctx.engine_is_current(BOARD, engine.judged_by)
+    revision = ctx.recipe(BOARD)[0]
+    sizes = [(v, None) for v in (0, -3.0, math.nan, math.inf, 1e300, "abc", True)]  # S29 review: above 0, to 10 m,
+    boxes = [(None, b) for b in ([-1.0, 0, 5, 1], [0, 0, 0, 1], [0, 0, 5, 2e4], [0, 0, 5], "abc")]  # x and y from 0
+    for size, box in sizes + boxes:
+        with pytest.raises(AoiError) as refused:
+            ctx.save_recipe(Recipe(board_model=BOARD, min_defect_mm=size, rois=[ROI("R1", mm=box)]))
+        assert refused.value.code == "AOI-RCP-011" and ctx.recipe(BOARD)[0] == revision, (size, box)
+    ctx.save_recipe(Recipe(board_model=BOARD, min_defect_mm=0.01, rois=[ROI("R1", mm=[0, 0, 0.5, 0.5])]))
 
 
 def test_req_rcp_006_a_stored_result_is_judged_again_at_its_own_scale(trained_ctx: AppContext, ng_board: Path) -> None:

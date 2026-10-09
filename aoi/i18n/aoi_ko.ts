@@ -98,13 +98,13 @@
     </message>
     <message>
         <location line="+3"/>
-        <location line="+95"/>
-        <location line="+510"/>
+        <location line="+96"/>
+        <location line="+520"/>
         <source>Golden board</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-604"/>
+        <location line="-615"/>
         <source>AI model</source>
         <translation type="unfinished"></translation>
     </message>
@@ -134,7 +134,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+70"/>
+        <location line="+6"/>
+        <source>Minimum defect size (mm)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+65"/>
         <source>Test Image…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -160,12 +165,12 @@
     </message>
     <message>
         <location line="+15"/>
-        <location line="+826"/>
+        <location line="+844"/>
         <source>Test board</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-820"/>
+        <location line="-838"/>
         <source>Inspecting…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -230,7 +235,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+161"/>
+        <location line="+171"/>
         <source>Would be: {verdict}</source>
         <translation type="unfinished"></translation>
     </message>
@@ -271,12 +276,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+25"/>
+        <location line="+32"/>
         <source>the AI model&apos;s calibrated value</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+75"/>
+        <location line="+76"/>
         <source>{file} was not inspected; press Re-evaluate › to inspect it.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -286,7 +291,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-898"/>
+        <location line="-917"/>
         <source>AI score threshold</source>
         <translation type="unfinished"></translation>
     </message>
@@ -301,7 +306,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1"/>
+        <location line="+2"/>
         <source>Similarity minimum (SSIM)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -338,7 +343,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+162"/>
+        <location line="+172"/>
         <source>Test board: {file}</source>
         <translation type="unfinished"></translation>
     </message>
@@ -380,13 +385,13 @@
     <message>
         <location line="+0"/>
         <location line="+146"/>
-        <location line="+219"/>
+        <location line="+227"/>
         <location line="+12"/>
         <source>Re-evaluate ›</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-363"/>
+        <location line="-371"/>
         <source>Train an AI model on Training.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -439,12 +444,12 @@
         <location line="+1"/>
         <location line="+6"/>
         <location line="+4"/>
-        <location line="+126"/>
+        <location line="+133"/>
         <source>none</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-131"/>
+        <location line="-138"/>
         <source>Since then the board model moved to AI model {model} and recipe revision {revision}.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -464,7 +469,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+127"/>
+        <location line="+135"/>
         <source>Recipe saved as revision {revision}</source>
         <translation type="unfinished"></translation>
     </message>
@@ -510,7 +515,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+21"/>
+        <location line="+23"/>
         <source> ({context})</source>
         <translation type="unfinished"></translation>
     </message>
@@ -550,7 +555,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+86"/>
+        <location line="+91"/>
         <source>it cannot be read ({code} {title})</source>
         <translation type="unfinished"></translation>
     </message>
@@ -610,12 +615,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+23"/>
+        <location line="+24"/>
         <source>Setting a board model&apos;s scale</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+23"/>
+        <location line="+28"/>
         <source>Changing the reference image</source>
         <translation type="unfinished"></translation>
     </message>
@@ -660,17 +665,17 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1078"/>
+        <location line="-1091"/>
         <source>there is no board model of that name</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+407"/>
+        <location line="+409"/>
         <source>its UUID {found} is not {uuid}, as in the AI model registry</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+686"/>
+        <location line="+697"/>
         <source>Changing settings</source>
         <translation type="unfinished"></translation>
     </message>
@@ -712,12 +717,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/compare.py" line="-215"/>
+        <location filename="../ui/pages/compare.py" line="-223"/>
         <source>Changing recipes</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/recipe_editor.py" line="+397"/>
+        <location filename="../ui/pages/recipe_editor.py" line="+401"/>
         <source>Height</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1384,6 +1389,46 @@
     </message>
     <message>
         <location line="+8"/>
+        <source>Scale set after Compare showed the recipe</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>The scale of board model {board_model} was set to {scale:.2f} px/mm after Compare showed revision {revision}, so Save to Recipe listed its changes at the scale before, or in px without one; the sheet closed and nothing was saved. Compare now shows the thresholds of revision {revision} at the new scale.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+7"/>
+        <source>Try your thresholds again at this scale, then press Save to Recipe.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+4"/>
+        <source>Size in mm refused</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+6"/>
+        <source>Nothing was saved. Correct the size, then save the recipe again.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+4"/>
+        <source>Scale cannot be read</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>The stored scale of board model {board_model}, {value}, is not a finite number above 0.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>Nothing was judged or saved with it. On the Recipe Editor, press Calibrate Scale… and set the scale again; Set Scale replaces it.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+8"/>
         <source>Export stopped part-way</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1648,7 +1693,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-637"/>
+        <location line="-671"/>
         <source>Board judged NG</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1703,7 +1748,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+230"/>
+        <location line="+71"/>
+        <source>The {size} of board model {board_model} cannot be {value} mm: a size in mm is a number above 0 and at most {most}, and an ROI&apos;s box is four of them, its x and y 0 or more.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+193"/>
         <source>Workspace in use</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1880,6 +1930,16 @@
     <message>
         <location line="+1"/>
         <source>no scale</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../core/recipe.py" line="+14"/>
+        <source>minimum defect size</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>box of ROI {roi}</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -3035,7 +3095,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/compare.py" line="-733"/>
+        <location filename="../ui/pages/compare.py" line="-743"/>
         <source>Compare</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3090,7 +3150,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/recipe_editor.py" line="-331"/>
+        <location filename="../ui/pages/recipe_editor.py" line="-335"/>
         <source>Recipe Editor</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3342,7 +3402,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+77"/>
+        <location line="+81"/>
         <source>Train an AI model or set a reference image on Training.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3666,7 +3726,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/services.py" line="-1255"/>
+        <location filename="../core/services.py" line="-1268"/>
         <source>Aligning {count} images to the reference board</source>
         <translation type="unfinished"></translation>
     </message>

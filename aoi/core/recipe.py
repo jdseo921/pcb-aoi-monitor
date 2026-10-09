@@ -7,7 +7,12 @@ import math
 from dataclasses import asdict, dataclass, field
 from typing import Any
 
+from ..errors import QT_TRANSLATE_NOOP, AoiError
+
 ROI_TYPES = ["Presence", "Polarity", "Solder Bridge", "Height", "Anomaly"]
+MAX_MM = 10000  # the largest size or place in mm a recipe holds, 10 m: past any board (AOI-RCP-011, S29 review)
+MIN_SIZE = QT_TRANSLATE_NOOP("Errors", "minimum defect size")  # what AOI-RCP-011 names
+ROI_BOX = QT_TRANSLATE_NOOP("Errors", "box of ROI {roi}")
 
 # Defect name reported when a region fails inside an ROI of this type.
 ROI_DEFECT = {
@@ -93,6 +98,26 @@ class Recipe:
                 roi.x, roi.y, roi.w, roi.h = (round(v * px_per_mm) for v in roi.mm)
         return out
 
+    def mm_refusal(self) -> AoiError | None:
+        """AOI-RCP-011 for the first size in mm that `in_px` cannot apply, which `AppContext.save_recipe` refuses: a
+        minimum defect size, or an ROI's width or height in mm, that is no number above 0, an ROI's x or y below 0, a
+        size or place above MAX_MM, or a box that is not four numbers; None when there is none (S29 review)."""
+        if self.min_defect_mm is not None and not _mm(self.min_defect_mm):
+            return AoiError(
+                "AOI-RCP-011", size=MIN_SIZE, board_model=self.board_model, value=self.min_defect_mm, most=MAX_MM
+            )
+        for roi in self.rois:
+            box = roi.mm if isinstance(roi.mm, list) and len(roi.mm) == 4 else [math.nan]
+            if roi.mm is not None and not all(_mm(v, place=i < 2) for i, v in enumerate(box)):
+                return AoiError(
+                    "AOI-RCP-011",
+                    size=ROI_BOX.fill(roi=roi.name),
+                    board_model=self.board_model,
+                    value=roi.mm,
+                    most=MAX_MM,
+                )
+        return None
+
     @property
     def sized_in_mm(self) -> bool:
         """Whether the recipe holds a size in mm, its minimum defect size or an enabled ROI's box: one a scale sizes."""
@@ -115,6 +140,14 @@ def disc_area(width_px: float) -> int:
 def disc_width(area_px: float) -> float:
     """The width in px of a round defect of `area_px` px of area: a minimum defect area as a size (`disc_area` back)."""
     return math.sqrt(4 * area_px / math.pi)
+
+
+def _mm(value: object, place: bool = False) -> bool:
+    """Whether `value` is a size in mm the engine applies: a number, not true or false, above 0 (0 or more for a
+    place) and at most MAX_MM, so that no size in px overflows."""
+    if isinstance(value, bool) or not isinstance(value, int | float):
+        return False
+    return (0 <= value if place else 0 < value) and value <= MAX_MM
 
 
 def scale_digits(a: float | None, b: float | None) -> int:
