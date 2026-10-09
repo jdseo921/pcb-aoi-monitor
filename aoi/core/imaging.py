@@ -576,6 +576,19 @@ def save_image(path: str | Path, img: np.ndarray, params: Sequence[int] = ()) ->
     atomic.write_bytes(path, encode_image(path, img, params))  # whole file or nothing, and non-ASCII Windows paths work
 
 
+PREVIEW_PX = 1600  # the longest side of an overlay kept for a preview: sharp on a 1080 p pane, quick to load
+
+
+def preview_size(img: np.ndarray, longest: int = PREVIEW_PX) -> np.ndarray:
+    """`img` scaled down so its longest side is at most `longest` pixels; a smaller image as it is."""
+    h, w = img.shape[:2]
+    if max(h, w) <= longest:
+        return img
+    f = longest / max(h, w)
+    small: np.ndarray = cv2.resize(img, (max(1, round(w * f)), max(1, round(h * f))), interpolation=cv2.INTER_AREA)
+    return small
+
+
 def list_images(folder: str | Path) -> list[Path]:
     return sorted(p for p in Path(folder).rglob("*") if p.suffix.lower() in IMAGE_EXTS)
 
