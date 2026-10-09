@@ -757,7 +757,7 @@
 <context>
     <name>Errors</name>
     <message>
-        <location filename="../core/services.py" line="+77"/>
+        <location filename="../core/services.py" line="+81"/>
         <source>a length of {length} px over {distance} mm gives no scale: both must be numbers above 0, and the scale from {least} to {most} px per mm</source>
         <translation type="unfinished"></translation>
     </message>
@@ -795,11 +795,12 @@
     </message>
     <message>
         <location line="+158"/>
+        <location line="+1571"/>
         <source>(none)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+31"/>
+        <location line="-1540"/>
         <source>Saving a recipe</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1184,7 +1185,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+85"/>
+        <location line="+140"/>
         <source>Exporting an AI model</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1199,7 +1200,17 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-2210"/>
+        <location line="-2268"/>
+        <source>no earlier version of this board model was active</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>its Golden board {file} cannot be read ({error})</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+2"/>
         <source>no defect type was given</source>
         <translation>결함 유형이 지정되지 않았습니다</translation>
     </message>
@@ -1244,7 +1255,12 @@
         <translation>이 뷰의 가장 최근 일치도 검사가 목표에 도달하지 못했습니다</translation>
     </message>
     <message>
-        <location line="+66"/>
+        <location line="+47"/>
+        <source>Rolling back an AI model</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+74"/>
         <source>Changing settings</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2304,6 +2320,21 @@
     </message>
     <message>
         <location line="+8"/>
+        <source>AI model not made active</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>AI model {version} of board model {board} was not made active: {reason}.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Activate another version on Training, or train again; the active AI model and its Golden board are unchanged.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+8"/>
         <source>AI model, recipe, scale or Golden board changed since the run</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2708,7 +2739,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1006"/>
+        <location line="-1016"/>
         <source>Board judged NG</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2808,7 +2839,7 @@
         <translation>새 버전을 고정하고 검증 세트를 잠그면 해당 이미지는 잠긴 채로 유지됩니다. 그 버전으로 학습하십시오. 아무것도 저장되지 않았으며, 활성 AI 모델은 바뀌지 않았습니다.</translation>
     </message>
     <message>
-        <location line="+74"/>
+        <location line="+84"/>
         <source>ROI thresholds refused</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5545,7 +5576,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/services.py" line="-2391"/>
+        <location filename="../core/services.py" line="-2450"/>
         <source>Aligning {count} images to the reference board</source>
         <translation type="unfinished"></translation>
     </message>

@@ -62,6 +62,12 @@ def _second_version(ctx: AppContext) -> None:
     ctx.db.register_model("TINY", "v1.1", v10["path"], {}, activate=True)
 
 
+def _rolled_back_to_v10(ctx: AppContext) -> None:
+    """v1.0 activated in place of v1.1, so rolling back (WRITES) makes v1.1 active again (REQ-TRN-010)."""
+    _second_version(ctx)
+    ctx.activate_model(next(m["id"] for m in ctx.models("TINY") if m["version"] == "v1.0"))
+
+
 def _a_result(ctx: AppContext) -> None:
     """One stored result with its overlay, so archiving and exporting overlays have something to change."""
     ctx.inspect_file("TINY", ctx.samples("TINY", "OK")[0]["path"])
@@ -87,6 +93,7 @@ def _labelled_set(ctx: AppContext) -> None:
 # a write that would change nothing on the trained workspace gets something to change, or its case proves nothing
 SETUP: dict[str, Callable[[AppContext], object]] = {
     "activate_model": _second_version,
+    "rollback_model": _rolled_back_to_v10,
     "archive_old": _a_result,
     "export_overlays": _a_result,
     "make_calibration_set": _cal_samples,

@@ -558,7 +558,7 @@ def test_req_trn_010_a_board_started_after_an_activation_is_judged_by_the_active
     version = trainable(trained_ctx, BOARD)
     trained_ctx.train(version, epochs=TINY_EPOCHS, image_size=TINY_IMAGE_SIZE)  # v1.1 and its Golden board are active
     run(page.next_board)  # board 2: Next Board on the queue already loaded
-    activate("v1.0")  # v1.0 with v1.1's Golden board (a rollback keeps the newest Golden board, REQ-TRN-010 Partial)
+    activate("v1.0")  # v1.0 with its own Golden board (an activation switches both, REQ-TRN-010, S42)
     run(page.start_run)  # board 3: Start on the queue already loaded
     activate("v1.1")
     page._set_queue(boards[3:5])
@@ -572,7 +572,7 @@ def test_req_trn_010_a_board_started_after_an_activation_is_judged_by_the_active
     g10, g11 = f"{BOARD}_v1.0_golden.png", f"{BOARD}_v1.1_golden.png"
     note = (
         f"The AI model, recipe, scale or Golden board changed during this run: {boards[6].name} was judged with AI"
-        f" model v1.0, recipe revision 1, Golden board {g11} and no scale; each record names the recipe revision and"
+        f" model v1.0, recipe revision 1, Golden board {g10} and no scale; each record names the recipe revision and"
         " Golden board that judged it and the AI model version active then."
     )
     assert page.summary.text() == f"Inspecting {boards[7].name}…\n{note}", "the run says it moved to v1.0"
@@ -585,9 +585,9 @@ def test_req_trn_010_a_board_started_after_an_activation_is_judged_by_the_active
         return Path(rec["reference_path"]).name if rec and rec["reference_path"] else "none"
 
     judged = [(Path(r["image_path"]).name, r["model_version"], golden(r["id"])) for r in trained_ctx.inspections()]
-    by = [("v1.0", g10), ("v1.1", g11), ("v1.0", g11), ("v1.1", g11), ("v1.1", g11), ("v1.1", g11)] + [
-        ("v1.0", g11)
-    ] * 2
+    by = [("v1.0", g10), ("v1.1", g11), ("v1.0", g10), ("v1.1", g11), ("v1.1", g11), ("v1.1", g11)] + [
+        ("v1.0", g10)
+    ] * 2  # each activation brings its version's own Golden board (REQ-TRN-010, S42)
     assert judged[::-1] == [(b.name, *v) for b, v in zip(boards, by, strict=True)], "board 6 was in hand at activation"
     assert built_for == [1, 2, 3, 4, 6, 7], "boards 5 and 8 use the kept engine, which is still current"
     codes = [a["code"] for a in trained_ctx.alarms()]
