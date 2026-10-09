@@ -542,6 +542,34 @@ CODES: dict[str, ErrorCode] = {
             ),
         ),
         ErrorCode(
+            "AOI-TRN-020",
+            QT_TRANSLATE_NOOP("Errors", "Dataset not frozen: NG labels not checked"),
+            QT_TRANSLATE_NOOP("Errors", "{name} was not frozen: {count} NG labels are not checked by a second user."),
+            QT_TRANSLATE_NOOP("Errors", "Have another Engineer or Admin check each NG label, then freeze again."),
+        ),
+        ErrorCode(
+            "AOI-TRN-021",
+            QT_TRANSLATE_NOOP("Errors", "Dataset not frozen: OK labels not checked"),
+            QT_TRANSLATE_NOOP(
+                "Errors", "{name} was not frozen: {checked} of {needed} OK labels to check (10 % of {ok}) are checked."
+            ),
+            QT_TRANSLATE_NOOP(
+                "Errors", "Draw OK labels for a check and have another Engineer or Admin check them, then freeze again."
+            ),
+        ),
+        ErrorCode(
+            "AOI-TRN-024",
+            QT_TRANSLATE_NOOP("Errors", "Dataset not frozen: no customer"),
+            QT_TRANSLATE_NOOP("Errors", "{name} was not frozen: no customer is set."),
+            QT_TRANSLATE_NOOP("Errors", "Enter the customer the dataset is for, then freeze it again."),
+        ),
+        ErrorCode(
+            "AOI-TRN-027",
+            QT_TRANSLATE_NOOP("Errors", "Dataset not frozen"),
+            QT_TRANSLATE_NOOP("Errors", "{name} was not frozen: {reason}."),
+            QT_TRANSLATE_NOOP("Errors", "Do what the reason says, then freeze the dataset again; nothing was written."),
+        ),
+        ErrorCode(
             "AOI-TRN-030",
             QT_TRANSLATE_NOOP("Errors", "Label not changed"),
             QT_TRANSLATE_NOOP("Errors", "The label of {sample} was not changed: {reason}."),

@@ -19,7 +19,7 @@ import os
 import random
 import secrets
 import threading
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Iterator, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Concatenate, Literal, ParamSpec, TypeVar, cast
@@ -37,7 +37,7 @@ from ..data.workspace_lock import WorkspaceLock
 from ..errors import QT_TRANSLATE_NOOP, AoiError, Phrase, joined
 from ..hal import VIEWS
 from ..times import local_date, now_utc
-from . import anomaly, imaging, labels
+from . import anomaly, datasets, imaging, labels
 from .compare import Region, changed_regions
 from .imaging import align_to_reference, encode_image, list_images, load_image, load_image_sha256, save_image
 from .inspector import NG, OK, WARN, AiEvidence, InspectionResult, Inspector, JudgedBy, ai_check, draw_overlay, re_grade
@@ -1487,6 +1487,89 @@ class AppContext:
         """A board model's agreement checks, newest first (uuid, set_uuid, labeller_a, labeller_b, images, ok_ng_agree,
         both_ng, type_agree, ok_ng_target, type_target, agreed 1 or 0, run_by, at_utc)."""
         return self.db.agreement_checks(board_model)
+
+    # --- frozen dataset versions (REQ-TRN-005; S35): a version never changes; a later change goes into v<N+1> ---
+    @requires("Engineer", QT_TRANSLATE_NOOP("Errors", "Freezing a dataset version"))
+    def freeze_dataset(
+        self, board_model: str, view: str, revision: str, customer: str, allowed_uses: Sequence[str] = ("own",)
+    ) -> dict[str, Any]:
+        """Freeze the OK and NG images of a board model and view as version N, one more than the view's last, named by
+        `datasets.name`: writes datasets/<name>/manifest.json (each file's relative path, SHA-256, label row and label,
+        boxes, labeller, checker); stores the version with its SHA-256, the customer, the uses (own by default) and the
+        newest agreed agreement check; audited as `dataset.freeze`. Refused, writing nothing, while
+        labels_ready_to_freeze is False (AOI-TRN-020 for NG, AOI-TRN-021 for OK labels), with no customer
+        (AOI-TRN-024), and for the other lines of the sketch's Freeze sheet (AOI-TRN-027). Hashes on this thread."""
+        n = 1 + max((d["version"] for d in self.db.datasets(board_model) if d["view"] == view), default=0)
+        name = datasets.name(board_model, revision, view, n)
+        rel = f"{datasets.FOLDER}/{name}/manifest.json"
+        agreed = self._refuse_freeze(name, board_model, view, revision, customer, allowed_uses, rel)
+        version: dict[str, Any] = {"uuid": new_uuid(), "name": name, "board_model": board_model, "revision": revision}
+        version |= {"view": view, "version": n, "customer": customer.strip(), "allowed_uses": list(allowed_uses)}
+        version |= {"agreement_check_uuid": agreed["uuid"], "frozen_by": self.user_uuid, "frozen_at": now_utc()}
+        draws = [{k: v for k, v in d.items() if k != "id"} for d in self.db.ok_check_draws(board_model, view)]
+        head = version | {"agreement_check": {k: v for k, v in agreed.items() if k != "id"}, "ok_check_draws": draws}
+        files = [
+            self._frozen_file(s) for s in self.db.samples(board_model) if s["side"] == view and s["label"] != "UNSURE"
+        ]
+        data, sha = datasets.manifest(head, files)
+        atomic.write_bytes(target := self.settings.root / rel, data)
+        try:
+            with self.db.transaction():
+                self.db.add_dataset(version | {"manifest_path": rel, "manifest_sha256": sha}, files)
+                keep = ("name", "customer", "allowed_uses", "agreement_check_uuid")
+                after = {k: version[k] for k in keep} | {"files": len(files), "manifest_sha256": sha}
+                self.audit("dataset.freeze", "dataset", version["uuid"], None, after)
+        except BaseException:
+            target.unlink(missing_ok=True)
+            with contextlib.suppress(OSError):
+                target.parent.rmdir()
+            raise
+        return self.db.datasets(board_model, version["uuid"])[0]
+
+    def datasets(self, board_model: str) -> list[dict[str, Any]]:
+        """A board model's frozen versions, newest first, as the datasets table holds them (docs/ARCHITECTURE.md)."""
+        return self.db.datasets(board_model)
+
+    def dataset_items(self, dataset_uuid: str) -> list[dict[str, Any]]:
+        """A frozen version's files as its manifest lists them, each with its row's id, uuid and dataset_uuid."""
+        return self.db.dataset_items(dataset_uuid)
+
+    def _refuse_freeze(
+        self, name: str, board_model: str, view: str, revision: str, customer: str, uses: Sequence[str], manifest: str
+    ) -> dict[str, Any]:
+        """The newest agreed agreement check; else the first reason not to freeze, in the order of the Freeze sheet."""
+        status = self.label_check_status(board_model, view)  # its `ready` is labels_ready_to_freeze (REQ-TRN-004)
+        agreed = next((c for c in self.db.agreement_checks(board_model) if c["agreed"]), None)
+        why = None
+        if not datasets.REVISION.fullmatch(revision):
+            why = QT_TRANSLATE_NOOP("Errors", "the board revision {revision} is not 1 to 16 letters and digits")
+            why = why.fill(revision=revision)
+        elif not customer.strip():
+            raise AoiError("AOI-TRN-024", name=name)
+        elif not uses or not set(uses) <= set(datasets.ALLOWED_USES):
+            why = QT_TRANSLATE_NOOP("Errors", "the allowed uses are one or more of own, shared and demos")
+        elif not status["ok"] + status["ng"]:
+            why = QT_TRANSLATE_NOOP("Errors", "the view holds no image labelled OK or NG")
+        elif status["ng_unchecked"]:
+            raise AoiError("AOI-TRN-020", name=name, count=len(status["ng_unchecked"]))
+        elif len(status["ok_checked"]) < status["ok_needed"]:
+            checked, needed = len(status["ok_checked"]), status["ok_needed"]
+            raise AoiError("AOI-TRN-021", name=name, checked=checked, needed=needed, ok=status["ok"])
+        elif agreed is None:
+            why = QT_TRANSLATE_NOOP("Errors", "no agreement check of the board model reaches the targets")
+        elif (self.settings.root / manifest).exists():
+            why = QT_TRANSLATE_NOOP("Errors", "a manifest of that name is in the workspace already")
+        if why is not None or agreed is None:
+            raise AoiError("AOI-TRN-027", name=name, reason=why)
+        return agreed
+
+    def _frozen_file(self, sample: dict[str, Any]) -> dict[str, Any]:
+        """One file of a version as its manifest lists it; AOI-INSP-001 when the file cannot be read."""
+        if (sha := datasets.file_sha256(sample["path"])) is None:
+            raise AoiError("AOI-INSP-001", path=sample["path"])
+        keys = ("label_uuid", "label", "defect_type", "labelled_by", "checked_by")
+        head = {"path": to_stored(sample["path"], self.settings.root), "sha256": sha, "sample_uuid": sample["uuid"]}
+        return head | {k: sample[k] for k in keys} | {"boxes": self._label_state(sample)["boxes"]}
 
     @requires("Engineer", QT_TRANSLATE_NOOP("Errors", "Activating an AI model version"))
     @transactional

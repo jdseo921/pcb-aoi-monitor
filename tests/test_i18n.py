@@ -408,6 +408,7 @@ ENGINE_ALLOWED = {  # (file, literal): why it is not a phrase; a stale entry fai
     ("aoi/core/services.py", "missing"): "a Judged key; Compare words it (JUDGED in aoi/ui/pages/compare.py)",
     ("aoi/core/services.py", "unreadable"): "a Judged key; Compare words it (JUDGED in aoi/ui/pages/compare.py)",
     ("aoi/core/services.py", "changed"): "a Judged key; Compare words it (JUDGED in aoi/ui/pages/compare.py)",
+    ("aoi/core/datasets.py", "DS-0-0-0-v0"): "a dataset version's name (REQ-TRN-005), the same in every language",
 }
 
 

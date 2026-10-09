@@ -789,7 +789,37 @@
         <translation>한 라벨러가 이미지 {size}개 중 {n}개만 블라인드로 라벨링했습니다</translation>
     </message>
     <message>
-        <location line="+20"/>
+        <location line="+21"/>
+        <source>Freezing a dataset version</source>
+        <translation>데이터셋 버전 동결</translation>
+    </message>
+    <message>
+        <location line="+53"/>
+        <source>the board revision {revision} is not 1 to 16 letters and digits</source>
+        <translation>보드 리비전 {revision}이(가) 1~16자의 영문자와 숫자가 아닙니다</translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>the allowed uses are one or more of own, shared and demos</source>
+        <translation>허용 용도는 own, shared, demos 중 하나 이상입니다</translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>the view holds no image labelled OK or NG</source>
+        <translation>이 뷰에 OK 또는 NG로 라벨링된 이미지가 없습니다</translation>
+    </message>
+    <message>
+        <location line="+7"/>
+        <source>no agreement check of the board model reaches the targets</source>
+        <translation>이 보드 모델의 일치도 검사 중 목표에 도달한 것이 없습니다</translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>a manifest of that name is in the workspace already</source>
+        <translation>같은 이름의 매니페스트가 이미 작업 공간에 있습니다</translation>
+    </message>
+    <message>
+        <location line="+13"/>
         <source>Activating an AI model version</source>
         <translation type="unfinished"></translation>
     </message>
@@ -809,7 +839,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1448"/>
+        <location line="-1531"/>
         <source>no defect type was given</source>
         <translation>결함 유형이 지정되지 않았습니다</translation>
     </message>
@@ -844,7 +874,7 @@
         <translation>{label}(으)로 다시 라벨링</translation>
     </message>
     <message>
-        <location line="+178"/>
+        <location line="+261"/>
         <source>Changing settings</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1498,12 +1528,12 @@
     </message>
     <message>
         <location line="+8"/>
-        <location line="+101"/>
+        <location line="+129"/>
         <source>View not known</source>
         <translation>알 수 없는 뷰</translation>
     </message>
     <message>
-        <location line="-100"/>
+        <location line="-128"/>
         <source>{path} was not imported: its view &quot;{view}&quot; is not one of {views}.</source>
         <translation>{path}을(를) 가져오지 않았습니다. 뷰 &quot;{view}&quot;는 {views} 중 하나가 아닙니다.</translation>
     </message>
@@ -1539,6 +1569,66 @@
     </message>
     <message>
         <location line="+8"/>
+        <source>Dataset not frozen: NG labels not checked</source>
+        <translation>데이터셋이 동결되지 않음: NG 라벨 미검토</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>{name} was not frozen: {count} NG labels are not checked by a second user.</source>
+        <translation>{name}이(가) 동결되지 않았습니다: NG 라벨 {count}개를 다른 사용자가 검토하지 않았습니다.</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Have another Engineer or Admin check each NG label, then freeze again.</source>
+        <translation>다른 엔지니어 또는 관리자에게 각 NG 라벨의 검토를 요청한 다음 다시 동결하십시오.</translation>
+    </message>
+    <message>
+        <location line="+4"/>
+        <source>Dataset not frozen: OK labels not checked</source>
+        <translation>데이터셋이 동결되지 않음: OK 라벨 미검토</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>{name} was not frozen: {checked} of {needed} OK labels to check (10 % of {ok}) are checked.</source>
+        <translation>{name}이(가) 동결되지 않았습니다: 검토할 OK 라벨 {needed}개({ok}개의 10 %) 중 {checked}개만 검토되었습니다.</translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>Draw OK labels for a check and have another Engineer or Admin check them, then freeze again.</source>
+        <translation>검토할 OK 라벨을 추출하고 다른 엔지니어 또는 관리자에게 검토를 요청한 다음 다시 동결하십시오.</translation>
+    </message>
+    <message>
+        <location line="+6"/>
+        <source>Dataset not frozen: no customer</source>
+        <translation>데이터셋이 동결되지 않음: 고객 없음</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>{name} was not frozen: no customer is set.</source>
+        <translation>{name}이(가) 동결되지 않았습니다: 고객이 지정되지 않았습니다.</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Enter the customer the dataset is for, then freeze it again.</source>
+        <translation>데이터셋의 고객을 입력한 다음 다시 동결하십시오.</translation>
+    </message>
+    <message>
+        <location line="+4"/>
+        <source>Dataset not frozen</source>
+        <translation>데이터셋이 동결되지 않음</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>{name} was not frozen: {reason}.</source>
+        <translation>{name}이(가) 동결되지 않았습니다: {reason}.</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Do what the reason says, then freeze the dataset again; nothing was written.</source>
+        <translation>이유에 적힌 대로 한 다음 데이터셋을 다시 동결하십시오. 아무것도 기록되지 않았습니다.</translation>
+    </message>
+    <message>
+        <location line="+4"/>
         <source>Label not changed</source>
         <translation>라벨이 바뀌지 않음</translation>
     </message>
@@ -2073,7 +2163,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-837"/>
+        <location line="-865"/>
         <source>Board judged NG</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2153,7 +2243,7 @@
         <translation>{path}에 라벨 &quot;{label}&quot;을(를) 붙이지 않았습니다. {labels} 중 하나가 아닙니다.</translation>
     </message>
     <message>
-        <location line="+127"/>
+        <location line="+155"/>
         <source>ROI thresholds refused</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4350,7 +4440,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/services.py" line="-1622"/>
+        <location filename="../core/services.py" line="-1705"/>
         <source>Aligning {count} images to the reference board</source>
         <translation type="unfinished"></translation>
     </message>

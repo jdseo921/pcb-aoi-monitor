@@ -336,12 +336,16 @@ class Database:
         return [{**r, "sample_uuids": json.loads(r["sample_uuids"])} for r in rows]
 
     # --- labeller agreement (REQ-TRN-016): rows are added, never changed ---
-    def add_row(self, table: str, **values: Any) -> str:
-        """Add a row with a new UUID and the time now (at_utc) to one of the append-only tables of migration 0016, the
-        names given by the code, never a user; returns the UUID."""
-        row = {"uuid": new_uuid(), **values, "at_utc": now_utc()}
+    def insert(self, table: str, row: dict[str, Any]) -> None:
+        """Insert {column: value} into one of the append-only tables, the names given by the code, never a user."""
         marks = ",".join("?" * len(row))
         self.execute(f"INSERT INTO {table}({','.join(row)}) VALUES({marks})", list(row.values()))  # noqa: S608
+
+    def add_row(self, table: str, **values: Any) -> str:
+        """Add a row with a new UUID and the time now (at_utc) to one of the tables of migration 0016; returns the
+        UUID."""
+        row = {"uuid": new_uuid(), **values, "at_utc": now_utc()}
+        self.insert(table, row)
         return str(row["uuid"])
 
     def calibration_sets(self, board_model: str, uid: str | None = None) -> list[dict[str, Any]]:
@@ -359,6 +363,26 @@ class Database:
         """A board model's agreement checks, newest first, or the one with UUID `uid`."""
         where, params = ("uuid=?", (uid,)) if uid else ("board_model=?", (board_model,))
         return self.query(f"SELECT * FROM agreement_checks WHERE {where} ORDER BY id DESC", params)  # noqa: S608
+
+    # --- frozen dataset versions (REQ-TRN-005): rows are added, never changed ---
+    def add_dataset(self, dataset: dict[str, Any], files: list[dict[str, Any]]) -> None:
+        """Store a frozen version and each of its files, in the caller's transaction."""
+        self.insert("datasets", {**dataset, "allowed_uses": json.dumps(dataset["allowed_uses"])})
+        for f in files:
+            item = {"uuid": new_uuid(), "dataset_uuid": dataset["uuid"], **f, "boxes": json.dumps(f["boxes"])}
+            self.insert("dataset_items", item)
+
+    def datasets(self, board_model: str, uid: str | None = None) -> list[dict[str, Any]]:
+        """A board model's frozen versions, newest first, or the one with UUID `uid`; manifest_path stays relative to
+        the workspace, as the manifest's file paths do."""
+        where, params = ("uuid=?", (uid,)) if uid else ("board_model=?", (board_model,))
+        rows = self.query(f"SELECT * FROM datasets WHERE {where} ORDER BY id DESC", params)  # noqa: S608
+        return [{**r, "allowed_uses": json.loads(r["allowed_uses"])} for r in rows]
+
+    def dataset_items(self, dataset_uuid: str) -> list[dict[str, Any]]:
+        """A frozen version's files in the manifest's order, each with its boxes."""
+        rows = self.query("SELECT * FROM dataset_items WHERE dataset_uuid=? ORDER BY id", (dataset_uuid,))
+        return [{**r, "boxes": json.loads(r["boxes"])} for r in rows]
 
     # --- model registry ----------------------------------------------------
     def register_model(
