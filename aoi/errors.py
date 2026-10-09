@@ -455,6 +455,18 @@ CODES: dict[str, ErrorCode] = {
             ),
         ),
         ErrorCode(
+            "AOI-TRN-012",
+            QT_TRANSLATE_NOOP("Errors", "AI model calibration cannot be read"),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "AI model {version} of board model {board} has no usable calibration in the AI model registry.",
+            ),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "For the next boards, train again or activate another version on Training, or set a value of your own.",
+            ),
+        ),
+        ErrorCode(
             "AOI-TST-001",
             QT_TRANSLATE_NOOP("Errors", "AI model, recipe or Golden board changed since the run"),
             QT_TRANSLATE_NOOP(

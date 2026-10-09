@@ -118,6 +118,18 @@ R = TypeVar("R")
 Judged = Literal["same", "none", "unrecorded", "missing", "unreadable", "changed"]
 
 
+def _calibration(model: dict[str, Any] | None) -> tuple[float, float] | None:
+    """An AI model registry row's image and pixel thresholds, as training stored them from the AI model file's
+    metadata; None for no row, or one without two finite numbers above 0 (only a row changed by hand has none)."""
+    try:
+        cal = json.loads(model["metrics"]) if model else {}
+        found = cal["image_threshold"], cal["pixel_threshold"]
+        image_thr, pixel_thr = (math.nan if isinstance(v, bool) else float(v) for v in found)
+    except (ValueError, TypeError, KeyError, OverflowError):
+        return None
+    return (image_thr, pixel_thr) if min(image_thr, pixel_thr) > 0 and math.isfinite(image_thr + pixel_thr) else None
+
+
 def requires(
     role: str, what: str
 ) -> Callable[[Callable[Concatenate[AppContext, P], R]], Callable[Concatenate[AppContext, P], R]]:
@@ -469,10 +481,26 @@ class AppContext:
     @requires("Engineer", QT_TRANSLATE_NOOP("Errors", "Saving a recipe"))
     @transactional
     def save_recipe(self, recipe: Recipe, reason: str | None = None) -> int:
-        """Store the next recipe revision and audit it with the revision before (a recipe decides verdicts)."""
+        """Store the next recipe revision and audit it with the revision before (a recipe decides verdicts). A revision
+        that sets, changes or clears the override of the AI score threshold is also audited as `recipe.ai_threshold`
+        of the board model (REQ-TRN-015): before and after, the revision, the override (None: none), the threshold
+        that judges (the override, else the active AI model's calibrated value; None with neither), that AI model's
+        version and its calibrated value (None while none is active or its calibration cannot be read)."""
         latest = self.db.latest_recipe(recipe.board_model)
         rev, uid = self.db.save_recipe(recipe.board_model, recipe.to_dict(), self.user)
         self.audit("recipe.save", "recipe", uid, latest[1] if latest else None, recipe.to_dict(), reason)
+        old = (latest[1].get("anomaly_threshold") if latest else None) or None  # 0 judges as none: the engine's `or`
+        if (new := recipe.anomaly_threshold or None) != old:
+            model = self.db.active_model(recipe.board_model)
+            cal = _calibration(model)
+            named = {"ai_model": model["version"] if model else None, "calibrated": cal[0] if cal else None}
+            before = {
+                "revision": latest[0] if latest else None,
+                "override": old,
+                "threshold": old or named["calibrated"],
+            }
+            after = {"revision": rev, "override": new, "threshold": new or named["calibrated"]}
+            self.audit("recipe.ai_threshold", "board_model", recipe.board_model, before | named, after | named, reason)
         return rev
 
     # --- audit trail (REQ-LOG-004) --------------------------------------------
@@ -797,6 +825,27 @@ class AppContext:
         """The model version inspections use, or None when none is trained."""
         return self.db.active_model(board_model)
 
+    def calibrated_threshold(self, board_model: str, model_uuid: str | None = None) -> float | None:
+        """The AI score threshold an AI model of `board_model` was calibrated to (REQ-TRN-015), from its registry row:
+        the active one's, which judges the next board whose recipe holds no override, or, with `model_uuid`, that of
+        the AI model a stored result names, which Re-evaluate applies (ADR 0006 decision 2). None while no AI model is
+        active. AOI-TRN-012 when the row holds no usable calibration, or the registry holds no AI model `model_uuid`."""
+        if model_uuid is None:
+            model = self.db.active_model(board_model)
+            if model is None:
+                return None
+        elif (model := next((m for m in self.db.models(board_model) if m["uuid"] == model_uuid), None)) is None:
+            raise AoiError("AOI-TRN-012", version=model_uuid, board=board_model)
+        return self.calibration_of(model)
+
+    def calibration_of(self, model: dict[str, Any]) -> float:
+        """The calibrated AI score threshold an AI model registry row (one of `models()`) holds, read as
+        `calibrated_threshold` reads it, for a page that lists the rows (Training: one registry read for all).
+        AOI-TRN-012 when the row holds no usable calibration (only a row changed by hand)."""
+        if (cal := _calibration(model)) is None:
+            raise AoiError("AOI-TRN-012", version=model["version"], board=model["board_model"])
+        return cal[0]
+
     def recipe_history(self, board_model: str) -> list[dict[str, Any]]:
         """Recipe revisions (revision, uuid, user, created_at), newest first; revision 1 by "system" is the default."""
         return self.db.recipe_history(board_model)
@@ -909,13 +958,8 @@ class AppContext:
         ai, check = None, next((c for c in res.checks if c.source == "AI"), None)
         if thresholds.use_ai and check is not None:
             model = next((m for m in self.db.models(rec["board_model"]) if m["uuid"] == rec["model_uuid"]), None)
-            try:  # a registry row this app wrote holds both thresholds, finite and above 0
-                cal = json.loads(model["metrics"]) if model else {}
-                image_thr, pixel_thr = float(cal["image_threshold"]), float(cal["pixel_threshold"])
-            except (ValueError, TypeError, KeyError, OverflowError):
-                image_thr = pixel_thr = math.nan
-            if min(image_thr, pixel_thr) > 0 and math.isfinite(image_thr + pixel_thr):
-                ai = AiEvidence(check.value, image_thr, pixel_thr, check.explain)
+            if (cal := _calibration(model)) is not None:
+                ai = AiEvidence(check.value, *cal, check.explain)
             else:
                 version = rec["model_version"] or rec["model_uuid"]
                 calibration = QT_TRANSLATE_NOOP("Errors", "the calibration of AI model {version}").fill(version=version)

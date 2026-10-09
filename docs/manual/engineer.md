@@ -131,6 +131,12 @@ when the recipe or the Golden board changes, as no AI model judges its boards: a
 raises no AOI-INSP-013, though the boards after it name the version now active, while a training run still does, as it
 sets a new Golden board, and the line names no AI model but says the AI check was off.
 
+**Threshold column.** Each AI model version's calibrated AI score threshold, which judges the board model's boards while
+the recipe holds no override of its own (section 5). A version whose calibrated value the AI model registry cannot give,
+which only a change made by hand leaves, reads AOI-TRN-012, with what happened and what to do as the row's tooltip:
+for the next boards, train again or activate another version, or set a value of your own for the board model (section
+5). Where such a row's sample counts cannot be read either, its OK/NG cell stays empty.
+
 (to be written: training, progress and cancel, versions, activation and rollback, the model card)
 
 ## 5. Recipes
@@ -245,6 +251,11 @@ pane gives the error's code and what happened. A long file name over a picture, 
 in the line under the verdict wraps onto the next line after a _ or -. (to be written: picking another reference)
 
 ## 8. Logs and audit
+
+**Recipes in the audit trail.** Each Save Recipe and Save to Recipe is recorded as `recipe.save` with the recipe before
+and after. One that sets, changes or clears the board model's override of the AI score threshold is also recorded as
+`recipe.ai_threshold`, naming the board model, the user, the revisions and the value before and after: the override, or
+the AI model's calibrated value that judges without one, with that AI model's version.
 
 **Export CSV** on Logs & Export writes two files, UTF-8 with a byte-order mark so Excel opens Korean text: the file you
 name holds one row per record (id, time, board model, view, AI model version, recipe revision, result, score, defect
