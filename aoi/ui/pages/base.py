@@ -132,26 +132,34 @@ class Page(QWidget):
         new = QCoreApplication.translate("Page", "+ New board model")
         return heading, QCoreApplication.translate("Page", "Create one to begin."), new, self.shell.new_board_model
 
-    def ai_threshold_field(self) -> AiThresholdField:
+    def ai_threshold_field(self, override: str = "", own_row: bool = False) -> AiThresholdField:
         """The AI score threshold of a recipe (REQ-TRN-015): a tick, size class F, that names the AI model's calibrated
-        value in a few words, as the Recipe Editor's sketch does ("override 5.69"), so that tick and field fit beside
-        the form's labels without widening the window; the note under them says the rest."""
+        value, the field, and the note that says why none is named. `override` is the page's sketch's text for the tick
+        ({value} for the value); by default the Recipe Editor's few words ("override 5.69"), which fit beside the field
+        under the form's labels without widening the window. Longer words (Compare's "Override the AI model's value
+        5.69") need `own_row`: the page lays out `tick_row` under the field, as it does the note."""
         texts = (
-            QCoreApplication.translate("Page", "Override {value}"),
+            override or QCoreApplication.translate("Page", "Override {value}"),
             QCoreApplication.translate("Page", "Set my own value"),
         )
-        field = AiThresholdField(texts)
+        field = AiThresholdField(texts, own_row)
         size_class(field.tick, "F")
         return field
 
-    def show_calibrated(self, field: AiThresholdField, board_model: str | None, model_uuid: str | None = None) -> None:
+    def show_calibrated(
+        self,
+        field: AiThresholdField,
+        board_model: str | None,
+        model_uuid: str | None = None,
+        version: str | None = None,
+    ) -> None:
         """`field` names the calibrated value of `board_model`'s active AI model, or of the AI model `model_uuid` (a
-        stored result's). With none, its note says why: no AI model trained, or none active, or a calibration that
-        cannot be read (AOI-TRN-012, with what happened and what to do, and no dialog, since a page shows it unasked);
-        with no board model, nothing."""
+        stored result's, whose `version` names it if the registry no longer holds it). With none, its note says why: no
+        AI model trained, or none active, or a calibration that cannot be read (AOI-TRN-012, with what happened and
+        what to do, and no dialog, since a page shows it unasked); with no board model, nothing."""
         why = ""
         try:
-            value = self.ctx.calibrated_threshold(board_model, model_uuid) if board_model else None
+            value = self.ctx.calibrated_threshold(board_model, model_uuid, version) if board_model else None
         except AoiError as e:
             value, why = None, self.coded_text(e)
         else:
@@ -329,7 +337,7 @@ W = TypeVar("W", bound=QWidget)
 
 def size_class(w: W, cls: str) -> W:
     """Mark a control with a sketch size class, "T" (operator target, 48 px), "T+" (run control, 56 px) or "F" (a tick
-    beside a field, 40 px tall as the fields, which the stylesheet sizes themselves), which the stylesheet sizes
+    with the fields, 40 px tall as they are, which the stylesheet sizes themselves), which the stylesheet sizes
     (`[sizeClass="T+"]`). `setMinimumHeight()` is undone when the stylesheet is applied, since QStyleSheetStyle sets the
     minimum from its own min-height rule: that is how the run controls shipped at 42 px."""
     w.setProperty("sizeClass", cls)  # not "size": that is QWidget's own QSize property

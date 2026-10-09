@@ -1,9 +1,9 @@
-"""REQ-TRN-015 (S28c): the AI score threshold on the Recipe Editor and on Compare names the AI model's calibrated
-value beside a tick and shows it greyed until the tick is set; ticked, the field holds the board model's override, and
-clearing the tick restores the calibrated value. Inspection, Compare's tried thresholds, Re-evaluate and AI Model Test
-judge by the same threshold. With no calibrated value to name, the note under the tick says why, with AOI-TRN-012 for a
-calibration that cannot be read; tick and note never widen the window (sketches recipe-editor.md, Thresholds tab, and
-compare-decision-table.md, "AI threshold override")."""
+"""REQ-TRN-015 (S28c): the AI score threshold on the Recipe Editor and on Compare names the AI model's calibrated value
+in a tick, in each page's sketch's words, and shows it greyed until the tick is set; ticked, the field holds the board
+model's override, and clearing the tick restores the calibrated value. Inspection, Compare's tried thresholds,
+Re-evaluate and AI Model Test judge by the same threshold. With no calibrated value to name, the note under the tick
+says why, with AOI-TRN-012 for a calibration that cannot be read; tick and note never widen the window (sketches
+recipe-editor.md, Thresholds tab, and compare-decision-table.md, "AI threshold override")."""
 
 from __future__ import annotations
 
@@ -12,6 +12,8 @@ import shutil
 from pathlib import Path
 
 import pytest
+from PySide6.QtCore import QPoint, QRect, Qt
+from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication, QFormLayout, QMessageBox, QTabWidget, QWidget
 from pytestqt.qtbot import QtBot
 
@@ -25,8 +27,10 @@ from aoi.ui.pages.model_test import ModelTestPage
 from aoi.ui.pages.recipe_editor import RecipeEditorPage
 from aoi.ui.widgets.ai_threshold import AiThresholdField
 from tests.test_compare_stored import _table
-from tests.test_req_done_in_v01 import BOARD, _inspect_one, _window
+from tests.test_req_done_in_v01 import BOARD, _button, _inspect_one, _window
 
+EDITOR_TICK = "Override {value}"  # the Recipe Editor sketch's words for the tick, beside the field
+COMPARE_TICK = "Override the AI model's value {value}"  # the Compare sketch's label, in a row of its own
 OWN = "Set my own value"  # the tick's text with no calibrated value to name
 UNTRAINED = "No AI model is trained yet: there is no calibrated value."
 INACTIVE = "No AI model version is active: there is no calibrated value."
@@ -44,10 +48,11 @@ def _judged_by(ctx: AppContext, board: Path) -> float:
     return _ai_threshold(ctx.inspect_file(BOARD, str(board), save=False))
 
 
-def _shows_calibrated(field: AiThresholdField, value: float) -> bool:
-    """The tick clear and naming `value`, which the greyed field shows; the recipe keeps no threshold of its own."""
+def _shows_calibrated(field: AiThresholdField, value: float, tick: str = EDITOR_TICK) -> bool:
+    """The tick clear and naming `value` in the page's `tick` words, the greyed field showing it; the recipe keeps no
+    threshold of its own."""
     return (
-        field.tick.text() == f"Override {value:.3f}"
+        field.tick.text() == tick.format(value=f"{value:.3f}")
         and not field.tick.isChecked()
         and not field.field.isEnabled()
         and field.field.isVisibleTo(field)
@@ -55,6 +60,23 @@ def _shows_calibrated(field: AiThresholdField, value: float) -> bool:
         and field.override() is None
         and field.note.isHidden()
     )
+
+
+def _tick_in_panel(compare: ComparePage) -> bool:
+    """Compare's tick shown in its panel, wherever it sits: never hidden by a move, nor a window of its own."""
+    tick = compare.ai_thr.tick
+    return tick.isVisibleTo(compare.window()) and compare.tryout.isAncestorOf(tick) and not tick.isWindow()
+
+
+def _placed_in_reading_order(compare: ComparePage) -> bool:
+    """Compare's tick, ticked, laid out where it reads: in its row under the field and above Pixel difference, or
+    beside the field and before it."""
+    QApplication.processEvents()  # a move is laid out on the event loop's next turn
+    f = compare.ai_thr
+    tick, box, below = (QRect(w.mapTo(compare, QPoint(0, 0)), w.size()) for w in (f.tick, f.field, compare.diff_thr))
+    if f.tick.parentWidget() is f.tick_row:
+        return box.bottom() < tick.top() and tick.bottom() < below.top()
+    return tick.right() < box.left() and box.top() <= tick.center().y() <= box.bottom() < below.top()
 
 
 def _editor(qtbot: QtBot, ctx: AppContext, monkeypatch: pytest.MonkeyPatch) -> tuple[MainWindow, RecipeEditorPage]:
@@ -79,7 +101,9 @@ def test_req_trn_015_override_and_clear(
     saved is a new revision that judges the next inspection, and its audit entry names the board model, the user and
     the value before and after; clearing the tick shows the calibrated value again, and that save is a new revision
     audited the same way. A save that keeps the override writes no entry of it. With no override, a newly trained AI
-    model's calibrated value judges, and the field names it when the page is shown again."""
+    model's calibrated value judges; a tick set by hand starts from it even where the page stayed shown while it was
+    trained, on the Recipe Editor and on Compare (review round 2: the replaced AI model's value was pinned), and the
+    field names the active AI model's value when the page is shown again."""
     ctx = trained_ctx
     cal, model = ctx.calibrated_threshold(BOARD), ctx.active_model(BOARD)
     assert cal is not None and model is not None and cal == json.loads(model["metrics"])["image_threshold"]
@@ -108,12 +132,23 @@ def test_req_trn_015_override_and_clear(
     assert ctx.recipe(BOARD)[1].anomaly_threshold is None and _judged_by(ctx, ng_board) == pytest.approx(cal)
     editor.save()  # nothing of the AI score threshold changes: the revision's own entry, none of the override
     assert ctx.recipe(BOARD)[0] == rev + 3 and len(ctx.audit_entries(action="recipe.ai_threshold")) == 2
-    ctx.train(BOARD, epochs=1, image_size=32)  # a newly trained AI model, calibrated afresh
+    ctx.train(BOARD, epochs=1, image_size=32)  # a newly trained AI model, calibrated afresh, as the page stays shown
     newer = ctx.calibrated_threshold(BOARD)
     assert newer is not None and newer != cal and _judged_by(ctx, ng_board) == pytest.approx(newer)
-    win.navigate("Home")
+    editor.ai_thr.tick.setChecked(True)  # by hand: from the value that judges now, never the replaced AI model's
+    assert editor.ai_thr.tick.text() == f"Override {newer:.3f}" and editor.ai_thr.override() == newer
+    assert editor.ai_thr.field.value() == round(newer, 3), "the field shows the value it gives"
+    editor.ai_thr.tick.setChecked(False)
+    compare = win.pages["Compare"]
+    assert isinstance(compare, ComparePage) and win.navigate("Compare")
+    qtbot.waitUntil(ctx.jobs.idle, timeout=10000)
+    ctx.activate_model(model["id"])  # the first AI model again, as Compare stays shown
+    compare.ai_thr.tick.setChecked(True)
+    assert compare.ai_thr.tick.text() == COMPARE_TICK.format(value=f"{cal:.3f}") and compare.ai_thr.override() == cal
+    assert compare.ai_thr.field.value() == round(cal, 3)
+    compare.ai_thr.tick.setChecked(False)
     win.navigate("Recipe Editor")
-    assert _shows_calibrated(editor.ai_thr, newer), "the field names the AI model that judges now"
+    assert _shows_calibrated(editor.ai_thr, cal), "the field names the AI model that judges now"
 
 
 def test_req_trn_015_inspection_compare_reevaluate_and_model_test_judge_by_one_threshold(
@@ -162,14 +197,41 @@ def test_req_trn_015_inspection_compare_reevaluate_and_model_test_judge_by_one_t
         tester._clear_run()
 
 
+def test_req_trn_015_a_later_save_keeps_the_override_as_stored(
+    qtbot: QtBot, trained_ctx: AppContext, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """An override the field cannot show as stored, saved outside the pages (more decimals than 3, or above 10000), is
+    kept to every decimal by a later Save Recipe on the Recipe Editor and Save to Recipe on Compare: each is a new
+    revision with no entry of the override, which did not change, so opening and saving a recipe never changes what
+    judges a board (release note, first section)."""
+    ctx = trained_ctx
+    win, editor = _editor(qtbot, ctx, monkeypatch)
+    compare = win.pages["Compare"]
+    assert isinstance(compare, ComparePage)
+    for kept in (4.5954, 20000.0):
+        _save_override(ctx, kept)
+        entries = len(ctx.audit_entries(action="recipe.ai_threshold"))
+        for title, save in (("Recipe Editor", _button(editor, "Save Recipe")), ("Compare", compare.btn_save)):
+            win.navigate("Home")
+            assert win.navigate(title)  # shown again: the revision saved since is loaded
+            qtbot.waitUntil(ctx.jobs.idle, timeout=10000)
+            rev = ctx.recipe(BOARD)[0]
+            save.click()
+            assert ctx.recipe(BOARD)[0] == rev + 1, (kept, title)
+            assert ctx.recipe(BOARD)[1].anomaly_threshold == kept, (kept, title, "kept to every decimal")
+            assert len(ctx.audit_entries(action="recipe.ai_threshold")) == entries, (kept, title, "unchanged")
+
+
 def test_req_trn_015_compare_names_the_value_that_judges_its_board(
     qtbot: QtBot, trained_ctx: AppContext, ng_board: Path
 ) -> None:
     """Compare's tick tries an override, and its clear the calibrated value. The value named is the active AI model's
     for a board Compare inspects, and for a stored result that of the AI model that judged it, which Re-evaluate applies
-    (ADR 0006 decision 2); a newly trained AI model is named when the page is shown again, and when a fresh board starts
+    (ADR 0006 decision 2), when the result shows, when the page is shown again and when the tick is set by hand, a newer
+    AI model active; a newly trained AI model is named when the page is shown again, and when a fresh board starts
     after a stored result, which it then judges. Setting the tick, or editing the value while ticked, drops what
-    Re-evaluate showed, as any other threshold does. An Operator never sees the field."""
+    Re-evaluate showed, as any other threshold does. A stored result whose AI model the registry no longer holds says
+    AOI-TRN-012 naming the version it gives. An Operator never sees the field."""
     ctx = trained_ctx
     cal = ctx.calibrated_threshold(BOARD)
     assert cal is not None
@@ -179,21 +241,32 @@ def test_req_trn_015_compare_names_the_value_that_judges_its_board(
     compare = win.pages["Compare"]
     assert isinstance(compare, ComparePage) and win.navigate("Compare")
     qtbot.waitUntil(ctx.jobs.idle, timeout=10000)
-    assert _shows_calibrated(compare.ai_thr, cal) and compare._form_recipe(BOARD).anomaly_threshold is None
+    assert (
+        _shows_calibrated(compare.ai_thr, cal, COMPARE_TICK) and compare._form_recipe(BOARD).anomaly_threshold is None
+    )
     compare.ai_thr.tick.setChecked(True)
     compare.ai_thr.field.setValue(cal + 1)
     assert compare._form_recipe(BOARD).anomaly_threshold == round(cal + 1, 3)
     compare.ai_thr.tick.setChecked(False)
-    assert _shows_calibrated(compare.ai_thr, cal) and compare._form_recipe(BOARD).anomaly_threshold is None
+    assert (
+        _shows_calibrated(compare.ai_thr, cal, COMPARE_TICK) and compare._form_recipe(BOARD).anomaly_threshold is None
+    )
     ctx.train(BOARD, epochs=1, image_size=32)  # a newer AI model, calibrated afresh, judges the next board
     newer = ctx.calibrated_threshold(BOARD)
     assert newer is not None and round(newer, 3) != round(cal, 3)
     win.navigate("Home")
     win.navigate("Compare")
-    assert _shows_calibrated(compare.ai_thr, newer), "the active AI model judges a board inspected here"
+    assert _shows_calibrated(compare.ai_thr, newer, COMPARE_TICK), "the active AI model judges a board inspected here"
     compare.show_stored(rec["id"])
     qtbot.waitUntil(lambda: compare.loaded and compare._bg is None, timeout=10000)
-    assert _shows_calibrated(compare.ai_thr, cal), "the AI model that judged the stored result"
+    assert _shows_calibrated(compare.ai_thr, cal, COMPARE_TICK), "the AI model that judged the stored result"
+    win.navigate("Home")
+    win.navigate("Compare")  # shown again on the stored result, the newer AI model still active (review round 3)
+    assert _shows_calibrated(compare.ai_thr, cal, COMPARE_TICK), "named again when the page is shown"
+    compare.ai_thr.tick.setChecked(True)  # by hand: the value named again at the tick, which the field starts from
+    assert compare.ai_thr.tick.text() == COMPARE_TICK.format(value=f"{cal:.3f}"), "named again at the tick"
+    assert compare.ai_thr.override() == cal and compare.ai_thr.field.value() == round(cal, 3), "starts from it"
+    compare.ai_thr.tick.setChecked(False)
     res = ctx.inspection_result(rec["id"])
     assert res is not None
     ai_check = compare._check_text(next(c for c in res.checks if c.source == "AI"))[0]
@@ -210,13 +283,21 @@ def test_req_trn_015_compare_names_the_value_that_judges_its_board(
     compare.ai_thr.tick.setChecked(False)
     compare.set_test(str(ng_board))  # a fresh board after the stored result: the active AI model judges it
     qtbot.waitUntil(lambda: compare._bg is None and compare.res is not None, timeout=30000)
-    assert compare.stored is None and _shows_calibrated(compare.ai_thr, newer), "named when a fresh board starts"
+    assert compare.stored is None and _shows_calibrated(compare.ai_thr, newer, COMPARE_TICK), (
+        "named when a fresh board starts"
+    )
     assert _ai_threshold(compare.res) == pytest.approx(newer), "the value named judges it"
     win.navigate("Home")  # a rollback on Training as the fresh board shows, which is not inspected again (review)
     ctx.activate_model(next(m["id"] for m in ctx.models(BOARD) if m["uuid"] == rec["model_uuid"]))
     win.navigate("Compare")  # so only on_show names the value of the AI model activated
     shown = compare.ai_thr.tick.text().endswith(f" {cal:.3f}") and compare.ai_thr.field.value() == round(cal, 3)
     assert shown and compare.stored is None and compare._bg is None, "named when the page is shown again"
+    ctx.db.execute("DELETE FROM models WHERE uuid=?", (rec["model_uuid"],))  # by hand: the stored result's AI model
+    compare.show_stored(rec["id"])
+    qtbot.waitUntil(lambda: compare.loaded and compare._bg is None, timeout=10000)
+    said = f"AOI-TRN-012 AI model {rec['model_version']} of board model {BOARD} "  # its version, never its UUID
+    assert compare.ai_thr.tick.text() == OWN and compare.ai_thr.note.text().startswith(said)
+    assert compare.ai_thr.tick.parentWidget() is compare.ai_thr and _tick_in_panel(compare), "back beside the field"
     win.set_user("operator")
     assert not compare.ai_thr.isVisibleTo(win) and not win.navigate("Recipe Editor")
 
@@ -251,11 +332,77 @@ def test_req_trn_015_compare_names_no_value_of_an_ai_model_that_judged_nothing(
     for rec, check, named in ((off, "OFF", newer), (ran, "RAN", cal), (off, "OFF", newer)):
         compare.show_stored(rec["id"])
         qtbot.waitUntil(lambda: compare.loaded and compare._bg is None, timeout=10000)
-        assert ai_check(compare.res) == check and _shows_calibrated(compare.ai_thr, named), (check, "shown")
+        assert ai_check(compare.res) == check and _shows_calibrated(compare.ai_thr, named, COMPARE_TICK), check
         win.navigate("Home")
         win.navigate("Compare")
         assert compare.stored is not None and compare.stored["id"] == rec["id"], "the stored result is still shown"
-        assert _shows_calibrated(compare.ai_thr, named), (check, "the page shown again")
+        assert _shows_calibrated(compare.ai_thr, named, COMPARE_TICK), (check, "the page shown again")
+    ctx.db.execute("UPDATE models SET active=0 WHERE board_model=?", (BOARD,))  # as Compare stays shown on the first
+    compare.ai_thr.tick.setChecked(True)  # by hand: named again as for the next board, so none; never the record's
+    assert compare.ai_thr.tick.text() == OWN and compare.ai_thr.override() is None and compare.ai_thr.field.value() == 0
+
+
+def _tab_from(start: QWidget, presses: int) -> list[QWidget | None]:
+    """Where each of `presses` presses of Tab takes the focus, from `start` given it as Tab gives it."""
+    start.setFocus(Qt.FocusReason.TabFocusReason)
+    reached = []
+    for _ in range(presses):
+        QTest.keyClick(QApplication.focusWidget(), Qt.Key.Key_Tab)
+        reached.append(QApplication.focusWidget())
+    return reached
+
+
+def test_req_trn_015_compares_tick_keeps_the_reading_order_and_the_focus_when_it_moves(
+    qtbot: QtBot, trained_ctx: AppContext
+) -> None:
+    """Compare's tick sits in its row under the field while it names a value, else beside the field. Tab follows the
+    reading order wherever it sits (frame-and-patterns.md: Tab reaches the control in reading order): from the field to
+    the tick under it, then Pixel difference; from the tick beside the field to the field, then Pixel difference. Space
+    on the focused tick while the value it names comes or goes as the page stays shown (an AI model activated, then none
+    active) moves the tick and leaves it the focus, so a digit typed next never edits Pixel difference, which judges
+    Re-evaluate and Save to Recipe stores, and the next Space clears the tick (review round 2b: the focus went to Pixel
+    difference). A tick a run moves while the focus is elsewhere leaves the focus where it is (review round 3)."""
+    ctx = trained_ctx
+    model = ctx.active_model(BOARD)
+    assert model is not None
+    ctx.db.execute("UPDATE models SET active=0 WHERE board_model=?", (BOARD,))  # none to name when Compare is shown
+    win = _window(qtbot, ctx, "Engineer")
+    compare = win.pages["Compare"]
+    assert isinstance(compare, ComparePage) and win.navigate("Compare")
+    qtbot.waitUntil(ctx.jobs.idle, timeout=10000)
+    win.activateWindow()
+    qtbot.waitUntil(lambda: QApplication.activeWindow() is win, timeout=5000)
+    field, pixel = compare.ai_thr, compare.diff_thr
+    pixel.setFocus(Qt.FocusReason.TabFocusReason)
+    for named in (True, False):  # Ctrl+R with no stored result runs Compare again, which names the value as it is now
+        if named:
+            ctx.activate_model(model["id"])
+        else:
+            ctx.db.execute("UPDATE models SET active=0 WHERE board_model=?", (BOARD,))
+        QTest.keyClick(QApplication.focusWidget(), Qt.Key.Key_R, Qt.KeyboardModifier.ControlModifier)
+        qtbot.waitUntil(ctx.jobs.idle, timeout=30000)
+        assert field.tick.parentWidget() is (field.tick_row if named else field), (named, "the run moved the tick")
+        assert QApplication.focusWidget() is pixel, (named, "a tick that had no focus takes none as it moves")
+    pixels = pixel.value()
+    for named in (True, False):
+        if named:
+            ctx.activate_model(model["id"])  # as the page stays shown: the tick beside the field will name its value
+        else:
+            ctx.db.execute("UPDATE models SET active=0 WHERE board_model=?", (BOARD,))  # the tick in its row: none now
+        assert field.tick.parentWidget() is (field if named else field.tick_row), named
+        field.tick.setFocus(Qt.FocusReason.TabFocusReason)
+        QTest.keyClick(field.tick, Qt.Key.Key_Space)  # ticked by hand: the value named again moves the tick
+        assert field.tick.isChecked() and field.tick.parentWidget() is (field.tick_row if named else field), named
+        assert QApplication.focusWidget() is field.tick and _tick_in_panel(compare), (named, "the tick keeps the focus")
+        QTest.keyClick(QApplication.focusWidget(), Qt.Key.Key_3)  # typed where the focus is
+        assert pixel.value() == pixels, (named, "a digit typed next never edits Pixel difference")
+        QTest.keyClick(QApplication.focusWidget(), Qt.Key.Key_Space)
+        assert not field.tick.isChecked(), (named, "the next Space clears the tick")
+        field.tick.setChecked(True)
+        assert _placed_in_reading_order(compare), named
+        order = [field.field, field.tick, pixel] if named else [field.tick, field.field, pixel]
+        assert _tab_from(order[0], 2) == order[1:], (named, "Tab in reading order")
+        field.tick.setChecked(False)
 
 
 def test_req_trn_015_a_calibration_that_cannot_be_read_says_so_with_a_code(
@@ -321,7 +468,7 @@ def test_req_trn_015_set_my_own_value_starts_from_none_not_another_board_models_
     win, editor = _editor(qtbot, ctx, monkeypatch)
     compare = win.pages["Compare"]
     assert isinstance(compare, ComparePage) and win.navigate("Compare") and win.navigate("Recipe Editor")
-    assert _shows_calibrated(compare.ai_thr, cal) and _shows_calibrated(editor.ai_thr, cal)
+    assert _shows_calibrated(compare.ai_thr, cal, COMPARE_TICK) and _shows_calibrated(editor.ai_thr, cal)
     win._on_board_model("")  # none selected (review)
     for title, field in (("Compare", compare.ai_thr), ("Recipe Editor", editor.ai_thr)):
         win.navigate(title)
@@ -374,14 +521,15 @@ def test_req_trn_015_set_my_own_value_starts_from_none_not_another_board_models_
 
 
 def _without_rows(fields: list[AiThresholdField]) -> int:
-    """The window's minimum width with the form rows of `fields` and their notes hidden, as if their pages had no AI
-    score threshold; each row is shown again as it was."""
+    """The window's minimum width with the form rows of `fields`, their ticks (Compare's is a row of its own) and their
+    notes hidden, as if their pages had no AI score threshold; each row is shown again as it was."""
     win = fields[0].window()
     rows: list[QWidget] = []
     for field in fields:
         form = field.parentWidget().layout()
         assert isinstance(form, QFormLayout)
-        rows += [w for w in (form.labelForField(field), field, field.note) if w is not None and not w.isHidden()]
+        shown = (form.labelForField(field), field, field.tick_row, field.note)
+        rows += [w for w in shown if w is not None and not w.isHidden()]
     for w in rows:
         w.hide()
     QApplication.processEvents()
@@ -394,12 +542,14 @@ def _without_rows(fields: list[AiThresholdField]) -> int:
 
 @pytest.mark.parametrize("state", ["calibrated", "unreadable", "none-trained"])
 def test_req_trn_015_tick_and_note_never_widen_the_window(qtbot: QtBot, trained_ctx: AppContext, state: str) -> None:
-    """The tick's words are short in every state and its note wraps in a row as wide as the form, so the AI score
-    threshold never widens the window: its minimum width stays 1616 px, as before the tick, and the same as with the AI
-    score threshold's rows hidden on the Recipe Editor and Compare, cleared and ticked (the review found 1929 px, wider
-    than a 1920 px screen). At 1600 x 900 and at 1920 x 1080 each page's note is as tall as its text at its width, so
-    what to do shows whole, no row around it is squeezed to make room (on Compare the "why" box gives way first), and
-    the tick is as tall as the fields beside it (size class F)."""
+    """The tick's words are short beside the field on the Recipe Editor ("Override 3.063", its sketch's), and Compare's
+    sketch's label ("Override the AI model's value 3.063") is a row of its own; the note wraps in a row as wide as the
+    form. So the AI score threshold never widens the window: its minimum width stays 1616 px, as before the tick, and
+    the same as with the AI score threshold's rows hidden on the Recipe Editor and Compare, cleared and ticked (review
+    round 1 found 1929 px, wider than a 1920 px screen; Compare's label beside the field, 1779 px). At 1600 x 900 and
+    at 1920 x 1080 each page's note is as tall as its text at its width, so what to do shows whole, no row around it is
+    squeezed to make room (on Compare the "why" box gives way first), and the tick is as tall as the fields (size class
+    F)."""
     ctx = trained_ctx
     model = ctx.active_model(BOARD)
     assert model is not None
@@ -417,11 +567,20 @@ def test_req_trn_015_tick_and_note_never_widen_the_window(qtbot: QtBot, trained_
     tabs.setCurrentWidget(editor.ai_thr.parentWidget())  # the Thresholds tab, where the field is
     for title in pages:  # each page built and shown once
         win.navigate(title)
+    cal = ctx.calibrated_threshold(BOARD) if state == "calibrated" else None
+    for field, words in ((editor.ai_thr, EDITOR_TICK), (compare.ai_thr, COMPARE_TICK)):
+        assert field.tick.text() == (OWN if cal is None else words.format(value=f"{cal:.3f}")), state
+    assert editor.ai_thr.tick.parentWidget() is editor.ai_thr, "the Recipe Editor's tick beside its field"
+    row = compare.ai_thr.tick_row if cal is not None else compare.ai_thr  # Compare's naming a value: a row of its own
+    assert compare.ai_thr.tick.parentWidget() is row and compare.ai_thr.tick_row.isVisibleTo(win) == (cal is not None)
+    assert _tick_in_panel(compare) and compare.tryout.isAncestorOf(compare.ai_thr.tick_row), state
+    assert not editor.ai_thr.tick_row.isWindow(), "the Recipe Editor lays out no tick_row: never a window of its own"
     for ticked in (False, True):
         for field in pages.values():
             field.tick.setChecked(ticked)
             assert field.field.isVisibleTo(field) == (ticked or state == "calibrated"), (state, ticked)
         QApplication.processEvents()
+        assert not ticked or _placed_in_reading_order(compare), state
         width = win.minimumSizeHint().width()
         assert width <= MIN_WIDTH, (state, ticked, width, "the AI score threshold widens the window")
         assert width == _without_rows([*pages.values()]), (state, ticked, width, "its rows widen the window")

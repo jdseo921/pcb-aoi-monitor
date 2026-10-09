@@ -220,6 +220,11 @@ class TrainingPage(Page):
         )
         self.models_empty = EmptyState(self.models)
         rl.addWidget(self.models, 1)
+        self.models_note = QLabel()  # each AOI-TRN-012 row's coded line, which a tooltip gives no touch or key to read
+        self.models_note.setObjectName("muted")
+        self.models_note.setWordWrap(True)
+        self.models_note.hide()
+        rl.addWidget(self.models_note)
         mrow = QHBoxLayout()
         mrow.addWidget(button(self.tr("Activate Selected"), slot=self.activate))
         mrow.addWidget(button(self.tr("Export AI Model…"), slot=self.export_model))
@@ -488,6 +493,7 @@ class TrainingPage(Page):
         if not self.board_model:
             self.samples.setRowCount(0)
             self.models.setRowCount(0)
+            self.models_note.hide()
             self.counts.set_line(lambda _name: "", "")
             self.tip.hide()
             self.samples_empty.show_state(*self.no_board_model())
@@ -533,6 +539,10 @@ class TrainingPage(Page):
             rows.append([m["id"], m["version"], to_local(m["created_at"]), threshold, _sample_counts(m), active])
             tips.append(tip)
         fill_table(self.models, rows, tooltips=tips)
+        # each row's AOI-TRN-012, with what happened and what to do, under the table
+        said = [tip for tip in tips if tip]
+        self.models_note.setText("\n".join(said))
+        self.models_note.setVisible(bool(said))
         if ms:
             self.models_empty.hide()
         else:

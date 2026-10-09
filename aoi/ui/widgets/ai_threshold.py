@@ -9,12 +9,12 @@ trained or active, or one whose calibration cannot be read), the tick's text sta
 the error's code where there is one; the field shows once ticked, from 0, which is no override, as the engine reads
 it, until a value is typed: never from a value it showed before, such as another board model's. Pages give the words,
 as they do for `EmptyState`, and place the note, a row of its own as wide as their form, so its words never widen the
-window.
+window; a page whose sketch gives the tick longer words places the tick naming a value in such a row too (Compare).
 """
 
 from __future__ import annotations
 
-from PySide6.QtCore import Signal
+from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import QCheckBox, QDoubleSpinBox, QHBoxLayout, QLabel, QWidget
 
 DECIMALS = 3
@@ -22,10 +22,13 @@ DECIMALS = 3
 
 class AiThresholdField(QWidget):
     changed = Signal()  # the tick or the override changed
+    ticking = Signal()  # ticked by hand: the page names the calibrated value again, which the field then starts from
 
-    def __init__(self, texts: tuple[str, str]) -> None:
+    def __init__(self, texts: tuple[str, str], own_row: bool = False) -> None:
         """`texts`: the tick's text naming the calibrated value as {value}, and its text while there is none to name,
-        both short, as the tick sits beside the field."""
+        short, beside the field. With `own_row`, the tick naming a value sits in `tick_row`, a row of its own that the
+        page lays out under the field, for longer words (Compare's sketch's); with none to name it goes back beside
+        the field, so that it and the note never both take a row (a panel that tall cut the note at 1600 x 900)."""
         super().__init__()
         self._texts = texts
         self._calibrated: float | None = None
@@ -42,6 +45,10 @@ class AiThresholdField(QWidget):
         self.field.setSingleStep(0.1)
         layout.addWidget(self.tick)
         layout.addWidget(self.field, 1)
+        self._own_row = own_row
+        self.tick_row = QWidget(self)  # the tick's row of its own, which a page with `own_row` lays out under the field
+        QHBoxLayout(self.tick_row).setContentsMargins(0, 0, 0, 0)
+        self.tick_row.hide()
         self.note = QLabel(self)  # why no calibrated value is named; the page lays it out (see the module docstring)
         self.note.setObjectName("muted")
         self.note.setWordWrap(True)
@@ -56,6 +63,8 @@ class AiThresholdField(QWidget):
         of a calibration that cannot be read; nothing with no board model)."""
         self._calibrated = value
         self.tick.setText(self._texts[1] if value is None else self._texts[0].format(value=f"{value:.{DECIMALS}f}"))
+        if self._own_row:
+            self._place_tick(in_row=value is not None)
         self.note.setText(why if value is None else "")
         self.note.setVisible(value is None and bool(why))
         self._show()
@@ -78,6 +87,23 @@ class AiThresholdField(QWidget):
             return None
         return self._kept if self._kept is not None else self.field.value() or None
 
+    def _place_tick(self, in_row: bool) -> None:
+        """The tick in `tick_row`, shown, or beside the field, the row hidden. Tab keeps the reading order, the tick
+        under the field after it and beside it before it, and a tick that had the focus keeps it: a move to another
+        parent takes it away, and it went to the next field, which the next keys then edited (review round 2b)."""
+        beside, row = self.layout(), self.tick_row.layout()
+        assert isinstance(beside, QHBoxLayout) and isinstance(row, QHBoxLayout)
+        old, new = (beside, row) if in_row else (row, beside)
+        moved, focused = new.indexOf(self.tick) < 0, self.tick.hasFocus()
+        if moved:
+            old.removeWidget(self.tick)
+            new.insertWidget(0, self.tick)
+            self.tick.show()
+            QWidget.setTabOrder(*((self.field, self.tick) if in_row else (self.tick, self.field)))
+        self.tick_row.setVisible(in_row)
+        if moved and focused:
+            self.tick.setFocus(Qt.FocusReason.OtherFocusReason)
+
     def _show(self) -> None:
         ticked = self.tick.isChecked()
         self.field.setEnabled(ticked)
@@ -88,7 +114,11 @@ class AiThresholdField(QWidget):
     def _toggled(self, on: bool) -> None:
         if not on:
             self._kept = None  # the override goes with the tick
-        elif self._kept is None:  # ticked by hand: from the calibrated value, kept exactly until the field is edited
+        elif self._kept is None:  # ticked by hand: from the calibrated value as it is now (an AI model trained since
+            self.ticking.emit()  # the page was shown), kept exactly until the field is edited, or 0 with none named
+            self.field.blockSignals(True)  # not an edit
+            self.field.setValue(0 if self._calibrated is None else self._calibrated)
+            self.field.blockSignals(False)
             self._kept = self._calibrated
         self._show()
         self.changed.emit()

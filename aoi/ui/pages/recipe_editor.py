@@ -138,6 +138,7 @@ class RecipeEditorPage(Page):
         self.use_ai = QCheckBox(self.tr("Use the self-trained AI model"))
         self.use_cmp = QCheckBox(self.tr("Use the Golden board comparison"))
         self.ai_thr = self.ai_threshold_field()
+        self.ai_thr.ticking.connect(lambda: self.show_calibrated(self.ai_thr, self.board_model))  # trained since shown
         self.warn = QDoubleSpinBox()
         self.warn.setRange(0.1, 1)
         self.warn.setSingleStep(0.05)

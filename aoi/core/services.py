@@ -825,17 +825,20 @@ class AppContext:
         """The model version inspections use, or None when none is trained."""
         return self.db.active_model(board_model)
 
-    def calibrated_threshold(self, board_model: str, model_uuid: str | None = None) -> float | None:
+    def calibrated_threshold(
+        self, board_model: str, model_uuid: str | None = None, version: str | None = None
+    ) -> float | None:
         """The AI score threshold an AI model of `board_model` was calibrated to (REQ-TRN-015), from its registry row:
         the active one's, which judges the next board whose recipe holds no override, or, with `model_uuid`, that of
         the AI model a stored result names, which Re-evaluate applies (ADR 0006 decision 2). None while no AI model is
-        active. AOI-TRN-012 when the row holds no usable calibration, or the registry holds no AI model `model_uuid`."""
+        active. AOI-TRN-012 when the row holds no usable calibration, or the registry holds no AI model `model_uuid`,
+        named then by the `version` the stored result gives (else by its UUID)."""
         if model_uuid is None:
             model = self.db.active_model(board_model)
             if model is None:
                 return None
         elif (model := next((m for m in self.db.models(board_model) if m["uuid"] == model_uuid), None)) is None:
-            raise AoiError("AOI-TRN-012", version=model_uuid, board=board_model)
+            raise AoiError("AOI-TRN-012", version=version or model_uuid, board=board_model)
         return self.calibration_of(model)
 
     def calibration_of(self, model: dict[str, Any]) -> float:
