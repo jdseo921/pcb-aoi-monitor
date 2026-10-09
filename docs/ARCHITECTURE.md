@@ -385,15 +385,19 @@ whether a version of that view is frozen, and the version names it (S35).
 customer (AOI-TRN-024), a view outside `aoi.hal.VIEWS` (AOI-TRN-038), a board model whose name has no Latin letter or
 digit (AOI-TRN-039) or gives the letters and digits another board model's versions are named with (AOI-TRN-040), and
 while the newest agreement check of the board model whose set holds images of the view is missing or short of its
-targets (AOI-TRN-027); else it names the version `DS-<BOARDMODEL>-<REV>-<VIEW>-v<N>` (`aoi/core/datasets.py`). It
-hashes the files with no lock held, then in one transaction finds N, checks the gate, reads the labels, stores the
-version and its files with the manifest's SHA-256 and the audit entry, and moves `datasets/<name>/manifest.json` (each
-OK and NG file's relative path, SHA-256, label row, boxes, labeller and checker; the agreement check; the OK draws)
-into place just before the commit (`atomic.staged`). A freeze that dies before the move leaves no manifest; one that
-dies between the move and the commit leaves a manifest that no `datasets` row names, which is how such a leftover is
-known (`verify_dataset` reads only the manifest a row names), and the next freeze of that name replaces it.
-AOI-TRN-041 for a manifest not written, AOI-TRN-042 for a path too long. A version's
-rows and manifest never change, and a later label change reaches only the next version. A version names the
+targets (AOI-TRN-027); else it names the version `DS-<BOARDMODEL>-<REV>-<VIEW>-v<N>` (`aoi/core/datasets.py`). The
+refusals that need no file come first, so a freeze they refuse reads no image file first; then it hashes the files and
+works out their stored paths with no lock held. Then, holding the database lock, one transaction finds N, checks the
+gate again, reads the labels and, in one query, the boxes, stores the version and its files with the manifest's SHA-256
+and the audit entry, and moves `datasets/<name>/manifest.json` (each OK and NG file's relative path, SHA-256, label row,
+boxes, labeller and checker; the agreement check; the OK draws) into place just before the commit (`atomic.staged`); a
+failed commit puts back the manifest it replaced before the lock is released (`Database.locked`), so no other freeze
+comes between. A freeze that dies before the move leaves no manifest; one that dies between the move and the commit
+leaves a manifest that no `datasets` row names, which is how such a leftover is known (`verify_dataset` reads only the
+manifest a row names), and the next freeze of that name replaces it. Every other database call waits while the lock is
+held, for those reads, the manifest's write and fsync and one insert per file: about 0.3 s for 3,000 files on the
+development VM, so some 2 s at 20,000. AOI-TRN-041 for a manifest not written, AOI-TRN-042 for a path too long. A
+version's rows and manifest never change, and a later label change reaches only the next version. A version names the
 workspace's image files rather than copying them, and the app never changes or removes one (`delete_sample` keeps the
 file), so a file changed or removed outside the app is what `verify_dataset` reports: it re-hashes the manifest and
 every file against the stored SHA-256 and lists the files that match, changed or are missing, and writes nothing.

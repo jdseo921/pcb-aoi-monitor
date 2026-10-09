@@ -125,6 +125,14 @@ class Database:
             finally:
                 self._tx_depth = 0
 
+    @contextmanager
+    def locked(self) -> Iterator[None]:
+        """Hold the lock `transaction()` holds, with no transaction: no other thread's statement runs until the block
+        ends. Work on files that must end before another write starts goes in it, such as putting a file back after a
+        failed commit (`AppContext.freeze_dataset`)."""
+        with self._lock:
+            yield
+
     def _commit(self) -> None:
         """Commit a statement's own transaction; inside `transaction()` the outermost one commits."""
         if not self._tx_depth:
@@ -385,6 +393,17 @@ class Database:
         for r in self.query("SELECT board_model, name FROM datasets ORDER BY id"):
             names.setdefault(r["board_model"], []).append(r["name"])
         return names
+
+    def current_boxes(self, board_model: str) -> dict[str, list[dict[str, Any]]]:
+        """The current defect boxes of a board model's samples in one query, by sample UUID, each in the order drawn."""
+        boxes: dict[str, list[dict[str, Any]]] = {}
+        for r in self.query(
+            "SELECT b.* FROM defect_boxes b JOIN samples s ON s.uuid = b.sample_uuid"
+            " WHERE s.board_model=? AND b.superseded_by IS NULL ORDER BY b.id",
+            (board_model,),
+        ):
+            boxes.setdefault(r["sample_uuid"], []).append(r)
+        return boxes
 
     def dataset_items(self, dataset_uuid: str) -> list[dict[str, Any]]:
         """A frozen version's files in the manifest's order, each with its boxes."""

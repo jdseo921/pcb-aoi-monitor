@@ -794,7 +794,7 @@
         <translation>데이터셋 버전 동결</translation>
     </message>
     <message>
-        <location line="+78"/>
+        <location line="+84"/>
         <source>the board revision {revision} is not 1 to 16 letters and digits</source>
         <translation>보드 리비전 {revision}이(가) 1~16자의 영문자와 숫자가 아닙니다</translation>
     </message>
@@ -814,7 +814,7 @@
         <translation>이 뷰에 OK 또는 NG로 라벨링된 이미지가 없습니다</translation>
     </message>
     <message>
-        <location line="+36"/>
+        <location line="+41"/>
         <source>Activating an AI model version</source>
         <translation type="unfinished"></translation>
     </message>
@@ -834,7 +834,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1603"/>
+        <location line="-1614"/>
         <source>no defect type was given</source>
         <translation>결함 유형이 지정되지 않았습니다</translation>
     </message>
@@ -869,7 +869,7 @@
         <translation>{label}(으)로 다시 라벨링</translation>
     </message>
     <message>
-        <location line="+268"/>
+        <location line="+274"/>
         <source>no agreement check of the board model holds images of this view</source>
         <translation>이 보드 모델의 일치도 검사 중 이 뷰의 이미지를 담은 것이 없습니다</translation>
     </message>
@@ -879,7 +879,7 @@
         <translation>이 뷰의 가장 최근 일치도 검사가 목표에 도달하지 못했습니다</translation>
     </message>
     <message>
-        <location line="+52"/>
+        <location line="+57"/>
         <source>Changing settings</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4520,7 +4520,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/services.py" line="-1777"/>
+        <location filename="../core/services.py" line="-1788"/>
         <source>Aligning {count} images to the reference board</source>
         <translation type="unfinished"></translation>
     </message>

@@ -184,12 +184,14 @@ customer (AOI-TRN-024) and an agreement check that reached its targets (AOI-TRN-
 whose set holds images of the view decides, so a newer check short of the targets stops freezing until a newer one
 reaches them. A board model whose name has no Latin letter or digit (AOI-TRN-039), or whose letters and digits name
 another board model's versions (AOI-TRN-040), cannot be frozen; import its images under another name. A manifest that
-cannot be written is AOI-TRN-041, or AOI-TRN-042 when its path is too long, and nothing of the version is kept. The
-version's record and manifest never change, and a later label change goes into the next version. The version names the
-workspace's image files rather than copying them; the app never changes or removes one, but a file changed or removed
-outside the app cannot be recovered from the workspace, so back the workspace up. Verifying a version hashes its
-manifest and every file again and lists each file that changed or is missing since the freeze; train from another
-version when one did. No screen freezes or verifies a version yet.
+cannot be written is AOI-TRN-041, or AOI-TRN-042 when its path is too long, and nothing of the version is kept. A
+freeze refused by its checks reads no image file first. A datasets/<name> folder whose manifest no version lists was
+left by a freeze that stopped before storing its version; the next freeze of that name replaces it. The version's record
+and manifest never change, and a later label change goes into the next version. The version names the workspace's image
+files rather than copying them; the app never changes or removes one, but a file changed or removed outside the app
+cannot be recovered from the workspace, so back the workspace up. Verifying a version hashes its manifest and every file
+again and lists each file that changed or is missing since the freeze; train from another version when one did. No
+screen freezes or verifies a version yet.
 
 (to be written: the label editor and UNSURE on the Samples tab, the check and the blind labels on screen, the Datasets
 tab, locking the validation set)

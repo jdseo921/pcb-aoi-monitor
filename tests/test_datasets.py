@@ -7,13 +7,18 @@ from __future__ import annotations
 import errno
 import hashlib
 import json
+import os
+import shutil
 import sqlite3
+import threading
 from pathlib import Path
 from typing import Any
 
+import numpy as np
 import pytest
 
 from aoi.core import datasets
+from aoi.core.imaging import save_image
 from aoi.core.labels import DefectBox
 from aoi.core.services import AppContext, _manifest_write
 from aoi.errors import AoiError
@@ -253,8 +258,9 @@ def test_req_trn_005_relabel_while_hashing_is_refused(
 
 def test_req_trn_005_newest_agreement_check_decides(ctx: AppContext, tmp_path: Path) -> None:
     """The newest agreement check of the board model whose set holds images of the view decides: a newer check short of
-    the targets refuses the freeze until a newer one reaches them. A file whose bytes change between two freezes is
-    in the second version with its new SHA-256, and the first version reports it changed."""
+    the targets refuses the freeze until a newer one reaches them, and a check of another view's set does not count.
+    A file whose bytes change between two freezes is in the second version with its new SHA-256, and the first version
+    reports it changed."""
     samples, cal = ready(ctx, tmp_path / "boards")
     agree(ctx, cal, samples)
     kim, lee = (str(ctx.db.user_uuid(u)) for u in ("kim", "lee"))
@@ -264,6 +270,15 @@ def test_req_trn_005_newest_agreement_check_decides(ctx: AppContext, tmp_path: P
     with pytest.raises(AoiError) as failed:
         ctx.freeze_dataset(CAL, "Top", "R3", "Acme")
     assert failed.value.code == "AOI-TRN-027" and "newest agreement check" in failed.value.what
+    save_image(tmp_path / "side.png", np.full((32, 32, 3), 7, np.uint8))
+    ctx.import_samples(CAL, [str(tmp_path / "side.png")], "OK", side="Side")
+    side = [s["uuid"] for s in ctx.samples(CAL) if s["side"] == "Side"]
+    side_set = ctx.db.add_row("calibration_sets", board_model=CAL, sample_uuids=json.dumps(side), made_by=kim)
+    agreed = {k: v for k, v in ctx.agreement_checks(CAL)[-1].items() if k not in ("id", "uuid", "at_utc")}
+    ctx.db.add_row("agreement_checks", **agreed | {"set_uuid": side_set})  # a newer check, agreed, of Side only
+    with pytest.raises(AoiError) as still:
+        ctx.freeze_dataset(CAL, "Top", "R3", "Acme")
+    assert still.value.code == "AOI-TRN-027" and "newest agreement check" in still.value.what
     passed = ctx.run_agreement_check(cal, kim, lee)
     path = ctx.settings.root / ctx.dataset_items(v1["uuid"])[3]["path"]
     path.write_bytes(path.read_bytes() + b"\0")  # changed outside the app
@@ -272,3 +287,102 @@ def test_req_trn_005_newest_agreement_check_decides(ctx: AppContext, tmp_path: P
     new = ctx.dataset_items(v2["uuid"])[3]
     assert new["sha256"] == hashlib.sha256(path.read_bytes()).hexdigest() != ctx.dataset_items(v1["uuid"])[3]["sha256"]
     assert ctx.verify_dataset(v1["uuid"])["changed"] == [new["path"]] and not ctx.verify_dataset(v2["uuid"])["changed"]
+
+
+def test_req_trn_005_refused_freeze_reads_no_image(
+    ctx: AppContext, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The refusals that need no file come before any file is hashed: a board model whose letters and digits another
+    board model's versions use (AOI-TRN-040) and an unchecked NG label (AOI-TRN-020) are refused with no file read,
+    the second with a file missing too. Once the view is ready, the missing file is AOI-INSP-001 with the system's
+    reason for it."""
+    samples, cal = ready(ctx, tmp_path / "boards")
+    agree(ctx, cal, samples)
+    ctx.freeze_dataset(CAL, "Top", "R3", "Acme")
+    ctx.import_samples("CAL_1", [str(p) for p in sorted((tmp_path / "boards").glob("*.png"))[:3]], "OK")
+    hashed, real = [], datasets.sha256
+    monkeypatch.setattr(datasets, "sha256", lambda path: hashed.append(path) or real(path))
+    with pytest.raises(AoiError) as taken:
+        ctx.freeze_dataset("CAL_1", "Top", "R3", "Acme")
+    ng = ctx.samples(CAL, "NG")[0]["uuid"]
+    ctx.set_boxes(ng, [DefectBox(3, 3, 5, 5, "Scratch")])  # a new label row, not checked
+    gone = Path(ctx.samples(CAL, "OK")[5]["path"])
+    gone.unlink()
+    with pytest.raises(AoiError) as unchecked:
+        ctx.freeze_dataset(CAL, "Top", "R3", "Acme")
+    assert (taken.value.code, unchecked.value.code, unchecked.value.params.get("count"), hashed) == (
+        "AOI-TRN-040", "AOI-TRN-020", 1, []
+    )  # fmt: skip
+    ctx.set_user("kim")
+    ctx.check_label(ng)
+    with pytest.raises(AoiError) as unreadable:
+        ctx.freeze_dataset(CAL, "Top", "R3", "Acme")
+    assert unreadable.value.code == "AOI-INSP-001" and unreadable.value.params["path"] == str(gone)
+    assert str(FileNotFoundError(2, os.strerror(2))) in str(unreadable.value.detail)
+
+
+class FailingCommit:
+    """A database connection whose commit fails, as a full disk or a lost network drive makes it fail."""
+
+    def __init__(self, conn: sqlite3.Connection) -> None:
+        self.conn = conn
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self.conn, name)
+
+    def commit(self) -> None:
+        raise sqlite3.OperationalError("disk I/O error")
+
+
+def test_req_trn_005_failed_commit_puts_the_workspace_back(
+    ctx: AppContext, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A manifest whose move fails is AOI-TRN-041 with nothing stored. A freeze whose commit fails after its manifest is
+    moved in stores no version and no audit entry, and puts the workspace back before another thread can take the
+    database lock: the manifest it replaced returns, or the one it moved in goes with the folders made for it. The next
+    freeze succeeds."""
+    samples, cal = ready(ctx, tmp_path / "boards")
+    agree(ctx, cal, samples)
+    root, entries, conn = ctx.settings.root, ctx.audit_entries(), ctx.db._conn
+    manifest, left = root / "datasets" / "DS-CAL1-R3-TOP-v1" / "manifest.json", b"left by a freeze that died"
+    free, refuse, replace = [], [False], os.replace
+
+    def watched(src: Any, dst: Any) -> None:  # notes whether another thread could take the database lock as it moves
+        def take() -> None:
+            if got := ctx.db._lock.acquire(blocking=False):
+                ctx.db._lock.release()
+            free.append(got)
+
+        other = threading.Thread(target=take)
+        other.start()
+        other.join()
+        if refuse[0] and Path(dst) == manifest:
+            refuse[0] = False
+            raise PermissionError(13, "Permission denied", str(dst))
+        replace(src, dst)
+
+    monkeypatch.setattr(os, "replace", watched)
+    manifest.parent.mkdir(parents=True)
+    manifest.write_bytes(left)
+    refuse[0] = True
+    with pytest.raises(AoiError) as unmoved:
+        ctx.freeze_dataset(CAL, "Top", "R3", "Acme")
+    assert unmoved.value.code == "AOI-TRN-041" and ctx.datasets(CAL) == [] and ctx.audit_entries() == entries
+    assert manifest.read_bytes() == left and [p.name for p in manifest.parent.iterdir()] == [manifest.name]
+    for orphan in (True, False):
+        shutil.rmtree(root / "datasets", ignore_errors=True)
+        if orphan:
+            manifest.parent.mkdir(parents=True)
+            manifest.write_bytes(left)
+        monkeypatch.setattr(ctx.db, "_conn", FailingCommit(conn))
+        with pytest.raises(sqlite3.OperationalError):
+            ctx.freeze_dataset(CAL, "Top", "R3", "Acme")
+        monkeypatch.setattr(ctx.db, "_conn", conn)
+        assert ctx.datasets(CAL) == [] and ctx.audit_entries() == entries
+        if orphan:
+            assert manifest.read_bytes() == left and [p.name for p in manifest.parent.iterdir()] == [manifest.name]
+        else:
+            assert not (root / "datasets").exists()
+    assert free and not any(free)
+    v1 = ctx.freeze_dataset(CAL, "Top", "R3", "Acme")
+    assert ctx.verify_dataset(v1["uuid"])["manifest"] == "same" and not any(free)
