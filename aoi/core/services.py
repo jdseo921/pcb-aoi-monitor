@@ -38,7 +38,7 @@ from ..data.workspace_lock import WorkspaceLock
 from ..errors import QT_TRANSLATE_NOOP, AoiError, Phrase, joined
 from ..hal import VIEWS
 from ..times import local_date, now_utc
-from . import anomaly, crypto, datasets, golden, imaging, labels, run_progress, stores
+from . import anomaly, crypto, datasets, golden, imaging, labels, lineage, run_progress, stores
 from .compare import Region, changed_regions
 from .imaging import (
     align_to_reference,
@@ -673,6 +673,9 @@ class AppContext:
         model_uuid = new_uuid()  # in the file's metadata and in the registry row, so an exported .pt names its record
         model.meta.update(board_model=board_model, version=version, uuid=model_uuid, created_at=now_utc())
         model.meta.update(dataset=frozen["name"], dataset_uuid=dataset_uuid, use=use)
+        # lineage (REQ-TRN-009): the code that trained it, and the Golden board's settings beside the network's
+        model.meta.update(code=lineage.code_version())
+        model.meta["settings"].update(golden_band_bytes=band, golden_step_bytes=golden.STEP_BYTES)
         try:
             model.save(path)
             save_image(golden_path, board.board)
