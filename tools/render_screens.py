@@ -55,7 +55,7 @@ BOARD_MODEL = "TINY"
 FIXED_TIME = "2026-01-01T09:00:00+00:00"  # every stored time, so a render does not change with the clock
 FIXED_MS = 480.0  # the inspection time Inspection and Compare show
 FIXED_SSIM, FIXED_INLIERS = 0.95, 400  # the similarity and alignment points Compare shows (module docstring)
-PAGE_VIEWS = {"Training": ("datasets", "blind")}  # a page's other views, rendered as <page>-<view>-<role>
+PAGE_VIEWS = {"Training": ("datasets", "blind"), "Settings": ("restore", "move-in", "shred")}  # <page>-<view>-<role>
 STORED_STATES = (  # Compare
     "compare-stored-operator", "compare-golden-changed-operator", "compare-tried-engineer", "compare-save-engineer",
 )  # fmt: skip
@@ -128,6 +128,11 @@ class PinnedModel:
         return float(np.percentile(amap, 99.9))  # as AnomalyModel.score
 
 
+def pinned_key() -> tuple[bytes, bytes]:
+    """A store's key as `crypto.new_key` draws it, its key id fixed, as Settings › Dataset stores shows it."""
+    return os.urandom(32), bytes.fromhex("5ca1ab1e") + bytes(12)
+
+
 def build_workspace(root: Path) -> AppContext:
     """The synthetic workspace the pages are rendered on; see the module docstring."""
     from aoi.config import Settings
@@ -142,7 +147,7 @@ def build_workspace(root: Path) -> AppContext:
     os.environ["AOI_WORKSPACE"] = str(root / "default_workspace")  # settings.json is saved there, never in ~/
     dataset = root / "dataset"
     write_dataset(dataset, DATASET_OK, DATASET_NG, DATASET_SEED)
-    with mock.patch("uuid.uuid4", side_effect=counted_uuids()):
+    with mock.patch("uuid.uuid4", side_effect=counted_uuids()), mock.patch("aoi.core.crypto.new_key", pinned_key):
         keys = credentials.MemoryCredentials()  # the store key trainable makes, never written to the Credential Manager
         ctx = AppContext(Settings(workspace=str(root / "workspace"), device="cpu"), keys)
         ctx.set_user("engineer")
@@ -309,7 +314,9 @@ def show_view(win: MainWindow, title: str, view: str | None) -> None:
     """`title` with its `view` shown (PAGE_VIEWS); None, the view it opens on. Training's are its Datasets tab, as a
     click on the tab shows it, and the blind labelling panel on its first image, the board model's images standing in
     for a calibration set of 100 (the workspace holds fewer): Stop closes it, the status line saying so until the next
-    page clears it, and with None the focus is cleared, as Training opens with none, so the pages after render alike."""
+    page clears it, and with None the focus is cleared, as Training opens with none, so the pages after render alike.
+    Settings' are Restore Key…, Move Board Model In… and Shred Store… on the store the screenshot workspace's version
+    is in."""
     from PySide6.QtWidgets import QApplication
 
     page: Any = win.pages[title]
@@ -322,6 +329,13 @@ def show_view(win: MainWindow, title: str, view: str | None) -> None:
             page._stop_blind()
         page.tabs.setCurrentIndex(0 if view is None else 1)
         if view is None and (focus := QApplication.focusWidget()) is not None:
+            focus.clearFocus()
+    if title == "Settings":
+        page.stores.close_sheet()
+        steps = {"restore": page.stores.btn_restore, "move-in": page.stores.btn_move, "shred": page.stores.btn_shred}
+        if view is not None:
+            steps[view].click()
+        elif (focus := QApplication.focusWidget()) is not None:
             focus.clearFocus()
 
 

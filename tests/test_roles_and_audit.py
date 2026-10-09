@@ -200,7 +200,7 @@ UNCHECKED = {
     "golden_board_unreadable", "engine_is_current", "calibrated_threshold", "calibration_of", "scale", "label_history",
     "boxes", "box_history", "unsure_samples", "label_check_status", "labels_ready_to_freeze", "calibration_sets",
     "agreement_checks", "propose_calibration_set", "blind_labelled", "datasets", "dataset_items", "verify_dataset",
-    "validation_split", "stores", "store_of", "training_version",
+    "validation_split", "stores", "store_of", "store_contents", "training_version",
 }  # fmt: skip
 CALLS = {**{name: call for name, (_, call) in WRITES.items()}, **CHECKED_READS}
 # The lowest role allowed each call, copied from the write table of docs/ARCHITECTURE.md §5 and REQ-CMP-005, never read

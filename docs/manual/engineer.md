@@ -245,13 +245,17 @@ again and lists each file that changed or is missing since the freeze; train fro
 screen freezes or verifies a version yet.
 
 **Each customer's images are in a store of their own.** A version is frozen only from a board model in the dataset
-store of the customer it names (AOI-TRN-027). An Admin makes the store, one per customer, and prints its recovery
-sheet, which is shown once: keep it apart from the station, since it is the only way to open the store on a new PC or
-Windows account. Moving a board model in encrypts its images and manifests where they are; they keep their .png and
-.json names but open only in this app, on a station that holds the key. A file the app cannot open is AOI-TRN-025,
-which says why. When an engagement ends, an Admin shreds the store: its key goes first, then its images, versions, AI
-models and Golden boards; nothing of it opens afterwards, a backup included, once the sheet is destroyed. These are
-service calls until the Settings screen comes (ADR 0010).
+store of the customer it names (AOI-TRN-027). An Admin keeps the stores under Settings › Dataset stores, one per
+customer; each step there opens a sheet in the table's place. New Store… makes a store and shows its recovery sheet
+once, with Print Sheet…: keep it apart from the station, since it is the only way to open the store on a new PC or
+Windows account, where Restore Key… takes its 13 groups of four back. Close waits for the tick that says it is printed.
+Move Board Model In… encrypts a board model's images and manifests where they are; they keep their .png and .json names
+but open only in this app, on a station that holds the key. Cancel on its busy indicator leaves the rest plain, and the
+same step, its button then reading Finish Moving In, moves them. A file the app cannot open is AOI-TRN-025, which says
+why. When an engagement ends, an Admin shreds the store with Shred Store…, which names the board models and the files it
+deletes and waits for the customer's name typed: its key goes first, then its images, versions, AI models and Golden
+boards; nothing of it opens afterwards, a backup included, once the sheet is destroyed. A file that would not go is
+AOI-TRN-044, and Shred Store… again deletes what is left (ADR 0010).
 
 (to be written: the Datasets tab's freeze, versions and validation set lock)
 

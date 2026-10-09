@@ -1878,14 +1878,22 @@ class AppContext:
         self._save_key(store, key)
 
     @requires("Admin", QT_TRANSLATE_NOOP("Errors", "Moving a board model into a dataset store"))
-    def move_in(self, board_model: str, store_uuid: str) -> dict[str, int]:
+    def move_in(
+        self,
+        board_model: str,
+        store_uuid: str,
+        progress: Callable[[int, int], None] | None = None,
+        should_stop: Callable[[], bool] | None = None,
+    ) -> dict[str, int]:
         """Put `board_model` in a store for good and encrypt its files there (ADR 0010, decision 5): every file under
         images/<board model>/ and the manifest of each of its frozen versions, keeping its path. Each plain file is
         encrypted into a crash-safe write, read back and decrypted, and kept only when the SHA-256 matches; else its
         plain bytes are written back and AOI-TRN-044 stops the move. The board model's row in `board_model_stores` and
         the audit entry `store.move_in` (files to move) are written first, so from then on a plain file of it is
         refused (AOI-TRN-025) and an interrupted move is finished by calling this again, which skips the files already
-        moved. Returns the counts `moved` and `already`. AOI-TRN-044, writing nothing, for a store the workspace does
+        moved. `progress(done, total)` follows each file moved, and once `should_stop()` is true the files not yet moved
+        stay plain until the move is finished (Settings › Dataset stores, Finish Moving In). Returns the counts `moved`,
+        `already` and `left` (0 unless stopped). AOI-TRN-044, writing nothing, for a store the workspace does
         not hold or that is shredded, a board model that does not exist, one in another store, and a file encrypted
         under another store's key; AOI-TRN-019 for a board model whose name is not one folder's (#112)."""
         store = self._store(store_uuid)
@@ -1916,9 +1924,13 @@ class AppContext:
                 self.db.add_board_model_store(row | {"set_by": self.user_uuid, "set_at": now_utc()})
             after = {"board_model": board_model, "files": len(plain), "resumed": current is not None}
             self.audit("store.move_in", "dataset_store", store_uuid, None, after)
-        for f in plain:
+        for i, f in enumerate(plain):
+            if should_stop is not None and should_stop():
+                return {"moved": i, "already": len(files) - len(plain), "left": len(plain) - i}
             self._encrypt_in_place(store, key, f)
-        return {"moved": len(plain), "already": len(files) - len(plain)}
+            if progress is not None:
+                progress(i + 1, len(plain))
+        return {"moved": len(plain), "already": len(files) - len(plain), "left": 0}
 
     @requires("Admin", QT_TRANSLATE_NOOP("Errors", "Shredding a customer's dataset store"))
     def shred_store(self, store_uuid: str) -> dict[str, int]:
@@ -1935,11 +1947,7 @@ class AppContext:
             why = QT_TRANSLATE_NOOP("Errors", "the workspace holds no such store")
             raise AoiError("AOI-TRN-044", store=store_uuid, reason=why)
         root, models = self.settings.root, self.settings.models_dir
-        boards = [(b, [d["name"] for d in self.db.datasets(b)]) for b in store["board_models"]]
-        files = [f for b, versions in boards for f in stores.files_of(root, b, versions)]
-        derived = [
-            f for b, _ in boards if (models / b).is_dir() for f in sorted((models / b).rglob("*")) if f.is_file()
-        ]
+        boards, files, derived = self._store_files(store)
         if not store["shredded_at"]:
             try:
                 self.credentials.delete(credentials.STORE_PREFIX + store_uuid)  # first: from here nothing of it opens
@@ -1961,6 +1969,31 @@ class AppContext:
             reason = why.fill(count=len(left), file=to_stored(left[0][0], root), detail=str(left[0][1]))
             raise AoiError("AOI-TRN-044", store=store["customer"], reason=reason)
         return {"files": len(files), "models": len(derived)}
+
+    def store_contents(self, store_uuid: str) -> dict[str, Any]:
+        """What `shred_store` would delete now, for Shred Store… to name before it does: the store's `customer`, its
+        `board_models`, and the counts `files` (images and manifests, as it counts them) and `models` (the files of
+        their AI models and golden boards), 0 once a shred has deleted them. AOI-TRN-044 for a store the workspace does
+        not hold."""
+        if (store := self.db.store(store_uuid)) is None:
+            why = QT_TRANSLATE_NOOP("Errors", "the workspace holds no such store")
+            raise AoiError("AOI-TRN-044", store=store_uuid, reason=why)
+        _, files, derived = self._store_files(store)
+        return {"customer": store["customer"], "board_models": store["board_models"]} | {
+            "files": len(files),
+            "models": len(derived),
+        }
+
+    def _store_files(self, store: dict[str, Any]) -> tuple[list[tuple[str, list[str]]], list[Path], list[Path]]:
+        """A store's board models with their frozen versions' names, the files it holds (`stores.files_of`) and the
+        files derived from them under models/."""
+        root, models = self.settings.root, self.settings.models_dir
+        boards = [(b, [d["name"] for d in self.db.datasets(b)]) for b in store["board_models"]]
+        files = [f for b, versions in boards for f in stores.files_of(root, b, versions)]
+        derived = [
+            f for b, _ in boards if (models / b).is_dir() for f in sorted((models / b).rglob("*")) if f.is_file()
+        ]
+        return boards, files, derived
 
     def stores(self) -> list[dict[str, Any]]:
         """Every dataset store, oldest first: uuid, customer, key_id, created_by, created_at, shredded_at (None while

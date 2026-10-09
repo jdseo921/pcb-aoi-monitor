@@ -1,4 +1,4 @@
-"""System settings, users and hardware status (Admin)."""
+"""System settings, users, dataset stores and hardware status (Admin)."""
 
 from __future__ import annotations
 
@@ -22,6 +22,7 @@ from ...config import APP_VERSION
 from ...core.services import AppContext
 from ...errors import AoiError
 from .base import QT_TRANSLATE_NOOP, ROLES, Page, button, fill_table, make_table, role_text
+from .settings_stores import StoresPanel
 
 if TYPE_CHECKING:
     from ..main_window import MainWindow
@@ -84,10 +85,14 @@ class SettingsPage(Page):
         f.addRow(self.tr("Log retention (days)"), self.ret)
         f.addRow(self.tr("Language"), self.lang)
         f.addRow(button(self.tr("Save Settings"), "primary", self.save))
-        body.addWidget(g, 1)
+        left = QVBoxLayout()
+        left.addWidget(g)
+        self.stores = StoresPanel(self)  # the customers' encrypted dataset stores (REQ-TRN-017), under System
+        left.addWidget(self.stores, 1)
+        body.addLayout(left, 1)
 
         right = QVBoxLayout()
-        ug = QGroupBox(self.tr("Users & roles"))
+        ug = QGroupBox(self.tr("Users & roles").replace("&", "&&"))  # a lone & would be a mnemonic, not shown
         ul = QVBoxLayout(ug)
         self.users = make_table([self.tr("Name"), self.tr("Role")])
         ul.addWidget(self.users)
@@ -147,6 +152,17 @@ class SettingsPage(Page):
                 if name == self.ctx.user and chosen != current:  # the signed-in user's own role changed
                     self.shell.set_user(name)  # the header and the pages follow the role add_user stored
 
+    def idle(self) -> bool:
+        """No move or shred of a dataset store runs: the panel's steps wait for it."""
+        return self._bg is None
+
+    def update_actions(self) -> None:
+        self.stores.sync()
+
+    def on_user_changed(self) -> None:
+        self.stores.close_sheet()  # the recovery sheet, or a key half typed, never stays for the next user
+
     def on_show(self) -> None:
         fill_table(self.users, [[u["name"], role_text(u["role"])] for u in self.ctx.users()])
+        self.stores.refresh()
         fill_table(self.hw, [[self.tr(cell) for cell in row] for row in HARDWARE])

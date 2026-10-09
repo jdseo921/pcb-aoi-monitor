@@ -55,6 +55,7 @@ ALLOWED_WORDS = {  # (catalogue code or translation context, Not word): why the 
     ("AOI-INSP-014", "window"): "the operating system's name, Windows, whose long paths setting is the step",
     ("AOI-TRN-011", "window"): "the operating system's name, Windows, whose long paths setting is the step",
     ("AOI-TRN-042", "window"): "the operating system's name, Windows, whose long paths setting is the step",
+    ("StoresPanel", "window"): "the operating system's name, Windows, whose account the key store belongs to",
     ("AOI-SET-007", "error"): APP_ERROR,
     ("AOI-TRN-010", "error"): APP_ERROR,
     ("AOI-SET-006", "invalid"): "said of the app's migration files, never of a user (the Charter bans 'invalid user')",

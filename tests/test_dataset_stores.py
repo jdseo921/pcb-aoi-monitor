@@ -16,7 +16,7 @@ from typing import Any
 import numpy as np
 import pytest
 
-from aoi.core import crypto
+from aoi.core import crypto, stores
 from aoi.core.imaging import image_header, save_image
 from aoi.core.services import AppContext
 from aoi.data import atomic, credentials
@@ -118,8 +118,8 @@ def test_req_trn_017_store_encrypted_at_rest(ctx: AppContext, tmp_path: Path) ->
     whose name is not one folder's is refused (AOI-TRN-019), moving nothing."""
     sources = board(ctx, "ENC", tmp_path / "enc", 5, 2)
     store = as_admin(ctx, ctx.create_store, "Acme")
-    assert as_admin(ctx, ctx.move_in, "ENC", store["uuid"]) == {"moved": 5, "already": 0}
-    assert as_admin(ctx, ctx.move_in, "ENC", store["uuid"]) == {"moved": 0, "already": 5}
+    assert as_admin(ctx, ctx.move_in, "ENC", store["uuid"]) == {"moved": 5, "already": 0, "left": 0}
+    assert as_admin(ctx, ctx.move_in, "ENC", store["uuid"]) == {"moved": 0, "already": 5, "left": 0}
     sources += board(ctx, "PLAIN", tmp_path / "plain", 1, 3)
     ctx.import_samples("ENC", [str(sources[-1])], "OK")
     for s, src in zip(ctx.samples("ENC"), sources, strict=True):
@@ -189,13 +189,48 @@ def test_req_trn_017_interrupted_move_in_resumes(
     assert ctx.load_image(samples[0]["path"]).shape == (32, 32, 3)
     assert refusal(ctx.load_image, stopped)[1].endswith(" is not encrypted")
     monkeypatch.setattr(atomic, "write_bytes", write)
-    assert as_admin(ctx, ctx.move_in, "RES", acme) == {"moved": 4, "already": 2}
+    assert as_admin(ctx, ctx.move_in, "RES", acme) == {"moved": 4, "already": 2, "left": 0}
     for s, src in zip(ctx.samples("RES"), sources, strict=True):
         assert (
             Path(s["path"]).read_bytes().startswith(crypto.MAGIC) and plain(ctx, s["path"], "RES") == src.read_bytes()
         )
     moves = ctx.audit_entries(action="store.move_in")
     assert [(e["after"]["files"], e["after"]["resumed"]) for e in moves] == [(4, True), (6, False)]
+
+
+def test_req_trn_017_move_in_follows_and_stops(ctx: AppContext, tmp_path: Path) -> None:
+    """Moving in reports each file moved, for Settings › Dataset stores to show; stopped part-way, it leaves the files
+    not yet moved plain and counts them, and moving the board model in again (Finish Moving In) encrypts only those."""
+    board(ctx, "MOV", tmp_path / "mov", 5, 8)
+    store, seen = as_admin(ctx, ctx.create_store, "Acme"), []
+
+    def follow(done: int, total: int) -> None:
+        seen.append((done, total))
+
+    stopped = as_admin(ctx, ctx.move_in, "MOV", store["uuid"], follow, lambda: len(seen) == 2)
+    assert stopped == {"moved": 2, "already": 0, "left": 3} and seen == [(1, 5), (2, 5)]
+    assert sum(stores.header_of(Path(s["path"])) is not None for s in ctx.samples("MOV")) == 2
+    seen.clear()
+    assert as_admin(ctx, ctx.move_in, "MOV", store["uuid"], follow) == {"moved": 3, "already": 2, "left": 0}
+    assert seen == [(1, 3), (2, 3), (3, 3)]
+    assert all(stores.header_of(Path(s["path"])) is not None for s in ctx.samples("MOV"))
+    moves = ctx.audit_entries(action="store.move_in")
+    assert [(e["after"]["files"], e["after"]["resumed"]) for e in moves] == [(3, True), (5, False)]
+
+
+def test_req_trn_017_store_contents_names_what_a_shred_deletes(ctx: AppContext, tmp_path: Path) -> None:
+    """What Shred Store… names before it shreds: the customer, the board models and the counts the shred then deletes,
+    and none once it has; AOI-TRN-044 for a store the workspace does not hold."""
+    board(ctx, "CNT", tmp_path / "cnt", 3, 9)
+    store = moved_in(ctx, "CNT", "Acme")
+    derived = ctx.settings.models_dir / "CNT" / "v1"
+    derived.mkdir(parents=True)
+    (derived / "model.pt").write_bytes(b"weights")
+    named = ctx.store_contents(store["uuid"])
+    assert named == {"customer": "Acme", "board_models": ["CNT"], "files": 3, "models": 1}
+    assert as_admin(ctx, ctx.shred_store, store["uuid"]) == {"files": 3, "models": 1}
+    assert ctx.store_contents(store["uuid"]) == named | {"files": 0, "models": 0}
+    assert refusal(ctx.store_contents, "no-such-store") == ("AOI-TRN-044", "the workspace holds no such store")
 
 
 def test_req_trn_017_changed_moved_or_foreign_file_refused(ctx: AppContext, tmp_path: Path) -> None:
