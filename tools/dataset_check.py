@@ -1,6 +1,7 @@
 """Check the engine on public PCB defect datasets, for an internal test record (plan stage S30, issue #10).
 
     python tools/dataset_check.py --out <folder> [--deeppcb <PCBData folder>] [--pku <PCB_DATASET folder>]
+        [--min-area <px>] [--ai]
 
 DeepPCB (PCBData: `*_temp.jpg` defect-free, `*_test.jpg` defective, boxes in `*_not/*.txt`, splits in test.txt and
 trainval.txt) and PKU-Market-PCB (PCB_DATASET: `PCB_USED/<board>.JPG` defect-free, `images/<type>/` defective, VOC boxes
@@ -9,9 +10,10 @@ approved them in writing on 2026-10-08 for internal training and checks only: no
 them, enters the repository or ships, and their results are counts on public boards, never an accuracy claim.
 
 It runs the golden-board comparison with the AI check off (each defective board against its own defect-free board, the
-default recipe). A labelled box counts as found when a difference region overlaps it grown by MARGIN px. It writes
-manifest.csv (SHA-256 of every file read), results.json and summary.md to --out, which must lie outside the repository
-and the datasets, and checks that no source file changed.
+default recipe) and, with --ai, the AI model alone on DeepPCB's test split (one model per group, trained on --ok-train
+seeded templates of the group's trainval split). A labelled box counts as found when a difference region overlaps
+it grown by MARGIN px. It writes manifest.csv (SHA-256 of every file read), results.json and summary.md to --out, which
+must lie outside the repository and the datasets, and checks that no source file changed.
 """
 
 from __future__ import annotations
@@ -21,7 +23,9 @@ import csv
 import hashlib
 import json
 import math
+import os
 import platform
+import random
 import sys
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass, field
@@ -30,12 +34,15 @@ from pathlib import Path
 from time import perf_counter
 from typing import Any
 
+import cv2
 import numpy as np
+import torch
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:  # run as a script: the repository root holds the ``aoi`` package
     sys.path.insert(0, str(ROOT))
 
+from aoi.core import anomaly  # noqa: E402
 from aoi.core.imaging import load_image  # noqa: E402
 from aoi.core.inspector import Inspector  # noqa: E402
 from aoi.core.recipe import Recipe  # noqa: E402
@@ -136,8 +143,9 @@ def found(box: tuple[int, int, int, int, str], regions: list[tuple[int, int, int
     )
 
 
-def golden_check(items: list[Item]) -> dict[str, Any]:
-    """Each board judged against its own defect-free board by the default recipe with the AI check off."""
+def golden_check(items: list[Item], min_area: int = Recipe.min_defect_area) -> dict[str, Any]:
+    """Each board judged against its own defect-free board by the default recipe with the AI check off, its Minimum
+    defect area min_area px."""
     verdicts: dict[str, int] = {}
     per_type: dict[str, dict[str, int]] = {}
     ms: list[float] = []
@@ -146,7 +154,8 @@ def golden_check(items: list[Item]) -> dict[str, Any]:
     for item in items:
         good, test = load_image(item.good), load_image(item.test)
         t0 = perf_counter()
-        result = Inspector(Recipe(board_model=item.group, use_ai=False), reference=good).inspect(test)
+        recipe = Recipe(board_model=item.group, use_ai=False, min_defect_area=min_area)
+        result = Inspector(recipe, reference=good).inspect(test)
         ms.append((perf_counter() - t0) * 1000)
         verdicts[result.verdict] = verdicts.get(result.verdict, 0) + 1
         regions = [(d.x, d.y, d.w, d.h) for d in result.defects]
@@ -180,10 +189,58 @@ def golden_check(items: list[Item]) -> dict[str, Any]:
     }
 
 
-def timing(ms: list[float]) -> dict[str, float] | None:
+def ai_check(train: list[Item], test: list[Item], ok_train: int, cfg: anomaly.TrainConfig) -> dict[str, Any]:
+    """Per DeepPCB group: train on `ok_train` seeded templates of its trainval split (and calibrate on a few of its
+    defective boards), then score the group's test split, templates as OK and defective boards as NG."""
+    counts = {"ok": 0, "ok_called_ng": 0, "ok_called_warning": 0, "ng": 0, "ng_called_ok": 0, "ng_called_warning": 0}
+    train_s: list[float] = []
+    ms: list[float] = []
+    groups: dict[str, Any] = {}
+    for group in sorted({i.group for i in test}):
+        pool = [i for i in train if i.group == group]
+        seen, ok_items = set(), []
+        for item in random.Random(cfg.seed).sample(pool, len(pool)):
+            digest = sha256(item.good)
+            if digest not in seen:  # some templates are byte-identical
+                seen.add(digest)
+                ok_items.append(item)
+        ok_items = ok_items[:ok_train]
+        ng_items = [i for i in pool if i not in ok_items][: max(2, ok_train // 4)]
+        if len(ok_items) < 2:
+            groups[group] = {"skipped": "fewer than 2 distinct defect-free templates in trainval"}
+            continue
+        t0 = perf_counter()
+        model = anomaly.train([load_image(i.good) for i in ok_items], [load_image(i.test) for i in ng_items], cfg)
+        train_s.append(perf_counter() - t0)
+        thr, warn = model.image_threshold, Recipe(board_model=group).warn_ratio * model.image_threshold
+        g = dict.fromkeys(counts, 0)
+        for item in (i for i in test if i.group == group):
+            for path, kind in ((item.good, "ok"), (item.test, "ng")):
+                img = load_image(path)
+                t1 = perf_counter()
+                score = model.score(model.anomaly_map(img))
+                ms.append((perf_counter() - t1) * 1000)
+                called = "ng" if score >= thr else "warning" if score >= warn else "ok"
+                g[kind] += 1
+                if called != kind:
+                    g[f"{kind}_called_{called}"] += 1
+        groups[group] = {**g, "ok_trained": len(ok_items), "ng_calibrated": len(ng_items), "threshold": round(thr, 4)}
+        for k in counts:
+            counts[k] += g[k]
+    return {
+        **counts,
+        "ok_called_ng_upper_95": round(upper_95(counts["ok_called_ng"], counts["ok"]), 4),
+        "ng_called_ok_upper_95": round(upper_95(counts["ng_called_ok"], counts["ng"]), 4),
+        "groups": groups,
+        "train_s": timing([s * 1000 for s in train_s], scale=1000),
+        "ms": timing(ms),
+    }
+
+
+def timing(ms: list[float], scale: float = 1.0) -> dict[str, float] | None:
     if not ms:
         return None
-    a = np.array(ms)
+    a = np.array(ms) / scale
     return {"n": len(ms), "median": round(float(np.median(a)), 1), "p95": round(float(np.percentile(a, 95)), 1)}
 
 
@@ -220,27 +277,40 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
     out = Path(args.out)
     if not roots:
         raise SystemExit("give --deeppcb, --pku or both")
+    if args.min_area < 1:
+        raise SystemExit("--min-area must be 1 px or more")
     if not outside(out, [ROOT, *roots]):
         raise SystemExit("--out must lie outside the repository and the datasets")
     out.mkdir(parents=True, exist_ok=True)
+    cfg = anomaly.TrainConfig(epochs=args.epochs, steps_per_epoch=args.steps, image_size=args.size, seed=args.seed)
     results: dict[str, Any] = {
         "when_utc": datetime.now(UTC).isoformat(timespec="seconds"),
-        "machine": {"system": platform.platform(), "cpu": platform.processor(), "python": platform.python_version()},
-        "settings": {"margin_px": MARGIN, "recipe": "default, AI check off"},
+        "machine": machine(),
+        "settings": {
+            "margin_px": MARGIN,
+            "recipe": "default, AI check off"
+            if args.min_area == Recipe.min_defect_area
+            else f"default except Minimum defect area {args.min_area} px, AI check off",
+            "min_defect_area_px": args.min_area,
+            "ok_train": args.ok_train,
+            **vars(cfg),
+        },
         "note": "Counts on public research datasets for an internal check; not validated accuracy.",
+        "arguments": vars(args),
     }
-    used: list[Item] = []
-    if args.deeppcb:
-        test = deeppcb_items(Path(args.deeppcb), "test")
-        used += test
-        results["deeppcb"] = {"golden": golden_check(test), "px_per_mm": DEEPPCB_PX_PER_MM}
-    if args.pku:
-        items = pku_items(Path(args.pku))
-        used += items
-        results["pku"] = {"golden": golden_check(items)}
-    before = manifest(used)
+    test = deeppcb_items(Path(args.deeppcb), "test") if args.deeppcb else []
+    train = deeppcb_items(Path(args.deeppcb), "trainval") if args.deeppcb and args.ai else []
+    items = pku_items(Path(args.pku)) if args.pku else []
+    used = test + train + items
+    before = manifest(used)  # before any check reads them, so a change made while they run is caught
     with open(out / "manifest.csv", "w", newline="", encoding="utf-8") as f:
         csv.writer(f).writerows([("file", "sha256"), *before.items()])
+    if args.deeppcb:
+        results["deeppcb"] = {"golden": golden_check(test, args.min_area), "px_per_mm": DEEPPCB_PX_PER_MM}
+        if args.ai:
+            results["deeppcb"]["ai"] = ai_check(train, test, args.ok_train, cfg)
+    if args.pku:
+        results["pku"] = {"golden": golden_check(items, args.min_area)}
     results["peak_memory_mb"] = peak_memory_mb()
     results["sources_unchanged"] = manifest(used) == before
     (out / "results.json").write_text(json.dumps(results, indent=2), encoding="utf-8")
@@ -250,6 +320,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
 
 def summary(r: dict[str, Any]) -> str:
     lines = [f"# Public dataset check, {r['when_utc']}", "", r["note"], "", f"Machine: {r['machine']}", ""]
+    lines += [f"Recipe: {r['settings']['recipe']}; arguments: {r['arguments']}.", ""]
     for name in ("deeppcb", "pku"):
         if name in r:
             g = r[name]["golden"]
@@ -257,8 +328,33 @@ def summary(r: dict[str, Any]) -> str:
             lines += [f"Boxes {g['boxes']}, missed {g['boxes_missed']} (95 % upper {g['boxes_missed_upper_95']})."]
             lines += [f"- {t}: {v['found']} of {v['boxes']} found" for t, v in g["by_type"].items()]
             lines += [f"Regions on no box {g['regions_on_no_box']}; time per board {g['ms']}.", ""]
+    if "ai" in r.get("deeppcb", {}):
+        a = r["deeppcb"]["ai"]
+        lines += [
+            "## deeppcb AI model alone",
+            f"OK {a['ok']}: {a['ok_called_ng']} NG, {a['ok_called_warning']} Warning.",
+        ]
+        lines += [
+            f"NG {a['ng']}: {a['ng_called_ok']} OK, {a['ng_called_warning']} Warning; training {a['train_s']} s.",
+            "",
+        ]
     lines += [f"Peak memory {r['peak_memory_mb']} MB; sources unchanged: {r['sources_unchanged']}.", ""]
     return "\n".join(lines)
+
+
+def machine() -> dict[str, Any]:
+    """The machine and libraries the counts and times come from, with the threads each library computes on."""
+    return {
+        "system": platform.platform(),
+        "cpu": platform.processor(),
+        "cpus": os.cpu_count(),
+        "python": platform.python_version(),
+        "numpy": np.__version__,
+        "opencv": cv2.__version__,
+        "torch": torch.__version__,
+        "threads": {"torch": torch.get_num_threads(), "opencv": cv2.getNumThreads()},
+        "env": {k: os.environ.get(k) for k in ("OMP_NUM_THREADS", "MKL_NUM_THREADS")},
+    }
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -266,6 +362,13 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--out", required=True)
     p.add_argument("--deeppcb", help="DeepPCB's PCBData folder")
     p.add_argument("--pku", help="PKU-Market-PCB's PCB_DATASET folder")
+    p.add_argument("--min-area", type=int, default=Recipe.min_defect_area, help="Minimum defect area in px (a what-if)")
+    p.add_argument("--ai", action="store_true", help="also train and test the AI model on DeepPCB")
+    p.add_argument("--ok-train", type=int, default=20)
+    p.add_argument("--epochs", type=int, default=anomaly.TrainConfig.epochs)
+    p.add_argument("--steps", type=int, default=anomaly.TrainConfig.steps_per_epoch)
+    p.add_argument("--size", type=int, default=anomaly.TrainConfig.image_size)
+    p.add_argument("--seed", type=int, default=0)
     results = run(p.parse_args(argv))
     print(summary(results))
     return 0 if results["sources_unchanged"] else 1
