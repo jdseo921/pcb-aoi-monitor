@@ -67,6 +67,17 @@ on Inspection stay grey until a board model is chosen in the top bar, and so doe
 is no recipe for a threshold to differ from; another action that needs one shows AOI-SET-014 (select a board model; an
 Engineer or Admin creates the first with **+ New**).
 
+**Scale.** A board model's scale, in px per mm of the board, lets its recipe give sizes in mm, so that a recipe can
+survive a camera change (REQ-RCP-006). The scale does not follow the images by itself: after a camera change, or any
+other change of image size, set it again on the new Golden board before boards are judged; until then sizes in mm keep
+their px at the old scale, as sizes in px always do. With a scale, the Recipe Editor names it above the Golden board,
+the ROI table gives X, Y, W and H in mm, and the minimum defect size, on Thresholds and on Compare, is a width in mm
+(that of a round defect), with the px it spans beside it; the next Save Recipe stores the sizes in mm, and boards are
+judged as before at that scale. Until then, AOI-RCP-009 in amber under the scale counts the sizes the latest revision
+still holds in px and says to press Save Recipe: shown in mm, they keep their px when the scale is set again, while
+sizes in mm follow it. Save to Recipe on Compare keeps a size left untouched as the recipe holds it, so AOI-RCP-009
+stays after it. Without a scale, sizes stay in px beside AOI-RCP-005 in amber, and a recipe saves all the same.
+
 (to be written: creating a board model in full, calibrating px per mm)
 
 ## 3. Samples, labels and datasets

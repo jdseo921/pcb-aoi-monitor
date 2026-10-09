@@ -54,6 +54,7 @@ from ..errors import phrase_text, show_error
 from ..widgets.busy import BusyOverlay
 from ..widgets.empty_state import EmptyState
 from ..widgets.image_view import ImageView
+from ..widgets.scale import DefectSizeField
 from .base import (
     QT_TRANSLATE_NOOP,
     Page,
@@ -269,8 +270,8 @@ class ComparePage(Page):
         self.ai_thr = self.ai_threshold_field(self.tr("Override the AI model's value {value}"), own_row=True)
         self.diff_thr = QSpinBox()
         self.diff_thr.setRange(1, 255)
-        self.min_area = QSpinBox()
-        self.min_area.setRange(1, 100000)
+        self.min_size = DefectSizeField()  # in px without a scale, in mm with one (REQ-RCP-006)
+        self.min_area = self.min_size.area
         self.ssim_min = QDoubleSpinBox()
         self.ssim_min.setRange(0, 1)
         self.ssim_min.setSingleStep(0.01)
@@ -280,12 +281,12 @@ class ComparePage(Page):
         f.addRow(self.ai_thr.tick_row)  # the sketch's label, naming the value: beside the field it widens the window
         f.addRow(self.ai_thr.note)  # why no calibrated value is named, as wide as the panel
         f.addRow(self.tr(THRESHOLDS["diff_threshold"]), self.diff_thr)
-        f.addRow(self.tr(THRESHOLDS["min_defect_area"]), self.min_area)
+        f.addRow(self.min_size.label, self.min_size)
         f.addRow(self.tr(THRESHOLDS["ssim_min"]), self.ssim_min)
         f.addRow(self.tr(THRESHOLDS["max_diff_regions"]), self.max_regions)
         self.ai_thr.changed.connect(self._drop_tried)  # what was tried no longer applies
         self.ai_thr.ticking.connect(self._show_calibration)  # an AI model trained since the value was named
-        for field in (self.diff_thr, self.min_area, self.ssim_min, self.max_regions):
+        for field in (self.diff_thr, self.min_area, self.min_size.mm, self.ssim_min, self.max_regions):
             field.valueChanged.connect(self._drop_tried)
         row = QHBoxLayout()
         self.would_be = QLabel()  # "Would be: ▲ WARN" beside Re-evaluate once a stored result is judged again (sketch)
@@ -301,7 +302,7 @@ class ComparePage(Page):
         pl.addWidget(self.tryout)
         pl.addWidget(self._save_sheet())
         self.ai_thr.changed.connect(self._sync_save)  # Save to Recipe is on while a threshold differs from the recipe
-        for field in (self.diff_thr, self.min_area, self.ssim_min, self.max_regions):
+        for field in (self.diff_thr, self.min_area, self.min_size.mm, self.ssim_min, self.max_regions):
             field.valueChanged.connect(self._sync_save)
         split.addWidget(panel)
         split.setSizes([800, 920])  # the decision table shows all six columns at 1920 x 1080
@@ -398,7 +399,7 @@ class ComparePage(Page):
         self.form_revision = (self.board_model, rev)  # on_show loads the form again once another revision is saved
         self.ai_thr.set_override(r.anomaly_threshold)
         self.diff_thr.setValue(r.diff_threshold)
-        self.min_area.setValue(r.min_defect_area)
+        self.min_size.show_recipe(r, self.ctx.scale(self.board_model))
         self.ssim_min.setValue(r.ssim_min)
         self.max_regions.setValue(r.max_diff_regions)
         self.form_recipe = r
@@ -421,7 +422,7 @@ class ComparePage(Page):
         r = copy.deepcopy(self.ctx.recipe(board_model)[1] if saved is None else saved)
         r.anomaly_threshold = self.ai_thr.override()
         r.diff_threshold = self.diff_thr.value()
-        r.min_defect_area = self.min_area.value()
+        self.min_size.apply(r)
         r.ssim_min = self.ssim_min.value()
         r.max_diff_regions = self.max_regions.value()
         return r
@@ -1107,10 +1108,12 @@ class ComparePage(Page):
 
     def _take_up_revision(self) -> AoiError | None:
         """The form takes up a revision of the header's board model saved since it was loaded (on the Recipe Editor,
-        or anywhere through AppContext). A Save to Recipe sheet open then closes, nothing stored, and AOI-RCP-004 for
-        the page to show is returned: its changes were listed against the revision before (sketch, Errors)."""
+        or anywhere through AppContext), and a scale set since, at which it shows its sizes (S29). A Save to Recipe
+        sheet open then closes, and for a revision AOI-RCP-004 for the page to show is returned, nothing stored: its
+        changes were listed against the revision before (sketch, Errors)."""
         asked = self.form_revision if self._asking else None  # the revision Save to Recipe's open sheet lists against
-        if self.board_model and self.form_revision != (self.board_model, self.ctx.recipe(self.board_model)[0]):
+        bm = self.board_model
+        if bm and (self.form_revision != (bm, self.ctx.recipe(bm)[0]) or self.min_size.px_per_mm != self.ctx.scale(bm)):
             self._load_recipe_into_form()
         if asked and (now := self.form_revision) and now != asked:
             return AoiError("AOI-RCP-004", board_model=now[0], latest=now[1], revision=asked[1])

@@ -990,6 +990,8 @@ def test_req_set_021_however_a_re_evaluation_starts_and_ends_a_further_space_wri
                 wrong.append(f"{start}, ended by {end}: an Engineer's sign-in after it moved the focus")
     for control in (*panel.findChildren(QAbstractSpinBox), *panel.findChildren(QAbstractButton), compare.mode):
         compare.ai_thr.tick.setChecked(True)  # its field takes the focus only then
+        if control is compare.min_size.mm and control.isHidden():  # DefectSizeField's mm, hidden without a scale (S29)
+            continue
         control.setFocus(Qt.FocusReason.TabFocusReason)
         win.set_user("admin")
         kept, revisions = QApplication.focusWidget() is control, len(ctx.recipe_history(BOARD))

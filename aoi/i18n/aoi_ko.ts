@@ -27,7 +27,7 @@
 <context>
     <name>ComparePage</name>
     <message>
-        <location filename="../ui/pages/compare.py" line="+75"/>
+        <location filename="../ui/pages/compare.py" line="+76"/>
         <source>Side by side</source>
         <translation type="unfinished"></translation>
     </message>
@@ -480,6 +480,24 @@
     </message>
 </context>
 <context>
+    <name>DefectSizeField</name>
+    <message>
+        <location filename="../ui/widgets/scale.py" line="+41"/>
+        <source>Minimum defect area (px)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+0"/>
+        <source>Minimum defect size (mm)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+25"/>
+        <source>= {px:.1f} px</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
     <name>Errors</name>
     <message>
         <location filename="../core/services.py" line="+50"/>
@@ -694,7 +712,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/recipe_editor.py" line="+362"/>
+        <location filename="../ui/pages/recipe_editor.py" line="+397"/>
         <source>Height</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1311,6 +1329,21 @@
     </message>
     <message>
         <location line="+4"/>
+        <source>Sizes are shown in px</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Board model {board_model} has no scale yet, so its recipe&apos;s minimum defect size and ROIs are in px of its images: a recipe saves so and judges as before, but its sizes keep their px after a camera change, where sizes in mm would follow the scale set again on the new Golden board.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+6"/>
+        <source>To give them in mm, set the board model&apos;s scale from a known distance on its Golden board.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+7"/>
         <source>Scale not set</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1322,6 +1355,21 @@
     <message>
         <location line="+1"/>
         <source>Nothing was changed. On the Recipe Editor, press Calibrate Scale…, click two points on the Golden board a known distance apart, enter that distance in mm and press Set Scale.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+8"/>
+        <source>Sizes are held in px</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Revision {revision} of board model {board_model} holds {count} of its {total} size(s) in px of its images (the minimum defect size and each ROI&apos;s box): shown in mm at this scale, they keep their px when the scale is set again, as after a camera change, while sizes in mm follow it.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+6"/>
+        <source>Press Save Recipe to store them in mm, so that they follow the scale; that alone changes no verdict at this scale.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -1590,7 +1638,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-607"/>
+        <location line="-636"/>
         <source>Board judged NG</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1650,7 +1698,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+201"/>
+        <location line="+230"/>
         <source>Workspace in use</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3017,7 +3065,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/recipe_editor.py" line="-298"/>
+        <location filename="../ui/pages/recipe_editor.py" line="-331"/>
         <source>Recipe Editor</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3073,7 +3121,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+32"/>
+        <location line="+33"/>
         <source>Draw ROI</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3083,17 +3131,17 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+9"/>
+        <location line="+24"/>
         <source>Trying the recipe…</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+10"/>
+        <location line="+120"/>
         <source>AI score</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+4"/>
+        <location line="-107"/>
         <source>Selected ROI</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3103,18 +3151,18 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-14"/>
-        <location line="+15"/>
+        <location line="+1"/>
+        <location line="+97"/>
         <source>Name</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-15"/>
+        <location line="+0"/>
         <source>Type</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+0"/>
+        <location line="-2"/>
         <source>X</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3134,7 +3182,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+16"/>
+        <location line="-94"/>
         <source>ROI type</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3194,12 +3242,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1"/>
-        <source>Minimum defect area (px)</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+1"/>
+        <location line="+2"/>
         <source>Similarity minimum (SSIM)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3259,6 +3302,21 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <location line="+14"/>
+        <source>px</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+0"/>
+        <source>mm</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>{name} ({unit})</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <location line="+77"/>
         <source>Train an AI model or set a reference image on Training.</source>
         <translation type="unfinished"></translation>
@@ -3269,7 +3327,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+11"/>
+        <location line="+13"/>
         <source>No ROIs yet</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3299,7 +3357,17 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+98"/>
+        <location line="+113"/>
+        <source>Scale {scale:.2f} px/mm</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+10"/>
+        <source>{code} {title}: {action}</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+10"/>
         <source>Image to try the recipe on</source>
         <translation type="unfinished"></translation>
     </message>
