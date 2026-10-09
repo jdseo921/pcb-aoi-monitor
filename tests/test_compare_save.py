@@ -29,7 +29,7 @@ from aoi.ui.pages.recipe_editor import RecipeEditorPage
 from tests.conftest import wrapped
 from tests.test_compare_reevaluate import _pass_every_check, _press, _stored_on_compare, _walk
 from tests.test_compare_stored import save_to_recipe
-from tests.test_req_done_in_v01 import BOARD, _button, _inspect_one, _window
+from tests.test_req_done_in_v01 import BOARD, _inspect_one, _save_recipe, _window
 
 REASON = "Pixel noise from the new lighting"
 SIGN_IN = "Sign in as a user with that role, or ask one to do it."  # AOI-USR-001's step
@@ -265,7 +265,7 @@ def test_req_cmp_005_nothing_is_stored_until_save_revision(
     editor = win.pages["Recipe Editor"]
     assert isinstance(editor, RecipeEditorPage)
     editor.diff.setValue(30)
-    _button(editor, "Save Recipe").click()
+    _save_recipe(qtbot, editor)
     rev = ctx.recipe(BOARD)[0]
     win.navigate("Compare")
     assert compare.sheet.isHidden() and compare.diff_thr.value() == 30 and not compare.btn_save.isEnabled()

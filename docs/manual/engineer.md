@@ -386,11 +386,16 @@ Threshold column on Training). An ROI is NG when the highest AI score inside it 
 Volume thresholds, min and max (stored now, checked from Stage 2), are 0 or more, with min not above max; "—", one step
 below 0, leaves a threshold unset. Apply refuses other values with AOI-RCP-002 and changes nothing.
 
-Each Save Recipe stores a new revision. When a revision was saved after the Recipe Editor loaded its own, for example
-with Save to Recipe on Compare, the editor shows it when opened again; if the editor holds changes not yet saved, it asks
-first. Choosing No keeps them on screen, but Save Recipe then refuses (AOI-RCP-001) until the newer revision is loaded,
-so a save never undoes another without notice. Picking another board model cancels a Try Recipe… still running and
-clears the last Try's verdict.
+**Save Recipe** (Ctrl+S) never overwrites a revision. It opens a sheet under the tabs that names the revision it will
+make and lists what changes from the latest one, before → after ("Pixel difference: 45 → 30", "ROI R3 added"), and the
+mandatory AOI checks the recipe leaves uncovered (see AOI checks below). Nothing is saved until you press Save Revision
+(named with the revision's number); Cancel or Esc closes the sheet. Save Revision is off while nothing has changed, and
+while a Stage 1 check is uncovered until you type a reason, which is kept with the revision in its audit entry. If you
+change the recipe while the sheet is open, Save Revision shows the sheet again with the new changes before anything is
+saved. When a revision was saved after the Recipe Editor loaded its own, for example with Save to Recipe on Compare, the
+editor shows it when opened again; if the editor holds changes not yet saved, it asks first. Choosing No keeps them on
+screen, but Save Recipe then refuses (AOI-RCP-001) until the newer revision is loaded, so a save never undoes another
+without notice. Picking another board model cancels a Try Recipe… still running and clears the last Try's verdict.
 
 **AI score threshold** (Thresholds tab). Each AI model is calibrated to an AI score threshold when it is trained (the
 Threshold column on Training), and the recipe judges by that value unless you override it for the board model. The tick

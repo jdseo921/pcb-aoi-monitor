@@ -170,3 +170,44 @@ def _mm(value: object, place: bool = False) -> bool:
 def scale_digits(a: float | None, b: float | None) -> int:
     """The decimals, 2 or more, that print two scales apart when they differ (S29 review), else 2."""
     return next((d for d in range(2, 17) if a and b and f"{a:.{d}f}" != f"{b:.{d}f}"), 2)
+
+
+ADDED, REMOVED = "added", "removed"  # a Change's `field` for a whole ROI
+
+
+@dataclass(frozen=True)
+class Change:
+    """One difference between two revisions of a recipe (REQ-RCP-004): a setting of the recipe (`roi` None) or of the
+    ROI named `roi`, as stored, before and after (None: not stored); a whole ROI added or removed has `field` ADDED or
+    REMOVED and the ROI as stored on its side."""
+
+    roi: str | None
+    field: str
+    before: Any
+    after: Any
+
+
+def changes(before: Recipe | None, after: Recipe) -> list[Change]:
+    """What `after` changes from `before`, both as stored (`to_dict`): the recipe's settings that differ, in its field
+    order, then its ROIs in `after`'s order, each added or with each field that differs, then the ROIs `before` held
+    and `after` does not. ROIs are matched by name, two of one name in their order; against no revision, every setting
+    and ROI is a change."""
+    old, new = (before.to_dict() if before is not None else {}), after.to_dict()
+    out = [Change(None, k, old.get(k), new.get(k)) for k in _keys(old, new, ("board_model", "rois"))]
+    left: dict[str, list[dict[str, Any]]] = {}
+    for r in old.get("rois", []):
+        left.setdefault(r["name"], []).append(r)
+    for r in new["rois"]:
+        if not (same := left.get(r["name"])):
+            out.append(Change(r["name"], ADDED, None, r))
+            continue
+        o = same.pop(0)
+        out += [Change(r["name"], k, o.get(k), r.get(k)) for k in _keys(o, r, ("name",))]
+    out += [Change(r["name"], REMOVED, r, None) for rs in left.values() for r in rs]
+    return out
+
+
+def _keys(old: dict[str, Any], new: dict[str, Any], skip: tuple[str, ...]) -> list[str]:
+    """The keys of `new`, then of `old` only, whose values differ, but those in `skip`."""
+    keys = [*new, *(k for k in old if k not in new)]
+    return [k for k in keys if k not in skip and old.get(k) != new.get(k)]
