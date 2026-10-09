@@ -41,6 +41,7 @@ from .inspector import NG, OK, WARN, AiEvidence, InspectionResult, Inspector, Ju
 from .jobs import JobCancelled, Jobs
 from .maps import load_maps, map_paths, picture_shape, save_maps
 from .recipe import Recipe
+from .sample_import import REFUSED, ImportFile, ImportReport
 
 ALARM_LIMIT = 1000  # REQ-INSP-006: the alarms a screen shows and that survive a restart
 BUSY_ALARM_WAIT_MS = 200  # how long the alarm of a locked database's error, or an Inspection alarm, waits, not 5 s
@@ -335,18 +336,22 @@ class AppContext:
     ) -> int:
         """Copy uploads into the workspace so training data survives the source folder moving; returns how many were
         added. Each file goes through `_copy_checked` (REQ-TRN-001): checked as Inspection checks an image, never
-        written, its SHA-256 recorded with the sample. An NG import names one of the 33 DCT types (AOI-TRN-013). All or
-        nothing (#178): a file refused, or one that cannot be copied (AOI-TRN-008, or AOI-TRN-011
-        when the system refuses the copy's path as too long, #245), stops the import with its code and removes the
-        copies made; then the samples, a new board model's default recipe and reference, and the audit entry, which
-        names each sample added by its UUID and SHA-256 (`samples`), commit together. `progress(done, total)` follows
-        each file, and once `should_stop()` is true the files not yet copied are left out, the ones copied are added
-        and the audit entry says so (`cancelled`)."""
+        written, its SHA-256 recorded with the sample; an image the board model already has, or one earlier in
+        `paths`, is skipped (decision Q31), and the audit entry counts it and names the sample that has it by UUID and
+        SHA-256 (`skipped`, `already`). An NG import names one of the 33 DCT types (AOI-TRN-013). All or nothing
+        (#178): a file refused, or one that cannot be copied (AOI-TRN-008, or AOI-TRN-011 when the system refuses the
+        copy's path as too long, #245), stops the import with its code and removes the copies made; then the samples, a
+        new board model's default recipe and reference, and the audit entry, which names each sample added by its UUID
+        and SHA-256 (`samples`), commit together. `progress(done, total)` follows each file, and once `should_stop()` is
+        true the files not yet copied are left out, the ones copied are added and the audit entry says so
+        (`cancelled`); `import_files` passes one file a call and stops between calls, so the entries it writes never
+        say so."""
         self._refuse_case_variant(board_model)  # a new board model is created by its first import
         self._refuse_untyped(paths[0] if paths else "", label, defect_type)
         dest = self.settings.images_dir / board_model / label
+        known: dict[str, dict[str, Any]] = {}  # each image copied so far, by SHA-256: a second one is skipped too
         copies: list[tuple[Path, str, str]] = []  # each copy, its sample UUID (which its file name carries, #245), hash
-        stopped = False
+        stopped, kept = False, list[tuple[str, dict[str, Any]]]()  # each image skipped: its SHA-256, the sample with it
         try:
             for p in paths:
                 if should_stop is not None and should_stop():
@@ -354,9 +359,14 @@ class AppContext:
                     break
                 src, uid = Path(p), new_uuid()
                 target = dest / f"{_stem(src)}_{uid}{src.suffix.lower()}"
-                copies.append((target, uid, self._copy_checked(src, target, len(paths))))
+                digest, same = self._copy_checked(board_model, src, target, known, len(paths))
+                if same is not None:
+                    kept.append((digest, same))
+                else:
+                    copies.append((target, uid, digest))
+                    known[digest] = {"uuid": uid, "path": str(target), "label": label}
                 if progress is not None:
-                    progress(len(copies), len(paths))
+                    progress(len(copies) + len(kept), len(paths))
             with self.db.transaction():
                 for target, uid, digest in copies:  # the first creates a new board model
                     self.db.add_sample(board_model, str(target), label, defect_type, side, uid, sha256=digest)
@@ -366,10 +376,10 @@ class AppContext:
                     oks = self.db.samples(board_model, "OK")
                     if oks:
                         self.db.set_reference(board_model, oks[0]["path"])
-                after: dict[str, Any] = {
-                    "label": label, "defect_type": defect_type, "side": side, "added": len(copies), "cancelled": stopped
-                }  # fmt: skip
+                after: dict[str, Any] = {"label": label, "defect_type": defect_type, "side": side, "added": len(copies)}
+                after |= {"skipped": len(kept), "cancelled": stopped}
                 after["samples"] = [{"uuid": uid, "sha256": digest} for _, uid, digest in copies]
+                after["already"] = [{"uuid": had["uuid"], "sha256": digest} for digest, had in kept]
                 self.audit("sample.import", "board_model", board_model, None, after)
         except BaseException:
             _remove([target for target, _, _ in copies])
@@ -383,16 +393,21 @@ class AppContext:
             why = NOT_A_TYPE.fill(name=defect_type) if defect_type else NO_TYPE
             raise AoiError("AOI-TRN-013", path=path, why=why)
 
-    def _copy_checked(self, src: Path, target: Path, count: int) -> str:
-        """Copy one sample's source file to `target` and return its SHA-256 (REQ-TRN-001). The source is only read:
-        its bytes are checked and decoded as Inspection checks an image (`checked_bytes`: AOI-INSP-001, -004 to -007,
-        decision Q30) and hashed. The copy is a crash-safe write; then the source and the copy are read again, and a
-        SHA-256 other than the one checked (a writer still at the source) refuses the file with AOI-TRN-014 and removes
-        the copy. A copy that cannot be written raises AOI-TRN-008, or AOI-TRN-011 when the system refuses its path as
-        too long (#245)."""
+    def _copy_checked(
+        self, board_model: str, src: Path, target: Path, known: dict[str, dict[str, Any]], count: int
+    ) -> tuple[str, dict[str, Any] | None]:
+        """Copy one sample's source file to `target` and return its SHA-256 and None (REQ-TRN-001). The source is only
+        read: its bytes are checked and decoded as Inspection checks an image (`checked_bytes`: AOI-INSP-001, -004 to
+        -007, decision Q30) and hashed; an image already imported, one `board_model` has (one indexed lookup) or one
+        of `known`, copies nothing and comes back with that sample (decision Q31). The copy is a crash-safe write; then
+        the source and the copy are read again, and a SHA-256 other than the one checked (a writer still at the source)
+        refuses the file with AOI-TRN-014 and removes the copy. A copy that cannot be written raises AOI-TRN-008, or
+        AOI-TRN-011 when the system refuses its path as too long (#245)."""
         data = imaging.checked_bytes(src, self.settings.max_image_megapixels, self.settings.max_image_megabytes)
         digest = hashlib.sha256(data).hexdigest()
         del data  # up to the size limit in memory: not kept through the copy
+        if (had := known.get(digest) or self.db.sample_with_sha256(board_model, digest)) is not None:
+            return digest, had
         try:
             atomic.copy_file(src, target)
         except OSError as e:  # gone, unreadable, the workspace drive full, or a path the system refuses
@@ -408,7 +423,42 @@ class AppContext:
         if not same:
             _remove([target])
             raise AoiError("AOI-TRN-014", path=str(src))
-        return digest
+        return digest, None
+
+    @requires("Engineer", QT_TRANSLATE_NOOP("Errors", "Importing samples"))
+    def import_files(
+        self,
+        board_model: str,
+        files: list[ImportFile],
+        progress: Callable[[int, int], None] | None = None,
+        should_stop: Callable[[], bool] | None = None,
+    ) -> ImportReport:
+        """Import each file with its own label, defect type and view, one `import_samples` call each, so what went in
+        stays when Cancel or an error stops the rest (#178, #206); the import sheet on Training runs it on the pool
+        (REQ-TRN-001). A file refused with a code in `REFUSED` (Inspection's checks, an NG with no type, a source
+        changed while copied), one with no label (AOI-TRN-016) and an image the board model already has (AOI-TRN-015,
+        decision Q31) is listed with its error and the import goes on; any other error, such as a copy the workspace
+        refuses or the database, stops it at that file. `progress(done, total)` follows each file, and once
+        `should_stop()` is true the files not yet imported are left."""
+        report = ImportReport()
+        for i, f in enumerate(files):
+            if should_stop is not None and should_stop():
+                report.left = files[i:]
+                break
+            try:
+                if f.label is None:
+                    raise AoiError("AOI-TRN-016", path=f.path)
+                if not self.import_samples(board_model, [f.path], f.label, f.defect_type, f.side):
+                    raise AoiError("AOI-TRN-015", path=f.path, board_model=board_model)
+                report.added.append(f)
+            except Exception as e:
+                if not (isinstance(e, AoiError) and e.code in REFUSED):
+                    report.stopped, report.left = (f, e), files[i + 1 :]
+                    break
+                report.refused.append((f, e))
+            if progress is not None:
+                progress(i + 1, len(files))
+        return report
 
     # --- training ------------------------------------------------------------
     @requires("Engineer", QT_TRANSLATE_NOOP("Errors", "Training an AI model"))

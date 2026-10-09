@@ -43,6 +43,16 @@ def wrapped(name: str) -> str:
     return "".join(c + ZWSP if c in "_-" else c for c in name)
 
 
+def distinct_copies(src: Path, folder: Path, n: int) -> list[Path]:
+    """`n` copies of the image `src` in `folder`, each with bytes of its own after the image's end, which decoders never
+    read: one picture under n SHA-256s, so an import takes each rather than skipping it as already imported (Q31)."""
+    folder.mkdir(parents=True, exist_ok=True)
+    data, out = src.read_bytes(), [folder / f"{src.stem}_{i:03d}{src.suffix}" for i in range(n)]
+    for i, p in enumerate(out):
+        p.write_bytes(data + f"{folder.name}{i:06d}".encode())  # another folder's copies have other bytes
+    return out
+
+
 @pytest.fixture
 def workspace(tmp_path: Path) -> Settings:
     """Settings on a fresh temporary workspace; nothing in the tests touches ~/AOI_Workspace."""

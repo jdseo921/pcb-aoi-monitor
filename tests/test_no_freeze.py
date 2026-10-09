@@ -40,6 +40,7 @@ from aoi.ui import theme
 from aoi.ui.pages.training import NgDialog
 from aoi.ui.widgets.busy import BusyOverlay
 from aoi.ui.workers import Worker, start
+from tests.conftest import distinct_copies
 from tests.test_jobs import count_to
 from tests.test_req_done_in_v01 import BOARD, _window
 
@@ -210,9 +211,10 @@ def test_req_set_021_recipe_editor_test_run_does_not_freeze(
 def test_req_set_021_training_folder_import_does_not_freeze(
     qtbot: QtBot, trained_ctx: AppContext, board_5mp: Path, tmp_path: Path
 ) -> None:
-    for name in ("ok/a.png", "ok/b.png", "ng/missing_component/c.png"):  # an NG image is imported with its type
-        (tmp_path / "import" / name).parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy(board_5mp, tmp_path / "import" / name)
+    boards = distinct_copies(board_5mp, tmp_path / "boards", 3)  # three images: one is imported once (Q31)
+    for board, name in zip(boards, ("ok/a.png", "ok/b.png", "ng/missing_component/c.png"), strict=True):
+        (tmp_path / "import" / name).parent.mkdir(parents=True, exist_ok=True)  # an NG image is imported with its type
+        shutil.copy(board, tmp_path / "import" / name)
     win = _window(qtbot, trained_ctx)
     page = win.pages["Training"]
     before = page.samples.rowCount()
@@ -373,7 +375,8 @@ def test_req_set_021_training_add_samples_does_not_freeze(
     """#194: + OK Images and + NG Images copy the picked files on a pool thread under the dataset's busy overlay; Cancel
     keeps the samples already added and says how many."""
     n = _copies_for_a_stall(board_5mp, tmp_path, checked=True)
-    monkeypatch.setattr(QFileDialog, "getOpenFileNames", staticmethod(lambda *a, **k: ([str(board_5mp)] * n, "")))
+    picked = {"ok": [str(p) for p in distinct_copies(board_5mp, tmp_path / "ok", n)]}  # each imported once (Q31)
+    monkeypatch.setattr(QFileDialog, "getOpenFileNames", staticmethod(lambda *a, **k: (picked["ok"], "")))
     monkeypatch.setattr(QInputDialog, "getItem", staticmethod(lambda *a, **k: ("Top", True)))
     monkeypatch.setattr(NgDialog, "exec", lambda self: self.type.setCurrentIndex(1) or 1)  # the first type, Top
     win = _window(qtbot, trained_ctx)
@@ -392,6 +395,7 @@ def test_req_set_021_training_add_samples_does_not_freeze(
     ng_dir = trained_ctx.settings.images_dir / BOARD / "NG"
     files_before = len(list(ng_dir.glob("board_5mp_*.png")))
     status = win.statusBar().currentMessage
+    picked["ok"] = [str(p) for p in distinct_copies(board_5mp, tmp_path / "ng", n)]
     page.add_ng()
     _cancel_when_started(qtbot, page.busy, lambda: len(list(ng_dir.glob("board_5mp_*.png"))) > files_before)
     qtbot.waitUntil(lambda: status().startswith("Stopped"), timeout=60000)

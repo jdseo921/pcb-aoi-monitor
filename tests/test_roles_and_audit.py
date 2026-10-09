@@ -16,11 +16,20 @@ from pytestqt.qtbot import QtBot
 
 from aoi.config import Settings, default_workspace
 from aoi.core.recipe import Recipe
+from aoi.core.sample_import import ImportFile, ImportReport
 from aoi.core.services import REQUIRED_ROLE, ROLES, AppContext, CsvFile
 from aoi.errors import AoiError
 from aoi.ui.main_window import MainWindow
 from aoi.ui.pages.base import role_text
 from aoi.ui.pages.settings import SettingsPage
+
+
+def _raising(report: ImportReport) -> ImportReport:
+    """import_files reports the error that stopped it rather than raising it: raised here, as every other write's is."""
+    if report.stopped is not None:
+        raise report.stopped[1]
+    return report
+
 
 # every AppContext write: method -> (its audit action, a call that works on the trained workspace), in a runnable order
 WRITES: dict[str, tuple[str, Callable[[AppContext, Path, Path], Any]]] = {
@@ -28,6 +37,12 @@ WRITES: dict[str, tuple[str, Callable[[AppContext, Path, Path], Any]]] = {
     "import_samples": (
         "sample.import",
         lambda ctx, data, tmp: ctx.import_samples("TINY", [str(data / "golden.png")], "OK"),
+    ),
+    "import_files": (
+        "sample.import",
+        lambda ctx, data, tmp: _raising(
+            ctx.import_files("TINY", [ImportFile(str(data / "test" / "ok" / "ok_000.png"), "OK")])
+        ),
     ),
     "set_reference": (
         "board_model.reference",
