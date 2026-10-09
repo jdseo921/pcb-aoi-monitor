@@ -16,7 +16,6 @@ import cv2
 import numpy as np
 import pytest
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QDialogButtonBox
 from pytestqt.qtbot import QtBot
 
 from aoi.core.imaging import list_images
@@ -26,7 +25,6 @@ from aoi.data import atomic
 from aoi.defects import names
 from aoi.errors import AoiError
 from aoi.ui.main_window import MainWindow
-from aoi.ui.pages.training import NgDialog
 from tests.conftest import distinct_copies
 from tests.test_no_freeze import BUDGET_S, gap_meter
 
@@ -135,11 +133,10 @@ def test_req_trn_001_ng_has_dct_type(
 def test_req_trn_001_a_sample_marked_ng_has_one_of_the_33_types(
     qtbot: QtBot, ctx: AppContext, synthetic_dataset: Path
 ) -> None:
-    """Mark NG… holds to the import's rule: update_sample refuses NG without one of the 33 types (none, "Unknown /
-    mixed", "Anomaly") with AOI-TRN-013, and a label other than OK or NG with AOI-TRN-018, which says the sample was
-    not given that label, leaving the sample as it was; Mark OK clears the type, so no sample is NG without a type or
-    OK with one. Its dialog offers the 33 types alone, none picked, and holds OK until one is; another category clears
-    the pick. It asks no view, which Mark NG… never changed."""
+    """update_sample holds to the import's rule: it refuses NG without one of the 33 types (none, "Unknown / mixed",
+    "Anomaly") with AOI-TRN-013, and a label other than OK or NG with AOI-TRN-018, which says the sample was not given
+    that label, leaving the sample as it was; a relabel to OK clears the type. Training's marks write through set_label
+    (S33): an image marked NG there has no type until a box of one of the 33 is drawn."""
     ctx.import_samples(BOARD, [str(p) for p in list_images(synthetic_dataset / "train" / "ok")[:2]], "OK")
     sample = ctx.samples(BOARD)[1]["id"]  # not the reference, which is never relabelled NG (AOI-TRN-007)
 
@@ -158,15 +155,6 @@ def test_req_trn_001_a_sample_marked_ng_has_one_of_the_33_types(
     assert kept() == ("NG", "Scratch")
     ctx.update_sample(sample, "OK", "Scratch")
     assert kept() == ("OK", None)
-    dialog = NgDialog()
-    qtbot.addWidget(dialog)
-    ok = dialog.buttons.button(QDialogButtonBox.StandardButton.Ok)
-    kinds = [dialog.type.itemData(i) for i in range(dialog.type.count())]
-    assert kinds == names() and dialog.type.currentIndex() == -1 and not ok.isEnabled() and dialog.value() is None
-    dialog.type.setCurrentIndex(dialog.type.findData("Scratch"))
-    assert ok.isEnabled() and dialog.value() == "Scratch"
-    dialog.cat.setCurrentIndex(dialog.cat.findData("Solder"))
-    assert dialog.type.currentIndex() == -1 and not ok.isEnabled()
 
 
 @pytest.mark.parametrize("side", ["Front", "", "top", "../../outside", "Top/../.."])

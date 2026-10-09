@@ -14,7 +14,6 @@ from aoi.core.services import AppContext
 from aoi.errors import AoiError
 from aoi.ui.main_window import MainWindow
 from aoi.ui.pages.base import cell_text
-from aoi.ui.pages.training import NgDialog
 from tests.test_req_done_in_v01 import BOARD, _window
 
 
@@ -146,7 +145,6 @@ def test_req_trn_007_mark_ng_and_remove_skip_only_the_reference_whatever_the_sel
     win._on_board_model("B")
     win.navigate("Training")
     page = win.pages["Training"]
-    monkeypatch.setattr(NgDialog, "exec", lambda self: self.type.setCurrentIndex(self.type.findData("Scratch")) or 1)
     monkeypatch.setattr(QMessageBox, "question", lambda *a, **k: QMessageBox.StandardButton.Yes)
 
     def select(*ids: int) -> None:  # in this order: the reference first

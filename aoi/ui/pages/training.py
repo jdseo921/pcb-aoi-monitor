@@ -13,8 +13,6 @@ from PySide6.QtGui import QKeyEvent, QResizeEvent
 from PySide6.QtWidgets import (
     QApplication,
     QComboBox,
-    QDialog,
-    QDialogButtonBox,
     QFileDialog,
     QFormLayout,
     QGroupBox,
@@ -31,7 +29,6 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from ... import defects as taxonomy
 from ...core.imaging import IMAGE_EXTS
 from ...core.labels import DefectBox
 from ...core.sample_import import ImportFile, ImportReport, folder_files
@@ -94,48 +91,6 @@ def _sample_counts(model: dict[str, Any]) -> str:
     if len(counts) != 3 or not all(type(c) is int for c in counts):  # bool is an int, but not a count
         return ""
     return f"{counts[0] + counts[1]}/{counts[2]}"
-
-
-class NgDialog(QDialog):
-    """Ask which of the 33 defect types of the classification table the samples marked NG show: no "Unknown"
-    (REQ-TRN-001), and OK stays grey until a type is picked. No view: Mark NG… keeps each sample's."""
-
-    def __init__(self, parent: QWidget | None = None) -> None:
-        super().__init__(parent)
-        self.setWindowTitle(self.tr("Label NG images"))
-        f = QFormLayout(self)
-        self.cat = QComboBox()
-        self.cat.addItem(self.tr("(any)"), None)
-        for category in taxonomy.categories():  # names from the classification table, English until it is translated
-            self.cat.addItem(category, category)
-        self.type = QComboBox()
-        self.type.setPlaceholderText(self.tr("Pick one of the 33 defect types"))
-        self.cat.currentIndexChanged.connect(self._fill)
-        self._fill()
-        f.addRow(self.tr("Category"), self.cat)
-        f.addRow(self.tr("Defect type"), self.type)
-        self.buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
-        self.buttons.accepted.connect(self.accept)
-        self.buttons.rejected.connect(self.reject)
-        f.addRow(self.buttons)
-        self.type.currentIndexChanged.connect(self._allow)
-        self._allow()
-
-    def _fill(self, _index: int = 0) -> None:
-        cat = self.cat.currentData()
-        self.type.clear()
-        for d in taxonomy.DEFECT_TYPES:  # the 33: never "Unknown", never the AI model's "Anomaly"
-            if cat is None or d.category == cat:
-                self.type.addItem(self.tr("{type}  [{severity}]").format(type=d.name, severity=d.severity), d.name)
-        self.type.setCurrentIndex(-1)  # a type is picked, never taken by default
-
-    def _allow(self, _index: int = 0) -> None:
-        self.buttons.button(QDialogButtonBox.StandardButton.Ok).setEnabled(self.type.currentIndex() >= 0)
-
-    def value(self) -> str | None:
-        """The defect type picked, as the services store it (None until one is, which they refuse for NG)."""
-        type_name: str | None = self.type.currentData()
-        return type_name
 
 
 class _Counts(QLabel):
