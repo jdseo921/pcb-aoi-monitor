@@ -40,7 +40,20 @@ from ..data.workspace_lock import WorkspaceLock
 from ..errors import QT_TRANSLATE_NOOP, AoiError, Phrase, joined
 from ..hal import VIEWS
 from ..times import local_date, now_utc
-from . import anomaly, crypto, datasets, golden, imaging, labels, lineage, model_card, run_progress, stats, stores
+from . import (
+    anomaly,
+    crypto,
+    datasets,
+    golden,
+    imaging,
+    labels,
+    lineage,
+    model_card,
+    report,
+    run_progress,
+    stats,
+    stores,
+)
 from .compare import Region, changed_regions
 from .imaging import (
     align_to_reference,
@@ -1233,6 +1246,26 @@ class AppContext:
         if (cal := _calibration(model)) is None:
             raise AoiError("AOI-TRN-012", version=model["version"], board=model["board_model"])
         return cal[0]
+
+    def report_images(self, rows: list[dict[str, Any]]) -> dict[str, str]:
+        """The stored overlay of each missed defect and false call among `rows` (`report.misses_and_false_calls`), as a
+        PNG data URI at most REPORT_PX on its longest side, by the row's image path, for the validation report
+        (REQ-TST-004); a row whose overlay is not kept, or cannot be read, is left out and the report says so."""
+        misses, false_calls = report.misses_and_false_calls(rows)
+        out: dict[str, str] = {}
+        for r in misses + false_calls:
+            if r.get("overlay"):
+                try:
+                    out[str(r["image"])] = report.image_uri(self.load_image(r["overlay"]))
+                except (AoiError, OSError, ValueError):
+                    continue
+        return out
+
+    def model_card_text(self, board_model: str, model_uuid: str | None) -> str | None:
+        """The model card, as Markdown, of the AI model version `model_uuid` of `board_model`, which a validation
+        report includes (REQ-TST-004); None for no AI model or a version without a card."""
+        model = next((m for m in self.db.models(board_model) if m["uuid"] == model_uuid), None) if model_uuid else None
+        return self.card_text(int(model["id"])) if model else None
 
     def test_runs(self, board_model: str) -> list[dict[str, Any]]:
         """Every validation run of a board model, newest first (REQ-TST-005): uuid, time, the AI model version, the
