@@ -36,6 +36,7 @@ states yet.
 | Date | Request, in Jay's words | Where it was made |
 |---|---|---|
 | 2026-10-01 | "Essential functions include self-training from sample pcb board image uploads and side-by-side comparisons page that users can optionally access to compare images and see metrics/variables that decide whether an uploaded pcb image has a defect or not." | Jay's first message in the project chat |
+| 2026-10-09 | "After merging and push are done and everything is fully up to date on github main branch, perform the training/learning so that the false positives are minimized; aim for 95% accuracy." | The project thread "Train to cut false positives" |
 
 ## Named releases
 

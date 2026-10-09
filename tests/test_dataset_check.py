@@ -168,3 +168,30 @@ def test_req_insp_014_ai_model_trained_per_group_and_scored_on_the_test_split(tm
     assert ai["ok"] == 1 and ai["ng"] == 1  # the test split's template and its defective board
     assert ai["groups"]["groupA"]["ok_trained"] == 3 and ai["groups"]["groupA"]["ng_calibrated"] == 0
     assert ai["train_s"]["n"] == 1 and ai["ms"]["n"] == 2
+
+
+def test_req_trn_018_tune_chooses_the_comparisons_thresholds_on_pku(tmp_path: Path) -> None:
+    """--tune trains the Pixel difference and Minimum defect area on PKU-Market-PCB's photos not held out and counts
+    the held-out ones at the chosen pair and at the default; with none held out, those counts are zero."""
+    pku = _pku(tmp_path / "p")
+    out = tmp_path / "out"
+    assert dc.main(["--out", str(out), "--pku", str(pku), "--tune", "--held-out", "0"]) == 0
+    tune = json.loads((out / "results.json").read_text(encoding="utf-8"))["pku"]["tune"]
+    assert tune["boards"] == {"train": 1, "held_out": 0}
+    assert tune["train"]["chosen"]["found"] == 1 and tune["train"]["chosen"]["false_windows"] == 0
+    assert tune["held_out"]["chosen"]["defects"] == 0
+    assert "comparison thresholds trained" in (out / "summary.md").read_text(encoding="utf-8")
+
+
+def test_req_trn_018_held_out_photos_are_a_seeded_share_of_each_board_and_type(tmp_path: Path) -> None:
+    items = [
+        dc.Item("PKU-Market-PCB", board, tmp_path / kind / f"{board}_{i}.jpg", tmp_path / f"{board}.JPG")
+        for board in ("01", "04")
+        for kind in ("Short", "Spur")
+        for i in range(10)
+    ]
+    test = dc.held_out(items, 0.3, 0)
+    assert len(test) == 12 and test == dc.held_out(items, 0.3, 0)
+    assert all(
+        sum(p.parent.name == k and p.stem[:2] == b for p in test) == 3 for b in ("01", "04") for k in ("Short", "Spur")
+    )

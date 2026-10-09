@@ -60,6 +60,7 @@ interfaces that Stages 2–4 (cameras, robot, MES/ERP) plug into without changin
 │  explain.py   a verdict in plain words, one sentence per failing check       │
 │  views.py     Compare's heat views: the board under a difference or AI map   │
 │  recipe.py    ROIs + thresholds per board model                              │
+│  tuning.py    trains the comparison's two thresholds from labelled boards    │
 │  jobs.py      background jobs: progress, cancel, finished callbacks; no Qt   │
 │  run_progress.py a training run's percent and time left; no Qt               │
 │  defects.py   DCT taxonomy, severities, mandatory AOI set                    │
@@ -1024,6 +1025,13 @@ the datasets. Both are research-use datasets, used for internal checks only with
 no image, box or model trained on them enters the repository or ships, and their counts are never an accuracy claim. The
 runs are recorded in `docs/tests/2026-10-08-public-dataset-check.md` (DeepPCB in the cloud, then DeepPCB and
 PKU-Market-PCB on Jay's laptop), and ADR 0008 (proposed) keeps the default Minimum defect area of 40 px until the customer's size is agreed.
+
+Training the comparison (REQ-TRN-018): `aoi/core/tuning.py` counts, for each pair of Pixel difference and Minimum defect
+area it tries, the boxed defects a labelled board's difference map finds and its defect-free 512 px windows that a
+region falls in, and chooses the pair with the fewest false calls among those that miss at most 1 % of the boxed
+defects. `tools/dataset_check.py --tune` runs it on PKU-Market-PCB with 30 % of each board's photos of each type held
+out (`docs/tests/2026-10-09-comparison-training.md`); the app's defaults do not change, and no AppContext method or
+screen runs it on a board model's samples yet.
 
 | Requirement | Where | Status |
 |---|---|---|

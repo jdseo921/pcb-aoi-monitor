@@ -1,7 +1,7 @@
 """Check the engine on public PCB defect datasets, for an internal test record (plan stage S30, issue #10).
 
     python tools/dataset_check.py --out <folder> [--deeppcb <PCBData folder>] [--pku <PCB_DATASET folder>]
-        [--min-area <px>] [--ai]
+        [--min-area <px>] [--ai] [--tune]
 
 DeepPCB (PCBData: `*_temp.jpg` defect-free, `*_test.jpg` defective, boxes in `*_not/*.txt`, splits in test.txt and
 trainval.txt) and PKU-Market-PCB (PCB_DATASET: `PCB_USED/<board>.JPG` defect-free, `images/<type>/` defective, VOC boxes
@@ -14,6 +14,10 @@ default recipe) and, with --ai, the AI model alone on DeepPCB's test split (one 
 seeded templates of the group's trainval split). A labelled box counts as found when a difference region overlaps
 it grown by MARGIN px. It writes manifest.csv (SHA-256 of every file read), results.json and summary.md to --out, which
 must lie outside the repository and the datasets, and checks that no source file changed.
+
+With --tune and --pku it trains the comparison's Pixel difference and Minimum defect area (aoi/core/tuning.py,
+REQ-TRN-018) on PKU-Market-PCB: a seeded --held-out share of each board's photos of each defect type is set aside, the
+pair is chosen on the rest, and the held-out photos are counted at the chosen pair and at the default recipe.
 """
 
 from __future__ import annotations
@@ -42,7 +46,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:  # run as a script: the repository root holds the ``aoi`` package
     sys.path.insert(0, str(ROOT))
 
-from aoi.core import anomaly  # noqa: E402
+from aoi.core import anomaly, tuning  # noqa: E402
 from aoi.core.imaging import load_image  # noqa: E402
 from aoi.core.inspector import Inspector  # noqa: E402
 from aoi.core.recipe import Recipe  # noqa: E402
@@ -189,6 +193,53 @@ def golden_check(items: list[Item], min_area: int = Recipe.min_defect_area) -> d
     }
 
 
+def held_out(items: list[Item], share: float, seed: int) -> set[Path]:
+    """A seeded `share` of each board's photos of each defect type, rounded, set aside from training."""
+    groups: dict[tuple[str, str], list[Item]] = {}
+    for item in items:
+        groups.setdefault((item.group, item.test.parent.name), []).append(item)
+    out: set[Path] = set()
+    for key in sorted(groups):
+        paths = sorted(i.test for i in groups[key])
+        random.Random(f"{seed}/{key[0]}/{key[1]}").shuffle(paths)
+        out.update(paths[: round(len(paths) * share)])
+    return out
+
+
+def tune_check(items: list[Item], share: float, seed: int) -> dict[str, Any]:
+    """Each board judged against its own defect-free board by the default recipe, AI check off, its difference map
+    counted at every pair of thresholds; the pair chosen on the training photos, then counted on the held-out ones."""
+    test = held_out(items, share, seed)
+    train_tables, test_tables = [], []
+    recipe = Recipe(board_model="PKU", use_ai=False)
+    for item in items:
+        res = Inspector(recipe, reference=load_image(item.good)).inspect(load_image(item.test))
+        assert res.compare is not None and res.compare.diff_map is not None
+        boxes = [b[:4] for b in item.boxes]
+        table = tuning.measure(res.compare.diff_map, boxes, True, recipe, res.compare.metrics["ssim"])
+        (test_tables if item.test in test else train_tables).append(table)
+    train, held = tuning.total(train_tables), tuning.total(test_tables)
+    chosen = tuning.choose(train)
+    default, none = (recipe.diff_threshold, recipe.min_defect_area), tuning.Counts()
+
+    def row(c: tuning.Counts) -> dict[str, Any]:
+        rates = {k: round(getattr(c, k), 4) for k in ("accuracy", "precision", "recall", "false_call_rate")}
+        bounds = {"missed_upper_95": round(upper_95(c.missed, c.defects), 4)}
+        bounds["false_call_upper_95"] = round(upper_95(c.false_windows, c.windows), 4)
+        return {**vars(c), "missed": c.missed, **rates, **bounds}
+
+    return {
+        "boards": {"train": len(train_tables), "held_out": len(test_tables)},
+        "held_out_share": share,
+        "max_miss": tuning.MAX_MISS,
+        "window_px": tuning.WINDOW,
+        "chosen": {"diff_threshold": chosen[0], "min_defect_area": chosen[1]},
+        "train": {"chosen": row(train[chosen]), "default": row(train[default])},
+        "held_out": {"chosen": row(held.get(chosen, none)), "default": row(held.get(default, none))},
+        "held_out_all": {f"{t}/{a}": row(c) for (t, a), c in sorted(held.items())},
+    }
+
+
 def ai_check(train: list[Item], test: list[Item], ok_train: int, cfg: anomaly.TrainConfig) -> dict[str, Any]:
     """Per DeepPCB group: train on `ok_train` seeded templates of its trainval split (and calibrate on a few of its
     defective boards), then score the group's test split, templates as OK and defective boards as NG."""
@@ -317,6 +368,8 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             results["deeppcb"]["ai"] = ai_check(train, test, args.ok_train, cfg)
     if args.pku:
         results["pku"] = {"golden": golden_check(items, args.min_area)}
+        if args.tune:
+            results["pku"]["tune"] = tune_check(items, args.held_out, args.seed)
     results["peak_memory_mb"] = peak_memory_mb()
     results["sources_unchanged"] = manifest(used) == before
     (out / "results.json").write_text(json.dumps(results, indent=2), encoding="utf-8")
@@ -334,6 +387,22 @@ def summary(r: dict[str, Any]) -> str:
             lines += [f"Boxes {g['boxes']}, missed {g['boxes_missed']} (95 % upper {g['boxes_missed_upper_95']})."]
             lines += [f"- {t}: {v['found']} of {v['boxes']} found" for t, v in g["by_type"].items()]
             lines += [f"Regions on no box {g['regions_on_no_box']}; time per board {g['ms']}.", ""]
+    if "tune" in r.get("pku", {}):
+        t = r["pku"]["tune"]
+        c = t["chosen"]
+        lines += [
+            "## pku comparison thresholds trained",
+            f"Boards {t['boards']}; chosen Pixel difference {c['diff_threshold']}, Minimum defect area "
+            f"{c['min_defect_area']} px.",
+        ]
+        for name in ("chosen", "default"):
+            h = t["held_out"][name]
+            lines += [
+                f"- held out, {name}: defects {h['found']} of {h['defects']} found, false windows {h['false_windows']}"
+                f" of {h['windows']}, NG boards {h['ng_called_ng']} of {h['ng_boards']} NG, accuracy {h['accuracy']}"
+                f", precision {h['precision']}, recall {h['recall']}, false call rate {h['false_call_rate']}"
+            ]
+        lines += [""]
     if "ai" in r.get("deeppcb", {}):
         a = r["deeppcb"]["ai"]
         lines += [
@@ -376,6 +445,8 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--steps", type=int, default=anomaly.TrainConfig.steps_per_epoch)
     p.add_argument("--size", type=int, default=anomaly.TrainConfig.image_size)
     p.add_argument("--seed", type=int, default=0)
+    p.add_argument("--tune", action="store_true", help="also train the comparison's thresholds on PKU-Market-PCB")
+    p.add_argument("--held-out", type=float, default=0.3, help="share of PKU-Market-PCB photos held out from --tune")
     results = run(p.parse_args(argv))
     print(summary(results))
     return 0 if results["sources_unchanged"] else 1

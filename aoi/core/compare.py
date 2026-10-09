@@ -71,6 +71,16 @@ def regions_from_mask(mask: np.ndarray, value_map: np.ndarray, min_area: int, so
     return sorted(out, key=lambda r: -r.peak)
 
 
+def changed_mask(diff: np.ndarray, diff_threshold: int) -> np.ndarray:
+    """The pixels of a difference map that differ by `diff_threshold` or more, cleaned of noise (0 or 255):
+    `changed_regions` finds its regions in it, and the comparison's training (aoi/core/tuning.py) counts on it."""
+    mask: np.ndarray = (diff >= diff_threshold).astype(np.uint8) * 255
+    k = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
+    mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, k)
+    out: np.ndarray = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, k, iterations=2)
+    return out
+
+
 def changed_regions(
     diff: np.ndarray, diff_threshold: int, min_area: int
 ) -> tuple[np.ndarray, list[Region], dict[str, Any]]:
@@ -78,10 +88,7 @@ def changed_regions(
     of `min_area` px or more among them, and their metrics: the changed area % and the region count, which the recipe
     judges, and the largest region's area, shown with them. `compare` and the re-evaluation of a stored result
     (REQ-CMP-005) both find them here."""
-    mask: np.ndarray = (diff >= diff_threshold).astype(np.uint8) * 255
-    k = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
-    mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, k)
-    mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, k, iterations=2)
+    mask = changed_mask(diff, diff_threshold)
     regions = regions_from_mask(mask, diff, min_area, "compare")
     metrics = {
         "changed_pct": cv2.countNonZero(mask) / mask.size * 100.0,  # as (mask > 0).mean() * 100, in a tenth of the time
