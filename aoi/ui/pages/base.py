@@ -64,6 +64,18 @@ def view_text(view: str) -> str:
 
 
 VIEW_NAMES = (QT_TRANSLATE_NOOP("View", "Top"), QT_TRANSLATE_NOOP("View", "Side"), QT_TRANSLATE_NOOP("View", "Bottom"))
+
+
+def time_left_text(seconds: float | None) -> str:
+    """A training run's time left as its progress shows it, in the UI language (REQ-TRN-008): estimating until it is
+    known, then whole minutes, and under a minute as such."""
+    if seconds is None:
+        return QCoreApplication.translate("Page", "estimating…")
+    if seconds < 60:
+        return QCoreApplication.translate("Page", "less than a minute left")
+    return QCoreApplication.translate("Page", "about {minutes} min left").format(minutes=round(seconds / 60))
+
+
 ZWSP = "\u200b"  # zero width space: a place where a wrapped label may break a line, never shown
 
 

@@ -581,7 +581,7 @@
 <context>
     <name>Errors</name>
     <message>
-        <location filename="../core/services.py" line="+70"/>
+        <location filename="../core/services.py" line="+77"/>
         <source>a length of {length} px over {distance} mm gives no scale: both must be numbers above 0, and the scale from {least} to {most} px per mm</source>
         <translation type="unfinished"></translation>
     </message>
@@ -617,7 +617,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+107"/>
+        <location line="+158"/>
         <source>(none)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1016,7 +1016,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-2027"/>
+        <location line="-2078"/>
         <source>no defect type was given</source>
         <translation>결함 유형이 지정되지 않았습니다</translation>
     </message>
@@ -1031,7 +1031,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+555"/>
+        <location line="+606"/>
         <source>its UUID {found} is not {uuid}, as in the AI model registry</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2680,7 +2680,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/anomaly.py" line="+38"/>
+        <location filename="../core/anomaly.py" line="+40"/>
         <source>the file is damaged ({damaged})</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2710,7 +2710,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+231"/>
+        <location line="+267"/>
         <source>it holds no state_dict and metadata</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2720,7 +2720,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-243"/>
+        <location line="-279"/>
         <source>its input size {size} is not a multiple of {stride} pixels</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2730,7 +2730,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+264"/>
+        <location line="+300"/>
         <source>its err_std holds a spread of 0 or less</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2760,7 +2760,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/training.py" line="+372"/>
+        <location filename="../ui/pages/training.py" line="+378"/>
         <location filename="../ui/pages/training_import.py" line="+38"/>
         <source>{code} {title}</source>
         <translation type="unfinished"></translation>
@@ -4147,7 +4147,22 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/base.py" line="+132"/>
+        <location filename="../ui/pages/base.py" line="+73"/>
+        <source>estimating…</source>
+        <translation>계산 중…</translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>less than a minute left</source>
+        <translation>1분 미만 남음</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>about {minutes} min left</source>
+        <translation>약 {minutes}분 남음</translation>
+    </message>
+    <message>
+        <location line="+68"/>
         <source>No board model yet</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4282,7 +4297,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/training.py" line="-242"/>
+        <location filename="../ui/pages/training.py" line="-246"/>
         <source>Training</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4648,7 +4663,7 @@
 <context>
     <name>Role</name>
     <message>
-        <location filename="../ui/pages/base.py" line="-313"/>
+        <location filename="../ui/pages/base.py" line="-325"/>
         <source>Operator</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4853,14 +4868,14 @@
 <context>
     <name>Training</name>
     <message>
-        <location filename="../core/anomaly.py" line="-263"/>
+        <location filename="../core/anomaly.py" line="-299"/>
         <source>Training on {train} OK images ({held_out} held out, {ng} NG for calibration) on {device}</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location line="+3"/>
-        <source>Stopped by user; calibrating current weights</source>
-        <translation type="unfinished"></translation>
+        <source>Epoch {epoch} of {epochs}: loss {loss:.4f}</source>
+        <translation>에포크 {epoch}/{epochs}: 손실 {loss:.4f}</translation>
     </message>
     <message>
         <location line="+1"/>
@@ -4883,9 +4898,39 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/services.py" line="-2201"/>
+        <location filename="../core/services.py" line="-2259"/>
         <source>Aligning {count} images to the reference board</source>
         <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>Aligning image {n} of {count}</source>
+        <translation>이미지 정렬 중 {n}/{count}</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Golden board, part {band} of {bands}: image {n} of {count}</source>
+        <translation>골든 보드 {band}/{bands} 부분: 이미지 {n}/{count}</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Building the Golden board: step {n} of {count}</source>
+        <translation>골든 보드 생성 중: 단계 {n}/{count}</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Training epoch {epoch} of {epochs}</source>
+        <translation>학습 에포크 {epoch}/{epochs}</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Calibrating: map {n} of {count}</source>
+        <translation>보정 중: 맵 {n}/{count}</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Saving AI model {version}</source>
+        <translation>AI 모델 {version} 저장 중</translation>
     </message>
 </context>
 <context>
@@ -4902,23 +4947,23 @@
     </message>
     <message>
         <location line="+1"/>
-        <location line="+601"/>
+        <location line="+605"/>
         <source>Import Folder…</source>
         <translation>폴더 가져오기…</translation>
     </message>
     <message>
-        <location line="-593"/>
+        <location line="-597"/>
         <source>Training needs 20 OK images or more in a dataset version&apos;s training set</source>
         <translation>학습에는 데이터셋 버전의 학습 세트에 OK 이미지가 20장 이상 필요합니다</translation>
     </message>
     <message>
         <location line="+10"/>
-        <location line="+70"/>
+        <location line="+74"/>
         <source>ID</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-70"/>
+        <location line="-74"/>
         <source>Label</source>
         <translation>라벨</translation>
     </message>
@@ -4974,12 +5019,12 @@
     </message>
     <message>
         <location line="+1"/>
-        <location line="+354"/>
+        <location line="+358"/>
         <source>Remove</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-348"/>
+        <location line="-352"/>
         <source>Select a sample to preview</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5015,11 +5060,21 @@
     </message>
     <message>
         <location line="+1"/>
-        <source>Stop</source>
-        <translation type="unfinished"></translation>
+        <source>Cancel</source>
+        <translation type="unfinished">취소</translation>
     </message>
     <message>
-        <location line="+12"/>
+        <location line="+400"/>
+        <source>{phase} · {percent} % · {left}</source>
+        <translation>{phase} · {percent} % · {left}</translation>
+    </message>
+    <message>
+        <location line="+15"/>
+        <source>Cancelled: no AI model was saved; the active AI model is unchanged.</source>
+        <translation>취소됨: AI 모델을 저장하지 않았으며 활성 AI 모델은 바뀌지 않았습니다.</translation>
+    </message>
+    <message>
+        <location line="-399"/>
         <source>AI model versions</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5119,12 +5174,7 @@
         <translation>{type} ×{count}</translation>
     </message>
     <message>
-        <location line="+41"/>
-        <source>epoch {epoch}/{total}  loss {loss:.4f}</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+4"/>
+        <location line="+44"/>
         <source>Saved AI model {version} ({seconds} s). Golden board updated.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5134,12 +5184,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+5"/>
-        <source>Stopped: no AI model was saved; the active AI model is unchanged.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+41"/>
+        <location line="+47"/>
         <source>No frozen dataset version of {board_model} yet; training reads only a frozen version&apos;s training set, once its validation set is locked.</source>
         <translation>{board_model}의 고정된 데이터셋 버전이 아직 없습니다. 학습은 검증 세트가 잠긴 고정 버전의 학습 세트만 읽습니다.</translation>
     </message>

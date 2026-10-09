@@ -34,6 +34,7 @@ from torch import nn
 from ..data import atomic
 from ..errors import QT_TRANSLATE_NOOP, AoiError, Phrase
 from . import run_progress
+from .jobs import JobCancelled
 
 # Why an AI model file or a trained AI model is refused (AOI-TRN-001, AOI-TRN-004), as phrases shown translated (#198)
 DAMAGED = QT_TRANSLATE_NOOP("Errors", "the file is damaged ({damaged})")
@@ -46,7 +47,7 @@ MALFORMED = QT_TRANSLATE_NOOP("Errors", "its metadata is malformed ({error})")
 TRAINING_ON = QT_TRANSLATE_NOOP(
     "Training", "Training on {train} OK images ({held_out} held out, {ng} NG for calibration) on {device}"
 )
-STOPPED = QT_TRANSLATE_NOOP("Training", "Stopped by user; calibrating current weights")
+EPOCH_LOSS = QT_TRANSLATE_NOOP("Training", "Epoch {epoch} of {epochs}: loss {loss:.4f}")  # epoch 1 and every 5th
 CALIBRATED = QT_TRANSLATE_NOOP(
     "Training", "Calibrated image threshold {threshold:.4f} ({rule}); pixel threshold {pixel:.4f}"
 )
@@ -179,7 +180,9 @@ class TrainConfig:
     seed: int = 0
 
 
-ProgressFn = Callable[[int, int, float, str], None]  # epoch, total, loss, message: "" or a Phrase (#199)
+# What a run has done (REQ-TRN-008): its "step"s (training steps) or "map"s (calibration maps) done of the total, and a
+# line for its log, "" or a Phrase (#199); a report repeats the count when it only brings a line.
+ProgressFn = Callable[[str, int, int, str], None]
 
 
 def held_out(n: int, fraction: float) -> int:
@@ -369,13 +372,21 @@ def train(
 ) -> AnomalyModel:
     """An AI model learnt from the OK images, prepared at `cfg.image_size`; the NG images only calibrate its image
     threshold (REQ-TRN-007). Each anomaly map is made at its image's size when it is scored and then let go: the run
-    holds no image and no map at the camera's resolution beyond the one in hand."""
+    holds no image and no map at the camera's resolution beyond the one in hand.
+
+    `progress` hears of the start of training and of every training step and calibration map as it ends, and
+    `should_stop()` is asked after each report: once it is true the run raises JobCancelled there, so it stops within
+    a step and returns no AI model (REQ-TRN-008)."""
     if len(ok_images) < 2:
         raise AoiError("AOI-TRN-002", found=len(ok_images))
     random.seed(cfg.seed)
     np.random.seed(cfg.seed)
     torch.manual_seed(cfg.seed)
     say = progress or (lambda *a: None)
+
+    def stop() -> None:  # Cancel, or the window closing: nothing of the run is kept (#171)
+        if should_stop is not None and should_stop():
+            raise JobCancelled("training")
 
     tensors = [p.tensor for p in ok_images]
     idx = list(range(len(tensors)))
@@ -389,14 +400,14 @@ def train(
     sched = torch.optim.lr_scheduler.CosineAnnealingLR(opt, T_max=cfg.epochs)
     l1 = nn.L1Loss()
     t0 = time.time()
-    say(
-        0, cfg.epochs, 0.0, TRAINING_ON.fill(train=len(train_set), held_out=n_val, ng=len(ng_images), device=cfg.device)
-    )
+    steps = cfg.epochs * cfg.steps_per_epoch
+    say("step", 0, steps, TRAINING_ON.fill(train=len(train_set), held_out=n_val, ng=len(ng_images), device=cfg.device))
+    stop()
     loss_hist = []
     for ep in range(1, cfg.epochs + 1):
         net.train()
         running = 0.0
-        for _ in range(cfg.steps_per_epoch):
+        for i in range(1, cfg.steps_per_epoch + 1):
             batch = torch.stack([augment(random.choice(train_set)) for _ in range(cfg.batch_size)]).to(cfg.device)
             rec = net(batch)
             loss = l1(rec, batch) + 0.5 * ((rec - batch) ** 2).mean()
@@ -404,12 +415,14 @@ def train(
             loss.backward()
             opt.step()
             running += loss.item()
-        sched.step()
-        loss_hist.append(running / cfg.steps_per_epoch)
-        say(ep, cfg.epochs, loss_hist[-1], "")
-        if should_stop and should_stop():
-            say(ep, cfg.epochs, loss_hist[-1], STOPPED)
-            break
+            note = ""
+            if i == cfg.steps_per_epoch:  # the epoch's last step
+                sched.step()
+                loss_hist.append(running / cfg.steps_per_epoch)
+                if ep == 1 or ep % 5 == 0:
+                    note = EPOCH_LOSS.fill(epoch=ep, epochs=cfg.epochs, loss=loss_hist[-1])
+            say("step", (ep - 1) * cfg.steps_per_epoch + i, steps, note)
+            stop()
 
     model = AnomalyModel(
         net, {"image_size": cfg.image_size, "image_threshold": 1.0, "pixel_threshold": 1.0}, cfg.device
@@ -423,16 +436,23 @@ def train(
     # Calibrate on held-out OK images when we have them, otherwise on training images.
     cal_ok = [ok_images[i] for i in (val_idx or train_idx)]
     ok_scores: list[float] = []
+    ng_scores: list[float] = []
+    maps = len(cal_ok) + len(ng_images)
 
     def scored(images: Sequence[Prepared]) -> Iterable[np.ndarray]:  # each map scored, then read for its top
         for p in images:
             amap = model.prepared_map(p)
             ok_scores.append(model.score(amap))
             yield amap
+            say("map", len(ok_scores), maps, "")  # once the map's largest values are read
+            stop()
 
     pixels = sum(p.shape[0] * p.shape[1] for p in cal_ok)
     top = float(top_percentile(scored(cal_ok), pixels, PIXEL_PERCENTILE))
-    ng_scores = [model.score(model.prepared_map(p)) for p in ng_images]
+    for p in ng_images:
+        ng_scores.append(model.score(model.prepared_map(p)))
+        say("map", len(ok_scores) + len(ng_scores), maps, "")
+        stop()
     thr, rule = calibrate(ok_scores, ng_scores)
     pix = max(top * 1.15, thr * 0.6)
     model.meta.update(
@@ -453,5 +473,5 @@ def train(
     # of one photo score 0, so the threshold is 0.
     if (why := _unusable(model.meta, model.net.state_dict())) is not None:
         raise AoiError("AOI-TRN-004", reason=why)
-    say(len(loss_hist), cfg.epochs, loss_hist[-1], CALIBRATED.fill(threshold=thr, rule=rule, pixel=pix))
+    say("map", maps, maps, CALIBRATED.fill(threshold=thr, rule=rule, pixel=pix))
     return model

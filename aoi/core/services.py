@@ -38,7 +38,7 @@ from ..data.workspace_lock import WorkspaceLock
 from ..errors import QT_TRANSLATE_NOOP, AoiError, Phrase, joined
 from ..hal import VIEWS
 from ..times import local_date, now_utc
-from . import anomaly, crypto, datasets, golden, imaging, labels, stores
+from . import anomaly, crypto, datasets, golden, imaging, labels, run_progress, stores
 from .compare import Region, changed_regions
 from .imaging import (
     align_to_reference,
@@ -60,6 +60,13 @@ from .sample_import import LABELS, REFUSED, ImportFile, ImportReport
 ALARM_LIMIT = 1000  # REQ-INSP-006: the alarms a screen shows and that survive a restart
 BUSY_ALARM_WAIT_MS = 200  # how long the alarm of a locked database's error, or an Inspection alarm, waits, not 5 s
 ALIGNING = QT_TRANSLATE_NOOP("Training", "Aligning {count} images to the reference board")  # a progress line (#199)
+# what a training run does now, as its progress names it (REQ-TRN-008)
+READING = QT_TRANSLATE_NOOP("Training", "Aligning image {n} of {count}")
+BAND = QT_TRANSLATE_NOOP("Training", "Golden board, part {band} of {bands}: image {n} of {count}")
+MEDIAN = QT_TRANSLATE_NOOP("Training", "Building the Golden board: step {n} of {count}")
+EPOCH = QT_TRANSLATE_NOOP("Training", "Training epoch {epoch} of {epochs}")
+CALIBRATING = QT_TRANSLATE_NOOP("Training", "Calibrating: map {n} of {count}")
+SAVING = QT_TRANSLATE_NOOP("Training", "Saving AI model {version}")
 NO_TYPE = QT_TRANSLATE_NOOP("Errors", "no defect type was given")  # why AOI-TRN-013 refused an NG sample
 NOT_A_TYPE = QT_TRANSLATE_NOOP("Errors", "{name} is not one of them")
 STEM_CHARS = 40  # how much of a source file's stem names its evidence or sample file (#245)
@@ -521,7 +528,7 @@ class AppContext:
         dataset_uuid: str,
         epochs: int | None = None,
         image_size: int | None = None,
-        progress: anomaly.ProgressFn | None = None,
+        progress: Callable[[run_progress.RunProgress], None] | None = None,
         should_stop: Callable[[], bool] | None = None,
         use: str = "own",
     ) -> dict[str, Any]:
@@ -535,9 +542,16 @@ class AppContext:
         Memory (REQ-TRN-007): each image is read, registered onto the board model's reference board (else the first OK
         image) and warped, then kept only as its tensor at the network's input size and its band of the Golden board's
         median (aoi/core/golden.py); each later band reads the OK images again and warps them with the homography kept.
-        So a run holds one image at the camera's resolution at a time, one band of every OK image, and the tensors."""
+        So a run holds one image at the camera's resolution at a time, one band of every OK image, and the tensors.
+
+        Progress (REQ-TRN-008): `progress(RunProgress)` follows every image read, step of the Golden board's median,
+        training step and calibration map, each with the time left (aoi/core/run_progress.py), known from the second
+        report on: a step of each other kind is timed on the first image read (`Median.probe`, `anomaly.probe`).
+        `should_stop()` is asked after each, and once it is true the run raises JobCancelled there, having saved
+        nothing; it is asked for the last time once the AI model's files are written, which it then removes."""
         device = self.device  # not self.device later: save_settings may change it while the samples load and align
-        say = progress or (lambda *a: None)
+        say = progress or (lambda p: None)
+        stop = should_stop or (lambda: False)
         frozen, ok_items, ng_items = self._training_set(dataset_uuid, use)
         board_model = frozen["board_model"]
         out = self.settings.models_dir / board_model
@@ -546,35 +560,76 @@ class AppContext:
             epochs=epochs or self.settings.default_epochs,
             device=device,
         )
+        n_ok, n_ng = len(ok_items), len(ng_items)
+        maps = (anomaly.held_out(n_ok, cfg.val_fraction) or n_ok) + n_ng  # held-out OK maps, else every OK's; the NG's
+        eta = run_progress.Eta({"read": 1 + n_ok + n_ng, "step": cfg.epochs * cfg.steps_per_epoch, "map": maps})
+
+        def check() -> None:  # Cancel, or the window closing: nothing saved, registered, activated or audited (#171)
+            if stop():
+                raise JobCancelled(f"training {board_model}")
+
+        def read(phase: Phrase) -> None:  # an image read: reported, then the run stops there if asked
+            eta.tick("read")
+            say(eta.report(phase))
+            check()
+
+        def engine(kind: str, n: int, total: int, note: str) -> None:  # anomaly.train's steps and maps
+            if n > eta.done[kind]:
+                eta.tick(kind)
+            epoch = max(1, -(-n // cfg.steps_per_epoch))  # the epoch of step n, the first before any
+            phase = EPOCH.fill(epoch=epoch, epochs=cfg.epochs) if kind == "step" else CALIBRATING.fill(n=n, count=total)
+            say(eta.report(phase, note))
+
+        aligning = ALIGNING.fill(count=n_ok + n_ng)
+        say(eta.report(aligning, aligning))
+        check()
         ref_path = self.db.reference(board_model)
         if ref_path and Path(ref_path).exists():  # the board model's reference board, as Inspection aligns to it
             anchor = self.load_image(ref_path)
         else:
             anchor = self._read_frozen(frozen, ok_items[0])
+        eta.tick("read")
         size = (anchor.shape[1], anchor.shape[0])
-        say(0, 1, 0.0, ALIGNING.fill(count=len(ok_items) + len(ng_items)))
-        band = golden.BAND_BYTES  # read here rather than as Median's default, so the memory test can set it
-        board = golden.Median(len(ok_items), (anchor.shape[0], anchor.shape[1]), band)
+        band = golden.BAND_BYTES  # read here rather than as Median's defaults, so a test can set them
+        board = golden.Median(n_ok, (anchor.shape[0], anchor.shape[1]), band, golden.STEP_BYTES)
+        bands = len(board.bands)
+        eta.counts["read"] += (bands - 1) * n_ok  # each later band reads the OK images again
+        eta.counts["median"] = board.steps
+        step_s, map_s = anomaly.probe(anomaly.prepare(anchor, cfg.image_size), cfg)
+        eta.sample("step", step_s)  # each kind timed on the first image read, so the time left is known from here on
+        eta.sample("map", map_s)
+        eta.sample("median", board.probe())
+
+        def built() -> None:  # a step of a band's median: reported, then the run stops there if asked
+            eta.tick("median")
+            say(eta.report(MEDIAN.fill(n=eta.done["median"], count=board.steps)))
+            check()
+
+        say(eta.report(aligning))
+        check()
         kept: list[np.ndarray | None] = []
         ok_in: list[anomaly.Prepared] = []
-        for item in ok_items:
+        for n, item in enumerate(ok_items, 1):
             image = self._read_frozen(frozen, item)
             homography = registration(image, anchor)[0]
             warped = warp_to(image, homography, size)
             del image  # the image at the camera's resolution goes; its tensor and its first band stay
             kept.append(homography)
             ok_in.append(anomaly.prepare(warped, cfg.image_size))
-            board.add(warped)
-        ng_in = [
-            anomaly.prepare(align_to_reference(self._read_frozen(frozen, item), anchor)[0], cfg.image_size)
-            for item in ng_items
-        ]
-        while not board.done:  # each later band of the median: every OK image read again, warped as the first time
-            for item, homography in zip(ok_items, kept, strict=True):
-                board.add(warp_to(self._read_frozen(frozen, item), homography, size))
-        model = anomaly.train(ok_in, ng_in, cfg, progress, should_stop)
-        if should_stop is not None and should_stop():  # Stop, or the window closing: the active model stays (TRN-008)
-            raise JobCancelled(f"training {board_model}")  # nothing saved, registered, activated or audited (#171)
+            read(READING.fill(n=n, count=n_ok + n_ng))
+            board.add(warped, built)
+        ng_in: list[anomaly.Prepared] = []
+        for n, item in enumerate(ng_items, n_ok + 1):
+            aligned = align_to_reference(self._read_frozen(frozen, item), anchor)[0]
+            ng_in.append(anomaly.prepare(aligned, cfg.image_size))
+            read(READING.fill(n=n, count=n_ok + n_ng))
+        for part in range(2, bands + 1):  # each later band of the median: every OK image read again, warped as before
+            for n, (item, homography) in enumerate(zip(ok_items, kept, strict=True), 1):
+                warped = warp_to(self._read_frozen(frozen, item), homography, size)
+                read(BAND.fill(band=part, bands=bands, n=n, count=n_ok))
+                board.add(warped, built)
+        model = anomaly.train(ok_in, ng_in, cfg, engine, should_stop)
+        check()
         previous = self.db.active_model(board_model)
         out.mkdir(parents=True, exist_ok=True)
 
@@ -584,6 +639,7 @@ class AppContext:
         # never a name whose file is on disk: a result may name a Golden board that a run left unregistered (#178)
         version = self.db.next_model_version(board_model, lambda v: any(f.exists() for f in files(v)))
         path, golden_path = files(version)
+        say(eta.report(SAVING.fill(version=version)))
         model_uuid = new_uuid()  # in the file's metadata and in the registry row, so an exported .pt names its record
         model.meta.update(board_model=board_model, version=version, uuid=model_uuid, created_at=now_utc())
         model.meta.update(dataset=frozen["name"], dataset_uuid=dataset_uuid, use=use)
@@ -591,6 +647,7 @@ class AppContext:
             model.save(path)
             save_image(golden_path, board.board)
             model.meta["golden_image"] = to_stored(golden_path, self.settings.root)
+            check()  # the last chance to stop: once registered, the run ends with it; the files go below
             summary = {k: v for k, v in model.meta.items() if k not in ("loss_history", "err_mean", "err_std")}
             with self.db.transaction():  # the Golden board in use, the active version and the entry change together
                 before = self.db.reference(board_model)
