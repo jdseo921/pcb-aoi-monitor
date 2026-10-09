@@ -825,6 +825,16 @@ CODES: dict[str, ErrorCode] = {
             ),
         ),
         ErrorCode(
+            "AOI-TST-003",
+            QT_TRANSLATE_NOOP("Errors", "The validation did not start"),
+            QT_TRANSLATE_NOOP("Errors", "Dataset version {name} was not tested: {reason}."),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Split and lock its validation set on Training's Datasets tab, or pick another dataset version; nothing"
+                " was stored.",
+            ),
+        ),
+        ErrorCode(
             "AOI-RCP-001",
             QT_TRANSLATE_NOOP("Errors", "Recipe saved since it was opened"),
             QT_TRANSLATE_NOOP(
