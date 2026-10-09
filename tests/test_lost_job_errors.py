@@ -222,6 +222,7 @@ def test_req_log_005_an_import_stopped_while_a_copy_fails_logs_the_failure_and_s
     win = _engineer_window(qtbot, ctx)
     page = win.pages["Training"]
     page.import_from(str(folder))
+    page.sheet.btn_import.click()
     first = page._bg
     assert first is not None
     qtbot.waitUntil(reached.is_set, timeout=30000)
@@ -232,9 +233,7 @@ def test_req_log_005_an_import_stopped_while_a_copy_fails_logs_the_failure_and_s
         assert page._bg is first, "a second import started while the first one ran"
     go.set()
     _settled(qtbot, first)
-    assert [title for title, _ in dialogs] == (
-        [] if how == "cancel" else ["AOI-TRN-009 Folder import stopped part-way"]
-    )
+    assert [title for title, _ in dialogs] == ([] if how == "cancel" else ["AOI-TRN-009 Import stopped part-way"])
     rows = _log_rows(ctx, "error.shown")
     assert [r["code"] for r in rows] == ["AOI-TRN-009"] and "FileNotFoundError" in str(rows[0]["trace"]), rows
     assert [(a["level"], a["code"]) for a in ctx.alarms()] == [("ERROR", "AOI-TRN-009")]
@@ -301,6 +300,7 @@ def test_req_set_021_a_folder_import_that_fails_part_way_shows_the_files_it_impo
     assert QCoreApplication.installTranslator(translator)
     try:
         page.import_from(str(folder))
+        page.sheet.btn_import.click()
         w = page._bg
         assert w is not None
         _settled(qtbot, w)
@@ -308,7 +308,7 @@ def test_req_set_021_a_folder_import_that_fails_part_way_shows_the_files_it_impo
         QCoreApplication.removeTranslator(translator)
     assert page.samples.rowCount() == len(ctx.samples("NEWB")) == 2
     [(title, text)] = dialogs
-    assert title == "AOI-TRN-010 Folder import stopped by an error", title
+    assert title == "AOI-TRN-010 Import stopped by an error", title
     named = "(OperationalError)" if cause == "sqlite" else "(AOI-SET-013 «busy»)"
     assert "c.png" in text and named in text and "image 3 of 4" in text, text
     assert "the 2 image(s) imported before it" in text and "the 2 image(s) already imported are skipped" in text, text

@@ -17,11 +17,11 @@ from PySide6.QtWidgets import (
     QFormLayout,
     QGroupBox,
     QHBoxLayout,
-    QInputDialog,
     QLabel,
     QMessageBox,
     QPlainTextEdit,
     QProgressBar,
+    QPushButton,
     QSizePolicy,
     QSpinBox,
     QSplitter,
@@ -30,7 +30,8 @@ from PySide6.QtWidgets import (
 )
 
 from ... import defects as taxonomy
-from ...core.imaging import IMAGE_EXTS, list_images
+from ...core.imaging import IMAGE_EXTS
+from ...core.sample_import import ImportFile, ImportReport, folder_files
 from ...core.services import AppContext
 from ...errors import AoiError
 from ...hal import VIEWS
@@ -41,7 +42,18 @@ from ..widgets.busy import BusyOverlay
 from ..widgets.empty_state import EmptyState
 from ..widgets.image_view import ImageView
 from ..workers import Worker, start
-from .base import QT_TRANSLATE_NOOP, Page, button, cell_item, cell_text, fill_table, make_table, view_text
+from .base import (
+    QT_TRANSLATE_NOOP,
+    Page,
+    action_button,
+    button,
+    cell_item,
+    cell_text,
+    fill_table,
+    make_table,
+    view_text,
+)
+from .training_import import ImportSheet
 
 if TYPE_CHECKING:
     from ..main_window import MainWindow
@@ -145,9 +157,13 @@ class TrainingPage(Page):
         ll = QVBoxLayout(left)
         ll.setContentsMargins(0, 0, 8, 0)
         up = QHBoxLayout()
-        self.btn_ok = button(self.tr("+ OK Images"), slot=self.add_ok)  # verdict colours mean verdicts, not add buttons
-        self.btn_ng = button(self.tr("+ NG Images"), slot=self.add_ng)
-        self.btn_folder = button(self.tr("Import Folder…"), slot=self.import_folder)
+        # the sketch's keys, each in its button's tooltip; verdict colours mean verdicts, not add buttons
+        self.adds = [
+            self.action(self.tr("Add OK Images…"), "Ctrl+O", self.add_ok),
+            self.action(self.tr("Add NG Images…"), "Ctrl+N", self.add_ng),
+            self.action(self.tr("Import Folder…"), "Ctrl+Shift+O", self.import_folder),
+        ]
+        self.btn_ok, self.btn_ng, self.btn_folder = (action_button(a, show_key=False) for a in self.adds)
         for b in (self.btn_ok, self.btn_ng, self.btn_folder):
             up.addWidget(b)
         ll.addLayout(up)
@@ -157,6 +173,8 @@ class TrainingPage(Page):
         self.tip.setObjectName("muted")
         self.tip.setWordWrap(True)
         ll.addWidget(self.tip)
+        self.sheet = ImportSheet(self._run_import, self._close_sheet)
+        ll.addWidget(self.sheet, 2)
         self.samples = make_table(
             [self.tr("ID"), self.tr("Label"), self.tr("Defect type"), self.tr("View"), self.tr("File")]
         )
@@ -243,38 +261,14 @@ class TrainingPage(Page):
 
     def add_ok(self) -> None:
         if (bm := self.checked_board_model()) and (files := self._pick()):
-            names = [view_text(v) for v in VIEWS]
-            side, ok = QInputDialog.getItem(
-                self, self.tr("View"), self.tr("Camera view of these images"), names, 0, False
-            )
-            if ok:
-                self._add(bm, files, "OK", None, VIEWS[names.index(side)])
+            self._open_sheet(bm, [ImportFile(f, "OK") for f in files])
 
     def add_ng(self) -> None:
         if (bm := self.checked_board_model()) and (files := self._pick()):
-            dlg = NgDialog(self)
-            if dlg.exec():
-                dtype, side = dlg.value()
-                self._add(bm, files, "NG", dtype, side)
-
-    def _add(self, board_model: str, files: list[str], label: str, dtype: str | None, side: str) -> None:
-        """Copy the picked files on a pool thread (REQ-SET-021, #194); Cancel keeps the samples added so far."""
-        if self._bg is not None:  # one import at a time: a second would stop this one (#194)
-            return
-        self.run_in_background(
-            self.ctx.import_samples, board_model, files, label, dtype, side, with_progress=True,
-            on_result=lambda _added: self.refresh(), busy=self.busy,
-            on_cancel=lambda added: self._add_stopped(added or 0, len(files)),
-        )  # fmt: skip
-
-    def _add_stopped(self, added: int, total: int) -> None:
-        if added < total:  # Cancel after the last file: every image was added, so nothing to say (#194)
-            stopped = self.tr("Stopped: added {added} of {total} images; the others were not added.")
-            self.shell.status(stopped.format(added=added, total=total))
-        self.refresh()
+            self._open_sheet(bm, [ImportFile(f, "NG") for f in files])
 
     def import_folder(self) -> None:
-        """Folder with ok/ and ng/ sub-folders (ng/<defect type>/ also accepted)."""
+        """Folder with ok/ and ng/ sub-folders (ng/<defect type>/ pre-fills the type)."""
         if self._bg is not None or not self.need_board_model():  # one import at a time (#194)
             return
         d = QFileDialog.getExistingDirectory(self, self.tr("Folder containing ok/ and ng/ sub-folders"))
@@ -282,74 +276,102 @@ class TrainingPage(Page):
             self.import_from(d)
 
     def import_from(self, folder: str) -> None:
-        """Import on a pool thread (REQ-SET-021): the table shows the result; Cancel keeps what was imported so far."""
-        if self._bg is not None or (bm := self.checked_board_model()) is None:  # one import at a time (#194)
+        """Open the import sheet on the images under `folder`, each labelled by its sub-folders (REQ-TRN-001)."""
+        if (bm := self.checked_board_model()) is not None:
+            self._open_sheet(bm, folder_files(folder), folder)
+
+    def _open_sheet(self, board_model: str, files: list[ImportFile], base: str | None = None) -> None:
+        """The import sheet in place of nothing: never a dialog over the file picker (sketch). While it is open, its
+        Import is the page's one blue primary and Start Training a plain button. One import at a time (#194)."""
+        if self._bg is not None:
+            return
+        self.sheet.open_files(files, base)
+        self._primary(self.sheet.btn_import, self.btn_train)
+
+    def _close_sheet(self) -> None:
+        """Cancel or Esc: stops an import that runs, keeping what went in (#194); else closes the sheet."""
+        if self.sheet.running:
+            self.busy.cancel_button.click()
+            return
+        self.sheet.hide()
+        self._primary(self.btn_train, self.sheet.btn_import)
+
+    def _primary(self, blue: QPushButton, plain: QPushButton) -> None:
+        for b, name in ((blue, "primary"), (plain, "")):
+            b.setObjectName(name)
+            b.style().unpolish(b)
+            b.style().polish(b)
+
+    def _run_import(self, files: list[ImportFile]) -> None:
+        """Import the sheet's files on a pool thread (REQ-SET-021, REQ-TRN-001): one call per file, so Cancel keeps
+        what went in (#194); the busy overlay shows progress, time left and Cancel after 10 s."""
+        if self._bg is not None or (bm := self.checked_board_model()) is None:
+            self.sheet.show_report(ImportReport(left=files), self.coded_text)
             return
         self.run_in_background(
-            self._import, bm, folder, with_progress=True,
-            on_result=self._imported, busy=self.busy, on_cancel=self._import_stopped,
-            on_error=lambda _e: self.refresh(),
+            self.ctx.import_files, bm, files, with_progress=True,
+            on_result=lambda report: self._imported(report, len(files)), busy=self.busy,
+            on_cancel=lambda report: self._import_stopped(report, files),
+            on_error=lambda _e: self._import_failed(files),
         )  # fmt: skip
 
-    def _import(
-        self, board_model: str, folder: str, progress: Callable[[int, int], None], should_stop: Callable[[], bool]
-    ) -> tuple[int, int, AoiError | None]:
-        """Pool thread: files and the service layer only, never a widget. One file per call, so what was imported
-        before a file that cannot be copied stays, and the error returned (AOI-TRN-009) says so (#178); any other
-        error after a file went in is returned as AOI-TRN-010 with the same count (#206). A copy refused as too long
-        before any went in raises AOI-TRN-011 for the whole folder (#245)."""
-        n_ok = n_ng = 0
-        files = list_images(folder)
-        for i, p in enumerate(files, 1):
-            if should_stop():
-                break
-            parts = [x.lower() for x in p.relative_to(folder).parts[:-1]]
-            try:
-                if any(x in ("ok", "good") for x in parts):
-                    n_ok += self.ctx.import_samples(board_model, [str(p)], "OK")
-                elif any(x in ("ng", "bad", "defect", "defects") for x in parts):
-                    sub = p.parent.name.replace("_", " ").title()
-                    dtype = sub if sub in taxonomy.BY_NAME else None
-                    n_ng += self.ctx.import_samples(board_model, [str(p)], "NG", dtype)
-            except Exception as e:
-                n = {"at": i, "total": len(files), "imported": n_ok + n_ng}
-                if isinstance(e, AoiError) and e.code == "AOI-TRN-008":  # this one file not copied
-                    reason, code = e.params["reason"], "AOI-TRN-009"
-                elif n["imported"]:  # files went in before it: the message must say how many (#206)
-                    title = QT_TRANSLATE_NOOP("Errors", "{code} {title}")  # the title in the UI language (#198)
-                    reason = title.fill(code=e.code, title=e.title) if isinstance(e, AoiError) else type(e).__name__
-                    code = "AOI-TRN-010"
-                elif isinstance(e, AoiError) and e.code == "AOI-TRN-011":  # none of the folder's images went in, not 1
-                    workspace, count = e.params["workspace"], len(files)
-                    raise AoiError("AOI-TRN-011", e.detail, path=str(p), workspace=workspace, count=count) from e
-                else:  # nothing imported yet: the error is shown as it is
-                    raise
-                detail = e.detail if isinstance(e, AoiError) else str(e)
-                stopped = AoiError(code, detail, path=str(p), reason=reason, folder=folder, **n)
-                stopped.__cause__ = e
-                return n_ok, n_ng, stopped
-            progress(i, len(files))
-        return n_ok, n_ng, None
+    def _stop_error(self, report: ImportReport, total: int) -> BaseException | None:
+        """The error an import stopped at, as its dialog says it: a file that cannot be copied is AOI-TRN-009 (#178);
+        any other error after a file went in AOI-TRN-010 with the count (#206); a copy refused as too long before any
+        went in AOI-TRN-011 for all the files (#245); any other, as it is."""
+        if report.stopped is None:
+            return None
+        f, e = report.stopped
+        n = {"at": total - len(report.left), "total": total, "imported": len(report.added)}
+        if isinstance(e, AoiError) and e.code == "AOI-TRN-008":  # this one file not copied
+            reason, code = e.params["reason"], "AOI-TRN-009"
+        elif n["imported"]:  # files went in before it: the message must say how many (#206)
+            title = QT_TRANSLATE_NOOP("Errors", "{code} {title}")  # the title in the UI language (#198)
+            reason = title.fill(code=e.code, title=e.title) if isinstance(e, AoiError) else type(e).__name__
+            code = "AOI-TRN-010"
+        elif isinstance(e, AoiError) and e.code == "AOI-TRN-011":  # none of the images went in, not 1
+            return AoiError("AOI-TRN-011", e.detail, path=f.path, workspace=e.params["workspace"], count=total)
+        else:  # nothing imported yet: the error is shown as it is
+            return e
+        stopped = AoiError(code, e.detail if isinstance(e, AoiError) else str(e), path=f.path, reason=reason, **n)
+        stopped.__cause__ = e
+        return stopped
 
-    def _imported(self, outcome: tuple[int, int, AoiError | None]) -> None:
-        n_ok, n_ng, stopped = outcome
-        self.shell.status(self.tr("Imported {ok} OK and {ng} NG images").format(ok=n_ok, ng=n_ng))
+    def _counts(self, report: ImportReport) -> dict[str, int]:
+        ok = sum(f.label == "OK" for f in report.added)
+        return {"ok": ok, "ng": len(report.added) - ok, "refused": len(report.refused)}
+
+    def _imported(self, report: ImportReport, total: int) -> None:
+        self.sheet.show_report(report, self.coded_text)
+        n = self._counts(report)
+        said = self.tr("Imported {ok} OK and {ng} NG images").format(**n)
+        if n["refused"]:
+            said = self.tr("Imported {ok} OK and {ng} NG images; {refused} not imported (see the list)").format(**n)
+        self.shell.status(said)
         self.refresh()  # the table shows what was imported before the dialog says how far it went
-        if stopped is not None:
+        if (stopped := self._stop_error(report, total)) is not None:
             self.error(stopped)
 
-    def _import_stopped(self, outcome: tuple[int, int, AoiError | None] | None) -> None:
-        """Cancel stopped the import: the table and the status line show what it imported, and a file it could not
-        import is logged and alarmed with no dialog, since the user has left that import (#206). No newer import can
-        stop it: one import runs at a time (#194)."""
-        self.refresh()
-        if outcome is None:  # stopped before it ran, or it raised (run_in_background reported that)
+    def _import_stopped(self, report: ImportReport | None, files: list[ImportFile]) -> None:
+        """Cancel stopped the import: the sheet, the table and the status line show what it imported, and a file it
+        could not import is logged and alarmed with no dialog, since the user has left that import (#206). No newer
+        import can stop it: one import runs at a time (#194)."""
+        if report is None:  # stopped before it ran, or it raised (run_in_background reported that)
+            self._import_failed(files)
             return
-        n_ok, n_ng, stopped = outcome
+        if not report.left and report.stopped is None:  # Cancel after the last file: nothing was left out (#194)
+            self._imported(report, len(files))
+            return
+        self.refresh()
+        self.sheet.show_report(report, self.coded_text)
         msg = self.tr("Import cancelled: {ok} OK and {ng} NG images imported before it stopped")
-        self.shell.status(msg.format(ok=n_ok, ng=n_ng))
-        if stopped is not None:
+        self.shell.status(msg.format(**self._counts(report)))
+        if (stopped := self._stop_error(report, len(files))) is not None:
             self.ctx.report_error(stopped, self.title)
+
+    def _import_failed(self, files: list[ImportFile]) -> None:
+        self.sheet.show_report(ImportReport(left=files), self.coded_text)
+        self.refresh()
 
     def _selected_ids(self) -> list[int]:
         return [int(cell_text(self.samples, i.row(), 0)) for i in self.samples.selectionModel().selectedRows()]
@@ -468,8 +490,9 @@ class TrainingPage(Page):
         """One import at a time, and no training while one runs (#194): a second import, also from the empty table's
         Import Folder… link, would stop the first, and training would learn from part of the images."""
         idle = self._bg is None
-        for b in (self.btn_ok, self.btn_ng, self.btn_folder, self.samples_empty.link):
-            b.setEnabled(idle)
+        for a in self.adds:
+            a.setEnabled(idle)  # its button and its key
+        self.samples_empty.link.setEnabled(idle)
         self.btn_train.setEnabled(idle and self.worker is None)
 
     # --- model registry ---------------------------------------------------------
@@ -552,6 +575,8 @@ class TrainingPage(Page):
 
     def on_board_model_changed(self, name: str | None) -> None:
         self.preview.set_image(None)
+        if not self.sheet.running:  # the files were picked for the board model shown before
+            self._close_sheet()
         self.refresh()
 
     def on_show(self) -> None:

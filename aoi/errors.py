@@ -411,30 +411,30 @@ CODES: dict[str, ErrorCode] = {
         ),
         ErrorCode(
             "AOI-TRN-009",
-            QT_TRANSLATE_NOOP("Errors", "Folder import stopped part-way"),
+            QT_TRANSLATE_NOOP("Errors", "Import stopped part-way"),
             QT_TRANSLATE_NOOP(
                 "Errors",
-                "Copying {path} into the workspace failed ({reason}), so the import of {folder} stopped at image {at}"
-                " of {total}; the {imported} image(s) imported before it stay in the sample table.",
+                "Copying {path} into the workspace failed ({reason}), so the import stopped at image {at} of {total};"
+                " the {imported} image(s) imported before it stay in the sample table.",
             ),
             QT_TRANSLATE_NOOP(
                 "Errors",
                 "Check that the file is still there and can be opened and that the workspace drive has free space,"
-                " then import the folder again: the {imported} image(s) already imported are skipped.",
+                " then press Import again: the {imported} image(s) already imported are skipped.",
             ),
         ),
         ErrorCode(
             "AOI-TRN-010",
-            QT_TRANSLATE_NOOP("Errors", "Folder import stopped by an error"),
+            QT_TRANSLATE_NOOP("Errors", "Import stopped by an error"),
             QT_TRANSLATE_NOOP(
                 "Errors",
-                "Importing {path} failed ({reason}), so the import of {folder} stopped at image {at} of {total}; the"
-                " {imported} image(s) imported before it stay in the sample table.",
+                "Importing {path} failed ({reason}), so the import stopped at image {at} of {total}; the {imported}"
+                " image(s) imported before it stay in the sample table.",
             ),
             QT_TRANSLATE_NOOP(
                 "Errors",
                 "Fix what stopped it (the log file in the workspace's logs folder has the details; send it to support"
-                " if the cause is unclear), then import the folder again: the {imported} image(s) already imported are"
+                " if the cause is unclear), then press Import again: the {imported} image(s) already imported are"
                 " skipped.",
             ),
         ),

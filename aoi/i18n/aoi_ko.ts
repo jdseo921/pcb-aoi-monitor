@@ -1307,27 +1307,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+8"/>
-        <source>Folder import stopped part-way</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+1"/>
-        <source>Copying {path} into the workspace failed ({reason}), so the import of {folder} stopped at image {at} of {total}; the {imported} image(s) imported before it stay in the sample table.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+13"/>
-        <source>Folder import stopped by an error</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+1"/>
-        <source>Importing {path} failed ({reason}), so the import of {folder} stopped at image {at} of {total}; the {imported} image(s) imported before it stay in the sample table.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+14"/>
+        <location line="+37"/>
         <source>Images not imported: path too long</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1367,17 +1347,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+201"/>
-        <source>Check that the file is still there and can be opened and that the workspace drive has free space, then import the folder again: the {imported} image(s) already imported are skipped.</source>
-        <translation>파일이 아직 그 자리에 있고 열 수 있는지, 작업 공간 드라이브에 여유 공간이 있는지 확인한 뒤 폴더를 다시 가져오세요. 이미 가져온 이미지 {imported}개는 건너뜁니다.</translation>
-    </message>
-    <message>
-        <location line="+14"/>
-        <source>Fix what stopped it (the log file in the workspace&apos;s logs folder has the details; send it to support if the cause is unclear), then import the folder again: the {imported} image(s) already imported are skipped.</source>
-        <translation>가져오기를 멈춘 원인을 해결한 뒤(작업 공간 logs 폴더의 로그 파일에 자세한 내용이 있습니다. 원인이 분명하지 않으면 지원팀에 보내세요) 폴더를 다시 가져오세요. 이미 가져온 이미지 {imported}개는 건너뜁니다.</translation>
-    </message>
-    <message>
-        <location line="+36"/>
+        <location line="+251"/>
         <source>NG image needs a defect type</source>
         <translation>NG 이미지에는 결함 유형이 필요합니다</translation>
     </message>
@@ -1882,7 +1852,37 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+198"/>
+        <location line="+68"/>
+        <source>Import stopped part-way</source>
+        <translation>가져오기가 도중에 멈춤</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Copying {path} into the workspace failed ({reason}), so the import stopped at image {at} of {total}; the {imported} image(s) imported before it stay in the sample table.</source>
+        <translation>{path}을(를) 작업 공간으로 복사하지 못해({reason}) 가져오기가 이미지 {total}개 중 {at}번째에서 멈췄습니다. 그 전에 가져온 이미지 {imported}개는 샘플 표에 남아 있습니다.</translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>Check that the file is still there and can be opened and that the workspace drive has free space, then press Import again: the {imported} image(s) already imported are skipped.</source>
+        <translation>파일이 아직 그 자리에 있고 열 수 있는지, 작업 공간 드라이브에 여유 공간이 있는지 확인한 뒤 가져오기를 다시 누르세요. 이미 가져온 이미지 {imported}개는 건너뜁니다.</translation>
+    </message>
+    <message>
+        <location line="+8"/>
+        <source>Import stopped by an error</source>
+        <translation>오류로 가져오기가 멈춤</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Importing {path} failed ({reason}), so the import stopped at image {at} of {total}; the {imported} image(s) imported before it stay in the sample table.</source>
+        <translation>{path}을(를) 가져오지 못해({reason}) 가져오기가 이미지 {total}개 중 {at}번째에서 멈췄습니다. 그 전에 가져온 이미지 {imported}개는 샘플 표에 남아 있습니다.</translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>Fix what stopped it (the log file in the workspace&apos;s logs folder has the details; send it to support if the cause is unclear), then press Import again: the {imported} image(s) already imported are skipped.</source>
+        <translation>가져오기를 멈춘 원인을 해결한 뒤(작업 공간 logs 폴더의 로그 파일에 자세한 내용이 있습니다. 원인이 분명하지 않으면 지원팀에 보내세요) 가져오기를 다시 누르세요. 이미 가져온 이미지 {imported}개는 건너뜁니다.</translation>
+    </message>
+    <message>
+        <location line="+110"/>
         <source>ROI thresholds refused</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2047,7 +2047,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/training.py" line="+319"/>
+        <location filename="../ui/pages/training.py" line="+329"/>
         <location filename="../ui/pages/training_import.py" line="+36"/>
         <source>{code} {title}</source>
         <translation type="unfinished"></translation>
@@ -3264,7 +3264,7 @@
 <context>
     <name>NgDialog</name>
     <message>
-        <location filename="../ui/pages/training.py" line="-251"/>
+        <location filename="../ui/pages/training.py" line="-249"/>
         <source>Label NG images</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4056,28 +4056,28 @@
 <context>
     <name>TrainingPage</name>
     <message>
-        <location filename="../ui/pages/training.py" line="+16"/>
-        <source>+ OK Images</source>
-        <translation type="unfinished"></translation>
+        <location filename="../ui/pages/training.py" line="+18"/>
+        <source>Add OK Images…</source>
+        <translation>OK 이미지 추가…</translation>
     </message>
     <message>
         <location line="+1"/>
-        <source>+ NG Images</source>
-        <translation type="unfinished"></translation>
+        <source>Add NG Images…</source>
+        <translation>NG 이미지 추가…</translation>
     </message>
     <message>
         <location line="+1"/>
-        <location line="+373"/>
+        <location line="+382"/>
         <source>Import Folder…</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-367"/>
+        <location line="-374"/>
         <source>Tip: 20+ OK images give a steadier threshold</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+5"/>
+        <location line="+7"/>
         <location line="+52"/>
         <source>ID</source>
         <translation type="unfinished"></translation>
@@ -4094,12 +4094,11 @@
     </message>
     <message>
         <location line="+0"/>
-        <location line="+87"/>
         <source>View</source>
         <translation type="unfinished">뷰</translation>
     </message>
     <message>
-        <location line="-87"/>
+        <location line="+0"/>
         <source>File</source>
         <translation type="unfinished">파일</translation>
     </message>
@@ -4125,12 +4124,12 @@
     </message>
     <message>
         <location line="+1"/>
-        <location line="+235"/>
+        <location line="+239"/>
         <source>Remove</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-230"/>
+        <location line="-234"/>
         <source>Select a sample to preview</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4215,32 +4214,27 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+8"/>
-        <source>Camera view of these images</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+24"/>
-        <source>Stopped: added {added} of {total} images; the others were not added.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+8"/>
+        <location line="+16"/>
         <source>Folder containing ok/ and ng/ sub-folders</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+56"/>
+        <location line="+73"/>
         <source>Imported {ok} OK and {ng} NG images</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+13"/>
+        <location line="+2"/>
+        <source>Imported {ok} OK and {ng} NG images; {refused} not imported (see the list)</source>
+        <translation>OK 이미지 {ok}개와 NG 이미지 {ng}개를 가져왔습니다. {refused}개는 가져오지 않았습니다(목록 참조).</translation>
+    </message>
+    <message>
+        <location line="+18"/>
         <source>Import cancelled: {ok} OK and {ng} NG images imported before it stopped</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+48"/>
+        <location line="+52"/>
         <source>Reference image set: inspections compare against it now, until training learns a Golden board</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4270,7 +4264,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+27"/>
+        <location line="+28"/>
         <source>Export AI model</source>
         <translation type="unfinished"></translation>
     </message>

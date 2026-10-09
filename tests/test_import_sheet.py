@@ -4,16 +4,21 @@ and per row; Import waits for every NG file's type, and the files not imported a
 
 from __future__ import annotations
 
+import shutil
 from pathlib import Path
 
+import pytest
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QGuiApplication
-from PySide6.QtWidgets import QComboBox, QTableWidget
+from PySide6.QtWidgets import QApplication, QComboBox, QFileDialog, QPushButton, QTableWidget
 from pytestqt.qtbot import QtBot
 
+from aoi.core.imaging import list_images
 from aoi.core.sample_import import ImportFile, ImportReport
+from aoi.core.services import AppContext
 from aoi.defects import names
 from aoi.errors import AoiError
+from aoi.ui.main_window import MainWindow
 from aoi.ui.pages.base import cell_item, cell_text
 from aoi.ui.pages.training_import import FILE, LABEL, STATUS, TYPE, VIEW, ImportSheet
 
@@ -114,3 +119,52 @@ def test_req_trn_001_the_sheet_takes_each_file_with_its_view_and_an_ng_file_with
     )
     qtbot.keyClick(sheet.table, Qt.Key.Key_Escape)
     assert closed == [True]
+
+
+def test_req_trn_001_training_opens_the_sheet_inline_and_imports_on_the_pool(
+    qtbot: QtBot,
+    ctx: AppContext,
+    synthetic_dataset: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    dialogs: list[tuple[str, str]],
+) -> None:
+    """Import Folder… opens the sheet inline above the samples table with no dialog; while it is open Import is the
+    page's one blue primary and Start Training a plain button. Enter imports on the pool: the samples table shows the
+    files imported, the status line counts them, and the file with no label is listed with AOI-TRN-016. Esc closes the
+    sheet and Start Training is the primary again. Ctrl+N (Add NG Images…) opens it with NG for all and Import off
+    until a type is picked, and another board model in the header closes it."""
+    oks, ngs = list_images(synthetic_dataset / "train" / "ok"), list_images(synthetic_dataset / "train" / "ng")
+    folder = tmp_path / "src"
+    for src, name in ((oks[0], "ok/a.png"), (ngs[0], "ng/solder_bridge/c.png"), (oks[1], "loose/e.png")):
+        (folder / name).parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy(src, folder / name)
+    win = MainWindow(ctx)
+    qtbot.addWidget(win)
+    win.resize(1600, 900)
+    win.show()
+    qtbot.waitExposed(win)
+    win.set_user("engineer")
+    win._on_board_model("NEWB")
+    win.navigate("Training")
+    qtbot.waitUntil(win.isActiveWindow)
+    page = win.pages["Training"]
+    sheet = page.sheet
+    page.import_from(str(folder))
+    assert sheet.isVisible() and QApplication.activeModalWidget() is None
+    primaries = [b for b in page.findChildren(QPushButton) if b.objectName() == "primary"]
+    assert primaries == [sheet.btn_import], [b.text() for b in primaries]
+    qtbot.keyClick(sheet.table, Qt.Key.Key_Return)
+    qtbot.waitUntil(lambda: page._bg is None and not sheet.running, timeout=60000)
+    assert [r[STATUS] for r in _rows(sheet.table)] == ["AOI-TRN-016 Image has no label", "copied", "copied"]
+    assert win.statusBar().currentMessage() == "Imported 1 OK and 1 NG images; 1 not imported (see the list)"
+    stored = [(r["label"], r["defect_type"], r["side"]) for r in ctx.samples("NEWB")]
+    assert stored == [("NG", "Solder Bridge", "Top"), ("OK", None, "Top")] and page.samples.rowCount() == 2
+    qtbot.keyClick(sheet.table, Qt.Key.Key_Escape)
+    assert not sheet.isVisible() and page.btn_train.objectName() == "primary" and not sheet.btn_import.objectName()
+
+    monkeypatch.setattr(QFileDialog, "getOpenFileNames", staticmethod(lambda *a, **k: ([str(ngs[1])], "")))
+    qtbot.keyClick(page.samples, Qt.Key.Key_N, Qt.KeyboardModifier.ControlModifier)
+    assert sheet.isVisible() and sheet.labels.checkedId() == 1 and not sheet.btn_import.isEnabled()
+    win._on_board_model("OTHER")
+    assert not sheet.isVisible() and not dialogs

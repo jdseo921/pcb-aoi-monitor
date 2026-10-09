@@ -118,6 +118,7 @@ def test_req_usr_001_a_folder_import_finishes_as_the_engineer_who_started_it(
     page = cast(TrainingPage, win.pages["Training"])
     assert win.navigate("Training")
     page.import_from(str(folder))
+    page.sheet.btn_import.click()
     assert reached.wait(30)
     win.set_user("operator")  # the import goes on on its own; the Operator lands on Home
     release.set()

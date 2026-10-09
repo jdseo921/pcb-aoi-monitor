@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from PySide6.QtWidgets import QFileDialog, QInputDialog
+from PySide6.QtWidgets import QFileDialog
 from pytestqt.qtbot import QtBot
 
 from aoi.config import Settings
@@ -21,6 +21,7 @@ from aoi.core.imaging import list_images, load_image, save_image
 from aoi.core.services import AppContext
 from aoi.data import atomic
 from aoi.ui.main_window import MainWindow
+from aoi.ui.pages.base import cell_text
 from tests.test_req_done_in_v01 import BOARD, _window
 from tests.test_roles_and_audit import WRITES
 
@@ -101,7 +102,7 @@ ctx.save_recipe(Recipe.from_dict({{**Recipe(board_model="B1").to_dict(), "warn_r
     ctx.close()
 
 
-def test_req_trn_001_an_import_that_fails_part_way_stores_nothing(
+def test_req_trn_001_a_file_gone_since_the_pick_is_listed_and_the_others_go_in(
     qtbot: QtBot,
     ctx: AppContext,
     synthetic_dataset: Path,
@@ -109,6 +110,9 @@ def test_req_trn_001_an_import_that_fails_part_way_stores_nothing(
     monkeypatch: pytest.MonkeyPatch,
     dialogs: list[tuple[str, str]],
 ) -> None:
+    """Add OK Images… imports each picked file on its own (REQ-TRN-001, S31; decisions Q30, Q31): one gone between the
+    pick and Import is listed in the import sheet with AOI-INSP-001 and no dialog, and the others go in, each with its
+    audit entry (#178) and no copy of the gone one left. Put back, Import again adds it alone."""
     win = MainWindow(ctx)
     qtbot.addWidget(win)
     win.set_user("engineer")
@@ -119,18 +123,19 @@ def test_req_trn_001_an_import_that_fails_part_way_stores_nothing(
         shutil.copy(p, f)
     files[2].unlink()  # gone between the pick and the copy
     monkeypatch.setattr(QFileDialog, "getOpenFileNames", staticmethod(lambda *_: ([str(f) for f in files], "")))
-    monkeypatch.setattr(QInputDialog, "getItem", staticmethod(lambda *a: (a[3][0], True)))
-    page.add_ok()  # the copies run on the pool (#194); the error reaches the coded dialog
-    qtbot.waitUntil(lambda: page._bg is None, timeout=30000)
-    [(title, text)] = dialogs  # refused as Inspection refuses it (REQ-TRN-001, S31); the copies made are removed
-    assert title == "AOI-INSP-001 Image cannot be read" and "ok2.png" in text, (title, text)
-    assert ctx.samples("NEWB") == [] and ctx.audit_entries(action="sample.import") == []
-    assert not any((ctx.settings.images_dir / "NEWB").rglob("*.png"))  # no copy left behind
-    shutil.copy(list_images(synthetic_dataset / "train" / "ok")[2], files[2])  # the file put back: Try again
     page.add_ok()
+    page.sheet.btn_import.click()  # the copies run on the pool (#194)
+    qtbot.waitUntil(lambda: page._bg is None, timeout=30000)
+    statuses = [cell_text(page.sheet.table, r, 4) for r in range(3)]
+    assert dialogs == [] and statuses == ["copied", "copied", "AOI-INSP-001 Image cannot be read"], statuses
+    assert "ok2.png" in page.sheet.table.item(2, 4).toolTip()
+    assert len(ctx.samples("NEWB")) == 2 and len(list((ctx.settings.images_dir / "NEWB").rglob("*.png"))) == 2
+    assert [e["after"]["added"] for e in ctx.audit_entries(action="sample.import")] == [1, 1]
+    shutil.copy(list_images(synthetic_dataset / "train" / "ok")[2], files[2])  # the file put back: Import again
+    page.sheet.btn_import.click()
     qtbot.waitUntil(lambda: page._bg is None, timeout=30000)
     assert len(ctx.samples("NEWB")) == 3 and ctx.reference_image("NEWB") and ctx.recipe("NEWB")[0] == 1
-    assert [e["after"]["added"] for e in ctx.audit_entries(action="sample.import")] == [3]
+    assert [e["after"]["added"] for e in ctx.audit_entries(action="sample.import")] == [1, 1, 1]
 
 
 def test_req_trn_001_a_folder_import_that_fails_part_way_says_what_was_imported(
@@ -161,10 +166,11 @@ def test_req_trn_001_a_folder_import_that_fails_part_way_says_what_was_imported(
     win._on_board_model("NEWB")
     page = win.pages["Training"]
     page.import_from(str(folder))
+    page.sheet.btn_import.click()
     qtbot.waitUntil(lambda: page._bg is None, timeout=30000)
     assert len(ctx.samples("NEWB")) == 2 and page.samples.rowCount() == 2  # the two before it, shown in the table
     [(title, text)] = dialogs
-    assert title == "AOI-TRN-009 Folder import stopped part-way", title
+    assert title == "AOI-TRN-009 Import stopped part-way", title
     assert "ok_2.png" in text and "Permission denied" in text and "image 3 of 5" in text, text
     assert "the 2 image(s) imported before it" in text and "the 2 image(s) already imported are skipped" in text, text
     assert win.statusBar().currentMessage() == "Imported 2 OK and 0 NG images"
