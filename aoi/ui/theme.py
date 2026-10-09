@@ -41,6 +41,7 @@ BG_RAISED = "#26323f"  # cards, tiles, table headers, disabled buttons
 BG_IMAGE = "#0f161d"  # behind board images
 BG_BUTTON, BG_BUTTON_HOVER, BG_NAV_HOVER = "#2d4257", "#36506a", "#24394f"
 BG_SELECTED = "#1565c0"  # the selected sidebar entry, tab, row and text: 14 pt white reads at 5.7:1, 3.7:1 on ACCENT
+BG_ON = BG_SELECTED  # a toggle button while it is on, such as Draw Box in Draw mode, with white text and border
 BG_BUSY = "rgba(15, 22, 29, 200)"
 LINE, LINE_STRONG = "#2f3e4e", "#3f5a75"
 TEXT, TEXT_MUTED, TEXT_DISABLED = "#e6edf3", "#9fb0c0", "#6c7c8c"
@@ -61,10 +62,16 @@ TARGET_H = 48  # T: an operator target, such as a defect row or a sidebar entry
 RUN_CONTROL_H = 56  # T+: Start, Stop, Next Board, Save Image…
 FIELD_H = 40  # F
 BANNER_H = 90  # the verdict banner and a metric tile
+WHY_MIN_H = 60  # Compare's "why" box gives way to two lines before the decision table's rows are squeezed
+DECISION_ROWS = 7  # and before the decision table shows fewer rows than this, the sketch's seven; more scroll
 NAV_W, HEADER_H, FIELD_W, CARD_W = 250, 64, 240, 720
 IMAGE_MIN_W, IMAGE_MIN_H, PROGRESS_W = 320, 240, 360
+MARK_D = 12  # a point picked on an image (Calibrate Scale…): a ring this many px across at every zoom
+WHY_H = 150  # Compare's "why" box at most, AOI-RCP-007's line in it included (S29)
+HANDLE_PX = 16  # a corner handle of the selected defect box on Training's label editor (labels sketch)
 SPACE, SPACE_S = 14, 8  # between blocks; inside a block
 RADIUS, RADIUS_L = 6, 10
+MARK_W = 6  # the verdict-colour bar beside a verdict said next to a control, such as Compare's "Would be"
 
 TOKENS = {k: v for k, v in dict(globals()).items() if k.isupper()}
 
@@ -76,6 +83,7 @@ QWidget { color: $TEXT; }
 QLabel#h1 { font-size: ${FONT_H1_PT}pt; font-weight: 600; }
 QLabel#muted { color: $TEXT_MUTED; }
 QLabel#logo, QLabel#busyText { font-size: ${FONT_LARGE_PT}pt; font-weight: 600; }
+QLabel#badge { background: $WARN_COLOR; color: $ON_LIGHT; border-radius: ${RADIUS}px; padding: 4px ${SPACE_S}px; }
 QLabel#tile { background: $BG_RAISED; border-radius: ${RADIUS_L}px; padding: ${SPACE_S}px; }
 QFrame#header { background: $BG_DEEP; border-bottom: 1px solid $LINE; }
 QFrame#card { background: $BG_RAISED; border-radius: ${RADIUS_L}px; }
@@ -88,8 +96,16 @@ QListWidget#nav::item:hover:!selected { background: $BG_NAV_HOVER; }
 QPushButton { background: $BG_BUTTON; border: 1px solid $LINE_STRONG; border-radius: ${RADIUS}px;
               min-width: ${BUTTON_W}px; min-height: ${BUTTON_H}px; padding: 0 ${SPACE}px; }
 QPushButton:hover { background: $BG_BUTTON_HOVER; }
-QPushButton[sizeClass="T"], QComboBox[sizeClass="T"] { min-height: ${TARGET_H}px; }
+QPushButton:checked, QPushButton:checked:hover { background: $BG_ON; border-color: $ON_DARK; color: $ON_DARK; }
+QPushButton[sizeClass="T"], QComboBox[sizeClass="T"], QRadioButton[sizeClass="T"] { min-height: ${TARGET_H}px; }
+QRadioButton[sizeClass="T"] { background: $BG_BUTTON; border: 1px solid $LINE_STRONG; border-radius: ${RADIUS}px;
+                              padding: 0 ${SPACE}px; }
+QRadioButton[sizeClass="T"]::indicator { width: 0; height: 0; }
+QRadioButton[sizeClass="T"]:checked { background: $BG_SELECTED; border-color: $BG_SELECTED; color: $ON_DARK; }
+QRadioButton[sizeClass="T"]:focus { border-color: $TEXT; }
+QRadioButton[sizeClass="T"]:disabled { color: $TEXT_DISABLED; background: $BG_RAISED; }
 QPushButton[sizeClass="T+"] { min-height: ${RUN_CONTROL_H}px; }
+QCheckBox[sizeClass="F"] { min-height: ${FIELD_H}px; }
 QPushButton:disabled { color: $TEXT_DISABLED; background: $BG_RAISED; }
 QPushButton#primary, QPushButton#start, QPushButton#stop, QPushButton#danger { color: $ON_DARK; font-weight: 700; }
 QPushButton#primary { background: $ACCENT; border-color: $ACCENT; }
@@ -100,6 +116,7 @@ QPushButton#primary:disabled, QPushButton#start:disabled, QPushButton#stop:disab
 QComboBox, QLineEdit, QSpinBox, QDoubleSpinBox, QDateEdit {
     background: $BG_DEEP; border: 1px solid $LINE_STRONG; border-radius: 4px; min-height: ${FIELD_H}px;
     padding: 0 6px; }
+QDoubleSpinBox#calibrated:disabled { color: $TEXT_MUTED; }
 QComboBox QAbstractItemView { background: $BG_DEEP; color: $TEXT; border: 1px solid $LINE_STRONG;
     selection-background-color: $BG_SELECTED; selection-color: $ON_DARK; }
 QCalendarWidget QAbstractItemView { background: $BG_DEEP; color: $TEXT; alternate-background-color: $BG_RAISED;
@@ -156,6 +173,17 @@ def on_color(fill: str) -> str:
     """The text colour that reads on `fill`: dark on amber, grey and orange (5.6:1 or more), white on green, red and
     blue (where white measures 3.3:1 to 4.2:1, so the text there is bold or 40 pt; see the module docstring)."""
     return ON_LIGHT if fill in (WARN_COLOR, INFO_COLOR, MAJOR_COLOR) else ON_DARK
+
+
+def verdict_mark_style(verdict: str) -> str:
+    """Stylesheet of a verdict said next to a control, such as Compare's "Would be: ▲ WARN": bold text beside a bar in
+    the verdict's colour, with no fill or rounded box, so that it never reads as a button. The text keeps the
+    stylesheet's colour, so a theme passed to `stylesheet()` (the presenter theme, REQ-SET-008) colours it too."""
+    c = VERDICT_COLORS.get(verdict, INFO_COLOR)
+    return (
+        f"background:transparent; font-size:{FONT_PT}pt; font-weight:700; "
+        f"border:none; border-left:{MARK_W}px solid {c}; padding-left:{SPACE_S}px;"
+    )
 
 
 def verdict_style(verdict: str, big: bool = True) -> str:

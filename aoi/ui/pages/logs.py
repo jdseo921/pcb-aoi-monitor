@@ -12,6 +12,7 @@ from PySide6.QtWidgets import QCheckBox, QComboBox, QDateEdit, QFileDialog, QHBo
 
 from ...core.inspector import ai_check
 from ...core.services import AppContext, CsvFile
+from ...errors import AoiError
 from ...times import to_local
 from .. import theme
 from ..widgets.busy import BusyOverlay
@@ -276,7 +277,7 @@ class LogsPage(Page):
         stored one cannot be read (damaged), which is logged by the record's id and stops no export (#246)."""
         try:
             return ai_check(self.ctx.inspection_result(inspection_id))
-        except (ValueError, KeyError, TypeError, AttributeError):  # not JSON, or JSON that is no stored result
+        except AoiError:  # AOI-CMP-002: not JSON, or JSON that is no stored result
             self.ctx.log.warning("export.result_not_read", exc_info=True, extra={"inspection_id": inspection_id})
             return ""
 

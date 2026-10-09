@@ -209,16 +209,21 @@ def test_req_insp_008_the_headless_save_names_a_path_too_long_and_nothing_else(
     trained_ctx: AppContext, ng_board: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """`inspect_file` raises AOI-INSP-014 for ENAMETOOLONG and, on Windows, for a file not found at a path of 260
-    UTF-16 units or more (how such a path fails there with long paths off; 130 emoji are 260); a file not found at a
-    shorter path, or on Linux, stays the OSError it is (the Inspection page shows it as AOI-INSP-008). Before, each
-    was a bare OSError, ENAMETOOLONG included."""
+    UTF-16 units or more (how such a path fails there with long paths off; 29 emoji are 58), each of its names no
+    longer than the 255 units Windows takes in one; a file not found at a shorter path, or on Linux, stays the OSError
+    it is (the Inspection page shows it as AOI-INSP-008). Before, each was a bare OSError, ENAMETOOLONG included."""
     monkeypatch.setattr(atomic, "write_bytes", _too_long)
     with pytest.raises(AoiError) as caught:
         trained_ctx.inspect_file(BOARD, str(ng_board))
     assert caught.value.code == "AOI-INSP-014" and isinstance(caught.value.__cause__, OSError)
     assert caught.value.params == {"file": ng_board.name, "workspace": str(trained_ctx.settings.root)}
     monkeypatch.setattr(services, "WINDOWS", True)
-    for name, code in (("x" * 260, "AOI-INSP-014"), ("\U0001f600" * 130, "AOI-INSP-014"), ("x" * 259, None)):
+    at_260, emoji_260, at_259 = (
+        "x" * 200 + "/" + "x" * 59,
+        "x" * 201 + "/" + "\U0001f600" * 29,
+        "x" * 200 + "/" + "x" * 58,
+    )
+    for name, code in ((at_260, "AOI-INSP-014"), (emoji_260, "AOI-INSP-014"), (at_259, None)):
         gone = FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), name)
         monkeypatch.setattr(atomic, "write_bytes", mock.Mock(side_effect=gone))
         with pytest.raises((AoiError, FileNotFoundError)) as refused:
@@ -234,15 +239,16 @@ def test_req_trn_001_a_copy_the_system_refuses_as_too_long_has_its_own_code(
     ctx: AppContext, ng_board: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """An import whose copy the system refuses as too long stops with AOI-TRN-011: ENAMETOOLONG, or on Windows a file
-    not found at a path of 260 characters or more. It names the picked file and the workspace folder, gives copying the
-    workspace as the step, not AOI-TRN-008's free space, and imports nothing. A picked file whose own path is refused,
-    or a copy not found at 259 characters, stays AOI-TRN-008. Before: AOI-TRN-008 for each."""
+    not found at a path of 260 characters or more (no name in it over 255). It names the picked file and the workspace
+    folder, gives copying the workspace as the step, not AOI-TRN-008's free space, and imports nothing. A copy not found
+    at 259 characters stays AOI-TRN-008, and a picked file whose own path is refused is that file's, AOI-INSP-001 (S31).
+    Before: AOI-TRN-008 for each."""
     copy = str(ctx.settings.images_dir / BOARD / "OK" / ".copy.tmp")
     cases = [
         (False, OSError(errno.ENAMETOOLONG, os.strerror(errno.ENAMETOOLONG), copy), "AOI-TRN-011"),
-        (True, FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), "x" * 260), "AOI-TRN-011"),
-        (True, FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), "x" * 259), "AOI-TRN-008"),
-        (False, OSError(errno.ENAMETOOLONG, os.strerror(errno.ENAMETOOLONG), str(ng_board)), "AOI-TRN-008"),
+        (True, FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), "x" * 200 + "/" + "x" * 59), "AOI-TRN-011"),
+        (True, FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), "x" * 200 + "/" + "x" * 58), "AOI-TRN-008"),
+        (False, OSError(errno.ENAMETOOLONG, os.strerror(errno.ENAMETOOLONG), str(ng_board)), "AOI-INSP-001"),
     ]
     for windows, refusal, code in cases:
 
@@ -264,7 +270,7 @@ def test_req_trn_001_a_copy_the_system_refuses_as_too_long_has_its_own_code(
 @pytest.mark.parametrize(
     ("refused", "kept", "title", "says"),
     [
-        ("ok_2.png", 2, "AOI-TRN-010 Folder import stopped by an error", "image 3 of 5"),
+        ("ok_2.png", 2, "AOI-TRN-010 Import stopped by an error", "image 3 of 5"),
         ("ok_0.png", 0, "AOI-TRN-011 Images not imported: path too long", "None of the 5 image(s) picked"),
     ],
     ids=["third", "first"],
@@ -290,6 +296,7 @@ def test_req_trn_001_a_folder_import_names_a_copy_refused_as_too_long(
     ctx.ensure_board_model(BOARD)
     page = _window(qtbot, ctx, "Engineer").pages["Training"]
     page.import_from(str(tmp_path / "fold"))
+    page.sheet.btn_import.click()
     qtbot.waitUntil(lambda: page._bg is None, timeout=30000)
     assert len(ctx.samples(BOARD)) == kept
     [(shown, text)] = dialogs

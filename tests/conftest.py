@@ -8,6 +8,7 @@ standard, "Validation and accuracy claims").
 
 from __future__ import annotations
 
+import gc
 import os
 import shutil
 from collections.abc import Iterator
@@ -21,7 +22,10 @@ import pytest
 # Qt pages render offscreen in tests (CI runners have no display). Set before any Qt import.
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from PySide6.QtWidgets import QMessageBox  # noqa: E402
+from PySide6.QtCore import Qt  # noqa: E402
+from PySide6.QtGui import QGuiApplication  # noqa: E402
+from PySide6.QtTest import QTest  # noqa: E402
+from PySide6.QtWidgets import QMessageBox, QWidget  # noqa: E402
 
 from aoi.config import Settings  # noqa: E402
 from aoi.core import anomaly  # noqa: E402
@@ -29,7 +33,7 @@ from aoi.core.imaging import list_images, load_image  # noqa: E402
 from aoi.core.services import AppContext  # noqa: E402
 from aoi.data.db import new_uuid  # noqa: E402
 from aoi.ui.theme import QSS  # noqa: E402
-from tools.make_synthetic_dataset import write_dataset  # noqa: E402
+from tools.make_synthetic_dataset import ng_type, write_dataset  # noqa: E402
 
 DATASET_SEED = 7  # the generator's default seed, so the fixture matches `python tools/make_synthetic_dataset.py`
 DATASET_OK, DATASET_NG = 30, 14
@@ -41,6 +45,16 @@ def wrapped(name: str) -> str:
     """`name` as a page shows a file name that may wrap after each _ and - (`breakable` in aoi/ui/pages/base.py, #245),
     spelled out here, so that a test does not take its expected text from the code under test."""
     return "".join(c + ZWSP if c in "_-" else c for c in name)
+
+
+def distinct_copies(src: Path, folder: Path, n: int) -> list[Path]:
+    """`n` copies of the image `src` in `folder`, each with bytes of its own after the image's end, which decoders never
+    read: one picture under n SHA-256s, so an import takes each rather than skipping it as already imported (Q31)."""
+    folder.mkdir(parents=True, exist_ok=True)
+    data, out = src.read_bytes(), [folder / f"{src.stem}_{i:03d}{src.suffix}" for i in range(n)]
+    for i, p in enumerate(out):
+        p.write_bytes(data + f"{folder.name}{i:06d}".encode())  # another folder's copies have other bytes
+    return out
 
 
 @pytest.fixture
@@ -92,7 +106,8 @@ def tiny_model(tmp_path_factory: pytest.TempPathFactory, synthetic_dataset: Path
     ctx = engineer(AppContext(settings))
     board_model = "TINY"
     ctx.import_samples(board_model, [str(p) for p in list_images(synthetic_dataset / "train" / "ok")], "OK")
-    ctx.import_samples(board_model, [str(p) for p in list_images(synthetic_dataset / "train" / "ng")], "NG")
+    for p in list_images(synthetic_dataset / "train" / "ng"):  # one call each: an NG sample is imported with its type
+        ctx.import_samples(board_model, [str(p)], "NG", ng_type(p))
     meta = ctx.train(board_model, epochs=TINY_EPOCHS, image_size=TINY_IMAGE_SIZE)
     loaded = ctx.load_model(board_model)
     assert loaded is not None, "training registered no active model"
@@ -150,6 +165,36 @@ def _questions_answer_yes(monkeypatch: pytest.MonkeyPatch) -> None:
     """Yes in place of a modal question that would block offscreen: a window closed at a test's end while work runs
     asks whether to stop it (#171). A test that answers otherwise patches QMessageBox.question itself."""
     monkeypatch.setattr(QMessageBox, "question", staticmethod(lambda *_: QMessageBox.StandardButton.Yes))
+
+
+def let_go_of_keys() -> None:
+    """Qt reads no key as held after this. QTest's click with Ctrl lets go of Ctrl in an event that still carries Ctrl,
+    so Qt reads Ctrl as held until the next key event."""
+    if QGuiApplication.keyboardModifiers() != Qt.KeyboardModifier.NoModifier:
+        QTest.keyRelease(QWidget(), Qt.Key.Key_Control)  # an event with no modifier: Qt reads none held after it
+
+
+@pytest.fixture(autouse=True)
+def _no_key_held(qapp: Any) -> None:
+    """Each test starts with no key held: with Ctrl read as held from an earlier test, a test's selectRow() adds its
+    row to the selection instead of selecting it alone (the AI Model Test preview test's another_row failed so on
+    Linux CI, after the import sheet's Ctrl+N)."""
+    let_go_of_keys()
+
+
+@pytest.fixture
+def settled_collector() -> Iterator[None]:
+    """For a test that times the app against a budget: Python's collector first frees what earlier tests left, then
+    leaves every object that exists by then out of its passes until the test ends, so a pass that falls inside a timed
+    step walks the test's own objects only. A local run of the whole suite made 38 full passes of 60 to 354 ms, at
+    points no test chooses; one landing in a Home opening fails REQ-INSP-016's 300 ms budget (Linux CI on PR 334: 550
+    ms in one opening of 11, the others 4 to 13 ms)."""
+    gc.collect()
+    gc.freeze()
+    try:
+        yield
+    finally:
+        gc.unfreeze()
 
 
 @pytest.fixture

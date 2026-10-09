@@ -29,7 +29,7 @@ from tools.update_translations import ROOT, TS_FILE, qt_tool, update
 
 PLACEHOLDER = re.compile(r"\{(\w+)(?::[^}]*)?\}")
 S19_CONTEXTS = {"Page", "Role", "View", "HomePage", "MainWindow", "InspectionPage", "ComparePage", "LogsPage"}
-S20_CONTEXTS = {"TrainingPage", "NgDialog", "ModelTestPage", "SettingsPage", "Profile3DPage", "RecipeEditorPage"}
+S20_CONTEXTS = {"TrainingPage", "ModelTestPage", "SettingsPage", "Profile3DPage", "RecipeEditorPage"}
 
 # The scan for untranslated literals (test_req_set_005_no_untranslated_literals).
 TRANSLATORS = {"tr", "translate", "QT_TRANSLATE_NOOP", "page_text", "role_text", "view_text"}
@@ -91,7 +91,7 @@ def test_req_set_005_translation_file_is_generated_from_the_sources(tmp_path: Pa
         named = set(PLACEHOLDER.findall(translation))
         assert not translation or named == set(PLACEHOLDER.findall(source)), (context, source, translation)
     assert ("Page", "Home") in committed and ("LogsPage", "Filter") in committed and ("Role", "Admin") in committed
-    assert ("SettingsPage", "Version {version}") in committed and ("NgDialog", "Label NG images") in committed
+    assert ("SettingsPage", "Version {version}") in committed and ("TrainingPage", "Set Reference") in committed
 
 
 def test_req_set_005_engine_names_and_camera_views_have_display_strings(tiny_model: TrainedModel) -> None:
@@ -408,6 +408,7 @@ ENGINE_ALLOWED = {  # (file, literal): why it is not a phrase; a stale entry fai
     ("aoi/core/services.py", "missing"): "a Judged key; Compare words it (JUDGED in aoi/ui/pages/compare.py)",
     ("aoi/core/services.py", "unreadable"): "a Judged key; Compare words it (JUDGED in aoi/ui/pages/compare.py)",
     ("aoi/core/services.py", "changed"): "a Judged key; Compare words it (JUDGED in aoi/ui/pages/compare.py)",
+    ("aoi/core/datasets.py", "DS-0-0-0-v0"): "a dataset version's name (REQ-TRN-005), the same in every language",
 }
 
 
