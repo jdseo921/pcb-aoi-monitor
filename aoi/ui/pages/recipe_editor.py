@@ -97,10 +97,12 @@ class RecipeEditorPage(Page):
         self.scale_text.setObjectName("muted")
         self.scale_badge.setObjectName("badge")
         self.calibrate_btn = button(self.tr("Calibrate Scale…"), slot=self.calibrate)
-        for part in (self.scale_text, self.scale_badge, self.calibrate_btn):
+        for part in (self.scale_text, self.calibrate_btn):
             scale_row.addWidget(part)
         scale_row.addStretch(1)
         ll.addLayout(scale_row)
+        self.scale_badge.setWordWrap(True)  # a row of its own under the scale, as AOI-RCP-009: beside Calibrate Scale…
+        ll.addWidget(self.scale_badge)  # it made the window 1601 px wide, wider than a 1600 x 900 screen
         self.held_badge = QLabel()  # AOI-RCP-009, word-wrapped on a row of its own under the scale: no wider window
         self.held_badge.setObjectName("badge")  # amber, as AOI-RCP-005 (S29 review)
         self.held_badge.setWordWrap(True)

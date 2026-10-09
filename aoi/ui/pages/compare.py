@@ -16,6 +16,7 @@ from __future__ import annotations
 import copy
 import dataclasses
 import html
+import itertools
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, TypeAlias
 
@@ -33,6 +34,7 @@ from PySide6.QtWidgets import (
     QHeaderView,
     QLabel,
     QLineEdit,
+    QSizePolicy,
     QSpinBox,
     QSplitter,
     QTextEdit,
@@ -269,8 +271,34 @@ class ComparePage(Page):
         self.try_busy = BusyOverlay(self.decision, self.tr("Re-evaluating…"))  # over both: Cancel fits at least size
         self.try_busy.cancel_button.clicked.connect(self._cancel_tried)  # the stored checks again (REQ-SET-021, review)
 
+        split.addWidget(panel)
+        split.setSizes([800, 920])  # the decision table shows all six columns at 1920 x 1080
+        self.root.addWidget(split, 1)
+        self.root.addWidget(self._tryout())  # under the images, the panel's full height left to the decision (sketch)
+        self.root.addWidget(self._save_sheet())
+
+    def _tryout(self) -> QGroupBox:
+        """Try other thresholds, as wide as the page under the images and the panel, so the decision table shows every
+        row (Jay's choice of layout, 2026-10-08): in the panel its seven rows left the table five of its seven rows at
+        1920 x 1080 and one at 1600 x 900. Each column is a form of its own, the sketch's first two rows across them:
+        the AI score threshold over its tick, Pixel difference over Similarity minimum, the minimum defect size (in px,
+        or in mm at the board model's scale) over Allowed difference regions. Re-evaluate and Save to Recipe take a
+        third row, at its right: beside the fields they made the window at least 1856 px wide. Why no calibrated value
+        is named fills the rest of that row, and Tab keeps the order the fields had in one form."""
         self.tryout = QGroupBox(self.tr("Try other thresholds (nothing is saved until you press Save to Recipe)"))
-        f = QFormLayout(self.tryout)
+        tl = QVBoxLayout(self.tryout)
+        cols = QHBoxLayout()
+        cols.setSpacing(theme.SPACE * 2)
+        forms: list[QFormLayout] = []
+        for _ in range(3):
+            column = QWidget()
+            form = QFormLayout(column)
+            form.setContentsMargins(0, 0, 0, 0)
+            form.setRowWrapPolicy(QFormLayout.RowWrapPolicy.WrapLongRows)  # a label over its field, not a wider window
+            forms.append(form)
+            cols.addWidget(column)
+        cols.addStretch(1)
+        ai, pixels, areas = forms
         self.ai_thr = self.ai_threshold_field(self.tr("Override the AI model's value {value}"), own_row=True)
         self.diff_thr = QSpinBox()
         self.diff_thr.setRange(1, 255)
@@ -282,18 +310,20 @@ class ComparePage(Page):
         self.ssim_min.setSingleStep(0.01)
         self.max_regions = QSpinBox()
         self.max_regions.setRange(0, 1000)
-        f.addRow(self.tr(THRESHOLDS["anomaly_threshold"]), self.ai_thr)
-        f.addRow(self.ai_thr.tick_row)  # the sketch's label, naming the value: beside the field it widens the window
-        f.addRow(self.ai_thr.note)  # why no calibrated value is named, as wide as the panel
-        f.addRow(self.tr(THRESHOLDS["diff_threshold"]), self.diff_thr)
-        f.addRow(self.min_size.label, self.min_size)
-        f.addRow(self.tr(THRESHOLDS["ssim_min"]), self.ssim_min)
-        f.addRow(self.tr(THRESHOLDS["max_diff_regions"]), self.max_regions)
+        ai.addRow(self.tr(THRESHOLDS["anomaly_threshold"]), self.ai_thr)
+        ai.addRow(self.ai_thr.tick_row)  # the sketch's label, naming the value: beside the field it widens the window
+        pixels.addRow(self.tr(THRESHOLDS["diff_threshold"]), self.diff_thr)
+        pixels.addRow(self.tr(THRESHOLDS["ssim_min"]), self.ssim_min)
+        areas.addRow(self.min_size.label, self.min_size)
+        areas.addRow(self.tr(THRESHOLDS["max_diff_regions"]), self.max_regions)
         self.ai_thr.changed.connect(self._drop_tried)  # what was tried no longer applies
         self.ai_thr.ticking.connect(self._show_calibration)  # an AI model trained since the value was named
         for field in (self.diff_thr, self.min_area, self.min_size.mm, self.ssim_min, self.max_regions):
             field.valueChanged.connect(self._drop_tried)
         row = QHBoxLayout()
+        self.ai_thr.note.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)  # never widens it
+        row.addWidget(self.ai_thr.note, 1)  # why no calibrated value is named, wrapped in what the row leaves it
+        row.addStretch(0)  # without the note, the buttons keep their width at the row's right, as in the sketch
         self.would_be = QLabel()  # "Would be: ▲ WARN" beside Re-evaluate once a stored result is judged again (sketch)
         self.would_be.hide()
         row.addWidget(self.would_be)
@@ -303,41 +333,50 @@ class ComparePage(Page):
         self.act_save = self.action(self.tr("Save to Recipe"), "Ctrl+S", self.save_recipe)
         self.btn_save = action_button(self.act_save, "primary", show_key=False)  # the page's one blue primary
         row.addWidget(self.btn_save)
-        f.addRow(row)
-        pl.addWidget(self.tryout)
-        pl.addWidget(self._save_sheet())
+        tl.addLayout(cols)
+        tl.addLayout(row)
+        order = (self.ai_thr.field, self.diff_thr, self.min_area, self.min_size.mm, self.ssim_min, self.max_regions)
+        for before, after in itertools.pairwise((*order, self.btn_try, self.btn_save)):  # the hidden size skipped
+            QWidget.setTabOrder(before, after)  # as in one form: the AI score threshold, then the first row, the second
         self.ai_thr.changed.connect(self._sync_save)  # Save to Recipe is on while a threshold differs from the recipe
         for field in (self.diff_thr, self.min_area, self.min_size.mm, self.ssim_min, self.max_regions):
             field.valueChanged.connect(self._sync_save)
-        split.addWidget(panel)
-        split.setSizes([800, 920])  # the decision table shows all six columns at 1920 x 1080
-        self.root.addWidget(split, 1)
+        return self.tryout
 
     def _save_sheet(self) -> QGroupBox:
-        """Save to Recipe's confirmation, shown in place of the panel: inline, never a dialog over a dialog (sketch). It
-        lists each threshold that changes, before -> after, and asks for a reason, without which Save Revision is off;
-        Cancel, or Esc in the sheet, closes it. Save Revision is a plain button: the page keeps one blue primary."""
+        """Save to Recipe's confirmation, shown in place of Try other thresholds: inline, never a dialog over a dialog
+        (sketch). It lists each threshold that changes, before -> after, and asks for a reason, without which Save
+        Revision is off; Cancel, or Esc in the sheet, closes it. Save Revision is a plain button: the page keeps one
+        blue primary."""
         self.sheet = QGroupBox(self.tr("Save to Recipe"))
-        sl = QVBoxLayout(self.sheet)
+        sl = QHBoxLayout(self.sheet)  # what changes beside the reason: stacked, the window outgrew a 900 px screen
+        said = QVBoxLayout()
         self.sheet_heading, self.sheet_changes, self.sheet_note = QLabel(), QLabel(), QLabel()
         self.sheet_note.setObjectName("muted")
         for label in (self.sheet_heading, self.sheet_changes, self.sheet_note):
             label.setWordWrap(True)
             label.setTextFormat(Qt.TextFormat.PlainText)  # a board model's name is never read as markup
-            sl.addWidget(label)
+        said.addWidget(self.sheet_heading)
+        said.addWidget(self.sheet_changes)
+        said.addStretch(1)  # the lines together at the top when the reason's side is taller
+        sl.addLayout(said, 1)
+        asked = QVBoxLayout()
         form = QFormLayout()
         self.reason = QLineEdit()
         self.reason.textChanged.connect(self._sync_save)
         self.reason.returnPressed.connect(self._confirm_save)
         form.addRow(self.tr("Reason (required)"), self.reason)
-        sl.addLayout(form)
+        asked.addLayout(form)
+        asked.addWidget(self.sheet_note)  # what Save Revision does, over it
         row = QHBoxLayout()
         row.addStretch(1)
         self.btn_cancel = button(self.tr("Cancel"), slot=self._close_sheet)
         row.addWidget(self.btn_cancel)
         self.btn_confirm = button(self.tr("Save Revision"), slot=self._confirm_save)  # named with its revision on open
         row.addWidget(self.btn_confirm)
-        sl.addLayout(row)
+        asked.addLayout(row)
+        asked.addStretch(1)
+        sl.addLayout(asked, 1)
         esc = QAction(self.sheet)
         esc.setShortcut(QKeySequence(Qt.Key.Key_Escape))
         esc.setShortcutContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)  # Esc in the sheet closes it
@@ -696,6 +735,15 @@ class ComparePage(Page):
         self.verdict.setStyleSheet(theme.verdict_style(r.verdict))
         self._show_checks(r)
 
+    def _hold_rows(self) -> None:
+        """The decision table never shorter than its rows, up to theme.DECISION_ROWS of them, so the "why" box gives
+        way first: with the panel's full height, at 1600 x 900 it still left the table four of seven rows. It is run
+        on each fill, not on a change of style or font, which the light theme due by 1.0 must run it on."""
+        t = self.metrics
+        rows = sum(t.rowHeight(r) for r in range(min(t.rowCount(), theme.DECISION_ROWS)))
+        bar = t.horizontalScrollBar().sizeHint().height()  # a narrow panel scrolls the columns under the rows
+        t.setMinimumHeight(t.horizontalHeader().sizeHint().height() + rows + bar + 2 * t.frameWidth())
+
     def _show_checks(self, r: InspectionResult, tried: bool = False) -> None:
         """The decision table and "why" box of `r`: the result shown, or (`tried`) what the thresholds tried give it."""
         rows, colors = [], []
@@ -715,6 +763,7 @@ class ComparePage(Page):
         )
         colors.append(None)
         fill_table(self.metrics, rows, colors)
+        self._hold_rows()
         self._show_why(self._explain(r, tried))
 
     def show_stored(self, inspection_id: int) -> None:
@@ -1034,6 +1083,7 @@ class ComparePage(Page):
         self.verdict.setText(NO_VERDICT)
         self.verdict.setStyleSheet(theme.verdict_style("INFO"))
         fill_table(self.metrics, [])
+        self._hold_rows()
         self._show_why("")
         self.test_view.set_image(None)
         self.ref_view.clear_overlays()

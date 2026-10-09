@@ -69,9 +69,9 @@ def _stored_on_compare(qtbot: QtBot, ctx: AppContext, board: Path, role: str) ->
 
 
 def _panel(compare: ComparePage) -> QWidget:
-    """The panel that holds the thresholds form, Re-evaluate and Save to Recipe."""
-    panel = compare.ai_thr.parentWidget()
-    assert panel is not None and panel.isAncestorOf(compare.btn_save)
+    """The panel that holds the thresholds form, Re-evaluate and Save to Recipe: Try other thresholds."""
+    panel = compare.tryout
+    assert panel.isAncestorOf(compare.ai_thr) and panel.isAncestorOf(compare.btn_save)
     return panel
 
 

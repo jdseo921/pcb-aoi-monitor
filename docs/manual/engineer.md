@@ -76,8 +76,9 @@ the ROI table gives X, Y, W and H in mm, and the minimum defect size, on Thresho
 judged as before at that scale. Until then, AOI-RCP-009 in amber under the scale counts the sizes the latest revision
 still holds in px and says to press Save Recipe: shown in mm, they keep their px when the scale is set again, while
 sizes in mm follow it. Save to Recipe on Compare stores a size typed in mm and keeps one left untouched as the recipe
-holds it, so AOI-RCP-009 stays after it. Without a scale, sizes stay in px beside AOI-RCP-005 in amber, and a recipe
-saves all the same. A stored scale that cannot be read, AOI-RCP-012, judges and saves nothing until it is set again.
+holds it, so AOI-RCP-009 stays after it. Without a scale, sizes stay in px, with AOI-RCP-005 in amber under
+Calibrate Scale…, and a recipe saves all the same. A stored scale that cannot be read, AOI-RCP-012, judges and saves
+nothing until it is set again.
 To set the scale, press **Calibrate Scale…** on the Recipe Editor (it needs the Golden board): click two points on the
 Golden board a known distance apart (a third click starts again), or type the length between them in px, enter that
 distance in mm and press **Set Scale**; the status bar then names the scale, with AOI-RCP-009 while the latest revision
@@ -272,9 +273,10 @@ Golden board pane shows the golden board as judged, the verdict and table stand,
 line under the verdict keeps the error's code. When nothing of the result's pictures can be read,
 both panes say why, with the message's code (AOI-SET-013 when another program holds the workspace
 database), and the Golden board pane what to do; neither pane ever shows the result opened before.
-The thresholds form, Re-evaluate and Save to Recipe are in the Try other thresholds panel, for Engineer and Admin; an
-Operator does not see it, and Compare judges an Operator's boards by the board model's recipe, never by values left in
-the form. Its AI score threshold works as on the Recipe Editor (section 5), with the tick under the field, reading
+The thresholds form, Re-evaluate and Save to Recipe are in the Try other thresholds panel under the two pictures, for
+Engineer and Admin, so the decision table beside the pictures shows all its rows; an Operator does not see it, and
+Compare judges an Operator's boards by the board model's recipe, never by values left in the form. Its AI score
+threshold works as on the Recipe Editor (section 5), with the tick under the field, reading
 "Override the AI model's value 3.063", except that on a stored result the tick
 names the calibrated value of the AI model that judged it, which Re-evaluate applies while the tick is clear; on any
 other board, and on a stored result judged with the AI check off, it names the active AI model's. On a stored result,

@@ -75,7 +75,7 @@
 <context>
     <name>ComparePage</name>
     <message>
-        <location filename="../ui/pages/compare.py" line="+76"/>
+        <location filename="../ui/pages/compare.py" line="+78"/>
         <source>Side by side</source>
         <translation type="unfinished"></translation>
     </message>
@@ -147,12 +147,12 @@
     <message>
         <location line="+3"/>
         <location line="+97"/>
-        <location line="+533"/>
+        <location line="+580"/>
         <source>Golden board</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-629"/>
+        <location line="-676"/>
         <source>AI model</source>
         <translation type="unfinished"></translation>
     </message>
@@ -213,12 +213,12 @@
     </message>
     <message>
         <location line="+15"/>
-        <location line="+857"/>
+        <location line="+905"/>
         <source>Test board</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-851"/>
+        <location line="-899"/>
         <source>Inspecting…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -258,22 +258,22 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+3"/>
+        <location line="+17"/>
         <source>Try other thresholds (nothing is saved until you press Save to Recipe)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+2"/>
+        <location line="+14"/>
         <source>Override the AI model&apos;s value {value}</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+58"/>
+        <location line="+66"/>
         <source>Reason (required)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+4"/>
+        <location line="+5"/>
         <source>Cancel</source>
         <translation type="unfinished"></translation>
     </message>
@@ -283,7 +283,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+183"/>
+        <location line="+185"/>
         <source>Would be: {verdict}</source>
         <translation type="unfinished"></translation>
     </message>
@@ -294,7 +294,7 @@
     </message>
     <message>
         <location line="+5"/>
-        <location line="+147"/>
+        <location line="+157"/>
         <source>The verdict and the decision table are the stored ones; press Re-evaluate › to inspect the board again from its image file.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -329,7 +329,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+76"/>
+        <location line="+77"/>
         <source>{file} was not inspected; press Re-evaluate › to inspect it.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -339,7 +339,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-931"/>
+        <location line="-979"/>
         <source>AI score threshold</source>
         <translation type="unfinished"></translation>
     </message>
@@ -364,18 +364,18 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+168"/>
+        <location line="+196"/>
         <source>Re-evaluate</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location line="+3"/>
-        <location line="+17"/>
+        <location line="+18"/>
         <source>Save to Recipe</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+40"/>
+        <location line="+48"/>
         <source>Test image</source>
         <translation type="unfinished"></translation>
     </message>
@@ -432,14 +432,14 @@
     </message>
     <message>
         <location line="+0"/>
-        <location line="+146"/>
-        <location line="+227"/>
+        <location line="+156"/>
+        <location line="+228"/>
         <location line="+12"/>
         <source>Re-evaluate ›</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-371"/>
+        <location line="-382"/>
         <source>Train an AI model on Training.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -449,7 +449,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+19"/>
+        <location line="+28"/>
         <source>Inspection time (ms)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -464,7 +464,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+36"/>
+        <location line="+37"/>
         <source>Test board: {file} (stored result)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -522,7 +522,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+49"/>
+        <location line="+50"/>
         <source>Inspection cancelled</source>
         <translation type="unfinished"></translation>
     </message>
@@ -780,7 +780,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/compare.py" line="-224"/>
+        <location filename="../ui/pages/compare.py" line="-225"/>
         <source>Changing recipes</source>
         <translation type="unfinished"></translation>
     </message>
@@ -790,7 +790,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+364"/>
+        <location line="+366"/>
         <source>Height</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3188,7 +3188,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/compare.py" line="-757"/>
+        <location filename="../ui/pages/compare.py" line="-804"/>
         <source>Compare</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3243,7 +3243,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/recipe_editor.py" line="-351"/>
+        <location filename="../ui/pages/recipe_editor.py" line="-353"/>
         <source>Recipe Editor</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3309,7 +3309,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+33"/>
+        <location line="+35"/>
         <source>Trying the recipe…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3365,12 +3365,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-47"/>
+        <location line="-49"/>
         <source>Calibrate Scale…</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+48"/>
+        <location line="+50"/>
         <source>AI score (× AI score threshold)</source>
         <translation type="unfinished"></translation>
     </message>
