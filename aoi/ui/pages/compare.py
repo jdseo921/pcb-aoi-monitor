@@ -42,7 +42,7 @@ from ...core.explain import explain
 from ...core.imaging import IMAGE_EXTS
 from ...core.inspector import Check, InspectionResult, ai_check
 from ...core.recipe import Recipe
-from ...core.services import ROLES_FROM, AppContext, ErrorReport, Judged
+from ...core.services import REQUIRED_ROLE, ROLES, ROLES_FROM, AppContext, ErrorReport, Judged
 from ...core.views import ai_view, difference_view
 from ...errors import AoiError
 from ...times import to_local
@@ -119,6 +119,13 @@ RULES = {
     "> thr → NG": QT_TRANSLATE_NOOP("ComparePage", "> threshold → NG"),
     "info only": QT_TRANSLATE_NOOP("ComparePage", "info only"),
 }
+THRESHOLDS = {  # the recipe's thresholds the panel holds, in its order: field -> its label, shown through tr()
+    "anomaly_threshold": QT_TRANSLATE_NOOP("ComparePage", "AI score threshold"),
+    "diff_threshold": QT_TRANSLATE_NOOP("ComparePage", "Pixel difference (0-255)"),
+    "min_defect_area": QT_TRANSLATE_NOOP("ComparePage", "Minimum defect area (px)"),
+    "ssim_min": QT_TRANSLATE_NOOP("ComparePage", "Similarity minimum (SSIM)"),
+    "max_diff_regions": QT_TRANSLATE_NOOP("ComparePage", "Allowed difference regions"),
+}
 
 
 def _judging(r: Recipe, res: InspectionResult | None) -> Recipe:
@@ -143,6 +150,12 @@ def _judging(r: Recipe, res: InspectionResult | None) -> Recipe:
     return dataclasses.replace(r, diff_threshold=0, ssim_min=0.0, changed_pct_max=0.0, max_diff_regions=0)
 
 
+def _as_read(r: Recipe) -> Recipe:
+    """`r` as the engine reads it, to tell Save to Recipe a change: an AI score threshold of 0 is none. Unlike
+    `_judging`, a value that did not judge the board shown counts, as saving it changes the recipe (S28d)."""
+    return dataclasses.replace(r, anomaly_threshold=r.anomaly_threshold or None)
+
+
 class ComparePage(Page):
     title = QT_TRANSLATE_NOOP("Page", "Compare")
     subtitle = QT_TRANSLATE_NOOP("Page", "Golden board vs. test board, with the metrics behind the verdict")
@@ -160,6 +173,7 @@ class ComparePage(Page):
         self.golden_state = False  # the pane says there is no Golden board, or why it cannot be opened
         self.record_board_model: str | None = None  # the board model of the record the test board came from, if any
         self.form_revision: tuple[str, int] | None = None  # the board model and recipe revision the form came from
+        self.form_recipe: Recipe | None = None  # and that revision's recipe, which Save to Recipe tells a change from
         self.shown_board_model: str | None = None  # the header's board model the page last followed (#247)
         self.judge_on_show = False  # the header changed while the page was hidden: judge its board when shown (#247)
         self.judged_by: Recipe | None = None  # the recipe a board inspected here, shown or still worked out, judges by
@@ -258,13 +272,13 @@ class ComparePage(Page):
         self.ssim_min.setSingleStep(0.01)
         self.max_regions = QSpinBox()
         self.max_regions.setRange(0, 1000)
-        f.addRow(self.tr("AI score threshold"), self.ai_thr)
+        f.addRow(self.tr(THRESHOLDS["anomaly_threshold"]), self.ai_thr)
         f.addRow(self.ai_thr.tick_row)  # the sketch's label, naming the value: beside the field it widens the window
         f.addRow(self.ai_thr.note)  # why no calibrated value is named, as wide as the panel
-        f.addRow(self.tr("Pixel difference (0-255)"), self.diff_thr)
-        f.addRow(self.tr("Minimum defect area (px)"), self.min_area)
-        f.addRow(self.tr("Similarity minimum (SSIM)"), self.ssim_min)
-        f.addRow(self.tr("Allowed difference regions"), self.max_regions)
+        f.addRow(self.tr(THRESHOLDS["diff_threshold"]), self.diff_thr)
+        f.addRow(self.tr(THRESHOLDS["min_defect_area"]), self.min_area)
+        f.addRow(self.tr(THRESHOLDS["ssim_min"]), self.ssim_min)
+        f.addRow(self.tr(THRESHOLDS["max_diff_regions"]), self.max_regions)
         self.ai_thr.changed.connect(self._drop_tried)  # what was tried no longer applies
         self.ai_thr.ticking.connect(self._show_calibration)  # an AI model trained since the value was named
         for field in (self.diff_thr, self.min_area, self.ssim_min, self.max_regions):
@@ -280,6 +294,9 @@ class ComparePage(Page):
         row.addWidget(self.btn_save)
         f.addRow(row)
         pl.addWidget(self.tryout)
+        self.ai_thr.changed.connect(self._sync_save)  # Save to Recipe is on while a threshold differs from the recipe
+        for field in (self.diff_thr, self.min_area, self.ssim_min, self.max_regions):
+            field.valueChanged.connect(self._sync_save)
         split.addWidget(panel)
         split.setSizes([800, 920])  # the decision table shows all six columns at 1920 x 1080
         self.root.addWidget(split, 1)
@@ -332,6 +349,7 @@ class ComparePage(Page):
     def _load_recipe_into_form(self) -> Recipe | None:
         """The form takes the header's board model's recipe, which is returned; None with no board model."""
         self._drop_tried()  # tried with the recipe the form came from
+        self.form_recipe = None
         if not self.board_model:
             return None
         rev, r = self.ctx.recipe(self.board_model)
@@ -341,6 +359,8 @@ class ComparePage(Page):
         self.min_area.setValue(r.min_defect_area)
         self.ssim_min.setValue(r.ssim_min)
         self.max_regions.setValue(r.max_diff_regions)
+        self.form_recipe = r
+        self._sync_save()
         return r
 
     def _show_calibration(self) -> None:
@@ -814,18 +834,35 @@ class ComparePage(Page):
         return r.image if view is None else view
 
     def save_recipe(self) -> None:
-        if self.ctx.role == "Operator":
-            self.error(
-                AoiError(
-                    "AOI-USR-001", what=QT_TRANSLATE_NOOP("Errors", "Changing recipes"), roles=ROLES_FROM["Engineer"]
-                )
-            )
+        """Save to Recipe (Engineer and Admin; REQ-CMP-005): the form's thresholds on the recipe they came from, stored
+        through AppContext as its next revision. Off while nothing differs: a revision that changes nothing is never
+        stored."""
+        if not self._may_save():
+            roles = ROLES_FROM[REQUIRED_ROLE["save_recipe"]]
+            self.error(AoiError("AOI-USR-001", what=QT_TRANSLATE_NOOP("Errors", "Changing recipes"), roles=roles))
             return
-        if (bm := self.checked_board_model()) is None:
+        if (bm := self.checked_board_model()) is None or (saved := self.form_recipe) is None or not self._changes():
             return
-        rev = self.ctx.save_recipe(self._form_recipe(bm))
-        self.form_revision = (bm, rev)
+        rev = self.ctx.save_recipe(self._form_recipe(bm, saved))
+        self.form_revision, self.form_recipe = (bm, rev), self.ctx.recipe(bm)[1]
+        self._sync_save()
         self.shell.status(self.tr("Recipe saved as revision {revision}").format(revision=rev))
+
+    def _changes(self) -> list[tuple[str, Any, Any]]:
+        """Each threshold the form holds otherwise than the recipe it came from, as the engine reads them (`_as_read`):
+        the recipe field, the recipe's value and the form's."""
+        if (saved := self.form_recipe) is None:
+            return []
+        was, now = _as_read(saved), _as_read(self._form_recipe(saved.board_model, saved))
+        return [(k, getattr(was, k), getattr(now, k)) for k in THRESHOLDS if getattr(was, k) != getattr(now, k)]
+
+    def _sync_save(self) -> None:
+        """Save to Recipe on while a threshold differs from the recipe, for a role that may save one."""
+        self.btn_save.setEnabled(self._may_save() and bool(self._changes()))
+
+    def _may_save(self) -> bool:
+        """The role signed in is at or above the one `AppContext.save_recipe`'s @requires names (#241)."""
+        return self.ctx.role in ROLES and ROLES.index(self.ctx.role) >= ROLES.index(REQUIRED_ROLE["save_recipe"])
 
     def _clear_result(self) -> None:
         """No result on the page: the banner, the decision table, the explanation and the board's pictures go."""
@@ -881,10 +918,11 @@ class ComparePage(Page):
         """The threshold panel for an Engineer or Admin only, hidden for an Operator, who never sees what other
         thresholds would give (REQ-CMP-005; ADR 0006 decision 4, sketch Q17). Re-evaluate waits until the load of a
         stored result's pictures and maps has ended, so it never stops it, and is off while a re-evaluation runs. A
-        focus on it as it goes off waits in the "why" box and goes back to it once it is on again, if still there:
-        Qt would pass it on to Save to Recipe, where one more Space saved the form's thresholds, as when Inspection's
-        "Compare with Golden board ›" showed Compare with the focus it had on Re-evaluate, then a stored result (third
-        verification). The focus read is the window's, which it keeps while another window is in front (review)."""
+        focus on it as it goes off waits in the "why" box and goes back to it once it is on again, if still there,
+        as when Inspection's "Compare with Golden board ›" showed Compare with the focus it had on Re-evaluate, then a
+        stored result (third verification): Qt would pass it on to the header's board model, whose list a Space opens,
+        or, while a threshold differs, to Save to Recipe, where one more Space saved the form's thresholds. The focus
+        read is the window's, which it keeps while another window is in front (review)."""
         engineer = self.ctx.role != "Operator"
         on = engineer and (self.stored is None or self.loaded) and self._trying is None
         focus = self.window().focusWidget()
@@ -892,8 +930,8 @@ class ComparePage(Page):
             self.why.setFocus(Qt.FocusReason.OtherFocusReason)
             self._refocus = True
         self.tryout.setVisible(engineer)
-        self.btn_save.setEnabled(engineer)
         self.act_try.setEnabled(on)
+        self._sync_save()
         if on and self._refocus and focus is self.why:
             self.btn_try.setFocus(Qt.FocusReason.OtherFocusReason)
         self._refocus = self._refocus and engineer and not on  # only while an Engineer's Re-evaluate is off

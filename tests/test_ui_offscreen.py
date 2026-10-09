@@ -89,7 +89,9 @@ def test_logs_date_filter_never_raises_at_the_edges(qtbot: QtBot, ctx: AppContex
 
 def test_switch_user_refreshes_the_page_on_screen(qtbot: QtBot, ctx: AppContext) -> None:
     """#174: Switch User on a page the new role may still open shows that page again for the new role: an Engineer
-    can export from Logs & Export at once, and an Operator on Compare no longer sees Save to Recipe enabled."""
+    can export from Logs & Export at once, and an Operator on Compare no longer sees Save to Recipe enabled, not even
+    with a threshold of the hidden form changed (on for the Engineer once a threshold differs from the recipe, S28d)."""
+    ctx.ensure_board_model("TINY")  # a recipe for Compare's thresholds to differ from
     win = MainWindow(ctx)
     qtbot.addWidget(win)
     win.set_user("operator")
@@ -101,9 +103,12 @@ def test_switch_user_refreshes_the_page_on_screen(qtbot: QtBot, ctx: AppContext)
     assert logs.btn_csv.isEnabled() and logs.btn_img.isEnabled() and logs.btn_arch.isEnabled()
     assert win.navigate("Compare")
     compare = cast(ComparePage, win.pages["Compare"])
+    compare.diff_thr.setValue(compare.diff_thr.value() + 1)
     assert compare.btn_save.isEnabled()
     win.set_user("operator")
     assert win.stack.currentWidget() is compare and not compare.btn_save.isEnabled()
+    compare.diff_thr.setValue(compare.diff_thr.value() + 1)  # the hidden form changed by code: the role keeps it off
+    assert not compare.btn_save.isEnabled()
 
 
 def test_logs_preview_survives_a_narrower_filter(

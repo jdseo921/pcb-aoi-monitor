@@ -58,6 +58,13 @@ def _table(page: ComparePage) -> list[tuple[object, ...]]:
     return rows
 
 
+def save_to_recipe(compare: ComparePage) -> int:
+    """Save to Recipe as an Engineer presses it (S28d); returns the revision now in use, which the save made."""
+    assert compare.btn_save.isEnabled(), "a threshold differs from the recipe"
+    compare.btn_save.click()
+    return compare.ctx.recipe(BOARD)[0]
+
+
 def _expected(page: ComparePage, checks: list[dict[str, object]]) -> list[tuple[object, ...]]:
     """The stored checks as the table must show them: names in the UI language, values to 4 decimals, NG and WARN
     rows in the verdict's colour."""
@@ -372,7 +379,7 @@ def test_req_cmp_005_form_follows_a_revision_saved_elsewhere(
     win.navigate("Compare")
     assert compare.diff_thr.value() == recipe.diff_threshold and compare.min_area.value() == recipe.min_defect_area
     compare.ssim_min.setValue(compare.ssim_min.value() - 0.01)
-    compare.save_recipe()
+    save_to_recipe(compare)
     saved = ctx.recipe(BOARD)[1]
     assert saved.diff_threshold == recipe.diff_threshold and saved.ssim_min == pytest.approx(recipe.ssim_min - 0.01)
     qtbot.waitUntil(lambda: ctx.jobs.idle() and compare._bg is None, timeout=20000)

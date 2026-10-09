@@ -26,7 +26,7 @@ from aoi.ui.pages.inspection import InspectionPage
 from aoi.ui.pages.model_test import ModelTestPage
 from aoi.ui.pages.recipe_editor import RecipeEditorPage
 from aoi.ui.widgets.ai_threshold import AiThresholdField
-from tests.test_compare_stored import _table
+from tests.test_compare_stored import _table, save_to_recipe
 from tests.test_req_done_in_v01 import BOARD, _button, _inspect_one, _window
 
 EDITOR_TICK = "Override {value}"  # the Recipe Editor sketch's words for the tick, beside the field
@@ -203,20 +203,27 @@ def test_req_trn_015_a_later_save_keeps_the_override_as_stored(
     """An override the field cannot show as stored, saved outside the pages (more decimals than 3, or above 10000), is
     kept to every decimal by a later Save Recipe on the Recipe Editor and Save to Recipe on Compare: each is a new
     revision with no entry of the override, which did not change, so opening and saving a recipe never changes what
-    judges a board (release note, first section)."""
+    judges a board (release note, first section). On Compare the override shown rounded is no change, so Save to Recipe
+    stays off until another threshold changes (S28d)."""
     ctx = trained_ctx
     win, editor = _editor(qtbot, ctx, monkeypatch)
     compare = win.pages["Compare"]
     assert isinstance(compare, ComparePage)
+
+    def save_on_compare() -> None:
+        assert not compare.btn_save.isEnabled(), "the override the field cannot show is no change"
+        compare.diff_thr.setValue(compare.diff_thr.value() + 1)
+        save_to_recipe(compare)
+
     for kept in (4.5954, 20000.0):
         _save_override(ctx, kept)
         entries = len(ctx.audit_entries(action="recipe.ai_threshold"))
-        for title, save in (("Recipe Editor", _button(editor, "Save Recipe")), ("Compare", compare.btn_save)):
+        for title, save in (("Recipe Editor", _button(editor, "Save Recipe").click), ("Compare", save_on_compare)):
             win.navigate("Home")
             assert win.navigate(title)  # shown again: the revision saved since is loaded
             qtbot.waitUntil(ctx.jobs.idle, timeout=10000)
             rev = ctx.recipe(BOARD)[0]
-            save.click()
+            save()
             assert ctx.recipe(BOARD)[0] == rev + 1, (kept, title)
             assert ctx.recipe(BOARD)[1].anomaly_threshold == kept, (kept, title, "kept to every decimal")
             assert len(ctx.audit_entries(action="recipe.ai_threshold")) == entries, (kept, title, "unchanged")
