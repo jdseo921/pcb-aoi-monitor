@@ -23,7 +23,14 @@ from aoi.data import atomic
 from aoi.ui.main_window import MainWindow
 from aoi.ui.pages.base import cell_text
 from tests.test_req_done_in_v01 import BOARD, _window
-from tests.test_roles_and_audit import WRITES, calibration_samples, calibration_set, labelled_blind, ready_to_freeze
+from tests.test_roles_and_audit import (
+    WRITES,
+    calibration_samples,
+    calibration_set,
+    frozen_for_lock,
+    labelled_blind,
+    ready_to_freeze,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -84,6 +91,7 @@ SETUP: dict[str, Callable[[AppContext], object]] = {
     "label_blind": _a_set,
     "run_agreement_check": _labelled_set,
     "freeze_dataset": ready_to_freeze,
+    "lock_validation_set": frozen_for_lock,
 }
 
 

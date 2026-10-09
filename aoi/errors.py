@@ -559,6 +559,16 @@ CODES: dict[str, ErrorCode] = {
             ),
         ),
         ErrorCode(
+            "AOI-TRN-022",
+            QT_TRANSLATE_NOOP("Errors", "Validation set not locked"),
+            QT_TRANSLATE_NOOP("Errors", "The validation set of {name} was not locked: {reason}."),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Add OK images if there are too few, freeze a new dataset version and lock its validation set; nothing"
+                " was written.",
+            ),
+        ),
+        ErrorCode(
             "AOI-TRN-024",
             QT_TRANSLATE_NOOP("Errors", "Dataset not frozen: no customer"),
             QT_TRANSLATE_NOOP("Errors", "{name} was not frozen: no customer is set."),
@@ -704,6 +714,20 @@ CODES: dict[str, ErrorCode] = {
                 "Ask an Admin to save a workspace folder with a shorter path on Settings and then, with the app closed,"
                 " to copy everything in the folder {workspace} into that folder, or to turn on long paths in Windows;"
                 " then freeze again.",
+            ),
+        ),
+        ErrorCode(
+            "AOI-TRN-043",
+            QT_TRANSLATE_NOOP("Errors", "Training not started: locked validation images"),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "{board} was not trained: {count} of its OK and NG images are, by their content, in a locked validation"
+                " set, and an AI model is never trained on one.",
+            ),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Delete those samples from the board model to train on the others; nothing was saved, and the active"
+                " AI model is unchanged.",
             ),
         ),
         ErrorCode(

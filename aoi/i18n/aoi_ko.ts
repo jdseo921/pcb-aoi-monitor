@@ -581,7 +581,7 @@
 <context>
     <name>Errors</name>
     <message>
-        <location filename="../core/services.py" line="+60"/>
+        <location filename="../core/services.py" line="+61"/>
         <source>a length of {length} px over {distance} mm gives no scale: both must be numbers above 0, and the scale from {least} to {most} px per mm</source>
         <translation type="unfinished"></translation>
     </message>
@@ -617,7 +617,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+87"/>
+        <location line="+93"/>
         <source>(none)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -802,7 +802,27 @@
         <translation>데이터셋 버전 동결</translation>
     </message>
     <message>
-        <location line="+84"/>
+        <location line="+76"/>
+        <source>Locking a validation set</source>
+        <translation>검증 세트 잠금</translation>
+    </message>
+    <message>
+        <location line="+14"/>
+        <source>the workspace holds no such dataset version</source>
+        <translation>작업 공간에 그런 데이터셋 버전이 없습니다</translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>its validation set is locked already, and a version is split only once</source>
+        <translation>검증 세트가 이미 잠겨 있으며, 버전은 한 번만 분할됩니다</translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>it holds {ok} OK image(s), and a validation set holds {least}</source>
+        <translation>OK 이미지가 {ok}개이며, 검증 세트에는 {least}개가 들어갑니다</translation>
+    </message>
+    <message>
+        <location line="+30"/>
         <source>the board revision {revision} is not 1 to 16 letters and digits</source>
         <translation>보드 리비전 {revision}이(가) 1~16자의 영문자와 숫자가 아닙니다</translation>
     </message>
@@ -842,7 +862,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1614"/>
+        <location line="-1660"/>
         <source>no defect type was given</source>
         <translation>결함 유형이 지정되지 않았습니다</translation>
     </message>
@@ -857,7 +877,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+525"/>
+        <location line="+531"/>
         <source>its UUID {found} is not {uuid}, as in the AI model registry</source>
         <translation type="unfinished"></translation>
     </message>
@@ -877,7 +897,7 @@
         <translation>{label}(으)로 다시 라벨링</translation>
     </message>
     <message>
-        <location line="+274"/>
+        <location line="+314"/>
         <source>no agreement check of the board model holds images of this view</source>
         <translation>이 보드 모델의 일치도 검사 중 이 뷰의 이미지를 담은 것이 없습니다</translation>
     </message>
@@ -1541,12 +1561,12 @@
     </message>
     <message>
         <location line="+8"/>
-        <location line="+136"/>
+        <location line="+146"/>
         <source>View not known</source>
         <translation>알 수 없는 뷰</translation>
     </message>
     <message>
-        <location line="-135"/>
+        <location line="-145"/>
         <source>{path} was not imported: its view &quot;{view}&quot; is not one of {views}.</source>
         <translation>{path}을(를) 가져오지 않았습니다. 뷰 &quot;{view}&quot;는 {views} 중 하나가 아닙니다.</translation>
     </message>
@@ -1602,6 +1622,21 @@
     </message>
     <message>
         <location line="+6"/>
+        <source>Validation set not locked</source>
+        <translation>검증 세트가 잠기지 않음</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>The validation set of {name} was not locked: {reason}.</source>
+        <translation>{name}의 검증 세트가 잠기지 않았습니다: {reason}.</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Add OK images if there are too few, freeze a new dataset version and lock its validation set; nothing was written.</source>
+        <translation>OK 이미지가 부족하면 추가하고, 새 데이터셋 버전을 동결한 다음 그 검증 세트를 잠그십시오. 아무것도 기록되지 않았습니다.</translation>
+    </message>
+    <message>
+        <location line="+8"/>
         <source>Dataset not frozen: no customer</source>
         <translation>데이터셋이 동결되지 않음: 고객 없음</translation>
     </message>
@@ -1837,6 +1872,21 @@
     </message>
     <message>
         <location line="+9"/>
+        <source>Training not started: locked validation images</source>
+        <translation>학습이 시작되지 않음: 잠긴 검증 이미지</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>{board} was not trained: {count} of its OK and NG images are, by their content, in a locked validation set, and an AI model is never trained on one.</source>
+        <translation>{board}이(가) 학습되지 않았습니다: OK 및 NG 이미지 중 {count}개가 내용으로 볼 때 잠긴 검증 세트에 있으며, AI 모델은 잠긴 검증 이미지로 학습하지 않습니다.</translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>Delete those samples from the board model to train on the others; nothing was saved, and the active AI model is unchanged.</source>
+        <translation>나머지 이미지로 학습하려면 보드 모델에서 해당 샘플을 삭제하십시오. 아무것도 저장되지 않았으며, 활성 AI 모델은 바뀌지 않았습니다.</translation>
+    </message>
+    <message>
+        <location line="+8"/>
         <source>AI model, recipe, scale or Golden board changed since the run</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2241,7 +2291,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-925"/>
+        <location line="-949"/>
         <source>Board judged NG</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2331,7 +2381,7 @@
         <translation>{name}이(가) 동결되지 않았습니다: 검토할 OK 라벨 {needed}개({ok}개의 10 %) 중 {checked}개만 검토되었습니다.</translation>
     </message>
     <message>
-        <location line="+187"/>
+        <location line="+211"/>
         <source>ROI thresholds refused</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4604,7 +4654,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/services.py" line="-1788"/>
+        <location filename="../core/services.py" line="-1834"/>
         <source>Aligning {count} images to the reference board</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4623,12 +4673,12 @@
     </message>
     <message>
         <location line="+1"/>
-        <location line="+549"/>
+        <location line="+552"/>
         <source>Import Folder…</source>
         <translation>폴더 가져오기…</translation>
     </message>
     <message>
-        <location line="-541"/>
+        <location line="-544"/>
         <source>Tip: 20+ OK images give a steadier threshold</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4695,12 +4745,12 @@
     </message>
     <message>
         <location line="+1"/>
-        <location line="+344"/>
+        <location line="+347"/>
         <source>Remove</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-338"/>
+        <location line="-341"/>
         <source>Select a sample to preview</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4820,7 +4870,7 @@
         <translation>가져오기 취소됨: 멈추기 전에 OK 이미지 {ok}개와 NG 이미지 {ng}개를 {board_model}(으)로 가져왔습니다</translation>
     </message>
     <message>
-        <location line="+86"/>
+        <location line="+89"/>
         <source>Reference image set: inspections compare against it now, until training learns a Golden board</source>
         <translation type="unfinished"></translation>
     </message>

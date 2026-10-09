@@ -410,6 +410,32 @@ class Database:
         rows = self.query("SELECT * FROM dataset_items WHERE dataset_uuid=? ORDER BY id", (dataset_uuid,))
         return [{**r, "boxes": json.loads(r["boxes"])} for r in rows]
 
+    def add_split(self, split: dict[str, Any], parts: dict[str, list[dict[str, Any]]]) -> None:
+        """Store a frozen version's split and the part ("train" or "validation") each of its files is in, in the
+        caller's transaction."""
+        self.insert("validation_splits", split)
+        for part, files in parts.items():
+            for f in files:
+                row = {"uuid": new_uuid(), "split_uuid": split["uuid"], "item_uuid": f["uuid"], "sha256": f["sha256"]}
+                self.insert("validation_split_items", row | {"part": part})
+
+    def validation_split(self, dataset_uuid: str) -> dict[str, Any] | None:
+        """A frozen version's split (uuid, dataset_uuid, seed, locked_by, locked_at) with the item UUIDs of its "train"
+        and "validation" parts in the order stored, or None while it is not split."""
+        found = self.query("SELECT * FROM validation_splits WHERE dataset_uuid=?", (dataset_uuid,))
+        if not found:
+            return None
+        split: dict[str, Any] = {k: v for k, v in found[0].items() if k != "id"} | {"train": [], "validation": []}
+        sql = "SELECT item_uuid, part FROM validation_split_items WHERE split_uuid=? ORDER BY id"
+        for r in self.query(sql, (split["uuid"],)):
+            split[r["part"]].append(r["item_uuid"])
+        return split
+
+    def split_sha256(self, part: str) -> set[str]:
+        """The SHA-256 of every file a split of any version put in `part` ("train" or "validation")."""
+        sql = "SELECT DISTINCT sha256 FROM validation_split_items WHERE part=?"
+        return {r["sha256"] for r in self.query(sql, (part,))}
+
     # --- model registry ----------------------------------------------------
     def register_model(
         self,

@@ -19,6 +19,7 @@ import os
 import random
 import secrets
 import threading
+from collections import Counter
 from collections.abc import Callable, Iterator, Sequence
 from dataclasses import dataclass
 from pathlib import Path, PureWindowsPath
@@ -507,7 +508,9 @@ class AppContext:
         """Train an AI model of `board_model` on its samples, then save, register, activate and audit it. The run reads
         the device once, before it loads anything, and keeps it to the end: a device saved on Settings while the run
         loads, aligns or trains applies from the next run (#201). Its name meets the rule a new board model meets
-        (AOI-TRN-019, AOI-TRN-005), as its folder under models/ does, before anything is loaded."""
+        (AOI-TRN-019, AOI-TRN-005), as its folder under models/ does, before anything is loaded. A run that reads an
+        image whose SHA-256, of the bytes read, any split locked for validation is refused with AOI-TRN-043 before it
+        aligns anything (REQ-TRN-006)."""
         device = self.device  # not self.device later: save_settings may change it while the samples load and align
         say = progress or (lambda *a: None)
         self._refuse_unsafe_name(board_model)  # the run writes the board model's row and its folder
@@ -515,8 +518,12 @@ class AppContext:
         out = self.settings.models_dir / board_model
         if not inside(out, self.settings.models_dir):  # a board model named before names were checked (#112)
             raise AoiError("AOI-TRN-019", name=board_model)
-        ok = [self.load_image(s["path"]) for s in self.db.samples(board_model, "OK")]
-        ng = [self.load_image(s["path"]) for s in self.db.samples(board_model, "NG")]
+        ok_read = [self._load_image_sha256(s["path"]) for s in self.db.samples(board_model, "OK")]
+        ng_read = [self._load_image_sha256(s["path"]) for s in self.db.samples(board_model, "NG")]
+        locked = self.db.split_sha256("validation")  # never trained on: by the bytes read, not the path (REQ-TRN-006)
+        if held := [sha for _, sha in ok_read + ng_read if sha in locked]:
+            raise AoiError("AOI-TRN-043", board=board_model, count=len(held))
+        ok, ng = [image for image, _ in ok_read], [image for image, _ in ng_read]
         if len(ok) < 2:
             raise AoiError("AOI-TRN-002", found=len(ok))
         # Register every sample onto one board, then learn a golden template as the
@@ -1575,6 +1582,46 @@ class AppContext:
             sha = datasets.file_sha256(resolve(item["path"], self.settings.root))
             result["missing" if sha is None else "matched" if sha == item["sha256"] else "changed"].append(item["path"])
         return result | {"files": len(items)}
+
+    @requires("Engineer", QT_TRANSLATE_NOOP("Errors", "Locking a validation set"))
+    @transactional
+    def lock_validation_set(self, dataset_uuid: str, seed: int | None = None) -> dict[str, Any]:
+        """Split a frozen version once, with a recorded seed (a new one when None), into its training set and a locked
+        validation set (REQ-TRN-006; S36), as `datasets.split` draws them: 50 OK files, and 30 % of the NG files rounded
+        up, by defect type where it can; a file whose SHA-256 any earlier split locked is locked again, and files no
+        split put in training are drawn first. Audited as `dataset.lock`; returns `validation_split`. Nothing unlocks or
+        splits a version again: a new split needs a new version. Refused with AOI-TRN-022, writing nothing, for a
+        version the workspace does not hold, one split already and one with fewer than 50 OK files. Reads the rows,
+        not the files: a file changed since the freeze keeps the SHA-256 the freeze stored, as verify_dataset shows."""
+        found = self.db.datasets("", dataset_uuid)
+        items = self.db.dataset_items(dataset_uuid) if found else []
+        ok, why = sum(i["label"] == "OK" for i in items), None
+        if not found:
+            why = QT_TRANSLATE_NOOP("Errors", "the workspace holds no such dataset version")
+        elif self.db.validation_split(dataset_uuid) is not None:
+            why = QT_TRANSLATE_NOOP("Errors", "its validation set is locked already, and a version is split only once")
+        elif ok < datasets.VALIDATION_OK:
+            why = QT_TRANSLATE_NOOP("Errors", "it holds {ok} OK image(s), and a validation set holds {least}")
+            why = why.fill(ok=ok, least=datasets.VALIDATION_OK)
+        if why is not None:
+            raise AoiError("AOI-TRN-022", name=found[0]["name"] if found else dataset_uuid, reason=why)
+        seed = secrets.randbelow(2**31) if seed is None else seed
+        parts = datasets.split(items, seed, self.db.split_sha256("validation"), self.db.split_sha256("train"))
+        split = {"uuid": new_uuid(), "dataset_uuid": dataset_uuid, "seed": seed, "locked_by": self.user_uuid}
+        self.db.add_split(split | {"locked_at": now_utc()}, parts)
+        after: dict[str, Any] = {"split_uuid": split["uuid"], "seed": seed}
+        for part, files in parts.items():
+            after |= {f"{part}_{label.lower()}": sum(f["label"] == label for f in files) for label in ("OK", "NG")}
+        after["validation_ng_types"] = dict(
+            Counter(datasets.stratum(f) for f in parts["validation"] if f["label"] == "NG")
+        )
+        self.audit("dataset.lock", "dataset", dataset_uuid, None, after)
+        return self.db.validation_split(dataset_uuid) or {}
+
+    def validation_split(self, dataset_uuid: str) -> dict[str, Any] | None:
+        """A frozen version's split as the database holds it: uuid, dataset_uuid, seed, locked_by, locked_at, and the
+        dataset item UUIDs of its "train" and "validation" parts; None while it is not split."""
+        return self.db.validation_split(dataset_uuid)
 
     def _refuse_input(self, board_model: str, view: str, revision: str, customer: str, uses: list[str]) -> None:
         """The refusals that read only what the freeze was given: no Latin letter or digit in the board model's name
