@@ -33,6 +33,7 @@ WRITES: dict[str, tuple[str, Callable[[AppContext, Path, Path], Any]]] = {
         "board_model.reference",
         lambda ctx, data, tmp: ctx.set_reference("TINY", ctx.samples("TINY", "OK")[1]["id"]),
     ),
+    "set_scale": ("board_model.scale", lambda ctx, data, tmp: ctx.set_scale("TINY", 476.0, 10.0)),  # S29
     "update_sample": (
         "sample.update",
         lambda ctx, data, tmp: ctx.update_sample(ctx.samples("TINY", "OK")[0]["id"], "NG", "Scratch"),
@@ -79,7 +80,7 @@ UNCHECKED = {
     "inspector", "inspect", "inspect_file", "load_image", "log_result", "board_models", "reference_image", "samples",
     "sample_path", "models", "model", "active_model", "recipe_history", "inspections", "defects_for", "checks_for",
     "checks_for_many", "inspection_result", "inspection", "judged_reference", "users", "board_status", "start_user",
-    "golden_board_unreadable", "engine_is_current", "calibrated_threshold", "calibration_of",
+    "golden_board_unreadable", "engine_is_current", "calibrated_threshold", "calibration_of", "scale",
 }  # fmt: skip
 CALLS = {**{name: call for name, (_, call) in WRITES.items()}, **CHECKED_READS}
 # The lowest role allowed each call, copied from the write table of docs/ARCHITECTURE.md §5 and REQ-CMP-005, never read

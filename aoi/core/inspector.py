@@ -105,6 +105,7 @@ class InspectionResult:
     elapsed_ms: float = 0.0
     notes: list[str] = field(default_factory=list)
     view: str = "Top"  # the camera view the board was inspected under, kept with the result (REQ-INSP-010)
+    px_per_mm: float | None = None  # the scale its recipe's sizes in mm were applied at, kept with it (REQ-RCP-006)
 
     def metrics_dict(self) -> dict[str, Any]:
         d = {c.name: c.value for c in self.checks}
@@ -116,11 +117,12 @@ class InspectionResult:
     def to_dict(self) -> dict[str, Any]:
         """The result without its images, as plain values `json.dumps` writes and `from_dict` reads back unchanged:
         verdict, score, every check and defect, the compare metrics and regions, notes, view and elapsed time
-        (REQ-INSP-008). The images (board, reference, maps) are files, not JSON."""
+        (REQ-INSP-008), and its scale, if judged at one. The images (board, reference, maps) are files, not JSON."""
         compare = None
         if self.compare is not None:
             regions = [_plain(asdict(r)) for r in self.compare.regions]
             compare = {"metrics": _plain(self.compare.metrics), "regions": regions}
+        scale = {"px_per_mm": self.px_per_mm} if self.px_per_mm is not None else {}  # none before S29: as then
         return {
             "verdict": self.verdict,
             "score": _plain(self.score),
@@ -130,6 +132,7 @@ class InspectionResult:
             "elapsed_ms": _plain(self.elapsed_ms),
             "notes": list(self.notes),
             "view": self.view,
+            **scale,
         }
 
     @classmethod
@@ -149,6 +152,7 @@ class InspectionResult:
             elapsed_ms=float(d.get("elapsed_ms", 0.0)),
             notes=list(d.get("notes", [])),
             view=str(d.get("view", "Top")),
+            px_per_mm=_scale(d.get("px_per_mm")),
         )
 
 
@@ -162,6 +166,14 @@ def ai_check(res: InspectionResult | None) -> str:
     if any(c.source == "AI" for c in res.checks):
         return "RAN"
     return "NO_AI_MODEL" if NO_AI_NOTE in res.notes else "OFF"
+
+
+def _scale(value: Any) -> float | None:
+    """A stored scale: None or a number above 0; any other value is damage, ValueError, as for a damaged time."""
+    scale = None if value is None else math.nan if isinstance(value, bool) else float(value)
+    if scale is not None and not (math.isfinite(scale) and scale > 0):
+        raise ValueError(f"px_per_mm {value!r} is not a scale")
+    return scale
 
 
 def _known(cls: type[Any], d: dict[str, Any]) -> dict[str, Any]:
@@ -247,7 +259,9 @@ class Inspector:
     when it judges and the recipe revision it judges by, which a saved record carries (REQ-INSP-008, REQ-INSP-012);
     whether the AI check ran is the recipe's to say, and a result judged with it off carries AI_OFF_NOTE (#246).
     `reference_path` and `reference_sha256` name the golden board file it judges against and the SHA-256 of its bytes
-    (REQ-CMP-003): `AppContext.inspector()` fills them; an Inspector built bare has none."""
+    (REQ-CMP-003): `AppContext.inspector()` fills them; an Inspector built bare has none. It judges by `recipe` as
+    applied at `px_per_mm`, the board model's scale (`Recipe.in_px`, REQ-RCP-006), which each result keeps; without a
+    scale, by `recipe` itself."""
 
     def __init__(
         self,
@@ -261,8 +275,10 @@ class Inspector:
         recipe_uuid: str | None = None,
         reference_path: str | None = None,
         reference_sha256: str | None = None,
+        px_per_mm: float | None = None,
     ) -> None:
-        self.recipe = recipe
+        self.recipe = recipe.in_px(px_per_mm)
+        self.px_per_mm = px_per_mm
         self.model = model
         self.reference = reference
         self.side = side
@@ -305,7 +321,7 @@ class Inspector:
                 raise AoiError("AOI-INSP-011", image=image, width=w, height=h, minimum=MIN_SIDE)
         t0 = time.perf_counter()
         r = self.recipe
-        res = InspectionResult(verdict=OK, score=0.0, reference=self.reference, view=self.side)
+        res = InspectionResult(OK, 0.0, reference=self.reference, view=self.side, px_per_mm=self.px_per_mm)
         work = img
 
         # 0) Register onto the golden board so pixels mean the same place on every board; then the evidence, from the
@@ -486,6 +502,7 @@ def re_grade(
     threshold changes them, and so do the inspection time, the view and the picture. A check the recipe turns on that
     did not run on the board is not judged, with a note saying so, as inspecting with the recipe notes a check it cannot
     run, and the AI check it turns off gets AI_OFF_NOTE (#246). `judged` is not changed; the result shares its maps.
+    `recipe` comes in px: `AppContext.re_evaluate` applies sizes in mm at the scale `judged` was judged at (S29).
     `changed`, when given, is what `changed_regions` gives for `judged`'s difference map with the recipe's pixel
     difference and minimum area, found by the caller (`AppContext.re_evaluate` finds them while the AI map decodes,
     #249). ValueError when a check the recipe uses ran on the board but its map, or its AI evidence, is not given;
@@ -496,6 +513,7 @@ def re_grade(
     ):
         raise ValueError("re_grade needs the maps and the AI evidence the result was judged on")
     res = InspectionResult(OK, 0.0, image=judged.image, reference=judged.reference, view=judged.view)
+    res.px_per_mm = judged.px_per_mm  # `recipe` comes in px, as applied at the scale `judged` was (REQ-RCP-006)
     res.elapsed_ms = judged.elapsed_ms
     if recipe.use_compare and cr is not None and cr.diff_map is not None:
         mask, regions, found = changed or changed_regions(cr.diff_map, recipe.diff_threshold, recipe.min_defect_area)

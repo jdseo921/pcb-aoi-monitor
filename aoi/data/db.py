@@ -179,6 +179,14 @@ class Database:
         self.ensure_board_model(board_model)
         self.execute("UPDATE board_models SET reference_image=? WHERE name=?", (self._stored(path), board_model))
 
+    def scale(self, board_model: str) -> float | None:
+        """The board model's px per mm (migration 0012), or None while it has none."""
+        r = self.query("SELECT px_per_mm FROM board_models WHERE name=?", (board_model,))
+        return float(r[0]["px_per_mm"]) if r and r[0]["px_per_mm"] is not None else None
+
+    def set_scale(self, board_model: str, px_per_mm: float) -> None:
+        self.execute("UPDATE board_models SET px_per_mm=? WHERE name=?", (px_per_mm, board_model))
+
     def reference(self, board_model: str) -> str | None:
         r = self.query("SELECT reference_image FROM board_models WHERE name=?", (board_model,))
         return self.resolve_path(r[0]["reference_image"]) if r and r[0]["reference_image"] else None
