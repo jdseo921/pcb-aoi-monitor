@@ -12,6 +12,7 @@ import gc
 import os
 import shutil
 from collections.abc import Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -32,6 +33,7 @@ from aoi.core import anomaly  # noqa: E402
 from aoi.core.imaging import list_images, load_image  # noqa: E402
 from aoi.core.services import AppContext  # noqa: E402
 from aoi.data.db import new_uuid  # noqa: E402
+from aoi.ui import workers  # noqa: E402
 from aoi.ui.theme import QSS  # noqa: E402
 from tools.make_synthetic_dataset import ng_type, write_dataset  # noqa: E402
 
@@ -201,6 +203,34 @@ def settled_collector() -> Iterator[None]:
 def ng_board(synthetic_dataset: Path) -> Path:
     """A test-split board with a missing component: the largest defect, found by the compare step alone."""
     return next(synthetic_dataset.glob("test/ng/*missing_component*.png"))
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _collector_on_ui_thread(qapp: Any) -> Iterator[None]:
+    """Python's cycle collector runs on the UI thread only, as main.py sets it up (REQ-INSP-011): a collection that
+    started on a pool thread freed a Qt object there and crashed Windows CI (2026-10-09)."""
+    workers.collect_on_ui_thread()
+    yield
+    gc.enable()
+
+
+@contextmanager
+def collector_off() -> Iterator[None]:
+    """No cycle collection until the block ends, the UI thread's timer's included: only reference counting frees."""
+    (timer,) = workers._collector
+    timer.stop()
+    try:
+        yield
+    finally:
+        timer.start()
+
+
+@pytest.fixture(autouse=True)
+def _young_garbage_freed() -> Iterator[None]:
+    """After each test, on the UI thread, a pass over the young generations, and a full one once its count is due: the
+    timer collects only while a test runs the event loop, and many tests never do."""
+    yield
+    gc.collect(2 if gc.get_count()[2] > gc.get_threshold()[2] else 1)
 
 
 @pytest.fixture(scope="session", autouse=True)

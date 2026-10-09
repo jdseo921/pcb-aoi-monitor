@@ -8,12 +8,14 @@ from aoi.config import APP_NAME
 from aoi.ui.errors import open_workspace
 from aoi.ui.main_window import build_window
 from aoi.ui.theme import QSS
+from aoi.ui.workers import collect_on_ui_thread
 
 
 def main() -> int:
     app = QApplication(sys.argv)
     app.setApplicationName(APP_NAME)
     app.setStyleSheet(QSS)
+    collect_on_ui_thread()  # no pool thread runs Python's cycle collector, which could delete a Qt object there
     ctx = open_workspace()  # a refused workspace (ADR 0004): its coded message, then a picker for another (REQ-SET-016)
     if ctx is None:  # cancelled, or a bad settings.json
         return 2

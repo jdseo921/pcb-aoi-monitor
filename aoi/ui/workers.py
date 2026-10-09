@@ -2,14 +2,16 @@
 
 A `Worker` wraps a `Job` and turns its callbacks, which arrive on the pool thread, into Qt signals whose slots run on
 the UI thread, the only place a widget changes. A job function never touches a widget: plain values in, plain out.
+`collect_on_ui_thread` keeps Python's cycle collector on the UI thread too (REQ-INSP-011).
 """
 
 from __future__ import annotations
 
+import gc
 from collections.abc import Callable
 from typing import Any
 
-from PySide6.QtCore import QCoreApplication, QEvent, QObject, Signal
+from PySide6.QtCore import QCoreApplication, QEvent, QObject, QTimer, Signal
 
 from ..core.jobs import Job, Jobs
 
@@ -62,3 +64,36 @@ def drop_queued(jobs: Jobs) -> None:
     for key, worker in list(_live.items()):
         if worker.jobs is jobs:
             del _live[key]
+
+
+COLLECT_MS = 200  # how often the UI thread runs a collection that has come due
+_collector: list[QTimer] = []  # the timer `collect_on_ui_thread` started, kept while the app runs
+
+
+def collect_due() -> int:
+    """Run the collection the interpreter would start now, on the calling thread: once more container objects were
+    made than freed than the youngest generation's threshold allows, the oldest generation over its threshold. The
+    generation collected, or -1 when none is due."""
+    counts, limits = gc.get_count(), gc.get_threshold()
+    if limits[0] == 0 or counts[0] <= limits[0]:
+        return -1
+    gen = max(g for g in range(3) if counts[g] > limits[g])
+    gc.collect(gen)
+    return gen
+
+
+def collect_on_ui_thread(interval_ms: int = COLLECT_MS) -> QTimer:
+    """Turn Python's automatic cycle collection off and run each collection that comes due from a timer on the calling
+    thread, the UI thread (`main.py`, after the QApplication; REQ-INSP-011). The interpreter starts a collection on
+    whichever thread is allocating when one comes due, so a pool thread could free a reference cycle that holds a Qt
+    object and delete the object off its own thread, which Qt forbids: on Windows CI a collection that started inside
+    an inspection job crashed the test process with an access violation (2026-10-09). Calling it again replaces the
+    timer."""
+    for old in _collector:
+        old.stop()
+    gc.disable()
+    timer = QTimer()
+    timer.timeout.connect(collect_due)
+    timer.start(interval_ms)
+    _collector[:] = [timer]
+    return timer
