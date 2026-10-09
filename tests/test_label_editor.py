@@ -957,6 +957,26 @@ def test_req_trn_003_editor_a_store_ending_after_a_sign_in_leaves_nothing_to_und
     assert ctx.boxes(ng["uuid"]) == [] and not editor.act_undo.isEnabled()
 
 
+def test_req_trn_003_editor_mark_after_a_box_adds_no_row(qtbot: QtBot, trained_ctx: AppContext) -> None:
+    """A label carried over with no labeller, then a box drawn on it, which stores a label row as the user acting:
+    Mark NG then finds it NG with a labeller and adds no label row and no audit entry (ADR 0009, decision 2). Before,
+    it went by the table as read before the box and stored a copy of that row (review of main, 2026-10-09)."""
+    ctx = trained_ctx
+    ng = ctx.samples(BOARD, "NG")[0]
+    ctx.db.add_label(ng["uuid"], "NG", ng["defect_type"], [], None)  # as migration 0014 carries a label over
+    page = _open(qtbot, ctx, ng)
+    view = page.editor.view
+    page.editor.draw_btn.click()
+    _drag(view, _at(view, 100, 100), _at(view, 160, 140))
+    assert len(_stored(page, ng["uuid"])) == 1 and ctx.label_history(ng["uuid"])[0]["labelled_by"] == ctx.user_uuid
+    rows = len(ctx.label_history(ng["uuid"]))
+    audits = len(ctx.audit_entries(action="label.set", object_uuid=ng["uuid"]))
+    _key(page.samples, Qt.Key.Key_N)
+    _wait(page)
+    assert len(ctx.label_history(ng["uuid"])) == rows, "no second row for the label the box stored"
+    assert len(ctx.audit_entries(action="label.set", object_uuid=ng["uuid"])) == audits
+
+
 def test_req_trn_003_editor_mark_ng_drops_a_type_not_of_the_33(
     qtbot: QtBot, trained_ctx: AppContext, dialogs: list[tuple[str, str]]
 ) -> None:

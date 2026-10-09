@@ -484,13 +484,16 @@ class TrainingPage(Page):
         changed: list[State] = []
         since = self.editor.forgotten  # a sign-in or another board model meanwhile: nothing to undo
 
-        def write(i: int) -> None:  # on a pool thread: the sample as it was, for Undo, then its new label
-            s = next(s for s in before if s["id"] == i)
-            kind = s["defect_type"] if s["defect_type"] in names() else None
-            boxes = [DefectBox(b["x"], b["y"], b["w"], b["h"], b["dct_type"]) for b in ctx.boxes(s["uuid"])]
-            ctx.set_label(s["uuid"], label, kind if s["label"] == label else None)
-            if s["label"] != label:
-                changed.append((s["uuid"], s["label"], kind, boxes))
+        def write(i: int) -> None:  # on a pool thread: the sample as it is, for Undo, then its new label
+            uuid = next(s["uuid"] for s in before if s["id"] == i)
+            now = ctx.label_history(uuid)[0]  # not the table's row: a box stored since gave the label a labeller
+            if now["label"] == label and now["labelled_by"]:
+                return
+            kind = now["defect_type"] if now["defect_type"] in names() else None
+            boxes = [DefectBox(b["x"], b["y"], b["w"], b["h"], b["dct_type"]) for b in ctx.boxes(uuid)]
+            ctx.set_label(uuid, label, kind if now["label"] == label else None)
+            if now["label"] != label:
+                changed.append((uuid, now["label"], kind, boxes))
 
         def done(refused: Exception | None) -> None:
             if changed:
