@@ -180,7 +180,7 @@
 <context>
     <name>BoxEditor</name>
     <message>
-        <location filename="../ui/widgets/box_editor.py" line="+122"/>
+        <location filename="../ui/widgets/box_editor.py" line="+328"/>
         <source>{number} {type} ◆ {severity}</source>
         <translation>{number} {type} ◆ {severity}</translation>
     </message>
