@@ -795,12 +795,12 @@
     </message>
     <message>
         <location line="+170"/>
-        <location line="+1613"/>
+        <location line="+1615"/>
         <source>(none)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1582"/>
+        <location line="-1584"/>
         <source>Saving a recipe</source>
         <translation type="unfinished"></translation>
     </message>
@@ -826,7 +826,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+198"/>
+        <location line="+200"/>
         <source>Re-evaluating a result</source>
         <translation type="unfinished"></translation>
     </message>
@@ -991,19 +991,19 @@
         <translation>검증 세트 잠금</translation>
     </message>
     <message>
-        <location line="-1769"/>
-        <location line="+1783"/>
+        <location line="-1771"/>
+        <location line="+1785"/>
         <location line="+39"/>
         <source>the workspace holds no such dataset version</source>
         <translation>작업 공간에 그런 데이터셋 버전이 없습니다</translation>
     </message>
     <message>
-        <location line="-1821"/>
+        <location line="-1823"/>
         <source>its validation set is not split and locked</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1784"/>
+        <location line="+1786"/>
         <source>its validation set is locked already, and a version is split only once</source>
         <translation>검증 세트가 이미 잠겨 있으며, 버전은 한 번만 분할됩니다</translation>
     </message>
@@ -1207,7 +1207,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-2331"/>
+        <location line="-2333"/>
         <source>no earlier version of this board model was active</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1237,7 +1237,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+741"/>
+        <location line="+743"/>
         <source>Labelling an image</source>
         <translation>이미지 라벨링</translation>
     </message>
@@ -4750,6 +4750,24 @@
     </message>
 </context>
 <context>
+    <name>Rates</name>
+    <message>
+        <location filename="../core/stats.py" line="+19"/>
+        <source>{n} of {of}</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>{n} of {of}, 95 % upper bound {limit} %</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>{n} of {of}, 95 % lower bound {limit} %</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
     <name>RecipeEditorPage</name>
     <message>
         <location filename="../ui/pages/recipe_editor.py" line="-20"/>
@@ -5613,7 +5631,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/services.py" line="-2545"/>
+        <location filename="../core/services.py" line="-2547"/>
         <source>Aligning {count} images to the reference board</source>
         <translation type="unfinished"></translation>
     </message>
