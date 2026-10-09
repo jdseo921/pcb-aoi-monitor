@@ -200,11 +200,12 @@ def test_req_log_005_an_import_stopped_while_a_copy_fails_logs_the_failure_and_s
     dialogs: list[tuple[str, str]],
     how: str,
 ) -> None:
-    """The issue's scenario: Import Folder of ok/a,b,c,d.png; the copy of c.png hangs on a share, the Engineer presses
-    Cancel or Import Folder again, then the share drops. After Cancel no dialog opens for the import the user left, but
-    its failure is logged with the trace and alarmed, and the status line says it was cancelled. A second Import Folder
-    starts nothing while the first runs (#194), so the first one goes on and its failure opens its own coded dialog.
-    Either way the table shows the files it imported."""
+    """The issue's scenario: Import Folder of ok/a,b,c,d.png; the copy of c.png hangs on the workspace's share, the
+    Engineer presses Cancel or Import Folder again, then the share drops (a source lost is that file's, listed, S31).
+    After Cancel no dialog opens for the import the user left, but its failure is logged with the trace and alarmed,
+    and the status line says it was cancelled. A second Import Folder starts nothing while the first runs (#194), so
+    the first one goes on and its failure opens its own coded dialog. Either way the table shows the files it
+    imported."""
     source = synthetic_dataset / "train" / "ok"
     folder = _folder(tmp_path / "fold", source, ["a.png", "b.png", "c.png", "d.png"])
     second = _folder(tmp_path / "second", source, ["e.png"])
@@ -215,7 +216,7 @@ def test_req_log_005_an_import_stopped_while_a_copy_fails_logs_the_failure_and_s
         if Path(src).name == "c.png":
             reached.set()
             assert go.wait(30)
-            raise FileNotFoundError(2, "No such file or directory", str(src))
+            raise FileNotFoundError(2, "No such file or directory", str(dst))
         copy(src, dst)
 
     monkeypatch.setattr(atomic, "copy_file", hang_then_fail)

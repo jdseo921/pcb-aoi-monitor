@@ -573,7 +573,7 @@
 <context>
     <name>Errors</name>
     <message>
-        <location filename="../core/services.py" line="+55"/>
+        <location filename="../core/services.py" line="+56"/>
         <source>a length of {length} px over {distance} mm gives no scale: both must be numbers above 0, and the scale from {least} to {most} px per mm</source>
         <translation type="unfinished"></translation>
     </message>
@@ -599,7 +599,7 @@
     </message>
     <message>
         <location line="+200"/>
-        <location line="+102"/>
+        <location line="+113"/>
         <source>Importing samples</source>
         <translation type="unfinished"></translation>
     </message>
@@ -679,7 +679,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+24"/>
+        <location line="+31"/>
         <source>Setting a board model&apos;s scale</source>
         <translation type="unfinished"></translation>
     </message>
@@ -729,7 +729,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1181"/>
+        <location line="-1199"/>
         <source>no defect type was given</source>
         <translation>결함 유형이 지정되지 않았습니다</translation>
     </message>
@@ -744,12 +744,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+491"/>
+        <location line="+502"/>
         <source>its UUID {found} is not {uuid}, as in the AI model registry</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+700"/>
+        <location line="+707"/>
         <source>Changing settings</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1408,6 +1408,51 @@
     </message>
     <message>
         <location line="+8"/>
+        <source>View not known</source>
+        <translation>알 수 없는 뷰</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>{path} was not imported: its view &quot;{view}&quot; is not one of {views}.</source>
+        <translation>{path}을(를) 가져오지 않았습니다. 뷰 &quot;{view}&quot;는 {views} 중 하나가 아닙니다.</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Give the image the view it was taken from, one of {views}, and import it again.</source>
+        <translation>이미지를 촬영한 뷰({views} 중 하나)를 지정해 다시 가져오세요.</translation>
+    </message>
+    <message>
+        <location line="+6"/>
+        <source>Label not known</source>
+        <translation>알 수 없는 라벨</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>{path} was not taken as a sample: its label &quot;{label}&quot; is not one of {labels}.</source>
+        <translation>{path}을(를) 샘플로 받지 않았습니다. 라벨 &quot;{label}&quot;이(가) {labels} 중 하나가 아닙니다.</translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>Give it the label OK or NG, then try again.</source>
+        <translation>라벨을 OK 또는 NG로 정한 뒤 다시 시도하세요.</translation>
+    </message>
+    <message>
+        <location line="+4"/>
+        <source>Board model name not allowed</source>
+        <translation>사용할 수 없는 보드 모델 이름</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>The board model name &quot;{name}&quot; cannot be the name of its folders in the workspace: a folder name is not empty, holds none of / : * ? &quot; &lt; &gt; and no backslash, vertical bar or control character, does not end with a dot or a space, and is not a name the system keeps for a device (CON, NUL, COM1 and the like).</source>
+        <translation>보드 모델 이름 &quot;{name}&quot;은(는) 작업 공간에서 그 보드 모델의 폴더 이름이 될 수 없습니다. 폴더 이름은 비어 있지 않고, / : * ? &quot; &lt; &gt; 와 백슬래시, 세로 막대, 제어 문자를 포함하지 않으며, 점이나 공백으로 끝나지 않고, 시스템이 장치용으로 쓰는 이름(CON, NUL, COM1 등)이 아니어야 합니다.</translation>
+    </message>
+    <message>
+        <location line="+7"/>
+        <source>Use another name, such as TBOX-A1 Rev2: create the board model with it and add its images there. Nothing was written.</source>
+        <translation>TBOX-A1 Rev2 같은 다른 이름으로 보드 모델을 만들고 그 보드 모델에 이미지를 추가하세요. 아무것도 기록되지 않았습니다.</translation>
+    </message>
+    <message>
+        <location line="+8"/>
         <source>AI model, recipe, scale or Golden board changed since the run</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1812,7 +1857,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-729"/>
+        <location line="-761"/>
         <source>Board judged NG</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1882,7 +1927,7 @@
         <translation>가져오기를 멈춘 원인을 해결한 뒤(작업 공간 logs 폴더의 로그 파일에 자세한 내용이 있습니다. 원인이 분명하지 않으면 지원팀에 보내세요) 가져오기를 다시 누르세요. 이미 가져온 이미지 {imported}개는 건너뜁니다.</translation>
     </message>
     <message>
-        <location line="+110"/>
+        <location line="+142"/>
         <source>ROI thresholds refused</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2048,7 +2093,7 @@
     </message>
     <message>
         <location filename="../ui/pages/training.py" line="+329"/>
-        <location filename="../ui/pages/training_import.py" line="+36"/>
+        <location filename="../ui/pages/training_import.py" line="+37"/>
         <source>{code} {title}</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2389,18 +2434,18 @@
     </message>
     <message>
         <location line="+1"/>
-        <location line="+89"/>
+        <location line="+94"/>
         <source>OK</source>
         <translation>OK</translation>
     </message>
     <message>
-        <location line="-89"/>
-        <location line="+89"/>
+        <location line="-94"/>
+        <location line="+94"/>
         <source>NG</source>
         <translation>NG</translation>
     </message>
     <message>
-        <location line="-84"/>
+        <location line="-89"/>
         <source>Defect type for NG files</source>
         <translation>NG 파일의 결함 유형</translation>
     </message>
@@ -2435,7 +2480,7 @@
         <translation>상태</translation>
     </message>
     <message>
-        <location line="+10"/>
+        <location line="+15"/>
         <source>Copy List</source>
         <translation>목록 복사</translation>
     </message>
@@ -2461,7 +2506,7 @@
         <translation>파일 {count}개 가져오기</translation>
     </message>
     <message>
-        <location line="+45"/>
+        <location line="+49"/>
         <source>pick a type</source>
         <translation>유형을 고르세요</translation>
     </message>
@@ -2486,7 +2531,7 @@
         <translation>NG 파일 {count}개에 결함 유형이 필요합니다</translation>
     </message>
     <message>
-        <location line="+7"/>
+        <location line="+9"/>
         <source>Importing…</source>
         <translation>가져오는 중…</translation>
     </message>
@@ -4048,7 +4093,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/services.py" line="-1355"/>
+        <location filename="../core/services.py" line="-1373"/>
         <source>Aligning {count} images to the reference board</source>
         <translation type="unfinished"></translation>
     </message>

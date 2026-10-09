@@ -8,10 +8,15 @@ import errno
 import hashlib
 import io
 import shutil
+from collections import Counter
 from collections.abc import Callable
 from pathlib import Path
 
+import cv2
+import numpy as np
 import pytest
+from PySide6.QtCore import Qt
+from pytestqt.qtbot import QtBot
 
 from aoi.core.imaging import list_images
 from aoi.core.sample_import import ImportFile, folder_files
@@ -19,6 +24,9 @@ from aoi.core.services import AppContext
 from aoi.data import atomic
 from aoi.defects import names
 from aoi.errors import AoiError
+from aoi.ui.main_window import MainWindow
+from tests.conftest import distinct_copies
+from tests.test_no_freeze import BUDGET_S, gap_meter
 
 BOARD = "TBOX-A1"
 
@@ -120,6 +128,128 @@ def test_req_trn_001_ng_has_dct_type(
     ctx.import_samples(BOARD, [str(ng_board)], "NG", "Missing Component")
     ctx.import_samples(BOARD, [str(list_images(synthetic_dataset / "train" / "ok")[0])], "OK")
     assert [(r["label"], r["defect_type"]) for r in ctx.samples(BOARD)] == [("NG", "Missing Component"), ("OK", None)]
+
+
+@pytest.mark.parametrize("side", ["Front", "", "top", "../../outside", "Top/../.."])
+def test_req_trn_001_an_import_refuses_a_view_other_than_top_side_or_bottom(
+    ctx: AppContext, synthetic_dataset: Path, side: str
+) -> None:
+    """A view names a dataset version and its folders (S35), so whoever calls AppContext, an import takes only Top,
+    Side or Bottom as aoi.hal.VIEWS writes them: any other is refused with AOI-TRN-017 before anything is copied, and
+    import_files lists that file with the code while the others go in."""
+    a, b = (str(p) for p in list_images(synthetic_dataset / "train" / "ok")[:2])
+    with pytest.raises(AoiError) as refused:
+        ctx.import_samples(BOARD, [a], "OK", None, side)
+    assert (refused.value.code, refused.value.params["view"]) == ("AOI-TRN-017", side), refused.value
+    assert ctx.samples(BOARD) == [] and not ctx.settings.images_dir.joinpath(BOARD).exists()
+    report = ctx.import_files(BOARD, [ImportFile(a, "OK", None, side), ImportFile(b, "OK", None, "Bottom")])
+    assert [(f.path, e.code) for f, e in report.refused] == [(a, "AOI-TRN-017")] and report.stopped is None
+    assert [(r["side"], r["sha256"] is not None) for r in ctx.samples(BOARD)] == [("Bottom", True)]
+
+
+def outside(ctx: AppContext, tmp_path: Path) -> set[Path]:
+    """Every file and folder of the test's own folder outside the workspace: what an import must never add to."""
+    return {p for p in tmp_path.rglob("*") if not p.is_relative_to(ctx.settings.root)}
+
+
+@pytest.mark.parametrize("label", ["ok", "UNSURE", "", "../../../escaped"])
+def test_req_trn_001_an_import_refuses_a_label_other_than_ok_or_ng(
+    ctx: AppContext, synthetic_dataset: Path, tmp_path: Path, label: str
+) -> None:
+    """A label names the copy's folder (images/<board model>/<label>/) and the samples table holds OK or NG alone, so
+    whoever calls AppContext, an import refuses any other label with AOI-TRN-018 before anything is copied, never with
+    a database error after the copy, and writes nothing outside the workspace; import_files lists that file with the
+    code, a lowercase "ok" too, while the others go in."""
+    a, b = (str(p) for p in list_images(synthetic_dataset / "train" / "ok")[:2])
+    before = outside(ctx, tmp_path)
+    with pytest.raises(AoiError) as refused:
+        ctx.import_samples(BOARD, [a], label)
+    assert (refused.value.code, refused.value.params["label"]) == ("AOI-TRN-018", label), refused.value
+    report = ctx.import_files(BOARD, [ImportFile(a, label), ImportFile(b, "OK")])
+    assert [(f.path, e.code) for f, e in report.refused] == [(a, "AOI-TRN-018")] and report.stopped is None
+    assert [r["label"] for r in ctx.samples(BOARD)] == ["OK"] and len(list(ctx.settings.images_dir.rglob("*.*"))) == 1
+    assert outside(ctx, tmp_path) == before
+
+
+@pytest.mark.parametrize(
+    "name",
+    ["", "../../bm_escape", "a/b", "a\\b", ".", "..", "TBOX.", "TBOX ", "CON", "nul", "COM1", "Lpt9.txt", "A:B", "A*B",
+     'A"B', "A?B", "A<B", "A>B", "A|B", "A\tB", "COM0", "lpt0.txt", "COM¹", "LPT³.png", "conin$", "CONOUT$.log"],
+)  # fmt: skip
+def test_req_trn_001_a_new_board_model_name_is_one_safe_folder_name(
+    ctx: AppContext, synthetic_dataset: Path, tmp_path: Path, name: str
+) -> None:
+    """A board model's name is the name of its folders under images/ and models/, so a new one, made by + New board
+    model (ensure_board_model) or by its first import, is one folder name on Windows as on Linux: not empty, . or ..,
+    no / \\ : * ? " < > | or control character, no dot or space at its end, and not a name Windows keeps for a device
+    (CON, NUL, COM0 to COM9 and COM¹ to COM³, LPT the same, CONIN$, CONOUT$, in any case and with an extension, as
+    LPT9.txt). Any other is refused with AOI-TRN-019 before anything is written."""
+    a = str(list_images(synthetic_dataset / "train" / "ok")[0])
+    before = outside(ctx, tmp_path)
+    for create in (ctx.ensure_board_model, lambda n: ctx.import_samples(n, [a], "OK")):
+        with pytest.raises(AoiError) as refused:
+            create(name)
+        assert (refused.value.code, refused.value.params["name"]) == ("AOI-TRN-019", name), refused.value
+    assert ctx.db.board_models() == [] and not any(ctx.settings.images_dir.rglob("*.*"))
+    assert outside(ctx, tmp_path) == before
+
+
+def test_req_trn_001_an_import_copies_only_into_images(
+    ctx: AppContext, synthetic_dataset: Path, tmp_path: Path
+) -> None:
+    """Names such as TBOX-A1 Rev2, v1.2, CONSOLE or COM10 are taken. A board model made before its name was checked
+    keeps it, but its import copies only into a folder inside the workspace's images/: a name that leads elsewhere
+    (../../escape, as a row from before could hold) is refused with AOI-TRN-019 and nothing is written outside."""
+    a = str(list_images(synthetic_dataset / "train" / "ok")[0])
+    for name in ("TBOX-A1 Rev2", "v1.2", "기판 A", "CONSOLE", "COM10"):
+        ctx.ensure_board_model(name)
+    ctx.db.ensure_board_model("../../escape")
+    before = outside(ctx, tmp_path)
+    with pytest.raises(AoiError) as refused:
+        ctx.import_samples("../../escape", [a], "OK")
+    assert (refused.value.code, refused.value.params["name"]) == ("AOI-TRN-019", "../../escape"), refused.value
+    assert outside(ctx, tmp_path) == before and ctx.samples("../../escape") == []
+    assert ctx.import_samples("COM10", [a], "OK") == 1
+
+
+def test_req_trn_001_a_name_the_workspace_already_holds_is_kept(ctx: AppContext, synthetic_dataset: Path) -> None:
+    """AOI-TRN-019 refuses a new name alone: a board model a workspace already holds under a name the rule refuses
+    (TBOX., made before names were checked) can still be created, which changes nothing, and imported into, while a
+    new TBOX2. is refused both ways."""
+    a = str(list_images(synthetic_dataset / "train" / "ok")[0])
+    ctx.db.ensure_board_model("TBOX.")
+    ctx.ensure_board_model("TBOX.")
+    assert ctx.import_samples("TBOX.", [a], "OK") == 1 and len(ctx.samples("TBOX.")) == 1
+    for create in (ctx.ensure_board_model, lambda n: ctx.import_samples(n, [a], "OK")):
+        with pytest.raises(AoiError) as refused:
+            create("TBOX2.")
+        assert (refused.value.code, refused.value.params["name"]) == ("AOI-TRN-019", "TBOX2."), refused.value
+    assert ctx.db.board_models() == ["TBOX."]
+
+
+@pytest.mark.parametrize("how", ["gone", "unreadable"])
+def test_req_trn_001_a_source_lost_before_its_copy_is_listed_and_the_others_go_in(
+    ctx: AppContext, synthetic_dataset: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, how: str
+) -> None:
+    """A file removed or made unreadable between its check and its copy is that file's to fix, not the workspace's: it
+    is refused with AOI-INSP-001, as Inspection refuses a file it cannot read, and listed while the others go in, with
+    no copy of it left. A copy the workspace refuses still stops the import (AOI-TRN-008, the test above)."""
+    picked = distinct_copies(list_images(synthetic_dataset / "train" / "ok")[0], tmp_path / "picked", 3)
+    files = [ImportFile(str(p), "OK") for p in picked]
+    copy = atomic.copy_file
+
+    def lose_then_copy(src: str | Path, dst: str | Path) -> None:
+        if Path(src) == picked[1] and how == "gone":
+            picked[1].unlink()
+        elif Path(src) == picked[1]:
+            raise PermissionError(errno.EACCES, "Permission denied", str(src))
+        copy(src, dst)
+
+    monkeypatch.setattr(atomic, "copy_file", lose_then_copy)
+    report = ctx.import_files(BOARD, files)
+    assert [(f, e.code) for f, e in report.refused] == [(files[1], "AOI-INSP-001")], report
+    assert report.added == [files[0], files[2]] and report.stopped is None and report.left == []
+    assert len(list(ctx.settings.images_dir.rglob("*"))) == len(ctx.samples(BOARD)) + 2  # the two folders, two copies
 
 
 @pytest.mark.parametrize(
@@ -251,3 +381,40 @@ def test_req_trn_001_an_import_stopped_by_an_error_or_cancel_keeps_what_went_in(
     report = ctx.import_files(BOARD, files, lambda n, total: done.append(n), lambda: len(done) == 3)
     assert [f for f, _ in report.refused] == files[:2] and report.added == [files[2]] and report.left == files[3:]
     assert len(ctx.samples(BOARD)) == 3
+
+
+def test_req_trn_001_200_files_20mp_no_freeze(qtbot: QtBot, ctx: AppContext, tmp_path: Path) -> None:
+    """The stage's acceptance: Import Folder… on 100 OK and 100 NG files of 20 MP (5472 x 3648), the NG ones in
+    ng/solder_bridge/, with Side picked for all on the sheet. Import runs on the pool and every file goes in with its
+    view and, for NG, its type, while the window's event loop never stalls for 2 s: a 50 ms timer on the window thread
+    measures each gap (`gap_meter`), so a slower runner takes longer but is held to the same budget. The files are one
+    plain JPEG, each with bytes of its own after the image's end: cheap to write, each its own SHA-256."""
+    board = np.full((3648, 5472, 3), 96, np.uint8)
+    cv2.rectangle(board, (500, 400), (4900, 3200), (40, 150, 40), -1)  # a board on a plain ground: a small JPEG
+    encoded, jpeg = cv2.imencode(".jpg", board)
+    assert encoded
+    folder = tmp_path / "src"
+    for i in range(200):
+        sub = folder / ("ok" if i < 100 else "ng/solder_bridge")
+        sub.mkdir(parents=True, exist_ok=True)
+        (sub / f"board_{i:03d}.jpg").write_bytes(jpeg.tobytes() + i.to_bytes(2, "big"))
+    win = MainWindow(ctx)
+    qtbot.addWidget(win)
+    win.resize(1600, 900)
+    win.show()
+    qtbot.waitExposed(win)
+    win.set_user("engineer")
+    win._on_board_model(BOARD)
+    win.navigate("Training")
+    page = win.pages["Training"]
+    with gap_meter(qtbot) as g:
+        page.import_from(str(folder))
+        qtbot.mouseClick(page.sheet.views.button(1), Qt.MouseButton.LeftButton)  # Side, for all
+        qtbot.mouseClick(page.sheet.btn_import, Qt.MouseButton.LeftButton)
+        qtbot.waitUntil(lambda: page._bg is None and not page.sheet.running, timeout=900000)
+    assert g["longest_s"] < BUDGET_S, g
+    rows = ctx.samples(BOARD)
+    assert len(rows) == 200 == page.samples.rowCount()
+    assert ctx.load_image(ctx.sample_path(rows[-1]["id"])).shape == board.shape, "a 20 MP copy, read back"
+    kinds = Counter((r["label"], r["defect_type"], r["side"]) for r in rows)
+    assert kinds == {("OK", None, "Side"): 100, ("NG", "Solder Bridge", "Side"): 100}, kinds

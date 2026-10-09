@@ -15,6 +15,7 @@ from PySide6.QtWidgets import (
     QComboBox,
     QGroupBox,
     QHBoxLayout,
+    QHeaderView,
     QLabel,
     QRadioButton,
     QStyledItemDelegate,
@@ -104,6 +105,11 @@ class ImportSheet(QGroupBox):
         heads = [self.tr("File"), self.tr("Label"), self.tr("Defect type"), self.tr("View"), self.tr("Status")]
         self.table = make_table(heads, sortable=False)
         self.table.setItemDelegate(_RowChoice(self))
+        head = self.table.horizontalHeader()
+        head.setStretchLastSection(False)
+        head.setSectionResizeMode(FILE, QHeaderView.ResizeMode.Stretch)  # the file takes what the others leave
+        self.table.setWordWrap(False)  # one line a file: a long path is cut in the middle, keeping its folder and name
+        self.table.setTextElideMode(Qt.TextElideMode.ElideMiddle)
         edit = QAbstractItemView.EditTrigger
         self._edits = edit.SelectedClicked | edit.DoubleClicked | edit.EditKeyPressed | edit.AnyKeyPressed
         lay.addWidget(self.table, 1)
@@ -178,6 +184,10 @@ class ImportSheet(QGroupBox):
         return [(view_text(v), v) for v in VIEWS] if column == VIEW else []
 
     def set_cell(self, row: int, column: int, key: str) -> None:
+        self._set(row, column, key)
+        self._sync()
+
+    def _set(self, row: int, column: int, key: str) -> None:
         f = self.files[row]
         if column == LABEL:
             f.label, f.defect_type = key, f.defect_type if key == "NG" else None
@@ -186,12 +196,12 @@ class ImportSheet(QGroupBox):
         elif column == VIEW:
             f.side = key
         self._show_row(row, None)
-        self._sync()
 
     def _for_all(self, column: int, key: str) -> None:
         for i, f in enumerate(self.files):
             if i not in self.done and (column != TYPE or f.label == "NG"):
-                self.set_cell(i, column, key)
+                self._set(i, column, key)
+        self._sync()
 
     def _show_row(self, row: int, status: str | None) -> None:
         f = self.files[row]
@@ -225,6 +235,8 @@ class ImportSheet(QGroupBox):
             w.setEnabled(not self.running)  # the files are the pool's while they are imported
         if untyped and not self.running:
             self.note.setText(self.tr("{count} NG file(s) need a defect type").format(count=untyped))
+        for column in range(LABEL, STATUS + 1):  # once a change, not once a cell; the file name takes what is left
+            self.table.resizeColumnToContents(column)
 
     # --- the import -----------------------------------------------------------------------------------------------
     def start(self) -> None:

@@ -10,12 +10,14 @@ from .. import defects as taxonomy
 from ..errors import AoiError
 from .imaging import list_images
 
+LABELS = ("OK", "NG")  # a sample's label as the samples table holds it, and the name of its copy's folder
 OK_FOLDERS = ("ok", "good")
 NG_FOLDERS = ("ng", "bad", "defect", "defects")
 # a file refused with one of these is listed with its code and the import goes on: what is wrong is that file's
 REFUSED = frozenset(
     {"AOI-INSP-001", "AOI-INSP-004", "AOI-INSP-005", "AOI-INSP-006", "AOI-INSP-007"}  # Inspection's checks (Q30)
     | {"AOI-TRN-013", "AOI-TRN-014", "AOI-TRN-015", "AOI-TRN-016"}  # no type, changed, already imported, no label
+    | {"AOI-TRN-017", "AOI-TRN-018"}  # a view or a label not known
 )
 
 
