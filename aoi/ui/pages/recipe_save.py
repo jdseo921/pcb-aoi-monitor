@@ -1,18 +1,20 @@
 """Save Recipe's confirmation sheet on the Recipe Editor (REQ-RCP-004, REQ-RCP-005; recipe-editor sketch): inline under
 the tabs, never a dialog over a dialog. It names the revision a save makes, lists what it changes from the latest one,
 before → after, and the mandatory AOI checks the recipe leaves uncovered, for which it asks a reason; the reason is kept
-with the revision, in the audit entry of its save."""
+with the revision, in the audit entry of its save. Also the Revisions tab's pane that opens a revision read-only."""
 
 from __future__ import annotations
 
 from collections.abc import Callable
+from typing import Any
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QAction, QKeySequence
 from PySide6.QtWidgets import QFormLayout, QGroupBox, QHBoxLayout, QLabel, QLineEdit, QVBoxLayout
 
-from ...core.recipe import ADDED, REMOVED, Change
-from .base import QT_TRANSLATE_NOOP, button
+from ...core.recipe import ADDED, REMOVED, Change, Recipe
+from ...times import to_local
+from .base import QT_TRANSLATE_NOOP, button, fill_table, make_table
 
 SETTINGS = {  # a Change's field as the sheet and the Revisions tab name it; a field not here is shown as stored
     "use_ai": QT_TRANSLATE_NOOP("SaveSheet", "AI check"),
@@ -52,6 +54,7 @@ class SaveSheet(QGroupBox):
         self.setTitle(self.tr("Save Recipe"))
         self._confirm, self._type_text = confirm, type_text
         self.shown: tuple[list[str], list[str]] = ([], [])  # the lines and the checks the sheet shows
+        self.restoring: tuple[int, Recipe] | None = None  # Restore as New Revision's revision, while the sheet is open
         lay = QVBoxLayout(self)
         self.heading, self.changes, self.missing = QLabel(), QLabel(), QLabel()
         self.missing.setObjectName("badge")  # amber, as AOI-RCP-009 is under the scale
@@ -77,12 +80,28 @@ class SaveSheet(QGroupBox):
         self.addAction(esc)
         self.hide()
 
-    def open_for(self, board_model: str, revision: int, changes: list[Change], uncovered: list[str]) -> None:
-        """Show the sheet for a save of `board_model`'s recipe after `revision`, which it never replaces."""
+    def open_for(
+        self,
+        board_model: str,
+        revision: int,
+        changes: list[Change],
+        uncovered: list[str],
+        restoring: tuple[int, Recipe] | None = None,
+    ) -> None:
+        """Show the sheet for a save of `board_model`'s recipe after `revision`, which it never replaces: the recipe as
+        edited, or with `restoring`, a revision and its recipe as stored, a copy of that revision (Q24)."""
         lines = [self.line(c) for c in changes]
-        self.shown = (lines, uncovered)
-        ask = self.tr("Save the recipe of {board_model} as revision {next}? Revision {revision} stays as it was saved.")
-        self.heading.setText(ask.format(board_model=board_model, next=revision + 1, revision=revision))
+        self.shown, self.restoring = (lines, uncovered), restoring
+        if restoring is None:
+            ask = self.tr(
+                "Save the recipe of {board_model} as revision {next}? Revision {revision} stays as it was saved."
+            )
+        else:
+            ask = self.tr(
+                "Restore revision {old} of {board_model} as revision {next}? Revision {revision} stays as it was saved."
+            )
+        old = restoring[0] if restoring else None
+        self.heading.setText(ask.format(board_model=board_model, next=revision + 1, revision=revision, old=old))
         none = self.tr("Nothing changed since revision {revision}.").format(revision=revision)
         self.changes.setText("\n".join(lines) or none)
         said = self.tr("Not covered: {checks}. A reason is needed to save without them, and is kept with the revision.")
@@ -132,3 +151,43 @@ class SaveSheet(QGroupBox):
     def close_sheet(self) -> None:
         self.hide()
         self.reason.clear()
+        self.restoring = None
+
+
+class RevisionPane(QGroupBox):
+    """Open on the Revisions tab (REQ-RCP-004): a revision read-only beside the recipe as edited, as stored: its
+    settings, its ROIs, and what the recipe as edited changes from it. Nothing in it can be edited or saved."""
+
+    def __init__(self, sheet: SaveSheet) -> None:
+        super().__init__()
+        self._sheet = sheet  # its wording of a setting and of a change
+        lay = QVBoxLayout(self)
+        self.settings, self.against = QLabel(), QLabel()
+        for label in (self.settings, self.against):
+            label.setWordWrap(True)
+            label.setTextFormat(Qt.TextFormat.PlainText)
+            lay.addWidget(label)
+        self.rois = make_table([], sortable=False)  # read-only: make_table's cells take no edit
+        lay.addWidget(self.rois, 1)
+        self.hide()
+
+    def show_revision(
+        self, rev: dict[str, Any], headers: list[str], rois: list[list[object]], against: list[Change]
+    ) -> None:
+        """Show `rev`, a row of `AppContext.recipe_revisions`, with its ROIs as `rois` under `headers`, as the ROIs tab
+        shows them, and `against`, the changes from it to the recipe as edited."""
+        n, recipe = rev["revision"], rev["recipe"]
+        title = self.tr("Revision {revision}, read-only: saved by {user}, {saved}")
+        self.setTitle(title.format(revision=n, user=rev["user"], saved=to_local(rev["created_at"])))
+        stored = {k: v for k, v in recipe.to_dict().items() if k not in ("board_model", "rois")}
+        one = self.tr("{setting}: {value}")
+        said = [one.format(setting=self._sheet.name(k), value=self._sheet.value(k, v)) for k, v in stored.items()]
+        self.settings.setText("  ·  ".join(said))
+        lines = [self._sheet.line(c) for c in against]
+        head = self.tr("What the recipe as edited changes from revision {revision}:").format(revision=n)
+        same = self.tr("The recipe as edited is the same as revision {revision}.").format(revision=n)
+        self.against.setText("\n".join([head, *lines]) if lines else same)
+        self.rois.setColumnCount(len(headers))
+        self.rois.setHorizontalHeaderLabels(headers)
+        fill_table(self.rois, rois)
+        self.show()

@@ -436,7 +436,14 @@ matching type (Presence, Polarity, Solder Bridge) covers it; • whole board for
 while the AI check or the Golden board comparison is on; ○ not covered; and ◌ needs Stage 2 for the 4 checks a 3D or
 side camera makes. The marks follow each edit before it is saved.
 
-(to be written: the other thresholds, revision history)
+**Revisions** tab. Every revision of the board model's recipe, newest first, with who saved it, when, what it changed
+from the revision before (hover for the full list) and the reason given. Pick one and press Open to see it read-only
+beside the recipe on screen: its settings, its ROIs and what your recipe changes from it; nothing in it can be edited.
+Restore as New Revision opens the Save Recipe sheet for a copy of the revision picked as the next revision, listing what
+it changes from the latest one; Save Revision saves it and shows it, after asking whether to discard any unsaved
+changes. The revisions before stay as they were.
+
+(to be written: the other thresholds)
 
 ## 6. AI model test and reports
 

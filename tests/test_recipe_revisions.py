@@ -10,9 +10,10 @@ import json
 import pytest
 from PySide6.QtCore import QRectF, Qt
 from PySide6.QtTest import QTest
-from PySide6.QtWidgets import QMessageBox
+from PySide6.QtWidgets import QAbstractItemView, QMessageBox, QTabWidget
 from pytestqt.qtbot import QtBot
 
+from aoi.core.recipe import ROI
 from aoi.core.services import AppContext
 from aoi.ui.pages.recipe_editor import RecipeEditorPage
 from tests.test_recipe_rois import _page
@@ -35,10 +36,15 @@ def _bodies(ctx: AppContext) -> dict[int, str]:
     return {r["revision"]: r["body"] for r in rows}
 
 
+def _rows(page: RecipeEditorPage) -> list[list[str]]:
+    t = page.history
+    return [[t.item(r, c).text() for c in range(t.columnCount())] for r in range(t.rowCount())]
+
+
 def test_req_rcp_004_save_creates_revision_with_diff(page: RecipeEditorPage, trained_ctx: AppContext) -> None:
     """Ctrl+S opens the sheet, which names revision n+1 and lists each change before → after, saving nothing yet; Save
     Revision stores revision n+1, every revision before it as it was, with an audit entry holding the body before and
-    after and the reason,. Esc closes the sheet unsaved, and with
+    after and the reason, and the Revisions tab lists it first with its changes. Esc closes the sheet unsaved, and with
     nothing changed Save Revision is off, as a revision never repeats the one before."""
     ctx, rev = trained_ctx, page.rev
     before = _bodies(ctx)
@@ -67,15 +73,80 @@ def test_req_rcp_004_save_creates_revision_with_diff(page: RecipeEditorPage, tra
     assert entry["before"]["diff_threshold"] == 45 and entry["before"]["rois"] == []
     assert entry["after"]["diff_threshold"] == 30 and [r["name"] for r in entry["after"]["rois"]] == ["R1"]
     assert entry["reason"] == "R1 added for the new connector" and entry["user_uuid"] == ctx.actor.uuid
+    top = _rows(page)[0]
+    assert top[0] == str(rev + 1) and top[1] == ctx.user
+    assert top[3:] == ["Pixel difference: 45 → 30; ROI R1 added", "R1 added for the new connector"]
+    assert _rows(page)[-1][3] == "first revision"
 
     page.ask_save()
     sheet.reason.setText("typed, so that nothing changed alone keeps Save Revision off")
     assert sheet.changes.text() == f"Nothing changed since revision {rev + 1}." and not sheet.btn_save.isEnabled()
 
 
+def test_req_rcp_004_old_revision_viewable(page: RecipeEditorPage, trained_ctx: AppContext) -> None:
+    """Open shows the revision picked read-only beside the recipe as edited: its settings, its ROIs and what the edits
+    change from it, nothing editable and nothing saved; Restore as New Revision saves a copy of it as the next revision,
+    after the sheet, which never replaces one."""
+    ctx = trained_ctx
+    old = ctx.recipe(BOARD)[1]
+    old.rois = [ROI("R1", "Presence", 10, 20, 30, 40)]
+    first = ctx.save_recipe(old, "first ROI")
+    newer = ctx.recipe(BOARD)[1]
+    newer.diff_threshold, newer.rois = 30, []
+    ctx.save_recipe(newer)
+    page.on_show()  # the revisions saved since are loaded
+    assert ctx.recipe_revisions("NEWB") == [], "a board model with no recipe has none"
+    tabs = page.findChild(QTabWidget)
+    assert tabs is not None
+    tabs.setCurrentIndex([tabs.tabText(i) for i in range(tabs.count())].index("Revisions"))  # as an Engineer would
+    page.ssim.setValue(0.9)  # an edit not saved
+    rows = _rows(page)
+    assert [r[0] for r in rows[:2]] == [str(first + 1), str(first)]
+    assert rows[1][3:] == ["ROI R1 added", "first ROI"] and rows[0][3:] == [
+        "Pixel difference: 45 → 30; ROI R1 removed",
+        "—",
+    ]
+    assert not page.open_btn.isEnabled() and not page.restore_btn.isEnabled(), "no revision picked"
+    page.history.selectRow(1)
+    page.open_btn.click()
+    pane = page.revision_pane
+    assert pane.isVisible() and pane.title().startswith(f"Revision {first}, read-only: saved by {ctx.user}")
+    assert "Pixel difference: 45" in pane.settings.text() and "Similarity minimum (SSIM): 0.8" in pane.settings.text()
+    assert pane.against.text().split("\n") == [
+        f"What the recipe as edited changes from revision {first}:",
+        "Pixel difference: 45 → 30",
+        "Similarity minimum (SSIM): 0.8 → 0.9",
+        "ROI R1 removed",
+    ]
+    cells = [[pane.rois.item(r, c).text() for c in range(pane.rois.columnCount())] for r in range(pane.rois.rowCount())]
+    assert cells == [["R1", "Presence", "10", "20", "30", "40", "1"]], "as the ROIs tab shows them"
+    assert pane.rois.editTriggers() == QAbstractItemView.EditTrigger.NoEditTriggers
+    assert page.ssim.value() == pytest.approx(0.9) and page.edited_recipe.rois == [], "the edits kept"
+    assert ctx.recipe(BOARD)[0] == first + 1, "nothing saved"
+
+    bodies = _bodies(ctx)
+    page.history.selectRow(1)
+    page.restore_btn.click()
+    sheet = page.save_sheet
+    assert sheet.heading.text().startswith(f"Restore revision {first} of {BOARD} as revision {first + 2}?")
+    assert sheet.changes.text().split("\n") == ["Pixel difference: 30 → 45", "ROI R1 added"]
+    assert sheet.missing.isVisible(), "revision 2 leaves Polarity Error and Solder Bridge uncovered"
+    sheet.reason.setText("back to revision 2")
+    answers = [QMessageBox.StandardButton.Yes]
+    with pytest.MonkeyPatch.context() as mp:
+        mp.setattr(QMessageBox, "question", staticmethod(lambda *_: answers.pop(0)))
+        sheet.btn_save.click()
+    assert not answers, "the unsaved edit was asked about first"
+    saved = _bodies(ctx)
+    assert {k: v for k, v in saved.items() if k != first + 2} == bodies and saved[first + 2] == bodies[first]
+    assert page.rev == first + 2 and page.ssim.value() == pytest.approx(0.8) and len(page.edited_recipe.rois) == 1
+    assert _rows(page)[0][3:] == ["Pixel difference: 30 → 45; ROI R1 added", "back to revision 2"]
+    assert not page.open_btn.isEnabled() and pane.isHidden(), "the list filled again, no row is another revision"
+
+
 def test_req_rcp_005_uncovered_check_needs_reason(page: RecipeEditorPage, trained_ctx: AppContext) -> None:
     """With a Stage 1 AOI check uncovered, the sheet names it and Save Revision stays off until a reason is typed
-    (blank is none); the reason is kept in the revision's audit entry. With every Stage 1
+    (blank is none); the reason is kept in the revision's audit entry and on the Revisions tab. With every Stage 1
     check covered no reason is asked. An edit made while the sheet is open shows it again, so what is saved is what
     was confirmed: an ROI deleted then uncovers its check and asks for a reason."""
     ctx, sheet = trained_ctx, page.save_sheet
@@ -88,7 +159,7 @@ def test_req_rcp_005_uncovered_check_needs_reason(page: RecipeEditorPage, traine
     sheet.reason.setText("ROIs follow with the new fixture")
     sheet.btn_save.click()
     entry = ctx.audit_entries(action="recipe.save")[0]
-    assert entry["reason"] == "ROIs follow with the new fixture"
+    assert entry["reason"] == "ROIs follow with the new fixture" and _rows(page)[0][4] == entry["reason"]
 
     for i, roi_type in enumerate(("Presence", "Polarity", "Solder Bridge")):
         page.roi_type.setCurrentIndex(page.roi_type.findData(roi_type))
