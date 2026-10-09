@@ -549,7 +549,8 @@ class AppContext:
             epochs=epochs or self.settings.default_epochs,
             device=device,
         )
-        model = anomaly.train(ok, ng, cfg, progress, should_stop)
+        ok_in, ng_in = ([anomaly.prepare(im, cfg.image_size) for im in images] for images in (ok, ng))
+        model = anomaly.train(ok_in, ng_in, cfg, progress, should_stop)
         if should_stop is not None and should_stop():  # Stop, or the window closing: the active model stays (TRN-008)
             raise JobCancelled(f"training {board_model}")  # nothing saved, registered, activated or audited (#171)
         previous = self.db.active_model(board_model)

@@ -21,7 +21,7 @@ import math
 import random
 import time
 import zipfile
-from collections.abc import Callable
+from collections.abc import Callable, Iterable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -120,6 +120,45 @@ def to_tensor(img_bgr: np.ndarray, size: int) -> torch.Tensor:
     return torch.from_numpy(rgb).permute(2, 0, 1).float() / 255.0
 
 
+@dataclass(frozen=True)
+class Prepared:
+    """An image as the AI model reads it: its tensor at the network's input size, made once, and the image's height and
+    width, to which its anomaly map is scaled back. A training run keeps these, not the images (REQ-TRN-007)."""
+
+    tensor: torch.Tensor
+    shape: tuple[int, int]
+
+
+def prepare(img_bgr: np.ndarray, size: int) -> Prepared:
+    """`img_bgr` as a training run keeps it: `to_tensor` at `size` px, and its height and width."""
+    return Prepared(to_tensor(img_bgr, size), (int(img_bgr.shape[0]), int(img_bgr.shape[1])))
+
+
+PIXEL_PERCENTILE = 99.95  # of every pixel of the calibration OK images' anomaly maps together
+
+
+def top_percentile(maps: Iterable[np.ndarray], count: int, q: float) -> np.floating:
+    """`np.percentile(np.concatenate([m.ravel() for m in maps]), q)`, numpy's linear method to the bit, holding only
+    the largest values of each map rather than every map at once (REQ-TRN-007): the values at and above the rank the
+    percentile reads are among them. `count` is the pixels of every map together, so a q near 100 keeps few values
+    (99.95 keeps 0.05 % of them); `maps` may make each map as it is asked for."""
+    at = (count - 1) * (q / 100)
+    lo = math.floor(at)
+    keep = count - lo  # the ranks lo to count - 1, counted from the smallest
+    tops = []
+    for m in maps:
+        flat = m.ravel()
+        k = min(keep, flat.size)
+        tops.append(np.partition(flat, flat.size - k)[flat.size - k :].copy())  # a view would keep the whole map
+    top = np.concatenate(tops)  # holds every value of rank lo or more, ties included
+    first = top.size - keep  # rank lo is here, rank lo + 1 next
+    part = np.partition(top, [first, first + 1] if keep > 1 else [first])
+    a, b = part[first], part[first + 1] if keep > 1 else part[first]
+    gamma, diff = at - lo, b - a
+    out: np.floating = b - diff * (1 - gamma) if gamma >= 0.5 else a + diff * gamma  # numpy's _lerp, in its order
+    return out
+
+
 def augment(t: torch.Tensor) -> torch.Tensor:
     """Lighting jitter only: geometry must stay fixed so the model learns layout."""
     gain = 1.0 + random.uniform(-0.08, 0.08)
@@ -162,10 +201,13 @@ class AnomalyModel:
     def pixel_threshold(self) -> float:
         return float(self.meta["pixel_threshold"])
 
-    @torch.no_grad()
     def raw_error(self, img_bgr: np.ndarray) -> np.ndarray:
         """Reconstruction error at network resolution."""
-        x = to_tensor(img_bgr, self.size).unsqueeze(0).to(self.device)
+        return self._raw(to_tensor(img_bgr, self.size))
+
+    @torch.no_grad()
+    def _raw(self, t: torch.Tensor) -> np.ndarray:
+        x = t.unsqueeze(0).to(self.device)
         rec = self.net(x)
         err = (x - rec).abs().mean(dim=1)[0].cpu().numpy()
         blurred: np.ndarray = cv2.GaussianBlur(err, (0, 0), sigmaX=1.5)
@@ -178,7 +220,13 @@ class AnomalyModel:
         good boards (component edges, text and connectors are always a little
         off), so the map reads as "standard deviations above normal".
         """
-        err = self.raw_error(img_bgr)
+        return self._scaled(self.raw_error(img_bgr), (img_bgr.shape[0], img_bgr.shape[1]))
+
+    def prepared_map(self, image: Prepared) -> np.ndarray:
+        """`anomaly_map` of the image `image` was prepared from, to the bit, made from its tensor (REQ-TRN-007)."""
+        return self._scaled(self._raw(image.tensor), image.shape)
+
+    def _scaled(self, err: np.ndarray, shape: tuple[int, int]) -> np.ndarray:
         m = max(2, self.size // 64)  # warped borders are never meaningful
         err[:m, :] = err[-m:, :] = 0
         err[:, :m] = err[:, -m:] = 0
@@ -186,7 +234,7 @@ class AnomalyModel:
         if mu is not None:
             err = np.clip((err - mu) / sd, 0, None)
             err = cv2.GaussianBlur(err, (0, 0), sigmaX=1.5)
-        return cv2.resize(err, (img_bgr.shape[1], img_bgr.shape[0]), interpolation=cv2.INTER_LINEAR)
+        return cv2.resize(err, (shape[1], shape[0]), interpolation=cv2.INTER_LINEAR)
 
     def score(self, amap: np.ndarray) -> float:
         # 99.9th percentile is robust to single hot pixels but catches small defects.
@@ -278,12 +326,15 @@ def calibrate(ok_scores: list[float], ng_scores: list[float]) -> tuple[float, Ph
 
 
 def train(
-    ok_images: list[np.ndarray],
-    ng_images: list[np.ndarray],
+    ok_images: Sequence[Prepared],
+    ng_images: Sequence[Prepared],
     cfg: TrainConfig,
     progress: ProgressFn | None = None,
     should_stop: Callable[[], bool] | None = None,
 ) -> AnomalyModel:
+    """An AI model learnt from the OK images, prepared at `cfg.image_size`; the NG images only calibrate its image
+    threshold (REQ-TRN-007). Each anomaly map is made at its image's size when it is scored and then let go: the run
+    holds no image and no map at the camera's resolution beyond the one in hand."""
     if len(ok_images) < 2:
         raise AoiError("AOI-TRN-002", found=len(ok_images))
     random.seed(cfg.seed)
@@ -291,7 +342,7 @@ def train(
     torch.manual_seed(cfg.seed)
     say = progress or (lambda *a: None)
 
-    tensors = [to_tensor(im, cfg.image_size) for im in ok_images]
+    tensors = [p.tensor for p in ok_images]
     idx = list(range(len(tensors)))
     random.shuffle(idx)
     n_val = max(1, int(round(len(idx) * cfg.val_fraction))) if len(idx) >= 5 else 0
@@ -329,17 +380,25 @@ def train(
         net, {"image_size": cfg.image_size, "image_threshold": 1.0, "pixel_threshold": 1.0}, cfg.device
     )
     # Per-pixel error statistics of good boards (the learned "normal variation").
-    errs = np.stack([model.raw_error(ok_images[i]) for i in train_idx])
+    errs = np.stack([model._raw(tensors[i]) for i in train_idx])
     sd = errs.std(axis=0)
     model.meta["err_mean"] = errs.mean(axis=0).astype(np.float32)
     model.meta["err_std"] = np.maximum(sd, max(float(np.median(sd)), SPREAD_FLOOR)).astype(np.float32)
     # Calibrate on held-out OK images when we have them, otherwise on training images.
     cal_ok = [ok_images[i] for i in (val_idx or train_idx)]
-    ok_maps = [model.anomaly_map(im) for im in cal_ok]
-    ok_scores = [model.score(m) for m in ok_maps]
-    ng_scores = [model.score(model.anomaly_map(im)) for im in ng_images]
+    ok_scores: list[float] = []
+
+    def scored(images: Sequence[Prepared]) -> Iterable[np.ndarray]:  # each map scored, then read for its top
+        for p in images:
+            amap = model.prepared_map(p)
+            ok_scores.append(model.score(amap))
+            yield amap
+
+    pixels = sum(p.shape[0] * p.shape[1] for p in cal_ok)
+    top = float(top_percentile(scored(cal_ok), pixels, PIXEL_PERCENTILE))
+    ng_scores = [model.score(model.prepared_map(p)) for p in ng_images]
     thr, rule = calibrate(ok_scores, ng_scores)
-    pix = max(float(np.percentile(np.concatenate([m.ravel() for m in ok_maps]), 99.95)) * 1.15, thr * 0.6)
+    pix = max(top * 1.15, thr * 0.6)
     model.meta.update(
         image_threshold=thr,
         pixel_threshold=max(pix, 1e-4),

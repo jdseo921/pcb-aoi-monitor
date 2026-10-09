@@ -210,7 +210,8 @@ def ai_check(train: list[Item], test: list[Item], ok_train: int, cfg: anomaly.Tr
             groups[group] = {"skipped": "fewer than 2 distinct defect-free templates in trainval"}
             continue
         t0 = perf_counter()
-        model = anomaly.train([load_image(i.good) for i in ok_items], [load_image(i.test) for i in ng_items], cfg)
+        ok_in = [anomaly.prepare(load_image(i.good), cfg.image_size) for i in ok_items]
+        model = anomaly.train(ok_in, [anomaly.prepare(load_image(i.test), cfg.image_size) for i in ng_items], cfg)
         train_s.append(perf_counter() - t0)
         thr, warn = model.image_threshold, Recipe(board_model=group).warn_ratio * model.image_threshold
         g = dict.fromkeys(counts, 0)
