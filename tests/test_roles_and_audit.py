@@ -218,7 +218,7 @@ UNCHECKED = {
     "agreement_checks", "propose_calibration_set", "blind_labelled", "datasets", "dataset_items", "verify_dataset",
     "validation_split", "stores", "store_of", "store_contents", "training_version", "freeze_gate",
     "dataset_counts", "previous_model", "model_card", "card_files", "card_text", "last_board", "test_runs", "test_run",
-    "recipe_revisions",
+    "report_images", "model_card_text", "validation_report_data", "recipe_revisions",
 }  # fmt: skip
 CALLS = {**{name: call for name, (_, call) in WRITES.items()}, **CHECKED_READS}
 # The lowest role allowed each call, copied from the write table of docs/ARCHITECTURE.md §5 and REQ-CMP-005, never read

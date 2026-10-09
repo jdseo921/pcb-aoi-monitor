@@ -290,6 +290,8 @@ def test_req_set_004_ai_model_tests_preview_pane_wraps_the_names_aoi_tst_001_giv
     page.folder = str(folder)
     page.run()
     qtbot.waitUntil(lambda: bool(page.rows) and page.btn_run.isEnabled(), timeout=60000)
+    for r in page.rows:  # as a run stored before S46: no overlay, so a preview judges its row again (#250)
+        r.pop("overlay", None)
     run_golden, golden = (Path(str(s["path"])).name for s in ctx.samples("TINY", "OK")[:2])
     assert Path(str(ctx.reference_image("TINY"))).name == run_golden
     ctx.set_reference("TINY", ctx.samples("TINY", "OK")[1]["id"])

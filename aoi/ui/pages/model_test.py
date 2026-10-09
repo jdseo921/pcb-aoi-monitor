@@ -18,16 +18,19 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QProgressBar,
     QSplitter,
+    QTabWidget,
     QVBoxLayout,
     QWidget,
 )
 
 from ... import defects as taxonomy
+from ...core import report as reporting
 from ...core import stats
 from ...core.inspector import InspectionResult, JudgedBy
 from ...core.recipe import scale_digits
 from ...core.services import AppContext
 from ...errors import AoiError, Phrase
+from ...times import to_local
 from .. import theme
 from ..errors import phrase_text
 from ..widgets.busy import BusyOverlay
@@ -92,6 +95,10 @@ class ModelTestPage(Page):
         self.run_board_model: str | None = None  # and the board model they were run for, while shown (#180)
         self.run_judged: JudgedBy | None = None  # and what judged them: AI model, recipe revision, Golden board (#250)
 
+        self.tabs = QTabWidget()  # Run, and History: every stored run, reopened in Run (REQ-TST-005)
+        run_tab = QWidget()
+        run_layout = QVBoxLayout(run_tab)
+        run_layout.setContentsMargins(0, 0, 0, 0)
         bar = QHBoxLayout()
         bar.addWidget(button(self.tr("Select Test Folder…"), slot=self.pick))
         self.btn_run = button(self.tr("Run Test"), "primary", self.run)
@@ -101,13 +108,13 @@ class ModelTestPage(Page):
         self.folder_label = QLabel(self.tr("No folder selected"))
         self.folder_label.setObjectName("muted")
         bar.addWidget(self.folder_label, 1)
-        self.root.addLayout(bar)
+        run_layout.addLayout(bar)
         src = QHBoxLayout()  # a frozen dataset version's locked validation set, or a labelled folder (REQ-TST-001)
         src.addWidget(QLabel(self.tr("Source")))
         self.source = QComboBox()
         self.source.currentIndexChanged.connect(self._source_changed)
         src.addWidget(self.source, 1)
-        self.root.addLayout(src)
+        run_layout.addLayout(src)
 
         tiles = QGridLayout()
         self.tiles = {
@@ -122,18 +129,18 @@ class ModelTestPage(Page):
         }
         for i, t in enumerate(self.tiles.values()):
             tiles.addWidget(t, 0, i)
-        self.root.addLayout(tiles)
+        run_layout.addLayout(tiles)
         self.confusion = QLabel("")
         self.confusion.setObjectName("muted")
-        self.root.addWidget(self.confusion)
+        run_layout.addWidget(self.confusion)
         self.run_note = QLabel("")  # what judged the run and what is in use now, once they differ (#250)
         self.run_note.setObjectName("muted")
         self.run_note.setWordWrap(True)
         self.run_note.hide()
-        self.root.addWidget(self.run_note)
+        run_layout.addWidget(self.run_note)
         self.bar = QProgressBar()
         self.bar.setVisible(False)
-        self.root.addWidget(self.bar)
+        run_layout.addWidget(self.bar)
 
         split = QSplitter(Qt.Orientation.Horizontal)
         self.headers = [
@@ -159,7 +166,214 @@ class ModelTestPage(Page):
         pl.addWidget(self.view, 1)
         split.addWidget(preview)
         split.setSizes([800, 800])
-        self.root.addWidget(split, 1)
+        run_layout.addWidget(split, 1)
+        self.tabs.addTab(run_tab, self.tr("Run"))
+        self.tabs.addTab(self._history_tab(), self.tr("History"))
+        self.tabs.currentChanged.connect(lambda i: self._fill_history() if i == 1 else None)
+        self.root.addWidget(self.tabs, 1)
+
+    def _history_tab(self) -> QWidget:
+        """Every stored run of the board model, newest first: its time, AI model, dataset version or folder, what
+        judged it, missed defects and false calls; Open shows it on Run (REQ-TST-005)."""
+        tab = QWidget()
+        hl = QVBoxLayout(tab)
+        hl.setContentsMargins(0, 0, 0, 0)
+        self.history = make_table(
+            [
+                self.tr("Time"),
+                self.tr("AI model"),
+                self.tr("Dataset or folder"),
+                self.tr("Settings"),
+                self.tr("Missed defects"),
+                self.tr("False calls"),
+            ]
+        )
+        self.history.doubleClicked.connect(lambda _i: self.open_run())
+        self.history_empty = EmptyState(self.history)
+        hl.addWidget(self.history, 1)
+        row = QHBoxLayout()
+        row.addWidget(button(self.tr("Open"), slot=self.open_run))
+        row.addWidget(button(self.tr("Validation Report…"), slot=self.validation_report))
+        row.addStretch(1)
+        hl.addLayout(row)
+        self._runs: list[dict[str, Any]] = []
+        return tab
+
+    def _fill_history(self) -> None:
+        bm = self.board_model
+        self._runs = self.ctx.test_runs(bm) if bm else []
+        names = {d["uuid"]: d["name"] for d in self.ctx.datasets(bm)} if bm else {}
+        rows = []
+        for run in self._runs:
+            source = names.get(run["dataset_uuid"], run["dataset_uuid"]) if run.get("dataset_uuid") else run["folder"]
+            judged = run["judged_by"]
+            settings = self.tr("recipe revision {revision}").format(revision=judged.recipe_rev or 0) if judged else "—"
+            rates = run["metrics"].get("rates") or stats.validation_rates(run["results"])
+            rows.append([
+                to_local(run["time"]), run["model_version"] or "—", source, settings,
+                phrase_text(stats.text(rates["missed_defects"])), phrase_text(stats.text(rates["false_calls"])),
+            ])  # fmt: skip
+        fill_table(self.history, rows)
+        if self._runs:
+            self.history_empty.hide()
+        else:
+            self.history_empty.show_state(self.tr("No runs stored yet"), self.tr("Run Test stores each run here."))
+
+    def open_run(self) -> None:
+        """The run selected on History, shown on Run as it was stored: rows, tiles and previews (REQ-TST-005)."""
+        sel = self.history.selectionModel().selectedRows()
+        if not sel or (bm := self.board_model) is None:
+            return
+        run = self.ctx.test_run(self._runs[sel[0].row()]["uuid"])
+        if run is None:
+            return
+        source = str(run["folder"])
+        self._show((run["metrics"], run["results"], run["judged_by"]), source, bm)
+        self.tabs.setCurrentIndex(0)
+
+    def validation_report(self) -> None:
+        """The customer validation report of the run selected on History (REQ-TST-008): its data read on the pool,
+        then the PDF rendered here and written, whole and audited, by the service layer. A run on a folder, or a board
+        model with no labeller agreement check, is refused with AOI-TST-007."""
+        sel = self.history.selectionModel().selectedRows()
+        if not sel or (bm := self.board_model) is None:
+            return
+        run_uuid = self._runs[sel[0].row()]["uuid"]
+        f, _ = QFileDialog.getSaveFileName(
+            self,
+            self.tr("Validation report"),
+            str(self.ctx.settings.exports_dir / "validation_report.pdf"),
+            self.tr("PDF (*.pdf)"),
+        )
+        if not f:
+            return
+        self.run_in_background(
+            self.ctx.validation_report_data, run_uuid, on_result=lambda data: self._write_validation(f, bm, data)
+        )
+
+    def _write_validation(self, f: str, board_model: str, data: dict[str, Any]) -> None:
+        doc = QTextDocument()
+        doc.setHtml(self._validation_html(data))
+        buf = QBuffer()
+        buf.open(QIODevice.OpenModeFlag.WriteOnly)
+        w = QPdfWriter(buf)
+        margins = QMarginsF(15, 15, 15, 15)
+        w.setPageLayout(QPageLayout(QPageSize(QPageSize.PageSizeId.A4), QPageLayout.Orientation.Portrait, margins))
+        doc.print_(w)
+        del w
+        run = data["run"]
+        try:
+            self.ctx.export_report(f, bytes(buf.data().data()), board_model, run["uuid"], run["model_version"])
+        except AoiError as e:
+            self.error(e)
+            return
+        self.shell.status(self.tr("Validation report saved: {file}").format(file=f))
+
+    def _validation_html(self, data: dict[str, Any]) -> str:
+        """The customer validation report: data, targets agreed before testing beside the results, the locked set,
+        results with counts and bounds, one page per missed defect and false call, the AI model card, known limits and
+        signature lines for the customer and the AI lead (Customers & Launch, "Validation"). English first; each
+        heading carries its Korean draft for native review."""
+        run, ds, split, agree = data["run"], data["dataset"], data["split"] or {}, data["agreement"]
+        e = html.escape
+        out = [f"<h2>{self.tr('Customer validation report / 고객 검증 보고서 (draft)')}</h2>"]
+        top = self.tr("Board model {board_model} · AI model {version} · validation run {run} · {date}")
+        version = run["model_version"] or "-"
+        top = top.format(board_model=run["board_model"], version=version, run=run["uuid"], date=to_local(run["time"]))
+        out.append(f"<p>{e(top)}</p>")
+        out.append(f"<h3>{self.tr('1. Data / 데이터 (draft)')}</h3>")
+        data_line = self.tr(
+            "Dataset version {name} of {customer}, revision {revision}, view {view}, frozen {frozen}; one camera"
+            " set-up."
+        )
+        frozen = to_local(ds["frozen_at"])
+        dataset = {k: ds[k] for k in ("name", "customer", "revision", "view")}
+        out.append(f"<p>{e(data_line.format(**dataset, frozen=frozen))}</p>")
+        counts = "".join(f"<tr><td>{e(k)}</td><td>{v}</td></tr>" for k, v in data["counts"].items())
+        out.append(f"<table border=1 cellpadding=3 cellspacing=0>{counts}</table>")
+        agree_line = self.tr(
+            "Labeller agreement check: OK or NG agree on {ok_ng} of {images} images (target {ok_target} %), defect type"
+            " on {types} of {ng} NG images (target {type_target} %)."
+        )
+        agreed_on = agree_line.format(
+            ok_ng=agree["ok_ng_agree"],
+            images=agree["images"],
+            ok_target=agree["ok_ng_target"],
+            types=agree["type_agree"],
+            ng=agree["both_ng"],
+            type_target=agree["type_target"],
+        )
+        out.append(f"<p>{e(agreed_on)}</p>")
+        out.append(f"<h3>{self.tr('2. Targets agreed before testing / 사전 합의 목표 (draft)')}</h3>")
+        names = {
+            "missed_critical": self.tr("Missed Critical defects"),
+            "false_call_rate": self.tr("False call rate"),
+            "seconds_per_image": self.tr("Time per image, 95th percentile"),
+        }
+        rows = []
+        for tg in data["targets"]:
+            result = tg["result"]
+            if isinstance(result, dict):
+                shown = phrase_text(stats.text(result))
+            elif result is not None:
+                shown = self.tr("{s:.2f} s").format(s=result)
+            else:
+                shown = self.tr("not measured")
+            agreed = f"{tg['agreed']:.0%}" if tg["target"] == "false_call_rate" else str(tg["agreed"])
+            met = self.tr("Met") if tg["met"] else self.tr("Not met")
+            rows.append(f"<tr><td>{names[tg['target']]}</td><td>{e(agreed)}</td><td>{e(shown)}</td><td>{met}</td></tr>")
+        head = (
+            f"<tr><th>{self.tr('Target')}</th><th>{self.tr('Agreed')}</th><th>{self.tr('Result')}</th>"
+            f"<th>{self.tr('Met?')}</th></tr>"
+        )
+        out.append(f"<table border=1 cellpadding=3 cellspacing=0>{head}{''.join(rows)}</table>")
+        out.append(f"<h3>{self.tr('3. Locked validation set / 잠긴 검증 세트 (draft)')}</h3>")
+        locked = to_local(split["locked_at"]) if split.get("locked_at") else "-"
+        set_line = self.tr("Manifest SHA-256 {sha}; split with seed {seed}, locked {at}; never trained on.")
+        out.append(f"<p>{e(set_line.format(sha=ds['manifest_sha256'], seed=split.get('seed', '-'), at=locked))}</p>")
+        out.append(f"<h3>{self.tr('4. Results / 결과 (draft)')}</h3>")
+        rates = data["rates"]
+        labels = {
+            "missed_defects": self.tr("Missed defects"),
+            "false_calls": self.tr("False calls"),
+            "recall": self.tr("Recall"),
+            "precision": self.tr("Precision"),
+            "accuracy": self.tr("Accuracy"),
+        }
+        res = "".join(
+            f"<tr><td>{v}</td><td>{e(phrase_text(stats.text(rates[k])))}</td></tr>" for k, v in labels.items()
+        )
+        out.append(f"<table border=1 cellpadding=3 cellspacing=0>{res}</table>")
+        out.append(self._report_per_type(rates))
+        misses, false_calls = reporting.misses_and_false_calls(run["results"])
+        row_line = self.tr("{image}: labelled {label}, judged {verdict}, AI score {score}")
+        for heading, items in ((self.tr("Missed defect"), misses), (self.tr("False call"), false_calls)):
+            for r in items:
+                verdict = theme.verdict_label(r["ai_result"])
+                line = row_line.format(image=e(Path(r["image"]).name), label=r["gt"], verdict=verdict, score=r["score"])
+                uri = data["images"].get(str(r["image"]))
+                picture = f"<br><img src='{uri}'>" if uri else f"<br>{self.tr('(its overlay is not kept)')}"
+                out.append(f"<div style='page-break-before:always'><h3>{heading}</h3><p>{line}{picture}</p></div>")
+        card_head = self.tr("5. AI model card / AI 모델 카드 (draft)")
+        card = f"<pre>{e(data['card'])}</pre>" if data["card"] else f"<p>{self.tr('No AI model card.')}</p>"
+        out.append(f"<div style='page-break-before:always'><h3>{card_head}</h3>{card}</div>")
+        out.append(f"<h3>{self.tr('6. Known limits / 알려진 한계 (draft)')}</h3><ul>")
+        for limit in (
+            self.tr("Counts on this validation set only: the bounds say how far the true rates may lie."),
+            self.tr("Until sign-in ships at release 1.0, the names in the audit trail are picked, not signed in."),
+            self.tr("Valid for the board model, view, camera set-up and AI model named above only."),
+        ):
+            out.append(f"<li>{e(limit)}</li>")
+        out.append(f"</ul><h3>{self.tr('7. Sign-off / 서명 (draft)')}</h3>")
+        sign = "".join(
+            f"<tr><td>{who}</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>"
+            for who in (self.tr("Customer"), self.tr("AI lead"))
+        )
+        heads = "".join(
+            f"<th>{h}</th>" for h in (self.tr("Role"), self.tr("Name"), self.tr("Date"), self.tr("Signature"))
+        )
+        out.append(f"<table border=1 cellpadding=8 cellspacing=0><tr>{heads}</tr>{sign}</table>")
+        return "".join(out)
 
     def _fill_sources(self) -> None:
         """The board model's frozen versions whose validation set is locked, newest first and picked, then a labelled
@@ -216,13 +430,22 @@ class ModelTestPage(Page):
         def progress(done: int, total: int) -> None:
             report((done, total))  # the worker's emit, bound below before the job starts
 
-        if dataset:  # its locked validation set, labelled as frozen
-            w = Worker(self.ctx.test_dataset, dataset, progress=progress)
-        else:
-            w = Worker(self.ctx.batch_test, bm, folder, progress=progress)
-        report = w.signals.progress.emit  # the job holds this emit, never the worker or its signals (#132)
+        def on_row(row: dict[str, Any]) -> None:  # each board as it is judged: the table grows (REQ-TST-006)
+            report(("row", row))
 
-        def on_progress(a: tuple[int, int]) -> None:
+        if dataset:  # its locked validation set, labelled as frozen
+            w = Worker(self.ctx.test_dataset, dataset, progress=progress, on_row=on_row)
+        else:
+            w = Worker(self.ctx.batch_test, bm, folder, progress=progress, on_row=on_row)
+        report = w.signals.progress.emit  # the job holds this emit, never the worker or its signals (#132)
+        live: list[dict[str, Any]] = []
+
+        def on_progress(a: tuple[Any, ...]) -> None:
+            if a[0] == "row":
+                if bm == self.board_model:  # never under another board model's name (#180)
+                    live.append(a[1])
+                    self._fill_rows(live)
+                return
             self.bar.setMaximum(a[1])
             self.bar.setValue(a[0])
 
@@ -230,6 +453,7 @@ class ModelTestPage(Page):
             self.btn_run.setEnabled(True)
             self.btn_run.setText(self.tr("Run Test Again") if self.rows else self.tr("Run Test"))
             self.bar.setVisible(False)
+            self._fill_history()  # the run just stored heads the list
 
         w.signals.progress.connect(on_progress)
         w.signals.result.connect(lambda out: self._show(out, folder, bm))  # folder and board model go with them
@@ -262,12 +486,16 @@ class ModelTestPage(Page):
         self.confusion.setText(
             counts.format(labelled=m["labelled"], images=m["samples"], tp=m["TP"], fn=m["FN"], fp=m["FP"], tn=m["TN"])
         )
-        rows = [
-            [Path(r["image"]).name, r["gt"], theme.verdict_label(r["ai_result"]), r["score"], self._matches(r)]
-            for r in self.rows
-        ]
-        colors = [theme.NG_COLOR if r["pass_fail"] == "FAIL" else None for r in self.rows]
-        fill_table(self.table, rows, colors, [r["image"] for r in self.rows])
+        self._fill_rows(self.rows)
+
+    def _fill_rows(self, rows: list[dict[str, Any]]) -> None:
+        """The results table: Image, Label, Verdict, AI score and whether the verdict matches the label, a row that
+        differs in red (REQ-TST-003); while a run goes, the rows judged so far (REQ-TST-006)."""
+        self.empty.hide()
+        cells = [[Path(r["image"]).name, r["gt"], theme.verdict_label(r["ai_result"]), r["score"], self._matches(r)]
+                 for r in rows]  # fmt: skip
+        colors = [theme.NG_COLOR if r["pass_fail"] == "FAIL" else None for r in rows]
+        fill_table(self.table, cells, colors, [r["image"] for r in rows])
 
     def _matches(self, r: dict[str, Any]) -> str:
         """Whether the verdict matches the label, translated; a "?" label from before #207 (PASS) reads No label."""
@@ -280,6 +508,15 @@ class ModelTestPage(Page):
             return  # a row is judged under the board model of its run (#180), never the header's after a switch
         path = cell_item(self.table, rows[0].row(), 0).toolTip()
         self._clear_preview()  # the row before never stands beside this one, even when it cannot be inspected (#182)
+        row = next((r for r in self.rows if r["image"] == path), None)
+        if row is not None and row.get("overlay"):  # the overlay stored as it was judged: shown, never judged again
+            self._drop_preview()
+            self.run_in_background(
+                self.ctx.load_image, row["overlay"],
+                on_result=lambda img: self._show_overlay(row, img, bm), busy=self.busy,
+                on_error=lambda e: self.not_inspected(self.preview_verdict, Path(path).name, e, big=False),
+            )  # fmt: skip
+            return
         if (changed := self._judged_now()) is not None:  # never judged by what did not judge its row (#250)
             self._drop_preview()  # nor the row before, still being inspected
             self._refuse_preview(path, changed)
@@ -376,7 +613,15 @@ class ModelTestPage(Page):
         self._note(self._judged_now() if self.rows else None)
 
     def _note(self, changed: dict[str, object] | None) -> None:
-        if changed is not None:
+        if changed is not None and any(r.get("overlay") for r in self.rows):  # each row shows its stored overlay
+            note = self.tr(
+                "These results were judged by {run_model}, recipe revision {run_recipe}, {run_golden} and {run_scale};"
+                " {board_model} now uses {model}, recipe revision {recipe}, {golden} and {scale}. Each row's preview"
+                " shows it as the run judged it; Run Test Again tests the run's source with what is in use now."
+            )
+            shown = {k: phrase_text(v) if isinstance(v, str) else v for k, v in changed.items()}
+            self.run_note.setText(note.format(**shown))
+        elif changed is not None:
             note = self.tr(
                 "These results were judged by {run_model}, recipe revision {run_recipe}, {run_golden} and {run_scale};"
                 " {board_model} now uses {model}, recipe revision {recipe}, {golden} and {scale}. Rows are not"
@@ -385,6 +630,15 @@ class ModelTestPage(Page):
             shown = {k: phrase_text(v) if isinstance(v, str) else v for k, v in changed.items()}  # phrases translated
             self.run_note.setText(note.format(**shown))
         self.run_note.setVisible(changed is not None)
+
+    def _show_overlay(self, row: dict[str, Any], image: Any, board_model: str) -> None:
+        """A row's stored overlay with its verdict, as the run judged it (REQ-TST-003): what changed since judges none
+        of it, so it is never refused; a row of a run no longer shown is dropped."""
+        if board_model != self.run_board_model or board_model != self.board_model or row not in self.rows:
+            return
+        self.preview_verdict.setText(theme.verdict_label(row["ai_result"]))
+        self.preview_verdict.setStyleSheet(theme.verdict_style(row["ai_result"], big=False))
+        self.view.set_image(image)
 
     def _show_preview(self, path: str, res: InspectionResult, board_model: str, run: JudgedBy | None) -> None:
         if board_model != self.run_board_model or board_model != self.board_model:
@@ -405,6 +659,7 @@ class ModelTestPage(Page):
 
     def on_board_model_changed(self, name: str | None) -> None:
         self._fill_sources()
+        self._fill_history()
         if self.run_board_model not in (None, name):  # another board model's run is not shown, previewed or reported
             self._clear_run()  # under this one's name (#180)
 
@@ -426,7 +681,7 @@ class ModelTestPage(Page):
         # so, and the pane drops the row previewed before; a row still selected is refused, as selecting it now would be
         changed = self._judged_now() if self.rows else None
         self._note(changed)
-        if changed is not None:
+        if changed is not None and not any(r.get("overlay") for r in self.rows):  # a stored overlay is never refused
             self._drop_preview()
             self._clear_preview()
             if sel := self.table.selectionModel().selectedRows():
@@ -464,10 +719,27 @@ class ModelTestPage(Page):
             str(self.ctx.settings.exports_dir / "model_test_report.pdf"),
             self.tr("PDF (*.pdf)"),
         )
-        if not f or self.run_board_model is None:
+        if not f or (bm := self.run_board_model) is None:
+            return
+        misses, false_calls = reporting.misses_and_false_calls(self.rows)
+        ask = self.tr(
+            "Export the validation report of {images} images? It shows each of its {misses} missed defects and"
+            " {false_calls} false calls with its overlay, and the AI model card."
+        ).format(images=len(self.rows), misses=len(misses), false_calls=len(false_calls))
+        buttons = QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+        if QMessageBox.question(self, self.tr("Export report"), ask, buttons) != QMessageBox.StandardButton.Yes:
+            return
+        rows = list(self.rows)  # the overlays are read on the pool: no file work on the UI thread (REQ-SET-021)
+        self.run_in_background(
+            self.ctx.report_images, rows, on_result=lambda images: self._write_report(f, bm, rows, images)
+        )
+
+    def _write_report(self, f: str, board_model: str, rows: list[dict[str, Any]], images: dict[str, str]) -> None:
+        """Render the report of `rows` with their overlays and hand it to the service layer to write and audit."""
+        if board_model != self.run_board_model or rows != self.rows:  # another run or board model shown since (#180)
             return
         doc = QTextDocument()
-        doc.setHtml(self._report_html())
+        doc.setHtml(self._report_html(images))
         buf = QBuffer()  # rendered in memory, then written whole or not at all by the service layer (#180)
         buf.open(QIODevice.OpenModeFlag.WriteOnly)
         w = QPdfWriter(buf)
@@ -487,8 +759,9 @@ class ModelTestPage(Page):
             return
         self.shell.status(self.tr("Report saved: {file}").format(file=f))
 
-    def _report_html(self) -> str:
-        """The validation report: every sentence through tr(), the markup and the numbers from the code."""
+    def _report_html(self, images: dict[str, str] | None = None) -> str:
+        """The validation report: every sentence through tr(), the markup and the numbers from the code; `images`, the
+        overlays of its misses and false calls (`AppContext.report_images`), read here when not given."""
         m = self.metrics
         bm = self.run_board_model or ""  # the board model the run was for (#180)
         run = self.rows[0] if self.rows else {}  # each row names the run and the AI model active then (REQ-SET-017)
@@ -523,9 +796,51 @@ class ModelTestPage(Page):
             f"<td>{html.escape(self._matches(r))}</td></tr>"
             for r in self.rows
         )
+        if images is None:
+            images = self.ctx.report_images(self.rows)
         return (
             f"<h2>{title}</h2><p>{head}</p>"
             f"<table border=1 cellpadding=4 cellspacing=0><tr>{tiles}</tr><tr>{values}</tr></table>"
             f"<p>{counts}</p>"
-            f"<table border=1 cellpadding=3 cellspacing=0><tr>{headers}</tr>{rows}</table>"
+            + self._report_per_type(rates)
+            + self._report_misses(images)
+            + f"<table border=1 cellpadding=3 cellspacing=0><tr>{headers}</tr>{rows}</table>"
+            + self._report_card(bm, run.get("model_uuid"))
         )
+
+    def _report_per_type(self, rates: dict[str, Any]) -> str:
+        """Recall per defect type: each type's NG images found of all, with its lower bound (REQ-TST-007)."""
+        per_type = rates.get("recall_per_type") or {}
+        if not per_type:
+            return ""
+        head = f"<tr><th>{self.tr('Defect type')}</th><th>{self.tr('Found')}</th></tr>"
+        body = "".join(
+            f"<tr><td>{html.escape(name)}</td><td>{html.escape(phrase_text(stats.text(r)))}</td></tr>"
+            for name, r in per_type.items()
+        )
+        table = f"<table border=1 cellpadding=3 cellspacing=0>{head}{body}</table>"
+        return f"<h3>{self.tr('Recall per defect type')}</h3>{table}"
+
+    def _report_misses(self, images: dict[str, str]) -> str:
+        """Every missed defect and false call, each with its row and its overlay (Customers & Launch, Validation)."""
+        misses, false_calls = reporting.misses_and_false_calls(self.rows)
+        parts = []
+        for heading, items in ((self.tr("Missed defects"), misses), (self.tr("False calls"), false_calls)):
+            parts.append(f"<h3>{heading}: {len(items)}</h3>")
+            if not items:
+                parts.append(f"<p>{self.tr('None in this run.')}</p>")
+            for r in items:
+                line = self.tr("{image}: labelled {label}, judged {verdict}, AI score {score}").format(
+                    image=html.escape(Path(r["image"]).name), label=r["gt"],
+                    verdict=theme.verdict_label(r["ai_result"]), score=r["score"],
+                )  # fmt: skip
+                uri = images.get(str(r["image"]))
+                picture = f"<br><img src='{uri}'>" if uri else f"<br>{self.tr('(its overlay is not kept)')}"
+                parts.append(f"<p>{line}{picture}</p>")
+        return "".join(parts)
+
+    def _report_card(self, board_model: str, model_uuid: str | None) -> str:
+        """The AI model card of the version that judged the run, or a line saying it has none (REQ-TST-004)."""
+        card = self.ctx.model_card_text(board_model, model_uuid) if board_model else None
+        body = f"<pre>{html.escape(card)}</pre>" if card else f"<p>{self.tr('This AI model has no AI model card.')}</p>"
+        return f"<h3>{self.tr('AI model card')}</h3>{body}"

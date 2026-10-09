@@ -35,13 +35,17 @@ from tools.trainable import trainable
 
 
 def _tested_page(qtbot: QtBot, win: MainWindow, folder: Path) -> ModelTestPage:
-    """The AI Model Test page after Run Test on `folder` under the header's board model."""
+    """The AI Model Test page after Run Test on `folder` under the header's board model, its rows without their stored
+    overlays, as a run stored before S46 holds none: these tests are of the preview that judges such a row again (#250).
+    A row with its overlay shows it and is never judged again (tests/test_model_test_live.py)."""
     win.navigate("AI Model Test")
     page = win.pages["AI Model Test"]
     assert isinstance(page, ModelTestPage)
     page.folder = str(folder)
     page.run()
     qtbot.waitUntil(lambda: bool(page.rows) and page.btn_run.isEnabled(), timeout=60000)
+    for r in page.rows:
+        r.pop("overlay", None)
     return page
 
 
@@ -156,6 +160,7 @@ def test_req_tst_003_a_preview_is_judged_by_what_judged_its_row_or_not_at_all(
             assert {r["model_version"] for r in csv.DictReader(f)} == {"v1.0"}
         _save_as(monkeypatch, tmp_path / "report.pdf")
         page.export_report()
+        qtbot.waitUntil(lambda: page._bg is None, timeout=30000)  # overlays read on the pool
         assert "AI model: v1.0" in page._report_html()
         assert ctx.audit_entries(action="export.report")[0]["after"]["model_version"] == "v1.0"
     run_uuid = page.rows[0]["run_uuid"]  # Run Test Again, as the pane says: a run of what is in use, previewed again
@@ -165,7 +170,9 @@ def test_req_tst_003_a_preview_is_judged_by_what_judged_its_row_or_not_at_all(
     assert page.run_note.isHidden() and page.preview_empty.isHidden() and page.rows[0]["model_version"] == active
     assert page.run_folder == page.folder_label.text() == str(synthetic_dataset / "test") and len(page.rows) == 21
     again = _preview_every_row(qtbot, page)[:3]
-    assert all(s[2] == s[1] and s[3] == "" for s in again) and win.last_inspected is not before, again
+    # the new run keeps each row's overlay: its previews show it as judged, never judged again, so Use Last Inspected
+    # keeps the board before (REQ-TST-003, S46)
+    assert all(s[2] == s[1] and s[3] == "" for s in again) and win.last_inspected is before, again
 
 
 @pytest.mark.parametrize("row", ["same_row", "another_row", "shown_again"])
@@ -506,6 +513,7 @@ def test_req_tst_004_a_run_is_not_shown_under_another_board_model(
     asked: list[object] = []
     monkeypatch.setattr(QFileDialog, "getSaveFileName", staticmethod(lambda *a, **k: asked.append(a) or ("", "")))
     page.export_report()
+    qtbot.waitUntil(lambda: page._bg is None, timeout=30000)  # overlays read on the pool
     assert inspected == [BOARD] and asked == [] and dialogs == []
     assert not page.empty.isHidden() and "OTHER" in page.empty.heading.text()
 
@@ -557,6 +565,7 @@ def test_req_log_004_export_report_is_written_whole_or_not_at_all_and_audited(
     good = tmp_path / "report.pdf"
     _save_as(monkeypatch, good)
     page.export_report()
+    qtbot.waitUntil(lambda: page._bg is None, timeout=30000)  # overlays read on the pool
     entries = audited()
     print("export.report entries after a good export:", len(entries))
     assert good.read_bytes().startswith(b"%PDF") and dialogs == []
@@ -575,6 +584,7 @@ def test_req_log_004_export_report_is_written_whole_or_not_at_all_and_audited(
     win.statusBar().clearMessage()
     _save_as(monkeypatch, blocker / "report.pdf")
     page.export_report()
+    qtbot.waitUntil(lambda: page._bg is None, timeout=30000)  # overlays read on the pool
     print("status after a failed export:", repr(win.statusBar().currentMessage()), "dialogs:", dialogs)
     assert [t for t, _ in dialogs] == ["AOI-LOG-002 Export not written"] and str(blocker) in dialogs[0][1]
     assert win.statusBar().currentMessage() == "" and len(audited()) == 1
@@ -589,6 +599,7 @@ def test_req_log_004_export_report_is_written_whole_or_not_at_all_and_audited(
     monkeypatch.setattr(atomic.os, "fsync", disk_fails)  # the disk fails while the new report is being written
     _save_as(monkeypatch, good)
     page.export_report()
+    qtbot.waitUntil(lambda: page._bg is None, timeout=30000)  # overlays read on the pool
     monkeypatch.setattr(atomic.os, "fsync", fsync)
     print("earlier report after a write that failed:", good.read_bytes()[:40])
     assert good.read_bytes() == earlier and [p.name for p in tmp_path.iterdir() if p.name.endswith(".tmp")] == []
@@ -598,6 +609,7 @@ def test_req_log_004_export_report_is_written_whole_or_not_at_all_and_audited(
     refused = tmp_path / "operator.pdf"
     _save_as(monkeypatch, refused)
     page.export_report()
+    qtbot.waitUntil(lambda: page._bg is None, timeout=30000)  # overlays read on the pool
     assert not refused.exists() and dialogs[-1][0].startswith("AOI-USR-001") and len(audited()) == 1
 
 
