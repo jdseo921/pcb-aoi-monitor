@@ -35,13 +35,17 @@ from tools.trainable import trainable
 
 
 def _tested_page(qtbot: QtBot, win: MainWindow, folder: Path) -> ModelTestPage:
-    """The AI Model Test page after Run Test on `folder` under the header's board model."""
+    """The AI Model Test page after Run Test on `folder` under the header's board model, its rows without their stored
+    overlays, as a run stored before S46 holds none: these tests are of the preview that judges such a row again (#250).
+    A row with its overlay shows it and is never judged again (tests/test_model_test_live.py)."""
     win.navigate("AI Model Test")
     page = win.pages["AI Model Test"]
     assert isinstance(page, ModelTestPage)
     page.folder = str(folder)
     page.run()
     qtbot.waitUntil(lambda: bool(page.rows) and page.btn_run.isEnabled(), timeout=60000)
+    for r in page.rows:
+        r.pop("overlay", None)
     return page
 
 
@@ -165,7 +169,9 @@ def test_req_tst_003_a_preview_is_judged_by_what_judged_its_row_or_not_at_all(
     assert page.run_note.isHidden() and page.preview_empty.isHidden() and page.rows[0]["model_version"] == active
     assert page.run_folder == page.folder_label.text() == str(synthetic_dataset / "test") and len(page.rows) == 21
     again = _preview_every_row(qtbot, page)[:3]
-    assert all(s[2] == s[1] and s[3] == "" for s in again) and win.last_inspected is not before, again
+    # the new run keeps each row's overlay: its previews show it as judged, never judged again, so Use Last Inspected
+    # keeps the board before (REQ-TST-003, S46)
+    assert all(s[2] == s[1] and s[3] == "" for s in again) and win.last_inspected is before, again
 
 
 @pytest.mark.parametrize("row", ["same_row", "another_row", "shown_again"])
