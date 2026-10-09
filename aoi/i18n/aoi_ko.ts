@@ -27,7 +27,7 @@
 <context>
     <name>CalibrationSheet</name>
     <message>
-        <location filename="../ui/widgets/scale.py" line="+90"/>
+        <location filename="../ui/widgets/scale.py" line="+117"/>
         <source>Calibrate Scale</source>
         <translation type="unfinished"></translation>
     </message>
@@ -146,13 +146,13 @@
     </message>
     <message>
         <location line="+3"/>
-        <location line="+96"/>
-        <location line="+520"/>
+        <location line="+97"/>
+        <location line="+533"/>
         <source>Golden board</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-615"/>
+        <location line="-629"/>
         <source>AI model</source>
         <translation type="unfinished"></translation>
     </message>
@@ -187,7 +187,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+65"/>
+        <location line="+66"/>
         <source>Test Image…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -213,12 +213,12 @@
     </message>
     <message>
         <location line="+15"/>
-        <location line="+844"/>
+        <location line="+857"/>
         <source>Test board</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-838"/>
+        <location line="-851"/>
         <source>Inspecting…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -268,7 +268,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+57"/>
+        <location line="+58"/>
         <source>Reason (required)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -283,7 +283,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+171"/>
+        <location line="+183"/>
         <source>Would be: {verdict}</source>
         <translation type="unfinished"></translation>
     </message>
@@ -339,7 +339,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-917"/>
+        <location line="-931"/>
         <source>AI score threshold</source>
         <translation type="unfinished"></translation>
     </message>
@@ -364,7 +364,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+166"/>
+        <location line="+168"/>
         <source>Re-evaluate</source>
         <translation type="unfinished"></translation>
     </message>
@@ -391,7 +391,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+172"/>
+        <location line="+184"/>
         <source>Test board: {file}</source>
         <translation type="unfinished"></translation>
     </message>
@@ -527,7 +527,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+99"/>
+        <location line="+100"/>
         <source>Inspect a board on Inspection, or pick a test image.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -540,7 +540,7 @@
 <context>
     <name>DefectSizeField</name>
     <message>
-        <location filename="../ui/widgets/scale.py" line="-86"/>
+        <location filename="../ui/widgets/scale.py" line="-100"/>
         <source>Minimum defect area (px)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -550,8 +550,23 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+25"/>
+        <location line="+28"/>
         <source>= {px:.1f} px</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+0"/>
+        <source>= {px:.1f} px ✓</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>{code} {title}: raise it to {least} or more.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>{code} {title}: {action}</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -603,7 +618,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+91"/>
+        <location line="+94"/>
         <source>it cannot be read ({code} {title})</source>
         <translation type="unfinished"></translation>
     </message>
@@ -713,7 +728,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1091"/>
+        <location line="-1094"/>
         <source>there is no board model of that name</source>
         <translation type="unfinished"></translation>
     </message>
@@ -723,7 +738,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+697"/>
+        <location line="+700"/>
         <source>Changing settings</source>
         <translation type="unfinished"></translation>
     </message>
@@ -765,7 +780,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/compare.py" line="-223"/>
+        <location filename="../ui/pages/compare.py" line="-224"/>
         <source>Changing recipes</source>
         <translation type="unfinished"></translation>
     </message>
@@ -775,7 +790,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+363"/>
+        <location line="+364"/>
         <source>Height</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1407,6 +1422,21 @@
     </message>
     <message>
         <location line="+14"/>
+        <source>Minimum defect size under 4 px</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>The minimum defect size, {size}, spans {px:.1f} px in the board images: under 4 px, a defect is not told from image noise.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>Raise it to {least} or more, or use images of a higher resolution. The recipe saves as it is; its audit entry keeps this code.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+8"/>
         <source>Scale not set</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1741,7 +1771,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-672"/>
+        <location line="-686"/>
         <source>Board judged NG</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1801,7 +1831,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+46"/>
+        <location line="+60"/>
         <source>The {size} of board model {board_model} cannot be {value} mm: a size in mm is a number above 0 and at most {most}, and an ROI&apos;s box is four of them, its x and y 0 or more.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1993,6 +2023,16 @@
     <message>
         <location line="+1"/>
         <source>box of ROI {roi}</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>{mm:.2f} mm</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>{area} px of area</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -3058,7 +3098,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/base.py" line="+129"/>
+        <location filename="../ui/pages/base.py" line="+132"/>
         <source>No board model yet</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3148,7 +3188,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/compare.py" line="-743"/>
+        <location filename="../ui/pages/compare.py" line="-757"/>
         <source>Compare</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3203,7 +3243,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/recipe_editor.py" line="-350"/>
+        <location filename="../ui/pages/recipe_editor.py" line="-351"/>
         <source>Recipe Editor</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3274,12 +3314,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+120"/>
+        <location line="+121"/>
         <source>AI score</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-107"/>
+        <location line="-108"/>
         <source>Selected ROI</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3290,7 +3330,7 @@
     </message>
     <message>
         <location line="+1"/>
-        <location line="+97"/>
+        <location line="+98"/>
         <source>Name</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3320,7 +3360,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-94"/>
+        <location line="-95"/>
         <source>ROI type</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3385,7 +3425,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+2"/>
+        <location line="+3"/>
         <source>Similarity minimum (SSIM)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3520,7 +3560,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+9"/>
+        <location line="+10"/>
         <source>Image to try the recipe on</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3794,7 +3834,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/services.py" line="-1268"/>
+        <location filename="../core/services.py" line="-1271"/>
         <source>Aligning {count} images to the reference board</source>
         <translation type="unfinished"></translation>
     </message>

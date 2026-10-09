@@ -25,6 +25,7 @@ the pointer) and the month list; the calendar's previous and next month arrows, 
 from __future__ import annotations
 
 import re
+import shutil
 import sys
 from collections import Counter
 from collections.abc import Iterator
@@ -79,6 +80,7 @@ from PySide6.QtWidgets import (
 )
 from pytestqt.qtbot import QtBot
 
+from aoi.config import Settings
 from aoi.core.services import AppContext
 from aoi.ui import theme
 from aoi.ui.main_window import MainWindow
@@ -558,6 +560,73 @@ def test_req_set_004_sizes_and_contrast_on_every_page(
     # (a field's menu per page and role with a field: Compare's are in Try other thresholds, hidden for an Operator)
     assert all(seen[k] >= n for k, n in enough.items()), seen
     assert not findings, f"{len(findings)} findings:\n" + "\n".join(sorted(set(findings)))
+
+
+def test_req_insp_014_compare_notice_costs_the_decision_table_no_row(
+    screens: tuple[AppContext, Path], qtbot: QtBot, qapp: QApplication, tmp_path: Path
+) -> None:
+    """AOI-RCP-007 on Compare (here a minimum defect area under 13 px, without a scale) is one line in amber at the top
+    of the "why" box, which keeps its height, so at 1920 x 1080 the decision table keeps its height and shows as many
+    check rows whole as without the notice; S29's size field is as tall as Pixel difference's spin box, the kind of
+    field it replaced, so the table shows as many rows as before S29, with the notice or without (S29 review): six of
+    the seven with the approved screenshots' font (DejaVu Sans, on Linux) and five with Windows' taller one (Windows CI;
+    WenQuanYi Zen Hei at 15 pt, as tall, gives five on Linux before S29 as after). Each widget and target on the page
+    passes the walk's checks (the lists and the field's menu the walk above opens are windows of their own, outside the
+    page); with the notice gone, the box says nothing of it. The box follows the notice whatever came before: a recipe
+    saved under 4 px and another board model chosen and back before Compare is first shown, then the notice hidden and
+    shown again. It runs on a copy of the module's workspace: it saves a recipe and a board model there, and closing its
+    window closes that copy's context."""
+    shared, dataset = screens
+    shutil.copytree(shared.settings.root, tmp_path / "workspace")
+    ctx = AppContext(Settings(workspace=str(tmp_path / "workspace"), device="cpu"))
+    ctx.set_user("engineer")
+    _, small = ctx.recipe(render_screens.BOARD_MODEL)
+    small.min_defect_area = 12  # under 4 px: AOI-RCP-007 as the form is filled
+    ctx.save_recipe(small)
+    ctx.ensure_board_model("ZZZ")
+    ctx.settings.last_page = "Home"
+    findings: list[str] = []
+    seen: Counter = Counter()
+    with render_screens.pinned_rendering(qapp, render_screens.TEST_FONT if LINUX else ""):
+        win = MainWindow(ctx)
+        qtbot.addWidget(win)
+        win.resize(1920, 1080)
+        win.show()
+        qtbot.waitExposed(win)
+        win.set_user("engineer")
+        page = win.pages["Compare"]
+        assert win.stack.currentWidget() is not page
+        for name in ("ZZZ", render_screens.BOARD_MODEL):  # before Compare is first shown (review round 2)
+            win._on_board_model(name)
+        assert win.navigate("Compare")
+        render_screens.prepare(win, "Compare", dataset)
+        notice, table = page.min_size.notice, page.metrics
+
+        def whole(state: str, shown: bool) -> tuple[int, int, int]:
+            """The check rows shown whole once the layouts settle (each asks the one above it by a posted event), and
+            the heights of the table and the "why" box."""
+            for _ in range(10):
+                QApplication.processEvents()
+            said = notice.text() != "" and notice.text() in page.why.toPlainText()
+            assert said == shown and page.why.maximumHeight() == theme.WHY_H, state
+            rows = [table.visualItemRect(table.item(r, 0)) for r in range(table.rowCount())]
+            assert len(rows) >= 7, (state, rows)
+            return sum(table.viewport().rect().contains(r) for r in rows), table.height(), page.why.height()
+
+        first = whole("a recipe under 4 px, and a board model round trip before Compare was shown", True)
+        page.min_size.area.setValue(40)  # the notice gone
+        gone = whole("the notice gone", False)
+        page.min_size.area.setValue(12)
+        assert first == whole("the notice hidden and shown again", True) == gone, (first, gone)
+        assert page.min_size.height() == page.diff_thr.height(), (page.min_size.height(), page.diff_thr.height())
+        assert gone[0] >= (6 if LINUX else 5), gone
+        shot = _pixels(win.grab().toImage())
+        for w in win.findChildren(QWidget):
+            if w.isVisible() and w.width() > 0:
+                findings += _check_widget("Compare with AOI-RCP-007", win, shot, w, seen)
+        findings += _check_targets("Compare with AOI-RCP-007", win, "Compare", seen)  # as for every page (#240)
+        win.close()
+    assert seen["contrast"] > 50 and not findings, "\n".join(sorted(set(findings)))
 
 
 def test_req_set_004_theme_token_pairs_read() -> None:

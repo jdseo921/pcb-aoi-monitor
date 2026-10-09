@@ -89,6 +89,15 @@ board it was measured on. Setting the scale again moves a size held in mm to its
 still in px stays as it is, and Inspection judges its next board at it (a run in progress says so with AOI-INSP-013
 while its recipe holds a size in mm).
 
+**Smallest defect.** A minimum defect size that spans under 4 px in the board images is too small to tell from
+image noise: AOI-RCP-007 shows in amber, on Thresholds under the field with what to do, and on Compare in one line
+with the least size, at the top of the "why" box while Try other thresholds shows (REQ-INSP-014). At 4 px or more the
+px beside the size carry a ✓. The recipe saves all the same, and the audit entry of its revision keeps the code. After
+Set Scale, the status bar says AOI-RCP-007 too while the size spans under 4 px at the new scale, as a size held in mm
+can at a smaller scale. When the window is too short for every field of the Thresholds tab, as on a 1600 × 900 screen
+with this notice and the note under the AI score threshold shown, the tab scrolls: use the scroll bar at its right,
+the mouse wheel, or Tab, which brings each field into view.
+
 (to be written: creating a board model in full)
 
 ## 3. Samples, labels and datasets

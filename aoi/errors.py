@@ -537,6 +537,20 @@ CODES: dict[str, ErrorCode] = {
             ),
         ),
         ErrorCode(
+            "AOI-RCP-007",
+            QT_TRANSLATE_NOOP("Errors", "Minimum defect size under 4 px"),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "The minimum defect size, {size}, spans {px:.1f} px in the board images: under 4 px, a defect is not"
+                " told from image noise.",
+            ),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Raise it to {least} or more, or use images of a higher resolution. The recipe saves as it is; its"
+                " audit entry keeps this code.",
+            ),
+        ),
+        ErrorCode(
             "AOI-RCP-008",
             QT_TRANSLATE_NOOP("Errors", "Scale not set"),
             QT_TRANSLATE_NOOP("Errors", "The scale of board model {board_model} was not set: {reason}."),

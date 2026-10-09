@@ -39,7 +39,7 @@ from ..widgets.busy import BusyOverlay
 from ..widgets.empty_state import EmptyState
 from ..widgets.image_view import ImageView
 from ..widgets.scale import CalibrationSheet, DefectSizeField
-from .base import QT_TRANSLATE_NOOP, Page, button, fill_table, make_table
+from .base import QT_TRANSLATE_NOOP, Page, button, fill_table, make_table, scrolled
 
 if TYPE_CHECKING:
     from ..main_window import MainWindow
@@ -189,12 +189,13 @@ class RecipeEditorPage(Page):
             (self.use_cmp, None),
             (self.diff, self.tr("Pixel difference (0-255)")),
             (self.min_size, self.min_size.label),
+            (self.min_size.notice, None),
             (self.ssim, self.tr("Similarity minimum (SSIM)")),
             (self.chg, self.tr("Maximum changed area %")),
             (self.maxreg, self.tr("Allowed difference regions")),
         ):
             tf.addRow(label, w) if label else tf.addRow(w)
-        tabs.addTab(thr_tab, self.tr("Thresholds"))
+        tabs.addTab(scrolled(thr_tab), self.tr("Thresholds"))  # scrolls where the window is too short for its rows
 
         # Mandatory defect set tab (classification table §4)
         mand = QWidget()
@@ -480,7 +481,7 @@ class RecipeEditorPage(Page):
             self.held_badge.setText(self._with_action(held))
 
     def _with_action(self, notice: AoiError) -> str:
-        """A notice's code, title and what to do, in one line (AOI-RCP-009 under the scale; S29 review)."""
+        """A notice's code, title and what to do, in one line, under the scale or in the status bar (S29 review)."""
         return self.tr("{code} {title}: {action}").format(
             code=notice.code, title=phrase_text(notice.title), action=phrase_text(notice.action)
         )
@@ -541,7 +542,8 @@ class RecipeEditorPage(Page):
         done = self.tr("Scale of {board_model} set: {scale:.2f} px/mm.").format(board_model=bm, scale=scale)
         held = self.held_in_px()  # sizes still held in px: AOI-RCP-009 and what to do, as under the scale (S29 review)
         then = self.tr("Sizes are shown in mm.") if held is None else self._with_action(held)
-        self.shell.status(" ".join([done, then]))
+        small = self.recipe.size_notice(scale)  # a size held in mm may span under 4 px now: AOI-RCP-007 (S29 review)
+        self.shell.status(" ".join([done, *([] if small is None else [self._with_action(small)]), then]))
 
     # --- actions ----------------------------------------------------------------
     def test_run(self) -> None:

@@ -4,6 +4,7 @@ share, an area in px without a scale and a size in mm with one, and the Recipe E
 from __future__ import annotations
 
 import math
+from typing import cast
 
 from PySide6.QtCore import QPointF, Qt, Signal
 from PySide6.QtGui import QAction, QKeySequence
@@ -19,21 +20,33 @@ from PySide6.QtWidgets import (
 )
 
 from ...core.recipe import Recipe, disc_area, disc_width
+from ..errors import phrase_text
 
 
 class DefectSizeField(QWidget):
     """A recipe's minimum defect size: without a scale its area in px, as before S29; with one, its width in mm with the
-    px it spans beside it (the sketch's "0.80 mm = 38 px"). `label` is its form row's label, which names the unit."""
+    px it spans beside it (the sketch's "0.80 mm = 38 px ✓"). `label` is its form row's label, which names the unit.
+    `notice` holds AOI-RCP-007 under 4 px (REQ-INSP-014) with what to do, or, when `compact`, in one line and hidden,
+    for Compare's "why" box, as Compare's panel has no row to give it at 1600 x 900 (S29 review)."""
 
-    def __init__(self) -> None:
+    noticeChanged = Signal(bool)  # AOI-RCP-007's text set (True) or gone (False)
+
+    def __init__(self, compact: bool = False) -> None:
         super().__init__()
         self.px_per_mm: float | None = None
+        self.compact = compact
         self._own: tuple[int, float | None] = (40, None)  # the area and mm of the recipe show_recipe() put in the field
         self._shown = 0.0  # as this many mm: while the field shows them, it gives the recipe's own size back
         self.label, self.px = QLabel(), QLabel()
         self.px.setObjectName("muted")
+        self.notice = QLabel(self)  # AOI-RCP-007 in amber while the size spans under 4 px: a page puts it on a form
+        # row of its own, under the field's, as wide as the form; in view, as a tooltip is out of reach by touch
+        self.notice.setObjectName("badge")
+        self.notice.setWordWrap(True)
+        self.notice.hide()
         self.area = QSpinBox()
         self.area.setRange(1, 100000)
+        self.area.valueChanged.connect(self._follow)
         self.mm = QDoubleSpinBox()
         self.mm.setRange(0.01, 1000)
         self.mm.setSingleStep(0.05)
@@ -74,9 +87,23 @@ class DefectSizeField(QWidget):
         return (area if mm is None else disc_area(mm * (self.px_per_mm or 1.0))), mm
 
     def _follow(self) -> None:
-        if (s := self.px_per_mm) is not None:  # the px the engine applies, not those of the 0.01 mm shown
-            area, mm = self._size()
-            self.px.setText(self.tr("= {px:.1f} px").format(px=disc_width(area) if mm is None else mm * s))
+        """The px beside the size and the notice, from the size the engine applies, not from the 0.01 mm shown."""
+        s = self.px_per_mm
+        area, mm = (self.area.value(), None) if s is None else self._size()
+        notice = Recipe(board_model="", min_defect_area=area, min_defect_mm=mm).size_notice(s)
+        if s is not None:
+            px = self.tr("= {px:.1f} px ✓") if notice is None else self.tr("= {px:.1f} px")  # ✓: 4 px or more
+            self.px.setText(px.format(px=disc_width(area) if mm is None else mm * s))
+        text, said = "", {} if notice is None else {"code": notice.code, "title": phrase_text(notice.title)}
+        if notice is not None and self.compact:  # one line, so that it costs Compare's decision table no row
+            least = phrase_text(cast(str, notice.params["least"]))
+            text = self.tr("{code} {title}: raise it to {least} or more.").format(least=least, **said)
+        elif notice is not None:  # its title for what happened, as AOI-RCP-009's under the scale, so that it fits
+            text = self.tr("{code} {title}: {action}").format(action=phrase_text(notice.action), **said)  # 1600 x 900
+        if text != self.notice.text():
+            self.notice.setText(text)
+            self.notice.setVisible(bool(text) and not self.compact)
+            self.noticeChanged.emit(bool(text))
 
 
 class CalibrationSheet(QGroupBox):

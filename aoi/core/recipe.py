@@ -13,6 +13,9 @@ ROI_TYPES = ["Presence", "Polarity", "Solder Bridge", "Height", "Anomaly"]
 MAX_MM = 10000  # the largest size or place in mm a recipe holds, 10 m: past any board (AOI-RCP-011, S29 review)
 MIN_SIZE = QT_TRANSLATE_NOOP("Errors", "minimum defect size")  # what AOI-RCP-011 names
 ROI_BOX = QT_TRANSLATE_NOOP("Errors", "box of ROI {roi}")
+RESOLVED_PX = 4  # the smallest defect width, in px, told from image noise (REQ-INSP-014, the resolution test)
+IN_MM = QT_TRANSLATE_NOOP("Errors", "{mm:.2f} mm")  # AOI-RCP-007's sizes, with a scale or without one
+IN_AREA = QT_TRANSLATE_NOOP("Errors", "{area} px of area")
 
 # Defect name reported when a region fails inside an ROI of this type.
 ROI_DEFECT = {
@@ -122,6 +125,20 @@ class Recipe:
     def sized_in_mm(self) -> bool:
         """Whether the recipe holds a size in mm, its minimum defect size or an enabled ROI's box: one a scale sizes."""
         return self.min_defect_mm is not None or any(roi.mm is not None and roi.enabled for roi in self.rois)
+
+    def size_notice(self, px_per_mm: float | None) -> AoiError | None:
+        """AOI-RCP-007 when the minimum defect size spans under RESOLVED_PX px at `px_per_mm`, as `in_px` applies it
+        (REQ-INSP-014), with the size and the least size to give in mm at a scale, as an area without one; else None."""
+        mm = self.min_defect_mm if px_per_mm else None
+        width = mm * px_per_mm if mm is not None and px_per_mm else disc_width(self.min_defect_area)
+        if width >= RESOLVED_PX - 1e-9:
+            return None
+        if px_per_mm:
+            least_mm = math.ceil(RESOLVED_PX / px_per_mm * 100) / 100  # rounded up, so that it spans 4 px or more
+            size, least = IN_MM.fill(mm=width / px_per_mm), IN_MM.fill(mm=least_mm)
+        else:
+            size, least = IN_AREA.fill(area=self.min_defect_area), IN_AREA.fill(area=disc_area(RESOLVED_PX))
+        return AoiError("AOI-RCP-007", size=size, px=width, least=least)
 
     @classmethod
     def from_dict(cls, d: dict[str, Any]) -> Recipe:
