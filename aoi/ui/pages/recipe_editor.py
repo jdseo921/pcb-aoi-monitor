@@ -6,7 +6,7 @@ import copy
 from typing import TYPE_CHECKING
 
 import numpy as np
-from PySide6.QtCore import QRectF, Qt
+from PySide6.QtCore import QPointF, QRectF, Qt
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -38,7 +38,7 @@ from ..errors import phrase_text
 from ..widgets.busy import BusyOverlay
 from ..widgets.empty_state import EmptyState
 from ..widgets.image_view import ImageView
-from ..widgets.scale import DefectSizeField
+from ..widgets.scale import CalibrationSheet, DefectSizeField
 from .base import QT_TRANSLATE_NOOP, Page, button, fill_table, make_table
 
 if TYPE_CHECKING:
@@ -51,6 +51,7 @@ ROI_TYPE_NAMES = {  # the recipe stores the English type (ROI_TYPES); the editor
     "Height": QT_TRANSLATE_NOOP("RecipeEditorPage", "Height"),
     "Anomaly": QT_TRANSLATE_NOOP("RecipeEditorPage", "Anomaly"),
 }
+REPLACED = QT_TRANSLATE_NOOP("Errors", "its Golden board was replaced after the points were picked on it")
 
 
 def _opt_spin(maxv: float = 1e4) -> QDoubleSpinBox:
@@ -95,7 +96,8 @@ class RecipeEditorPage(Page):
         self.scale_text, self.scale_badge = QLabel(), QLabel()  # the scale, or AOI-RCP-005 in amber (Q21)
         self.scale_text.setObjectName("muted")
         self.scale_badge.setObjectName("badge")
-        for part in (self.scale_text, self.scale_badge):
+        self.calibrate_btn = button(self.tr("Calibrate Scale…"), slot=self.calibrate)
+        for part in (self.scale_text, self.scale_badge, self.calibrate_btn):
             scale_row.addWidget(part)
         scale_row.addStretch(1)
         ll.addLayout(scale_row)
@@ -106,9 +108,17 @@ class RecipeEditorPage(Page):
         ll.addWidget(self.held_badge)
         self.scale_text.hide()  # until load() finds a board model
         self.scale_badge.hide()
+        self.calibrate_btn.setEnabled(False)
+        self.sheet = CalibrationSheet()  # inline, under the scale: no dialog over the page
+        self.sheet_user = ""  # who opened it: another user signed in closes it, with the points picked
+        self.sheet.hide()
+        self.sheet.submitted.connect(self.set_scale)
+        self.sheet.cancelled.connect(self._close_sheet)
+        ll.addWidget(self.sheet)
         self.view = ImageView(placeholder="")
         self.view_empty = EmptyState(self.view)
         self.view.roiDrawn.connect(self.add_roi)
+        self.view.pointPicked.connect(self._pick)
         self.busy = BusyOverlay(self.view, self.tr("Trying the recipe…"))
         ll.addWidget(self.view, 1)
         split.addWidget(left)
@@ -260,6 +270,9 @@ class RecipeEditorPage(Page):
     def load(self) -> None:
         self.roi_table.clearSelection()  # row i of the recipe before is not ROI i of this one: the form empties (#173)
         if not self.board_model:
+            self.calibrate_btn.setEnabled(False)  # no Golden board to click on, nor to take the focus back
+            if not self.sheet.isHidden():  # no Golden board to pick points on: Draw ROI and panning come back
+                self._close_sheet()
             self.view_empty.show_state(*self.no_board_model())
             self.show_calibrated(self.ai_thr, None)  # nothing to name, never the board model before's value (review)
             self.scale_text.hide()  # no board model, so no scale and no AOI-RCP-005 to show
@@ -274,6 +287,7 @@ class RecipeEditorPage(Page):
             self.error(e)
         self.recipe = r = r.in_px(self.px_per_mm)  # its sizes in mm as the engine applies them, in px
         self._read_golden_board()
+        self._close_sheet()
         self.use_ai.setChecked(r.use_ai)
         self.use_cmp.setChecked(r.use_compare)
         self.show_calibrated(self.ai_thr, self.board_model)
@@ -314,6 +328,7 @@ class RecipeEditorPage(Page):
             self.view_empty.show_state(heading, *step)
         else:
             self.view_empty.hide()
+        self.calibrate_btn.setEnabled(self.ref is not None)  # Calibrate Scale… is clicked on the Golden board
 
     def _refresh_rois(self) -> None:
         r = self.edited_recipe
@@ -391,6 +406,7 @@ class RecipeEditorPage(Page):
         for j, r in enumerate(rois):
             color = theme.ROI_SELECTED if j == i else theme.ROI_COLOR
             self.view.add_box(r.x, r.y, r.w, r.h, color, f"{r.name} [{self._type_text(r.type)}]")
+        self.view.add_measure(self.sheet.points)  # the points picked stay in view (S29 review)
 
     def apply_roi(self) -> None:
         i = self._sel_index()
@@ -469,6 +485,64 @@ class RecipeEditorPage(Page):
             code=notice.code, title=phrase_text(notice.title), action=phrase_text(notice.action)
         )
 
+    def calibrate(self) -> None:
+        """Calibrate Scale…: the inline sheet opens, and clicks on the Golden board pick its points; a Try running or
+        shown, of another board, goes (S29 review)."""
+        self._drop_try()
+        self.view.set_image(self.ref, keep_view=True)
+        self.draw_btn.setChecked(False)
+        self.draw_btn.setEnabled(False)
+        self.sheet_user = self.ctx.user
+        self.sheet.start()
+        self.sheet.show()
+        self.view.addAction(self.sheet.esc)  # Esc on the Golden board too, while it picks points (S29 review)
+        self.view.set_draw_mode(True, pick=True)
+        self._draw_rois()
+
+    def _pick(self, p: QPointF) -> None:
+        self.sheet.add_point(p)
+        self._draw_rois()
+
+    def _close_sheet(self) -> None:
+        """The sheet goes with its points; Draw ROI and panning come back. The focus, if in the sheet, goes back to
+        Calibrate Scale…, or to the image view while that is off, where Space and the arrow keys write nothing:
+        decided here, not left to the focus chain."""
+        held = self.sheet.isAncestorOf(self.window().focusWidget())  # read before the sheet hides and Qt moves it
+        self.sheet.hide()
+        self.sheet.points = []
+        self.view.removeAction(self.sheet.esc)
+        self.draw_btn.setEnabled(True)
+        self.view.set_draw_mode(self.draw_btn.isChecked())
+        self._draw_rois()
+        if held and self.isVisible():
+            back = self.calibrate_btn if self.calibrate_btn.isEnabled() else self.view  # off: no Golden board
+            back.setFocus(Qt.FocusReason.OtherFocusReason)
+
+    def set_scale(self, length_px: float, distance_mm: float) -> None:
+        """Set Scale: store the board model's scale (audited), then show the recipe being edited at it, as the engine
+        will apply it: a size held in mm, saved so or typed, moves to its px at the new scale, and a size still in px
+        stays as it is, so a recipe in px judges as before. The revision as loaded moves so too, so only an edit counts
+        as an unsaved change. The status bar names the scale and, while the revision holds sizes in px, AOI-RCP-009.
+        A Golden board replaced since the points were picked on it sets nothing, said with AOI-RCP-008 (S29 review)."""
+        if (bm := self.checked_board_model()) is None:
+            return
+        if self.golden_board_stamp() != self.golden_seen:
+            self._read_golden_board()
+            self._close_sheet()
+            self.error(AoiError("AOI-RCP-008", board_model=bm, reason=REPLACED))
+            return
+        scale = self.ctx.set_scale(bm, length_px, distance_mm)
+        self.recipe = self._collect().in_px(scale)
+        self._loaded = Recipe.from_dict(copy.deepcopy(self._loaded)).in_px(scale).to_dict()  # as load() shows it now
+        self.px_per_mm = scale
+        self._close_sheet()
+        self.min_size.show_recipe(self.recipe, scale)
+        self._refresh_rois()
+        done = self.tr("Scale of {board_model} set: {scale:.2f} px/mm.").format(board_model=bm, scale=scale)
+        held = self.held_in_px()  # sizes still held in px: AOI-RCP-009 and what to do, as under the scale (S29 review)
+        then = self.tr("Sizes are shown in mm.") if held is None else self._with_action(held)
+        self.shell.status(" ".join([done, then]))
+
     # --- actions ----------------------------------------------------------------
     def test_run(self) -> None:
         if not self.need_board_model():
@@ -485,6 +559,8 @@ class RecipeEditorPage(Page):
         if (bm := self.checked_board_model()) is None:
             return
         recipe = copy.deepcopy(self._collect())  # the user may keep editing while the test runs
+        if not self.sheet.isHidden():  # the Try shows another board: the points picked go with the sheet (S29 review)
+            self._close_sheet()
         self.run_in_background(self._inspect_with, bm, path, recipe, on_result=self._show_test, busy=self.busy)
 
     def _inspect_with(self, board_model: str, path: str, recipe: Recipe) -> InspectionResult:
@@ -554,6 +630,7 @@ class RecipeEditorPage(Page):
             # spec: yellow = active (being edited), green = saved
             color = theme.ROI_SELECTED if i == sel else theme.ROI_COLOR if x.enabled else theme.ROI_DISABLED
             self.view.add_box(x.x, x.y, x.w, x.h, color, f"{x.name} [{self._type_text(x.type)}]")
+        self.view.add_measure(self.sheet.points)  # none while the sheet is closed
 
     def on_board_model_changed(self, name: str | None) -> None:
         self._drop_try()
@@ -563,10 +640,12 @@ class RecipeEditorPage(Page):
         if self.recipe is None or self.recipe.board_model != self.board_model:
             self.load()
             return
+        if not self.sheet.isHidden() and self.sheet_user != self.ctx.user:
+            self._close_sheet()  # the points picked are another user's: not theirs to set (S29 review)
         if self.golden_board_stamp() != self.golden_seen:  # Set Reference, training, or the file put back, replaced
             self._drop_try()  # or gone since (#176 review): a Try was judged against the Golden board before (#173)
             self._read_golden_board()
-            self._draw_rois()
+            self._close_sheet()  # and points picked on the Golden board before go with it (S29 review)
         else:
             self._show_golden_board()  # the role may have changed since load() built it
         if self.board_model and (latest := self.ctx.recipe(self.board_model)[0]) != self.rev:

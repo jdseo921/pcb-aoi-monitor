@@ -532,7 +532,8 @@ CODES: dict[str, ErrorCode] = {
             ),
             QT_TRANSLATE_NOOP(
                 "Errors",
-                "To give them in mm, set the board model's scale from a known distance on its Golden board.",
+                "To give them in mm, press Calibrate Scale…, click two points on the Golden board a known distance"
+                " apart, enter that distance in mm and press Set Scale.",
             ),
         ),
         ErrorCode(

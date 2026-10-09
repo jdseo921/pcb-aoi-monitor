@@ -64,6 +64,7 @@ BANNER_H = 90  # the verdict banner and a metric tile
 WHY_MIN_H = 60  # Compare's "why" box gives way to two lines before a row of Try other thresholds is squeezed
 NAV_W, HEADER_H, FIELD_W, CARD_W = 250, 64, 240, 720
 IMAGE_MIN_W, IMAGE_MIN_H, PROGRESS_W = 320, 240, 360
+MARK_D = 12  # a point picked on an image (Calibrate Scale…): a ring this many px across at every zoom
 SPACE, SPACE_S = 14, 8  # between blocks; inside a block
 RADIUS, RADIUS_L = 6, 10
 MARK_W = 6  # the verdict-colour bar beside a verdict said next to a control, such as Compare's "Would be"

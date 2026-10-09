@@ -78,8 +78,18 @@ still holds in px and says to press Save Recipe: shown in mm, they keep their px
 sizes in mm follow it. Save to Recipe on Compare stores a size typed in mm and keeps one left untouched as the recipe
 holds it, so AOI-RCP-009 stays after it. Without a scale, sizes stay in px beside AOI-RCP-005 in amber, and a recipe
 saves all the same. A stored scale that cannot be read, AOI-RCP-012, judges and saves nothing until it is set again.
+To set the scale, press **Calibrate Scale…** on the Recipe Editor (it needs the Golden board): click two points on the
+Golden board a known distance apart (a third click starts again), or type the length between them in px, enter that
+distance in mm and press **Set Scale**; the status bar then names the scale, with AOI-RCP-009 while the latest revision
+holds sizes in px. Cancel or Esc closes the sheet with nothing set, and so do another board model, the Golden board
+replaced, another user signing in and Try Recipe…; the sheet opens on the Golden board, a Try's verdict gone. Set Scale
+on a Golden board replaced while the page is shown, as at a training run's end, sets nothing and says so with
+AOI-RCP-008. The audit trail keeps each scale set (board_model.scale) with the length, the distance and the Golden
+board it was measured on. Setting the scale again moves a size held in mm to its px at the new scale, while a size
+still in px stays as it is, and Inspection judges its next board at it (a run in progress says so with AOI-INSP-013
+while its recipe holds a size in mm).
 
-(to be written: creating a board model in full, calibrating px per mm)
+(to be written: creating a board model in full)
 
 ## 3. Samples, labels and datasets
 
