@@ -791,19 +791,25 @@ class Database:
         results: list[dict[str, Any]],
         model_uuid: str | None = None,
         dataset_uuid: str | None = None,
+        uid: str | None = None,
+        judged_by: dict[str, Any] | None = None,
     ) -> str:
         """Store one validation run of the AI Model Test screen, naming by UUID the AI model version active when the run
         was judged, and return the run's UUID (REQ-SET-017); each result's "ai_check" says whether the AI check judged
         it (#246). The folder and each result's "image" are stored relative to the workspace when inside it, else
         absolute: a folder on a USB drive or a share is not part of the workspace and does not move with it
         (REQ-SET-001)."""
-        uid = new_uuid()
-        stored = [{**r, "image": self._stored(str(Path(r["image"]).absolute()))} for r in results]
+        uid = uid or new_uuid()
+        stored = [
+            {**r, "image": self._stored(str(Path(r["image"]).absolute()))}
+            | ({"overlay": self._stored(str(Path(r["overlay"]).absolute()))} if r.get("overlay") else {})
+            for r in results
+        ]
         row = (uid, now_utc(), board_model, model_version, model_uuid, self._stored(str(Path(folder).absolute())))
         self._insert(
             "INSERT INTO test_runs(uuid, time, board_model, model_version, model_uuid, folder, metrics, results,"
-            " dataset_uuid) VALUES(?,?,?,?,?,?,?,?,?)",
-            (*row, json.dumps(metrics), json.dumps(stored), dataset_uuid),
+            " dataset_uuid, judged_by) VALUES(?,?,?,?,?,?,?,?,?,?)",
+            (*row, json.dumps(metrics), json.dumps(stored), dataset_uuid, self._judged(judged_by)),
         )
         return uid
 
@@ -813,10 +819,33 @@ class Database:
         r = self.query("SELECT * FROM test_runs WHERE board_model=? ORDER BY id DESC LIMIT 1", (board_model,))
         if not r:
             return None
-        run = self._resolved(r[0], "folder")
+        return self._run(r[0])
+
+    def _run(self, row: dict[str, Any]) -> dict[str, Any]:
+        """A test_runs row decoded: folder, each result's image and overlay absolute for this workspace."""
+        run = self._resolved(row, "folder")
         run["metrics"] = json.loads(run["metrics"] or "{}")
-        run["results"] = [self._resolved(x, "image") for x in json.loads(run["results"] or "[]")]
+        run["results"] = [self._resolved(x, "image", "overlay") for x in json.loads(run["results"] or "[]")]
+        judged = json.loads(run["judged_by"]) if run.get("judged_by") else None
+        run["judged_by"] = self._resolved(judged, "reference_path") if judged else None  # a moved workspace too
         return run
+
+    def _judged(self, judged_by: dict[str, Any] | None) -> str | None:
+        """What judged a run as stored: its Golden board's path relative to the workspace (REQ-SET-001)."""
+        if not judged_by:
+            return None
+        ref = judged_by.get("reference_path")
+        return json.dumps(judged_by | {"reference_path": self._stored(ref) if ref else None})
+
+    def test_runs(self, board_model: str) -> list[dict[str, Any]]:
+        """Every validation run of a board model, newest first, decoded as `latest_test_run` decodes one."""
+        rows = self.query("SELECT * FROM test_runs WHERE board_model=? ORDER BY id DESC", (board_model,))
+        return [self._run(r) for r in rows]
+
+    def test_run(self, uid: str) -> dict[str, Any] | None:
+        """One validation run by UUID, decoded, or None."""
+        r = self.query("SELECT * FROM test_runs WHERE uuid=?", (uid,))
+        return self._run(r[0]) if r else None
 
     def inspection_counts(self, board_model: str) -> tuple[int, int]:
         """(inspections, NG inspections) of a board model, archived ones included."""
