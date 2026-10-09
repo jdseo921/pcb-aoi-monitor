@@ -29,9 +29,10 @@ from PySide6.QtTest import QTest  # noqa: E402
 from PySide6.QtWidgets import QMessageBox, QWidget  # noqa: E402
 
 from aoi.config import Settings  # noqa: E402
-from aoi.core import anomaly  # noqa: E402
+from aoi.core import anomaly, crypto  # noqa: E402
 from aoi.core.imaging import list_images, load_image  # noqa: E402
 from aoi.core.services import AppContext  # noqa: E402
+from aoi.data import credentials  # noqa: E402
 from aoi.data.db import new_uuid  # noqa: E402
 from aoi.ui import workers  # noqa: E402
 from aoi.ui.theme import QSS  # noqa: E402
@@ -57,6 +58,27 @@ def distinct_copies(src: Path, folder: Path, n: int) -> list[Path]:
     for i, p in enumerate(out):
         p.write_bytes(data + f"{folder.name}{i:06d}".encode())  # another folder's copies have other bytes
     return out
+
+
+def _in_store(ctx: AppContext, path: Path, board_model: str) -> tuple[dict[str, Any], bytes, str]:
+    store = ctx.store_of(board_model) or {}
+    key = ctx.credentials.read(credentials.STORE_PREFIX + store["uuid"]) or b""
+    return store, key, path.resolve().relative_to(ctx.settings.root.resolve()).as_posix()
+
+
+def plain(ctx: AppContext, path: str | Path, board_model: str) -> bytes:
+    """A file of `board_model`'s dataset store as the app reads it, decrypted here with the key the key store holds
+    rather than through the code under test (REQ-TRN-017); `path` absolute or relative to the workspace."""
+    path = ctx.settings.root / path
+    store, key, stored = _in_store(ctx, path, board_model)
+    return crypto.decrypt(key, bytes.fromhex(store["key_id"]), store["uuid"], stored, path.read_bytes())
+
+
+def seal(ctx: AppContext, path: str | Path, board_model: str, data: bytes) -> None:
+    """Write `data` as a file of `board_model`'s store, encrypted as the app would: a change by someone with its key."""
+    path = ctx.settings.root / path
+    store, key, stored = _in_store(ctx, path, board_model)
+    path.write_bytes(crypto.encrypt(key, bytes.fromhex(store["key_id"]), store["uuid"], stored, data))
 
 
 @pytest.fixture
@@ -138,6 +160,15 @@ def trained_ctx(tmp_path: Path, tiny_model: TrainedModel) -> AppContext:
     ws = tmp_path / "trained_workspace"
     shutil.copytree(tiny_model.ctx.settings.root, ws)
     return engineer(AppContext(Settings(workspace=str(ws), device="cpu")))
+
+
+@pytest.fixture(autouse=True)
+def keys(monkeypatch: pytest.MonkeyPatch) -> credentials.MemoryCredentials:
+    """The key store of every AppContext a test makes: in memory, new for each test and shared by its contexts, so that
+    no test writes a dataset store's key to the Credential Manager of the Windows machine running it (REQ-TRN-017)."""
+    held = credentials.MemoryCredentials()
+    monkeypatch.setattr(credentials, "default", lambda: held)
+    return held
 
 
 @pytest.fixture(autouse=True)

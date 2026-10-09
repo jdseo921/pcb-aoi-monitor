@@ -30,7 +30,7 @@ import numpy as np
 from .. import defects as taxonomy
 from .. import logging_setup
 from ..config import Settings, resolve_device
-from ..data import atomic
+from ..data import atomic, credentials
 from ..data.db import Database, DbError, is_busy, new_uuid
 from ..data.errors import WorkspaceError
 from ..data.paths import inside, one_folder_name, resolve, to_stored
@@ -38,7 +38,7 @@ from ..data.workspace_lock import WorkspaceLock
 from ..errors import QT_TRANSLATE_NOOP, AoiError, Phrase, joined
 from ..hal import VIEWS
 from ..times import local_date, now_utc
-from . import anomaly, datasets, imaging, labels
+from . import anomaly, crypto, datasets, imaging, labels, stores
 from .compare import Region, changed_regions
 from .imaging import align_to_reference, encode_image, list_images, load_image, load_image_sha256, save_image
 from .inspector import NG, OK, WARN, AiEvidence, InspectionResult, Inspector, JudgedBy, ai_check, draw_overlay, re_grade
@@ -229,8 +229,11 @@ def _remove(files: list[Path]) -> None:
 
 
 class AppContext:
-    def __init__(self, settings: Settings | None = None) -> None:
+    def __init__(self, settings: Settings | None = None, key_store: credentials.Credentials | None = None) -> None:
         self.settings = settings or Settings.load()
+        # each customer's dataset store key (REQ-TRN-017): Credential Manager on a station, never the workspace
+        self.credentials = key_store if key_store is not None else credentials.default()
+        self._keys: dict[str, bytes] = {}  # store UUID -> its key, read once and checked against its check value
         try:
             self.settings.ensure_dirs()
         except OSError as e:  # a drive not connected, a file where the folder must go (REQ-SET-019)
@@ -430,16 +433,23 @@ class AppContext:
         -007, decision Q30) and hashed; an image already imported, one `board_model` has (one indexed lookup) or one
         of `known`, copies nothing and comes back with that sample (decision Q31). The copy is a crash-safe write; then
         the source and the copy are read again, and a SHA-256 other than the one checked (a writer still at the source)
-        refuses the file with AOI-TRN-014 and removes the copy. A source lost since its check (removed, unreadable) is
-        refused with AOI-INSP-001, as Inspection's check would; a copy that cannot be written raises AOI-TRN-008, or
-        AOI-TRN-011 when the system refuses its path as too long (#245)."""
+        refuses the file with AOI-TRN-014 and removes the copy. A board model in a customer's dataset store gets its
+        copy encrypted from the bytes checked, never written plain, and read back decrypted (REQ-TRN-017). A source
+        lost since its check (removed, unreadable) is refused with AOI-INSP-001, as Inspection's check would; a copy
+        that cannot be written raises AOI-TRN-008, or AOI-TRN-011 when the system refuses its path as too long
+        (#245)."""
         data = imaging.checked_bytes(src, self.settings.max_image_megapixels, self.settings.max_image_megabytes)
         digest = hashlib.sha256(data).hexdigest()
-        del data  # up to the size limit in memory: not kept through the copy
         if (had := known.get(digest) or self.db.sample_with_sha256(board_model, digest)) is not None:
             return digest, had
+        sealed = self._sealed(to_stored(target, self.settings.root), data)  # the bytes checked, in the store's form
+        del data  # up to the size limit in memory: not kept through the copy
         try:
-            atomic.copy_file(src, target)
+            if sealed is None:
+                atomic.copy_file(src, target)
+            else:  # a board model in a customer's dataset store: its copy is encrypted from the start (REQ-TRN-017)
+                atomic.write_bytes(target, sealed)
+                del sealed
         except OSError as e:  # gone, unreadable, the workspace drive full, or a path the system refuses
             if str(e.filename) == str(src):  # the source's own: that file's to fix, listed by import_files
                 raise AoiError("AOI-INSP-001", str(e), path=str(src)) from e
@@ -449,8 +459,8 @@ class AppContext:
             why = e.strerror or str(e)
             raise AoiError("AOI-TRN-008", str(e), path=str(src), reason=why, count=count) from e
         try:
-            same = _sha256(src) == digest == _sha256(target)
-        except OSError:  # the source gone right after its copy: it cannot be found unchanged
+            same = _sha256(src) == digest == self._file_sha256(target)
+        except (OSError, AoiError):  # the source gone right after its copy, or a copy that does not read back
             same = False
         if not same:
             _remove([target])
@@ -685,11 +695,13 @@ class AppContext:
     def load_image(self, path: str | Path) -> np.ndarray:
         """Read an image under the settings' size limits (REQ-INSP-001). Every image a screen or a service opens comes
         through here, so one pair of settings governs them all; `tests/test_layers.py` fails a page that reads one
-        itself."""
-        return load_image(path, self.settings.max_image_megapixels, self.settings.max_image_megabytes)
+        itself. A file of a customer's dataset store is decrypted in memory first (`_plain_bytes`, REQ-TRN-017)."""
+        limits = (self.settings.max_image_megapixels, self.settings.max_image_megabytes)
+        return load_image(path, *limits, read=self._plain_bytes)
 
     def _load_image_sha256(self, path: str | Path) -> tuple[np.ndarray, str]:
-        return load_image_sha256(path, self.settings.max_image_megapixels, self.settings.max_image_megabytes)
+        limits = (self.settings.max_image_megapixels, self.settings.max_image_megabytes)
+        return load_image_sha256(path, *limits, read=self._plain_bytes)
 
     def inspector(
         self, board_model: str, recipe: Recipe | None = None, side: str = "Top", reference: np.ndarray | None = None
@@ -1304,7 +1316,7 @@ class AppContext:
     def _set_label(self, sample_uuid: str, given: tuple[str, str | None] | None, boxes: list[DefectBox] | None) -> str:
         """`set_label`, with `given` None for the label and type the sample has. The image's size, which the box checks
         need, is read before the write transaction opens, so no file is read while the database is locked."""
-        size = labels.image_size(self._sample(sample_uuid)["path"]) if boxes else None
+        size = self._image_size(self._sample(sample_uuid)["path"]) if boxes else None
         with self.db.transaction():
             sample = self._sample(sample_uuid)
             label, defect_type = given or (sample["label"], sample["defect_type"])
@@ -1529,13 +1541,13 @@ class AppContext:
         paths = [s["path"] for label in ("OK", "NG") for s in self._in_view(board_model, view, label)]  # AOI-TRN-038
         self._refuse_input(board_model, view, revision, customer, uses)
         name = datasets.name(board_model, revision, view, self._next_version(board_model, view))
-        self._refuse_freeze(name, board_model, view)  # before any file is read, and again in the transaction
+        self._refuse_freeze(name, board_model, view, customer)  # before any file is read, and again in the transaction
         known = {p: (self._sha256(p), to_stored(p, self.settings.root)) for p in paths}  # file work, before the lock
         # the manifest's exit runs after the commit and before the lock is released
         with self.db.locked(), contextlib.ExitStack() as manifest, self.db.transaction():
             n = self._next_version(board_model, view)  # again, in the transaction that stores it
             name = datasets.name(board_model, revision, view, n)
-            agreed = self._refuse_freeze(name, board_model, view)
+            agreed = self._refuse_freeze(name, board_model, view, customer)
             version: dict[str, Any] = {"uuid": new_uuid(), "name": name, "board_model": board_model}
             version |= {"revision": revision, "view": view, "version": n, "customer": customer.strip()}
             version |= {"allowed_uses": uses, "agreement_check_uuid": agreed["uuid"], "frozen_by": self.user_uuid}
@@ -1550,9 +1562,10 @@ class AppContext:
             files = [self._frozen_file(s, known, boxes.get(s["uuid"], [])) for s in in_view]
             data, sha = datasets.manifest(head, files)
             rel = f"{datasets.FOLDER}/{name}/manifest.json"
-            manifest.enter_context(_manifest_write(name, rel, self.settings.root))
-            move_in = manifest.enter_context(atomic.staged(self.settings.root / rel, data))
             self.db.add_dataset(version | {"manifest_path": rel, "manifest_sha256": sha}, files)
+            manifest.enter_context(_manifest_write(name, rel, self.settings.root))
+            # sealed once the row names the version's board model, so its store is found (REQ-TRN-017)
+            move_in = manifest.enter_context(atomic.staged(self.settings.root / rel, self._sealed(rel, data) or data))
             keep = ("name", "customer", "allowed_uses", "agreement_check_uuid")
             after = {k: version[k] for k in keep} | {"files": len(files), "manifest_sha256": sha}
             self.audit("dataset.freeze", "dataset", version["uuid"], None, after)
@@ -1571,15 +1584,17 @@ class AppContext:
         """Re-hash a frozen version's manifest and each of its files against the SHA-256 stored at the freeze
         (REQ-TRN-005), writing nothing: `manifest` is same, changed or missing; `files` counts the files, and `matched`,
         `changed` and `missing` list their relative paths in the manifest's order. AOI-TRN-028 for a version the
-        workspace does not hold. Hashes on this thread; the Datasets tab runs it on the pool."""
+        workspace does not hold. Hashes on this thread; the Datasets tab runs it on the pool. A file of a customer's
+        dataset store is hashed decrypted, and one that does not decrypt (changed, moved, damaged) is changed; a key
+        this station does not hold is AOI-TRN-025 (REQ-TRN-017)."""
         if not (found := self.db.datasets("", dataset_uuid)):
             raise AoiError("AOI-TRN-028", dataset=dataset_uuid)
-        sha = datasets.file_sha256(self.settings.root / found[0]["manifest_path"])
+        sha = self._verified_sha256(self.settings.root / found[0]["manifest_path"])
         result: dict[str, Any] = {"matched": [], "changed": [], "missing": []}
         result["manifest"] = "missing" if sha is None else "same" if sha == found[0]["manifest_sha256"] else "changed"
         items = self.db.dataset_items(dataset_uuid)
         for item in items:
-            sha = datasets.file_sha256(resolve(item["path"], self.settings.root))
+            sha = self._verified_sha256(resolve(item["path"], self.settings.root))
             result["missing" if sha is None else "matched" if sha == item["sha256"] else "changed"].append(item["path"])
         return result | {"files": len(items)}
 
@@ -1623,6 +1638,262 @@ class AppContext:
         dataset item UUIDs of its "train" and "validation" parts; None while it is not split."""
         return self.db.validation_split(dataset_uuid)
 
+    # --- customer dataset stores (REQ-TRN-017; S38; ADR 0010) ---------------------------------------------------
+    @requires("Admin", QT_TRANSLATE_NOOP("Errors", "Creating a customer's dataset store"))
+    @transactional
+    def create_store(self, customer: str) -> dict[str, Any]:
+        """A new encrypted dataset store for `customer`: a random 256-bit key, saved in the key store under the store's
+        UUID (Windows Credential Manager on a station) and never in the workspace, with its key id and check value in
+        `dataset_stores`; audited as `store.create` (no key). Returns the store with `sheet`, the key as the recovery
+        sheet prints it: the caller shows or prints it once, for the person who holds the data under the contract.
+        AOI-TRN-044, writing nothing, for no customer and for a customer whose store is not shredded."""
+        name, why = customer.strip(), None
+        if not name:
+            why = QT_TRANSLATE_NOOP("Errors", "no customer is given")
+        elif any(s["customer"].casefold() == name.casefold() and not s["shredded_at"] for s in self.db.stores()):
+            why = QT_TRANSLATE_NOOP("Errors", "the customer has a store already, and has one at a time")
+        if why is not None:
+            raise AoiError("AOI-TRN-044", store=name or QT_TRANSLATE_NOOP("Errors", "a new customer"), reason=why)
+        key, key_id = crypto.new_key()
+        store: dict[str, Any] = {"uuid": new_uuid(), "customer": name, "key_id": key_id.hex()}
+        store |= {"check_value": crypto.check_value(key), "created_by": self.user_uuid, "created_at": now_utc()}
+        self.db.add_store(store)
+        self.audit("store.create", "dataset_store", store["uuid"], None, {k: store[k] for k in ("customer", "key_id")})
+        self._save_key(store, key)  # last before the commit: a key whose store is not stored would open nothing
+        return {k: v for k, v in store.items() if k != "check_value"} | {"sheet": crypto.sheet(key)}
+
+    @requires("Admin", QT_TRANSLATE_NOOP("Errors", "Restoring a dataset store's key"))
+    @transactional
+    def restore_store_key(self, store_uuid: str, sheet: str) -> None:
+        """Save a store's key again from its recovery sheet, typed on a new PC or Windows account (ADR 0010, decision
+        7); audited as `store.restore`. AOI-TRN-044, writing nothing, for a store the workspace does not hold, one
+        shredded, and a sheet whose key is not the store's (by its check value)."""
+        store = self._store(store_uuid)
+        key = crypto.key_from_sheet(sheet)
+        if key is None or crypto.check_value(key) != store["check_value"]:
+            why = QT_TRANSLATE_NOOP("Errors", "the key typed is not this store's key; check each group of four")
+            raise AoiError("AOI-TRN-044", store=store["customer"], reason=why)
+        self.audit("store.restore", "dataset_store", store_uuid, None, {"key_id": store["key_id"]})
+        self._save_key(store, key)
+
+    @requires("Admin", QT_TRANSLATE_NOOP("Errors", "Moving a board model into a dataset store"))
+    def move_in(self, board_model: str, store_uuid: str) -> dict[str, int]:
+        """Put `board_model` in a store for good and encrypt its files there (ADR 0010, decision 5): every file under
+        images/<board model>/ and the manifest of each of its frozen versions, keeping its path. Each plain file is
+        encrypted into a crash-safe write, read back and decrypted, and kept only when the SHA-256 matches; else its
+        plain bytes are written back and AOI-TRN-044 stops the move. The board model's row in `board_model_stores` and
+        the audit entry `store.move_in` (files to move) are written first, so from then on a plain file of it is
+        refused (AOI-TRN-025) and an interrupted move is finished by calling this again, which skips the files already
+        moved. Returns the counts `moved` and `already`. AOI-TRN-044, writing nothing, for a store the workspace does
+        not hold or that is shredded, a board model that does not exist, one in another store, and a file encrypted
+        under another store's key; AOI-TRN-019 for a board model whose name is not one folder's (#112)."""
+        store = self._store(store_uuid)
+        key = self._key(store)  # AOI-TRN-025 for a key this station does not hold
+        current, why = self.db.board_model_store(board_model), None
+        if board_model not in self.db.board_models():
+            why = QT_TRANSLATE_NOOP("Errors", "the workspace holds no board model {board}").fill(board=board_model)
+        elif current is not None and current["uuid"] != store_uuid:
+            why = QT_TRANSLATE_NOOP("Errors", "{board} is in the store of {other}, and a board model never leaves it")
+            why = why.fill(board=board_model, other=current["customer"])
+        if why is not None:
+            raise AoiError("AOI-TRN-044", store=store["customer"], reason=why)
+        if not one_folder_name(board_model):  # named before names were checked (#112): "." would be all of images/
+            raise AoiError("AOI-TRN-019", name=board_model)
+        files = stores.files_of(self.settings.root, board_model, [d["name"] for d in self.db.datasets(board_model)])
+        try:
+            heads = [(f, stores.header_of(f)) for f in files]
+        except OSError as e:
+            why = QT_TRANSLATE_NOOP("Errors", "a file of it could not be read ({reason})").fill(reason=str(e))
+            raise AoiError("AOI-TRN-044", str(e), store=store["customer"], reason=why) from e
+        if foreign := [f for f, h in heads if h is not None and h.key_id.hex() != store["key_id"]]:
+            why = crypto.OTHER_KEY.fill(file=to_stored(foreign[0], self.settings.root))
+            raise AoiError("AOI-TRN-044", store=store["customer"], reason=why)
+        plain = [f for f, h in heads if h is None]
+        with self.db.transaction():
+            if current is None:
+                row = {"uuid": new_uuid(), "board_model": board_model, "store_uuid": store_uuid}
+                self.db.add_board_model_store(row | {"set_by": self.user_uuid, "set_at": now_utc()})
+            after = {"board_model": board_model, "files": len(plain), "resumed": current is not None}
+            self.audit("store.move_in", "dataset_store", store_uuid, None, after)
+        for f in plain:
+            self._encrypt_in_place(store, key, f)
+        return {"moved": len(plain), "already": len(files) - len(plain)}
+
+    @requires("Admin", QT_TRANSLATE_NOOP("Errors", "Shredding a customer's dataset store"))
+    def shred_store(self, store_uuid: str) -> dict[str, int]:
+        """End a store for good when its engagement ends (ADR 0010, decision 9). Its key is deleted from this
+        station's key store first, which alone leaves every copy of its files unreadable, a backup's included, once
+        the recovery sheet is destroyed too. Then a row of `store_shreds` and the audit entry `store.shred` record it,
+        with the key id and the counts, and the files of its board models are deleted: under images/, each frozen
+        version's folder under datasets/, and their AI models and golden boards under models/. Rows stay (ADR 0009),
+        and a file of the store is refused from then on with AOI-TRN-025. Calling this again finishes a shred stopped
+        part-way, deleting what is left, and is audited too. Returns the counts `files` (images and manifests) and
+        `models`. AOI-TRN-044 for a store the workspace does not hold, a key the key store would not delete (nothing
+        changed) and a file that would not go (the rest went, and the shred stays recorded)."""
+        if (store := self.db.store(store_uuid)) is None:
+            why = QT_TRANSLATE_NOOP("Errors", "the workspace holds no such store")
+            raise AoiError("AOI-TRN-044", store=store_uuid, reason=why)
+        root, models = self.settings.root, self.settings.models_dir
+        boards = [(b, [d["name"] for d in self.db.datasets(b)]) for b in store["board_models"]]
+        files = [f for b, versions in boards for f in stores.files_of(root, b, versions)]
+        derived = [
+            f for b, _ in boards if (models / b).is_dir() for f in sorted((models / b).rglob("*")) if f.is_file()
+        ]
+        if not store["shredded_at"]:
+            try:
+                self.credentials.delete(credentials.STORE_PREFIX + store_uuid)  # first: from here nothing of it opens
+            except OSError as e:
+                why = QT_TRANSLATE_NOOP("Errors", "this station's key store did not delete the key ({reason})")
+                raise AoiError("AOI-TRN-044", str(e), store=store["customer"], reason=why.fill(reason=str(e))) from e
+            self._keys.pop(store_uuid, None)
+        with self.db.transaction():
+            if not store["shredded_at"]:
+                row = {"uuid": new_uuid(), "store_uuid": store_uuid, "key_id": store["key_id"], "files": len(files)}
+                self.db.add_shred(row | {"shredded_by": self.user_uuid, "shredded_at": now_utc()})
+            after = {"customer": store["customer"], "key_id": store["key_id"], "board_models": store["board_models"]}
+            after |= {"files": len(files), "models": len(derived), "resumed": bool(store["shredded_at"])}
+            self.audit("store.shred", "dataset_store", store_uuid, None, after)
+        folders = [root / stores.IMAGES / b for b, _ in boards] + [models / b for b, _ in boards]
+        folders += [root / datasets.FOLDER / name for _, versions in boards for name in versions]
+        if left := _deleted(files + derived, folders):
+            why = QT_TRANSLATE_NOOP("Errors", "{count} file(s) would not go, {file} first ({detail}); shred it again")
+            reason = why.fill(count=len(left), file=to_stored(left[0][0], root), detail=str(left[0][1]))
+            raise AoiError("AOI-TRN-044", store=store["customer"], reason=reason)
+        return {"files": len(files), "models": len(derived)}
+
+    def stores(self) -> list[dict[str, Any]]:
+        """Every dataset store, oldest first: uuid, customer, key_id, created_by, created_at, shredded_at (None while
+        it is not shredded) and its board_models. No key."""
+        return [{k: v for k, v in s.items() if k != "check_value"} for s in self.db.stores()]
+
+    def store_of(self, board_model: str) -> dict[str, Any] | None:
+        """The store `board_model` is in, as `stores` lists it, or None for a board model in none (its files plain)."""
+        found = self.db.board_model_store(board_model)
+        return None if found is None else {k: v for k, v in found.items() if k != "check_value"}
+
+    def _store(self, store_uuid: str) -> dict[str, Any]:
+        """A store that is not shredded; AOI-TRN-044 for one the workspace does not hold or that is shredded."""
+        store = self.db.store(store_uuid)
+        if store is None or store["shredded_at"]:
+            why = QT_TRANSLATE_NOOP("Errors", "the workspace holds no such store, or it is shredded")
+            raise AoiError("AOI-TRN-044", store=store["customer"] if store else store_uuid, reason=why)
+        return store
+
+    def _save_key(self, store: dict[str, Any], key: bytes) -> None:
+        try:
+            self.credentials.write(credentials.STORE_PREFIX + store["uuid"], key)
+        except OSError as e:
+            why = QT_TRANSLATE_NOOP("Errors", "this station's key store refused the key ({reason})")
+            raise AoiError("AOI-TRN-044", str(e), store=store["customer"], reason=why.fill(reason=str(e))) from e
+        self._keys.pop(store["uuid"], None)
+
+    def _key(self, store: dict[str, Any]) -> bytes:
+        """The store's key from this station's key store, checked against its check value; AOI-TRN-025 when this
+        station holds none or holds another."""
+        if (key := self._keys.get(store["uuid"])) is not None:
+            return key
+        try:
+            key = self.credentials.read(credentials.STORE_PREFIX + store["uuid"])
+        except OSError as e:
+            why = QT_TRANSLATE_NOOP("Errors", "this station's key store could not be read ({reason})")
+            raise AoiError("AOI-TRN-025", str(e), store=store["customer"], reason=why.fill(reason=str(e))) from e
+        if key is None:
+            why = QT_TRANSLATE_NOOP("Errors", "this station holds no key for it")
+        elif crypto.check_value(key) != store["check_value"]:
+            why = QT_TRANSLATE_NOOP("Errors", "the key this station holds is not its key")
+        else:
+            self._keys[store["uuid"]] = key
+            return key
+        raise AoiError("AOI-TRN-025", store=store["customer"], reason=why)
+
+    def _encrypt_in_place(self, store: dict[str, Any], key: bytes, path: Path) -> None:
+        """Encrypt one plain file of a store where it is, with a crash-safe write; keep it only once it reads back
+        decrypted to the same SHA-256, else write the plain bytes back and refuse with AOI-TRN-044."""
+        stored, key_id = to_stored(path, self.settings.root), bytes.fromhex(store["key_id"])
+        try:
+            plain = path.read_bytes()
+        except OSError as e:
+            why = QT_TRANSLATE_NOOP("Errors", "{file} could not be read ({detail})").fill(file=stored, detail=str(e))
+            raise AoiError("AOI-TRN-044", str(e), store=store["customer"], reason=why) from e
+        error: Exception | None = None
+        try:
+            atomic.write_bytes(path, crypto.encrypt(key, key_id, store["uuid"], stored, plain))
+            back = crypto.decrypt(key, key_id, store["uuid"], stored, path.read_bytes())
+        except (OSError, crypto.NotOpened) as e:  # a write the disk refused leaves the plain file as it was
+            back, error = b"", e
+        if error is not None or hashlib.sha256(back).digest() != hashlib.sha256(plain).digest():
+            with contextlib.suppress(OSError):
+                atomic.write_bytes(path, plain)
+            why = QT_TRANSLATE_NOOP("Errors", "{file} did not read back as written, and was left plain ({detail})")
+            raise AoiError("AOI-TRN-044", store=store["customer"], reason=why.fill(file=stored, detail=str(error)))
+
+    def _store_for(self, path: str | Path) -> tuple[dict[str, Any], str] | None:
+        """The store a workspace file is in, with the path as the rows store it: a file under images/<board model>/,
+        or a version's folder under datasets/, of a board model in a store; else None, and the file is plain."""
+        stored = to_stored(path, self.settings.root)
+        found = stores.owner(stored)
+        if found is None:
+            return None
+        board_model = found[1] if found[0] == stores.IMAGES else self.db.dataset_board_model(found[1])
+        store = self.db.board_model_store(board_model) if board_model else None
+        return None if store is None else (store, stored)
+
+    def _plain_bytes(self, path: Path) -> bytes:
+        """A file's bytes as the app reads them: a file of a customer's dataset store decrypted in memory, any other
+        as it is on disk. OSError as reading gives it; AOI-TRN-025 for a store file that does not open (no key, a
+        wrong key, not encrypted, changed, moved or damaged) or one of a shredded store."""
+        try:
+            return self._open(path)
+        except crypto.NotOpened as e:  # only a file of a store is decrypted
+            found = self._store_for(path)
+            customer, stored = (str(found[0]["customer"]), found[1]) if found is not None else ("", str(path))
+            raise AoiError("AOI-TRN-025", store=customer, reason=e.reason.fill(file=stored)) from e
+
+    def _open(self, path: str | Path) -> bytes:
+        """`_plain_bytes`, with crypto.NotOpened for a store file that does not decrypt."""
+        if (found := self._store_for(path)) is None:
+            return Path(path).read_bytes()
+        store, stored = found
+        key = self._live_key(store)  # a shredded store's files are gone: that, not a missing file, is the reason
+        return crypto.decrypt(key, bytes.fromhex(store["key_id"]), store["uuid"], stored, Path(path).read_bytes())
+
+    def _live_key(self, store: dict[str, Any]) -> bytes:
+        """`_key` of a store that is not shredded; AOI-TRN-025 naming the day it was."""
+        if store["shredded_at"]:
+            why = QT_TRANSLATE_NOOP("Errors", "it was shredded on {date}").fill(date=store["shredded_at"][:10])
+            raise AoiError("AOI-TRN-025", store=store["customer"], reason=why)
+        return self._key(store)
+
+    def _image_size(self, path: str) -> tuple[int, int]:
+        """`labels.image_size`: a file of a customer's dataset store decrypted whole first, any other with only its
+        header read."""
+        return labels.image_size(path, None if self._store_for(path) is None else self._plain_bytes)
+
+    def _sealed(self, stored: str, data: bytes) -> bytes | None:
+        """`data` encrypted for the workspace path `stored` when that path is in a customer's dataset store, else
+        None (the file is written plain)."""
+        if (found := self._store_for(self.settings.root / stored)) is None:
+            return None
+        store = found[0]
+        return crypto.encrypt(self._live_key(store), bytes.fromhex(store["key_id"]), store["uuid"], stored, data)
+
+    def _file_sha256(self, path: str | Path) -> str:
+        """The SHA-256 of a file's plain bytes: read a block at a time when it is plain, decrypted in memory when it
+        is in a customer's dataset store. OSError when it cannot be read; AOI-TRN-025 as `_plain_bytes`."""
+        if self._store_for(path) is None:
+            return datasets.sha256(path)
+        return hashlib.sha256(self._plain_bytes(Path(path))).hexdigest()
+
+    def _verified_sha256(self, path: Path) -> str | None:
+        """`_file_sha256` for verify_dataset: None for a file that is missing or cannot be read, and an empty text,
+        which matches no stored SHA-256, for a store file that does not decrypt."""
+        try:
+            return hashlib.sha256(self._open(path)).hexdigest()
+        except OSError:
+            return None
+        except crypto.NotOpened:
+            return ""
+
     def _refuse_input(self, board_model: str, view: str, revision: str, customer: str, uses: list[str]) -> None:
         """The refusals that read only what the freeze was given: no Latin letter or digit in the board model's name
         (AOI-TRN-039), a revision other than 1 to 16 letters and digits (AOI-TRN-027), no customer (AOI-TRN-024), a use
@@ -1643,12 +1914,13 @@ class AppContext:
     def _next_version(self, board_model: str, view: str) -> int:
         return 1 + max((d["version"] for d in self.db.datasets(board_model) if d["view"] == view), default=0)
 
-    def _refuse_freeze(self, name: str, board_model: str, view: str) -> dict[str, Any]:
+    def _refuse_freeze(self, name: str, board_model: str, view: str, customer: str) -> dict[str, Any]:
         """The agreement check a version is frozen with; else, read in the freeze's transaction, the first reason not to
         freeze: another board model whose name gives the same letters and digits has frozen versions (AOI-TRN-040), a
         version of that name exists or the view holds no OK or NG image (AOI-TRN-027), an NG label not checked
-        (AOI-TRN-020), too few drawn OK labels checked (AOI-TRN-021), and the newest agreement check missing or short
-        of its targets (AOI-TRN-027)."""
+        (AOI-TRN-020), too few drawn OK labels checked (AOI-TRN-021), the newest agreement check missing or short of
+        its targets, and the board model in no customer's dataset store, in a shredded one or in another customer's
+        than `customer` (AOI-TRN-027; REQ-TRN-017)."""
         frozen = self.db.dataset_names()
         token = datasets.token(board_model)
         other = next((d for d in frozen if d != board_model and datasets.token(d) == token), None)
@@ -1670,6 +1942,14 @@ class AppContext:
             why = QT_TRANSLATE_NOOP("Errors", "no agreement check of the board model holds images of this view")
         elif not newest["agreed"]:
             why = QT_TRANSLATE_NOOP("Errors", "the newest agreement check of the view did not reach the targets")
+        elif (store := self.db.board_model_store(board_model)) is None:
+            why = QT_TRANSLATE_NOOP("Errors", "its images are in no customer's dataset store; an Admin moves them in")
+        elif store["shredded_at"]:  # its images are gone, and its board model never joins another store
+            why = QT_TRANSLATE_NOOP("Errors", "its dataset store was shredded on {date}")
+            why = why.fill(date=store["shredded_at"][:10])
+        elif store["customer"] != customer.strip():
+            why = QT_TRANSLATE_NOOP("Errors", "its images are in the dataset store of {store}, not of {customer}")
+            why = why.fill(store=store["customer"], customer=customer.strip())
         if why is not None or newest is None:
             raise AoiError("AOI-TRN-027", name=name, reason=why)
         return newest
@@ -1683,9 +1963,10 @@ class AppContext:
         return next((c for c in checks if view in {side.get(u) for u in sets.get(c["set_uuid"], [])}), None)
 
     def _sha256(self, path: str) -> str:
-        """A file's SHA-256 for a version; AOI-INSP-001, with the system's reason, for one that cannot be read."""
+        """A file's SHA-256 for a version, of its plain bytes (`_file_sha256`); AOI-INSP-001, with the system's
+        reason, for one that cannot be read."""
         try:
-            return datasets.sha256(path)
+            return self._file_sha256(path)
         except OSError as e:
             raise AoiError("AOI-INSP-001", detail=str(e), path=path) from e
 
@@ -1951,6 +2232,24 @@ def _export_write(path: str | Path) -> Iterator[None]:
         yield
     except OSError as e:
         raise _not_written(e, path) from e
+
+
+def _deleted(files: list[Path], folders: list[Path]) -> list[tuple[Path, OSError]]:
+    """Delete `files`, then whatever is left in `folders` once they are empty, deepest first; the files that would not
+    go, with why. A file already gone counts as deleted."""
+    left = []
+    for f in files:
+        try:
+            f.unlink(missing_ok=True)
+        except OSError as e:  # held open by another program, or read-only
+            left.append((f, e))
+    for folder in folders:
+        for d in sorted((p for p in folder.rglob("*") if p.is_dir()), key=lambda p: len(p.parts), reverse=True):
+            with contextlib.suppress(OSError):
+                d.rmdir()
+        with contextlib.suppress(OSError):
+            folder.rmdir()
+    return left
 
 
 @contextlib.contextmanager

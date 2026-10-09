@@ -575,6 +575,16 @@ CODES: dict[str, ErrorCode] = {
             QT_TRANSLATE_NOOP("Errors", "Enter the customer the dataset is for, then freeze it again."),
         ),
         ErrorCode(
+            "AOI-TRN-025",
+            QT_TRANSLATE_NOOP("Errors", "Dataset store not opened"),
+            QT_TRANSLATE_NOOP("Errors", "The dataset store of {store} was not opened: {reason}."),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "An Admin types the store's recovery sheet into this station when its key is missing or wrong; a file"
+                " changed outside the app comes back only from a backup. Nothing was changed.",
+            ),
+        ),
+        ErrorCode(
             "AOI-TRN-027",
             QT_TRANSLATE_NOOP("Errors", "Dataset not frozen"),
             QT_TRANSLATE_NOOP("Errors", "{name} was not frozen: {reason}."),
@@ -729,6 +739,12 @@ CODES: dict[str, ErrorCode] = {
                 "Delete those samples from the board model to train on the others; nothing was saved, and the active"
                 " AI model is unchanged.",
             ),
+        ),
+        ErrorCode(
+            "AOI-TRN-044",
+            QT_TRANSLATE_NOOP("Errors", "Dataset store not changed"),
+            QT_TRANSLATE_NOOP("Errors", "The dataset store of {store} was not changed: {reason}."),
+            QT_TRANSLATE_NOOP("Errors", "Do what the reason says, then try again."),
         ),
         ErrorCode(
             "AOI-TST-001",

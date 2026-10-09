@@ -47,6 +47,7 @@ interfaces that Stages 2–4 (cameras, robot, MES/ERP) plug into without changin
 │          make_calibration_set · label_blind · run_agreement_check            │
 │          freeze_dataset (a frozen dataset version and its manifest)          │
 │          lock_validation_set (a version's locked validation set)             │
+│          create_store · restore_store_key · move_in · shred_store (Admin)    │
 │  engine  inspector · inspect · inspect_file · log_result · batch_test        │
 │          re_evaluate (a stored result under other thresholds, Engineer)      │
 │  jobs    the thread pool every slow call runs on (REQ-SET-021)               │
@@ -61,9 +62,12 @@ interfaces that Stages 2–4 (cameras, robot, MES/ERP) plug into without changin
 │  recipe.py    ROIs + thresholds per board model                              │
 │  jobs.py      background jobs: progress, cancel, finished callbacks; no Qt   │
 │  defects.py   DCT taxonomy, severities, mandatory AOI set                    │
+│  crypto.py    file format 1: a dataset store's files, AES-256-GCM (ADR 0010) │
+│  stores.py    the store a workspace file is in, its files and their headers  │
 ├──────────────────────────────────────────────────────────────────────────────┤
 │ Data  (aoi/data/db.py)  SQLite: samples · models · recipes · inspections ·   │
 │                         defects · test_runs · alarms · users · board_models  │
+│  credentials.py  each dataset store's key: Windows Credential Manager        │
 ├──────────────────────────────────────────────────────────────────────────────┤
 │ HAL  (aoi/hal)  Camera · LightingController · RobotController · MesClient    │
 │   Stage 1: FolderCamera (images)   Stage 2–4: GigE/USB3, serial, RS-485, OPC │
@@ -336,7 +340,9 @@ AOI_Workspace/                 (default ~/AOI_Workspace, set in Settings, used f
   settings.json
   images/<board>/<OK|NG>/      uploaded training samples (copied in, so source folders can move), each named
                                <stem>_<sample UUID>.<ext>; a copy whose path the system refuses as too long stops
-                               the import with AOI-TRN-011 (#245)
+                               the import with AOI-TRN-011 (#245). Once an Admin moves the board model into a
+                               customer's dataset store, each file is in file format 1, encrypted under the store's
+                               key, and opens only in the app (REQ-TRN-017, ADR 0010)
   models/<board>/<board>_vX.Y.pt            trained model + calibration: tensors and plain values only, loaded with
                                             torch.load(weights_only=True) after its zip CRC-32s check; a file that
                                             is cut short, changed or unusable, has an entry flagged as a folder, or
@@ -352,7 +358,8 @@ AOI_Workspace/                 (default ~/AOI_Workspace, set in Settings, used f
                                refuses as too long is AOI-INSP-014 (#245; before: 6 random hex digits, whole stem)
   exports/                     CSV / PDF / overlay exports
   datasets/<name>/manifest.json  a frozen dataset version's manifest (REQ-TRN-005): each file's path, relative to
-                               the workspace, SHA-256, label and boxes; the files stay where images/ holds them
+                               the workspace, SHA-256, label and boxes; the files stay where images/ holds them.
+                               Encrypted as they are, in its board model's store (REQ-TRN-017)
 ```
 
 ---
@@ -409,14 +416,34 @@ manifest a row names), and the next freeze of that name replaces it. Every other
 held, for those reads, the manifest's write and fsync and one insert per file: about 0.3 s for 3,000 files on the
 development VM, so some 2 s at 20,000. AOI-TRN-041 for a manifest not written, AOI-TRN-042 for a path too long. A
 version's rows and manifest never change, and a later label change reaches only the next version. A version names the
-workspace's image files rather than copying them, and the app never changes or removes one (`delete_sample` keeps the
-file), so a file changed or removed outside the app is what `verify_dataset` reports: it re-hashes the manifest and
-every file against the stored SHA-256 and lists the files that match, changed or are missing, and writes nothing.
+workspace's image files rather than copying them, and the app changes one only to encrypt it where it is, to the same
+plain bytes (`move_in`), and removes one only when its store is shredded (`delete_sample` keeps the file), so a file
+changed or removed outside the app is what `verify_dataset` reports: it re-hashes the manifest and every file against
+the stored SHA-256 and lists the files that match, changed or are missing, and writes nothing.
 The old bytes of such a file cannot be recovered from the workspace, which therefore needs a backup. How labels,
 checks, agreement checks and frozen versions are stored, and why, is
-[ADR 0009](adr/0009-labels-checks-and-dataset-versions.md) (proposed). How S38 will encrypt each customer's dataset
-store at rest, with one key per store kept in Windows Credential Manager, is
-[ADR 0010](adr/0010-customer-dataset-encryption.md) (proposed); nothing is encrypted yet.
+[ADR 0009](adr/0009-labels-checks-and-dataset-versions.md) (proposed). How each customer's dataset store is encrypted at
+rest, with one key per store kept in Windows Credential Manager, is [ADR 0010](adr/0010-customer-dataset-encryption.md).
+
+**Customer dataset stores** (REQ-TRN-017, S38). An Admin makes one store per customer at a time (`create_store`, a
+customer's name in any case and spacing being one customer): a random 256-bit key, saved in this station's key store
+(`aoi/data/credentials.py`: Windows Credential Manager as `AOI/dataset-store/<store UUID>`, memory on Linux) and never
+in the workspace, and a `dataset_stores` row with its key id and check value. The call returns the recovery sheet once,
+the key as 52 base32 characters, and `restore_store_key` takes it back on a new PC or Windows account once the check
+value agrees. `move_in(board_model, store)` puts a board model in a store for good and encrypts each file under
+images/<board model>/ and each of its manifests where it is, in file format 1 (`aoi/core/crypto.py`: a 34-byte header,
+AES-256-GCM, the header, store UUID and workspace-relative path as associated data); each file is read back and
+decrypted before it replaces the plain one, and calling it again finishes an interrupted move. From then on an import
+writes its copy encrypted, and every read of a store's file (`_plain_bytes`: an image loaded, hashed for a freeze or a
+verify, sized for a box, read for training) decrypts it in memory. A file that does not open is AOI-TRN-025 naming why
+(no key, another key, not encrypted, another store's key, changed, moved or damaged), never read as plain. The plaintext
+SHA-256 stays each file's identity. A board model in no store stays plain, and `freeze_dataset` refuses it, or one in
+another customer's store than the version names (AOI-TRN-027), so a frozen version is one customer's, encrypted.
+`shred_store` ends a store: it deletes the key first, records the shred (`store_shreds`, `store.shred`), then deletes
+the board models' images, their versions' folders and their AI models and golden boards under models/. A file of it is
+AOI-TRN-025 "it was shredded on <day>" from then on, and calling it again finishes a shred stopped part-way. The rest of
+models/, results/ and `aoi.sqlite` stay plain (ADR 0010, Consequences).
+
 `lock_validation_set(dataset_uuid, seed)` (REQ-TRN-006, S36) splits a frozen version once into its training set and
 its locked validation set, with the seed drawn and recorded when none is given (`datasets.split`): at least 50 OK files
 and 30 % of its NG files, rounded up, the NG spread over their defect types (an NG file's type, else its boxes' types)
@@ -638,6 +665,9 @@ The writes, their roles and entries:
 | `make_calibration_set`, `label_blind`, `run_agreement_check` | Engineer | `calibration.make` (board model, samples), `label.blind` (sample, label, defect type), `agreement.check` (the stored check); object = calibration set UUID (REQ-TRN-016) |
 | `freeze_dataset` | Engineer | `dataset.freeze` (name, customer, allowed uses, agreement check, file count, manifest SHA-256); object = dataset UUID (REQ-TRN-005) |
 | `lock_validation_set` | Engineer | `dataset.lock` (split UUID, seed, OK and NG counts of each part, the validation set's NG count by defect type); object = dataset UUID (REQ-TRN-006) |
+| `create_store`, `restore_store_key` | Admin | `store.create` (customer, key id), `store.restore` (key id); object = store UUID; never the key or its sheet. The key is saved after the row and the entry, in their transaction, so an entry that cannot be written leaves no key, and a key store that refuses the key is `AOI-TRN-044` with nothing written (REQ-TRN-017) |
+| `move_in` | Admin | `store.move_in` (board model, files to move, resumed); object = store UUID. The row and the entry are written before any file is encrypted, so a move that stops is finished by calling it again, audited again (REQ-TRN-017) |
+| `shred_store` | Admin | `store.shred` (customer, key id, board models, file and AI model counts, resumed); object = store UUID. The key is deleted before the row and the entry are written, and the files after them; a shred that stops is finished by calling it again, audited again (REQ-TRN-017) |
 | `train`, `activate_model` | Engineer | `model.train`, `model.activate` (active version; an older one is a rollback; `model.train` also the Golden board before); object = model UUID |
 | `save_recipe` | Engineer | `recipe.save` (recipe body); object = recipe UUID. A revision that sets, changes or clears the AI score threshold's override is also audited as `recipe.ai_threshold` (revision, override, the threshold that judges, the active AI model's version and calibrated value); object = board model name (REQ-TRN-015). A size in mm the engine cannot apply is `AOI-RCP-011`, and any recipe while the board model's scale cannot be read `AOI-RCP-012`, nothing written (S29) |
 | `batch_test` | Engineer | `test.run` (folder, model version, metrics); object = board model name |
@@ -713,6 +743,9 @@ any sign-in closes its Save to Recipe sheet, so a revision never carries the rea
 | `dataset_items` | uuid, dataset_uuid, path (relative), sha256, sample_uuid, label_uuid, label OK/NG, defect_type, boxes (JSON), labelled_by, checked_by: a frozen version's files as its manifest lists them; append only |
 | `validation_splits` | uuid, dataset_uuid (one split per version), seed, locked_by, locked_at: a frozen version's split; never changed or deleted |
 | `validation_split_items` | uuid, split_uuid, item_uuid (a `dataset_items` row, in one split only), sha256, part train/validation; never changed or deleted |
+| `dataset_stores` | uuid, customer, key_id (hex of the 16 bytes each file's header names), check_value (an HMAC-SHA-256 of a fixed text under the key, which tells a wrong key), created_by, created_at: a customer's dataset store, never its key; never changed or deleted, shredded instead (REQ-TRN-017) |
+| `board_model_stores` | uuid, board_model (in one store only), store_uuid, set_by, set_at; never changed or deleted |
+| `store_shreds` | uuid, store_uuid (one shred per store), key_id, files (the count when the key was deleted), shredded_by, shredded_at; never changed or deleted |
 | `models` | board_model, version, uuid (also in the `.pt` file's metadata, written there before the file is saved, so an exported file names its record), path (.pt), metrics JSON (thresholds, scores, timing), active (one version per board model, switched in one transaction, so no reader finds none active, #171) |
 | `recipes` | board_model, revision (1 is the default recipe, stored when the board model is created, so every result names a stored revision), uuid, body JSON, user, created_at |
 | `inspections` | time, board_model, model_version, model_uuid (the AI model version active when the board was judged; whether the AI check ran is the recipe revision's to say, and a result judged with it off carries `AI_OFF_NOTE`, #246), recipe_rev, recipe_uuid, image/overlay paths, diff_map_path and ai_map_path (the difference and AI score maps as PNG files beside the overlay, 8-bit exact, and 16-bit within one step: `_ai2.png` since S28a, 0.001 σ steps to 32.767 σ, then 1/8192 of the value to 1789 σ, or `_ai.png` before, 0.001 σ steps to 65.535 σ; NULL for rows from before migration 0007, and for OK results once the retention sweep deleted them), reference_path and reference_sha256 (the golden board file the result was judged against and the SHA-256 of its bytes; NULL for rows from before migration 0008 and for results judged without a golden board), view (Top, Side or Bottom; NULL for rows from before migration 0005), result, score, metrics JSON, result_json (the whole result as `InspectionResult.to_dict` writes it, read back by `from_dict` without the images, with the scale it was judged at, `px_per_mm`, when there was one; NULL before migration 0006), operator, archived |
@@ -751,7 +784,7 @@ parent; an error raised out of building the window (a page that cannot read a da
 workspace and ends with exit code 2 (#205).
 Records that can leave the station (`users`, `samples`, `models`, `recipes`, `inspections`, since migration 0009
 `test_runs` and `alarms`, since migration 0014 `labels` and `defect_boxes`, since 0015 `label_checks` and `ok_check_draws`, and since 0016 `calibration_sets`, `blind_labels` and
-`agreement_checks`; since 0017 `datasets` and `dataset_items`; since 0018 `validation_splits` and `validation_split_items`) carry a `uuid` beside their integer key; `defects` and `checks` are rows of one inspection and
+`agreement_checks`; since 0017 `datasets` and `dataset_items`; since 0018 `validation_splits` and `validation_split_items`; since 0019 `dataset_stores`, `board_model_stores` and `store_shreds`) carry a `uuid` beside their integer key; `defects` and `checks` are rows of one inspection and
 are named by its UUID and their `no`. Every stored time is ISO 8601 UTC with an offset and is shown in local time
 (`aoi/times.py`); image, overlay, map, golden board, model and validation folder paths inside the workspace are stored
 relative to it and resolved by `aoi/data/paths.py`, so a workspace folder can move (REQ-SET-017, REQ-SET-001). A path

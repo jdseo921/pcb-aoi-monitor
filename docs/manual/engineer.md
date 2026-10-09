@@ -227,10 +227,20 @@ cannot be written is AOI-TRN-041, or AOI-TRN-042 when its path is too long, and 
 freeze refused by its checks reads no image file first. A datasets/<name> folder whose manifest no version lists was
 left by a freeze that stopped before storing its version; the next freeze of that name replaces it. The version's record
 and manifest never change, and a later label change goes into the next version. The version names the workspace's image
-files rather than copying them; the app never changes or removes one, but a file changed or removed outside the app
-cannot be recovered from the workspace, so back the workspace up. Verifying a version hashes its manifest and every file
+files rather than copying them; the app changes one only to encrypt it in its customer's store, and removes one only
+when that store is shredded, but a file changed or removed outside the app cannot be recovered from the workspace, so
+back the workspace up. Verifying a version hashes its manifest and every file
 again and lists each file that changed or is missing since the freeze; train from another version when one did. No
 screen freezes or verifies a version yet.
+
+**Each customer's images are in a store of their own.** A version is frozen only from a board model in the dataset
+store of the customer it names (AOI-TRN-027). An Admin makes the store, one per customer, and prints its recovery
+sheet, which is shown once: keep it apart from the station, since it is the only way to open the store on a new PC or
+Windows account. Moving a board model in encrypts its images and manifests where they are; they keep their .png and
+.json names but open only in this app, on a station that holds the key. A file the app cannot open is AOI-TRN-025,
+which says why. When an engagement ends, an Admin shreds the store: its key goes first, then its images, versions, AI
+models and Golden boards; nothing of it opens afterwards, a backup included, once the sheet is destroyed. These are
+service calls until the Settings screen comes (ADR 0010).
 
 (to be written: the check and the blind labels on screen, the Datasets tab, locking the validation set)
 

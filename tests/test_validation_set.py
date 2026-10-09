@@ -16,6 +16,7 @@ from aoi.core import datasets
 from aoi.core.imaging import save_image
 from aoi.core.services import AppContext
 from aoi.errors import AoiError
+from tests.conftest import plain
 from tests.test_datasets import agree, ready
 from tests.test_labeller_agreement import CAL
 
@@ -114,7 +115,7 @@ def test_req_trn_006_overlap_by_hash_refused(ctx: AppContext, tmp_path: Path) ->
     files = {i["uuid"]: i for i in ctx.dataset_items(v1["uuid"])}
     (folder := tmp_path / "copy").mkdir()
     copy = folder / "another_name.png"
-    copy.write_bytes((ctx.settings.root / files[split["validation"][0]]["path"]).read_bytes())
+    copy.write_bytes(plain(ctx, files[split["validation"][0]]["path"], CAL))  # its bytes as CAL-1's store holds them
     rng = np.random.default_rng(43)
     for name in ("new_1.png", "new_2.png"):
         save_image(folder / name, rng.integers(0, 256, (32, 32, 3), dtype=np.uint8))

@@ -436,6 +436,40 @@ class Database:
         sql = "SELECT DISTINCT sha256 FROM validation_split_items WHERE part=?"
         return {r["sha256"] for r in self.query(sql, (part,))}
 
+    # --- customer dataset stores (REQ-TRN-017; S38) ----------------------------
+    def add_store(self, store: dict[str, Any]) -> None:
+        self.insert("dataset_stores", store)
+
+    def add_board_model_store(self, row: dict[str, Any]) -> None:
+        self.insert("board_model_stores", row)
+
+    def add_shred(self, row: dict[str, Any]) -> None:
+        self.insert("store_shreds", row)
+
+    def stores(self) -> list[dict[str, Any]]:
+        """Every dataset store, oldest first, with `shredded_at` (None while it is not shredded) and the
+        `board_models` in it."""
+        sql = "SELECT s.*, x.shredded_at FROM dataset_stores s LEFT JOIN store_shreds x ON x.store_uuid=s.uuid"
+        members = self.query("SELECT board_model, store_uuid FROM board_model_stores ORDER BY id")
+        return [
+            {k: v for k, v in r.items() if k != "id"}
+            | {"board_models": [m["board_model"] for m in members if m["store_uuid"] == r["uuid"]]}
+            for r in self.query(sql + " ORDER BY s.id")
+        ]
+
+    def store(self, uid: str) -> dict[str, Any] | None:
+        return next((s for s in self.stores() if s["uuid"] == uid), None)
+
+    def board_model_store(self, board_model: str) -> dict[str, Any] | None:
+        """The store `board_model` is in, or None."""
+        found = self.query("SELECT store_uuid FROM board_model_stores WHERE board_model=?", (board_model,))
+        return self.store(found[0]["store_uuid"]) if found else None
+
+    def dataset_board_model(self, name: str) -> str | None:
+        """The board model of the frozen version named `name`, or None."""
+        found = self.query("SELECT board_model FROM datasets WHERE name=?", (name,))
+        return str(found[0]["board_model"]) if found else None
+
     # --- model registry ----------------------------------------------------
     def register_model(
         self,

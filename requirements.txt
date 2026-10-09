@@ -5,3 +5,4 @@ PySide6-Essentials==6.11.2  # Qt's LGPL modules, not the PySide6 meta-package: i
 torch==2.14.1       # 2.6+ for weights-only loading (REQ-TRN-014); CPU build in CI, CUDA build on GPU stations (README)
 opencv-python==5.0.0.93
 numpy==2.4.6
+cryptography==50.0.2  # AES-256-GCM of each customer's dataset store (ADR 0010); Apache-2.0 OR BSD-3-Clause

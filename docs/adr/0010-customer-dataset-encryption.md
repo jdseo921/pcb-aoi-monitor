@@ -146,3 +146,21 @@ per run; frozen versions name files by workspace-relative path and SHA-256 in ap
 - **A board model needs its store at its first import**, before the Freeze sheet asks for a customer today, so S38
   updates the sketches first. A store's file keeps its `.png` name but opens only in the app; the manual says so.
 - **A lost credential and a lost sheet lose the store**, as a shred does. The sketch's Q40 now points here.
+
+## As built in S38
+
+- **A board model joins its store when an Admin moves it in, not at its first import** (decision 1 and the fourth
+  consequence). With no screen yet to pick a store at an import, a board model in no store keeps its files plain, as
+  every workspace from before S38 does, and the freeze refuses it (AOI-TRN-027), as it refuses one in another
+  customer's store than the version names. So no frozen version, and from S39 no run that trains on one, holds a plain
+  file or a second customer's; our own and synthetic boards get a store of their own before they are frozen. Picking
+  the store at a board model's first import stays in the sketch.
+- **No screen yet** (decision 11): creating a store, printing its sheet, restoring a key, moving a board model in and
+  shredding are `AppContext` calls, Admin only and audited; `docs/sketches/training-datasets.md` proposes their
+  screens.
+- **A shred deletes the key from the station it runs on.** A station that restored the key from the sheet holds it
+  until that station's workspace shreds the store too, so the written confirmation of decision 9 follows the shred on
+  every station that holds the store.
+- **A board model's name must name one folder to be moved in** (AOI-TRN-019): a name from before names were checked
+  (#112), such as ".", would make its folder all of images/.
+

@@ -9,7 +9,7 @@ from typing import Any
 
 from ..defects import BY_NAME, names
 from ..errors import QT_TRANSLATE_NOOP, AoiError
-from .imaging import file_header
+from .imaging import Reader, file_header
 
 LABELS = ("OK", "NG", "UNSURE")  # UNSURE images stay out of training and validation and go to the quality engineer
 Size = tuple[int, int] | None  # an image's (width, height), or None where no box needs it
@@ -74,13 +74,13 @@ def _whole(value: object) -> bool:
     return isinstance(value, numbers.Integral) and not isinstance(value, bool)
 
 
-def image_size(path: str) -> tuple[int, int]:
+def image_size(path: str, read: Reader | None = None) -> tuple[int, int]:
     """(width, height) of the image at `path` as the decoder returns it, turned by its Orientation, read without
     decoding it (`imaging.file_header`: the first MiB of most files, the whole of a TIFF or of a JPEG whose frame header
     lies past that, and a PNG's chunk headers across the file, up to PNG_MAX_CHUNKS of them): AOI-INSP-001 for a file
-    that cannot be read, AOI-INSP-004 for one that holds no image with a size."""
+    that cannot be read, AOI-INSP-004 for one that holds no image with a size. `read` as `file_header` takes it."""
     try:
-        header = file_header(path)
+        header = file_header(path, read)
     except OSError as e:
         raise AoiError("AOI-INSP-001", detail=str(e), path=path) from e
     if header is None or min(header[1], header[2]) <= 0:
