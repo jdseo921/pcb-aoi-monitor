@@ -172,8 +172,11 @@ nothing. Each box is saved, in whole pixels, when you let go, and each type when
 image's history with the boxes before kept. Images open and changes are saved in the background: until a change is
 saved the image takes no other, and the status bar says to wait; one that takes over a second says so over the image.
 An OK or UNSURE image takes no boxes, so Draw Box is off there. An image that cannot be read shows its error code
-under its name; its boxes are listed but cannot be changed. Deleting a box, marking an image and the editor's keys are
-not on this screen yet.
+under its name; its boxes are listed but cannot be changed. To delete the selected box, press **Delete Box** or the
+Delete key: it goes at once, with no question, and stays in the image's history. **Undo**, beside it, or Ctrl+Z puts
+back what the last change replaced, on whichever image it was, which the table then selects; press it again for the
+change before. Once another user signs in, or another board model is picked, what was changed before can no longer be
+undone. Marking an image and the editor's keys are not on this screen yet.
 
 **A second user checks each label.** The labels of a board model and view are ready to freeze into a dataset only
 once a second Engineer or Admin has checked every NG label and OK labels drawn at random, 10 % of them rounded up; the

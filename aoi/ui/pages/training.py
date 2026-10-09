@@ -7,7 +7,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import QItemSelectionModel, Qt
 from PySide6.QtGui import QResizeEvent
 from PySide6.QtWidgets import (
     QComboBox,
@@ -55,6 +55,8 @@ from .training_labels import LabelEditor
 
 if TYPE_CHECKING:
     from ..main_window import MainWindow
+
+SELECT_ROW = QItemSelectionModel.SelectionFlag.Select | QItemSelectionModel.SelectionFlag.Rows
 
 
 def _sample_counts(model: dict[str, Any]) -> str:
@@ -198,6 +200,7 @@ class TrainingPage(Page):
         # Middle: the label editor, the selected image with its defect boxes (REQ-TRN-003) ----------------------
         self.shown: dict[int, dict[str, Any]] = {}  # the samples in the table, by id
         self.editor = LabelEditor(self, self.tr("Select a sample to preview"))
+        self.editor.undone.connect(self._show_samples)
         split.addWidget(self.editor)
 
         # Right: training + model versions ----------------------------------------
@@ -316,6 +319,7 @@ class TrainingPage(Page):
     def on_user_changed(self) -> None:
         """A sign-in closes the sheet the user before left, so the next user never imports its files (review); an
         import that runs goes on as the user who started it (#177), and its sheet closes once that import ends."""
+        self.editor.forget()  # and the next user never undoes what the user before changed
         if self.sheet.running:
             self._left = True
         else:
@@ -501,6 +505,21 @@ class TrainingPage(Page):
         if QMessageBox.question(self, self.tr("Remove"), question, yes | no, no) == yes:  # Enter keeps them (#182)
             self._each_sample(ids, self.ctx.delete_sample)
 
+    def _show_samples(self, uuids: list[str]) -> None:
+        """The rows of these samples alone selected, the first in view, and the topmost in the label editor: an Undo
+        may change back an image other than the one shown."""
+        picks = self.samples.selectionModel()
+        picks.blockSignals(True)  # the editor follows once, below
+        picks.clearSelection()
+        for row in range(self.samples.rowCount()):
+            if self.shown[int(cell_text(self.samples, row, 0))]["uuid"] in uuids:
+                if not picks.hasSelection():
+                    self.samples.scrollTo(self.samples.model().index(row, 0))
+                picks.select(self.samples.model().index(row, 0), SELECT_ROW)
+        picks.blockSignals(False)
+        self.samples.viewport().update()
+        self._preview()
+
     def _preview(self) -> None:
         """The label editor on the selected sample, the topmost row when several are selected."""
         rows = sorted(i.row() for i in self.samples.selectionModel().selectedRows())
@@ -648,6 +667,7 @@ class TrainingPage(Page):
 
     def on_board_model_changed(self, name: str | None) -> None:
         self.editor.show_sample(None)
+        self.editor.forget()  # Undo never changes another board model's image
         if self.sheet.running or self.sheet.reported:  # an import goes on into its board model, and a list stays,
             self._follow_header(name)  # with Import off until that board model is back (REQ-SET-021)
         else:  # files picked for the board model shown before, none imported yet

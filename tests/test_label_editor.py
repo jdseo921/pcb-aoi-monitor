@@ -16,7 +16,7 @@ import pytest
 from PySide6.QtCore import QEvent, QItemSelectionModel, QPoint, QPointF, QRectF, Qt
 from PySide6.QtGui import QInputDevice, QPointingDevice, QWheelEvent
 from PySide6.QtTest import QTest
-from PySide6.QtWidgets import QApplication, QGraphicsSimpleTextItem, QWidget
+from PySide6.QtWidgets import QApplication, QGraphicsSimpleTextItem, QMessageBox, QPushButton, QWidget
 from pytestqt.qtbot import QtBot
 
 from aoi import defects
@@ -30,14 +30,16 @@ from tests.test_req_done_in_v01 import BOARD, _window
 if TYPE_CHECKING:
     from aoi.ui.widgets.box_editor import BoxEditor
 
-LEFT, NONE = Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier
+LEFT, NONE, CTRL = Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, Qt.KeyboardModifier.ControlModifier
 NO_BUTTON = Qt.MouseButton.NoButton
 FINGER = (QInputDevice.DeviceType.TouchScreen, QPointingDevice.PointerType.Finger, QInputDevice.Capability.Position)
 
 
 def _page(qtbot: QtBot, ctx: AppContext) -> TrainingPage:
+    """Training in the active window, the one a key's shortcut works in, as it is for a hand at the keyboard."""
     win = _window(qtbot, ctx)
     win.navigate("Training")
+    qtbot.waitUntil(win.isActiveWindow, timeout=5000)
     page = win.pages["Training"]
     assert isinstance(page, TrainingPage)
     return page
@@ -68,6 +70,12 @@ def _wait(page: TrainingPage) -> None:
     while not page.editor.idle():
         assert time.monotonic() < end, "the label editor's read or store did not end"
         QTest.qWait(5)
+
+
+def _key(w: QWidget, key: Qt.Key, modifiers: Qt.KeyboardModifier = NONE) -> None:
+    """`key` typed with the focus put on `w`, sent to the widget that has the focus then, as a keyboard sends it."""
+    w.setFocus()
+    QTest.keyClick(QApplication.focusWidget(), key, modifiers)
 
 
 def _stored(page: TrainingPage, uuid: str) -> list[tuple[int, int, int, int, str, str]]:
@@ -407,3 +415,73 @@ def test_req_trn_003_editor_reads_and_stores_off_the_ui_thread(
     assert editor.sample["uuid"] == other["uuid"] and view._pix is not None and not editor.saving.isVisible()
     assert on_ui == {"set_boxes": {False}, "load_image": {False}, "boxes": {False}}, "nothing on the UI thread"
     assert [b[4] for b in _stored(page, first["uuid"])] == [kind] and len(ctx.label_history(first["uuid"])) == rows + 1
+
+
+def test_req_trn_003_editor_delete_and_undo(
+    qtbot: QtBot, trained_ctx: AppContext, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Delete Box, red and the last in its row, is on only while a box is selected: it deletes that box at once, with
+    no question, the box kept in the image's history, and the Delete key does the same. Undo beside it and Ctrl+Z, on
+    only while there is a change to undo, put back the boxes as they were before the last change stored, one change
+    per press, each as a new label, on whichever image it was, which is then selected and shown. Switch User and
+    another board model leave nothing to undo."""
+    monkeypatch.setattr(QMessageBox, "question", lambda *a, **k: pytest.fail("Delete Box asks nothing"))
+    ctx = trained_ctx
+    sample, other = ctx.samples(BOARD, "NG")[:2]
+    both = [(100, 100, 60, 40, "Scratch", "Minor"), (300, 200, 50, 50, "Tombstone", "Major")]
+    ctx.set_boxes(sample["uuid"], [DefectBox(*b[:5]) for b in both])
+    page = _open(qtbot, ctx, sample)
+    editor, view, win = page.editor, page.editor.view, page.shell
+    undo, delete = (next(b for b in page.findChildren(QPushButton) if b.text() == t) for t in ("Undo", "Delete Box"))
+    assert delete.objectName() == "danger" and not delete.isEnabled() and not undo.isEnabled()
+    assert undo.y() == delete.y() and undo.x() < delete.x(), "Undo beside Delete Box, which comes last"
+    editor.box_list.setCurrentRow(0)
+    assert delete.isEnabled()
+    rows = len(ctx.label_history(sample["uuid"]))
+    qtbot.mouseClick(delete, LEFT)
+    assert _stored(page, sample["uuid"]) == both[1:] and editor.box_list.count() == 1
+    history = ctx.label_history(sample["uuid"])
+    assert len(history) == rows + 1 and [b["dct_type"] for b in history[1]["boxes"]] == ["Scratch", "Tombstone"]
+    assert view.chosen == -1 and not delete.isEnabled() and undo.isEnabled()
+    assert win.statusBar().currentMessage() == "Box 1 deleted; Undo or Ctrl+Z brings it back"
+    _key(page.samples, Qt.Key.Key_Z, CTRL)  # wherever the focus is on the page
+    assert _stored(page, sample["uuid"]) == both and len(ctx.label_history(sample["uuid"])) == rows + 2
+    assert editor.box_list.count() == 2 and not undo.isEnabled()
+    editor.box_list.setCurrentRow(1)
+    _key(editor.box_list, Qt.Key.Key_Delete)
+    assert _stored(page, sample["uuid"]) == both[:1]
+    assert win.statusBar().currentMessage() == "Box 2 deleted; Undo or Ctrl+Z brings it back"
+    editor.box_list.setCurrentRow(0)
+    _drag(view, _at(view, 130, 120), _at(view, 230, 220))  # a move, then two undos: the move, then the delete
+    assert _stored(page, sample["uuid"]) != both[:1]
+    _key(view, Qt.Key.Key_Z, CTRL)
+    assert _stored(page, sample["uuid"]) == both[:1]
+    qtbot.mouseClick(undo, LEFT)  # a click or a tap
+    assert _stored(page, sample["uuid"]) == both and not undo.isEnabled()
+    assert len(ctx.label_history(sample["uuid"])) == rows + 6, "each delete, move and undo a label row of its own"
+
+    editor.box_list.setCurrentRow(0)
+    qtbot.mouseClick(delete, LEFT)
+    _select(page, other["id"])
+    _wait(page)
+    _key(page.samples, Qt.Key.Key_Z, CTRL)  # the change was on the image before
+    assert _stored(page, sample["uuid"]) == both and page._selected_ids() == [sample["id"]]
+    assert editor.sample is not None and editor.sample["uuid"] == sample["uuid"] and editor.box_list.count() == 2
+
+    editor.box_list.setCurrentRow(0)
+    qtbot.mouseClick(delete, LEFT)
+    _wait(page)
+    win.set_user("admin")  # Switch User: the next user cannot undo what the one before did
+    assert not undo.isEnabled()
+    win.set_user("engineer")
+    _key(page.samples, Qt.Key.Key_Z, CTRL)
+    assert _stored(page, sample["uuid"]) == both[1:] and not undo.isEnabled()
+    _select(page, sample["id"])
+    _wait(page)
+    editor.box_list.setCurrentRow(0)
+    qtbot.mouseClick(delete, LEFT)
+    assert _stored(page, sample["uuid"]) == [] and undo.isEnabled()
+    ctx.ensure_board_model("OTHER")
+    win._on_board_model("OTHER")
+    win._on_board_model(BOARD)
+    assert not undo.isEnabled()
