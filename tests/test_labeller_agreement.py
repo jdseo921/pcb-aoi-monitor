@@ -105,3 +105,42 @@ def test_req_trn_016_agreement_thresholds(ctx: AppContext, tmp_path: Path) -> No
             call()
         assert refused.value.code == code
     assert len(ctx.audit_entries()) == entries and len(ctx.agreement_checks(CAL)) == 2
+
+
+@pytest.mark.parametrize(("n_ok", "n_ng", "drawn_ng"), [(80, 20, 20), (90, 40, 30), (60, 50, 40), (100, 0, 0)])
+def test_req_trn_016_draw_calibration(n_ok: int, n_ng: int, drawn_ng: int) -> None:
+    """A proposed set holds 100 different images labelled OK or NG: 30 NG, or every NG image when fewer, and more NG
+    where the OK images run short; the same seed draws the same set, and the NG images are not drawn first."""
+    ok, ng = [f"ok{i}" for i in range(n_ok)], [f"ng{i}" for i in range(n_ng)]
+    drawn = labels.draw_calibration(ok, ng, 7)
+    assert len(set(drawn)) == len(drawn) == labels.CALIBRATION_IMAGES and set(drawn) <= set(ok + ng)
+    assert sum(s in ng for s in drawn) == drawn_ng and drawn == labels.draw_calibration(ok, ng, 7)
+    assert drawn_ng == 0 or {s in ng for s in drawn[:drawn_ng]} == {True, False}
+    assert labels.draw_calibration(ok[:-1], ng[: 100 - n_ok], 7) == []  # 99 images make no set
+
+
+def test_req_trn_016_propose_calibration_set_and_blind_labelled(ctx: AppContext, tmp_path: Path) -> None:
+    """The proposal draws from the board model's images labelled OK or NG, every view together, as the seed draws,
+    and the set made from it is accepted; with fewer than 100 such images it is refused (AOI-TRN-035), proposing
+    nothing and writing no audit entry. blind_labelled names the images each user labelled blind, never the labels."""
+    samples = calibration_workspace(ctx, tmp_path / "boards", 85, 20)
+    reference, unsure = (str(s["uuid"]) for s in samples[:2])  # the first import is the reference: it stays OK
+    ctx.set_label(unsure, "UNSURE")
+    ok, ng = ([str(s["uuid"]) for s in ctx.samples(CAL, k)] for k in ("OK", "NG"))
+    proposed = ctx.propose_calibration_set(CAL, 3)
+    assert proposed == labels.draw_calibration(ok, ng, 3) and unsure not in proposed
+    cal = ctx.make_calibration_set(CAL, proposed)
+    assert ctx.calibration_sets(CAL)[0]["sample_uuids"] == proposed
+    for user, n in (("kim", 3), ("lee", 1)):
+        ctx.set_user(user)
+        for uuid in proposed[:n]:
+            ctx.label_blind(cal, uuid, "OK" if uuid in ok else "NG", None if uuid in ok else "Scratch")
+    assert ctx.blind_labelled(cal) == {ctx.db.user_uuid("kim"): proposed[:3], ctx.db.user_uuid("lee"): proposed[:1]}
+    assert ctx.blind_labelled("no-such-set") == {}
+    for uuid in [u for u in ok if u != reference][:5]:
+        ctx.set_label(uuid, "UNSURE")
+    entries = len(ctx.audit_entries())
+    with pytest.raises(AoiError) as refused:
+        ctx.propose_calibration_set(CAL)
+    assert refused.value.code == "AOI-TRN-035" and "holds 99 images labelled OK or NG, not 100" in refused.value.what
+    assert len(ctx.audit_entries()) == entries

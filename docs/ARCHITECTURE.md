@@ -402,7 +402,10 @@ Two labellers agree before a customer validation (REQ-TRN-016, S34): `make_calib
 `labels`), and `run_agreement_check` stores the counts: OK/NG agreement against 98 % and defect-type agreement on the
 images both labelled NG against 90 % (proposed), compared in whole numbers (`labels.agreement`). The check is stored
 on its own, keyed by its calibration set and board model; the newest one whose set holds images of a view decides
-whether a version of that view is frozen, and the version names it (S35).
+whether a version of that view is frozen, and the version names it (S35). `propose_calibration_set` draws a set to
+make, at random with a seed: 30 NG images, or every one when fewer, the rest OK, more NG where the OK images run short,
+in a random order (`labels.draw_calibration`); `blind_labelled` names the images each user has labelled blind, never
+the labels (Datasets stage, 2 of 4).
 `freeze_dataset` (REQ-TRN-005, S35) is refused while `labels_ready_to_freeze` is False (AOI-TRN-020, -021), with no
 customer (AOI-TRN-024), a view outside `aoi.hal.VIEWS` (AOI-TRN-038), a board model whose name has no Latin letter or
 digit (AOI-TRN-039) or gives the letters and digits another board model's versions are named with (AOI-TRN-040), and

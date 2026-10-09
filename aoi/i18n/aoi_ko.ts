@@ -798,7 +798,12 @@
         <translation>한 라벨러가 이미지 {size}개 중 {n}개만 블라인드로 라벨링했습니다</translation>
     </message>
     <message>
-        <location line="+21"/>
+        <location line="+19"/>
+        <source>{board_model} holds {n} images labelled OK or NG, not {size}</source>
+        <translation>{board_model}에 OK 또는 NG로 라벨이 지정된 이미지가 {size}개가 아니라 {n}개 있습니다</translation>
+    </message>
+    <message>
+        <location line="+20"/>
         <source>Freezing a dataset version</source>
         <translation>데이터셋 버전 동결</translation>
     </message>
@@ -1017,7 +1022,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-2108"/>
+        <location line="-2126"/>
         <source>no defect type was given</source>
         <translation>결함 유형이 지정되지 않았습니다</translation>
     </message>
@@ -1052,7 +1057,7 @@
         <translation>{label}(으)로 다시 라벨링</translation>
     </message>
     <message>
-        <location line="+646"/>
+        <location line="+664"/>
         <source>no agreement check of the board model holds images of this view</source>
         <translation>이 보드 모델의 일치도 검사 중 이 뷰의 이미지를 담은 것이 없습니다</translation>
     </message>
@@ -2837,7 +2842,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/labels.py" line="+46"/>
+        <location filename="../core/labels.py" line="+48"/>
         <source>{label} is not OK, NG or UNSURE</source>
         <translation>{label}은(는) OK, NG, UNSURE 중 하나가 아닙니다</translation>
     </message>
@@ -4924,7 +4929,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/services.py" line="-2289"/>
+        <location filename="../core/services.py" line="-2307"/>
         <source>Aligning {count} images to the reference board</source>
         <translation type="unfinished"></translation>
     </message>

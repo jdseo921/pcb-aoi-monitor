@@ -367,6 +367,15 @@ class Database:
         rows = self.query("SELECT * FROM blind_labels WHERE set_uuid=? AND labelled_by=?", (set_uuid, labelled_by))
         return {r["sample_uuid"]: (r["label"], r["defect_type"]) for r in rows}
 
+    def blind_labelled(self, set_uuid: str) -> dict[str, list[str]]:
+        """The images of a calibration set each user has labelled blind: {user UUID: [sample UUID]}, in the order
+        labelled."""
+        done: dict[str, list[str]] = {}
+        rows = self.query("SELECT labelled_by, sample_uuid FROM blind_labels WHERE set_uuid=? ORDER BY id", (set_uuid,))
+        for r in rows:
+            done.setdefault(r["labelled_by"], []).append(r["sample_uuid"])
+        return done
+
     def agreement_checks(self, board_model: str, uid: str | None = None) -> list[dict[str, Any]]:
         """A board model's agreement checks, newest first, or the one with UUID `uid`."""
         where, params = ("uuid=?", (uid,)) if uid else ("board_model=?", (board_model,))
