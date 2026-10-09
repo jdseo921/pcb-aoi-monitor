@@ -5,8 +5,10 @@ boxes before in the image's history (labels sketch, docs/sketches/training-label
 
 from __future__ import annotations
 
+import sqlite3
 import threading
 import time
+from collections.abc import Callable
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -853,3 +855,139 @@ def test_req_trn_003_editor_esc_closes_the_import_sheet_or_leaves_draw_mode(
     finally:
         qInstallMessageHandler(previous)
     assert not [m for m in logged if "mbiguous" in m], logged
+
+
+def _held(n: int, real: Callable[..., Any]) -> Callable[..., Any]:
+    """`real`, whose n-th call raises SQLite's "database is locked", as one does once the busy timeout ends (db.py)."""
+    calls: list[object] = []
+
+    def call(*args: Any, **kwargs: Any) -> Any:
+        calls.append(args)
+        if len(calls) == n:
+            held = sqlite3.OperationalError("database is locked")
+            held.sqlite_errorcode = sqlite3.SQLITE_BUSY
+            raise held
+        return real(*args, **kwargs)
+
+    return call
+
+
+def test_req_trn_003_editor_a_batch_an_error_stops_shows_what_it_stored(
+    qtbot: QtBot, trained_ctx: AppContext, monkeypatch: pytest.MonkeyPatch, dialogs: list[tuple[str, str]]
+) -> None:
+    """A mark of three images that an error other than a refusal stops at the second, such as a database another
+    program holds past the busy timeout, keeps what it stored: the table shows it, the error is the coded dialog as
+    before (AOI-SET-013), and Undo puts it back. An Undo, and Remove, stopped so show what they changed before the
+    error, with its dialog (the review of the joined stack)."""
+    ctx = trained_ctx
+    oks = ctx.samples(BOARD, "OK")[1:4]
+    page = _open(qtbot, ctx, oks[0])
+    real = ctx.set_label
+
+    def stored() -> list[str]:
+        """Each image's label as stored, which the table shows."""
+        _wait(page)
+        rows = {int(cell_text(page.samples, r, 0)): r for r in range(page.samples.rowCount())}
+        labels = [ctx.label_history(s["uuid"])[0]["label"] for s in oks]
+        assert labels == [cell_text(page.samples, rows[s["id"]], 1) for s in oks]
+        return sorted(labels)
+
+    monkeypatch.setattr(ctx, "set_label", _held(2, real))
+    _select(page, *(s["id"] for s in oks))
+    page.act_unsure.trigger()
+    assert stored() == ["OK", "OK", "UNSURE"] and page.editor.act_undo.isEnabled()
+    assert [t[:11] for t, _ in dialogs] == ["AOI-SET-013"]
+    monkeypatch.setattr(ctx, "set_label", real)
+    page.editor.act_undo.trigger()
+    assert stored() == ["OK", "OK", "OK"] and not page.editor.act_undo.isEnabled()
+
+    _select(page, *(s["id"] for s in oks))  # Undo selected the one image it put back
+    page.act_unsure.trigger()
+    assert stored() == ["UNSURE", "UNSURE", "UNSURE"]
+    monkeypatch.setattr(ctx, "set_label", _held(2, real))
+    page.editor.act_undo.trigger()  # put back one, then stopped
+    assert stored() == ["OK", "UNSURE", "UNSURE"] and [t[:11] for t, _ in dialogs] == ["AOI-SET-013"] * 2
+
+    monkeypatch.setattr(ctx, "delete_sample", _held(2, ctx.delete_sample))
+    _select(page, *(s["id"] for s in oks))
+    page._remove()
+    _wait(page)
+    left = {s["id"] for s in ctx.samples(BOARD)}
+    assert sum(s["id"] in left for s in oks) == 2 and len(dialogs) == 3
+    assert {int(cell_text(page.samples, r, 0)) for r in range(page.samples.rowCount())} == left
+
+
+def test_req_trn_003_editor_a_store_ending_after_a_sign_in_leaves_nothing_to_undo(
+    qtbot: QtBot, trained_ctx: AppContext, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A change whose store ends only after another user signed in, or another board model was picked, is stored, but
+    Undo stays empty, as for one stored before: the next user never undoes it, nor Undo changes an image of the board
+    model before (the review of the joined stack)."""
+    ctx = trained_ctx
+    ng = ctx.samples(BOARD, "NG")[0]
+    ctx.set_boxes(ng["uuid"], [DefectBox(100, 100, 60, 40, "Scratch"), DefectBox(200, 100, 60, 40, "Scratch")])
+    page = _open(qtbot, ctx, ng)
+    editor, win = page.editor, page.shell
+    real, go = ctx.set_boxes, threading.Event()
+
+    def slow(*args: Any) -> str:  # stored, but its end reaches the page late, as from a slow network share
+        uid = real(*args)
+        assert go.wait(10)
+        return uid
+
+    def delete_first() -> None:
+        go.clear()
+        editor.box_list.setCurrentRow(0)
+        editor.act_delete.trigger()
+        assert editor.busy(), "still being stored"
+
+    monkeypatch.setattr(ctx, "set_boxes", slow)
+    delete_first()
+    win.set_user("admin")
+    go.set()
+    _wait(page)
+    assert len(ctx.boxes(ng["uuid"])) == 1 and not editor.act_undo.isEnabled()
+    ctx.ensure_board_model("OTHER")
+    delete_first()
+    win._on_board_model("OTHER")
+    go.set()
+    _wait(page)
+    win._on_board_model(BOARD)
+    _wait(page)
+    assert ctx.boxes(ng["uuid"]) == [] and not editor.act_undo.isEnabled()
+
+
+def test_req_trn_003_editor_mark_ng_drops_a_type_not_of_the_33(
+    qtbot: QtBot, trained_ctx: AppContext, dialogs: list[tuple[str, str]]
+) -> None:
+    """An NG image whose label an earlier version stored with a type that is not one of the 33 (Missing), carried over
+    with no labeller, takes no box: AOI-TRN-030 says so and that Mark NG labels it NG again with no type. Mark NG does,
+    as the user acting, and its boxes are then drawn; Mark OK on another such image, then Undo, puts it back NG with no
+    type, the one it can take (the review of the joined stack)."""
+    ctx = trained_ctx
+    ng, other = ctx.samples(BOARD, "NG")[:2]
+    for s in (ng, other):
+        ctx.db.add_label(s["uuid"], "NG", "Missing", [], None)  # as migration 0014 carries an earlier label over
+    page = _open(qtbot, ctx, ng)
+    editor, view = page.editor, page.editor.view
+    rows = len(ctx.label_history(ng["uuid"]))
+    editor.draw_btn.click()
+    _drag(view, _at(view, 100, 100), _at(view, 160, 140))
+    assert _stored(page, ng["uuid"]) == [] and [t[:11] for t, _ in dialogs] == ["AOI-TRN-030"]
+    assert "Missing, is not one of the 33" in dialogs[0][1] and "Mark NG" in dialogs[0][1]
+    _key(page.samples, Qt.Key.Key_N)
+    _wait(page)
+    label = ctx.label_history(ng["uuid"])[0]
+    assert (label["label"], label["defect_type"], label["labelled_by"]) == ("NG", None, ctx.user_uuid)
+    assert len(ctx.label_history(ng["uuid"])) == rows + 1 and len(dialogs) == 1
+    _drag(view, _at(view, 100, 100), _at(view, 160, 140))
+    assert len(_stored(page, ng["uuid"])) == 1 and len(dialogs) == 1
+
+    _select(page, other["id"])
+    _wait(page)
+    _key(page.samples, Qt.Key.Key_O)
+    _wait(page)
+    _key(page.samples, Qt.Key.Key_Z, CTRL)
+    _wait(page)
+    label = ctx.label_history(other["uuid"])[0]
+    assert (label["label"], label["defect_type"]) == ("NG", None) and len(dialogs) == 1

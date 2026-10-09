@@ -153,10 +153,13 @@ later label or box change, add a label to the image's history and keep the one b
 and when; nothing is deleted, and the audit trail records each change (`sample.update`, `label.set`). Images labelled
 before this version keep their label, with no labeller recorded. Marking an image as it is labelled already changes
 nothing, unless no labeller is recorded for its label: then it is labelled again, by you, so that a second user can
-check it. An UNSURE image is left out of training and its calibration and counted as neither OK nor NG on Training and
-Home. A box must lie inside the image (AOI-TRN-031); a label an image cannot take, such as a box on an OK image or a
-type not one of the 33, is refused (AOI-TRN-030). The label editor draws boxes and Mark UNSURE marks an image UNSURE
-(below); no screen lists UNSURE images for the customer's quality engineer yet.
+check it. An NG image whose defect type is not one of the 33, as an earlier version could store, takes no box until
+you mark it NG again (AOI-TRN-030 says so): Mark NG labels it NG with no type, as for any image, and its boxes then
+give its types; Undo after another mark puts it back with no type either. An UNSURE image is left out of training and
+its calibration and counted as neither OK nor NG on Training and Home. A box must lie inside the image (AOI-TRN-031);
+a label an image cannot take, such as a box on an OK image or a type not one of the 33, is refused (AOI-TRN-030). The
+label editor draws boxes and Mark UNSURE marks an image UNSURE (below); no screen lists UNSURE images for the
+customer's quality engineer yet.
 
 **Drawing defect boxes on the label editor (the S33 screen).** Select an image in Training's sample table and it opens
 in the label editor beside the table: its file name, label and view above it, its boxes on it and listed under it. On
@@ -178,9 +181,11 @@ back what the last change replaced, on whichever image it was, which the table t
 change before. Once another user signs in, or another board model is picked, what was changed before can no longer be
 undone. **Mark OK**, **Mark NG** and **Mark UNSURE** under the table, or the keys O, N and U, label each selected
 image at once, without asking; an image already so labelled stays as it is, unless its label has no labeller (see
-Labels keep their history), and the rows stay selected. Once drawn, an NG image's boxes carry its defect types, which
-the table's Defect type column shows, each with its count; Mark NG asks for no type and puts the focus on the image
-for you to draw its boxes. An image marked OK or UNSURE loses its boxes, which stay in its history, and Undo or Ctrl+Z
+Labels keep their history), and the rows stay selected. If an error stops the marks part-way, such as a database
+another program holds, the images marked before it keep their new label, which the table shows and Undo puts back;
+an Undo stopped so shows the images it put back. Once drawn, an NG image's boxes carry its defect types, which the
+table's Defect type column shows, each with its count; Mark NG asks for no type and puts the focus on the image for
+you to draw its boxes. An image marked OK or UNSURE loses its boxes, which stay in its history, and Undo or Ctrl+Z
 gives them back with its label. While you type in a field, such as Epochs, in a drop-down list, such as the Type list,
 or anywhere in the import sheet, the letters, digits and signs go there instead: a letter typed in a row's Label or
 Defect type cell of the sheet opens its list on the value it starts. **PgDn** and **PgUp** open the next and previous

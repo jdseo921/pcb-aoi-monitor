@@ -130,13 +130,13 @@ def test_req_trn_001_ng_has_dct_type(
     assert [(r["label"], r["defect_type"]) for r in ctx.samples(BOARD)] == [("NG", "Missing Component"), ("OK", None)]
 
 
-def test_req_trn_001_a_sample_marked_ng_has_one_of_the_33_types(
-    qtbot: QtBot, ctx: AppContext, synthetic_dataset: Path
+def test_req_trn_001_update_sample_relabels_ng_only_with_one_of_the_33_types(
+    ctx: AppContext, synthetic_dataset: Path
 ) -> None:
-    """update_sample holds to the import's rule: it refuses NG without one of the 33 types (none, "Unknown / mixed",
-    "Anomaly") with AOI-TRN-013, and a label other than OK or NG with AOI-TRN-018, which says the sample was not given
-    that label, leaving the sample as it was; a relabel to OK clears the type. Training's marks write through set_label
-    (S33): an image marked NG there has no type until a box of one of the 33 is drawn."""
+    """AppContext.update_sample holds to the import's rule: it refuses NG without one of the 33 types (none, "Unknown /
+    mixed", "Anomaly") with AOI-TRN-013, and a label other than OK or NG with AOI-TRN-018, which says the sample was not
+    given that label, leaving the sample as it was; a relabel to OK clears the type. Training's marks do not call it:
+    they write through set_label (S33, test_req_trn_003_editor_mark)."""
     ctx.import_samples(BOARD, [str(p) for p in list_images(synthetic_dataset / "train" / "ok")[:2]], "OK")
     sample = ctx.samples(BOARD)[1]["id"]  # not the reference, which is never relabelled NG (AOI-TRN-007)
 
