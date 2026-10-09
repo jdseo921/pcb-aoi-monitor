@@ -4,6 +4,7 @@ dialog, logs its trace and closes the workspace, where before the app vanished w
 
 from __future__ import annotations
 
+import gc
 import sys
 from collections.abc import Callable
 from typing import Any
@@ -16,6 +17,7 @@ from pytestqt.qtbot import QtBot
 import main
 from aoi.config import Settings
 from aoi.core.services import AppContext
+from aoi.ui import workers
 from aoi.ui.main_window import MainWindow
 from aoi.ui.pages.training import TrainingPage
 from tests.test_alarms_and_errors import UNEXPECTED, _log_rows
@@ -180,3 +182,28 @@ def test_req_log_005_startup_installs_excepthook(
     assert row["context"] == "unhandled" and "RuntimeError: slot failed while running" in str(row["trace"])
     (alarm,) = seen["alarms"]
     assert alarm["level"] == "ERROR" and alarm["code"] == "AOI-SET-007"
+
+
+def test_req_insp_011_startup_runs_the_collector_on_the_ui_thread(
+    qtbot: QtBot, opened: list[AppContext], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """main.main() turns the interpreter's automatic cycle collection off and starts the UI thread's timer that runs it
+    (`workers.collect_on_ui_thread`) before the event loop; with the call removed from start-up this test fails."""
+    seen: dict[str, Any] = {}
+
+    def loop() -> int:
+        win = _shown_window()
+        qtbot.addWidget(win)
+        seen["automatic"], seen["timers"] = gc.isenabled(), list(workers._collector)
+        win.close()
+        return 0
+
+    monkeypatch.setattr(_App, "loop", staticmethod(loop))
+    suite = list(workers._collector)
+    gc.enable()  # as in a new interpreter; conftest.py turned it off for the suite
+    try:
+        assert main.main() == 0
+    finally:
+        gc.disable()
+    (timer,) = seen["timers"]
+    assert seen["automatic"] is False and timer not in suite and timer.isActive()

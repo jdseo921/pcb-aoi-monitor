@@ -25,6 +25,7 @@ from aoi.ui.pages.compare import ComparePage
 from aoi.ui.pages.inspection import InspectionPage, Outcome
 from aoi.ui.pages.model_test import ModelTestPage
 from aoi.ui.workers import Worker, _live
+from tests.conftest import collector_off
 from tests.test_compare_views import _compare, _open
 from tests.test_jobs import count_to
 from tests.test_req_done_in_v01 import BOARD, _window
@@ -115,8 +116,7 @@ def test_issue_132_inspection_keeps_only_the_board_it_shows(
     broken = tmp_path / "broken.png"
     broken.write_bytes(ng_board.read_bytes()[:200])  # a PNG cut short: it cannot be decoded
     page._set_queue([ng_board, ng_board, ng_board, broken])
-    gc.disable()  # from here, a result kept by a reference cycle stays: only the collector could free it
-    try:
+    with collector_off():  # from here, a result kept by a reference cycle stays: only the collector could free it
         for n in range(1, 4):
             page.next_board()
             qtbot.waitUntil(lambda: page.worker is None and len(seen) == n, timeout=60000)  # noqa: B023
@@ -126,8 +126,6 @@ def test_issue_132_inspection_keeps_only_the_board_it_shows(
         signals = weakref.ref(page.worker.signals)
         qtbot.waitUntil(lambda: page.worker is None and not _live, timeout=60000)
         assert signals() is None, "a failed board's signals go with its worker, not with its job"
-    finally:
-        gc.enable()
 
 
 def test_issue_132_ai_model_test_lets_go_of_its_worker(
@@ -147,10 +145,7 @@ def test_issue_132_ai_model_test_lets_go_of_its_worker(
 
     monkeypatch.setattr(model_test, "start", spy)
     page.folder = str(synthetic_dataset / "test" / "ng")
-    gc.disable()
-    try:
+    with collector_off():
         page.run()
         qtbot.waitUntil(lambda: page.btn_run.isEnabled() and not _live, timeout=60000)
         assert len(started) == 1 and started[0]() is None, "the worker is freed with its last slot"
-    finally:
-        gc.enable()

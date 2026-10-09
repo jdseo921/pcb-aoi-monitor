@@ -191,6 +191,15 @@ bound once the worker is built), which does not keep the signals; `tests/test_ba
 result is freed once the page shows another, and that a board that fails lets go of its worker's signals with the
 worker. One call starts a thread of its own: `maps.load_maps`, run by a job, decodes a stored result's AI map on a
 helper thread while the job decodes the difference map, and waits for it before it returns.
+Python's cycle collector runs on the UI thread only (REQ-INSP-011): `main.py` calls `workers.collect_on_ui_thread`,
+which turns the interpreter's automatic collection off and runs each collection that comes due, by the interpreter's
+own thresholds, from a 200 ms timer on the UI thread. The interpreter starts a collection on whichever thread is
+allocating when one comes due, and one started on a pool thread frees every reference cycle there, Qt objects of the
+UI thread included, where Qt forbids deleting them: on Windows CI a pass that started while a job loaded the AI model
+ended the process with an access violation (2026-10-09). The timer cannot see the interpreter's count of long-lived
+objects, so it runs a full pass whenever its count is due (35 to 52 ms with the app's modules loaded), at most once a
+tick. `tests/conftest.py` sets up the same for the suite, with a pass over the young generations after each test, and
+`tests/test_collector.py` holds a job's cycles to the UI thread.
 Closing the window stops the background work (#171): while a job runs `MainWindow.closeEvent` asks first (No keeps the
 window open), then `AppContext.close` cancels every job, waits for it and closes the database and the log, and the slots
 the jobs queued are dropped unrun, and the workers that waited for them let go (`workers.drop_queued`); `main.py` closes
