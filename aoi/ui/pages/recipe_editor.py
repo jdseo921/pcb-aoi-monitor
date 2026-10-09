@@ -137,10 +137,7 @@ class RecipeEditorPage(Page):
         tf = QFormLayout(thr_tab)
         self.use_ai = QCheckBox(self.tr("Use the self-trained AI model"))
         self.use_cmp = QCheckBox(self.tr("Use the Golden board comparison"))
-        self.ai_thr = QDoubleSpinBox()
-        self.ai_thr.setRange(0, 1e4)
-        self.ai_thr.setDecimals(3)
-        self.ai_thr.setSpecialValueText(self.tr("AI model default"))
+        self.ai_thr = self.ai_threshold_field()
         self.warn = QDoubleSpinBox()
         self.warn.setRange(0.1, 1)
         self.warn.setSingleStep(0.05)
@@ -159,6 +156,7 @@ class RecipeEditorPage(Page):
         for w, label in (
             (self.use_ai, None),
             (self.ai_thr, self.tr("AI score threshold")),
+            (self.ai_thr.note, None),  # why no calibrated value is named, as wide as the form
             (self.warn, self.tr("WARN band (fraction of the threshold)")),
             (self.use_cmp, None),
             (self.diff, self.tr("Pixel difference (0-255)")),
@@ -239,7 +237,8 @@ class RecipeEditorPage(Page):
         self._read_golden_board()
         self.use_ai.setChecked(r.use_ai)
         self.use_cmp.setChecked(r.use_compare)
-        self.ai_thr.setValue(r.anomaly_threshold or 0)
+        self.show_calibrated(self.ai_thr, self.board_model)
+        self.ai_thr.set_override(r.anomaly_threshold)
         self.warn.setValue(r.warn_ratio)
         self.diff.setValue(r.diff_threshold)
         self.area.setValue(r.min_defect_area)
@@ -389,7 +388,7 @@ class RecipeEditorPage(Page):
     def _collect(self) -> Recipe:
         r = self.edited_recipe
         r.use_ai, r.use_compare = self.use_ai.isChecked(), self.use_cmp.isChecked()
-        r.anomaly_threshold = self.ai_thr.value() or None
+        r.anomaly_threshold = self.ai_thr.override()
         r.warn_ratio, r.diff_threshold, r.min_defect_area = self.warn.value(), self.diff.value(), self.area.value()
         r.ssim_min, r.changed_pct_max, r.max_diff_regions = self.ssim.value(), self.chg.value(), self.maxreg.value()
         return r
@@ -496,3 +495,4 @@ class RecipeEditorPage(Page):
             self._show_golden_board()  # the role may have changed since load() built it
         if self.board_model and (latest := self.ctx.recipe(self.board_model)[0]) != self.rev:
             self._show_latest(latest)  # saved since, on Compare: shown, so that Save never reverts it
+        self.show_calibrated(self.ai_thr, self.board_model)  # an AI model trained or activated since: its value

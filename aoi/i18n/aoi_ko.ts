@@ -632,7 +632,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/recipe_editor.py" line="+361"/>
+        <location filename="../ui/pages/recipe_editor.py" line="+360"/>
         <source>Height</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2780,7 +2780,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/base.py" line="+128"/>
+        <location filename="../ui/pages/base.py" line="+129"/>
         <source>No board model yet</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2800,7 +2800,27 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+27"/>
+        <location line="+7"/>
+        <source>Override {value}</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Set my own value</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+18"/>
+        <source>No AI model version is active: there is no calibrated value.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>No AI model is trained yet: there is no calibrated value.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+28"/>
         <source>Open {page} ›</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2840,7 +2860,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+109"/>
+        <location line="+110"/>
         <source>{action}  {key}</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2905,7 +2925,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/recipe_editor.py" line="-297"/>
+        <location filename="../ui/pages/recipe_editor.py" line="-296"/>
         <source>Recipe Editor</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3067,17 +3087,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+4"/>
-        <source>AI model default</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+18"/>
+        <location line="+19"/>
         <source>AI score threshold</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1"/>
+        <location line="+2"/>
         <source>WARN band (fraction of the threshold)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3152,7 +3167,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+75"/>
+        <location line="+76"/>
         <source>Train an AI model or set a reference image on Training.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3231,7 +3246,7 @@
 <context>
     <name>Role</name>
     <message>
-        <location filename="../ui/pages/base.py" line="-271"/>
+        <location filename="../ui/pages/base.py" line="-301"/>
         <source>Operator</source>
         <translation type="unfinished"></translation>
     </message>
