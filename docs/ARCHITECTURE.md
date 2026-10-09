@@ -887,6 +887,12 @@ boards at 0.3 MP and 5 MP for the base commit and the head on one runner (`tools
 head's median or 95th percentile at either size is over 1.10 times the base's; `tests/perf/test_timing.py` checks a
 developer machine against its own `baseline.json` entry. Neither is the product's speed (`tests/perf/README.md`).
 
+Public datasets (S30, REQ-INSP-014): `tools/dataset_check.py` runs the golden-board comparison with the AI check off on
+DeepPCB and PKU-Market-PCB, laid out as their authors publish them, and writes counts, times and peak memory outside
+the repository and the datasets. Both are research-use
+datasets, used for internal checks only with Jay's written approval of 2026-10-08: no image, box or model trained on
+them enters the repository or ships, and their counts are never an accuracy claim. The record is in `docs/tests/`.
+
 | Requirement | Where | Status |
 |---|---|---|
 | Image upload PNG/JPG | Training, Inspection | Done (also BMP/TIFF) |
