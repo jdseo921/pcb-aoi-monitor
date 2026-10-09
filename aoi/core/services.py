@@ -9,6 +9,7 @@ from __future__ import annotations
 import contextlib
 import contextvars
 import csv
+import dataclasses
 import errno
 import functools
 import hashlib
@@ -18,6 +19,7 @@ import math
 import os
 import random
 import secrets
+import shutil
 import threading
 from collections import Counter
 from collections.abc import Callable, Iterator, Sequence
@@ -46,6 +48,7 @@ from .imaging import (
     list_images,
     load_image,
     load_image_sha256,
+    preview_size,
     registration,
     save_image,
     warp_to,
@@ -71,6 +74,7 @@ SAVING = QT_TRANSLATE_NOOP("Training", "Saving AI model {version}")
 NO_EARLIER = QT_TRANSLATE_NOOP("Errors", "no earlier version of this board model was active")
 NO_GOLDEN = QT_TRANSLATE_NOOP("Errors", "its Golden board {file} cannot be read ({error})")
 SWITCHES = ("model.train", "model.activate", "model.rollback")
+TEST_RUNS = "test_runs"  # under results/: a validation run's overlays, one per row (REQ-TST-003)
 # Why a dataset version was not tested (AOI-TST-003, REQ-TST-001)
 NO_SUCH_VERSION = QT_TRANSLATE_NOOP("Errors", "the workspace holds no such dataset version")
 NOT_LOCKED = QT_TRANSLATE_NOOP(
@@ -1052,7 +1056,11 @@ class AppContext:
     # --- batch test (AI Model Test screen) -----------------------------------
     @requires("Engineer", QT_TRANSLATE_NOOP("Errors", "Running an AI model test"))
     def batch_test(
-        self, board_model: str, folder: str, progress: Callable[[int, int], None] | None = None
+        self,
+        board_model: str,
+        folder: str,
+        progress: Callable[[int, int], None] | None = None,
+        on_row: Callable[[dict[str, Any]], None] | None = None,
     ) -> tuple[dict[str, Any], list[dict[str, Any]], JudgedBy]:
         """Validate the active AI model on a folder and store the run: (metrics, rows, judged_by), one row per image,
         and the recipe revision and Golden board that judged them all, the AI model version active then and whether the
@@ -1068,11 +1076,14 @@ class AppContext:
             parts = {p.lower() for p in f.relative_to(folder).parts[:-1]}
             gt = NG if parts & {"ng", "defect", "defects", "bad"} else OK if parts & {"ok", "good"} else None
             entries.append((f, gt, None, functools.partial(self.load_image, f)))
-        return self._run_test(board_model, folder, entries, None, progress)
+        return self._run_test(board_model, folder, entries, None, progress, on_row)
 
     @requires("Engineer", QT_TRANSLATE_NOOP("Errors", "Running an AI model test"))
     def test_dataset(
-        self, dataset_uuid: str, progress: Callable[[int, int], None] | None = None
+        self,
+        dataset_uuid: str,
+        progress: Callable[[int, int], None] | None = None,
+        on_row: Callable[[dict[str, Any]], None] | None = None,
     ) -> tuple[dict[str, Any], list[dict[str, Any]], JudgedBy]:
         """Validate the active AI model on a frozen dataset version's locked validation set (REQ-TST-001): each file's
         label is the one frozen, each file is read decrypted and checked against the SHA-256 frozen (AOI-TRN-045 when
@@ -1093,7 +1104,7 @@ class AppContext:
             for u in split["validation"]
         ]  # fmt: skip
         folder = self.settings.root / datasets.FOLDER / version["name"]
-        return self._run_test(version["board_model"], folder, entries, dataset_uuid, progress)
+        return self._run_test(version["board_model"], folder, entries, dataset_uuid, progress, on_row)
 
     def _run_test(
         self,
@@ -1102,15 +1113,42 @@ class AppContext:
         entries: Sequence[tuple[Path, str | None, str | None, Callable[[], np.ndarray]]],
         dataset_uuid: str | None,
         progress: Callable[[int, int], None] | None,
+        on_row: Callable[[dict[str, Any]], None] | None = None,
     ) -> tuple[dict[str, Any], list[dict[str, Any]], JudgedBy]:
         """Judge each (image path, label or None, defect type or None, read) of `entries` with the engine in use, then
         store and audit the run: `batch_test`'s rows, metrics and judged_by. The metrics hold `rates`, each rate with
         its count and one-sided 95 % bound, and recall per defect type where rows carry one (REQ-TST-002, -007)."""
         insp = self.inspector(board_model)
-        rows = []
+        run_uuid = new_uuid()
+        ids = {"run_uuid": run_uuid, "model_version": insp.model_version, "model_uuid": insp.model_uuid}
+        out = self.settings.results_dir / TEST_RUNS / run_uuid  # each row's overlay, for a preview (REQ-TST-003)
+        rows: list[dict[str, Any]] = []
+        try:
+            return self._judge_rows(board_model, folder, entries, dataset_uuid, progress, on_row, insp, ids, out, rows)
+        except BaseException:
+            shutil.rmtree(out, ignore_errors=True)  # not stored: no overlay is left for a run nobody can open
+            raise
+
+    def _judge_rows(
+        self,
+        board_model: str,
+        folder: str | Path,
+        entries: Sequence[tuple[Path, str | None, str | None, Callable[[], np.ndarray]]],
+        dataset_uuid: str | None,
+        progress: Callable[[int, int], None] | None,
+        on_row: Callable[[dict[str, Any]], None] | None,
+        insp: Inspector,
+        ids: dict[str, Any],
+        out: Path,
+        rows: list[dict[str, Any]],
+    ) -> tuple[dict[str, Any], list[dict[str, Any]], JudgedBy]:
+        """`_run_test`'s run: each row judged, its overlay stored and the row handed to `on_row` as it is done (the
+        table grows board by board, REQ-TST-006); then the run, what judged it and its entry stored together."""
         for i, (f, gt, defect_type, read) in enumerate(entries, 1):
             res = insp.inspect(read())
             pred = NG if res.verdict in (NG, WARN) else OK
+            overlay = out / f"{i:04d}.png"
+            save_image(overlay, preview_size(draw_overlay(res)))
             rows.append(
                 {
                     "image": str(f),
@@ -1121,17 +1159,21 @@ class AppContext:
                     "pass_fail": "NO_LABEL" if gt is None else "PASS" if gt == pred else "FAIL",  # vs the label (#207)
                     "ai_check": ai_check(res),  # stored with the run: its AI model may not have judged it (#246)
                     "defect_type": defect_type,  # as frozen, for recall per defect type (REQ-TST-007); None in a folder
+                    "overlay": str(overlay),  # what a preview shows, never judged again (REQ-TST-003)
                 }
             )
+            if on_row:
+                on_row({**rows[-1], **ids})
             if progress:
                 progress(i, len(entries))
         metrics = classification_metrics(rows) | {"rates": stats.validation_rates(rows)}
         model_version = insp.model_version or "-"
+        judged = dataclasses.asdict(insp.judged_by)  # what judged every row: recipe, Golden board, scale (REQ-TST-005)
         with self.db.transaction():  # the run and its entry, or neither (#178)
-            run_uuid = self.db.add_test_run(
-                board_model, model_version, str(folder), metrics, rows, insp.model_uuid, dataset_uuid
-            )
-            ids = {"run_uuid": run_uuid, "model_version": insp.model_version, "model_uuid": insp.model_uuid}
+            self.db.add_test_run(
+                board_model, model_version, str(folder), metrics, rows, insp.model_uuid, dataset_uuid,
+                uid=ids["run_uuid"], judged_by=judged,
+            )  # fmt: skip
             source = {"dataset_uuid": dataset_uuid} if dataset_uuid else {}
             after = {"folder": to_stored(Path(folder).absolute(), self.settings.root), **source, **ids, **metrics}
             self.audit("test.run", "board_model", board_model, None, after)
@@ -1191,6 +1233,22 @@ class AppContext:
         if (cal := _calibration(model)) is None:
             raise AoiError("AOI-TRN-012", version=model["version"], board=model["board_model"])
         return cal[0]
+
+    def test_runs(self, board_model: str) -> list[dict[str, Any]]:
+        """Every validation run of a board model, newest first (REQ-TST-005): uuid, time, the AI model version, the
+        dataset version (`dataset_uuid`, None for a folder) or the folder, what judged it (`judged_by`, a JudgedBy; None
+        for a run stored before migration 0021), its metrics with their rates, and its rows with their overlays."""
+        return [self._run_of(r) for r in self.db.test_runs(board_model)]
+
+    def test_run(self, run_uuid: str) -> dict[str, Any] | None:
+        """One validation run by UUID, as `test_runs` gives each, to reopen it (REQ-TST-005); None without one."""
+        found = self.db.test_run(run_uuid)
+        return self._run_of(found) if found else None
+
+    def _run_of(self, run: dict[str, Any]) -> dict[str, Any]:
+        ids = {"run_uuid": run["uuid"], "model_version": run["model_version"], "model_uuid": run.get("model_uuid")}
+        judged = JudgedBy(**run["judged_by"]) if run.get("judged_by") else None
+        return run | {"judged_by": judged, "results": [{**r, **ids} for r in run["results"]]}
 
     def recipe_history(self, board_model: str) -> list[dict[str, Any]]:
         """Recipe revisions (revision, uuid, user, created_at), newest first; revision 1 by "system" is the default."""
