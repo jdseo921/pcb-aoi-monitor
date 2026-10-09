@@ -60,6 +60,11 @@ WRITES: dict[str, tuple[str, Callable[[AppContext, Path, Path], Any]]] = {
         "label.set",
         lambda ctx, data, tmp: ctx.set_boxes(ctx.samples("TINY", "NG")[-1]["uuid"], [DefectBox(0, 0, 4, 4, "Scratch")]),
     ),
+    "check_label": (  # an image the fixture's Engineer imported: the Admin acting here labelled golden.png above
+        "label.check",
+        lambda ctx, data, tmp: ctx.check_label(ctx.samples("TINY", "OK")[1]["uuid"]),
+    ),
+    "draw_ok_checks": ("label.draw", lambda ctx, data, tmp: ctx.draw_ok_checks("TINY", "Top", seed=1)),
     "train": ("model.train", lambda ctx, data, tmp: ctx.train("TINY", epochs=1, image_size=32)),
     "activate_model": ("model.activate", lambda ctx, data, tmp: ctx.activate_model(ctx.models("TINY")[-1]["id"])),
     "save_recipe": ("recipe.save", lambda ctx, data, tmp: ctx.save_recipe(Recipe(board_model="TINY"))),
@@ -102,7 +107,7 @@ UNCHECKED = {
     "sample_path", "models", "model", "active_model", "recipe_history", "inspections", "defects_for", "checks_for",
     "checks_for_many", "inspection_result", "inspection", "judged_reference", "users", "board_status", "start_user",
     "golden_board_unreadable", "engine_is_current", "calibrated_threshold", "calibration_of", "scale", "label_history",
-    "boxes", "box_history", "unsure_samples",
+    "boxes", "box_history", "unsure_samples", "label_check_status", "labels_ready_to_freeze",
 }  # fmt: skip
 CALLS = {**{name: call for name, (_, call) in WRITES.items()}, **CHECKED_READS}
 # The lowest role allowed each call, copied from the write table of docs/ARCHITECTURE.md §5 and REQ-CMP-005, never read

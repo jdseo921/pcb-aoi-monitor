@@ -570,6 +570,28 @@ CODES: dict[str, ErrorCode] = {
             ),
         ),
         ErrorCode(
+            "AOI-TRN-033",
+            QT_TRANSLATE_NOOP("Errors", "Check refused: you labelled this image"),
+            QT_TRANSLATE_NOOP(
+                "Errors", "The label of {sample} was not checked: you labelled it, and a second user checks each label."
+            ),
+            QT_TRANSLATE_NOOP("Errors", "Ask another Engineer or Admin to check the label."),
+        ),
+        ErrorCode(
+            "AOI-TRN-034",
+            QT_TRANSLATE_NOOP("Errors", "Label cannot be checked"),
+            QT_TRANSLATE_NOOP("Errors", "The label of {sample} was not checked: {reason}."),
+            QT_TRANSLATE_NOOP(
+                "Errors", "Do what the reason says, then check the label again; a label checked already needs nothing."
+            ),
+        ),
+        ErrorCode(
+            "AOI-TRN-038",
+            QT_TRANSLATE_NOOP("Errors", "View not known"),
+            QT_TRANSLATE_NOOP("Errors", "{view} is not a camera view of this app, so nothing was read or changed."),
+            QT_TRANSLATE_NOOP("Errors", "Name the view as the Inspection and Training pages do: Top, Side or Bottom."),
+        ),
+        ErrorCode(
             "AOI-TST-001",
             QT_TRANSLATE_NOOP("Errors", "AI model, recipe, scale or Golden board changed since the run"),
             QT_TRANSLATE_NOOP(

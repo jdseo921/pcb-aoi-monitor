@@ -28,10 +28,13 @@ from .paths import resolve, to_stored
 IN_CHUNK = 500  # ids per IN (…) query, under SQLite's 999 bound variables on older builds
 WAIT_MS = 5000  # how long a write waits for another program's lock on the database before SQLite refuses it
 DbError = sqlite3.Error  # what a Database call raises when SQLite refuses it, for callers that do not import sqlite3
-SAMPLES = (  # a sample with its current label, the one label row no other has superseded (migration 0014)
+SAMPLES = (  # a sample with its current label, the one label row no other has superseded (migration 0014), and the
+    # second user's check of that row, if any (migration 0015)
     "SELECT s.id, s.uuid, s.board_model, s.path, l.label, l.defect_type, s.side, s.added_at, s.sha256,"
-    " l.uuid label_uuid, l.labelled_by, u.name labelled_by_name, l.at_utc labelled_at FROM samples s"
+    " l.uuid label_uuid, l.labelled_by, u.name labelled_by_name, l.at_utc labelled_at, c.checked_by,"
+    " cu.name checked_by_name, c.at_utc checked_at FROM samples s"
     " JOIN labels l ON l.sample_uuid = s.uuid AND l.superseded_by IS NULL LEFT JOIN users u ON u.uuid = l.labelled_by"
+    " LEFT JOIN label_checks c ON c.label_uuid = l.uuid LEFT JOIN users cu ON cu.uuid = c.checked_by"
 )
 
 
@@ -301,6 +304,36 @@ class Database:
         """A sample's current defect boxes in the order drawn; with `every`, the superseded ones too."""
         current = "" if every else " AND superseded_by IS NULL"
         return self.query(f"SELECT * FROM defect_boxes WHERE sample_uuid=?{current} ORDER BY id", (sample_uuid,))
+
+    # --- second-user label checks (REQ-TRN-004): rows are added, never changed ---
+    def add_check(self, label_uuid: str, sample_uuid: str, checked_by: str | None) -> str:
+        """Store a check of a label row by a user (UUID); returns the check's UUID."""
+        uid = new_uuid()
+        self.execute(
+            "INSERT INTO label_checks(uuid, label_uuid, sample_uuid, checked_by, at_utc) VALUES(?,?,?,?,?)",
+            (uid, label_uuid, sample_uuid, checked_by, now_utc()),
+        )
+        return uid
+
+    def add_ok_check_draw(
+        self, board_model: str, side: str, seed: int, ok_labels: int, sample_uuids: list[str], drawn_by: str | None
+    ) -> dict[str, Any]:
+        """Store a draw of OK labels to check and return it as `ok_check_draws` reads it, without its id."""
+        draw = {"uuid": new_uuid(), "board_model": board_model, "side": side, "seed": seed, "ok_labels": ok_labels}
+        draw |= {"sample_uuids": sample_uuids, "drawn_by": drawn_by, "at_utc": now_utc()}
+        self.execute(
+            "INSERT INTO ok_check_draws(uuid, board_model, side, seed, ok_labels, sample_uuids, drawn_by, at_utc)"
+            " VALUES(?,?,?,?,?,?,?,?)",
+            [json.dumps(v) if k == "sample_uuids" else v for k, v in draw.items()],
+        )
+        return draw
+
+    def ok_check_draws(self, board_model: str, side: str) -> list[dict[str, Any]]:
+        """The draws of a board model and view, oldest first, each with its list of sample UUIDs."""
+        rows = self.query(
+            "SELECT * FROM ok_check_draws WHERE board_model=? AND side=? ORDER BY id", (board_model, side)
+        )
+        return [{**r, "sample_uuids": json.loads(r["sample_uuids"])} for r in rows]
 
     # --- model registry ----------------------------------------------------
     def register_model(
