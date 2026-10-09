@@ -414,7 +414,9 @@ file), so a file changed or removed outside the app is what `verify_dataset` rep
 every file against the stored SHA-256 and lists the files that match, changed or are missing, and writes nothing.
 The old bytes of such a file cannot be recovered from the workspace, which therefore needs a backup. How labels,
 checks, agreement checks and frozen versions are stored, and why, is
-[ADR 0009](adr/0009-labels-checks-and-dataset-versions.md) (proposed).
+[ADR 0009](adr/0009-labels-checks-and-dataset-versions.md) (proposed). How S38 will encrypt each customer's dataset
+store at rest, with one key per store kept in Windows Credential Manager, is
+[ADR 0010](adr/0010-customer-dataset-encryption.md) (proposed); nothing is encrypted yet.
 `lock_validation_set(dataset_uuid, seed)` (REQ-TRN-006, S36) splits a frozen version once into its training set and
 its locked validation set, with the seed drawn and recorded when none is given (`datasets.split`): at least 50 OK files
 and 30 % of its NG files, rounded up, the NG spread over their defect types (an NG file's type, else its boxes' types)
