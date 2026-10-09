@@ -215,12 +215,13 @@ CODES: dict[str, ErrorCode] = {
         ),
         ErrorCode(
             "AOI-INSP-013",
-            QT_TRANSLATE_NOOP("Errors", "AI model, recipe or Golden board changed during a run"),
+            QT_TRANSLATE_NOOP("Errors", "AI model, recipe, scale or Golden board changed during a run"),
             QT_TRANSLATE_NOOP(
                 "Errors",
-                "The AI model, recipe or Golden board of {board} changed during a run (training ended, a version was"
-                " activated while the recipe has the AI check on, a recipe saved or a Golden board set), so {file} and"
-                " the boards after it are judged with what is active now; the boards before keep what judged them.",
+                "The AI model, recipe, scale or Golden board of {board} changed during a run (training ended, a version"
+                " was activated while the recipe has the AI check on, a recipe saved, a scale set while it holds a size"
+                " in mm, or a Golden board set), so {file} and the boards after it are judged with what is active now;"
+                " the boards before keep what judged them.",
             ),
             QT_TRANSLATE_NOOP(
                 "Errors",
@@ -263,8 +264,8 @@ CODES: dict[str, ErrorCode] = {
             QT_TRANSLATE_NOOP("Errors", "Result has no stored decision table"),
             QT_TRANSLATE_NOOP(
                 "Errors",
-                "Record {id} ({file}) has no stored decision table: it was saved before migration 0006, or no record "
-                "has that number or UUID.",
+                "Record {id} ({file}) has no stored decision table that can be read: it was saved before migration"
+                " 0006, it is damaged, or no record has that number or UUID.",
             ),
             QT_TRANSLATE_NOOP("Errors", "Inspect the board again on Inspection; Compare then opens the new result."),
         ),
@@ -410,33 +411,32 @@ CODES: dict[str, ErrorCode] = {
         ),
         ErrorCode(
             "AOI-TRN-009",
-            QT_TRANSLATE_NOOP("Errors", "Folder import stopped part-way"),
+            QT_TRANSLATE_NOOP("Errors", "Import stopped part-way"),
             QT_TRANSLATE_NOOP(
                 "Errors",
-                "Copying {path} into the workspace failed ({reason}), so the import of {folder} stopped at image {at}"
-                " of {total}; the {imported} image(s) imported before it stay in the sample table.",
+                "Copying {path} into the workspace failed ({reason}), so the import stopped at image {at} of {total};"
+                " the {imported} image(s) imported before it stay in the sample table.",
             ),
             QT_TRANSLATE_NOOP(
                 "Errors",
-                "Check that the file is still there and can be opened and that the workspace drive has free space."
-                " Importing the folder again would add those {imported} a second time: import the images not yet"
-                " imported with + OK or + NG, or first remove the {imported} from the sample table.",
+                "Check that the file is still there and can be opened and that the workspace drive has free space,"
+                " then, with {name} picked in the header, press Import again: the {imported} image(s) already imported"
+                " are skipped.",
             ),
         ),
         ErrorCode(
             "AOI-TRN-010",
-            QT_TRANSLATE_NOOP("Errors", "Folder import stopped by an error"),
+            QT_TRANSLATE_NOOP("Errors", "Import stopped by an error"),
             QT_TRANSLATE_NOOP(
                 "Errors",
-                "Importing {path} failed ({reason}), so the import of {folder} stopped at image {at} of {total}; the"
-                " {imported} image(s) imported before it stay in the sample table.",
+                "Importing {path} failed ({reason}), so the import stopped at image {at} of {total}; the {imported}"
+                " image(s) imported before it stay in the sample table.",
             ),
             QT_TRANSLATE_NOOP(
                 "Errors",
                 "Fix what stopped it (the log file in the workspace's logs folder has the details; send it to support"
-                " if the cause is unclear). Importing the folder again would add those {imported} a second time:"
-                " import the images not yet imported with + OK or + NG, or first remove the {imported} from the sample"
-                " table.",
+                " if the cause is unclear), then, with {name} picked in the header, press Import again: the {imported}"
+                " image(s) already imported are skipped.",
             ),
         ),
         ErrorCode(
@@ -455,13 +455,265 @@ CODES: dict[str, ErrorCode] = {
             ),
         ),
         ErrorCode(
-            "AOI-TST-001",
-            QT_TRANSLATE_NOOP("Errors", "AI model, recipe or Golden board changed since the run"),
+            "AOI-TRN-012",
+            QT_TRANSLATE_NOOP("Errors", "AI model calibration cannot be read"),
             QT_TRANSLATE_NOOP(
                 "Errors",
-                "{file} was judged in this run by {run_model}, recipe revision {run_recipe} and {run_golden};"
-                " {board_model} now uses {model}, recipe revision {recipe} and {golden}, so a preview could show"
-                " another verdict than its row.",
+                "AI model {version} of board model {board} has no usable calibration in the AI model registry.",
+            ),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "For the next boards, train again or activate another version on Training, or set a value of your own.",
+            ),
+        ),
+        ErrorCode(
+            "AOI-TRN-013",
+            QT_TRANSLATE_NOOP("Errors", "NG image needs a defect type"),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "{path} was not taken as an NG sample: an NG sample needs one of the 33 defect types of the defect"
+                " classification table, and {why}.",
+            ),
+            QT_TRANSLATE_NOOP("Errors", "Pick the defect type the image shows, then try again."),
+        ),
+        ErrorCode(
+            "AOI-TRN-014",
+            QT_TRANSLATE_NOOP("Errors", "Image changed while it was copied"),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "{path} changed while it was copied into the workspace: its SHA-256 after the copy differs from the"
+                " one checked before it, so it was not imported.",
+            ),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Wait until the file is complete (a camera or a copy may still be writing it), then import it again.",
+            ),
+        ),
+        ErrorCode(
+            "AOI-TRN-015",
+            QT_TRANSLATE_NOOP("Errors", "Image already imported"),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "{path} was skipped: board model {board_model} already has the same image (the same SHA-256) as"
+                " sample {sample}, labelled {label}.",
+            ),
+            QT_TRANSLATE_NOOP("Errors", "Nothing to do: the image is in the sample table once."),
+        ),
+        ErrorCode(
+            "AOI-TRN-016",
+            QT_TRANSLATE_NOOP("Errors", "Image has no label"),
+            QT_TRANSLATE_NOOP(
+                "Errors", "{path} was not imported: it is in neither an ok/ nor an ng/ folder, so it has no label."
+            ),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Pick OK or NG in its row of the import sheet, then press Import again: the images already imported"
+                " are skipped.",
+            ),
+        ),
+        ErrorCode(
+            "AOI-TRN-017",
+            QT_TRANSLATE_NOOP("Errors", "View not known"),
+            QT_TRANSLATE_NOOP("Errors", '{path} was not imported: its view "{view}" is not one of {views}.'),
+            QT_TRANSLATE_NOOP(
+                "Errors", "Give the image the view it was taken from, one of {views}, and import it again."
+            ),
+        ),
+        ErrorCode(
+            "AOI-TRN-018",
+            QT_TRANSLATE_NOOP("Errors", "Label not known"),
+            QT_TRANSLATE_NOOP("Errors", '{path} was not given the label "{label}": it is not one of {labels}.'),
+            QT_TRANSLATE_NOOP("Errors", "Give it the label OK or NG, then try again."),
+        ),
+        ErrorCode(
+            "AOI-TRN-019",
+            QT_TRANSLATE_NOOP("Errors", "Board model name not allowed"),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                'The board model name "{name}" cannot be the name of its folders in the workspace: a folder name is'
+                ' not empty, holds none of / : * ? " < > and no backslash, vertical bar or control character, does not'
+                " end with a dot or a space, and is not a name the system keeps for a device (CON, NUL, COM1 and the"
+                " like).",
+            ),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Use another name, such as TBOX-A1 Rev2: create the board model with it and add its images there."
+                " Nothing was written.",
+            ),
+        ),
+        ErrorCode(
+            "AOI-TRN-020",
+            QT_TRANSLATE_NOOP("Errors", "Dataset not frozen: NG labels not checked"),
+            QT_TRANSLATE_NOOP("Errors", "{name} was not frozen: a second user has not checked {count} NG label(s)."),
+            QT_TRANSLATE_NOOP("Errors", "Have another Engineer or Admin check each NG label, then freeze again."),
+        ),
+        ErrorCode(
+            "AOI-TRN-021",
+            QT_TRANSLATE_NOOP("Errors", "Dataset not frozen: OK labels not checked"),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "{name} was not frozen: {checked} of the {needed} OK label(s) to check (10 % of {ok}) are checked.",
+            ),
+            QT_TRANSLATE_NOOP(
+                "Errors", "Draw OK labels for a check and have another Engineer or Admin check them, then freeze again."
+            ),
+        ),
+        ErrorCode(
+            "AOI-TRN-024",
+            QT_TRANSLATE_NOOP("Errors", "Dataset not frozen: no customer"),
+            QT_TRANSLATE_NOOP("Errors", "{name} was not frozen: no customer is set."),
+            QT_TRANSLATE_NOOP("Errors", "Enter the customer the dataset is for, then freeze it again."),
+        ),
+        ErrorCode(
+            "AOI-TRN-027",
+            QT_TRANSLATE_NOOP("Errors", "Dataset not frozen"),
+            QT_TRANSLATE_NOOP("Errors", "{name} was not frozen: {reason}."),
+            QT_TRANSLATE_NOOP("Errors", "Do what the reason says, then freeze the dataset again; nothing was written."),
+        ),
+        ErrorCode(
+            "AOI-TRN-028",
+            QT_TRANSLATE_NOOP("Errors", "Dataset version not found"),
+            QT_TRANSLATE_NOOP("Errors", "The workspace holds no dataset version {dataset}, so nothing was verified."),
+            QT_TRANSLATE_NOOP("Errors", "Show the dataset versions again and pick one of them."),
+        ),
+        ErrorCode(
+            "AOI-TRN-030",
+            QT_TRANSLATE_NOOP("Errors", "Label not changed"),
+            QT_TRANSLATE_NOOP("Errors", "The label of {sample} was not changed: {reason}."),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Label the image OK, NG or UNSURE, and give an NG image's defect boxes one of the 33 defect types each;"
+                " then save the label again.",
+            ),
+        ),
+        ErrorCode(
+            "AOI-TRN-031",
+            QT_TRANSLATE_NOOP("Errors", "Defect box outside the image"),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Defect box {number} on {sample}, {w} × {h} px at x {x}, y {y}, does not lie inside the image of"
+                " {width} × {height} px, so the label and its boxes were not changed.",
+            ),
+            QT_TRANSLATE_NOOP("Errors", "Move or resize the box so that it lies inside the image, then save again."),
+        ),
+        ErrorCode(
+            "AOI-TRN-032",
+            QT_TRANSLATE_NOOP("Errors", "Sample not found"),
+            QT_TRANSLATE_NOOP("Errors", "The workspace holds no sample {sample}, so nothing was changed."),
+            QT_TRANSLATE_NOOP(
+                "Errors", "Show the sample table again: the sample may have been removed since it was shown."
+            ),
+        ),
+        ErrorCode(
+            "AOI-TRN-033",
+            QT_TRANSLATE_NOOP("Errors", "Check refused: you labelled this image"),
+            QT_TRANSLATE_NOOP(
+                "Errors", "The label of {sample} was not checked: you labelled it, and a second user checks each label."
+            ),
+            QT_TRANSLATE_NOOP("Errors", "Ask another Engineer or Admin to check the label."),
+        ),
+        ErrorCode(
+            "AOI-TRN-034",
+            QT_TRANSLATE_NOOP("Errors", "Label cannot be checked"),
+            QT_TRANSLATE_NOOP("Errors", "The label of {sample} was not checked: {reason}."),
+            QT_TRANSLATE_NOOP(
+                "Errors", "Do what the reason says, then check the label again; a label checked already needs nothing."
+            ),
+        ),
+        ErrorCode(
+            "AOI-TRN-035",
+            QT_TRANSLATE_NOOP("Errors", "Calibration set not made"),
+            QT_TRANSLATE_NOOP("Errors", "The calibration set was not made: {reason}."),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Pick 100 different images of one board model, each labelled OK or NG, and make the set again.",
+            ),
+        ),
+        ErrorCode(
+            "AOI-TRN-036",
+            QT_TRANSLATE_NOOP("Errors", "Blind label not kept"),
+            QT_TRANSLATE_NOOP("Errors", "The blind label of {sample} was not kept: {reason}."),
+            QT_TRANSLATE_NOOP(
+                "Errors", "Label each image of the set once, as yourself: OK, or NG with one of the 33 defect types."
+            ),
+        ),
+        ErrorCode(
+            "AOI-TRN-037",
+            QT_TRANSLATE_NOOP("Errors", "Agreement check did not run"),
+            QT_TRANSLATE_NOOP("Errors", "The agreement check did not run: {reason}."),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Pick two different labellers who have each labelled every image of the set blind, then run the check"
+                " again.",
+            ),
+        ),
+        ErrorCode(
+            "AOI-TRN-038",
+            QT_TRANSLATE_NOOP("Errors", "View not known"),
+            QT_TRANSLATE_NOOP("Errors", "{view} is not a camera view of this app, so nothing was read or changed."),
+            QT_TRANSLATE_NOOP("Errors", "Name the view as the Inspection and Training pages do: Top, Side or Bottom."),
+        ),
+        ErrorCode(
+            "AOI-TRN-039",
+            QT_TRANSLATE_NOOP("Errors", "Dataset not frozen: no version name"),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Board model {board} was not frozen: its name has no Latin letter or digit, which a dataset version is"
+                " named with.",
+            ),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Import the images under a board model whose name has a Latin letter or digit, such as TBOX-A1, and"
+                " freeze that board model.",
+            ),
+        ),
+        ErrorCode(
+            "AOI-TRN-040",
+            QT_TRANSLATE_NOOP("Errors", "Dataset not frozen: version name taken"),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "{name} was not frozen: board model {other} has frozen versions under the same letters and digits as"
+                " board model {board}, so their names would mix.",
+            ),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Import the images under a board model whose letters and digits differ from those of {other}, and"
+                " freeze that board model.",
+            ),
+        ),
+        ErrorCode(
+            "AOI-TRN-041",
+            QT_TRANSLATE_NOOP("Errors", "Dataset not frozen: manifest not written"),
+            QT_TRANSLATE_NOOP("Errors", "{name} was not frozen: its manifest {path} could not be written ({reason})."),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Check the free space on the workspace drive and that its datasets folder can be written, then freeze"
+                " again; nothing of the version was kept.",
+            ),
+        ),
+        ErrorCode(
+            "AOI-TRN-042",
+            QT_TRANSLATE_NOOP("Errors", "Dataset not frozen: path too long"),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "{name} was not frozen: the system refused the path of its manifest in the workspace folder {workspace}"
+                " as too long.",
+            ),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Ask an Admin to save a workspace folder with a shorter path on Settings and then, with the app closed,"
+                " to copy everything in the folder {workspace} into that folder, or to turn on long paths in Windows;"
+                " then freeze again.",
+            ),
+        ),
+        ErrorCode(
+            "AOI-TST-001",
+            QT_TRANSLATE_NOOP("Errors", "AI model, recipe, scale or Golden board changed since the run"),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "{file} was judged in this run by {run_model}, recipe revision {run_recipe}, {run_golden} and"
+                " {run_scale}; {board_model} now uses {model}, recipe revision {recipe}, {golden} and {scale}, so a"
+                " preview could show another verdict than its row.",
             ),
             QT_TRANSLATE_NOOP(
                 "Errors",
@@ -495,6 +747,105 @@ CODES: dict[str, ErrorCode] = {
                 "Errors",
                 "Nothing was applied. Correct the two values, or step a threshold down below 0 to — to leave it unset,"
                 " then press Apply again.",
+            ),
+        ),
+        ErrorCode(
+            "AOI-RCP-004",
+            QT_TRANSLATE_NOOP("Errors", "Recipe saved while Save to Recipe was open"),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Revision {latest} of board model {board_model} was saved after revision {revision}, the one Save to"
+                " Recipe listed its changes against; saving them would undo revision {latest}, so the sheet closed and"
+                " nothing was saved. Compare now shows the thresholds of revision {latest}.",
+            ),
+            QT_TRANSLATE_NOOP("Errors", "Try your thresholds again on revision {latest}, then press Save to Recipe."),
+        ),
+        ErrorCode(
+            "AOI-RCP-005",
+            QT_TRANSLATE_NOOP("Errors", "Sizes are shown in px"),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Board model {board_model} has no scale yet, so its recipe's minimum defect size and ROIs are in px of"
+                " its images: a recipe saves so and judges as before, but its sizes keep their px after a camera"
+                " change, where sizes in mm would follow the scale set again on the new Golden board.",
+            ),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "To give them in mm, press Calibrate Scale…, click two points on the Golden board a known distance"
+                " apart, enter that distance in mm and press Set Scale.",
+            ),
+        ),
+        ErrorCode(
+            "AOI-RCP-007",
+            QT_TRANSLATE_NOOP("Errors", "Minimum defect size under 4 px"),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "The minimum defect size, {size}, spans {px:.1f} px in the board images: under 4 px, a defect is not"
+                " told from image noise.",
+            ),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Raise it to {least} or more, or use images of a higher resolution. The recipe saves as it is; its"
+                " audit entry keeps this code.",
+            ),
+        ),
+        ErrorCode(
+            "AOI-RCP-008",
+            QT_TRANSLATE_NOOP("Errors", "Scale not set"),
+            QT_TRANSLATE_NOOP("Errors", "The scale of board model {board_model} was not set: {reason}."),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Nothing was changed. On the Recipe Editor, press Calibrate Scale…, click two points on the Golden"
+                " board a known distance apart, enter that distance in mm and press Set Scale.",
+            ),
+        ),
+        ErrorCode(
+            "AOI-RCP-009",
+            QT_TRANSLATE_NOOP("Errors", "Sizes are held in px"),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Revision {revision} of board model {board_model} holds {count} of its {total} size(s) in px of its"
+                " images (the minimum defect size and each ROI's box): shown in mm at this scale, they keep their px"
+                " when the scale is set again, as after a camera change, while sizes in mm follow it.",
+            ),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Press Save Recipe to store them in mm, so that they follow the scale; that alone changes no verdict"
+                " at this scale.",
+            ),
+        ),
+        ErrorCode(
+            "AOI-RCP-010",
+            QT_TRANSLATE_NOOP("Errors", "Scale set after Compare showed the recipe"),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "The scale of board model {board_model} was set to {scale:.2f} px/mm after Compare showed revision"
+                " {revision}, so Save to Recipe listed its changes at the scale before, or in px without one; the"
+                " sheet closed and nothing was saved. Compare now shows the thresholds of revision {revision} at the"
+                " new scale.",
+            ),
+            QT_TRANSLATE_NOOP("Errors", "Try your thresholds again at this scale, then press Save to Recipe."),
+        ),
+        ErrorCode(
+            "AOI-RCP-011",
+            QT_TRANSLATE_NOOP("Errors", "Size in mm refused"),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "The {size} of board model {board_model} cannot be {value} mm: a size in mm is a number above 0 and at"
+                " most {most}, and an ROI's box is four of them, its x and y 0 or more.",
+            ),
+            QT_TRANSLATE_NOOP("Errors", "Nothing was saved. Correct the size, then save the recipe again."),
+        ),
+        ErrorCode(
+            "AOI-RCP-012",
+            QT_TRANSLATE_NOOP("Errors", "Scale cannot be read"),
+            QT_TRANSLATE_NOOP(
+                "Errors", "The stored scale of board model {board_model}, {value}, is not a finite number above 0."
+            ),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Nothing was judged or saved with it. On the Recipe Editor, press Calibrate Scale… and set the scale"
+                " again; Set Scale replaces it.",
             ),
         ),
         ErrorCode(

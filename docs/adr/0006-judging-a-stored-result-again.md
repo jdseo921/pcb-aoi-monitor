@@ -49,3 +49,6 @@ evidence it is judged on, which AI model's calibration applies, who may call it 
 - A result whose OK maps the retention sweep deleted can be judged again only with the checks that need them off.
 - A result keeps its AI model's calibration after a newer model is made active; a registry row that is gone, or
   damaged by hand, gives AOI-CMP-004.
+- Since S29 (REQ-RCP-006) a result also keeps the scale its sizes in mm were applied at, and is judged again at it. A
+  result judged before its board model had a scale is judged again at the board model's scale now, which the result
+  returned keeps: the scale's counterpart of the active AI model's calibration rejected above, open with Jay.

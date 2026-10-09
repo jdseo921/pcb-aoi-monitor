@@ -176,6 +176,7 @@ def test_req_insp_015_no_board_is_judged_without_its_golden_board_or_with_no_che
     ]
 
 
+@pytest.mark.usefixtures("settled_collector")  # the budget is Home's, not a collector pass over earlier tests' objects
 def test_req_insp_016_six_step_cards_open_their_pages_and_show_status(
     qtbot: QtBot, trained_ctx: AppContext, ng_board: Path, synthetic_dataset: Path
 ) -> None:

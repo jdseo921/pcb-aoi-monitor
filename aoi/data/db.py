@@ -9,6 +9,7 @@ is created and changed only by the numbered migrations in ``migrations/``
 from __future__ import annotations
 
 import json
+import math
 import sqlite3
 import threading
 import uuid
@@ -18,7 +19,7 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
-from ..errors import Phrase
+from ..errors import AoiError, Phrase
 from ..times import local_day_bounds_utc, now_utc
 from .errors import WorkspaceError
 from .migrate import migrate
@@ -27,6 +28,14 @@ from .paths import resolve, to_stored
 IN_CHUNK = 500  # ids per IN (…) query, under SQLite's 999 bound variables on older builds
 WAIT_MS = 5000  # how long a write waits for another program's lock on the database before SQLite refuses it
 DbError = sqlite3.Error  # what a Database call raises when SQLite refuses it, for callers that do not import sqlite3
+SAMPLES = (  # a sample with its current label, the one label row no other has superseded (migration 0014), and the
+    # second user's check of that row, if any (migration 0015)
+    "SELECT s.id, s.uuid, s.board_model, s.path, l.label, l.defect_type, s.side, s.added_at, s.sha256,"
+    " l.uuid label_uuid, l.labelled_by, u.name labelled_by_name, l.at_utc labelled_at, c.checked_by,"
+    " cu.name checked_by_name, c.at_utc checked_at FROM samples s"
+    " JOIN labels l ON l.sample_uuid = s.uuid AND l.superseded_by IS NULL LEFT JOIN users u ON u.uuid = l.labelled_by"
+    " LEFT JOIN label_checks c ON c.label_uuid = l.uuid LEFT JOIN users cu ON cu.uuid = c.checked_by"
+)
 
 
 def new_uuid() -> str:
@@ -116,6 +125,14 @@ class Database:
             finally:
                 self._tx_depth = 0
 
+    @contextmanager
+    def locked(self) -> Iterator[None]:
+        """Hold the lock `transaction()` holds, with no transaction: no other thread's statement runs until the block
+        ends. Work on files that must end before another write starts goes in it, such as putting a file back after a
+        failed commit (`AppContext.freeze_dataset`)."""
+        with self._lock:
+            yield
+
     def _commit(self) -> None:
         """Commit a statement's own transaction; inside `transaction()` the outermost one commits."""
         if not self._tx_depth:
@@ -179,6 +196,18 @@ class Database:
         self.ensure_board_model(board_model)
         self.execute("UPDATE board_models SET reference_image=? WHERE name=?", (self._stored(path), board_model))
 
+    def scale(self, board_model: str) -> float | None:
+        """The board model's px per mm (migration 0012), or None while it has none; AOI-RCP-012 for a stored value that
+        is no number above 0, which its CHECK keeps out unless turned off by hand (S29 review)."""
+        r = self.query("SELECT px_per_mm FROM board_models WHERE name=?", (board_model,))
+        value = r[0]["px_per_mm"] if r else None
+        if value is not None and not (isinstance(value, float) and 0 < value < math.inf):
+            raise AoiError("AOI-RCP-012", board_model=board_model, value=value)
+        return value
+
+    def set_scale(self, board_model: str, px_per_mm: float) -> None:
+        self.execute("UPDATE board_models SET px_per_mm=? WHERE name=?", (px_per_mm, board_model))
+
     def reference(self, board_model: str) -> str | None:
         r = self.query("SELECT reference_image FROM board_models WHERE name=?", (board_model,))
         return self.resolve_path(r[0]["reference_image"]) if r and r[0]["reference_image"] else None
@@ -192,30 +221,194 @@ class Database:
         defect_type: str | None = None,
         side: str = "Top",
         uid: str | None = None,
+        labelled_by: str | None = None,
+        sha256: str | None = None,
     ) -> int:
-        """Add a sample; returns its id. `uid` is the UUID its file name already carries (#245); a new one when None."""
+        """Add a sample with its first label row, labelled by `labelled_by` (a user's UUID); returns its id. `uid` is
+        the UUID its file name already carries (#245); a new one when None. `sha256` is its source file's, as the
+        import checked it (REQ-TRN-001)."""
         self.ensure_board_model(board_model)
-        return self._insert(
-            "INSERT INTO samples(uuid, board_model, path, label, defect_type, side, added_at) VALUES(?,?,?,?,?,?,?)",
-            (uid or new_uuid(), board_model, self._stored(path), label, defect_type, side, now_utc()),
+        uid, at = uid or new_uuid(), now_utc()
+        with self.transaction():
+            sample_id = self._insert(
+                "INSERT INTO samples(uuid, board_model, path, label, defect_type, side, added_at, sha256)"
+                " VALUES(?,?,?,?,?,?,?,?)",
+                (uid, board_model, self._stored(path), label, defect_type, side, at, sha256),
+            )
+            self.add_label(uid, label, defect_type, [], labelled_by, at)
+        return sample_id
+
+    def sample_with_sha256(self, board_model: str, sha256: str) -> dict[str, Any] | None:
+        """The first sample of `board_model` whose source had `sha256`, as `sample` gives it, or None: one lookup
+        through the index of the sample SHA-256 migration (no sample imported before it has a SHA-256)."""
+        rows = self.query(
+            f"{SAMPLES} WHERE s.board_model=? AND s.sha256=? ORDER BY s.id LIMIT 1", (board_model, sha256)
         )
+        return self._resolved(rows[0], "path") if rows else None
 
     def samples(self, board_model: str, label: str | None = None) -> list[dict[str, Any]]:
+        """A board model's samples, oldest first, each with its current label (REQ-TRN-002); `label` filters by it."""
+        sql, p = f"{SAMPLES} WHERE s.board_model=?", [board_model]
         if label:
-            rows = self.query("SELECT * FROM samples WHERE board_model=? AND label=? ORDER BY id", (board_model, label))
-        else:
-            rows = self.query("SELECT * FROM samples WHERE board_model=? ORDER BY id", (board_model,))
-        return [self._resolved(r, "path") for r in rows]
+            sql, p = f"{sql} AND l.label=?", [board_model, label]
+        return [self._resolved(r, "path") for r in self.query(f"{sql} ORDER BY s.id", p)]
 
     def sample(self, sample_id: int) -> dict[str, Any]:
-        """One sample by id, with its absolute path."""
-        return self._resolved(self.query("SELECT * FROM samples WHERE id=?", (sample_id,))[0], "path")
+        """One sample by id, with its absolute path and its current label."""
+        return self._resolved(self.query(f"{SAMPLES} WHERE s.id=?", (sample_id,))[0], "path")
 
-    def update_sample(self, sample_id: int, label: str, defect_type: str | None) -> None:
-        self.execute("UPDATE samples SET label=?, defect_type=? WHERE id=?", (label, defect_type, sample_id))
+    def sample_by_uuid(self, uid: str) -> dict[str, Any] | None:
+        """One sample by UUID, as `sample` gives it; None when the workspace holds none."""
+        rows = self.query(f"{SAMPLES} WHERE s.uuid=?", (uid,))
+        return self._resolved(rows[0], "path") if rows else None
 
     def delete_sample(self, sample_id: int) -> None:
         self.execute("DELETE FROM samples WHERE id=?", (sample_id,))
+
+    # --- labels and defect boxes (REQ-TRN-002, REQ-TRN-003): rows are added, never changed but to be superseded ---
+    def add_label(
+        self,
+        sample_uuid: str,
+        label: str,
+        defect_type: str | None,
+        boxes: list[dict[str, Any]],
+        labelled_by: str | None,
+        at_utc: str | None = None,
+    ) -> str:
+        """Store a sample's new current label with its defect boxes (x, y, w, h, dct_type, severity) and return the
+        label row's UUID. The label row before it and its boxes are marked superseded by that UUID in the same
+        transaction, so history keeps them (migration 0014's triggers refuse any other change)."""
+        uid, at = new_uuid(), at_utc or now_utc()
+        with self.transaction():
+            for table in ("defect_boxes", "labels"):
+                self.execute(
+                    f"UPDATE {table} SET superseded_by=? WHERE sample_uuid=? AND superseded_by IS NULL",
+                    (uid, sample_uuid),
+                )
+            self.execute(
+                "INSERT INTO labels(uuid, sample_uuid, label, defect_type, labelled_by, at_utc) VALUES(?,?,?,?,?,?)",
+                (uid, sample_uuid, label, defect_type, labelled_by, at),
+            )
+            for b in boxes:
+                self.execute(
+                    "INSERT INTO defect_boxes(uuid, sample_uuid, label_uuid, x, y, w, h, dct_type, severity,"
+                    " labelled_by, at_utc) VALUES(?,?,?,?,?,?,?,?,?,?,?)",
+                    (new_uuid(), sample_uuid, uid, b["x"], b["y"], b["w"], b["h"], b["dct_type"], b["severity"])
+                    + (labelled_by, at),
+                )
+        return uid
+
+    def label_history(self, sample_uuid: str) -> list[dict[str, Any]]:
+        """Every label row of a sample, newest first, with the labeller's name and the boxes drawn with it."""
+        rows = self.query(
+            "SELECT l.*, u.name labelled_by_name FROM labels l LEFT JOIN users u ON u.uuid = l.labelled_by"
+            " WHERE l.sample_uuid=? ORDER BY l.id DESC",
+            (sample_uuid,),
+        )
+        boxes = self.boxes(sample_uuid, every=True)
+        return [{**r, "boxes": [b for b in boxes if b["label_uuid"] == r["uuid"]]} for r in rows]
+
+    def boxes(self, sample_uuid: str, every: bool = False) -> list[dict[str, Any]]:
+        """A sample's current defect boxes in the order drawn; with `every`, the superseded ones too."""
+        current = "" if every else " AND superseded_by IS NULL"
+        return self.query(f"SELECT * FROM defect_boxes WHERE sample_uuid=?{current} ORDER BY id", (sample_uuid,))
+
+    # --- second-user label checks (REQ-TRN-004): rows are added, never changed ---
+    def add_check(self, label_uuid: str, sample_uuid: str, checked_by: str | None) -> str:
+        """Store a check of a label row by a user (UUID); returns the check's UUID."""
+        uid = new_uuid()
+        self.execute(
+            "INSERT INTO label_checks(uuid, label_uuid, sample_uuid, checked_by, at_utc) VALUES(?,?,?,?,?)",
+            (uid, label_uuid, sample_uuid, checked_by, now_utc()),
+        )
+        return uid
+
+    def add_ok_check_draw(
+        self, board_model: str, side: str, seed: int, ok_labels: int, sample_uuids: list[str], drawn_by: str | None
+    ) -> dict[str, Any]:
+        """Store a draw of OK labels to check and return it as `ok_check_draws` reads it, without its id."""
+        draw = {"uuid": new_uuid(), "board_model": board_model, "side": side, "seed": seed, "ok_labels": ok_labels}
+        draw |= {"sample_uuids": sample_uuids, "drawn_by": drawn_by, "at_utc": now_utc()}
+        self.execute(
+            "INSERT INTO ok_check_draws(uuid, board_model, side, seed, ok_labels, sample_uuids, drawn_by, at_utc)"
+            " VALUES(?,?,?,?,?,?,?,?)",
+            [json.dumps(v) if k == "sample_uuids" else v for k, v in draw.items()],
+        )
+        return draw
+
+    def ok_check_draws(self, board_model: str, side: str) -> list[dict[str, Any]]:
+        """The draws of a board model and view, oldest first, each with its list of sample UUIDs."""
+        rows = self.query(
+            "SELECT * FROM ok_check_draws WHERE board_model=? AND side=? ORDER BY id", (board_model, side)
+        )
+        return [{**r, "sample_uuids": json.loads(r["sample_uuids"])} for r in rows]
+
+    # --- labeller agreement (REQ-TRN-016): rows are added, never changed ---
+    def insert(self, table: str, row: dict[str, Any]) -> None:
+        """Insert {column: value} into one of the append-only tables, the names given by the code, never a user."""
+        marks = ",".join("?" * len(row))
+        self.execute(f"INSERT INTO {table}({','.join(row)}) VALUES({marks})", list(row.values()))  # noqa: S608
+
+    def add_row(self, table: str, **values: Any) -> str:
+        """Add a row with a new UUID and the time now (at_utc) to one of the tables of migration 0016; returns the
+        UUID."""
+        row = {"uuid": new_uuid(), **values, "at_utc": now_utc()}
+        self.insert(table, row)
+        return str(row["uuid"])
+
+    def calibration_sets(self, board_model: str, uid: str | None = None) -> list[dict[str, Any]]:
+        """A board model's calibration sets, newest first, or the one with UUID `uid`, each with its sample UUIDs."""
+        where, params = ("uuid=?", (uid,)) if uid else ("board_model=?", (board_model,))
+        rows = self.query(f"SELECT * FROM calibration_sets WHERE {where} ORDER BY id DESC", params)  # noqa: S608
+        return [{**r, "sample_uuids": json.loads(r["sample_uuids"])} for r in rows]
+
+    def blind_labels(self, set_uuid: str, labelled_by: str | None) -> dict[str, tuple[str, str | None]]:
+        """A user's blind labels of a calibration set: {sample UUID: (label, defect type)}."""
+        rows = self.query("SELECT * FROM blind_labels WHERE set_uuid=? AND labelled_by=?", (set_uuid, labelled_by))
+        return {r["sample_uuid"]: (r["label"], r["defect_type"]) for r in rows}
+
+    def agreement_checks(self, board_model: str, uid: str | None = None) -> list[dict[str, Any]]:
+        """A board model's agreement checks, newest first, or the one with UUID `uid`."""
+        where, params = ("uuid=?", (uid,)) if uid else ("board_model=?", (board_model,))
+        return self.query(f"SELECT * FROM agreement_checks WHERE {where} ORDER BY id DESC", params)  # noqa: S608
+
+    # --- frozen dataset versions (REQ-TRN-005): rows are added, never changed ---
+    def add_dataset(self, dataset: dict[str, Any], files: list[dict[str, Any]]) -> None:
+        """Store a frozen version and each of its files, in the caller's transaction."""
+        self.insert("datasets", {**dataset, "allowed_uses": json.dumps(dataset["allowed_uses"])})
+        for f in files:
+            item = {"uuid": new_uuid(), "dataset_uuid": dataset["uuid"], **f, "boxes": json.dumps(f["boxes"])}
+            self.insert("dataset_items", item)
+
+    def datasets(self, board_model: str, uid: str | None = None) -> list[dict[str, Any]]:
+        """A board model's frozen versions, newest first, or the one with UUID `uid`; manifest_path stays relative to
+        the workspace, as the manifest's file paths do."""
+        where, params = ("uuid=?", (uid,)) if uid else ("board_model=?", (board_model,))
+        rows = self.query(f"SELECT * FROM datasets WHERE {where} ORDER BY id DESC", params)  # noqa: S608
+        return [{**r, "allowed_uses": json.loads(r["allowed_uses"])} for r in rows]
+
+    def dataset_names(self) -> dict[str, list[str]]:
+        """Each board model with frozen versions: the names of its versions."""
+        names: dict[str, list[str]] = {}
+        for r in self.query("SELECT board_model, name FROM datasets ORDER BY id"):
+            names.setdefault(r["board_model"], []).append(r["name"])
+        return names
+
+    def current_boxes(self, board_model: str) -> dict[str, list[dict[str, Any]]]:
+        """The current defect boxes of a board model's samples in one query, by sample UUID, each in the order drawn."""
+        boxes: dict[str, list[dict[str, Any]]] = {}
+        for r in self.query(
+            "SELECT b.* FROM defect_boxes b JOIN samples s ON s.uuid = b.sample_uuid"
+            " WHERE s.board_model=? AND b.superseded_by IS NULL ORDER BY b.id",
+            (board_model,),
+        ):
+            boxes.setdefault(r["sample_uuid"], []).append(r)
+        return boxes
+
+    def dataset_items(self, dataset_uuid: str) -> list[dict[str, Any]]:
+        """A frozen version's files in the manifest's order, each with its boxes."""
+        rows = self.query("SELECT * FROM dataset_items WHERE dataset_uuid=? ORDER BY id", (dataset_uuid,))
+        return [{**r, "boxes": json.loads(r["boxes"])} for r in rows]
 
     # --- model registry ----------------------------------------------------
     def register_model(

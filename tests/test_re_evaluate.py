@@ -69,13 +69,15 @@ def _what_if(base: Recipe) -> list[Recipe]:
 
 
 def _refuse_the_engine(monkeypatch: pytest.MonkeyPatch) -> None:
-    """From here on, running the AI model, loading one, aligning or comparing with the golden board fails the test."""
+    """From here on, running the AI model (its network's forward pass included), loading one, aligning or comparing
+    with the golden board fails the test."""
 
     def refuse(*a: object, **k: object) -> None:
         raise AssertionError("the result was not judged again from its evidence: the engine ran")
 
     for owner, name in (
         (anomaly.AnomalyModel, "anomaly_map"), (anomaly.AnomalyModel, "score"), (anomaly.AnomalyModel, "load"),
+        (anomaly.AnomalyModel, "raw_error"), (anomaly.ConvAutoencoder, "forward"),
         (inspector, "compare"), (inspector, "align_to_reference"), (AppContext, "load_model"),
     ):  # fmt: skip
         monkeypatch.setattr(owner, name, refuse)
