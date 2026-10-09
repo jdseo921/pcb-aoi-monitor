@@ -462,6 +462,11 @@ class Database:
         found = self.query("SELECT store_uuid FROM board_model_stores WHERE board_model=?", (board_model,))
         return self.store(found[0]["store_uuid"]) if found else None
 
+    def dataset_board_model(self, name: str) -> str | None:
+        """The board model of the frozen version named `name`, or None."""
+        found = self.query("SELECT board_model FROM datasets WHERE name=?", (name,))
+        return str(found[0]["board_model"]) if found else None
+
     # --- model registry ----------------------------------------------------
     def register_model(
         self,

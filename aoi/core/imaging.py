@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 import hashlib
+import io
 import re
 import struct
 import zlib
-from collections.abc import Iterator, Sequence
+from collections.abc import Callable, Iterator, Sequence
 from pathlib import Path
 from typing import Any, Literal
 
@@ -15,6 +16,8 @@ import numpy as np
 
 from ..data import atomic
 from ..errors import QT_TRANSLATE_NOOP, AoiError, Phrase
+
+Reader = Callable[[Path], bytes]  # a file's bytes as the image checks see them
 
 IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".bmp", ".tif", ".tiff"}
 # Limits an image must stay within to be decoded (REQ-INSP-001), at the register's proposed values; a station's own
@@ -138,15 +141,17 @@ def _tiff_header(data: bytes) -> tuple[str, int, int]:
     return "TIFF", tags.get(256, 0), tags.get(257, 0)
 
 
-def file_header(path: str | Path) -> tuple[str, int, int] | None:
+def file_header(path: str | Path, read: Reader | None = None) -> tuple[str, int, int] | None:
     """`image_header` of the file at `path`, width and height swapped where its Orientation is 5 to 8 as the decoder
     turns the image: the size of the image `load_image` returns. The first HEADER_BYTES are read, and the rest only for
     a TIFF, whose directory may lie anywhere, or a file whose header lies past them; a PNG's chunk headers are read
     across the file besides, each chunk's data skipped by its length, up to PNG_MAX_CHUNKS of them. The Orientation is
     read as OpenCV 5.0 reads it: from each EXIF APP1 segment before a JPEG's scan and from the eXIf chunk libpng keeps
     (`_exif_orientation`), and from a TIFF's tag 274 as libtiff reads it (`_tiff_tags`). OSError when the file cannot be
-    read."""
-    with open(path, "rb", buffering=0) as f:  # unbuffered: a read or a skip touches only the bytes asked for
+    read. With `read`, the bytes it gives are walked in memory instead: a file of a customer's dataset store, decrypted
+    whole (REQ-TRN-017)."""
+    # unbuffered: a read or a skip touches only the bytes asked for
+    with open(path, "rb", buffering=0) if read is None else io.BytesIO(read(Path(path))) as f:
         data = _read(f, HEADER_BYTES)
         header = image_header(data)
         if header is not None and len(data) == HEADER_BYTES and (header[0] == "TIFF" or min(header[1:]) <= 0):
@@ -469,7 +474,10 @@ def _decoder_work(data: bytes, kind: str, width: int, height: int) -> Phrase | N
 
 
 def load_image(
-    path: str | Path, max_megapixels: float = MAX_MEGAPIXELS, max_megabytes: float = MAX_MEGABYTES
+    path: str | Path,
+    max_megapixels: float = MAX_MEGAPIXELS,
+    max_megabytes: float = MAX_MEGABYTES,
+    read: Reader | None = None,
 ) -> np.ndarray:
     """Read as BGR uint8 after checking the file (REQ-INSP-001): it must hold a PNG, JPEG, BMP or TIFF image by its
     content, whatever its name, and stay within `max_megabytes` on disk, `max_megapixels` by its header and `MAX_SIDE`
@@ -479,35 +487,44 @@ def load_image(
     crafted file within every bound can still hold it some seconds (docs/security/threat-model.md). All of these are
     checked before a pixel is decoded, and a recognised format whose header gives no size is refused, never decoded.
     Decoding the bytes with `imdecode` keeps non-ASCII (Korean) Windows paths working."""
-    return _read_image(Path(path), max_megapixels, max_megabytes)[0]
+    return _read_image(Path(path), max_megapixels, max_megabytes, read)[0]
 
 
 def load_image_sha256(
-    path: str | Path, max_megapixels: float = MAX_MEGAPIXELS, max_megabytes: float = MAX_MEGABYTES
+    path: str | Path,
+    max_megapixels: float = MAX_MEGAPIXELS,
+    max_megabytes: float = MAX_MEGABYTES,
+    read: Reader | None = None,
 ) -> tuple[np.ndarray, str]:
     """`load_image`, with the SHA-256 of the very bytes decoded, in hex: a record names the golden board it was judged
     against by its content, read once, so no second read of the file can race a writer (REQ-CMP-003)."""
-    img, data = _read_image(Path(path), max_megapixels, max_megabytes)
+    img, data = _read_image(Path(path), max_megapixels, max_megabytes, read)
     return img, hashlib.sha256(data).hexdigest()
 
 
 def checked_bytes(
-    path: str | Path, max_megapixels: float = MAX_MEGAPIXELS, max_megabytes: float = MAX_MEGABYTES
+    path: str | Path,
+    max_megapixels: float = MAX_MEGAPIXELS,
+    max_megabytes: float = MAX_MEGABYTES,
+    read: Reader | None = None,
 ) -> bytes:
     """The bytes of an image file once `load_image` has checked and decoded them, read once: a sample import copies
     only a file Inspection would open, and hashes the very bytes checked (REQ-TRN-001, REQ-INSP-001)."""
-    return _read_image(Path(path), max_megapixels, max_megabytes)[1]
+    return _read_image(Path(path), max_megapixels, max_megabytes, read)[1]
 
 
-def _read_image(p: Path, max_megapixels: float, max_megabytes: float) -> tuple[np.ndarray, bytes]:
-    """The image and the bytes it was decoded from, after `load_image`'s checks."""
+def _read_image(
+    p: Path, max_megapixels: float, max_megabytes: float, read: Reader | None = None
+) -> tuple[np.ndarray, bytes]:
+    """The image and the bytes it was decoded from, after `load_image`'s checks; `read` gives the file's bytes, so
+    a customer's dataset store hands over a file decrypted in memory (REQ-TRN-017, ADR 0010, decision 6)."""
     try:
         size = p.stat().st_size
         if size > max_megabytes * 1e6:
             in_bytes = QT_TRANSLATE_NOOP("Errors", "{megabytes} MB ({count} bytes)")
             found = in_bytes.fill(megabytes=f"{size / 1e6:.1f}", count=f"{size:,}")
             raise AoiError("AOI-INSP-005", path=str(p), size=found, limit=f"{max_megabytes:g} MB")
-        data = p.read_bytes()
+        data = p.read_bytes() if read is None else read(p)
     except OSError as e:  # missing file, folder, or no permission
         raise AoiError("AOI-INSP-001", detail=str(e), path=str(p)) from e
     header = image_header(data)

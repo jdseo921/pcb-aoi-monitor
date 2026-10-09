@@ -180,7 +180,7 @@ def test_req_trn_003_severity_matches_dct(trained_ctx: AppContext, monkeypatch: 
     size = ctx.load_image(sample["path"]).shape  # the image is 640 x 480
     boxes = [DefectBox(i, i, 4, 4, t.name) for i, t in enumerate(defects.DEFECT_TYPES)]
     depth, real = [], labels.image_size
-    monkeypatch.setattr(labels, "image_size", lambda path: depth.append(ctx.db._tx_depth) or real(path))
+    monkeypatch.setattr(labels, "image_size", lambda path, read: depth.append(ctx.db._tx_depth) or real(path, read))
     ctx.set_boxes(sample["uuid"], boxes)
     assert depth == [0]
     stored = ctx.boxes(sample["uuid"])

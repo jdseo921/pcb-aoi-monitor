@@ -607,7 +607,7 @@
     </message>
     <message>
         <location line="+213"/>
-        <location line="+118"/>
+        <location line="+125"/>
         <source>Importing samples</source>
         <translation type="unfinished"></translation>
     </message>
@@ -627,7 +627,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+94"/>
+        <location line="+96"/>
         <source>it cannot be read ({code} {title})</source>
         <translation type="unfinished"></translation>
     </message>
@@ -802,7 +802,7 @@
         <translation>데이터셋 버전 동결</translation>
     </message>
     <message>
-        <location line="+76"/>
+        <location line="+79"/>
         <source>Locking a validation set</source>
         <translation>검증 세트 잠금</translation>
     </message>
@@ -852,7 +852,27 @@
         <translation>입력한 키가 이 저장소의 키가 아닙니다. 네 글자씩 묶인 각 그룹을 확인하십시오</translation>
     </message>
     <message>
-        <location line="+19"/>
+        <location line="+5"/>
+        <source>Moving a board model into a dataset store</source>
+        <translation>보드 모델을 데이터셋 저장소로 옮기기</translation>
+    </message>
+    <message>
+        <location line="+15"/>
+        <source>the workspace holds no board model {board}</source>
+        <translation>작업 공간에 보드 모델 {board}이(가) 없습니다</translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>{board} is in the store of {other}, and a board model never leaves it</source>
+        <translation>{board}은(는) {other}의 저장소에 있으며, 보드 모델은 저장소를 떠나지 않습니다</translation>
+    </message>
+    <message>
+        <location line="+8"/>
+        <source>a file of it could not be read ({reason})</source>
+        <translation>그 파일 하나를 읽을 수 없습니다({reason})</translation>
+    </message>
+    <message>
+        <location line="+30"/>
         <source>the workspace holds no such store, or it is shredded</source>
         <translation>작업 공간에 그런 저장소가 없거나 파기되었습니다</translation>
     </message>
@@ -877,7 +897,22 @@
         <translation>이 스테이션에 있는 키는 그 저장소의 키가 아닙니다</translation>
     </message>
     <message>
-        <location line="+14"/>
+        <location line="+13"/>
+        <source>{file} could not be read ({detail})</source>
+        <translation>{file}을(를) 읽을 수 없습니다({detail})</translation>
+    </message>
+    <message>
+        <location line="+11"/>
+        <source>{file} did not read back as written, and was left plain ({detail})</source>
+        <translation>{file}을(를) 쓴 그대로 다시 읽을 수 없어 암호화하지 않은 채로 두었습니다({detail})</translation>
+    </message>
+    <message>
+        <location line="+32"/>
+        <source>it was shredded on {date}</source>
+        <translation>{date}에 파기되었습니다</translation>
+    </message>
+    <message>
+        <location line="+42"/>
         <source>the board revision {revision} is not 1 to 16 letters and digits</source>
         <translation>보드 리비전 {revision}이(가) 1~16자의 영문자와 숫자가 아닙니다</translation>
     </message>
@@ -897,7 +932,7 @@
         <translation>이 뷰에 OK 또는 NG로 라벨링된 이미지가 없습니다</translation>
     </message>
     <message>
-        <location line="+41"/>
+        <location line="+42"/>
         <source>Activating an AI model version</source>
         <translation type="unfinished"></translation>
     </message>
@@ -917,7 +952,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1746"/>
+        <location line="-1884"/>
         <source>no defect type was given</source>
         <translation>결함 유형이 지정되지 않았습니다</translation>
     </message>
@@ -932,12 +967,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+534"/>
+        <location line="+541"/>
         <source>its UUID {found} is not {uuid}, as in the AI model registry</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+697"/>
+        <location line="+699"/>
         <source>Labelling an image</source>
         <translation>이미지 라벨링</translation>
     </message>
@@ -952,7 +987,7 @@
         <translation>{label}(으)로 다시 라벨링</translation>
     </message>
     <message>
-        <location line="+397"/>
+        <location line="+525"/>
         <source>no agreement check of the board model holds images of this view</source>
         <translation>이 보드 모델의 일치도 검사 중 이 뷰의 이미지를 담은 것이 없습니다</translation>
     </message>
@@ -962,7 +997,7 @@
         <translation>이 뷰의 가장 최근 일치도 검사가 목표에 도달하지 못했습니다</translation>
     </message>
     <message>
-        <location line="+57"/>
+        <location line="+58"/>
         <source>Changing settings</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1024,7 +1059,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/imaging.py" line="+368"/>
+        <location filename="../core/imaging.py" line="+373"/>
         <source>it has {count} tiles, more than the {most} this app decodes</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1079,7 +1114,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+42"/>
+        <location line="+54"/>
         <source>{megabytes} MB ({count} bytes)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4754,7 +4789,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/services.py" line="-1920"/>
+        <location filename="../core/services.py" line="-2058"/>
         <source>Aligning {count} images to the reference board</source>
         <translation type="unfinished"></translation>
     </message>
