@@ -510,6 +510,17 @@ CODES: dict[str, ErrorCode] = {
             ),
         ),
         ErrorCode(
+            "AOI-RCP-004",
+            QT_TRANSLATE_NOOP("Errors", "Recipe saved while Save to Recipe was open"),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Revision {latest} of board model {board_model} was saved after revision {revision}, the one Save to"
+                " Recipe listed its changes against; saving them would undo revision {latest}, so the sheet closed and"
+                " nothing was saved. Compare now shows the thresholds of revision {latest}.",
+            ),
+            QT_TRANSLATE_NOOP("Errors", "Try your thresholds again on revision {latest}, then press Save to Recipe."),
+        ),
+        ErrorCode(
             "AOI-LOG-001",
             QT_TRANSLATE_NOOP("Errors", "Export stopped part-way"),
             QT_TRANSLATE_NOOP(

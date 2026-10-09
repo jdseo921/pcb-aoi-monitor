@@ -55,7 +55,9 @@ BOARD_MODEL = "TINY"
 FIXED_TIME = "2026-01-01T09:00:00+00:00"  # every stored time, so a render does not change with the clock
 FIXED_MS = 480.0  # the inspection time Inspection and Compare show
 FIXED_SSIM, FIXED_INLIERS = 0.95, 400  # the similarity and alignment points Compare shows (module docstring)
-STORED_STATES = ("compare-stored-operator", "compare-golden-changed-operator", "compare-tried-engineer")  # Compare
+STORED_STATES = (  # Compare
+    "compare-stored-operator", "compare-golden-changed-operator", "compare-tried-engineer", "compare-save-engineer",
+)  # fmt: skip
 FIXED_WORKSPACE = "C:/AOI_Workspace"  # what the Settings page shows instead of the temporary folder
 TEST_FONT = '"DejaVu Sans"'  # the font the approved images are drawn with (Linux)
 DATASET_OK, DATASET_NG, DATASET_SEED = 30, 14, 7  # as tests/conftest.py
@@ -288,7 +290,8 @@ def prepare(win: MainWindow, title: str, dataset: Path) -> None:
 def render_stored(win: Any, ctx: AppContext, out: Path) -> dict[str, Path]:
     """Compare on the record `build_workspace` saved, as an Operator opens it from Inspection: beside the golden board
     it was judged against, then with that file changed, which the pane explains (REQ-CMP-003); the file is put back.
-    Then as an Engineer judges it again with other thresholds: the would-be verdict beside Re-evaluate (REQ-CMP-005)."""
+    Then as an Engineer judges it again with other thresholds: the would-be verdict beside Re-evaluate, and Save to
+    Recipe's sheet with a reason typed, nothing saved (REQ-CMP-005)."""
     from PySide6.QtWidgets import QApplication
 
     page, files = win.pages["Compare"], {}
@@ -305,11 +308,14 @@ def render_stored(win: Any, ctx: AppContext, out: Path) -> dict[str, Path]:
             assert win.navigate("Compare")
             page.show_stored(record)
             wait_until(lambda: page._bg is None)
-            if name == STORED_STATES[2]:  # an AI score threshold above the AI score, and no pixel differs enough
+            if name in STORED_STATES[2:]:  # an AI score threshold above the AI score, and no pixel differs enough
                 page.ai_thr.set_override(7.0)
                 page.diff_thr.setValue(255)
                 page.act_try.trigger()
                 wait_until(lambda: page._bg is None)
+            if name == STORED_STATES[3]:
+                page.act_save.trigger()
+                page.reason.setText("No pixel differs enough on this board")
             QApplication.processEvents()
             files[name] = out / f"{name}.png"
             assert win.grab().save(str(files[name])), files[name]

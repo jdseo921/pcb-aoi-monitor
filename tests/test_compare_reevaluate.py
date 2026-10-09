@@ -714,7 +714,8 @@ def test_req_set_021_a_re_evaluation_over_a_second_shows_a_busy_indicator_over_t
     landing after and no worker held. Cancel, by Tab and Space after Ctrl+R in the "why" box or by a click after Ctrl+R
     on Show, gives the focus to Re-evaluate, so a second Space never sets the AI score threshold's tick, next after
     Cancel in the Tab order; Ctrl+R in the "why" box leaves the focus there when the answer comes, and an answer within
-    the first second leaves no indicator to show after it while the job's end is still to come (verification)."""
+    the first second leaves no indicator to show after it while the job's end is still to come (verification). Save to
+    Recipe is off meanwhile too, so Ctrl+S opens no sheet over the run (S28d)."""
     ctx = trained_ctx
     win, compare, _ = _stored_on_compare(qtbot, ctx, ng_board, "Engineer")
     win.resize(win.minimumSizeHint())  # the panel at its least height (review)
@@ -766,6 +767,9 @@ def test_req_set_021_a_re_evaluation_over_a_second_shows_a_busy_indicator_over_t
         assert busy.label.text().startswith("Re-evaluating…")
         assert compare.would_be.isHidden() and _table(compare) == stored
         assert not compare.act_try.isEnabled(), "Re-evaluate is off while it runs"
+        qtbot.keyClick(win, Qt.Key.Key_S, Qt.KeyboardModifier.ControlModifier)  # Save to Recipe's key, then let go
+        qtbot.keyRelease(win, Qt.Key.Key_S)
+        assert compare.sheet.isHidden() and not compare.act_save.isEnabled(), "nor does Save to Recipe (S28d)"
         focus = QApplication.focusWidget()
         assert focus is not None
         qtbot.keyClick(focus, Qt.Key.Key_Space)  # a second Space, where the focus went
@@ -780,6 +784,7 @@ def test_req_set_021_a_re_evaluation_over_a_second_shows_a_busy_indicator_over_t
             qtbot.waitUntil(lambda: compare.would_be.isVisible() or bool(dialogs), timeout=20000)
             assert not over_the_checks() and compare.act_try.isEnabled(), f"the indicator goes with {then}, not later"
             assert (_table(compare) != stored) == (not fail[0]), f"{then}: the checks tried show with an answer only"
+            assert compare.act_save.isEnabled(), f"Save to Recipe on again with {then} (S28d)"
             assert QApplication.focusWidget() is compare.btn_try, f"the focus back on Re-evaluate with {then}"
             end.set()
             qtbot.waitUntil(lambda: compare._bg is None, timeout=20000)
@@ -796,6 +801,7 @@ def test_req_set_021_a_re_evaluation_over_a_second_shows_a_busy_indicator_over_t
             qtbot.keyClick(compare.min_area, Qt.Key.Key_Up)
         assert not over_the_checks() and _table(compare) == stored, f"the indicator goes at once with {then}"
         assert compare.act_try.isEnabled(), f"Re-evaluate is on again at once with {then}"
+        assert compare.act_save.isEnabled(), f"Save to Recipe on again at once with {then} (S28d)"
         back, where = (compare.btn_try, "back on Re-evaluate") if then == "Cancel" else (compare.min_area, "kept")
         assert QApplication.focusWidget() is back, f"the focus {where} after {then}"
         gate.set()

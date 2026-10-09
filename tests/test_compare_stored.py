@@ -58,10 +58,14 @@ def _table(page: ComparePage) -> list[tuple[object, ...]]:
     return rows
 
 
-def save_to_recipe(compare: ComparePage) -> int:
-    """Save to Recipe as an Engineer presses it (S28d); returns the revision now in use, which the save made."""
+def save_to_recipe(compare: ComparePage, reason: str = "tried on Compare") -> int:
+    """Save to Recipe as an Engineer presses it (S28d): the button, a reason in the sheet, then Save Revision; returns
+    the revision now in use, which the save made."""
     assert compare.btn_save.isEnabled(), "a threshold differs from the recipe"
     compare.btn_save.click()
+    compare.reason.setText(reason)
+    compare.btn_confirm.click()
+    assert compare.sheet.isHidden() and compare.ctx.audit_entries(action="recipe.save")[0]["reason"] == reason
     return compare.ctx.recipe(BOARD)[0]
 
 
