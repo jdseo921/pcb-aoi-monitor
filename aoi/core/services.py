@@ -67,6 +67,10 @@ MEDIAN = QT_TRANSLATE_NOOP("Training", "Building the Golden board: step {n} of {
 EPOCH = QT_TRANSLATE_NOOP("Training", "Training epoch {epoch} of {epochs}")
 CALIBRATING = QT_TRANSLATE_NOOP("Training", "Calibrating: map {n} of {count}")
 SAVING = QT_TRANSLATE_NOOP("Training", "Saving AI model {version}")
+# Why an AI model version was not made active (AOI-TRN-048, REQ-TRN-010), as phrases shown translated (#198)
+NO_EARLIER = QT_TRANSLATE_NOOP("Errors", "no earlier version of this board model was active")
+NO_GOLDEN = QT_TRANSLATE_NOOP("Errors", "its Golden board {file} cannot be read ({error})")
+SWITCHES = ("model.train", "model.activate", "model.rollback")  # the audit actions that change the active version
 NO_TYPE = QT_TRANSLATE_NOOP("Errors", "no defect type was given")  # why AOI-TRN-013 refused an NG sample
 NOT_A_TYPE = QT_TRANSLATE_NOOP("Errors", "{name} is not one of them")
 STEM_CHARS = 40  # how much of a source file's stem names its evidence or sample file (#245)
@@ -2273,12 +2277,67 @@ class AppContext:
     @requires("Engineer", QT_TRANSLATE_NOOP("Errors", "Activating an AI model version"))
     @transactional
     def activate_model(self, model_id: int) -> None:
-        """Make a model version the one inspections use (an older version: a rollback)."""
-        target = self.db.model(model_id)
-        previous = self.db.active_model(target["board_model"])
-        self.db.activate_model(model_id)
-        old = {"active_version": previous["version"] if previous else None}
-        self.audit("model.activate", "model", target["uuid"], old, {"active_version": target["version"]})
+        """Make a model version the one inspections use, with its Golden board (REQ-TRN-010): `_switch_to`."""
+        self._switch_to(self.db.model(model_id), "model.activate")
+
+    @requires("Engineer", QT_TRANSLATE_NOOP("Errors", "Rolling back an AI model"))
+    @transactional
+    def rollback_model(self, board_model: str) -> dict[str, Any]:
+        """Make the version that was active before the active one active again, with its Golden board, in one call
+        (REQ-TRN-010), and return it; AOI-TRN-048 when no earlier version was active. Audited as `model.rollback`."""
+        target = self.previous_model(board_model)
+        if target is None:
+            active = self.db.active_model(board_model)
+            version = active["version"] if active else QT_TRANSLATE_NOOP("Errors", "(none)")
+            raise AoiError("AOI-TRN-048", version=version, board=board_model, reason=NO_EARLIER)
+        self._switch_to(target, "model.rollback")
+        return target
+
+    def previous_model(self, board_model: str) -> dict[str, Any] | None:
+        """The version that was active before the active one, which Roll Back makes active again, from the audit trail
+        (the newest training, activation or rollback that made the active version active names the one before it); None
+        when there is none, such as after a board model's first training."""
+        active = self.db.active_model(board_model)
+        if active is None:
+            return None
+        rows = {m["uuid"]: m for m in self.db.models(board_model)}
+        by_version = {m["version"]: m for m in rows.values()}
+        for entry in self.db.audit_entries("model", None, None, None, 1_000_000):  # newest first
+            if entry["object_uuid"] not in rows or entry["action"] not in SWITCHES:
+                continue
+            after, before = entry["after"] or {}, entry["before"] or {}
+            made = after.get("active_version", after.get("version"))  # model.train's entry names the version it made
+            if made == active["version"]:
+                previous = before.get("active_version")
+                return by_version.get(previous) if previous and previous != made else None
+        return None
+
+    def _switch_to(self, target: dict[str, Any], action: str) -> None:
+        """Make `target` its board model's active version and its Golden board the board model's, together, with an
+        audit entry naming both before and after (REQ-TRN-010). A version that records no Golden board (trained before
+        it was recorded) keeps the board model's. A recorded Golden board that cannot be read is refused with
+        AOI-TRN-048 before anything changes: inspections would otherwise judge with another version's board."""
+        board_model = target["board_model"]
+        previous = self.db.active_model(board_model)
+        before_ref = self.db.reference(board_model)
+        stored = json.loads(target["metrics"] or "{}").get("golden_image")
+        ref = before_ref
+        if stored:
+            path = resolve(stored, self.settings.root)
+            try:
+                self.load_image(str(path))
+            except AoiError as e:
+                why = NO_GOLDEN.fill(file=to_stored(path, self.settings.root), error=e.code)
+                raise AoiError("AOI-TRN-048", version=target["version"], board=board_model, reason=why) from e
+            self.db.set_reference(board_model, str(path))
+            ref = str(path)
+        self.db.activate_model(int(target["id"]))
+
+        def kept(p: str | None) -> str | None:
+            return to_stored(Path(p), self.settings.root) if p else None
+
+        old = {"active_version": previous["version"] if previous else None, "reference": kept(before_ref)}
+        self.audit(action, "model", target["uuid"], old, {"active_version": target["version"], "reference": kept(ref)})
 
     @requires("Admin", QT_TRANSLATE_NOOP("Errors", "Changing users"))
     @transactional

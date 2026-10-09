@@ -156,6 +156,8 @@ WRITES: dict[str, tuple[str, Callable[[AppContext, Path, Path], Any]]] = {
     # the version TINY was trained from (tests/conftest.py), so the call under test writes the only rows
     "train": ("model.train", lambda ctx, data, tmp: ctx.train(ctx.training_version("TINY")["uuid"], 1, 32)),
     "activate_model": ("model.activate", lambda ctx, data, tmp: ctx.activate_model(ctx.models("TINY")[-1]["id"])),
+    # back to the version the activation above replaced, with its Golden board (REQ-TRN-010, S42)
+    "rollback_model": ("model.rollback", lambda ctx, data, tmp: ctx.rollback_model("TINY")),
     "save_recipe": ("recipe.save", lambda ctx, data, tmp: ctx.save_recipe(Recipe(board_model="TINY"))),
     "batch_test": ("test.run", lambda ctx, data, tmp: ctx.batch_test("TINY", str(data / "test" / "ng"))),
     "export_model": (
@@ -201,7 +203,7 @@ UNCHECKED = {
     "boxes", "box_history", "unsure_samples", "label_check_status", "labels_ready_to_freeze", "calibration_sets",
     "agreement_checks", "propose_calibration_set", "blind_labelled", "datasets", "dataset_items", "verify_dataset",
     "validation_split", "stores", "store_of", "store_contents", "training_version", "freeze_gate",
-    "dataset_counts",
+    "dataset_counts", "previous_model",
 }  # fmt: skip
 CALLS = {**{name: call for name, (_, call) in WRITES.items()}, **CHECKED_READS}
 # The lowest role allowed each call, copied from the write table of docs/ARCHITECTURE.md §5 and REQ-CMP-005, never read
@@ -249,10 +251,12 @@ def test_req_log_004_writes_are_audited(trained_ctx: AppContext, synthetic_datas
     reference = by_action["board_model.reference"]["after"]["reference"]  # set before training; the Golden board (#178)
     assert by_action["model.train"]["before"] == {"active_version": versions[1], "reference": reference}
     assert by_action["model.train"]["after"]["version"] == versions[0]
-    assert (by_action["model.activate"]["before"], by_action["model.activate"]["after"]) == (
-        {"active_version": versions[0]},
-        {"active_version": versions[1]},
-    )  # a rollback
+    switched = [by_action[a] for a in ("model.activate", "model.rollback")]  # to the older version, then back
+    assert [(e["before"]["active_version"], e["after"]["active_version"]) for e in switched] == [
+        (versions[0], versions[1]),
+        (versions[1], versions[0]),
+    ]
+    assert switched[0]["after"]["reference"] == switched[1]["before"]["reference"] != switched[1]["after"]["reference"]
     assert by_action["sample.update"]["before"] == {"label": "OK", "defect_type": None}
     assert by_action["sample.update"]["after"] == {"label": "NG", "defect_type": "Scratch"}
     assert not Path(by_action["board_model.reference"]["after"]["reference"]).is_absolute()
@@ -260,7 +264,7 @@ def test_req_log_004_writes_are_audited(trained_ctx: AppContext, synthetic_datas
     assert by_action["settings.change"]["after"] == {"default_epochs": 7} and ctx.settings.default_epochs == 7
     assert by_action["inspection.archive"]["after"]["archived"] == 1 and by_action["export.csv"]["after"]["rows"] == 1
     assert by_action["recipe.save"]["before"] == Recipe(board_model="TINY").to_dict()  # revision 1, the default
-    assert by_action["test.run"]["after"]["model_version"] == versions[1]  # the test ran after the rollback
+    assert by_action["test.run"]["after"]["model_version"] == versions[0]  # the test ran after the roll back to it
 
 
 def test_req_usr_001_the_current_user_is_held_with_uuid_name_and_role(ctx: AppContext) -> None:
