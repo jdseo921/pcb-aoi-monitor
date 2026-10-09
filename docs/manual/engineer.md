@@ -162,11 +162,13 @@ UNSURE or lists UNSURE images for the customer's quality engineer yet.
 in the label editor beside the table: its file name, label and view above it, its boxes on it and listed under it. On
 an NG image, press **Draw Box**, which stays blue while it is on, and drag around a defect: the box takes the type in
 the **Type** list, and **Severity** beside it shows what the defect table gives that type; you cannot pick a severity
-of your own. A box stays inside the image and is at least 4 by 4 pixels of the image; a shorter drag draws nothing.
-Each box is saved when you let go, in whole pixels, as a new label in the image's history with the boxes before kept.
-An OK or UNSURE image takes no boxes, so Draw Box is off there. An image that cannot be read shows its error code
-under its name; its boxes are listed but cannot be changed. Changing, moving, resizing and deleting a box, marking an
-image and the editor's keys are not on this screen yet.
+of your own. Select a box by its row in the list, and the Type list shows its type: pick another in the open list, or
+show one with the arrow keys and press Enter, to change it; the wheel turns the list only once you have clicked it,
+and nothing changes until you pick. A box stays inside the image and is at least 4 by 4 pixels of the image; a shorter
+drag draws nothing. Each box is saved, in whole pixels, when you let go, and each type when you pick it, as a new
+label in the image's history with the boxes before kept. An OK or UNSURE image takes no boxes, so Draw Box is off
+there. An image that cannot be read shows its error code under its name; its boxes are listed but cannot be changed.
+Moving, resizing and deleting a box, marking an image and the editor's keys are not on this screen yet.
 
 **A second user checks each label.** The labels of a board model and view are ready to freeze into a dataset only
 once a second Engineer or Admin has checked every NG label and OK labels drawn at random, 10 % of them rounded up; the
