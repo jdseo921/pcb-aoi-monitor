@@ -425,7 +425,9 @@ validation on a dataset version also stores recall per defect type, by the type 
 
 **History.** The History tab lists every run of the board model, newest first: its time, AI model, dataset version or folder, recipe revision, missed defects and false calls. Select one and press Open (or double-click it) to show it on Run as it was stored, rows, tiles and previews.
 
-(to be written: exports in full, the validation report)
+**Export Report.** Asks first, naming how many images, missed defects and false calls the report holds; the PDF then gives the rates with their counts and bounds, recall per defect type, each missed defect and false call with its overlay, every row, and the card of the AI model that judged the run. It is written whole or not at all and recorded in the audit trail.
+
+(to be written: Export Overlays, the validation report for a customer)
 
 Each validation run is stored with a UUID and the UUID of the AI model active when it ran. **Export CSV** writes one row
 per image (`image`, `gt` the label, `ai_result` the verdict, `score`, `defects`, `pass_fail`, `ai_check`, `defect_type` as

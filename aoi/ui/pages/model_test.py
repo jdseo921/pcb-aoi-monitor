@@ -24,6 +24,7 @@ from PySide6.QtWidgets import (
 )
 
 from ... import defects as taxonomy
+from ...core import report as reporting
 from ...core import stats
 from ...core.inspector import InspectionResult, JudgedBy
 from ...core.recipe import scale_digits
@@ -573,10 +574,27 @@ class ModelTestPage(Page):
             str(self.ctx.settings.exports_dir / "model_test_report.pdf"),
             self.tr("PDF (*.pdf)"),
         )
-        if not f or self.run_board_model is None:
+        if not f or (bm := self.run_board_model) is None:
+            return
+        misses, false_calls = reporting.misses_and_false_calls(self.rows)
+        ask = self.tr(
+            "Export the validation report of {images} images? It shows each of its {misses} missed defects and"
+            " {false_calls} false calls with its overlay, and the AI model card."
+        ).format(images=len(self.rows), misses=len(misses), false_calls=len(false_calls))
+        buttons = QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+        if QMessageBox.question(self, self.tr("Export report"), ask, buttons) != QMessageBox.StandardButton.Yes:
+            return
+        rows = list(self.rows)  # the overlays are read on the pool: no file work on the UI thread (REQ-SET-021)
+        self.run_in_background(
+            self.ctx.report_images, rows, on_result=lambda images: self._write_report(f, bm, rows, images)
+        )
+
+    def _write_report(self, f: str, board_model: str, rows: list[dict[str, Any]], images: dict[str, str]) -> None:
+        """Render the report of `rows` with their overlays and hand it to the service layer to write and audit."""
+        if board_model != self.run_board_model or rows != self.rows:  # another run or board model shown since (#180)
             return
         doc = QTextDocument()
-        doc.setHtml(self._report_html())
+        doc.setHtml(self._report_html(images))
         buf = QBuffer()  # rendered in memory, then written whole or not at all by the service layer (#180)
         buf.open(QIODevice.OpenModeFlag.WriteOnly)
         w = QPdfWriter(buf)
@@ -596,8 +614,9 @@ class ModelTestPage(Page):
             return
         self.shell.status(self.tr("Report saved: {file}").format(file=f))
 
-    def _report_html(self) -> str:
-        """The validation report: every sentence through tr(), the markup and the numbers from the code."""
+    def _report_html(self, images: dict[str, str] | None = None) -> str:
+        """The validation report: every sentence through tr(), the markup and the numbers from the code; `images`, the
+        overlays of its misses and false calls (`AppContext.report_images`), read here when not given."""
         m = self.metrics
         bm = self.run_board_model or ""  # the board model the run was for (#180)
         run = self.rows[0] if self.rows else {}  # each row names the run and the AI model active then (REQ-SET-017)
@@ -632,9 +651,51 @@ class ModelTestPage(Page):
             f"<td>{html.escape(self._matches(r))}</td></tr>"
             for r in self.rows
         )
+        if images is None:
+            images = self.ctx.report_images(self.rows)
         return (
             f"<h2>{title}</h2><p>{head}</p>"
             f"<table border=1 cellpadding=4 cellspacing=0><tr>{tiles}</tr><tr>{values}</tr></table>"
             f"<p>{counts}</p>"
-            f"<table border=1 cellpadding=3 cellspacing=0><tr>{headers}</tr>{rows}</table>"
+            + self._report_per_type(rates)
+            + self._report_misses(images)
+            + f"<table border=1 cellpadding=3 cellspacing=0><tr>{headers}</tr>{rows}</table>"
+            + self._report_card(bm, run.get("model_uuid"))
         )
+
+    def _report_per_type(self, rates: dict[str, Any]) -> str:
+        """Recall per defect type: each type's NG images found of all, with its lower bound (REQ-TST-007)."""
+        per_type = rates.get("recall_per_type") or {}
+        if not per_type:
+            return ""
+        head = f"<tr><th>{self.tr('Defect type')}</th><th>{self.tr('Found')}</th></tr>"
+        body = "".join(
+            f"<tr><td>{html.escape(name)}</td><td>{html.escape(phrase_text(stats.text(r)))}</td></tr>"
+            for name, r in per_type.items()
+        )
+        table = f"<table border=1 cellpadding=3 cellspacing=0>{head}{body}</table>"
+        return f"<h3>{self.tr('Recall per defect type')}</h3>{table}"
+
+    def _report_misses(self, images: dict[str, str]) -> str:
+        """Every missed defect and false call, each with its row and its overlay (Customers & Launch, Validation)."""
+        misses, false_calls = reporting.misses_and_false_calls(self.rows)
+        parts = []
+        for heading, items in ((self.tr("Missed defects"), misses), (self.tr("False calls"), false_calls)):
+            parts.append(f"<h3>{heading}: {len(items)}</h3>")
+            if not items:
+                parts.append(f"<p>{self.tr('None in this run.')}</p>")
+            for r in items:
+                line = self.tr("{image}: labelled {label}, judged {verdict}, AI score {score}").format(
+                    image=html.escape(Path(r["image"]).name), label=r["gt"],
+                    verdict=theme.verdict_label(r["ai_result"]), score=r["score"],
+                )  # fmt: skip
+                uri = images.get(str(r["image"]))
+                picture = f"<br><img src='{uri}'>" if uri else f"<br>{self.tr('(its overlay is not kept)')}"
+                parts.append(f"<p>{line}{picture}</p>")
+        return "".join(parts)
+
+    def _report_card(self, board_model: str, model_uuid: str | None) -> str:
+        """The AI model card of the version that judged the run, or a line saying it has none (REQ-TST-004)."""
+        card = self.ctx.model_card_text(board_model, model_uuid) if board_model else None
+        body = f"<pre>{html.escape(card)}</pre>" if card else f"<p>{self.tr('This AI model has no AI model card.')}</p>"
+        return f"<h3>{self.tr('AI model card')}</h3>{body}"

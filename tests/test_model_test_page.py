@@ -160,6 +160,7 @@ def test_req_tst_003_a_preview_is_judged_by_what_judged_its_row_or_not_at_all(
             assert {r["model_version"] for r in csv.DictReader(f)} == {"v1.0"}
         _save_as(monkeypatch, tmp_path / "report.pdf")
         page.export_report()
+        qtbot.waitUntil(lambda: page._bg is None, timeout=30000)  # overlays read on the pool
         assert "AI model: v1.0" in page._report_html()
         assert ctx.audit_entries(action="export.report")[0]["after"]["model_version"] == "v1.0"
     run_uuid = page.rows[0]["run_uuid"]  # Run Test Again, as the pane says: a run of what is in use, previewed again
@@ -512,6 +513,7 @@ def test_req_tst_004_a_run_is_not_shown_under_another_board_model(
     asked: list[object] = []
     monkeypatch.setattr(QFileDialog, "getSaveFileName", staticmethod(lambda *a, **k: asked.append(a) or ("", "")))
     page.export_report()
+    qtbot.waitUntil(lambda: page._bg is None, timeout=30000)  # overlays read on the pool
     assert inspected == [BOARD] and asked == [] and dialogs == []
     assert not page.empty.isHidden() and "OTHER" in page.empty.heading.text()
 
@@ -563,6 +565,7 @@ def test_req_log_004_export_report_is_written_whole_or_not_at_all_and_audited(
     good = tmp_path / "report.pdf"
     _save_as(monkeypatch, good)
     page.export_report()
+    qtbot.waitUntil(lambda: page._bg is None, timeout=30000)  # overlays read on the pool
     entries = audited()
     print("export.report entries after a good export:", len(entries))
     assert good.read_bytes().startswith(b"%PDF") and dialogs == []
@@ -581,6 +584,7 @@ def test_req_log_004_export_report_is_written_whole_or_not_at_all_and_audited(
     win.statusBar().clearMessage()
     _save_as(monkeypatch, blocker / "report.pdf")
     page.export_report()
+    qtbot.waitUntil(lambda: page._bg is None, timeout=30000)  # overlays read on the pool
     print("status after a failed export:", repr(win.statusBar().currentMessage()), "dialogs:", dialogs)
     assert [t for t, _ in dialogs] == ["AOI-LOG-002 Export not written"] and str(blocker) in dialogs[0][1]
     assert win.statusBar().currentMessage() == "" and len(audited()) == 1
@@ -595,6 +599,7 @@ def test_req_log_004_export_report_is_written_whole_or_not_at_all_and_audited(
     monkeypatch.setattr(atomic.os, "fsync", disk_fails)  # the disk fails while the new report is being written
     _save_as(monkeypatch, good)
     page.export_report()
+    qtbot.waitUntil(lambda: page._bg is None, timeout=30000)  # overlays read on the pool
     monkeypatch.setattr(atomic.os, "fsync", fsync)
     print("earlier report after a write that failed:", good.read_bytes()[:40])
     assert good.read_bytes() == earlier and [p.name for p in tmp_path.iterdir() if p.name.endswith(".tmp")] == []
@@ -604,6 +609,7 @@ def test_req_log_004_export_report_is_written_whole_or_not_at_all_and_audited(
     refused = tmp_path / "operator.pdf"
     _save_as(monkeypatch, refused)
     page.export_report()
+    qtbot.waitUntil(lambda: page._bg is None, timeout=30000)  # overlays read on the pool
     assert not refused.exists() and dialogs[-1][0].startswith("AOI-USR-001") and len(audited()) == 1
 
 
