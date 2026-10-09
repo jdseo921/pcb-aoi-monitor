@@ -1307,12 +1307,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/recipe_editor.py" line="+54"/>
+        <location filename="../ui/pages/recipe_editor.py" line="+55"/>
         <source>its Golden board was replaced after the points were picked on it</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+385"/>
+        <location line="+397"/>
         <source>Height</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4684,7 +4684,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/recipe_editor.py" line="-372"/>
+        <location filename="../ui/pages/recipe_editor.py" line="-384"/>
         <source>Recipe Editor</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4740,12 +4740,13 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+34"/>
+        <location line="+36"/>
+        <location line="+2"/>
         <source>Draw ROI</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+3"/>
+        <location line="+8"/>
         <source>Type:</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4806,7 +4807,27 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-52"/>
+        <location line="-69"/>
+        <source>Leave Draw ROI</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>Delete ROI</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Undo</source>
+        <translation type="unfinished">실행 취소</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Redo</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+12"/>
         <source>Calibrate Scale…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4941,7 +4962,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+92"/>
+        <location line="+93"/>
         <source>Train an AI model or set a reference image on Training.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4981,7 +5002,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+123"/>
+        <location line="+156"/>
         <source>Scale {scale:.2f} px/mm</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4991,7 +5012,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+58"/>
+        <location line="+59"/>
         <source>Scale of {board_model} set: {scale:.2f} px/mm.</source>
         <translation type="unfinished"></translation>
     </message>

@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 from PySide6.QtCore import QPointF, QRectF, Qt
+from PySide6.QtGui import QKeySequence
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -77,6 +78,8 @@ class RecipeEditorPage(Page):
         self.golden_seen: tuple[str | None, int, int] | None = None  # the Golden board file last read (#176)
         self.golden_error: AoiError | None = None  # and why it could not be
         self.px_per_mm: float | None = None  # the board model's scale, which load() reads (REQ-RCP-006)
+        self._undo: list[list[ROI]] = []  # the ROIs before each edit since load(), the last edit last (Ctrl+Z)
+        self._redo: list[list[ROI]] = []  # and the edits undone, which Ctrl+Y does again
 
         split = QSplitter(Qt.Orientation.Horizontal)
         left = QWidget()
@@ -85,6 +88,13 @@ class RecipeEditorPage(Page):
         tools = QHBoxLayout()
         self.draw_btn = button(self.tr("Draw ROI"), slot=self.toggle_draw)  # Save Recipe is the page's one blue primary
         self.draw_btn.setCheckable(True)
+        self.action(self.tr("Draw ROI"), "D", self.draw_btn.click)  # off while Calibrate Scale… picks points
+        leave = self.action(self.tr("Leave Draw ROI"), "Esc", self.draw_btn.click)  # on only in Draw ROI mode: the
+        leave.setEnabled(False)  # sheet's Esc, the only other one on the page, is never on with it
+        self.draw_btn.toggled.connect(leave.setEnabled)
+        self.action(self.tr("Delete ROI"), QKeySequence.StandardKey.Delete, self.delete_roi)  # undoable: no question
+        self.act_undo = self.action(self.tr("Undo"), "Ctrl+Z", lambda: self._swap(self._undo, self._redo))
+        self.act_redo = self.action(self.tr("Redo"), "Ctrl+Y", lambda: self._swap(self._redo, self._undo))
         tools.addWidget(self.draw_btn)
         tools.addWidget(QLabel(self.tr("Type:")))
         self.roi_type = QComboBox()
@@ -275,6 +285,7 @@ class RecipeEditorPage(Page):
     # --- load / show ------------------------------------------------------------
     def load(self) -> None:
         self.roi_table.clearSelection()  # row i of the recipe before is not ROI i of this one: the form empties (#173)
+        self._forget()
         if not self.board_model:
             self.calibrate_btn.setEnabled(False)  # no Golden board to click on, nor to take the focus back
             if not self.sheet.isHidden():  # no Golden board to pick points on: Draw ROI and panning come back
@@ -381,6 +392,7 @@ class RecipeEditorPage(Page):
         self.view.set_draw_mode(self.draw_btn.isChecked())
 
     def add_roi(self, rect: QRectF) -> None:
+        self._remember()
         rois = self.edited_recipe.rois
         n = len(rois) + 1
         rois.append(
@@ -424,6 +436,7 @@ class RecipeEditorPage(Page):
         """ROIs moved or resized on the Golden board (REQ-RCP-001): each takes its new box in px, and drops its box in
         mm, so that Save Recipe stores the new box in mm at the scale (`Recipe.in_mm`)."""
         i = self._sel_index()
+        self._remember()
         for x, shown in zip(self.edited_recipe.rois, self.view.boxes, strict=True):
             if (shown.x, shown.y, shown.w, shown.h) != (x.x, x.y, x.w, x.h):
                 x.x, x.y, x.w, x.h, x.mm = shown.x, shown.y, shown.w, shown.h, None
@@ -443,6 +456,7 @@ class RecipeEditorPage(Page):
                 shown = ["—" if v is None else f"{v:g}" for v in (low, high)]
                 self.error(AoiError("AOI-RCP-002", roi=x.name, quantity=quantity, low=shown[0], high=shown[1]))
                 return  # nothing applied: a Stage 2 check would judge every board NG on these thresholds (#173)
+        self._remember()
         x.name, x.type, x.ai_score, x.enabled = (
             self.r_name.text(),
             self.r_type.currentData(),
@@ -450,6 +464,9 @@ class RecipeEditorPage(Page):
             self.r_enabled.isChecked(),
         )
         x.height_min, x.height_max, x.volume_min, x.volume_max = thresholds
+        if self.edited_recipe.rois == self._undo[-1]:
+            self._undo.pop()  # an Apply that changed nothing: nothing to undo
+            self._sync_undo()
         self._refresh_rois()
 
     @staticmethod
@@ -460,9 +477,36 @@ class RecipeEditorPage(Page):
     def delete_roi(self) -> None:
         i = self._sel_index()
         if i >= 0:
+            self._remember()
             self.roi_table.clearSelection()  # the next ROI moves up to row i: the form must not stay on the deleted one
             del self.edited_recipe.rois[i]
             self._refresh_rois()
+
+    def _remember(self) -> None:
+        """Keep the ROIs as they are before an edit, for Undo; a new edit drops the edits Redo would do again."""
+        self._undo.append(copy.deepcopy(self.edited_recipe.rois))
+        self._redo.clear()
+        self._sync_undo()
+
+    def _forget(self) -> None:
+        """No edit to undo or redo: the ROIs are a revision as loaded, or moved to a new scale (`set_scale`)."""
+        self._undo.clear()
+        self._redo.clear()
+        self._sync_undo()
+
+    def _swap(self, take: list[list[ROI]], keep: list[list[ROI]]) -> None:
+        """Undo (Ctrl+Z, `take` the undo list) or Redo (Ctrl+Y): the ROIs before the last edit, or after the last
+        undone, the ROIs shown kept on the other list; none selected, as row i may now be another ROI."""
+        if take:
+            keep.append(self.edited_recipe.rois)
+            self.roi_table.clearSelection()
+            self.edited_recipe.rois = take.pop()
+            self._sync_undo()
+            self._refresh_rois()
+
+    def _sync_undo(self) -> None:
+        self.act_undo.setEnabled(bool(self._undo))
+        self.act_redo.setEnabled(bool(self._redo))
 
     def _collect(self) -> Recipe:
         r = self.edited_recipe
@@ -557,6 +601,7 @@ class RecipeEditorPage(Page):
         self.recipe = self._collect().in_px(scale)
         self._loaded = Recipe.from_dict(copy.deepcopy(self._loaded)).in_px(scale).to_dict()  # as load() shows it now
         self.view.saved = self._saved_rois()
+        self._forget()  # the ROIs before held their place in px at the scale before
         self.px_per_mm = scale
         self._close_sheet()
         self.min_size.show_recipe(self.recipe, scale)

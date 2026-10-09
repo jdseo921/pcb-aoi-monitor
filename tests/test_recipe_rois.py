@@ -19,7 +19,7 @@ from aoi.core.services import AppContext
 from aoi.ui import theme
 from aoi.ui.pages.recipe_editor import RecipeEditorPage
 from tests.conftest import engineer
-from tests.test_label_editor import LEFT, NONE, SHIFT, _at, _drag, _finger, _shift, _wheel
+from tests.test_label_editor import CTRL, LEFT, NONE, SHIFT, _at, _drag, _finger, _shift, _wheel
 from tests.test_req_done_in_v01 import BOARD, _button, _window
 
 if TYPE_CHECKING:
@@ -223,3 +223,66 @@ def test_req_rcp_001_calibrate_scale_picks_a_point_on_an_roi_and_moves_none(
         QTest.mouseClick(view.viewport(), LEFT, NONE, _at(view, 140, 130))
     _drag(view, _at(view, 120, 120), _at(view, 160, 150))
     assert _box(page, 0) == (100, 100, 80, 60) and len(page.sheet.points) == 2
+
+
+def test_req_rcp_001_keys_draw_leave_delete_undo_and_redo(
+    qtbot: QtBot, trained_ctx: AppContext, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """D turns Draw ROI on and Esc off again; Delete removes the selected ROI with no question, as Ctrl+Z puts it back.
+    Ctrl+Z undoes each edit (draw, move, Apply, delete) back to the revision loaded and no further, Ctrl+Y does them
+    again, and a new edit drops what Ctrl+Y would do. In a text field, D and Delete type and delete text as ever. A
+    revision saved, or a new scale, which moves each ROI held in mm, leaves nothing to undo."""
+    page = _page(qtbot, trained_ctx)
+    view = page.view
+    view.setFocus()
+    QTest.keyClick(view, Qt.Key.Key_D)
+    assert page.draw_btn.isChecked() and view._draw_mode
+    _drag(view, _at(view, 100, 100), _at(view, 180, 160))
+    QTest.keyClick(view, Qt.Key.Key_Escape)
+    assert not page.draw_btn.isChecked() and not view._draw_mode
+    drawn = _box(page, 0)
+    x, y, w, h = drawn
+    _drag(view, _at(view, x + w / 2, y + h / 2), _at(view, x + w / 2, y + h / 2) + QPoint(30, 0))
+    moved = _box(page, 0)
+    assert moved != drawn
+    page.r_name.setText("Pin 1")
+    qtbot.mouseClick(_button(page, "Apply"), LEFT)
+    qtbot.mouseClick(_button(page, "Apply"), LEFT)  # again, unchanged: no edit to undo
+    page.roi_table.selectRow(0)
+    QTest.keyClick(view, Qt.Key.Key_Delete)
+    shown = [[]]
+
+    def rois() -> list[tuple[object, ...]]:
+        return [(r.name, r.x, r.y, r.w, r.h) for r in page.edited_recipe.rois]
+
+    states = [[("Pin 1", *moved)], [("R1", *moved)], [("R1", *drawn)], []]
+    assert rois() == [] and page.roi_table.rowCount() == 0
+    for state in states:
+        QTest.keyClick(view, Qt.Key.Key_Z, CTRL)
+        assert rois() == state
+        shown.append(state)
+    QTest.keyClick(view, Qt.Key.Key_Z, CTRL)
+    assert rois() == [] and not page.act_undo.isEnabled(), "never past the revision loaded"
+    for state in reversed(shown[:-1]):
+        QTest.keyClick(view, Qt.Key.Key_Y, CTRL)
+        assert rois() == state
+    assert not page.act_redo.isEnabled()
+    QTest.keyClick(view, Qt.Key.Key_Z, CTRL)
+    QTest.keyClick(view, Qt.Key.Key_Z, CTRL)
+    assert page.act_redo.isEnabled()
+    view.roiDrawn.emit(QRectF(300, 300, 40, 40))
+    assert not page.act_redo.isEnabled(), "a new edit drops what Ctrl+Y would do"
+    page.roi_table.selectRow(0)
+    name, count = page.r_name.text(), len(page.edited_recipe.rois)
+    page.r_name.setFocus()
+    page.r_name.setCursorPosition(0)
+    QTest.keyClick(page.r_name, Qt.Key.Key_Delete)
+    QTest.keyClick(page.r_name, Qt.Key.Key_D)
+    assert page.r_name.text().lower() == "d" + name[1:].lower(), "the keys edited the name"
+    assert len(page.edited_recipe.rois) == count and not page.draw_btn.isChecked(), "and did nothing else"
+    monkeypatch.setattr(QMessageBox, "information", staticmethod(lambda *_: QMessageBox.StandardButton.Ok))
+    qtbot.mouseClick(_button(page, "Save Recipe"), LEFT)
+    assert not page.act_undo.isEnabled(), "nothing to undo past the revision saved"
+    view.roiDrawn.emit(QRectF(50, 50, 40, 40))
+    page.set_scale(476, 10)
+    assert not page.act_undo.isEnabled(), "nor past a new scale"
