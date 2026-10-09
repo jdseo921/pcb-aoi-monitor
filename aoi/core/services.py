@@ -38,7 +38,7 @@ from ..data.workspace_lock import WorkspaceLock
 from ..errors import QT_TRANSLATE_NOOP, AoiError, Phrase, joined
 from ..hal import VIEWS
 from ..times import local_date, now_utc
-from . import anomaly, crypto, datasets, golden, imaging, labels, lineage, model_card, run_progress, stores
+from . import anomaly, crypto, datasets, golden, imaging, labels, lineage, model_card, run_progress, stats, stores
 from .compare import Region, changed_regions
 from .imaging import (
     align_to_reference,
@@ -1067,7 +1067,7 @@ class AppContext:
         for f in list_images(folder):
             parts = {p.lower() for p in f.relative_to(folder).parts[:-1]}
             gt = NG if parts & {"ng", "defect", "defects", "bad"} else OK if parts & {"ok", "good"} else None
-            entries.append((f, gt, functools.partial(self.load_image, f)))
+            entries.append((f, gt, None, functools.partial(self.load_image, f)))
         return self._run_test(board_model, folder, entries, None, progress)
 
     @requires("Engineer", QT_TRANSLATE_NOOP("Errors", "Running an AI model test"))
@@ -1088,7 +1088,7 @@ class AppContext:
         version = found[0]
         items = {i["uuid"]: i for i in self.db.dataset_items(dataset_uuid)}
         entries = [
-            (resolve(items[u]["path"], self.settings.root), items[u]["label"],
+            (resolve(items[u]["path"], self.settings.root), items[u]["label"], items[u]["defect_type"],
              functools.partial(self._read_frozen, version, items[u]))
             for u in split["validation"]
         ]  # fmt: skip
@@ -1099,15 +1099,16 @@ class AppContext:
         self,
         board_model: str,
         folder: str | Path,
-        entries: Sequence[tuple[Path, str | None, Callable[[], np.ndarray]]],
+        entries: Sequence[tuple[Path, str | None, str | None, Callable[[], np.ndarray]]],
         dataset_uuid: str | None,
         progress: Callable[[int, int], None] | None,
     ) -> tuple[dict[str, Any], list[dict[str, Any]], JudgedBy]:
-        """Judge each (image path, label or None, read) of `entries` with the engine in use, then store and audit the
-        run: `batch_test`'s rows, metrics and judged_by."""
+        """Judge each (image path, label or None, defect type or None, read) of `entries` with the engine in use, then
+        store and audit the run: `batch_test`'s rows, metrics and judged_by. The metrics hold `rates`, each rate with
+        its count and one-sided 95 % bound, and recall per defect type where rows carry one (REQ-TST-002, -007)."""
         insp = self.inspector(board_model)
         rows = []
-        for i, (f, gt, read) in enumerate(entries, 1):
+        for i, (f, gt, defect_type, read) in enumerate(entries, 1):
             res = insp.inspect(read())
             pred = NG if res.verdict in (NG, WARN) else OK
             rows.append(
@@ -1119,11 +1120,12 @@ class AppContext:
                     "defects": len(res.defects),
                     "pass_fail": "NO_LABEL" if gt is None else "PASS" if gt == pred else "FAIL",  # vs the label (#207)
                     "ai_check": ai_check(res),  # stored with the run: its AI model may not have judged it (#246)
+                    "defect_type": defect_type,  # as frozen, for recall per defect type (REQ-TST-007); None in a folder
                 }
             )
             if progress:
                 progress(i, len(entries))
-        metrics = classification_metrics(rows)
+        metrics = classification_metrics(rows) | {"rates": stats.validation_rates(rows)}
         model_version = insp.model_version or "-"
         with self.db.transaction():  # the run and its entry, or neither (#178)
             run_uuid = self.db.add_test_run(
