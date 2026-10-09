@@ -90,6 +90,11 @@ SWITCHES = ("model.train", "model.activate", "model.rollback")
 TEST_RUNS = "test_runs"  # under results/: a validation run's overlays, one per row (REQ-TST-003)
 # Why a dataset version was not tested (AOI-TST-003, REQ-TST-001)
 NO_SUCH_VERSION = QT_TRANSLATE_NOOP("Errors", "the workspace holds no such dataset version")
+# Why a customer validation report was not made (AOI-TST-007, REQ-TST-008)
+NOT_A_VERSION_RUN = QT_TRANSLATE_NOOP(
+    "Errors", "the run used a folder, not a frozen dataset version's locked validation set"
+)
+NO_AGREEMENT = QT_TRANSLATE_NOOP("Errors", "no labeller agreement check is stored for the board model")
 NOT_LOCKED = QT_TRANSLATE_NOOP(
     "Errors", "its validation set is not split and locked"
 )  # the audit actions that change the active version
@@ -1173,6 +1178,7 @@ class AppContext:
                     "ai_check": ai_check(res),  # stored with the run: its AI model may not have judged it (#246)
                     "defect_type": defect_type,  # as frozen, for recall per defect type (REQ-TST-007); None in a folder
                     "overlay": str(overlay),  # what a preview shows, never judged again (REQ-TST-003)
+                    "ms": round(res.elapsed_ms, 1),  # its time to a verdict, for the validation report (REQ-TST-008)
                 }
             )
             if on_row:
@@ -1266,6 +1272,35 @@ class AppContext:
         report includes (REQ-TST-004); None for no AI model or a version without a card."""
         model = next((m for m in self.db.models(board_model) if m["uuid"] == model_uuid), None) if model_uuid else None
         return self.card_text(int(model["id"])) if model else None
+
+    def validation_report_data(self, run_uuid: str) -> dict[str, Any]:
+        """What the customer validation report of a run states (REQ-TST-008; Customers & Launch, "Validation"): the
+        run (`test_run`), its frozen dataset version (name, customer, revision, view, manifest SHA-256, frozen at), its
+        locked split (seed, locked by, locked at), the labeller agreement check stored for the board model, the
+        validation set's images by label and defect type, the targets beside their results (`report.target_results`),
+        the overlays of its misses and false calls and the AI model card. AOI-TST-007 for a run on a folder, a run of a
+        version the workspace no longer holds, or a board model with no agreement check stored."""
+        run = self.test_run(run_uuid)
+        if run is None or not run.get("dataset_uuid"):
+            raise AoiError("AOI-TST-007", reason=NOT_A_VERSION_RUN)
+        found = self.db.datasets("", run["dataset_uuid"])
+        checks = self.db.agreement_checks(run["board_model"])
+        if not found:
+            raise AoiError("AOI-TST-007", reason=NO_SUCH_VERSION)
+        if not checks:
+            raise AoiError("AOI-TST-007", reason=NO_AGREEMENT)
+        rows = run["results"]
+        return {
+            "run": run,
+            "dataset": found[0],
+            "split": self.db.validation_split(run["dataset_uuid"]),
+            "agreement": checks[0],
+            "counts": report.label_counts(rows),
+            "targets": report.target_results(rows),
+            "rates": run["metrics"].get("rates") or stats.validation_rates(rows),
+            "images": self.report_images(rows),
+            "card": self.model_card_text(run["board_model"], run.get("model_uuid")),
+        }
 
     def test_runs(self, board_model: str) -> list[dict[str, Any]]:
         """Every validation run of a board model, newest first (REQ-TST-005): uuid, time, the AI model version, the

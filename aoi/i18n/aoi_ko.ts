@@ -757,7 +757,7 @@
 <context>
     <name>Errors</name>
     <message>
-        <location filename="../core/services.py" line="+103"/>
+        <location filename="../core/services.py" line="+108"/>
         <source>a length of {length} px over {distance} mm gives no scale: both must be numbers above 0, and the scale from {least} to {most} px per mm</source>
         <translation type="unfinished"></translation>
     </message>
@@ -795,12 +795,12 @@
     </message>
     <message>
         <location line="+170"/>
-        <location line="+1689"/>
+        <location line="+1719"/>
         <source>(none)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1658"/>
+        <location line="-1688"/>
         <source>Saving a recipe</source>
         <translation type="unfinished"></translation>
     </message>
@@ -826,7 +826,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+270"/>
+        <location line="+300"/>
         <source>Re-evaluating a result</source>
         <translation type="unfinished"></translation>
     </message>
@@ -991,19 +991,29 @@
         <translation>검증 세트 잠금</translation>
     </message>
     <message>
-        <location line="-1845"/>
-        <location line="+1859"/>
+        <location line="-1880"/>
+        <location line="+1894"/>
         <location line="+39"/>
         <source>the workspace holds no such dataset version</source>
         <translation>작업 공간에 그런 데이터셋 버전이 없습니다</translation>
     </message>
     <message>
-        <location line="-1897"/>
+        <location line="-1931"/>
+        <source>the run used a folder, not a frozen dataset version&apos;s locked validation set</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>no labeller agreement check is stored for the board model</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
         <source>its validation set is not split and locked</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1860"/>
+        <location line="+1890"/>
         <source>its validation set is locked already, and a version is split only once</source>
         <translation>검증 세트가 이미 잠겨 있으며, 버전은 한 번만 분할됩니다</translation>
     </message>
@@ -1207,7 +1217,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-2408"/>
+        <location line="-2443"/>
         <source>no earlier version of this board model was active</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1217,7 +1227,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+8"/>
+        <location line="+13"/>
         <source>no defect type was given</source>
         <translation>결함 유형이 지정되지 않았습니다</translation>
     </message>
@@ -1237,7 +1247,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+817"/>
+        <location line="+847"/>
         <source>Labelling an image</source>
         <translation>이미지 라벨링</translation>
     </message>
@@ -2387,6 +2397,21 @@
     </message>
     <message>
         <location line="+8"/>
+        <source>The validation report was not made</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>No customer validation report was made: {reason}.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Run Test on a frozen dataset version&apos;s locked validation set, with a labeller agreement check stored on Training&apos;s Datasets tab, then make the report from that run.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+8"/>
         <source>Recipe saved since it was opened</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2776,7 +2801,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1038"/>
+        <location line="-1048"/>
         <source>Board judged NG</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2876,7 +2901,7 @@
         <translation>새 버전을 고정하고 검증 세트를 잠그면 해당 이미지는 잠긴 채로 유지됩니다. 그 버전으로 학습하십시오. 아무것도 저장되지 않았으며, 활성 AI 모델은 바뀌지 않았습니다.</translation>
     </message>
     <message>
-        <location line="+106"/>
+        <location line="+116"/>
         <source>ROI thresholds refused</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4343,51 +4368,54 @@
     <name>ModelTestPage</name>
     <message>
         <location filename="../ui/pages/model_test.py" line="+44"/>
-        <location line="+454"/>
+        <location line="+599"/>
         <source>Select Test Folder…</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-453"/>
-        <location line="+205"/>
+        <location line="-598"/>
+        <location line="+350"/>
         <location line="+220"/>
         <source>Run Test</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-423"/>
-        <location line="+457"/>
+        <location line="-568"/>
+        <location line="+602"/>
         <source>Export CSV</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-456"/>
+        <location line="-601"/>
         <source>Export Report</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location line="+1"/>
-        <location line="+144"/>
+        <location line="+289"/>
         <source>No folder selected</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-125"/>
+        <location line="-270"/>
+        <location line="+214"/>
         <source>Accuracy</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1"/>
+        <location line="-215"/>
+        <location line="+214"/>
         <source>Precision</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1"/>
+        <location line="-215"/>
+        <location line="+214"/>
         <source>Recall</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+22"/>
+        <location line="-192"/>
         <source>Image</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4407,12 +4435,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+331"/>
+        <location line="+476"/>
         <source>These results were judged by {run_model}, recipe revision {run_recipe}, {run_golden} and {run_scale}; {board_model} now uses {model}, recipe revision {recipe}, {golden} and {scale}. Rows are not previewed; select one for Run Test Again, which tests the run&apos;s folder with what is in use now.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-435"/>
+        <location line="-580"/>
         <source>Matches label</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4434,19 +4462,21 @@
     <message>
         <location line="+10"/>
         <location line="+64"/>
-        <location line="+496"/>
+        <location line="+150"/>
+        <location line="+491"/>
         <source>Missed defects</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-559"/>
+        <location line="-704"/>
         <location line="+64"/>
-        <location line="+495"/>
+        <location line="+150"/>
+        <location line="+490"/>
         <source>False calls</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-532"/>
+        <location line="-677"/>
         <source>Matches label?</source>
         <comment>whether the verdict matches the image&apos;s label</comment>
         <translation type="unfinished"></translation>
@@ -4497,6 +4527,11 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <location line="+1"/>
+        <source>Validation Report…</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <location line="+14"/>
         <source>recipe revision {revision}</source>
         <translation type="unfinished"></translation>
@@ -4512,7 +4547,132 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+23"/>
+        <location line="+24"/>
+        <source>Validation report</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+26"/>
+        <source>Validation report saved: {file}</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+10"/>
+        <source>Board model {board_model} · AI model {version} · validation run {run} · {date}</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+6"/>
+        <source>Dataset version {name} of {customer}, revision {revision}, view {view}, frozen {frozen}; one camera set-up.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+9"/>
+        <source>Labeller agreement check: OK or NG agree on {ok_ng} of {images} images (target {ok_target} %), defect type on {types} of {ng} NG images (target {type_target} %).</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+14"/>
+        <source>Missed Critical defects</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>False call rate</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Time per image, 95th percentile</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+8"/>
+        <source>{s:.2f} s</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>not measured</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>Met</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+0"/>
+        <source>Not met</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+9"/>
+        <source>Manifest SHA-256 {sha}; split with seed {seed}, locked {at}; never trained on.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+18"/>
+        <source>Missed defect</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+0"/>
+        <source>False call</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+7"/>
+        <source>5. AI model card / AI 모델 카드 (draft)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>Counts on this validation set only: the bounds say how far the true rates may lie.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Until sign-in ships at release 1.0, the names in the audit trail are picked, not signed in.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Valid for the board model, view, camera set-up and AI model named above only.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+6"/>
+        <source>Customer</source>
+        <translation type="unfinished">고객</translation>
+    </message>
+    <message>
+        <location line="+0"/>
+        <source>AI lead</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>Role</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+0"/>
+        <source>Name</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+0"/>
+        <source>Date</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+0"/>
+        <source>Signature</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+14"/>
         <source>{name}: its locked validation set, {count} images</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4593,7 +4753,8 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-10"/>
+        <location line="-484"/>
+        <location line="+474"/>
         <source>PDF (*.pdf)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4634,7 +4795,8 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+44"/>
+        <location line="-440"/>
+        <location line="+484"/>
         <source>{image}: labelled {label}, judged {verdict}, AI score {score}</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4777,7 +4939,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/model_test.py" line="-603"/>
+        <location filename="../ui/pages/model_test.py" line="-748"/>
         <source>AI Model Test</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5732,7 +5894,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/services.py" line="-2622"/>
+        <location filename="../core/services.py" line="-2657"/>
         <source>Aligning {count} images to the reference board</source>
         <translation type="unfinished"></translation>
     </message>

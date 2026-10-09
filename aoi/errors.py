@@ -835,6 +835,16 @@ CODES: dict[str, ErrorCode] = {
             ),
         ),
         ErrorCode(
+            "AOI-TST-007",
+            QT_TRANSLATE_NOOP("Errors", "The validation report was not made"),
+            QT_TRANSLATE_NOOP("Errors", "No customer validation report was made: {reason}."),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Run Test on a frozen dataset version's locked validation set, with a labeller agreement check stored"
+                " on Training's Datasets tab, then make the report from that run.",
+            ),
+        ),
+        ErrorCode(
             "AOI-RCP-001",
             QT_TRANSLATE_NOOP("Errors", "Recipe saved since it was opened"),
             QT_TRANSLATE_NOOP(
