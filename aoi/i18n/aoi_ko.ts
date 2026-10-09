@@ -3200,12 +3200,12 @@
 <context>
     <name>FreezeSheet</name>
     <message>
-        <location filename="../ui/pages/training_versions.py" line="+127"/>
+        <location filename="../ui/pages/training_versions.py" line="+132"/>
         <source>Freeze dataset</source>
         <translation>데이터셋 동결</translation>
     </message>
     <message>
-        <location line="+10"/>
+        <location line="+12"/>
         <source>View</source>
         <translation>뷰</translation>
     </message>
@@ -3215,12 +3215,17 @@
         <translation>보드 리비전</translation>
     </message>
     <message>
-        <location line="+22"/>
+        <location line="+23"/>
         <source>Cancel</source>
         <translation type="unfinished">취소</translation>
     </message>
     <message>
-        <location line="+32"/>
+        <location line="+1"/>
+        <source>Freeze</source>
+        <translation>동결</translation>
+    </message>
+    <message>
+        <location line="+33"/>
         <source>Name: type the board revision, 1 to 16 letters and digits, such as R3</source>
         <translation>이름: 보드 리비전을 1~16자의 영문자와 숫자로 입력하십시오(예: R3)</translation>
     </message>
@@ -3283,6 +3288,21 @@
         <location line="+1"/>
         <source>{files} files · a SHA-256 manifest is written · the version never changes afterwards</source>
         <translation>파일 {files}개 · SHA-256 매니페스트를 기록 · 이후 버전은 바뀌지 않음</translation>
+    </message>
+    <message>
+        <location line="+12"/>
+        <source>Tick at least one allowed use</source>
+        <translation>허용된 용도를 하나 이상 선택하십시오</translation>
+    </message>
+    <message>
+        <location line="+39"/>
+        <source>Froze {name}: {files} files and their manifest</source>
+        <translation>{name}을(를) 동결했습니다: 파일 {files}개와 매니페스트</translation>
+    </message>
+    <message>
+        <location line="+10"/>
+        <source>Freeze of {name} cancelled: nothing was written</source>
+        <translation>{name} 동결을 취소했습니다. 아무것도 기록하지 않았습니다</translation>
     </message>
 </context>
 <context>
@@ -5959,7 +5979,7 @@
 <context>
     <name>WorkingSetPanel</name>
     <message>
-        <location filename="../ui/pages/training_versions.py" line="-183"/>
+        <location filename="../ui/pages/training_versions.py" line="-253"/>
         <source>Their own AI models</source>
         <translation>고객 자체 AI 모델</translation>
     </message>
@@ -5999,7 +6019,12 @@
         <translation>허용된 용도</translation>
     </message>
     <message>
-        <location line="+14"/>
+        <location line="+2"/>
+        <source>Freezing the dataset version…</source>
+        <translation>데이터셋 버전을 동결하는 중…</translation>
+    </message>
+    <message>
+        <location line="+13"/>
         <source>{view}: {ok} OK · {ng} NG · {unsure} UNSURE · {ng_checked} of {ng} NG checked · {ok_checked} of {need} OK checked (10 %)</source>
         <translation>{view}: OK {ok} · NG {ng} · UNSURE {unsure} · NG {ng}개 중 {ng_checked}개 검토 · OK {need}개 중 {ok_checked}개 검토(10 %)</translation>
     </message>
@@ -6019,7 +6044,7 @@
         <translation>아직 어느 고객의 데이터셋 저장소에도 없음</translation>
     </message>
     <message>
-        <location line="+11"/>
+        <location line="+14"/>
         <source>Label images OK or NG on the Samples tab first</source>
         <translation>먼저 샘플 탭에서 이미지를 OK 또는 NG로 라벨링하십시오</translation>
     </message>

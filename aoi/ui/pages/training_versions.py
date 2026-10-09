@@ -1,8 +1,8 @@
 """Training › Datasets' Working set panel and its Freeze sheet (REQ-TRN-005, the screen half; Datasets stage 4 of 4):
 the datasets sketch's working set, view by view with its labels checked, the customer whose dataset store holds the
 board model and the allowed uses; Freeze Dataset… shows the Freeze sheet in place of the panels under it, the version
-it would make and a line for each thing a freeze needs, ✓ or ✗ with the fix. Nothing here reads or writes the database
-itself."""
+it would make and a line for each thing a freeze needs, ✓ or ✗ with the fix, and Freeze freezes the version on the
+pool, with progress and Cancel. Nothing here reads or writes the database itself."""
 
 from __future__ import annotations
 
@@ -24,6 +24,7 @@ from PySide6.QtWidgets import (
 
 from ...core.datasets import ALLOWED_USES
 from ...hal import VIEWS
+from ..widgets.busy import BusyOverlay
 from .base import QT_TRANSLATE_NOOP, action_button, button
 
 if TYPE_CHECKING:
@@ -69,11 +70,12 @@ class WorkingSetPanel(QGroupBox):
         uses.addStretch(1)
         form.addRow(self.tr("Allowed uses"), uses)
         self.sheet = FreezeSheet(self)
+        self.busy = BusyOverlay(self.sheet, self.tr("Freezing the dataset version…"))
 
     def show_board_model(self, board_model: str | None, samples: list[dict[str, Any]]) -> None:
         """Each view's labels and checks, the store's customer; a sheet of another board model closes."""
         if board_model != self.board_model:
-            self.sheet.close_sheet()
+            self.sheet.leave()
         self.board_model = board_model
         n = Counter((s["side"], s["label"]) for s in samples)
         self.views = [v for v in VIEWS if n[v, "OK"] + n[v, "NG"]]
@@ -101,6 +103,9 @@ class WorkingSetPanel(QGroupBox):
             self.sheet.read_gate()
         self._sync()
 
+    def picked_uses(self) -> list[str]:
+        return [use for use, box in self.uses.items() if box.isChecked()]
+
     def _sync(self) -> None:
         """Freeze Dataset… needs a view with an image labelled OK or NG, and no job of the page's running."""
         idle = self.page.idle()
@@ -120,7 +125,7 @@ class WorkingSetPanel(QGroupBox):
 
 
 class FreezeSheet(QGroupBox):
-    """The Freeze sheet: the view and board revision, the version a freeze makes, what it needs, and Cancel."""
+    """The Freeze sheet: the view and board revision, the version a freeze makes, what it needs, Cancel and Freeze."""
 
     def __init__(self, panel: WorkingSetPanel) -> None:
         super().__init__()
@@ -128,9 +133,11 @@ class FreezeSheet(QGroupBox):
         self.panel, self.page, self.ctx = panel, panel.page, panel.ctx
         self.board_model: str | None = None
         self.gate: dict[str, Any] | None = None
+        self.running = False  # a freeze of this sheet's runs on the pool
+        self.left = False  # a sign-in or another board model came while it ran: the sheet closes as it ends
         esc = QAction(self, shortcut=QKeySequence(Qt.Key.Key_Escape))
         esc.setShortcutContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
-        esc.triggered.connect(self.close_sheet)
+        esc.triggered.connect(self.cancel)
         self.addAction(esc)
         lay = QVBoxLayout(self)
         fields = QHBoxLayout()
@@ -142,6 +149,7 @@ class FreezeSheet(QGroupBox):
         self.revision = QLineEdit()
         self.revision.setMaxLength(REVISION_LENGTH)
         self.revision.textChanged.connect(self.read_gate)
+        self.revision.returnPressed.connect(self.freeze)
         fields.addWidget(self.revision, 1)
         lay.addLayout(fields)
         self.name_line = QLabel()
@@ -160,8 +168,10 @@ class FreezeSheet(QGroupBox):
         lay.addWidget(self.refused)
         row = QHBoxLayout()
         row.addStretch(1)
-        self.btn_cancel = button(self.tr("Cancel"), slot=self.close_sheet)
+        self.btn_cancel = button(self.tr("Cancel"), slot=self.cancel)
+        self.btn_now = button(self.tr("Freeze"), slot=self.freeze)
         row.addWidget(self.btn_cancel)
+        row.addWidget(self.btn_now)
         lay.addLayout(row)
         lay.addStretch(1)
         self.hide()
@@ -221,14 +231,72 @@ class FreezeSheet(QGroupBox):
         self.sync()
 
     def sync(self) -> None:
-        """The view and the revision, fixed while a job of the page's runs."""
+        """Freeze needs every line ✓, no refusal, an allowed use ticked and no job of the page's running."""
+        uses = self.panel.picked_uses()
+        ready = self.gate is not None and self.gate["refused"] is None and bool(uses)
+        self.btn_now.setEnabled(ready and self.page.idle())
+        self.btn_now.setToolTip("" if uses else self.tr("Tick at least one allowed use"))
         self.revision.setEnabled(self.page.idle())
         self.view_box.setEnabled(self.page.idle())
 
+    def cancel(self) -> None:
+        """Cancel or Esc: the panels back; a freeze that runs is stopped instead, nothing written, the sheet kept."""
+        if self.running:
+            self.panel.busy.cancel_button.click()  # the job asked to stop, as the busy overlay's Cancel does
+            return
+        self.close_sheet()
+
+    def leave(self) -> None:
+        """A sign-in or another board model: the sheet closes, or, while its freeze runs, once that freeze ends."""
+        if self.running:
+            self.left = True
+        else:
+            self.close_sheet()
+
     def close_sheet(self) -> None:
+        self.left = False
         if not self.isVisible():
             return
         self.hide()
         self.gate = None
         self.page.show_freeze_sheet(False)
         self.panel.sync()
+
+    def freeze(self) -> None:
+        """Freeze the view as the gate named it, for the store's customer and the uses ticked, on the pool."""
+        g, bm = self.gate, self.board_model
+        if g is None or bm is None or g["store"] is None or not self.btn_now.isEnabled():
+            return
+        view, revision, name = self.view_box.currentText(), self.revision.text().strip(), g["name"]
+
+        def done(version: dict[str, Any] | None) -> None:
+            self.running = False
+            self.close_sheet()
+            self.page.refresh()
+            if version is not None:
+                said = self.tr("Froze {name}: {files} files and their manifest")
+                self.page.shell.status(said.format(name=version["name"], files=g["files"]))
+
+        def stopped(version: dict[str, Any] | None) -> None:  # a Cancel after the last file hashed comes too late
+            if version is not None or self.left:
+                done(version)
+            else:
+                self.running = False
+                self.read_gate()
+            if version is None:
+                self.page.shell.status(self.tr("Freeze of {name} cancelled: nothing was written").format(name=name))
+
+        def failed(_e: BaseException) -> None:
+            self.running = False
+            self.page.refresh()
+            if self.left:
+                self.close_sheet()
+            elif self.isVisible():
+                self.read_gate()
+
+        self.running = True
+        self.page.run_in_background(
+            self.ctx.freeze_dataset, bm, view, revision, g["store"]["customer"], self.panel.picked_uses(),
+            with_progress=True, on_result=done, on_cancel=stopped, on_error=failed, busy=self.panel.busy,
+        )  # fmt: skip
+        self.sync()

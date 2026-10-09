@@ -1,12 +1,14 @@
 """REQ-TRN-005 on screen (Datasets stage 4 of 4): Training › Datasets' Working set panel and its Freeze sheet, which
-shows what a freeze of the working set needs, line by line. Results on synthetic boards prove a code path; they are
-never quoted as accuracy."""
+freezes a dataset version on the pool once every line a freeze needs shows ✓. Results on synthetic boards prove a code
+path; they are never quoted as accuracy."""
 
 from __future__ import annotations
 
+import threading
 from pathlib import Path
 from typing import cast
 
+import pytest
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QApplication
 from pytestqt.qtbot import QtBot
@@ -38,6 +40,10 @@ def _datasets(qtbot: QtBot, ctx: AppContext) -> TrainingPage:
 
 def _lines(page: TrainingPage) -> list[str]:
     return [line.text() for line in page.working.sheet.lines]
+
+
+def _idle(qtbot: QtBot, page: TrainingPage) -> None:
+    qtbot.waitUntil(page.idle, timeout=30000)
 
 
 def test_req_trn_005_working_set_panel(qtbot: QtBot, ctx: AppContext, tmp_path: Path) -> None:
@@ -128,3 +134,88 @@ def test_req_trn_005_freeze_sheet_shows_a_refusal_no_line_names(qtbot: QtBot, ct
     assert all(line.startswith("✓") for line in _lines(page))
     sheet = page.working.sheet
     assert sheet.refused.isVisible() and sheet.refused.text().startswith("AOI-TRN-040 ")
+    assert not sheet.btn_now.isEnabled()
+
+
+def test_req_trn_005_freeze_on_the_pool(
+    qtbot: QtBot, ctx: AppContext, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Freeze waits for every line ✓ and a use ticked. Enter freezes on the pool, Freeze and Freeze Dataset… off
+    meanwhile; the sheet closes, the status line names the version and Training lists it. The next sheet names v2 with
+    the revision kept; the sheet's Cancel during the freeze stops it, writing nothing and keeping the sheet."""
+    samples, cal = ready(ctx, tmp_path / "boards")
+    agree(ctx, cal, samples)
+    page = _datasets(qtbot, ctx)
+    panel, sheet = page.working, page.working.sheet
+    panel.btn_freeze.click()
+    assert not sheet.btn_now.isEnabled()  # no name yet
+    qtbot.keyClicks(sheet.revision, "R3")
+    assert sheet.btn_now.isEnabled()
+    panel.uses["own"].setChecked(False)
+    assert not sheet.btn_now.isEnabled() and sheet.btn_now.toolTip() == "Tick at least one allowed use"
+    for use in ("own", "shared"):
+        panel.uses[use].setChecked(True)
+    qtbot.keyClick(sheet.revision, Qt.Key.Key_Return)
+    assert not sheet.btn_now.isEnabled() and not panel.act_freeze.isEnabled()  # one job of the page's at a time
+    _idle(qtbot, page)
+    v1 = ctx.datasets(CAL)[0]
+    assert (v1["name"], v1["customer"], v1["allowed_uses"]) == ("DS-CAL1-R3-TOP-v1", "Acme", ["own", "shared"])
+    assert page.shell.statusBar().currentMessage() == "Froze DS-CAL1-R3-TOP-v1: 100 files and their manifest"
+    assert not sheet.isVisible() and page.agreement.isVisible()
+    assert page.dataset_version.itemData(0) == v1["uuid"]  # Training lists it
+    panel.btn_freeze.click()
+    assert sheet.revision.text() == "R3" and sheet.name_line.text() == "Name DS-CAL1-R3-TOP-v2"
+    sha, hashed, go_on = ctx._sha256, [], threading.Event()
+
+    def held_after_two(path: str) -> str:
+        hashed.append(path)
+        if len(hashed) == 2:
+            go_on.wait(30)  # until the test has pressed Cancel
+        return sha(path)
+
+    monkeypatch.setattr(ctx, "_sha256", held_after_two)
+    sheet.btn_now.click()
+    qtbot.waitUntil(lambda: len(hashed) == 2, timeout=30000)
+    sheet.btn_cancel.click()  # the sheet's Cancel stops the freeze, as the busy overlay's does
+    go_on.set()
+    _idle(qtbot, page)
+    said = page.shell.statusBar().currentMessage()
+    assert said == "Freeze of DS-CAL1-R3-TOP-v2 cancelled: nothing was written" and len(hashed) == 2
+    assert [d["name"] for d in ctx.datasets(CAL)] == ["DS-CAL1-R3-TOP-v1"] and sheet.isVisible()
+    assert sheet.btn_now.isEnabled()
+
+
+def test_req_trn_005_a_freeze_goes_on_through_a_sign_in(
+    qtbot: QtBot, ctx: AppContext, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A sign-in while a freeze runs keeps its sheet until the freeze ends, then closes it; the version names the
+    engineer who pressed Freeze, whoever signed in meanwhile (#177). Cancelled after a sign-in, the freeze writes
+    nothing and its sheet closes too, so the next user never sees the sheet the user before left."""
+    samples, cal = ready(ctx, tmp_path / "boards")
+    agree(ctx, cal, samples)
+    engineer = ctx.user_uuid
+    page = _datasets(qtbot, ctx)
+    sheet = page.working.sheet
+    sha, go_on = ctx._sha256, threading.Event()
+
+    def held(path: str) -> str:
+        go_on.wait(30)  # until the test has signed in, or pressed Cancel
+        return sha(path)
+
+    monkeypatch.setattr(ctx, "_sha256", held)
+    for then in ("admin", "engineer"):
+        page.working.btn_freeze.click()
+        if then == "admin":
+            qtbot.keyClicks(sheet.revision, "R3")
+        sheet.btn_now.click()
+        page.shell.set_user(then)
+        assert sheet.isVisible() and sheet.running
+        if then == "engineer":
+            page.working.busy.cancel_button.click()
+        go_on.set()
+        _idle(qtbot, page)
+        go_on.clear()
+        assert not sheet.isVisible() and page.agreement.isVisible()
+    assert [(d["name"], d["frozen_by"]) for d in ctx.datasets(CAL)] == [("DS-CAL1-R3-TOP-v1", engineer)]
+    said = page.shell.statusBar().currentMessage()
+    assert said == "Freeze of DS-CAL1-R3-TOP-v2 cancelled: nothing was written"

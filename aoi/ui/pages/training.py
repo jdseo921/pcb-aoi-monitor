@@ -360,7 +360,7 @@ class TrainingPage(Page):
         return a
 
     def idle(self) -> bool:
-        """No import or draw of the page's runs: one job of the page's at a time (#194)."""
+        """No import, draw or freeze of the page's runs: one job of the page's at a time (#194)."""
         return self._bg is None
 
     def show_freeze_sheet(self, shown: bool) -> None:
@@ -453,7 +453,7 @@ class TrainingPage(Page):
         import that runs goes on as the user who started it (#177), and its sheet closes once that import ends."""
         self.editor.forget()  # and the next user never undoes what the user before changed
         self._stop_blind()
-        self.working.sheet.close_sheet()  # the Freeze sheet too
+        self.working.sheet.leave()  # the Freeze sheet too; a freeze that runs goes on, as an import does
         if self.sheet.running:
             self._left = True
         else:
@@ -967,7 +967,7 @@ class TrainingPage(Page):
             a.setEnabled(idle)  # its button and its key
         self.btn_draw.setEnabled(idle)  # a draw would stop the import that runs: one job of the page's at a time
         self.samples_empty.link.setEnabled(idle)
-        self.working.sync()  # Freeze Dataset…, off while a job runs
+        self.working.sync()  # Freeze Dataset… and Freeze, off while a job runs
         self.btn_train.setEnabled(idle and self.worker is None and self.dataset_version.currentData() is not None)
 
     def _fill_versions(self) -> None:
