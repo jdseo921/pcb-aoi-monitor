@@ -1412,6 +1412,82 @@ class AppContext:
             raise AoiError("AOI-TRN-038", view=view)
         return [s for s in self.db.samples(board_model, label) if s["side"] == view]
 
+    # --- labeller agreement (REQ-TRN-016; S34): two users label a calibration set blind; each check is stored ---
+    @requires("Engineer", QT_TRANSLATE_NOOP("Errors", "Making a calibration set"))
+    @transactional
+    def make_calibration_set(self, board_model: str, sample_uuids: list[str]) -> str:
+        """Fix a calibration set of a board model: 100 different images (proposed), each labelled OK or NG now; returns
+        its UUID, audited as `calibration.make`. AOI-TRN-035 refuses any other set."""
+        current = {s["uuid"]: s["label"] for s in self.db.samples(board_model)}
+        why = None
+        if len(set(sample_uuids)) != len(sample_uuids) or len(sample_uuids) != labels.CALIBRATION_IMAGES:
+            why = QT_TRANSLATE_NOOP("Errors", "it holds {n} different images, not {size}")
+            why = why.fill(n=len(set(sample_uuids)), size=labels.CALIBRATION_IMAGES)
+        elif other := [u for u in sample_uuids if current.get(u) not in ("OK", "NG")]:
+            why = QT_TRANSLATE_NOOP("Errors", "{n} of its images are not labelled OK or NG under {board_model}")
+            why = why.fill(n=len(other), board_model=board_model)
+        if why is not None:
+            raise AoiError("AOI-TRN-035", reason=why)
+        row = {"board_model": board_model, "sample_uuids": json.dumps(sample_uuids), "made_by": self.user_uuid}
+        uid = self.db.add_row("calibration_sets", **row)
+        self.audit("calibration.make", "calibration_set", uid, None, {**row, "sample_uuids": sample_uuids})
+        return uid
+
+    @requires("Engineer", QT_TRANSLATE_NOOP("Errors", "Labelling a calibration image blind"))
+    @transactional
+    def label_blind(self, set_uuid: str, sample_uuid: str, label: str, defect_type: str | None = None) -> str:
+        """Record the user acting's own label of an image of a calibration set, kept apart from the image's label: OK,
+        or NG with one of the 33 defect types, once per image and user. Returns its UUID, audited as `label.blind`.
+        AOI-TRN-036 refuses an image outside the set, any other label, and a second blind label of an image."""
+        cal, sample = self.db.calibration_sets("", set_uuid), self.db.sample_by_uuid(sample_uuid)
+        why = None
+        if not cal or sample_uuid not in cal[0]["sample_uuids"]:
+            why = QT_TRANSLATE_NOOP("Errors", "it is not an image of the calibration set")
+        elif not labels.blind_label_ok(label, defect_type):
+            why = QT_TRANSLATE_NOOP("Errors", "a blind label is OK, or NG with one of the 33 defect types")
+        elif sample_uuid in self.db.blind_labels(set_uuid, self.user_uuid):
+            why = QT_TRANSLATE_NOOP("Errors", "you labelled it blind already")
+        if why is not None:
+            raise AoiError("AOI-TRN-036", sample=Path(sample["path"]).name if sample else sample_uuid, reason=why)
+        row = {"set_uuid": set_uuid, "sample_uuid": sample_uuid, "label": label, "defect_type": defect_type}
+        uid = self.db.add_row("blind_labels", **row, labelled_by=self.user_uuid)
+        self.audit("label.blind", "calibration_set", set_uuid, None, {"uuid": uid, **row})
+        return uid
+
+    @requires("Engineer", QT_TRANSLATE_NOOP("Errors", "Running an agreement check"))
+    @transactional
+    def run_agreement_check(self, set_uuid: str, labeller_a: str, labeller_b: str) -> dict[str, Any]:
+        """Compare two users' (UUIDs) blind labels of every image of a calibration set, as labels.agreement does, and
+        store the check with its counts, targets and labellers; returns it as `agreement_checks` reads it, audited as
+        `agreement.check`. AOI-TRN-037 refuses one user twice and a labeller who has not labelled every image blind."""
+        cal = next(iter(self.db.calibration_sets("", set_uuid)), None)
+        a, b = (self.db.blind_labels(set_uuid, u) for u in (labeller_a, labeller_b))
+        why = None
+        if cal is None:
+            why = QT_TRANSLATE_NOOP("Errors", "the workspace holds no such calibration set")
+        elif labeller_a == labeller_b:
+            why = QT_TRANSLATE_NOOP("Errors", "the two labellers are one user")
+        elif min(len(a), len(b)) < len(cal["sample_uuids"]):
+            why = QT_TRANSLATE_NOOP("Errors", "a labeller has labelled {n} of its {size} images blind")
+            why = why.fill(n=min(len(a), len(b)), size=len(cal["sample_uuids"]))
+        if cal is None or why is not None:
+            raise AoiError("AOI-TRN-037", reason=why)
+        counts = labels.agreement(a, b) | {"set_uuid": set_uuid, "board_model": cal["board_model"]}
+        counts |= {"labeller_a": labeller_a, "labeller_b": labeller_b, "run_by": self.user_uuid}
+        uid = self.db.add_row("agreement_checks", **counts | {"agreed": int(counts["agreed"])})
+        check = self.db.agreement_checks(cal["board_model"], uid)[0]
+        self.audit("agreement.check", "calibration_set", set_uuid, None, check)
+        return check
+
+    def calibration_sets(self, board_model: str) -> list[dict[str, Any]]:
+        """A board model's calibration sets, newest first (uuid, board_model, sample_uuids, made_by, at_utc)."""
+        return self.db.calibration_sets(board_model)
+
+    def agreement_checks(self, board_model: str) -> list[dict[str, Any]]:
+        """A board model's agreement checks, newest first (uuid, set_uuid, labeller_a, labeller_b, images, ok_ng_agree,
+        both_ng, type_agree, ok_ng_target, type_target, agreed 1 or 0, run_by, at_utc)."""
+        return self.db.agreement_checks(board_model)
+
     @requires("Engineer", QT_TRANSLATE_NOOP("Errors", "Activating an AI model version"))
     @transactional
     def activate_model(self, model_id: int) -> None:

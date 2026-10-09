@@ -13,6 +13,8 @@ from .imaging import file_header
 
 LABELS = ("OK", "NG", "UNSURE")  # UNSURE images stay out of training and validation and go to the quality engineer
 Size = tuple[int, int] | None  # an image's (width, height), or None where no box needs it
+CALIBRATION_IMAGES = 100  # images in a calibration set (proposed, REQ-TRN-016)
+OK_NG_TARGET, TYPE_TARGET = 98, 90  # percent agreement two labellers reach (proposed; the labels sketch's Q36)
 
 
 @dataclass(frozen=True)
@@ -83,3 +85,20 @@ def image_size(path: str) -> tuple[int, int]:
     if header is None or min(header[1], header[2]) <= 0:
         raise AoiError("AOI-INSP-004", path=path)
     return header[1], header[2]
+
+
+def blind_label_ok(label: str, defect_type: str | None) -> bool:
+    """A blind label of a calibration image is OK with no defect type, or NG with one of the 33 (REQ-TRN-016)."""
+    return label == "OK" and defect_type is None or label == "NG" and defect_type in names()
+
+
+def agreement(a: dict[str, tuple[str, str | None]], b: dict[str, tuple[str, str | None]]) -> dict[str, Any]:
+    """Two labellers' blind labels of the same images, {sample: (label, defect type)}, compared (REQ-TRN-016):
+    `ok_ng_agree` of the `images` alike in OK or NG, `type_agree` of the `both_ng` images both labelled NG alike in
+    defect type, and `agreed` when both reach their targets, compared in whole numbers (98 of 100 reaches 98 %). With
+    no image both labelled NG the defect types show no agreement, so the targets are not reached."""
+    both_ng = [s for s in a if a[s][0] == b[s][0] == "NG"]
+    ok_ng, types = sum(a[s][0] == b[s][0] for s in a), sum(a[s][1] == b[s][1] for s in both_ng)
+    agreed = 100 * ok_ng >= OK_NG_TARGET * len(a) > 0 and 100 * types >= TYPE_TARGET * len(both_ng) > 0
+    counts = {"images": len(a), "ok_ng_agree": ok_ng, "both_ng": len(both_ng), "type_agree": types}
+    return counts | {"ok_ng_target": OK_NG_TARGET, "type_target": TYPE_TARGET, "agreed": agreed}

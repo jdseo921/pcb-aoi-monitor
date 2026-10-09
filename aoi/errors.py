@@ -586,6 +586,33 @@ CODES: dict[str, ErrorCode] = {
             ),
         ),
         ErrorCode(
+            "AOI-TRN-035",
+            QT_TRANSLATE_NOOP("Errors", "Calibration set not made"),
+            QT_TRANSLATE_NOOP("Errors", "The calibration set was not made: {reason}."),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Pick 100 different images of one board model, each labelled OK or NG, and make the set again.",
+            ),
+        ),
+        ErrorCode(
+            "AOI-TRN-036",
+            QT_TRANSLATE_NOOP("Errors", "Blind label not kept"),
+            QT_TRANSLATE_NOOP("Errors", "The blind label of {sample} was not kept: {reason}."),
+            QT_TRANSLATE_NOOP(
+                "Errors", "Label each image of the set once, as yourself: OK, or NG with one of the 33 defect types."
+            ),
+        ),
+        ErrorCode(
+            "AOI-TRN-037",
+            QT_TRANSLATE_NOOP("Errors", "Agreement check did not run"),
+            QT_TRANSLATE_NOOP("Errors", "The agreement check did not run: {reason}."),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Pick two different labellers who have each labelled every image of the set blind, then run the check"
+                " again.",
+            ),
+        ),
+        ErrorCode(
             "AOI-TRN-038",
             QT_TRANSLATE_NOOP("Errors", "View not known"),
             QT_TRANSLATE_NOOP("Errors", "{view} is not a camera view of this app, so nothing was read or changed."),

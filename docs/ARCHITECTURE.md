@@ -43,6 +43,7 @@ interfaces that Stages 2–4 (cameras, robot, MES/ERP) plug into without changin
 │          add_user                                                            │
 │          set_label · set_boxes (a label and its defect boxes, with history)  │
 │          check_label · draw_ok_checks (a second user's check of labels)      │
+│          make_calibration_set · label_blind · run_agreement_check            │
 │  engine  inspector · inspect · inspect_file · log_result · batch_test        │
 │          re_evaluate (a stored result under other thresholds, Engineer)      │
 │  jobs    the thread pool every slow call runs on (REQ-SET-021)               │
@@ -371,6 +372,11 @@ never its labeller, so a relabel needs a new check; `draw_ok_checks` draws OK la
 labels, rounded up, are checked, and never with no OK or NG label. A view other than `aoi.hal.VIEWS` is refused.
 Until sign-in ships at 1.0, the second user is a second name picked under ADR 0002, not a proven person; the
 validation report (S48) says so.
+Two labellers agree before a customer validation (REQ-TRN-016, S34): `make_calibration_set` fixes 100 images
+(proposed) labelled OK or NG, each labeller records a blind label of every image (`label_blind`, kept apart from
+`labels`), and `run_agreement_check` stores the counts: OK/NG agreement against 98 % and defect-type agreement on the
+images both labelled NG against 90 % (proposed), compared in whole numbers (`labels.agreement`). The check is stored
+on its own, keyed by its calibration set and board model; the dataset version frozen next names it (S35).
 An AI model the loader would refuse, such as one with an image threshold of 0 from OK images that are copies of one
 photo, is refused at step 5 with AOI-TRN-004: nothing is saved, registered or audited, and the active version stays.
 Step 6 sets the new golden board as the reference, registers and activates the version and writes `model.train` in one
@@ -578,6 +584,7 @@ The writes, their roles and entries:
 | `update_sample`, `delete_sample` | Engineer | `sample.update` (label, defect type: a label of `LABELS`, else AOI-TRN-018, and for NG one of the 33 types, else AOI-TRN-013; none for OK; the relabel adds a label row and keeps the one before; a sample a labeller labelled so already gets neither, and one carried over with no labeller is labelled again), `sample.delete`; object = sample UUID |
 | `set_label`, `set_boxes` | Engineer | `label.set` (the label before and after: its label row's UUID, label, defect type and boxes, each with x, y, w, h, type and severity); object = sample UUID (REQ-TRN-002, REQ-TRN-003) |
 | `check_label`, `draw_ok_checks` | Engineer | `label.check` (check UUID, label row, label; object = sample UUID), `label.draw` (the draw: seed, OK labels, samples drawn; object = board model name) (REQ-TRN-004) |
+| `make_calibration_set`, `label_blind`, `run_agreement_check` | Engineer | `calibration.make` (board model, samples), `label.blind` (sample, label, defect type), `agreement.check` (the stored check); object = calibration set UUID (REQ-TRN-016) |
 | `train`, `activate_model` | Engineer | `model.train`, `model.activate` (active version; an older one is a rollback; `model.train` also the Golden board before); object = model UUID |
 | `save_recipe` | Engineer | `recipe.save` (recipe body); object = recipe UUID. A revision that sets, changes or clears the AI score threshold's override is also audited as `recipe.ai_threshold` (revision, override, the threshold that judges, the active AI model's version and calibrated value); object = board model name (REQ-TRN-015). A size in mm the engine cannot apply is `AOI-RCP-011`, and any recipe while the board model's scale cannot be read `AOI-RCP-012`, nothing written (S29) |
 | `batch_test` | Engineer | `test.run` (folder, model version, metrics); object = board model name |
@@ -646,6 +653,9 @@ any sign-in closes its Save to Recipe sheet, so a revision never carries the rea
 | `defect_boxes` | uuid, sample_uuid, label_uuid (the label row it was drawn with), x, y, w, h (whole pixels of the image as decoded and shown, turned by its EXIF Orientation, and inside it, by the size `imaging.file_header` reads without decoding: from the first MiB of most files, the whole of a TIFF or of a JPEG with large segments before its frame header, and a PNG's chunk headers across the file (each chunk's data skipped, up to 65,536 chunks), before the database lock is taken), dct_type (one of the 33, never Anomaly), severity (the type's in `aoi/defects.py`, never the caller's), labelled_by, at_utc, superseded_by (as the label row that replaced its own); append only, as `labels` |
 | `label_checks` | uuid, label_uuid (the label row checked, one check each), sample_uuid, checked_by (a user's UUID, never the row's labelled_by), at_utc; append only |
 | `ok_check_draws` | uuid, board_model, side, seed, ok_labels (when drawn), sample_uuids (JSON, the samples drawn), drawn_by, at_utc; append only |
+| `calibration_sets` | uuid, board_model, sample_uuids (JSON, 100 proposed), made_by, at_utc; append only |
+| `blind_labels` | uuid, set_uuid, sample_uuid, label OK/NG, defect_type, labelled_by (one per image and user), at_utc; append only |
+| `agreement_checks` | uuid, set_uuid, board_model, labeller_a, labeller_b, images, ok_ng_agree, both_ng, type_agree, ok_ng_target, type_target (percent), agreed (both reached), run_by, at_utc; append only |
 | `models` | board_model, version, uuid (also in the `.pt` file's metadata, written there before the file is saved, so an exported file names its record), path (.pt), metrics JSON (thresholds, scores, timing), active (one version per board model, switched in one transaction, so no reader finds none active, #171) |
 | `recipes` | board_model, revision (1 is the default recipe, stored when the board model is created, so every result names a stored revision), uuid, body JSON, user, created_at |
 | `inspections` | time, board_model, model_version, model_uuid (the AI model version active when the board was judged; whether the AI check ran is the recipe revision's to say, and a result judged with it off carries `AI_OFF_NOTE`, #246), recipe_rev, recipe_uuid, image/overlay paths, diff_map_path and ai_map_path (the difference and AI score maps as PNG files beside the overlay, 8-bit exact, and 16-bit within one step: `_ai2.png` since S28a, 0.001 σ steps to 32.767 σ, then 1/8192 of the value to 1789 σ, or `_ai.png` before, 0.001 σ steps to 65.535 σ; NULL for rows from before migration 0007, and for OK results once the retention sweep deleted them), reference_path and reference_sha256 (the golden board file the result was judged against and the SHA-256 of its bytes; NULL for rows from before migration 0008 and for results judged without a golden board), view (Top, Side or Bottom; NULL for rows from before migration 0005), result, score, metrics JSON, result_json (the whole result as `InspectionResult.to_dict` writes it, read back by `from_dict` without the images, with the scale it was judged at, `px_per_mm`, when there was one; NULL before migration 0006), operator, archived |
@@ -683,7 +693,8 @@ parent; an error raised out of building the window (a page that cannot read a da
 `AOI-SET-007` with its trace in the workspace's log (`error.shown`, context `start-up`), and `main.py` closes the
 workspace and ends with exit code 2 (#205).
 Records that can leave the station (`users`, `samples`, `models`, `recipes`, `inspections`, since migration 0009
-`test_runs` and `alarms`, since migration 0014 `labels` and `defect_boxes`, and since 0015 `label_checks` and `ok_check_draws`) carry a `uuid` beside their integer key; `defects` and `checks` are rows of one inspection and
+`test_runs` and `alarms`, since migration 0014 `labels` and `defect_boxes`, since 0015 `label_checks` and `ok_check_draws`, and since 0016 `calibration_sets`, `blind_labels` and
+`agreement_checks`) carry a `uuid` beside their integer key; `defects` and `checks` are rows of one inspection and
 are named by its UUID and their `no`. The dataset record, with its UUID, arrives with frozen dataset versions (stage
 S35, REQ-TRN-005). Every stored time is ISO 8601 UTC with an offset and is shown in local time
 (`aoi/times.py`); image, overlay, map, golden board, model and validation folder paths inside the workspace are stored

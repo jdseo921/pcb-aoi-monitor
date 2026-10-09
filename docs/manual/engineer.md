@@ -166,8 +166,16 @@ not checked, and a label from before this version, with no labeller, is labelled
 needs a new check. Until sign-in arrives in version 1.0, the second user is the second name picked in the user list,
 which the validation report states. No screen draws or checks labels yet: the services do, and the screen comes later.
 
-(to be written: the label editor and UNSURE on the Samples tab, the check on screen, freezing a dataset version,
-locking the validation set)
+**Two labellers agree before a customer validation.** Pick 100 images of the board model, each labelled OK or NG, as a
+calibration set. Two Engineers each label every image of the set blind, OK, or NG with one of the 33 defect types, once
+per image; no screen hides an image's own label yet, so not looking at it is up to each labeller. The agreement check
+then counts the images on which the two agree on OK or NG, at least 98 of 100, and the images both labelled NG on which
+they agree on the defect type, at least 90 % (both targets proposed). Every check is stored with its counts, and the
+next dataset version you freeze carries it. A set that is not 100 such images (AOI-TRN-035), a second blind label
+(AOI-TRN-036) and a labeller who has not labelled every image (AOI-TRN-037) are refused. None of this has a screen yet.
+
+(to be written: the label editor and UNSURE on the Samples tab, the check and the blind labels on screen, freezing a
+dataset version, locking the validation set)
 
 ## 4. Training and AI model versions
 

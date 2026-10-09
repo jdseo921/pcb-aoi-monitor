@@ -734,7 +734,62 @@
         <translation>검토할 OK 라벨 추출</translation>
     </message>
     <message>
-        <location line="+45"/>
+        <location line="+46"/>
+        <source>Making a calibration set</source>
+        <translation>보정 세트 만들기</translation>
+    </message>
+    <message>
+        <location line="+8"/>
+        <source>it holds {n} different images, not {size}</source>
+        <translation>서로 다른 이미지가 {size}개가 아니라 {n}개입니다</translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>{n} of its images are not labelled OK or NG under {board_model}</source>
+        <translation>이미지 중 {n}개가 {board_model}에서 OK 또는 NG로 라벨링되어 있지 않습니다</translation>
+    </message>
+    <message>
+        <location line="+9"/>
+        <source>Labelling a calibration image blind</source>
+        <translation>보정 이미지 블라인드 라벨링</translation>
+    </message>
+    <message>
+        <location line="+9"/>
+        <source>it is not an image of the calibration set</source>
+        <translation>보정 세트의 이미지가 아닙니다</translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>a blind label is OK, or NG with one of the 33 defect types</source>
+        <translation>블라인드 라벨은 OK이거나, 33개 결함 유형 중 하나를 지정한 NG입니다</translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>you labelled it blind already</source>
+        <translation>이미 블라인드로 라벨링했습니다</translation>
+    </message>
+    <message>
+        <location line="+8"/>
+        <source>Running an agreement check</source>
+        <translation>일치도 검사 실행</translation>
+    </message>
+    <message>
+        <location line="+10"/>
+        <source>the workspace holds no such calibration set</source>
+        <translation>작업 공간에 해당 보정 세트가 없습니다</translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>the two labellers are one user</source>
+        <translation>두 라벨러가 같은 사용자입니다</translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>a labeller has labelled {n} of its {size} images blind</source>
+        <translation>한 라벨러가 이미지 {size}개 중 {n}개만 블라인드로 라벨링했습니다</translation>
+    </message>
+    <message>
+        <location line="+20"/>
         <source>Activating an AI model version</source>
         <translation type="unfinished"></translation>
     </message>
@@ -754,7 +809,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1372"/>
+        <location line="-1448"/>
         <source>no defect type was given</source>
         <translation>결함 유형이 지정되지 않았습니다</translation>
     </message>
@@ -789,7 +844,7 @@
         <translation>{label}(으)로 다시 라벨링</translation>
     </message>
     <message>
-        <location line="+102"/>
+        <location line="+178"/>
         <source>Changing settings</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1443,12 +1498,12 @@
     </message>
     <message>
         <location line="+8"/>
-        <location line="+74"/>
+        <location line="+101"/>
         <source>View not known</source>
         <translation>알 수 없는 뷰</translation>
     </message>
     <message>
-        <location line="-73"/>
+        <location line="-100"/>
         <source>{path} was not imported: its view &quot;{view}&quot; is not one of {views}.</source>
         <translation>{path}을(를) 가져오지 않았습니다. 뷰 &quot;{view}&quot;는 {views} 중 하나가 아닙니다.</translation>
     </message>
@@ -1558,7 +1613,52 @@
         <translation>사유에 따라 조치한 뒤 라벨을 다시 검토하십시오. 이미 검토된 라벨은 더 할 일이 없습니다.</translation>
     </message>
     <message>
+        <location line="+6"/>
+        <source>Calibration set not made</source>
+        <translation>보정 세트가 만들어지지 않음</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>The calibration set was not made: {reason}.</source>
+        <translation>보정 세트가 만들어지지 않았습니다: {reason}.</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Pick 100 different images of one board model, each labelled OK or NG, and make the set again.</source>
+        <translation>한 보드 모델에서 OK 또는 NG로 라벨링된 서로 다른 이미지 100개를 골라 세트를 다시 만드십시오.</translation>
+    </message>
+    <message>
         <location line="+7"/>
+        <source>Blind label not kept</source>
+        <translation>블라인드 라벨이 저장되지 않음</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>The blind label of {sample} was not kept: {reason}.</source>
+        <translation>{sample}의 블라인드 라벨이 저장되지 않았습니다: {reason}.</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Label each image of the set once, as yourself: OK, or NG with one of the 33 defect types.</source>
+        <translation>세트의 각 이미지를 본인으로 한 번씩 라벨링하십시오. OK, 또는 33개 결함 유형 중 하나를 지정한 NG입니다.</translation>
+    </message>
+    <message>
+        <location line="+6"/>
+        <source>Agreement check did not run</source>
+        <translation>일치도 검사가 실행되지 않음</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>The agreement check did not run: {reason}.</source>
+        <translation>일치도 검사가 실행되지 않았습니다: {reason}.</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Pick two different labellers who have each labelled every image of the set blind, then run the check again.</source>
+        <translation>세트의 모든 이미지를 각각 블라인드로 라벨링한 서로 다른 라벨러 두 명을 고른 뒤 검사를 다시 실행하십시오.</translation>
+    </message>
+    <message>
+        <location line="+9"/>
         <source>{view} is not a camera view of this app, so nothing was read or changed.</source>
         <translation>{view}은(는) 이 앱의 카메라 뷰가 아니므로 아무것도 읽거나 바꾸지 않았습니다.</translation>
     </message>
@@ -1973,7 +2073,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-810"/>
+        <location line="-837"/>
         <source>Board judged NG</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2053,7 +2153,7 @@
         <translation>{path}에 라벨 &quot;{label}&quot;을(를) 붙이지 않았습니다. {labels} 중 하나가 아닙니다.</translation>
     </message>
     <message>
-        <location line="+100"/>
+        <location line="+127"/>
         <source>ROI thresholds refused</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2279,7 +2379,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/labels.py" line="+44"/>
+        <location filename="../core/labels.py" line="+46"/>
         <source>{label} is not OK, NG or UNSURE</source>
         <translation>{label}은(는) OK, NG, UNSURE 중 하나가 아닙니다</translation>
     </message>
@@ -4250,7 +4350,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/services.py" line="-1546"/>
+        <location filename="../core/services.py" line="-1622"/>
         <source>Aligning {count} images to the reference board</source>
         <translation type="unfinished"></translation>
     </message>
