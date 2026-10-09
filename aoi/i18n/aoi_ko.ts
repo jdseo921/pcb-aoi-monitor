@@ -2776,7 +2776,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/training.py" line="+379"/>
+        <location filename="../ui/pages/training.py" line="+396"/>
         <location filename="../ui/pages/training_import.py" line="+38"/>
         <source>{code} {title}</source>
         <translation type="unfinished"></translation>
@@ -3151,7 +3151,7 @@
 <context>
     <name>ImportSheet</name>
     <message>
-        <location filename="../ui/pages/training_import.py" line="+59"/>
+        <location filename="../ui/pages/training_import.py" line="+64"/>
         <location line="+22"/>
         <source>View</source>
         <translation>뷰</translation>
@@ -3163,18 +3163,18 @@
     </message>
     <message>
         <location line="+1"/>
-        <location line="+116"/>
+        <location line="+113"/>
         <source>OK</source>
         <translation>OK</translation>
     </message>
     <message>
-        <location line="-116"/>
-        <location line="+116"/>
+        <location line="-113"/>
+        <location line="+113"/>
         <source>NG</source>
         <translation>NG</translation>
     </message>
     <message>
-        <location line="-111"/>
+        <location line="-108"/>
         <source>Defect type for NG files</source>
         <translation>NG 파일의 결함 유형</translation>
     </message>
@@ -3215,18 +3215,18 @@
     </message>
     <message>
         <location line="+1"/>
-        <location line="+67"/>
+        <location line="+64"/>
         <location line="+96"/>
         <source>Cancel</source>
         <translation>취소</translation>
     </message>
     <message>
-        <location line="-162"/>
+        <location line="-159"/>
         <source>Import</source>
         <translation>가져오기</translation>
     </message>
     <message>
-        <location line="+43"/>
+        <location line="+40"/>
         <source>{type} · {severity}</source>
         <translation>{type} · {severity}</translation>
     </message>
@@ -3850,7 +3850,7 @@
     <message>
         <location line="+19"/>
         <source>All</source>
-        <translation type="unfinished"></translation>
+        <translation>전체</translation>
     </message>
 </context>
 <context>
@@ -4323,7 +4323,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/training.py" line="-246"/>
+        <location filename="../ui/pages/training.py" line="-259"/>
         <source>Training</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4973,43 +4973,53 @@
     </message>
     <message>
         <location line="+1"/>
-        <location line="+614"/>
+        <location line="+480"/>
         <source>Import Folder…</source>
         <translation>폴더 가져오기…</translation>
     </message>
     <message>
-        <location line="-606"/>
+        <location line="-472"/>
         <source>Training needs 20 OK images or more in a dataset version&apos;s training set</source>
         <translation>학습에는 데이터셋 버전의 학습 세트에 OK 이미지가 20장 이상 필요합니다</translation>
     </message>
     <message>
-        <location line="+10"/>
-        <location line="+74"/>
+        <location line="+11"/>
+        <location line="+86"/>
         <source>ID</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-74"/>
+        <location line="-85"/>
         <source>Label</source>
         <translation>라벨</translation>
     </message>
     <message>
-        <location line="+0"/>
+        <location line="+1"/>
         <source>Defect type</source>
         <translation>결함 유형</translation>
     </message>
     <message>
-        <location line="+0"/>
+        <location line="+1"/>
         <source>View</source>
         <translation>뷰</translation>
     </message>
     <message>
-        <location line="+0"/>
+        <location line="+1"/>
+        <source>Labelled</source>
+        <translation>라벨 작성</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Checked</source>
+        <translation>검토</translation>
+    </message>
+    <message>
+        <location line="+1"/>
         <source>File</source>
         <translation>파일</translation>
     </message>
     <message>
-        <location line="+4"/>
+        <location line="+5"/>
         <source>Importing…</source>
         <translation>가져오는 중…</translation>
     </message>
@@ -5029,7 +5039,12 @@
         <translation>UNSURE로 표시</translation>
     </message>
     <message>
-        <location line="+3"/>
+        <location line="+2"/>
+        <source>Check Label</source>
+        <translation>라벨 검토</translation>
+    </message>
+    <message>
+        <location line="+5"/>
         <source>Next image</source>
         <translation>다음 이미지</translation>
     </message>
@@ -5045,12 +5060,12 @@
     </message>
     <message>
         <location line="+1"/>
-        <location line="+358"/>
+        <location line="+361"/>
         <source>Remove</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-352"/>
+        <location line="-354"/>
         <source>Select a sample to preview</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5090,7 +5105,52 @@
         <translation type="unfinished">취소</translation>
     </message>
     <message>
-        <location line="+409"/>
+        <location line="+400"/>
+        <source>{user} ✓</source>
+        <translation>{user} ✓</translation>
+    </message>
+    <message>
+        <location line="+10"/>
+        <source>Checked by {user}</source>
+        <translation>{user}이(가) 검토함</translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>An UNSURE image is left out of training, so its label is not checked</source>
+        <translation>UNSURE 이미지는 학습에서 제외되므로 라벨을 검토하지 않습니다</translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>Draw its defect boxes first</source>
+        <translation>먼저 결함 상자를 그리세요</translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>No labeller is recorded for it: label it again first</source>
+        <translation>라벨 작성자가 기록되지 않았습니다. 먼저 라벨을 다시 지정하세요</translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>You labelled this image</source>
+        <translation>이 이미지의 라벨을 직접 지정했습니다</translation>
+    </message>
+    <message>
+        <location line="+10"/>
+        <source>Select the images to check</source>
+        <translation>검토할 이미지를 선택하세요</translation>
+    </message>
+    <message>
+        <location line="+18"/>
+        <source>Checked {count} label(s); {left} left unchecked, {file} first: {reason}</source>
+        <translation>라벨 {count}개를 검토했습니다. {left}개는 검토하지 않았습니다. 첫 번째 {file}: {reason}</translation>
+    </message>
+    <message>
+        <location line="+4"/>
+        <source>Checked {count} label(s)</source>
+        <translation>라벨 {count}개를 검토했습니다</translation>
+    </message>
+    <message>
+        <location line="+63"/>
         <source>{phase} · {percent} % · {left}</source>
         <translation>{phase} · {percent} % · {left}</translation>
     </message>
@@ -5100,7 +5160,7 @@
         <translation>취소됨: AI 모델을 저장하지 않았으며 활성 AI 모델은 바뀌지 않았습니다.</translation>
     </message>
     <message>
-        <location line="-408"/>
+        <location line="-512"/>
         <source>AI model versions</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5185,7 +5245,7 @@
         <translation>가져오기 취소됨: 멈추기 전에 OK 이미지 {ok}개와 NG 이미지 {ng}개를 {board_model}(으)로 가져왔습니다</translation>
     </message>
     <message>
-        <location line="+89"/>
+        <location line="+91"/>
         <source>Reference image set: inspections compare against it now, until training learns a Golden board</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5195,12 +5255,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+45"/>
+        <location line="+138"/>
         <source>{type} ×{count}</source>
         <translation>{type} ×{count}</translation>
     </message>
     <message>
-        <location line="+53"/>
+        <location line="+62"/>
         <source>Saved AI model {version} ({seconds} s). Golden board updated.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5235,7 +5295,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+42"/>
+        <location line="-209"/>
         <source>Add at least 20 OK boards with Add OK Images… or Import Folder…</source>
         <translation>OK 이미지 추가… 또는 폴더 가져오기…로 OK 보드를 20개 이상 추가하세요</translation>
     </message>
@@ -5245,7 +5305,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+4"/>
+        <location line="+229"/>
         <source>none</source>
         <translation type="unfinished"></translation>
     </message>

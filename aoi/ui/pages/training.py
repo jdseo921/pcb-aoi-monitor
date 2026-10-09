@@ -9,9 +9,10 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from PySide6.QtCore import QEvent, QItemSelectionModel, QObject, Qt
-from PySide6.QtGui import QKeyEvent, QResizeEvent
+from PySide6.QtGui import QKeyEvent, QKeySequence, QResizeEvent
 from PySide6.QtWidgets import (
     QAbstractItemView,
+    QAbstractSpinBox,
     QApplication,
     QComboBox,
     QFileDialog,
@@ -19,6 +20,7 @@ from PySide6.QtWidgets import (
     QGroupBox,
     QHBoxLayout,
     QLabel,
+    QLineEdit,
     QMessageBox,
     QPlainTextEdit,
     QProgressBar,
@@ -41,6 +43,7 @@ from ...errors import AoiError
 from ...times import to_local
 from .. import theme
 from ..errors import phrase_text
+from ..widgets.box_editor import ENTER
 from ..widgets.busy import BusyOverlay
 from ..widgets.empty_state import EmptyState
 from ..workers import Worker, keep
@@ -66,6 +69,7 @@ SELECT_ROW = QItemSelectionModel.SelectionFlag.Select | QItemSelectionModel.Sele
 CHOOSE_ROW = QItemSelectionModel.SelectionFlag.ClearAndSelect | QItemSelectionModel.SelectionFlag.Rows
 NOT_TYPING = Qt.KeyboardModifier.ControlModifier | Qt.KeyboardModifier.AltModifier | Qt.KeyboardModifier.MetaModifier
 EDIT_ON_KEY = QAbstractItemView.EditTrigger.AnyKeyPressed
+FIELDS = (QAbstractSpinBox, QComboBox, QLineEdit)  # a field whose Enter is its own, never Check Label's
 
 
 def _each(ids: list[int], write: Callable[[int], None]) -> Exception | None:
@@ -169,7 +173,15 @@ class TrainingPage(Page):
         self._left = False  # the user who started the import that runs has signed out: its sheet closes as it ends
         self._by = ""  # the user who pressed Import: only they get the dialog of an error that stops it (#206)
         self.samples = make_table(
-            [self.tr("ID"), self.tr("Label"), self.tr("Defect type"), self.tr("View"), self.tr("File")]
+            [
+                self.tr("ID"),
+                self.tr("Label"),
+                self.tr("Defect type"),
+                self.tr("View"),
+                self.tr("Labelled"),
+                self.tr("Checked"),
+                self.tr("File"),
+            ]
         )
         self.samples.itemSelectionChanged.connect(self._preview)
         self.samples_empty = EmptyState(self.samples)
@@ -179,8 +191,12 @@ class TrainingPage(Page):
         self.act_ok = self.action(self.tr("Mark OK"), "O", lambda: self._relabel("OK"))
         self.act_ng = self.action(self.tr("Mark NG"), "N", lambda: self._relabel("NG"))
         self.act_unsure = self.action(self.tr("Mark UNSURE"), "U", lambda: self._relabel("UNSURE"))
+        # Return, as the labels sketch has it: a field, a drop-down list or the image keeps its own (eventFilter)
+        self.act_check = self.action(self.tr("Check Label"), "Return", self._check)
         for a in (self.act_ok, self.act_ng, self.act_unsure):
             marks.addWidget(action_button(a, show_key=False))
+        self.btn_check = action_button(self.act_check, show_key=False)  # its tooltip says why it is off
+        marks.addWidget(self.btn_check)
         self.act_next = self.action(self.tr("Next image"), "PgDown", lambda: self._step(1))  # keys only (sketch)
         self.act_previous = self.action(self.tr("Previous image"), "PgUp", lambda: self._step(-1))
         ll.addLayout(marks)
@@ -192,7 +208,8 @@ class TrainingPage(Page):
         split.addWidget(left)
 
         # Middle: the label editor, the selected image with its defect boxes (REQ-TRN-003) ----------------------
-        self.shown: dict[int, dict[str, Any]] = {}  # the samples in the table, by id
+        self.shown: dict[int, dict[str, Any]] = {}  # the board model's samples, by id; the filter picks the table's
+        self._boxes: dict[int, list[str]] = {}  # each NG sample's box types, by id
         self.editor = LabelEditor(self, self.tr("Select a sample to preview"))
         self.editor.undone.connect(self._show_samples)
         self.editor.stored.connect(self._show_types)
@@ -465,10 +482,12 @@ class TrainingPage(Page):
         """While this page is shown, a letter, digit or sign typed in a drop-down list, such as the Type list, in a
         table or list that a typed key edits, or anywhere in S31's import sheet goes there, never to the page's keys
         (O, N, U, D, Z, +, - and 0): the window takes its ShortcutOverride. A spin box or a text field, such as Epochs,
-        needs none of this: its line edit accepts the ShortcutOverride of a key it types first."""
+        needs none of this: its line edit accepts the ShortcutOverride of a key it types first. Enter typed in a spin
+        box, a text field or a drop-down list is the field's too, never Check Label's (labels sketch)."""
         if e.type() == QEvent.Type.ShortcutOverride and self.isVisible() and isinstance(e, QKeyEvent):
+            focus = QApplication.focusWidget()
             typed = e.text().isprintable() and e.text() != "" and not e.modifiers() & NOT_TYPING
-            if typed and self._takes_keys(QApplication.focusWidget()):
+            if (typed and self._takes_keys(focus)) or (e.key() in ENTER and isinstance(focus, FIELDS)):
                 e.accept()
                 return True
         return super().eventFilter(watched, e)
@@ -579,9 +598,102 @@ class TrainingPage(Page):
             self.samples.scrollTo(index)
 
     def _preview(self) -> None:
-        """The label editor on the selected sample, the topmost row when several are selected; none: nothing."""
+        """The label editor on the selected sample, the topmost row when several are selected; none: nothing. Check
+        Label follows the rows selected."""
         rows = sorted(i.row() for i in self.samples.selectionModel().selectedRows())
         self.editor.show_sample(self.shown.get(int(cell_text(self.samples, rows[0], 0))) if rows else None)
+        self._sync_check()
+
+    def _fill_samples(self) -> None:
+        """The samples in the table, with the rows selected before selected again; the editor follows once."""
+        if not self.board_model:
+            return
+        s = list(self.shown.values())
+        kept = set(self._selected_ids())
+        self.samples.selectionModel().blockSignals(True)  # the editor follows once the rows are selected again
+        fill_table(
+            self.samples,
+            [
+                [
+                    r["id"],
+                    r["label"],
+                    self._types(self._boxes.get(r["id"], []), r["defect_type"]),
+                    view_text(r["side"]) if r["side"] else "",
+                    r["labelled_by_name"] or "—",
+                    self._checker(r),
+                    Path(r["path"]).name,
+                ]
+                for r in s
+            ],
+            [theme.NG_TINT if r["label"] == "NG" else None for r in s],  # UNSURE is not NG (REQ-TRN-002)
+            [r["path"] for r in s],
+        )
+        self.samples.selectionModel().blockSignals(False)
+        self._select(lambda r: r["id"] in kept)
+        if s:
+            self.samples_empty.hide()
+        else:
+            what = self.tr("Add at least 20 OK boards with Add OK Images… or Import Folder…")
+            heading = self.tr("No samples for {board_model} yet").format(board_model=self.board_model)
+            self.samples_empty.show_state(heading, what, self.tr("Import Folder…"), self.import_folder)
+
+    def _checker(self, sample: dict[str, Any]) -> str:
+        """The Checked column: who checked the sample's current label (labels sketch), else "—"."""
+        if sample["checked_by"] is None:
+            return "—"
+        return self.tr("{user} ✓").format(user=sample["checked_by_name"] or "—")
+
+    def _picked(self) -> list[dict[str, Any]]:
+        """The samples selected in the table, topmost first."""
+        rows = sorted(i.row() for i in self.samples.selectionModel().selectedRows())
+        return [self.shown[int(cell_text(self.samples, r, 0))] for r in rows]
+
+    def _why_not(self, sample: dict[str, Any]) -> str | None:
+        """Why the user signed in cannot check the sample's label, as check_label refuses it; None when they can."""
+        if sample["checked_by"] is not None:
+            return self.tr("Checked by {user}").format(user=sample["checked_by_name"] or "—")
+        if sample["label"] == "UNSURE":
+            return self.tr("An UNSURE image is left out of training, so its label is not checked")
+        if sample["label"] == "NG" and not self._boxes.get(sample["id"]):
+            return self.tr("Draw its defect boxes first")
+        if sample["labelled_by"] is None:
+            return self.tr("No labeller is recorded for it: label it again first")
+        if sample["labelled_by"] == self.ctx.user_uuid:
+            return self.tr("You labelled this image")
+        return None
+
+    def _sync_check(self) -> None:
+        """Check Label on while the user signed in can check a selected image's label; off, its tooltip says why for
+        the topmost selected image, or that none is selected (labels sketch)."""
+        why = [self._why_not(s) for s in self._picked()]
+        can = None in why
+        self.act_check.setEnabled(can)
+        key = self.act_check.shortcut().toString(QKeySequence.SequenceFormat.NativeText)
+        self.btn_check.setToolTip(key if can else (why[0] or "") if why else self.tr("Select the images to check"))
+
+    def _check(self) -> None:
+        """Check Label (Return): record the user signed in as the second user who checked each selected image's label
+        that they can check (REQ-TRN-004), on a pool thread as the marks write; the others stay as they are, and the
+        status line counts them and says why for the first. A refusal or an error stops at the image it names, the
+        checks before it staying stored."""
+        picked = self._picked()
+        can = {s["id"]: s["uuid"] for s in picked if self._why_not(s) is None}
+        left = [(s, why) for s in picked if (why := self._why_not(s)) is not None]
+        if not can:
+            return
+
+        def done(refused: Exception | None) -> None:
+            self.refresh()
+            if refused is not None:
+                self.error(refused)
+            elif left:
+                line = self.tr("Checked {count} label(s); {left} left unchecked, {file} first: {reason}")
+                file = Path(left[0][0]["path"]).name
+                self.shell.status(line.format(count=len(can), left=len(left), file=file, reason=left[0][1]))
+            else:
+                self.shell.status(self.tr("Checked {count} label(s)").format(count=len(can)))
+
+        self.editor.write(done, _each, list(can), lambda i: self.ctx.check_label(can[i]))
 
     def _types(self, kinds: list[str], given: str | None) -> str:
         """The Defect type column: the types of an image's boxes, each once with its count ("Solder Bridge ×2,
@@ -592,11 +704,20 @@ class TrainingPage(Page):
         return ", ".join(kind if n == 1 else each.format(type=kind, count=n) for kind, n in Counter(kinds).items())
 
     def _show_types(self, uuid: str, boxes: list[DefectBox]) -> None:
-        """The boxes of a sample just stored: its row's Defect type, with no read of the database."""
+        """The boxes of a sample just stored: its row's Defect type, with no read of the database, and its label row
+        now the user's own, with no check (REQ-TRN-004), which Check Label follows."""
+        for s in self.shown.values():
+            if s["uuid"] == uuid:
+                self._boxes[s["id"]] = [b.dct_type for b in boxes]
+                s |= {"labelled_by": self.ctx.user_uuid, "labelled_by_name": self.ctx.user}
+                s |= {"checked_by": None, "checked_by_name": None}
         for row in range(self.samples.rowCount()):
             s = self.shown[int(cell_text(self.samples, row, 0))]
             if s["uuid"] == uuid:
-                cell_item(self.samples, row, 2).setText(self._types([b.dct_type for b in boxes], s["defect_type"]))
+                cell_item(self.samples, row, 2).setText(self._types(self._boxes[s["id"]], s["defect_type"]))
+                cell_item(self.samples, row, 4).setText(s["labelled_by_name"] or "—")
+                cell_item(self.samples, row, 5).setText(self._checker(s))
+        self._sync_check()
 
     # --- training ---------------------------------------------------------------
     def train(self) -> None:
@@ -738,34 +859,8 @@ class TrainingPage(Page):
             return
         s = self.ctx.samples(self.board_model)
         self.shown = {r["id"]: r for r in s}
-        kept = set(self._selected_ids())
-        self.samples.selectionModel().blockSignals(True)  # the editor follows once the rows are selected again
-        fill_table(
-            self.samples,
-            [
-                [
-                    r["id"],
-                    r["label"],
-                    self._types(
-                        [b["dct_type"] for b in self.ctx.boxes(r["uuid"])] if r["label"] == "NG" else [],
-                        r["defect_type"],
-                    ),
-                    view_text(r["side"]) if r["side"] else "",
-                    Path(r["path"]).name,
-                ]
-                for r in s
-            ],
-            [theme.NG_TINT if r["label"] == "NG" else None for r in s],  # UNSURE is not NG (REQ-TRN-002)
-            [r["path"] for r in s],
-        )
-        self.samples.selectionModel().blockSignals(False)
-        self._select(lambda r: r["id"] in kept)
-        if s:
-            self.samples_empty.hide()
-        else:
-            what = self.tr("Add at least 20 OK boards with Add OK Images… or Import Folder…")
-            heading = self.tr("No samples for {board_model} yet").format(board_model=self.board_model)
-            self.samples_empty.show_state(heading, what, self.tr("Import Folder…"), self.import_folder)
+        self._boxes = {r["id"]: [b["dct_type"] for b in self.ctx.boxes(r["uuid"])] for r in s if r["label"] == "NG"}
+        self._fill_samples()
         n_ok, n_ng = (sum(r["label"] == label for r in s) for label in ("OK", "NG"))  # UNSURE counts as neither
         ref = self.ctx.reference_image(self.board_model)
         reference = Path(ref).name if ref else self.tr("none")
