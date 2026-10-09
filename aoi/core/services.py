@@ -35,11 +35,12 @@ from ..data.workspace_lock import WorkspaceLock
 from ..errors import QT_TRANSLATE_NOOP, AoiError, Phrase, joined
 from ..hal import VIEWS
 from ..times import local_date, now_utc
-from . import anomaly, imaging
+from . import anomaly, imaging, labels
 from .compare import Region, changed_regions
 from .imaging import align_to_reference, encode_image, list_images, load_image, load_image_sha256, save_image
 from .inspector import NG, OK, WARN, AiEvidence, InspectionResult, Inspector, JudgedBy, ai_check, draw_overlay, re_grade
 from .jobs import JobCancelled, Jobs
+from .labels import DefectBox
 from .maps import load_maps, map_paths, picture_shape, save_maps
 from .recipe import Recipe
 from .sample_import import LABELS, REFUSED, ImportFile, ImportReport
@@ -1231,18 +1232,17 @@ class AppContext:
         the 33 DCT types for NG (else AOI-TRN-013), none for OK, whatever is given, with a new label row; the one before
         stays in history (REQ-TRN-002). A sample a labeller gave that label and type already is left as it is; one
         carried over with no labeller is labelled again, by the user acting, so it can be checked. The reference sample
-        cannot be relabelled NG (AOI-TRN-007): inspections would compare against a defective board."""
+        cannot be relabelled NG (AOI-TRN-007): inspections would compare against a defective board. The new label row
+        is checked as `set_label` checks one."""
         before = self.db.sample(sample_id)
         name = Path(before["path"]).name
         if label not in LABELS:
             raise AoiError("AOI-TRN-018", path=name, label=label, labels=", ".join(LABELS))
-        if label != "OK":
-            self._refuse_reference_change(before, QT_TRANSLATE_NOOP("Errors", "relabelled NG"))
         self._refuse_untyped(name, label, defect_type)
         defect_type = defect_type if label == "NG" else None
         if (before["label"], before["defect_type"]) == (label, defect_type) and before["labelled_by"] is not None:
             return  # labelled so already: no new row, so its labeller and any check of it stay
-        self.db.add_label(before["uuid"], label, defect_type, [], self.user_uuid)
+        self._write_label(before, label, defect_type, None, None)  # an image that stays NG keeps its boxes
         old = {"label": before["label"], "defect_type": before["defect_type"]}
         self.audit("sample.update", "sample", before["uuid"], old, {"label": label, "defect_type": defect_type})
 
@@ -1263,6 +1263,80 @@ class AppContext:
         reference = self.db.reference(sample["board_model"])
         if reference is not None and Path(reference) == Path(sample["path"]):
             raise AoiError("AOI-TRN-007", sample=Path(sample["path"]).name, change=change)
+
+    # --- labels and defect boxes (REQ-TRN-002, REQ-TRN-003; S32): a relabel adds rows, the old ones stay in history ---
+    @requires("Engineer", QT_TRANSLATE_NOOP("Errors", "Labelling an image"))
+    def set_label(
+        self, sample_uuid: str, label: str, defect_type: str | None = None, boxes: list[DefectBox] | None = None
+    ) -> str:
+        """Give a sample a new current label, OK, NG or UNSURE, with an NG image's defect type and boxes (None keeps the
+        boxes of an image that stays NG), each box with its type's severity; audited as `label.set` with the label
+        before and after. The rows replaced stay, superseded by the new label row, whose UUID is returned. Refused with
+        AOI-TRN-030 or AOI-TRN-031 for a label or box the image cannot take, AOI-TRN-032 for a sample the workspace
+        does not hold and AOI-TRN-007 for the reference sample labelled other than OK."""
+        return self._set_label(sample_uuid, (label, defect_type), boxes)
+
+    @requires("Engineer", QT_TRANSLATE_NOOP("Errors", "Drawing defect boxes"))
+    def set_boxes(self, sample_uuid: str, boxes: list[DefectBox]) -> str:
+        """Replace the defect boxes of an NG image: `set_label` with its label and defect type as they are."""
+        return self._set_label(sample_uuid, None, boxes)
+
+    def _set_label(self, sample_uuid: str, given: tuple[str, str | None] | None, boxes: list[DefectBox] | None) -> str:
+        """`set_label`, with `given` None for the label and type the sample has. The image's size, which the box checks
+        need, is read before the write transaction opens, so no file is read while the database is locked."""
+        size = labels.image_size(self._sample(sample_uuid)["path"]) if boxes else None
+        with self.db.transaction():
+            sample = self._sample(sample_uuid)
+            label, defect_type = given or (sample["label"], sample["defect_type"])
+            before = self._label_state(sample)
+            uid, rows = self._write_label(sample, label, defect_type, boxes, size)
+            after = {"label_uuid": uid, "label": label, "defect_type": defect_type, "boxes": rows}
+            self.audit("label.set", "sample", sample_uuid, before, after)
+        return uid
+
+    def label_history(self, sample_uuid: str) -> list[dict[str, Any]]:
+        """Every label a sample has had, newest first (uuid, label, defect_type, labelled_by: a user's UUID, None for a
+        label carried over from before history was kept, labelled_by_name, at_utc, superseded_by: the label row that
+        replaced it, None for the current one), each with `boxes`, the defect boxes drawn with it."""
+        return self.db.label_history(sample_uuid)
+
+    def boxes(self, sample_uuid: str) -> list[dict[str, Any]]:
+        """A sample's current defect boxes (uuid, label_uuid, x, y, w, h, dct_type, severity, labelled_by, at_utc), in
+        the order drawn; none for an image that is not NG."""
+        return self.db.boxes(sample_uuid)
+
+    def box_history(self, sample_uuid: str) -> list[dict[str, Any]]:
+        """Every defect box a sample has had, newest first; a replaced one names the label row that replaced it."""
+        return self.db.boxes(sample_uuid, every=True)[::-1]
+
+    def unsure_samples(self, board_model: str) -> list[dict[str, Any]]:
+        """The images labelled UNSURE, as `samples` gives them, for the customer's quality engineer (REQ-TRN-002)."""
+        return self.db.samples(board_model, "UNSURE")
+
+    def _sample(self, sample_uuid: str) -> dict[str, Any]:
+        if (sample := self.db.sample_by_uuid(sample_uuid)) is None:
+            raise AoiError("AOI-TRN-032", sample=sample_uuid)
+        return sample
+
+    def _label_state(self, sample: dict[str, Any]) -> dict[str, Any]:
+        """A sample's current label as its audit entries hold it."""
+        boxes = [{k: b[k] for k in ("x", "y", "w", "h", "dct_type", "severity")} for b in self.db.boxes(sample["uuid"])]
+        return {k: sample[k] for k in ("label_uuid", "label", "defect_type")} | {"boxes": boxes}
+
+    def _write_label(
+        self, sample: dict[str, Any], label: str, dtype: str | None, boxes: list[DefectBox] | None, size: labels.Size
+    ) -> tuple[str, list[dict[str, Any]]]:
+        """Check and store a new label as the user acting, in the caller's transaction, with the image's `size` for the
+        boxes given: (its UUID, the box rows)."""
+        if boxes is None:  # the boxes stay with an image that stays NG; any other label has none
+            keep = self.db.boxes(sample["uuid"]) if label == "NG" else []
+            boxes = [DefectBox(b["x"], b["y"], b["w"], b["h"], b["dct_type"]) for b in keep]
+        labels.check(Path(sample["path"]).name, size, label, dtype, boxes)
+        if label != "OK":
+            change = QT_TRANSLATE_NOOP("Errors", "relabelled {label}").fill(label=label)
+            self._refuse_reference_change(sample, change)
+        rows = [b.row() for b in boxes]
+        return self.db.add_label(sample["uuid"], label, dtype, rows, self.user_uuid), rows
 
     @requires("Engineer", QT_TRANSLATE_NOOP("Errors", "Activating an AI model version"))
     @transactional

@@ -15,6 +15,7 @@ from PySide6.QtWidgets import QInputDialog, QMessageBox
 from pytestqt.qtbot import QtBot
 
 from aoi.config import Settings, default_workspace
+from aoi.core.labels import DefectBox
 from aoi.core.recipe import Recipe
 from aoi.core.sample_import import ImportFile, ImportReport
 from aoi.core.services import REQUIRED_ROLE, ROLES, AppContext, CsvFile
@@ -54,6 +55,11 @@ WRITES: dict[str, tuple[str, Callable[[AppContext, Path, Path], Any]]] = {
         lambda ctx, data, tmp: ctx.update_sample(ctx.samples("TINY", "OK")[0]["id"], "NG", "Scratch"),
     ),
     "delete_sample": ("sample.delete", lambda ctx, data, tmp: ctx.delete_sample(ctx.samples("TINY", "NG")[0]["id"])),
+    "set_label": ("label.set", lambda ctx, data, tmp: ctx.set_label(ctx.samples("TINY", "OK")[-1]["uuid"], "UNSURE")),
+    "set_boxes": (
+        "label.set",
+        lambda ctx, data, tmp: ctx.set_boxes(ctx.samples("TINY", "NG")[-1]["uuid"], [DefectBox(0, 0, 4, 4, "Scratch")]),
+    ),
     "train": ("model.train", lambda ctx, data, tmp: ctx.train("TINY", epochs=1, image_size=32)),
     "activate_model": ("model.activate", lambda ctx, data, tmp: ctx.activate_model(ctx.models("TINY")[-1]["id"])),
     "save_recipe": ("recipe.save", lambda ctx, data, tmp: ctx.save_recipe(Recipe(board_model="TINY"))),
@@ -95,7 +101,8 @@ UNCHECKED = {
     "inspector", "inspect", "inspect_file", "load_image", "log_result", "board_models", "reference_image", "samples",
     "sample_path", "models", "model", "active_model", "recipe_history", "inspections", "defects_for", "checks_for",
     "checks_for_many", "inspection_result", "inspection", "judged_reference", "users", "board_status", "start_user",
-    "golden_board_unreadable", "engine_is_current", "calibrated_threshold", "calibration_of", "scale",
+    "golden_board_unreadable", "engine_is_current", "calibrated_threshold", "calibration_of", "scale", "label_history",
+    "boxes", "box_history", "unsure_samples",
 }  # fmt: skip
 CALLS = {**{name: call for name, (_, call) in WRITES.items()}, **CHECKED_READS}
 # The lowest role allowed each call, copied from the write table of docs/ARCHITECTURE.md §5 and REQ-CMP-005, never read

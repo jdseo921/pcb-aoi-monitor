@@ -41,6 +41,7 @@ interfaces that Stages 2–4 (cameras, robot, MES/ERP) plug into without changin
 │  reads   board_models · samples · models · recipe · inspections · users      │
 │  writes  import_samples · train · save_recipe · set_reference · set_scale    │
 │          add_user                                                            │
+│          set_label · set_boxes (a label and its defect boxes, with history)  │
 │  engine  inspector · inspect · inspect_file · log_result · batch_test        │
 │          re_evaluate (a stored result under other thresholds, Engineer)      │
 │  jobs    the thread pool every slow call runs on (REQ-SET-021)               │
@@ -360,6 +361,9 @@ Upload OK images (+ optional NG)                         Training page
 ```
 
 Re-training after more uploads creates a new version; older versions stay selectable (model version control, GUI §6).
+Training reads each sample's current label (`labels`, since S32): the OK and NG images; an image labelled UNSURE is in
+neither list, so it is left out of training and of the OK images held back for calibration in step 5, its validation
+part, and `AppContext.unsure_samples` lists it for the customer's quality engineer (REQ-TRN-002).
 An AI model the loader would refuse, such as one with an image threshold of 0 from OK images that are copies of one
 photo, is refused at step 5 with AOI-TRN-004: nothing is saved, registered or audited, and the active version stays.
 Step 6 sets the new golden board as the reference, registers and activates the version and writes `model.train` in one
@@ -565,6 +569,7 @@ The writes, their roles and entries:
 | `ensure_board_model`, `set_reference`, `import_samples`, `import_files` | Engineer | `board_model.create`, `board_model.reference` (reference path), `sample.import` (one per `import_files` file, with `skipped`); object = board model name |
 | `set_scale` | Engineer | `board_model.scale` (px per mm before → after, with the length in px, the distance in mm and the Golden board file it was measured on; S29, REQ-RCP-006); object = board model name. A length or distance that is not a number above 0, a scale outside 2 to 100000 px/mm, or an unknown board model, is `AOI-RCP-008`, nothing written; a stored scale that cannot be read (`AOI-RCP-012`) is replaced |
 | `update_sample`, `delete_sample` | Engineer | `sample.update` (label, defect type: a label of `LABELS`, else AOI-TRN-018, and for NG one of the 33 types, else AOI-TRN-013; none for OK; the relabel adds a label row and keeps the one before; a sample a labeller labelled so already gets neither, and one carried over with no labeller is labelled again), `sample.delete`; object = sample UUID |
+| `set_label`, `set_boxes` | Engineer | `label.set` (the label before and after: its label row's UUID, label, defect type and boxes, each with x, y, w, h, type and severity); object = sample UUID (REQ-TRN-002, REQ-TRN-003) |
 | `train`, `activate_model` | Engineer | `model.train`, `model.activate` (active version; an older one is a rollback; `model.train` also the Golden board before); object = model UUID |
 | `save_recipe` | Engineer | `recipe.save` (recipe body); object = recipe UUID. A revision that sets, changes or clears the AI score threshold's override is also audited as `recipe.ai_threshold` (revision, override, the threshold that judges, the active AI model's version and calibrated value); object = board model name (REQ-TRN-015). A size in mm the engine cannot apply is `AOI-RCP-011`, and any recipe while the board model's scale cannot be read `AOI-RCP-012`, nothing written (S29) |
 | `batch_test` | Engineer | `test.run` (folder, model version, metrics); object = board model name |
