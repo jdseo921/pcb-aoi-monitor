@@ -12,11 +12,13 @@ import tracemalloc
 from collections.abc import Iterator
 from pathlib import Path
 
+import cv2
 import numpy as np
 import pytest
 
-from aoi.core import anomaly
-from aoi.core.imaging import list_images, load_image
+from aoi.core import anomaly, golden
+from aoi.core.imaging import align_to_reference, list_images, load_image, registration, warp_to
+from tests.regression import make_regression_set as rs
 
 
 @pytest.mark.parametrize("q", [anomaly.PIXEL_PERCENTILE, 99.9, 50.0, 100.0, 0.0])
@@ -90,3 +92,36 @@ def test_req_trn_007_calibration_as_from_whole_images(synthetic_dataset: Path) -
     p = anomaly.prepare(ok[0], 64)
     assert p.shape == ok[0].shape[:2]
     assert np.array_equal(model.prepared_map(p), model.anomaly_map(ok[0]))
+
+
+def test_req_trn_007_golden_board_matches_exact_median(tmp_path: Path) -> None:
+    """The Golden board worked out band by band equals the median of every aligned OK board of the synthetic regression
+    set held at once, to the bit: in one band, in bands of 7 rows with a shorter last band, and for an odd count. Each
+    later band reads the boards again and warps them with the homography kept from the first read, as a training run
+    does; that warp equals align_to_reference's, the plain resize included."""
+    boards = rs.generate(tmp_path)
+    reference = cv2.imread(str(tmp_path / "golden.png"))
+    size = (reference.shape[1], reference.shape[0])
+    ok = [cv2.imread(str(tmp_path / b.name)) for b in boards if b.label == "OK"]
+    kept = [registration(im, reference)[0] for im in ok]
+    assert all(h is not None for h in kept)  # every board registered, so the bands re-warp rather than resize
+    aligned = [align_to_reference(im, reference)[0] for im in ok]
+    assert all(np.array_equal(warp_to(im, h, size), a) for im, h, a in zip(ok, kept, aligned, strict=True))
+    blank = np.full((300, 400, 3), 128, np.uint8)  # no features: the plain resize, both ways
+    assert registration(blank, reference)[0] is None
+    assert np.array_equal(warp_to(blank, None, size), align_to_reference(blank, reference)[0])
+    for count, budget in ((20, golden.BAND_BYTES), (20, 20 * 640 * 3 * 7), (19, 19 * 640 * 3 * 7)):
+        exact = np.median(np.stack(aligned[:count]), axis=0).astype(np.uint8)
+        median = golden.Median(count, reference.shape[:2], budget)
+        assert len(median.bands) == (1 if budget == golden.BAND_BYTES else 69)
+        while not median.done:
+            for im, h in zip(ok[:count], kept[:count], strict=True):
+                median.add(warp_to(im, h, size))
+        assert np.array_equal(median.board, exact), count
+    rng = np.random.default_rng(1)  # and one row a band, on boards of noise
+    noise = [rng.integers(0, 256, (5, 6, 3), dtype=np.uint8) for _ in range(4)]
+    median = golden.Median(4, (5, 6), budget=1)
+    for _ in median.bands:
+        for im in noise:
+            median.add(im)
+    assert median.done and np.array_equal(median.board, np.median(np.stack(noise), axis=0).astype(np.uint8))

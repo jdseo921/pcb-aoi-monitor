@@ -587,7 +587,15 @@ def align_to_reference(img: np.ndarray, ref: np.ndarray, max_features: int = 400
     (golden-sample diff, ROI checks) happens after this step. Falls back to a plain
     resize when not enough features match; `info["aligned"]` tells the UI which.
     """
-    h, w = ref.shape[:2]
+    homography, info = registration(img, ref, max_features)
+    return warp_to(img, homography, (ref.shape[1], ref.shape[0])), info
+
+
+def registration(
+    img: np.ndarray, ref: np.ndarray, max_features: int = 4000
+) -> tuple[np.ndarray | None, dict[str, Any]]:
+    """The homography `align_to_reference` warps `img` onto `ref` with, or None for its plain resize, and its info. A
+    training run keeps it, so it can warp an image read again exactly as the first time (REQ-TRN-007)."""
     info: dict[str, Any] = {"aligned": False, "inliers": 0, "method": "resize"}
     g1 = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     g2 = cv2.cvtColor(ref, cv2.COLOR_BGR2GRAY)
@@ -602,10 +610,18 @@ def align_to_reference(img: np.ndarray, ref: np.ndarray, max_features: int = 400
             dst = np.array([k2[m.trainIdx].pt for m in matches], dtype=np.float32).reshape(-1, 1, 2)
             H, mask = cv2.findHomography(src, dst, cv2.RANSAC, 4.0)
             if H is not None and mask is not None and int(mask.sum()) >= 12:
-                warped = cv2.warpPerspective(img, H, (w, h), borderMode=cv2.BORDER_REPLICATE)
                 info.update(aligned=True, inliers=int(mask.sum()), method="orb-homography")
-                return warped, info
-    return cv2.resize(img, (w, h), interpolation=cv2.INTER_AREA), info
+                return H, info
+    return None, info
+
+
+def warp_to(img: np.ndarray, homography: np.ndarray | None, size: tuple[int, int]) -> np.ndarray:
+    """`img` warped by `homography` to `size` (width, height), or resized to it when the homography is None."""
+    if homography is None:
+        resized: np.ndarray = cv2.resize(img, size, interpolation=cv2.INTER_AREA)
+        return resized
+    warped: np.ndarray = cv2.warpPerspective(img, homography, size, borderMode=cv2.BORDER_REPLICATE)
+    return warped
 
 
 def blend(img: np.ndarray, overlay: np.ndarray, alpha: float = 0.45) -> np.ndarray:
