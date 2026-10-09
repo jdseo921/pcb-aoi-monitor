@@ -2776,7 +2776,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/training.py" line="+396"/>
+        <location filename="../ui/pages/training.py" line="+421"/>
         <location filename="../ui/pages/training_import.py" line="+38"/>
         <source>{code} {title}</source>
         <translation type="unfinished"></translation>
@@ -4323,7 +4323,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/training.py" line="-259"/>
+        <location filename="../ui/pages/training.py" line="-276"/>
         <source>Training</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4973,23 +4973,23 @@
     </message>
     <message>
         <location line="+1"/>
-        <location line="+480"/>
+        <location line="+503"/>
         <source>Import Folder…</source>
         <translation>폴더 가져오기…</translation>
     </message>
     <message>
-        <location line="-472"/>
+        <location line="-491"/>
         <source>Training needs 20 OK images or more in a dataset version&apos;s training set</source>
         <translation>학습에는 데이터셋 버전의 학습 세트에 OK 이미지가 20장 이상 필요합니다</translation>
     </message>
     <message>
-        <location line="+11"/>
-        <location line="+86"/>
+        <location line="+20"/>
+        <location line="+90"/>
         <source>ID</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-85"/>
+        <location line="-89"/>
         <source>Label</source>
         <translation>라벨</translation>
     </message>
@@ -5004,17 +5004,7 @@
         <translation>뷰</translation>
     </message>
     <message>
-        <location line="+1"/>
-        <source>Labelled</source>
-        <translation>라벨 작성</translation>
-    </message>
-    <message>
-        <location line="+1"/>
-        <source>Checked</source>
-        <translation>검토</translation>
-    </message>
-    <message>
-        <location line="+1"/>
+        <location line="+3"/>
         <source>File</source>
         <translation>파일</translation>
     </message>
@@ -5039,12 +5029,7 @@
         <translation>UNSURE로 표시</translation>
     </message>
     <message>
-        <location line="+2"/>
-        <source>Check Label</source>
-        <translation>라벨 검토</translation>
-    </message>
-    <message>
-        <location line="+5"/>
+        <location line="+7"/>
         <source>Next image</source>
         <translation>다음 이미지</translation>
     </message>
@@ -5059,8 +5044,8 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1"/>
-        <location line="+361"/>
+        <location line="+3"/>
+        <location line="+363"/>
         <source>Remove</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5105,52 +5090,7 @@
         <translation type="unfinished">취소</translation>
     </message>
     <message>
-        <location line="+400"/>
-        <source>{user} ✓</source>
-        <translation>{user} ✓</translation>
-    </message>
-    <message>
-        <location line="+10"/>
-        <source>Checked by {user}</source>
-        <translation>{user}이(가) 검토함</translation>
-    </message>
-    <message>
-        <location line="+2"/>
-        <source>An UNSURE image is left out of training, so its label is not checked</source>
-        <translation>UNSURE 이미지는 학습에서 제외되므로 라벨을 검토하지 않습니다</translation>
-    </message>
-    <message>
-        <location line="+2"/>
-        <source>Draw its defect boxes first</source>
-        <translation>먼저 결함 상자를 그리세요</translation>
-    </message>
-    <message>
-        <location line="+2"/>
-        <source>No labeller is recorded for it: label it again first</source>
-        <translation>라벨 작성자가 기록되지 않았습니다. 먼저 라벨을 다시 지정하세요</translation>
-    </message>
-    <message>
-        <location line="+2"/>
-        <source>You labelled this image</source>
-        <translation>이 이미지의 라벨을 직접 지정했습니다</translation>
-    </message>
-    <message>
-        <location line="+10"/>
-        <source>Select the images to check</source>
-        <translation>검토할 이미지를 선택하세요</translation>
-    </message>
-    <message>
-        <location line="+18"/>
-        <source>Checked {count} label(s); {left} left unchecked, {file} first: {reason}</source>
-        <translation>라벨 {count}개를 검토했습니다. {left}개는 검토하지 않았습니다. 첫 번째 {file}: {reason}</translation>
-    </message>
-    <message>
-        <location line="+4"/>
-        <source>Checked {count} label(s)</source>
-        <translation>라벨 {count}개를 검토했습니다</translation>
-    </message>
-    <message>
-        <location line="+63"/>
+        <location line="+587"/>
         <source>{phase} · {percent} % · {left}</source>
         <translation>{phase} · {percent} % · {left}</translation>
     </message>
@@ -5160,12 +5100,62 @@
         <translation>취소됨: AI 모델을 저장하지 않았으며 활성 AI 모델은 바뀌지 않았습니다.</translation>
     </message>
     <message>
-        <location line="-512"/>
+        <location line="-586"/>
         <source>AI model versions</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+4"/>
+        <location line="-210"/>
+        <source>All</source>
+        <translation>전체</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>OK</source>
+        <translation>OK</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>NG</source>
+        <translation>NG</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>UNSURE</source>
+        <translation>UNSURE</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Unchecked</source>
+        <translation>미검토</translation>
+    </message>
+    <message>
+        <location line="+109"/>
+        <source>Show</source>
+        <translation>표시</translation>
+    </message>
+    <message>
+        <location line="+14"/>
+        <source>Labelled</source>
+        <translation>라벨 작성</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Checked</source>
+        <translation>검토</translation>
+    </message>
+    <message>
+        <location line="+13"/>
+        <source>Check Label</source>
+        <translation>라벨 검토</translation>
+    </message>
+    <message>
+        <location line="+11"/>
+        <source>Draw OK Labels to Check</source>
+        <translation>검토할 OK 라벨 추출</translation>
+    </message>
+    <message>
+        <location line="+62"/>
         <source>Version</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5255,12 +5245,117 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+138"/>
+        <location line="+81"/>
+        <source>A second user has checked every NG label and every OK label drawn.</source>
+        <translation>다른 사용자가 모든 NG 라벨과 추출된 모든 OK 라벨을 검토했습니다.</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Nothing left to check</source>
+        <translation>검토할 항목이 남지 않았습니다</translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>No label waits for a check: Draw OK Labels to Check draws the OK labels a second user checks.</source>
+        <translation>검토를 기다리는 라벨이 없습니다. 검토할 OK 라벨 추출을 누르면 다른 사용자가 검토할 OK 라벨을 추출합니다.</translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>Nothing to check yet</source>
+        <translation>아직 검토할 항목이 없습니다</translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>No {label} images</source>
+        <translation>{label} 이미지 없음</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Show All lists every image.</source>
+        <translation>표시에서 전체를 고르면 모든 이미지가 나옵니다.</translation>
+    </message>
+    <message>
+        <location line="+6"/>
+        <source>{user} ✓</source>
+        <translation>{user} ✓</translation>
+    </message>
+    <message>
+        <location line="+19"/>
+        <source>{ng_checked} of {ng} NG labels checked · {ok_checked} of {need} OK labels checked (10 % of {ok}, none drawn yet)</source>
+        <translation>NG 라벨 {ng}개 중 {ng_checked}개 검토 · OK 라벨 {need}개 중 {ok_checked}개 검토({ok}개의 10 %, 아직 추출 안 함)</translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>{ng_checked} of {ng} NG labels checked · {ok_checked} of {need} OK labels checked (10 % of {ok})</source>
+        <translation>NG 라벨 {ng}개 중 {ng_checked}개 검토 · OK 라벨 {need}개 중 {ok_checked}개 검토({ok}개의 10 %)</translation>
+    </message>
+    <message>
+        <location line="+4"/>
+        <source>{line} ✓</source>
+        <translation>{line} ✓</translation>
+    </message>
+    <message>
+        <location line="+11"/>
+        <source>Checked by {user}</source>
+        <translation>{user}이(가) 검토함</translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>An UNSURE image is left out of training, so its label is not checked</source>
+        <translation>UNSURE 이미지는 학습에서 제외되므로 라벨을 검토하지 않습니다</translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>Draw its defect boxes first</source>
+        <translation>먼저 결함 상자를 그리세요</translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>No labeller is recorded for it: label it again first</source>
+        <translation>라벨 작성자가 기록되지 않았습니다. 먼저 라벨을 다시 지정하세요</translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>You labelled this image</source>
+        <translation>이 이미지의 라벨을 직접 지정했습니다</translation>
+    </message>
+    <message>
+        <location line="+10"/>
+        <source>Select the images to check</source>
+        <translation>검토할 이미지를 선택하세요</translation>
+    </message>
+    <message>
+        <location line="+18"/>
+        <source>Checked {count} label(s); {left} left unchecked, {file} first: {reason}</source>
+        <translation>라벨 {count}개를 검토했습니다. {left}개는 검토하지 않았습니다. 첫 번째 {file}: {reason}</translation>
+    </message>
+    <message>
+        <location line="+4"/>
+        <source>Checked {count} label(s)</source>
+        <translation>라벨 {count}개를 검토했습니다</translation>
+    </message>
+    <message>
+        <location line="+21"/>
+        <source>Drew {count} OK label(s) for a second user to check; Show Unchecked lists them</source>
+        <translation>다른 사용자가 검토할 OK 라벨 {count}개를 추출했습니다. 표시에서 미검토를 고르면 목록이 나옵니다</translation>
+    </message>
+    <message>
+        <location line="+4"/>
+        <source>The OK labels drawn are enough: {drawn} of the {needed} needed</source>
+        <translation>추출된 OK 라벨이 충분합니다: 필요한 {needed}개 중 {drawn}개</translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>No OK label to draw yet: add or mark OK images first</source>
+        <translation>아직 추출할 OK 라벨이 없습니다. 먼저 OK 이미지를 추가하거나 표시하세요</translation>
+    </message>
+    <message>
+        <location line="+7"/>
         <source>{type} ×{count}</source>
         <translation>{type} ×{count}</translation>
     </message>
     <message>
-        <location line="+62"/>
+        <location line="+64"/>
         <source>Saved AI model {version} ({seconds} s). Golden board updated.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5270,7 +5365,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+47"/>
+        <location line="+48"/>
         <source>No frozen dataset version of {board_model} yet; training reads only a frozen version&apos;s training set, once its validation set is locked.</source>
         <translation>{board_model}의 고정된 데이터셋 버전이 아직 없습니다. 학습은 검증 세트가 잠긴 고정 버전의 학습 세트만 읽습니다.</translation>
     </message>
@@ -5295,7 +5390,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-209"/>
+        <location line="-278"/>
         <source>Add at least 20 OK boards with Add OK Images… or Import Folder…</source>
         <translation>OK 이미지 추가… 또는 폴더 가져오기…로 OK 보드를 20개 이상 추가하세요</translation>
     </message>
@@ -5305,7 +5400,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+229"/>
+        <location line="+300"/>
         <source>none</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5315,7 +5410,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+23"/>
+        <location line="+24"/>
         <source>No AI model yet</source>
         <translation type="unfinished"></translation>
     </message>

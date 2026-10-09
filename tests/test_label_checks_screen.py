@@ -1,6 +1,7 @@
 """REQ-TRN-004 on screen (Datasets stage, 1 of 4): Training's samples table names each image's labeller and checker,
-and Check Label records a second user's check of the images selected. Under ADR 0002, until sign-in ships, the
-second user is a second name picked in the header."""
+Check Label records a second user's check of the images selected, Draw OK Labels to Check draws 10 % of the OK labels
+of each view for it, and the filter Unchecked lists what a freeze still needs checked. Under ADR 0002, until sign-in
+ships, the second user is a second name picked in the header."""
 
 from __future__ import annotations
 
@@ -9,6 +10,7 @@ from pathlib import Path
 
 from PySide6.QtCore import Qt
 from PySide6.QtTest import QTest
+from PySide6.QtWidgets import QApplication
 from pytestqt.qtbot import QtBot
 
 from aoi.core.imaging import list_images
@@ -28,6 +30,10 @@ def _rows(page: TrainingPage) -> dict[str, list[str]]:
     cols = range(page.samples.columnCount())
     rows = [[cell_text(page.samples, r, c) for c in cols] for r in range(page.samples.rowCount())]
     return {row[-1]: row for row in rows}
+
+
+def _filter(page: TrainingPage, shown: str) -> None:
+    page.filter.setCurrentIndex(page.filter.findData(shown))
 
 
 def _return(page: TrainingPage) -> None:
@@ -107,3 +113,46 @@ def test_req_trn_004_enter_in_the_import_sheet_imports(
     _select(page, ng["id"])
     _return(page)
     assert {e["object_uuid"] for e in ctx.audit_entries(action="label.check")} == {ng["uuid"]}
+
+
+def test_req_trn_004_draw_ok_labels_and_filter_unchecked(qtbot: QtBot, trained_ctx: AppContext) -> None:
+    """Draw OK Labels to Check draws 10 % of the OK labels, rounded up, once, and the line over the table counts the
+    checks a freeze needs; the filter shows All, OK, NG, UNSURE or Unchecked, the NG labels and drawn OK labels not yet
+    checked. Once a second user has checked them all, the filter Unchecked is empty and says so, and the line ends with
+    ✓."""
+    ctx = trained_ctx
+    oks, ngs = ctx.samples(BOARD, "OK"), ctx.samples(BOARD, "NG")
+    ctx.set_label(oks[0]["uuid"], "UNSURE")
+    for s in ngs:
+        ctx.set_boxes(s["uuid"], BOX)
+    page = _page(qtbot, ctx)
+    n_ok, n_ng = len(oks) - 1, len(ngs)
+    need = -(-n_ok // 10)
+    assert page.checks_line.text() == (
+        f"0 of {n_ng} NG labels checked · 0 of {need} OK labels checked (10 % of {n_ok}, none drawn yet)"
+    )
+    shown = {"All": n_ok + n_ng + 1, "OK": n_ok, "NG": n_ng, "UNSURE": 1, "Unchecked": n_ng}
+    for kind, n in shown.items():
+        _filter(page, kind)
+        assert page.samples.rowCount() == n, kind
+    page.btn_draw.click()
+    qtbot.waitUntil(lambda: len(ctx.audit_entries(action="label.draw")) == 1, timeout=10000)
+    qtbot.waitUntil(lambda: page.samples.rowCount() == n_ng + need, timeout=10000)
+    drawn = ctx.label_check_status(BOARD, "Top")["ok_drawn"]
+    assert len(drawn) == need
+    assert page.checks_line.text() == f"0 of {n_ng} NG labels checked · 0 of {need} OK labels checked (10 % of {n_ok})"
+    page.btn_draw.click()
+    qtbot.waitUntil(lambda: "enough" in page.shell.statusBar().currentMessage(), timeout=10000)
+    assert page.shell.statusBar().currentMessage() == f"The OK labels drawn are enough: {need} of the {need} needed"
+    assert len(ctx.audit_entries(action="label.draw")) == 1
+    page.shell.set_user("admin")
+    assert page.filter.currentData() == "Unchecked" and page.samples.rowCount() == n_ng + need
+    page.samples.selectAll()
+    _return(page)
+    assert page.samples.rowCount() == 0 and page.samples_empty.isVisible()
+    assert page.samples_empty.heading.text() == "Nothing left to check"
+    assert page.checks_line.text() == (
+        f"{n_ng} of {n_ng} NG labels checked · {need} of {need} OK labels checked (10 % of {n_ok}) ✓"
+    )
+    assert ctx.labels_ready_to_freeze(BOARD, "Top")
+    QApplication.processEvents()

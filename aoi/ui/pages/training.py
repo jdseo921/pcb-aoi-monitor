@@ -40,6 +40,7 @@ from ...core.sample_import import ImportFile, ImportReport, folder_files
 from ...core.services import AppContext
 from ...defects import names
 from ...errors import AoiError
+from ...hal import VIEWS
 from ...times import to_local
 from .. import theme
 from ..errors import phrase_text
@@ -70,6 +71,13 @@ CHOOSE_ROW = QItemSelectionModel.SelectionFlag.ClearAndSelect | QItemSelectionMo
 NOT_TYPING = Qt.KeyboardModifier.ControlModifier | Qt.KeyboardModifier.AltModifier | Qt.KeyboardModifier.MetaModifier
 EDIT_ON_KEY = QAbstractItemView.EditTrigger.AnyKeyPressed
 FIELDS = (QAbstractSpinBox, QComboBox, QLineEdit)  # a field whose Enter is its own, never Check Label's
+SHOWN = (  # the samples filter of the labels sketch: what each shows, by its key
+    ("All", QT_TRANSLATE_NOOP("TrainingPage", "All")),
+    ("OK", QT_TRANSLATE_NOOP("TrainingPage", "OK")),
+    ("NG", QT_TRANSLATE_NOOP("TrainingPage", "NG")),
+    ("UNSURE", QT_TRANSLATE_NOOP("TrainingPage", "UNSURE")),
+    ("Unchecked", QT_TRANSLATE_NOOP("TrainingPage", "Unchecked")),
+)
 
 
 def _each(ids: list[int], write: Callable[[int], None]) -> Exception | None:
@@ -163,6 +171,10 @@ class TrainingPage(Page):
         ll.addLayout(up)
         self.counts = _Counts()
         ll.addWidget(self.counts)
+        self.checks_line = QLabel()  # the second-user checks a freeze needs (REQ-TRN-004), every view together
+        self.checks_line.setObjectName("muted")
+        self.checks_line.setWordWrap(True)
+        ll.addWidget(self.checks_line)
         self.tip = QLabel(self.tr("Training needs 20 OK images or more in a dataset version's training set"))
         self.tip.setObjectName("muted")
         self.tip.setWordWrap(True)
@@ -172,6 +184,15 @@ class TrainingPage(Page):
         self._listed: tuple[str, str] | None = None  # the status line naming the sheet's list, and once it is gone
         self._left = False  # the user who started the import that runs has signed out: its sheet closes as it ends
         self._by = ""  # the user who pressed Import: only they get the dialog of an error that stops it (#206)
+        show = QHBoxLayout()  # the labels sketch's filter, Unchecked the labels a freeze still needs checked
+        show.addWidget(QLabel(self.tr("Show")))
+        self.filter = QComboBox()
+        for key, text in SHOWN:
+            self.filter.addItem(self.tr(text), key)
+        self.filter.currentIndexChanged.connect(self._fill_samples)
+        show.addWidget(self.filter)
+        show.addStretch(1)
+        ll.addLayout(show)
         self.samples = make_table(
             [
                 self.tr("ID"),
@@ -203,6 +224,8 @@ class TrainingPage(Page):
         shell.installEventFilter(self)  # the keys typed in a drop-down list or the import sheet reach the window last
         act = QHBoxLayout()
         act.addWidget(button(self.tr("Set Reference"), slot=self._set_reference))
+        self.btn_draw = button(self.tr("Draw OK Labels to Check"), slot=self._draw)
+        act.addWidget(self.btn_draw)
         act.addWidget(button(self.tr("Remove"), "danger", self._remove))  # red, last in its row, never the default
         ll.addLayout(act)
         split.addWidget(left)
@@ -210,6 +233,8 @@ class TrainingPage(Page):
         # Middle: the label editor, the selected image with its defect boxes (REQ-TRN-003) ----------------------
         self.shown: dict[int, dict[str, Any]] = {}  # the board model's samples, by id; the filter picks the table's
         self._boxes: dict[int, list[str]] = {}  # each NG sample's box types, by id
+        self._statuses: list[dict[str, Any]] = []  # label_check_status of each view with an OK or NG label
+        self._to_check: set[str] = set()  # the samples whose label a freeze still needs checked: the filter Unchecked
         self.editor = LabelEditor(self, self.tr("Select a sample to preview"))
         self.editor.undone.connect(self._show_samples)
         self.editor.stored.connect(self._show_types)
@@ -605,10 +630,16 @@ class TrainingPage(Page):
         self._sync_check()
 
     def _fill_samples(self) -> None:
-        """The samples in the table, with the rows selected before selected again; the editor follows once."""
+        """The samples the filter shows, in the table, with the rows selected before selected again; the editor
+        follows once. An empty list says what the filter looks for, and what to do."""
         if not self.board_model:
             return
-        s = list(self.shown.values())
+        shown = self.filter.currentData()
+        s = [
+            r
+            for r in self.shown.values()
+            if shown == "All" or r["label"] == shown or (shown == "Unchecked" and r["uuid"] in self._to_check)
+        ]
         kept = set(self._selected_ids())
         self.samples.selectionModel().blockSignals(True)  # the editor follows once the rows are selected again
         fill_table(
@@ -632,16 +663,56 @@ class TrainingPage(Page):
         self._select(lambda r: r["id"] in kept)
         if s:
             self.samples_empty.hide()
-        else:
+        elif not self.shown:
             what = self.tr("Add at least 20 OK boards with Add OK Images… or Import Folder…")
             heading = self.tr("No samples for {board_model} yet").format(board_model=self.board_model)
             self.samples_empty.show_state(heading, what, self.tr("Import Folder…"), self.import_folder)
+        elif shown == "Unchecked" and self._statuses and all(st["ready"] for st in self._statuses):
+            done = self.tr("A second user has checked every NG label and every OK label drawn.")
+            self.samples_empty.show_state(self.tr("Nothing left to check"), done)
+        elif shown == "Unchecked":
+            draw = self.tr(
+                "No label waits for a check: Draw OK Labels to Check draws the OK labels a second user checks."
+            )
+            self.samples_empty.show_state(self.tr("Nothing to check yet"), draw)
+        else:
+            heading = self.tr("No {label} images").format(label=shown)
+            self.samples_empty.show_state(heading, self.tr("Show All lists every image."))
 
     def _checker(self, sample: dict[str, Any]) -> str:
         """The Checked column: who checked the sample's current label (labels sketch), else "—"."""
         if sample["checked_by"] is None:
             return "—"
         return self.tr("{user} ✓").format(user=sample["checked_by_name"] or "—")
+
+    def _check_status(self) -> None:
+        """The second-user checks of each view with an OK or NG label (REQ-TRN-004), and the labels still to check."""
+        views = [v for v in VIEWS if any(r["side"] == v and r["label"] in ("OK", "NG") for r in self.shown.values())]
+        self._statuses = [self.ctx.label_check_status(self.board_model or "", v) for v in views]
+        self._to_check = {u for st in self._statuses for u in st["ng_unchecked"]}
+        self._to_check |= {u for st in self._statuses for u in st["ok_drawn"] if u not in st["ok_checked"]}
+
+    def _show_checks(self) -> None:
+        """The line over the table: the NG labels checked and the OK labels checked of the 10 % a freeze needs, every
+        view together, with ✓ once every view is ready to freeze; none without an OK or NG label."""
+        st = self._statuses
+        self.checks_line.setVisible(bool(st))
+        ng, need, ok = (sum(x[k] for x in st) for k in ("ng", "ok_needed", "ok"))
+        ng_checked = ng - sum(len(x["ng_unchecked"]) for x in st)
+        ok_checked = sum(min(len(x["ok_checked"]), x["ok_needed"]) for x in st)
+        if need and not any(x["ok_drawn"] for x in st):
+            line = self.tr(
+                "{ng_checked} of {ng} NG labels checked · {ok_checked} of {need} OK labels checked (10 % of {ok},"
+                " none drawn yet)"
+            )
+        else:
+            line = self.tr(
+                "{ng_checked} of {ng} NG labels checked · {ok_checked} of {need} OK labels checked (10 % of {ok})"
+            )
+        text = line.format(ng_checked=ng_checked, ng=ng, ok_checked=ok_checked, need=need, ok=ok)
+        if st and all(x["ready"] for x in st):
+            text = self.tr("{line} ✓").format(line=text)
+        self.checks_line.setText(text)
 
     def _picked(self) -> list[dict[str, Any]]:
         """The samples selected in the table, topmost first."""
@@ -695,6 +766,32 @@ class TrainingPage(Page):
 
         self.editor.write(done, _each, list(can), lambda i: self.ctx.check_label(can[i]))
 
+    def _draw(self) -> None:
+        """Draw OK Labels to Check: in each view with an OK label, draw at random the OK labels a second user checks,
+        10 % of them rounded up, on a pool thread; the filter then shows Unchecked (REQ-TRN-004)."""
+        if (board_model := self.checked_board_model()) is None:
+            return
+        views = [v for v in VIEWS if any(r["side"] == v and r["label"] == "OK" for r in self.shown.values())]
+
+        def draw() -> list[dict[str, Any]]:
+            return [d for v in views if (d := self.ctx.draw_ok_checks(board_model, v)) is not None]
+
+        self.run_in_background(draw, on_result=self._drawn)
+
+    def _drawn(self, draws: list[dict[str, Any]]) -> None:
+        self.refresh()
+        need = sum(st["ok_needed"] for st in self._statuses)
+        if draws:
+            self.filter.setCurrentIndex(self.filter.findData("Unchecked"))
+            line = self.tr("Drew {count} OK label(s) for a second user to check; Show Unchecked lists them")
+            self.shell.status(line.format(count=sum(len(d["sample_uuids"]) for d in draws)))
+        elif need:
+            drawn = sum(min(len(st["ok_drawn"]), st["ok_needed"]) for st in self._statuses)
+            line = self.tr("The OK labels drawn are enough: {drawn} of the {needed} needed")
+            self.shell.status(line.format(drawn=drawn, needed=need))
+        else:
+            self.shell.status(self.tr("No OK label to draw yet: add or mark OK images first"))
+
     def _types(self, kinds: list[str], given: str | None) -> str:
         """The Defect type column: the types of an image's boxes, each once with its count ("Solder Bridge ×2,
         Missing Component", the sketch's Defect types), else the type given at import, if any."""
@@ -705,7 +802,7 @@ class TrainingPage(Page):
 
     def _show_types(self, uuid: str, boxes: list[DefectBox]) -> None:
         """The boxes of a sample just stored: its row's Defect type, with no read of the database, and its label row
-        now the user's own, with no check (REQ-TRN-004), which Check Label follows."""
+        now the user's own, with no check (REQ-TRN-004), which the checks line and Check Label follow."""
         for s in self.shown.values():
             if s["uuid"] == uuid:
                 self._boxes[s["id"]] = [b.dct_type for b in boxes]
@@ -717,6 +814,8 @@ class TrainingPage(Page):
                 cell_item(self.samples, row, 2).setText(self._types(self._boxes[s["id"]], s["defect_type"]))
                 cell_item(self.samples, row, 4).setText(s["labelled_by_name"] or "—")
                 cell_item(self.samples, row, 5).setText(self._checker(s))
+        self._check_status()
+        self._show_checks()
         self._sync_check()
 
     # --- training ---------------------------------------------------------------
@@ -782,6 +881,7 @@ class TrainingPage(Page):
         idle = self._bg is None
         for a in self.adds:
             a.setEnabled(idle)  # its button and its key
+        self.btn_draw.setEnabled(idle)  # a draw would stop the import that runs: one job of the page's at a time
         self.samples_empty.link.setEnabled(idle)
         self.btn_train.setEnabled(idle and self.worker is None and self.dataset_version.currentData() is not None)
 
@@ -853,6 +953,7 @@ class TrainingPage(Page):
             self.models.setRowCount(0)
             self.models_note.hide()
             self.counts.set_line(lambda _name: "", "")
+            self.checks_line.hide()
             self.tip.hide()
             self.samples_empty.show_state(*self.no_board_model())
             self.models_empty.hide()
@@ -860,12 +961,14 @@ class TrainingPage(Page):
         s = self.ctx.samples(self.board_model)
         self.shown = {r["id"]: r for r in s}
         self._boxes = {r["id"]: [b["dct_type"] for b in self.ctx.boxes(r["uuid"])] for r in s if r["label"] == "NG"}
+        self._check_status()
         self._fill_samples()
         n_ok, n_ng = (sum(r["label"] == label for r in s) for label in ("OK", "NG"))  # UNSURE counts as neither
         ref = self.ctx.reference_image(self.board_model)
         reference = Path(ref).name if ref else self.tr("none")
         counts = self.tr("{ok} OK · {ng} NG · reference: {reference}")
         self.counts.set_line(lambda name: counts.format(ok=n_ok, ng=n_ng, reference=name), reference)
+        self._show_checks()
         self.tip.setVisible(n_ok < 20)
         ms = self.ctx.models(self.board_model)
         rows, tips = [], []

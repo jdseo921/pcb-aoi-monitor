@@ -203,7 +203,12 @@ draw's seed, count and labels are stored and audited, and a draw adds to earlier
 check a label you made (AOI-TRN-033). An NG image needs a defect box before its label is checked, an UNSURE label is
 not checked, and a label from before this version, with no labeller, is labelled again first (AOI-TRN-034). A relabel
 needs a new check. Until sign-in arrives in version 1.0, the second user is the second name picked in the user list,
-which the validation report states. No screen draws or checks labels yet: the services do, and the screen comes later.
+which the validation report states. On Training, the samples table names each image's labeller (Labelled) and the
+user who checked its label (Checked), and the line over it counts the checks a freeze still needs. Press **Draw OK
+Labels to Check** to draw the OK labels, then pick **Unchecked** under Show: it lists every NG label and drawn OK label
+not checked yet. The second user signs in with Switch User, selects the images and presses **Check Label** or Enter; it
+checks each selected label they can check and says how many it left and why. It is off, its tooltip saying why, for an
+image you labelled yourself; Enter typed in a field or a drop-down list stays the field's.
 
 **Two labellers agree before a customer validation.** Pick 100 images of the board model, each labelled OK or NG, as a
 calibration set. Two Engineers each label every image of the set blind, OK, or NG with one of the 33 defect types, once
@@ -242,7 +247,7 @@ which says why. When an engagement ends, an Admin shreds the store: its key goes
 models and Golden boards; nothing of it opens afterwards, a backup included, once the sheet is destroyed. These are
 service calls until the Settings screen comes (ADR 0010).
 
-(to be written: the check and the blind labels on screen, the Datasets tab, locking the validation set)
+(to be written: the blind labels on screen, the Datasets tab, locking the validation set)
 
 ## 4. Training and AI model versions
 
