@@ -216,13 +216,22 @@ class ModelTestPage(Page):
         def progress(done: int, total: int) -> None:
             report((done, total))  # the worker's emit, bound below before the job starts
 
-        if dataset:  # its locked validation set, labelled as frozen
-            w = Worker(self.ctx.test_dataset, dataset, progress=progress)
-        else:
-            w = Worker(self.ctx.batch_test, bm, folder, progress=progress)
-        report = w.signals.progress.emit  # the job holds this emit, never the worker or its signals (#132)
+        def on_row(row: dict[str, Any]) -> None:  # each board as it is judged: the table grows (REQ-TST-006)
+            report(("row", row))
 
-        def on_progress(a: tuple[int, int]) -> None:
+        if dataset:  # its locked validation set, labelled as frozen
+            w = Worker(self.ctx.test_dataset, dataset, progress=progress, on_row=on_row)
+        else:
+            w = Worker(self.ctx.batch_test, bm, folder, progress=progress, on_row=on_row)
+        report = w.signals.progress.emit  # the job holds this emit, never the worker or its signals (#132)
+        live: list[dict[str, Any]] = []
+
+        def on_progress(a: tuple[Any, ...]) -> None:
+            if a[0] == "row":
+                if bm == self.board_model:  # never under another board model's name (#180)
+                    live.append(a[1])
+                    self._fill_rows(live)
+                return
             self.bar.setMaximum(a[1])
             self.bar.setValue(a[0])
 
@@ -262,12 +271,16 @@ class ModelTestPage(Page):
         self.confusion.setText(
             counts.format(labelled=m["labelled"], images=m["samples"], tp=m["TP"], fn=m["FN"], fp=m["FP"], tn=m["TN"])
         )
-        rows = [
-            [Path(r["image"]).name, r["gt"], theme.verdict_label(r["ai_result"]), r["score"], self._matches(r)]
-            for r in self.rows
-        ]
-        colors = [theme.NG_COLOR if r["pass_fail"] == "FAIL" else None for r in self.rows]
-        fill_table(self.table, rows, colors, [r["image"] for r in self.rows])
+        self._fill_rows(self.rows)
+
+    def _fill_rows(self, rows: list[dict[str, Any]]) -> None:
+        """The results table: Image, Label, Verdict, AI score and whether the verdict matches the label, a row that
+        differs in red (REQ-TST-003); while a run goes, the rows judged so far (REQ-TST-006)."""
+        self.empty.hide()
+        cells = [[Path(r["image"]).name, r["gt"], theme.verdict_label(r["ai_result"]), r["score"], self._matches(r)]
+                 for r in rows]  # fmt: skip
+        colors = [theme.NG_COLOR if r["pass_fail"] == "FAIL" else None for r in rows]
+        fill_table(self.table, cells, colors, [r["image"] for r in rows])
 
     def _matches(self, r: dict[str, Any]) -> str:
         """Whether the verdict matches the label, translated; a "?" label from before #207 (PASS) reads No label."""
@@ -280,6 +293,15 @@ class ModelTestPage(Page):
             return  # a row is judged under the board model of its run (#180), never the header's after a switch
         path = cell_item(self.table, rows[0].row(), 0).toolTip()
         self._clear_preview()  # the row before never stands beside this one, even when it cannot be inspected (#182)
+        row = next((r for r in self.rows if r["image"] == path), None)
+        if row is not None and row.get("overlay"):  # the overlay stored as it was judged: shown, never judged again
+            self._drop_preview()
+            self.run_in_background(
+                self.ctx.load_image, row["overlay"],
+                on_result=lambda img: self._show_overlay(row, img, bm), busy=self.busy,
+                on_error=lambda e: self.not_inspected(self.preview_verdict, Path(path).name, e, big=False),
+            )  # fmt: skip
+            return
         if (changed := self._judged_now()) is not None:  # never judged by what did not judge its row (#250)
             self._drop_preview()  # nor the row before, still being inspected
             self._refuse_preview(path, changed)
@@ -376,7 +398,15 @@ class ModelTestPage(Page):
         self._note(self._judged_now() if self.rows else None)
 
     def _note(self, changed: dict[str, object] | None) -> None:
-        if changed is not None:
+        if changed is not None and any(r.get("overlay") for r in self.rows):  # each row shows its stored overlay
+            note = self.tr(
+                "These results were judged by {run_model}, recipe revision {run_recipe}, {run_golden} and {run_scale};"
+                " {board_model} now uses {model}, recipe revision {recipe}, {golden} and {scale}. Each row's preview"
+                " shows it as the run judged it; Run Test Again tests the run's source with what is in use now."
+            )
+            shown = {k: phrase_text(v) if isinstance(v, str) else v for k, v in changed.items()}
+            self.run_note.setText(note.format(**shown))
+        elif changed is not None:
             note = self.tr(
                 "These results were judged by {run_model}, recipe revision {run_recipe}, {run_golden} and {run_scale};"
                 " {board_model} now uses {model}, recipe revision {recipe}, {golden} and {scale}. Rows are not"
@@ -385,6 +415,15 @@ class ModelTestPage(Page):
             shown = {k: phrase_text(v) if isinstance(v, str) else v for k, v in changed.items()}  # phrases translated
             self.run_note.setText(note.format(**shown))
         self.run_note.setVisible(changed is not None)
+
+    def _show_overlay(self, row: dict[str, Any], image: Any, board_model: str) -> None:
+        """A row's stored overlay with its verdict, as the run judged it (REQ-TST-003): what changed since judges none
+        of it, so it is never refused; a row of a run no longer shown is dropped."""
+        if board_model != self.run_board_model or board_model != self.board_model or row not in self.rows:
+            return
+        self.preview_verdict.setText(theme.verdict_label(row["ai_result"]))
+        self.preview_verdict.setStyleSheet(theme.verdict_style(row["ai_result"], big=False))
+        self.view.set_image(image)
 
     def _show_preview(self, path: str, res: InspectionResult, board_model: str, run: JudgedBy | None) -> None:
         if board_model != self.run_board_model or board_model != self.board_model:
@@ -426,7 +465,7 @@ class ModelTestPage(Page):
         # so, and the pane drops the row previewed before; a row still selected is refused, as selecting it now would be
         changed = self._judged_now() if self.rows else None
         self._note(changed)
-        if changed is not None:
+        if changed is not None and not any(r.get("overlay") for r in self.rows):  # a stored overlay is never refused
             self._drop_preview()
             self._clear_preview()
             if sel := self.table.selectionModel().selectedRows():

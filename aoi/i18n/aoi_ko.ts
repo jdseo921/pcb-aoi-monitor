@@ -4343,25 +4343,25 @@
     <name>ModelTestPage</name>
     <message>
         <location filename="../ui/pages/model_test.py" line="+40"/>
-        <location line="+351"/>
+        <location line="+390"/>
         <source>Select Test Folder…</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-350"/>
-        <location line="+134"/>
-        <location line="+188"/>
+        <location line="-389"/>
+        <location line="+143"/>
+        <location line="+218"/>
         <source>Run Test</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-320"/>
-        <location line="+354"/>
+        <location line="-359"/>
+        <location line="+393"/>
         <source>Export CSV</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-353"/>
+        <location line="-392"/>
         <source>Export Report</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4407,12 +4407,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+238"/>
+        <location line="+268"/>
         <source>These results were judged by {run_model}, recipe revision {run_recipe}, {run_golden} and {run_scale}; {board_model} now uses {model}, recipe revision {recipe}, {golden} and {scale}. Rows are not previewed; select one for Run Test Again, which tests the run&apos;s folder with what is in use now.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-338"/>
+        <location line="-368"/>
         <source>Matches label</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4483,7 +4483,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+21"/>
+        <location line="+30"/>
         <source>Run Test Again</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4498,12 +4498,17 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+105"/>
+        <location line="+118"/>
         <source>Run Test Again ›</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+77"/>
+        <location line="+16"/>
+        <source>These results were judged by {run_model}, recipe revision {run_recipe}, {run_golden} and {run_scale}; {board_model} now uses {model}, recipe revision {recipe}, {golden} and {scale}. Each row&apos;s preview shows it as the run judged it; Run Test Again tests the run&apos;s source with what is in use now.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+78"/>
         <source>No AI model for {board_model} yet</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4707,7 +4712,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/model_test.py" line="-434"/>
+        <location filename="../ui/pages/model_test.py" line="-473"/>
         <source>AI Model Test</source>
         <translation type="unfinished"></translation>
     </message>

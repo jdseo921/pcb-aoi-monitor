@@ -421,6 +421,8 @@ calls** (OK boards called NG, of the OK boards), then Recall, Precision and Accu
 50", with its exact one-sided 95 % bound under it ("95 % upper bound 5.8 %"): a rate is never a percent alone. A
 validation on a dataset version also stores recall per defect type, by the type each image was frozen with.
 
+**Results as they come.** The table grows as each board is judged, so the first row shows within a moment of Run Test. Selecting a row shows the overlay kept as the run judged it, with its verdict: it is never judged again, so a retrain, an activation or a new recipe since changes nothing it shows; the line above the table then names what judged the run and what is in use now, and Run Test Again tests the run's source with what is in use. A preview from a kept overlay leaves Compare's Use Last Inspected as it was. A run stored before this release keeps no overlay; its rows are judged again, as below.
+
 (to be written: exports in full, the validation report)
 
 Each validation run is stored with a UUID and the UUID of the AI model active when it ran. **Export CSV** writes one row
