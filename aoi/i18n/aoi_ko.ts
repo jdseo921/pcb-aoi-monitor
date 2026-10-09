@@ -606,7 +606,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+210"/>
+        <location line="+213"/>
         <location line="+118"/>
         <source>Importing samples</source>
         <translation type="unfinished"></translation>
@@ -822,7 +822,62 @@
         <translation>OK 이미지가 {ok}개이며, 검증 세트에는 {least}개가 들어갑니다</translation>
     </message>
     <message>
-        <location line="+30"/>
+        <location line="+23"/>
+        <source>Creating a customer&apos;s dataset store</source>
+        <translation>고객의 데이터셋 저장소 만들기</translation>
+    </message>
+    <message>
+        <location line="+10"/>
+        <source>no customer is given</source>
+        <translation>고객이 지정되지 않았습니다</translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>the customer has a store already, and has one at a time</source>
+        <translation>고객에게 이미 저장소가 있으며, 고객당 한 번에 하나만 둘 수 있습니다</translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>a new customer</source>
+        <translation>새 고객</translation>
+    </message>
+    <message>
+        <location line="+9"/>
+        <source>Restoring a dataset store&apos;s key</source>
+        <translation>데이터셋 저장소의 키 복원</translation>
+    </message>
+    <message>
+        <location line="+9"/>
+        <source>the key typed is not this store&apos;s key; check each group of four</source>
+        <translation>입력한 키가 이 저장소의 키가 아닙니다. 네 글자씩 묶인 각 그룹을 확인하십시오</translation>
+    </message>
+    <message>
+        <location line="+19"/>
+        <source>the workspace holds no such store, or it is shredded</source>
+        <translation>작업 공간에 그런 저장소가 없거나 파기되었습니다</translation>
+    </message>
+    <message>
+        <location line="+8"/>
+        <source>this station&apos;s key store refused the key ({reason})</source>
+        <translation>이 스테이션의 키 저장소가 키를 거부했습니다({reason})</translation>
+    </message>
+    <message>
+        <location line="+12"/>
+        <source>this station&apos;s key store could not be read ({reason})</source>
+        <translation>이 스테이션의 키 저장소를 읽을 수 없습니다({reason})</translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>this station holds no key for it</source>
+        <translation>이 스테이션에 그 키가 없습니다</translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>the key this station holds is not its key</source>
+        <translation>이 스테이션에 있는 키는 그 저장소의 키가 아닙니다</translation>
+    </message>
+    <message>
+        <location line="+14"/>
         <source>the board revision {revision} is not 1 to 16 letters and digits</source>
         <translation>보드 리비전 {revision}이(가) 1~16자의 영문자와 숫자가 아닙니다</translation>
     </message>
@@ -862,7 +917,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1660"/>
+        <location line="-1746"/>
         <source>no defect type was given</source>
         <translation>결함 유형이 지정되지 않았습니다</translation>
     </message>
@@ -877,7 +932,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+531"/>
+        <location line="+534"/>
         <source>its UUID {found} is not {uuid}, as in the AI model registry</source>
         <translation type="unfinished"></translation>
     </message>
@@ -897,7 +952,7 @@
         <translation>{label}(으)로 다시 라벨링</translation>
     </message>
     <message>
-        <location line="+314"/>
+        <location line="+397"/>
         <source>no agreement check of the board model holds images of this view</source>
         <translation>이 보드 모델의 일치도 검사 중 이 뷰의 이미지를 담은 것이 없습니다</translation>
     </message>
@@ -1561,12 +1616,12 @@
     </message>
     <message>
         <location line="+8"/>
-        <location line="+146"/>
+        <location line="+156"/>
         <source>View not known</source>
         <translation>알 수 없는 뷰</translation>
     </message>
     <message>
-        <location line="-145"/>
+        <location line="-155"/>
         <source>{path} was not imported: its view &quot;{view}&quot; is not one of {views}.</source>
         <translation>{path}을(를) 가져오지 않았습니다. 뷰 &quot;{view}&quot;는 {views} 중 하나가 아닙니다.</translation>
     </message>
@@ -1652,6 +1707,21 @@
     </message>
     <message>
         <location line="+4"/>
+        <source>Dataset store not opened</source>
+        <translation>데이터셋 저장소를 열지 못함</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>The dataset store of {store} was not opened: {reason}.</source>
+        <translation>{store}의 데이터셋 저장소를 열지 못했습니다: {reason}.</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>An Admin types the store&apos;s recovery sheet into this station when its key is missing or wrong; a file changed outside the app comes back only from a backup. Nothing was changed.</source>
+        <translation>키가 없거나 잘못된 경우 관리자가 이 스테이션에 저장소의 복구 시트를 입력합니다. 앱 밖에서 변경된 파일은 백업에서만 되돌릴 수 있습니다. 아무것도 변경되지 않았습니다.</translation>
+    </message>
+    <message>
+        <location line="+8"/>
         <source>Dataset not frozen</source>
         <translation>데이터셋이 동결되지 않음</translation>
     </message>
@@ -1887,6 +1957,21 @@
     </message>
     <message>
         <location line="+8"/>
+        <source>Dataset store not changed</source>
+        <translation>데이터셋 저장소를 변경하지 않음</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>The dataset store of {store} was not changed: {reason}.</source>
+        <translation>{store}의 데이터셋 저장소를 변경하지 않았습니다: {reason}.</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Do what the reason says, then try again.</source>
+        <translation>이유에 적힌 대로 한 뒤 다시 시도하십시오.</translation>
+    </message>
+    <message>
+        <location line="+4"/>
         <source>AI model, recipe, scale or Golden board changed since the run</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2291,7 +2376,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-949"/>
+        <location line="-965"/>
         <source>Board judged NG</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2381,7 +2466,7 @@
         <translation>{name}이(가) 동결되지 않았습니다: 검토할 OK 라벨 {needed}개({ok}개의 10 %) 중 {checked}개만 검토되었습니다.</translation>
     </message>
     <message>
-        <location line="+211"/>
+        <location line="+227"/>
         <source>ROI thresholds refused</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4669,7 +4754,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/services.py" line="-1834"/>
+        <location filename="../core/services.py" line="-1920"/>
         <source>Aligning {count} images to the reference board</source>
         <translation type="unfinished"></translation>
     </message>

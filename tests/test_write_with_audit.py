@@ -25,6 +25,7 @@ from aoi.ui.pages.base import cell_text
 from tests.test_req_done_in_v01 import BOARD, _window
 from tests.test_roles_and_audit import (
     WRITES,
+    a_store,
     calibration_samples,
     calibration_set,
     frozen_for_lock,
@@ -92,6 +93,7 @@ SETUP: dict[str, Callable[[AppContext], object]] = {
     "run_agreement_check": _labelled_set,
     "freeze_dataset": ready_to_freeze,
     "lock_validation_set": frozen_for_lock,
+    "restore_store_key": lambda ctx: a_store(ctx, "Gamma"),
 }
 
 

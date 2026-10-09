@@ -72,9 +72,10 @@ def test_req_trn_017_recovery_sheet_and_check_value() -> None:
     assert crypto.key_from_sheet(printed[:-1]) is None and crypto.key_from_sheet("1" * 52) is None
 
 
-def test_req_trn_017_memory_key_store() -> None:
+def test_req_trn_017_memory_key_store(monkeypatch: pytest.MonkeyPatch) -> None:
     """The key store's three calls: a secret written reads back, a second write replaces it, and a deleted one reads
-    None; deleting it again says there was nothing."""
+    None; deleting it again says there was nothing. Off Windows the app's own key store is the one in memory."""
+    monkeypatch.undo()  # the suite's key store for each test (conftest's `keys`) set aside
     keys = credentials.MemoryCredentials()
     name = credentials.STORE_PREFIX + STORE
     assert keys.read(name) is None

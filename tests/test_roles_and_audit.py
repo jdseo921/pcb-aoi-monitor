@@ -16,10 +16,13 @@ from PySide6.QtWidgets import QInputDialog, QMessageBox
 from pytestqt.qtbot import QtBot
 
 from aoi.config import Settings, default_workspace
+from aoi.core import crypto
 from aoi.core.labels import DefectBox
 from aoi.core.recipe import Recipe
 from aoi.core.sample_import import ImportFile, ImportReport
 from aoi.core.services import REQUIRED_ROLE, ROLES, AppContext, CsvFile
+from aoi.data import credentials
+from aoi.data.db import new_uuid
 from aoi.errors import AoiError
 from aoi.ui.main_window import MainWindow
 from aoi.ui.pages.base import role_text
@@ -54,6 +57,23 @@ def labelled_blind(ctx: AppContext) -> str:
         for user in users[: 2 if n else 1]:
             if image not in ctx.db.blind_labels(uid, user):
                 ctx.db.add_row("blind_labels", set_uuid=uid, sample_uuid=image, label="OK", labelled_by=user)
+    return uid
+
+
+def key_of(ctx: AppContext, store_uuid: str) -> bytes:
+    """The key the key store holds for a store."""
+    return ctx.credentials.read(credentials.STORE_PREFIX + store_uuid) or b""
+
+
+def a_store(ctx: AppContext, customer: str) -> str:
+    """The UUID of `customer`'s dataset store, its row and key stored through the database and the key store when
+    missing, so that only the call under test is role-checked and audited."""
+    if found := [s for s in ctx.db.stores() if s["customer"] == customer and not s["shredded_at"]]:
+        return str(found[0]["uuid"])
+    (key, key_id), uid, who = crypto.new_key(), new_uuid(), str(ctx.db.user_uuid("admin"))
+    ctx.db.add_store({"uuid": uid, "customer": customer, "key_id": key_id.hex(), "check_value": crypto.check_value(key),
+                      "created_by": who, "created_at": "2026-10-09T00:00:00+00:00"})  # fmt: skip
+    ctx.credentials.write(credentials.STORE_PREFIX + uid, key)
     return uid
 
 
@@ -142,6 +162,11 @@ WRITES: dict[str, tuple[str, Callable[[AppContext, Path, Path], Any]]] = {
         lambda ctx, data, tmp: ctx.freeze_dataset(ready_to_freeze(ctx), "Top", "R1", "Acme Electronics"),
     ),
     "lock_validation_set": ("dataset.lock", lambda ctx, data, tmp: ctx.lock_validation_set(frozen_for_lock(ctx), 1)),
+    "create_store": ("store.create", lambda ctx, data, tmp: ctx.create_store("Beta Boards")),  # S38, REQ-TRN-017
+    "restore_store_key": (
+        "store.restore",
+        lambda ctx, data, tmp: ctx.restore_store_key(uid := a_store(ctx, "Gamma"), crypto.sheet(key_of(ctx, uid))),
+    ),
     "train": ("model.train", lambda ctx, data, tmp: ctx.train("TINY", epochs=1, image_size=32)),
     "activate_model": ("model.activate", lambda ctx, data, tmp: ctx.activate_model(ctx.models("TINY")[-1]["id"])),
     "save_recipe": ("recipe.save", lambda ctx, data, tmp: ctx.save_recipe(Recipe(board_model="TINY"))),
@@ -185,12 +210,13 @@ UNCHECKED = {
     "checks_for_many", "inspection_result", "inspection", "judged_reference", "users", "board_status", "start_user",
     "golden_board_unreadable", "engine_is_current", "calibrated_threshold", "calibration_of", "scale", "label_history",
     "boxes", "box_history", "unsure_samples", "label_check_status", "labels_ready_to_freeze", "calibration_sets",
-    "agreement_checks", "datasets", "dataset_items", "verify_dataset", "validation_split",
+    "agreement_checks", "datasets", "dataset_items", "verify_dataset", "validation_split", "stores", "store_of",
 }  # fmt: skip
 CALLS = {**{name: call for name, (_, call) in WRITES.items()}, **CHECKED_READS}
 # The lowest role allowed each call, copied from the write table of docs/ARCHITECTURE.md §5 and REQ-CMP-005, never read
 # from the decorators under test (#181): built from REQUIRED_ROLE, a lowered @requires refused fewer roles and passed.
 EXPECTED_ROLE = {name: "Engineer" for name in CALLS} | {"add_user": "Admin", "save_settings": "Admin"}
+EXPECTED_ROLE |= {"create_store": "Admin", "restore_store_key": "Admin"}  # ADR 0010
 EXPECTED_ROLE["export_board_image"] = "Operator"  # Save Image… (F9): every role keeps it, audited (#241, REQ-INSP-005)
 REFUSED = [(name, role) for name in CALLS for role in ROLES[: ROLES.index(EXPECTED_ROLE[name])]]
 

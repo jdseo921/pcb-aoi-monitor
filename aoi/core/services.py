@@ -30,7 +30,7 @@ import numpy as np
 from .. import defects as taxonomy
 from .. import logging_setup
 from ..config import Settings, resolve_device
-from ..data import atomic
+from ..data import atomic, credentials
 from ..data.db import Database, DbError, is_busy, new_uuid
 from ..data.errors import WorkspaceError
 from ..data.paths import inside, one_folder_name, resolve, to_stored
@@ -38,7 +38,7 @@ from ..data.workspace_lock import WorkspaceLock
 from ..errors import QT_TRANSLATE_NOOP, AoiError, Phrase, joined
 from ..hal import VIEWS
 from ..times import local_date, now_utc
-from . import anomaly, datasets, imaging, labels
+from . import anomaly, crypto, datasets, imaging, labels
 from .compare import Region, changed_regions
 from .imaging import align_to_reference, encode_image, list_images, load_image, load_image_sha256, save_image
 from .inspector import NG, OK, WARN, AiEvidence, InspectionResult, Inspector, JudgedBy, ai_check, draw_overlay, re_grade
@@ -229,8 +229,11 @@ def _remove(files: list[Path]) -> None:
 
 
 class AppContext:
-    def __init__(self, settings: Settings | None = None) -> None:
+    def __init__(self, settings: Settings | None = None, key_store: credentials.Credentials | None = None) -> None:
         self.settings = settings or Settings.load()
+        # each customer's dataset store key (REQ-TRN-017): Credential Manager on a station, never the workspace
+        self.credentials = key_store if key_store is not None else credentials.default()
+        self._keys: dict[str, bytes] = {}  # store UUID -> its key, read once and checked against its check value
         try:
             self.settings.ensure_dirs()
         except OSError as e:  # a drive not connected, a file where the folder must go (REQ-SET-019)
@@ -1622,6 +1625,89 @@ class AppContext:
         """A frozen version's split as the database holds it: uuid, dataset_uuid, seed, locked_by, locked_at, and the
         dataset item UUIDs of its "train" and "validation" parts; None while it is not split."""
         return self.db.validation_split(dataset_uuid)
+
+    # --- customer dataset stores (REQ-TRN-017; S38; ADR 0010) ---------------------------------------------------
+    @requires("Admin", QT_TRANSLATE_NOOP("Errors", "Creating a customer's dataset store"))
+    @transactional
+    def create_store(self, customer: str) -> dict[str, Any]:
+        """A new encrypted dataset store for `customer`: a random 256-bit key, saved in the key store under the store's
+        UUID (Windows Credential Manager on a station) and never in the workspace, with its key id and check value in
+        `dataset_stores`; audited as `store.create` (no key). Returns the store with `sheet`, the key as the recovery
+        sheet prints it: the caller shows or prints it once, for the person who holds the data under the contract.
+        AOI-TRN-044, writing nothing, for no customer and for a customer whose store is not shredded."""
+        name, why = customer.strip(), None
+        if not name:
+            why = QT_TRANSLATE_NOOP("Errors", "no customer is given")
+        elif any(s["customer"].casefold() == name.casefold() and not s["shredded_at"] for s in self.db.stores()):
+            why = QT_TRANSLATE_NOOP("Errors", "the customer has a store already, and has one at a time")
+        if why is not None:
+            raise AoiError("AOI-TRN-044", store=name or QT_TRANSLATE_NOOP("Errors", "a new customer"), reason=why)
+        key, key_id = crypto.new_key()
+        store: dict[str, Any] = {"uuid": new_uuid(), "customer": name, "key_id": key_id.hex()}
+        store |= {"check_value": crypto.check_value(key), "created_by": self.user_uuid, "created_at": now_utc()}
+        self.db.add_store(store)
+        self.audit("store.create", "dataset_store", store["uuid"], None, {k: store[k] for k in ("customer", "key_id")})
+        self._save_key(store, key)  # last before the commit: a key whose store is not stored would open nothing
+        return {k: v for k, v in store.items() if k != "check_value"} | {"sheet": crypto.sheet(key)}
+
+    @requires("Admin", QT_TRANSLATE_NOOP("Errors", "Restoring a dataset store's key"))
+    @transactional
+    def restore_store_key(self, store_uuid: str, sheet: str) -> None:
+        """Save a store's key again from its recovery sheet, typed on a new PC or Windows account (ADR 0010, decision
+        7); audited as `store.restore`. AOI-TRN-044, writing nothing, for a store the workspace does not hold, one
+        shredded, and a sheet whose key is not the store's (by its check value)."""
+        store = self._store(store_uuid)
+        key = crypto.key_from_sheet(sheet)
+        if key is None or crypto.check_value(key) != store["check_value"]:
+            why = QT_TRANSLATE_NOOP("Errors", "the key typed is not this store's key; check each group of four")
+            raise AoiError("AOI-TRN-044", store=store["customer"], reason=why)
+        self.audit("store.restore", "dataset_store", store_uuid, None, {"key_id": store["key_id"]})
+        self._save_key(store, key)
+
+    def stores(self) -> list[dict[str, Any]]:
+        """Every dataset store, oldest first: uuid, customer, key_id, created_by, created_at, shredded_at (None while
+        it is not shredded) and its board_models. No key."""
+        return [{k: v for k, v in s.items() if k != "check_value"} for s in self.db.stores()]
+
+    def store_of(self, board_model: str) -> dict[str, Any] | None:
+        """The store `board_model` is in, as `stores` lists it, or None for a board model in none (its files plain)."""
+        found = self.db.board_model_store(board_model)
+        return None if found is None else {k: v for k, v in found.items() if k != "check_value"}
+
+    def _store(self, store_uuid: str) -> dict[str, Any]:
+        """A store that is not shredded; AOI-TRN-044 for one the workspace does not hold or that is shredded."""
+        store = self.db.store(store_uuid)
+        if store is None or store["shredded_at"]:
+            why = QT_TRANSLATE_NOOP("Errors", "the workspace holds no such store, or it is shredded")
+            raise AoiError("AOI-TRN-044", store=store["customer"] if store else store_uuid, reason=why)
+        return store
+
+    def _save_key(self, store: dict[str, Any], key: bytes) -> None:
+        try:
+            self.credentials.write(credentials.STORE_PREFIX + store["uuid"], key)
+        except OSError as e:
+            why = QT_TRANSLATE_NOOP("Errors", "this station's key store refused the key ({reason})")
+            raise AoiError("AOI-TRN-044", str(e), store=store["customer"], reason=why.fill(reason=str(e))) from e
+        self._keys.pop(store["uuid"], None)
+
+    def _key(self, store: dict[str, Any]) -> bytes:
+        """The store's key from this station's key store, checked against its check value; AOI-TRN-025 when this
+        station holds none or holds another."""
+        if (key := self._keys.get(store["uuid"])) is not None:
+            return key
+        try:
+            key = self.credentials.read(credentials.STORE_PREFIX + store["uuid"])
+        except OSError as e:
+            why = QT_TRANSLATE_NOOP("Errors", "this station's key store could not be read ({reason})")
+            raise AoiError("AOI-TRN-025", str(e), store=store["customer"], reason=why.fill(reason=str(e))) from e
+        if key is None:
+            why = QT_TRANSLATE_NOOP("Errors", "this station holds no key for it")
+        elif crypto.check_value(key) != store["check_value"]:
+            why = QT_TRANSLATE_NOOP("Errors", "the key this station holds is not its key")
+        else:
+            self._keys[store["uuid"]] = key
+            return key
+        raise AoiError("AOI-TRN-025", store=store["customer"], reason=why)
 
     def _refuse_input(self, board_model: str, view: str, revision: str, customer: str, uses: list[str]) -> None:
         """The refusals that read only what the freeze was given: no Latin letter or digit in the board model's name

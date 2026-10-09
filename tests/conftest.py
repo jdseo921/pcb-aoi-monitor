@@ -32,6 +32,7 @@ from aoi.config import Settings  # noqa: E402
 from aoi.core import anomaly  # noqa: E402
 from aoi.core.imaging import list_images, load_image  # noqa: E402
 from aoi.core.services import AppContext  # noqa: E402
+from aoi.data import credentials  # noqa: E402
 from aoi.data.db import new_uuid  # noqa: E402
 from aoi.ui import workers  # noqa: E402
 from aoi.ui.theme import QSS  # noqa: E402
@@ -138,6 +139,15 @@ def trained_ctx(tmp_path: Path, tiny_model: TrainedModel) -> AppContext:
     ws = tmp_path / "trained_workspace"
     shutil.copytree(tiny_model.ctx.settings.root, ws)
     return engineer(AppContext(Settings(workspace=str(ws), device="cpu")))
+
+
+@pytest.fixture(autouse=True)
+def keys(monkeypatch: pytest.MonkeyPatch) -> credentials.MemoryCredentials:
+    """The key store of every AppContext a test makes: in memory, new for each test and shared by its contexts, so that
+    no test writes a dataset store's key to the Credential Manager of the Windows machine running it (REQ-TRN-017)."""
+    held = credentials.MemoryCredentials()
+    monkeypatch.setattr(credentials, "default", lambda: held)
+    return held
 
 
 @pytest.fixture(autouse=True)
