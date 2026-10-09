@@ -2,6 +2,114 @@
 <!DOCTYPE TS>
 <TS version="2.1" language="ko_KR" sourcelanguage="en_US">
 <context>
+    <name>AgreementPanel</name>
+    <message>
+        <location filename="../ui/pages/training_agreement.py" line="+32"/>
+        <source>Labeller agreement</source>
+        <translation>라벨러 일치도</translation>
+    </message>
+    <message>
+        <location line="+9"/>
+        <source>New Set</source>
+        <translation>새 세트</translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>Set</source>
+        <translation>세트</translation>
+    </message>
+    <message>
+        <location line="+10"/>
+        <source>Labellers</source>
+        <translation>라벨러</translation>
+    </message>
+    <message>
+        <location line="+7"/>
+        <source>Run Agreement Check</source>
+        <translation>일치도 검사 실행</translation>
+    </message>
+    <message>
+        <location line="+18"/>
+        <source>{when} · made by {user}</source>
+        <translation>{when} · {user}이(가) 만듦</translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>Needs {size} images labelled OK or NG; {n} are</source>
+        <translation>OK 또는 NG로 라벨이 지정된 이미지 {size}개가 필요합니다. 현재 {n}개입니다</translation>
+    </message>
+    <message>
+        <location line="+14"/>
+        <source>No calibration set yet: New Set draws {size} images labelled OK or NG.</source>
+        <translation>아직 캘리브레이션 세트가 없습니다. 새 세트는 OK 또는 NG로 라벨이 지정된 이미지 {size}개를 추출합니다.</translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>Nobody has labelled this set blind yet.</source>
+        <translation>아직 아무도 이 세트를 블라인드로 라벨링하지 않았습니다.</translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>{user} {n} of {size}</source>
+        <translation>{user} {size}개 중 {n}개</translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>Labelled blind: {each}</source>
+        <translation>블라인드 라벨링: {each}</translation>
+    </message>
+    <message>
+        <location line="+20"/>
+        <source>No agreement check yet. Pick a set of 100 labelled images and two labellers.</source>
+        <translation>아직 일치도 검사가 없습니다. 라벨이 지정된 이미지 100개의 세트와 라벨러 두 명을 선택하세요.</translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>OK/NG agreement {n} of {of} ({percent} %) {mark} target {target} %</source>
+        <translation>OK/NG 일치 {of}개 중 {n}개 ({percent} %) {mark} 목표 {target} %</translation>
+    </message>
+    <message>
+        <location line="+7"/>
+        <source>Defect type {n} of {of} ({percent} %) {mark} target {target} %</source>
+        <translation>불량 유형 {of}개 중 {n}개 ({percent} %) {mark} 목표 {target} %</translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>Defect type: no image both labelled NG ✗ target {target} %</source>
+        <translation>불량 유형: 두 사람 모두 NG로 라벨을 지정한 이미지 없음 ✗ 목표 {target} %</translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>{a} and {b}, checked {when} by {user}</source>
+        <translation>{a}, {b}: {when}에 {user}이(가) 검사함</translation>
+    </message>
+    <message>
+        <location line="+8"/>
+        <source>Two users must each label every image of the set blind first</source>
+        <translation>먼저 두 사용자가 각각 세트의 모든 이미지를 블라인드로 라벨링해야 합니다</translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>Pick two different labellers</source>
+        <translation>서로 다른 라벨러 두 명을 선택하세요</translation>
+    </message>
+    <message>
+        <location line="+17"/>
+        <source>Made a calibration set of {size} images. Each labeller now labels it blind.</source>
+        <translation>이미지 {size}개의 캘리브레이션 세트를 만들었습니다. 이제 각 라벨러가 블라인드로 라벨을 지정합니다.</translation>
+    </message>
+    <message>
+        <location line="+12"/>
+        <source>The labellers agree</source>
+        <translation>라벨러들이 일치합니다</translation>
+    </message>
+    <message>
+        <location line="+0"/>
+        <source>The labellers fall short of the targets</source>
+        <translation>라벨러들이 목표에 미치지 못합니다</translation>
+    </message>
+</context>
+<context>
     <name>BoxEditor</name>
     <message>
         <location filename="../ui/widgets/box_editor.py" line="+122"/>
@@ -2781,7 +2889,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/training.py" line="+421"/>
+        <location filename="../ui/pages/training.py" line="+455"/>
         <location filename="../ui/pages/training_import.py" line="+38"/>
         <source>{code} {title}</source>
         <translation type="unfinished"></translation>
@@ -4328,7 +4436,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/training.py" line="-276"/>
+        <location filename="../ui/pages/training.py" line="-307"/>
         <source>Training</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4967,7 +5075,7 @@
 <context>
     <name>TrainingPage</name>
     <message>
-        <location filename="../ui/pages/training.py" line="+18"/>
+        <location filename="../ui/pages/training.py" line="+19"/>
         <source>Add OK Images…</source>
         <translation>OK 이미지 추가…</translation>
     </message>
@@ -4978,12 +5086,12 @@
     </message>
     <message>
         <location line="+1"/>
-        <location line="+503"/>
+        <location line="+533"/>
         <source>Import Folder…</source>
         <translation>폴더 가져오기…</translation>
     </message>
     <message>
-        <location line="-491"/>
+        <location line="-521"/>
         <source>Training needs 20 OK images or more in a dataset version&apos;s training set</source>
         <translation>학습에는 데이터셋 버전의 학습 세트에 OK 이미지가 20장 이상 필요합니다</translation>
     </message>
@@ -5050,12 +5158,12 @@
     </message>
     <message>
         <location line="+3"/>
-        <location line="+363"/>
+        <location line="+393"/>
         <source>Remove</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-354"/>
+        <location line="-384"/>
         <source>Select a sample to preview</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5095,7 +5203,7 @@
         <translation type="unfinished">취소</translation>
     </message>
     <message>
-        <location line="+587"/>
+        <location line="+617"/>
         <source>{phase} · {percent} % · {left}</source>
         <translation>{phase} · {percent} % · {left}</translation>
     </message>
@@ -5105,12 +5213,12 @@
         <translation>취소됨: AI 모델을 저장하지 않았으며 활성 AI 모델은 바뀌지 않았습니다.</translation>
     </message>
     <message>
-        <location line="-586"/>
+        <location line="-616"/>
         <source>AI model versions</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-210"/>
+        <location line="-211"/>
         <source>All</source>
         <translation>전체</translation>
     </message>
@@ -5135,7 +5243,7 @@
         <translation>미검토</translation>
     </message>
     <message>
-        <location line="+109"/>
+        <location line="+110"/>
         <source>Show</source>
         <translation>표시</translation>
     </message>
@@ -5195,7 +5303,17 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+12"/>
+        <location line="+17"/>
+        <source>Samples</source>
+        <translation>샘플</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Datasets</source>
+        <translation>데이터셋</translation>
+    </message>
+    <message>
+        <location line="+24"/>
         <source>Select PCB images</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5405,7 +5523,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+300"/>
+        <location line="+302"/>
         <source>none</source>
         <translation type="unfinished"></translation>
     </message>
