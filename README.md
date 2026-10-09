@@ -28,11 +28,29 @@ python main.py
 Linux: same steps with `source .venv/bin/activate` (macOS is not a target: PyTorch's index has no 2.14.1+cpu
 build for it). Developers install `requirements-dev.lock` in place of `requirements.lock` and run `ruff check .`,
 `ruff format --check .`, `mypy` and `pytest -q` before pushing. `requirements.txt` and `requirements-dev.txt` hold
-the direct pins; after changing one, `python tools/make_lock.py` regenerates the four lock files with the hash of
+the direct pins; after changing one, `python tools/make_lock.py` regenerates the five lock files with the hash of
 every file pip may install, and CI fails while a lock file does not match its inputs. Qt comes from
 `PySide6-Essentials`, not `PySide6` (whose Addons hold GPL-only modules such as Qt Charts; ADR 0003): in an
 environment installed before that change, run `python -m pip uninstall -y PySide6 PySide6-Addons PySide6-Essentials`
 first, then the steps above.
+
+## Windows build without Python (internal test build)
+
+GitHub Actions builds the app for Windows on every push to main
+([.github/workflows/build.yml](.github/workflows/build.yml), ADR 0007): open the latest **Windows build** run under
+**Actions**, download its `AOI-PoC-Inspector-…-unsigned` artifact, unzip it and start
+`AOI-PoC-Inspector\AOI-PoC-Inspector.exe`. **Run workflow** on that page builds any branch. The build is not signed,
+so Windows SmartScreen warns about an unknown publisher (**More info → Run anyway**), and it is **not a release**: no
+customer or demo gets it (Engineering standard, "Signing"; Customers & Launch, "Demos"). `BUILD-INFO.txt` names its
+commit, `THIRD_PARTY_NOTICES.txt` holds the third-party licenses and `SHA256SUMS.txt` the hash of every file. To
+build it on a Windows PC:
+
+```powershell
+python -m pip install --require-hashes --no-deps -r requirements-torch-cpu.lock
+python -m pip install --require-hashes -r requirements-build.lock    # the runtime packages plus PyInstaller
+pyinstaller --noconfirm --clean installer\aoi.spec                 # -> dist\AOI-PoC-Inspector\
+python tools\smoke_test_build.py dist\AOI-PoC-Inspector\AOI-PoC-Inspector.exe
+```
 
 ## Try it in 5 minutes with synthetic boards
 

@@ -927,4 +927,4 @@ them enters the repository or ships, and their counts are never an accuracy clai
 * Defect **type** is inferred from ROIs, not classified by the model yet.
 * Side-view and 3D checks in the mandatory set (Shield Can Gap, Pin Height, Coplanarity, Solder Volume) need Stage 2
   hardware.
-* No Windows installer yet; runs from source.
+* No Windows installer yet: stations run from source, and CI builds an unsigned one-folder test build (ADR 0007).

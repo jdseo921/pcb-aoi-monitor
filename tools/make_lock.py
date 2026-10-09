@@ -3,13 +3,14 @@
 
     python tools/make_lock.py            # rewrite every lock file
     python tools/make_lock.py --check    # exit 1 and print the difference when a lock file is out of date
-    python tools/make_lock.py --pypi-only   # only the two PyPI lock files, where download.pytorch.org is unreachable
+    python tools/make_lock.py --pypi-only   # only the PyPI lock files, where download.pytorch.org is unreachable
 
 Every lock file lists the sha256 hash of each file pip may install, for Python 3.11 on Windows and Linux, so pip
 refuses a download that differs from what was reviewed (Engineering standard, "Code style"; stage S04):
 
     requirements.lock             runtime packages from PyPI, except PyTorch
     requirements-dev.lock         the same versions plus the development and CI tools
+    requirements-build.lock       the same versions plus PyInstaller, for the Windows build (ADR 0007)
     requirements-torch-cpu.lock   PyTorch's CPU build, from download.pytorch.org/whl/cpu (CI, CPU stations)
     requirements-torch-cuda.lock  PyTorch's CUDA build, from download.pytorch.org/whl/cu130, and on Linux the NVIDIA
                                   libraries it needs (GPU stations)
@@ -26,9 +27,9 @@ checks files, so each station type needs the hashes of its own build. torch's ot
 setuptools and so on) are the same on every index and stay in requirements.lock, hashed from PyPI.
 
 pip-compile drops a requirement whose platform marker is false where it runs, so a Windows-only requirement such as
-`colorama ; sys_platform == "win32"` in requirements-dev.txt (pytest, bandit and build need it on Windows) is
-resolved on its own and added with its marker. The output is the same whichever platform runs this tool, and the
---check job in CI fails when a lock file no longer matches its inputs.
+`colorama ; sys_platform == "win32"` in requirements-dev.txt (pytest, bandit and build need it on Windows) or
+PyInstaller's `pefile` in requirements-build.txt is resolved on its own and added with its marker. The output is the
+same whichever platform runs this tool, and the --check job in CI fails when a lock file no longer matches its inputs.
 
 pip-compile resolves the versions; the hashes come from the index itself (the sha256 that PyPI and PyTorch's index
 publish for every file of the pinned version, on every platform), because pip-compile --generate-hashes downloads
@@ -72,6 +73,8 @@ HEADERS = {
     + INSTALL.format(lock="requirements.lock"),
     "requirements-dev.lock": "# Runtime packages plus the development and CI tools, except PyTorch.\n"
     + INSTALL.format(lock="requirements-dev.lock"),
+    "requirements-build.lock": "# Runtime packages plus PyInstaller for the Windows build (ADR 0007), except PyTorch.\n"
+    + INSTALL.format(lock="requirements-build.lock"),
     "requirements-torch-cpu.lock": "# PyTorch's CPU build for CI and CPU stations; install it first.\n",
     "requirements-torch-cuda.lock": "# PyTorch's CUDA build for GPU stations; install it first.\n",
 }
@@ -231,6 +234,8 @@ def build_all(tmp: Path, target: Path = ROOT, *, torch_builds: bool = True) -> d
     dev_inputs = [ROOT / "requirements.txt", ROOT / "requirements-dev.txt"]
     texts = {"requirements.lock": runtime}
     texts["requirements-dev.lock"] = pypi_lock("requirements-dev.lock", dev_inputs, tmp, pins(runtime), target)
+    build_inputs = [ROOT / "requirements.txt", ROOT / "requirements-build.txt"]
+    texts["requirements-build.lock"] = pypi_lock("requirements-build.lock", build_inputs, tmp, pins(runtime), target)
     torch = next(line for line in requirement_lines(ROOT / "requirements.txt") if line.startswith("torch=="))
     version = torch.split("==", 1)[1].strip()
     for build in TORCH_BUILDS if torch_builds else ():
