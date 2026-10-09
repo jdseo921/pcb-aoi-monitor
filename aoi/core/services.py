@@ -11,41 +11,60 @@ import contextvars
 import csv
 import errno
 import functools
+import hashlib
 import io
 import json
 import math
 import os
+import random
+import secrets
 import threading
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Iterator, Sequence
 from dataclasses import dataclass
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 from typing import Any, Concatenate, Literal, ParamSpec, TypeVar, cast
 
 import numpy as np
 
+from .. import defects as taxonomy
 from .. import logging_setup
 from ..config import Settings, resolve_device
 from ..data import atomic
 from ..data.db import Database, DbError, is_busy, new_uuid
 from ..data.errors import WorkspaceError
-from ..data.paths import to_stored
+from ..data.paths import inside, one_folder_name, resolve, to_stored
 from ..data.workspace_lock import WorkspaceLock
 from ..errors import QT_TRANSLATE_NOOP, AoiError, Phrase, joined
+from ..hal import VIEWS
 from ..times import local_date, now_utc
-from . import anomaly
+from . import anomaly, datasets, imaging, labels
 from .compare import Region, changed_regions
 from .imaging import align_to_reference, encode_image, list_images, load_image, load_image_sha256, save_image
 from .inspector import NG, OK, WARN, AiEvidence, InspectionResult, Inspector, JudgedBy, ai_check, draw_overlay, re_grade
 from .jobs import JobCancelled, Jobs
+from .labels import DefectBox
 from .maps import load_maps, map_paths, picture_shape, save_maps
 from .recipe import Recipe
+from .sample_import import LABELS, REFUSED, ImportFile, ImportReport
 
 ALARM_LIMIT = 1000  # REQ-INSP-006: the alarms a screen shows and that survive a restart
 BUSY_ALARM_WAIT_MS = 200  # how long the alarm of a locked database's error, or an Inspection alarm, waits, not 5 s
 ALIGNING = QT_TRANSLATE_NOOP("Training", "Aligning {count} images to the reference board")  # a progress line (#199)
+NO_TYPE = QT_TRANSLATE_NOOP("Errors", "no defect type was given")  # why AOI-TRN-013 refused an NG sample
+NOT_A_TYPE = QT_TRANSLATE_NOOP("Errors", "{name} is not one of them")
 STEM_CHARS = 40  # how much of a source file's stem names its evidence or sample file (#245)
 WINDOWS = os.name == "nt"
 MAX_PATH = 260  # the UTF-16 units of a path, its ending NUL included, that Windows takes with long paths off
+NAME_MAX = 255  # the UTF-16 units of one name in a path that Windows takes, long paths on or off
+NO_BOARD_MODEL = QT_TRANSLATE_NOOP("Errors", "there is no board model of that name")  # AOI-RCP-008's reasons (S29)
+SCALE_NUMBERS = QT_TRANSLATE_NOOP(
+    "Errors",
+    "a length of {length} px over {distance} mm gives no scale: both must be numbers above 0, and the scale from"
+    " {least} to {most} px per mm",
+)
+# px per mm a scale set holds: from 2, so that no ROI of an image up to 20000 px wide is over MAX_MM (AOI-RCP-011),
+# and up to 100000, so that no size in mm overflows in px (S29 review)
+MIN_SCALE, MAX_SCALE = 2, 100000
 
 
 @dataclass(frozen=True)
@@ -118,6 +137,18 @@ R = TypeVar("R")
 Judged = Literal["same", "none", "unrecorded", "missing", "unreadable", "changed"]
 
 
+def _calibration(model: dict[str, Any] | None) -> tuple[float, float] | None:
+    """An AI model registry row's image and pixel thresholds, as training stored them from the AI model file's
+    metadata; None for no row, or one without two finite numbers above 0 (only a row changed by hand has none)."""
+    try:
+        cal = json.loads(model["metrics"]) if model else {}
+        found = cal["image_threshold"], cal["pixel_threshold"]
+        image_thr, pixel_thr = (math.nan if isinstance(v, bool) else float(v) for v in found)
+    except (ValueError, TypeError, KeyError, OverflowError):
+        return None
+    return (image_thr, pixel_thr) if min(image_thr, pixel_thr) > 0 and math.isfinite(image_thr + pixel_thr) else None
+
+
 def requires(
     role: str, what: str
 ) -> Callable[[Callable[Concatenate[AppContext, P], R]], Callable[Concatenate[AppContext, P], R]]:
@@ -167,11 +198,26 @@ def _stem(path: str | Path) -> str:
 
 def _too_long(e: OSError) -> bool:
     """The system refused a path as too long: ENAMETOOLONG, or on Windows ERROR_FILENAME_EXCED_RANGE or a file not found
-    at a path of MAX_PATH UTF-16 units or more, which is how open() fails there with long paths off (#245)."""
+    at a path of MAX_PATH UTF-16 units or more, which is how open() fails there with long paths off (#245), or a path
+    holding a name of more than NAME_MAX units, which Windows refuses with long paths on as a name not valid (S35)."""
     if e.errno == errno.ENAMETOOLONG or getattr(e, "winerror", None) == 206:
         return True
-    units = len(str(e.filename or "").encode("utf-16-le", "surrogatepass")) // 2  # outside the BMP, 2 units
-    return WINDOWS and isinstance(e, FileNotFoundError) and units >= MAX_PATH
+    if not WINDOWS:
+        return False
+    paths = [str(p) for p in (e.filename, e.filename2) if p]
+    if any(_units(name) > NAME_MAX for p in paths for name in PureWindowsPath(p).parts):
+        return True
+    return isinstance(e, FileNotFoundError) and _units(str(e.filename or "")) >= MAX_PATH
+
+
+def _units(text: str) -> int:
+    """The UTF-16 units Windows counts in a path or name: one for each character, two outside the BMP."""
+    return len(text.encode("utf-16-le", "surrogatepass")) // 2
+
+
+def _sha256(path: Path) -> str:
+    with open(path, "rb") as f:
+        return hashlib.file_digest(f, "sha256").hexdigest()
 
 
 def _remove(files: list[Path]) -> None:
@@ -302,55 +348,151 @@ class AppContext:
         side: str = "Top",
         progress: Callable[[int, int], None] | None = None,
         should_stop: Callable[[], bool] | None = None,
+        already: list[dict[str, Any]] | None = None,
     ) -> int:
         """Copy uploads into the workspace so training data survives the source folder moving; returns how many were
-        added. All or nothing (#178): a file that cannot be copied stops the import with AOI-TRN-008, or AOI-TRN-011
-        when the system refuses the copy's path as too long (#245), and removes the copies made; then the samples, a
-        new board model's default recipe and reference, and the audit entry commit together. A page runs it on the
-        pool (REQ-SET-021, #194): `progress(done, total)` follows each file, and once `should_stop()` is true the files
-        not yet copied are left out, the ones copied are added and the audit entry says so (`cancelled`)."""
-        self._refuse_case_variant(board_model)  # a new board model is created by its first import
+        added. Each file goes through `_copy_checked` (REQ-TRN-001): checked as Inspection checks an image, never
+        written, its SHA-256 recorded with the sample; an image the board model already has, or one earlier in
+        `paths`, is skipped (decision Q31), and the audit entry counts it and names the sample that has it by UUID and
+        SHA-256 (`skipped`, `already`). An NG import names one of the 33 DCT types (AOI-TRN-013). All or nothing
+        (#178): a file refused, or one that cannot be copied (AOI-TRN-008, or AOI-TRN-011 when the system refuses the
+        copy's path as too long, #245), stops the import with its code and removes the copies made; then the samples, a
+        new board model's default recipe and reference, and the audit entry, which names each sample added by its UUID
+        and SHA-256 (`samples`), commit together. `progress(done, total)` follows each file, and once `should_stop()` is
+        true the files not yet copied are left out, the ones copied are added and the audit entry says so
+        (`cancelled`); `import_files` passes one file a call and stops between calls, so the entries it writes never
+        say so. `already`, when given, gets the sample each skipped image is already (`import_files` names it)."""
+        self._refuse_unsafe_name(board_model)  # a new board model is created by its first import
+        self._refuse_case_variant(board_model)
+        first = paths[0] if paths else ""
+        if label not in LABELS:  # the copy's folder is named after it, and the samples table holds no other
+            raise AoiError("AOI-TRN-018", path=first, label=label, labels=", ".join(LABELS))
+        self._refuse_untyped(first, label, defect_type)
+        if side not in VIEWS:  # a dataset version names its folders by view (S35): no other name reaches a path
+            raise AoiError("AOI-TRN-017", path=first, view=side, views=", ".join(VIEWS))
         dest = self.settings.images_dir / board_model / label
-        copies: list[Path] = []
-        uids: list[str] = []  # each copy's sample UUID, which its file name carries (#245)
-        stopped = False
+        if not inside(dest, self.settings.images_dir):  # a board model named before names were checked (#112)
+            raise AoiError("AOI-TRN-019", name=board_model)
+        known: dict[str, dict[str, Any]] = {}  # each image copied so far, by SHA-256: a second one is skipped too
+        copies: list[tuple[Path, str, str]] = []  # each copy, its sample UUID (which its file name carries, #245), hash
+        stopped, kept = False, list[tuple[str, dict[str, Any]]]()  # each image skipped: its SHA-256, the sample with it
         try:
             for p in paths:
                 if should_stop is not None and should_stop():
                     stopped = True
                     break
-                src = Path(p)
-                uid = new_uuid()
+                src, uid = Path(p), new_uuid()
                 target = dest / f"{_stem(src)}_{uid}{src.suffix.lower()}"
-                try:
-                    atomic.copy_file(src, target)
-                except OSError as e:  # gone, unreadable, the workspace drive full, or a path the system refuses
-                    if _too_long(e) and str(e.filename) != str(src):  # the copy's path, not the picked file's (#245)
-                        where = {"workspace": str(self.settings.root), "count": len(paths)}
-                        raise AoiError("AOI-TRN-011", str(e), path=str(src), **where) from e
-                    why = e.strerror or str(e)
-                    raise AoiError("AOI-TRN-008", str(e), path=str(src), reason=why, count=len(paths)) from e
-                copies.append(target)
-                uids.append(uid)
+                digest, same = self._copy_checked(board_model, src, target, known, len(paths))
+                if same is not None:
+                    kept.append((digest, same))
+                else:
+                    copies.append((target, uid, digest))
+                    known[digest] = {"uuid": uid, "path": str(target), "label": label}
                 if progress is not None:
-                    progress(len(copies), len(paths))
+                    progress(len(copies) + len(kept), len(paths))
             with self.db.transaction():
-                for target, uid in zip(copies, uids, strict=True):  # the first creates a new board model
-                    self.db.add_sample(board_model, str(target), label, defect_type, side, uid)
+                for target, uid, digest in copies:  # the first creates a new board model
+                    self.db.add_sample(
+                        board_model, str(target), label, defect_type, side, uid, self.user_uuid, sha256=digest
+                    )
                 if copies:
                     self._ensure_recipe(board_model)
                 if not self.db.reference(board_model):
                     oks = self.db.samples(board_model, "OK")
                     if oks:
                         self.db.set_reference(board_model, oks[0]["path"])
-                after = {
-                    "label": label, "defect_type": defect_type, "side": side, "added": len(copies), "cancelled": stopped
-                }  # fmt: skip
+                after: dict[str, Any] = {"label": label, "defect_type": defect_type, "side": side, "added": len(copies)}
+                after |= {"skipped": len(kept), "cancelled": stopped}
+                after["samples"] = [{"uuid": uid, "sha256": digest} for _, uid, digest in copies]
+                after["already"] = [{"uuid": had["uuid"], "sha256": digest} for digest, had in kept]
                 self.audit("sample.import", "board_model", board_model, None, after)
         except BaseException:
-            _remove(copies)
+            _remove([target for target, _, _ in copies])
             raise
+        if already is not None:
+            already.extend(had for _, had in kept)
         return len(copies)
+
+    def _refuse_untyped(self, path: str, label: str, defect_type: str | None) -> None:
+        """Refuse an NG sample without one of the 33 DCT types, named as the classification table names it
+        (AOI-TRN-013, REQ-TRN-001): no type, "Unknown" or the AI model's "Anomaly" is never a sample's type."""
+        if label == "NG" and defect_type not in taxonomy.names():
+            why = NOT_A_TYPE.fill(name=defect_type) if defect_type else NO_TYPE
+            raise AoiError("AOI-TRN-013", path=path, why=why)
+
+    def _copy_checked(
+        self, board_model: str, src: Path, target: Path, known: dict[str, dict[str, Any]], count: int
+    ) -> tuple[str, dict[str, Any] | None]:
+        """Copy one sample's source file to `target` and return its SHA-256 and None (REQ-TRN-001). The source is only
+        read: its bytes are checked and decoded as Inspection checks an image (`checked_bytes`: AOI-INSP-001, -004 to
+        -007, decision Q30) and hashed; an image already imported, one `board_model` has (one indexed lookup) or one
+        of `known`, copies nothing and comes back with that sample (decision Q31). The copy is a crash-safe write; then
+        the source and the copy are read again, and a SHA-256 other than the one checked (a writer still at the source)
+        refuses the file with AOI-TRN-014 and removes the copy. A source lost since its check (removed, unreadable) is
+        refused with AOI-INSP-001, as Inspection's check would; a copy that cannot be written raises AOI-TRN-008, or
+        AOI-TRN-011 when the system refuses its path as too long (#245)."""
+        data = imaging.checked_bytes(src, self.settings.max_image_megapixels, self.settings.max_image_megabytes)
+        digest = hashlib.sha256(data).hexdigest()
+        del data  # up to the size limit in memory: not kept through the copy
+        if (had := known.get(digest) or self.db.sample_with_sha256(board_model, digest)) is not None:
+            return digest, had
+        try:
+            atomic.copy_file(src, target)
+        except OSError as e:  # gone, unreadable, the workspace drive full, or a path the system refuses
+            if str(e.filename) == str(src):  # the source's own: that file's to fix, listed by import_files
+                raise AoiError("AOI-INSP-001", str(e), path=str(src)) from e
+            if _too_long(e):  # the copy's path (#245)
+                where = {"workspace": str(self.settings.root), "count": count}
+                raise AoiError("AOI-TRN-011", str(e), path=str(src), **where) from e
+            why = e.strerror or str(e)
+            raise AoiError("AOI-TRN-008", str(e), path=str(src), reason=why, count=count) from e
+        try:
+            same = _sha256(src) == digest == _sha256(target)
+        except OSError:  # the source gone right after its copy: it cannot be found unchanged
+            same = False
+        if not same:
+            _remove([target])
+            raise AoiError("AOI-TRN-014", path=str(src))
+        return digest, None
+
+    @requires("Engineer", QT_TRANSLATE_NOOP("Errors", "Importing samples"))
+    def import_files(
+        self,
+        board_model: str,
+        files: list[ImportFile],
+        progress: Callable[[int, int], None] | None = None,
+        should_stop: Callable[[], bool] | None = None,
+    ) -> ImportReport:
+        """Import each file with its own label, defect type and view, one `import_samples` call each, so what went in
+        stays when Cancel or an error stops the rest (#178, #206); the import sheet on Training runs it on the pool
+        (REQ-TRN-001). A file refused with a code in `REFUSED` (Inspection's checks, a source lost before its copy
+        among them, an NG with no type, a source changed while copied, a view or a label not known), one with no label
+        (AOI-TRN-016) and an image the board model already has (AOI-TRN-015, naming that sample and its label, decision
+        Q31) is listed with its error and the import goes on; any other error, such as a copy the workspace refuses or
+        the database, stops it at that file. `progress(done, total)` follows each file, and once `should_stop()` is
+        true the files not yet imported are left."""
+        report = ImportReport()
+        for i, f in enumerate(files):
+            if should_stop is not None and should_stop():
+                report.left = files[i:]
+                break
+            try:
+                if f.label is None:
+                    raise AoiError("AOI-TRN-016", path=f.path)
+                had: list[dict[str, Any]] = []
+                if not self.import_samples(board_model, [f.path], f.label, f.defect_type, f.side, already=had):
+                    sample = {"sample": Path(had[0]["path"]).name, "label": had[0]["label"]}
+                    raise AoiError("AOI-TRN-015", path=f.path, board_model=board_model, **sample)
+                report.added.append(f)
+            except Exception as e:
+                if not (isinstance(e, AoiError) and e.code in REFUSED):
+                    report.stopped, report.left = (f, e), files[i + 1 :]
+                    break
+                report.refused.append((f, e))
+            if progress is not None:
+                progress(i + 1, len(files))
+        return report
 
     # --- training ------------------------------------------------------------
     @requires("Engineer", QT_TRANSLATE_NOOP("Errors", "Training an AI model"))
@@ -364,9 +506,15 @@ class AppContext:
     ) -> dict[str, Any]:
         """Train an AI model of `board_model` on its samples, then save, register, activate and audit it. The run reads
         the device once, before it loads anything, and keeps it to the end: a device saved on Settings while the run
-        loads, aligns or trains applies from the next run (#201)."""
+        loads, aligns or trains applies from the next run (#201). Its name meets the rule a new board model meets
+        (AOI-TRN-019, AOI-TRN-005), as its folder under models/ does, before anything is loaded."""
         device = self.device  # not self.device later: save_settings may change it while the samples load and align
         say = progress or (lambda *a: None)
+        self._refuse_unsafe_name(board_model)  # the run writes the board model's row and its folder
+        self._refuse_case_variant(board_model)
+        out = self.settings.models_dir / board_model
+        if not inside(out, self.settings.models_dir):  # a board model named before names were checked (#112)
+            raise AoiError("AOI-TRN-019", name=board_model)
         ok = [self.load_image(s["path"]) for s in self.db.samples(board_model, "OK")]
         ng = [self.load_image(s["path"]) for s in self.db.samples(board_model, "NG")]
         if len(ok) < 2:
@@ -388,7 +536,6 @@ class AppContext:
         if should_stop is not None and should_stop():  # Stop, or the window closing: the active model stays (TRN-008)
             raise JobCancelled(f"training {board_model}")  # nothing saved, registered, activated or audited (#171)
         previous = self.db.active_model(board_model)
-        out = self.settings.models_dir / board_model
         out.mkdir(parents=True, exist_ok=True)
 
         def files(v: str) -> list[Path]:
@@ -469,10 +616,34 @@ class AppContext:
     @requires("Engineer", QT_TRANSLATE_NOOP("Errors", "Saving a recipe"))
     @transactional
     def save_recipe(self, recipe: Recipe, reason: str | None = None) -> int:
-        """Store the next recipe revision and audit it with the revision before (a recipe decides verdicts)."""
+        """Store the next recipe revision and audit it with the revision before (a recipe decides verdicts); a minimum
+        defect size under 4 px (AOI-RCP-007) is saved all the same, the notice added to the entry's reason. A revision
+        that sets, changes or clears the override of the AI score threshold is also audited as `recipe.ai_threshold`
+        of the board model (REQ-TRN-015): before and after, the revision, the override (None: none), the threshold
+        that judges (the override, else the active AI model's calibrated value; None with neither), that AI model's
+        version and its calibrated value (None while none is active or its calibration cannot be read). A size in mm
+        the engine cannot apply is refused with AOI-RCP-011 (`Recipe.mm_refusal`), and any recipe while the board
+        model's scale cannot be read with AOI-RCP-012, nothing stored (S29 review)."""
+        if (refused := recipe.mm_refusal()) is not None:
+            raise refused
+        scale = self.db.scale(recipe.board_model)  # AOI-RCP-012 for one that cannot be read
         latest = self.db.latest_recipe(recipe.board_model)
+        if (notice := recipe.size_notice(scale)) is not None:  # saved, and kept with it
+            reason = f"{reason} {notice}" if reason else str(notice)  # in the audit entry (REQ-INSP-014)
         rev, uid = self.db.save_recipe(recipe.board_model, recipe.to_dict(), self.user)
         self.audit("recipe.save", "recipe", uid, latest[1] if latest else None, recipe.to_dict(), reason)
+        old = (latest[1].get("anomaly_threshold") if latest else None) or None  # 0 judges as none: the engine's `or`
+        if (new := recipe.anomaly_threshold or None) != old:
+            model = self.db.active_model(recipe.board_model)
+            cal = _calibration(model)
+            named = {"ai_model": model["version"] if model else None, "calibrated": cal[0] if cal else None}
+            before = {
+                "revision": latest[0] if latest else None,
+                "override": old,
+                "threshold": old or named["calibrated"],
+            }
+            after = {"revision": rev, "override": new, "threshold": new or named["calibrated"]}
+            self.audit("recipe.ai_threshold", "board_model", recipe.board_model, before | named, after | named, reason)
         return rev
 
     # --- audit trail (REQ-LOG-004) --------------------------------------------
@@ -542,19 +713,22 @@ class AppContext:
                 why = unreadable if Path(golden).exists() else QT_TRANSLATE_NOOP("Errors", "the file is gone")
                 raise AoiError("AOI-INSP-009", detail=str(e), board=board_model, file=golden, reason=why) from e
         model, version, model_uuid = (mv[1], mv[0], mv[2]) if mv else (None, None, None)
-        return Inspector(recipe or rcp, model, reference, side, version, rev, model_uuid, recipe_uuid, golden, sha)
+        scale = self.db.scale(board_model)  # the recipe's sizes in mm are applied at it (REQ-RCP-006)
+        args = (model, reference, side, version, rev, model_uuid, recipe_uuid, golden, sha, scale)
+        return Inspector(recipe or rcp, *args)
 
     def engine_is_current(self, board_model: str, insp: Inspector | JudgedBy) -> bool:
         """Whether `insp` was built from what `inspector(board_model)` would use now: the active AI model, the latest
-        recipe revision and the Golden board, by UUID and path (`Inspector.inputs`). It reads the database only, no
-        image or weights, so the Inspection page asks before each board whether the engine it keeps is still the one to
-        use: a training run, an activation or a saved recipe makes it stale (#243). AI Model Test asks it with the
-        `JudgedBy` of a run before a row is previewed (#250), so both pages agree on when a result is current; for a run
-        judged with the AI check off, that page then compares the recipe revision and Golden board alone (#246)."""
+        recipe revision, the Golden board and the scale, by UUID, path and value (`Inspector.inputs`). It reads the
+        database only, no image or weights, so the Inspection page asks before each board whether the engine it keeps
+        is still the one to use: training, an activation, a saved recipe or a scale set makes it stale (#243, S29). AI
+        Model Test asks it with the `JudgedBy` of a run before a row is previewed (#250), so both pages agree on when a
+        result is current; that page then passes over the AI model for a run judged with the AI check off (#246), and
+        the scale for a recipe that holds no size in mm (S29)."""
         active = self.db.active_model(board_model)
         latest = self.db.latest_recipe(board_model)
-        now = str(active["uuid"]) if active else None, latest[2] if latest else None, self.db.reference(board_model)
-        return insp.inputs == now
+        model, recipe = str(active["uuid"]) if active else None, latest[2] if latest else None
+        return insp.inputs == (model, recipe, self.db.reference(board_model), self.db.scale(board_model))
 
     def inspect(
         self,
@@ -778,7 +952,9 @@ class AppContext:
         return self.db.reference(board_model)
 
     def samples(self, board_model: str, label: str | None = None) -> list[dict[str, Any]]:
-        """Training samples (id, label, defect_type, side, path, added_at), oldest first; `label` filters OK or NG."""
+        """Training samples (id, uuid, side, path, added_at) with their current label (label, defect_type, label_uuid,
+        labelled_by: a user's UUID or None, labelled_by_name, labelled_at), oldest first; `label` filters OK, NG or
+        UNSURE. Training and the counts read OK and NG only, so an UNSURE image is in neither (REQ-TRN-002)."""
         return self.db.samples(board_model, label)
 
     def sample_path(self, sample_id: int) -> str:
@@ -796,6 +972,30 @@ class AppContext:
     def active_model(self, board_model: str) -> dict[str, Any] | None:
         """The model version inspections use, or None when none is trained."""
         return self.db.active_model(board_model)
+
+    def calibrated_threshold(
+        self, board_model: str, model_uuid: str | None = None, version: str | None = None
+    ) -> float | None:
+        """The AI score threshold an AI model of `board_model` was calibrated to (REQ-TRN-015), from its registry row:
+        the active one's, which judges the next board whose recipe holds no override, or, with `model_uuid`, that of
+        the AI model a stored result names, which Re-evaluate applies (ADR 0006 decision 2). None while no AI model is
+        active. AOI-TRN-012 when the row holds no usable calibration, or the registry holds no AI model `model_uuid`,
+        named then by the `version` the stored result gives (else by its UUID)."""
+        if model_uuid is None:
+            model = self.db.active_model(board_model)
+            if model is None:
+                return None
+        elif (model := next((m for m in self.db.models(board_model) if m["uuid"] == model_uuid), None)) is None:
+            raise AoiError("AOI-TRN-012", version=version or model_uuid, board=board_model)
+        return self.calibration_of(model)
+
+    def calibration_of(self, model: dict[str, Any]) -> float:
+        """The calibrated AI score threshold an AI model registry row (one of `models()`) holds, read as
+        `calibrated_threshold` reads it, for a page that lists the rows (Training: one registry read for all).
+        AOI-TRN-012 when the row holds no usable calibration (only a row changed by hand)."""
+        if (cal := _calibration(model)) is None:
+            raise AoiError("AOI-TRN-012", version=model["version"], board=model["board_model"])
+        return cal[0]
 
     def recipe_history(self, board_model: str) -> list[dict[str, Any]]:
         """Recipe revisions (revision, uuid, user, created_at), newest first; revision 1 by "system" is the default."""
@@ -837,9 +1037,15 @@ class AppContext:
         """One stored result read back without its images (verdict, checks, defects, compare metrics and regions, as
         decided) for Compare (REQ-INSP-008); with `with_maps`, the stored maps too, where their files exist
         (REQ-INSP-012), and AOI-CMP-003 for one there that cannot be read or is not the map stored (in colour, or not
-        the size of its board picture, #249). None for a record from before migration 0006."""
-        doc = self.db.inspection_result(inspection_id)
-        res = InspectionResult.from_dict(doc) if doc is not None else None
+        the size of its board picture, #249). None for a record from before migration 0006; AOI-CMP-002 for a stored
+        result that cannot be read (damaged: not JSON, or a scale or time that is no number, S29 review)."""
+        try:
+            doc = self.db.inspection_result(inspection_id)
+            res = InspectionResult.from_dict(doc) if doc is not None else None
+        except (ValueError, KeyError, TypeError, AttributeError) as e:  # as Logs & Export's CSV skips one (#246)
+            rec = self.db.inspection(inspection_id)
+            file = Path(rec["image_path"]).name if rec else "?"
+            raise AoiError("AOI-CMP-002", detail=str(e), id=inspection_id, file=file) from e
         if res is None or not with_maps:
             return res
         rec = self.db.inspection(inspection_id)
@@ -882,7 +1088,10 @@ class AppContext:
         decision table; AOI-CMP-005 when `thresholds` are another board model's; AOI-CMP-003 when a map it reads is
         there but cannot be read; AOI-CMP-004 when a map, or the AI model's calibration, that a check `thresholds`
         uses was judged on is gone; and AOI-INSP-010 when `thresholds` leave no check that ran on the board. A map that
-        is not the map stored (in colour, or not the size of the result's board picture) cannot be read (#249)."""
+        is not the map stored (in colour, or not the size of the result's board picture) cannot be read (#249). Sizes in
+        mm are applied at the scale the result was judged at, or, for one judged without a scale, at the board model's
+        now, which the result it returns keeps (REQ-RCP-006). A stored result that cannot be read is AOI-CMP-002 too
+        (S29 review)."""
         iid = self.db.inspection_id(result_uuid)
         rec = self.db.inspection(iid) if iid is not None else None
         res = self.inspection_result(iid) if iid is not None else None
@@ -895,6 +1104,9 @@ class AppContext:
             raise AoiError("AOI-CMP-005", tried=thresholds.board_model, file=file, judged=rec["board_model"])
         diff_path, ai_path = self.db.map_paths(iid)
         shape = picture_shape(rec["overlay_path"])  # the size the board was judged at: its maps' (#249)
+        if res.px_per_mm is None:  # judged without a scale: judged again at the board model's now, kept with it (S29)
+            res.px_per_mm = self.db.scale(rec["board_model"])
+        thresholds = thresholds.in_px(res.px_per_mm)  # in px before the regions are found while the AI map decodes
         changed: list[tuple[np.ndarray, list[Region], dict[str, Any]]] = []  # found while the AI map decodes (#249)
         load_maps(
             res,
@@ -909,13 +1121,8 @@ class AppContext:
         ai, check = None, next((c for c in res.checks if c.source == "AI"), None)
         if thresholds.use_ai and check is not None:
             model = next((m for m in self.db.models(rec["board_model"]) if m["uuid"] == rec["model_uuid"]), None)
-            try:  # a registry row this app wrote holds both thresholds, finite and above 0
-                cal = json.loads(model["metrics"]) if model else {}
-                image_thr, pixel_thr = float(cal["image_threshold"]), float(cal["pixel_threshold"])
-            except (ValueError, TypeError, KeyError, OverflowError):
-                image_thr = pixel_thr = math.nan
-            if min(image_thr, pixel_thr) > 0 and math.isfinite(image_thr + pixel_thr):
-                ai = AiEvidence(check.value, image_thr, pixel_thr, check.explain)
+            if (cal := _calibration(model)) is not None:
+                ai = AiEvidence(check.value, *cal, check.explain)
             else:
                 version = rec["model_version"] or rec["model_uuid"]
                 calibration = QT_TRANSLATE_NOOP("Errors", "the calibration of AI model {version}").fill(version=version)
@@ -960,10 +1167,17 @@ class AppContext:
         """Create a board model unless it exists."""
         if name in self.db.board_models():
             return
+        self._refuse_unsafe_name(name)
         self._refuse_case_variant(name)
         self.db.ensure_board_model(name)
         self.audit("board_model.create", "board_model", name, None, {"name": name})
         self._ensure_recipe(name)
+
+    def _refuse_unsafe_name(self, name: str) -> None:
+        """Refuse a new board model whose name cannot name its folders under images/ and models/ on Windows as on Linux
+        (AOI-TRN-019, `one_folder_name`): a name with / or .., a device name such as CON, one ending with a dot."""
+        if not one_folder_name(name) and name not in self.db.board_models():
+            raise AoiError("AOI-TRN-019", name=name)
 
     def _refuse_case_variant(self, name: str) -> None:
         """Refuse a new board model whose name differs from an existing one's only in case (AOI-TRN-005): on Windows,
@@ -973,12 +1187,48 @@ class AppContext:
         if same is not None:
             raise AoiError("AOI-TRN-005", name=name, existing=same)
 
+    def scale(self, board_model: str) -> float | None:
+        """The board model's scale in px per mm (REQ-RCP-006), or None until one is set: its recipe's sizes in px;
+        AOI-RCP-012 for one stored that cannot be read, as for every reader of it (`Database.scale`)."""
+        return self.db.scale(board_model)
+
+    @requires("Engineer", QT_TRANSLATE_NOOP("Errors", "Setting a board model's scale"))
+    @transactional
+    def set_scale(self, board_model: str, length_px: float, distance_mm: float) -> float:
+        """Set the board model's scale from a known length on its calibration image, the Golden board (REQ-RCP-006;
+        Calibrate Scale… on the Recipe Editor): `length_px` px on the image are `distance_mm` mm on the board. Returns
+        the scale in px per mm, at which its recipe's sizes in mm judge every board from then on, so it can change
+        verdicts: audited as board_model.scale with the scale before and after, the length, the distance and the Golden
+        board file. Refused with AOI-RCP-008, before anything is written, unless both are numbers above 0, not true or
+        false, whose ratio is from MIN_SCALE to MAX_SCALE, or for a board model that does not exist. It replaces a
+        stored scale that cannot be read (AOI-RCP-012), which its entry keeps as it was stored (S29 review)."""
+        numbers = all(isinstance(v, int | float) and not isinstance(v, bool) for v in (length_px, distance_mm))
+        scale = length_px / distance_mm if numbers and distance_mm > 0 else math.nan  # a bool is none (S29 review)
+        if board_model not in self.db.board_models():
+            raise AoiError("AOI-RCP-008", board_model=board_model, reason=NO_BOARD_MODEL)
+        if not (numbers and 0 < length_px < math.inf and MIN_SCALE <= scale <= MAX_SCALE):
+            reason = SCALE_NUMBERS.fill(length=length_px, distance=distance_mm, least=MIN_SCALE, most=MAX_SCALE)
+            raise AoiError("AOI-RCP-008", board_model=board_model, reason=reason)
+        try:
+            before: object = self.db.scale(board_model)
+        except AoiError as e:  # AOI-RCP-012: replaced
+            before = e.params["value"]
+        golden = self.db.reference(board_model)
+        self.db.set_scale(board_model, scale)
+        image = to_stored(Path(golden), self.settings.root) if golden else None
+        after = {"px_per_mm": scale, "length_px": length_px, "distance_mm": distance_mm, "image": image}
+        self.audit("board_model.scale", "board_model", board_model, {"px_per_mm": before}, after)
+        return scale
+
     @requires("Engineer", QT_TRANSLATE_NOOP("Errors", "Changing the reference image"))
     @transactional
     def set_reference(self, board_model: str, sample_id: int) -> None:
         """Make a stored OK sample the reference image: inspections compare against it from now on, and the next
         training run aligns its boards to it before it learns the golden template. An NG sample is refused
-        (AOI-TRN-006)."""
+        (AOI-TRN-006), and a board model it would create meets the rule a first import's does (AOI-TRN-019,
+        AOI-TRN-005)."""
+        self._refuse_unsafe_name(board_model)
+        self._refuse_case_variant(board_model)
         sample = self.db.sample(sample_id)
         if sample["label"] != "OK":
             raise AoiError("AOI-TRN-006", sample=Path(sample["path"]).name, label=sample["label"])
@@ -991,12 +1241,21 @@ class AppContext:
     @requires("Engineer", QT_TRANSLATE_NOOP("Errors", "Relabelling a sample"))
     @transactional
     def update_sample(self, sample_id: int, label: str, defect_type: str | None) -> None:
-        """Relabel a sample OK or NG and set its defect type. The reference sample cannot be relabelled NG
-        (AOI-TRN-007): inspections would compare against a defective board."""
+        """Relabel a sample OK or NG (else AOI-TRN-018) and set its defect type as an import does (REQ-TRN-001): one of
+        the 33 DCT types for NG (else AOI-TRN-013), none for OK, whatever is given, with a new label row; the one before
+        stays in history (REQ-TRN-002). A sample a labeller gave that label and type already is left as it is; one
+        carried over with no labeller is labelled again, by the user acting, so it can be checked. The reference sample
+        cannot be relabelled NG (AOI-TRN-007): inspections would compare against a defective board. The new label row
+        is checked as `set_label` checks one."""
         before = self.db.sample(sample_id)
-        if label != "OK":
-            self._refuse_reference_change(before, QT_TRANSLATE_NOOP("Errors", "relabelled NG"))
-        self.db.update_sample(sample_id, label, defect_type)
+        name = Path(before["path"]).name
+        if label not in LABELS:
+            raise AoiError("AOI-TRN-018", path=name, label=label, labels=", ".join(LABELS))
+        self._refuse_untyped(name, label, defect_type)
+        defect_type = defect_type if label == "NG" else None
+        if (before["label"], before["defect_type"]) == (label, defect_type) and before["labelled_by"] is not None:
+            return  # labelled so already: no new row, so its labeller and any check of it stay
+        self._write_label(before, label, defect_type, None, None)  # an image that stays NG keeps its boxes
         old = {"label": before["label"], "defect_type": before["defect_type"]}
         self.audit("sample.update", "sample", before["uuid"], old, {"label": label, "defect_type": defect_type})
 
@@ -1017,6 +1276,383 @@ class AppContext:
         reference = self.db.reference(sample["board_model"])
         if reference is not None and Path(reference) == Path(sample["path"]):
             raise AoiError("AOI-TRN-007", sample=Path(sample["path"]).name, change=change)
+
+    # --- labels and defect boxes (REQ-TRN-002, REQ-TRN-003; S32): a relabel adds rows, the old ones stay in history ---
+    @requires("Engineer", QT_TRANSLATE_NOOP("Errors", "Labelling an image"))
+    def set_label(
+        self, sample_uuid: str, label: str, defect_type: str | None = None, boxes: list[DefectBox] | None = None
+    ) -> str:
+        """Give a sample a new current label, OK, NG or UNSURE, with an NG image's defect type and boxes (None keeps the
+        boxes of an image that stays NG), each box with its type's severity; audited as `label.set` with the label
+        before and after. The rows replaced stay, superseded by the new label row, whose UUID is returned. Refused with
+        AOI-TRN-030 or AOI-TRN-031 for a label or box the image cannot take, AOI-TRN-032 for a sample the workspace
+        does not hold and AOI-TRN-007 for the reference sample labelled other than OK."""
+        return self._set_label(sample_uuid, (label, defect_type), boxes)
+
+    @requires("Engineer", QT_TRANSLATE_NOOP("Errors", "Drawing defect boxes"))
+    def set_boxes(self, sample_uuid: str, boxes: list[DefectBox]) -> str:
+        """Replace the defect boxes of an NG image: `set_label` with its label and defect type as they are."""
+        return self._set_label(sample_uuid, None, boxes)
+
+    def _set_label(self, sample_uuid: str, given: tuple[str, str | None] | None, boxes: list[DefectBox] | None) -> str:
+        """`set_label`, with `given` None for the label and type the sample has. The image's size, which the box checks
+        need, is read before the write transaction opens, so no file is read while the database is locked."""
+        size = labels.image_size(self._sample(sample_uuid)["path"]) if boxes else None
+        with self.db.transaction():
+            sample = self._sample(sample_uuid)
+            label, defect_type = given or (sample["label"], sample["defect_type"])
+            before = self._label_state(sample)
+            uid, rows = self._write_label(sample, label, defect_type, boxes, size)
+            after = {"label_uuid": uid, "label": label, "defect_type": defect_type, "boxes": rows}
+            self.audit("label.set", "sample", sample_uuid, before, after)
+        return uid
+
+    def label_history(self, sample_uuid: str) -> list[dict[str, Any]]:
+        """Every label a sample has had, newest first (uuid, label, defect_type, labelled_by: a user's UUID, None for a
+        label carried over from before history was kept, labelled_by_name, at_utc, superseded_by: the label row that
+        replaced it, None for the current one), each with `boxes`, the defect boxes drawn with it."""
+        return self.db.label_history(sample_uuid)
+
+    def boxes(self, sample_uuid: str) -> list[dict[str, Any]]:
+        """A sample's current defect boxes (uuid, label_uuid, x, y, w, h, dct_type, severity, labelled_by, at_utc), in
+        the order drawn; none for an image that is not NG."""
+        return self.db.boxes(sample_uuid)
+
+    def box_history(self, sample_uuid: str) -> list[dict[str, Any]]:
+        """Every defect box a sample has had, newest first; a replaced one names the label row that replaced it."""
+        return self.db.boxes(sample_uuid, every=True)[::-1]
+
+    def unsure_samples(self, board_model: str) -> list[dict[str, Any]]:
+        """The images labelled UNSURE, as `samples` gives them, for the customer's quality engineer (REQ-TRN-002)."""
+        return self.db.samples(board_model, "UNSURE")
+
+    def _sample(self, sample_uuid: str) -> dict[str, Any]:
+        if (sample := self.db.sample_by_uuid(sample_uuid)) is None:
+            raise AoiError("AOI-TRN-032", sample=sample_uuid)
+        return sample
+
+    def _label_state(self, sample: dict[str, Any]) -> dict[str, Any]:
+        """A sample's current label as its audit entries hold it."""
+        boxes = [{k: b[k] for k in ("x", "y", "w", "h", "dct_type", "severity")} for b in self.db.boxes(sample["uuid"])]
+        return {k: sample[k] for k in ("label_uuid", "label", "defect_type")} | {"boxes": boxes}
+
+    def _write_label(
+        self, sample: dict[str, Any], label: str, dtype: str | None, boxes: list[DefectBox] | None, size: labels.Size
+    ) -> tuple[str, list[dict[str, Any]]]:
+        """Check and store a new label as the user acting, in the caller's transaction, with the image's `size` for the
+        boxes given: (its UUID, the box rows)."""
+        if boxes is None:  # the boxes stay with an image that stays NG; any other label has none
+            keep = self.db.boxes(sample["uuid"]) if label == "NG" else []
+            boxes = [DefectBox(b["x"], b["y"], b["w"], b["h"], b["dct_type"]) for b in keep]
+        labels.check(Path(sample["path"]).name, size, label, dtype, boxes)
+        if label != "OK":
+            change = QT_TRANSLATE_NOOP("Errors", "relabelled {label}").fill(label=label)
+            self._refuse_reference_change(sample, change)
+        rows = [b.row() for b in boxes]
+        return self.db.add_label(sample["uuid"], label, dtype, rows, self.user_uuid), rows
+
+    # --- second-user label checks (REQ-TRN-004; S34): every NG label and a seeded random 10 % of the OK labels ---
+    @requires("Engineer", QT_TRANSLATE_NOOP("Errors", "Checking a label"))
+    @transactional
+    def check_label(self, sample_uuid: str) -> str:
+        """Record that the user acting checked a sample's current label row; returns the check's UUID, audited as
+        `label.check`. The labeller cannot check it (AOI-TRN-033): a second user does, by name under ADR 0002 until
+        sign-in ships. AOI-TRN-034 refuses a label checked already, an UNSURE label, an NG image with no defect box and
+        a label with no labeller recorded (carried over by migration 0014)."""
+        sample = self._sample(sample_uuid)
+        why = None
+        if sample["checked_by"] is not None:
+            why = QT_TRANSLATE_NOOP("Errors", "it is checked already")
+        elif sample["label"] == "UNSURE":
+            why = QT_TRANSLATE_NOOP("Errors", "an UNSURE image is left out of training, so its label is not checked")
+        elif sample["label"] == "NG" and not self.db.boxes(sample_uuid):
+            why = QT_TRANSLATE_NOOP("Errors", "an NG image needs at least one defect box: draw its boxes first")
+        elif sample["labelled_by"] is None:
+            why = QT_TRANSLATE_NOOP("Errors", "no labeller is recorded for it: label it again first")
+        if why is not None:
+            raise AoiError("AOI-TRN-034", sample=Path(sample["path"]).name, reason=why)
+        if sample["labelled_by"] == self.user_uuid:
+            raise AoiError("AOI-TRN-033", sample=Path(sample["path"]).name)
+        uid = self.db.add_check(sample["label_uuid"], sample_uuid, self.user_uuid)
+        after = {"check_uuid": uid, "label_uuid": sample["label_uuid"], "label": sample["label"]}
+        self.audit("label.check", "sample", sample_uuid, None, after)
+        return uid
+
+    @requires("Engineer", QT_TRANSLATE_NOOP("Errors", "Drawing OK labels for a check"))
+    @transactional
+    def draw_ok_checks(self, board_model: str, view: str, seed: int | None = None) -> dict[str, Any] | None:
+        """Draw at random, with a recorded seed (a new one when None), OK labels of a board model and view for a second
+        user to check, so that the drawn ones still OK number 10 % of its OK labels, rounded up; a draw adds to the
+        earlier ones and never replaces one. Returns the draw (uuid, side, seed, ok_labels, sample_uuids), audited as
+        `label.draw`, or None, writing nothing, when the earlier draws are enough."""
+        status = self.label_check_status(board_model, view)
+        need = status["ok_needed"] - len(status["ok_drawn"])
+        if need <= 0:
+            return None
+        drawn = {u for d in self.db.ok_check_draws(board_model, view) for u in d["sample_uuids"]}
+        pool = [s["uuid"] for s in self._in_view(board_model, view, "OK") if s["uuid"] not in drawn]
+        seed = secrets.randbelow(2**31) if seed is None else seed
+        picked = random.Random(seed).sample(pool, need)  # noqa: S311 - no secret: seed and draw are audited
+        draw = self.db.add_ok_check_draw(board_model, view, seed, status["ok"], picked, self.user_uuid)
+        self.audit("label.draw", "board_model", board_model, None, draw)
+        return draw
+
+    def label_check_status(self, board_model: str, view: str) -> dict[str, Any]:
+        """The second-user checks of a board model and view (REQ-TRN-004): `ok` and `ng`, its OK and NG labels;
+        `ng_unchecked`, the NG samples whose label is not checked; `ok_needed`, 10 % of the OK labels rounded up;
+        `ok_drawn` and `ok_checked`, the drawn samples still OK and those of them checked; and `ready`, never with no OK
+        or NG label. A view other than Top, Side or Bottom is refused with AOI-TRN-038, here and in each call below."""
+        ok, ng = self._in_view(board_model, view, "OK"), self._in_view(board_model, view, "NG")
+        drawn = {u for d in self.db.ok_check_draws(board_model, view) for u in d["sample_uuids"]}
+        ok_drawn = [s for s in ok if s["uuid"] in drawn]
+        status: dict[str, Any] = {"ok": len(ok), "ng": len(ng), "ok_needed": -(-len(ok) // 10)}
+        status["ng_unchecked"] = [s["uuid"] for s in ng if s["checked_by"] is None]
+        status["ok_drawn"] = [s["uuid"] for s in ok_drawn]
+        status["ok_checked"] = [s["uuid"] for s in ok_drawn if s["checked_by"] is not None]
+        enough = len(status["ok_checked"]) >= status["ok_needed"]
+        status["ready"] = bool(ok or ng) and not status["ng_unchecked"] and enough  # no label: nothing to freeze
+        return status
+
+    def labels_ready_to_freeze(self, board_model: str, view: str) -> bool:
+        """True once every NG label of the board model and view, and drawn OK labels numbering at least 10 % of its OK
+        labels, are checked by a second user (REQ-TRN-004); a dataset of that view is frozen only then (S35)."""
+        return bool(self.label_check_status(board_model, view)["ready"])
+
+    def _in_view(self, board_model: str, view: str, label: str) -> list[dict[str, Any]]:
+        if view not in VIEWS:  # a view names a dataset version and its folder, so no other text may reach a path
+            raise AoiError("AOI-TRN-038", view=view)
+        return [s for s in self.db.samples(board_model, label) if s["side"] == view]
+
+    # --- labeller agreement (REQ-TRN-016; S34): two users label a calibration set blind; each check is stored ---
+    @requires("Engineer", QT_TRANSLATE_NOOP("Errors", "Making a calibration set"))
+    @transactional
+    def make_calibration_set(self, board_model: str, sample_uuids: list[str]) -> str:
+        """Fix a calibration set of a board model: 100 different images (proposed), each labelled OK or NG now; returns
+        its UUID, audited as `calibration.make`. AOI-TRN-035 refuses any other set."""
+        current = {s["uuid"]: s["label"] for s in self.db.samples(board_model)}
+        why = None
+        if len(set(sample_uuids)) != len(sample_uuids) or len(sample_uuids) != labels.CALIBRATION_IMAGES:
+            why = QT_TRANSLATE_NOOP("Errors", "it holds {n} different images, not {size}")
+            why = why.fill(n=len(set(sample_uuids)), size=labels.CALIBRATION_IMAGES)
+        elif other := [u for u in sample_uuids if current.get(u) not in ("OK", "NG")]:
+            why = QT_TRANSLATE_NOOP("Errors", "{n} of its images are not labelled OK or NG under {board_model}")
+            why = why.fill(n=len(other), board_model=board_model)
+        if why is not None:
+            raise AoiError("AOI-TRN-035", reason=why)
+        row = {"board_model": board_model, "sample_uuids": json.dumps(sample_uuids), "made_by": self.user_uuid}
+        uid = self.db.add_row("calibration_sets", **row)
+        self.audit("calibration.make", "calibration_set", uid, None, {**row, "sample_uuids": sample_uuids})
+        return uid
+
+    @requires("Engineer", QT_TRANSLATE_NOOP("Errors", "Labelling a calibration image blind"))
+    @transactional
+    def label_blind(self, set_uuid: str, sample_uuid: str, label: str, defect_type: str | None = None) -> str:
+        """Record the user acting's own label of an image of a calibration set, kept apart from the image's label: OK,
+        or NG with one of the 33 defect types, once per image and user. Returns its UUID, audited as `label.blind`.
+        AOI-TRN-036 refuses an image outside the set, any other label, and a second blind label of an image."""
+        cal, sample = self.db.calibration_sets("", set_uuid), self.db.sample_by_uuid(sample_uuid)
+        why = None
+        if not cal or sample_uuid not in cal[0]["sample_uuids"]:
+            why = QT_TRANSLATE_NOOP("Errors", "it is not an image of the calibration set")
+        elif not labels.blind_label_ok(label, defect_type):
+            why = QT_TRANSLATE_NOOP("Errors", "a blind label is OK, or NG with one of the 33 defect types")
+        elif sample_uuid in self.db.blind_labels(set_uuid, self.user_uuid):
+            why = QT_TRANSLATE_NOOP("Errors", "you labelled it blind already")
+        if why is not None:
+            raise AoiError("AOI-TRN-036", sample=Path(sample["path"]).name if sample else sample_uuid, reason=why)
+        row = {"set_uuid": set_uuid, "sample_uuid": sample_uuid, "label": label, "defect_type": defect_type}
+        uid = self.db.add_row("blind_labels", **row, labelled_by=self.user_uuid)
+        self.audit("label.blind", "calibration_set", set_uuid, None, {"uuid": uid, **row})
+        return uid
+
+    @requires("Engineer", QT_TRANSLATE_NOOP("Errors", "Running an agreement check"))
+    @transactional
+    def run_agreement_check(self, set_uuid: str, labeller_a: str, labeller_b: str) -> dict[str, Any]:
+        """Compare two users' (UUIDs) blind labels of every image of a calibration set, as labels.agreement does, and
+        store the check with its counts, targets and labellers; returns it as `agreement_checks` reads it, audited as
+        `agreement.check`. AOI-TRN-037 refuses one user twice and a labeller who has not labelled every image blind."""
+        cal = next(iter(self.db.calibration_sets("", set_uuid)), None)
+        a, b = (self.db.blind_labels(set_uuid, u) for u in (labeller_a, labeller_b))
+        why = None
+        if cal is None:
+            why = QT_TRANSLATE_NOOP("Errors", "the workspace holds no such calibration set")
+        elif labeller_a == labeller_b:
+            why = QT_TRANSLATE_NOOP("Errors", "the two labellers are one user")
+        elif min(len(a), len(b)) < len(cal["sample_uuids"]):
+            why = QT_TRANSLATE_NOOP("Errors", "a labeller has labelled {n} of its {size} images blind")
+            why = why.fill(n=min(len(a), len(b)), size=len(cal["sample_uuids"]))
+        if cal is None or why is not None:
+            raise AoiError("AOI-TRN-037", reason=why)
+        counts = labels.agreement(a, b) | {"set_uuid": set_uuid, "board_model": cal["board_model"]}
+        counts |= {"labeller_a": labeller_a, "labeller_b": labeller_b, "run_by": self.user_uuid}
+        uid = self.db.add_row("agreement_checks", **counts | {"agreed": int(counts["agreed"])})
+        check = self.db.agreement_checks(cal["board_model"], uid)[0]
+        self.audit("agreement.check", "calibration_set", set_uuid, None, check)
+        return check
+
+    def calibration_sets(self, board_model: str) -> list[dict[str, Any]]:
+        """A board model's calibration sets, newest first (uuid, board_model, sample_uuids, made_by, at_utc)."""
+        return self.db.calibration_sets(board_model)
+
+    def agreement_checks(self, board_model: str) -> list[dict[str, Any]]:
+        """A board model's agreement checks, newest first (uuid, set_uuid, labeller_a, labeller_b, images, ok_ng_agree,
+        both_ng, type_agree, ok_ng_target, type_target, agreed 1 or 0, run_by, at_utc)."""
+        return self.db.agreement_checks(board_model)
+
+    # --- frozen dataset versions (REQ-TRN-005; S35): rows and manifest never change; a change goes into v<N+1> ---
+    @requires("Engineer", QT_TRANSLATE_NOOP("Errors", "Freezing a dataset version"))
+    def freeze_dataset(
+        self, board_model: str, view: str, revision: str, customer: str, allowed_uses: Sequence[str] = ("own",)
+    ) -> dict[str, Any]:
+        """Freeze the OK and NG images of a board model and view as version N, one more than the view's last, named by
+        `datasets.name`: writes datasets/<name>/manifest.json (each file's relative path, SHA-256, label row and label,
+        boxes, labeller, checker); stores the version with its SHA-256, the customer, the uses (own by default, each
+        once) and the agreement check that decides (`_newest_check`); audited as `dataset.freeze`. Refused, writing
+        nothing, in this order: a view not in aoi.hal.VIEWS (AOI-TRN-038), a board model name with no Latin letter or
+        digit (AOI-TRN-039), then as `_refuse_input` and `_refuse_freeze` give; `_refuse_freeze` runs once before any
+        file is read, so a freeze it refuses reads no image file first. The files are hashed next, with no lock held
+        (AOI-INSP-001 for one that cannot be read). Then, with the database lock held, one write transaction finds N,
+        checks the name and the gate again and reads the files' labels and boxes, stores the rows and the audit entry,
+        and moves the manifest into place (atomic.staged) just before it commits; a failed commit puts back the manifest
+        it replaced before the lock is released, so no other freeze comes between. A freeze that dies before the move
+        leaves no manifest; one that dies between the move and the commit leaves a manifest no row names, which the next
+        freeze of that name replaces. A second freeze of the view waits for the first. AOI-TRN-041 for a manifest that
+        cannot be written, AOI-TRN-042 for one whose path the system refuses as too long."""
+        uses = list(dict.fromkeys(allowed_uses))  # a use given twice is kept once
+        paths = [s["path"] for label in ("OK", "NG") for s in self._in_view(board_model, view, label)]  # AOI-TRN-038
+        self._refuse_input(board_model, view, revision, customer, uses)
+        name = datasets.name(board_model, revision, view, self._next_version(board_model, view))
+        self._refuse_freeze(name, board_model, view)  # before any file is read, and again in the transaction
+        known = {p: (self._sha256(p), to_stored(p, self.settings.root)) for p in paths}  # file work, before the lock
+        # the manifest's exit runs after the commit and before the lock is released
+        with self.db.locked(), contextlib.ExitStack() as manifest, self.db.transaction():
+            n = self._next_version(board_model, view)  # again, in the transaction that stores it
+            name = datasets.name(board_model, revision, view, n)
+            agreed = self._refuse_freeze(name, board_model, view)
+            version: dict[str, Any] = {"uuid": new_uuid(), "name": name, "board_model": board_model}
+            version |= {"revision": revision, "view": view, "version": n, "customer": customer.strip()}
+            version |= {"allowed_uses": uses, "agreement_check_uuid": agreed["uuid"], "frozen_by": self.user_uuid}
+            version |= {"frozen_at": now_utc()}
+            draws = [{k: v for k, v in d.items() if k != "id"} for d in self.db.ok_check_draws(board_model, view)]
+            head = version | {
+                "agreement_check": {k: v for k, v in agreed.items() if k != "id"},
+                "ok_check_draws": draws,
+            }
+            in_view = [s for s in self.db.samples(board_model) if s["side"] == view and s["label"] != "UNSURE"]
+            boxes = self.db.current_boxes(board_model)  # one query, not one per file, while the lock is held
+            files = [self._frozen_file(s, known, boxes.get(s["uuid"], [])) for s in in_view]
+            data, sha = datasets.manifest(head, files)
+            rel = f"{datasets.FOLDER}/{name}/manifest.json"
+            manifest.enter_context(_manifest_write(name, rel, self.settings.root))
+            move_in = manifest.enter_context(atomic.staged(self.settings.root / rel, data))
+            self.db.add_dataset(version | {"manifest_path": rel, "manifest_sha256": sha}, files)
+            keep = ("name", "customer", "allowed_uses", "agreement_check_uuid")
+            after = {k: version[k] for k in keep} | {"files": len(files), "manifest_sha256": sha}
+            self.audit("dataset.freeze", "dataset", version["uuid"], None, after)
+            move_in()
+        return self.db.datasets(board_model, version["uuid"])[0]
+
+    def datasets(self, board_model: str) -> list[dict[str, Any]]:
+        """A board model's frozen versions, newest first, as the datasets table holds them (docs/ARCHITECTURE.md)."""
+        return self.db.datasets(board_model)
+
+    def dataset_items(self, dataset_uuid: str) -> list[dict[str, Any]]:
+        """A frozen version's files as its manifest lists them, each with its row's id, uuid and dataset_uuid."""
+        return self.db.dataset_items(dataset_uuid)
+
+    def verify_dataset(self, dataset_uuid: str) -> dict[str, Any]:
+        """Re-hash a frozen version's manifest and each of its files against the SHA-256 stored at the freeze
+        (REQ-TRN-005), writing nothing: `manifest` is same, changed or missing; `files` counts the files, and `matched`,
+        `changed` and `missing` list their relative paths in the manifest's order. AOI-TRN-028 for a version the
+        workspace does not hold. Hashes on this thread; the Datasets tab runs it on the pool."""
+        if not (found := self.db.datasets("", dataset_uuid)):
+            raise AoiError("AOI-TRN-028", dataset=dataset_uuid)
+        sha = datasets.file_sha256(self.settings.root / found[0]["manifest_path"])
+        result: dict[str, Any] = {"matched": [], "changed": [], "missing": []}
+        result["manifest"] = "missing" if sha is None else "same" if sha == found[0]["manifest_sha256"] else "changed"
+        items = self.db.dataset_items(dataset_uuid)
+        for item in items:
+            sha = datasets.file_sha256(resolve(item["path"], self.settings.root))
+            result["missing" if sha is None else "matched" if sha == item["sha256"] else "changed"].append(item["path"])
+        return result | {"files": len(items)}
+
+    def _refuse_input(self, board_model: str, view: str, revision: str, customer: str, uses: list[str]) -> None:
+        """The refusals that read only what the freeze was given: no Latin letter or digit in the board model's name
+        (AOI-TRN-039), a revision other than 1 to 16 letters and digits (AOI-TRN-027), no customer (AOI-TRN-024), a use
+        outside the three (AOI-TRN-027)."""
+        if not datasets.token(board_model):
+            raise AoiError("AOI-TRN-039", board=board_model)
+        name, why = datasets.name(board_model, revision, view, self._next_version(board_model, view)), None
+        if not datasets.REVISION.fullmatch(revision):
+            why = QT_TRANSLATE_NOOP("Errors", "the board revision {revision} is not 1 to 16 letters and digits")
+            why = why.fill(revision=revision)
+        elif not customer.strip():
+            raise AoiError("AOI-TRN-024", name=name)
+        elif not uses or not set(uses) <= set(datasets.ALLOWED_USES):
+            why = QT_TRANSLATE_NOOP("Errors", "the allowed uses are one or more of own, shared and demos")
+        if why is not None:
+            raise AoiError("AOI-TRN-027", name=name, reason=why)
+
+    def _next_version(self, board_model: str, view: str) -> int:
+        return 1 + max((d["version"] for d in self.db.datasets(board_model) if d["view"] == view), default=0)
+
+    def _refuse_freeze(self, name: str, board_model: str, view: str) -> dict[str, Any]:
+        """The agreement check a version is frozen with; else, read in the freeze's transaction, the first reason not to
+        freeze: another board model whose name gives the same letters and digits has frozen versions (AOI-TRN-040), a
+        version of that name exists or the view holds no OK or NG image (AOI-TRN-027), an NG label not checked
+        (AOI-TRN-020), too few drawn OK labels checked (AOI-TRN-021), and the newest agreement check missing or short
+        of its targets (AOI-TRN-027)."""
+        frozen = self.db.dataset_names()
+        token = datasets.token(board_model)
+        other = next((d for d in frozen if d != board_model and datasets.token(d) == token), None)
+        if other is not None:
+            raise AoiError("AOI-TRN-040", board=board_model, name=name, other=other)
+        status = self.label_check_status(board_model, view)  # its `ready` is labels_ready_to_freeze (REQ-TRN-004)
+        newest = self._newest_check(board_model, view)
+        why = None
+        if name in frozen.get(board_model, []):
+            why = QT_TRANSLATE_NOOP("Errors", "a dataset version of that name is in the workspace already")
+        elif not status["ok"] + status["ng"]:
+            why = QT_TRANSLATE_NOOP("Errors", "the view holds no image labelled OK or NG")
+        elif status["ng_unchecked"]:
+            raise AoiError("AOI-TRN-020", name=name, count=len(status["ng_unchecked"]))
+        elif len(status["ok_checked"]) < status["ok_needed"]:
+            checked, needed = len(status["ok_checked"]), status["ok_needed"]
+            raise AoiError("AOI-TRN-021", name=name, checked=checked, needed=needed, ok=status["ok"])
+        elif newest is None:
+            why = QT_TRANSLATE_NOOP("Errors", "no agreement check of the board model holds images of this view")
+        elif not newest["agreed"]:
+            why = QT_TRANSLATE_NOOP("Errors", "the newest agreement check of the view did not reach the targets")
+        if why is not None or newest is None:
+            raise AoiError("AOI-TRN-027", name=name, reason=why)
+        return newest
+
+    def _newest_check(self, board_model: str, view: str) -> dict[str, Any] | None:
+        """The newest agreement check of the board model whose calibration set holds an image of `view`: it decides,
+        so a newer check short of the targets refuses a freeze until a newer one reaches them (ADR 0009)."""
+        side = {s["uuid"]: s["side"] for s in self.db.samples(board_model)}
+        sets = {c["uuid"]: c["sample_uuids"] for c in self.db.calibration_sets(board_model)}
+        checks = self.db.agreement_checks(board_model)
+        return next((c for c in checks if view in {side.get(u) for u in sets.get(c["set_uuid"], [])}), None)
+
+    def _sha256(self, path: str) -> str:
+        """A file's SHA-256 for a version; AOI-INSP-001, with the system's reason, for one that cannot be read."""
+        try:
+            return datasets.sha256(path)
+        except OSError as e:
+            raise AoiError("AOI-INSP-001", detail=str(e), path=path) from e
+
+    def _frozen_file(
+        self, sample: dict[str, Any], known: dict[str, tuple[str, str]], boxes: list[dict[str, Any]]
+    ) -> dict[str, Any]:
+        """One file of a version as its manifest lists it: its SHA-256 and stored path from `known`, read before the
+        lock (a file added since, now), and its current `boxes` as `_label_state` gives them."""
+        path = sample["path"]
+        sha, stored = known.get(path) or (self._sha256(path), to_stored(path, self.settings.root))
+        keys = ("label_uuid", "label", "defect_type", "labelled_by", "checked_by")
+        head = {"path": stored, "sha256": sha, "sample_uuid": sample["uuid"]}
+        drawn = [{k: b[k] for k in ("x", "y", "w", "h", "dct_type", "severity")} for b in boxes]
+        return head | {k: sample[k] for k in keys} | {"boxes": drawn}
 
     @requires("Engineer", QT_TRANSLATE_NOOP("Errors", "Activating an AI model version"))
     @transactional
@@ -1268,6 +1904,18 @@ def _export_write(path: str | Path) -> Iterator[None]:
         yield
     except OSError as e:
         raise _not_written(e, path) from e
+
+
+@contextlib.contextmanager
+def _manifest_write(name: str, path: str, root: Path) -> Iterator[None]:
+    """A manifest that cannot be written becomes AOI-TRN-042 for a path the system refuses as too long, as AOI-TRN-011
+    does for an import, and AOI-TRN-041 naming the file otherwise; atomic.staged has put the workspace back."""
+    try:
+        yield
+    except OSError as e:
+        if _too_long(e):
+            raise AoiError("AOI-TRN-042", repr(e), name=name, workspace=str(root)) from e
+        raise AoiError("AOI-TRN-041", repr(e), name=name, path=path, reason=e.strerror or str(e)) from e
 
 
 def _not_written(e: OSError, path: object) -> AoiError:

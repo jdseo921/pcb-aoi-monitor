@@ -124,6 +124,12 @@ DEFECTS = [
 ]
 
 
+def ng_type(path: Path) -> str:
+    """The defect type a synthetic NG board was drawn with, read back from its file name (`ng_000_solder_bridge.png`),
+    since an NG sample is imported only with its type (REQ-TRN-001)."""
+    return next(d for d in DEFECTS if path.stem.endswith("_" + d.replace(" ", "_").lower()))
+
+
 def write_dataset(out: Path, ok: int = 60, ng: int = 14, seed: int = 7) -> list[dict[str, str]]:
     """Write the dataset under `out` and return the label rows. Same seed, same images, on every machine."""
     rng = random.Random(seed)

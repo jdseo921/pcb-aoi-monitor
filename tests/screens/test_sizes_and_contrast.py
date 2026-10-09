@@ -5,7 +5,7 @@ least 48 px tall, text contrast at least 4.5:1. The walk opens the shell at 1920
 every page in the state the screenshots show (`tools/render_screens.py`) and, for every role that may open it, reads
 each visible widget: its resolved font, its size, whether its text fits, and the colours of its pixels in the window
 grab. The operator targets are named (the Inspection source bar among them), and every visible control marked with
-size class T or T+ is held to 48 or 56 px too (#240). Contrast is the WCAG 2.1 ratio between a widget's background
+size class T, T+ or F is held to 48, 56 or 40 px (#240). Contrast is the WCAG 2.1 ratio between a widget's background
 (its most common colour) and its text (the colour farthest from the background in luminance); a label is also measured
 line by line, and each colour its rich text sets at that text's own size, on the text's own background where it sets
 one (a chip), so a second colour beside a stronger one is read too (#240). Bold or 18 pt text may read at 3:1 (WCAG
@@ -25,6 +25,7 @@ the pointer) and the month list; the calendar's previous and next month arrows, 
 from __future__ import annotations
 
 import re
+import shutil
 import sys
 from collections import Counter
 from collections.abc import Iterator
@@ -79,6 +80,7 @@ from PySide6.QtWidgets import (
 )
 from pytestqt.qtbot import QtBot
 
+from aoi.config import Settings
 from aoi.core.services import AppContext
 from aoi.ui import theme
 from aoi.ui.main_window import MainWindow
@@ -465,8 +467,8 @@ def _check_targets(where: str, win: MainWindow, title: str, seen: Counter) -> li
     """Operator targets (sketch size classes T, 48 px, and T+, 56 px): sidebar entries, header controls, defect and
     history rows, the Inspection source bar (Load Images…, Load Folder…, View) and run controls, each named, so one
     whose size class a change drops is still measured, and held to its size class where that asks more; then every
-    visible widget marked T or T+, so one marked later is measured before anyone names it, whatever its type: the
-    stylesheet sizes only buttons and drop-downs (#240)."""
+    visible widget marked T, T+ or F (40 px: a tick beside a field), so one marked later is measured before anyone names
+    it, whatever its type: the stylesheet sizes only buttons (T, T+), drop-downs (T) and check boxes (F) (#240)."""
     out: list[str] = []
     page: Any = win.pages[title]
     targets: list[tuple[str, int, int]] = []
@@ -486,7 +488,7 @@ def _check_targets(where: str, win: MainWindow, title: str, seen: Counter) -> li
             ("run control", b, theme.RUN_CONTROL_H)
             for b in (page.btn_start, page.btn_stop, page.btn_next, page.btn_save)
         ]
-    need = {"T": theme.TARGET_H, "T+": theme.RUN_CONTROL_H}
+    need = {"T": theme.TARGET_H, "T+": theme.RUN_CONTROL_H, "F": theme.FIELD_H}  # size_class() in pages/base.py
     named = [(what, w, max(h, need.get(str(w.property("sizeClass")), 0))) for what, w, h in named]
     for w in win.findChildren(QWidget):
         if w.isVisible() and (cls := w.property("sizeClass")) in need and all(w is not n for _, n, _ in named):
@@ -560,6 +562,73 @@ def test_req_set_004_sizes_and_contrast_on_every_page(
     assert not findings, f"{len(findings)} findings:\n" + "\n".join(sorted(set(findings)))
 
 
+def test_req_insp_014_compare_notice_costs_the_decision_table_no_row(
+    screens: tuple[AppContext, Path], qtbot: QtBot, qapp: QApplication, tmp_path: Path
+) -> None:
+    """AOI-RCP-007 on Compare (here a minimum defect area under 13 px, without a scale) is one line in amber at the top
+    of the "why" box, which keeps its height, so at 1920 x 1080 the decision table keeps its height and shows as many
+    check rows whole as without the notice; S29's size field is as tall as Pixel difference's spin box, the kind of
+    field it replaced, so the table shows as many rows as before S29, with the notice or without (S29 review): six of
+    the seven with the approved screenshots' font (DejaVu Sans, on Linux) and five with Windows' taller one (Windows CI;
+    WenQuanYi Zen Hei at 15 pt, as tall, gives five on Linux before S29 as after). Each widget and target on the page
+    passes the walk's checks (the lists and the field's menu the walk above opens are windows of their own, outside the
+    page); with the notice gone, the box says nothing of it. The box follows the notice whatever came before: a recipe
+    saved under 4 px and another board model chosen and back before Compare is first shown, then the notice hidden and
+    shown again. It runs on a copy of the module's workspace: it saves a recipe and a board model there, and closing its
+    window closes that copy's context."""
+    shared, dataset = screens
+    shutil.copytree(shared.settings.root, tmp_path / "workspace")
+    ctx = AppContext(Settings(workspace=str(tmp_path / "workspace"), device="cpu"))
+    ctx.set_user("engineer")
+    _, small = ctx.recipe(render_screens.BOARD_MODEL)
+    small.min_defect_area = 12  # under 4 px: AOI-RCP-007 as the form is filled
+    ctx.save_recipe(small)
+    ctx.ensure_board_model("ZZZ")
+    ctx.settings.last_page = "Home"
+    findings: list[str] = []
+    seen: Counter = Counter()
+    with render_screens.pinned_rendering(qapp, render_screens.TEST_FONT if LINUX else ""):
+        win = MainWindow(ctx)
+        qtbot.addWidget(win)
+        win.resize(1920, 1080)
+        win.show()
+        qtbot.waitExposed(win)
+        win.set_user("engineer")
+        page = win.pages["Compare"]
+        assert win.stack.currentWidget() is not page
+        for name in ("ZZZ", render_screens.BOARD_MODEL):  # before Compare is first shown (review round 2)
+            win._on_board_model(name)
+        assert win.navigate("Compare")
+        render_screens.prepare(win, "Compare", dataset)
+        notice, table = page.min_size.notice, page.metrics
+
+        def whole(state: str, shown: bool) -> tuple[int, int, int]:
+            """The check rows shown whole once the layouts settle (each asks the one above it by a posted event), and
+            the heights of the table and the "why" box."""
+            for _ in range(10):
+                QApplication.processEvents()
+            said = notice.text() != "" and notice.text() in page.why.toPlainText()
+            assert said == shown and page.why.maximumHeight() == theme.WHY_H, state
+            rows = [table.visualItemRect(table.item(r, 0)) for r in range(table.rowCount())]
+            assert len(rows) >= 7, (state, rows)
+            return sum(table.viewport().rect().contains(r) for r in rows), table.height(), page.why.height()
+
+        first = whole("a recipe under 4 px, and a board model round trip before Compare was shown", True)
+        page.min_size.area.setValue(40)  # the notice gone
+        gone = whole("the notice gone", False)
+        page.min_size.area.setValue(12)
+        assert first == whole("the notice hidden and shown again", True) == gone, (first, gone)
+        assert page.min_size.height() == page.diff_thr.height(), (page.min_size.height(), page.diff_thr.height())
+        assert gone[0] >= (6 if LINUX else 5), gone
+        shot = _pixels(win.grab().toImage())
+        for w in win.findChildren(QWidget):
+            if w.isVisible() and w.width() > 0:
+                findings += _check_widget("Compare with AOI-RCP-007", win, shot, w, seen)
+        findings += _check_targets("Compare with AOI-RCP-007", win, "Compare", seen)  # as for every page (#240)
+        win.close()
+    assert seen["contrast"] > 50 and not findings, "\n".join(sorted(set(findings)))
+
+
 def test_req_set_004_theme_token_pairs_read() -> None:
     """Every text colour on every surface the stylesheet composes: 4.5:1, or 3:1 where the text is bold or 40 pt
     (white on the standard's OK green, NG red and accent blue, accent blue on a card; open with Jay, see the theme's
@@ -592,7 +661,8 @@ def test_req_set_004_the_walk_holds_every_size_class_t_control_to_48_px(
     """Load Folder with its size class cleared at run time, as a change that drops its size_class() leaves it (42 px),
     a field marked T that no list names, and the header's Board model marked T+ (56 px) where the list names it at 48:
     the walk's target check reports all three. Before #240 it measured a fixed list without the Inspection source bar
-    and never read sizeClass, so it reported none."""
+    and never read sizeClass, so it reported none. Every size class is held, not T alone as the name says: a label
+    marked F, a tick's class (40 px, REQ-TRN-015), which the stylesheet gives a check box alone, is reported too."""
     ctx, dataset = screens
     with _shell(ctx, qtbot, qapp) as win:
         win.set_user("engineer")
@@ -605,11 +675,14 @@ def test_req_set_004_the_walk_holds_every_size_class_t_control_to_48_px(
         folder.style().polish(folder)
         field = size_class(QLineEdit("a field marked T"), "T")  # the stylesheet sizes no field to 48 px
         page.root.addWidget(field)
+        page.root.addWidget(tick := size_class(QLabel("a label marked F"), "F"))  # a tick's height, but not a tick
         win.bm_combo.setProperty("sizeClass", "T+")  # not polished again: it stays at the 48 px the list names
         QApplication.processEvents()
         assert folder.height() < theme.TARGET_H and field.height() < theme.TARGET_H, (folder.height(), field.height())
+        assert tick.height() < theme.FIELD_H, tick.height()
         found = _check_targets("Inspection", win, "Inspection", Counter())
     assert any("Load Folder" in f for f in found) and any("a field marked T" in f for f in found), found
+    assert any("a label marked F" in f and f.endswith("needs 40") for f in found), found
     assert any(f.startswith("Inspection: header control") and f.endswith("needs 56") for f in found), found
 
 

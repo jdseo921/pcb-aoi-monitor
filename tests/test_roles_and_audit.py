@@ -5,6 +5,7 @@ the entry (re-evaluating a result, since S28a)."""
 from __future__ import annotations
 
 import inspect
+import json
 import sqlite3
 from collections.abc import Callable
 from pathlib import Path
@@ -15,12 +16,63 @@ from PySide6.QtWidgets import QInputDialog, QMessageBox
 from pytestqt.qtbot import QtBot
 
 from aoi.config import Settings, default_workspace
+from aoi.core.labels import DefectBox
 from aoi.core.recipe import Recipe
+from aoi.core.sample_import import ImportFile, ImportReport
 from aoi.core.services import REQUIRED_ROLE, ROLES, AppContext, CsvFile
 from aoi.errors import AoiError
 from aoi.ui.main_window import MainWindow
 from aoi.ui.pages.base import role_text
 from aoi.ui.pages.settings import SettingsPage
+
+
+def _raising(report: ImportReport) -> ImportReport:
+    """import_files reports the error that stopped it rather than raising it: raised here, as every other write's is."""
+    if report.stopped is not None:
+        raise report.stopped[1]
+    return report
+
+
+def calibration_samples(ctx: AppContext) -> list[str]:
+    """The board model CAL's 100 samples, added through the database when missing, so that only the call under test is
+    role-checked and audited."""
+    have = [s["uuid"] for s in ctx.samples("CAL")]
+    return have or [ctx.db.sample(ctx.db.add_sample("CAL", "images/CAL/board.png", "OK"))["uuid"] for _ in range(100)]
+
+
+def calibration_set(ctx: AppContext) -> tuple[str, list[str]]:
+    """The newest calibration set's UUID and images; none before one is made, as for a call refused by its role."""
+    sets = ctx.calibration_sets("CAL")
+    return (sets[0]["uuid"], sets[0]["sample_uuids"]) if sets else ("", [""])
+
+
+def labelled_blind(ctx: AppContext) -> str:
+    """The set's UUID, labelled blind where missing by the engineer and, past label_blind's image, the user acting."""
+    uid, images = calibration_set(ctx)
+    users = (ctx.db.user_uuid("engineer"), ctx.user_uuid)
+    for n, image in enumerate(images if uid else []):
+        for user in users[: 2 if n else 1]:
+            if image not in ctx.db.blind_labels(uid, user):
+                ctx.db.add_row("blind_labels", set_uuid=uid, sample_uuid=image, label="OK", labelled_by=user)
+    return uid
+
+
+def ready_to_freeze(ctx: AppContext) -> str:
+    """TINY, with every Top OK and NG label checked and drawn and an agreed check, stored through the database where
+    missing, so that only the call under test is role-checked and audited."""
+    who, labelled = str(ctx.db.user_uuid("engineer")), [s for s in ctx.samples("TINY") if s["label"] != "UNSURE"]
+    for s in [s for s in labelled if s["checked_by"] is None]:  # TINY's samples are all Top
+        ctx.db.add_check(s["label_uuid"], s["uuid"], who)
+    if not ctx.labels_ready_to_freeze("TINY", "Top"):
+        ctx.db.add_ok_check_draw("TINY", "Top", 0, 0, [s["uuid"] for s in labelled if s["label"] == "OK"], who)
+    counts = {"images": 100, "ok_ng_agree": 100, "both_ng": 3, "type_agree": 3, "ok_ng_target": 98, "type_target": 90}
+    if not ctx.agreement_checks("TINY"):  # who as both labellers, on a set of TINY's Top images, which decides Top
+        images = json.dumps([s["uuid"] for s in labelled])
+        cal = ctx.db.add_row("calibration_sets", board_model="TINY", sample_uuids=images, made_by=who)
+        ctx.db.add_row("agreement_checks", set_uuid=cal, board_model="TINY", labeller_a=who, labeller_b=who, **counts,
+                       agreed=1, run_by=who)  # fmt: skip
+    return "TINY"
+
 
 # every AppContext write: method -> (its audit action, a call that works on the trained workspace), in a runnable order
 WRITES: dict[str, tuple[str, Callable[[AppContext, Path, Path], Any]]] = {
@@ -29,15 +81,50 @@ WRITES: dict[str, tuple[str, Callable[[AppContext, Path, Path], Any]]] = {
         "sample.import",
         lambda ctx, data, tmp: ctx.import_samples("TINY", [str(data / "golden.png")], "OK"),
     ),
+    "import_files": (
+        "sample.import",
+        lambda ctx, data, tmp: _raising(
+            ctx.import_files("TINY", [ImportFile(str(data / "test" / "ok" / "ok_000.png"), "OK")])
+        ),
+    ),
     "set_reference": (
         "board_model.reference",
         lambda ctx, data, tmp: ctx.set_reference("TINY", ctx.samples("TINY", "OK")[1]["id"]),
     ),
+    "set_scale": ("board_model.scale", lambda ctx, data, tmp: ctx.set_scale("TINY", 476.0, 10.0)),  # S29
     "update_sample": (
         "sample.update",
         lambda ctx, data, tmp: ctx.update_sample(ctx.samples("TINY", "OK")[0]["id"], "NG", "Scratch"),
     ),
     "delete_sample": ("sample.delete", lambda ctx, data, tmp: ctx.delete_sample(ctx.samples("TINY", "NG")[0]["id"])),
+    "set_label": ("label.set", lambda ctx, data, tmp: ctx.set_label(ctx.samples("TINY", "OK")[-1]["uuid"], "UNSURE")),
+    "set_boxes": (
+        "label.set",
+        lambda ctx, data, tmp: ctx.set_boxes(ctx.samples("TINY", "NG")[-1]["uuid"], [DefectBox(0, 0, 4, 4, "Scratch")]),
+    ),
+    "check_label": (  # an image the fixture's Engineer imported: the Admin acting here labelled golden.png above
+        "label.check",
+        lambda ctx, data, tmp: ctx.check_label(ctx.samples("TINY", "OK")[1]["uuid"]),
+    ),
+    "draw_ok_checks": ("label.draw", lambda ctx, data, tmp: ctx.draw_ok_checks("TINY", "Top", seed=1)),
+    "make_calibration_set": (
+        "calibration.make",
+        lambda ctx, data, tmp: ctx.make_calibration_set("CAL", calibration_samples(ctx)),
+    ),
+    "label_blind": (
+        "label.blind",
+        lambda ctx, data, tmp: ctx.label_blind(calibration_set(ctx)[0], calibration_set(ctx)[1][0], "OK"),
+    ),
+    "run_agreement_check": (
+        "agreement.check",
+        lambda ctx, data, tmp: ctx.run_agreement_check(
+            labelled_blind(ctx), str(ctx.user_uuid), str(ctx.db.user_uuid("engineer"))
+        ),
+    ),
+    "freeze_dataset": (
+        "dataset.freeze",
+        lambda ctx, data, tmp: ctx.freeze_dataset(ready_to_freeze(ctx), "Top", "R1", "Acme Electronics"),
+    ),
     "train": ("model.train", lambda ctx, data, tmp: ctx.train("TINY", epochs=1, image_size=32)),
     "activate_model": ("model.activate", lambda ctx, data, tmp: ctx.activate_model(ctx.models("TINY")[-1]["id"])),
     "save_recipe": ("recipe.save", lambda ctx, data, tmp: ctx.save_recipe(Recipe(board_model="TINY"))),
@@ -79,7 +166,9 @@ UNCHECKED = {
     "inspector", "inspect", "inspect_file", "load_image", "log_result", "board_models", "reference_image", "samples",
     "sample_path", "models", "model", "active_model", "recipe_history", "inspections", "defects_for", "checks_for",
     "checks_for_many", "inspection_result", "inspection", "judged_reference", "users", "board_status", "start_user",
-    "golden_board_unreadable", "engine_is_current",
+    "golden_board_unreadable", "engine_is_current", "calibrated_threshold", "calibration_of", "scale", "label_history",
+    "boxes", "box_history", "unsure_samples", "label_check_status", "labels_ready_to_freeze", "calibration_sets",
+    "agreement_checks", "datasets", "dataset_items", "verify_dataset",
 }  # fmt: skip
 CALLS = {**{name: call for name, (_, call) in WRITES.items()}, **CHECKED_READS}
 # The lowest role allowed each call, copied from the write table of docs/ARCHITECTURE.md §5 and REQ-CMP-005, never read

@@ -312,6 +312,8 @@ class MainWindow(QMainWindow):
             # greyed as a disabled control here, not by a stylesheet rule for disabled items: that rule would grey
             # the section headings too, which have no flags either (#239)
             it.setData(Qt.ItemDataRole.ForegroundRole, None if allowed else QColor(theme.TEXT_DISABLED))
+        for page in self.pages.values():  # shown or not: what a page keeps for the role before goes now
+            page.on_user_changed()
         cur = self.stack.currentWidget()
         if isinstance(cur, Page) and role not in cur.roles:
             self.navigate("Home")

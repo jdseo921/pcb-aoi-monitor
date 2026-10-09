@@ -5,9 +5,10 @@ from __future__ import annotations
 import hashlib
 import re
 import struct
-from collections.abc import Sequence
+import zlib
+from collections.abc import Iterator, Sequence
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 import cv2
 import numpy as np
@@ -20,12 +21,22 @@ IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".bmp", ".tif", ".tiff"}
 # values live in Settings and reach here through AppContext.load_image.
 MAX_MEGAPIXELS = 50
 MAX_MEGABYTES = 200
+HEADER_BYTES = 1 << 20  # what `file_header` reads first: a PNG, BMP or JPEG header lies well inside it
 MAX_SIDE = 1 << 20  # a side longer than this is beyond the decoder (OpenCV's CV_IO_MAX_IMAGE_WIDTH and _HEIGHT)
 BMP_HEADER_SIZES = {12, 16, 40, 52, 56, 64, 108, 124}  # BITMAPCOREHEADER to BITMAPV5HEADER: how a bitmap is known
 JPEG_FRAME_MARKERS = {0xC0, 0xC1, 0xC2, 0xC3, 0xC5, 0xC6, 0xC7, 0xC9, 0xCA, 0xCB, 0xCD, 0xCE, 0xCF}
 JPEG_BARE_MARKERS = {0x00, 0x01, 0xD8, *range(0xD0, 0xD8)}  # no length field follows: a stuffed byte, TEM, SOI, RSTn
 JPEG_MAX_MARKERS = 65536  # more markers than any camera writes: past it a walk gives up
 JPEG_FILL = re.compile(rb"\xff+")
+PNG_MAX_CHUNKS = 65536  # more chunks than a writer makes (about 7,330 in a 20 MP PNG): past it a walk gives up
+PNG_CRITICAL = (b"IHDR", b"PLTE", b"IDAT")  # the critical chunks libpng knows before IEND
+# The entries of an EXIF block's first directory that OpenCV 5.0's ExifReader reads before its Orientation, giving up on
+# the block at the first whose value lies past the block's end: text (ImageDescription, Make, Model, Software, DateTime,
+# Copyright), a 16-bit value (ResolutionUnit, YCbCrPositioning) and rationals by how many it reads (XResolution,
+# YResolution, WhitePoint, PrimaryChromaticities, YCbCrCoefficients, ReferenceBlackWhite)
+EXIF_TEXT = (0x010E, 0x010F, 0x0110, 0x0131, 0x0132, 0x8298)
+EXIF_SHORT = (0x0128, 0x0213)
+EXIF_RATIONALS = {0x011A: 1, 0x011B: 1, 0x013E: 2, 0x013F: 6, 0x0211: 3, 0x0214: 6}
 # libjpeg's progression writes 10 scans for a colour image, and its decoder reads every scan a file holds; libtiff stops
 # a JPEG inside a TIFF at the same 100 scans by default (LIBTIFF_JPEG_MAX_ALLOWED_SCAN_NUMBER)
 JPEG_MAX_SCANS = 100
@@ -35,9 +46,9 @@ JPEG_MAX_SCANS = 100
 JPEG_WALK = re.compile(rb"\xff([\xc0-\xc4\xc9-\xcc\xd9-\xdd\xe0-\xef\xfe])")
 TIFF_INT_TYPES = {1: "B", 3: "H", 4: "I", 6: "b", 8: "h", 9: "i", 16: "Q", 17: "q"}  # BYTE to SLONG8: a size's types
 TIFF_BLOCK_TAGS = (278, 322, 323)  # RowsPerStrip, TileWidth, TileLength: the size of a strip or tile
-# with ImageWidth, ImageLength, Compression, SamplesPerPixel, PlanarConfiguration, ImageDepth and TileDepth
-TIFF_TAGS = (256, 257, *TIFF_BLOCK_TAGS, 259, 277, 284, 32997, 32998)
-TIFF_FIRST = (277, 32997, 32998)  # SamplesPerPixel, ImageDepth, TileDepth: libtiff reads the first entry
+# with ImageWidth, ImageLength, Compression, SamplesPerPixel, PlanarConfiguration, ImageDepth, TileDepth and Orientation
+TIFF_TAGS = (256, 257, *TIFF_BLOCK_TAGS, 259, 277, 284, 32997, 32998, 274)
+TIFF_FIRST = (277, 32997, 32998, 274)  # SamplesPerPixel, ImageDepth, TileDepth, Orientation: libtiff reads the first
 TIFF_TWICE = -1  # what `_tiff_tags` gives a tag listed twice, or a Compression given per sample: no single value
 # StripOffsets and TileOffsets fill libtiff's one list of where the strips or tiles start (0), StripByteCounts and
 # TileByteCounts its list of the bytes each holds (1); the values are read unsigned, as libtiff refuses a negative one
@@ -79,33 +90,40 @@ def image_header(data: bytes) -> tuple[str, int, int] | None:
     return None
 
 
-def _jpeg_header(data: bytes) -> tuple[str, int, int]:
-    """Walk the segments to the start-of-frame marker, which holds the size; (JPEG, 0, 0) when none is found. Bytes
-    between segments that belong to no marker are skipped, as libjpeg skips them ("extraneous bytes before marker"),
-    so a stray byte cannot hide the frame from this reader while the decoder still finds it."""
+def _jpeg_segments(data: bytes) -> Iterator[tuple[int, int]]:
+    """Each marker after a JPEG's SOI, up to its scan or its end, as (marker, index of its 0xFF), found as libjpeg finds
+    it: bytes between segments that belong to no marker are skipped ("extraneous bytes before marker"), and so are fill
+    bytes, so a stray byte cannot hide a segment from these readers while the decoder still reads it."""
     i = 2
     for _ in range(JPEG_MAX_MARKERS):
         i = data.find(b"\xff", i)
         if i < 0:
-            break
+            return
         fill = JPEG_FILL.match(data, i)
         i = fill.end() - 1 if fill else i  # fill bytes: the marker byte follows the last 0xFF
         if i + 2 > len(data):
-            break
+            return
         marker = data[i + 1]
-        if marker in JPEG_FRAME_MARKERS:
-            if i + 9 > len(data):
-                break
-            h, w = struct.unpack(">HH", data[i + 5 : i + 9])
-            return "JPEG", int(w), int(h)
-        if marker in (0xD9, 0xDA):  # end of image, or the scan data: no frame came before it
-            break
+        yield marker, i
+        if marker in (0xD9, 0xDA):  # end of image, or the scan data
+            return
         if marker in JPEG_BARE_MARKERS:
             i += 2
         elif i + 4 <= len(data):
             i += 2 + struct.unpack(">H", data[i + 2 : i + 4])[0]
         else:
-            break
+            return
+
+
+def _jpeg_header(data: bytes) -> tuple[str, int, int]:
+    """The size the first start-of-frame segment holds, walked to by `_jpeg_segments`; (JPEG, 0, 0) when none comes
+    before the scan."""
+    for marker, i in _jpeg_segments(data):
+        if marker in JPEG_FRAME_MARKERS:
+            if i + 9 > len(data):
+                break
+            h, w = struct.unpack(">HH", data[i + 5 : i + 9])
+            return "JPEG", int(w), int(h)
     return "JPEG", 0, 0
 
 
@@ -118,6 +136,104 @@ def _tiff_header(data: bytes) -> tuple[str, int, int]:
     if TIFF_TWICE in (tags.get(256), tags.get(257)):
         return "TIFF", 0, 0
     return "TIFF", tags.get(256, 0), tags.get(257, 0)
+
+
+def file_header(path: str | Path) -> tuple[str, int, int] | None:
+    """`image_header` of the file at `path`, width and height swapped where its Orientation is 5 to 8 as the decoder
+    turns the image: the size of the image `load_image` returns. The first HEADER_BYTES are read, and the rest only for
+    a TIFF, whose directory may lie anywhere, or a file whose header lies past them; a PNG's chunk headers are read
+    across the file besides, each chunk's data skipped by its length, up to PNG_MAX_CHUNKS of them. The Orientation is
+    read as OpenCV 5.0 reads it: from each EXIF APP1 segment before a JPEG's scan and from the eXIf chunk libpng keeps
+    (`_exif_orientation`), and from a TIFF's tag 274 as libtiff reads it (`_tiff_tags`). OSError when the file cannot be
+    read."""
+    with open(path, "rb", buffering=0) as f:  # unbuffered: a read or a skip touches only the bytes asked for
+        data = _read(f, HEADER_BYTES)
+        header = image_header(data)
+        if header is not None and len(data) == HEADER_BYTES and (header[0] == "TIFF" or min(header[1:]) <= 0):
+            data += f.read()
+            header = image_header(data)
+        if header is None:
+            return None
+        blocks = _jpeg_exif(data) if header[0] == "JPEG" else _png_exif(f) if header[0] == "PNG" else []
+    turns = (t for t in map(_exif_orientation, blocks) if t is not None)  # OpenCV keeps the first one it reads
+    turn = _tiff_tags(data).get(274, 1) if header[0] == "TIFF" else next(turns, 1)
+    return (header[0], header[2], header[1]) if turn in (5, 6, 7, 8) else header
+
+
+def _read(f: Any, size: int) -> bytes:
+    """Up to `size` bytes from `f`, fewer only at its end."""
+    data = b""
+    while len(data) < size and (more := f.read(size - len(data))):
+        data += more
+    return data
+
+
+def _jpeg_exif(data: bytes) -> list[bytes]:
+    """The TIFF blocks of the APP1 segments that hold EXIF before a JPEG's scan, in order, as OpenCV reads each one."""
+    app1 = ((i, i + 2 + int.from_bytes(data[i + 2 : i + 4], "big")) for m, i in _jpeg_segments(data) if m == 0xE1)
+    return [data[i + 10 : end] for i, end in app1 if end > i + 10 and data[i + 4 : i + 10] == b"Exif\0\0"]
+
+
+def _png_exif(f: Any) -> list[bytes]:
+    """The eXIf chunk of a PNG file that libpng 1.6.58 keeps, wherever it lies before IEND: the first whose data starts
+    II*\\0 or MM\\0* and whose CRC is right, as libpng drops any other. None in an animated PNG, whose last acTL chunk
+    before the image data names more than one frame: OpenCV decodes its first frame with no Orientation. The walk ends
+    where libpng fails the file, at a chunk type that is not four letters with an upper case third or at a critical
+    chunk it does not know, and after PNG_MAX_CHUNKS chunks, where libpng reads on."""
+    f.seek(8)
+    kept, frames, image = list[bytes](), 1, False
+    for _ in range(PNG_MAX_CHUNKS):
+        kind = (head := _read(f, 8))[4:]
+        if len(head) < 8 or kind == b"IEND" or not (kind.isalpha() and kind[2:3].isupper()):
+            break  # the end, or libpng's "bad header (invalid type)"
+        if kind[:1].isupper() and kind not in PNG_CRITICAL:
+            break  # libpng's "unhandled critical chunk"
+        length, image = int.from_bytes(head[:4], "big"), image or kind == b"IDAT"
+        if not (kind == b"eXIf" and not kept or kind == b"acTL" and not image):
+            f.seek(length + 4, 1)  # the chunk's data and its CRC
+            continue
+        body = _read(f, length + 4)
+        crc = struct.pack(">I", zlib.crc32(kind + body[:length]))
+        if kind == b"acTL":
+            frames = int.from_bytes(body[:4], "big")
+        elif body[:4] in (b"II*\0", b"MM\0*") and body[length:] == crc:
+            kept = [body[:length]]
+    return [] if frames > 1 else kept
+
+
+def _exif_orientation(block: bytes) -> int | None:
+    """The Orientation OpenCV 5.0's ExifReader reads from an EXIF block, None for none. The block is little endian after
+    II and big endian after anything else, and needs 42 next; the first directory's entries are read in turn, the
+    Orientation being the first 16 bits of the first tag 274's value, whatever its type and number of values. The
+    reader gives up on the block at an entry whose value it cannot read (EXIF_TEXT, EXIF_SHORT, EXIF_RATIONALS): an
+    Orientation after it is not read."""
+    order: Literal["little", "big"] = "little" if block[:2] == b"II" else "big"
+
+    def value(at: int, size: int) -> int:  # ExifReader's getU16 and getU32, which give up past the block's end
+        if at + size > len(block):
+            raise IndexError(at)
+        return int.from_bytes(block[at : at + size], order)
+
+    try:
+        if value(2, 2) != 42:
+            return None
+        start = value(4, 4) + 2  # the first entry, after the directory's count
+        for at in range(start, start + 12 * value(start - 2, 2), 12):
+            tag = value(at, 2)
+            if tag == 274:
+                return value(at + 8, 2)
+            if tag in EXIF_TEXT:  # read from the offset given, or from byte 8 of the block when 4 bytes or fewer
+                size = value(at + 4, 4)
+                end = (value(at + 8, 4) if size > 4 else 8) + size
+            elif tag in EXIF_RATIONALS:
+                end = value(at + 8, 4) + 8 * EXIF_RATIONALS[tag]
+            else:
+                end = at + 10 if tag in EXIF_SHORT else 0
+            if end > len(block):  # past the block: the reader gives up on it
+                return None
+    except IndexError:
+        return None
+    return None
 
 
 def _tiff_entries(data: bytes) -> tuple[str, bool, list[tuple[int, int, int, bytes]]]:
@@ -151,8 +267,8 @@ def _tiff_tags(data: bytes) -> dict[int, int]:
     value of an integer type, BYTE to SLONG8, as libtiff's TIFFReadDirEntryLong reads it: in a classic file the 8 bytes
     of a LONG8 or SLONG8 sit at the offset its entry holds (#242 review), and a value below 0 reads as 0. A tag listed
     twice gives TIFF_TWICE whatever either entry holds, since libtiff reads the first, but TIFF_FIRST keep the first,
-    as they only set how many strips are read; so does a Compression given once per sample, as TIFF before 5.0 wrote
-    it and libtiff still reads it (#242 stack review)."""
+    as they only set how many strips are read or, for the Orientation, how the image is turned; so does a Compression
+    given once per sample, as TIFF before 5.0 wrote it and libtiff still reads it (#242 stack review)."""
     order, big, entries = _tiff_entries(data)
     tags, seen = dict[int, int](), set[int]()
     for tag, kind, values, field in entries:
@@ -373,6 +489,14 @@ def load_image_sha256(
     against by its content, read once, so no second read of the file can race a writer (REQ-CMP-003)."""
     img, data = _read_image(Path(path), max_megapixels, max_megabytes)
     return img, hashlib.sha256(data).hexdigest()
+
+
+def checked_bytes(
+    path: str | Path, max_megapixels: float = MAX_MEGAPIXELS, max_megabytes: float = MAX_MEGABYTES
+) -> bytes:
+    """The bytes of an image file once `load_image` has checked and decoded them, read once: a sample import copies
+    only a file Inspection would open, and hashes the very bytes checked (REQ-TRN-001, REQ-INSP-001)."""
+    return _read_image(Path(path), max_megapixels, max_megabytes)[1]
 
 
 def _read_image(p: Path, max_megapixels: float, max_megabytes: float) -> tuple[np.ndarray, bytes]:

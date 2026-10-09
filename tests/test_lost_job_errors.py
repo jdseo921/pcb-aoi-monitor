@@ -200,11 +200,12 @@ def test_req_log_005_an_import_stopped_while_a_copy_fails_logs_the_failure_and_s
     dialogs: list[tuple[str, str]],
     how: str,
 ) -> None:
-    """The issue's scenario: Import Folder of ok/a,b,c,d.png; the copy of c.png hangs on a share, the Engineer presses
-    Cancel or Import Folder again, then the share drops. After Cancel no dialog opens for the import the user left, but
-    its failure is logged with the trace and alarmed, and the status line says it was cancelled. A second Import Folder
-    starts nothing while the first runs (#194), so the first one goes on and its failure opens its own coded dialog.
-    Either way the table shows the files it imported."""
+    """The issue's scenario: Import Folder of ok/a,b,c,d.png; the copy of c.png hangs on the workspace's share, the
+    Engineer presses Cancel or Import Folder again, then the share drops (a source lost is that file's, listed, S31).
+    After Cancel no dialog opens for the import the user left, but its failure is logged with the trace and alarmed,
+    and the status line says it was cancelled. A second Import Folder starts nothing while the first runs (#194), so
+    the first one goes on and its failure opens its own coded dialog. Either way the table shows the files it
+    imported."""
     source = synthetic_dataset / "train" / "ok"
     folder = _folder(tmp_path / "fold", source, ["a.png", "b.png", "c.png", "d.png"])
     second = _folder(tmp_path / "second", source, ["e.png"])
@@ -215,13 +216,14 @@ def test_req_log_005_an_import_stopped_while_a_copy_fails_logs_the_failure_and_s
         if Path(src).name == "c.png":
             reached.set()
             assert go.wait(30)
-            raise FileNotFoundError(2, "No such file or directory", str(src))
+            raise FileNotFoundError(2, "No such file or directory", str(dst))
         copy(src, dst)
 
     monkeypatch.setattr(atomic, "copy_file", hang_then_fail)
     win = _engineer_window(qtbot, ctx)
     page = win.pages["Training"]
     page.import_from(str(folder))
+    page.sheet.btn_import.click()
     first = page._bg
     assert first is not None
     qtbot.waitUntil(reached.is_set, timeout=30000)
@@ -232,14 +234,13 @@ def test_req_log_005_an_import_stopped_while_a_copy_fails_logs_the_failure_and_s
         assert page._bg is first, "a second import started while the first one ran"
     go.set()
     _settled(qtbot, first)
-    assert [title for title, _ in dialogs] == (
-        [] if how == "cancel" else ["AOI-TRN-009 Folder import stopped part-way"]
-    )
+    assert [title for title, _ in dialogs] == ([] if how == "cancel" else ["AOI-TRN-009 Import stopped part-way"])
     rows = _log_rows(ctx, "error.shown")
     assert [r["code"] for r in rows] == ["AOI-TRN-009"] and "FileNotFoundError" in str(rows[0]["trace"]), rows
     assert [(a["level"], a["code"]) for a in ctx.alarms()] == [("ERROR", "AOI-TRN-009")]
     assert page.samples.rowCount() == len(ctx.samples("NEWB")) == 2
-    message = "Import cancelled: 2 OK and 0 NG images imported before it stopped" if how == "cancel" else "Imported 2"
+    message = "Import cancelled: 2 OK and 0 NG images imported into NEWB before it stopped"
+    message = message if how == "cancel" else "Imported 2 OK and 0 NG images into NEWB"
     assert win.statusBar().currentMessage().startswith(message), win.statusBar().currentMessage()
 
 
@@ -287,12 +288,12 @@ def test_req_set_021_a_folder_import_that_fails_part_way_shows_the_files_it_impo
     folder = _folder(tmp_path / "fold", synthetic_dataset / "train" / "ok", ["a.png", "b.png", "c.png", "d.png"])
     add = ctx.db.add_sample
 
-    def add_or_fail(board_model: str, path: str, *a: Any) -> None:
+    def add_or_fail(board_model: str, path: str, *a: Any, **kw: Any) -> None:
         if Path(path).name.startswith("c_") and cause == "coded":
             raise AoiError("AOI-SET-013", "disk I/O error", path="aoi.sqlite", error="disk I/O error")
         if Path(path).name.startswith("c_"):
             raise sqlite3.OperationalError("disk I/O error")
-        add(board_model, path, *a)
+        add(board_model, path, *a, **kw)
 
     monkeypatch.setattr(ctx.db, "add_sample", add_or_fail)
     win = _engineer_window(qtbot, ctx)
@@ -301,6 +302,7 @@ def test_req_set_021_a_folder_import_that_fails_part_way_shows_the_files_it_impo
     assert QCoreApplication.installTranslator(translator)
     try:
         page.import_from(str(folder))
+        page.sheet.btn_import.click()
         w = page._bg
         assert w is not None
         _settled(qtbot, w)
@@ -308,11 +310,12 @@ def test_req_set_021_a_folder_import_that_fails_part_way_shows_the_files_it_impo
         QCoreApplication.removeTranslator(translator)
     assert page.samples.rowCount() == len(ctx.samples("NEWB")) == 2
     [(title, text)] = dialogs
-    assert title == "AOI-TRN-010 Folder import stopped by an error", title
+    assert title == "AOI-TRN-010 Import stopped by an error", title
     named = "(OperationalError)" if cause == "sqlite" else "(AOI-SET-013 «busy»)"
     assert "c.png" in text and named in text and "image 3 of 4" in text, text
-    assert "the 2 image(s) imported before it" in text and "would add those 2 a second time" in text, text
+    assert "the 2 image(s) imported before it" in text, text
+    assert "with NEWB picked in the header, press Import again: the 2 image(s) already imported are skipped" in text
     assert "disk I/O error" not in text  # the raw text goes to the log only
-    assert win.statusBar().currentMessage() == "Imported 2 OK and 0 NG images"
+    assert win.statusBar().currentMessage() == "Imported 2 OK and 0 NG images into NEWB"
     (row,) = _log_rows(ctx, "error.shown")
     assert row["code"] == "AOI-TRN-010" and "disk I/O error" in str(row["trace"])

@@ -105,6 +105,7 @@ class InspectionResult:
     elapsed_ms: float = 0.0
     notes: list[str] = field(default_factory=list)
     view: str = "Top"  # the camera view the board was inspected under, kept with the result (REQ-INSP-010)
+    px_per_mm: float | None = None  # the scale its recipe's sizes in mm were applied at, kept with it (REQ-RCP-006)
 
     def metrics_dict(self) -> dict[str, Any]:
         d = {c.name: c.value for c in self.checks}
@@ -116,11 +117,12 @@ class InspectionResult:
     def to_dict(self) -> dict[str, Any]:
         """The result without its images, as plain values `json.dumps` writes and `from_dict` reads back unchanged:
         verdict, score, every check and defect, the compare metrics and regions, notes, view and elapsed time
-        (REQ-INSP-008). The images (board, reference, maps) are files, not JSON."""
+        (REQ-INSP-008), and its scale, if judged at one. The images (board, reference, maps) are files, not JSON."""
         compare = None
         if self.compare is not None:
             regions = [_plain(asdict(r)) for r in self.compare.regions]
             compare = {"metrics": _plain(self.compare.metrics), "regions": regions}
+        scale = {"px_per_mm": self.px_per_mm} if self.px_per_mm is not None else {}  # none before S29: as then
         return {
             "verdict": self.verdict,
             "score": _plain(self.score),
@@ -130,6 +132,7 @@ class InspectionResult:
             "elapsed_ms": _plain(self.elapsed_ms),
             "notes": list(self.notes),
             "view": self.view,
+            **scale,
         }
 
     @classmethod
@@ -149,6 +152,7 @@ class InspectionResult:
             elapsed_ms=float(d.get("elapsed_ms", 0.0)),
             notes=list(d.get("notes", [])),
             view=str(d.get("view", "Top")),
+            px_per_mm=_scale(d.get("px_per_mm")),
         )
 
 
@@ -162,6 +166,14 @@ def ai_check(res: InspectionResult | None) -> str:
     if any(c.source == "AI" for c in res.checks):
         return "RAN"
     return "NO_AI_MODEL" if NO_AI_NOTE in res.notes else "OFF"
+
+
+def _scale(value: Any) -> float | None:
+    """A stored scale: None or a number above 0; any other value is damage, ValueError, as for a damaged time."""
+    scale = None if value is None else math.nan if isinstance(value, bool) else float(value)
+    if scale is not None and not (math.isfinite(scale) and scale > 0):
+        raise ValueError(f"px_per_mm {value!r} is not a scale")
+    return scale
 
 
 def _known(cls: type[Any], d: dict[str, Any]) -> dict[str, Any]:
@@ -227,7 +239,8 @@ class JudgedBy:
     UUID and the Golden board's path, each None when it has none, and whether the recipe runs the AI check (`use_ai`;
     with it off the AI model named is the one active then, which judged nothing, #246). `AppContext.batch_test` returns
     it with a run, and `AppContext.engine_is_current` compares its `inputs` with what is active now, as it does an
-    engine's; AI Model Test compares a run with the AI check off by its recipe revision and Golden board alone."""
+    engine's; AI Model Test passes over the AI model of a run with the AI check off, and the scale of one whose
+    recipe holds no size in mm, as neither judged it (`px_per_mm`, the scale, None without one, S29)."""
 
     model_version: str | None
     model_uuid: str | None
@@ -235,11 +248,12 @@ class JudgedBy:
     recipe_uuid: str | None
     reference_path: str | None
     use_ai: bool = True
+    px_per_mm: float | None = None
 
     @property
-    def inputs(self) -> tuple[str | None, str | None, str | None]:
-        """The AI model's UUID, the recipe revision's UUID and the Golden board's path, as `Inspector.inputs`."""
-        return self.model_uuid, self.recipe_uuid, self.reference_path
+    def inputs(self) -> tuple[str | None, str | None, str | None, float | None]:
+        """The AI model's and recipe revision's UUIDs, the Golden board's path and the scale, as `Inspector.inputs`."""
+        return self.model_uuid, self.recipe_uuid, self.reference_path, self.px_per_mm
 
 
 class Inspector:
@@ -247,7 +261,9 @@ class Inspector:
     when it judges and the recipe revision it judges by, which a saved record carries (REQ-INSP-008, REQ-INSP-012);
     whether the AI check ran is the recipe's to say, and a result judged with it off carries AI_OFF_NOTE (#246).
     `reference_path` and `reference_sha256` name the golden board file it judges against and the SHA-256 of its bytes
-    (REQ-CMP-003): `AppContext.inspector()` fills them; an Inspector built bare has none."""
+    (REQ-CMP-003): `AppContext.inspector()` fills them; an Inspector built bare has none. It judges by `recipe` as
+    applied at `px_per_mm`, the board model's scale (`Recipe.in_px`, REQ-RCP-006), which each result keeps; without a
+    scale, by `recipe` itself."""
 
     def __init__(
         self,
@@ -261,8 +277,10 @@ class Inspector:
         recipe_uuid: str | None = None,
         reference_path: str | None = None,
         reference_sha256: str | None = None,
+        px_per_mm: float | None = None,
     ) -> None:
-        self.recipe = recipe
+        self.recipe = recipe.in_px(px_per_mm)
+        self.px_per_mm = px_per_mm
         self.model = model
         self.reference = reference
         self.side = side
@@ -274,26 +292,28 @@ class Inspector:
         self.reference_sha256 = reference_sha256
 
     @property
-    def inputs(self) -> tuple[str | None, str | None, str | None]:
-        """What the engine was built from: the AI model's UUID, the recipe revision's UUID and the Golden board's path,
-        each None when it has none. `AppContext.engine_is_current` compares them with what is active now (#243)."""
-        return self.model_uuid, self.recipe_uuid, self.reference_path
+    def inputs(self) -> tuple[str | None, str | None, str | None, float | None]:
+        """What the engine was built from: the AI model's UUID, the recipe revision's UUID, the Golden board's path and
+        the scale (S29), each None if it has none; `AppContext.engine_is_current` compares them with what is active."""
+        return self.model_uuid, self.recipe_uuid, self.reference_path, self.px_per_mm
 
     @property
-    def judging_inputs(self) -> tuple[str | None, str | None, str | None]:
+    def judging_inputs(self) -> tuple[str | None, str | None, str | None, float | None]:
         """What judges a board: `inputs`, with no AI model (None) when the recipe turns the AI check off, as no AI model
         judges the board then (#246). The Inspection page compares them from board to board of a run, so an AI model
         activated during a run with the AI check off is no change of what judges it (AOI-INSP-013, #243), while
         `AppContext.engine_is_current` still compares `inputs`: the engine is rebuilt on an activation, and each
-        record names the AI model version active when its board was judged."""
-        return self.model_uuid if self.recipe.use_ai else None, self.recipe_uuid, self.reference_path
+        record names the AI model version active when its board was judged. The scale counts only while the recipe
+        holds a size in mm, as it sizes nothing else (S29)."""
+        scale = self.px_per_mm if self.recipe.sized_in_mm else None
+        return self.model_uuid if self.recipe.use_ai else None, self.recipe_uuid, self.reference_path, scale
 
     @property
     def judged_by(self) -> JudgedBy:
         """What the engine judges with, kept with an AI Model Test run after the engine is gone (#250), with whether its
-        recipe runs the AI check (#246)."""
-        rev, path = self.recipe_rev, self.reference_path
-        return JudgedBy(self.model_version, self.model_uuid, rev, self.recipe_uuid, path, self.recipe.use_ai)
+        recipe runs the AI check (#246) and the scale it judges at (S29)."""
+        rev, path, use_ai = self.recipe_rev, self.reference_path, self.recipe.use_ai
+        return JudgedBy(self.model_version, self.model_uuid, rev, self.recipe_uuid, path, use_ai, self.px_per_mm)
 
     def inspect(self, img: np.ndarray) -> InspectionResult:
         """The board in `img` aligned, compared and judged. AOI-INSP-011 before any work when it, or the golden board,
@@ -305,7 +325,7 @@ class Inspector:
                 raise AoiError("AOI-INSP-011", image=image, width=w, height=h, minimum=MIN_SIDE)
         t0 = time.perf_counter()
         r = self.recipe
-        res = InspectionResult(verdict=OK, score=0.0, reference=self.reference, view=self.side)
+        res = InspectionResult(OK, 0.0, reference=self.reference, view=self.side, px_per_mm=self.px_per_mm)
         work = img
 
         # 0) Register onto the golden board so pixels mean the same place on every board; then the evidence, from the
@@ -486,6 +506,7 @@ def re_grade(
     threshold changes them, and so do the inspection time, the view and the picture. A check the recipe turns on that
     did not run on the board is not judged, with a note saying so, as inspecting with the recipe notes a check it cannot
     run, and the AI check it turns off gets AI_OFF_NOTE (#246). `judged` is not changed; the result shares its maps.
+    `recipe` comes in px: `AppContext.re_evaluate` applies sizes in mm at the scale `judged` was judged at (S29).
     `changed`, when given, is what `changed_regions` gives for `judged`'s difference map with the recipe's pixel
     difference and minimum area, found by the caller (`AppContext.re_evaluate` finds them while the AI map decodes,
     #249). ValueError when a check the recipe uses ran on the board but its map, or its AI evidence, is not given;
@@ -496,6 +517,7 @@ def re_grade(
     ):
         raise ValueError("re_grade needs the maps and the AI evidence the result was judged on")
     res = InspectionResult(OK, 0.0, image=judged.image, reference=judged.reference, view=judged.view)
+    res.px_per_mm = judged.px_per_mm  # `recipe` comes in px, as applied at the scale `judged` was (REQ-RCP-006)
     res.elapsed_ms = judged.elapsed_ms
     if recipe.use_compare and cr is not None and cr.diff_map is not None:
         mask, regions, found = changed or changed_regions(cr.diff_map, recipe.diff_threshold, recipe.min_defect_area)

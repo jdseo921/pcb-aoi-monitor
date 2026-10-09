@@ -7,18 +7,22 @@ decided and never inspected again (REQ-CMP-003). The "Try other thresholds"
 panel is for an Engineer or Admin and hidden for an Operator (REQ-CMP-005,
 docs/adr/0006-judging-a-stored-result-again.md decision 4).
 Its Re-evaluate judges a stored result again from its stored maps and shows
-what it would be.
+what it would be; its Save to Recipe makes them the board model's recipe,
+a new revision with an audit entry, after an inline sheet lists what changes and asks for a reason.
 """
 
 from __future__ import annotations
 
 import copy
+import dataclasses
 import html
+import itertools
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, TypeAlias
 
 import numpy as np
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QAction, QKeySequence
 from PySide6.QtWidgets import (
     QComboBox,
     QDoubleSpinBox,
@@ -29,6 +33,8 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QHeaderView,
     QLabel,
+    QLineEdit,
+    QSizePolicy,
     QSpinBox,
     QSplitter,
     QTextEdit,
@@ -39,9 +45,9 @@ from PySide6.QtWidgets import (
 from ... import defects as taxonomy
 from ...core.explain import explain
 from ...core.imaging import IMAGE_EXTS
-from ...core.inspector import Check, InspectionResult
-from ...core.recipe import Recipe
-from ...core.services import ROLES_FROM, AppContext, ErrorReport, Judged
+from ...core.inspector import Check, InspectionResult, ai_check
+from ...core.recipe import Recipe, disc_width, scale_digits
+from ...core.services import REQUIRED_ROLE, ROLES, ROLES_FROM, AppContext, ErrorReport, Judged
 from ...core.views import ai_view, difference_view
 from ...errors import AoiError
 from ...times import to_local
@@ -50,6 +56,7 @@ from ..errors import phrase_text, show_error
 from ..widgets.busy import BusyOverlay
 from ..widgets.empty_state import EmptyState
 from ..widgets.image_view import ImageView
+from ..widgets.scale import DefectSizeField
 from .base import (
     QT_TRANSLATE_NOOP,
     Page,
@@ -118,6 +125,44 @@ RULES = {
     "> thr → NG": QT_TRANSLATE_NOOP("ComparePage", "> threshold → NG"),
     "info only": QT_TRANSLATE_NOOP("ComparePage", "info only"),
 }
+THRESHOLDS = {  # the recipe's thresholds the panel holds, in its order: field -> its label, shown through tr()
+    "anomaly_threshold": QT_TRANSLATE_NOOP("ComparePage", "AI score threshold"),
+    "diff_threshold": QT_TRANSLATE_NOOP("ComparePage", "Pixel difference (0-255)"),
+    "min_defect_area": QT_TRANSLATE_NOOP("ComparePage", "Minimum defect area (px)"),
+    "min_defect_mm": QT_TRANSLATE_NOOP("ComparePage", "Minimum defect size (mm)"),  # with a scale (REQ-RCP-006)
+    "ssim_min": QT_TRANSLATE_NOOP("ComparePage", "Similarity minimum (SSIM)"),
+    "max_diff_regions": QT_TRANSLATE_NOOP("ComparePage", "Allowed difference regions"),
+}
+
+
+def _judging(r: Recipe, res: InspectionResult | None) -> Recipe:
+    """`r` as the engine judged the board `res` by it, to compare with another: a value that did not judge the board is
+    no change (review). An AI score threshold of 0 is none, as the engine reads it, and judges nothing when the board's
+    AI check did not run (off, or no AI model active; #243, #246), nor do an ROI's AI score and name, as no ROI check
+    runs then (`Inspector.judge`: an ROI only names the defects in it, by its type); the Golden board comparison's own
+    thresholds judge nothing when the board was judged without it (Minimum defect area also sizes the AI model's
+    defects: it counts); a disabled ROI, and an ROI's Stage 2 heights and volumes and its side, which nothing reads yet,
+    never judge (verification). `res` None, a board still being worked out: `r`'s switches say what judges it. `r`
+    comes in px at the scale the board is judged at (`Recipe.in_px`): a size in mm judges by the px it gives (S29)."""
+    ai, compared = (ai_check(res) == "RAN", res.compare is not None) if res is not None else (r.use_ai, r.use_compare)
+    rois = [
+        dataclasses.replace(x, height_min=None, height_max=None, volume_min=None, volume_max=None, side="", mm=None)
+        for x in r.rois
+        if x.enabled
+    ]
+    if not ai:
+        rois = [dataclasses.replace(x, name="", ai_score=0.0) for x in rois]
+    r = dataclasses.replace(r, anomaly_threshold=(r.anomaly_threshold or None) if ai else None, rois=rois)
+    r.min_defect_mm = None  # judged by its area at the scale, as each ROI by its box
+    if compared:
+        return r
+    return dataclasses.replace(r, diff_threshold=0, ssim_min=0.0, changed_pct_max=0.0, max_diff_regions=0)
+
+
+def _as_read(r: Recipe) -> Recipe:
+    """`r` as the engine reads it, to tell Save to Recipe a change: an AI score threshold of 0 is none. Unlike
+    `_judging`, a value that did not judge the board shown counts, as saving it changes the recipe (S28d)."""
+    return dataclasses.replace(r, anomaly_threshold=r.anomaly_threshold or None)
 
 
 class ComparePage(Page):
@@ -137,13 +182,16 @@ class ComparePage(Page):
         self.golden_state = False  # the pane says there is no Golden board, or why it cannot be opened
         self.record_board_model: str | None = None  # the board model of the record the test board came from, if any
         self.form_revision: tuple[str, int] | None = None  # the board model and recipe revision the form came from
+        self.form_recipe: Recipe | None = None  # and that revision's recipe, which Save to Recipe tells a change from
+        self._asking = False  # the Save to Recipe sheet is open in place of the panel
         self.shown_board_model: str | None = None  # the header's board model the page last followed (#247)
         self.judge_on_show = False  # the header changed while the page was hidden: judge its board when shown (#247)
-        self.by_form = False  # the board shown was inspected with the form's thresholds, not the recipe's
-        self.operator_form = False  # the form was loaded from the recipe when the Operator signed in
+        self.judged_by: Recipe | None = None  # the recipe a board inspected here, shown or still worked out, judges by
         self.loaded = False  # the load of a stored result's pictures and maps has ended: Re-evaluate may judge it
         self.tried = False  # the table and the "why" box show the checks the form's thresholds give, not the result's
         self._trying: Worker | None = None  # the re-evaluation running, if any
+        self._refocus = False  # the focus waits in the "why" box while Re-evaluate is off, for it to take back (review)
+        self._why = self._noticed = ""  # the explanation the "why" box shows, and AOI-RCP-007 above it (_show_why)
         self._fitted = False
 
         bar = QHBoxLayout()
@@ -210,51 +258,136 @@ class ComparePage(Page):
         hh.setStretchLastSection(False)
         hh.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)  # a stretched Check column shrank to "C…"
         self.metrics.setWordWrap(True)
-        pl.addWidget(self.metrics, 2)
+        self.decision = QWidget()  # the decision table and the "why" box, where the checks tried appear
+        dl = QVBoxLayout(self.decision)
+        dl.setContentsMargins(0, 0, 0, 0)
+        dl.addWidget(self.metrics, 1)
         self.why = QTextEdit()
         self.why.setReadOnly(True)
-        self.why.setMaximumHeight(150)
-        pl.addWidget(self.why)
+        self.why.setMaximumHeight(theme.WHY_H)
+        self.why.setMinimumHeight(theme.WHY_MIN_H)  # at 1600 x 900 the panel is too short for all of it at full height
+        dl.addWidget(self.why)
+        pl.addWidget(self.decision, 2)
+        self.try_busy = BusyOverlay(self.decision, self.tr("Re-evaluating…"))  # over both: Cancel fits at least size
+        self.try_busy.cancel_button.clicked.connect(self._cancel_tried)  # the stored checks again (REQ-SET-021, review)
 
+        split.addWidget(panel)
+        split.setSizes([800, 920])  # the decision table shows all six columns at 1920 x 1080
+        self.root.addWidget(split, 1)
+        self.root.addWidget(self._tryout())  # under the images, the panel's full height left to the decision (sketch)
+        self.root.addWidget(self._save_sheet())
+
+    def _tryout(self) -> QGroupBox:
+        """Try other thresholds, as wide as the page under the images and the panel, so the decision table shows every
+        row (Jay's choice of layout, 2026-10-08): in the panel its seven rows left the table five of its seven rows at
+        1920 x 1080 and one at 1600 x 900. Each column is a form of its own, the sketch's first two rows across them:
+        the AI score threshold over its tick, Pixel difference over Similarity minimum, the minimum defect size (in px,
+        or in mm at the board model's scale) over Allowed difference regions. Re-evaluate and Save to Recipe take a
+        third row, at its right: beside the fields they made the window at least 1856 px wide. Why no calibrated value
+        is named fills the rest of that row, and Tab keeps the order the fields had in one form."""
         self.tryout = QGroupBox(self.tr("Try other thresholds (nothing is saved until you press Save to Recipe)"))
-        f = QFormLayout(self.tryout)
-        self.ai_thr = QDoubleSpinBox()
-        self.ai_thr.setDecimals(3)
-        self.ai_thr.setRange(0, 1e4)
-        self.ai_thr.setSpecialValueText(self.tr("AI model default"))
-        self.ai_thr.setSingleStep(0.1)
+        tl = QVBoxLayout(self.tryout)
+        cols = QHBoxLayout()
+        cols.setSpacing(theme.SPACE * 2)
+        forms: list[QFormLayout] = []
+        for _ in range(3):
+            column = QWidget()
+            form = QFormLayout(column)
+            form.setContentsMargins(0, 0, 0, 0)
+            form.setRowWrapPolicy(QFormLayout.RowWrapPolicy.WrapLongRows)  # a label over its field, not a wider window
+            forms.append(form)
+            cols.addWidget(column)
+        cols.addStretch(1)
+        ai, pixels, areas = forms
+        self.ai_thr = self.ai_threshold_field(self.tr("Override the AI model's value {value}"), own_row=True)
         self.diff_thr = QSpinBox()
         self.diff_thr.setRange(1, 255)
-        self.min_area = QSpinBox()
-        self.min_area.setRange(1, 100000)
+        self.min_size = DefectSizeField(compact=True)  # in px without a scale, in mm with one (REQ-RCP-006)
+        self.min_size.noticeChanged.connect(lambda _: self._show_why())
+        self.min_area = self.min_size.area
         self.ssim_min = QDoubleSpinBox()
         self.ssim_min.setRange(0, 1)
         self.ssim_min.setSingleStep(0.01)
         self.max_regions = QSpinBox()
         self.max_regions.setRange(0, 1000)
-        f.addRow(self.tr("AI score threshold"), self.ai_thr)
-        f.addRow(self.tr("Pixel difference (0-255)"), self.diff_thr)
-        f.addRow(self.tr("Minimum defect area (px)"), self.min_area)
-        f.addRow(self.tr("Similarity minimum (SSIM)"), self.ssim_min)
-        f.addRow(self.tr("Allowed difference regions"), self.max_regions)
-        for field in (self.ai_thr, self.diff_thr, self.min_area, self.ssim_min, self.max_regions):
-            field.valueChanged.connect(self._drop_tried)  # what was tried no longer applies
+        ai.addRow(self.tr(THRESHOLDS["anomaly_threshold"]), self.ai_thr)
+        ai.addRow(self.ai_thr.tick_row)  # the sketch's label, naming the value: beside the field it widens the window
+        pixels.addRow(self.tr(THRESHOLDS["diff_threshold"]), self.diff_thr)
+        pixels.addRow(self.tr(THRESHOLDS["ssim_min"]), self.ssim_min)
+        areas.addRow(self.min_size.label, self.min_size)
+        areas.addRow(self.tr(THRESHOLDS["max_diff_regions"]), self.max_regions)
+        self.ai_thr.changed.connect(self._drop_tried)  # what was tried no longer applies
+        self.ai_thr.ticking.connect(self._show_calibration)  # an AI model trained since the value was named
+        for field in (self.diff_thr, self.min_area, self.min_size.mm, self.ssim_min, self.max_regions):
+            field.valueChanged.connect(self._drop_tried)
         row = QHBoxLayout()
+        self.ai_thr.note.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)  # never widens it
+        row.addWidget(self.ai_thr.note, 1)  # why no calibrated value is named, wrapped in what the row leaves it
+        row.addStretch(0)  # without the note, the buttons keep their width at the row's right, as in the sketch
         self.would_be = QLabel()  # "Would be: ▲ WARN" beside Re-evaluate once a stored result is judged again (sketch)
         self.would_be.hide()
         row.addWidget(self.would_be)
         self.act_try = self.action(self.tr("Re-evaluate"), "Ctrl+R", self.re_evaluate)
-        row.addWidget(action_button(self.act_try, show_key=False))
-        self.btn_save = button(self.tr("Save to Recipe"), "primary", self.save_recipe)  # the page's one blue primary
+        self.btn_try = action_button(self.act_try, show_key=False)
+        row.addWidget(self.btn_try)
+        self.act_save = self.action(self.tr("Save to Recipe"), "Ctrl+S", self.save_recipe)
+        self.btn_save = action_button(self.act_save, "primary", show_key=False)  # the page's one blue primary
         row.addWidget(self.btn_save)
-        f.addRow(row)
-        pl.addWidget(self.tryout)
-        split.addWidget(panel)
-        split.setSizes([800, 920])  # the decision table shows all six columns at 1920 x 1080
-        self.root.addWidget(split, 1)
+        tl.addLayout(cols)
+        tl.addLayout(row)
+        order = (self.ai_thr.field, self.diff_thr, self.min_area, self.min_size.mm, self.ssim_min, self.max_regions)
+        for before, after in itertools.pairwise((*order, self.btn_try, self.btn_save)):  # the hidden size skipped
+            QWidget.setTabOrder(before, after)  # as in one form: the AI score threshold, then the first row, the second
+        self.ai_thr.changed.connect(self._sync_save)  # Save to Recipe is on while a threshold differs from the recipe
+        for field in (self.diff_thr, self.min_area, self.min_size.mm, self.ssim_min, self.max_regions):
+            field.valueChanged.connect(self._sync_save)
+        return self.tryout
+
+    def _save_sheet(self) -> QGroupBox:
+        """Save to Recipe's confirmation, shown in place of Try other thresholds: inline, never a dialog over a dialog
+        (sketch). It lists each threshold that changes, before -> after, and asks for a reason, without which Save
+        Revision is off; Cancel, or Esc in the sheet, closes it. Save Revision is a plain button: the page keeps one
+        blue primary."""
+        self.sheet = QGroupBox(self.tr("Save to Recipe"))
+        sl = QHBoxLayout(self.sheet)  # what changes beside the reason: stacked, the window outgrew a 900 px screen
+        said = QVBoxLayout()
+        self.sheet_heading, self.sheet_changes, self.sheet_note = QLabel(), QLabel(), QLabel()
+        self.sheet_note.setObjectName("muted")
+        for label in (self.sheet_heading, self.sheet_changes, self.sheet_note):
+            label.setWordWrap(True)
+            label.setTextFormat(Qt.TextFormat.PlainText)  # a board model's name is never read as markup
+        said.addWidget(self.sheet_heading)
+        said.addWidget(self.sheet_changes)
+        said.addStretch(1)  # the lines together at the top when the reason's side is taller
+        sl.addLayout(said, 1)
+        asked = QVBoxLayout()
+        form = QFormLayout()
+        self.reason = QLineEdit()
+        self.reason.textChanged.connect(self._sync_save)
+        self.reason.returnPressed.connect(self._confirm_save)
+        form.addRow(self.tr("Reason (required)"), self.reason)
+        asked.addLayout(form)
+        asked.addWidget(self.sheet_note)  # what Save Revision does, over it
+        row = QHBoxLayout()
+        row.addStretch(1)
+        self.btn_cancel = button(self.tr("Cancel"), slot=self._close_sheet)
+        row.addWidget(self.btn_cancel)
+        self.btn_confirm = button(self.tr("Save Revision"), slot=self._confirm_save)  # named with its revision on open
+        row.addWidget(self.btn_confirm)
+        asked.addLayout(row)
+        asked.addStretch(1)
+        sl.addLayout(asked, 1)
+        esc = QAction(self.sheet)
+        esc.setShortcut(QKeySequence(Qt.Key.Key_Escape))
+        esc.setShortcutContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)  # Esc in the sheet closes it
+        esc.triggered.connect(self._close_sheet)
+        self.sheet.addAction(esc)
+        self.sheet.hide()
+        return self.sheet
 
     # --- inputs ------------------------------------------------------------------
     def set_test(self, path: str) -> None:
+        self._close_sheet()  # any board opened, the one shown too, closes it with its reason, as Cancel does
         self.test_path, self.as_judged, self.record_board_model = path, None, None  # a file: the header's board model
         self.test_empty.hide()
         self._fitted = False
@@ -298,25 +431,64 @@ class ComparePage(Page):
         if self.mode.currentIndex() == MODE_BOXES:
             self.mode.setCurrentIndex(MODE_SIDE)  # redraw shows the pane and its label, and fits the board to its half
 
-    def _load_recipe_into_form(self) -> None:
+    def _load_recipe_into_form(self) -> Recipe | None:
+        """The form takes the header's board model's recipe, which is returned; None with no board model. A Save to
+        Recipe sheet open closes: what it lists was tried on the recipe before."""
         self._drop_tried()  # tried with the recipe the form came from
+        self.form_recipe = None
+        self._close_sheet()
         if not self.board_model:
-            return
+            return None
         rev, r = self.ctx.recipe(self.board_model)
         self.form_revision = (self.board_model, rev)  # on_show loads the form again once another revision is saved
-        self.ai_thr.setValue(r.anomaly_threshold or 0)
+        self.ai_thr.set_override(r.anomaly_threshold)
         self.diff_thr.setValue(r.diff_threshold)
-        self.min_area.setValue(r.min_defect_area)
+        self.min_size.show_recipe(r, self._scale(self.board_model))
         self.ssim_min.setValue(r.ssim_min)
         self.max_regions.setValue(r.max_diff_regions)
+        self.form_recipe = r
+        self._sync_save()
+        return r
 
-    def _form_recipe(self, board_model: str) -> Recipe:
-        """The board model's recipe with the thresholds from the form."""
-        _, r = self.ctx.recipe(board_model)
-        r = copy.deepcopy(r)
-        r.anomaly_threshold = self.ai_thr.value() or None
+    def _show_calibration(self) -> None:
+        """The calibrated value the AI score threshold names (REQ-TRN-015): on a stored result, that of the AI model
+        that judged it, which Re-evaluate applies (ADR 0006 decision 2); else the active AI model's, which judges a
+        board inspected here, also on a stored result judged with the AI check off, whose record names the AI model
+        active then, which judged nothing (#246)."""
+        if self.stored is not None and self.stored["model_uuid"] and ai_check(self.res) == "RAN":
+            stored = self.stored
+            self.show_calibrated(self.ai_thr, stored["board_model"], stored["model_uuid"], stored["model_version"])
+        else:
+            self.show_calibrated(self.ai_thr, self.board_model)
+
+    def _scale(self, board_model: str) -> float | None:
+        """The board model's scale for the form and the note; None while the one stored cannot be read (AOI-RCP-012,
+        which the Recipe Editor says and every judging and saving refuses with), so that Compare still opens (S29)."""
+        try:
+            return self.ctx.scale(board_model)
+        except AoiError as e:
+            if e.code == "AOI-RCP-012":
+                return None
+            raise
+
+    def _show_why(self, explanation: str | None = None) -> None:
+        """The "why" box: `explanation` (`_explain`; None keeps the one shown), under AOI-RCP-007 in amber in one line
+        while Try other thresholds shows the size it is about (REQ-INSP-014), so never to an Operator, who has no panel,
+        nor over Save to Recipe's sheet (S29 review). It takes no row: at 1600 x 900 the panel has none to give, and at
+        1920 x 1080 it would cost the decision table one (S29 review); the box's text scrolls instead."""
+        notice = self.min_size.notice.text() if self.tryout.isVisibleTo(self) else ""
+        if explanation is None and notice == self._noticed:
+            return  # nothing new: the text stays where it was scrolled to
+        self._why, self._noticed = self._why if explanation is None else explanation, notice
+        said = f'<p style="background: {theme.WARN_COLOR}; color: {theme.ON_LIGHT}">{html.escape(notice)}</p>'
+        self.why.setHtml((said if notice else "") + self._why)
+
+    def _form_recipe(self, board_model: str, saved: Recipe | None = None) -> Recipe:
+        """The board model's recipe (`saved`, when read already) with the thresholds from the form."""
+        r = copy.deepcopy(self.ctx.recipe(board_model)[1] if saved is None else saved)
+        r.anomaly_threshold = self.ai_thr.override()
         r.diff_threshold = self.diff_thr.value()
-        r.min_defect_area = self.min_area.value()
+        self.min_size.apply(r)
         r.ssim_min = self.ssim_min.value()
         r.max_diff_regions = self.max_regions.value()
         return r
@@ -324,37 +496,82 @@ class ComparePage(Page):
     # --- evaluate ----------------------------------------------------------------
     def re_evaluate(self) -> None:
         """Re-evaluate (Ctrl+R, Engineer and Admin): a stored result is judged again with the form's thresholds from its
-        stored maps on the pool thread, without the AI model (`AppContext.re_evaluate`, REQ-CMP-005), and "Would be"
-        shows the verdict they give while the banner keeps the stored one (ADR 0006 decision 3); a board not stored is
-        inspected again with them. The service refuses the header's board model's thresholds for another's result."""
+        stored maps on the pool thread, without the AI model (`AppContext.re_evaluate`, REQ-CMP-005), under a busy
+        indicator over the decision table once it takes a second (REQ-SET-021), and "Would be" shows the verdict they
+        give while the banner keeps the stored one (ADR 0006 decision 3); a board not stored is inspected again with
+        them. The service refuses the header's board model's thresholds for another's result. The focus rule: a focus
+        on Re-evaluate or on any other control the run turns off waits in the "why" box under the indicator, one Tab
+        before Cancel once that shows, and goes to Re-evaluate when the run ends if it is still there (`_sync_roles`);
+        Qt would pass it on to the next control in the Tab order that is on, the header's board model list, where Down
+        would pick another board model (review)."""
         if self.stored is None:
             self.run()
             return
         if (bm := self.checked_board_model()) is None:
             return
+        focus: QWidget | None = self.window().focusWidget()  # the window's, before anything is turned off (review)
         self._drop_tried()
         recipe, uuid = self._form_recipe(bm), self.stored["uuid"]
         self._trying = self.run_in_background(
-            self.ctx.re_evaluate, uuid, recipe, on_result=self._on_tried,
-            on_error=lambda _: setattr(self, "_trying", None),  # a refusal holds no worker past its end (#132)
+            self.ctx.re_evaluate, uuid, recipe, on_result=self._on_tried, busy=self.try_busy,
+            on_error=self._refused,  # a refusal holds no worker past its end (#132), nor its indicator (verification)
         )  # fmt: skip
+        self._sync_roles()  # Re-evaluate is off while it runs: a second press would start the same job (REQ-SET-021)
+        if focus is not None and not focus.isEnabled():  # on Re-evaluate, or on another control the run turned off
+            self.why.setFocus(Qt.FocusReason.OtherFocusReason)  # under the indicator, one Tab before Cancel once shown
+            self._refocus = True
+
+    def _not_trying(self) -> None:
+        """No re-evaluation runs any more: its worker is let go (#132) and Re-evaluate is on again, with the focus it
+        had when the run started if that is still in the "why" box, where the run put it (`_sync_roles`). Its answer, a
+        refusal and `_drop_tried` call this before the indicator hides, so a focus on its Cancel, which Qt would then
+        pass on to the AI score threshold's tick, goes to Re-evaluate too, or, once an Operator's sign-in hides the
+        panel, to the "why" box, not on to the header's board model (second verification). The focus read is the
+        window's, which it keeps while another window is in front, when `hasFocus()` is False for every control: given
+        to Re-evaluate then, it is there when the window is in front again (review)."""
+        held = self.window().focusWidget() is self.try_busy.cancel_button
+        self._trying = None
+        self._sync_roles()
+        if held and self.act_try.isEnabled():
+            self.btn_try.setFocus(Qt.FocusReason.OtherFocusReason)
+        elif held:
+            self.why.setFocus(Qt.FocusReason.OtherFocusReason)
+
+    def _refused(self, _exc: BaseException) -> None:
+        """A refusal ends the run as its answer does (`_on_tried`): the indicator goes at once, not at the job's end,
+        which a loaded pool thread may signal after the dialog, Cancel still shown meanwhile to take the focus and pass
+        it on to the AI score threshold's tick as it hides (third verification)."""
+        self._not_trying()  # first: a focus on Cancel goes to Re-evaluate before Cancel hides
+        self.try_busy.finish()
+
+    def _cancel_tried(self) -> None:
+        """Cancel on the busy indicator: the stored checks again, and the focus on Re-evaluate, on again (verification).
+        Cancel held it, pressed by key or click, and Qt passed it on as Cancel hid, to the AI score threshold's tick or
+        field, where a second Space would set the tick."""
+        self._drop_tried()
+        if self.act_try.isEnabled():
+            self.btn_try.setFocus(Qt.FocusReason.OtherFocusReason)
 
     def _on_tried(self, res: InspectionResult) -> None:
         """The checks and the explanation the thresholds tried give; the banner keeps the stored verdict."""
-        self._trying, self.tried = None, True
+        self._not_trying()
+        self.try_busy.finish()  # at the answer, not at the job's end, which a loaded pool thread may signal later
+        self.tried = True
         self.would_be.setText(self.tr("Would be: {verdict}").format(verdict=theme.verdict_label(res.verdict)))
-        self.would_be.setStyleSheet(theme.verdict_style(res.verdict, big=False))
+        self.would_be.setStyleSheet(theme.verdict_mark_style(res.verdict))  # beside the buttons, never one of them
         self.would_be.show()
         self._show_checks(res, tried=True)
 
     def _drop_tried(self) -> None:
         """Back to the checks of the result shown once what was tried no longer applies: a threshold or the recipe
-        changes, another run starts or another result shows, the board model changes or an Operator signs in. A
-        re-evaluation still running is stopped, so its answer never shows, and its error, logged and alarmed, shows no
-        dialog (#206)."""
-        if self._trying is not None and self._trying is self._bg:
-            self._trying.stop()
-        self._trying = None
+        changes, another run starts or another result shows, the board model changes, an Operator signs in or Cancel is
+        pressed on the busy indicator. A re-evaluation still running is stopped and its indicator goes, so its answer
+        never shows, and its error, logged and alarmed, shows no dialog (#206)."""
+        if (trying := self._trying) is not None:
+            self._not_trying()  # first: a focus on Cancel goes back before Cancel hides (second verification)
+            if trying is self._bg:
+                trying.stop()
+                self.try_busy.finish()  # at once, not when the pool thread lets go of it
         self.would_be.hide()
         if self.tried and self.res is not None:
             self._show_checks(self.res)
@@ -377,11 +594,16 @@ class ComparePage(Page):
             return
         self._drop_tried()
         self.stored = None  # a fresh inspection with the form's thresholds, not a stored result
+        self._show_calibration()
         self.note.hide()
         if self.test_path:
             self.test_label.setText(self.tr("Test board: {file}").format(file=breakable(Path(self.test_path).name)))
-        recipe = self._form_recipe(bm) if self.test_path and self.ctx.role != "Operator" else None  # else the recipe
-        self.by_form = recipe is not None  # an Operator signing in has it judged again by the recipe
+        recipe: Recipe | None = None  # an Operator's board is judged by the recipe
+        self.judged_by = None  # only the Golden board to read
+        if self.test_path:  # what judges it, which an Operator's sign-in holds against the recipe then (review)
+            saved = self.ctx.recipe(bm)[1]
+            recipe = None if self.ctx.role == "Operator" else self._form_recipe(bm, saved)
+            self.judged_by = (saved if recipe is None else recipe).in_px(self._scale(bm))  # as the engine applies it
         self._sync_roles()  # Re-evaluate, waiting for a stored result's maps, now inspects again
         judged = self.as_judged[1] if self.as_judged and not self.ref_override else None
         if not self.ref_override:
@@ -513,6 +735,15 @@ class ComparePage(Page):
         self.verdict.setStyleSheet(theme.verdict_style(r.verdict))
         self._show_checks(r)
 
+    def _hold_rows(self) -> None:
+        """The decision table never shorter than its rows, up to theme.DECISION_ROWS of them, so the "why" box gives
+        way first: with the panel's full height, at 1600 x 900 it still left the table four of seven rows. It is run
+        on each fill, not on a change of style or font, which the light theme due by 1.0 must run it on."""
+        t = self.metrics
+        rows = sum(t.rowHeight(r) for r in range(min(t.rowCount(), theme.DECISION_ROWS)))
+        bar = t.horizontalScrollBar().sizeHint().height()  # a narrow panel scrolls the columns under the rows
+        t.setMinimumHeight(t.horizontalHeader().sizeHint().height() + rows + bar + 2 * t.frameWidth())
+
     def _show_checks(self, r: InspectionResult, tried: bool = False) -> None:
         """The decision table and "why" box of `r`: the result shown, or (`tried`) what the thresholds tried give it."""
         rows, colors = [], []
@@ -532,22 +763,29 @@ class ComparePage(Page):
         )
         colors.append(None)
         fill_table(self.metrics, rows, colors)
-        self.why.setHtml(self._explain(r, tried))
+        self._hold_rows()
+        self._show_why(self._explain(r, tried))
 
     def show_stored(self, inspection_id: int) -> None:
         """A stored result as it was decided, never inspected again (REQ-CMP-003): the verdict, table and explanation
         from the record at once (REQ-INSP-009); the pictures and the stored maps follow from the pool thread."""
         rec = self.ctx.inspection(inspection_id)
-        res = self.ctx.inspection_result(inspection_id)
+        try:
+            res = self.ctx.inspection_result(inspection_id)
+        except AoiError as e:  # AOI-CMP-002: a stored result that cannot be read, damaged (S29 review)
+            self.error(e)
+            return
         if rec is None or res is None:
             file = Path(rec["image_path"]).name if rec else "?"
             self.error(AoiError("AOI-CMP-002", id=inspection_id, file=file))
             return
         self._drop_tried()
+        self._close_sheet()  # any board opened, the one shown too, closes it with its reason, as Cancel does
         self.stored, self.test_path, self.ref_override, self.as_judged = rec, rec["image_path"], None, None
         self.golden_error, self.golden_state = None, False  # its pane shows the golden board as judged, not today's
         self.record_board_model = rec["board_model"]  # Re-evaluate judges the board under it (#172)
         self._fitted = self.loaded = False
+        self.judged_by = None  # judged as it was decided: an Operator's sign-in never judges it again
         self._sync_roles()  # Re-evaluate waits for its pictures and maps
         self.judge_on_show = False  # a stored result is never inspected again unasked
         self.test_empty.hide()
@@ -558,6 +796,7 @@ class ComparePage(Page):
         name = breakable(Path(rec["image_path"]).name)  # the labels over the pictures wrap a long name (#245)
         self.test_label.setText(self.tr("Test board: {file} (stored result)").format(file=name))
         self._show_result(res)
+        self._show_calibration()
         self._show_note(rec)
         self.run_in_background(self._load_stored, rec, inspection_id, on_result=self._on_stored_loaded)
 
@@ -597,7 +836,7 @@ class ComparePage(Page):
         if self.stored is None:  # a fresh run or a board model change came first: nothing of it shows
             return
         self.loaded = True  # read, or not: Re-evaluate no longer stops the load
-        self._sync_roles()
+        self._sync_roles()  # Re-evaluate on, with a focus that waited for it in the "why" box
         if isinstance(out, ErrorReport):  # none of its pictures: the verdict and table stand, and each pane says why
             why = f"{out.code} {phrase_text(out.what)}"  # the Golden board pane's next step is the dialog's
             self.ref_empty.show_state(self.tr("Golden board not shown"), f"{why} {phrase_text(out.action)}")
@@ -646,6 +885,13 @@ class ComparePage(Page):
         if rec["reference_path"] and golden != rec["reference_path"]:  # an Engineer or a training run set another
             name = breakable(Path(golden).name) if golden else self.tr("none")
             parts.append(self.tr("The board model's Golden board is now {file}.").format(file=name))
+        judged_at, scale = self.res.px_per_mm if self.res is not None else None, self._scale(bm)
+        if judged_at is not None and scale is not None and scale != judged_at:  # Re-evaluate applies its own (ADR 0006)
+            line = self.tr(
+                "It was judged at a scale of {then:.{digits}f} px/mm, at which Re-evaluate applies sizes in mm; the"
+                " board model's scale, at which Try other thresholds shows them, is now {now:.{digits}f} px/mm."
+            )
+            parts.append(line.format(then=judged_at, now=scale, digits=scale_digits(judged_at, scale)))
         if not any(p and Path(p).is_file() for p in (rec["diff_map_path"], rec["ai_map_path"])):
             name = breakable(Path(rec["image_path"]).name)  # shown only, never raised or logged, so it may wrap
             e = AoiError("AOI-CMP-001", file=name, days=self.ctx.settings.map_retention_days_ok)
@@ -719,18 +965,117 @@ class ComparePage(Page):
         return r.image if view is None else view
 
     def save_recipe(self) -> None:
-        if self.ctx.role == "Operator":
-            self.error(
-                AoiError(
-                    "AOI-USR-001", what=QT_TRANSLATE_NOOP("Errors", "Changing recipes"), roles=ROLES_FROM["Engineer"]
-                )
-            )
+        """Save to Recipe (Ctrl+S, Engineer and Admin; REQ-CMP-005): the sheet, in place of the panel, lists each
+        threshold the form holds otherwise than the recipe, before -> after, and asks for a reason; nothing is stored
+        until Save Revision (sketch docs/sketches/compare-decision-table.md). Off while nothing differs."""
+        if not self._may_save():
+            roles = ROLES_FROM[REQUIRED_ROLE["save_recipe"]]
+            self.error(AoiError("AOI-USR-001", what=QT_TRANSLATE_NOOP("Errors", "Changing recipes"), roles=roles))
             return
-        if (bm := self.checked_board_model()) is None:
+        if (bm := self.checked_board_model()) is None or not (changes := self._changes()):
             return
-        rev = self.ctx.save_recipe(self._form_recipe(bm))
-        self.form_revision = (bm, rev)
+        revision = (self.form_revision[1] if self.form_revision else 0) + 1  # the revision the save will make
+        line = self.tr("{threshold}: {before} → {after}")
+        heading = self.tr("Save these thresholds as revision {revision} of the recipe of {board_model}?")
+        self.sheet_heading.setText(heading.format(revision=revision, board_model=breakable(bm)))  # wraps (#245)
+        shown = [(self.tr(THRESHOLDS[k]), self._shown(k, was, bm), self._shown(k, now, bm)) for k, was, now in changes]
+        self.sheet_changes.setText("\n".join(line.format(threshold=t, before=b, after=a) for t, b, a in shown))
+        note = self.tr(
+            "Boards inspected after the save are judged by revision {revision}; stored results keep their verdicts."
+        )
+        self.sheet_note.setText(note.format(revision=revision))
+        self.btn_confirm.setText(self.tr("Save Revision {revision}").format(revision=revision))
+        self._asking = True
+        self.reason.clear()
+        self._sync_roles()
+        self.reason.setFocus(Qt.FocusReason.OtherFocusReason)
+
+    def _changes(self) -> list[tuple[str, Any, Any]]:
+        """Each threshold the form holds otherwise than the recipe it came from, as the engine reads them (`_as_read`):
+        the recipe field, the recipe's value and the form's. With a scale the minimum defect size counts in mm, as its
+        field shows it (a size held in px as its width at the scale, to the field's decimals), and its area, which
+        follows it, is not listed apart (S29)."""
+        if (saved := self.form_recipe) is None:
+            return []
+        was, now = _as_read(saved), _as_read(self._form_recipe(saved.board_model, saved))
+        if (s := self.min_size.px_per_mm) is not None:
+            for r in (was, now):
+                mm = round(disc_width(r.min_defect_area) / s, self.min_size.mm.decimals())
+                r.min_defect_area, r.min_defect_mm = 0, mm if r.min_defect_mm is None else r.min_defect_mm
+        return [(k, getattr(was, k), getattr(now, k)) for k in THRESHOLDS if getattr(was, k) != getattr(now, k)]
+
+    def _shown(self, field: str, value: object, board_model: str) -> str:
+        """A threshold's value as the sheet lists it as it opens: none of the recipe's own is what the saved revision
+        judges by, read from `board_model`'s active AI model, not from the panel, which names the AI model of when
+        Compare was shown, or of a stored result: "the AI model's calibrated value" while its calibration can be read,
+        else "none", as the audit entry of the save then names no threshold; a number shows as its field does, or with
+        every decimal the recipe holds where the field shows fewer; the minimum defect size in mm as its own field does
+        (S29)."""
+        if value is None:
+            try:
+                named = self.ctx.calibrated_threshold(board_model) is not None
+            except AoiError:  # AOI-TRN-012: a calibration that cannot be read names no value
+                named = False
+            return self.tr("the AI model's calibrated value") if named else self.tr("none")
+        if isinstance(value, float):
+            fields = {"anomaly_threshold": self.ai_thr.field, "min_defect_mm": self.min_size.mm}
+            places = fields.get(field, self.ssim_min).decimals()
+            exact = np.format_float_positional(value, trim="-")  # shortest that reads back the same, never 1e-05
+            return f"{value:.{places}f}" if round(value, places) == value else exact
+        return str(value)
+
+    def _confirm_save(self) -> None:
+        """Save Revision, or Enter in the reason: the form's thresholds on the recipe the sheet listed them against,
+        stored through AppContext as the next revision with its audit entry of before, after, user, time and reason
+        (REQ-CMP-005, REQ-LOG-004). A refusal (AOI-USR-001 for a role that may not save, say) is the coded dialog, and
+        the sheet stays with its reason; a revision saved since the sheet opened closes it with AOI-RCP-004, and a
+        scale set since with AOI-RCP-010 (S29), nothing stored. Inspection and the Recipe Editor take the revision up
+        as they do one the Recipe Editor saves: at the next board, and when the editor is shown again."""
+        reason, saved = self.reason.text().strip(), self.form_recipe
+        if not (self._asking and reason) or saved is None:
+            return
+        if (moved := self._take_up_revision()) is not None:  # one saved, or a scale set, since: never undone (sketch)
+            self.error(moved)
+            return
+        try:
+            rev = self.ctx.save_recipe(self._form_recipe(saved.board_model, saved), reason)
+        except Exception as e:  # logged and alarmed; nothing was stored (one transaction)
+            self.error(e)
+            return
+        self.form_revision, self.form_recipe = (saved.board_model, rev), self.ctx.recipe(saved.board_model)[1]
+        self._close_sheet()
         self.shell.status(self.tr("Recipe saved as revision {revision}").format(revision=rev))
+
+    def _close_sheet(self) -> None:
+        """The sheet goes, with its reason, and the panel is back, nothing stored: Cancel, Esc, a save, any sign-in (a
+        revision never carries the reason of a user it does not name), any board opened, a board model change or a
+        recipe reloaded. With none open, nothing changes: the panel shown or hidden while the page is not is a minimum
+        size the window never learns (the stack keeps the size its hidden page had). The focus, if in the sheet, goes
+        back to the panel, or to the "why" box while Save to Recipe and Re-evaluate are both off (a stored result still
+        loading), where a run puts it, and on to Re-evaluate when the load ends if it is still there (`_sync_roles`),
+        as at a run's end; moved out of the sheet, to the header's board model say, it stays, as a run's end leaves
+        it."""
+        if not self._asking:
+            return
+        held = self.sheet.isAncestorOf(self.window().focusWidget())  # read before the sheet hides and Qt moves it
+        self._asking = False
+        self.reason.clear()
+        self._sync_roles()
+        if held and self.isVisible():  # the focus back on the panel, not lost with the sheet
+            back = next((b for b in (self.btn_save, self.btn_try) if b.isEnabled()), self.why)
+            back.setFocus(Qt.FocusReason.OtherFocusReason)
+            self._refocus = back is self.why and self.ctx.role != "Operator"  # for Re-evaluate once on (_sync_roles)
+
+    def _sync_save(self) -> None:
+        """Save to Recipe on for a role that may save a recipe while a threshold differs, no sheet is open and no
+        re-evaluation runs (Ctrl+S opens no sheet over one), and Save Revision while the sheet has a reason."""
+        free = self._may_save() and not self._asking and self._trying is None
+        self.act_save.setEnabled(free and bool(self._changes()))
+        self.btn_confirm.setEnabled(self._asking and bool(self.reason.text().strip()))
+
+    def _may_save(self) -> bool:
+        """The role signed in is at or above the one `AppContext.save_recipe`'s @requires names (#241)."""
+        return self.ctx.role in ROLES and ROLES.index(self.ctx.role) >= ROLES.index(REQUIRED_ROLE["save_recipe"])
 
     def _clear_result(self) -> None:
         """No result on the page: the banner, the decision table, the explanation and the board's pictures go."""
@@ -738,7 +1083,8 @@ class ComparePage(Page):
         self.verdict.setText(NO_VERDICT)
         self.verdict.setStyleSheet(theme.verdict_style("INFO"))
         fill_table(self.metrics, [])
-        self.why.clear()
+        self._hold_rows()
+        self._show_why("")
         self.test_view.set_image(None)
         self.ref_view.clear_overlays()
 
@@ -784,26 +1130,59 @@ class ComparePage(Page):
 
     def _sync_roles(self) -> None:
         """The threshold panel for an Engineer or Admin only, hidden for an Operator, who never sees what other
-        thresholds would give (REQ-CMP-005; ADR 0006 decision 4, sketch Q17): for an Operator the hidden form holds the
-        recipe's thresholds, read once at the sign-in, which the Difference heatmap follows, and a board inspected with
-        an Engineer's is cleared and judged again by the recipe, a run of it still going replaced (review). Re-evaluate
-        waits until the load of a stored result's pictures and maps has ended, so it never stops it."""
+        thresholds would give (REQ-CMP-005; ADR 0006 decision 4, sketch Q17). Re-evaluate waits until the load of a
+        stored result's pictures and maps has ended, so it never stops it, and is off while a re-evaluation runs. A
+        focus on it as it goes off waits in the "why" box and goes back to it once it is on again, if still there,
+        as when Inspection's "Compare with Golden board ›" showed Compare with the focus it had on Re-evaluate, then a
+        stored result (third verification): Qt would pass it on to the header's board model, whose list a Space opens,
+        or, while a threshold differs, to Save to Recipe, where one more Space would open its sheet. The focus
+        read is the window's, which it keeps while another window is in front (review)."""
         engineer = self.ctx.role != "Operator"
-        self.tryout.setVisible(engineer)
-        self.btn_save.setEnabled(engineer)
-        self.act_try.setEnabled(engineer and (self.stored is None or self.loaded))
-        if engineer or self.operator_form:  # the form is the recipe's since the Operator signed in: no read again
-            self.operator_form = not engineer
+        on = engineer and not self._asking and (self.stored is None or self.loaded) and self._trying is None
+        focus = self.window().focusWidget()
+        if not on and focus is self.btn_try:
+            self.why.setFocus(Qt.FocusReason.OtherFocusReason)
+            self._refocus = True
+        self.tryout.setVisible(engineer and not self._asking)
+        self._show_why()  # AOI-RCP-007 with the panel only
+        self.sheet.setVisible(engineer and self._asking)
+        self.act_try.setEnabled(on)
+        self._sync_save()
+        if on and self._refocus and focus is self.why:
+            self.btn_try.setFocus(Qt.FocusReason.OtherFocusReason)
+        self._refocus = self._refocus and engineer and not on  # only while an Engineer's Re-evaluate is off
+
+    def on_user_changed(self) -> None:
+        """An Operator signs in, on Compare or on any other page (review): the hidden form goes back to the recipe's
+        thresholds, which the Difference heatmap follows, and what was tried with values an Engineer left unsaved goes,
+        so the next Engineer finds the recipe's thresholds too; a board inspected with thresholds or other values the
+        recipe does not hold now (an Engineer's not saved, or a revision saved since it was inspected, or a scale set
+        since that changes the px of a size in mm, S29) is cleared, a run of it still going stopped, and judged by the
+        recipe when Compare is shown (`on_show`, next if it is shown now).
+        A run stopped by Cancel stays so, and a stored result as it was decided; a value that did not judge the board is
+        no change (`_judging`). A focus in the panel, which the sign-in hides, waits in the "why" box, which every role
+        sees, as one on the indicator's Cancel does (`_not_trying`), where Qt would pass it on to the header's board
+        model, whose list a Space opens (review); it can be in the panel only while Compare is shown. Any sign-in closes
+        Save to Recipe's sheet, its reason with it."""
+        self._close_sheet()
+        if self.ctx.role != "Operator":
             return
-        self.operator_form = True
+        focus: QWidget | None = self.window().focusWidget()  # before a run, ended by _drop_tried, hides the panel
         scale = self.diff_thr.value()
-        self._load_recipe_into_form()  # values an Engineer left there unsaved go
+        saved = self._load_recipe_into_form()  # values an Engineer left there unsaved go, and what was tried with them
         if self.diff_thr.value() != scale and self.mode.currentIndex() == MODE_DIFF:
             self.redraw()
-        going = self._bg is not None and not self._bg.job.cancelled  # a run stopped, by Cancel say, is not replaced
-        if self.by_form and self.stored is None and (self.res is not None or going):
+        going = self._bg is not None and not self._bg.job.cancelled  # a run stopped, by Cancel say, is not judged again
+        by, judged = self.judged_by, None if going else self.res  # a run still going: not its result yet
+        now = saved.in_px(self._scale(saved.board_model)) if saved is not None else None  # read now, at the scale
+        stale = by is not None and now is not None and _judging(by, judged) != _judging(now, judged)  # now (S29)
+        if stale and self.stored is None and (self.res is not None or going):
+            if self._bg is not None:
+                self._bg.stop()  # its verdict never shows; an error of it is still logged and alarmed (#206)
             self._clear_result()  # no verdict, table or "why" by the form's thresholds while the recipe judges it
-            self._start(quiet=True)  # by the recipe now: the newest run wins, so a run with the form's never shows
+            self.judge_on_show = True  # by the recipe, as soon as the page is shown
+        if focus is not None and self.tryout.isAncestorOf(focus):
+            self.why.setFocus(Qt.FocusReason.OtherFocusReason)  # outside the panel, which hides now or in on_show
 
     def on_show(self) -> None:
         self._sync_roles()
@@ -817,5 +1196,24 @@ class ComparePage(Page):
         if self.res is None and self.test_path is None:
             step = self.empty_step(self.tr("Inspect a board on Inspection, or pick a test image."), "Inspection")
             self.test_empty.show_state(self.tr("No board to compare yet"), *step)
-        if self.board_model and self.form_revision != (self.board_model, self.ctx.recipe(self.board_model)[0]):
-            self._load_recipe_into_form()  # a revision saved since, on Recipe Editor: Save to Recipe never reverts it
+        moved = self._take_up_revision()  # a revision saved since, on Recipe Editor: Save to Recipe never reverts it
+        self._show_calibration()  # an AI model trained or activated since: its value
+        if moved is not None:  # nor does a sheet left open: it closed (sketch)
+            self.error(moved)
+
+    def _take_up_revision(self) -> AoiError | None:
+        """The form takes up a revision of the header's board model saved since it was loaded (on the Recipe Editor,
+        or anywhere through AppContext), and a scale set since, at which it shows its sizes (S29). A Save to Recipe
+        sheet open then closes, nothing stored, and the error for the page to show is returned: AOI-RCP-004 for a
+        revision, as its changes were listed against the revision before (sketch, Errors), else AOI-RCP-010 for a
+        scale, as they were listed at the scale before."""
+        asked = self.form_revision if self._asking else None  # the revision Save to Recipe's open sheet lists against
+        at = self.min_size.px_per_mm  # and the scale it lists the sizes at
+        bm = self.board_model
+        if bm and (self.form_revision != (bm, self.ctx.recipe(bm)[0]) or self.min_size.px_per_mm != self._scale(bm)):
+            self._load_recipe_into_form()
+        if asked and (now := self.form_revision) and now != asked:
+            return AoiError("AOI-RCP-004", board_model=now[0], latest=now[1], revision=asked[1])
+        if asked and (scale := self.min_size.px_per_mm) is not None and scale != at:  # set since (never unset)
+            return AoiError("AOI-RCP-010", board_model=asked[0], scale=scale, revision=asked[1])
+        return None
