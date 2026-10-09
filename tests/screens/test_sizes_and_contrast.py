@@ -541,19 +541,23 @@ def test_req_set_004_sizes_and_contrast_on_every_page(
                 if role not in page.roles:
                     continue
                 _show(win, title, dataset)
-                seen["pages"] += 1
-                shot = _pixels(win.grab().toImage())
-                where = f"{title} ({role})"
-                for w in win.findChildren(QWidget):
-                    if w.isVisible() and w.width() > 0:
-                        findings += _check_widget(where, win, shot, w, seen)
-                for w in win.findChildren(QWidget):  # the lists and calendars they open, after the page grab
-                    if isinstance(w, QComboBox) and w.isVisible() and w.isEnabled() and not _covered(win, w):
-                        findings += check_popup(where, w, seen)
-                    elif isinstance(w, QDateEdit) and w.isVisible() and w.calendarPopup() and w.isEnabled():
-                        findings += check_calendar(where, w, seen)
-                findings += check_field_menu(where, win, seen)
-                findings += _check_targets(where, win, title, seen)
+                for view in (None, *render_screens.PAGE_VIEWS.get(title, ())):  # each tab, as the screenshots show it
+                    render_screens.show_view(win, title, view)
+                    QApplication.processEvents()
+                    seen["pages"] += 1
+                    shot = _pixels(win.grab().toImage())
+                    where = f"{title}{f' {view}' if view else ''} ({role})"
+                    for w in win.findChildren(QWidget):
+                        if w.isVisible() and w.width() > 0:
+                            findings += _check_widget(where, win, shot, w, seen)
+                    for w in win.findChildren(QWidget):  # the lists and calendars they open, after the page grab
+                        if isinstance(w, QComboBox) and w.isVisible() and w.isEnabled() and not _covered(win, w):
+                            findings += check_popup(where, w, seen)
+                        elif isinstance(w, QDateEdit) and w.isVisible() and w.calendarPopup() and w.isEnabled():
+                            findings += check_calendar(where, w, seen)
+                    findings += check_field_menu(where, win, seen)
+                    findings += _check_targets(where, win, title, seen)
+                render_screens.show_view(win, title, None)
     enough = {"pages": 21, "text": 500, "buttons": 100, "contrast": 500, "targets": 200, "image_text": 2}
     enough |= {"popup_rows": 80, "calendar_cells": 300, "calendar_hover": 12}  # 6 calendars: Logs From and To, 3 roles
     enough |= {"calendar_arrows": 24, "field_menus": 10, "menu_entries": 72 + 10 * 7}  # 12 months; 7 entries a field

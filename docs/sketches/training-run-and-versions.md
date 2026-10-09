@@ -66,14 +66,14 @@ While training: "v1.3 will appear here when training ends."
 
 | Code | What happened | Why | What to do |
 |---|---|---|---|
-| AOI-TRN-030 | Training did not start | Fewer than 20 OK images for this board model and view | Add OK boards and freeze a new version |
-| AOI-TRN-031 | Training did not start | A locked validation image is in the training set | Freeze a new version; the lock is kept |
+| AOI-TRN-045 | Training not started | The reason names it: no such version, its validation set not locked, fewer than 20 OK images in its training set, or a file not the one frozen | Do what the reason says, then train again |
+| AOI-TRN-043 | Training not started: locked validation images | Images of the training set are, by their content, in a locked validation set | Freeze a new version and lock its validation set, which keeps the lock, then train from it |
 | AOI-TRN-032 | Training stopped | Out of memory at this resolution | Lower the input size, or train on a station with more memory; the active AI model is unchanged |
 | AOI-TRN-033 | Training failed | Engine error, details in the log | Copy Details; the active AI model is unchanged |
 | AOI-TRN-034 | Training cancelled | — | Partial version removed; active AI model unchanged |
 | AOI-TRN-035 | Activation refused | The version has no model card | Train again, or wait for the card step to finish |
 | AOI-TRN-036 | Export failed | Disk full or folder not writable | Pick another folder |
-| AOI-TRN-037 | Training did not start | The dataset belongs to another customer, or the use is not allowed | Pick a dataset of this customer with the allowed use (REQ-TRN-017) |
+| AOI-TRN-046 | Training not started: customer or use not allowed | The version's images are in no customer's store, a shredded one or another customer's, or the use is not allowed; the refusal is in the audit log | Train from a version of one customer's store that allows this use (REQ-TRN-017) |
 | AOI-TRN-038 | The AI model file was refused | It needs code to load, or is not weights only | Use a file exported by this app (REQ-TRN-014) |
 
 ## Requirements served
@@ -91,4 +91,4 @@ Training, Validation, Missed defect, False call, Threshold); sizes; every string
 - Q41: Roll Back goes to the previously active version in one click; Activate serves any other. Reason: REQ-TRN-010 and S42.
 - Q42: Engineers set epochs, input size and seed per run; Settings holds the defaults. Reason: Training is the Engineer's work; every run records its seed and settings (REQ-TRN-009).
 - Q43: The card is Markdown and JSON, exported as `<version>.card.md` beside `<version>.pt`; printing uses the Markdown. Reason: S43 and Engineering, Model card (MUST), which also name the AI and quality leads as signers.
-- Q44: Before the first epoch the time left reads "estimating…". Reason: An estimate from another run's data size would mislead; the first epoch gives a real one within the 10 s update rule.
+- Q44 (revised in S40): Until the run has read its first image the time left reads "estimating…"; then one step of each kind is timed on that image. Reason: An estimate from another run's data size would mislead; this run's own image gives a real one within seconds, where waiting for the first epoch would show none through the aligning and the Golden board, minutes at 20 MP.

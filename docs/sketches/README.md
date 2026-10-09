@@ -16,8 +16,8 @@ Each sketch holds:
 - the requirement IDs the screen serves (`docs/requirements/stage1.md`);
 - anything the GUI specification leaves open, marked "Question for Jay". Since 2026-10-02 (Jay: "Do everything that
   you would ask me permission for by yourself") each sketch records these under "Decisions (2026-10-02)" with a
-  reason, numbered Q1 to Q58 as in the S01–S02 audit; "Still for Jay" keeps only a MUST departure or a business or
-  contract decision.
+  reason, numbered Q1 to Q58 as in the S01–S02 audit and from Q59 as later stages decide; "Still for Jay" keeps only a
+  MUST departure or a business or contract decision.
 
 Rules every sketch follows (Engineering, "Screens"): role first, verdict first, one frame, at most 2 clicks from
 Home, no dialog over a dialog, destructive buttons red and never focused by default, every string translatable.

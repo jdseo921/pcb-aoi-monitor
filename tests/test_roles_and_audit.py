@@ -16,6 +16,7 @@ from PySide6.QtWidgets import QInputDialog, QMessageBox
 from pytestqt.qtbot import QtBot
 
 from aoi.config import Settings, default_workspace
+from aoi.core import crypto
 from aoi.core.labels import DefectBox
 from aoi.core.recipe import Recipe
 from aoi.core.sample_import import ImportFile, ImportReport
@@ -24,6 +25,7 @@ from aoi.errors import AoiError
 from aoi.ui.main_window import MainWindow
 from aoi.ui.pages.base import role_text
 from aoi.ui.pages.settings import SettingsPage
+from tools.trainable import a_store, in_store, key_of
 
 
 def _raising(report: ImportReport) -> ImportReport:
@@ -58,8 +60,10 @@ def labelled_blind(ctx: AppContext) -> str:
 
 
 def ready_to_freeze(ctx: AppContext) -> str:
-    """TINY, with every Top OK and NG label checked and drawn and an agreed check, stored through the database where
-    missing, so that only the call under test is role-checked and audited."""
+    """TINY, with every Top OK and NG label checked and drawn, an agreed check, and its files in the store of Acme
+    Electronics, stored through the database where missing, so that only the call under test is role-checked and
+    audited."""
+    in_store(ctx, "TINY", "Acme Electronics")
     who, labelled = str(ctx.db.user_uuid("engineer")), [s for s in ctx.samples("TINY") if s["label"] != "UNSURE"]
     for s in [s for s in labelled if s["checked_by"] is None]:  # TINY's samples are all Top
         ctx.db.add_check(s["label_uuid"], s["uuid"], who)
@@ -72,6 +76,22 @@ def ready_to_freeze(ctx: AppContext) -> str:
         ctx.db.add_row("agreement_checks", set_uuid=cal, board_model="TINY", labeller_a=who, labeller_b=who, **counts,
                        agreed=1, run_by=who)  # fmt: skip
     return "TINY"
+
+
+def frozen_for_lock(ctx: AppContext) -> str:
+    """A frozen version of board model LOCK with 60 OK files, stored through the database where missing, so that only
+    the lock under test is role-checked and audited; its files are no workspace image's, so no training meets them."""
+    if found := ctx.db.datasets("LOCK"):
+        return str(found[0]["uuid"])
+    who, uid = str(ctx.db.user_uuid("engineer")), "00000000-0000-4000-8000-00000000000c"
+    version = {"uuid": uid, "name": "DS-LOCK-R1-TOP-v1", "board_model": "LOCK", "revision": "R1", "view": "Top"}
+    version |= {"version": 1, "customer": "Acme", "allowed_uses": ["own"], "agreement_check_uuid": uid}
+    version |= {"manifest_path": "datasets/DS-LOCK-R1-TOP-v1/manifest.json", "manifest_sha256": "0" * 64}
+    files = [{"path": f"images/LOCK/OK/{i}.png", "sha256": f"{i:064x}", "sample_uuid": uid, "label_uuid": uid,
+              "label": "OK", "defect_type": None, "boxes": [], "labelled_by": who, "checked_by": who}
+             for i in range(60)]  # fmt: skip
+    ctx.db.add_dataset(version | {"frozen_by": who, "frozen_at": "2026-10-09T00:00:00+00:00"}, files)
+    return uid
 
 
 # every AppContext write: method -> (its audit action, a call that works on the trained workspace), in a runnable order
@@ -125,7 +145,16 @@ WRITES: dict[str, tuple[str, Callable[[AppContext, Path, Path], Any]]] = {
         "dataset.freeze",
         lambda ctx, data, tmp: ctx.freeze_dataset(ready_to_freeze(ctx), "Top", "R1", "Acme Electronics"),
     ),
-    "train": ("model.train", lambda ctx, data, tmp: ctx.train("TINY", epochs=1, image_size=32)),
+    "lock_validation_set": ("dataset.lock", lambda ctx, data, tmp: ctx.lock_validation_set(frozen_for_lock(ctx), 1)),
+    "create_store": ("store.create", lambda ctx, data, tmp: ctx.create_store("Beta Boards")),  # S38, REQ-TRN-017
+    "restore_store_key": (
+        "store.restore",
+        lambda ctx, data, tmp: ctx.restore_store_key(uid := a_store(ctx, "Gamma"), crypto.sheet(key_of(ctx, uid))),
+    ),
+    "move_in": ("store.move_in", lambda ctx, data, tmp: ctx.move_in("TINY", a_store(ctx, "Acme Electronics"))),
+    "shred_store": ("store.shred", lambda ctx, data, tmp: ctx.shred_store(a_store(ctx, "Delta"))),
+    # the version TINY was trained from (tests/conftest.py), so the call under test writes the only rows
+    "train": ("model.train", lambda ctx, data, tmp: ctx.train(ctx.training_version("TINY")["uuid"], 1, 32)),
     "activate_model": ("model.activate", lambda ctx, data, tmp: ctx.activate_model(ctx.models("TINY")[-1]["id"])),
     "save_recipe": ("recipe.save", lambda ctx, data, tmp: ctx.save_recipe(Recipe(board_model="TINY"))),
     "batch_test": ("test.run", lambda ctx, data, tmp: ctx.batch_test("TINY", str(data / "test" / "ng"))),
@@ -156,9 +185,11 @@ WRITES: dict[str, tuple[str, Callable[[AppContext, Path, Path], Any]]] = {
     "add_user": ("user.change", lambda ctx, data, tmp: ctx.add_user("kim", "Engineer")),
     "save_settings": ("settings.change", lambda ctx, data, tmp: ctx.save_settings({"default_epochs": 7})),
 }
-# what only an Engineer does that writes nothing, so no audit entry: re-evaluating a result (REQ-CMP-005, since S28a)
+# what only an Engineer does that writes no audit entry itself: re-evaluating a result (REQ-CMP-005, since S28a), and
+# starting a training run, whose job writes model.train once it ends (REQ-TRN-008, S40)
 CHECKED_READS: dict[str, Callable[[AppContext, Path, Path], Any]] = {
     "re_evaluate": lambda ctx, data, tmp: ctx.re_evaluate("a-result-uuid", Recipe(board_model="TINY")),
+    "start_training": lambda ctx, data, tmp: ctx.start_training(ctx.training_version("TINY")["uuid"], 5, 32).wait(60),
 }
 # every public AppContext call that is not role-checked: reads, what an Operator does, and the lifecycle
 UNCHECKED = {
@@ -168,12 +199,15 @@ UNCHECKED = {
     "checks_for_many", "inspection_result", "inspection", "judged_reference", "users", "board_status", "start_user",
     "golden_board_unreadable", "engine_is_current", "calibrated_threshold", "calibration_of", "scale", "label_history",
     "boxes", "box_history", "unsure_samples", "label_check_status", "labels_ready_to_freeze", "calibration_sets",
-    "agreement_checks", "datasets", "dataset_items", "verify_dataset",
+    "agreement_checks", "propose_calibration_set", "blind_labelled", "datasets", "dataset_items", "verify_dataset",
+    "validation_split", "stores", "store_of", "store_contents", "training_version", "freeze_gate",
+    "dataset_counts",
 }  # fmt: skip
 CALLS = {**{name: call for name, (_, call) in WRITES.items()}, **CHECKED_READS}
 # The lowest role allowed each call, copied from the write table of docs/ARCHITECTURE.md §5 and REQ-CMP-005, never read
 # from the decorators under test (#181): built from REQUIRED_ROLE, a lowered @requires refused fewer roles and passed.
 EXPECTED_ROLE = {name: "Engineer" for name in CALLS} | {"add_user": "Admin", "save_settings": "Admin"}
+EXPECTED_ROLE |= {"create_store": "Admin", "restore_store_key": "Admin", "move_in": "Admin", "shred_store": "Admin"}
 EXPECTED_ROLE["export_board_image"] = "Operator"  # Save Image… (F9): every role keeps it, audited (#241, REQ-INSP-005)
 REFUSED = [(name, role) for name in CALLS for role in ROLES[: ROLES.index(EXPECTED_ROLE[name])]]
 

@@ -682,7 +682,8 @@ def test_req_trn_003_editor_next_and_previous(qtbot: QtBot, trained_ctx: AppCont
     key(table, Qt.Key.Key_PageUp, ids[0])  # the first row stays
     _select(page, ids[-1])
     key(table, Qt.Key.Key_PageDown, ids[-1])  # and so does the last
-    table.sortItems(4, Qt.SortOrder.DescendingOrder)  # by File, Z to A: the order the rows are seen in
+    files = next(c for c in range(table.columnCount()) if table.horizontalHeaderItem(c).text() == "File")
+    table.sortItems(files, Qt.SortOrder.DescendingOrder)  # by File, Z to A: the order the rows are seen in
     seen = order()
     assert seen != ids and sorted(seen) == sorted(ids)
     _select(page, seen[0])

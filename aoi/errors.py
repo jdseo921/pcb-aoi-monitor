@@ -559,10 +559,40 @@ CODES: dict[str, ErrorCode] = {
             ),
         ),
         ErrorCode(
+            "AOI-TRN-022",
+            QT_TRANSLATE_NOOP("Errors", "Validation set not locked"),
+            QT_TRANSLATE_NOOP("Errors", "The validation set of {name} was not locked: {reason}."),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Add OK images if there are too few, freeze a new dataset version and lock its validation set; nothing"
+                " was written.",
+            ),
+        ),
+        ErrorCode(
+            "AOI-TRN-023",
+            QT_TRANSLATE_NOOP("Errors", "Manifest does not match"),
+            QT_TRANSLATE_NOOP("Errors", "{name} does not match what was frozen: {reason}."),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Train from another version, or freeze the working set again; the files are named under the Versions"
+                " table.",
+            ),
+        ),
+        ErrorCode(
             "AOI-TRN-024",
             QT_TRANSLATE_NOOP("Errors", "Dataset not frozen: no customer"),
             QT_TRANSLATE_NOOP("Errors", "{name} was not frozen: no customer is set."),
             QT_TRANSLATE_NOOP("Errors", "Enter the customer the dataset is for, then freeze it again."),
+        ),
+        ErrorCode(
+            "AOI-TRN-025",
+            QT_TRANSLATE_NOOP("Errors", "Dataset store not opened"),
+            QT_TRANSLATE_NOOP("Errors", "The dataset store of {store} was not opened: {reason}."),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "An Admin types the store's recovery sheet into this station when its key is missing or wrong; a file"
+                " changed outside the app comes back only from a backup. Nothing was changed.",
+            ),
         ),
         ErrorCode(
             "AOI-TRN-027",
@@ -704,6 +734,57 @@ CODES: dict[str, ErrorCode] = {
                 "Ask an Admin to save a workspace folder with a shorter path on Settings and then, with the app closed,"
                 " to copy everything in the folder {workspace} into that folder, or to turn on long paths in Windows;"
                 " then freeze again.",
+            ),
+        ),
+        ErrorCode(
+            "AOI-TRN-043",
+            QT_TRANSLATE_NOOP("Errors", "Training not started: locked validation images"),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "{name} was not trained: {count} of its training set's images are, by their content, in a locked"
+                " validation set, and an AI model is never trained on one.",
+            ),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Freeze a new version and lock its validation set, which keeps those images locked, then train from it;"
+                " nothing was saved, and the active AI model is unchanged.",
+            ),
+        ),
+        ErrorCode(
+            "AOI-TRN-044",
+            QT_TRANSLATE_NOOP("Errors", "Dataset store not changed"),
+            QT_TRANSLATE_NOOP("Errors", "The dataset store of {store} was not changed: {reason}."),
+            QT_TRANSLATE_NOOP("Errors", "Do what the reason says, then try again."),
+        ),
+        ErrorCode(
+            "AOI-TRN-045",
+            QT_TRANSLATE_NOOP("Errors", "Training not started"),
+            QT_TRANSLATE_NOOP("Errors", "{name} was not trained: {reason}."),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Do what the reason says, then train again; nothing was saved, and the active AI model is unchanged.",
+            ),
+        ),
+        ErrorCode(
+            "AOI-TRN-046",
+            QT_TRANSLATE_NOOP("Errors", "Training not started: customer or use not allowed"),
+            QT_TRANSLATE_NOOP("Errors", "{name} was not trained for the use {use}: {reason}."),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Train from a version of one customer's dataset store that allows this use; the refusal is in the audit"
+                " log, and the active AI model is unchanged.",
+            ),
+        ),
+        ErrorCode(
+            "AOI-TRN-047",
+            QT_TRANSLATE_NOOP("Errors", "Training already running"),
+            QT_TRANSLATE_NOOP(
+                "Errors", "An AI model is already training on this station, so a second training run was not started."
+            ),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Wait for the run to end, or press Cancel on the Training page, then start again; the header shows how"
+                " far the run is.",
             ),
         ),
         ErrorCode(

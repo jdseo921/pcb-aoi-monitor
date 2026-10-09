@@ -203,16 +203,27 @@ draw's seed, count and labels are stored and audited, and a draw adds to earlier
 check a label you made (AOI-TRN-033). An NG image needs a defect box before its label is checked, an UNSURE label is
 not checked, and a label from before this version, with no labeller, is labelled again first (AOI-TRN-034). A relabel
 needs a new check. Until sign-in arrives in version 1.0, the second user is the second name picked in the user list,
-which the validation report states. No screen draws or checks labels yet: the services do, and the screen comes later.
+which the validation report states. On Training, the samples table names each image's labeller (Labelled) and the
+user who checked its label (Checked), and the line over it counts the checks a freeze still needs. Press **Draw OK
+Labels to Check** to draw the OK labels, then pick **Unchecked** under Show: it lists every NG label and drawn OK label
+not checked yet. The second user signs in with Switch User, selects the images and presses **Check Label** or Enter; it
+checks each selected label they can check and says how many it left and why. It is off, its tooltip saying why, for an
+image you labelled yourself; Enter typed in a field or a drop-down list stays the field's.
 
-**Two labellers agree before a customer validation.** Pick 100 images of the board model, each labelled OK or NG, as a
-calibration set. Two Engineers each label every image of the set blind, OK, or NG with one of the 33 defect types, once
-per image; no screen hides an image's own label yet, so not looking at it is up to each labeller. The agreement check
-then counts the images on which the two agree on OK or NG, at least 98 of 100, and the images both labelled NG on which
-they agree on the defect type, at least 90 % (both targets proposed). Every check is stored with its counts, and the
-newest one decides whether a dataset version can be frozen. A set that is not 100 such images (AOI-TRN-035), a second
-blind label (AOI-TRN-036) and a labeller who has not labelled every image (AOI-TRN-037) are refused. None of this has a
-screen yet.
+**Two labellers agree before a customer validation.** On Training, open the **Datasets** tab. **New Set** draws a
+calibration set of 100 images of the board model, each labelled OK or NG: 30 NG images, or all when fewer, among the OK
+ones, in a random order. It is off, its tooltip giving the count, while fewer than 100 images are so labelled. Each of
+two Engineers then signs in with Switch User and presses **Label Blind…**: the set's images show one by one, "Image 1 of
+100", with no file name, label, box or history, in place of the tabs. Press **Label OK** or O, or pick the defect type
+and press **Label NG** or N; the next image follows. **Stop** or Esc leaves, keeping every label made, and Label Blind…
+goes on from the next image; a sign-in or another board model in the header stops it too. The line under the set says
+who has labelled how many images. Once two users have labelled every image, pick them under Labellers and press **Run
+Agreement Check**: it counts the images on which the two agree on OK or NG, at least 98 of 100, and the images both
+labelled NG on which they agree on the defect type, at least 90 % (both targets proposed), and shows both with ✓ or ✗.
+Every check is stored with its counts, and the newest one decides whether a dataset version can be frozen. A set that is
+not 100 such images (AOI-TRN-035), a second blind label (AOI-TRN-036) and a labeller who has not labelled every image
+(AOI-TRN-037) are refused. Until sign-in arrives in version 1.0, each labeller is a name picked in the user list (ADR
+0002).
 
 **A frozen dataset version keeps its record.** Freezing takes the OK and NG images of one board model and view, with the
 board revision, the customer and the allowed uses (their own AI models by default), as DS-TBOXA1-R3-TOP-v4: the board
@@ -227,12 +238,41 @@ cannot be written is AOI-TRN-041, or AOI-TRN-042 when its path is too long, and 
 freeze refused by its checks reads no image file first. A datasets/<name> folder whose manifest no version lists was
 left by a freeze that stopped before storing its version; the next freeze of that name replaces it. The version's record
 and manifest never change, and a later label change goes into the next version. The version names the workspace's image
-files rather than copying them; the app never changes or removes one, but a file changed or removed outside the app
-cannot be recovered from the workspace, so back the workspace up. Verifying a version hashes its manifest and every file
-again and lists each file that changed or is missing since the freeze; train from another version when one did. No
-screen freezes or verifies a version yet.
+files rather than copying them; the app changes one only to encrypt it in its customer's store, and removes one only
+when that store is shredded, but a file changed or removed outside the app cannot be recovered from the workspace, so
+back the workspace up. Verifying a version hashes its manifest and every file
+again and lists each file that changed or is missing since the freeze; train from another version when one did.
 
-(to be written: the check and the blind labels on screen, the Datasets tab, locking the validation set)
+**Each customer's images are in a store of their own.** A version is frozen only from a board model in the dataset
+store of the customer it names (AOI-TRN-027). An Admin keeps the stores under Settings › Dataset stores, one per
+customer; each step there opens a sheet in the table's place. New Store… makes a store and shows its recovery sheet
+once, with Print Sheet…: keep it apart from the station, since it is the only way to open the store on a new PC or
+Windows account, where Restore Key… takes its 13 groups of four back. Close waits for the tick that says it is printed.
+Move Board Model In… encrypts a board model's images and manifests where they are; they keep their .png and .json names
+but open only in this app, on a station that holds the key. Cancel on its busy indicator leaves the rest plain, and the
+same step, its button then reading Finish Moving In, moves them. A file the app cannot open is AOI-TRN-025, which says
+why. When an engagement ends, an Admin shreds the store with Shred Store…, which names the board models and the files it
+deletes and waits for the customer's name typed: its key goes first, then its images, versions, AI models and Golden
+boards; nothing of it opens afterwards, a backup included, once the sheet is destroyed. A file that would not go is
+AOI-TRN-044, and Shred Store… again deletes what is left (ADR 0010).
+
+**Training › Datasets freezes, splits and checks versions.** The Working set panel counts each view's OK, NG and UNSURE
+images and the checks a freeze needs, with ✓ once the view can be frozen, and names the customer whose dataset store
+holds the board model; tick the allowed uses under it. **Freeze Dataset…** (Ctrl+F) shows the Freeze sheet in place of
+the labeller agreement: pick the view and type the board revision, and the sheet names the version and shows a line for
+each thing a freeze needs, ✓ or ✗ with the fix. **Freeze**, or Enter in the revision, freezes it in the background with
+progress and Cancel; Cancel or Esc stops it, writes nothing and keeps the sheet. The **Versions** table lists the board
+model's versions, newest first: when each was frozen and by whom, its OK and NG images, its locked validation set
+("50 / 6") or "not locked", the customer, the uses and what Verify Manifest found. **Split and Lock Validation Set…**
+shows a sheet for the version picked: its images against the 50 OK and 30 % of the NG that its validation set takes, its
+NG images by defect type, and a random seed you may change. **Lock**, or Enter in the seed, splits the version once, for
+good, and the status line counts both sets; the button is then off for that version, since a new split needs a new
+version, and a version with fewer than 50 OK images cannot be locked. **Verify Manifest** hashes the version picked and
+each of its files again, with progress and Cancel: ✓ when every file matches, else ✗ and, under the table, AOI-TRN-023
+naming the files changed or missing; train from another version, or freeze the working set again. **Export Manifest…**
+asks first, naming the file count, then writes the version as a CSV file, one row per image: its path, SHA-256, label,
+defect type, boxes, labeller, checker and part of the split. Open Version, the sketch's read-only view of a version's
+labels and boxes, comes later.
 
 ## 4. Training and AI model versions
 
@@ -240,19 +280,42 @@ screen freezes or verifies a version yet.
 of 0 because the OK images are copies of one photo, it stops with AOI-TRN-004: nothing is saved and the active AI model
 stays in use. Import photos of several different good boards, then train again.
 
-**An import** runs in the background (#194): the sample table shows "Importing…" after a second, and progress, the
-time left and Cancel after ten. While any import runs, Add OK Images…, Add NG Images…, Import Folder… (also the link
-in an empty sample table) and Start Training are off, "Importing…" stays over the table when the page is shown again,
-and a Switch User does not stop it: the samples are recorded as added by the user who started the import. The line
-over the sample table counts the OK and NG samples and names the reference image (under it, while fewer than 20 OK
-samples are imported, a tip says that 20 or more give a steadier threshold); a name too long for the line is cut at its
-end (…), and pointing at the line shows it whole. If the system refuses the path of a sample's copy in the workspace as
-too long (a workspace folder with a long path, on Windows with long paths off), the import keeps the images it
-imported before that file and names AOI-TRN-011 in AOI-TRN-010; when that file was the first, it shows AOI-TRN-011
-itself, which counts every image it was to import. The steps are those of AOI-INSP-014 (section 8, Evidence files).
+**An import** runs in the background (#194): the sample table shows "Importing…" after a second, and progress, the time
+left and Cancel after ten. While any import runs, Add OK Images…, Add NG Images…, Import Folder… (also the link in an
+empty sample table) and Start Training are off, "Importing…" stays over the table when the page is shown again, and a
+Switch User does not stop it: the samples are recorded as added by the user who started the import. The line over the
+sample table counts the OK and NG samples and names the reference image (under it, while fewer than 20 OK samples are
+imported, a tip says that training needs 20 OK images or more in a dataset version's training set); a name too long for
+the line is cut at its end (…), and pointing at the line shows it whole. If the system refuses the path of a sample's
+copy in the workspace as too long (a workspace folder with a long path, on Windows with long paths off), the import
+keeps the images it imported before that file and names AOI-TRN-011 in AOI-TRN-010; when that file was the first, it
+shows AOI-TRN-011 itself, which counts every image it was to import. The steps are those of AOI-INSP-014 (section 8,
+Evidence files).
 
-**Stop** ends a training run without saving anything: no AI model version, golden board or audit entry; the active AI
-model stays. Closing the app while work runs asks whether to stop it; an AI model test finishes its folder first.
+**What a run trains on.** Start Training trains from a frozen dataset version, never from the sample table: pick it
+in Dataset version, which lists the board model's frozen versions, newest first, and starts on the newest whose
+validation set is locked; the line under it counts that version's validation set and training set. The run reads only
+the training set: its OK images make the Golden board, three quarters of them train the AI model and the rest set the
+threshold, which its NG images only help to set; the locked validation set is never read. The run does not start, and
+saves nothing, when the version's validation set is not locked or its training set holds fewer than 20 OK images
+(AOI-TRN-045), when an image of its training set is locked in any validation set (AOI-TRN-043), or when its images are
+not in the dataset store of the customer it names or it does not allow the use (AOI-TRN-046, written to the audit log).
+Locking keeps at least 50 OK images for validation, so a board model and view needs 70 or more. An image changed since
+the freeze stops the run with AOI-TRN-045 naming the file. The new AI model names the version it was trained from.
+Freeze a version and lock its validation set on the Datasets tab (section 3).
+
+**While a run goes on**, the line under the bar names what it does now, with its percent and the time left: "Aligning
+image 12 of 53", "Building the Golden board: step 3 of 16", "Training epoch 23 of 60", "Calibrating: map 4 of 16", then
+"Saving AI model v1.3". The time left reads "estimating…" for the run's first image only, then "about 6 min left", or
+"less than a minute left"; the line and the bar change at least every 10 s. The run goes on whichever page you open: the
+header shows "Training 38 % · about 6 min left" on every page, and Home's Self-train card "Training running 38 % · about
+6 min left"; press the header's button to come back to Training. Start Training stays off while a run goes on, one run
+at a time (AOI-TRN-047).
+
+**Cancel** ends a training run without saving anything: no AI model version, golden board or audit entry; the active AI
+model stays. The run stops after the image, step or map in hand, within seconds, or as it saves, before the new AI model
+is registered, and the log says "Cancelled: no AI model was saved; the active AI model is unchanged." Closing the app
+while work runs asks whether to stop it; an AI model test finishes its folder first.
 
 **A run that fails as it is registered** (the disk full, the database held by another program) leaves the Golden board
 and the AI model in use as they were, with no new version, file or audit entry; train again once the cause is fixed.
@@ -286,7 +349,7 @@ and in a line under the table: for the next boards, train again or activate anot
 own for the board model (section 5). Where such a row's sample counts cannot be read either, its OK/NG cell stays
 empty.
 
-(to be written: training, progress and cancel, versions, activation and rollback, the model card)
+(to be written: versions, activation and rollback, the model card)
 
 ## 5. Recipes
 
@@ -294,8 +357,8 @@ empty.
 that turns off both "Use the Golden board comparison" and "Use the self-trained AI model", judges nothing: every
 board is refused with AOI-INSP-010, which names why each check did not run. A Golden board whose file is gone or
 damaged refuses every board of its board model with AOI-INSP-009: put the file back, or choose another OK sample as
-the Golden board with Set Reference on Training. Training again does not cure it while the Golden board is one of the
-imported samples, since training reads every OK sample. The Recipe Editor and Compare show such a Golden board as one
+the Golden board with Set Reference on Training. Training again does not cure a damaged file, since a run reads the
+Golden board first to align every image to it. The Recipe Editor and Compare show such a Golden board as one
 that cannot be opened, with the file's error code and the same steps (a long file name in it wraps onto the next line
 after a _ or -), and the app still opens with no error dialog (#176), though the alarm log on Inspection records it
 once with that code (#195); an Operator reads the same with "Ask an Engineer". When shown again after Set Reference, a

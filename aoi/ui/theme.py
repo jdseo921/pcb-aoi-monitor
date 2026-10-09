@@ -51,6 +51,7 @@ PRINT_TEXT = "#000000"  # text in a PDF report, on paper
 
 # Point sizes, never below FONT_PT, and pixel sizes (Engineering standard, "Sizes"; the sketches' size classes)
 FONT_FAMILY = '"Segoe UI", "Malgun Gothic", "Noto Sans", sans-serif'  # the screenshot tests pin one font instead
+FONT_MONO = '"Consolas", "DejaVu Sans Mono", monospace'  # a recovery sheet's key, each letter as wide
 FONT_PT = 14  # body, tables, headers, muted labels
 FONT_LARGE_PT = 16  # card titles, the logo, busy text
 FONT_H1_PT = 20
@@ -83,6 +84,7 @@ QWidget { color: $TEXT; }
 QLabel#h1 { font-size: ${FONT_H1_PT}pt; font-weight: 600; }
 QLabel#muted { color: $TEXT_MUTED; }
 QLabel#logo, QLabel#busyText { font-size: ${FONT_LARGE_PT}pt; font-weight: 600; }
+QLabel#recoveryKey { font-family: ${FONT_MONO}; font-size: ${FONT_H1_PT}pt; }
 QLabel#badge { background: $WARN_COLOR; color: $ON_LIGHT; border-radius: ${RADIUS}px; padding: 4px ${SPACE_S}px; }
 QLabel#tile { background: $BG_RAISED; border-radius: ${RADIUS_L}px; padding: ${SPACE_S}px; }
 QFrame#header { background: $BG_DEEP; border-bottom: 1px solid $LINE; }

@@ -21,6 +21,8 @@ package:shiboken6            # LGPL-3.0-only, PySide6's runtime, a separate libr
 # Exceptions pending Jay's written decision (Stage 1 plan, item J8). The standard does not name
 # these; each is permissive or public-domain-like and comes with a dependency we cannot avoid.
 # CI reports every exception in use so the decision stays visible.
+exception:MIT-0              # cffi, which cryptography needs at run time (ADR 0010): MIT without the notice duty,
+                             # first raised by ADR 0002 for argon2-cffi
 exception:MIT-CMU            # pillow (development only: tests write image files with it); MIT with CMU's wording
 exception:0BSD               # inside numpy's notice; BSD with no conditions at all
 exception:Apache-2.0 WITH LLVM-exception  # inside torch's notice (LLVM-derived parts); Apache 2.0 plus a waiver

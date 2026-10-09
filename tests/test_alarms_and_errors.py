@@ -28,7 +28,7 @@ from aoi.ui.main_window import MainWindow
 from aoi.ui.pages.compare import NO_VERDICT
 from aoi.ui.pages.inspection import InspectionPage
 from aoi.ui.pages.settings import SettingsPage
-from tests.conftest import wrapped
+from tests.conftest import plain, seal, wrapped
 from tests.test_req_done_in_v01 import BOARD, _inspect_one, _window
 
 # ISO date, 24-hour time, level, code and message, two spaces apart (REQ-INSP-006)
@@ -210,7 +210,8 @@ def test_req_set_019_the_app_opens_when_the_golden_board_file_is_gone(
     both kept the error after the remedy)."""
     fix = "choose another OK sample with Set Reference on Training."
     board = trained_ctx.samples(BOARD, "OK")[-1]["path"]
-    for change, code in ((Path.unlink, "AOI-INSP-001"), (lambda p: p.write_bytes(b"no image"), "AOI-INSP-004")):
+    damage = (lambda p: seal(trained_ctx, p, BOARD, b"no image"), "AOI-INSP-004")  # in TINY's store, as it opens
+    for change, code in ((Path.unlink, "AOI-INSP-001"), damage):
         golden = Path(str(trained_ctx.reference_image(BOARD)))
         change(golden)
         alarms = trained_ctx.alarms()
@@ -367,7 +368,7 @@ def test_req_set_019_both_golden_board_panes_follow_a_new_reference(
     trained_ctx.set_reference(BOARD, next(s["id"] for s in trained_ctx.samples(BOARD, "OK") if s["path"] == one))
     for step, path in (("Set Reference", one), ("the file replaced", two)):
         if step == "the file replaced":
-            Path(one).write_bytes(Path(two).read_bytes())
+            seal(trained_ctx, one, BOARD, plain(trained_ctx, two, BOARD))  # by someone with TINY's store key
         win.navigate("Home")
         win.navigate("Recipe Editor")
         assert editor.ref is not None and np.array_equal(editor.ref, trained_ctx.load_image(path)), step

@@ -19,6 +19,7 @@ import os
 import random
 import secrets
 import threading
+from collections import Counter
 from collections.abc import Callable, Iterator, Sequence
 from dataclasses import dataclass
 from pathlib import Path, PureWindowsPath
@@ -29,7 +30,7 @@ import numpy as np
 from .. import defects as taxonomy
 from .. import logging_setup
 from ..config import Settings, resolve_device
-from ..data import atomic
+from ..data import atomic, credentials
 from ..data.db import Database, DbError, is_busy, new_uuid
 from ..data.errors import WorkspaceError
 from ..data.paths import inside, one_folder_name, resolve, to_stored
@@ -37,11 +38,20 @@ from ..data.workspace_lock import WorkspaceLock
 from ..errors import QT_TRANSLATE_NOOP, AoiError, Phrase, joined
 from ..hal import VIEWS
 from ..times import local_date, now_utc
-from . import anomaly, datasets, imaging, labels
+from . import anomaly, crypto, datasets, golden, imaging, labels, run_progress, stores
 from .compare import Region, changed_regions
-from .imaging import align_to_reference, encode_image, list_images, load_image, load_image_sha256, save_image
+from .imaging import (
+    align_to_reference,
+    encode_image,
+    list_images,
+    load_image,
+    load_image_sha256,
+    registration,
+    save_image,
+    warp_to,
+)
 from .inspector import NG, OK, WARN, AiEvidence, InspectionResult, Inspector, JudgedBy, ai_check, draw_overlay, re_grade
-from .jobs import JobCancelled, Jobs
+from .jobs import Job, JobCancelled, Jobs
 from .labels import DefectBox
 from .maps import load_maps, map_paths, picture_shape, save_maps
 from .recipe import Recipe
@@ -50,6 +60,13 @@ from .sample_import import LABELS, REFUSED, ImportFile, ImportReport
 ALARM_LIMIT = 1000  # REQ-INSP-006: the alarms a screen shows and that survive a restart
 BUSY_ALARM_WAIT_MS = 200  # how long the alarm of a locked database's error, or an Inspection alarm, waits, not 5 s
 ALIGNING = QT_TRANSLATE_NOOP("Training", "Aligning {count} images to the reference board")  # a progress line (#199)
+# what a training run does now, as its progress names it (REQ-TRN-008)
+READING = QT_TRANSLATE_NOOP("Training", "Aligning image {n} of {count}")
+BAND = QT_TRANSLATE_NOOP("Training", "Golden board, part {band} of {bands}: image {n} of {count}")
+MEDIAN = QT_TRANSLATE_NOOP("Training", "Building the Golden board: step {n} of {count}")
+EPOCH = QT_TRANSLATE_NOOP("Training", "Training epoch {epoch} of {epochs}")
+CALIBRATING = QT_TRANSLATE_NOOP("Training", "Calibrating: map {n} of {count}")
+SAVING = QT_TRANSLATE_NOOP("Training", "Saving AI model {version}")
 NO_TYPE = QT_TRANSLATE_NOOP("Errors", "no defect type was given")  # why AOI-TRN-013 refused an NG sample
 NOT_A_TYPE = QT_TRANSLATE_NOOP("Errors", "{name} is not one of them")
 STEM_CHARS = 40  # how much of a source file's stem names its evidence or sample file (#245)
@@ -228,8 +245,11 @@ def _remove(files: list[Path]) -> None:
 
 
 class AppContext:
-    def __init__(self, settings: Settings | None = None) -> None:
+    def __init__(self, settings: Settings | None = None, key_store: credentials.Credentials | None = None) -> None:
         self.settings = settings or Settings.load()
+        # each customer's dataset store key (REQ-TRN-017): Credential Manager on a station, never the workspace
+        self.credentials = key_store if key_store is not None else credentials.default()
+        self._keys: dict[str, bytes] = {}  # store UUID -> its key, read once and checked against its check value
         try:
             self.settings.ensure_dirs()
         except OSError as e:  # a drive not connected, a file where the folder must go (REQ-SET-019)
@@ -274,6 +294,8 @@ class AppContext:
         # background work (REQ-SET-021): screens submit through aoi/ui/workers, tests directly; a job acts as the user
         # who submitted it (#177)
         self.jobs = Jobs(context=self._acting_context)
+        self.training: Job[dict[str, Any]] | None = None  # the run start_training began last, running or ended
+        self.training_progress: run_progress.RunProgress | None = None  # its latest report, for the header and Home
         self._golden_alarmed: set[tuple[str, str | None, str]] = set()  # each (board model, file, code) alarmed (#195)
         self._golden_lock = threading.Lock()  # the Recipe Editor reads on the UI thread, Compare on the pool's
         self._closed = False
@@ -429,16 +451,23 @@ class AppContext:
         -007, decision Q30) and hashed; an image already imported, one `board_model` has (one indexed lookup) or one
         of `known`, copies nothing and comes back with that sample (decision Q31). The copy is a crash-safe write; then
         the source and the copy are read again, and a SHA-256 other than the one checked (a writer still at the source)
-        refuses the file with AOI-TRN-014 and removes the copy. A source lost since its check (removed, unreadable) is
-        refused with AOI-INSP-001, as Inspection's check would; a copy that cannot be written raises AOI-TRN-008, or
-        AOI-TRN-011 when the system refuses its path as too long (#245)."""
+        refuses the file with AOI-TRN-014 and removes the copy. A board model in a customer's dataset store gets its
+        copy encrypted from the bytes checked, never written plain, and read back decrypted (REQ-TRN-017). A source
+        lost since its check (removed, unreadable) is refused with AOI-INSP-001, as Inspection's check would; a copy
+        that cannot be written raises AOI-TRN-008, or AOI-TRN-011 when the system refuses its path as too long
+        (#245)."""
         data = imaging.checked_bytes(src, self.settings.max_image_megapixels, self.settings.max_image_megabytes)
         digest = hashlib.sha256(data).hexdigest()
-        del data  # up to the size limit in memory: not kept through the copy
         if (had := known.get(digest) or self.db.sample_with_sha256(board_model, digest)) is not None:
             return digest, had
+        sealed = self._sealed(to_stored(target, self.settings.root), data)  # the bytes checked, in the store's form
+        del data  # up to the size limit in memory: not kept through the copy
         try:
-            atomic.copy_file(src, target)
+            if sealed is None:
+                atomic.copy_file(src, target)
+            else:  # a board model in a customer's dataset store: its copy is encrypted from the start (REQ-TRN-017)
+                atomic.write_bytes(target, sealed)
+                del sealed
         except OSError as e:  # gone, unreadable, the workspace drive full, or a path the system refuses
             if str(e.filename) == str(src):  # the source's own: that file's to fix, listed by import_files
                 raise AoiError("AOI-INSP-001", str(e), path=str(src)) from e
@@ -448,8 +477,8 @@ class AppContext:
             why = e.strerror or str(e)
             raise AoiError("AOI-TRN-008", str(e), path=str(src), reason=why, count=count) from e
         try:
-            same = _sha256(src) == digest == _sha256(target)
-        except OSError:  # the source gone right after its copy: it cannot be found unchanged
+            same = _sha256(src) == digest == self._file_sha256(target)
+        except (OSError, AoiError):  # the source gone right after its copy, or a copy that does not read back
             same = False
         if not same:
             _remove([target])
@@ -496,45 +525,141 @@ class AppContext:
 
     # --- training ------------------------------------------------------------
     @requires("Engineer", QT_TRANSLATE_NOOP("Errors", "Training an AI model"))
-    def train(
+    def start_training(
         self,
-        board_model: str,
+        dataset_uuid: str,
         epochs: int | None = None,
         image_size: int | None = None,
-        progress: anomaly.ProgressFn | None = None,
+        use: str = "own",
+        listen: Callable[[Job[dict[str, Any]]], None] | None = None,
+    ) -> Job[dict[str, Any]]:
+        """Train in the background as a job of the context, not of a page, so the run goes on whatever page is shown
+        (REQ-TRN-008): `train` on the pool, its latest report kept as `training_progress` for the header and Home,
+        Cancel through the job's `cancel()`. One run at a time: a second while one goes on is refused with AOI-TRN-047.
+        `listen(job)` registers listeners before the job is submitted, so none misses a report."""
+        if self.training is not None and not self.training.done:
+            raise AoiError("AOI-TRN-047")
+        job: Job[dict[str, Any]] = Job(
+            "train", self.train, dataset_uuid, epochs, image_size, use=use, with_progress=True
+        )
+
+        def keep(values: tuple[Any, ...]) -> None:  # on the pool thread; the header reads it on the UI thread
+            self.training_progress = values[0]
+
+        job.on_progress(keep)
+        if listen is not None:
+            listen(job)
+        self.training, self.training_progress = job, None
+        return self.jobs.submit(job)
+
+    @requires("Engineer", QT_TRANSLATE_NOOP("Errors", "Training an AI model"))
+    def train(
+        self,
+        dataset_uuid: str,
+        epochs: int | None = None,
+        image_size: int | None = None,
+        progress: Callable[[run_progress.RunProgress], None] | None = None,
         should_stop: Callable[[], bool] | None = None,
+        use: str = "own",
     ) -> dict[str, Any]:
-        """Train an AI model of `board_model` on its samples, then save, register, activate and audit it. The run reads
-        the device once, before it loads anything, and keeps it to the end: a device saved on Settings while the run
-        loads, aligns or trains applies from the next run (#201). Its name meets the rule a new board model meets
-        (AOI-TRN-019, AOI-TRN-005), as its folder under models/ does, before anything is loaded."""
+        """Train an AI model of a frozen dataset version's board model on the version's training set, for `use` (its
+        customer's own AI models by default), then save, register, activate and audit it (REQ-TRN-007). The OK images
+        train it and make the Golden board; the NG images only calibrate its threshold; the locked validation set is
+        never read. Refused, before any image is read, as `_training_set` gives. A file whose SHA-256, of the bytes
+        read, is not the one frozen stops the run with AOI-TRN-045. The run reads the device once, before it loads
+        anything, and keeps it to the end (#201).
+
+        Memory (REQ-TRN-007): each image is read, registered onto the board model's reference board (else the first OK
+        image) and warped, then kept only as its tensor at the network's input size and its band of the Golden board's
+        median (aoi/core/golden.py); each later band reads the OK images again and warps them with the homography kept.
+        So a run holds one image at the camera's resolution at a time, one band of every OK image, and the tensors.
+
+        Progress (REQ-TRN-008): `progress(RunProgress)` follows every image read, step of the Golden board's median,
+        training step and calibration map, each with the time left (aoi/core/run_progress.py), known from the second
+        report on: a step of each other kind is timed on the first image read (`Median.probe`, `anomaly.probe`).
+        `should_stop()` is asked after each, and once it is true the run raises JobCancelled there, having saved
+        nothing; it is asked for the last time once the AI model's files are written, which it then removes."""
         device = self.device  # not self.device later: save_settings may change it while the samples load and align
-        say = progress or (lambda *a: None)
-        self._refuse_unsafe_name(board_model)  # the run writes the board model's row and its folder
-        self._refuse_case_variant(board_model)
+        say = progress or (lambda p: None)
+        stop = should_stop or (lambda: False)
+        frozen, ok_items, ng_items = self._training_set(dataset_uuid, use)
+        board_model = frozen["board_model"]
         out = self.settings.models_dir / board_model
-        if not inside(out, self.settings.models_dir):  # a board model named before names were checked (#112)
-            raise AoiError("AOI-TRN-019", name=board_model)
-        ok = [self.load_image(s["path"]) for s in self.db.samples(board_model, "OK")]
-        ng = [self.load_image(s["path"]) for s in self.db.samples(board_model, "NG")]
-        if len(ok) < 2:
-            raise AoiError("AOI-TRN-002", found=len(ok))
-        # Register every sample onto one board, then learn a golden template as the
-        # per-pixel median of good boards: less noise than any single photo.
-        ref_path = self.db.reference(board_model)
-        anchor = self.load_image(ref_path) if ref_path and Path(ref_path).exists() else ok[0]
-        say(0, 1, 0.0, ALIGNING.fill(count=len(ok) + len(ng)))
-        ok = [align_to_reference(im, anchor)[0] for im in ok]
-        ng = [align_to_reference(im, anchor)[0] for im in ng]
-        golden = np.median(np.stack(ok), axis=0).astype(np.uint8)
         cfg = anomaly.TrainConfig(
             image_size=image_size or self.settings.image_size,
             epochs=epochs or self.settings.default_epochs,
             device=device,
         )
-        model = anomaly.train(ok, ng, cfg, progress, should_stop)
-        if should_stop is not None and should_stop():  # Stop, or the window closing: the active model stays (TRN-008)
-            raise JobCancelled(f"training {board_model}")  # nothing saved, registered, activated or audited (#171)
+        n_ok, n_ng = len(ok_items), len(ng_items)
+        maps = (anomaly.held_out(n_ok, cfg.val_fraction) or n_ok) + n_ng  # held-out OK maps, else every OK's; the NG's
+        eta = run_progress.Eta({"read": 1 + n_ok + n_ng, "step": cfg.epochs * cfg.steps_per_epoch, "map": maps})
+
+        def check() -> None:  # Cancel, or the window closing: nothing saved, registered, activated or audited (#171)
+            if stop():
+                raise JobCancelled(f"training {board_model}")
+
+        def read(phase: Phrase) -> None:  # an image read: reported, then the run stops there if asked
+            eta.tick("read")
+            say(eta.report(phase))
+            check()
+
+        def engine(kind: str, n: int, total: int, note: str) -> None:  # anomaly.train's steps and maps
+            if n > eta.done[kind]:
+                eta.tick(kind)
+            epoch = max(1, -(-n // cfg.steps_per_epoch))  # the epoch of step n, the first before any
+            phase = EPOCH.fill(epoch=epoch, epochs=cfg.epochs) if kind == "step" else CALIBRATING.fill(n=n, count=total)
+            say(eta.report(phase, note))
+
+        aligning = ALIGNING.fill(count=n_ok + n_ng)
+        say(eta.report(aligning, aligning))
+        check()
+        ref_path = self.db.reference(board_model)
+        if ref_path and Path(ref_path).exists():  # the board model's reference board, as Inspection aligns to it
+            anchor = self.load_image(ref_path)
+        else:
+            anchor = self._read_frozen(frozen, ok_items[0])
+        eta.tick("read")
+        size = (anchor.shape[1], anchor.shape[0])
+        band = golden.BAND_BYTES  # read here rather than as Median's defaults, so a test can set them
+        board = golden.Median(n_ok, (anchor.shape[0], anchor.shape[1]), band, golden.STEP_BYTES)
+        bands = len(board.bands)
+        eta.counts["read"] += (bands - 1) * n_ok  # each later band reads the OK images again
+        eta.counts["median"] = board.steps
+        step_s, map_s = anomaly.probe(anomaly.prepare(anchor, cfg.image_size), cfg)
+        eta.sample("step", step_s)  # each kind timed on the first image read, so the time left is known from here on
+        eta.sample("map", map_s)
+        eta.sample("median", board.probe())
+
+        def built() -> None:  # a step of a band's median: reported, then the run stops there if asked
+            eta.tick("median")
+            say(eta.report(MEDIAN.fill(n=eta.done["median"], count=board.steps)))
+            check()
+
+        say(eta.report(aligning))
+        check()
+        kept: list[np.ndarray | None] = []
+        ok_in: list[anomaly.Prepared] = []
+        for n, item in enumerate(ok_items, 1):
+            image = self._read_frozen(frozen, item)
+            homography = registration(image, anchor)[0]
+            warped = warp_to(image, homography, size)
+            del image  # the image at the camera's resolution goes; its tensor and its first band stay
+            kept.append(homography)
+            ok_in.append(anomaly.prepare(warped, cfg.image_size))
+            read(READING.fill(n=n, count=n_ok + n_ng))
+            board.add(warped, built)
+        ng_in: list[anomaly.Prepared] = []
+        for n, item in enumerate(ng_items, n_ok + 1):
+            aligned = align_to_reference(self._read_frozen(frozen, item), anchor)[0]
+            ng_in.append(anomaly.prepare(aligned, cfg.image_size))
+            read(READING.fill(n=n, count=n_ok + n_ng))
+        for part in range(2, bands + 1):  # each later band of the median: every OK image read again, warped as before
+            for n, (item, homography) in enumerate(zip(ok_items, kept, strict=True), 1):
+                warped = warp_to(self._read_frozen(frozen, item), homography, size)
+                read(BAND.fill(band=part, bands=bands, n=n, count=n_ok))
+                board.add(warped, built)
+        model = anomaly.train(ok_in, ng_in, cfg, engine, should_stop)
+        check()
         previous = self.db.active_model(board_model)
         out.mkdir(parents=True, exist_ok=True)
 
@@ -544,12 +669,15 @@ class AppContext:
         # never a name whose file is on disk: a result may name a Golden board that a run left unregistered (#178)
         version = self.db.next_model_version(board_model, lambda v: any(f.exists() for f in files(v)))
         path, golden_path = files(version)
+        say(eta.report(SAVING.fill(version=version)))
         model_uuid = new_uuid()  # in the file's metadata and in the registry row, so an exported .pt names its record
         model.meta.update(board_model=board_model, version=version, uuid=model_uuid, created_at=now_utc())
+        model.meta.update(dataset=frozen["name"], dataset_uuid=dataset_uuid, use=use)
         try:
             model.save(path)
-            save_image(golden_path, golden)
+            save_image(golden_path, board.board)
             model.meta["golden_image"] = to_stored(golden_path, self.settings.root)
+            check()  # the last chance to stop: once registered, the run ends with it; the files go below
             summary = {k: v for k, v in model.meta.items() if k not in ("loss_history", "err_mean", "err_std")}
             with self.db.transaction():  # the Golden board in use, the active version and the entry change together
                 before = self.db.reference(board_model)
@@ -678,11 +806,13 @@ class AppContext:
     def load_image(self, path: str | Path) -> np.ndarray:
         """Read an image under the settings' size limits (REQ-INSP-001). Every image a screen or a service opens comes
         through here, so one pair of settings governs them all; `tests/test_layers.py` fails a page that reads one
-        itself."""
-        return load_image(path, self.settings.max_image_megapixels, self.settings.max_image_megabytes)
+        itself. A file of a customer's dataset store is decrypted in memory first (`_plain_bytes`, REQ-TRN-017)."""
+        limits = (self.settings.max_image_megapixels, self.settings.max_image_megabytes)
+        return load_image(path, *limits, read=self._plain_bytes)
 
     def _load_image_sha256(self, path: str | Path) -> tuple[np.ndarray, str]:
-        return load_image_sha256(path, self.settings.max_image_megapixels, self.settings.max_image_megabytes)
+        limits = (self.settings.max_image_megapixels, self.settings.max_image_megabytes)
+        return load_image_sha256(path, *limits, read=self._plain_bytes)
 
     def inspector(
         self, board_model: str, recipe: Recipe | None = None, side: str = "Top", reference: np.ndarray | None = None
@@ -1297,7 +1427,7 @@ class AppContext:
     def _set_label(self, sample_uuid: str, given: tuple[str, str | None] | None, boxes: list[DefectBox] | None) -> str:
         """`set_label`, with `given` None for the label and type the sample has. The image's size, which the box checks
         need, is read before the write transaction opens, so no file is read while the database is locked."""
-        size = labels.image_size(self._sample(sample_uuid)["path"]) if boxes else None
+        size = self._image_size(self._sample(sample_uuid)["path"]) if boxes else None
         with self.db.transaction():
             sample = self._sample(sample_uuid)
             label, defect_type = given or (sample["label"], sample["defect_type"])
@@ -1490,6 +1620,24 @@ class AppContext:
         self.audit("agreement.check", "calibration_set", set_uuid, None, check)
         return check
 
+    def propose_calibration_set(self, board_model: str, seed: int | None = None) -> list[str]:
+        """A calibration set of a board model to make (REQ-TRN-016; Datasets stage 2 of 4): the UUIDs of 100 images
+        (proposed) labelled OK or NG, of every view, drawn at random with `seed` (a new one when None) as
+        `labels.draw_calibration` draws. Nothing is stored until `make_calibration_set`. AOI-TRN-035 when the board
+        model holds fewer images labelled OK or NG."""
+        ok, ng = ([s["uuid"] for s in self.db.samples(board_model, k)] for k in ("OK", "NG"))
+        drawn = labels.draw_calibration(ok, ng, secrets.randbelow(2**31) if seed is None else seed)
+        if not drawn:
+            why = QT_TRANSLATE_NOOP("Errors", "{board_model} holds {n} images labelled OK or NG, not {size}")
+            size = labels.CALIBRATION_IMAGES
+            raise AoiError("AOI-TRN-035", reason=why.fill(board_model=board_model, n=len(ok) + len(ng), size=size))
+        return drawn
+
+    def blind_labelled(self, set_uuid: str) -> dict[str, list[str]]:
+        """The images of a calibration set each user has labelled blind, {user UUID: [sample UUIDs]}; never the labels,
+        which only the agreement check compares."""
+        return self.db.blind_labelled(set_uuid)
+
     def calibration_sets(self, board_model: str) -> list[dict[str, Any]]:
         """A board model's calibration sets, newest first (uuid, board_model, sample_uuids, made_by, at_utc)."""
         return self.db.calibration_sets(board_model)
@@ -1502,8 +1650,15 @@ class AppContext:
     # --- frozen dataset versions (REQ-TRN-005; S35): rows and manifest never change; a change goes into v<N+1> ---
     @requires("Engineer", QT_TRANSLATE_NOOP("Errors", "Freezing a dataset version"))
     def freeze_dataset(
-        self, board_model: str, view: str, revision: str, customer: str, allowed_uses: Sequence[str] = ("own",)
-    ) -> dict[str, Any]:
+        self,
+        board_model: str,
+        view: str,
+        revision: str,
+        customer: str,
+        allowed_uses: Sequence[str] = ("own",),
+        progress: Callable[[int, int], None] | None = None,
+        should_stop: Callable[[], bool] | None = None,
+    ) -> dict[str, Any] | None:
         """Freeze the OK and NG images of a board model and view as version N, one more than the view's last, named by
         `datasets.name`: writes datasets/<name>/manifest.json (each file's relative path, SHA-256, label row and label,
         boxes, labeller, checker); stores the version with its SHA-256, the customer, the uses (own by default, each
@@ -1517,18 +1672,26 @@ class AppContext:
         it replaced before the lock is released, so no other freeze comes between. A freeze that dies before the move
         leaves no manifest; one that dies between the move and the commit leaves a manifest no row names, which the next
         freeze of that name replaces. A second freeze of the view waits for the first. AOI-TRN-041 for a manifest that
-        cannot be written, AOI-TRN-042 for one whose path the system refuses as too long."""
+        cannot be written, AOI-TRN-042 for one whose path the system refuses as too long. `progress(done, total)`
+        follows the files hashed, and once `should_stop()` is true no other file is hashed and None is returned, nothing
+        written (the Datasets tab's Cancel)."""
         uses = list(dict.fromkeys(allowed_uses))  # a use given twice is kept once
         paths = [s["path"] for label in ("OK", "NG") for s in self._in_view(board_model, view, label)]  # AOI-TRN-038
         self._refuse_input(board_model, view, revision, customer, uses)
         name = datasets.name(board_model, revision, view, self._next_version(board_model, view))
-        self._refuse_freeze(name, board_model, view)  # before any file is read, and again in the transaction
-        known = {p: (self._sha256(p), to_stored(p, self.settings.root)) for p in paths}  # file work, before the lock
+        self._refuse_freeze(name, board_model, view, customer)  # before any file is read, and again in the transaction
+        known: dict[str, tuple[str, str]] = {}  # file work, before the lock
+        for i, p in enumerate(paths):
+            if should_stop is not None and should_stop():
+                return None
+            known[p] = (self._sha256(p), to_stored(p, self.settings.root))
+            if progress is not None:
+                progress(i + 1, len(paths))
         # the manifest's exit runs after the commit and before the lock is released
         with self.db.locked(), contextlib.ExitStack() as manifest, self.db.transaction():
             n = self._next_version(board_model, view)  # again, in the transaction that stores it
             name = datasets.name(board_model, revision, view, n)
-            agreed = self._refuse_freeze(name, board_model, view)
+            agreed = self._refuse_freeze(name, board_model, view, customer)
             version: dict[str, Any] = {"uuid": new_uuid(), "name": name, "board_model": board_model}
             version |= {"revision": revision, "view": view, "version": n, "customer": customer.strip()}
             version |= {"allowed_uses": uses, "agreement_check_uuid": agreed["uuid"], "frozen_by": self.user_uuid}
@@ -1543,38 +1706,478 @@ class AppContext:
             files = [self._frozen_file(s, known, boxes.get(s["uuid"], [])) for s in in_view]
             data, sha = datasets.manifest(head, files)
             rel = f"{datasets.FOLDER}/{name}/manifest.json"
-            manifest.enter_context(_manifest_write(name, rel, self.settings.root))
-            move_in = manifest.enter_context(atomic.staged(self.settings.root / rel, data))
             self.db.add_dataset(version | {"manifest_path": rel, "manifest_sha256": sha}, files)
+            manifest.enter_context(_manifest_write(name, rel, self.settings.root))
+            # sealed once the row names the version's board model, so its store is found (REQ-TRN-017)
+            move_in = manifest.enter_context(atomic.staged(self.settings.root / rel, self._sealed(rel, data) or data))
             keep = ("name", "customer", "allowed_uses", "agreement_check_uuid")
             after = {k: version[k] for k in keep} | {"files": len(files), "manifest_sha256": sha}
             self.audit("dataset.freeze", "dataset", version["uuid"], None, after)
             move_in()
         return self.db.datasets(board_model, version["uuid"])[0]
 
+    def freeze_gate(self, board_model: str, view: str, revision: str) -> dict[str, Any]:
+        """What Freeze Dataset… shows before it freezes, writing nothing (REQ-TRN-005; Datasets stage 4 of 4): `name`,
+        the version a freeze would make now (None while `revision` is not 1 to 16 letters and digits); `files`, the
+        view's images labelled OK or NG; `labels`, as `label_check_status` gives them; `check`, the newest agreement
+        check of the view, which decides, or None; `store`, as `store_of` gives it, whose customer the freeze names;
+        and `refused`, the error `freeze_dataset` would raise now before reading a file, or None. AOI-TRN-038 for a
+        view other than Top, Side or Bottom."""
+        labels = self.label_check_status(board_model, view)  # AOI-TRN-038
+        store, n = self.store_of(board_model), self._next_version(board_model, view)
+        customer = store["customer"] if store else "-"  # none: `_refuse_freeze` names the missing store
+        name = datasets.name(board_model, revision, view, n) if datasets.REVISION.fullmatch(revision) else None
+        refused = None
+        try:
+            self._refuse_input(board_model, view, revision, customer, ["own"])
+            self._refuse_freeze(datasets.name(board_model, revision, view, n), board_model, view, customer)
+        except AoiError as e:
+            refused = e
+        gate = {"name": name, "files": labels["ok"] + labels["ng"], "labels": labels, "store": store}
+        return gate | {"check": self._newest_check(board_model, view), "refused": refused}
+
     def datasets(self, board_model: str) -> list[dict[str, Any]]:
         """A board model's frozen versions, newest first, as the datasets table holds them (docs/ARCHITECTURE.md)."""
         return self.db.datasets(board_model)
+
+    def dataset_counts(self, board_model: str) -> dict[str, dict[str, int]]:
+        """Each frozen version of a board model, by UUID, as the Datasets tab's Versions table counts it: `ok` and `ng`,
+        its files labelled so, `val_ok` and `val_ng`, those of its locked validation set (0 while it is not split), and
+        `locked`, whether it is split, read at once rather than file list by file list."""
+        return self.db.dataset_counts(board_model)
 
     def dataset_items(self, dataset_uuid: str) -> list[dict[str, Any]]:
         """A frozen version's files as its manifest lists them, each with its row's id, uuid and dataset_uuid."""
         return self.db.dataset_items(dataset_uuid)
 
-    def verify_dataset(self, dataset_uuid: str) -> dict[str, Any]:
+    def verify_dataset(
+        self,
+        dataset_uuid: str,
+        progress: Callable[[int, int], None] | None = None,
+        should_stop: Callable[[], bool] | None = None,
+    ) -> dict[str, Any]:
         """Re-hash a frozen version's manifest and each of its files against the SHA-256 stored at the freeze
         (REQ-TRN-005), writing nothing: `manifest` is same, changed or missing; `files` counts the files, and `matched`,
         `changed` and `missing` list their relative paths in the manifest's order. AOI-TRN-028 for a version the
-        workspace does not hold. Hashes on this thread; the Datasets tab runs it on the pool."""
+        workspace does not hold. Hashes on this thread; the Datasets tab runs it on the pool. A file of a customer's
+        dataset store is hashed decrypted, and one that does not decrypt (changed, moved, damaged) is changed; a key
+        this station does not hold is AOI-TRN-025 (REQ-TRN-017). `progress(done, total)` follows the files, and once
+        `should_stop()` is true the rest are not hashed: `left` counts them (0 unless stopped)."""
         if not (found := self.db.datasets("", dataset_uuid)):
             raise AoiError("AOI-TRN-028", dataset=dataset_uuid)
-        sha = datasets.file_sha256(self.settings.root / found[0]["manifest_path"])
+        sha = self._verified_sha256(self.settings.root / found[0]["manifest_path"])
         result: dict[str, Any] = {"matched": [], "changed": [], "missing": []}
         result["manifest"] = "missing" if sha is None else "same" if sha == found[0]["manifest_sha256"] else "changed"
         items = self.db.dataset_items(dataset_uuid)
-        for item in items:
-            sha = datasets.file_sha256(resolve(item["path"], self.settings.root))
+        for i, item in enumerate(items):
+            if should_stop is not None and should_stop():
+                return result | {"files": len(items), "left": len(items) - i}
+            sha = self._verified_sha256(resolve(item["path"], self.settings.root))
             result["missing" if sha is None else "matched" if sha == item["sha256"] else "changed"].append(item["path"])
-        return result | {"files": len(items)}
+            if progress is not None:
+                progress(i + 1, len(items))
+        return result | {"files": len(items), "left": 0}
+
+    @requires("Engineer", QT_TRANSLATE_NOOP("Errors", "Locking a validation set"))
+    @transactional
+    def lock_validation_set(self, dataset_uuid: str, seed: int | None = None) -> dict[str, Any]:
+        """Split a frozen version once, with a recorded seed (a new one when None), into its training set and a locked
+        validation set (REQ-TRN-006; S36), as `datasets.split` draws them: 50 OK files, and 30 % of the NG files rounded
+        up, by defect type where it can; a file whose SHA-256 any earlier split locked is locked again, and files no
+        split put in training are drawn first. Audited as `dataset.lock`; returns `validation_split`. Nothing unlocks or
+        splits a version again: a new split needs a new version. Refused with AOI-TRN-022, writing nothing, for a
+        version the workspace does not hold, one split already and one with fewer than 50 OK files. Reads the rows,
+        not the files: a file changed since the freeze keeps the SHA-256 the freeze stored, as verify_dataset shows."""
+        found = self.db.datasets("", dataset_uuid)
+        items = self.db.dataset_items(dataset_uuid) if found else []
+        ok, why = sum(i["label"] == "OK" for i in items), None
+        if not found:
+            why = QT_TRANSLATE_NOOP("Errors", "the workspace holds no such dataset version")
+        elif self.db.validation_split(dataset_uuid) is not None:
+            why = QT_TRANSLATE_NOOP("Errors", "its validation set is locked already, and a version is split only once")
+        elif ok < datasets.VALIDATION_OK:
+            why = QT_TRANSLATE_NOOP("Errors", "it holds {ok} OK image(s), and a validation set holds {least}")
+            why = why.fill(ok=ok, least=datasets.VALIDATION_OK)
+        if why is not None:
+            raise AoiError("AOI-TRN-022", name=found[0]["name"] if found else dataset_uuid, reason=why)
+        seed = secrets.randbelow(2**31) if seed is None else seed
+        parts = datasets.split(items, seed, self.db.split_sha256("validation"), self.db.split_sha256("train"))
+        split = {"uuid": new_uuid(), "dataset_uuid": dataset_uuid, "seed": seed, "locked_by": self.user_uuid}
+        self.db.add_split(split | {"locked_at": now_utc()}, parts)
+        after: dict[str, Any] = {"split_uuid": split["uuid"], "seed": seed}
+        for part, files in parts.items():
+            after |= {f"{part}_{label.lower()}": sum(f["label"] == label for f in files) for label in ("OK", "NG")}
+        after["validation_ng_types"] = dict(
+            Counter(datasets.stratum(f) for f in parts["validation"] if f["label"] == "NG")
+        )
+        self.audit("dataset.lock", "dataset", dataset_uuid, None, after)
+        return self.db.validation_split(dataset_uuid) or {}
+
+    def validation_split(self, dataset_uuid: str) -> dict[str, Any] | None:
+        """A frozen version's split as the database holds it: uuid, dataset_uuid, seed, locked_by, locked_at, and the
+        dataset item UUIDs of its "train" and "validation" parts; None while it is not split."""
+        return self.db.validation_split(dataset_uuid)
+
+    # --- training from a frozen version (REQ-TRN-007, REQ-TRN-017; S39) ------------------------------------------
+    def _training_set(
+        self, dataset_uuid: str, use: str
+    ) -> tuple[dict[str, Any], list[dict[str, Any]], list[dict[str, Any]]]:
+        """A frozen version and the OK and NG files of its training set, in the manifest's order; else, from the rows
+        alone, the first reason not to train: no such version (AOI-TRN-045); a board model name the rule for a new one
+        refuses (AOI-TRN-019, AOI-TRN-005), as its folder under models/ does; its board model in no customer's dataset
+        store, in a shredded one or in another customer's than the version names, or `use` not among the uses the
+        version allows (AOI-TRN-046, audited as `training.refused`, REQ-TRN-017); no locked validation set, or fewer
+        than datasets.TRAIN_OK OK files in its training set (AOI-TRN-045); a file of the training set whose SHA-256
+        any split locked for validation (AOI-TRN-043, REQ-TRN-006). The validation set's files are never listed."""
+        found = self.db.datasets("", dataset_uuid)
+        if not found:
+            none = QT_TRANSLATE_NOOP("Errors", "the workspace holds no such dataset version")
+            raise AoiError("AOI-TRN-045", name=dataset_uuid, reason=none)
+        version, why = found[0], cast(Phrase | None, None)
+        customer, board_model = version["customer"], version["board_model"]
+        self._refuse_unsafe_name(board_model)  # the run writes the board model's row and its folder
+        self._refuse_case_variant(board_model)
+        if not inside(self.settings.models_dir / board_model, self.settings.models_dir):  # named before the rule (#112)
+            raise AoiError("AOI-TRN-019", name=board_model)
+        if (store := self.db.board_model_store(board_model)) is None:
+            why = QT_TRANSLATE_NOOP("Errors", "its images are in no customer's dataset store; an Admin moves them in")
+        elif store["shredded_at"]:
+            why = QT_TRANSLATE_NOOP("Errors", "its dataset store was shredded on {date}")
+            why = why.fill(date=store["shredded_at"][:10])
+        elif store["customer"] != customer:
+            why = QT_TRANSLATE_NOOP("Errors", "its images are in the dataset store of {store}, not of {customer}")
+            why = why.fill(store=store["customer"], customer=customer)
+        elif use not in version["allowed_uses"]:
+            why = QT_TRANSLATE_NOOP("Errors", "{customer} allowed only {uses}")
+            why = why.fill(customer=customer, uses=", ".join(version["allowed_uses"]))
+        if why is not None:
+            with self.db.transaction():
+                after = {"use": use, "customer": customer, "code": "AOI-TRN-046"}
+                self.audit("training.refused", "dataset", dataset_uuid, None, after, reason=str(why))
+            raise AoiError("AOI-TRN-046", name=version["name"], use=use, reason=why)
+        split = self.db.validation_split(dataset_uuid)
+        train = set(split["train"]) if split else set()
+        items = [i for i in self.db.dataset_items(dataset_uuid) if i["uuid"] in train]
+        ok, ng = ([i for i in items if i["label"] == label] for label in ("OK", "NG"))
+        if split is None:
+            why = QT_TRANSLATE_NOOP("Errors", "its validation set is not locked; training reads only a training set")
+        elif len(ok) < datasets.TRAIN_OK:
+            why = QT_TRANSLATE_NOOP("Errors", "its training set holds {ok} OK image(s), and training needs {least}")
+            why = why.fill(ok=len(ok), least=datasets.TRAIN_OK)
+        if why is not None:
+            raise AoiError("AOI-TRN-045", name=version["name"], reason=why)
+        locked = self.db.split_sha256("validation")  # by content, whatever its path or version (REQ-TRN-006)
+        if held := [i for i in items if i["sha256"] in locked]:
+            raise AoiError("AOI-TRN-043", name=version["name"], count=len(held))
+        return version, ok, ng
+
+    def training_version(self, board_model: str) -> dict[str, Any]:
+        """The newest frozen version of `board_model` whose validation set is locked: the one Training trains from
+        (REQ-TRN-007). AOI-TRN-045 when no version of it is."""
+        for version in self.db.datasets(board_model):
+            if self.db.validation_split(version["uuid"]) is not None:
+                return version
+        why = QT_TRANSLATE_NOOP("Errors", "no frozen dataset version of it has a locked validation set")
+        raise AoiError("AOI-TRN-045", name=board_model, reason=why)
+
+    def _read_frozen(self, version: dict[str, Any], item: dict[str, Any]) -> np.ndarray:
+        """A file of a frozen version, decoded (decrypted in memory first when in a store); AOI-TRN-045 when the
+        SHA-256 of the bytes read is not the one frozen: the file changed since the freeze, or another is in its
+        place."""
+        image, sha = self._load_image_sha256(resolve(item["path"], self.settings.root))
+        if sha != item["sha256"]:
+            why = QT_TRANSLATE_NOOP("Errors", "{file} is not the file frozen, by its SHA-256").fill(file=item["path"])
+            raise AoiError("AOI-TRN-045", name=version["name"], reason=why)
+        return image
+
+    # --- customer dataset stores (REQ-TRN-017; S38; ADR 0010) ---------------------------------------------------
+    @requires("Admin", QT_TRANSLATE_NOOP("Errors", "Creating a customer's dataset store"))
+    @transactional
+    def create_store(self, customer: str) -> dict[str, Any]:
+        """A new encrypted dataset store for `customer`: a random 256-bit key, saved in the key store under the store's
+        UUID (Windows Credential Manager on a station) and never in the workspace, with its key id and check value in
+        `dataset_stores`; audited as `store.create` (no key). Returns the store with `sheet`, the key as the recovery
+        sheet prints it: the caller shows or prints it once, for the person who holds the data under the contract.
+        AOI-TRN-044, writing nothing, for no customer and for a customer whose store is not shredded."""
+        name, why = customer.strip(), None
+        if not name:
+            why = QT_TRANSLATE_NOOP("Errors", "no customer is given")
+        elif any(s["customer"].casefold() == name.casefold() and not s["shredded_at"] for s in self.db.stores()):
+            why = QT_TRANSLATE_NOOP("Errors", "the customer has a store already, and has one at a time")
+        if why is not None:
+            raise AoiError("AOI-TRN-044", store=name or QT_TRANSLATE_NOOP("Errors", "a new customer"), reason=why)
+        key, key_id = crypto.new_key()
+        store: dict[str, Any] = {"uuid": new_uuid(), "customer": name, "key_id": key_id.hex()}
+        store |= {"check_value": crypto.check_value(key), "created_by": self.user_uuid, "created_at": now_utc()}
+        self.db.add_store(store)
+        self.audit("store.create", "dataset_store", store["uuid"], None, {k: store[k] for k in ("customer", "key_id")})
+        self._save_key(store, key)  # last before the commit: a key whose store is not stored would open nothing
+        return {k: v for k, v in store.items() if k != "check_value"} | {"sheet": crypto.sheet(key)}
+
+    @requires("Admin", QT_TRANSLATE_NOOP("Errors", "Restoring a dataset store's key"))
+    @transactional
+    def restore_store_key(self, store_uuid: str, sheet: str) -> None:
+        """Save a store's key again from its recovery sheet, typed on a new PC or Windows account (ADR 0010, decision
+        7); audited as `store.restore`. AOI-TRN-044, writing nothing, for a store the workspace does not hold, one
+        shredded, and a sheet whose key is not the store's (by its check value)."""
+        store = self._store(store_uuid)
+        key = crypto.key_from_sheet(sheet)
+        if key is None or crypto.check_value(key) != store["check_value"]:
+            why = QT_TRANSLATE_NOOP("Errors", "the key typed is not this store's key; check each group of four")
+            raise AoiError("AOI-TRN-044", store=store["customer"], reason=why)
+        self.audit("store.restore", "dataset_store", store_uuid, None, {"key_id": store["key_id"]})
+        self._save_key(store, key)
+
+    @requires("Admin", QT_TRANSLATE_NOOP("Errors", "Moving a board model into a dataset store"))
+    def move_in(
+        self,
+        board_model: str,
+        store_uuid: str,
+        progress: Callable[[int, int], None] | None = None,
+        should_stop: Callable[[], bool] | None = None,
+    ) -> dict[str, int]:
+        """Put `board_model` in a store for good and encrypt its files there (ADR 0010, decision 5): every file under
+        images/<board model>/ and the manifest of each of its frozen versions, keeping its path. Each plain file is
+        encrypted into a crash-safe write, read back and decrypted, and kept only when the SHA-256 matches; else its
+        plain bytes are written back and AOI-TRN-044 stops the move. The board model's row in `board_model_stores` and
+        the audit entry `store.move_in` (files to move) are written first, so from then on a plain file of it is
+        refused (AOI-TRN-025) and an interrupted move is finished by calling this again, which skips the files already
+        moved. `progress(done, total)` follows each file moved, and once `should_stop()` is true the files not yet moved
+        stay plain until the move is finished (Settings › Dataset stores, Finish Moving In). Returns the counts `moved`,
+        `already` and `left` (0 unless stopped). AOI-TRN-044, writing nothing, for a store the workspace does
+        not hold or that is shredded, a board model that does not exist, one in another store, and a file encrypted
+        under another store's key; AOI-TRN-019 for a board model whose name is not one folder's (#112)."""
+        store = self._store(store_uuid)
+        key = self._key(store)  # AOI-TRN-025 for a key this station does not hold
+        current, why = self.db.board_model_store(board_model), None
+        if board_model not in self.db.board_models():
+            why = QT_TRANSLATE_NOOP("Errors", "the workspace holds no board model {board}").fill(board=board_model)
+        elif current is not None and current["uuid"] != store_uuid:
+            why = QT_TRANSLATE_NOOP("Errors", "{board} is in the store of {other}, and a board model never leaves it")
+            why = why.fill(board=board_model, other=current["customer"])
+        if why is not None:
+            raise AoiError("AOI-TRN-044", store=store["customer"], reason=why)
+        if not one_folder_name(board_model):  # named before names were checked (#112): "." would be all of images/
+            raise AoiError("AOI-TRN-019", name=board_model)
+        files = stores.files_of(self.settings.root, board_model, [d["name"] for d in self.db.datasets(board_model)])
+        try:
+            heads = [(f, stores.header_of(f)) for f in files]
+        except OSError as e:
+            why = QT_TRANSLATE_NOOP("Errors", "a file of it could not be read ({reason})").fill(reason=str(e))
+            raise AoiError("AOI-TRN-044", str(e), store=store["customer"], reason=why) from e
+        if foreign := [f for f, h in heads if h is not None and h.key_id.hex() != store["key_id"]]:
+            why = crypto.OTHER_KEY.fill(file=to_stored(foreign[0], self.settings.root))
+            raise AoiError("AOI-TRN-044", store=store["customer"], reason=why)
+        plain = [f for f, h in heads if h is None]
+        with self.db.transaction():
+            if current is None:
+                row = {"uuid": new_uuid(), "board_model": board_model, "store_uuid": store_uuid}
+                self.db.add_board_model_store(row | {"set_by": self.user_uuid, "set_at": now_utc()})
+            after = {"board_model": board_model, "files": len(plain), "resumed": current is not None}
+            self.audit("store.move_in", "dataset_store", store_uuid, None, after)
+        for i, f in enumerate(plain):
+            if should_stop is not None and should_stop():
+                return {"moved": i, "already": len(files) - len(plain), "left": len(plain) - i}
+            self._encrypt_in_place(store, key, f)
+            if progress is not None:
+                progress(i + 1, len(plain))
+        return {"moved": len(plain), "already": len(files) - len(plain), "left": 0}
+
+    @requires("Admin", QT_TRANSLATE_NOOP("Errors", "Shredding a customer's dataset store"))
+    def shred_store(self, store_uuid: str) -> dict[str, int]:
+        """End a store for good when its engagement ends (ADR 0010, decision 9). Its key is deleted from this
+        station's key store first, which alone leaves every copy of its files unreadable, a backup's included, once
+        the recovery sheet is destroyed too. Then a row of `store_shreds` and the audit entry `store.shred` record it,
+        with the key id and the counts, and the files of its board models are deleted: under images/, each frozen
+        version's folder under datasets/, and their AI models and golden boards under models/. Rows stay (ADR 0009),
+        and a file of the store is refused from then on with AOI-TRN-025. Calling this again finishes a shred stopped
+        part-way, deleting what is left, and is audited too. Returns the counts `files` (images and manifests) and
+        `models`. AOI-TRN-044 for a store the workspace does not hold, a key the key store would not delete (nothing
+        changed) and a file that would not go (the rest went, and the shred stays recorded)."""
+        if (store := self.db.store(store_uuid)) is None:
+            why = QT_TRANSLATE_NOOP("Errors", "the workspace holds no such store")
+            raise AoiError("AOI-TRN-044", store=store_uuid, reason=why)
+        root, models = self.settings.root, self.settings.models_dir
+        boards, files, derived = self._store_files(store)
+        if not store["shredded_at"]:
+            try:
+                self.credentials.delete(credentials.STORE_PREFIX + store_uuid)  # first: from here nothing of it opens
+            except OSError as e:
+                why = QT_TRANSLATE_NOOP("Errors", "this station's key store did not delete the key ({reason})")
+                raise AoiError("AOI-TRN-044", str(e), store=store["customer"], reason=why.fill(reason=str(e))) from e
+            self._keys.pop(store_uuid, None)
+        with self.db.transaction():
+            if not store["shredded_at"]:
+                row = {"uuid": new_uuid(), "store_uuid": store_uuid, "key_id": store["key_id"], "files": len(files)}
+                self.db.add_shred(row | {"shredded_by": self.user_uuid, "shredded_at": now_utc()})
+            after = {"customer": store["customer"], "key_id": store["key_id"], "board_models": store["board_models"]}
+            after |= {"files": len(files), "models": len(derived), "resumed": bool(store["shredded_at"])}
+            self.audit("store.shred", "dataset_store", store_uuid, None, after)
+        folders = [root / stores.IMAGES / b for b, _ in boards] + [models / b for b, _ in boards]
+        folders += [root / datasets.FOLDER / name for _, versions in boards for name in versions]
+        if left := _deleted(files + derived, folders):
+            why = QT_TRANSLATE_NOOP("Errors", "{count} file(s) would not go, {file} first ({detail}); shred it again")
+            reason = why.fill(count=len(left), file=to_stored(left[0][0], root), detail=str(left[0][1]))
+            raise AoiError("AOI-TRN-044", store=store["customer"], reason=reason)
+        return {"files": len(files), "models": len(derived)}
+
+    def store_contents(self, store_uuid: str) -> dict[str, Any]:
+        """What `shred_store` would delete now, for Shred Store… to name before it does: the store's `customer`, its
+        `board_models`, and the counts `files` (images and manifests, as it counts them) and `models` (the files of
+        their AI models and golden boards), 0 once a shred has deleted them. AOI-TRN-044 for a store the workspace does
+        not hold."""
+        if (store := self.db.store(store_uuid)) is None:
+            why = QT_TRANSLATE_NOOP("Errors", "the workspace holds no such store")
+            raise AoiError("AOI-TRN-044", store=store_uuid, reason=why)
+        _, files, derived = self._store_files(store)
+        return {"customer": store["customer"], "board_models": store["board_models"]} | {
+            "files": len(files),
+            "models": len(derived),
+        }
+
+    def _store_files(self, store: dict[str, Any]) -> tuple[list[tuple[str, list[str]]], list[Path], list[Path]]:
+        """A store's board models with their frozen versions' names, the files it holds (`stores.files_of`) and the
+        files derived from them under models/."""
+        root, models = self.settings.root, self.settings.models_dir
+        boards = [(b, [d["name"] for d in self.db.datasets(b)]) for b in store["board_models"]]
+        files = [f for b, versions in boards for f in stores.files_of(root, b, versions)]
+        derived = [
+            f for b, _ in boards if (models / b).is_dir() for f in sorted((models / b).rglob("*")) if f.is_file()
+        ]
+        return boards, files, derived
+
+    def stores(self) -> list[dict[str, Any]]:
+        """Every dataset store, oldest first: uuid, customer, key_id, created_by, created_at, shredded_at (None while
+        it is not shredded) and its board_models. No key."""
+        return [{k: v for k, v in s.items() if k != "check_value"} for s in self.db.stores()]
+
+    def store_of(self, board_model: str) -> dict[str, Any] | None:
+        """The store `board_model` is in, as `stores` lists it, or None for a board model in none (its files plain)."""
+        found = self.db.board_model_store(board_model)
+        return None if found is None else {k: v for k, v in found.items() if k != "check_value"}
+
+    def _store(self, store_uuid: str) -> dict[str, Any]:
+        """A store that is not shredded; AOI-TRN-044 for one the workspace does not hold or that is shredded."""
+        store = self.db.store(store_uuid)
+        if store is None or store["shredded_at"]:
+            why = QT_TRANSLATE_NOOP("Errors", "the workspace holds no such store, or it is shredded")
+            raise AoiError("AOI-TRN-044", store=store["customer"] if store else store_uuid, reason=why)
+        return store
+
+    def _save_key(self, store: dict[str, Any], key: bytes) -> None:
+        try:
+            self.credentials.write(credentials.STORE_PREFIX + store["uuid"], key)
+        except OSError as e:
+            why = QT_TRANSLATE_NOOP("Errors", "this station's key store refused the key ({reason})")
+            raise AoiError("AOI-TRN-044", str(e), store=store["customer"], reason=why.fill(reason=str(e))) from e
+        self._keys.pop(store["uuid"], None)
+
+    def _key(self, store: dict[str, Any]) -> bytes:
+        """The store's key from this station's key store, checked against its check value; AOI-TRN-025 when this
+        station holds none or holds another."""
+        if (key := self._keys.get(store["uuid"])) is not None:
+            return key
+        try:
+            key = self.credentials.read(credentials.STORE_PREFIX + store["uuid"])
+        except OSError as e:
+            why = QT_TRANSLATE_NOOP("Errors", "this station's key store could not be read ({reason})")
+            raise AoiError("AOI-TRN-025", str(e), store=store["customer"], reason=why.fill(reason=str(e))) from e
+        if key is None:
+            why = QT_TRANSLATE_NOOP("Errors", "this station holds no key for it")
+        elif crypto.check_value(key) != store["check_value"]:
+            why = QT_TRANSLATE_NOOP("Errors", "the key this station holds is not its key")
+        else:
+            self._keys[store["uuid"]] = key
+            return key
+        raise AoiError("AOI-TRN-025", store=store["customer"], reason=why)
+
+    def _encrypt_in_place(self, store: dict[str, Any], key: bytes, path: Path) -> None:
+        """Encrypt one plain file of a store where it is, with a crash-safe write; keep it only once it reads back
+        decrypted to the same SHA-256, else write the plain bytes back and refuse with AOI-TRN-044."""
+        stored, key_id = to_stored(path, self.settings.root), bytes.fromhex(store["key_id"])
+        try:
+            plain = path.read_bytes()
+        except OSError as e:
+            why = QT_TRANSLATE_NOOP("Errors", "{file} could not be read ({detail})").fill(file=stored, detail=str(e))
+            raise AoiError("AOI-TRN-044", str(e), store=store["customer"], reason=why) from e
+        error: Exception | None = None
+        try:
+            atomic.write_bytes(path, crypto.encrypt(key, key_id, store["uuid"], stored, plain))
+            back = crypto.decrypt(key, key_id, store["uuid"], stored, path.read_bytes())
+        except (OSError, crypto.NotOpened) as e:  # a write the disk refused leaves the plain file as it was
+            back, error = b"", e
+        if error is not None or hashlib.sha256(back).digest() != hashlib.sha256(plain).digest():
+            with contextlib.suppress(OSError):
+                atomic.write_bytes(path, plain)
+            why = QT_TRANSLATE_NOOP("Errors", "{file} did not read back as written, and was left plain ({detail})")
+            raise AoiError("AOI-TRN-044", store=store["customer"], reason=why.fill(file=stored, detail=str(error)))
+
+    def _store_for(self, path: str | Path) -> tuple[dict[str, Any], str] | None:
+        """The store a workspace file is in, with the path as the rows store it: a file under images/<board model>/,
+        or a version's folder under datasets/, of a board model in a store; else None, and the file is plain."""
+        stored = to_stored(path, self.settings.root)
+        found = stores.owner(stored)
+        if found is None:
+            return None
+        board_model = found[1] if found[0] == stores.IMAGES else self.db.dataset_board_model(found[1])
+        store = self.db.board_model_store(board_model) if board_model else None
+        return None if store is None else (store, stored)
+
+    def _plain_bytes(self, path: Path) -> bytes:
+        """A file's bytes as the app reads them: a file of a customer's dataset store decrypted in memory, any other
+        as it is on disk. OSError as reading gives it; AOI-TRN-025 for a store file that does not open (no key, a
+        wrong key, not encrypted, changed, moved or damaged) or one of a shredded store."""
+        try:
+            return self._open(path)
+        except crypto.NotOpened as e:  # only a file of a store is decrypted
+            found = self._store_for(path)
+            customer, stored = (str(found[0]["customer"]), found[1]) if found is not None else ("", str(path))
+            raise AoiError("AOI-TRN-025", store=customer, reason=e.reason.fill(file=stored)) from e
+
+    def _open(self, path: str | Path) -> bytes:
+        """`_plain_bytes`, with crypto.NotOpened for a store file that does not decrypt."""
+        if (found := self._store_for(path)) is None:
+            return Path(path).read_bytes()
+        store, stored = found
+        key = self._live_key(store)  # a shredded store's files are gone: that, not a missing file, is the reason
+        return crypto.decrypt(key, bytes.fromhex(store["key_id"]), store["uuid"], stored, Path(path).read_bytes())
+
+    def _live_key(self, store: dict[str, Any]) -> bytes:
+        """`_key` of a store that is not shredded; AOI-TRN-025 naming the day it was."""
+        if store["shredded_at"]:
+            why = QT_TRANSLATE_NOOP("Errors", "it was shredded on {date}").fill(date=store["shredded_at"][:10])
+            raise AoiError("AOI-TRN-025", store=store["customer"], reason=why)
+        return self._key(store)
+
+    def _image_size(self, path: str) -> tuple[int, int]:
+        """`labels.image_size`: a file of a customer's dataset store decrypted whole first, any other with only its
+        header read."""
+        return labels.image_size(path, None if self._store_for(path) is None else self._plain_bytes)
+
+    def _sealed(self, stored: str, data: bytes) -> bytes | None:
+        """`data` encrypted for the workspace path `stored` when that path is in a customer's dataset store, else
+        None (the file is written plain)."""
+        if (found := self._store_for(self.settings.root / stored)) is None:
+            return None
+        store = found[0]
+        return crypto.encrypt(self._live_key(store), bytes.fromhex(store["key_id"]), store["uuid"], stored, data)
+
+    def _file_sha256(self, path: str | Path) -> str:
+        """The SHA-256 of a file's plain bytes: read a block at a time when it is plain, decrypted in memory when it
+        is in a customer's dataset store. OSError when it cannot be read; AOI-TRN-025 as `_plain_bytes`."""
+        if self._store_for(path) is None:
+            return datasets.sha256(path)
+        return hashlib.sha256(self._plain_bytes(Path(path))).hexdigest()
+
+    def _verified_sha256(self, path: Path) -> str | None:
+        """`_file_sha256` for verify_dataset: None for a file that is missing or cannot be read, and an empty text,
+        which matches no stored SHA-256, for a store file that does not decrypt."""
+        try:
+            return hashlib.sha256(self._open(path)).hexdigest()
+        except OSError:
+            return None
+        except crypto.NotOpened:
+            return ""
 
     def _refuse_input(self, board_model: str, view: str, revision: str, customer: str, uses: list[str]) -> None:
         """The refusals that read only what the freeze was given: no Latin letter or digit in the board model's name
@@ -1596,12 +2199,13 @@ class AppContext:
     def _next_version(self, board_model: str, view: str) -> int:
         return 1 + max((d["version"] for d in self.db.datasets(board_model) if d["view"] == view), default=0)
 
-    def _refuse_freeze(self, name: str, board_model: str, view: str) -> dict[str, Any]:
+    def _refuse_freeze(self, name: str, board_model: str, view: str, customer: str) -> dict[str, Any]:
         """The agreement check a version is frozen with; else, read in the freeze's transaction, the first reason not to
         freeze: another board model whose name gives the same letters and digits has frozen versions (AOI-TRN-040), a
         version of that name exists or the view holds no OK or NG image (AOI-TRN-027), an NG label not checked
-        (AOI-TRN-020), too few drawn OK labels checked (AOI-TRN-021), and the newest agreement check missing or short
-        of its targets (AOI-TRN-027)."""
+        (AOI-TRN-020), too few drawn OK labels checked (AOI-TRN-021), the newest agreement check missing or short of
+        its targets, and the board model in no customer's dataset store, in a shredded one or in another customer's
+        than `customer` (AOI-TRN-027; REQ-TRN-017)."""
         frozen = self.db.dataset_names()
         token = datasets.token(board_model)
         other = next((d for d in frozen if d != board_model and datasets.token(d) == token), None)
@@ -1623,6 +2227,14 @@ class AppContext:
             why = QT_TRANSLATE_NOOP("Errors", "no agreement check of the board model holds images of this view")
         elif not newest["agreed"]:
             why = QT_TRANSLATE_NOOP("Errors", "the newest agreement check of the view did not reach the targets")
+        elif (store := self.db.board_model_store(board_model)) is None:
+            why = QT_TRANSLATE_NOOP("Errors", "its images are in no customer's dataset store; an Admin moves them in")
+        elif store["shredded_at"]:  # its images are gone, and its board model never joins another store
+            why = QT_TRANSLATE_NOOP("Errors", "its dataset store was shredded on {date}")
+            why = why.fill(date=store["shredded_at"][:10])
+        elif store["customer"] != customer.strip():
+            why = QT_TRANSLATE_NOOP("Errors", "its images are in the dataset store of {store}, not of {customer}")
+            why = why.fill(store=store["customer"], customer=customer.strip())
         if why is not None or newest is None:
             raise AoiError("AOI-TRN-027", name=name, reason=why)
         return newest
@@ -1636,9 +2248,10 @@ class AppContext:
         return next((c for c in checks if view in {side.get(u) for u in sets.get(c["set_uuid"], [])}), None)
 
     def _sha256(self, path: str) -> str:
-        """A file's SHA-256 for a version; AOI-INSP-001, with the system's reason, for one that cannot be read."""
+        """A file's SHA-256 for a version, of its plain bytes (`_file_sha256`); AOI-INSP-001, with the system's
+        reason, for one that cannot be read."""
         try:
-            return datasets.sha256(path)
+            return self._file_sha256(path)
         except OSError as e:
             raise AoiError("AOI-INSP-001", detail=str(e), path=path) from e
 
@@ -1904,6 +2517,24 @@ def _export_write(path: str | Path) -> Iterator[None]:
         yield
     except OSError as e:
         raise _not_written(e, path) from e
+
+
+def _deleted(files: list[Path], folders: list[Path]) -> list[tuple[Path, OSError]]:
+    """Delete `files`, then whatever is left in `folders` once they are empty, deepest first; the files that would not
+    go, with why. A file already gone counts as deleted."""
+    left = []
+    for f in files:
+        try:
+            f.unlink(missing_ok=True)
+        except OSError as e:  # held open by another program, or read-only
+            left.append((f, e))
+    for folder in folders:
+        for d in sorted((p for p in folder.rglob("*") if p.is_dir()), key=lambda p: len(p.parts), reverse=True):
+            with contextlib.suppress(OSError):
+                d.rmdir()
+        with contextlib.suppress(OSError):
+            folder.rmdir()
+    return left
 
 
 @contextlib.contextmanager

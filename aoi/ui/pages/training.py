@@ -9,9 +9,10 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from PySide6.QtCore import QEvent, QItemSelectionModel, QObject, Qt
-from PySide6.QtGui import QKeyEvent, QResizeEvent
+from PySide6.QtGui import QAction, QKeyEvent, QKeySequence, QResizeEvent
 from PySide6.QtWidgets import (
     QAbstractItemView,
+    QAbstractSpinBox,
     QApplication,
     QComboBox,
     QFileDialog,
@@ -19,6 +20,7 @@ from PySide6.QtWidgets import (
     QGroupBox,
     QHBoxLayout,
     QLabel,
+    QLineEdit,
     QMessageBox,
     QPlainTextEdit,
     QProgressBar,
@@ -26,22 +28,28 @@ from PySide6.QtWidgets import (
     QSizePolicy,
     QSpinBox,
     QSplitter,
+    QStackedWidget,
+    QTabBar,
     QVBoxLayout,
     QWidget,
 )
 
 from ...core.imaging import IMAGE_EXTS
+from ...core.jobs import Job
 from ...core.labels import DefectBox
+from ...core.run_progress import RunProgress
 from ...core.sample_import import ImportFile, ImportReport, folder_files
 from ...core.services import AppContext
 from ...defects import names
 from ...errors import AoiError
+from ...hal import VIEWS
 from ...times import to_local
 from .. import theme
 from ..errors import phrase_text
+from ..widgets.box_editor import ENTER
 from ..widgets.busy import BusyOverlay
 from ..widgets.empty_state import EmptyState
-from ..workers import Worker, start
+from ..workers import Worker, keep
 from .base import (
     QT_TRANSLATE_NOOP,
     Page,
@@ -51,10 +59,13 @@ from .base import (
     cell_text,
     fill_table,
     make_table,
+    time_left_text,
     view_text,
 )
+from .training_agreement import AgreementPanel, BlindPanel
 from .training_import import ImportSheet
 from .training_labels import LabelEditor, State
+from .training_versions import VersionsPanel, WorkingSetPanel
 
 if TYPE_CHECKING:
     from ..main_window import MainWindow
@@ -63,6 +74,14 @@ SELECT_ROW = QItemSelectionModel.SelectionFlag.Select | QItemSelectionModel.Sele
 CHOOSE_ROW = QItemSelectionModel.SelectionFlag.ClearAndSelect | QItemSelectionModel.SelectionFlag.Rows
 NOT_TYPING = Qt.KeyboardModifier.ControlModifier | Qt.KeyboardModifier.AltModifier | Qt.KeyboardModifier.MetaModifier
 EDIT_ON_KEY = QAbstractItemView.EditTrigger.AnyKeyPressed
+FIELDS = (QAbstractSpinBox, QComboBox, QLineEdit)  # a field whose Enter is its own, never Check Label's
+SHOWN = (  # the samples filter of the labels sketch: what each shows, by its key
+    ("All", QT_TRANSLATE_NOOP("TrainingPage", "All")),
+    ("OK", QT_TRANSLATE_NOOP("TrainingPage", "OK")),
+    ("NG", QT_TRANSLATE_NOOP("TrainingPage", "NG")),
+    ("UNSURE", QT_TRANSLATE_NOOP("TrainingPage", "UNSURE")),
+    ("Unchecked", QT_TRANSLATE_NOOP("TrainingPage", "Unchecked")),
+)
 
 
 def _each(ids: list[int], write: Callable[[int], None]) -> Exception | None:
@@ -136,7 +155,8 @@ class TrainingPage(Page):
     def __init__(self, ctx: AppContext, shell: MainWindow) -> None:
         super().__init__(ctx, shell)
         self.worker: Worker | None = None
-
+        # the Samples tab: the page's keys are its actions (`action`), so none acts over the Datasets tab
+        self.keys = QWidget()
         split = QSplitter(Qt.Orientation.Horizontal)
 
         # Left: dataset ------------------------------------------------------------
@@ -156,7 +176,11 @@ class TrainingPage(Page):
         ll.addLayout(up)
         self.counts = _Counts()
         ll.addWidget(self.counts)
-        self.tip = QLabel(self.tr("Tip: 20+ OK images give a steadier threshold"))  # its own line: the name keeps room
+        self.checks_line = QLabel()  # the second-user checks a freeze needs (REQ-TRN-004), every view together
+        self.checks_line.setObjectName("muted")
+        self.checks_line.setWordWrap(True)
+        ll.addWidget(self.checks_line)
+        self.tip = QLabel(self.tr("Training needs 20 OK images or more in a dataset version's training set"))
         self.tip.setObjectName("muted")
         self.tip.setWordWrap(True)
         ll.addWidget(self.tip)
@@ -165,8 +189,25 @@ class TrainingPage(Page):
         self._listed: tuple[str, str] | None = None  # the status line naming the sheet's list, and once it is gone
         self._left = False  # the user who started the import that runs has signed out: its sheet closes as it ends
         self._by = ""  # the user who pressed Import: only they get the dialog of an error that stops it (#206)
+        show = QHBoxLayout()  # the labels sketch's filter, Unchecked the labels a freeze still needs checked
+        show.addWidget(QLabel(self.tr("Show")))
+        self.filter = QComboBox()
+        for key, text in SHOWN:
+            self.filter.addItem(self.tr(text), key)
+        self.filter.currentIndexChanged.connect(self._fill_samples)
+        show.addWidget(self.filter)
+        show.addStretch(1)
+        ll.addLayout(show)
         self.samples = make_table(
-            [self.tr("ID"), self.tr("Label"), self.tr("Defect type"), self.tr("View"), self.tr("File")]
+            [
+                self.tr("ID"),
+                self.tr("Label"),
+                self.tr("Defect type"),
+                self.tr("View"),
+                self.tr("Labelled"),
+                self.tr("Checked"),
+                self.tr("File"),
+            ]
         )
         self.samples.itemSelectionChanged.connect(self._preview)
         self.samples_empty = EmptyState(self.samples)
@@ -176,20 +217,29 @@ class TrainingPage(Page):
         self.act_ok = self.action(self.tr("Mark OK"), "O", lambda: self._relabel("OK"))
         self.act_ng = self.action(self.tr("Mark NG"), "N", lambda: self._relabel("NG"))
         self.act_unsure = self.action(self.tr("Mark UNSURE"), "U", lambda: self._relabel("UNSURE"))
+        # Return, as the labels sketch has it: a field, a drop-down list or the image keeps its own (eventFilter)
+        self.act_check = self.action(self.tr("Check Label"), "Return", self._check)
         for a in (self.act_ok, self.act_ng, self.act_unsure):
             marks.addWidget(action_button(a, show_key=False))
+        self.btn_check = action_button(self.act_check, show_key=False)  # its tooltip says why it is off
+        marks.addWidget(self.btn_check)
         self.act_next = self.action(self.tr("Next image"), "PgDown", lambda: self._step(1))  # keys only (sketch)
         self.act_previous = self.action(self.tr("Previous image"), "PgUp", lambda: self._step(-1))
         ll.addLayout(marks)
         shell.installEventFilter(self)  # the keys typed in a drop-down list or the import sheet reach the window last
         act = QHBoxLayout()
         act.addWidget(button(self.tr("Set Reference"), slot=self._set_reference))
+        self.btn_draw = button(self.tr("Draw OK Labels to Check"), slot=self._draw)
+        act.addWidget(self.btn_draw)
         act.addWidget(button(self.tr("Remove"), "danger", self._remove))  # red, last in its row, never the default
         ll.addLayout(act)
         split.addWidget(left)
 
         # Middle: the label editor, the selected image with its defect boxes (REQ-TRN-003) ----------------------
-        self.shown: dict[int, dict[str, Any]] = {}  # the samples in the table, by id
+        self.shown: dict[int, dict[str, Any]] = {}  # the board model's samples, by id; the filter picks the table's
+        self._boxes: dict[int, list[str]] = {}  # each NG sample's box types, by id
+        self._statuses: list[dict[str, Any]] = []  # label_check_status of each view with an OK or NG label
+        self._to_check: set[str] = set()  # the samples whose label a freeze still needs checked: the filter Unchecked
         self.editor = LabelEditor(self, self.tr("Select a sample to preview"))
         self.editor.undone.connect(self._show_samples)
         self.editor.stored.connect(self._show_types)
@@ -201,6 +251,13 @@ class TrainingPage(Page):
         rl.setContentsMargins(8, 0, 0, 0)
         g = QGroupBox(self.tr("Self-training"))
         f = QFormLayout(g)
+        self.dataset_version = QComboBox()  # the board model's frozen versions, newest first (REQ-TRN-007)
+        self.dataset_version.currentIndexChanged.connect(self._show_version)
+        f.addRow(self.tr("Dataset version"), self.dataset_version)
+        self.version_line = QLabel()  # its validation set and training set, or why there is nothing to train from
+        self.version_line.setObjectName("muted")
+        self.version_line.setWordWrap(True)
+        f.addRow(self.version_line)
         self.epochs = QSpinBox()
         self.epochs.setRange(5, 1000)
         self.epochs.setValue(ctx.settings.default_epochs)
@@ -214,13 +271,17 @@ class TrainingPage(Page):
         f.addRow(self.tr("Device"), self.device_label)
         row = QHBoxLayout()
         self.btn_train = button(self.tr("Start Training"), "primary", self.train)
-        self.btn_stop = button(self.tr("Stop"), slot=self.stop)
+        self.btn_stop = button(self.tr("Cancel"), slot=self.stop)  # stops the run within a step (REQ-TRN-008)
         self.btn_stop.setEnabled(False)
         row.addWidget(self.btn_train)
         row.addWidget(self.btn_stop)
         f.addRow(row)
-        self.bar = QProgressBar()
+        self.bar = QProgressBar()  # the percent of the run's time gone, as estimated
+        self.bar.setRange(0, 100)
         f.addRow(self.bar)
+        self.phase_line = QLabel()  # what the run does now and its time left
+        self.phase_line.setWordWrap(True)
+        f.addRow(self.phase_line)
         rl.addWidget(g)
         self.log = QPlainTextEdit()
         self.log.setReadOnly(True)
@@ -248,11 +309,95 @@ class TrainingPage(Page):
         mrow.addWidget(button(self.tr("Activate Selected"), slot=self.activate))
         mrow.addWidget(button(self.tr("Export AI Model…"), slot=self.export_model))
         rl.addLayout(mrow)
-        split.addWidget(right)
         # the table as wide as its reference line needs at 1920 px, the editor next; with S31's import sheet open the
-        # table takes 750 px and the training panel keeps 418 px, its buttons whole
-        split.setSizes([650, 500, 460])
-        self.root.addWidget(split, 1)
+        # table takes 742 px and the editor 407 px, its buttons whole, the training panel keeping its 457 px (outer)
+        split.setSizes([650, 500])
+        kl = QVBoxLayout(self.keys)
+        kl.setContentsMargins(0, 0, 0, 0)
+        kl.addWidget(split)
+        self.datasets_tab = QWidget()  # the working set, the labeller agreement and the versions (Datasets stage)
+        dl = QVBoxLayout(self.datasets_tab)
+        dl.setContentsMargins(0, 0, 0, 0)
+        self.working = WorkingSetPanel(self)
+        self.agreement = AgreementPanel(self)
+        self.versions = VersionsPanel(self)
+        for w in (self.working, self.working.sheet, self.versions.split, self.agreement):
+            dl.addWidget(w)  # a sheet in the agreement's place while it is open (show_sheet)
+        dl.addWidget(self.versions, 1)  # the table takes the height left
+        # the sketches' Samples and Datasets tabs, on the title row as they draw them, so the page is no taller than
+        # before them (Training fits a 1600 x 900 screen); the training panel stays beside both
+        self.tabs = QTabBar()
+        self.tabs.addTab(self.tr("Samples"))
+        self.tabs.addTab(self.tr("Datasets"))
+        self.head.addWidget(self.tabs, 0, Qt.AlignmentFlag.AlignBottom)
+        # Label Blind… shows the blind panel in the tabs' place, the tab bar hidden: none of their keys acts meanwhile
+        self.blind = BlindPanel(self)
+        self.blind.closed.connect(self._blind_closed)
+        self.stack = QStackedWidget()  # the tab shown, or the blind panel
+        self.stack.addWidget(self.keys)
+        self.stack.addWidget(self.datasets_tab)
+        self.stack.addWidget(self.blind)
+        self.tabs.currentChanged.connect(self.stack.setCurrentIndex)
+        outer = QSplitter(Qt.Orientation.Horizontal)
+        outer.addWidget(self.stack)
+        outer.addWidget(right)
+        outer.setSizes([1150, 460])
+        self.root.addWidget(outer, 1)
+
+    def action(self, text: str, key: str | QKeySequence.StandardKey, slot: Callable[[], object]) -> QAction:
+        """A key of the Samples tab's: the action is the tab's, not the page's, so its key acts only while the tab is
+        shown (a window shortcut is active only while a widget it is added to is visible)."""
+        a = super().action(text, key, slot)
+        self.removeAction(a)
+        self.keys.addAction(a)
+        return a
+
+    def dataset_action(self, text: str, key: str, slot: Callable[[], object]) -> QAction:
+        """A key of the Datasets tab's, acting only while the tab is shown, as `action` makes the Samples tab's."""
+        a = super().action(text, key, slot)
+        self.removeAction(a)
+        self.datasets_tab.addAction(a)
+        return a
+
+    def idle(self) -> bool:
+        """No import, draw or freeze of the page's runs: one job of the page's at a time (#194)."""
+        return self._bg is None
+
+    def show_sheet(self, sheet: QWidget | None) -> None:
+        """A sheet of the Datasets tab, Freeze or Split and Lock, in the labeller agreement's place, or with None the
+        agreement back: what it replaces hidden first, so the page keeps the height a 1600 x 900 screen gives it."""
+        if sheet is not None:
+            self.agreement.hide()
+        for s in (self.working.sheet, self.versions.split):
+            s.setVisible(s is sheet)
+        if sheet is None:
+            self.agreement.show()
+        self.working.sync()  # Freeze Dataset… and Split and Lock Validation Set…, off while a sheet is open
+        self.versions.sync()
+
+    def sheet_open(self) -> bool:
+        """Whether a sheet of the Datasets tab is open: one at a time."""
+        return self.working.sheet.isVisible() or self.versions.split.isVisible()
+
+    def open_blind(self, set_uuid: str, images: list[str], paths: dict[str, str]) -> None:
+        """Label Blind…: the blind panel in the tabs' place, from the set's first image the user has not labelled."""
+        self.tabs.hide()
+        self.stack.setCurrentWidget(self.blind)
+        self.blind.label_set(set_uuid, images, paths)
+
+    def _blind_closed(self) -> None:
+        """The tabs back, the focus on Label Blind…, or on the set once the user has labelled every image of it."""
+        self.tabs.show()
+        self.stack.setCurrentIndex(self.tabs.currentIndex())
+        self.refresh()
+        if self.isVisible():
+            panel = self.agreement
+            (panel.btn_blind if panel.btn_blind.isEnabled() else panel.sets).setFocus()
+
+    def _stop_blind(self) -> None:
+        """A sign-in or another board model ends blind labelling: the next user never labels as the one before."""
+        if self.stack.currentWidget() is self.blind:
+            self.blind.stop()
 
     # --- dataset ----------------------------------------------------------------
     def _pick(self) -> list[str]:
@@ -314,6 +459,9 @@ class TrainingPage(Page):
         """A sign-in closes the sheet the user before left, so the next user never imports its files (review); an
         import that runs goes on as the user who started it (#177), and its sheet closes once that import ends."""
         self.editor.forget()  # and the next user never undoes what the user before changed
+        self._stop_blind()
+        self.working.sheet.leave()  # the Freeze sheet too; a freeze that runs goes on, as an import does
+        self.versions.split.close_sheet()  # and the Split sheet; a lock that runs ends as the user who started it
         if self.sheet.running:
             self._left = True
         else:
@@ -451,10 +599,12 @@ class TrainingPage(Page):
         """While this page is shown, a letter, digit or sign typed in a drop-down list, such as the Type list, in a
         table or list that a typed key edits, or anywhere in S31's import sheet goes there, never to the page's keys
         (O, N, U, D, Z, +, - and 0): the window takes its ShortcutOverride. A spin box or a text field, such as Epochs,
-        needs none of this: its line edit accepts the ShortcutOverride of a key it types first."""
+        needs none of this: its line edit accepts the ShortcutOverride of a key it types first. Enter typed in a spin
+        box, a text field or a drop-down list is the field's too, never Check Label's (labels sketch)."""
         if e.type() == QEvent.Type.ShortcutOverride and self.isVisible() and isinstance(e, QKeyEvent):
+            focus = QApplication.focusWidget()
             typed = e.text().isprintable() and e.text() != "" and not e.modifiers() & NOT_TYPING
-            if typed and self._takes_keys(QApplication.focusWidget()):
+            if (typed and self._takes_keys(focus)) or (e.key() in ENTER and isinstance(focus, FIELDS)):
                 e.accept()
                 return True
         return super().eventFilter(watched, e)
@@ -565,9 +715,174 @@ class TrainingPage(Page):
             self.samples.scrollTo(index)
 
     def _preview(self) -> None:
-        """The label editor on the selected sample, the topmost row when several are selected; none: nothing."""
+        """The label editor on the selected sample, the topmost row when several are selected; none: nothing. Check
+        Label follows the rows selected."""
         rows = sorted(i.row() for i in self.samples.selectionModel().selectedRows())
         self.editor.show_sample(self.shown.get(int(cell_text(self.samples, rows[0], 0))) if rows else None)
+        self._sync_check()
+
+    def _fill_samples(self) -> None:
+        """The samples the filter shows, in the table, with the rows selected before selected again; the editor
+        follows once. An empty list says what the filter looks for, and what to do."""
+        if not self.board_model:
+            return
+        shown = self.filter.currentData()
+        s = [
+            r
+            for r in self.shown.values()
+            if shown == "All" or r["label"] == shown or (shown == "Unchecked" and r["uuid"] in self._to_check)
+        ]
+        kept = set(self._selected_ids())
+        self.samples.selectionModel().blockSignals(True)  # the editor follows once the rows are selected again
+        fill_table(
+            self.samples,
+            [
+                [
+                    r["id"],
+                    r["label"],
+                    self._types(self._boxes.get(r["id"], []), r["defect_type"]),
+                    view_text(r["side"]) if r["side"] else "",
+                    r["labelled_by_name"] or "—",
+                    self._checker(r),
+                    Path(r["path"]).name,
+                ]
+                for r in s
+            ],
+            [theme.NG_TINT if r["label"] == "NG" else None for r in s],  # UNSURE is not NG (REQ-TRN-002)
+            [r["path"] for r in s],
+        )
+        self.samples.selectionModel().blockSignals(False)
+        self._select(lambda r: r["id"] in kept)
+        if s:
+            self.samples_empty.hide()
+        elif not self.shown:
+            what = self.tr("Add at least 20 OK boards with Add OK Images… or Import Folder…")
+            heading = self.tr("No samples for {board_model} yet").format(board_model=self.board_model)
+            self.samples_empty.show_state(heading, what, self.tr("Import Folder…"), self.import_folder)
+        elif shown == "Unchecked" and self._statuses and all(st["ready"] for st in self._statuses):
+            done = self.tr("A second user has checked every NG label and every OK label drawn.")
+            self.samples_empty.show_state(self.tr("Nothing left to check"), done)
+        elif shown == "Unchecked":
+            draw = self.tr(
+                "No label waits for a check: Draw OK Labels to Check draws the OK labels a second user checks."
+            )
+            self.samples_empty.show_state(self.tr("Nothing to check yet"), draw)
+        else:
+            heading = self.tr("No {label} images").format(label=shown)
+            self.samples_empty.show_state(heading, self.tr("Show All lists every image."))
+
+    def _checker(self, sample: dict[str, Any]) -> str:
+        """The Checked column: who checked the sample's current label (labels sketch), else "—"."""
+        if sample["checked_by"] is None:
+            return "—"
+        return self.tr("{user} ✓").format(user=sample["checked_by_name"] or "—")
+
+    def _check_status(self) -> None:
+        """The second-user checks of each view with an OK or NG label (REQ-TRN-004), and the labels still to check."""
+        views = [v for v in VIEWS if any(r["side"] == v and r["label"] in ("OK", "NG") for r in self.shown.values())]
+        self._statuses = [self.ctx.label_check_status(self.board_model or "", v) for v in views]
+        self._to_check = {u for st in self._statuses for u in st["ng_unchecked"]}
+        self._to_check |= {u for st in self._statuses for u in st["ok_drawn"] if u not in st["ok_checked"]}
+
+    def _show_checks(self) -> None:
+        """The line over the table: the NG labels checked and the OK labels checked of the 10 % a freeze needs, every
+        view together, with ✓ once every view is ready to freeze; none without an OK or NG label."""
+        st = self._statuses
+        self.checks_line.setVisible(bool(st))
+        ng, need, ok = (sum(x[k] for x in st) for k in ("ng", "ok_needed", "ok"))
+        ng_checked = ng - sum(len(x["ng_unchecked"]) for x in st)
+        ok_checked = sum(min(len(x["ok_checked"]), x["ok_needed"]) for x in st)
+        if need and not any(x["ok_drawn"] for x in st):
+            line = self.tr(
+                "{ng_checked} of {ng} NG labels checked · {ok_checked} of {need} OK labels checked (10 % of {ok},"
+                " none drawn yet)"
+            )
+        else:
+            line = self.tr(
+                "{ng_checked} of {ng} NG labels checked · {ok_checked} of {need} OK labels checked (10 % of {ok})"
+            )
+        text = line.format(ng_checked=ng_checked, ng=ng, ok_checked=ok_checked, need=need, ok=ok)
+        if st and all(x["ready"] for x in st):
+            text = self.tr("{line} ✓").format(line=text)
+        self.checks_line.setText(text)
+
+    def _picked(self) -> list[dict[str, Any]]:
+        """The samples selected in the table, topmost first."""
+        rows = sorted(i.row() for i in self.samples.selectionModel().selectedRows())
+        return [self.shown[int(cell_text(self.samples, r, 0))] for r in rows]
+
+    def _why_not(self, sample: dict[str, Any]) -> str | None:
+        """Why the user signed in cannot check the sample's label, as check_label refuses it; None when they can."""
+        if sample["checked_by"] is not None:
+            return self.tr("Checked by {user}").format(user=sample["checked_by_name"] or "—")
+        if sample["label"] == "UNSURE":
+            return self.tr("An UNSURE image is left out of training, so its label is not checked")
+        if sample["label"] == "NG" and not self._boxes.get(sample["id"]):
+            return self.tr("Draw its defect boxes first")
+        if sample["labelled_by"] is None:
+            return self.tr("No labeller is recorded for it: label it again first")
+        if sample["labelled_by"] == self.ctx.user_uuid:
+            return self.tr("You labelled this image")
+        return None
+
+    def _sync_check(self) -> None:
+        """Check Label on while the user signed in can check a selected image's label; off, its tooltip says why for
+        the topmost selected image, or that none is selected (labels sketch)."""
+        why = [self._why_not(s) for s in self._picked()]
+        can = None in why
+        self.act_check.setEnabled(can)
+        key = self.act_check.shortcut().toString(QKeySequence.SequenceFormat.NativeText)
+        self.btn_check.setToolTip(key if can else (why[0] or "") if why else self.tr("Select the images to check"))
+
+    def _check(self) -> None:
+        """Check Label (Return): record the user signed in as the second user who checked each selected image's label
+        that they can check (REQ-TRN-004), on a pool thread as the marks write; the others stay as they are, and the
+        status line counts them and says why for the first. A refusal or an error stops at the image it names, the
+        checks before it staying stored."""
+        picked = self._picked()
+        can = {s["id"]: s["uuid"] for s in picked if self._why_not(s) is None}
+        left = [(s, why) for s in picked if (why := self._why_not(s)) is not None]
+        if not can:
+            return
+
+        def done(refused: Exception | None) -> None:
+            self.refresh()
+            if refused is not None:
+                self.error(refused)
+            elif left:
+                line = self.tr("Checked {count} label(s); {left} left unchecked, {file} first: {reason}")
+                file = Path(left[0][0]["path"]).name
+                self.shell.status(line.format(count=len(can), left=len(left), file=file, reason=left[0][1]))
+            else:
+                self.shell.status(self.tr("Checked {count} label(s)").format(count=len(can)))
+
+        self.editor.write(done, _each, list(can), lambda i: self.ctx.check_label(can[i]))
+
+    def _draw(self) -> None:
+        """Draw OK Labels to Check: in each view with an OK label, draw at random the OK labels a second user checks,
+        10 % of them rounded up, on a pool thread; the filter then shows Unchecked (REQ-TRN-004)."""
+        if (board_model := self.checked_board_model()) is None:
+            return
+        views = [v for v in VIEWS if any(r["side"] == v and r["label"] == "OK" for r in self.shown.values())]
+
+        def draw() -> list[dict[str, Any]]:
+            return [d for v in views if (d := self.ctx.draw_ok_checks(board_model, v)) is not None]
+
+        self.run_in_background(draw, on_result=self._drawn)
+
+    def _drawn(self, draws: list[dict[str, Any]]) -> None:
+        self.refresh()
+        need = sum(st["ok_needed"] for st in self._statuses)
+        if draws:
+            self.filter.setCurrentIndex(self.filter.findData("Unchecked"))
+            line = self.tr("Drew {count} OK label(s) for a second user to check; Show Unchecked lists them")
+            self.shell.status(line.format(count=sum(len(d["sample_uuids"]) for d in draws)))
+        elif need:
+            drawn = sum(min(len(st["ok_drawn"]), st["ok_needed"]) for st in self._statuses)
+            line = self.tr("The OK labels drawn are enough: {drawn} of the {needed} needed")
+            self.shell.status(line.format(drawn=drawn, needed=need))
+        else:
+            self.shell.status(self.tr("No OK label to draw yet: add or mark OK images first"))
 
     def _types(self, kinds: list[str], given: str | None) -> str:
         """The Defect type column: the types of an image's boxes, each once with its count ("Solder Bridge ×2,
@@ -578,58 +893,75 @@ class TrainingPage(Page):
         return ", ".join(kind if n == 1 else each.format(type=kind, count=n) for kind, n in Counter(kinds).items())
 
     def _show_types(self, uuid: str, boxes: list[DefectBox]) -> None:
-        """The boxes of a sample just stored: its row's Defect type, with no read of the database."""
+        """The boxes of a sample just stored: its row's Defect type, with no read of the database, and its label row
+        now the user's own, with no check (REQ-TRN-004), which the checks line and Check Label follow."""
+        for s in self.shown.values():
+            if s["uuid"] == uuid:
+                self._boxes[s["id"]] = [b.dct_type for b in boxes]
+                s |= {"labelled_by": self.ctx.user_uuid, "labelled_by_name": self.ctx.user}
+                s |= {"checked_by": None, "checked_by_name": None}
         for row in range(self.samples.rowCount()):
             s = self.shown[int(cell_text(self.samples, row, 0))]
             if s["uuid"] == uuid:
-                cell_item(self.samples, row, 2).setText(self._types([b.dct_type for b in boxes], s["defect_type"]))
+                cell_item(self.samples, row, 2).setText(self._types(self._boxes[s["id"]], s["defect_type"]))
+                cell_item(self.samples, row, 4).setText(s["labelled_by_name"] or "—")
+                cell_item(self.samples, row, 5).setText(self._checker(s))
+        self._check_status()
+        self._show_checks()
+        self._sync_check()
 
     # --- training ---------------------------------------------------------------
     def train(self) -> None:
-        if (bm := self.checked_board_model()) is None:
+        """Train from the dataset version picked, as a job of the context that goes on whatever page is shown
+        (REQ-TRN-008); the run refuses a version it cannot train from before reading an image."""
+        if self.checked_board_model() is None or (version := self.dataset_version.currentData()) is None:
             return
-        n_ok = len(self.ctx.samples(bm, "OK"))
-        if n_ok < 2:
-            self.error(AoiError("AOI-TRN-002", found=n_ok))
+        size = int(self.input_size.currentText())
+        try:
+            self.ctx.start_training(version, self.epochs.value(), size, listen=self._follow)
+        except AoiError as e:  # a run already going on (AOI-TRN-047)
+            self.error(e)
             return
-        self.log.clear()
-        self.bar.setRange(0, self.epochs.value())
+        self.log.clear()  # the run's first report is still queued for this thread
         self.bar.setValue(0)
+        self.phase_line.setText("")
         self.btn_train.setEnabled(False)
         self.btn_stop.setEnabled(True)
-        size = int(self.input_size.currentText())
-        self.worker = Worker(self.ctx.train, bm, self.epochs.value(), size, with_progress=True)
+
+    def _follow(self, job: Job[dict[str, Any]]) -> None:
+        """Show the run `job` here: its reports, result and end reach this page's slots on the UI thread."""
+        self.worker = Worker.of(job)
         self.worker.signals.progress.connect(self._on_progress)
         self.worker.signals.result.connect(self._on_done)
         self.worker.signals.error.connect(self.error)
         self.worker.signals.finished.connect(self._finished)
-        start(self.worker, self.ctx.jobs)
+        keep(self.worker, self.ctx.jobs)
 
     def stop(self) -> None:
+        """Cancel: the run stops after the image, training step or map in hand, and saves nothing (REQ-TRN-008)."""
         if self.worker:
             self.worker.stop()
 
-    def _on_progress(self, a: tuple[int, int, float, str]) -> None:
-        ep, total, loss, msg = a
-        if total > 1:
-            self.bar.setMaximum(total)
-            self.bar.setValue(ep)
-        if msg:  # a phrase of the engine, shown in the UI language (#199)
-            self.log.appendPlainText(phrase_text(msg))
-        elif ep % 5 == 0 or ep == 1:
-            self.log.appendPlainText(
-                self.tr("epoch {epoch}/{total}  loss {loss:.4f}").format(epoch=ep, total=total, loss=loss)
-            )
+    def _on_progress(self, values: tuple[RunProgress]) -> None:
+        p = values[0]
+        self.bar.setValue(p.percent)
+        line = self.tr("{phase} · {percent} % · {left}")  # the engine's phrases, shown in the UI language (#199)
+        left = time_left_text(p.left_s)
+        self.phase_line.setText(line.format(phase=phrase_text(p.phase), percent=p.percent, left=left))
+        if p.note:
+            self.log.appendPlainText(phrase_text(p.note))
 
     def _on_done(self, meta: dict[str, Any]) -> None:
+        self.bar.setValue(self.bar.maximum())
         saved = self.tr("Saved AI model {version} ({seconds} s). Golden board updated.")
         self.log.appendPlainText(saved.format(version=meta["version"], seconds=meta["train_seconds"]))
         self.shell.status(self.tr("AI model {version} trained and activated").format(version=meta["version"]))
         self.refresh()
 
     def _finished(self) -> None:
-        if self.worker is not None and self.worker.job.cancelled and self.worker.job.result is None:  # Stop (#171)
-            self.log.appendPlainText(self.tr("Stopped: no AI model was saved; the active AI model is unchanged."))
+        if self.worker is not None and self.worker.job.cancelled and self.worker.job.result is None:  # Cancel (#171)
+            self.log.appendPlainText(self.tr("Cancelled: no AI model was saved; the active AI model is unchanged."))
+        self.phase_line.setText("")
         self.btn_stop.setEnabled(False)
         self.worker = None
         self.device_label.setText(self.ctx.device.upper())  # a device saved during the run applies from the next one
@@ -641,8 +973,55 @@ class TrainingPage(Page):
         idle = self._bg is None
         for a in self.adds:
             a.setEnabled(idle)  # its button and its key
+        self.btn_draw.setEnabled(idle)  # a draw would stop the import that runs: one job of the page's at a time
         self.samples_empty.link.setEnabled(idle)
-        self.btn_train.setEnabled(idle and self.worker is None)
+        self.working.sync()  # Freeze Dataset… and Freeze, off while a job runs
+        self.versions.sync()  # and Split and Lock Validation Set…, Lock and Verify Manifest
+        self.btn_train.setEnabled(idle and self.worker is None and self.dataset_version.currentData() is not None)
+
+    def _fill_versions(self) -> None:
+        """The board model's frozen versions, newest first: the one picked before while it is listed, else the newest
+        whose validation set is locked, the one Training trains from (AppContext.training_version)."""
+        kept = self.dataset_version.currentData()
+        try:
+            newest = self.ctx.training_version(self.board_model)["uuid"] if self.board_model else None
+        except AoiError:  # no version of it is locked: the newest is picked, and its line says why it cannot train
+            newest = None
+        self.dataset_version.blockSignals(True)  # one line shown, once the list is whole
+        self.dataset_version.clear()
+        for v in self.ctx.datasets(self.board_model) if self.board_model else []:
+            self.dataset_version.addItem(v["name"], v["uuid"])
+        pick = self.dataset_version.findData(kept) if kept is not None else -1
+        self.dataset_version.setCurrentIndex(pick if pick >= 0 else max(self.dataset_version.findData(newest), 0))
+        self.dataset_version.blockSignals(False)
+        self._show_version()
+
+    def _show_version(self) -> None:
+        """The line under the dataset version: its locked validation set and its training set, as the sketch counts
+        them, or why Start Training has nothing to train from."""
+        uuid = self.dataset_version.currentData()
+        self.dataset_version.setEnabled(uuid is not None)
+        if uuid is None and not self.board_model:
+            text = ""
+        elif uuid is None:
+            text = self.tr(
+                "No frozen dataset version of {board_model} yet; training reads only a frozen version's training set,"
+                " once its validation set is locked."
+            ).format(board_model=self.board_model or "")
+        elif (split := self.ctx.validation_split(uuid)) is None:
+            text = self.tr("Validation set not locked: training needs it locked, and reads only the training set.")
+        else:
+            label = {i["uuid"]: i["label"] for i in self.ctx.dataset_items(uuid)}
+            n = Counter((part, label[u]) for part in ("train", "validation") for u in split[part])
+            line = self.tr(
+                "Validation set locked ✓ {val_ok} OK / {val_ng} NG · training set {ok} OK, {ng} NG"
+                " · NG used for calibration only"
+            )
+            text = line.format(
+                val_ok=n["validation", "OK"], val_ng=n["validation", "NG"], ok=n["train", "OK"], ng=n["train", "NG"]
+            )
+        self.version_line.setText(text)
+        self.update_actions()
 
     # --- model registry ---------------------------------------------------------
     def activate(self) -> None:
@@ -662,50 +1041,34 @@ class TrainingPage(Page):
             self.ctx.export_model(mid, f)
 
     def refresh(self) -> None:
+        self._fill_versions()
         if not self.board_model:
             self.samples.setRowCount(0)
             self.models.setRowCount(0)
             self.models_note.hide()
             self.counts.set_line(lambda _name: "", "")
+            self.checks_line.hide()
             self.tip.hide()
             self.samples_empty.show_state(*self.no_board_model())
             self.models_empty.hide()
+            self.agreement.show_board_model(None, [])
+            self.working.show_board_model(None, [])
+            self.versions.show_board_model(None)
             return
         s = self.ctx.samples(self.board_model)
+        self.agreement.show_board_model(self.board_model, s)
+        self.working.show_board_model(self.board_model, s)
+        self.versions.show_board_model(self.board_model)  # after the working set, whose views its empty state reads
         self.shown = {r["id"]: r for r in s}
-        kept = set(self._selected_ids())
-        self.samples.selectionModel().blockSignals(True)  # the editor follows once the rows are selected again
-        fill_table(
-            self.samples,
-            [
-                [
-                    r["id"],
-                    r["label"],
-                    self._types(
-                        [b["dct_type"] for b in self.ctx.boxes(r["uuid"])] if r["label"] == "NG" else [],
-                        r["defect_type"],
-                    ),
-                    view_text(r["side"]) if r["side"] else "",
-                    Path(r["path"]).name,
-                ]
-                for r in s
-            ],
-            [theme.NG_TINT if r["label"] == "NG" else None for r in s],  # UNSURE is not NG (REQ-TRN-002)
-            [r["path"] for r in s],
-        )
-        self.samples.selectionModel().blockSignals(False)
-        self._select(lambda r: r["id"] in kept)
-        if s:
-            self.samples_empty.hide()
-        else:
-            what = self.tr("Add at least 20 OK boards with Add OK Images… or Import Folder…")
-            heading = self.tr("No samples for {board_model} yet").format(board_model=self.board_model)
-            self.samples_empty.show_state(heading, what, self.tr("Import Folder…"), self.import_folder)
+        self._boxes = {r["id"]: [b["dct_type"] for b in self.ctx.boxes(r["uuid"])] for r in s if r["label"] == "NG"}
+        self._check_status()
+        self._fill_samples()
         n_ok, n_ng = (sum(r["label"] == label for r in s) for label in ("OK", "NG"))  # UNSURE counts as neither
         ref = self.ctx.reference_image(self.board_model)
         reference = Path(ref).name if ref else self.tr("none")
         counts = self.tr("{ok} OK · {ng} NG · reference: {reference}")
         self.counts.set_line(lambda name: counts.format(ok=n_ok, ng=n_ng, reference=name), reference)
+        self._show_checks()
         self.tip.setVisible(n_ok < 20)
         ms = self.ctx.models(self.board_model)
         rows, tips = [], []
@@ -727,10 +1090,11 @@ class TrainingPage(Page):
             self.models_empty.hide()
         else:
             self.models_empty.show_state(
-                self.tr("No AI model yet"), self.tr("Start Training once 20 OK boards are in.")
+                self.tr("No AI model yet"), self.tr("Start Training from a frozen dataset version.")
             )
 
     def on_board_model_changed(self, name: str | None) -> None:
+        self._stop_blind()
         self.editor.show_sample(None)
         self.editor.forget()  # Undo never changes another board model's image
         if self.sheet.running or self.sheet.reported:  # an import goes on into its board model, and a list stays,

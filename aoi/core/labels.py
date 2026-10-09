@@ -4,17 +4,19 @@ stores it. No Qt, so the same rules hold headless."""
 from __future__ import annotations
 
 import numbers
+import random
 from dataclasses import dataclass
 from typing import Any
 
 from ..defects import BY_NAME, names
 from ..errors import QT_TRANSLATE_NOOP, AoiError
-from .imaging import file_header
+from .imaging import Reader, file_header
 
 LABELS = ("OK", "NG", "UNSURE")  # UNSURE images stay out of training and validation and go to the quality engineer
 Size = tuple[int, int] | None  # an image's (width, height), or None where no box needs it
 CALIBRATION_IMAGES = 100  # images in a calibration set (proposed, REQ-TRN-016)
 OK_NG_TARGET, TYPE_TARGET = 98, 90  # percent agreement two labellers reach (proposed; the labels sketch's Q36)
+CALIBRATION_NG = 30  # NG images a proposed calibration set holds at most (the labels sketch's 27 of 30)
 
 
 @dataclass(frozen=True)
@@ -74,13 +76,13 @@ def _whole(value: object) -> bool:
     return isinstance(value, numbers.Integral) and not isinstance(value, bool)
 
 
-def image_size(path: str) -> tuple[int, int]:
+def image_size(path: str, read: Reader | None = None) -> tuple[int, int]:
     """(width, height) of the image at `path` as the decoder returns it, turned by its Orientation, read without
     decoding it (`imaging.file_header`: the first MiB of most files, the whole of a TIFF or of a JPEG whose frame header
     lies past that, and a PNG's chunk headers across the file, up to PNG_MAX_CHUNKS of them): AOI-INSP-001 for a file
-    that cannot be read, AOI-INSP-004 for one that holds no image with a size."""
+    that cannot be read, AOI-INSP-004 for one that holds no image with a size. `read` as `file_header` takes it."""
     try:
-        header = file_header(path)
+        header = file_header(path, read)
     except OSError as e:
         raise AoiError("AOI-INSP-001", detail=str(e), path=path) from e
     if header is None or min(header[1], header[2]) <= 0:
@@ -91,6 +93,20 @@ def image_size(path: str) -> tuple[int, int]:
 def blind_label_ok(label: str, defect_type: str | None) -> bool:
     """A blind label of a calibration image is OK with no defect type, or NG with one of the 33 (REQ-TRN-016)."""
     return label == "OK" and defect_type is None or label == "NG" and defect_type in names()
+
+
+def draw_calibration(ok: list[str], ng: list[str], seed: int) -> list[str]:
+    """A calibration set to propose from the images labelled OK and NG (REQ-TRN-016): CALIBRATION_IMAGES of them drawn
+    at random with `seed`, CALIBRATION_NG NG images or as many as there are, the rest OK, more NG where the OK images
+    run short, in a random order, so that a labeller meets the NG images among the OK ones. Fewer images than a set
+    holds make none: an empty list."""
+    if len(ok) + len(ng) < CALIBRATION_IMAGES:
+        return []
+    rng = random.Random(seed)  # noqa: S311 - no secret: the set is audited as it is made
+    n_ng = max(min(len(ng), CALIBRATION_NG), CALIBRATION_IMAGES - len(ok))
+    drawn = rng.sample(ng, n_ng) + rng.sample(ok, CALIBRATION_IMAGES - n_ng)
+    rng.shuffle(drawn)
+    return drawn
 
 
 def agreement(a: dict[str, tuple[str, str | None]], b: dict[str, tuple[str, str | None]]) -> dict[str, Any]:

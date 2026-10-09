@@ -11,7 +11,7 @@ from __future__ import annotations
 import gc
 import os
 import shutil
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
@@ -29,13 +29,15 @@ from PySide6.QtTest import QTest  # noqa: E402
 from PySide6.QtWidgets import QMessageBox, QWidget  # noqa: E402
 
 from aoi.config import Settings  # noqa: E402
-from aoi.core import anomaly  # noqa: E402
+from aoi.core import anomaly, crypto  # noqa: E402
 from aoi.core.imaging import list_images, load_image  # noqa: E402
 from aoi.core.services import AppContext  # noqa: E402
+from aoi.data import credentials  # noqa: E402
 from aoi.data.db import new_uuid  # noqa: E402
 from aoi.ui import workers  # noqa: E402
 from aoi.ui.theme import QSS  # noqa: E402
 from tools.make_synthetic_dataset import ng_type, write_dataset  # noqa: E402
+from tools.trainable import trainable  # noqa: E402
 
 DATASET_SEED = 7  # the generator's default seed, so the fixture matches `python tools/make_synthetic_dataset.py`
 DATASET_OK, DATASET_NG = 30, 14
@@ -57,6 +59,27 @@ def distinct_copies(src: Path, folder: Path, n: int) -> list[Path]:
     for i, p in enumerate(out):
         p.write_bytes(data + f"{folder.name}{i:06d}".encode())  # another folder's copies have other bytes
     return out
+
+
+def _in_store(ctx: AppContext, path: Path, board_model: str) -> tuple[dict[str, Any], bytes, str]:
+    store = ctx.store_of(board_model) or {}
+    key = ctx.credentials.read(credentials.STORE_PREFIX + store["uuid"]) or b""
+    return store, key, path.resolve().relative_to(ctx.settings.root.resolve()).as_posix()
+
+
+def plain(ctx: AppContext, path: str | Path, board_model: str) -> bytes:
+    """A file of `board_model`'s dataset store as the app reads it, decrypted here with the key the key store holds
+    rather than through the code under test (REQ-TRN-017); `path` absolute or relative to the workspace."""
+    path = ctx.settings.root / path
+    store, key, stored = _in_store(ctx, path, board_model)
+    return crypto.decrypt(key, bytes.fromhex(store["key_id"]), store["uuid"], stored, path.read_bytes())
+
+
+def seal(ctx: AppContext, path: str | Path, board_model: str, data: bytes) -> None:
+    """Write `data` as a file of `board_model`'s store, encrypted as the app would: a change by someone with its key."""
+    path = ctx.settings.root / path
+    store, key, stored = _in_store(ctx, path, board_model)
+    path.write_bytes(crypto.encrypt(key, bytes.fromhex(store["key_id"]), store["uuid"], stored, data))
 
 
 @pytest.fixture
@@ -105,12 +128,12 @@ class TrainedModel:
 @pytest.fixture(scope="session")
 def tiny_model(tmp_path_factory: pytest.TempPathFactory, synthetic_dataset: Path) -> TrainedModel:
     settings = Settings(workspace=str(tmp_path_factory.mktemp("model_workspace")), device="cpu")
-    ctx = engineer(AppContext(settings))
+    ctx = engineer(AppContext(settings, credentials.MemoryCredentials()))  # a key store that outlives the first test
     board_model = "TINY"
     ctx.import_samples(board_model, [str(p) for p in list_images(synthetic_dataset / "train" / "ok")], "OK")
     for p in list_images(synthetic_dataset / "train" / "ng"):  # one call each: an NG sample is imported with its type
         ctx.import_samples(board_model, [str(p)], "NG", ng_type(p))
-    meta = ctx.train(board_model, epochs=TINY_EPOCHS, image_size=TINY_IMAGE_SIZE)
+    meta = ctx.train(trainable(ctx, board_model), epochs=TINY_EPOCHS, image_size=TINY_IMAGE_SIZE)
     loaded = ctx.load_model(board_model)
     assert loaded is not None, "training registered no active model"
     reference = ctx.db.reference(board_model)
@@ -131,13 +154,32 @@ def another_version(ctx: AppContext, board_model: str, version: str) -> int:
     return ctx.db.register_model(board_model, version, str(path), {}, activate=False, uid=uid)
 
 
+def restored(tiny_model: TrainedModel, ws: Path, ignore: Callable[..., Any] | None = None) -> Path:
+    """`ws`, a copy of the tiny model's workspace (`ignore` as shutil.copytree takes it), with the keys of its dataset
+    stores in the test's key store (`keys`), as a station that restored the workspace from a backup holds them: TINY's
+    samples are in its customer's store (REQ-TRN-017)."""
+    shutil.copytree(tiny_model.ctx.settings.root, ws, ignore=ignore)
+    for store in tiny_model.ctx.db.stores():
+        name = credentials.STORE_PREFIX + store["uuid"]
+        credentials.default().write(name, tiny_model.ctx.credentials.read(name) or b"")
+    return ws
+
+
 @pytest.fixture
 def trained_ctx(tmp_path: Path, tiny_model: TrainedModel) -> AppContext:
     """A writable copy of the tiny model's workspace: samples, golden board and the active model are registered,
     no inspection has run yet. Tests that inspect, save recipes or log results use this one."""
-    ws = tmp_path / "trained_workspace"
-    shutil.copytree(tiny_model.ctx.settings.root, ws)
+    ws = restored(tiny_model, tmp_path / "trained_workspace")
     return engineer(AppContext(Settings(workspace=str(ws), device="cpu")))
+
+
+@pytest.fixture(autouse=True)
+def keys(monkeypatch: pytest.MonkeyPatch) -> credentials.MemoryCredentials:
+    """The key store of every AppContext a test makes: in memory, new for each test and shared by its contexts, so that
+    no test writes a dataset store's key to the Credential Manager of the Windows machine running it (REQ-TRN-017)."""
+    held = credentials.MemoryCredentials()
+    monkeypatch.setattr(credentials, "default", lambda: held)
+    return held
 
 
 @pytest.fixture(autouse=True)

@@ -367,6 +367,15 @@ class Database:
         rows = self.query("SELECT * FROM blind_labels WHERE set_uuid=? AND labelled_by=?", (set_uuid, labelled_by))
         return {r["sample_uuid"]: (r["label"], r["defect_type"]) for r in rows}
 
+    def blind_labelled(self, set_uuid: str) -> dict[str, list[str]]:
+        """The images of a calibration set each user has labelled blind: {user UUID: [sample UUID]}, in the order
+        labelled."""
+        done: dict[str, list[str]] = {}
+        rows = self.query("SELECT labelled_by, sample_uuid FROM blind_labels WHERE set_uuid=? ORDER BY id", (set_uuid,))
+        for r in rows:
+            done.setdefault(r["labelled_by"], []).append(r["sample_uuid"])
+        return done
+
     def agreement_checks(self, board_model: str, uid: str | None = None) -> list[dict[str, Any]]:
         """A board model's agreement checks, newest first, or the one with UUID `uid`."""
         where, params = ("uuid=?", (uid,)) if uid else ("board_model=?", (board_model,))
@@ -409,6 +418,89 @@ class Database:
         """A frozen version's files in the manifest's order, each with its boxes."""
         rows = self.query("SELECT * FROM dataset_items WHERE dataset_uuid=? ORDER BY id", (dataset_uuid,))
         return [{**r, "boxes": json.loads(r["boxes"])} for r in rows]
+
+    def dataset_counts(self, board_model: str) -> dict[str, dict[str, int]]:
+        """Each frozen version of a board model, by UUID: its OK and NG files, those of its locked validation set, and
+        whether it is split, in two queries."""
+        counts: dict[str, dict[str, int]] = {}
+        sql = (
+            "SELECT i.dataset_uuid, i.label, s.part, COUNT(*) AS n FROM dataset_items i"
+            " JOIN datasets d ON d.uuid = i.dataset_uuid LEFT JOIN validation_split_items s ON s.item_uuid = i.uuid"
+            " WHERE d.board_model=? GROUP BY i.dataset_uuid, i.label, s.part"
+        )
+        for r in self.query(sql, (board_model,)):
+            c = counts.setdefault(r["dataset_uuid"], {"ok": 0, "ng": 0, "val_ok": 0, "val_ng": 0, "locked": False})
+            c[r["label"].lower()] += r["n"]
+            if r["part"] == "validation":
+                c["val_" + r["label"].lower()] += r["n"]
+        sql = (
+            "SELECT s.dataset_uuid FROM validation_splits s JOIN datasets d ON d.uuid = s.dataset_uuid"
+            " WHERE d.board_model=?"
+        )
+        for r in self.query(sql, (board_model,)):
+            if r["dataset_uuid"] in counts:
+                counts[r["dataset_uuid"]]["locked"] = True
+        return counts
+
+    def add_split(self, split: dict[str, Any], parts: dict[str, list[dict[str, Any]]]) -> None:
+        """Store a frozen version's split and the part ("train" or "validation") each of its files is in, in the
+        caller's transaction."""
+        self.insert("validation_splits", split)
+        for part, files in parts.items():
+            for f in files:
+                row = {"uuid": new_uuid(), "split_uuid": split["uuid"], "item_uuid": f["uuid"], "sha256": f["sha256"]}
+                self.insert("validation_split_items", row | {"part": part})
+
+    def validation_split(self, dataset_uuid: str) -> dict[str, Any] | None:
+        """A frozen version's split (uuid, dataset_uuid, seed, locked_by, locked_at) with the item UUIDs of its "train"
+        and "validation" parts in the order stored, or None while it is not split."""
+        found = self.query("SELECT * FROM validation_splits WHERE dataset_uuid=?", (dataset_uuid,))
+        if not found:
+            return None
+        split: dict[str, Any] = {k: v for k, v in found[0].items() if k != "id"} | {"train": [], "validation": []}
+        sql = "SELECT item_uuid, part FROM validation_split_items WHERE split_uuid=? ORDER BY id"
+        for r in self.query(sql, (split["uuid"],)):
+            split[r["part"]].append(r["item_uuid"])
+        return split
+
+    def split_sha256(self, part: str) -> set[str]:
+        """The SHA-256 of every file a split of any version put in `part` ("train" or "validation")."""
+        sql = "SELECT DISTINCT sha256 FROM validation_split_items WHERE part=?"
+        return {r["sha256"] for r in self.query(sql, (part,))}
+
+    # --- customer dataset stores (REQ-TRN-017; S38) ----------------------------
+    def add_store(self, store: dict[str, Any]) -> None:
+        self.insert("dataset_stores", store)
+
+    def add_board_model_store(self, row: dict[str, Any]) -> None:
+        self.insert("board_model_stores", row)
+
+    def add_shred(self, row: dict[str, Any]) -> None:
+        self.insert("store_shreds", row)
+
+    def stores(self) -> list[dict[str, Any]]:
+        """Every dataset store, oldest first, with `shredded_at` (None while it is not shredded) and the
+        `board_models` in it."""
+        sql = "SELECT s.*, x.shredded_at FROM dataset_stores s LEFT JOIN store_shreds x ON x.store_uuid=s.uuid"
+        members = self.query("SELECT board_model, store_uuid FROM board_model_stores ORDER BY id")
+        return [
+            {k: v for k, v in r.items() if k != "id"}
+            | {"board_models": [m["board_model"] for m in members if m["store_uuid"] == r["uuid"]]}
+            for r in self.query(sql + " ORDER BY s.id")
+        ]
+
+    def store(self, uid: str) -> dict[str, Any] | None:
+        return next((s for s in self.stores() if s["uuid"] == uid), None)
+
+    def board_model_store(self, board_model: str) -> dict[str, Any] | None:
+        """The store `board_model` is in, or None."""
+        found = self.query("SELECT store_uuid FROM board_model_stores WHERE board_model=?", (board_model,))
+        return self.store(found[0]["store_uuid"]) if found else None
+
+    def dataset_board_model(self, name: str) -> str | None:
+        """The board model of the frozen version named `name`, or None."""
+        found = self.query("SELECT board_model FROM datasets WHERE name=?", (name,))
+        return str(found[0]["board_model"]) if found else None
 
     # --- model registry ----------------------------------------------------
     def register_model(

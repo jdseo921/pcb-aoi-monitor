@@ -60,8 +60,11 @@ python main.py
 ```
 
 1. Top bar → **+ New** → board model `TBOX-A1`.
-2. **Training** → **Import Folder…** → `sample_data\train` (picks up `ok\` and `ng\`) → **Start Training**
-   (about 1 minute on CPU at 60 epochs).
+2. **Training** → **Import Folder…** → `sample_data\train` (picks up `ok\` and `ng\`) → **Start Training** (about 1
+   minute on CPU at 60 epochs). Start Training stays off here: training reads only a frozen dataset version with a
+   locked validation set, and freezing one needs checked labels, two labellers' agreement check and a customer's dataset
+   store first (Engineer manual, section 3). Select an OK image and press **Set Reference** instead: steps 4 and 5 then
+   judge by the Golden board comparison alone, and step 3 waits for an AI model.
 3. **AI Model Test** → **Select Test Folder…** → `sample_data\test` → **Run Test**.
 4. **Inspection** → **Load Folder…** → `sample_data\test\ng` → **Start**.
 5. Click **Compare with Golden ›** to see the board next to the golden template and the metrics that decided the verdict.
@@ -70,8 +73,9 @@ The first launch opens as `admin`; use **Switch User** to see the Operator view.
 
 ## With your own boards
 
-* Put at least **20 good boards** (more is better) of one board model, photographed with the same camera, distance
-  and lighting, into `ok\`. Defective examples go into `ng\` (optionally `ng\solder_bridge\` etc. to label the type).
+* Put at least **70 good boards** (more is better; 50 are locked for validation and never trained on) of one board
+  model, photographed with the same camera, distance and lighting, into `ok\`. Defective examples go into `ng\`
+  (optionally `ng\solder_bridge\` etc. to label the type).
 * Train, then tune thresholds on **Compare** (Try other thresholds, Engineer and Admin) or in **Recipe Editor**, and
   validate on a separate test folder.
 

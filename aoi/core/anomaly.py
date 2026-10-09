@@ -21,7 +21,7 @@ import math
 import random
 import time
 import zipfile
-from collections.abc import Callable
+from collections.abc import Callable, Iterable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -33,6 +33,8 @@ from torch import nn
 
 from ..data import atomic
 from ..errors import QT_TRANSLATE_NOOP, AoiError, Phrase
+from . import run_progress
+from .jobs import JobCancelled
 
 # Why an AI model file or a trained AI model is refused (AOI-TRN-001, AOI-TRN-004), as phrases shown translated (#198)
 DAMAGED = QT_TRANSLATE_NOOP("Errors", "the file is damaged ({damaged})")
@@ -45,7 +47,7 @@ MALFORMED = QT_TRANSLATE_NOOP("Errors", "its metadata is malformed ({error})")
 TRAINING_ON = QT_TRANSLATE_NOOP(
     "Training", "Training on {train} OK images ({held_out} held out, {ng} NG for calibration) on {device}"
 )
-STOPPED = QT_TRANSLATE_NOOP("Training", "Stopped by user; calibrating current weights")
+EPOCH_LOSS = QT_TRANSLATE_NOOP("Training", "Epoch {epoch} of {epochs}: loss {loss:.4f}")  # epoch 1 and every 5th
 CALIBRATED = QT_TRANSLATE_NOOP(
     "Training", "Calibrated image threshold {threshold:.4f} ({rule}); pixel threshold {pixel:.4f}"
 )
@@ -120,6 +122,45 @@ def to_tensor(img_bgr: np.ndarray, size: int) -> torch.Tensor:
     return torch.from_numpy(rgb).permute(2, 0, 1).float() / 255.0
 
 
+@dataclass(frozen=True)
+class Prepared:
+    """An image as the AI model reads it: its tensor at the network's input size, made once, and the image's height and
+    width, to which its anomaly map is scaled back. A training run keeps these, not the images (REQ-TRN-007)."""
+
+    tensor: torch.Tensor
+    shape: tuple[int, int]
+
+
+def prepare(img_bgr: np.ndarray, size: int) -> Prepared:
+    """`img_bgr` as a training run keeps it: `to_tensor` at `size` px, and its height and width."""
+    return Prepared(to_tensor(img_bgr, size), (int(img_bgr.shape[0]), int(img_bgr.shape[1])))
+
+
+PIXEL_PERCENTILE = 99.95  # of every pixel of the calibration OK images' anomaly maps together
+
+
+def top_percentile(maps: Iterable[np.ndarray], count: int, q: float) -> np.floating:
+    """`np.percentile(np.concatenate([m.ravel() for m in maps]), q)`, numpy's linear method to the bit, holding only
+    the largest values of each map rather than every map at once (REQ-TRN-007): the values at and above the rank the
+    percentile reads are among them. `count` is the pixels of every map together, so a q near 100 keeps few values
+    (99.95 keeps 0.05 % of them); `maps` may make each map as it is asked for."""
+    at = (count - 1) * (q / 100)
+    lo = math.floor(at)
+    keep = count - lo  # the ranks lo to count - 1, counted from the smallest
+    tops = []
+    for m in maps:
+        flat = m.ravel()
+        k = min(keep, flat.size)
+        tops.append(np.partition(flat, flat.size - k)[flat.size - k :].copy())  # a view would keep the whole map
+    top = np.concatenate(tops)  # holds every value of rank lo or more, ties included
+    first = top.size - keep  # rank lo is here, rank lo + 1 next
+    part = np.partition(top, [first, first + 1] if keep > 1 else [first])
+    a, b = part[first], part[first + 1] if keep > 1 else part[first]
+    gamma, diff = at - lo, b - a
+    out: np.floating = b - diff * (1 - gamma) if gamma >= 0.5 else a + diff * gamma  # numpy's _lerp, in its order
+    return out
+
+
 def augment(t: torch.Tensor) -> torch.Tensor:
     """Lighting jitter only: geometry must stay fixed so the model learns layout."""
     gain = 1.0 + random.uniform(-0.08, 0.08)
@@ -139,7 +180,43 @@ class TrainConfig:
     seed: int = 0
 
 
-ProgressFn = Callable[[int, int, float, str], None]  # epoch, total, loss, message: "" or a Phrase (#199)
+# What a run has done (REQ-TRN-008): its "step"s (training steps) or "map"s (calibration maps) done of the total, and a
+# line for its log, "" or a Phrase (#199); a report repeats the count when it only brings a line.
+ProgressFn = Callable[[str, int, int, str], None]
+
+
+def held_out(n: int, fraction: float) -> int:
+    """How many of `n` OK images a run holds out to calibrate on rather than train on: none under 5."""
+    return max(1, int(round(n * fraction))) if n >= 5 else 0
+
+
+def probe(image: Prepared, cfg: TrainConfig) -> tuple[float, float]:
+    """The seconds one training step and one calibration map of `image` take on `cfg.device`, timed on a throwaway
+    network, so a run's time left is known before its first training step (REQ-TRN-008). The step is timed the second
+    time: the first in a process also starts PyTorch's threads, about 1.2 s against a step's 0.15 s on a 4-core VM at
+    256 px. It draws from the random sources before `train` seeds them, so the AI model trained is the same with or
+    without it."""
+    net = ConvAutoencoder().to(cfg.device)
+    opt = torch.optim.Adam(net.parameters(), lr=cfg.lr)
+
+    def step() -> None:
+        batch = torch.stack([augment(image.tensor) for _ in range(cfg.batch_size)]).to(cfg.device)
+        rec = net(batch)
+        loss = nn.L1Loss()(rec, batch) + 0.5 * ((rec - batch) ** 2).mean()
+        opt.zero_grad()
+        loss.backward()
+        opt.step()
+        loss.item()  # the step is done once its loss is on the CPU, as a run's is
+
+    step()
+    start = run_progress.clock()
+    step()
+    stepped = run_progress.clock()
+    model = AnomalyModel(
+        net, {"image_size": cfg.image_size, "image_threshold": 1.0, "pixel_threshold": 1.0}, cfg.device
+    )
+    model.score(model.prepared_map(image))
+    return stepped - start, run_progress.clock() - stepped
 
 
 class AnomalyModel:
@@ -162,10 +239,13 @@ class AnomalyModel:
     def pixel_threshold(self) -> float:
         return float(self.meta["pixel_threshold"])
 
-    @torch.no_grad()
     def raw_error(self, img_bgr: np.ndarray) -> np.ndarray:
         """Reconstruction error at network resolution."""
-        x = to_tensor(img_bgr, self.size).unsqueeze(0).to(self.device)
+        return self._raw(to_tensor(img_bgr, self.size))
+
+    @torch.no_grad()
+    def _raw(self, t: torch.Tensor) -> np.ndarray:
+        x = t.unsqueeze(0).to(self.device)
         rec = self.net(x)
         err = (x - rec).abs().mean(dim=1)[0].cpu().numpy()
         blurred: np.ndarray = cv2.GaussianBlur(err, (0, 0), sigmaX=1.5)
@@ -178,7 +258,13 @@ class AnomalyModel:
         good boards (component edges, text and connectors are always a little
         off), so the map reads as "standard deviations above normal".
         """
-        err = self.raw_error(img_bgr)
+        return self._scaled(self.raw_error(img_bgr), (img_bgr.shape[0], img_bgr.shape[1]))
+
+    def prepared_map(self, image: Prepared) -> np.ndarray:
+        """`anomaly_map` of the image `image` was prepared from, to the bit, made from its tensor (REQ-TRN-007)."""
+        return self._scaled(self._raw(image.tensor), image.shape)
+
+    def _scaled(self, err: np.ndarray, shape: tuple[int, int]) -> np.ndarray:
         m = max(2, self.size // 64)  # warped borders are never meaningful
         err[:m, :] = err[-m:, :] = 0
         err[:, :m] = err[:, -m:] = 0
@@ -186,7 +272,7 @@ class AnomalyModel:
         if mu is not None:
             err = np.clip((err - mu) / sd, 0, None)
             err = cv2.GaussianBlur(err, (0, 0), sigmaX=1.5)
-        return cv2.resize(err, (img_bgr.shape[1], img_bgr.shape[0]), interpolation=cv2.INTER_LINEAR)
+        return cv2.resize(err, (shape[1], shape[0]), interpolation=cv2.INTER_LINEAR)
 
     def score(self, amap: np.ndarray) -> float:
         # 99.9th percentile is robust to single hot pixels but catches small defects.
@@ -278,12 +364,19 @@ def calibrate(ok_scores: list[float], ng_scores: list[float]) -> tuple[float, Ph
 
 
 def train(
-    ok_images: list[np.ndarray],
-    ng_images: list[np.ndarray],
+    ok_images: Sequence[Prepared],
+    ng_images: Sequence[Prepared],
     cfg: TrainConfig,
     progress: ProgressFn | None = None,
     should_stop: Callable[[], bool] | None = None,
 ) -> AnomalyModel:
+    """An AI model learnt from the OK images, prepared at `cfg.image_size`; the NG images only calibrate its image
+    threshold (REQ-TRN-007). Each anomaly map is made at its image's size when it is scored and then let go: the run
+    holds no image and no map at the camera's resolution beyond the one in hand.
+
+    `progress` hears of the start of training and of every training step and calibration map as it ends, and
+    `should_stop()` is asked after each report: once it is true the run raises JobCancelled there, so it stops within
+    a step and returns no AI model (REQ-TRN-008)."""
     if len(ok_images) < 2:
         raise AoiError("AOI-TRN-002", found=len(ok_images))
     random.seed(cfg.seed)
@@ -291,10 +384,14 @@ def train(
     torch.manual_seed(cfg.seed)
     say = progress or (lambda *a: None)
 
-    tensors = [to_tensor(im, cfg.image_size) for im in ok_images]
+    def stop() -> None:  # Cancel, or the window closing: nothing of the run is kept (#171)
+        if should_stop is not None and should_stop():
+            raise JobCancelled("training")
+
+    tensors = [p.tensor for p in ok_images]
     idx = list(range(len(tensors)))
     random.shuffle(idx)
-    n_val = max(1, int(round(len(idx) * cfg.val_fraction))) if len(idx) >= 5 else 0
+    n_val = held_out(len(idx), cfg.val_fraction)
     val_idx, train_idx = idx[:n_val], idx[n_val:]
     train_set = [tensors[i] for i in train_idx]
 
@@ -303,14 +400,14 @@ def train(
     sched = torch.optim.lr_scheduler.CosineAnnealingLR(opt, T_max=cfg.epochs)
     l1 = nn.L1Loss()
     t0 = time.time()
-    say(
-        0, cfg.epochs, 0.0, TRAINING_ON.fill(train=len(train_set), held_out=n_val, ng=len(ng_images), device=cfg.device)
-    )
+    steps = cfg.epochs * cfg.steps_per_epoch
+    say("step", 0, steps, TRAINING_ON.fill(train=len(train_set), held_out=n_val, ng=len(ng_images), device=cfg.device))
+    stop()
     loss_hist = []
     for ep in range(1, cfg.epochs + 1):
         net.train()
         running = 0.0
-        for _ in range(cfg.steps_per_epoch):
+        for i in range(1, cfg.steps_per_epoch + 1):
             batch = torch.stack([augment(random.choice(train_set)) for _ in range(cfg.batch_size)]).to(cfg.device)
             rec = net(batch)
             loss = l1(rec, batch) + 0.5 * ((rec - batch) ** 2).mean()
@@ -318,28 +415,46 @@ def train(
             loss.backward()
             opt.step()
             running += loss.item()
-        sched.step()
-        loss_hist.append(running / cfg.steps_per_epoch)
-        say(ep, cfg.epochs, loss_hist[-1], "")
-        if should_stop and should_stop():
-            say(ep, cfg.epochs, loss_hist[-1], STOPPED)
-            break
+            note = ""
+            if i == cfg.steps_per_epoch:  # the epoch's last step
+                sched.step()
+                loss_hist.append(running / cfg.steps_per_epoch)
+                if ep == 1 or ep % 5 == 0:
+                    note = EPOCH_LOSS.fill(epoch=ep, epochs=cfg.epochs, loss=loss_hist[-1])
+            say("step", (ep - 1) * cfg.steps_per_epoch + i, steps, note)
+            stop()
 
     model = AnomalyModel(
         net, {"image_size": cfg.image_size, "image_threshold": 1.0, "pixel_threshold": 1.0}, cfg.device
     )
-    # Per-pixel error statistics of good boards (the learned "normal variation").
-    errs = np.stack([model.raw_error(ok_images[i]) for i in train_idx])
-    sd = errs.std(axis=0)
-    model.meta["err_mean"] = errs.mean(axis=0).astype(np.float32)
+    # Per-pixel error statistics of good boards (the learned "normal variation"), summed in float64: the mean of equal
+    # errors is then that error to the bit, whatever their count, so a board like every training board scores 0 (#168).
+    errs = np.stack([model._raw(tensors[i]) for i in train_idx])
+    sd = errs.std(axis=0, dtype=np.float64)
+    model.meta["err_mean"] = errs.mean(axis=0, dtype=np.float64).astype(np.float32)
     model.meta["err_std"] = np.maximum(sd, max(float(np.median(sd)), SPREAD_FLOOR)).astype(np.float32)
     # Calibrate on held-out OK images when we have them, otherwise on training images.
     cal_ok = [ok_images[i] for i in (val_idx or train_idx)]
-    ok_maps = [model.anomaly_map(im) for im in cal_ok]
-    ok_scores = [model.score(m) for m in ok_maps]
-    ng_scores = [model.score(model.anomaly_map(im)) for im in ng_images]
+    ok_scores: list[float] = []
+    ng_scores: list[float] = []
+    maps = len(cal_ok) + len(ng_images)
+
+    def scored(images: Sequence[Prepared]) -> Iterable[np.ndarray]:  # each map scored, then read for its top
+        for p in images:
+            amap = model.prepared_map(p)
+            ok_scores.append(model.score(amap))
+            yield amap
+            say("map", len(ok_scores), maps, "")  # once the map's largest values are read
+            stop()
+
+    pixels = sum(p.shape[0] * p.shape[1] for p in cal_ok)
+    top = float(top_percentile(scored(cal_ok), pixels, PIXEL_PERCENTILE))
+    for p in ng_images:
+        ng_scores.append(model.score(model.prepared_map(p)))
+        say("map", len(ok_scores) + len(ng_scores), maps, "")
+        stop()
     thr, rule = calibrate(ok_scores, ng_scores)
-    pix = max(float(np.percentile(np.concatenate([m.ravel() for m in ok_maps]), 99.95)) * 1.15, thr * 0.6)
+    pix = max(top * 1.15, thr * 0.6)
     model.meta.update(
         image_threshold=thr,
         pixel_threshold=max(pix, 1e-4),
@@ -358,5 +473,5 @@ def train(
     # of one photo score 0, so the threshold is 0.
     if (why := _unusable(model.meta, model.net.state_dict())) is not None:
         raise AoiError("AOI-TRN-004", reason=why)
-    say(len(loss_hist), cfg.epochs, loss_hist[-1], CALIBRATED.fill(threshold=thr, rule=rule, pixel=pix))
+    say("map", maps, maps, CALIBRATED.fill(threshold=thr, rule=rule, pixel=pix))
     return model

@@ -30,7 +30,7 @@ from aoi.data import migrate as mg
 from aoi.data.db import Database
 from aoi.ui.main_window import MainWindow
 from aoi.ui.pages.settings import SettingsPage
-from tests.conftest import TrainedModel, engineer
+from tests.conftest import TrainedModel, engineer, plain, restored
 from tests.test_req_done_in_v01 import BOARD, _inspect_one, _window
 
 UUID4 = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$")
@@ -77,14 +77,14 @@ def filled_ctx(tmp_path: Path, tiny_model: TrainedModel, name: str = "ws") -> Ap
     """A private copy of the trained workspace with one inspection logged, one recipe saved, one alarm stored and one
     validation run on a folder inside the workspace (`validation/ok` and `validation/ng`, a sample copied into each)."""
     ws = tmp_path / name
-    shutil.copytree(tiny_model.ctx.settings.root, ws)
-    ctx = engineer(AppContext(Settings(workspace=str(ws), device="cpu")))
+    ctx = engineer(AppContext(Settings(workspace=str(restored(tiny_model, ws)), device="cpu")))
     ctx.inspect_file("TINY", ctx.db.samples("TINY", "NG")[0]["path"])
     ctx.save_recipe(Recipe(board_model="TINY"))
     ctx.alarm("WARN", "a stored alarm")
     for label in ("OK", "NG"):
         (ws / "validation" / label.lower()).mkdir(parents=True)
-        shutil.copy(ctx.db.samples("TINY", label)[0]["path"], ws / "validation" / label.lower())
+        sample = Path(ctx.db.samples("TINY", label)[0]["path"])  # encrypted in the store: copied as the camera gave it
+        (ws / "validation" / label.lower() / sample.name).write_bytes(plain(ctx, sample, "TINY"))
     ctx.batch_test("TINY", str(ws / "validation"))
     return ctx
 

@@ -9,7 +9,7 @@ from dataclasses import replace
 from pathlib import Path
 
 from PySide6.QtCore import QAbstractItemModel, QEvent, QModelIndex, QPersistentModelIndex, Qt
-from PySide6.QtGui import QAction, QGuiApplication, QKeyEvent, QKeySequence
+from PySide6.QtGui import QGuiApplication, QKeyEvent
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QButtonGroup,
@@ -41,6 +41,11 @@ Choices = list[tuple[str, str]]
 
 def _is_esc(e: QKeyEvent) -> bool:
     return e.key() == Qt.Key.Key_Escape and e.modifiers() == Qt.KeyboardModifier.NoModifier
+
+
+def _is_enter(e: QKeyEvent) -> bool:
+    """Return, or Enter on the number pad, which Qt gives the KeypadModifier."""
+    return e.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter) and not e.modifiers() & ~Qt.KeyboardModifier.KeypadModifier
 
 
 class _RowChoice(QStyledItemDelegate):
@@ -144,27 +149,24 @@ class ImportSheet(QGroupBox):
         for b in (self.btn_copy, self.btn_cancel, self.btn_import):
             foot.addWidget(b)
         lay.addLayout(foot)
-        for key, slot in ((Qt.Key.Key_Return, self.start), (Qt.Key.Key_Enter, self.start)):  # Esc: keyPressEvent
-            act = QAction(self)
-            act.setShortcut(QKeySequence(key))
-            act.setShortcutContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)  # in the sheet, not over the page
-            act.triggered.connect(slot)
-            self.addAction(act)
         self.hide()
 
     def event(self, e: QEvent) -> bool:
-        """Esc typed in the sheet is the sheet's, before any page key on Esc, such as the label editor's Leave Draw
-        Mode, which would otherwise meet it as an ambiguous shortcut that neither takes (review): an open cell's
-        drop-down still takes its own Esc first."""
-        if e.type() == QEvent.Type.ShortcutOverride and isinstance(e, QKeyEvent) and _is_esc(e):
+        """Esc and Enter typed in the sheet are the sheet's, before any page key on them, such as the label editor's
+        Leave Draw Mode or Training's Check Label, which would otherwise meet them as an ambiguous shortcut that neither
+        takes (review): an open cell's drop-down still takes its own Esc and Enter first."""
+        if e.type() == QEvent.Type.ShortcutOverride and isinstance(e, QKeyEvent) and (_is_esc(e) or _is_enter(e)):
             e.accept()
             return True
         return super().event(e)
 
     def keyPressEvent(self, e: QKeyEvent) -> None:
-        """Esc, as Cancel or Close."""
+        """Esc, as Cancel or Close; Enter, as Import."""
         if _is_esc(e):
             self._cancel()
+            return
+        if _is_enter(e):
+            self.start()
             return
         super().keyPressEvent(e)
 

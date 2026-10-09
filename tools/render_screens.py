@@ -55,6 +55,10 @@ BOARD_MODEL = "TINY"
 FIXED_TIME = "2026-01-01T09:00:00+00:00"  # every stored time, so a render does not change with the clock
 FIXED_MS = 480.0  # the inspection time Inspection and Compare show
 FIXED_SSIM, FIXED_INLIERS = 0.95, 400  # the similarity and alignment points Compare shows (module docstring)
+PAGE_VIEWS = {  # <page>-<view>-<role>
+    "Training": ("datasets", "freeze", "split", "blind"),
+    "Settings": ("restore", "move-in", "shred"),
+}
 STORED_STATES = (  # Compare
     "compare-stored-operator", "compare-golden-changed-operator", "compare-tried-engineer", "compare-save-engineer",
 )  # fmt: skip
@@ -127,6 +131,11 @@ class PinnedModel:
         return float(np.percentile(amap, 99.9))  # as AnomalyModel.score
 
 
+def pinned_key() -> tuple[bytes, bytes]:
+    """A store's key as `crypto.new_key` draws it, its key id fixed, as Settings › Dataset stores shows it."""
+    return os.urandom(32), bytes.fromhex("5ca1ab1e") + bytes(12)
+
+
 def build_workspace(root: Path) -> AppContext:
     """The synthetic workspace the pages are rendered on; see the module docstring."""
     from aoi.config import Settings
@@ -134,18 +143,21 @@ def build_workspace(root: Path) -> AppContext:
     from aoi.core.labels import DefectBox
     from aoi.core.recipe import ROI
     from aoi.core.services import AppContext
+    from aoi.data import credentials
     from tools.make_synthetic_dataset import ng_type, write_dataset
+    from tools.trainable import trainable
 
     os.environ["AOI_WORKSPACE"] = str(root / "default_workspace")  # settings.json is saved there, never in ~/
     dataset = root / "dataset"
     write_dataset(dataset, DATASET_OK, DATASET_NG, DATASET_SEED)
-    with mock.patch("uuid.uuid4", side_effect=counted_uuids()):
-        ctx = AppContext(Settings(workspace=str(root / "workspace"), device="cpu"))
+    with mock.patch("uuid.uuid4", side_effect=counted_uuids()), mock.patch("aoi.core.crypto.new_key", pinned_key):
+        keys = credentials.MemoryCredentials()  # the store key trainable makes, never written to the Credential Manager
+        ctx = AppContext(Settings(workspace=str(root / "workspace"), device="cpu"), keys)
         ctx.set_user("engineer")
         ctx.import_samples(BOARD_MODEL, [str(p) for p in list_images(dataset / "train" / "ok")], "OK")
         for p in list_images(dataset / "train" / "ng"):  # one call each: an NG sample is imported with its type
             ctx.import_samples(BOARD_MODEL, [str(p)], "NG", ng_type(p))
-        ctx.train(BOARD_MODEL, epochs=TINY_EPOCHS, image_size=TINY_IMAGE_SIZE)
+        ctx.train(trainable(ctx, BOARD_MODEL), epochs=TINY_EPOCHS, image_size=TINY_IMAGE_SIZE)
         recipe = ctx.recipe(BOARD_MODEL)[1]
         recipe.rois.append(ROI("R1", "Presence", 110, 110, 110, 110))  # around the IC the NG board lacks (LAYOUT[0])
         ctx.save_recipe(recipe)
@@ -285,8 +297,7 @@ def prepare(win: MainWindow, title: str, dataset: Path) -> None:
     elif title == "Training":
         page.import_from(str(dataset / "train"))  # the import sheet open on ok/ and ng/, its NG rows waiting for a type
         page.sheet.table.clearFocus()  # the sheet takes the keys: let go, or the next page drawn shows a field's caret
-        page.bar.setRange(0, TINY_EPOCHS)
-        page.bar.setValue(TINY_EPOCHS)  # as a finished run leaves it: the percentage on the accent chunk (#203)
+        page.bar.setValue(page.bar.maximum())  # as a finished run leaves it: the percentage on the accent chunk (#203)
         missing = str(page.ctx.samples(BOARD_MODEL, "NG")[0]["id"])  # the label editor on its box, selected
         rows = range(page.samples.rowCount())
         page.samples.selectRow(next(r for r in rows if cell_text(page.samples, r, 0) == missing))
@@ -300,6 +311,46 @@ def prepare(win: MainWindow, title: str, dataset: Path) -> None:
         page.refresh()
     elif title == "Settings":
         page.ws.setText(FIXED_WORKSPACE)
+
+
+def show_view(win: MainWindow, title: str, view: str | None) -> None:
+    """`title` with its `view` shown (PAGE_VIEWS); None, the view it opens on. Training's are its Datasets tab, as a
+    click on the tab shows it, Freeze Dataset…'s sheet for the version after the workspace's, the Split sheet on the
+    workspace's version, opened as Split and Lock Validation Set… opens it on a version not split (that one is, with no
+    validation file, so the sheet is opened for it directly) with seed 7, and the blind labelling
+    panel on its first image, the board model's images standing in for a calibration set of 100 (the workspace holds
+    fewer): Stop closes it, the status line saying so until the next page clears it, and with None the focus is
+    cleared, as Training opens with none, so the pages after render alike.
+    Settings' are Restore Key…, Move Board Model In… and Shred Store… on the store the screenshot workspace's version
+    is in."""
+    from PySide6.QtWidgets import QApplication
+
+    page: Any = win.pages[title]
+    if title == "Training":
+        if view == "blind":
+            samples = page.ctx.samples(page.board_model)
+            page.open_blind("", [s["uuid"] for s in samples], {s["uuid"]: str(s["path"]) for s in samples})
+            wait_until(lambda: page.blind.shown is not None and page.blind._reading is None)
+        else:
+            page._stop_blind()
+        page.working.sheet.close_sheet()
+        page.versions.split.close_sheet()
+        page.tabs.setCurrentIndex(0 if view is None else 1)
+        if view == "freeze":
+            page.working.open_sheet()
+        if view == "split":
+            version = page.versions.rows[0]
+            page.versions.split.open_for(version, page.versions.counts[version["uuid"]])
+            page.versions.split.seed.setText(str(DATASET_SEED))  # not a random one, so a render does not change
+        if view is None and (focus := QApplication.focusWidget()) is not None:
+            focus.clearFocus()
+    if title == "Settings":
+        page.stores.close_sheet()
+        steps = {"restore": page.stores.btn_restore, "move-in": page.stores.btn_move, "shred": page.stores.btn_shred}
+        if view is not None:
+            steps[view].click()
+        elif (focus := QApplication.focusWidget()) is not None:
+            focus.clearFocus()
 
 
 def render_stored(win: Any, ctx: AppContext, out: Path) -> dict[str, Path]:
@@ -369,6 +420,13 @@ def render_pages(
             name = f"{slug(title)}-{role.lower()}"
             files[name] = out / f"{name}.png"
             assert win.grab().save(str(files[name])), files[name]
+            for view in PAGE_VIEWS.get(title, ()):
+                show_view(win, title, view)
+                QApplication.processEvents()
+                name = f"{slug(title)}-{view}-{role.lower()}"
+                files[name] = out / f"{name}.png"
+                assert win.grab().save(str(files[name])), files[name]
+            show_view(win, title, None)
     files.update(render_stored(win, ctx, out))
     win.close()
     return files

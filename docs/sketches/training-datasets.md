@@ -69,6 +69,35 @@ tab." with [Open Samples ›].
 | AOI-TRN-023 | The manifest does not match | n files changed or missing since the freeze | The version is marked; train from another version; Copy Details lists the files |
 | AOI-TRN-024 | The dataset cannot be frozen | No customer set | Pick the customer |
 | AOI-TRN-025 | The dataset store cannot be opened | Encrypted store key missing or wrong | Check the station's key in Settings (Admin); details in the log |
+| AOI-TRN-044 | The dataset store was not changed | The reason names it: no such store, a board model in another store, a key the key store refused, a file that would not go | Do what the reason says, then try again |
+
+## Built (Datasets stage 4 of 4)
+
+Training › Datasets builds the working set, the Freeze sheet, the Versions table, the Split sheet, Verify Manifest and
+Export Manifest… as drawn, with these differences. Freeze Dataset… and Lock are plain, not blue: Start Training stays
+the page's one blue primary. The Split sheet counts the version's NG by defect type and the share of all NG the
+validation set takes; the draw per type depends on the seed and earlier splits, which only the lock works out.
+AOI-TRN-023 names the files changed or missing under the table, the first five and a count of the rest, in place of Copy
+Details, and its mark, the Manifest cell, lasts the session, as Verify Manifest stores nothing. Open Version is not
+built yet.
+
+## Dataset stores (S38 builds the calls; the Datasets stage, 3 of 4, builds the screens)
+
+Settings › Dataset stores, Admin only. A table of the stores: customer, key id (first 8 hex digits), created, board
+models, shredded on. Actions, each an inline sheet, never a dialog over a dialog:
+
+- **New Store…**: the customer (F). On Create the sheet shows the recovery sheet (52 characters in 13 groups of
+  four, the store UUID and key id) with Print Sheet…; Close enables once "I have printed it and will keep it apart
+  from the station" is ticked, since the sheet is never shown again.
+- **Restore Key…**: the 13 groups typed (any case, spaces or hyphens); a wrong sheet says to check each group.
+- **Move Board Model In…**: a board model in no store; progress over 10 s with the file count; a move that stopped is
+  finished by the same button, which then reads Finish Moving In. As built, the store's own board models are listed
+  too, each as "(finish moving in)", since knowing which move stopped would read every file.
+- **Shred Store…**: red, never the primary. The sheet names the customer, the board models and the file and AI model
+  counts, says the step cannot be undone and that the sheet's holder destroys the sheet, and enables Shred once the
+  customer's name is typed.
+
+Open for Jay: whether the store is picked at a board model's first import (ADR 0010, As built in S38).
 
 ## Requirements served
 
@@ -84,7 +113,7 @@ glossary (Validation, Board model, Master sample is not used here); sizes; every
 
 - Q37: `<REV>` is the board revision entered with the board model ("R3"). Reason: The Charter's glossary: a board model is one PCB design and revision ("TBOX-A1 rev 3").
 - Q39: Nobody unlocks a validation set; a new split needs a new dataset version. Reason: S36: locking is audited and cannot be undone (the sketch's Admin unlock and AOI-TRN-026 are removed).
-- Q40: A per-station key in Windows Credential Manager is the direction for S37's design record (ADR 0010, the next free number: 0006 is S28's, 0007 the Windows build's (#283), 0008 S30's and 0009 S32 to S35's). Reason: Keeps the key off the workspace disk with no new dependency; S37's ADR decides the details.
+- Q40: [ADR 0010](../adr/0010-customer-dataset-encryption.md) decides: one key per customer store (not per station), in Windows Credential Manager, with AES-256-GCM from the `cryptography` package (a new dependency). Reason: One customer's data can then be shredded alone, and a cipher binding of our own would cost more to trust than three permissive packages.
 
 Still for Jay: Q38, the allowed uses. The three check boxes (default: their own AI models only) stand in until Jay
 names the uses the customer contracts allow; that is a contract term, not a screen decision.
