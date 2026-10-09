@@ -39,7 +39,7 @@ from PySide6.QtWidgets import (
 from ... import defects as taxonomy
 from ...core.explain import explain
 from ...core.imaging import IMAGE_EXTS
-from ...core.inspector import Check, InspectionResult
+from ...core.inspector import Check, InspectionResult, ai_check
 from ...core.recipe import Recipe
 from ...core.services import ROLES_FROM, AppContext, ErrorReport, Judged
 from ...core.views import ai_view, difference_view
@@ -214,15 +214,12 @@ class ComparePage(Page):
         self.why = QTextEdit()
         self.why.setReadOnly(True)
         self.why.setMaximumHeight(150)
+        self.why.setMinimumHeight(theme.WHY_MIN_H)  # at 1600 x 900 the panel is too short for all of it at full height
         pl.addWidget(self.why)
 
         self.tryout = QGroupBox(self.tr("Try other thresholds (nothing is saved until you press Save to Recipe)"))
         f = QFormLayout(self.tryout)
-        self.ai_thr = QDoubleSpinBox()
-        self.ai_thr.setDecimals(3)
-        self.ai_thr.setRange(0, 1e4)
-        self.ai_thr.setSpecialValueText(self.tr("AI model default"))
-        self.ai_thr.setSingleStep(0.1)
+        self.ai_thr = self.ai_threshold_field()
         self.diff_thr = QSpinBox()
         self.diff_thr.setRange(1, 255)
         self.min_area = QSpinBox()
@@ -233,12 +230,14 @@ class ComparePage(Page):
         self.max_regions = QSpinBox()
         self.max_regions.setRange(0, 1000)
         f.addRow(self.tr("AI score threshold"), self.ai_thr)
+        f.addRow(self.ai_thr.note)  # why no calibrated value is named, as wide as the panel
         f.addRow(self.tr("Pixel difference (0-255)"), self.diff_thr)
         f.addRow(self.tr("Minimum defect area (px)"), self.min_area)
         f.addRow(self.tr("Similarity minimum (SSIM)"), self.ssim_min)
         f.addRow(self.tr("Allowed difference regions"), self.max_regions)
-        for field in (self.ai_thr, self.diff_thr, self.min_area, self.ssim_min, self.max_regions):
-            field.valueChanged.connect(self._drop_tried)  # what was tried no longer applies
+        self.ai_thr.changed.connect(self._drop_tried)  # what was tried no longer applies
+        for field in (self.diff_thr, self.min_area, self.ssim_min, self.max_regions):
+            field.valueChanged.connect(self._drop_tried)
         row = QHBoxLayout()
         self.would_be = QLabel()  # "Would be: ▲ WARN" beside Re-evaluate once a stored result is judged again (sketch)
         self.would_be.hide()
@@ -304,17 +303,27 @@ class ComparePage(Page):
             return
         rev, r = self.ctx.recipe(self.board_model)
         self.form_revision = (self.board_model, rev)  # on_show loads the form again once another revision is saved
-        self.ai_thr.setValue(r.anomaly_threshold or 0)
+        self.ai_thr.set_override(r.anomaly_threshold)
         self.diff_thr.setValue(r.diff_threshold)
         self.min_area.setValue(r.min_defect_area)
         self.ssim_min.setValue(r.ssim_min)
         self.max_regions.setValue(r.max_diff_regions)
 
+    def _show_calibration(self) -> None:
+        """The calibrated value the AI score threshold names (REQ-TRN-015): on a stored result, that of the AI model
+        that judged it, which Re-evaluate applies (ADR 0006 decision 2); else the active AI model's, which judges a
+        board inspected here, also on a stored result judged with the AI check off, whose record names the AI model
+        active then, which judged nothing (#246)."""
+        if self.stored is not None and self.stored["model_uuid"] and ai_check(self.res) == "RAN":
+            self.show_calibrated(self.ai_thr, self.stored["board_model"], self.stored["model_uuid"])
+        else:
+            self.show_calibrated(self.ai_thr, self.board_model)
+
     def _form_recipe(self, board_model: str) -> Recipe:
         """The board model's recipe with the thresholds from the form."""
         _, r = self.ctx.recipe(board_model)
         r = copy.deepcopy(r)
-        r.anomaly_threshold = self.ai_thr.value() or None
+        r.anomaly_threshold = self.ai_thr.override()
         r.diff_threshold = self.diff_thr.value()
         r.min_defect_area = self.min_area.value()
         r.ssim_min = self.ssim_min.value()
@@ -377,6 +386,7 @@ class ComparePage(Page):
             return
         self._drop_tried()
         self.stored = None  # a fresh inspection with the form's thresholds, not a stored result
+        self._show_calibration()
         self.note.hide()
         if self.test_path:
             self.test_label.setText(self.tr("Test board: {file}").format(file=breakable(Path(self.test_path).name)))
@@ -558,6 +568,7 @@ class ComparePage(Page):
         name = breakable(Path(rec["image_path"]).name)  # the labels over the pictures wrap a long name (#245)
         self.test_label.setText(self.tr("Test board: {file} (stored result)").format(file=name))
         self._show_result(res)
+        self._show_calibration()
         self._show_note(rec)
         self.run_in_background(self._load_stored, rec, inspection_id, on_result=self._on_stored_loaded)
 
@@ -819,3 +830,4 @@ class ComparePage(Page):
             self.test_empty.show_state(self.tr("No board to compare yet"), *step)
         if self.board_model and self.form_revision != (self.board_model, self.ctx.recipe(self.board_model)[0]):
             self._load_recipe_into_form()  # a revision saved since, on Recipe Editor: Save to Recipe never reverts it
+        self._show_calibration()  # an AI model trained or activated since: its value

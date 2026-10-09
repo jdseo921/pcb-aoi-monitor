@@ -75,7 +75,7 @@ def _pass_every_check(compare: ComparePage) -> None:
     """Thresholds no check of the NG board fails: no pixel differs enough, any similarity, AI score threshold 500."""
     compare.diff_thr.setValue(255)
     compare.ssim_min.setValue(0.0)
-    compare.ai_thr.setValue(500.0)
+    compare.ai_thr.set_override(500.0)
 
 
 def _walk(win: MainWindow, widgets: list[QWidget]) -> tuple[list[str], Counter[str]]:
