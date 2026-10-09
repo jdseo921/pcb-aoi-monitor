@@ -193,6 +193,7 @@ class ModelTestPage(Page):
         hl.addWidget(self.history, 1)
         row = QHBoxLayout()
         row.addWidget(button(self.tr("Open"), slot=self.open_run))
+        row.addWidget(button(self.tr("Validation Report…"), slot=self.validation_report))
         row.addStretch(1)
         hl.addLayout(row)
         self._runs: list[dict[str, Any]] = []
@@ -229,6 +230,150 @@ class ModelTestPage(Page):
         source = str(run["folder"])
         self._show((run["metrics"], run["results"], run["judged_by"]), source, bm)
         self.tabs.setCurrentIndex(0)
+
+    def validation_report(self) -> None:
+        """The customer validation report of the run selected on History (REQ-TST-008): its data read on the pool,
+        then the PDF rendered here and written, whole and audited, by the service layer. A run on a folder, or a board
+        model with no labeller agreement check, is refused with AOI-TST-007."""
+        sel = self.history.selectionModel().selectedRows()
+        if not sel or (bm := self.board_model) is None:
+            return
+        run_uuid = self._runs[sel[0].row()]["uuid"]
+        f, _ = QFileDialog.getSaveFileName(
+            self,
+            self.tr("Validation report"),
+            str(self.ctx.settings.exports_dir / "validation_report.pdf"),
+            self.tr("PDF (*.pdf)"),
+        )
+        if not f:
+            return
+        self.run_in_background(
+            self.ctx.validation_report_data, run_uuid, on_result=lambda data: self._write_validation(f, bm, data)
+        )
+
+    def _write_validation(self, f: str, board_model: str, data: dict[str, Any]) -> None:
+        doc = QTextDocument()
+        doc.setHtml(self._validation_html(data))
+        buf = QBuffer()
+        buf.open(QIODevice.OpenModeFlag.WriteOnly)
+        w = QPdfWriter(buf)
+        margins = QMarginsF(15, 15, 15, 15)
+        w.setPageLayout(QPageLayout(QPageSize(QPageSize.PageSizeId.A4), QPageLayout.Orientation.Portrait, margins))
+        doc.print_(w)
+        del w
+        run = data["run"]
+        try:
+            self.ctx.export_report(f, bytes(buf.data().data()), board_model, run["uuid"], run["model_version"])
+        except AoiError as e:
+            self.error(e)
+            return
+        self.shell.status(self.tr("Validation report saved: {file}").format(file=f))
+
+    def _validation_html(self, data: dict[str, Any]) -> str:
+        """The customer validation report: data, targets agreed before testing beside the results, the locked set,
+        results with counts and bounds, one page per missed defect and false call, the AI model card, known limits and
+        signature lines for the customer and the AI lead (Customers & Launch, "Validation"). English first; each
+        heading carries its Korean draft for native review."""
+        run, ds, split, agree = data["run"], data["dataset"], data["split"] or {}, data["agreement"]
+        e = html.escape
+        out = [f"<h2>{self.tr('Customer validation report / 고객 검증 보고서 (draft)')}</h2>"]
+        top = self.tr("Board model {board_model} · AI model {version} · validation run {run} · {date}")
+        version = run["model_version"] or "-"
+        top = top.format(board_model=run["board_model"], version=version, run=run["uuid"], date=to_local(run["time"]))
+        out.append(f"<p>{e(top)}</p>")
+        out.append(f"<h3>{self.tr('1. Data / 데이터 (draft)')}</h3>")
+        data_line = self.tr(
+            "Dataset version {name} of {customer}, revision {revision}, view {view}, frozen {frozen}; one camera"
+            " set-up."
+        )
+        frozen = to_local(ds["frozen_at"])
+        dataset = {k: ds[k] for k in ("name", "customer", "revision", "view")}
+        out.append(f"<p>{e(data_line.format(**dataset, frozen=frozen))}</p>")
+        counts = "".join(f"<tr><td>{e(k)}</td><td>{v}</td></tr>" for k, v in data["counts"].items())
+        out.append(f"<table border=1 cellpadding=3 cellspacing=0>{counts}</table>")
+        agree_line = self.tr(
+            "Labeller agreement check: OK or NG agree on {ok_ng} of {images} images (target {ok_target} %), defect type"
+            " on {types} of {ng} NG images (target {type_target} %)."
+        )
+        agreed_on = agree_line.format(
+            ok_ng=agree["ok_ng_agree"],
+            images=agree["images"],
+            ok_target=agree["ok_ng_target"],
+            types=agree["type_agree"],
+            ng=agree["both_ng"],
+            type_target=agree["type_target"],
+        )
+        out.append(f"<p>{e(agreed_on)}</p>")
+        out.append(f"<h3>{self.tr('2. Targets agreed before testing / 사전 합의 목표 (draft)')}</h3>")
+        names = {
+            "missed_critical": self.tr("Missed Critical defects"),
+            "false_call_rate": self.tr("False call rate"),
+            "seconds_per_image": self.tr("Time per image, 95th percentile"),
+        }
+        rows = []
+        for tg in data["targets"]:
+            result = tg["result"]
+            if isinstance(result, dict):
+                shown = phrase_text(stats.text(result))
+            elif result is not None:
+                shown = self.tr("{s:.2f} s").format(s=result)
+            else:
+                shown = self.tr("not measured")
+            agreed = f"{tg['agreed']:.0%}" if tg["target"] == "false_call_rate" else str(tg["agreed"])
+            met = self.tr("Met") if tg["met"] else self.tr("Not met")
+            rows.append(f"<tr><td>{names[tg['target']]}</td><td>{e(agreed)}</td><td>{e(shown)}</td><td>{met}</td></tr>")
+        head = (
+            f"<tr><th>{self.tr('Target')}</th><th>{self.tr('Agreed')}</th><th>{self.tr('Result')}</th>"
+            f"<th>{self.tr('Met?')}</th></tr>"
+        )
+        out.append(f"<table border=1 cellpadding=3 cellspacing=0>{head}{''.join(rows)}</table>")
+        out.append(f"<h3>{self.tr('3. Locked validation set / 잠긴 검증 세트 (draft)')}</h3>")
+        locked = to_local(split["locked_at"]) if split.get("locked_at") else "-"
+        set_line = self.tr("Manifest SHA-256 {sha}; split with seed {seed}, locked {at}; never trained on.")
+        out.append(f"<p>{e(set_line.format(sha=ds['manifest_sha256'], seed=split.get('seed', '-'), at=locked))}</p>")
+        out.append(f"<h3>{self.tr('4. Results / 결과 (draft)')}</h3>")
+        rates = data["rates"]
+        labels = {
+            "missed_defects": self.tr("Missed defects"),
+            "false_calls": self.tr("False calls"),
+            "recall": self.tr("Recall"),
+            "precision": self.tr("Precision"),
+            "accuracy": self.tr("Accuracy"),
+        }
+        res = "".join(
+            f"<tr><td>{v}</td><td>{e(phrase_text(stats.text(rates[k])))}</td></tr>" for k, v in labels.items()
+        )
+        out.append(f"<table border=1 cellpadding=3 cellspacing=0>{res}</table>")
+        out.append(self._report_per_type(rates))
+        misses, false_calls = reporting.misses_and_false_calls(run["results"])
+        row_line = self.tr("{image}: labelled {label}, judged {verdict}, AI score {score}")
+        for heading, items in ((self.tr("Missed defect"), misses), (self.tr("False call"), false_calls)):
+            for r in items:
+                verdict = theme.verdict_label(r["ai_result"])
+                line = row_line.format(image=e(Path(r["image"]).name), label=r["gt"], verdict=verdict, score=r["score"])
+                uri = data["images"].get(str(r["image"]))
+                picture = f"<br><img src='{uri}'>" if uri else f"<br>{self.tr('(its overlay is not kept)')}"
+                out.append(f"<div style='page-break-before:always'><h3>{heading}</h3><p>{line}{picture}</p></div>")
+        card_head = self.tr("5. AI model card / AI 모델 카드 (draft)")
+        card = f"<pre>{e(data['card'])}</pre>" if data["card"] else f"<p>{self.tr('No AI model card.')}</p>"
+        out.append(f"<div style='page-break-before:always'><h3>{card_head}</h3>{card}</div>")
+        out.append(f"<h3>{self.tr('6. Known limits / 알려진 한계 (draft)')}</h3><ul>")
+        for limit in (
+            self.tr("Counts on this validation set only: the bounds say how far the true rates may lie."),
+            self.tr("Until sign-in ships at release 1.0, the names in the audit trail are picked, not signed in."),
+            self.tr("Valid for the board model, view, camera set-up and AI model named above only."),
+        ):
+            out.append(f"<li>{e(limit)}</li>")
+        out.append(f"</ul><h3>{self.tr('7. Sign-off / 서명 (draft)')}</h3>")
+        sign = "".join(
+            f"<tr><td>{who}</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>"
+            for who in (self.tr("Customer"), self.tr("AI lead"))
+        )
+        heads = "".join(
+            f"<th>{h}</th>" for h in (self.tr("Role"), self.tr("Name"), self.tr("Date"), self.tr("Signature"))
+        )
+        out.append(f"<table border=1 cellpadding=8 cellspacing=0><tr>{heads}</tr>{sign}</table>")
+        return "".join(out)
 
     def _fill_sources(self) -> None:
         """The board model's frozen versions whose validation set is locked, newest first and picked, then a labelled
