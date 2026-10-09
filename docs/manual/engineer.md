@@ -187,7 +187,8 @@ it is sorted. By keys alone: **D** presses Draw Box and puts the focus on the im
 pixels a side on screen at the middle of the image shown; the arrow keys move the selected box by 1 pixel, 10 with
 Shift, and with Ctrl move its bottom right corner; keys pressed one after another are saved once, half a second after
 the last. **Esc** leaves Draw mode. Tab moves between the image, the Type list and the Boxes list, where the up and
-down arrows select a box.
+down arrows select a box. With no wheel, **Zoom In** and **Zoom Out** under the image and **Fit** beside Draw Box, or
+the keys +, - and 0, zoom it by a click, a tap or a key; **Z** zooms to the selected box.
 
 **A second user checks each label.** The labels of a board model and view are ready to freeze into a dataset only
 once a second Engineer or Admin has checked every NG label and OK labels drawn at random, 10 % of them rounded up; the
@@ -224,8 +225,7 @@ cannot be recovered from the workspace, so back the workspace up. Verifying a ve
 again and lists each file that changed or is missing since the freeze; train from another version when one did. No
 screen freezes or verifies a version yet.
 
-(to be written: the label editor and UNSURE on the Samples tab, the check and the blind labels on screen, the Datasets
-tab, locking the validation set)
+(to be written: the check and the blind labels on screen, the Datasets tab, locking the validation set)
 
 ## 4. Training and AI model versions
 

@@ -12,7 +12,7 @@ from dataclasses import replace
 
 from PySide6.QtCore import QEvent, QPoint, QPointF, QRectF, Qt, QTimer, Signal
 from PySide6.QtGui import QBrush, QColor, QFocusEvent, QKeyEvent, QMouseEvent, QPen, QTransform
-from PySide6.QtWidgets import QGraphicsItem, QGraphicsRectItem, QWidget
+from PySide6.QtWidgets import QGraphicsItem, QGraphicsRectItem, QGraphicsView, QWidget
 
 from ...core.labels import DefectBox
 from ...defects import BY_NAME, names
@@ -92,6 +92,21 @@ class BoxEditor(ImageView):
         self._burst.stop()
         self.chosen = chosen if 0 <= chosen < len(self.boxes) else -1
         self.redraw()
+
+    def zoom(self, factor: float) -> None:
+        """Zoom by `factor` about the middle of the view: the Zoom In and Zoom Out buttons and keys, for a hand with no
+        wheel (the wheel zooms about the pointer)."""
+        self.setTransformationAnchor(QGraphicsView.ViewportAnchor.AnchorViewCenter)
+        self.scale(factor, factor)
+        self.setTransformationAnchor(QGraphicsView.ViewportAnchor.AnchorUnderMouse)
+        self._emit_changed()
+
+    def zoom_to_box(self) -> None:
+        """The selected box, with its own width and height again around it, filling the view."""
+        if self.chosen >= 0:
+            b = self.boxes[self.chosen]
+            self.center_on_box(b.x, b.y, b.w, b.h)
+            self._emit_changed()
 
     def choose(self, chosen: int) -> None:
         """Select box `chosen` (-1: none) and say so with `picked`."""
