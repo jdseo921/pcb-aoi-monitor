@@ -2092,7 +2092,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/training.py" line="+351"/>
+        <location filename="../ui/pages/training.py" line="+367"/>
         <location filename="../ui/pages/training_import.py" line="+38"/>
         <source>{code} {title}</source>
         <translation type="unfinished"></translation>
@@ -3320,7 +3320,7 @@
 <context>
     <name>NgDialog</name>
     <message>
-        <location filename="../ui/pages/training.py" line="-271"/>
+        <location filename="../ui/pages/training.py" line="-287"/>
         <source>Label NG images</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4118,17 +4118,17 @@
     </message>
     <message>
         <location line="+1"/>
-        <location line="+424"/>
+        <location line="+452"/>
         <source>Import Folder…</source>
         <translation>폴더 가져오기…</translation>
     </message>
     <message>
-        <location line="-416"/>
+        <location line="-444"/>
         <source>Tip: 20+ OK images give a steadier threshold</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+8"/>
+        <location line="+10"/>
         <location line="+52"/>
         <source>ID</source>
         <translation type="unfinished"></translation>
@@ -4175,12 +4175,12 @@
     </message>
     <message>
         <location line="+1"/>
-        <location line="+280"/>
+        <location line="+306"/>
         <source>Remove</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-275"/>
+        <location line="-301"/>
         <source>Select a sample to preview</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4275,7 +4275,7 @@
         <translation>{folder}와(과) 그 하위 폴더에 이미지가 없어 가져올 것이 없습니다</translation>
     </message>
     <message>
-        <location line="+99"/>
+        <location line="+116"/>
         <source>Imported {ok} OK and {ng} NG images into {board_model}</source>
         <translation>OK 이미지 {ok}개와 NG 이미지 {ng}개를 {board_model}(으)로 가져왔습니다</translation>
     </message>
@@ -4290,12 +4290,17 @@
         <translation>OK 이미지 {ok}개와 NG 이미지 {ng}개를 {board_model}(으)로 가져왔습니다. {refused}개는 가져오지 않았습니다</translation>
     </message>
     <message>
-        <location line="+20"/>
+        <location line="+12"/>
+        <source>Import into {board_model} stopped at {file}: see the alarm list</source>
+        <translation>{board_model}(으)로 가져오기가 {file}에서 멈췄습니다: 알람 목록을 보세요</translation>
+    </message>
+    <message>
+        <location line="+15"/>
         <source>Import cancelled: {ok} OK and {ng} NG images imported into {board_model} before it stopped</source>
         <translation>가져오기 취소됨: 멈추기 전에 OK 이미지 {ok}개와 NG 이미지 {ng}개를 {board_model}(으)로 가져왔습니다</translation>
     </message>
     <message>
-        <location line="+52"/>
+        <location line="+54"/>
         <source>Reference image set: inspections compare against it now, until training learns a Golden board</source>
         <translation type="unfinished"></translation>
     </message>

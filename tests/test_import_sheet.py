@@ -304,3 +304,86 @@ def test_req_trn_001_the_sheet_imports_into_the_board_model_it_was_opened_for(
     page.import_from(str(folder / "none"))
     assert not page.sheet.isVisible()
     assert win.statusBar().currentMessage() == f"No images in {folder / 'none'} or its sub-folders: nothing to import"
+
+
+def test_req_trn_001_a_sign_in_closes_the_sheet_the_user_before_left(
+    qtbot: QtBot, ctx: AppContext, synthetic_dataset: Path, tmp_path: Path, dialogs: list[tuple[str, str]]
+) -> None:
+    """The review's probe: a sheet left with its list (an unlabelled file not imported) closes at the next sign-in,
+    and the status line no longer points at the list, so an Engineer who signs in after an Operator never finds the
+    sheet the Engineer before left, nor imports its files under their own name. An import that runs at a sign-in goes
+    on as the user who started it, and its sheet closes once it ends (test_acting_user)."""
+    folder = tmp_path / "src"
+    oks = list_images(synthetic_dataset / "train" / "ok")[:2]
+    for src, name in zip(oks, ("ok/a.png", "loose/e.png"), strict=True):
+        (folder / name).parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy(src, folder / name)
+    ctx.ensure_board_model("A")
+    ctx.db.add_user("lee", "Engineer")
+    win = MainWindow(ctx)
+    qtbot.addWidget(win)
+    win.show()
+    win.set_user("engineer")
+    win._reload_board_models("A")
+    win.navigate("Training")
+    page = win.pages["Training"]
+    sheet = page.sheet
+    page.import_from(str(folder))
+    sheet.btn_import.click()
+    qtbot.waitUntil(lambda: page._bg is None, timeout=30000)
+    assert sheet.isVisible() and sheet.reported and sheet.btn_cancel.text() == "Close", "the list, left as it was"
+    win.set_user("operator")
+    assert sheet.isHidden() and page.btn_train.objectName() == "primary" and not sheet.btn_import.objectName()
+    assert win.statusBar().currentMessage() == "Imported 1 OK and 0 NG images into A; 1 not imported", "no list"
+    win.set_user("lee")
+    assert win.navigate("Training") and sheet.isHidden(), "lee finds no sheet to import from"
+    assert [Path(r["path"]).name[0] for r in ctx.samples("A")] == ["a"] and not dialogs
+
+
+def test_req_trn_001_an_import_stopped_after_its_user_signed_out_opens_no_dialog(
+    qtbot: QtBot, ctx: AppContext, synthetic_dataset: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+    dialogs: list[tuple[str, str]],
+) -> None:  # fmt: skip
+    """The coordinator's decision on the review's third round: an import the workspace stops at a file after the user
+    who pressed Import has signed out opens no dialog for whoever is signed in now; its error is logged and alarmed, as
+    for an import cancelled (#206), and the status line names the board model and the file. The user who pressed
+    Import, signed in again by then, gets the dialog."""
+    folder = tmp_path / "src"
+    for src, name in zip(list_images(synthetic_dataset / "train" / "ok")[:2], ("ok/a.png", "ok/b.png"), strict=True):
+        (folder / name).parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy(src, folder / name)
+    ctx.ensure_board_model("A")
+    reached, go = threading.Event(), threading.Event()
+    copy = atomic.copy_file
+
+    def held(src: str | Path, dst: str | Path) -> None:
+        if Path(src).name == "b.png":  # held, then refused by the workspace
+            reached.set()
+            assert go.wait(30)
+            raise PermissionError(errno.EACCES, "Permission denied", str(dst))
+        copy(src, dst)
+
+    monkeypatch.setattr(atomic, "copy_file", held)
+    win = MainWindow(ctx)
+    qtbot.addWidget(win)
+    win.show()
+    page = win.pages["Training"]
+    for users in (["operator"], ["operator", "engineer"]):
+        reached.clear()
+        go.clear()
+        win.set_user("engineer")
+        win._reload_board_models("A")
+        assert win.navigate("Training")
+        page.import_from(str(folder))
+        page.sheet.btn_import.click()
+        assert reached.wait(30)
+        for user in users:
+            win.set_user(user)
+        go.set()
+        qtbot.waitUntil(lambda: page._bg is None, timeout=30000)
+        assert page.sheet.isHidden()
+        if users == ["operator"]:
+            assert not dialogs and [(a["level"], a["code"]) for a in ctx.alarms()] == [("ERROR", "AOI-TRN-009")]
+            assert win.statusBar().currentMessage() == "Import into A stopped at b.png: see the alarm list"
+    assert [title for title, _ in dialogs] == ["AOI-TRN-009 Import stopped part-way"], "the user who pressed Import"
+    assert [a["code"] for a in ctx.alarms()] == ["AOI-TRN-009", "AOI-TRN-009"]
