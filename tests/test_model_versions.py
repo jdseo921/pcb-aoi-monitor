@@ -14,6 +14,7 @@ from aoi.core.imaging import list_images
 from aoi.core.services import AppContext
 from aoi.data.paths import resolve, to_stored
 from aoi.errors import AoiError
+from tests.conftest import activated
 from tests.test_train_from_version import BOARD, boards, oks
 from tools.trainable import trainable
 
@@ -21,9 +22,9 @@ from tools.trainable import trainable
 def two_versions(ctx: AppContext, synthetic_dataset: Path) -> tuple[dict[str, Any], dict[str, Any]]:
     """v1.0 trained from 21 OK boards and v1.1 from 26, each with its own Golden board; v1.1 is active."""
     boards(ctx, synthetic_dataset, 21)
-    ctx.train(trainable(ctx, BOARD), epochs=1, image_size=32)
+    activated(ctx, ctx.train(trainable(ctx, BOARD), epochs=1, image_size=32))
     ctx.import_samples(BOARD, oks(synthetic_dataset)[21:26], "OK")
-    ctx.train(trainable(ctx, BOARD), epochs=1, image_size=32)
+    activated(ctx, ctx.train(trainable(ctx, BOARD), epochs=1, image_size=32))
     new, old = ctx.models(BOARD)  # newest first
     return old, new
 
@@ -59,7 +60,7 @@ def test_req_trn_010_activation_audited(ctx: AppContext, synthetic_dataset: Path
     ctx.activate_model(int(old["id"]))
     assert ctx.active_model(BOARD)["version"] == old["version"]  # type: ignore[index]
     assert Path(ctx.reference_image(BOARD) or "") == golden_of(ctx, old)
-    [entry] = ctx.audit_entries(action="model.activate")
+    entry = ctx.audit_entries(action="model.activate")[0]  # newest first; each training's version was activated too
     assert (entry["before"]["active_version"], entry["after"]["active_version"]) == (new["version"], old["version"])
     assert entry["after"]["reference"] == to_stored(golden_of(ctx, old), ctx.settings.root)
 
@@ -81,12 +82,12 @@ def test_req_trn_010_refusals_change_nothing(ctx: AppContext, synthetic_dataset:
     """Roll Back with no earlier active version, and Activate of a version whose Golden board cannot be read, are
     refused with AOI-TRN-048; the active version, the Golden board and the audit trail stay as they were."""
     boards(ctx, synthetic_dataset, 21)
-    ctx.train(trainable(ctx, BOARD), epochs=1, image_size=32)
+    activated(ctx, ctx.train(trainable(ctx, BOARD), epochs=1, image_size=32))
     with pytest.raises(AoiError) as e:
         ctx.rollback_model(BOARD)
     assert e.value.code == "AOI-TRN-048" and "no earlier version of this board model was active" in e.value.what
     ctx.import_samples(BOARD, oks(synthetic_dataset)[21:26], "OK")
-    ctx.train(trainable(ctx, BOARD), epochs=1, image_size=32)
+    activated(ctx, ctx.train(trainable(ctx, BOARD), epochs=1, image_size=32))
     new, old = ctx.models(BOARD)
     golden_of(ctx, old).unlink()
     reference, entries = ctx.reference_image(BOARD), ctx.audit_entries()

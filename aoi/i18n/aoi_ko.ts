@@ -794,7 +794,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+161"/>
+        <location line="+170"/>
         <location line="+1576"/>
         <source>(none)</source>
         <translation type="unfinished"></translation>
@@ -1185,22 +1185,22 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+140"/>
+        <location line="+166"/>
         <source>Exporting an AI model</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+108"/>
+        <location line="+118"/>
         <source>Saving a board image</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-183"/>
+        <location line="-215"/>
         <source>Changing users</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-2276"/>
+        <location line="-2289"/>
         <source>no earlier version of this board model was active</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1225,7 +1225,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+639"/>
+        <location line="+648"/>
         <source>its UUID {found} is not {uuid}, as in the AI model registry</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1260,7 +1260,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+74"/>
+        <location line="+78"/>
         <source>Changing settings</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1270,7 +1270,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+50"/>
+        <location line="+82"/>
         <source>Exporting overlay images</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2334,6 +2334,11 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <location line="+12"/>
+        <source>Train again, so the new version has its card, or activate a version that has one; the active AI model and its Golden board are unchanged.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <location line="+8"/>
         <source>AI model, recipe, scale or Golden board changed since the run</source>
         <translation type="unfinished"></translation>
@@ -2739,7 +2744,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1016"/>
+        <location line="-1028"/>
         <source>Board judged NG</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2839,7 +2844,17 @@
         <translation>새 버전을 고정하고 검증 세트를 잠그면 해당 이미지는 잠긴 채로 유지됩니다. 그 버전으로 학습하십시오. 아무것도 저장되지 않았으며, 활성 AI 모델은 바뀌지 않았습니다.</translation>
     </message>
     <message>
-        <location line="+84"/>
+        <location line="+55"/>
+        <source>Activation refused: no AI model card</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>AI model {version} of board model {board} was not made active: it has no AI model card.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+40"/>
         <source>ROI thresholds refused</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3004,7 +3019,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/training.py" line="+513"/>
+        <location filename="../ui/pages/training.py" line="+524"/>
         <location filename="../ui/pages/training_import.py" line="+38"/>
         <source>{code} {title}</source>
         <translation type="unfinished"></translation>
@@ -4674,7 +4689,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/training.py" line="-364"/>
+        <location filename="../ui/pages/training.py" line="-375"/>
         <source>Training</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5627,7 +5642,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/services.py" line="-2458"/>
+        <location filename="../core/services.py" line="-2503"/>
         <source>Aligning {count} images to the reference board</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5676,12 +5691,12 @@
     </message>
     <message>
         <location line="+1"/>
-        <location line="+590"/>
+        <location line="+601"/>
         <source>Import Folder…</source>
         <translation>폴더 가져오기…</translation>
     </message>
     <message>
-        <location line="-578"/>
+        <location line="-589"/>
         <source>Training needs 20 OK images or more in a dataset version&apos;s training set</source>
         <translation>학습에는 데이터셋 버전의 학습 세트에 OK 이미지가 20장 이상 필요합니다</translation>
     </message>
@@ -5748,12 +5763,12 @@
     </message>
     <message>
         <location line="+3"/>
-        <location line="+450"/>
+        <location line="+461"/>
         <source>Remove</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-441"/>
+        <location line="-452"/>
         <source>Select a sample to preview</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5793,17 +5808,27 @@
         <translation type="unfinished">취소</translation>
     </message>
     <message>
-        <location line="+674"/>
+        <location line="+685"/>
         <source>{phase} · {percent} % · {left}</source>
         <translation>{phase} · {percent} % · {left}</translation>
     </message>
     <message>
-        <location line="+15"/>
+        <location line="+8"/>
+        <source>Saved AI model {version} ({seconds} s) with its Golden board and AI model card.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>AI model {version} trained: select it and press Activate Selected to judge boards with it</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+6"/>
         <source>Cancelled: no AI model was saved; the active AI model is unchanged.</source>
         <translation>취소됨: AI 모델을 저장하지 않았으며 활성 AI 모델은 바뀌지 않았습니다.</translation>
     </message>
     <message>
-        <location line="-673"/>
+        <location line="-685"/>
         <source>AI model versions</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5889,11 +5914,23 @@
     </message>
     <message>
         <location line="+1"/>
+        <location line="+770"/>
+        <location line="+40"/>
+        <source>Roll Back</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="-806"/>
+        <source>AI Model Card</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
         <source>Export AI Model…</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+20"/>
+        <location line="+26"/>
         <source>Samples</source>
         <translation>샘플</translation>
     </message>
@@ -6068,17 +6105,7 @@
         <translation>{type} ×{count}</translation>
     </message>
     <message>
-        <location line="+64"/>
-        <source>Saved AI model {version} ({seconds} s). Golden board updated.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+2"/>
-        <source>AI model {version} trained and activated</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+50"/>
+        <location line="+117"/>
         <source>No frozen dataset version of {board_model} yet; training reads only a frozen version&apos;s training set, once its validation set is locked.</source>
         <translation>{board_model}의 고정된 데이터셋 버전이 아직 없습니다. 학습은 검증 세트가 잠긴 고정 버전의 학습 세트만 읽습니다.</translation>
     </message>
@@ -6093,7 +6120,7 @@
         <translation>검증 세트 잠김 ✓ {val_ok} OK / {val_ng} NG · 학습 세트 {ok} OK, {ng} NG · NG는 보정에만 사용</translation>
     </message>
     <message>
-        <location line="+22"/>
+        <location line="+40"/>
         <source>Export AI model</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6103,7 +6130,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-280"/>
+        <location line="-299"/>
         <source>Add at least 20 OK boards with Add OK Images… or Import Folder…</source>
         <translation>OK 이미지 추가… 또는 폴더 가져오기…로 OK 보드를 20개 이상 추가하세요</translation>
     </message>
@@ -6113,7 +6140,17 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+308"/>
+        <location line="+278"/>
+        <source>Rolled back to AI model {version}</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+10"/>
+        <source>AI model {version} has no AI model card: train again to make a version that has one.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+42"/>
         <source>none</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6123,7 +6160,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+24"/>
+        <location line="+18"/>
+        <source>Roll Back to {version}</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+11"/>
         <source>No AI model yet</source>
         <translation type="unfinished"></translation>
     </message>

@@ -29,7 +29,7 @@ from PySide6.QtTest import QTest  # noqa: E402
 from PySide6.QtWidgets import QMessageBox, QWidget  # noqa: E402
 
 from aoi.config import Settings  # noqa: E402
-from aoi.core import anomaly, crypto  # noqa: E402
+from aoi.core import anomaly, crypto, model_card  # noqa: E402
 from aoi.core.imaging import list_images, load_image  # noqa: E402
 from aoi.core.services import AppContext  # noqa: E402
 from aoi.data import credentials  # noqa: E402
@@ -134,11 +134,19 @@ def tiny_model(tmp_path_factory: pytest.TempPathFactory, synthetic_dataset: Path
     for p in list_images(synthetic_dataset / "train" / "ng"):  # one call each: an NG sample is imported with its type
         ctx.import_samples(board_model, [str(p)], "NG", ng_type(p))
     meta = ctx.train(trainable(ctx, board_model), epochs=TINY_EPOCHS, image_size=TINY_IMAGE_SIZE)
+    ctx.activate_model(int(ctx.models(board_model)[0]["id"]))  # a version installs inactive (REQ-TRN-010, S43)
     loaded = ctx.load_model(board_model)
     assert loaded is not None, "training registered no active model"
     reference = ctx.db.reference(board_model)
     assert reference is not None, "training set no reference image"
     return TrainedModel(ctx, board_model, loaded[0], loaded[1], load_image(reference), meta)
+
+
+def activated(ctx: AppContext, meta: dict[str, Any]) -> dict[str, Any]:
+    """`meta`, of a version training just installed inactive (REQ-TRN-010, S43), once the Engineer has activated it:
+    for a test of what follows an activation, as training did before."""
+    ctx.activate_model(next(int(m["id"]) for m in ctx.models(meta["board_model"]) if m["uuid"] == meta["uuid"]))
+    return meta
 
 
 def another_version(ctx: AppContext, board_model: str, version: str) -> int:
@@ -151,6 +159,8 @@ def another_version(ctx: AppContext, board_model: str, version: str) -> int:
     model.meta.update(version=version, uuid=uid)
     path = Path(active["path"]).with_name(f"{board_model}_{version}_copy.pt")
     model.save(path)
+    for src, dst in zip(model_card.paths(Path(active["path"])), model_card.paths(path), strict=True):
+        shutil.copyfile(src, dst)  # its card, which activation needs (REQ-TRN-011)
     return ctx.db.register_model(board_model, version, str(path), {}, activate=False, uid=uid)
 
 

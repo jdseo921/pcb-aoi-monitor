@@ -384,7 +384,7 @@ Upload OK images (+ optional NG), label, freeze a version, lock its validation s
 4. Normal variation = per-pixel mean/std of reconstruction error on OK boards (summed in float64)
 5. Calibration      = threshold from held-out OK scores (mean+3σ, ≥1.05×max OK);
                       if labelled NG exist and separate cleanly → midpoint between OK and NG
-6. Register version vX.Y in the model registry, activate it                  → *.pt
+6. Register version vX.Y in the model registry, inactive, with its card     → *.pt, *.card.md, *.card.json
 ```
 
 Re-training after more uploads creates a new version; older versions stay selectable (model version control, GUI §6).
@@ -504,8 +504,11 @@ threshold (`anomaly.top_percentile`, numpy's percentile to the bit). Memory ther
 images ([measurement](tests/2026-10-09-training-memory.md)).
 An AI model the loader would refuse, such as one with an image threshold of 0 from OK images that are copies of one
 photo, is refused at step 5 with AOI-TRN-004: nothing is saved, registered or audited, and the active version stays.
-Step 6 sets the new golden board as the reference, registers and activates the version and writes `model.train` in one
-transaction: if it fails, the reference and the active version stay and the run's two files are removed. A version
+Step 6 writes the version's model card (`aoi/core/model_card.py`, REQ-TRN-011) and registers the version inactive with
+`model.train` in one transaction: if it fails, the run's four files are removed. The Engineer activates it
+(`activate_model`), or rolls back to the version active before (`rollback_model`): either switches the AI model and its
+Golden board together, audited, and refuses a version without a card (AOI-TRN-049) or whose Golden board cannot be read
+(AOI-TRN-048) (REQ-TRN-010). A version
 never takes a name whose `.pt` or `_golden.png` is on disk, so a golden board a result names is never written over (#178).
 The reference image an Engineer sets (Set Reference) must be an OK sample (AOI-TRN-006): inspections compare against it
 at once, and step 1 aligns to it. While a sample is the reference, it cannot be relabelled NG or removed (AOI-TRN-007).

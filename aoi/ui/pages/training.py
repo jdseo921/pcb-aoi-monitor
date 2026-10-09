@@ -305,10 +305,21 @@ class TrainingPage(Page):
         self.models_note.setWordWrap(True)
         self.models_note.hide()
         rl.addWidget(self.models_note)
-        mrow = QHBoxLayout()
+        mrow = QHBoxLayout()  # two rows of two: four in one row widen the window at 1600 px (REQ-SET-004)
         mrow.addWidget(button(self.tr("Activate Selected"), slot=self.activate))
-        mrow.addWidget(button(self.tr("Export AI Model…"), slot=self.export_model))
+        self.btn_rollback = button(self.tr("Roll Back"), slot=self.rollback)  # its label names the version (Q41)
+        mrow.addWidget(self.btn_rollback)
         rl.addLayout(mrow)
+        mrow2 = QHBoxLayout()
+        mrow2.addWidget(button(self.tr("AI Model Card"), slot=self.show_card))
+        mrow2.addWidget(button(self.tr("Export AI Model…"), slot=self.export_model))
+        rl.addLayout(mrow2)
+        self.card_view = (
+            QPlainTextEdit()
+        )  # the selected version's card, read-only, shown on AI Model Card (REQ-TRN-011)
+        self.card_view.setReadOnly(True)
+        self.card_view.hide()
+        rl.addWidget(self.card_view, 1)
         # the table as wide as its reference line needs at 1920 px, the editor next; with S31's import sheet open the
         # table takes 742 px and the editor 407 px, its buttons whole, the training panel keeping its 457 px (outer)
         split.setSizes([650, 500])
@@ -953,9 +964,10 @@ class TrainingPage(Page):
 
     def _on_done(self, meta: dict[str, Any]) -> None:
         self.bar.setValue(self.bar.maximum())
-        saved = self.tr("Saved AI model {version} ({seconds} s). Golden board updated.")
+        saved = self.tr("Saved AI model {version} ({seconds} s) with its Golden board and AI model card.")
         self.log.appendPlainText(saved.format(version=meta["version"], seconds=meta["train_seconds"]))
-        self.shell.status(self.tr("AI model {version} trained and activated").format(version=meta["version"]))
+        done = self.tr("AI model {version} trained: select it and press Activate Selected to judge boards with it")
+        self.shell.status(done.format(version=meta["version"]))  # it installs inactive (REQ-TRN-010)
         self.refresh()
 
     def _finished(self) -> None:
@@ -1030,6 +1042,24 @@ class TrainingPage(Page):
             self.ctx.activate_model(int(cell_text(self.models, rows[0].row(), 0)))
             self.refresh()
 
+    def rollback(self) -> None:
+        """One click back to the version active before the active one, with its Golden board (REQ-TRN-010)."""
+        if self.board_model:
+            back = self.ctx.rollback_model(self.board_model)
+            self.shell.status(self.tr("Rolled back to AI model {version}").format(version=back["version"]))
+            self.refresh()
+
+    def show_card(self) -> None:
+        """The selected version's model card under the table, or a line saying it has none (REQ-TRN-011)."""
+        rows = self.models.selectionModel().selectedRows()
+        if not rows:
+            self.card_view.hide()
+            return
+        text = self.ctx.card_text(int(cell_text(self.models, rows[0].row(), 0)))
+        no_card = self.tr("AI model {version} has no AI model card: train again to make a version that has one.")
+        self.card_view.setPlainText(text or no_card.format(version=cell_text(self.models, rows[0].row(), 1)))
+        self.card_view.show()
+
     def export_model(self) -> None:
         rows = self.models.selectionModel().selectedRows()
         if not rows:
@@ -1046,6 +1076,9 @@ class TrainingPage(Page):
             self.samples.setRowCount(0)
             self.models.setRowCount(0)
             self.models_note.hide()
+            self.card_view.hide()
+            self.btn_rollback.setText(self.tr("Roll Back"))
+            self.btn_rollback.setEnabled(False)
             self.counts.set_line(lambda _name: "", "")
             self.checks_line.hide()
             self.tip.hide()
@@ -1082,6 +1115,11 @@ class TrainingPage(Page):
             rows.append([m["id"], m["version"], to_local(m["created_at"]), threshold, _sample_counts(m), active])
             tips.append(tip)
         fill_table(self.models, rows, tooltips=tips)
+        self.card_view.hide()  # a card shown was the selected row's; the selection is gone
+        back = self.ctx.previous_model(self.board_model)  # Roll Back names the version it goes to (Q41)
+        label = self.tr("Roll Back to {version}").format(version=back["version"]) if back else self.tr("Roll Back")
+        self.btn_rollback.setText(label)
+        self.btn_rollback.setEnabled(back is not None)
         # each row's AOI-TRN-012, with what happened and what to do, under the table
         said = [tip for tip in tips if tip]
         self.models_note.setText("\n".join(said))
