@@ -39,20 +39,19 @@ from .. import theme
 from ..errors import phrase_text
 from ..widgets.busy import BusyOverlay
 from ..widgets.empty_state import EmptyState
-from ..widgets.image_view import ImageView
 from ..workers import Worker, start
 from .base import (
     QT_TRANSLATE_NOOP,
     Page,
     action_button,
     button,
-    cell_item,
     cell_text,
     fill_table,
     make_table,
     view_text,
 )
 from .training_import import ImportSheet
+from .training_labels import LabelEditor
 
 if TYPE_CHECKING:
     from ..main_window import MainWindow
@@ -196,9 +195,10 @@ class TrainingPage(Page):
         ll.addLayout(act)
         split.addWidget(left)
 
-        # Middle: preview ----------------------------------------------------------
-        self.preview = ImageView(placeholder=self.tr("Select a sample to preview"))
-        split.addWidget(self.preview)
+        # Middle: the label editor, the selected image with its defect boxes (REQ-TRN-003) ----------------------
+        self.shown: dict[int, dict[str, Any]] = {}  # the samples in the table, by id
+        self.editor = LabelEditor(self, self.tr("Select a sample to preview"))
+        split.addWidget(self.editor)
 
         # Right: training + model versions ----------------------------------------
         right = QWidget()
@@ -254,7 +254,7 @@ class TrainingPage(Page):
         mrow.addWidget(button(self.tr("Export AI Model…"), slot=self.export_model))
         rl.addLayout(mrow)
         split.addWidget(right)
-        split.setSizes([760, 380, 560])  # room for the four dataset buttons with their text; the preview keeps 320 px
+        split.setSizes([740, 400, 560])  # the four dataset buttons with their text; a box's label across the image
         self.root.addWidget(split, 1)
 
     # --- dataset ----------------------------------------------------------------
@@ -502,11 +502,10 @@ class TrainingPage(Page):
             self._each_sample(ids, self.ctx.delete_sample)
 
     def _preview(self) -> None:
-        rows = self.samples.selectionModel().selectedRows()
+        """The label editor on the selected sample, the topmost row when several are selected."""
+        rows = sorted(i.row() for i in self.samples.selectionModel().selectedRows())
         if rows:
-            p = cell_item(self.samples, rows[0].row(), 4).toolTip()
-            if Path(p).exists():
-                self.preview.set_image(self.ctx.load_image(p))
+            self.editor.show_sample(self.shown.get(int(cell_text(self.samples, rows[0], 0))))
 
     # --- training ---------------------------------------------------------------
     def train(self) -> None:
@@ -596,6 +595,7 @@ class TrainingPage(Page):
             self.models_empty.hide()
             return
         s = self.ctx.samples(self.board_model)
+        self.shown = {r["id"]: r for r in s}
         fill_table(
             self.samples,
             [
@@ -647,7 +647,7 @@ class TrainingPage(Page):
             )
 
     def on_board_model_changed(self, name: str | None) -> None:
-        self.preview.set_image(None)
+        self.editor.show_sample(None)
         if self.sheet.running or self.sheet.reported:  # an import goes on into its board model, and a list stays,
             self._follow_header(name)  # with Import off until that board model is back (REQ-SET-021)
         else:  # files picked for the board model shown before, none imported yet

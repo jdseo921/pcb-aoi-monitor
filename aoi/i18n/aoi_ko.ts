@@ -2,6 +2,14 @@
 <!DOCTYPE TS>
 <TS version="2.1" language="ko_KR" sourcelanguage="en_US">
 <context>
+    <name>BoxEditor</name>
+    <message>
+        <location filename="../ui/widgets/box_editor.py" line="+49"/>
+        <source>{number} {type} ◆ {severity}</source>
+        <translation>{number} {type} ◆ {severity}</translation>
+    </message>
+</context>
+<context>
     <name>BusyOverlay</name>
     <message>
         <location filename="../ui/widgets/busy.py" line="+28"/>
@@ -3032,7 +3040,7 @@
     <message>
         <location line="+1"/>
         <source>Type</source>
-        <translation type="unfinished"></translation>
+        <translation>유형</translation>
     </message>
     <message>
         <location line="+1"/>
@@ -3233,6 +3241,59 @@
         <location line="+11"/>
         <source>Run stopped: {user} signed in. The boards of the run so far are recorded under {starter}; press Start to carry on with the queue as {user}.</source>
         <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>LabelEditor</name>
+    <message>
+        <location filename="../ui/pages/training_labels.py" line="+37"/>
+        <source>Draw Box</source>
+        <translation>박스 그리기</translation>
+    </message>
+    <message>
+        <location line="+15"/>
+        <source>Type</source>
+        <translation>유형</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Severity</source>
+        <translation>심각도</translation>
+    </message>
+    <message>
+        <location line="+4"/>
+        <source>Boxes</source>
+        <translation>박스</translation>
+    </message>
+    <message>
+        <location line="+23"/>
+        <source>{file} · {label} · {view}</source>
+        <translation>{file} · {label} · {view}</translation>
+    </message>
+    <message>
+        <location line="+30"/>
+        <source>{number} {type} ({severity}) {x},{y} {w}×{h} px</source>
+        <translation>{number} {type} ({severity}) {x},{y} {w}×{h} px</translation>
+    </message>
+    <message>
+        <location line="+8"/>
+        <source>Press Draw Box and drag around each defect, then pick its type.</source>
+        <translation>박스 그리기를 누르고 결함마다 둘레를 드래그한 다음 유형을 고르십시오.</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>No defect box yet</source>
+        <translation>아직 결함 박스가 없음</translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>No defect boxes</source>
+        <translation>결함 박스 없음</translation>
+    </message>
+    <message>
+        <location line="+0"/>
+        <source>Only an NG image takes defect boxes.</source>
+        <translation>결함 박스는 NG 이미지에만 그립니다.</translation>
     </message>
 </context>
 <context>
@@ -3741,7 +3802,7 @@
 <context>
     <name>NgDialog</name>
     <message>
-        <location filename="../ui/pages/training.py" line="-287"/>
+        <location filename="../ui/pages/training.py" line="-288"/>
         <source>Label NG images</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4023,7 +4084,7 @@
     <message>
         <location line="+0"/>
         <source>Type</source>
-        <translation type="unfinished"></translation>
+        <translation>유형</translation>
     </message>
     <message>
         <location line="-2"/>
@@ -4539,23 +4600,23 @@
     </message>
     <message>
         <location line="+1"/>
-        <location line="+452"/>
+        <location line="+453"/>
         <source>Import Folder…</source>
         <translation>폴더 가져오기…</translation>
     </message>
     <message>
-        <location line="-444"/>
+        <location line="-445"/>
         <source>Tip: 20+ OK images give a steadier threshold</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location line="+10"/>
-        <location line="+52"/>
+        <location line="+53"/>
         <source>ID</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-52"/>
+        <location line="-53"/>
         <source>Label</source>
         <translation>라벨</translation>
     </message>
@@ -4596,7 +4657,7 @@
     </message>
     <message>
         <location line="+1"/>
-        <location line="+306"/>
+        <location line="+307"/>
         <source>Remove</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4731,7 +4792,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+46"/>
+        <location line="+45"/>
         <source>epoch {epoch}/{total}  loss {loss:.4f}</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4761,7 +4822,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+33"/>
+        <location line="+34"/>
         <source>Add at least 20 OK boards with Add OK Images… or Import Folder…</source>
         <translation>OK 이미지 추가… 또는 폴더 가져오기…로 OK 보드를 20개 이상 추가하세요</translation>
     </message>
