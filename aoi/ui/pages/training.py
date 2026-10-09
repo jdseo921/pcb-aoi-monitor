@@ -3,13 +3,15 @@
 from __future__ import annotations
 
 import json
+from collections import Counter
 from collections.abc import Callable
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from PySide6.QtCore import QItemSelectionModel, Qt
-from PySide6.QtGui import QResizeEvent
+from PySide6.QtCore import QEvent, QItemSelectionModel, QObject, Qt
+from PySide6.QtGui import QKeyEvent, QResizeEvent
 from PySide6.QtWidgets import (
+    QApplication,
     QComboBox,
     QDialog,
     QDialogButtonBox,
@@ -31,6 +33,7 @@ from PySide6.QtWidgets import (
 
 from ... import defects as taxonomy
 from ...core.imaging import IMAGE_EXTS
+from ...core.labels import DefectBox
 from ...core.sample_import import ImportFile, ImportReport, folder_files
 from ...core.services import AppContext
 from ...errors import AoiError
@@ -45,18 +48,39 @@ from .base import (
     Page,
     action_button,
     button,
+    cell_item,
     cell_text,
     fill_table,
     make_table,
     view_text,
 )
 from .training_import import ImportSheet
-from .training_labels import LabelEditor
+from .training_labels import LabelEditor, State
 
 if TYPE_CHECKING:
     from ..main_window import MainWindow
 
 SELECT_ROW = QItemSelectionModel.SelectionFlag.Select | QItemSelectionModel.SelectionFlag.Rows
+CHOOSE_ROW = QItemSelectionModel.SelectionFlag.ClearAndSelect | QItemSelectionModel.SelectionFlag.Rows
+NOT_TYPING = Qt.KeyboardModifier.ControlModifier | Qt.KeyboardModifier.AltModifier | Qt.KeyboardModifier.MetaModifier
+
+
+def _each(ids: list[int], write: Callable[[int], None]) -> AoiError | None:
+    """Write each sample but the reference, which stays as it is and is named once the others are written (AOI-TRN-007),
+    so which rows change never depends on the order they were selected in (#168); any other refusal stops at the sample
+    it names. Returns the refusal to show, if any."""
+    refused: AoiError | None = None
+    try:
+        for i in ids:
+            try:
+                write(i)
+            except AoiError as e:
+                if e.code != "AOI-TRN-007":
+                    raise
+                refused = e
+    except AoiError as e:
+        refused = e
+    return refused
 
 
 def _sample_counts(model: dict[str, Any]) -> str:
@@ -189,9 +213,17 @@ class TrainingPage(Page):
         self.samples_empty = EmptyState(self.samples)
         self.busy = BusyOverlay(self.samples, self.tr("Importing…"))
         ll.addWidget(self.samples, 1)
+        marks = QHBoxLayout()  # the labels sketch's row, a key each, which a drop-down list or a text field takes first
+        self.act_ok = self.action(self.tr("Mark OK"), "O", lambda: self._relabel("OK"))
+        self.act_ng = self.action(self.tr("Mark NG"), "N", lambda: self._relabel("NG"))
+        self.act_unsure = self.action(self.tr("Mark UNSURE"), "U", lambda: self._relabel("UNSURE"))
+        for a in (self.act_ok, self.act_ng, self.act_unsure):
+            marks.addWidget(action_button(a, show_key=False))
+        self.act_next = self.action(self.tr("Next image"), "PgDown", lambda: self._step(1))  # keys only (sketch)
+        self.act_previous = self.action(self.tr("Previous image"), "PgUp", lambda: self._step(-1))
+        ll.addLayout(marks)
+        shell.installEventFilter(self)  # the letters typed in a drop-down list, which reach the window last
         act = QHBoxLayout()
-        act.addWidget(button(self.tr("Mark OK"), slot=lambda: self._relabel("OK")))
-        act.addWidget(button(self.tr("Mark NG…"), slot=lambda: self._relabel("NG")))
         act.addWidget(button(self.tr("Set Reference"), slot=self._set_reference))
         act.addWidget(button(self.tr("Remove"), "danger", self._remove))  # red, last in its row, never the default
         ll.addLayout(act)
@@ -201,6 +233,7 @@ class TrainingPage(Page):
         self.shown: dict[int, dict[str, Any]] = {}  # the samples in the table, by id
         self.editor = LabelEditor(self, self.tr("Select a sample to preview"))
         self.editor.undone.connect(self._show_samples)
+        self.editor.stored.connect(self._show_types)
         split.addWidget(self.editor)
 
         # Right: training + model versions ----------------------------------------
@@ -453,33 +486,51 @@ class TrainingPage(Page):
     def _selected_ids(self) -> list[int]:
         return [int(cell_text(self.samples, i.row(), 0)) for i in self.samples.selectionModel().selectedRows()]
 
+    def eventFilter(self, watched: QObject, e: QEvent) -> bool:
+        """While this page is shown, a letter typed in a drop-down list, such as the Type list, goes to it, never to the
+        page's letter keys (O, N, U): the window takes its ShortcutOverride. A spin box or a text field, such as
+        Epochs, needs none of this: its line edit accepts the ShortcutOverride of a key it types first."""
+        if e.type() == QEvent.Type.ShortcutOverride and self.isVisible() and isinstance(e, QKeyEvent):
+            typed = e.text().isprintable() and e.text() != "" and not e.modifiers() & NOT_TYPING
+            if typed and isinstance(QApplication.focusWidget(), QComboBox):
+                e.accept()
+                return True
+        return super().eventFilter(watched, e)
+
     def _relabel(self, label: str) -> None:
-        ids = self._selected_ids()
-        if not ids:
+        """Mark OK, Mark NG, Mark UNSURE (O, N, U): each selected image not already so labelled, on a pool thread, with
+        no question and no defect type, which the boxes give; the rows stay selected, and Undo puts back each image's
+        label and boxes. Mark NG then puts the focus on the image, for its boxes (labels sketch). A label carried over
+        with no labeller is labelled again, keeping its type, so that it can be checked (S32), which Undo leaves. The
+        marks write through set_label, which takes UNSURE and an NG with no type until its boxes are drawn, where
+        update_sample keeps the import's rule, OK or NG with one of the 33 types (S31)."""
+        ctx = self.ctx
+        before = [s for i in self._selected_ids() if (s := self.shown[i])["label"] != label or not s["labelled_by"]]
+        if not before:
             return
-        dtype: str | None = None
-        if label == "NG":
-            dlg = NgDialog(self)
-            if not dlg.exec():
-                return
-            dtype = dlg.value()
-        self._each_sample(ids, lambda i: self.ctx.update_sample(i, label, dtype))
+        changed: list[State] = []
+
+        def write(i: int) -> None:  # on a pool thread: the sample as it was, for Undo, then its new label
+            s = next(s for s in before if s["id"] == i)
+            boxes = [DefectBox(b["x"], b["y"], b["w"], b["h"], b["dct_type"]) for b in ctx.boxes(s["uuid"])]
+            ctx.set_label(s["uuid"], label, s["defect_type"] if s["label"] == label else None)
+            if s["label"] != label:
+                changed.append((s["uuid"], s["label"], s["defect_type"], boxes))
+
+        def done(refused: AoiError | None) -> None:
+            if changed:
+                self.editor.remember(changed)
+            if refused is not None:
+                self.error(refused)
+            self.refresh()
+            if label == "NG":
+                self.editor.view.setFocus()
+
+        self.editor.write(done, _each, [s["id"] for s in before], write)
 
     def _each_sample(self, ids: list[int], write: Callable[[int], None]) -> None:
-        """Write each selected sample but the reference, which stays as it is and is named once the others are written
-        (AOI-TRN-007), so which rows change never depends on the order they were selected in (#168). Any other refusal
-        stops at the sample it names."""
-        refused: AoiError | None = None
-        try:
-            for i in ids:
-                try:
-                    write(i)
-                except AoiError as e:
-                    if e.code != "AOI-TRN-007":
-                        raise
-                    refused = e
-        except AoiError as e:
-            refused = e
+        """Write each selected sample as `_each` does, then show the refusal, if any, and the table again."""
+        refused = _each(ids, write)
         if refused is not None:
             self.error(refused)
         self.refresh()
@@ -506,25 +557,54 @@ class TrainingPage(Page):
             self._each_sample(ids, self.ctx.delete_sample)
 
     def _show_samples(self, uuids: list[str]) -> None:
-        """The rows of these samples alone selected, the first in view, and the topmost in the label editor: an Undo
-        may change back an image other than the one shown."""
+        """The table again, the rows of these samples alone selected, the first in view, and the topmost in the label
+        editor: an Undo may change back an image other than the one shown, or its label."""
+        self.refresh()
+        self._select(lambda s: s["uuid"] in uuids, scroll=True)
+
+    def _select(self, keep: Callable[[dict[str, Any]], bool], scroll: bool = False) -> None:
+        """Select the rows whose sample `keep` holds for, the first in view with `scroll`; the editor follows once."""
         picks = self.samples.selectionModel()
-        picks.blockSignals(True)  # the editor follows once, below
+        picks.blockSignals(True)
         picks.clearSelection()
         for row in range(self.samples.rowCount()):
-            if self.shown[int(cell_text(self.samples, row, 0))]["uuid"] in uuids:
-                if not picks.hasSelection():
+            if keep(self.shown[int(cell_text(self.samples, row, 0))]):
+                if scroll and not picks.hasSelection():
                     self.samples.scrollTo(self.samples.model().index(row, 0))
                 picks.select(self.samples.model().index(row, 0), SELECT_ROW)
         picks.blockSignals(False)
         self.samples.viewport().update()
         self._preview()
 
-    def _preview(self) -> None:
-        """The label editor on the selected sample, the topmost row when several are selected."""
+    def _step(self, by: int) -> None:
+        """PgDn, PgUp: the next or previous image of the table, as it is sorted, from the topmost selected row (the
+        first row with none), alone selected and in view; the label editor follows. The ends stay where they are."""
         rows = sorted(i.row() for i in self.samples.selectionModel().selectedRows())
-        if rows:
-            self.editor.show_sample(self.shown.get(int(cell_text(self.samples, rows[0], 0))))
+        if self.samples.rowCount():
+            row = min(max(rows[0] + by, 0), self.samples.rowCount() - 1) if rows else 0
+            index = self.samples.model().index(row, 0)
+            self.samples.selectionModel().setCurrentIndex(index, CHOOSE_ROW)
+            self.samples.scrollTo(index)
+
+    def _preview(self) -> None:
+        """The label editor on the selected sample, the topmost row when several are selected; none: nothing."""
+        rows = sorted(i.row() for i in self.samples.selectionModel().selectedRows())
+        self.editor.show_sample(self.shown.get(int(cell_text(self.samples, rows[0], 0))) if rows else None)
+
+    def _types(self, kinds: list[str], given: str | None) -> str:
+        """The Defect type column: the types of an image's boxes, each once with its count ("Solder Bridge ×2,
+        Missing Component", the sketch's Defect types), else the type given at import, if any."""
+        if not kinds:
+            return given or ""
+        each = self.tr("{type} ×{count}")
+        return ", ".join(kind if n == 1 else each.format(type=kind, count=n) for kind, n in Counter(kinds).items())
+
+    def _show_types(self, uuid: str, boxes: list[DefectBox]) -> None:
+        """The boxes of a sample just stored: its row's Defect type, with no read of the database."""
+        for row in range(self.samples.rowCount()):
+            s = self.shown[int(cell_text(self.samples, row, 0))]
+            if s["uuid"] == uuid:
+                cell_item(self.samples, row, 2).setText(self._types([b.dct_type for b in boxes], s["defect_type"]))
 
     # --- training ---------------------------------------------------------------
     def train(self) -> None:
@@ -615,13 +695,18 @@ class TrainingPage(Page):
             return
         s = self.ctx.samples(self.board_model)
         self.shown = {r["id"]: r for r in s}
+        kept = set(self._selected_ids())
+        self.samples.selectionModel().blockSignals(True)  # the editor follows once the rows are selected again
         fill_table(
             self.samples,
             [
                 [
                     r["id"],
                     r["label"],
-                    r["defect_type"] or "",
+                    self._types(
+                        [b["dct_type"] for b in self.ctx.boxes(r["uuid"])] if r["label"] == "NG" else [],
+                        r["defect_type"],
+                    ),
                     view_text(r["side"]) if r["side"] else "",
                     Path(r["path"]).name,
                 ]
@@ -630,6 +715,8 @@ class TrainingPage(Page):
             [theme.NG_TINT if r["label"] == "NG" else None for r in s],  # UNSURE is not NG (REQ-TRN-002)
             [r["path"] for r in s],
         )
+        self.samples.selectionModel().blockSignals(False)
+        self._select(lambda r: r["id"] in kept)
         if s:
             self.samples_empty.hide()
         else:

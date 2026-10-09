@@ -24,7 +24,7 @@ from aoi.core.labels import DefectBox
 from aoi.core.services import AppContext
 from aoi.ui import theme
 from aoi.ui.pages.base import cell_text
-from aoi.ui.pages.training import TrainingPage
+from aoi.ui.pages.training import NgDialog, TrainingPage
 from tests.test_req_done_in_v01 import BOARD, _window
 
 if TYPE_CHECKING:
@@ -485,3 +485,157 @@ def test_req_trn_003_editor_delete_and_undo(
     win._on_board_model("OTHER")
     win._on_board_model(BOARD)
     assert not undo.isEnabled()
+
+
+def test_req_trn_003_editor_mark(qtbot: QtBot, trained_ctx: AppContext, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Mark OK, Mark NG and Mark UNSURE, and the keys O, N and U, relabel each selected image not already so labelled,
+    with no question and on a pool thread; the table and the label editor show the new label, the rows still
+    selected. An image relabelled OK or UNSURE keeps its boxes in history only; Mark NG puts the focus on the image.
+    Undo and Ctrl+Z undo a mark too, the images getting back their label and boxes. A letter typed in a text field or
+    in the Type list goes to it, and marks nothing. A label carried over with no labeller is labelled again by the
+    same mark, so that it can be checked, which Undo does not take back."""
+    monkeypatch.setattr(NgDialog, "exec", lambda self: pytest.fail("Mark NG asks nothing"))
+    ctx = trained_ctx
+    ng = ctx.samples(BOARD, "NG")[0]
+    ctx.set_boxes(ng["uuid"], [DefectBox(100, 100, 60, 40, "Scratch")])
+    box = [(100, 100, 60, 40, "Scratch", "Minor")]
+    page = _open(qtbot, ctx, ng)
+    editor = page.editor
+    marks = {b.text(): b for b in page.findChildren(QPushButton) if b.text().startswith("Mark")}
+    assert sorted(marks) == ["Mark NG", "Mark OK", "Mark UNSURE"]
+    rows = len(ctx.label_history(ng["uuid"]))
+    on_ui: set[bool] = set()
+    relabel = ctx.set_label  # the marks' call (S32's), which takes UNSURE and an NG with no type yet
+
+    def watched(*args: Any) -> None:
+        on_ui.add(threading.current_thread() is threading.main_thread())
+        relabel(*args)
+
+    monkeypatch.setattr(ctx, "set_label", watched)
+
+    def now(sample: dict[str, Any]) -> str:
+        """The image's label as stored, as the table shows it and, for the image in the editor, as its heading says."""
+        _wait(page)
+        label = ctx.label_history(sample["uuid"])[0]["label"]
+        row = next(r for r in range(page.samples.rowCount()) if int(cell_text(page.samples, r, 0)) == sample["id"])
+        assert cell_text(page.samples, row, 1) == label
+        if editor.sample is not None and editor.sample["uuid"] == sample["uuid"]:
+            assert f" · {label} · " in editor.heading.text() and editor.sample["label"] == label
+        return label
+
+    qtbot.mouseClick(marks["Mark OK"], LEFT)
+    assert now(ng) == "OK" and len(ctx.label_history(ng["uuid"])) == rows + 1 and page._selected_ids() == [ng["id"]]
+    assert ctx.boxes(ng["uuid"]) == [] and len(ctx.label_history(ng["uuid"])[1]["boxes"]) == 1, "kept in history"
+    assert not editor.draw_btn.isEnabled() and editor.box_list_empty.heading.text() == "No defect boxes"
+    assert on_ui == {False}, "relabelled on a pool thread"
+    qtbot.mouseClick(marks["Mark OK"], LEFT)
+    assert now(ng) == "OK" and len(ctx.label_history(ng["uuid"])) == rows + 1, "already OK: no label row"
+    _key(page.samples, Qt.Key.Key_U)
+    assert now(ng) == "UNSURE" and not editor.draw_btn.isEnabled()
+    _key(page.samples, Qt.Key.Key_N)
+    assert now(ng) == "NG" and ctx.label_history(ng["uuid"])[0]["defect_type"] is None
+    assert editor.draw_btn.isEnabled() and QApplication.focusWidget() is editor.view
+    assert editor.box_list_empty.heading.text() == "No defect box yet"
+    assert len(ctx.audit_entries(action="label.set", object_uuid=ng["uuid"])) == 4  # the box set first, O, U and N
+    _key(page.samples, Qt.Key.Key_Z, CTRL)  # N undone, then U, then O: NG again with its box
+    assert now(ng) == "UNSURE"
+    _key(page.samples, Qt.Key.Key_Z, CTRL)
+    assert now(ng) == "OK"
+    _key(page.samples, Qt.Key.Key_Z, CTRL)
+    assert now(ng) == "NG" and _stored(page, ng["uuid"]) == box and editor.box_list.count() == 1
+    assert ctx.label_history(ng["uuid"])[0]["defect_type"] == ng["defect_type"]
+
+    oks = ctx.samples(BOARD, "OK")[1:3]
+    _select(page, *(s["id"] for s in oks))
+    _key(editor.box_list, Qt.Key.Key_U)  # from any control but a text field or a drop-down list
+    assert [now(s) for s in oks] == ["UNSURE", "UNSURE"]
+    assert sorted(page._selected_ids()) == sorted(s["id"] for s in oks), "the rows stay selected"
+    qtbot.mouseClick(editor.undo_btn, LEFT)
+    assert [now(s) for s in oks] == ["OK", "OK"] and sorted(page._selected_ids()) == sorted(s["id"] for s in oks)
+    for key in (Qt.Key.Key_O, Qt.Key.Key_N, Qt.Key.Key_U):  # typed in Epochs, whose line edit takes them: no mark
+        _key(page.epochs, key)
+    _key(page.shell.bm_combo, Qt.Key.Key_U)  # nor in the header's drop-down list of board models
+    _select(page, ng["id"])
+    _wait(page)
+    editor.box_list.setCurrentRow(0)
+    _key(editor.type_box, Qt.Key.Key_O)  # the Type list shows Open Circuit, and nothing is marked or stored
+    assert editor.type_box.currentData() == "Open Circuit" and _stored(page, ng["uuid"]) == box
+    assert [now(s) for s in (ng, *oks)] == ["NG", "OK", "OK"]
+    carried = ctx.samples(BOARD, "OK")[3]
+    ctx.db.add_label(carried["uuid"], "OK", None, [], None)  # as migration 0014 carries a label over: no labeller
+    page.refresh()
+    _select(page, carried["id"])
+    _key(page.samples, Qt.Key.Key_O)
+    assert now(carried) == "OK" and ctx.label_history(carried["uuid"])[0]["labelled_by"] == ctx.user_uuid
+    assert not editor.undo_btn.isEnabled(), "labelled again for its check: no label or box to put back"
+
+
+def test_req_trn_003_editor_types_in_the_table(qtbot: QtBot, trained_ctx: AppContext) -> None:
+    """The samples table's Defect type shows the types of an image's boxes, each once with its count, as soon as one
+    is stored; with no box, the type given at import or none. The label's own defect type stays as it was."""
+    ctx = trained_ctx
+    ng = ctx.samples(BOARD, "NG")[0]
+    page = _open(qtbot, ctx, ng)
+    editor, view = page.editor, page.editor.view
+
+    def shown() -> str:
+        _wait(page)
+        return next(
+            cell_text(page.samples, r, 2)
+            for r in range(page.samples.rowCount())
+            if int(cell_text(page.samples, r, 0)) == ng["id"]
+        )
+
+    given = ng["defect_type"] or ""
+    assert shown() == given
+    editor.draw_btn.click()
+    for kind, x in (("Solder Bridge", 100), ("Missing Component", 200), ("Solder Bridge", 300)):
+        editor.type_box.setCurrentIndex(editor.type_box.findData(kind))
+        _drag(view, _at(view, x, 100), _at(view, x + 40, 140))
+        _wait(page)
+    assert shown() == "Solder Bridge ×2, Missing Component"
+    page.refresh()
+    assert shown() == "Solder Bridge ×2, Missing Component", "as the table is filled again"
+    assert ctx.label_history(ng["uuid"])[0]["defect_type"] == ng["defect_type"], "the label's own type as it was"
+    for _ in range(3):
+        editor.box_list.setCurrentRow(0)
+        editor.act_delete.trigger()
+        _wait(page)
+    assert shown() == given
+
+
+def test_req_trn_003_editor_next_and_previous(qtbot: QtBot, trained_ctx: AppContext) -> None:
+    """PgDn and PgUp move the label editor to the next and previous image of the samples table, as it is sorted, with
+    the focus anywhere but a text field: that row alone is selected, and the ends stay where they are. From several
+    rows selected they move from the topmost; with none selected PgDn starts at the first row."""
+    page = _page(qtbot, trained_ctx)
+    editor, table = page.editor, page.samples
+
+    def order() -> list[int]:
+        return [int(cell_text(table, r, 0)) for r in range(table.rowCount())]
+
+    def key(target: QWidget, k: Qt.Key, expected: int) -> None:
+        _key(target, k)
+        _wait(page)
+        assert page._selected_ids() == [expected] and editor.sample is not None and editor.sample["id"] == expected
+
+    ids = order()
+    _select(page, ids[0])
+    key(table, Qt.Key.Key_PageDown, ids[1])
+    key(editor.view, Qt.Key.Key_PageDown, ids[2])  # from the image as from the table
+    key(editor.box_list, Qt.Key.Key_PageUp, ids[1])
+    key(table, Qt.Key.Key_PageUp, ids[0])
+    key(table, Qt.Key.Key_PageUp, ids[0])  # the first row stays
+    _select(page, ids[-1])
+    key(table, Qt.Key.Key_PageDown, ids[-1])  # and so does the last
+    table.sortItems(4, Qt.SortOrder.DescendingOrder)  # by File, Z to A: the order the rows are seen in
+    seen = order()
+    assert seen != ids and sorted(seen) == sorted(ids)
+    _select(page, seen[0])
+    key(table, Qt.Key.Key_PageDown, seen[1])
+    _select(page, seen[4], seen[2])
+    key(table, Qt.Key.Key_PageDown, seen[3])
+    table.clearSelection()
+    _wait(page)
+    assert editor.sample is None
+    key(table, Qt.Key.Key_PageDown, seen[0])

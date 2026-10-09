@@ -106,13 +106,13 @@ the mouse wheel, or Tab, which brings each field into view.
 
 **Set Reference** makes the selected OK sample the reference image: inspections compare against it at once, and the
 next training run aligns the boards to it before it learns a new golden board. An NG sample is refused (AOI-TRN-006),
-and the sample that is the reference cannot be relabelled NG or removed until another OK sample is set (AOI-TRN-007);
-with several rows selected, Mark NG and Remove change all the others and leave the reference as it is. Remove asks
-first, with No as the default: Enter keeps the samples.
+and the sample that is the reference cannot be relabelled NG or UNSURE or removed until another OK sample is set
+(AOI-TRN-007); with several rows selected, Mark NG, Mark UNSURE and Remove change all the others and leave the
+reference as it is. Remove asks first, with No as the default: Enter keeps the samples.
 
-**Mark NG…** asks which of the 33 defect types of the defect classification table the selected samples show (a
-category narrows the list): none is picked at first, "Unknown" is not offered, and OK stays grey until a type is picked,
-so no sample is NG without one (AOI-TRN-013). **Mark OK** clears the type. Neither changes a sample's view.
+**Mark NG** asks for no defect type: an NG image's boxes, each of one of the 33 types, give its types (below), so an
+image marked NG has none until a box is drawn, which a second user's check needs before a freeze. An import gives each
+NG sample one of the 33 types (AOI-TRN-013). **Mark OK** clears the type. Neither changes a sample's view.
 
 **Importing images.** **Add OK Images…** (Ctrl+O), **Add NG Images…** (Ctrl+N) and **Import Folder…**
 (Ctrl+Shift+O) open the import sheet above the sample table, with the files picked or found in the folder; no dialog
@@ -155,8 +155,8 @@ before this version keep their label, with no labeller recorded. Marking an imag
 nothing, unless no labeller is recorded for its label: then it is labelled again, by you, so that a second user can
 check it. An UNSURE image is left out of training and its calibration and counted as neither OK nor NG on Training and
 Home. A box must lie inside the image (AOI-TRN-031); a label an image cannot take, such as a box on an OK image or a
-type not one of the 33, is refused (AOI-TRN-030). The label editor draws boxes (below); no screen marks an image
-UNSURE or lists UNSURE images for the customer's quality engineer yet.
+type not one of the 33, is refused (AOI-TRN-030). The label editor draws boxes and Mark UNSURE marks an image UNSURE
+(below); no screen lists UNSURE images for the customer's quality engineer yet.
 
 **Drawing defect boxes on the label editor (the S33 screen).** Select an image in Training's sample table and it opens
 in the label editor beside the table: its file name, label and view above it, its boxes on it and listed under it. On
@@ -176,7 +176,14 @@ under its name; its boxes are listed but cannot be changed. To delete the select
 Delete key: it goes at once, with no question, and stays in the image's history. **Undo**, beside it, or Ctrl+Z puts
 back what the last change replaced, on whichever image it was, which the table then selects; press it again for the
 change before. Once another user signs in, or another board model is picked, what was changed before can no longer be
-undone. Marking an image and the editor's keys are not on this screen yet.
+undone. **Mark OK**, **Mark NG** and **Mark UNSURE** under the table, or the keys O, N and U, label each selected
+image at once, without asking; an image already so labelled stays as it is, unless its label has no labeller (see
+Labels keep their history), and the rows stay selected. Once drawn, an NG image's boxes carry its defect types, which
+the table's Defect type column shows, each with its count; Mark NG asks for no type and puts the focus on the image
+for you to draw its boxes. An image marked OK or UNSURE loses its boxes, which stay in its history, and Undo or Ctrl+Z
+gives them back with its label. While you type in a field, such as Epochs, or in a drop-down list, such as the Type
+list, the letters go there instead. **PgDn** and **PgUp** open the next and previous image of the table, in the order
+it is sorted. The editor's keys for drawing, moving and resizing a box are not on this screen yet.
 
 **A second user checks each label.** The labels of a board model and view are ready to freeze into a dataset only
 once a second Engineer or Admin has checked every NG label and OK labels drawn at random, 10 % of them rounded up; the

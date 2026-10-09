@@ -96,9 +96,11 @@ class TypeList(QComboBox):
 
 class LabelEditor(QWidget):
     """The selected image, its label and its defect boxes, beside Training's samples table (labels sketch). `undone`
-    names the samples an Undo changed back, for the page to select and show."""
+    names the samples an Undo changed back, for the page to select and show; `stored` a sample and the boxes just
+    stored for it."""
 
     undone = Signal(list)
+    stored = Signal(str, list)
 
     def __init__(self, page: Page, placeholder: str) -> None:
         super().__init__()
@@ -140,7 +142,8 @@ class LabelEditor(QWidget):
         self.act_undo = page.action(self.tr("Undo"), QKeySequence.StandardKey.Undo, self._undo)
         self.act_delete = page.action(self.tr("Delete Box"), "Delete", self._delete)  # no question: Undo brings it back
         under = QHBoxLayout()
-        under.addWidget(action_button(self.act_undo, show_key=False))  # for a hand with no keyboard
+        self.undo_btn = action_button(self.act_undo, show_key=False)  # for a hand with no keyboard
+        under.addWidget(self.undo_btn)
         under.addWidget(action_button(self.act_delete, "danger", show_key=False))  # red, the last in its row
         under.addStretch(1)
         lay.addLayout(under)
@@ -315,27 +318,31 @@ class LabelEditor(QWidget):
         self._sync()
 
     def _store(self) -> bool:
-        """Store the boxes shown, on a pool thread; while another change is stored the boxes as stored come back."""
+        """Store the boxes shown, on a pool thread; while the image is read or another change is stored they are
+        refused, and the boxes as stored come back."""
         if self.sample is None:
             return False
-        boxes, s = list(self.view.boxes), self.sample
-        before: State = (s["uuid"], s["label"], s["defect_type"], self._kept)
-        if not self.write(lambda _uid: self._stored(before), self.ctx.set_boxes, s["uuid"], boxes):
+        if self.busy():
+            self._refuse()
             self.view.show_boxes(self._kept, self.view.chosen)
             self._picked(self.view.chosen)
             return False
+        boxes, s = list(self.view.boxes), self.sample
+        before: State = (s["uuid"], s["label"], s["defect_type"], self._kept)
+        self.write(lambda _uid: self._stored(before), self.ctx.set_boxes, s["uuid"], boxes)
         self._kept = boxes
         return True
 
     def _stored(self, before: State) -> None:
         self._fill_list()
         self.remember([before])
+        self.stored.emit(before[0], self._kept)
 
     def write(self, done: Callable[[Any], None], fn: Callable[..., Any], *args: Any) -> bool:
-        """Store a change, `fn(*args)`, on a pool thread, `done` getting what it returns here: one at a time, and none
-        while the image is read. False, with a word in the status bar, while one is running. A refusal by the service,
-        or any other error, is the coded dialog, and the boxes as stored are read again."""
-        if self.busy():
+        """Store a change, `fn(*args)`, on a pool thread, `done` getting what it returns here, one at a time: False,
+        with a word in the status bar, while one is running. A refusal by the service, or any other error, is the coded
+        dialog, and the boxes as stored are read again; whatever `done` shows is shown once the change has ended."""
+        if self._writing is not None:
             self._refuse()
             return False
         self._writing = self._run(self.saving, done, fn, *args)
