@@ -5,6 +5,7 @@ the entry (re-evaluating a result, since S28a)."""
 from __future__ import annotations
 
 import inspect
+import json
 import sqlite3
 from collections.abc import Callable
 from pathlib import Path
@@ -65,8 +66,10 @@ def ready_to_freeze(ctx: AppContext) -> str:
     if not ctx.labels_ready_to_freeze("TINY", "Top"):
         ctx.db.add_ok_check_draw("TINY", "Top", 0, 0, [s["uuid"] for s in labelled if s["label"] == "OK"], who)
     counts = {"images": 100, "ok_ng_agree": 100, "both_ng": 3, "type_agree": 3, "ok_ng_target": 98, "type_target": 90}
-    if not ctx.agreement_checks("TINY"):  # who as both labellers: the database stores what the code gives it
-        ctx.db.add_row("agreement_checks", set_uuid="", board_model="TINY", labeller_a=who, labeller_b=who, **counts,
+    if not ctx.agreement_checks("TINY"):  # who as both labellers, on a set of TINY's Top images, which decides Top
+        images = json.dumps([s["uuid"] for s in labelled])
+        cal = ctx.db.add_row("calibration_sets", board_model="TINY", sample_uuids=images, made_by=who)
+        ctx.db.add_row("agreement_checks", set_uuid=cal, board_model="TINY", labeller_a=who, labeller_b=who, **counts,
                        agreed=1, run_by=who)  # fmt: skip
     return "TINY"
 

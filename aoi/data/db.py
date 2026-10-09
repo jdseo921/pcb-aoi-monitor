@@ -379,6 +379,13 @@ class Database:
         rows = self.query(f"SELECT * FROM datasets WHERE {where} ORDER BY id DESC", params)  # noqa: S608
         return [{**r, "allowed_uses": json.loads(r["allowed_uses"])} for r in rows]
 
+    def dataset_names(self) -> dict[str, list[str]]:
+        """Each board model with frozen versions: the names of its versions."""
+        names: dict[str, list[str]] = {}
+        for r in self.query("SELECT board_model, name FROM datasets ORDER BY id"):
+            names.setdefault(r["board_model"], []).append(r["name"])
+        return names
+
     def dataset_items(self, dataset_uuid: str) -> list[dict[str, Any]]:
         """A frozen version's files in the manifest's order, each with its boxes."""
         rows = self.query("SELECT * FROM dataset_items WHERE dataset_uuid=? ORDER BY id", (dataset_uuid,))

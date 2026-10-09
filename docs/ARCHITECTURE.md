@@ -379,12 +379,20 @@ Two labellers agree before a customer validation (REQ-TRN-016, S34): `make_calib
 (proposed) labelled OK or NG, each labeller records a blind label of every image (`label_blind`, kept apart from
 `labels`), and `run_agreement_check` stores the counts: OK/NG agreement against 98 % and defect-type agreement on the
 images both labelled NG against 90 % (proposed), compared in whole numbers (`labels.agreement`). The check is stored
-on its own, keyed by its calibration set and board model; the dataset version frozen next names it (S35).
+on its own, keyed by its calibration set and board model; the newest one whose set holds images of a view decides
+whether a version of that view is frozen, and the version names it (S35).
 `freeze_dataset` (REQ-TRN-005, S35) is refused while `labels_ready_to_freeze` is False (AOI-TRN-020, -021), with no
-customer (AOI-TRN-024) or no agreed agreement check (AOI-TRN-027); else it names the version
-`DS-<BOARDMODEL>-<REV>-<VIEW>-v<N>` (`aoi/core/datasets.py`), writes `datasets/<name>/manifest.json` atomically (each
+customer (AOI-TRN-024), a view outside `aoi.hal.VIEWS` (AOI-TRN-038), a board model whose name has no Latin letter or
+digit (AOI-TRN-039) or gives the letters and digits another board model's versions are named with (AOI-TRN-040), and
+while the newest agreement check of the board model whose set holds images of the view is missing or short of its
+targets (AOI-TRN-027); else it names the version `DS-<BOARDMODEL>-<REV>-<VIEW>-v<N>` (`aoi/core/datasets.py`). It
+hashes the files with no lock held, then in one transaction finds N, checks the gate, reads the labels, stores the
+version and its files with the manifest's SHA-256 and the audit entry, and moves `datasets/<name>/manifest.json` (each
 OK and NG file's relative path, SHA-256, label row, boxes, labeller and checker; the agreement check; the OK draws)
-and stores the version and its files with the manifest's SHA-256 and the audit entry in one transaction. A version's
+into place just before the commit (`atomic.staged`). A freeze that dies before the move leaves no manifest; one that
+dies between the move and the commit leaves a manifest that no `datasets` row names, which is how such a leftover is
+known (`verify_dataset` reads only the manifest a row names), and the next freeze of that name replaces it.
+AOI-TRN-041 for a manifest not written, AOI-TRN-042 for a path too long. A version's
 rows and manifest never change, and a later label change reaches only the next version. A version names the
 workspace's image files rather than copying them, and the app never changes or removes one (`delete_sample` keeps the
 file), so a file changed or removed outside the app is what `verify_dataset` reports: it re-hashes the manifest and

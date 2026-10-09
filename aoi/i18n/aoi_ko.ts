@@ -573,7 +573,7 @@
 <context>
     <name>Errors</name>
     <message>
-        <location filename="../core/services.py" line="+59"/>
+        <location filename="../core/services.py" line="+60"/>
         <source>a length of {length} px over {distance} mm gives no scale: both must be numbers above 0, and the scale from {least} to {most} px per mm</source>
         <translation type="unfinished"></translation>
     </message>
@@ -598,7 +598,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+200"/>
+        <location line="+210"/>
         <location line="+118"/>
         <source>Importing samples</source>
         <translation type="unfinished"></translation>
@@ -794,7 +794,7 @@
         <translation>데이터셋 버전 동결</translation>
     </message>
     <message>
-        <location line="+69"/>
+        <location line="+78"/>
         <source>the board revision {revision} is not 1 to 16 letters and digits</source>
         <translation>보드 리비전 {revision}이(가) 1~16자의 영문자와 숫자가 아닙니다</translation>
     </message>
@@ -804,22 +804,17 @@
         <translation>허용 용도는 own, shared, demos 중 하나 이상입니다</translation>
     </message>
     <message>
+        <location line="+22"/>
+        <source>a dataset version of that name is in the workspace already</source>
+        <translation>같은 이름의 데이터셋 버전이 이미 작업 공간에 있습니다</translation>
+    </message>
+    <message>
         <location line="+2"/>
         <source>the view holds no image labelled OK or NG</source>
         <translation>이 뷰에 OK 또는 NG로 라벨링된 이미지가 없습니다</translation>
     </message>
     <message>
-        <location line="+7"/>
-        <source>no agreement check of the board model reaches the targets</source>
-        <translation>이 보드 모델의 일치도 검사 중 목표에 도달한 것이 없습니다</translation>
-    </message>
-    <message>
-        <location line="+2"/>
-        <source>a manifest of that name is in the workspace already</source>
-        <translation>같은 이름의 매니페스트가 이미 작업 공간에 있습니다</translation>
-    </message>
-    <message>
-        <location line="+13"/>
+        <location line="+36"/>
         <source>Activating an AI model version</source>
         <translation type="unfinished"></translation>
     </message>
@@ -839,7 +834,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1547"/>
+        <location line="-1603"/>
         <source>no defect type was given</source>
         <translation>결함 유형이 지정되지 않았습니다</translation>
     </message>
@@ -849,12 +844,12 @@
         <translation>{name}은(는) 그중 하나가 아닙니다</translation>
     </message>
     <message>
-        <location line="+4"/>
+        <location line="+5"/>
         <source>there is no board model of that name</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+515"/>
+        <location line="+525"/>
         <source>its UUID {found} is not {uuid}, as in the AI model registry</source>
         <translation type="unfinished"></translation>
     </message>
@@ -874,7 +869,17 @@
         <translation>{label}(으)로 다시 라벨링</translation>
     </message>
     <message>
-        <location line="+277"/>
+        <location line="+268"/>
+        <source>no agreement check of the board model holds images of this view</source>
+        <translation>이 보드 모델의 일치도 검사 중 이 뷰의 이미지를 담은 것이 없습니다</translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>the newest agreement check of the view did not reach the targets</source>
+        <translation>이 뷰의 가장 최근 일치도 검사가 목표에 도달하지 못했습니다</translation>
+    </message>
+    <message>
+        <location line="+52"/>
         <source>Changing settings</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1528,12 +1533,12 @@
     </message>
     <message>
         <location line="+8"/>
-        <location line="+135"/>
+        <location line="+136"/>
         <source>View not known</source>
         <translation>알 수 없는 뷰</translation>
     </message>
     <message>
-        <location line="-134"/>
+        <location line="-135"/>
         <source>{path} was not imported: its view &quot;{view}&quot; is not one of {views}.</source>
         <translation>{path}을(를) 가져오지 않았습니다. 뷰 &quot;{view}&quot;는 {views} 중 하나가 아닙니다.</translation>
     </message>
@@ -1573,12 +1578,7 @@
         <translation>데이터셋이 동결되지 않음: NG 라벨 미검토</translation>
     </message>
     <message>
-        <location line="+1"/>
-        <source>{name} was not frozen: {count} NG labels are not checked by a second user.</source>
-        <translation>{name}이(가) 동결되지 않았습니다: NG 라벨 {count}개를 다른 사용자가 검토하지 않았습니다.</translation>
-    </message>
-    <message>
-        <location line="+1"/>
+        <location line="+2"/>
         <source>Have another Engineer or Admin check each NG label, then freeze again.</source>
         <translation>다른 엔지니어 또는 관리자에게 각 NG 라벨의 검토를 요청한 다음 다시 동결하십시오.</translation>
     </message>
@@ -1588,12 +1588,7 @@
         <translation>데이터셋이 동결되지 않음: OK 라벨 미검토</translation>
     </message>
     <message>
-        <location line="+1"/>
-        <source>{name} was not frozen: {checked} of {needed} OK labels to check (10 % of {ok}) are checked.</source>
-        <translation>{name}이(가) 동결되지 않았습니다: 검토할 OK 라벨 {needed}개({ok}개의 10 %) 중 {checked}개만 검토되었습니다.</translation>
-    </message>
-    <message>
-        <location line="+3"/>
+        <location line="+5"/>
         <source>Draw OK labels for a check and have another Engineer or Admin check them, then freeze again.</source>
         <translation>검토할 OK 라벨을 추출하고 다른 엔지니어 또는 관리자에게 검토를 요청한 다음 다시 동결하십시오.</translation>
     </message>
@@ -1774,6 +1769,66 @@
     </message>
     <message>
         <location line="+4"/>
+        <source>Dataset not frozen: no version name</source>
+        <translation>데이터셋이 동결되지 않음: 버전 이름 없음</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Board model {board} was not frozen: its name has no Latin letter or digit, which a dataset version is named with.</source>
+        <translation>보드 모델 {board}이(가) 동결되지 않았습니다: 데이터셋 버전 이름에 쓰이는 라틴 문자나 숫자가 이름에 없습니다.</translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>Import the images under a board model whose name has a Latin letter or digit, such as TBOX-A1, and freeze that board model.</source>
+        <translation>이름에 라틴 문자나 숫자가 있는 보드 모델(예: TBOX-A1)로 이미지를 가져온 다음 그 보드 모델을 동결하십시오.</translation>
+    </message>
+    <message>
+        <location line="+8"/>
+        <source>Dataset not frozen: version name taken</source>
+        <translation>데이터셋이 동결되지 않음: 버전 이름 중복</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>{name} was not frozen: board model {other} has frozen versions under the same letters and digits as board model {board}, so their names would mix.</source>
+        <translation>{name}이(가) 동결되지 않았습니다: 보드 모델 {other}에 보드 모델 {board}과(와) 같은 문자와 숫자로 된 동결 버전이 있어 두 보드 모델의 버전 이름이 섞이게 됩니다.</translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>Import the images under a board model whose letters and digits differ from those of {other}, and freeze that board model.</source>
+        <translation>{other}과(와) 문자와 숫자가 다른 보드 모델로 이미지를 가져온 다음 그 보드 모델을 동결하십시오.</translation>
+    </message>
+    <message>
+        <location line="+8"/>
+        <source>Dataset not frozen: manifest not written</source>
+        <translation>데이터셋이 동결되지 않음: 매니페스트를 쓰지 못함</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>{name} was not frozen: its manifest {path} could not be written ({reason}).</source>
+        <translation>{name}이(가) 동결되지 않았습니다: 매니페스트 {path}을(를) 쓸 수 없었습니다({reason}).</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Check the free space on the workspace drive and that its datasets folder can be written, then freeze again; nothing of the version was kept.</source>
+        <translation>작업 공간 드라이브의 여유 공간과 datasets 폴더에 쓸 수 있는지 확인한 다음 다시 동결하십시오. 버전은 아무것도 남지 않았습니다.</translation>
+    </message>
+    <message>
+        <location line="+8"/>
+        <source>Dataset not frozen: path too long</source>
+        <translation>데이터셋이 동결되지 않음: 경로가 너무 김</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>{name} was not frozen: the system refused the path of its manifest in the workspace folder {workspace} as too long.</source>
+        <translation>{name}이(가) 동결되지 않았습니다: 시스템이 작업 공간 폴더 {workspace}에 있는 매니페스트의 경로를 너무 길다며 거부했습니다.</translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>Ask an Admin to save a workspace folder with a shorter path on Settings and then, with the app closed, to copy everything in the folder {workspace} into that folder, or to turn on long paths in Windows; then freeze again.</source>
+        <translation>관리자에게 설정에서 더 짧은 경로의 작업 공간 폴더를 저장한 뒤 앱을 닫은 상태에서 {workspace} 폴더의 모든 내용을 그 폴더로 복사하거나, Windows에서 긴 경로를 켜 달라고 요청한 다음 다시 동결하십시오.</translation>
+    </message>
+    <message>
+        <location line="+9"/>
         <source>AI model, recipe, scale or Golden board changed since the run</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2178,7 +2233,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-871"/>
+        <location line="-925"/>
         <source>Board judged NG</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2258,7 +2313,17 @@
         <translation>{path}에 라벨 &quot;{label}&quot;을(를) 붙이지 않았습니다. {labels} 중 하나가 아닙니다.</translation>
     </message>
     <message>
-        <location line="+161"/>
+        <location line="+22"/>
+        <source>{name} was not frozen: a second user has not checked {count} NG label(s).</source>
+        <translation>{name}이(가) 동결되지 않았습니다: NG 라벨 {count}개를 다른 사용자가 검토하지 않았습니다.</translation>
+    </message>
+    <message>
+        <location line="+6"/>
+        <source>{name} was not frozen: {checked} of the {needed} OK label(s) to check (10 % of {ok}) are checked.</source>
+        <translation>{name}이(가) 동결되지 않았습니다: 검토할 OK 라벨 {needed}개({ok}개의 10 %) 중 {checked}개만 검토되었습니다.</translation>
+    </message>
+    <message>
+        <location line="+187"/>
         <source>ROI thresholds refused</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4455,7 +4520,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/services.py" line="-1721"/>
+        <location filename="../core/services.py" line="-1777"/>
         <source>Aligning {count} images to the reference board</source>
         <translation type="unfinished"></translation>
     </message>

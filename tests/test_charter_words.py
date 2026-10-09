@@ -54,6 +54,7 @@ ALLOWED_WORDS = {  # (catalogue code or translation context, Not word): why the 
     ("AOI-TRN-005", "window"): "the operating system's name, Windows, whose file names ignore case",
     ("AOI-INSP-014", "window"): "the operating system's name, Windows, whose long paths setting is the step",
     ("AOI-TRN-011", "window"): "the operating system's name, Windows, whose long paths setting is the step",
+    ("AOI-TRN-042", "window"): "the operating system's name, Windows, whose long paths setting is the step",
     ("AOI-SET-007", "error"): APP_ERROR,
     ("AOI-TRN-010", "error"): APP_ERROR,
     ("AOI-SET-006", "invalid"): "said of the app's migration files, never of a user (the Charter bans 'invalid user')",
@@ -84,7 +85,8 @@ def test_req_set_019_the_error_catalogue_uses_only_glossary_terms() -> None:
     print("catalogue texts with a Not word:", found)
     assert found == []
     assert {k for k in ALLOWED_WORDS if k[0].startswith("AOI-")} == used, "an ALLOWED_WORDS entry no longer applies"
-    assert not any(re.search(r"\bimport\b", t, re.IGNORECASE) and "model" in t for t in CATALOGUE_TEXTS), "import"
+    importing = [t.replace("board model", "") for t in CATALOGUE_TEXTS if re.search(r"\bimport\b", t, re.IGNORECASE)]
+    assert not any("model" in t for t in importing), "import"  # images imported under a board model are no AI model
     ng = AoiError("AOI-INSP-003", board="board_0042.png", defects=3)
     assert (ng.entry.title, ng.what) == ("Board judged NG", "Board board_0042.png was judged NG with 3 defect(s).")
 
