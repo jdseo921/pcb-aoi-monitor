@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from PySide6.QtWidgets import QFileDialog, QInputDialog
+from PySide6.QtWidgets import QFileDialog
 from pytestqt.qtbot import QtBot
 
 from aoi.config import Settings
@@ -21,8 +21,9 @@ from aoi.core.imaging import list_images, load_image, save_image
 from aoi.core.services import AppContext
 from aoi.data import atomic
 from aoi.ui.main_window import MainWindow
+from aoi.ui.pages.base import cell_text
 from tests.test_req_done_in_v01 import BOARD, _window
-from tests.test_roles_and_audit import WRITES
+from tests.test_roles_and_audit import WRITES, calibration_samples, calibration_set, labelled_blind, ready_to_freeze
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -57,11 +58,32 @@ def _a_result(ctx: AppContext) -> None:
     ctx.inspect_file("TINY", ctx.samples("TINY", "OK")[0]["path"])
 
 
+def _cal_samples(ctx: AppContext) -> None:
+    """100 samples of the board model CAL, for a calibration set."""
+    calibration_samples(ctx)
+
+
+def _a_set(ctx: AppContext) -> None:
+    """A calibration set of the board model CAL, for blind labels."""
+    ctx.make_calibration_set("CAL", calibration_samples(ctx))
+
+
+def _labelled_set(ctx: AppContext) -> None:
+    """A calibration set labelled blind by the engineer and the user acting, for an agreement check."""
+    _a_set(ctx)
+    ctx.label_blind(calibration_set(ctx)[0], calibration_set(ctx)[1][0], "OK")
+    labelled_blind(ctx)
+
+
 # a write that would change nothing on the trained workspace gets something to change, or its case proves nothing
-SETUP: dict[str, Callable[[AppContext], None]] = {
+SETUP: dict[str, Callable[[AppContext], object]] = {
     "activate_model": _second_version,
     "archive_old": _a_result,
     "export_overlays": _a_result,
+    "make_calibration_set": _cal_samples,
+    "label_blind": _a_set,
+    "run_agreement_check": _labelled_set,
+    "freeze_dataset": ready_to_freeze,
 }
 
 
@@ -101,7 +123,7 @@ ctx.save_recipe(Recipe.from_dict({{**Recipe(board_model="B1").to_dict(), "warn_r
     ctx.close()
 
 
-def test_req_trn_001_an_import_that_fails_part_way_stores_nothing(
+def test_req_trn_001_a_file_gone_since_the_pick_is_listed_and_the_others_go_in(
     qtbot: QtBot,
     ctx: AppContext,
     synthetic_dataset: Path,
@@ -109,6 +131,9 @@ def test_req_trn_001_an_import_that_fails_part_way_stores_nothing(
     monkeypatch: pytest.MonkeyPatch,
     dialogs: list[tuple[str, str]],
 ) -> None:
+    """Add OK Images… imports each picked file on its own (REQ-TRN-001, S31; decisions Q30, Q31): one gone between the
+    pick and Import is listed in the import sheet with AOI-INSP-001 and no dialog, and the others go in, each with its
+    audit entry (#178) and no copy of the gone one left. Put back, Import again adds it alone."""
     win = MainWindow(ctx)
     qtbot.addWidget(win)
     win.set_user("engineer")
@@ -119,18 +144,19 @@ def test_req_trn_001_an_import_that_fails_part_way_stores_nothing(
         shutil.copy(p, f)
     files[2].unlink()  # gone between the pick and the copy
     monkeypatch.setattr(QFileDialog, "getOpenFileNames", staticmethod(lambda *_: ([str(f) for f in files], "")))
-    monkeypatch.setattr(QInputDialog, "getItem", staticmethod(lambda *a: (a[3][0], True)))
-    page.add_ok()  # the copies run on the pool (#194); the error reaches the coded dialog
-    qtbot.waitUntil(lambda: page._bg is None, timeout=30000)
-    [(title, text)] = dialogs
-    assert title == "AOI-TRN-008 Images not imported" and "ok2.png" in text, (title, text)
-    assert ctx.samples("NEWB") == [] and ctx.audit_entries(action="sample.import") == []
-    assert not any((ctx.settings.images_dir / "NEWB").rglob("*.png"))  # no copy left behind
-    shutil.copy(list_images(synthetic_dataset / "train" / "ok")[2], files[2])  # the file put back: Try again
     page.add_ok()
+    page.sheet.btn_import.click()  # the copies run on the pool (#194)
+    qtbot.waitUntil(lambda: page._bg is None, timeout=30000)
+    statuses = [cell_text(page.sheet.table, r, 4) for r in range(3)]
+    assert dialogs == [] and statuses == ["copied", "copied", "AOI-INSP-001 Image cannot be read"], statuses
+    assert "ok2.png" in page.sheet.table.item(2, 4).toolTip()
+    assert len(ctx.samples("NEWB")) == 2 and len(list((ctx.settings.images_dir / "NEWB").rglob("*.png"))) == 2
+    assert [e["after"]["added"] for e in ctx.audit_entries(action="sample.import")] == [1, 1]
+    shutil.copy(list_images(synthetic_dataset / "train" / "ok")[2], files[2])  # the file put back: Import again
+    page.sheet.btn_import.click()
     qtbot.waitUntil(lambda: page._bg is None, timeout=30000)
     assert len(ctx.samples("NEWB")) == 3 and ctx.reference_image("NEWB") and ctx.recipe("NEWB")[0] == 1
-    assert [e["after"]["added"] for e in ctx.audit_entries(action="sample.import")] == [3]
+    assert [e["after"]["added"] for e in ctx.audit_entries(action="sample.import")] == [1, 1, 1]
 
 
 def test_req_trn_001_a_folder_import_that_fails_part_way_says_what_was_imported(
@@ -151,7 +177,7 @@ def test_req_trn_001_a_folder_import_that_fails_part_way_says_what_was_imported(
 
     def copy_or_refuse(src: str | Path, dst: str | Path) -> None:
         if Path(src).name == "ok_2.png":
-            raise PermissionError(13, "Permission denied", str(src))
+            raise PermissionError(13, "Permission denied", str(dst))  # the workspace's: the source's is listed
         copy(src, dst)
 
     monkeypatch.setattr(atomic, "copy_file", copy_or_refuse)
@@ -161,13 +187,15 @@ def test_req_trn_001_a_folder_import_that_fails_part_way_says_what_was_imported(
     win._on_board_model("NEWB")
     page = win.pages["Training"]
     page.import_from(str(folder))
+    page.sheet.btn_import.click()
     qtbot.waitUntil(lambda: page._bg is None, timeout=30000)
     assert len(ctx.samples("NEWB")) == 2 and page.samples.rowCount() == 2  # the two before it, shown in the table
     [(title, text)] = dialogs
-    assert title == "AOI-TRN-009 Folder import stopped part-way", title
+    assert title == "AOI-TRN-009 Import stopped part-way", title
     assert "ok_2.png" in text and "Permission denied" in text and "image 3 of 5" in text, text
-    assert "the 2 image(s) imported before it" in text and "would add those 2 a second time" in text, text
-    assert win.statusBar().currentMessage() == "Imported 2 OK and 0 NG images"
+    assert "the 2 image(s) imported before it" in text, text
+    assert "with NEWB picked in the header, press Import again: the 2 image(s) already imported are skipped" in text
+    assert win.statusBar().currentMessage() == "Imported 2 OK and 0 NG images into NEWB"
 
 
 def test_req_log_004_an_export_onto_its_own_file_is_never_removed(

@@ -55,7 +55,9 @@ BOARD_MODEL = "TINY"
 FIXED_TIME = "2026-01-01T09:00:00+00:00"  # every stored time, so a render does not change with the clock
 FIXED_MS = 480.0  # the inspection time Inspection and Compare show
 FIXED_SSIM, FIXED_INLIERS = 0.95, 400  # the similarity and alignment points Compare shows (module docstring)
-STORED_STATES = ("compare-stored-operator", "compare-golden-changed-operator", "compare-tried-engineer")  # Compare
+STORED_STATES = (  # Compare
+    "compare-stored-operator", "compare-golden-changed-operator", "compare-tried-engineer", "compare-save-engineer",
+)  # fmt: skip
 FIXED_WORKSPACE = "C:/AOI_Workspace"  # what the Settings page shows instead of the temporary folder
 TEST_FONT = '"DejaVu Sans"'  # the font the approved images are drawn with (Linux)
 DATASET_OK, DATASET_NG, DATASET_SEED = 30, 14, 7  # as tests/conftest.py
@@ -129,9 +131,10 @@ def build_workspace(root: Path) -> AppContext:
     """The synthetic workspace the pages are rendered on; see the module docstring."""
     from aoi.config import Settings
     from aoi.core.imaging import list_images
+    from aoi.core.labels import DefectBox
     from aoi.core.recipe import ROI
     from aoi.core.services import AppContext
-    from tools.make_synthetic_dataset import write_dataset
+    from tools.make_synthetic_dataset import ng_type, write_dataset
 
     os.environ["AOI_WORKSPACE"] = str(root / "default_workspace")  # settings.json is saved there, never in ~/
     dataset = root / "dataset"
@@ -140,13 +143,16 @@ def build_workspace(root: Path) -> AppContext:
         ctx = AppContext(Settings(workspace=str(root / "workspace"), device="cpu"))
         ctx.set_user("engineer")
         ctx.import_samples(BOARD_MODEL, [str(p) for p in list_images(dataset / "train" / "ok")], "OK")
-        ctx.import_samples(BOARD_MODEL, [str(p) for p in list_images(dataset / "train" / "ng")], "NG")
+        for p in list_images(dataset / "train" / "ng"):  # one call each: an NG sample is imported with its type
+            ctx.import_samples(BOARD_MODEL, [str(p)], "NG", ng_type(p))
         ctx.train(BOARD_MODEL, epochs=TINY_EPOCHS, image_size=TINY_IMAGE_SIZE)
         recipe = ctx.recipe(BOARD_MODEL)[1]
         recipe.rois.append(ROI("R1", "Presence", 110, 110, 110, 110))  # around the IC the NG board lacks (LAYOUT[0])
         ctx.save_recipe(recipe)
         with pinned_engine():
             ctx.inspect_file(BOARD_MODEL, str(ng_board(dataset)))  # one record for Logs, one alarm for Inspection
+        missing = ctx.samples(BOARD_MODEL, "NG")[0]  # ng_000: the seed leaves out its first IC (LAYOUT[0])
+        ctx.set_boxes(missing["uuid"], [DefectBox(110, 110, 110, 110, "Missing Component")])  # Training's editor
     for table, column in (
         ("board_models", "created_at"),
         ("samples", "added_at"),
@@ -259,6 +265,8 @@ def prepare(win: MainWindow, title: str, dataset: Path) -> None:
     the real ones would change from run to run."""
     from PySide6.QtCore import QDate
 
+    from aoi.ui.pages.base import cell_text
+
     page: Any = win.pages[title]
     if title == "Inspection":
         if page.last is None:
@@ -275,8 +283,17 @@ def prepare(win: MainWindow, title: str, dataset: Path) -> None:
             wait_until(lambda: page.res is not None)
             assert page.res.elapsed_ms == FIXED_MS, "the Compare run was not pinned"
     elif title == "Training":
+        page.import_from(str(dataset / "train"))  # the import sheet open on ok/ and ng/, its NG rows waiting for a type
+        page.sheet.table.clearFocus()  # the sheet takes the keys: let go, or the next page drawn shows a field's caret
         page.bar.setRange(0, TINY_EPOCHS)
         page.bar.setValue(TINY_EPOCHS)  # as a finished run leaves it: the percentage on the accent chunk (#203)
+        missing = str(page.ctx.samples(BOARD_MODEL, "NG")[0]["id"])  # the label editor on its box, selected
+        rows = range(page.samples.rowCount())
+        page.samples.selectRow(next(r for r in rows if cell_text(page.samples, r, 0) == missing))
+        wait_until(page.editor.idle)  # its image and boxes, read on a pool thread
+        page.editor.view.choose(0)
+        if not page.editor.draw_btn.isChecked():  # Draw mode on: the button's on look in the shot and the size walk
+            page.editor.draw_btn.click()
     elif title == "Logs & Export":
         page.d_from.setDate(QDate(2025, 12, 25))
         page.d_to.setDate(QDate(2026, 1, 8))
@@ -288,7 +305,8 @@ def prepare(win: MainWindow, title: str, dataset: Path) -> None:
 def render_stored(win: Any, ctx: AppContext, out: Path) -> dict[str, Path]:
     """Compare on the record `build_workspace` saved, as an Operator opens it from Inspection: beside the golden board
     it was judged against, then with that file changed, which the pane explains (REQ-CMP-003); the file is put back.
-    Then as an Engineer judges it again with other thresholds: the would-be verdict beside Re-evaluate (REQ-CMP-005)."""
+    Then as an Engineer judges it again with other thresholds: the would-be verdict beside Re-evaluate, and Save to
+    Recipe's sheet with a reason typed, nothing saved (REQ-CMP-005)."""
     from PySide6.QtWidgets import QApplication
 
     page, files = win.pages["Compare"], {}
@@ -305,11 +323,14 @@ def render_stored(win: Any, ctx: AppContext, out: Path) -> dict[str, Path]:
             assert win.navigate("Compare")
             page.show_stored(record)
             wait_until(lambda: page._bg is None)
-            if name == STORED_STATES[2]:  # an AI score threshold above the AI score, and no pixel differs enough
-                page.ai_thr.setValue(7.0)
+            if name in STORED_STATES[2:]:  # an AI score threshold above the AI score, and no pixel differs enough
+                page.ai_thr.set_override(7.0)
                 page.diff_thr.setValue(255)
                 page.act_try.trigger()
                 wait_until(lambda: page._bg is None)
+            if name == STORED_STATES[3]:
+                page.act_save.trigger()
+                page.reason.setText("No pixel differs enough on this board")
             QApplication.processEvents()
             files[name] = out / f"{name}.png"
             assert win.grab().save(str(files[name])), files[name]

@@ -9,9 +9,12 @@ from PySide6.QtCore import QCoreApplication, Qt
 from PySide6.QtGui import QAction, QColor, QFont, QKeySequence
 from PySide6.QtWidgets import (
     QAbstractItemView,
+    QApplication,
+    QFrame,
     QHBoxLayout,
     QLabel,
     QPushButton,
+    QScrollArea,
     QTableWidget,
     QTableWidgetItem,
     QVBoxLayout,
@@ -24,6 +27,7 @@ from ...errors import QT_TRANSLATE_NOOP as QT_TRANSLATE_NOOP  # pages mark text 
 from ...errors import AoiError
 from .. import theme
 from ..errors import phrase_text, show_error
+from ..widgets.ai_threshold import AiThresholdField
 from ..widgets.busy import BusyOverlay
 from ..workers import Worker, start
 
@@ -131,8 +135,49 @@ class Page(QWidget):
         new = QCoreApplication.translate("Page", "+ New board model")
         return heading, QCoreApplication.translate("Page", "Create one to begin."), new, self.shell.new_board_model
 
+    def ai_threshold_field(self, override: str = "", own_row: bool = False) -> AiThresholdField:
+        """The AI score threshold of a recipe (REQ-TRN-015): a tick, size class F, that names the AI model's calibrated
+        value, the field, and the note that says why none is named. `override` is the page's sketch's text for the tick
+        ({value} for the value); by default the Recipe Editor's few words ("override 5.69"), which fit beside the field
+        under the form's labels without widening the window. Longer words (Compare's "Override the AI model's value
+        5.69") need `own_row`: the page lays out `tick_row` under the field, as it does the note."""
+        texts = (
+            override or QCoreApplication.translate("Page", "Override {value}"),
+            QCoreApplication.translate("Page", "Set my own value"),
+        )
+        field = AiThresholdField(texts, own_row)
+        size_class(field.tick, "F")
+        return field
+
+    def show_calibrated(
+        self,
+        field: AiThresholdField,
+        board_model: str | None,
+        model_uuid: str | None = None,
+        version: str | None = None,
+    ) -> None:
+        """`field` names the calibrated value of `board_model`'s active AI model, or of the AI model `model_uuid` (a
+        stored result's, whose `version` names it if the registry no longer holds it). With none, its note says why: no
+        AI model trained, or none active, or a calibration that cannot be read (AOI-TRN-012, with what happened and
+        what to do, and no dialog, since a page shows it unasked); with no board model, nothing."""
+        why = ""
+        try:
+            value = self.ctx.calibrated_threshold(board_model, model_uuid, version) if board_model else None
+        except AoiError as e:
+            value, why = None, self.coded_text(e)
+        else:
+            if value is None and board_model and self.ctx.models(board_model):
+                why = QCoreApplication.translate("Page", "No AI model version is active: there is no calibrated value.")
+            elif value is None and board_model:
+                why = QCoreApplication.translate("Page", "No AI model is trained yet: there is no calibrated value.")
+        field.show_calibrated(value, why)
+
     # Hooks called by the shell.
     def on_show(self) -> None: ...
+    def on_user_changed(self) -> None:
+        """A sign-in, whichever page is shown: `MainWindow.set_user` calls it on every page before the page shown gets
+        `on_show`, so a page the new user opens later never finds what the user before left for that role."""
+
     def update_actions(self) -> None:
         """Enable the page's buttons for the role and for whether a background job runs (`self._bg`)."""
 
@@ -190,6 +235,11 @@ class Page(QWidget):
             )
             sentence = ask.format(code=e.code, what=what)
         return heading.format(board_model=self.board_model), sentence, link, go
+
+    def coded_text(self, e: AoiError) -> str:
+        """A coded error as one line of a page, in the UI language: its code, what happened and what to do."""
+        said = QCoreApplication.translate("Page", "{code} {what} {action}")
+        return said.format(code=e.code, what=phrase_text(e.what), action=phrase_text(e.action))
 
     def error(self, exc: BaseException) -> None:
         """Show an error the way the standard asks: its code, what happened and what to do (REQ-SET-019)."""
@@ -289,9 +339,10 @@ W = TypeVar("W", bound=QWidget)
 
 
 def size_class(w: W, cls: str) -> W:
-    """Mark a control with a sketch size class, "T" (operator target, 48 px) or "T+" (run control, 56 px), which the
-    stylesheet sizes (`[sizeClass="T+"]`). `setMinimumHeight()` is undone when the stylesheet is applied, since
-    QStyleSheetStyle sets the minimum from its own min-height rule: that is how the run controls shipped at 42 px."""
+    """Mark a control with a sketch size class, "T" (operator target, 48 px), "T+" (run control, 56 px) or "F" (a tick
+    with the fields, 40 px tall as they are, which the stylesheet sizes themselves), which the stylesheet sizes
+    (`[sizeClass="T+"]`). `setMinimumHeight()` is undone when the stylesheet is applied, since QStyleSheetStyle sets the
+    minimum from its own min-height rule: that is how the run controls shipped at 42 px."""
     w.setProperty("sizeClass", cls)  # not "size": that is QWidget's own QSize property
     return w
 
@@ -386,3 +437,34 @@ def cell_item(t: QTableWidget, row: int, column: int) -> QTableWidgetItem:
     if item is None:
         raise LookupError(f"the table has no item at row {row}, column {column}")
     return item
+
+
+class _Scrolled(QScrollArea):
+    """Shows the whole of a field in it as the field takes the focus, by Tab or a click: Qt's own scroll area shows only
+    a field's text cursor, on Tab alone (on Linux, the Recipe Editor's Thresholds tab at 1366 x 768 left 8 of a spin
+    box's 45 px under its edge). Its connection to the application's focusChanged goes when the area does."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        app = QApplication.instance()
+        if isinstance(app, QApplication):
+            app.focusChanged.connect(self._show_whole)
+
+    def _show_whole(self, _old: QWidget | None, field: QWidget | None) -> None:
+        content = self.widget()
+        if field is not None and content is not None and content.isAncestorOf(field):
+            centre = field.mapTo(content, field.rect().center())
+            self.ensureVisible(centre.x(), centre.y(), field.width() // 2 + 1, field.height() // 2 + 1)
+
+
+def scrolled(content: QWidget) -> QScrollArea:
+    """`content` in an area that scrolls it rather than squeeze a row where the area is shorter than its rows need at
+    its width: the Recipe Editor's Thresholds tab, which at 1600 x 900 with Windows' fonts, AOI-RCP-007 and the AI score
+    threshold's note shown had 597 of the 615 px its rows need. `content` is as wide as the area, which has no frame of
+    its own and takes no focus: Tab goes on to the fields, each shown whole."""
+    area = _Scrolled()
+    area.setWidget(content)
+    area.setWidgetResizable(True)
+    area.setFrameShape(QFrame.Shape.NoFrame)
+    area.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+    return area

@@ -19,6 +19,7 @@ from pytestqt.qtbot import QtBot
 
 from aoi.core.imaging import list_images
 from aoi.core.inspector import JudgedBy
+from aoi.core.recipe import ROI
 from aoi.core.services import AppContext
 from aoi.data import atomic
 from aoi.errors import AoiError
@@ -29,6 +30,7 @@ from aoi.ui.pages.model_test import ModelTestPage
 from tests.conftest import another_version, wrapped
 from tests.test_error_translation import Marking
 from tests.test_req_done_in_v01 import BOARD, _window
+from tools.make_synthetic_dataset import ng_type
 
 
 def _tested_page(qtbot: QtBot, win: MainWindow, folder: Path) -> ModelTestPage:
@@ -331,14 +333,14 @@ def test_req_tst_003_a_run_with_no_ai_model_or_golden_board_reads_so(
     note, said = page.run_note.text(), page.preview_empty.sentence.text()
     print(note, said, sep="\n")
     golden = Path(trained_ctx.reference_image(BOARD) or "").name
-    now = f"{BOARD} now uses AI model v1.0, recipe revision 1 and Golden board "  # the pane's names may wrap (#245)
+    now = f"{BOARD} now uses AI model v1.0, recipe revision 1, Golden board "  # the pane's names may wrap (#245)
     assert note.startswith(
-        f"These results were judged by no AI model, recipe revision 1 and no Golden board; {now}{golden}."
+        f"These results were judged by no AI model, recipe revision 1, no Golden board and no scale; {now}{golden} and"
     )
     assert said.startswith(
-        f"AOI-TST-001 {wrapped('ok_009.png')} was judged in this run by no AI model, recipe revision 1 and no"
+        f"AOI-TST-001 {wrapped('ok_009.png')} was judged in this run by no AI model, recipe revision 1, no Golden"
     )
-    assert f"Golden board; {now}{wrapped(golden)}, so" in said and "none" not in note + said
+    assert f"board and no scale; {now}{wrapped(golden)} and no scale, so" in said and "none" not in note + said
     errors: list[AoiError] = []
     shown = page.not_inspected
     monkeypatch.setattr(page, "not_inspected", lambda *a, **k: errors.append(a[2]) or shown(*a, **k))
@@ -351,11 +353,12 @@ def test_req_tst_003_a_run_with_no_ai_model_or_golden_board_reads_so(
     finally:
         QCoreApplication.removeTranslator(translator)
     print(page.run_note.text(), page.preview_empty.sentence.text(), str(errors[0]), sep="\n")
-    marked = ("§no AI model", "§AI model v1.0", "§no Golden board")
+    marked = ("§no AI model", "§AI model v1.0", "§no Golden board", "§no scale")
     assert all(m in page.run_note.text() and m in page.preview_empty.sentence.text() for m in marked)
     assert f"§Golden board {golden}" in page.run_note.text()
     assert f"§Golden board {wrapped(golden)}" in page.preview_empty.sentence.text()
-    assert "§" not in str(errors[0]) and "by no AI model, recipe revision 1 and no Golden board;" in str(errors[0])
+    error = str(errors[0])
+    assert "§" not in error and "by no AI model, recipe revision 1, no Golden board and no scale;" in error
 
 
 def test_req_tst_003_a_run_with_no_ai_model_says_so_once_one_is_trained(
@@ -369,8 +372,9 @@ def test_req_tst_003_a_run_with_no_ai_model_says_so_once_one_is_trained(
     then an AI model trained on Training. Shown again, the page says that the run was judged by no AI model, in the note
     and in AOI-TST-001 for the row previewed before, and names the AI model in use now."""
     monkeypatch.setattr(QMessageBox, "information", staticmethod(lambda *a: QMessageBox.StandardButton.Ok))
-    for label in ("OK", "NG"):
-        ctx.import_samples(BOARD, [str(p) for p in list_images(synthetic_dataset / "train" / label.lower())], label)
+    ctx.import_samples(BOARD, [str(p) for p in list_images(synthetic_dataset / "train" / "ok")], "OK")
+    for p in list_images(synthetic_dataset / "train" / "ng"):
+        ctx.import_samples(BOARD, [str(p)], "NG", ng_type(p))
     ctx.set_reference(BOARD, ctx.samples(BOARD, "OK")[0]["id"])
     golden = Path(ctx.reference_image(BOARD) or "").name
     win = _window(qtbot, ctx)
@@ -383,15 +387,15 @@ def test_req_tst_003_a_run_with_no_ai_model_says_so_once_one_is_trained(
     win.navigate("AI Model Test")
     note, said = page.run_note.text(), page.preview_empty.sentence.text()
     print(note, said, sep="\n")
-    judged = f"by no AI model, recipe revision 1 and Golden board {golden}; {BOARD} now uses AI model v1.0,"
+    judged = f"by no AI model, recipe revision 1, Golden board {golden} and no scale; {BOARD} now uses AI model v1.0,"
     assert page.run_note.isVisible() and note.startswith(f"These results were judged {judged}")
     shown = judged.replace(golden, wrapped(golden))  # the pane's names may break after each _ and - (#245)
     assert said.startswith(f"AOI-TST-001 {wrapped(cell_text(page.table, 0, 0))} was judged in this run {shown}")
     assert "Not inspected" in page.preview_verdict.text() and dialogs == []
 
 
-@pytest.mark.parametrize("change", ["activate", "recipe", "reference", "recipe_off"])
-def test_req_tst_003_a_run_judged_with_the_ai_check_off_is_tied_to_its_recipe_and_golden_board(
+@pytest.mark.parametrize("change", ["activate", "recipe", "reference", "recipe_off", "scale", "scale_px", "roi"])
+def test_req_tst_003_a_run_judged_with_the_ai_check_off_is_tied_to_its_recipe_golden_board_and_scale(
     qtbot: QtBot,
     trained_ctx: AppContext,
     synthetic_dataset: Path,
@@ -404,12 +408,17 @@ def test_req_tst_003_a_run_judged_with_the_ai_check_off_is_tied_to_its_recipe_an
     Last Inspected follows, and no note shows. A recipe saved since ("recipe", the AI check still off) or another
     Golden board set ("reference") refuses the rows, and the note and AOI-TST-001 say the run was judged, and the board
     model is now judged, by "no AI model (the AI check off)", never by AI model v1.0. A run judged with the AI check on,
-    then a recipe saved that turns it off ("recipe_off"), names the run's AI model and the AI check off now. Before, the
+    then a recipe saved that turns it off ("recipe_off"), names the run's AI model and the AI check off now. A scale set
+    since refuses the rows of a run whose recipe holds its minimum defect size in mm ("scale", S29), which the scale
+    sizes, and the note names it, and so does one whose only size in mm is an ROI's ("roi", S29 review), while one in
+    px ("scale_px") is previewed, as no scale changes it. Before, the
     activation refused every row of the AI-off run with AOI-TST-001, and its text and the note said the run was "judged
     by AI model v1.0", while the run's report says that no AI model judged the images."""
     ctx = trained_ctx
     recipe = copy.deepcopy(ctx.recipe(BOARD)[1])
     recipe.use_ai = change == "recipe_off"
+    recipe.min_defect_mm = 0.5 if change == "scale" else None  # 445 px of area at 47.6 px/mm; 40 px with no scale
+    recipe.rois = [ROI("R1", mm=[0, 0, 1, 1])] if change == "roi" else recipe.rois  # an ROI in mm alone (S29 review)
     run_rev = ctx.save_recipe(recipe)
     folder = tmp_path / "validation"
     for label in ("ok", "ng"):
@@ -427,6 +436,8 @@ def test_req_tst_003_a_run_judged_with_the_ai_check_off_is_tied_to_its_recipe_an
     elif change == "reference":  # another OK sample as the Golden board, with the recipe kept
         ok = next(s for s in ctx.samples(BOARD, "OK") if s["path"] != ctx.reference_image(BOARD))
         ctx.set_reference(BOARD, ok["id"])
+    elif change.startswith(("scale", "roi")):
+        ctx.set_scale(BOARD, 476, 10)
     else:
         recipe.use_ai, recipe.ssim_min = False, 0.75
         now_rev = ctx.save_recipe(recipe)
@@ -435,15 +446,16 @@ def test_req_tst_003_a_run_judged_with_the_ai_check_off_is_tied_to_its_recipe_an
     note, golden = page.run_note.text(), Path(ctx.reference_image(BOARD) or "").name
     print(change, seen, note, sep="\n")
     assert len(seen) == 4 and dialogs == [] and (golden != run_golden) == (change == "reference")
-    if change == "activate":
+    if change in ("activate", "scale_px"):
         assert all(s[2] == s[1] and s[3] == "" for s in seen) and page.run_note.isHidden(), seen
         assert win.last_inspected is not None and win.last_inspected[0] == cell_item(page.table, 3, 0).toolTip()
         return
     off = "no AI model (the AI check off)"
     run_model = "AI model v1.0" if change == "recipe_off" else off
+    scale = "a scale of 47.60 px/mm" if change in ("scale", "roi") else "no scale"
     judged = (
-        f"by {run_model}, recipe revision {run_rev} and Golden board {run_golden}; {BOARD} now uses {off}, recipe"
-        f" revision {now_rev} and Golden board {golden}"
+        f"by {run_model}, recipe revision {run_rev}, Golden board {run_golden} and no scale; {BOARD} now uses {off},"
+        f" recipe revision {now_rev}, Golden board {golden} and {scale}"
     )
     assert all("Not inspected" in s[2] for s in seen) and win.last_inspected is before
     assert page.run_note.isVisible() and note.startswith(f"These results were judged {judged}."), note

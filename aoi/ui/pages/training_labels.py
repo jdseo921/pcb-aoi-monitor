@@ -1,0 +1,444 @@
+"""Training's label editor (REQ-TRN-003, the screen half; stage S33): the box editor of docs/sketches/training-labels.md
+beside the samples table. It shows the selected image with its defect boxes; on an NG image boxes are drawn, moved,
+resized and deleted, each of one of the 33 defect types, whose severity the defect table gives, the selected box taking
+the type picked, and Undo (Ctrl+Z) puts back what the last change replaced, on any image. Every change is stored at once
+through `AppContext.set_boxes` (an Undo through `set_label`), which keeps the boxes before in the image's history and
+audits the change (S32); nothing here reads or writes the database itself. The image and its boxes are read, and each
+change stored, on a pool thread (REQ-SET-021), one at a time: until it ends the editor takes no other change."""
+
+from __future__ import annotations
+
+import weakref
+from collections.abc import Callable
+from dataclasses import replace
+from functools import partial
+from pathlib import Path
+from typing import TYPE_CHECKING, Any
+
+from PySide6.QtCore import QEvent, Qt, Signal
+from PySide6.QtGui import QFocusEvent, QKeyEvent, QKeySequence, QWheelEvent
+from PySide6.QtWidgets import QComboBox, QFormLayout, QHBoxLayout, QLabel, QListWidget, QVBoxLayout, QWidget
+
+from ...core.labels import DefectBox
+from ...defects import BY_NAME, names
+from ...errors import AoiError
+from .. import theme
+from ..widgets.box_editor import ENTER, BoxEditor
+from ..widgets.busy import BusyOverlay
+from ..widgets.empty_state import EmptyState
+from ..workers import Worker, start
+from .base import Page, action_button, breakable, button, view_text
+
+if TYPE_CHECKING:
+    import numpy as np
+
+    from ...core.services import AppContext
+
+ZOOM_STEP = 1.25  # each Zoom In, as a notch of the wheel
+State = tuple[str, str, str | None, list[DefectBox]]  # a sample's uuid, label, defect type and boxes, as stored
+
+
+def _read(ctx: AppContext, uuid: str, path: str | None) -> tuple[np.ndarray | AoiError | None, list[DefectBox]]:
+    """On a pool thread: a sample's stored boxes and, unless `path` is None, its image or the error that refused it."""
+    boxes = [DefectBox(r["x"], r["y"], r["w"], r["h"], r["dct_type"]) for r in ctx.boxes(uuid)]
+    if path is None:
+        return None, boxes
+    try:
+        return ctx.load_image(path), boxes
+    except AoiError as e:  # gone or damaged since it was imported: said under the heading, with no dialog per row
+        return e, boxes
+
+
+def _restore(ctx: AppContext, states: list[State]) -> Exception | None:
+    """On a pool thread: each sample back to the label, defect type and boxes it had (Undo), until one cannot take them
+    or another error stops it, which is returned, so that the samples put back before it are shown first (review)."""
+    try:
+        for uuid, label, dtype, boxes in states:
+            ctx.set_label(uuid, label, dtype, boxes if label == "NG" else None)
+    except Exception as e:
+        return e
+    return None
+
+
+class TypeList(QComboBox):
+    """The Type list: a type is picked by a choice in the open list, by mouse, finger or keys, or by Enter on the type
+    shown, never by the arrow keys, a letter or the wheel, which only show one; the wheel turns it only while it has the
+    focus. `left` says the focus went elsewhere, so the editor can show the type picked again."""
+
+    picked = Signal()
+    left = Signal()
+
+    def __init__(self) -> None:
+        super().__init__()
+        self._showing = False  # a key or the wheel turning the type shown
+        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+        self.activated.connect(self._chosen)
+
+    def _chosen(self, _index: int) -> None:
+        if not self._showing:
+            self.picked.emit()
+
+    def event(self, e: QEvent) -> bool:
+        if e.type() == QEvent.Type.ShortcutOverride and isinstance(e, QKeyEvent) and e.key() in ENTER:
+            e.accept()  # its Enter before a page key on Enter (the sketch's Check Label)
+            return True
+        return super().event(e)
+
+    def keyPressEvent(self, e: QKeyEvent) -> None:
+        if e.key() in ENTER:
+            self.picked.emit()
+            return
+        self._showing = True
+        super().keyPressEvent(e)
+        self._showing = False
+
+    def wheelEvent(self, e: QWheelEvent) -> None:
+        if not self.hasFocus():
+            e.ignore()  # to the page under the pointer, as a wheel turned on the way to the image
+            return
+        self._showing = True
+        super().wheelEvent(e)
+        self._showing = False
+
+    def focusOutEvent(self, e: QFocusEvent) -> None:
+        super().focusOutEvent(e)
+        if e.reason() != Qt.FocusReason.PopupFocusReason:  # the open list keeps it
+            self.left.emit()
+
+
+class LabelEditor(QWidget):
+    """The selected image, its label and its defect boxes, beside Training's samples table (labels sketch). `undone`
+    names the samples an Undo changed back, for the page to select and show; `stored` a sample and the boxes just
+    stored for it."""
+
+    undone = Signal(list)
+    stored = Signal(str, list)
+
+    def __init__(self, page: Page, placeholder: str) -> None:
+        super().__init__()
+        self.owner = page  # its error dialog and coded lines
+        self.ctx = page.ctx
+        self.sample: dict[str, Any] | None = None
+        lay = QVBoxLayout(self)
+        lay.setContentsMargins(theme.SPACE_S, 0, theme.SPACE_S, 0)
+        self.heading = QLabel()  # the sketch's "ng_003.png · NG · Top"; the file name may break after each _ and -
+        self.heading.setWordWrap(True)
+        lay.addWidget(self.heading)
+        tools = QHBoxLayout()
+        self.draw_btn = button(self.tr("Draw Box"), slot=self._toggle_draw)
+        self.draw_btn.setCheckable(True)
+        self.act_draw = page.action(self.tr("Draw Box"), "D", self._draw_key)  # the button's key (labels sketch)
+        self.act_leave = page.action(self.tr("Leave Draw Mode"), "Esc", self._leave)
+        self.draw_btn.setToolTip(self.act_draw.shortcut().toString(QKeySequence.SequenceFormat.NativeText))
+        tools.addWidget(self.draw_btn)
+        tools.addStretch(1)
+        self.view = BoxEditor(placeholder=placeholder)
+        # Zoom with no wheel, for a hand with no mouse: a button or a key each, and Z for the selected box (a key only)
+        self.act_zoom_in = page.action(self.tr("Zoom In"), "+", lambda: self.view.zoom(ZOOM_STEP))
+        self.act_zoom_out = page.action(self.tr("Zoom Out"), "-", lambda: self.view.zoom(1 / ZOOM_STEP))
+        self.act_fit = page.action(self.tr("Fit"), "0", self.view.fit)
+        self.act_to_box = page.action(self.tr("Zoom to Box"), "Z", self.view.zoom_to_box)
+        lay.addLayout(tools)
+        form = QFormLayout()
+        form.setRowWrapPolicy(QFormLayout.RowWrapPolicy.DontWrapRows)  # a row that wrapped moved the image mid-drag
+        self.type_box = TypeList()
+        self.type_box.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
+        # 14 widths of X: the Type row then asks no more room than the image below it (IMAGE_MIN_W), so Training
+        # fits a 1600 px window beside the import buttons; a longer name shows cut there, whole in the drop-down
+        self.type_box.setMinimumContentsLength(14)
+        for name in names():  # the 33 types, by category as the defect table lists them; never Anomaly (Q33)
+            self.type_box.addItem(name, name)  # names from the classification table, English until it is translated
+        self.severity = QLabel()  # read-only: the table's severity of the type
+        form.addRow(self.tr("Type"), self.type_box)
+        form.addRow(self.tr("Severity"), self.severity)
+        lay.addLayout(form)
+        lay.addWidget(self.view, 1)
+        zoom = QHBoxLayout()  # under the image: beside Draw Box they made the page and the window wider than Compare's
+        zooms = [action_button(a, show_key=False) for a in (self.act_zoom_in, self.act_zoom_out, self.act_fit)]
+        for b in zooms[:2]:
+            zoom.addWidget(b)
+        zoom.addStretch(1)
+        tools.addWidget(zooms[2])  # Fit above: three in a row cut the training panel's buttons with S31's import sheet
+        lay.addLayout(zoom)
+        lay.addWidget(QLabel(self.tr("Boxes")))
+        self.box_list = QListWidget()
+        self.box_list.setWordWrap(True)
+        self.box_list.setFixedHeight(4 * theme.TARGET_H)
+        self.box_list_empty = EmptyState(self.box_list)
+        lay.addWidget(self.box_list)
+        for a, b in zip([self.box_list, *zooms[:-1]], zooms, strict=True):  # Tab: the image, its list, then the zoom
+            QWidget.setTabOrder(a, b)
+        self.act_undo = page.action(self.tr("Undo"), QKeySequence.StandardKey.Undo, self._undo)
+        self.act_delete = page.action(self.tr("Delete Box"), "Delete", self._delete)  # no question: Undo brings it back
+        under = QHBoxLayout()
+        self.undo_btn = action_button(self.act_undo, show_key=False)  # for a hand with no keyboard
+        under.addWidget(self.undo_btn)
+        under.addWidget(action_button(self.act_delete, "danger", show_key=False))  # red, the last in its row
+        under.addStretch(1)
+        lay.addLayout(under)
+        self._history: list[list[State]] = []  # for each change stored, the samples it changed as they were before
+        self.forgotten = 0  # times `forget` emptied Undo: a store begun before the last one adds nothing to it (review)
+        self.reading = BusyOverlay(self.view, self.tr("Opening the image…"))
+        self.saving = BusyOverlay(self.view, self.tr("Storing the change…"))
+        self._reading: Worker | None = None  # the read of the sample shown, the newest asked for
+        self._writing: Worker | None = None  # the change being stored: one at a time
+        self._image_of: str | None = None  # the sample whose image is shown, or was refused
+        self._unread = ""  # the coded line of an image that cannot be read, under the heading
+        self._kept: list[DefectBox] = []  # the boxes as stored, or being stored
+        self._later: list[dict[str, Any] | None] = []  # a sample to show once the drag or the store in hand has ended
+        self.view.settled.connect(self._settled)
+        self.view.refused.connect(self._refuse)
+        self.view.picked.connect(self._picked)
+        self.view.edited.connect(self._store)
+        self.box_list.currentRowChanged.connect(self.view.choose)
+        self.type_box.currentIndexChanged.connect(self._shown_type)
+        self.type_box.picked.connect(self._typed)
+        self.type_box.left.connect(lambda: self._picked(self.view.chosen))  # the selected box's type, not one shown
+        self._shown_type()
+        self.show_sample(None)
+
+    # --- what is shown -------------------------------------------------------------
+    def show_sample(self, sample: dict[str, Any] | None) -> None:
+        """Show `sample` (a row of `AppContext.samples`) with its label and stored boxes; None shows nothing. The image
+        is read again only for another sample, and with the boxes on a pool thread; one that cannot be read is named
+        with its code under the heading. A sample asked for mid-drag, or while a change is stored, is shown once that
+        has ended."""
+        if self.view.dragging() or self._writing is not None:
+            self._later = [sample]
+            return
+        self._later.clear()
+        again = sample is not None and sample["uuid"] == self._image_of
+        chosen = self.view.chosen if again else -1
+        self.sample = sample
+        if self._reading is not None:
+            self._reading.stop()  # a newer sample is asked for: what it reads is dropped
+            self._reading = None
+        if not again:  # nothing to draw on until the image is read
+            self._image_of, self._unread, self._kept = None, "", []
+            self.view.set_image(None)
+            self.view.show_boxes([])
+            self._fill_list([])
+        self._heading()
+        if sample is not None:
+            path = None if again else str(sample["path"])
+            done = partial(self._read_done, chosen=chosen)
+            self._reading = self._run(self.reading, done, _read, self.ctx, sample["uuid"], path)
+        self._sync()
+
+    def _heading(self) -> None:
+        """The sketch's "ng_003.png · NG · Top", breaking after each _ and - of the name; an unread image's code."""
+        if self.sample is None:
+            self.heading.clear()
+            return
+        line, name = self.tr("{file} · {label} · {view}"), breakable(Path(self.sample["path"]).name)
+        said = line.format(file=name, label=self.sample["label"], view=view_text(self.sample["side"] or ""))
+        self.heading.setText(said + self._unread)
+
+    def _read_done(self, result: tuple[np.ndarray | AoiError | None, list[DefectBox]], chosen: int) -> None:
+        """The sample's image, unless it was shown already, and its stored boxes, `chosen` selected."""
+        image, self._kept = result
+        if image is not None and self.sample is not None:
+            self._image_of = self.sample["uuid"]
+            self.view.set_image(None if isinstance(image, AoiError) else image)
+            self._unread = f"\n{self.owner.coded_text(image)}" if isinstance(image, AoiError) else ""
+            self._heading()
+        self.view.show_boxes(self._kept if self.view._pix is not None else [], chosen)  # none over the placeholder
+        self._fill_list(self._kept)
+
+    def busy(self) -> bool:
+        """The image or its boxes being read, or a change stored: no change on the image meanwhile."""
+        return self._reading is not None or self._writing is not None
+
+    def idle(self) -> bool:
+        """Nothing read or stored, or waiting to be shown: what a test, or a screenshot, waits for."""
+        return not self.busy() and not self._later and not self.view.dragging()
+
+    def _settled(self) -> None:
+        if self._later:
+            self.show_sample(self._later.pop())
+
+    def _sync(self) -> None:
+        """Draw Box on an NG image shown, and Draw mode left on any other; Delete Box while a box of it is selected;
+        Undo while a change can be undone; the zoom with an image shown. No change on the image while it is read or a
+        change is stored."""
+        self.view.locked = self.busy()
+        shown = self.view._pix is not None
+        ng = self.sample is not None and self.sample["label"] == "NG" and shown
+        self.draw_btn.setEnabled(ng)
+        if not ng and self.draw_btn.isChecked():
+            self.draw_btn.setChecked(False)
+            self._toggle_draw()
+        self.act_delete.setEnabled(ng and self.view.chosen >= 0)
+        self.act_draw.setEnabled(ng)
+        self.act_leave.setEnabled(self.draw_btn.isChecked())
+        self.act_undo.setEnabled(bool(self._history))
+        for a in (self.act_zoom_in, self.act_zoom_out, self.act_fit):
+            a.setEnabled(shown)
+        self.act_to_box.setEnabled(shown and self.view.chosen >= 0)
+
+    def _fill_list(self, boxes: list[DefectBox] | None = None) -> None:
+        """List `boxes`, by default those shown; with no picture shown the list and the Type list are off."""
+        boxes = self.view.boxes if boxes is None else boxes
+        for w in (self.box_list, self.type_box):
+            w.setEnabled(self.view._pix is not None)
+        self.box_list.blockSignals(True)
+        self.box_list.clear()
+        for n, b in enumerate(boxes):
+            row = self.tr("{number} {type} ({severity}) {x},{y} {w}×{h} px")
+            said = {"number": n + 1, "type": b.dct_type, "severity": BY_NAME[b.dct_type].severity}
+            self.box_list.addItem(row.format(**said, x=b.x, y=b.y, w=b.w, h=b.h))
+        self.box_list.setCurrentRow(self.view.chosen)
+        self.box_list.blockSignals(False)
+        if boxes or self.sample is None or self.view._pix is None and self._image_of is None:
+            self.box_list_empty.hide()  # nothing yet, or the image still being read
+        elif self.sample["label"] == "NG":
+            hint = self.tr("Press Draw Box and drag around each defect, then pick its type.")
+            self.box_list_empty.show_state(self.tr("No defect box yet"), hint)
+        else:
+            self.box_list_empty.show_state(self.tr("No defect boxes"), self.tr("Only an NG image takes defect boxes."))
+
+    def _picked(self, chosen: int) -> None:
+        """A box selected on the image: its row in the list, and its type in the Type field."""
+        self.box_list.blockSignals(True)
+        self.box_list.setCurrentRow(chosen)
+        self.box_list.blockSignals(False)
+        if chosen >= 0:
+            self.type_box.setCurrentIndex(self.type_box.findData(self.view.boxes[chosen].dct_type))
+        self._sync()
+
+    # --- what is changed -------------------------------------------------------------
+    def _toggle_draw(self) -> None:
+        self.view.set_draw_mode(self.draw_btn.isChecked())
+        self.act_leave.setEnabled(self.draw_btn.isChecked())
+
+    def _draw_key(self) -> None:
+        """D: Draw Box pressed, and in Draw mode the focus on the image, where Enter places a box."""
+        self.draw_btn.click()
+        if self.draw_btn.isChecked():
+            self.view.setFocus()
+
+    def _leave(self) -> None:
+        """Esc: Draw mode left (labels sketch)."""
+        self.draw_btn.setChecked(False)
+        self._toggle_draw()
+
+    def _shown_type(self) -> None:
+        """The type the Type list shows: its severity beside it, and the type of the next box drawn."""
+        kind = str(self.type_box.currentData())
+        self.severity.setText(BY_NAME[kind].severity)
+        self.view.new_type = kind
+
+    def _typed(self) -> None:
+        """The type picked: the selected box's type, stored."""
+        kind, chosen = str(self.type_box.currentData()), self.view.chosen
+        if chosen >= 0 and self.view.boxes[chosen].dct_type != kind:
+            self.view.boxes[chosen] = replace(self.view.boxes[chosen], dct_type=kind)
+            self.view.redraw()
+            self._store()
+
+    def _delete(self) -> None:
+        """Delete Box (Delete): the selected box goes at once, with no question (the sketch); Undo brings it back."""
+        chosen = self.view.chosen
+        if chosen >= 0:
+            self.view.show_boxes(self.view.boxes[:chosen] + self.view.boxes[chosen + 1 :])
+            if self._store():
+                gone = self.tr("Box {number} deleted; Undo or Ctrl+Z brings it back")
+                self.owner.shell.status(gone.format(number=chosen + 1))
+
+    def _undo(self) -> None:
+        """Undo (Ctrl+Z): the samples the last change stored changed get back the label and boxes they had, each
+        stored as a new label, and are shown. One that cannot take them now, such as a sample removed since, or any
+        other error stops it there: the samples put back before it are shown, then the coded dialog, and that change is
+        not offered again."""
+        if self._history:
+            states = self._history.pop()
+
+            def done(stopped: Exception | None) -> None:
+                self.undone.emit([s[0] for s in states])
+                if stopped is not None:
+                    self.owner.error(stopped)
+
+            if self.write(done, _restore, self.ctx, states):
+                self._sync()
+            else:
+                self._history.append(states)
+
+    def remember(self, states: list[State], since: int) -> None:
+        """A change stored: these samples as they were before it, for Undo, unless Undo was emptied after the store
+        began, `since` being `forgotten` as it read then: a change of the user before, or of another board model."""
+        if since == self.forgotten:
+            self._history.append(states)
+        self._sync()
+
+    def forget(self) -> None:
+        """Nothing to undo: another user signed in, or another board model is shown; nor a store that ends later."""
+        self._history.clear()
+        self.forgotten += 1
+        self._sync()
+
+    def _store(self) -> bool:
+        """Store the boxes shown, on a pool thread; while the image is read or another change is stored they are
+        refused, and the boxes as stored come back."""
+        if self.sample is None:
+            return False
+        if self.busy():
+            self._refuse()
+            self.view.show_boxes(self._kept, self.view.chosen)
+            self._picked(self.view.chosen)
+            return False
+        boxes, s, since = list(self.view.boxes), self.sample, self.forgotten
+        before: State = (s["uuid"], s["label"], s["defect_type"], self._kept)
+        self.write(lambda _uid: self._stored(before, since), self.ctx.set_boxes, s["uuid"], boxes)
+        self._kept = boxes
+        return True
+
+    def _stored(self, before: State, since: int) -> None:
+        self._fill_list()
+        self.remember([before], since)
+        self.stored.emit(before[0], self._kept)
+
+    def write(self, done: Callable[[Any], None], fn: Callable[..., Any], *args: Any) -> bool:
+        """Store a change, `fn(*args)`, on a pool thread, `done` getting what it returns here, one at a time: False,
+        with a word in the status bar, while one is running. A refusal by the service, or any other error, is the coded
+        dialog, and the boxes as stored are read again; whatever `done` shows is shown once the change has ended."""
+        if self._writing is not None:
+            self._refuse()
+            return False
+        self._writing = self._run(self.saving, done, fn, *args)
+        self._sync()
+        return True
+
+    def _refuse(self) -> None:
+        self.owner.shell.status(self.tr("Wait until the image is open and the last change is stored"))
+
+    def _run(self, over: BusyOverlay, done: Callable[[Any], None], fn: Callable[..., Any], *args: Any) -> Worker:
+        """`fn(*args)` on a pool thread, `over` saying so after a second; `done` gets its result here unless a newer
+        read replaced it. A change not stored, by an error or a Cancel, reads the boxes as stored again."""
+        w = Worker(fn, *args)
+        ref = weakref.ref(w)  # the slots hold the worker weakly, as Page.run_in_background's do (#132)
+        got: list[bool] = []
+        failed: list[BaseException] = []
+
+        def result(value: Any) -> None:
+            if ref() in (self._reading, self._writing):
+                got.append(True)
+                done(value)
+
+        def finished() -> None:
+            worker = ref()
+            if worker is None or worker not in (self._reading, self._writing):
+                return  # a read replaced by a newer one
+            over.finish()
+            lost = worker is self._writing and not got
+            self._reading, self._writing = (None, self._writing) if worker is self._reading else (self._reading, None)
+            if failed:
+                self.owner.error(failed[0])
+            self._sync()
+            if self._later or lost:
+                self.show_sample(self._later.pop() if self._later else self.sample)
+
+        w.signals.result.connect(result)
+        w.signals.error.connect(failed.append)
+        w.signals.finished.connect(finished)
+        over.watch(w.job)
+        return start(w, self.ctx.jobs)
