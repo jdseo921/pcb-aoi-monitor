@@ -420,7 +420,8 @@ CODES: dict[str, ErrorCode] = {
             QT_TRANSLATE_NOOP(
                 "Errors",
                 "Check that the file is still there and can be opened and that the workspace drive has free space,"
-                " then press Import again: the {imported} image(s) already imported are skipped.",
+                " then, with {name} picked in the header, press Import again: the {imported} image(s) already imported"
+                " are skipped.",
             ),
         ),
         ErrorCode(
@@ -434,8 +435,8 @@ CODES: dict[str, ErrorCode] = {
             QT_TRANSLATE_NOOP(
                 "Errors",
                 "Fix what stopped it (the log file in the workspace's logs folder has the details; send it to support"
-                " if the cause is unclear), then press Import again: the {imported} image(s) already imported are"
-                " skipped.",
+                " if the cause is unclear), then, with {name} picked in the header, press Import again: the {imported}"
+                " image(s) already imported are skipped.",
             ),
         ),
         ErrorCode(

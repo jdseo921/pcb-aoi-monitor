@@ -239,7 +239,8 @@ def test_req_log_005_an_import_stopped_while_a_copy_fails_logs_the_failure_and_s
     assert [r["code"] for r in rows] == ["AOI-TRN-009"] and "FileNotFoundError" in str(rows[0]["trace"]), rows
     assert [(a["level"], a["code"]) for a in ctx.alarms()] == [("ERROR", "AOI-TRN-009")]
     assert page.samples.rowCount() == len(ctx.samples("NEWB")) == 2
-    message = "Import cancelled: 2 OK and 0 NG images imported before it stopped" if how == "cancel" else "Imported 2"
+    message = "Import cancelled: 2 OK and 0 NG images imported into NEWB before it stopped"
+    message = message if how == "cancel" else "Imported 2 OK and 0 NG images into NEWB"
     assert win.statusBar().currentMessage().startswith(message), win.statusBar().currentMessage()
 
 
@@ -312,8 +313,9 @@ def test_req_set_021_a_folder_import_that_fails_part_way_shows_the_files_it_impo
     assert title == "AOI-TRN-010 Import stopped by an error", title
     named = "(OperationalError)" if cause == "sqlite" else "(AOI-SET-013 «busy»)"
     assert "c.png" in text and named in text and "image 3 of 4" in text, text
-    assert "the 2 image(s) imported before it" in text and "the 2 image(s) already imported are skipped" in text, text
+    assert "the 2 image(s) imported before it" in text, text
+    assert "with NEWB picked in the header, press Import again: the 2 image(s) already imported are skipped" in text
     assert "disk I/O error" not in text  # the raw text goes to the log only
-    assert win.statusBar().currentMessage() == "Imported 2 OK and 0 NG images"
+    assert win.statusBar().currentMessage() == "Imported 2 OK and 0 NG images into NEWB"
     (row,) = _log_rows(ctx, "error.shown")
     assert row["code"] == "AOI-TRN-010" and "disk I/O error" in str(row["trace"])

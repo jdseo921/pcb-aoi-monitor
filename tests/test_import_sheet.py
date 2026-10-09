@@ -4,6 +4,7 @@ and per row; Import waits for every NG file's type, and the files not imported a
 
 from __future__ import annotations
 
+import errno
 import shutil
 import threading
 from pathlib import Path
@@ -151,9 +152,10 @@ def test_req_trn_001_training_opens_the_sheet_inline_and_imports_on_the_pool(
 ) -> None:
     """Import Folder… opens the sheet inline above the samples table with no dialog; while it is open Import is the
     page's one blue primary and Start Training a plain button. Enter imports on the pool: the samples table shows the
-    files imported, the status line counts them, and the file with no label is listed with AOI-TRN-016. Esc closes the
-    sheet and Start Training is the primary again. Ctrl+N (Add NG Images…) opens it with NG for all and Import off
-    until a type is picked, and another board model in the header closes it."""
+    files imported, the status line counts them into NEWB, and the file with no label is listed with AOI-TRN-016. Esc
+    closes the sheet, the status line no longer points at its list, and Start Training is the primary again. Ctrl+N
+    (Add NG Images…) opens it with NG for all and Import off until a type is picked, and another board model in the
+    header closes it before it imports."""
     oks, ngs = list_images(synthetic_dataset / "train" / "ok"), list_images(synthetic_dataset / "train" / "ng")
     folder = tmp_path / "src"
     for src, name in ((oks[0], "ok/a.png"), (ngs[0], "ng/solder_bridge/c.png"), (oks[1], "loose/e.png")):
@@ -177,11 +179,12 @@ def test_req_trn_001_training_opens_the_sheet_inline_and_imports_on_the_pool(
     qtbot.keyClick(sheet.table, Qt.Key.Key_Return)
     qtbot.waitUntil(lambda: page._bg is None and not sheet.running, timeout=60000)
     assert [r[STATUS] for r in _rows(sheet.table)] == ["AOI-TRN-016 Image has no label", "copied", "copied"]
-    assert win.statusBar().currentMessage() == "Imported 1 OK and 1 NG images; 1 not imported (see the list)"
+    assert win.statusBar().currentMessage() == "Imported 1 OK and 1 NG images into NEWB; 1 not imported (see the list)"
     stored = [(r["label"], r["defect_type"], r["side"]) for r in ctx.samples("NEWB")]
     assert stored == [("NG", "Solder Bridge", "Top"), ("OK", None, "Top")] and page.samples.rowCount() == 2
     qtbot.keyClick(sheet.table, Qt.Key.Key_Escape)
     assert not sheet.isVisible() and page.btn_train.objectName() == "primary" and not sheet.btn_import.objectName()
+    assert win.statusBar().currentMessage() == "Imported 1 OK and 1 NG images into NEWB; 1 not imported", "no list"
 
     monkeypatch.setattr(QFileDialog, "getOpenFileNames", staticmethod(lambda *a, **k: ([str(ngs[1])], "")))
     qtbot.keyClick(page.samples, Qt.Key.Key_N, Qt.KeyboardModifier.ControlModifier)
@@ -225,20 +228,26 @@ def test_req_trn_001_the_sheet_imports_into_the_board_model_it_was_opened_for(
     dialogs: list[tuple[str, str]],
 ) -> None:  # fmt: skip
     """The review's probe: the sheet names the board model it was opened for, and its Import goes there, never to the
-    header's. Another board model chosen in the header while an import runs lets that import end and then closes the
-    sheet, so Import again cannot send the rest elsewhere; an idle sheet closes at once. A folder with no image opens no
-    sheet, and the status line says so."""
+    header's. Another board model chosen in the header while an import runs lets that import end into A; the sheet then
+    stays with its list, Import off and a line naming A, which the status line names too, until A is back in the header,
+    which turns Import back on, or Close. The stop dialog names A as the board model to pick before Import again. While
+    the line shows, Start Training is the page's one blue primary, and the sheet's Import once A is back. A sheet that
+    has imported stays as another board model is picked; one that has not closes at once (the test above). A folder with
+    no image opens no sheet, and the status line says so."""
     folder = tmp_path / "src"
-    oks = list_images(synthetic_dataset / "train" / "ok")[:2]
-    for src, name in ((oks[0], "ok/a.png"), (oks[1], "loose/e.png")):
+    oks = list_images(synthetic_dataset / "train" / "ok")[:3]
+    for src, name in zip(oks, ("ok/a.png", "ok/b.png", "loose/e.png"), strict=True):
         (folder / name).parent.mkdir(parents=True, exist_ok=True)
         shutil.copy(src, folder / name)
     for name in ("A", "B"):
         ctx.ensure_board_model(name)
-    reached, go = threading.Event(), threading.Event()
+    reached, go, refuse = threading.Event(), threading.Event(), [True]
     copy = atomic.copy_file
 
     def held(src: str | Path, dst: str | Path) -> None:
+        if Path(src).name == "b.png" and refuse:  # the workspace refuses b's copy, at the first import alone
+            refuse.clear()
+            raise PermissionError(errno.EACCES, "Permission denied", str(dst))
         reached.set()
         assert go.wait(30)
         copy(src, dst)
@@ -258,19 +267,38 @@ def test_req_trn_001_the_sheet_imports_into_the_board_model_it_was_opened_for(
     assert page.sheet.isVisible() and page.sheet.running, "the import goes on"
     go.set()
     qtbot.waitUntil(lambda: page._bg is None, timeout=30000)
-    assert not page.sheet.isVisible() and page.btn_train.objectName() == "primary", "closed once it ended"
+    sheet, line = page.sheet, "These files were for board model A: pick it in the header to import the rest"
+    assert sheet.isVisible() and sheet.table.rowCount() == 3 and not sheet.btn_import.isEnabled(), "kept, Import off"
+    assert (sheet.away.text(), sheet.away.isVisible()) == (line, True)
+    assert win.statusBar().currentMessage() == "Imported 1 OK and 0 NG images into A; 1 not imported (see the list)"
+    ((title, text),) = dialogs  # b's copy, after B was picked: A is the board model to pick, never the header's
+    assert title == "AOI-TRN-009 Import stopped part-way" and "then, with A picked in the header, press Import" in text
+    dialogs.clear()
+    blue = [b.objectName() == "primary" for b in (page.btn_train, sheet.btn_import)]
+    assert blue == [True, False], "while the line shows, Start Training is the page's one blue primary"
+    win._reload_board_models("A")
+    assert sheet.btn_import.isEnabled() and not sheet.away.isVisible(), "A in the header again: Import is back"
+    assert [b.objectName() == "primary" for b in (page.btn_train, sheet.btn_import)] == [False, True]
+    win._reload_board_models("B")
+    assert sheet.isVisible() and not sheet.btn_import.isEnabled() and sheet.away.isVisible()
+    assert [b.objectName() == "primary" for b in (page.btn_train, sheet.btn_import)] == [True, False]
+    qtbot.mouseClick(sheet.btn_cancel, Qt.MouseButton.LeftButton)  # Close
+    assert not sheet.isVisible() and page.btn_train.objectName() == "primary" and not dialogs
+    assert win.statusBar().currentMessage() == "Imported 1 OK and 0 NG images into A; 1 not imported", "no list"
 
     def names() -> dict[str, list[str]]:
-        return {bm: [Path(r["path"]).name[0] for r in ctx.samples(bm)] for bm in ("A", "B")}
+        return {bm: sorted(Path(r["path"]).name[0] for r in ctx.samples(bm)) for bm in ("A", "B")}
 
     assert names() == {"A": ["a"], "B": []}
     page.import_from(str(folder))
-    assert page.sheet.title() == "Import 2 file(s) into B"
+    assert page.sheet.title() == "Import 3 file(s) into B"
     page.sheet.set_cell(0, LABEL, "OK")  # loose/e.png
     win.board_model = "A"  # the header read by the page with no change sent to it (white box)
     page.sheet.btn_import.click()
     qtbot.waitUntil(lambda: page._bg is None, timeout=30000)
-    assert names() == {"A": ["a"], "B": ["e", "a"]} and not dialogs
+    assert names() == {"A": ["a"], "B": ["a", "b", "e"]} and not dialogs
+    assert sheet.isVisible() and not (sheet.btn_import.isEnabled() or sheet.away.isVisible()), "all in: no line"
+    sheet.btn_cancel.click()
     (folder / "none").mkdir()
     win.board_model = "B"
     page.import_from(str(folder / "none"))
