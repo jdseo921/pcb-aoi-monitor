@@ -128,6 +128,11 @@ class PinnedModel:
         return float(np.percentile(amap, 99.9))  # as AnomalyModel.score
 
 
+def pinned_key() -> tuple[bytes, bytes]:
+    """A store's key as `crypto.new_key` draws it, its key id fixed, as Settings › Dataset stores shows it."""
+    return os.urandom(32), bytes.fromhex("5ca1ab1e") + bytes(12)
+
+
 def build_workspace(root: Path) -> AppContext:
     """The synthetic workspace the pages are rendered on; see the module docstring."""
     from aoi.config import Settings
@@ -142,7 +147,7 @@ def build_workspace(root: Path) -> AppContext:
     os.environ["AOI_WORKSPACE"] = str(root / "default_workspace")  # settings.json is saved there, never in ~/
     dataset = root / "dataset"
     write_dataset(dataset, DATASET_OK, DATASET_NG, DATASET_SEED)
-    with mock.patch("uuid.uuid4", side_effect=counted_uuids()):
+    with mock.patch("uuid.uuid4", side_effect=counted_uuids()), mock.patch("aoi.core.crypto.new_key", pinned_key):
         keys = credentials.MemoryCredentials()  # the store key trainable makes, never written to the Credential Manager
         ctx = AppContext(Settings(workspace=str(root / "workspace"), device="cpu"), keys)
         ctx.set_user("engineer")
