@@ -156,7 +156,7 @@ class TrainingPage(Page):
         ll.addLayout(up)
         self.counts = _Counts()
         ll.addWidget(self.counts)
-        self.tip = QLabel(self.tr("Tip: 20+ OK images give a steadier threshold"))  # its own line: the name keeps room
+        self.tip = QLabel(self.tr("Training needs 20 OK images or more in a dataset version's training set"))
         self.tip.setObjectName("muted")
         self.tip.setWordWrap(True)
         ll.addWidget(self.tip)
@@ -201,6 +201,13 @@ class TrainingPage(Page):
         rl.setContentsMargins(8, 0, 0, 0)
         g = QGroupBox(self.tr("Self-training"))
         f = QFormLayout(g)
+        self.dataset_version = QComboBox()  # the board model's frozen versions, newest first (REQ-TRN-007)
+        self.dataset_version.currentIndexChanged.connect(self._show_version)
+        f.addRow(self.tr("Dataset version"), self.dataset_version)
+        self.version_line = QLabel()  # its validation set and training set, or why there is nothing to train from
+        self.version_line.setObjectName("muted")
+        self.version_line.setWordWrap(True)
+        f.addRow(self.version_line)
         self.epochs = QSpinBox()
         self.epochs.setRange(5, 1000)
         self.epochs.setValue(ctx.settings.default_epochs)
@@ -586,12 +593,8 @@ class TrainingPage(Page):
 
     # --- training ---------------------------------------------------------------
     def train(self) -> None:
-        if (bm := self.checked_board_model()) is None:
-            return
-        try:
-            version = self.ctx.training_version(bm)  # its training set; the run checks it before reading an image
-        except AoiError as e:
-            self.error(e)
+        """Train from the dataset version picked; the run refuses one it cannot train from before reading an image."""
+        if self.checked_board_model() is None or (version := self.dataset_version.currentData()) is None:
             return
         self.log.clear()
         self.bar.setRange(0, self.epochs.value())
@@ -599,7 +602,7 @@ class TrainingPage(Page):
         self.btn_train.setEnabled(False)
         self.btn_stop.setEnabled(True)
         size = int(self.input_size.currentText())
-        self.worker = Worker(self.ctx.train, version["uuid"], self.epochs.value(), size, with_progress=True)
+        self.worker = Worker(self.ctx.train, version, self.epochs.value(), size, with_progress=True)
         self.worker.signals.progress.connect(self._on_progress)
         self.worker.signals.result.connect(self._on_done)
         self.worker.signals.error.connect(self.error)
@@ -643,7 +646,51 @@ class TrainingPage(Page):
         for a in self.adds:
             a.setEnabled(idle)  # its button and its key
         self.samples_empty.link.setEnabled(idle)
-        self.btn_train.setEnabled(idle and self.worker is None)
+        self.btn_train.setEnabled(idle and self.worker is None and self.dataset_version.currentData() is not None)
+
+    def _fill_versions(self) -> None:
+        """The board model's frozen versions, newest first: the one picked before while it is listed, else the newest
+        whose validation set is locked, the one Training trains from (AppContext.training_version)."""
+        kept = self.dataset_version.currentData()
+        try:
+            newest = self.ctx.training_version(self.board_model)["uuid"] if self.board_model else None
+        except AoiError:  # no version of it is locked: the newest is picked, and its line says why it cannot train
+            newest = None
+        self.dataset_version.blockSignals(True)  # one line shown, once the list is whole
+        self.dataset_version.clear()
+        for v in self.ctx.datasets(self.board_model) if self.board_model else []:
+            self.dataset_version.addItem(v["name"], v["uuid"])
+        pick = self.dataset_version.findData(kept) if kept is not None else -1
+        self.dataset_version.setCurrentIndex(pick if pick >= 0 else max(self.dataset_version.findData(newest), 0))
+        self.dataset_version.blockSignals(False)
+        self._show_version()
+
+    def _show_version(self) -> None:
+        """The line under the dataset version: its locked validation set and its training set, as the sketch counts
+        them, or why Start Training has nothing to train from."""
+        uuid = self.dataset_version.currentData()
+        self.dataset_version.setEnabled(uuid is not None)
+        if uuid is None and not self.board_model:
+            text = ""
+        elif uuid is None:
+            text = self.tr(
+                "No frozen dataset version of {board_model} yet; training reads only a frozen version's training set,"
+                " once its validation set is locked."
+            ).format(board_model=self.board_model or "")
+        elif (split := self.ctx.validation_split(uuid)) is None:
+            text = self.tr("Validation set not locked: training needs it locked, and reads only the training set.")
+        else:
+            label = {i["uuid"]: i["label"] for i in self.ctx.dataset_items(uuid)}
+            n = Counter((part, label[u]) for part in ("train", "validation") for u in split[part])
+            line = self.tr(
+                "Validation set locked ✓ {val_ok} OK / {val_ng} NG · training set {ok} OK, {ng} NG"
+                " · NG used for calibration only"
+            )
+            text = line.format(
+                val_ok=n["validation", "OK"], val_ng=n["validation", "NG"], ok=n["train", "OK"], ng=n["train", "NG"]
+            )
+        self.version_line.setText(text)
+        self.update_actions()
 
     # --- model registry ---------------------------------------------------------
     def activate(self) -> None:
@@ -663,6 +710,7 @@ class TrainingPage(Page):
             self.ctx.export_model(mid, f)
 
     def refresh(self) -> None:
+        self._fill_versions()
         if not self.board_model:
             self.samples.setRowCount(0)
             self.models.setRowCount(0)
@@ -728,7 +776,7 @@ class TrainingPage(Page):
             self.models_empty.hide()
         else:
             self.models_empty.show_state(
-                self.tr("No AI model yet"), self.tr("Start Training once 20 OK boards are in.")
+                self.tr("No AI model yet"), self.tr("Start Training from a frozen dataset version.")
             )
 
     def on_board_model_changed(self, name: str | None) -> None:

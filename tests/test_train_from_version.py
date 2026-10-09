@@ -5,21 +5,25 @@ Results on the synthetic boards prove a code path; they are never quoted as accu
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import pytest
+from pytestqt.qtbot import QtBot
 
 from aoi.core import datasets
 from aoi.core.imaging import encode_image, list_images, load_image
 from aoi.core.services import AppContext
 from aoi.data.db import new_uuid
 from aoi.errors import AoiError
+from aoi.ui.main_window import MainWindow
+from aoi.ui.pages.training import TrainingPage
 from tests.conftest import seal
 from tests.test_dataset_stores import as_admin
 from tools.make_synthetic_dataset import ng_type
 from tools.trainable import AT, trainable
 
 BOARD = "TBOX-A1"
+ACTIVE = {"version": "v1.0", "train_seconds": 0}  # what a run the page started returns, as it reads it
 
 
 def oks(synthetic_dataset: Path) -> list[str]:
@@ -148,3 +152,48 @@ def test_req_trn_017_training_from_another_customers_store_refused(ctx: AppConte
     e = refused(ctx, trainable(ctx, BOARD))
     assert e.code == "AOI-TRN-046" and "its dataset store was shredded on" in e.what
     assert len(ctx.audit_entries(action="training.refused")) == 3 and ctx.models(BOARD) == []
+
+
+def test_req_trn_007_training_page_trains_the_version_picked(
+    qtbot: QtBot, ctx: AppContext, synthetic_dataset: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Training lists the board model's frozen versions, newest first, and picks the newest whose validation set is
+    locked; the line under it counts that version's validation set and training set, or says why it cannot train, and
+    Start Training trains the version picked, which a refresh keeps. Without a frozen version the line says so and Start
+    Training is off."""
+    samples = boards(ctx, synthetic_dataset, 22)
+    win = MainWindow(ctx)
+    qtbot.addWidget(win)
+    win.resize(1600, 900)
+    win.show()
+    qtbot.waitExposed(win)
+    win.set_user("engineer")
+    win._on_board_model(BOARD)
+    win.navigate("Training")
+    page = cast(TrainingPage, win.pages["Training"])
+    assert (page.dataset_version.count(), page.btn_train.isEnabled()) == (0, False)
+    assert page.version_line.text() == (
+        "No frozen dataset version of TBOX-A1 yet; training reads only a frozen version's training set, once its"
+        " validation set is locked."
+    )
+    locked = trainable(ctx, BOARD, held=[samples[0]["uuid"], samples[-1]["uuid"]])  # 1 OK and 1 NG locked
+    unsplit = trainable(ctx, BOARD, split=False)
+    page.refresh()
+    listed = [(page.dataset_version.itemText(i), page.dataset_version.itemData(i)) for i in range(2)]
+    assert listed == [("DS-TBOXA1-R1-TOP-v2", unsplit), ("DS-TBOXA1-R1-TOP-v1", locked)]
+    assert page.dataset_version.currentData() == locked and page.btn_train.isEnabled()
+    assert page.version_line.text() == (
+        "Validation set locked ✓ 1 OK / 1 NG · training set 21 OK, 2 NG · NG used for calibration only"
+    )
+    page.dataset_version.setCurrentIndex(0)
+    page.refresh()  # the version picked stays picked
+    assert page.dataset_version.currentData() == unsplit and page.btn_train.isEnabled()  # the run says why it cannot
+    assert page.version_line.text() == (
+        "Validation set not locked: training needs it locked, and reads only the training set."
+    )
+    trained: list[str] = []
+    monkeypatch.setattr(ctx, "train", lambda version, *a, **k: trained.append(version) or ACTIVE)
+    page.dataset_version.setCurrentIndex(1)
+    page.btn_train.click()
+    qtbot.waitUntil(lambda: page.worker is None, timeout=30000)
+    assert trained == [locked] and page.dataset_version.currentData() == locked

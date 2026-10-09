@@ -2760,7 +2760,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/training.py" line="+365"/>
+        <location filename="../ui/pages/training.py" line="+372"/>
         <location filename="../ui/pages/training_import.py" line="+38"/>
         <source>{code} {title}</source>
         <translation type="unfinished"></translation>
@@ -4282,7 +4282,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/training.py" line="-235"/>
+        <location filename="../ui/pages/training.py" line="-242"/>
         <source>Training</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4902,23 +4902,23 @@
     </message>
     <message>
         <location line="+1"/>
-        <location line="+553"/>
+        <location line="+601"/>
         <source>Import Folder…</source>
         <translation>폴더 가져오기…</translation>
     </message>
     <message>
-        <location line="-545"/>
-        <source>Tip: 20+ OK images give a steadier threshold</source>
-        <translation type="unfinished"></translation>
+        <location line="-593"/>
+        <source>Training needs 20 OK images or more in a dataset version&apos;s training set</source>
+        <translation>학습에는 데이터셋 버전의 학습 세트에 OK 이미지가 20장 이상 필요합니다</translation>
     </message>
     <message>
         <location line="+10"/>
-        <location line="+63"/>
+        <location line="+70"/>
         <source>ID</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-63"/>
+        <location line="-70"/>
         <source>Label</source>
         <translation>라벨</translation>
     </message>
@@ -4974,12 +4974,12 @@
     </message>
     <message>
         <location line="+1"/>
-        <location line="+347"/>
+        <location line="+354"/>
         <source>Remove</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-341"/>
+        <location line="-348"/>
         <source>Select a sample to preview</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4989,7 +4989,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+9"/>
+        <location line="+4"/>
+        <source>Dataset version</source>
+        <translation>데이터셋 버전</translation>
+    </message>
+    <message>
+        <location line="+12"/>
         <source>Epochs</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5114,7 +5119,7 @@
         <translation>{type} ×{count}</translation>
     </message>
     <message>
-        <location line="+45"/>
+        <location line="+41"/>
         <source>epoch {epoch}/{total}  loss {loss:.4f}</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5134,7 +5139,22 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+28"/>
+        <location line="+41"/>
+        <source>No frozen dataset version of {board_model} yet; training reads only a frozen version&apos;s training set, once its validation set is locked.</source>
+        <translation>{board_model}의 고정된 데이터셋 버전이 아직 없습니다. 학습은 검증 세트가 잠긴 고정 버전의 학습 세트만 읽습니다.</translation>
+    </message>
+    <message>
+        <location line="+4"/>
+        <source>Validation set not locked: training needs it locked, and reads only the training set.</source>
+        <translation>검증 세트가 잠기지 않았습니다. 학습하려면 잠가야 하며, 학습은 학습 세트만 읽습니다.</translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>Validation set locked ✓ {val_ok} OK / {val_ng} NG · training set {ok} OK, {ng} NG · NG used for calibration only</source>
+        <translation>검증 세트 잠김 ✓ {val_ok} OK / {val_ng} NG · 학습 세트 {ok} OK, {ng} NG · NG는 보정에만 사용</translation>
+    </message>
+    <message>
+        <location line="+22"/>
         <source>Export AI model</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5144,7 +5164,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+41"/>
+        <location line="+42"/>
         <source>Add at least 20 OK boards with Add OK Images… or Import Folder…</source>
         <translation>OK 이미지 추가… 또는 폴더 가져오기…로 OK 보드를 20개 이상 추가하세요</translation>
     </message>
@@ -5170,8 +5190,8 @@
     </message>
     <message>
         <location line="+0"/>
-        <source>Start Training once 20 OK boards are in.</source>
-        <translation type="unfinished"></translation>
+        <source>Start Training from a frozen dataset version.</source>
+        <translation>고정된 데이터셋 버전을 골라 Start Training을 누르십시오.</translation>
     </message>
 </context>
 <context>
