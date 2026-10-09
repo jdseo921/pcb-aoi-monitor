@@ -784,6 +784,7 @@ class Database:
         metrics: dict[str, Any],
         results: list[dict[str, Any]],
         model_uuid: str | None = None,
+        dataset_uuid: str | None = None,
     ) -> str:
         """Store one validation run of the AI Model Test screen, naming by UUID the AI model version active when the run
         was judged, and return the run's UUID (REQ-SET-017); each result's "ai_check" says whether the AI check judged
@@ -794,9 +795,9 @@ class Database:
         stored = [{**r, "image": self._stored(str(Path(r["image"]).absolute()))} for r in results]
         row = (uid, now_utc(), board_model, model_version, model_uuid, self._stored(str(Path(folder).absolute())))
         self._insert(
-            "INSERT INTO test_runs(uuid, time, board_model, model_version, model_uuid, folder, metrics, results)"
-            " VALUES(?,?,?,?,?,?,?,?)",
-            (*row, json.dumps(metrics), json.dumps(stored)),
+            "INSERT INTO test_runs(uuid, time, board_model, model_version, model_uuid, folder, metrics, results,"
+            " dataset_uuid) VALUES(?,?,?,?,?,?,?,?,?)",
+            (*row, json.dumps(metrics), json.dumps(stored), dataset_uuid),
         )
         return uid
 

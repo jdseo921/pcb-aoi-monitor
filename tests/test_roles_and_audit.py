@@ -25,7 +25,7 @@ from aoi.errors import AoiError
 from aoi.ui.main_window import MainWindow
 from aoi.ui.pages.base import role_text
 from aoi.ui.pages.settings import SettingsPage
-from tools.trainable import a_store, in_store, key_of
+from tools.trainable import a_store, in_store, key_of, trainable
 
 
 def _raising(report: ImportReport) -> ImportReport:
@@ -95,6 +95,17 @@ def frozen_for_lock(ctx: AppContext) -> str:
 
 
 # every AppContext write: method -> (its audit action, a call that works on the trained workspace), in a runnable order
+
+
+def validation_version(ctx: AppContext) -> str:
+    """A frozen version of TINY whose locked validation set holds its last NG sample: the newest, else a new one."""
+    for d in ctx.db.datasets("TINY"):
+        split = ctx.db.validation_split(d["uuid"])
+        if split and split["validation"]:
+            return str(d["uuid"])
+    return trainable(ctx, "TINY", held=[ctx.samples("TINY", "NG")[-1]["uuid"]])
+
+
 WRITES: dict[str, tuple[str, Callable[[AppContext, Path, Path], Any]]] = {
     "ensure_board_model": ("board_model.create", lambda ctx, data, tmp: ctx.ensure_board_model("NEW")),
     "import_samples": (
@@ -161,6 +172,8 @@ WRITES: dict[str, tuple[str, Callable[[AppContext, Path, Path], Any]]] = {
     "rollback_model": ("model.rollback", lambda ctx, data, tmp: ctx.rollback_model("TINY")),
     "save_recipe": ("recipe.save", lambda ctx, data, tmp: ctx.save_recipe(Recipe(board_model="TINY"))),
     "batch_test": ("test.run", lambda ctx, data, tmp: ctx.batch_test("TINY", str(data / "test" / "ng"))),
+    # a version of TINY with a locked validation set (S44), made once: a write table call changes nothing else
+    "test_dataset": ("test.run", lambda ctx, data, tmp: ctx.test_dataset(validation_version(ctx))),
     "export_model": (
         "export.model",
         lambda ctx, data, tmp: ctx.export_model(ctx.models("TINY")[0]["id"], tmp / "m.pt"),

@@ -70,7 +70,12 @@ SAVING = QT_TRANSLATE_NOOP("Training", "Saving AI model {version}")
 # Why an AI model version was not made active (AOI-TRN-048, REQ-TRN-010), as phrases shown translated (#198)
 NO_EARLIER = QT_TRANSLATE_NOOP("Errors", "no earlier version of this board model was active")
 NO_GOLDEN = QT_TRANSLATE_NOOP("Errors", "its Golden board {file} cannot be read ({error})")
-SWITCHES = ("model.train", "model.activate", "model.rollback")  # the audit actions that change the active version
+SWITCHES = ("model.train", "model.activate", "model.rollback")
+# Why a dataset version was not tested (AOI-TST-003, REQ-TST-001)
+NO_SUCH_VERSION = QT_TRANSLATE_NOOP("Errors", "the workspace holds no such dataset version")
+NOT_LOCKED = QT_TRANSLATE_NOOP(
+    "Errors", "its validation set is not split and locked"
+)  # the audit actions that change the active version
 NO_TYPE = QT_TRANSLATE_NOOP("Errors", "no defect type was given")  # why AOI-TRN-013 refused an NG sample
 NOT_A_TYPE = QT_TRANSLATE_NOOP("Errors", "{name} is not one of them")
 STEM_CHARS = 40  # how much of a source file's stem names its evidence or sample file (#245)
@@ -1058,13 +1063,52 @@ class AppContext:
         NO_AI_MODEL, as for an inspection record (#246). Each row ends with the run's UUID, the AI model version active
         then and its UUID (run_uuid, model_version, model_uuid; None without an AI model), as the CSV export writes them
         (REQ-SET-017)."""
-        insp = self.inspector(board_model)
-        files = list_images(folder)
-        rows = []
-        for i, f in enumerate(files, 1):
+        entries = []
+        for f in list_images(folder):
             parts = {p.lower() for p in f.relative_to(folder).parts[:-1]}
             gt = NG if parts & {"ng", "defect", "defects", "bad"} else OK if parts & {"ok", "good"} else None
-            res = insp.inspect(self.load_image(f))
+            entries.append((f, gt, functools.partial(self.load_image, f)))
+        return self._run_test(board_model, folder, entries, None, progress)
+
+    @requires("Engineer", QT_TRANSLATE_NOOP("Errors", "Running an AI model test"))
+    def test_dataset(
+        self, dataset_uuid: str, progress: Callable[[int, int], None] | None = None
+    ) -> tuple[dict[str, Any], list[dict[str, Any]], JudgedBy]:
+        """Validate the active AI model on a frozen dataset version's locked validation set (REQ-TST-001): each file's
+        label is the one frozen, each file is read decrypted and checked against the SHA-256 frozen (AOI-TRN-045 when
+        it changed), in the order the split stored them, so the same AI model, recipe and data give the same verdicts
+        and scores. The run is stored and audited as `batch_test`'s, naming the version (`dataset_uuid`). AOI-TST-003
+        when the workspace holds no such version or its validation set is not locked."""
+        found = self.db.datasets("", dataset_uuid)
+        split = self.db.validation_split(dataset_uuid) if found else None
+        if not found or split is None:
+            name = found[0]["name"] if found else dataset_uuid
+            why = NO_SUCH_VERSION if not found else NOT_LOCKED
+            raise AoiError("AOI-TST-003", name=name, reason=why)
+        version = found[0]
+        items = {i["uuid"]: i for i in self.db.dataset_items(dataset_uuid)}
+        entries = [
+            (resolve(items[u]["path"], self.settings.root), items[u]["label"],
+             functools.partial(self._read_frozen, version, items[u]))
+            for u in split["validation"]
+        ]  # fmt: skip
+        folder = self.settings.root / datasets.FOLDER / version["name"]
+        return self._run_test(version["board_model"], folder, entries, dataset_uuid, progress)
+
+    def _run_test(
+        self,
+        board_model: str,
+        folder: str | Path,
+        entries: list[tuple[Path, str | None, Callable[[], np.ndarray]]],
+        dataset_uuid: str | None,
+        progress: Callable[[int, int], None] | None,
+    ) -> tuple[dict[str, Any], list[dict[str, Any]], JudgedBy]:
+        """Judge each (image path, label or None, read) of `entries` with the engine in use, then store and audit the
+        run: `batch_test`'s rows, metrics and judged_by."""
+        insp = self.inspector(board_model)
+        rows = []
+        for i, (f, gt, read) in enumerate(entries, 1):
+            res = insp.inspect(read())
             pred = NG if res.verdict in (NG, WARN) else OK
             rows.append(
                 {
@@ -1078,13 +1122,16 @@ class AppContext:
                 }
             )
             if progress:
-                progress(i, len(files))
+                progress(i, len(entries))
         metrics = classification_metrics(rows)
         model_version = insp.model_version or "-"
         with self.db.transaction():  # the run and its entry, or neither (#178)
-            run_uuid = self.db.add_test_run(board_model, model_version, folder, metrics, rows, insp.model_uuid)
+            run_uuid = self.db.add_test_run(
+                board_model, model_version, str(folder), metrics, rows, insp.model_uuid, dataset_uuid
+            )
             ids = {"run_uuid": run_uuid, "model_version": insp.model_version, "model_uuid": insp.model_uuid}
-            after = {"folder": to_stored(Path(folder).absolute(), self.settings.root), **ids, **metrics}
+            source = {"dataset_uuid": dataset_uuid} if dataset_uuid else {}
+            after = {"folder": to_stored(Path(folder).absolute(), self.settings.root), **source, **ids, **metrics}
             self.audit("test.run", "board_model", board_model, None, after)
         return metrics, [{**r, **ids} for r in rows], insp.judged_by
 
