@@ -463,7 +463,10 @@ from the rows alone and before any image is read, saving nothing, for the first 
 customer's dataset store, in a shredded one or in another customer's than the version names, or a use the version does
 not allow (AOI-TRN-046, audited as `training.refused` in a transaction of its own); no locked validation set, or fewer
 than 20 OK files (`datasets.TRAIN_OK`) in its training set (AOI-TRN-045); a training file whose SHA-256 any split
-locked (AOI-TRN-043, above). A split locks at least 50 OK files, so a version trains only with 70 OK files or more.
+locked (AOI-TRN-043, above). A name the workspace held before names were checked passes the name rule, but one that is
+not one folder's name, such as TBOX., whose folder Windows names images/TBOX, never reaches a store (`move_in` refuses
+it with AOI-TRN-019), so it does not train. A split locks at least 50 OK files, so a version trains only with 70 OK
+files or more.
 Each file is then read through its store and its SHA-256, of the bytes read, checked against the one frozen: another
 file in its place stops the run with AOI-TRN-045 naming it. The OK files make the Golden board; three quarters of them
 train the AI model and the rest are held back for step 5, which the NG files only calibrate. The AI model's metadata

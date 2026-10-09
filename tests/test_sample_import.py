@@ -26,6 +26,7 @@ from aoi.defects import names
 from aoi.errors import AoiError
 from aoi.ui.main_window import MainWindow
 from tests.conftest import distinct_copies
+from tests.test_dataset_stores import as_admin
 from tests.test_no_freeze import BUDGET_S, gap_meter
 from tools.trainable import trainable
 
@@ -260,9 +261,10 @@ def test_req_trn_001_set_reference_and_training_meet_the_name_rule(
 ) -> None:
     """Set Reference and a training run, which write a board model's row and its models/ folder, meet the rule a new
     board model meets, with the same exception for a name the workspace already holds: TBOX., made before names were
-    checked, gets its reference and trains, while a new name the rule refuses is refused before anything is written
-    (CON and TBOX2. with AOI-TRN-019, tbox-a1 beside TBOX-A1 with AOI-TRN-005), and a held name that leads outside
-    models/ never trains (AOI-TRN-019)."""
+    checked, gets its reference, and its training passes the rule and stops at the dataset store, which training
+    reads from (AOI-TRN-046) and which never holds TBOX. (AOI-TRN-019: Windows names its folder images/TBOX), while a
+    new name the rule refuses is refused before anything is written (CON and TBOX2. with AOI-TRN-019, tbox-a1 beside
+    TBOX-A1 with AOI-TRN-005), and a held name that leads outside models/ never trains (AOI-TRN-019)."""
     ctx.db.ensure_board_model("TBOX.")
     ctx.db.ensure_board_model("../../escape")
     ctx.ensure_board_model("TBOX-A1")
@@ -270,7 +272,13 @@ def test_req_trn_001_set_reference_and_training_meet_the_name_rule(
     assert ctx.import_samples("TBOX.", oks, "OK") == 20
     held = ctx.samples("TBOX.", "OK")[1]["id"]
     ctx.set_reference("TBOX.", held)
-    assert ctx.train(trainable(ctx, "TBOX."), epochs=1, image_size=32)["board_model"] == "TBOX."
+    store = as_admin(ctx, ctx.create_store, "Acme Electronics")
+    with pytest.raises(AoiError) as refused:
+        as_admin(ctx, ctx.move_in, "TBOX.", store["uuid"])
+    assert refused.value.code == "AOI-TRN-019" and ctx.store_of("TBOX.") is None
+    with pytest.raises(AoiError) as refused:
+        ctx.train(trainable(ctx, "TBOX.", stored=False), epochs=1, image_size=32)
+    assert refused.value.code == "AOI-TRN-046" and "in no customer's dataset store" in refused.value.what
     before = outside(ctx, tmp_path)
     writes = (lambda n: ctx.set_reference(n, held), lambda n: ctx.train(trainable(ctx, n), epochs=1, image_size=32))
     for name, code in (("CON", "AOI-TRN-019"), ("TBOX2.", "AOI-TRN-019"), ("tbox-a1", "AOI-TRN-005")):

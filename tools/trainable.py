@@ -54,12 +54,14 @@ def trainable(
     uses: Collection[str] = ("own",),
     held: Collection[str] = (),
     split: bool = True,
+    stored: bool = True,
 ) -> str:
     """The UUID of a new frozen version of `board_model`'s OK and NG samples of the first sample's view, split with
     every file in its training set but those of the sample UUIDs `held`, locked for validation (not split at all
-    unless `split`); the board model is in `customer`'s store first (`in_store`), and the version names that customer
-    and allows `uses`."""
-    in_store(ctx, board_model, customer)
+    unless `split`); the board model is in `customer`'s store first (`in_store`), unless not `stored`, and the version
+    names that customer and allows `uses`."""
+    if stored:
+        in_store(ctx, board_model, customer)
     samples = [s for s in ctx.db.samples(board_model) if s["label"] in ("OK", "NG")]
     view = samples[0]["side"] if samples else "Top"
     n = 1 + sum(d["view"] == view for d in ctx.db.datasets(board_model))
