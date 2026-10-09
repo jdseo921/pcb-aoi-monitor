@@ -245,7 +245,9 @@ AI model: the banner keeps the stored verdict, "Would be" beside Re-evaluate sho
 over a second, "Re-evaluating…" covers the table and the explanation meanwhile, Re-evaluate is off until it ends, and
 its Cancel keeps the stored checks and puts the focus on Re-evaluate, as does the end of the run while Cancel has it;
 pressed from the keyboard, Re-evaluate leaves the focus in the explanation, one Tab before Cancel once that shows, so a
-second Space presses nothing, and takes it back at the end), and the table
+second Space presses nothing, and takes it back at the end; a focus on Re-evaluate waits there too while Re-evaluate is
+off for a result's pictures and maps to load, after "Compare with Golden board ›" on Inspection, say, and is back on it
+once they have, never on Save to Recipe; an error takes the indicator away with its message), and the table
 and the explanation show their checks until you change a threshold, the form takes a revision saved on another page,
 you open another result, inspect a board or change the board model, or an Operator signs in on any page. The board
 keeps the stored result's defect boxes: when defects make the verdict WARN, the explanation says how many the thresholds

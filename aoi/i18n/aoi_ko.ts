@@ -99,12 +99,12 @@
     <message>
         <location line="+3"/>
         <location line="+78"/>
-        <location line="+455"/>
+        <location line="+460"/>
         <source>Golden board</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-532"/>
+        <location line="-537"/>
         <source>AI model</source>
         <translation type="unfinished"></translation>
     </message>
@@ -160,12 +160,12 @@
     </message>
     <message>
         <location line="+15"/>
-        <location line="+673"/>
+        <location line="+678"/>
         <source>Test board</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-667"/>
+        <location line="-672"/>
         <source>Inspecting…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -215,7 +215,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+175"/>
+        <location line="+180"/>
         <source>Would be: {verdict}</source>
         <translation type="unfinished"></translation>
     </message>
@@ -246,7 +246,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-591"/>
+        <location line="-596"/>
         <source>AI score threshold</source>
         <translation type="unfinished"></translation>
     </message>
@@ -297,7 +297,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+152"/>
+        <location line="+157"/>
         <source>Test board: {file}</source>
         <translation type="unfinished"></translation>
     </message>
@@ -427,7 +427,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+81"/>
+        <location line="+93"/>
         <source>Inspect a board on Inspection, or pick a test image.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -632,7 +632,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/compare.py" line="-108"/>
+        <location filename="../ui/pages/compare.py" line="-120"/>
         <source>Changing recipes</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2875,7 +2875,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/compare.py" line="-667"/>
+        <location filename="../ui/pages/compare.py" line="-672"/>
         <source>Compare</source>
         <translation type="unfinished"></translation>
     </message>
