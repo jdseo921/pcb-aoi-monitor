@@ -379,7 +379,9 @@ class AppContext:
                     progress(len(copies) + len(kept), len(paths))
             with self.db.transaction():
                 for target, uid, digest in copies:  # the first creates a new board model
-                    self.db.add_sample(board_model, str(target), label, defect_type, side, uid, sha256=digest)
+                    self.db.add_sample(
+                        board_model, str(target), label, defect_type, side, uid, self.user_uuid, sha256=digest
+                    )
                 if copies:
                     self._ensure_recipe(board_model)
                 if not self.db.reference(board_model):
@@ -936,7 +938,9 @@ class AppContext:
         return self.db.reference(board_model)
 
     def samples(self, board_model: str, label: str | None = None) -> list[dict[str, Any]]:
-        """Training samples (id, label, defect_type, side, path, added_at), oldest first; `label` filters OK or NG."""
+        """Training samples (id, uuid, side, path, added_at) with their current label (label, defect_type, label_uuid,
+        labelled_by: a user's UUID or None, labelled_by_name, labelled_at), oldest first; `label` filters OK, NG or
+        UNSURE. Training and the counts read OK and NG only, so an UNSURE image is in neither (REQ-TRN-002)."""
         return self.db.samples(board_model, label)
 
     def sample_path(self, sample_id: int) -> str:
@@ -1224,8 +1228,10 @@ class AppContext:
     @transactional
     def update_sample(self, sample_id: int, label: str, defect_type: str | None) -> None:
         """Relabel a sample OK or NG (else AOI-TRN-018) and set its defect type as an import does (REQ-TRN-001): one of
-        the 33 DCT types for NG (else AOI-TRN-013), none for OK, whatever is given. The reference sample cannot be
-        relabelled NG (AOI-TRN-007): inspections would compare against a defective board."""
+        the 33 DCT types for NG (else AOI-TRN-013), none for OK, whatever is given, with a new label row; the one before
+        stays in history (REQ-TRN-002). A sample a labeller gave that label and type already is left as it is; one
+        carried over with no labeller is labelled again, by the user acting, so it can be checked. The reference sample
+        cannot be relabelled NG (AOI-TRN-007): inspections would compare against a defective board."""
         before = self.db.sample(sample_id)
         name = Path(before["path"]).name
         if label not in LABELS:
@@ -1234,7 +1240,9 @@ class AppContext:
             self._refuse_reference_change(before, QT_TRANSLATE_NOOP("Errors", "relabelled NG"))
         self._refuse_untyped(name, label, defect_type)
         defect_type = defect_type if label == "NG" else None
-        self.db.update_sample(sample_id, label, defect_type)
+        if (before["label"], before["defect_type"]) == (label, defect_type) and before["labelled_by"] is not None:
+            return  # labelled so already: no new row, so its labeller and any check of it stay
+        self.db.add_label(before["uuid"], label, defect_type, [], self.user_uuid)
         old = {"label": before["label"], "defect_type": before["defect_type"]}
         self.audit("sample.update", "sample", before["uuid"], old, {"label": label, "defect_type": defect_type})
 

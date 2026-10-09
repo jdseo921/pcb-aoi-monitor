@@ -599,7 +599,7 @@
     </message>
     <message>
         <location line="+200"/>
-        <location line="+116"/>
+        <location line="+118"/>
         <source>Importing samples</source>
         <translation type="unfinished"></translation>
     </message>
@@ -639,7 +639,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+174"/>
+        <location line="+176"/>
         <source>Re-evaluating a result</source>
         <translation type="unfinished"></translation>
     </message>
@@ -694,12 +694,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+11"/>
+        <location line="+13"/>
         <source>relabelled NG</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+7"/>
+        <location line="+9"/>
         <source>Removing a sample</source>
         <translation type="unfinished"></translation>
     </message>
@@ -729,7 +729,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1219"/>
+        <location line="-1227"/>
         <source>no defect type was given</source>
         <translation>결함 유형이 지정되지 않았습니다</translation>
     </message>
@@ -744,12 +744,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+513"/>
+        <location line="+515"/>
         <source>its UUID {found} is not {uuid}, as in the AI model registry</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+716"/>
+        <location line="+722"/>
         <source>Changing settings</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4099,7 +4099,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/services.py" line="-1393"/>
+        <location filename="../core/services.py" line="-1401"/>
         <source>Aligning {count} images to the reference board</source>
         <translation type="unfinished"></translation>
     </message>

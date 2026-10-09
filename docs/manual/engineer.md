@@ -125,6 +125,7 @@ opens no sheet, and the status line says so. A name too long for its cell is cut
 screen reader reads its whole path. Import Folder… labels each image by its sub-folders: under `ok/` or `good/` OK,
 under `ng/`, `bad/`, `defect/` or `defects/` NG, with the defect type of its folder when that folder is named after one
 of the 33 types (`ng/solder_bridge/`, spaces or underscores, any case); an image in neither is "unsorted: pick a label".
+An import labels an image OK or NG only, as the user who pressed Import; UNSURE is only ever a later label.
 **View** (Top for every new batch) and **Label for all** set every row; **Defect type for NG files** (a category, then a
 type with its severity) sets every NG row; a row's own label, type or view is picked in its cell (tap a selected cell,
 double-click it or press F2). **Import** (Enter) stays grey until every NG file has one of the 33 types; "Unknown" is

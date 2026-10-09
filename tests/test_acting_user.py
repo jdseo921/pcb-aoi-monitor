@@ -107,7 +107,8 @@ def test_req_usr_001_a_folder_import_finishes_as_the_engineer_who_started_it(
 ) -> None:
     """Before, the import called the role-checked import_samples once per file as whoever was signed in at that file:
     after a switch to an Operator the next file was refused with AOI-USR-001 and the import stopped part-way. Its sheet
-    closes once it ends, so the next user who opens Training never finds it (review)."""
+    closes once it ends, so the next user who opens Training never finds it (review). Each sample's first label row
+    names that Engineer as its labeller (REQ-TRN-002)."""
     ctx = trained_ctx
     folder = tmp_path / "imp"
     (folder / "ok").mkdir(parents=True)
@@ -127,6 +128,7 @@ def test_req_usr_001_a_folder_import_finishes_as_the_engineer_who_started_it(
     assert dialogs == [] and len(ctx.samples(BOARD, "OK")) == before + 4
     entries = ctx.audit_entries(action="sample.import")[:4]
     assert {_who(e) for e in entries} == {("Engineer", ctx.db.user_uuid("engineer"))}
+    assert {s["labelled_by"] for s in ctx.samples(BOARD, "OK")[before:]} == {ctx.db.user_uuid("engineer")}
     assert page.sheet.isHidden() and page.btn_train.objectName() == "primary", "no sheet left for the next user"
 
 

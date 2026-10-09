@@ -28,6 +28,11 @@ from .paths import resolve, to_stored
 IN_CHUNK = 500  # ids per IN (…) query, under SQLite's 999 bound variables on older builds
 WAIT_MS = 5000  # how long a write waits for another program's lock on the database before SQLite refuses it
 DbError = sqlite3.Error  # what a Database call raises when SQLite refuses it, for callers that do not import sqlite3
+SAMPLES = (  # a sample with its current label, the one label row no other has superseded (migration 0014)
+    "SELECT s.id, s.uuid, s.board_model, s.path, l.label, l.defect_type, s.side, s.added_at, s.sha256,"
+    " l.uuid label_uuid, l.labelled_by, u.name labelled_by_name, l.at_utc labelled_at FROM samples s"
+    " JOIN labels l ON l.sample_uuid = s.uuid AND l.superseded_by IS NULL LEFT JOIN users u ON u.uuid = l.labelled_by"
+)
 
 
 def new_uuid() -> str:
@@ -205,41 +210,97 @@ class Database:
         defect_type: str | None = None,
         side: str = "Top",
         uid: str | None = None,
+        labelled_by: str | None = None,
         sha256: str | None = None,
     ) -> int:
-        """Add a sample; returns its id. `uid` is the UUID its file name already carries (#245); a new one when None.
-        `sha256` is its source file's, as the import checked it (REQ-TRN-001)."""
+        """Add a sample with its first label row, labelled by `labelled_by` (a user's UUID); returns its id. `uid` is
+        the UUID its file name already carries (#245); a new one when None. `sha256` is its source file's, as the
+        import checked it (REQ-TRN-001)."""
         self.ensure_board_model(board_model)
-        return self._insert(
-            "INSERT INTO samples(uuid, board_model, path, label, defect_type, side, added_at, sha256)"
-            " VALUES(?,?,?,?,?,?,?,?)",
-            (uid or new_uuid(), board_model, self._stored(path), label, defect_type, side, now_utc(), sha256),
-        )
+        uid, at = uid or new_uuid(), now_utc()
+        with self.transaction():
+            sample_id = self._insert(
+                "INSERT INTO samples(uuid, board_model, path, label, defect_type, side, added_at, sha256)"
+                " VALUES(?,?,?,?,?,?,?,?)",
+                (uid, board_model, self._stored(path), label, defect_type, side, at, sha256),
+            )
+            self.add_label(uid, label, defect_type, [], labelled_by, at)
+        return sample_id
 
     def sample_with_sha256(self, board_model: str, sha256: str) -> dict[str, Any] | None:
-        """The first sample of `board_model` whose source had `sha256`, or None: one lookup through the index of the
-        sample SHA-256 migration (no sample imported before it has a SHA-256)."""
+        """The first sample of `board_model` whose source had `sha256`, as `sample` gives it, or None: one lookup
+        through the index of the sample SHA-256 migration (no sample imported before it has a SHA-256)."""
         rows = self.query(
-            "SELECT id FROM samples WHERE board_model=? AND sha256=? ORDER BY id LIMIT 1", (board_model, sha256)
+            f"{SAMPLES} WHERE s.board_model=? AND s.sha256=? ORDER BY s.id LIMIT 1", (board_model, sha256)
         )
-        return self.sample(rows[0]["id"]) if rows else None
+        return self._resolved(rows[0], "path") if rows else None
 
     def samples(self, board_model: str, label: str | None = None) -> list[dict[str, Any]]:
+        """A board model's samples, oldest first, each with its current label (REQ-TRN-002); `label` filters by it."""
+        sql, p = f"{SAMPLES} WHERE s.board_model=?", [board_model]
         if label:
-            rows = self.query("SELECT * FROM samples WHERE board_model=? AND label=? ORDER BY id", (board_model, label))
-        else:
-            rows = self.query("SELECT * FROM samples WHERE board_model=? ORDER BY id", (board_model,))
-        return [self._resolved(r, "path") for r in rows]
+            sql, p = f"{sql} AND l.label=?", [board_model, label]
+        return [self._resolved(r, "path") for r in self.query(f"{sql} ORDER BY s.id", p)]
 
     def sample(self, sample_id: int) -> dict[str, Any]:
-        """One sample by id, with its absolute path."""
-        return self._resolved(self.query("SELECT * FROM samples WHERE id=?", (sample_id,))[0], "path")
+        """One sample by id, with its absolute path and its current label."""
+        return self._resolved(self.query(f"{SAMPLES} WHERE s.id=?", (sample_id,))[0], "path")
 
-    def update_sample(self, sample_id: int, label: str, defect_type: str | None) -> None:
-        self.execute("UPDATE samples SET label=?, defect_type=? WHERE id=?", (label, defect_type, sample_id))
+    def sample_by_uuid(self, uid: str) -> dict[str, Any] | None:
+        """One sample by UUID, as `sample` gives it; None when the workspace holds none."""
+        rows = self.query(f"{SAMPLES} WHERE s.uuid=?", (uid,))
+        return self._resolved(rows[0], "path") if rows else None
 
     def delete_sample(self, sample_id: int) -> None:
         self.execute("DELETE FROM samples WHERE id=?", (sample_id,))
+
+    # --- labels and defect boxes (REQ-TRN-002, REQ-TRN-003): rows are added, never changed but to be superseded ---
+    def add_label(
+        self,
+        sample_uuid: str,
+        label: str,
+        defect_type: str | None,
+        boxes: list[dict[str, Any]],
+        labelled_by: str | None,
+        at_utc: str | None = None,
+    ) -> str:
+        """Store a sample's new current label with its defect boxes (x, y, w, h, dct_type, severity) and return the
+        label row's UUID. The label row before it and its boxes are marked superseded by that UUID in the same
+        transaction, so history keeps them (migration 0014's triggers refuse any other change)."""
+        uid, at = new_uuid(), at_utc or now_utc()
+        with self.transaction():
+            for table in ("defect_boxes", "labels"):
+                self.execute(
+                    f"UPDATE {table} SET superseded_by=? WHERE sample_uuid=? AND superseded_by IS NULL",
+                    (uid, sample_uuid),
+                )
+            self.execute(
+                "INSERT INTO labels(uuid, sample_uuid, label, defect_type, labelled_by, at_utc) VALUES(?,?,?,?,?,?)",
+                (uid, sample_uuid, label, defect_type, labelled_by, at),
+            )
+            for b in boxes:
+                self.execute(
+                    "INSERT INTO defect_boxes(uuid, sample_uuid, label_uuid, x, y, w, h, dct_type, severity,"
+                    " labelled_by, at_utc) VALUES(?,?,?,?,?,?,?,?,?,?,?)",
+                    (new_uuid(), sample_uuid, uid, b["x"], b["y"], b["w"], b["h"], b["dct_type"], b["severity"])
+                    + (labelled_by, at),
+                )
+        return uid
+
+    def label_history(self, sample_uuid: str) -> list[dict[str, Any]]:
+        """Every label row of a sample, newest first, with the labeller's name and the boxes drawn with it."""
+        rows = self.query(
+            "SELECT l.*, u.name labelled_by_name FROM labels l LEFT JOIN users u ON u.uuid = l.labelled_by"
+            " WHERE l.sample_uuid=? ORDER BY l.id DESC",
+            (sample_uuid,),
+        )
+        boxes = self.boxes(sample_uuid, every=True)
+        return [{**r, "boxes": [b for b in boxes if b["label_uuid"] == r["uuid"]]} for r in rows]
+
+    def boxes(self, sample_uuid: str, every: bool = False) -> list[dict[str, Any]]:
+        """A sample's current defect boxes in the order drawn; with `every`, the superseded ones too."""
+        current = "" if every else " AND superseded_by IS NULL"
+        return self.query(f"SELECT * FROM defect_boxes WHERE sample_uuid=?{current} ORDER BY id", (sample_uuid,))
 
     # --- model registry ----------------------------------------------------
     def register_model(
