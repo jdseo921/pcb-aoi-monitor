@@ -1620,6 +1620,24 @@ class AppContext:
         self.audit("agreement.check", "calibration_set", set_uuid, None, check)
         return check
 
+    def propose_calibration_set(self, board_model: str, seed: int | None = None) -> list[str]:
+        """A calibration set of a board model to make (REQ-TRN-016; Datasets stage 2 of 4): the UUIDs of 100 images
+        (proposed) labelled OK or NG, of every view, drawn at random with `seed` (a new one when None) as
+        `labels.draw_calibration` draws. Nothing is stored until `make_calibration_set`. AOI-TRN-035 when the board
+        model holds fewer images labelled OK or NG."""
+        ok, ng = ([s["uuid"] for s in self.db.samples(board_model, k)] for k in ("OK", "NG"))
+        drawn = labels.draw_calibration(ok, ng, secrets.randbelow(2**31) if seed is None else seed)
+        if not drawn:
+            why = QT_TRANSLATE_NOOP("Errors", "{board_model} holds {n} images labelled OK or NG, not {size}")
+            size = labels.CALIBRATION_IMAGES
+            raise AoiError("AOI-TRN-035", reason=why.fill(board_model=board_model, n=len(ok) + len(ng), size=size))
+        return drawn
+
+    def blind_labelled(self, set_uuid: str) -> dict[str, list[str]]:
+        """The images of a calibration set each user has labelled blind, {user UUID: [sample UUIDs]}; never the labels,
+        which only the agreement check compares."""
+        return self.db.blind_labelled(set_uuid)
+
     def calibration_sets(self, board_model: str) -> list[dict[str, Any]]:
         """A board model's calibration sets, newest first (uuid, board_model, sample_uuids, made_by, at_utc)."""
         return self.db.calibration_sets(board_model)

@@ -4,6 +4,7 @@ stores it. No Qt, so the same rules hold headless."""
 from __future__ import annotations
 
 import numbers
+import random
 from dataclasses import dataclass
 from typing import Any
 
@@ -15,6 +16,7 @@ LABELS = ("OK", "NG", "UNSURE")  # UNSURE images stay out of training and valida
 Size = tuple[int, int] | None  # an image's (width, height), or None where no box needs it
 CALIBRATION_IMAGES = 100  # images in a calibration set (proposed, REQ-TRN-016)
 OK_NG_TARGET, TYPE_TARGET = 98, 90  # percent agreement two labellers reach (proposed; the labels sketch's Q36)
+CALIBRATION_NG = 30  # NG images a proposed calibration set holds at most (the labels sketch's 27 of 30)
 
 
 @dataclass(frozen=True)
@@ -91,6 +93,20 @@ def image_size(path: str, read: Reader | None = None) -> tuple[int, int]:
 def blind_label_ok(label: str, defect_type: str | None) -> bool:
     """A blind label of a calibration image is OK with no defect type, or NG with one of the 33 (REQ-TRN-016)."""
     return label == "OK" and defect_type is None or label == "NG" and defect_type in names()
+
+
+def draw_calibration(ok: list[str], ng: list[str], seed: int) -> list[str]:
+    """A calibration set to propose from the images labelled OK and NG (REQ-TRN-016): CALIBRATION_IMAGES of them drawn
+    at random with `seed`, CALIBRATION_NG NG images or as many as there are, the rest OK, more NG where the OK images
+    run short, in a random order, so that a labeller meets the NG images among the OK ones. Fewer images than a set
+    holds make none: an empty list."""
+    if len(ok) + len(ng) < CALIBRATION_IMAGES:
+        return []
+    rng = random.Random(seed)  # noqa: S311 - no secret: the set is audited as it is made
+    n_ng = max(min(len(ng), CALIBRATION_NG), CALIBRATION_IMAGES - len(ok))
+    drawn = rng.sample(ng, n_ng) + rng.sample(ok, CALIBRATION_IMAGES - n_ng)
+    rng.shuffle(drawn)
+    return drawn
 
 
 def agreement(a: dict[str, tuple[str, str | None]], b: dict[str, tuple[str, str | None]]) -> dict[str, Any]:

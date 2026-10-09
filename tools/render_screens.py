@@ -55,6 +55,7 @@ BOARD_MODEL = "TINY"
 FIXED_TIME = "2026-01-01T09:00:00+00:00"  # every stored time, so a render does not change with the clock
 FIXED_MS = 480.0  # the inspection time Inspection and Compare show
 FIXED_SSIM, FIXED_INLIERS = 0.95, 400  # the similarity and alignment points Compare shows (module docstring)
+PAGE_VIEWS = {"Training": ("datasets", "blind")}  # a page's other views, rendered as <page>-<view>-<role>
 STORED_STATES = (  # Compare
     "compare-stored-operator", "compare-golden-changed-operator", "compare-tried-engineer", "compare-save-engineer",
 )  # fmt: skip
@@ -304,6 +305,26 @@ def prepare(win: MainWindow, title: str, dataset: Path) -> None:
         page.ws.setText(FIXED_WORKSPACE)
 
 
+def show_view(win: MainWindow, title: str, view: str | None) -> None:
+    """`title` with its `view` shown (PAGE_VIEWS); None, the view it opens on. Training's are its Datasets tab, as a
+    click on the tab shows it, and the blind labelling panel on its first image, the board model's images standing in
+    for a calibration set of 100 (the workspace holds fewer): Stop closes it, the status line saying so until the next
+    page clears it, and with None the focus is cleared, as Training opens with none, so the pages after render alike."""
+    from PySide6.QtWidgets import QApplication
+
+    page: Any = win.pages[title]
+    if title == "Training":
+        if view == "blind":
+            samples = page.ctx.samples(page.board_model)
+            page.open_blind("", [s["uuid"] for s in samples], {s["uuid"]: str(s["path"]) for s in samples})
+            wait_until(lambda: page.blind.shown is not None and page.blind._reading is None)
+        else:
+            page._stop_blind()
+        page.tabs.setCurrentIndex(0 if view is None else 1)
+        if view is None and (focus := QApplication.focusWidget()) is not None:
+            focus.clearFocus()
+
+
 def render_stored(win: Any, ctx: AppContext, out: Path) -> dict[str, Path]:
     """Compare on the record `build_workspace` saved, as an Operator opens it from Inspection: beside the golden board
     it was judged against, then with that file changed, which the pane explains (REQ-CMP-003); the file is put back.
@@ -371,6 +392,13 @@ def render_pages(
             name = f"{slug(title)}-{role.lower()}"
             files[name] = out / f"{name}.png"
             assert win.grab().save(str(files[name])), files[name]
+            for view in PAGE_VIEWS.get(title, ()):
+                show_view(win, title, view)
+                QApplication.processEvents()
+                name = f"{slug(title)}-{view}-{role.lower()}"
+                files[name] = out / f"{name}.png"
+                assert win.grab().save(str(files[name])), files[name]
+            show_view(win, title, None)
     files.update(render_stored(win, ctx, out))
     win.close()
     return files

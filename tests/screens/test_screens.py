@@ -84,7 +84,8 @@ def test_req_set_004_every_page_matches_its_approved_image(screens: tuple[AppCon
     shutil.rmtree(ACTUAL_DIR, ignore_errors=True)
     with render_screens.pinned_rendering(qapp, render_screens.TEST_FONT):
         files = render_screens.render_pages(ctx, dataset, ACTUAL_DIR, SIZE)
-    assert len(files) == sum(len(cls.roles) for _, cls in NAV) + len(render_screens.STORED_STATES)
+    views = sum(len(cls.roles) * (1 + len(render_screens.PAGE_VIEWS.get(cls.title, ()))) for _, cls in NAV)
+    assert len(files) == views + len(render_screens.STORED_STATES)
     approved = {p.stem for p in render_screens.APPROVED_DIR.glob("*.png")}
     assert set(files) == approved, f"pages and approved images differ: {sorted(set(files) ^ approved)}; run {APPROVE}"
     failures = []
