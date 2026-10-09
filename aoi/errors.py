@@ -570,6 +570,12 @@ CODES: dict[str, ErrorCode] = {
             QT_TRANSLATE_NOOP("Errors", "Do what the reason says, then freeze the dataset again; nothing was written."),
         ),
         ErrorCode(
+            "AOI-TRN-028",
+            QT_TRANSLATE_NOOP("Errors", "Dataset version not found"),
+            QT_TRANSLATE_NOOP("Errors", "The workspace holds no dataset version {dataset}, so nothing was verified."),
+            QT_TRANSLATE_NOOP("Errors", "Show the dataset versions again and pick one of them."),
+        ),
+        ErrorCode(
             "AOI-TRN-030",
             QT_TRANSLATE_NOOP("Errors", "Label not changed"),
             QT_TRANSLATE_NOOP("Errors", "The label of {sample} was not changed: {reason}."),

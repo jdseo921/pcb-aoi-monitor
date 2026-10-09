@@ -340,6 +340,8 @@ AOI_Workspace/                 (default ~/AOI_Workspace, set in Settings, used f
                                never replaces a file (a name already taken refuses it), and a path the system still
                                refuses as too long is AOI-INSP-014 (#245; before: 6 random hex digits, whole stem)
   exports/                     CSV / PDF / overlay exports
+  datasets/<name>/manifest.json  a frozen dataset version's manifest (REQ-TRN-005): each file's path, relative to
+                               the workspace, SHA-256, label and boxes; the files stay where images/ holds them
 ```
 
 ---
@@ -382,8 +384,12 @@ on its own, keyed by its calibration set and board model; the dataset version fr
 customer (AOI-TRN-024) or no agreed agreement check (AOI-TRN-027); else it names the version
 `DS-<BOARDMODEL>-<REV>-<VIEW>-v<N>` (`aoi/core/datasets.py`), writes `datasets/<name>/manifest.json` atomically (each
 OK and NG file's relative path, SHA-256, label row, boxes, labeller and checker; the agreement check; the OK draws)
-and stores the version and its files with the manifest's SHA-256 and the audit entry in one transaction. A later
-label or file change reaches only the next version.
+and stores the version and its files with the manifest's SHA-256 and the audit entry in one transaction. A version's
+rows and manifest never change, and a later label change reaches only the next version. A version names the
+workspace's image files rather than copying them, and the app never changes or removes one (`delete_sample` keeps the
+file), so a file changed or removed outside the app is what `verify_dataset` reports: it re-hashes the manifest and
+every file against the stored SHA-256 and lists the files that match, changed or are missing, and writes nothing.
+The old bytes of such a file cannot be recovered from the workspace, which therefore needs a backup.
 An AI model the loader would refuse, such as one with an image threshold of 0 from OK images that are copies of one
 photo, is refused at step 5 with AOI-TRN-004: nothing is saved, registered or audited, and the active version stays.
 Step 6 sets the new golden board as the reference, registers and activates the version and writes `model.train` in one

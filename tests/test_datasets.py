@@ -112,3 +112,41 @@ def test_req_trn_005_change_makes_new_version(ctx: AppContext, tmp_path: Path) -
     for sql in [*changes, "DELETE FROM dataset_items"]:
         with pytest.raises(sqlite3.DatabaseError, match="never (changed|deleted)"):
             ctx.db.execute(sql)
+
+
+def test_req_trn_005_verify_detects_tampered_file(ctx: AppContext, tmp_path: Path) -> None:
+    """verify_dataset re-hashes the manifest and each file against the SHA-256 stored at the freeze, writing nothing:
+    all match after it, and after a sample the version names is removed, whose file the app keeps, with no foreign key
+    broken; a changed byte, a removed file and a changed or removed manifest are reported by path; a version the
+    workspace does not hold is AOI-TRN-028."""
+    samples, cal = ready(ctx, tmp_path / "boards")
+    agree(ctx, cal, samples)
+    v1 = ctx.freeze_dataset(CAL, "Top", "R3", "Acme")
+    paths, root = [i["path"] for i in ctx.dataset_items(v1["uuid"])], ctx.settings.root
+    ctx.delete_sample(ctx.samples(CAL, "NG")[0]["id"])  # its record goes; the file the version names stays
+    assert ctx.datasets(CAL) == [v1] and ctx.db.query("PRAGMA foreign_key_check") == []
+    assert ctx.verify_dataset(v1["uuid"]) == {
+        "manifest": "same",
+        "files": 100,
+        "matched": paths,
+        "changed": [],
+        "missing": [],
+    }
+    with open(root / paths[3], "ab") as f:
+        f.write(b"\0")  # one byte added, as a program that rewrites the image would
+    (root / paths[7]).unlink()
+    manifest, entries = root / v1["manifest_path"], ctx.audit_entries()
+    manifest.write_bytes(manifest.read_bytes().replace(b'"label": "NG"', b'"label": "OK"', 1))
+    tampered = ctx.verify_dataset(v1["uuid"])
+    assert [tampered[k] for k in ("manifest", "files", "changed", "missing")] == [
+        "changed",
+        100,
+        [paths[3]],
+        [paths[7]],
+    ]
+    assert tampered["matched"] == [p for p in paths if p not in (paths[3], paths[7])]
+    manifest.unlink()
+    assert ctx.verify_dataset(v1["uuid"])["manifest"] == "missing" and ctx.audit_entries() == entries
+    with pytest.raises(AoiError) as unknown:
+        ctx.verify_dataset("a-version-never-frozen")
+    assert unknown.value.code == "AOI-TRN-028"

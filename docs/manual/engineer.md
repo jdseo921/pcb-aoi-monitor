@@ -174,13 +174,17 @@ they agree on the defect type, at least 90 % (both targets proposed). Every chec
 next dataset version you freeze carries it. A set that is not 100 such images (AOI-TRN-035), a second blind label
 (AOI-TRN-036) and a labeller who has not labelled every image (AOI-TRN-037) are refused. None of this has a screen yet.
 
-**A frozen dataset version never changes.** Freezing takes the OK and NG images of one board model and view, with
+**A frozen dataset version keeps its record.** Freezing takes the OK and NG images of one board model and view, with
 the board revision, the customer and the allowed uses (their own AI models by default), as DS-TBOXA1-R3-TOP-v4: the
 board model without hyphens, the revision, the view and a number counting per board model and view. It writes
 datasets/<name>/manifest.json with each file's path, SHA-256, label, boxes, labeller and checker, and keeps the
 manifest's SHA-256. It waits for every NG label (AOI-TRN-020) and the drawn OK labels (AOI-TRN-021) to be checked, a
-customer (AOI-TRN-024) and an agreement check that reached its targets (AOI-TRN-027). A later change goes into the
-next version.
+customer (AOI-TRN-024) and an agreement check that reached its targets (AOI-TRN-027). The version's record and
+manifest never change, and a later label change goes into the next version. The version names the workspace's image
+files rather than copying them; the app never changes or removes one, but a file changed or removed outside the app
+cannot be recovered from the workspace, so back the workspace up. Verifying a version hashes its manifest and every
+file again and lists each file that changed or is missing since the freeze; train from another version when one did.
+No screen freezes or verifies a version yet.
 
 (to be written: the label editor and UNSURE on the Samples tab, the check and the blind labels on screen, the Datasets
 tab, locking the validation set)

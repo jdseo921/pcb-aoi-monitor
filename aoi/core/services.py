@@ -32,7 +32,7 @@ from ..config import Settings, resolve_device
 from ..data import atomic
 from ..data.db import Database, DbError, is_busy, new_uuid
 from ..data.errors import WorkspaceError
-from ..data.paths import inside, one_folder_name, to_stored
+from ..data.paths import inside, one_folder_name, resolve, to_stored
 from ..data.workspace_lock import WorkspaceLock
 from ..errors import QT_TRANSLATE_NOOP, AoiError, Phrase, joined
 from ..hal import VIEWS
@@ -1533,6 +1533,22 @@ class AppContext:
     def dataset_items(self, dataset_uuid: str) -> list[dict[str, Any]]:
         """A frozen version's files as its manifest lists them, each with its row's id, uuid and dataset_uuid."""
         return self.db.dataset_items(dataset_uuid)
+
+    def verify_dataset(self, dataset_uuid: str) -> dict[str, Any]:
+        """Re-hash a frozen version's manifest and each of its files against the SHA-256 stored at the freeze
+        (REQ-TRN-005), writing nothing: `manifest` is same, changed or missing; `files` counts the files, and `matched`,
+        `changed` and `missing` list their relative paths in the manifest's order. AOI-TRN-028 for a version the
+        workspace does not hold. Hashes on this thread; the Datasets tab runs it on the pool."""
+        if not (found := self.db.datasets("", dataset_uuid)):
+            raise AoiError("AOI-TRN-028", dataset=dataset_uuid)
+        sha = datasets.file_sha256(self.settings.root / found[0]["manifest_path"])
+        result: dict[str, Any] = {"matched": [], "changed": [], "missing": []}
+        result["manifest"] = "missing" if sha is None else "same" if sha == found[0]["manifest_sha256"] else "changed"
+        items = self.db.dataset_items(dataset_uuid)
+        for item in items:
+            sha = datasets.file_sha256(resolve(item["path"], self.settings.root))
+            result["missing" if sha is None else "matched" if sha == item["sha256"] else "changed"].append(item["path"])
+        return result | {"files": len(items)}
 
     def _refuse_freeze(
         self, name: str, board_model: str, view: str, revision: str, customer: str, uses: Sequence[str], manifest: str
