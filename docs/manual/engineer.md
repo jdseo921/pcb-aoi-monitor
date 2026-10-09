@@ -394,7 +394,16 @@ trained yet, or no AI model version is active, or, when the AI model registry ho
 active AI model (only after a change by hand), AOI-TRN-012 with what to do: for the next boards, train again or
 activate another version on Training, or set a value of your own.
 
-(to be written: drawing ROIs, the other thresholds, Test Run, revision history, the AOI checklist)
+**ROIs** (on the Golden board). Press Draw ROI and drag on the board to draw an ROI of the Type picked. Click an ROI to select it: it turns yellow with a handle at each corner and in the middle of each side,
+and its row and the Selected ROI form follow. Drag inside it to move it, or drag a handle to resize it: a corner moves
+its two sides and a side's handle that side alone, while the opposite sides stay. With the focus on the board, an arrow
+key moves it 1 px, Shift and an arrow 10 px, and Ctrl and an arrow moves its bottom right corner. An ROI never leaves
+the board and is never under 4 px a side; one too small for its handles has them outside it, so a press inside it still
+moves it. An ROI changed and not yet saved is yellow and dashed, a saved one green and a disabled one grey. The wheel zooms at the pointer; a drag on the
+board away from an ROI pans, as does a middle-button drag or a drag with Space held (in Draw ROI too); Home or a
+double-click fits the board. Save Recipe stores each ROI where it is shown, its box in mm under a scale (section 2).
+
+(to be written: the other thresholds, Test Run, revision history, the AOI checklist)
 
 ## 6. AI model test and reports
 

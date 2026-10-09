@@ -4,8 +4,21 @@ from __future__ import annotations
 
 import cv2
 import numpy as np
-from PySide6.QtCore import QLineF, QPointF, QRectF, QSize, Qt, Signal
-from PySide6.QtGui import QBrush, QColor, QFont, QImage, QMouseEvent, QPainter, QPen, QPixmap, QTransform, QWheelEvent
+from PySide6.QtCore import QLineF, QPoint, QPointF, QRectF, QSize, Qt, Signal
+from PySide6.QtGui import (
+    QBrush,
+    QColor,
+    QFocusEvent,
+    QFont,
+    QImage,
+    QKeyEvent,
+    QMouseEvent,
+    QPainter,
+    QPen,
+    QPixmap,
+    QTransform,
+    QWheelEvent,
+)
 from PySide6.QtWidgets import (
     QGraphicsItem,
     QGraphicsPixmapItem,
@@ -53,6 +66,8 @@ class ImageView(QGraphicsView):
         self._draw_mode = self._pick_mode = False
         self._drag_start: QPointF | None = None
         self._rubber: QGraphicsRectItem | None = None
+        self._space = False  # Space held: a left drag pans, in any mode (recipe-editor sketch)
+        self._pan_from: QPoint | None = None  # where a middle or Space drag was last, in viewport px
         self._peers: list[ImageView] = []
         self._syncing = False
         self._placeholder = self.scene().addSimpleText(placeholder, label_font())
@@ -147,6 +162,27 @@ class ImageView(QGraphicsView):
     def mouseDoubleClickEvent(self, e: QMouseEvent) -> None:
         self.fit()
 
+    def _pans(self, e: QMouseEvent) -> bool:
+        """A press that pans, whatever the mode: the middle button, or the left one while Space is held."""
+        return e.button() == Qt.MouseButton.MiddleButton or self._space and e.button() == Qt.MouseButton.LeftButton
+
+    def keyPressEvent(self, e: QKeyEvent) -> None:
+        if e.key() == Qt.Key.Key_Home:
+            self.fit()
+        elif e.key() == Qt.Key.Key_Space:
+            self._space = True
+        else:
+            super().keyPressEvent(e)
+
+    def keyReleaseEvent(self, e: QKeyEvent) -> None:
+        if e.key() == Qt.Key.Key_Space and not e.isAutoRepeat():
+            self._space = False
+        super().keyReleaseEvent(e)
+
+    def focusOutEvent(self, e: QFocusEvent) -> None:
+        super().focusOutEvent(e)
+        self._space = False  # Space let go elsewhere is never seen here
+
     # --- ROI drawing ---------------------------------------------------------------
     def set_draw_mode(self, on: bool, pick: bool = False) -> None:
         """Drag draws an ROI (`on`), or, with `pick`, a click picks a point (Calibrate Scale…); else drag pans."""
@@ -155,6 +191,9 @@ class ImageView(QGraphicsView):
         self.setCursor(Qt.CursorShape.CrossCursor if on else Qt.CursorShape.ArrowCursor)
 
     def mousePressEvent(self, e: QMouseEvent) -> None:
+        if self._pans(e):
+            self._pan_from = e.position().toPoint()
+            return
         if self._pick_mode and e.button() == Qt.MouseButton.LeftButton and self._pix is not None:
             if self._pix.sceneBoundingRect().contains(p := self.mapToScene(e.position().toPoint())):
                 self.pointPicked.emit(p)  # a click off the image measures nothing
@@ -169,12 +208,21 @@ class ImageView(QGraphicsView):
         super().mousePressEvent(e)
 
     def mouseMoveEvent(self, e: QMouseEvent) -> None:
+        if self._pan_from is not None:
+            at, (h, v) = e.position().toPoint(), (self.horizontalScrollBar(), self.verticalScrollBar())
+            h.setValue(h.value() - (at.x() - self._pan_from.x()))
+            v.setValue(v.value() - (at.y() - self._pan_from.y()))
+            self._pan_from = at
+            return
         if self._rubber is not None and self._drag_start is not None:
             self._rubber.setRect(QRectF(self._drag_start, self.mapToScene(e.position().toPoint())).normalized())
             return
         super().mouseMoveEvent(e)
 
     def mouseReleaseEvent(self, e: QMouseEvent) -> None:
+        if self._pan_from is not None:
+            self._pan_from = None
+            return
         if self._rubber is not None:
             rect = self._rubber.rect().intersected(self.sceneRect())
             self.scene().removeItem(self._rubber)

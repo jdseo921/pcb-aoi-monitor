@@ -1,5 +1,6 @@
 """Boxes on an image, drawn, selected, moved and resized on it: the defect boxes of an NG image (`BoxEditor`,
-REQ-TRN-003; labels sketch, S33).
+REQ-TRN-003; labels sketch, S33) and the ROIs of a recipe on its Golden board (`RoiEditor`, REQ-RCP-001; recipe-editor
+sketch, S49).
 
 `Boxes` is an `ImageView` (zoom, pan, fit and its Draw mode) that holds the boxes, each in image pixels. A finger works
 as the mouse does: Qt turns a touch the view does not take into the same mouse events. With the focus on it, the keys
@@ -8,6 +9,7 @@ do what the mouse does: Enter in Draw mode places a box, and the arrows move and
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import replace
 from typing import Generic, TypeVar
 
@@ -208,7 +210,8 @@ class Boxes(ImageView, Generic[B]):
     def mousePressEvent(self, e: QMouseEvent) -> None:
         self._keys_done()  # the arrows' change, stored before the mouse makes another
         left = e.button() == Qt.MouseButton.LeftButton
-        hit = None if self._draw_mode or not left else self._hit(e.position().toPoint())
+        idle = not left or self._draw_mode or self._pick_mode or self._pans(e)  # a press here picks or pans
+        hit = None if idle else self._hit(e.position().toPoint())
         if left and self.locked and (self._draw_mode or hit is not None):
             self.refused.emit()
             return
@@ -335,3 +338,38 @@ class BoxEditor(Boxes[DefectBox]):
         self.boxes.append(DefectBox(x0, y0, x1 - x0, y1 - y0, self.new_type))
         self.choose(len(self.boxes) - 1)
         self.edited.emit()
+
+
+class RoiEditor(Boxes[ROI]):
+    """A recipe's ROIs on its Golden board, each labelled with its name and type: the selected one yellow with a handle
+    at each corner and in the middle of each side; the others green as saved (`saved`, the revision loaded), yellow and
+    dashed while changed and not saved, grey while disabled (recipe-editor sketch). The page adds the ROI a drag in
+    Draw mode gives (`roiDrawn`); `marks`, the points Calibrate Scale… picked, and `extra`, the boxes of a Try's
+    defects, are drawn with the ROIs at every redraw, so a zoom or a drag keeps them."""
+
+    grips = CORNERS + SIDES
+    small_px = 3 * theme.HANDLE_PX  # its handles outside a box under this across: the press inside it still moves it
+
+    def __init__(self, parent: QWidget | None = None, placeholder: str = "") -> None:
+        super().__init__(parent, placeholder)
+        self.saved: list[ROI] = []
+        self.type_text: Callable[[str], str] = str  # an ROI type in the UI language
+        self.marks: list[QPointF] = []
+        self.extra: list[tuple[int, int, int, int, str, str]] = []  # x, y, w, h, colour, label
+
+    def _label(self, n: int) -> str:
+        r = self.boxes[n]
+        return f"{r.name} [{self.type_text(r.type)}]"
+
+    def _pen(self, n: int) -> tuple[str, bool]:
+        r = self.boxes[n]
+        changed = r not in self.saved
+        if n == self.chosen or changed:
+            return theme.ROI_SELECTED, changed
+        return (theme.ROI_COLOR if r.enabled else theme.ROI_DISABLED), False
+
+    def redraw(self) -> None:
+        super().redraw()
+        for x, y, w, h, colour, label in self.extra:
+            self.add_box(x, y, w, h, colour, label)
+        self.add_measure(self.marks)

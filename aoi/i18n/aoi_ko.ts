@@ -180,7 +180,7 @@
 <context>
     <name>BoxEditor</name>
     <message>
-        <location filename="../ui/widgets/box_editor.py" line="+328"/>
+        <location filename="../ui/widgets/box_editor.py" line="+331"/>
         <source>{number} {type} ◆ {severity}</source>
         <translation>{number} {type} ◆ {severity}</translation>
     </message>
@@ -1312,7 +1312,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+366"/>
+        <location line="+385"/>
         <source>Height</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4684,7 +4684,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/recipe_editor.py" line="-353"/>
+        <location filename="../ui/pages/recipe_editor.py" line="-372"/>
         <source>Recipe Editor</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4750,7 +4750,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+35"/>
+        <location line="+38"/>
         <source>Trying the recipe…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4806,12 +4806,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-49"/>
+        <location line="-52"/>
         <source>Calibrate Scale…</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+50"/>
+        <location line="+53"/>
         <source>AI score (× AI score threshold)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4941,7 +4941,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+85"/>
+        <location line="+92"/>
         <source>Train an AI model or set a reference image on Training.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4981,7 +4981,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+114"/>
+        <location line="+123"/>
         <source>Scale {scale:.2f} px/mm</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4991,7 +4991,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+57"/>
+        <location line="+58"/>
         <source>Scale of {board_model} set: {scale:.2f} px/mm.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5011,7 +5011,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+24"/>
+        <location line="+22"/>
         <source>Try result: {verdict}  ·  {defects} defect(s)  ·  {ms:.0f} ms</source>
         <translation type="unfinished"></translation>
     </message>

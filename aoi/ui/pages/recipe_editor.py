@@ -35,9 +35,9 @@ from ...errors import AoiError
 from ...times import to_local
 from .. import theme
 from ..errors import phrase_text
+from ..widgets.box_editor import RoiEditor
 from ..widgets.busy import BusyOverlay
 from ..widgets.empty_state import EmptyState
-from ..widgets.image_view import ImageView
 from ..widgets.scale import CalibrationSheet, DefectSizeField
 from .base import QT_TRANSLATE_NOOP, Page, button, fill_table, make_table, scrolled
 
@@ -117,9 +117,12 @@ class RecipeEditorPage(Page):
         self.sheet.submitted.connect(self.set_scale)
         self.sheet.cancelled.connect(self._close_sheet)
         ll.addWidget(self.sheet)
-        self.view = ImageView(placeholder="")
+        self.view = RoiEditor(placeholder="")
+        self.view.type_text = self._type_text
         self.view_empty = EmptyState(self.view)
         self.view.roiDrawn.connect(self.add_roi)
+        self.view.picked.connect(self._picked)  # an ROI pressed on the Golden board: its row, and the form
+        self.view.edited.connect(self._moved)
         self.view.pointPicked.connect(self._pick)
         self.busy = BusyOverlay(self.view, self.tr("Trying the recipe…"))
         ll.addWidget(self.view, 1)
@@ -305,12 +308,19 @@ class RecipeEditorPage(Page):
             self.history,
             [[h["revision"], h["user"], to_local(h["created_at"])] for h in self.ctx.recipe_history(self.board_model)],
         )
-        self._refresh_rois()
         self._loaded = self._collect().to_dict()  # as the form shows it, rounded to its spin boxes
+        self.view.saved = self._saved_rois()
+        self._refresh_rois()
+
+    def _saved_rois(self) -> list[ROI]:
+        """The ROIs of the revision loaded, as shown: any other ROI on the Golden board is a change not saved yet."""
+        return Recipe.from_dict(copy.deepcopy(self._loaded)).rois
 
     def _read_golden_board(self) -> None:
-        """Read the board model's Golden board into the view. A file gone or damaged must not stop the window opening
-        on this board model (#176): its error is kept for the pane, logged and alarmed (#195)."""
+        """Read the board model's Golden board into the view, in place of a Try's board and its defects. A file gone
+        or damaged must not stop the window opening on this board model (#176): its error is kept for the pane, logged
+        and alarmed (#195)."""
+        self.view.extra = []
         self.golden_seen, self.golden_error = self.golden_board_stamp(), None
         try:
             self.ref = self.ctx.load_image(self.golden_seen[0]) if self.golden_seen[0] else None
@@ -403,13 +413,22 @@ class RecipeEditorPage(Page):
         ):
             w.setValue(-1 if v is None else v)
         self.r_enabled.setChecked(x.enabled)
-        if i < 0:
-            return
-        self.view.clear_overlays()
-        for j, r in enumerate(rois):
-            color = theme.ROI_SELECTED if j == i else theme.ROI_COLOR
-            self.view.add_box(r.x, r.y, r.w, r.h, color, f"{r.name} [{self._type_text(r.type)}]")
-        self.view.add_measure(self.sheet.points)  # the points picked stay in view (S29 review)
+        if self.recipe is not None:
+            self._draw_rois()  # the points picked stay in view (S29 review)
+
+    def _picked(self, i: int) -> None:
+        if i != self._sel_index():
+            self.roi_table.selectRow(i) if i >= 0 else self.roi_table.clearSelection()
+
+    def _moved(self) -> None:
+        """ROIs moved or resized on the Golden board (REQ-RCP-001): each takes its new box in px, and drops its box in
+        mm, so that Save Recipe stores the new box in mm at the scale (`Recipe.in_mm`)."""
+        i = self._sel_index()
+        for x, shown in zip(self.edited_recipe.rois, self.view.boxes, strict=True):
+            if (shown.x, shown.y, shown.w, shown.h) != (x.x, x.y, x.w, x.h):
+                x.x, x.y, x.w, x.h, x.mm = shown.x, shown.y, shown.w, shown.h, None
+        self._refresh_rois()
+        self.roi_table.selectRow(i)
 
     def apply_roi(self) -> None:
         i = self._sel_index()
@@ -537,6 +556,7 @@ class RecipeEditorPage(Page):
         scale = self.ctx.set_scale(bm, length_px, distance_mm)
         self.recipe = self._collect().in_px(scale)
         self._loaded = Recipe.from_dict(copy.deepcopy(self._loaded)).in_px(scale).to_dict()  # as load() shows it now
+        self.view.saved = self._saved_rois()
         self.px_per_mm = scale
         self._close_sheet()
         self.min_size.show_recipe(self.recipe, scale)
@@ -573,10 +593,8 @@ class RecipeEditorPage(Page):
 
     def _show_test(self, res: InspectionResult) -> None:
         self.view.set_image(res.image, keep_view=True)
-        for d in res.defects:
-            self.view.add_box(d.x, d.y, d.w, d.h, theme.NG_COLOR, f"{d.no} {d.type}")
-        for x in self.edited_recipe.rois:
-            self.view.add_box(x.x, x.y, x.w, x.h, theme.ROI_COLOR, dashed=True)
+        self.view.extra = [(d.x, d.y, d.w, d.h, theme.NG_COLOR, f"{d.no} {d.type}") for d in res.defects]
+        self._draw_rois()
         result = self.tr("Try result: {verdict}  ·  {defects} defect(s)  ·  {ms:.0f} ms")
         self.test_verdict.setText(
             result.format(verdict=theme.verdict_label(res.verdict), defects=len(res.defects), ms=res.elapsed_ms)
@@ -626,15 +644,12 @@ class RecipeEditorPage(Page):
             self.busy.finish()
         self.test_verdict.clear()
         self.test_verdict.setStyleSheet("")
+        self.view.extra = []
 
     def _draw_rois(self) -> None:
-        self.view.clear_overlays()
-        sel = self._sel_index()
-        for i, x in enumerate(self.edited_recipe.rois):
-            # spec: yellow = active (being edited), green = saved
-            color = theme.ROI_SELECTED if i == sel else theme.ROI_COLOR if x.enabled else theme.ROI_DISABLED
-            self.view.add_box(x.x, x.y, x.w, x.h, color, f"{x.name} [{self._type_text(x.type)}]")
-        self.view.add_measure(self.sheet.points)  # none while the sheet is closed
+        """The ROIs on the board shown, the selected one with its handles (`RoiEditor`), and the points picked."""
+        self.view.marks = self.sheet.points  # none while the sheet is closed
+        self.view.show_boxes(self.edited_recipe.rois, self._sel_index())
 
     def on_board_model_changed(self, name: str | None) -> None:
         self._drop_try()
