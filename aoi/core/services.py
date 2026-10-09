@@ -1099,7 +1099,7 @@ class AppContext:
         self,
         board_model: str,
         folder: str | Path,
-        entries: list[tuple[Path, str | None, Callable[[], np.ndarray]]],
+        entries: Sequence[tuple[Path, str | None, Callable[[], np.ndarray]]],
         dataset_uuid: str | None,
         progress: Callable[[int, int], None] | None,
     ) -> tuple[dict[str, Any], list[dict[str, Any]], JudgedBy]:
