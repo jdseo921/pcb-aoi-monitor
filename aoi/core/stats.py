@@ -19,6 +19,8 @@ _STEPS = 200  # bisection steps: far below a float's resolution
 COUNT_ONLY = QT_TRANSLATE_NOOP("Rates", "{n} of {of}")
 UPPER = QT_TRANSLATE_NOOP("Rates", "{n} of {of}, 95 % upper bound {limit} %")
 LOWER = QT_TRANSLATE_NOOP("Rates", "{n} of {of}, 95 % lower bound {limit} %")
+UPPER_ONLY = QT_TRANSLATE_NOOP("Rates", "95 % upper bound {limit} %")  # under a count shown on its own
+LOWER_ONLY = QT_TRANSLATE_NOOP("Rates", "95 % lower bound {limit} %")
 
 
 def _binom_cdf(k: int, n: int, p: float) -> float:
@@ -87,6 +89,14 @@ def text(r: dict[str, Any]) -> Phrase:
         return COUNT_ONLY.fill(n=r["n"], of=r["of"])
     phrase = UPPER if r["bound"] == "upper" else LOWER
     return phrase.fill(n=r["n"], of=r["of"], limit=round(100 * r["limit"], 1))
+
+
+def bound_text(r: dict[str, Any]) -> Phrase | None:
+    """A rate's bound alone, for under its count ("95 % upper bound 5.8 %"), or None when there is nothing to count."""
+    if not r["of"]:
+        return None
+    phrase = UPPER_ONLY if r["bound"] == "upper" else LOWER_ONLY
+    return phrase.fill(limit=round(100 * r["limit"], 1))
 
 
 def validation_rates(rows: Iterable[dict[str, Any]]) -> dict[str, Any]:

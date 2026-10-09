@@ -3047,7 +3047,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/model_test.py" line="+48"/>
+        <location filename="../ui/pages/model_test.py" line="+50"/>
         <source>AI model {version}</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4342,56 +4342,52 @@
 <context>
     <name>ModelTestPage</name>
     <message>
-        <location filename="../ui/pages/model_test.py" line="+35"/>
-        <location line="+312"/>
+        <location filename="../ui/pages/model_test.py" line="+40"/>
+        <location line="+350"/>
         <source>Select Test Folder…</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-311"/>
-        <location line="+99"/>
-        <location line="+186"/>
+        <location line="-349"/>
+        <location line="+134"/>
+        <location line="+187"/>
         <source>Run Test</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-283"/>
-        <location line="+315"/>
+        <location line="-319"/>
+        <location line="+353"/>
         <source>Export CSV</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-314"/>
+        <location line="-352"/>
         <source>Export Report</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location line="+1"/>
+        <location line="+82"/>
         <source>No folder selected</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+9"/>
+        <location line="-63"/>
         <source>Accuracy</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1"/>
+        <location line="-1"/>
         <source>Precision</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1"/>
+        <location line="-1"/>
         <source>Recall</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1"/>
-        <source>False call rate</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+20"/>
+        <location line="+22"/>
         <source>Image</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4411,12 +4407,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+209"/>
+        <location line="+237"/>
         <source>These results were judged by {run_model}, recipe revision {run_recipe}, {run_golden} and {run_scale}; {board_model} now uses {model}, recipe revision {recipe}, {golden} and {scale}. Rows are not previewed; select one for Run Test Again, which tests the run&apos;s folder with what is in use now.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-297"/>
+        <location line="-337"/>
         <source>Matches label</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4431,7 +4427,22 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+87"/>
+        <location line="+61"/>
+        <source>Source</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+10"/>
+        <source>Missed defects</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>False calls</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+27"/>
         <source>Matches label?</source>
         <comment>whether the verdict matches the image&apos;s label</comment>
         <translation type="unfinished"></translation>
@@ -4447,12 +4458,22 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+9"/>
+        <location line="+17"/>
+        <source>{name}: its locked validation set, {count} images</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>Labelled folder (ok/ and ng/ sub-folders)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+12"/>
         <source>Validation folder (with ok/ and ng/ sub-folders)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+19"/>
+        <location line="+22"/>
         <source>No AI model</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4462,7 +4483,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+18"/>
+        <location line="+21"/>
         <source>Run Test Again</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4482,7 +4503,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+74"/>
+        <location line="+77"/>
         <source>No AI model for {board_model} yet</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4686,7 +4707,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/model_test.py" line="-394"/>
+        <location filename="../ui/pages/model_test.py" line="-432"/>
         <source>AI Model Test</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4764,6 +4785,16 @@
     <message>
         <location line="+1"/>
         <source>{n} of {of}, 95 % lower bound {limit} %</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>95 % upper bound {limit} %</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>95 % lower bound {limit} %</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
