@@ -253,8 +253,9 @@ class ModelTestPage(Page):
         self._clear_preview()  # nor a row of the run before, or why it was not previewed
         self._show_note()
         m = self.metrics
+        rates = m.get("rates") or stats.validation_rates(self.rows)  # a run stored before rates were (S45)
         for k, t in self.tiles.items():
-            t.set(m["rates"][k])
+            t.set(rates[k])
         counts = self.tr(
             "{labelled} labelled of {images} images  ·  TP {tp}  FN {fn}  FP {fp}  TN {tn}  ·  WARN counts as NG"
         )
@@ -510,7 +511,8 @@ class ModelTestPage(Page):
         )
         head += f"<br>{html.escape(off)}" if run.get("ai_check") == "OFF" else ""  # the AI model named did not (#246)
         tiles = "".join(f"<th>{t.name}</th>" for t in self.tiles.values())
-        values = "".join(f"<td>{html.escape(phrase_text(stats.text(m['rates'][k])))}</td>" for k in self.tiles)
+        rates = m.get("rates") or stats.validation_rates(self.rows)
+        values = "".join(f"<td>{html.escape(phrase_text(stats.text(rates[k])))}</td>" for k in self.tiles)
         counts = self.tr("TP {tp} · FN {fn} · FP {fp} · TN {tn} (NG = positive class; WARN counted as NG)")
         counts = counts.format(tp=m["TP"], fn=m["FN"], fp=m["FP"], tn=m["TN"])
         headers = "".join(f"<th>{h}</th>" for h in self.headers)
