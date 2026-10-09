@@ -731,13 +731,13 @@ CODES: dict[str, ErrorCode] = {
             QT_TRANSLATE_NOOP("Errors", "Training not started: locked validation images"),
             QT_TRANSLATE_NOOP(
                 "Errors",
-                "{board} was not trained: {count} of its OK and NG images are, by their content, in a locked validation"
-                " set, and an AI model is never trained on one.",
+                "{name} was not trained: {count} of its training set's images are, by their content, in a locked"
+                " validation set, and an AI model is never trained on one.",
             ),
             QT_TRANSLATE_NOOP(
                 "Errors",
-                "Delete those samples from the board model to train on the others; nothing was saved, and the active"
-                " AI model is unchanged.",
+                "Freeze a new version and lock its validation set, which keeps those images locked, then train from it;"
+                " nothing was saved, and the active AI model is unchanged.",
             ),
         ),
         ErrorCode(
@@ -745,6 +745,25 @@ CODES: dict[str, ErrorCode] = {
             QT_TRANSLATE_NOOP("Errors", "Dataset store not changed"),
             QT_TRANSLATE_NOOP("Errors", "The dataset store of {store} was not changed: {reason}."),
             QT_TRANSLATE_NOOP("Errors", "Do what the reason says, then try again."),
+        ),
+        ErrorCode(
+            "AOI-TRN-045",
+            QT_TRANSLATE_NOOP("Errors", "Training not started"),
+            QT_TRANSLATE_NOOP("Errors", "{name} was not trained: {reason}."),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Do what the reason says, then train again; nothing was saved, and the active AI model is unchanged.",
+            ),
+        ),
+        ErrorCode(
+            "AOI-TRN-046",
+            QT_TRANSLATE_NOOP("Errors", "Training not started: customer or use not allowed"),
+            QT_TRANSLATE_NOOP("Errors", "{name} was not trained for the use {use}: {reason}."),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Train from a version of one customer's dataset store that allows this use; the refusal is in the audit"
+                " log, and the active AI model is unchanged.",
+            ),
         ),
         ErrorCode(
             "AOI-TST-001",

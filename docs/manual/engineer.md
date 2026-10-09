@@ -250,16 +250,30 @@ service calls until the Settings screen comes (ADR 0010).
 of 0 because the OK images are copies of one photo, it stops with AOI-TRN-004: nothing is saved and the active AI model
 stays in use. Import photos of several different good boards, then train again.
 
-**An import** runs in the background (#194): the sample table shows "Importing…" after a second, and progress, the
-time left and Cancel after ten. While any import runs, Add OK Images…, Add NG Images…, Import Folder… (also the link
-in an empty sample table) and Start Training are off, "Importing…" stays over the table when the page is shown again,
-and a Switch User does not stop it: the samples are recorded as added by the user who started the import. The line
-over the sample table counts the OK and NG samples and names the reference image (under it, while fewer than 20 OK
-samples are imported, a tip says that 20 or more give a steadier threshold); a name too long for the line is cut at its
-end (…), and pointing at the line shows it whole. If the system refuses the path of a sample's copy in the workspace as
-too long (a workspace folder with a long path, on Windows with long paths off), the import keeps the images it
-imported before that file and names AOI-TRN-011 in AOI-TRN-010; when that file was the first, it shows AOI-TRN-011
-itself, which counts every image it was to import. The steps are those of AOI-INSP-014 (section 8, Evidence files).
+**An import** runs in the background (#194): the sample table shows "Importing…" after a second, and progress, the time
+left and Cancel after ten. While any import runs, Add OK Images…, Add NG Images…, Import Folder… (also the link in an
+empty sample table) and Start Training are off, "Importing…" stays over the table when the page is shown again, and a
+Switch User does not stop it: the samples are recorded as added by the user who started the import. The line over the
+sample table counts the OK and NG samples and names the reference image (under it, while fewer than 20 OK samples are
+imported, a tip says that training needs 20 OK images or more in a dataset version's training set); a name too long for
+the line is cut at its end (…), and pointing at the line shows it whole. If the system refuses the path of a sample's
+copy in the workspace as too long (a workspace folder with a long path, on Windows with long paths off), the import
+keeps the images it imported before that file and names AOI-TRN-011 in AOI-TRN-010; when that file was the first, it
+shows AOI-TRN-011 itself, which counts every image it was to import. The steps are those of AOI-INSP-014 (section 8,
+Evidence files).
+
+**What a run trains on.** Start Training trains from a frozen dataset version, never from the sample table: pick it
+in Dataset version, which lists the board model's frozen versions, newest first, and starts on the newest whose
+validation set is locked; the line under it counts that version's validation set and training set. The run reads only
+the training set: its OK images make the Golden board, three quarters of them train the AI model and the rest set the
+threshold, which its NG images only help to set; the locked validation set is never read. The run does not start, and
+saves nothing, when the version's validation set is not locked or its training set holds fewer than 20 OK images
+(AOI-TRN-045), when an image of its training set is locked in any validation set (AOI-TRN-043), or when its images are
+not in the dataset store of the customer it names or it does not allow the use (AOI-TRN-046, written to the audit log).
+Locking keeps at least 50 OK images for validation, so a board model and view needs 70 or more. An image changed since
+the freeze stops the run with AOI-TRN-045 naming the file. The new AI model names the version it was trained from. No
+screen freezes a version or locks its validation set yet (the Datasets tab comes next), so until then the list holds
+only versions made through the app's service calls.
 
 **Stop** ends a training run without saving anything: no AI model version, golden board or audit entry; the active AI
 model stays. Closing the app while work runs asks whether to stop it; an AI model test finishes its folder first.
@@ -304,8 +318,8 @@ empty.
 that turns off both "Use the Golden board comparison" and "Use the self-trained AI model", judges nothing: every
 board is refused with AOI-INSP-010, which names why each check did not run. A Golden board whose file is gone or
 damaged refuses every board of its board model with AOI-INSP-009: put the file back, or choose another OK sample as
-the Golden board with Set Reference on Training. Training again does not cure it while the Golden board is one of the
-imported samples, since training reads every OK sample. The Recipe Editor and Compare show such a Golden board as one
+the Golden board with Set Reference on Training. Training again does not cure a damaged file, since a run reads the
+Golden board first to align every image to it. The Recipe Editor and Compare show such a Golden board as one
 that cannot be opened, with the file's error code and the same steps (a long file name in it wraps onto the next line
 after a _ or -), and the app still opens with no error dialog (#176), though the alarm log on Inspection records it
 once with that code (#195); an Operator reads the same with "Ask an Engineer". When shown again after Set Reference, a

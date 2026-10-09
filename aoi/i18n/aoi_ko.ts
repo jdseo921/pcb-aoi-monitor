@@ -581,7 +581,7 @@
 <context>
     <name>Errors</name>
     <message>
-        <location filename="../core/services.py" line="+61"/>
+        <location filename="../core/services.py" line="+70"/>
         <source>a length of {length} px over {distance} mm gives no scale: both must be numbers above 0, and the scale from {least} to {most} px per mm</source>
         <translation type="unfinished"></translation>
     </message>
@@ -617,7 +617,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+93"/>
+        <location line="+107"/>
         <source>(none)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -808,11 +808,12 @@
     </message>
     <message>
         <location line="+14"/>
+        <location line="+39"/>
         <source>the workspace holds no such dataset version</source>
         <translation>작업 공간에 그런 데이터셋 버전이 없습니다</translation>
     </message>
     <message>
-        <location line="+2"/>
+        <location line="-37"/>
         <source>its validation set is locked already, and a version is split only once</source>
         <translation>검증 세트가 이미 잠겨 있으며, 버전은 한 번만 분할됩니다</translation>
     </message>
@@ -822,7 +823,32 @@
         <translation>OK 이미지가 {ok}개이며, 검증 세트에는 {least}개가 들어갑니다</translation>
     </message>
     <message>
-        <location line="+23"/>
+        <location line="+52"/>
+        <source>{customer} allowed only {uses}</source>
+        <translation>{customer}이(가) {uses}만 허용했습니다</translation>
+    </message>
+    <message>
+        <location line="+12"/>
+        <source>its validation set is not locked; training reads only a training set</source>
+        <translation>검증 세트가 잠겨 있지 않습니다. 학습은 학습 세트만 읽습니다</translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>its training set holds {ok} OK image(s), and training needs {least}</source>
+        <translation>학습 세트에 OK 이미지가 {ok}개 있으며, 학습에는 {least}개가 필요합니다</translation>
+    </message>
+    <message>
+        <location line="+15"/>
+        <source>no frozen dataset version of it has a locked validation set</source>
+        <translation>검증 세트가 잠긴 고정 데이터셋 버전이 없습니다</translation>
+    </message>
+    <message>
+        <location line="+9"/>
+        <source>{file} is not the file frozen, by its SHA-256</source>
+        <translation>SHA-256으로 볼 때 {file}은(는) 고정된 파일이 아닙니다</translation>
+    </message>
+    <message>
+        <location line="+5"/>
         <source>Creating a customer&apos;s dataset store</source>
         <translation>고객의 데이터셋 저장소 만들기</translation>
     </message>
@@ -867,7 +893,7 @@
         <translation>{board}은(는) {other}의 저장소에 있으며, 보드 모델은 저장소를 떠나지 않습니다</translation>
     </message>
     <message>
-        <location line="+8"/>
+        <location line="+10"/>
         <source>a file of it could not be read ({reason})</source>
         <translation>그 파일 하나를 읽을 수 없습니다({reason})</translation>
     </message>
@@ -952,17 +978,20 @@
         <translation>이 뷰에 OK 또는 NG로 라벨링된 이미지가 없습니다</translation>
     </message>
     <message>
-        <location line="+11"/>
+        <location line="-344"/>
+        <location line="+355"/>
         <source>its images are in no customer&apos;s dataset store; an Admin moves them in</source>
         <translation>이미지가 어느 고객의 데이터셋 저장소에도 없습니다. 관리자가 옮겨 넣습니다</translation>
     </message>
     <message>
-        <location line="+2"/>
+        <location line="-353"/>
+        <location line="+355"/>
         <source>its dataset store was shredded on {date}</source>
         <translation>이 데이터셋 저장소는 {date}에 파기되었습니다</translation>
     </message>
     <message>
-        <location line="+3"/>
+        <location line="-352"/>
+        <location line="+355"/>
         <source>its images are in the dataset store of {store}, not of {customer}</source>
         <translation>이미지가 {customer}이(가) 아니라 {store}의 데이터셋 저장소에 있습니다</translation>
     </message>
@@ -987,7 +1016,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1939"/>
+        <location line="-2027"/>
         <source>no defect type was given</source>
         <translation>결함 유형이 지정되지 않았습니다</translation>
     </message>
@@ -1002,7 +1031,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+541"/>
+        <location line="+555"/>
         <source>its UUID {found} is not {uuid}, as in the AI model registry</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1022,7 +1051,7 @@
         <translation>{label}(으)로 다시 라벨링</translation>
     </message>
     <message>
-        <location line="+572"/>
+        <location line="+646"/>
         <source>no agreement check of the board model holds images of this view</source>
         <translation>이 보드 모델의 일치도 검사 중 이 뷰의 이미지를 담은 것이 없습니다</translation>
     </message>
@@ -2016,17 +2045,7 @@
         <translation>학습이 시작되지 않음: 잠긴 검증 이미지</translation>
     </message>
     <message>
-        <location line="+1"/>
-        <source>{board} was not trained: {count} of its OK and NG images are, by their content, in a locked validation set, and an AI model is never trained on one.</source>
-        <translation>{board}이(가) 학습되지 않았습니다: OK 및 NG 이미지 중 {count}개가 내용으로 볼 때 잠긴 검증 세트에 있으며, AI 모델은 잠긴 검증 이미지로 학습하지 않습니다.</translation>
-    </message>
-    <message>
-        <location line="+5"/>
-        <source>Delete those samples from the board model to train on the others; nothing was saved, and the active AI model is unchanged.</source>
-        <translation>나머지 이미지로 학습하려면 보드 모델에서 해당 샘플을 삭제하십시오. 아무것도 저장되지 않았으며, 활성 AI 모델은 바뀌지 않았습니다.</translation>
-    </message>
-    <message>
-        <location line="+8"/>
+        <location line="+14"/>
         <source>Dataset store not changed</source>
         <translation>데이터셋 저장소를 변경하지 않음</translation>
     </message>
@@ -2042,6 +2061,36 @@
     </message>
     <message>
         <location line="+4"/>
+        <source>Training not started</source>
+        <translation>학습이 시작되지 않음</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>{name} was not trained: {reason}.</source>
+        <translation>{name}이(가) 학습되지 않았습니다: {reason}.</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Do what the reason says, then train again; nothing was saved, and the active AI model is unchanged.</source>
+        <translation>사유에 따라 조치한 후 다시 학습하십시오. 아무것도 저장되지 않았으며, 활성 AI 모델은 바뀌지 않았습니다.</translation>
+    </message>
+    <message>
+        <location line="+7"/>
+        <source>Training not started: customer or use not allowed</source>
+        <translation>학습이 시작되지 않음: 허용되지 않은 고객 또는 용도</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>{name} was not trained for the use {use}: {reason}.</source>
+        <translation>{name}이(가) {use} 용도로 학습되지 않았습니다: {reason}.</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Train from a version of one customer&apos;s dataset store that allows this use; the refusal is in the audit log, and the active AI model is unchanged.</source>
+        <translation>이 용도를 허용하는 한 고객의 데이터셋 저장소 버전으로 학습하십시오. 거부 내역은 감사 로그에 있으며, 활성 AI 모델은 바뀌지 않았습니다.</translation>
+    </message>
+    <message>
+        <location line="+8"/>
         <source>AI model, recipe, scale or Golden board changed since the run</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2446,7 +2495,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-965"/>
+        <location line="-984"/>
         <source>Board judged NG</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2536,7 +2585,17 @@
         <translation>{name}이(가) 동결되지 않았습니다: 검토할 OK 라벨 {needed}개({ok}개의 10 %) 중 {checked}개만 검토되었습니다.</translation>
     </message>
     <message>
-        <location line="+227"/>
+        <location line="+179"/>
+        <source>{name} was not trained: {count} of its training set&apos;s images are, by their content, in a locked validation set, and an AI model is never trained on one.</source>
+        <translation>{name}이(가) 학습되지 않았습니다: 학습 세트 이미지 중 {count}개가 내용으로 볼 때 잠긴 검증 세트에 있으며, AI 모델은 잠긴 검증 이미지로 학습하지 않습니다.</translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>Freeze a new version and lock its validation set, which keeps those images locked, then train from it; nothing was saved, and the active AI model is unchanged.</source>
+        <translation>새 버전을 고정하고 검증 세트를 잠그면 해당 이미지는 잠긴 채로 유지됩니다. 그 버전으로 학습하십시오. 아무것도 저장되지 않았으며, 활성 AI 모델은 바뀌지 않았습니다.</translation>
+    </message>
+    <message>
+        <location line="+62"/>
         <source>ROI thresholds refused</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2651,7 +2710,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+183"/>
+        <location line="+231"/>
         <source>it holds no state_dict and metadata</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2661,7 +2720,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-195"/>
+        <location line="-243"/>
         <source>its input size {size} is not a multiple of {stride} pixels</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2671,7 +2730,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+216"/>
+        <location line="+264"/>
         <source>its err_std holds a spread of 0 or less</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2701,7 +2760,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/training.py" line="+365"/>
+        <location filename="../ui/pages/training.py" line="+372"/>
         <location filename="../ui/pages/training_import.py" line="+38"/>
         <source>{code} {title}</source>
         <translation type="unfinished"></translation>
@@ -4223,7 +4282,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/training.py" line="-235"/>
+        <location filename="../ui/pages/training.py" line="-242"/>
         <source>Training</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4794,7 +4853,7 @@
 <context>
     <name>Training</name>
     <message>
-        <location filename="../core/anomaly.py" line="-215"/>
+        <location filename="../core/anomaly.py" line="-263"/>
         <source>Training on {train} OK images ({held_out} held out, {ng} NG for calibration) on {device}</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4824,7 +4883,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/services.py" line="-2113"/>
+        <location filename="../core/services.py" line="-2201"/>
         <source>Aligning {count} images to the reference board</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4843,23 +4902,23 @@
     </message>
     <message>
         <location line="+1"/>
-        <location line="+552"/>
+        <location line="+601"/>
         <source>Import Folder…</source>
         <translation>폴더 가져오기…</translation>
     </message>
     <message>
-        <location line="-544"/>
-        <source>Tip: 20+ OK images give a steadier threshold</source>
-        <translation type="unfinished"></translation>
+        <location line="-593"/>
+        <source>Training needs 20 OK images or more in a dataset version&apos;s training set</source>
+        <translation>학습에는 데이터셋 버전의 학습 세트에 OK 이미지가 20장 이상 필요합니다</translation>
     </message>
     <message>
         <location line="+10"/>
-        <location line="+63"/>
+        <location line="+70"/>
         <source>ID</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-63"/>
+        <location line="-70"/>
         <source>Label</source>
         <translation>라벨</translation>
     </message>
@@ -4915,12 +4974,12 @@
     </message>
     <message>
         <location line="+1"/>
-        <location line="+347"/>
+        <location line="+354"/>
         <source>Remove</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-341"/>
+        <location line="-348"/>
         <source>Select a sample to preview</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4930,7 +4989,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+9"/>
+        <location line="+4"/>
+        <source>Dataset version</source>
+        <translation>데이터셋 버전</translation>
+    </message>
+    <message>
+        <location line="+12"/>
         <source>Epochs</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5055,7 +5119,7 @@
         <translation>{type} ×{count}</translation>
     </message>
     <message>
-        <location line="+44"/>
+        <location line="+41"/>
         <source>epoch {epoch}/{total}  loss {loss:.4f}</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5075,7 +5139,22 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+28"/>
+        <location line="+41"/>
+        <source>No frozen dataset version of {board_model} yet; training reads only a frozen version&apos;s training set, once its validation set is locked.</source>
+        <translation>{board_model}의 고정된 데이터셋 버전이 아직 없습니다. 학습은 검증 세트가 잠긴 고정 버전의 학습 세트만 읽습니다.</translation>
+    </message>
+    <message>
+        <location line="+4"/>
+        <source>Validation set not locked: training needs it locked, and reads only the training set.</source>
+        <translation>검증 세트가 잠기지 않았습니다. 학습하려면 잠가야 하며, 학습은 학습 세트만 읽습니다.</translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>Validation set locked ✓ {val_ok} OK / {val_ng} NG · training set {ok} OK, {ng} NG · NG used for calibration only</source>
+        <translation>검증 세트 잠김 ✓ {val_ok} OK / {val_ng} NG · 학습 세트 {ok} OK, {ng} NG · NG는 보정에만 사용</translation>
+    </message>
+    <message>
+        <location line="+22"/>
         <source>Export AI model</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5085,7 +5164,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+41"/>
+        <location line="+42"/>
         <source>Add at least 20 OK boards with Add OK Images… or Import Folder…</source>
         <translation>OK 이미지 추가… 또는 폴더 가져오기…로 OK 보드를 20개 이상 추가하세요</translation>
     </message>
@@ -5111,8 +5190,8 @@
     </message>
     <message>
         <location line="+0"/>
-        <source>Start Training once 20 OK boards are in.</source>
-        <translation type="unfinished"></translation>
+        <source>Start Training from a frozen dataset version.</source>
+        <translation>고정된 데이터셋 버전을 골라 Start Training을 누르십시오.</translation>
     </message>
 </context>
 <context>

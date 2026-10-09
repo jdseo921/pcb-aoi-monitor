@@ -32,6 +32,7 @@ from tests.test_roles_and_audit import (
     labelled_blind,
     ready_to_freeze,
 )
+from tools.trainable import trainable
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -261,13 +262,13 @@ def test_req_trn_010_a_run_that_fails_to_register_keeps_the_golden_board(
     with monkeypatch.context() as m:
         m.setattr(ctx.db, "register_model", lambda *a, **k: (_ for _ in ()).throw(sqlite3.OperationalError("locked")))
         with pytest.raises(sqlite3.OperationalError):
-            ctx.train(BOARD, epochs=1, image_size=32)
+            ctx.train(trainable(ctx, BOARD), epochs=1, image_size=32)
     assert ctx.reference_image(BOARD) == golden and ctx.audit_entries() == entries
     assert [m["version"] for m in ctx.models(BOARD)] == ["v1.0"]
     assert not list((ctx.settings.models_dir / BOARD).glob("*v1.1*"))  # the failed run's files are removed
     ctx.inspect_file(BOARD, str(ng_board))
     rid = ctx.inspections()[0]["id"]
-    ctx.train(BOARD, epochs=1, image_size=32)
+    ctx.train(trainable(ctx, BOARD), epochs=1, image_size=32)
     assert ctx.judged_reference(rid)[1] == "same"
 
 
@@ -282,6 +283,6 @@ def test_req_cmp_003_training_never_writes_over_a_golden_board_a_result_names(
     ctx.db.set_reference(BOARD, str(left))  # in use, as the code before #178 left it
     ctx.inspect_file(BOARD, str(ng_board))
     rid, judged = ctx.inspections()[0]["id"], left.read_bytes()
-    ctx.train(BOARD, epochs=1, image_size=32)
+    ctx.train(trainable(ctx, BOARD), epochs=1, image_size=32)
     assert [m["version"] for m in ctx.models(BOARD)] == ["v1.2", "v1.0"]
     assert left.read_bytes() == judged and ctx.judged_reference(rid)[1] == "same"

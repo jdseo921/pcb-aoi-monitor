@@ -32,6 +32,7 @@ from aoi.ui.pages.inspection import NO_VERDICT, InspectionPage
 from aoi.ui.widgets.image_view import ImageView
 from tests.conftest import TINY_EPOCHS, TINY_IMAGE_SIZE, another_version
 from tests.test_req_done_in_v01 import BOARD, _button, _window
+from tools.trainable import trainable
 
 BUDGET_S = 0.1  # REQ-INSP-005: a response within 100 ms; REQ-INSP-002: the verdict within 100 ms of the result
 MIN_W, MIN_H = 120, theme.RUN_CONTROL_H  # the plan's 120 px wide; the sketch's T+, 56 px tall
@@ -554,7 +555,8 @@ def test_req_trn_010_a_board_started_after_an_activation_is_judged_by_the_active
     boards = list_images(synthetic_dataset / "test" / "ok")[:8]
     page._set_queue(boards[:3])
     run(page.next_board)  # board 1 builds the engine with v1.0, and the page keeps it
-    trained_ctx.train(BOARD, epochs=TINY_EPOCHS, image_size=TINY_IMAGE_SIZE)  # v1.1 and its Golden board are active
+    version = trainable(trained_ctx, BOARD)
+    trained_ctx.train(version, epochs=TINY_EPOCHS, image_size=TINY_IMAGE_SIZE)  # v1.1 and its Golden board are active
     run(page.next_board)  # board 2: Next Board on the queue already loaded
     activate("v1.0")  # v1.0 with v1.1's Golden board (a rollback keeps the newest Golden board, REQ-TRN-010 Partial)
     run(page.start_run)  # board 3: Start on the queue already loaded

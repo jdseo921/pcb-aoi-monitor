@@ -134,18 +134,21 @@ def build_workspace(root: Path) -> AppContext:
     from aoi.core.labels import DefectBox
     from aoi.core.recipe import ROI
     from aoi.core.services import AppContext
+    from aoi.data import credentials
     from tools.make_synthetic_dataset import ng_type, write_dataset
+    from tools.trainable import trainable
 
     os.environ["AOI_WORKSPACE"] = str(root / "default_workspace")  # settings.json is saved there, never in ~/
     dataset = root / "dataset"
     write_dataset(dataset, DATASET_OK, DATASET_NG, DATASET_SEED)
     with mock.patch("uuid.uuid4", side_effect=counted_uuids()):
-        ctx = AppContext(Settings(workspace=str(root / "workspace"), device="cpu"))
+        keys = credentials.MemoryCredentials()  # the store key trainable makes, never written to the Credential Manager
+        ctx = AppContext(Settings(workspace=str(root / "workspace"), device="cpu"), keys)
         ctx.set_user("engineer")
         ctx.import_samples(BOARD_MODEL, [str(p) for p in list_images(dataset / "train" / "ok")], "OK")
         for p in list_images(dataset / "train" / "ng"):  # one call each: an NG sample is imported with its type
             ctx.import_samples(BOARD_MODEL, [str(p)], "NG", ng_type(p))
-        ctx.train(BOARD_MODEL, epochs=TINY_EPOCHS, image_size=TINY_IMAGE_SIZE)
+        ctx.train(trainable(ctx, BOARD_MODEL), epochs=TINY_EPOCHS, image_size=TINY_IMAGE_SIZE)
         recipe = ctx.recipe(BOARD_MODEL)[1]
         recipe.rois.append(ROI("R1", "Presence", 110, 110, 110, 110))  # around the IC the NG board lacks (LAYOUT[0])
         ctx.save_recipe(recipe)
