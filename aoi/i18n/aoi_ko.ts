@@ -757,7 +757,7 @@
 <context>
     <name>Errors</name>
     <message>
-        <location filename="../core/services.py" line="+86"/>
+        <location filename="../core/services.py" line="+90"/>
         <source>a length of {length} px over {distance} mm gives no scale: both must be numbers above 0, and the scale from {least} to {most} px per mm</source>
         <translation type="unfinished"></translation>
     </message>
@@ -795,12 +795,12 @@
     </message>
     <message>
         <location line="+170"/>
-        <location line="+1615"/>
+        <location line="+1669"/>
         <source>(none)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1584"/>
+        <location line="-1638"/>
         <source>Saving a recipe</source>
         <translation type="unfinished"></translation>
     </message>
@@ -821,12 +821,12 @@
     </message>
     <message>
         <location line="+118"/>
-        <location line="+20"/>
+        <location line="+24"/>
         <source>Running an AI model test</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+200"/>
+        <location line="+250"/>
         <source>Re-evaluating a result</source>
         <translation type="unfinished"></translation>
     </message>
@@ -991,19 +991,19 @@
         <translation>검증 세트 잠금</translation>
     </message>
     <message>
-        <location line="-1771"/>
-        <location line="+1785"/>
+        <location line="-1825"/>
+        <location line="+1839"/>
         <location line="+39"/>
         <source>the workspace holds no such dataset version</source>
         <translation>작업 공간에 그런 데이터셋 버전이 없습니다</translation>
     </message>
     <message>
-        <location line="-1823"/>
+        <location line="-1877"/>
         <source>its validation set is not split and locked</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1786"/>
+        <location line="+1840"/>
         <source>its validation set is locked already, and a version is split only once</source>
         <translation>검증 세트가 이미 잠겨 있으며, 버전은 한 번만 분할됩니다</translation>
     </message>
@@ -1207,7 +1207,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-2333"/>
+        <location line="-2388"/>
         <source>no earlier version of this board model was active</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1217,7 +1217,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+7"/>
+        <location line="+8"/>
         <source>no defect type was given</source>
         <translation>결함 유형이 지정되지 않았습니다</translation>
     </message>
@@ -1237,7 +1237,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+743"/>
+        <location line="+797"/>
         <source>Labelling an image</source>
         <translation>이미지 라벨링</translation>
     </message>
@@ -4343,25 +4343,25 @@
     <name>ModelTestPage</name>
     <message>
         <location filename="../ui/pages/model_test.py" line="+40"/>
-        <location line="+350"/>
+        <location line="+351"/>
         <source>Select Test Folder…</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-349"/>
+        <location line="-350"/>
         <location line="+134"/>
-        <location line="+187"/>
+        <location line="+188"/>
         <source>Run Test</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-319"/>
-        <location line="+353"/>
+        <location line="-320"/>
+        <location line="+354"/>
         <source>Export CSV</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-352"/>
+        <location line="-353"/>
         <source>Export Report</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4407,12 +4407,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+237"/>
+        <location line="+238"/>
         <source>These results were judged by {run_model}, recipe revision {run_recipe}, {run_golden} and {run_scale}; {board_model} now uses {model}, recipe revision {recipe}, {golden} and {scale}. Rows are not previewed; select one for Run Test Again, which tests the run&apos;s folder with what is in use now.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-337"/>
+        <location line="-338"/>
         <source>Matches label</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4493,7 +4493,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+17"/>
+        <location line="+18"/>
         <source>{labelled} labelled of {images} images  ·  TP {tp}  FN {fn}  FP {fp}  TN {tn}  ·  WARN counts as NG</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4564,7 +4564,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+6"/>
+        <location line="+7"/>
         <source>TP {tp} · FN {fn} · FP {fp} · TN {tn} (NG = positive class; WARN counted as NG)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4707,7 +4707,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/model_test.py" line="-432"/>
+        <location filename="../ui/pages/model_test.py" line="-434"/>
         <source>AI Model Test</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5662,7 +5662,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/services.py" line="-2547"/>
+        <location filename="../core/services.py" line="-2602"/>
         <source>Aligning {count} images to the reference board</source>
         <translation type="unfinished"></translation>
     </message>
