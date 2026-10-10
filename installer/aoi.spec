@@ -2,6 +2,7 @@
 #
 #   python -m pip install --require-hashes --no-deps -r requirements-torch-cpu.lock
 #   python -m pip install --require-hashes -r requirements-build.lock
+#   python tools/make_demo_bundle.py                    ->  demo-bundle/, the demo workspace the build ships (S53)
 #   pyinstaller --noconfirm --clean installer/aoi.spec    ->  dist/AOI-PoC-Inspector/AOI-PoC-Inspector.exe
 #
 # One folder keeps the Qt libraries separate files a user can replace (Legal & Compliance, "Packaging"). The build
@@ -35,12 +36,17 @@ if sys.platform == "win32":
     WINDOWS = os.environ["SystemRoot"]
     os.environ["PATH"] = os.pathsep.join([sys.base_prefix, os.path.join(WINDOWS, "System32"), WINDOWS])
 
+DEMO = ROOT / "demo-bundle"  # the demo workspace Settings loads in one click (REQ-SET-007), built by its tool
+if not (DEMO / "bundle.json").is_file():
+    raise SystemExit("No demo bundle: run python tools/make_demo_bundle.py first, then the build again.")
+
 a = Analysis(
     [str(ROOT / "main.py")],
     pathex=[str(ROOT)],
     datas=[
         (str(ROOT / "aoi" / "data" / "migrations" / "*.sql"), "aoi/data/migrations"),  # applied at start-up
         (str(SELFTEST / "*"), "selftest"),  # two synthetic boards and selftest.json, never a photograph
+        (str(DEMO), "demo-bundle"),  # where aoi/core/demo.py bundle_dir() finds it in a build
     ],
     # Never used by the app. Tk has no window here. setuptools comes only through torch.utils.cpp_extension, which
     # builds C++ extensions, and would pull in build tools outside the shipped set. The QtNetwork module comes only

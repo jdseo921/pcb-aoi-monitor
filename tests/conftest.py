@@ -110,6 +110,17 @@ def synthetic_dataset(tmp_path_factory: pytest.TempPathFactory) -> Path:
     return out
 
 
+@pytest.fixture(scope="session")
+def demo_bundle(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    """The demo bundle as the build makes it (tools/make_demo_bundle.py, REQ-SET-007), built once per session.
+    Read-only by convention: a test loads it into a folder of its own."""
+    from tools.make_demo_bundle import build
+
+    out = tmp_path_factory.mktemp("demo") / "demo-bundle"
+    build(out)
+    return out
+
+
 @dataclass(frozen=True)
 class TrainedModel:
     """A tiny model trained once per session on the synthetic dataset.
