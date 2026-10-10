@@ -126,9 +126,12 @@ pytest -s tests/test_performance_budgets.py
 ```
 
 The test writes that workspace with `tools/seed_workspace.py` (about 15 s and 470 MB, removed with pytest's temporary
-folders), starts the app three times, opens every page twice as the Admin and asserts both budgets. The window is
-drawn off screen, as in every test. Record the times it prints: each start's seconds to usable with its phases, and
-each page's milliseconds per opening. Passes when the test passes.
+folders), starts the app four times, the first a warm-up that fills the disk cache and is not budgeted, opens every
+page twice as the Admin and asserts both budgets. The window is drawn off screen, as in every test. Record the times
+it prints: each start's seconds to usable with its phases, the warm-up among them, and each page's milliseconds per
+opening. Before the test, on the PC freshly booted, start the installed app once by hand and record the seconds to its
+window too: that is the start an operator meets after a boot, with nothing yet in the disk cache. Passes when the
+test passes.
 
 ## The record
 
