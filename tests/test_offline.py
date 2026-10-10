@@ -25,6 +25,7 @@ from pytestqt.qtbot import QtBot
 
 import main
 from aoi.ui.main_window import MainWindow
+from tests.conftest import listed
 from tests.test_startup import _App, _shown_window
 from tools.make_synthetic_dataset import ng_type
 from tools.trainable import trainable
@@ -167,6 +168,7 @@ def _drive(
     done(STEPS[5])
 
     win.navigate("Logs & Export")
+    listed(qtbot, logs)  # the page lists its records on the pool (S55); the exports take what it lists
     (out / "overlays").mkdir()
     mp.setattr(QFileDialog, "getSaveFileName", staticmethod(lambda *a, **k: (str(out / "inspections.csv"), "")))
     mp.setattr(QFileDialog, "getExistingDirectory", staticmethod(lambda *a, **k: str(out / "overlays")))
