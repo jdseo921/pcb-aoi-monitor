@@ -1,9 +1,10 @@
-"""Entry point: python main.py"""
+"""Entry point: python main.py, or python main.py --self-test WORKSPACE [BOARDS] (aoi/selftest.py)"""
 
 import sys
 
 from PySide6.QtWidgets import QApplication
 
+from aoi import selftest
 from aoi.config import APP_NAME
 from aoi.ui.errors import open_workspace
 from aoi.ui.main_window import build_window
@@ -12,6 +13,8 @@ from aoi.ui.workers import collect_on_ui_thread
 
 
 def main() -> int:
+    if sys.argv[1:2] == ["--self-test"]:  # the built app inspects one synthetic board, with no window (REQ-SET-012)
+        return selftest.main(sys.argv[2:])
     app = QApplication(sys.argv)
     app.setApplicationName(APP_NAME)
     app.setStyleSheet(QSS)

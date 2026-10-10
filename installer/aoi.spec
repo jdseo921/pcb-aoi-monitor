@@ -10,6 +10,7 @@
 # with SPECPATH, DISTPATH, workpath, Analysis, PYZ, EXE and COLLECT defined.
 import os
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -22,6 +23,11 @@ from tools import third_party_notices as tpn
 NAME = APP_NAME.replace(" ", "-")
 UCRT = re.compile(r"^(api-ms-win-.+|ucrtbase)\.dll$", re.IGNORECASE)
 
+# The boards `AOI-PoC-Inspector.exe --self-test` inspects (aoi/selftest.py), drawn for each build from the synthetic
+# regression set's seed; in a process of its own, before PATH is narrowed below, so nothing it loads stays in this one.
+SELFTEST = Path(workpath) / "selftest"
+subprocess.run([sys.executable, str(ROOT / "tools" / "make_selftest_data.py"), str(SELFTEST)], check=True)
+
 if sys.platform == "win32":
     # PyInstaller looks for a DLL that a bundled file needs beside that file and in the packages' folders, then along
     # PATH, which on a build machine also holds other programs' folders (on GitHub's runners MySQL's, Java's and
@@ -32,7 +38,10 @@ if sys.platform == "win32":
 a = Analysis(
     [str(ROOT / "main.py")],
     pathex=[str(ROOT)],
-    datas=[(str(ROOT / "aoi" / "data" / "migrations" / "*.sql"), "aoi/data/migrations")],  # applied at start-up
+    datas=[
+        (str(ROOT / "aoi" / "data" / "migrations" / "*.sql"), "aoi/data/migrations"),  # applied at start-up
+        (str(SELFTEST / "*"), "selftest"),  # two synthetic boards and selftest.json, never a photograph
+    ],
     # Never used by the app. Tk has no window here. setuptools comes only through torch.utils.cpp_extension, which
     # builds C++ extensions, and would pull in build tools outside the shipped set. The QtNetwork module comes only
     # through PySide6's own __init__ (for a source build's OpenSSL), and the app makes no network call (Engineering

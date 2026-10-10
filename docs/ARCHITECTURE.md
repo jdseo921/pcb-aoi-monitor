@@ -87,14 +87,14 @@ fails a screen module that holds one of them once imported (#202). `aoi/times.py
 `aoi/defects.py` are shared by every layer.
 
 Types (Code style, since S22): mypy runs strict on `aoi/core`, `aoi/data` and `aoi/times.py`, and since S22a on `aoi/ui`
-and `aoi/hal` too, with no flag relaxed (`pyproject.toml`). PySide6 enums are written in full
-(`Qt.AlignmentFlag.AlignCenter`), pages take `QT_TRANSLATE_NOOP` from `aoi/ui/pages/base.py` (Qt's is typed as returning
-object; it is the one of `aoi/errors.py`, which returns a `Phrase`, a `str` subclass, so every page title and role name
-is one), and no widget attribute carries a QWidget method's name: `size`, `pos` and `render` hid `QWidget.size()`,
-`pos()` and `render()` on three pages until S22a, and `tests/test_screen_rules.py` now fails on one. Since S22b every
-page is typed and no module is exempt, and ruff's annotation rules (all but ANN401) require a type hint on every
-function argument and return value across the repository, `tools/`, `main.py` and `tests/` included; mypy does not run
-there, so those hints are present, not verified.
+and `aoi/hal` too, and since S56 on `aoi/selftest.py`, with no flag relaxed (`pyproject.toml`). PySide6 enums are
+written in full (`Qt.AlignmentFlag.AlignCenter`), pages take `QT_TRANSLATE_NOOP` from `aoi/ui/pages/base.py` (Qt's is
+typed as returning object; it is the one of `aoi/errors.py`, which returns a `Phrase`, a `str` subclass, so every page
+title and role name is one), and no widget attribute carries a QWidget method's name: `size`, `pos` and `render` hid
+`QWidget.size()`, `pos()` and `render()` on three pages until S22a, and `tests/test_screen_rules.py` now fails on one.
+Since S22b every page is typed and no module is exempt, and ruff's annotation rules (all but ANN401) require a type hint
+on every function argument and return value across the repository, `tools/`, `main.py` and `tests/` included; mypy does
+not run there, so those hints are present, not verified.
 
 An image file from outside is checked before it is decoded (REQ-INSP-001, since S23): `aoi/core/imaging.load_image` reads
 the format and the size from the file's bytes, never from its name, and refuses a file over the byte limit or an image
