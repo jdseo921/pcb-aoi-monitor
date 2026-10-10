@@ -65,9 +65,9 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest]
     runs-on: ${{ matrix.os }}
-    # The Windows run takes about 27 minutes on a typical runner and a third longer on a slow one, so 30 minutes
-    # stopped a passing suite; 45 leaves room for both.
-    timeout-minutes: 45
+    # The Windows run took 30 to 42 minutes across eleven runs on 2026-10-10 and one of them did not finish the
+    # suite in 45, so 45 stopped a passing suite as 30 had before it; 75 leaves room for a runner half as fast again.
+    timeout-minutes: 75
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
