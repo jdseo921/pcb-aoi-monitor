@@ -180,7 +180,7 @@
 <context>
     <name>BoxEditor</name>
     <message>
-        <location filename="../ui/widgets/box_editor.py" line="+331"/>
+        <location filename="../ui/widgets/box_editor.py" line="+335"/>
         <source>{number} {type} ◆ {severity}</source>
         <translation>{number} {type} ◆ {severity}</translation>
     </message>
@@ -1384,7 +1384,7 @@
     </message>
     <message>
         <location line="+21"/>
-        <location filename="../ui/main_window.py" line="+517"/>
+        <location filename="../ui/main_window.py" line="+629"/>
         <source>start-up</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3101,6 +3101,11 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <location line="+1"/>
+        <source>true or false</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <location line="+2"/>
         <source>a whole number from {least} to {most}</source>
         <translation type="unfinished"></translation>
@@ -3576,7 +3581,7 @@
 <context>
     <name>HomePage</name>
     <message>
-        <location filename="../ui/main_window.py" line="-418"/>
+        <location filename="../ui/main_window.py" line="-519"/>
         <source>Upload samples</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3636,12 +3641,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+35"/>
+        <location line="+34"/>
         <source>Open {page} ›</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+12"/>
+        <location line="+23"/>
         <source>Training running {percent} % · {left}</source>
         <translation>학습 중 {percent} % · {left}</translation>
     </message>
@@ -4223,7 +4228,7 @@
 <context>
     <name>LogsPage</name>
     <message>
-        <location filename="../ui/pages/logs.py" line="+55"/>
+        <location filename="../ui/pages/logs.py" line="+52"/>
         <source>Include archived</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4416,7 +4421,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+19"/>
+        <location line="+28"/>
         <source>All</source>
         <translation>전체</translation>
     </message>
@@ -4449,7 +4454,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+60"/>
+        <location line="+68"/>
         <source>Demo</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4464,7 +4469,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+8"/>
+        <location line="+6"/>
+        <source>Exit presenter theme</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+5"/>
         <source>Switch User</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4509,12 +4519,22 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+21"/>
+        <location line="+76"/>
+        <source>Presenter theme off.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+22"/>
         <source>{page} needs the {roles} role</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+48"/>
+        <location line="+6"/>
+        <source>{page} is hidden in the presenter theme</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+45"/>
         <source>close the app</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4539,7 +4559,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+2"/>
+        <location line="-92"/>
+        <source>Presenter theme on. An Admin turns it off with Exit presenter theme.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+94"/>
         <source>Stopping the running work…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4547,13 +4572,13 @@
 <context>
     <name>ModelTestPage</name>
     <message>
-        <location filename="../ui/pages/model_test.py" line="+44"/>
-        <location line="+599"/>
+        <location filename="../ui/pages/model_test.py" line="+45"/>
+        <location line="+603"/>
         <source>Select Test Folder…</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-598"/>
+        <location line="-602"/>
         <location line="+350"/>
         <location line="+220"/>
         <source>Run Test</source>
@@ -4561,12 +4586,12 @@
     </message>
     <message>
         <location line="-568"/>
-        <location line="+602"/>
+        <location line="+606"/>
         <source>Export CSV</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-601"/>
+        <location line="-605"/>
         <source>Export Report</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4620,7 +4645,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-580"/>
+        <location line="-581"/>
         <source>Matches label</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4635,7 +4660,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+65"/>
+        <location line="+66"/>
         <source>Source</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4643,20 +4668,20 @@
         <location line="+10"/>
         <location line="+64"/>
         <location line="+150"/>
-        <location line="+491"/>
+        <location line="+495"/>
         <source>Missed defects</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-704"/>
+        <location line="-708"/>
         <location line="+64"/>
         <location line="+150"/>
-        <location line="+490"/>
+        <location line="+494"/>
         <source>False calls</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-677"/>
+        <location line="-681"/>
         <source>Matches label?</source>
         <comment>whether the verdict matches the image&apos;s label</comment>
         <translation type="unfinished"></translation>
@@ -4902,7 +4927,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+79"/>
+        <location line="+83"/>
         <source>No AI model for {board_model} yet</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4933,8 +4958,8 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-484"/>
-        <location line="+474"/>
+        <location line="-488"/>
+        <location line="+478"/>
         <source>PDF (*.pdf)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4975,8 +5000,8 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-440"/>
-        <location line="+484"/>
+        <location line="-444"/>
+        <location line="+488"/>
         <source>{image}: labelled {label}, judged {verdict}, AI score {score}</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4984,7 +5009,7 @@
 <context>
     <name>Page</name>
     <message>
-        <location filename="../ui/main_window.py" line="-385"/>
+        <location filename="../ui/main_window.py" line="-486"/>
         <source>Home</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5009,7 +5034,7 @@
         <translation>약 {minutes}분 남음</translation>
     </message>
     <message>
-        <location line="+68"/>
+        <location line="+71"/>
         <source>No board model yet</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5049,7 +5074,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+32"/>
+        <location line="+36"/>
         <source>Open {page} ›</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5094,7 +5119,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/logs.py" line="-296"/>
+        <location filename="../ui/pages/logs.py" line="-302"/>
         <source>Logs &amp; Export</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5119,7 +5144,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/model_test.py" line="-748"/>
+        <location filename="../ui/pages/model_test.py" line="-752"/>
         <source>AI Model Test</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5129,17 +5154,23 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/profile3d.py" line="+20"/>
+        <location filename="../ui/pages/profile3d.py" line="+49"/>
         <source>3D Profile</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location line="+1"/>
-        <source>Height and coplanarity · available after Stage 2 (3D camera integration)</source>
+        <location line="+2"/>
+        <source>Stage 2</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/settings.py" line="+47"/>
+        <location line="+1"/>
+        <source>Available with the 3D camera in Stage 2</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/pages/settings.py" line="+49"/>
         <source>Settings</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5167,18 +5198,28 @@
 <context>
     <name>Profile3DPage</name>
     <message>
-        <location filename="../ui/pages/profile3d.py" line="+9"/>
+        <location filename="../ui/pages/profile3d.py" line="+5"/>
+        <source>Open Recipe Editor ›</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+2"/>
         <source>Back to Home</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+6"/>
-        <source>Height and coplanarity need the 3D camera. Height and volume thresholds (min and max) can be entered per ROI in the Recipe Editor; they are stored now and checked from Stage 2.</source>
+        <location line="+2"/>
+        <source>Coming in Stage 2</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+3"/>
-        <source>3D Profile arrives with Stage 2</source>
+        <location line="+2"/>
+        <source>This page needs the 3D camera of Stage 2. It will show the height map of a board, the four AOI checks that need height data (Shield Can Gap, Connector Pin Height, 3D Coplanarity, Solder Volume), and Accept / Reject for each height defect.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>Height and volume thresholds (min and max) can be entered per ROI in the Recipe Editor until then; they are stored now and checked from Stage 2.</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -5653,7 +5694,7 @@
 <context>
     <name>Role</name>
     <message>
-        <location filename="../ui/pages/base.py" line="-325"/>
+        <location filename="../ui/pages/base.py" line="-332"/>
         <source>Operator</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5975,6 +6016,17 @@
     </message>
     <message>
         <location line="+10"/>
+        <location line="+2"/>
+        <source>Presenter theme</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+4"/>
+        <source>Light, text 18 pt or more, verdict 48 pt; Settings and 3D Profile hidden. An Admin leaves it with Exit presenter theme in the header.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+9"/>
         <source>Users &amp; roles</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5985,12 +6037,12 @@
     </message>
     <message>
         <location line="+0"/>
-        <location line="+46"/>
+        <location line="+52"/>
         <source>Role</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-44"/>
+        <location line="-50"/>
         <source>Add / Change User</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6035,7 +6087,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+3"/>
+        <location line="+9"/>
         <source>User</source>
         <translation type="unfinished"></translation>
     </message>

@@ -53,6 +53,15 @@ entry, `settings.change`, with the values before and after. The last user with t
 start too: the app starts with the Admin added first while the workspace has no board model, and with
 `operator` after that, so a role you change holds after a restart.
 
+**Presenter theme (demos).** For a demo, an Admin ticks Presenter theme on the Settings page, in its own group. It
+applies at once, with no restart, and stays on after one: a light background, text of 18 pt or more, the verdict at 48
+pt in the same colours and shapes, and black text on the green, red and blue fills. Settings, the Admin page, and 3D
+Profile leave the sidebar for every role (the SYSTEM heading with Settings), so a demo never shows them, and the app
+opens Home in their place; every other page stays where it was. Only an Admin leaves the theme, with Exit presenter
+theme in the header, which the header shows to an Admin alone: an Operator or Engineer at the station switches the user
+to an Admin first (Switch User), then presses it. Each switch, on or off, is saved in `settings.json` as
+`presenter_theme` and written to the audit log as `settings.change`, like a save on Settings.
+
 (to be written: the workspace folder, device, limits, demo workspace)
 
 ## 2. Board models and scale
@@ -384,7 +393,9 @@ leaves none selected. Its AI score field, "AI score (× AI score threshold)", is
 the AI score threshold the AI check uses: the recipe's when the recipe sets one, otherwise the AI model's (the
 Threshold column on Training). An ROI is NG when the highest AI score inside it reaches that multiple. The Height and
 Volume thresholds, min and max (stored now, checked from Stage 2), are 0 or more, with min not above max; "—", one step
-below 0, leaves a threshold unset. Apply refuses other values with AOI-RCP-002 and changes nothing.
+below 0, leaves a threshold unset. Apply refuses other values with AOI-RCP-002 and changes nothing. The 3D Profile page
+(its sidebar entry marked "Stage 2") says the same until the Stage 2 3D camera: it is one card, "Coming in Stage 2",
+and its Open Recipe Editor › (Enter) brings you here; Back to Home (Esc) leaves it.
 
 **Save Recipe** (Ctrl+S) never overwrites a revision. It opens a sheet under the tabs that names the revision it will
 make and lists what changes from the latest one, before → after ("Pixel difference: 45 → 30", "ROI R3 added"), and the

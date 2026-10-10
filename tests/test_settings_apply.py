@@ -7,6 +7,7 @@ kept the start-up value after a save that said "Saved.".
 
 from __future__ import annotations
 
+import json
 import threading
 import time
 from collections.abc import Callable
@@ -16,18 +17,21 @@ from typing import Any, cast
 
 import pytest
 import torch
-from PySide6.QtWidgets import QLabel, QMessageBox
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QApplication, QGraphicsSimpleTextItem, QLabel, QMessageBox
 from pytestqt.qtbot import QtBot
 
 from aoi.config import Settings
 from aoi.core import anomaly, services
 from aoi.core.services import AppContext
+from aoi.errors import AoiError
+from aoi.ui import theme
 from aoi.ui.main_window import MainWindow
 from aoi.ui.pages.logs import LogsPage
 from aoi.ui.pages.settings import SettingsPage
 from aoi.ui.pages.training import TrainingPage
 from aoi.ui.workers import Worker
-from tests.test_req_done_in_v01 import BOARD, _window
+from tests.test_req_done_in_v01 import BOARD, _inspect_one, _window
 from tools.trainable import trainable
 
 
@@ -265,3 +269,96 @@ def test_req_log_003_the_archive_button_follows_the_saved_retention(
     assert entry["after"] == {"days": 7, "archived": 1}
     assert win.statusBar().currentMessage() == "Archived 1 record(s)"
     assert {r["id"]: r["archived"] for r in ctx.inspections(include_archived=True)} == {old: 1, recent: 0}
+
+
+def test_req_set_008_the_presenter_theme_applies_at_once_saved_and_audited(
+    qtbot: QtBot, trained_ctx: AppContext, synthetic_dataset: Path
+) -> None:
+    """An Admin ticks Presenter theme on Settings: it is saved in settings.json, audited as `settings.change` with the
+    value before, and applies at once, with no restart: the light stylesheet, Settings and 3D Profile out of the
+    sidebar and Home shown, and what the pages drew before in the presenter theme's colours and sizes: the verdict
+    banner of the board inspected before (48 pt, black on its fill), the text on its image (18 pt), the Home card
+    numbers and Training's NG rows (their own tint, black, 18 pt). Exit presenter theme in the header, shown to an
+    Admin, turns it off the same way, saved and audited, and puts back what the production theme drew."""
+    ctx = trained_ctx
+    win = _window(qtbot, ctx, "Admin")
+    win.resize(1920, 1080)
+    inspection = _inspect_one(qtbot, win, next(synthetic_dataset.glob("test/ng/*missing_component*.png")))
+    verdict = inspection.last.verdict
+    training, home = cast(TrainingPage, win.pages["Training"]), win.pages["Home"]
+    win.navigate("Training")  # its samples, NG rows tinted, drawn before the switch
+    settings = cast(SettingsPage, win.pages["Settings"])
+    win.navigate("Settings")
+    assert not settings.presenter.isChecked() and not win.exit_presenter.isVisible()
+
+    def drawn() -> dict[str, object]:
+        """What the pages drew, read as a user sees it."""
+        labels = [i for i in inspection.view.scene().items() if isinstance(i, QGraphicsSimpleTextItem) and i.text()]
+        rows = [training.samples.item(r, 1) for r in range(training.samples.rowCount())]
+        tinted = [it for it in rows if it.background().style() != Qt.BrushStyle.NoBrush]
+        return {
+            "banner": inspection.verdict.styleSheet(),
+            "image": inspection.view.backgroundBrush().color().name(),
+            "labels": {(i.font().pointSize(), i.brush().color().name()) for i in labels},
+            "numbers": [w.text() for w in home.findChildren(QLabel) if theme.ACCENT_TEXT in w.text()],
+            "rows": {
+                (i.background().color().name(), i.foreground().color().name(), i.font().pointSize()) for i in tinted
+            },
+        }
+
+    before = drawn()
+    assert before["labels"] and before["rows"] == {(theme.NG_TINT, theme.ON_DARK, theme.FONT_PT)}, before
+    settings.presenter.click()
+    assert json.loads(Settings._file().read_text(encoding="utf-8"))["presenter_theme"] is True
+    entry = ctx.audit_entries(action="settings.change")[0]
+    assert (entry["before"], entry["after"]) == ({"presenter_theme": False}, {"presenter_theme": True})
+    assert ctx.settings.presenter_theme and theme.presenter()
+    assert cast(QApplication, QApplication.instance()).styleSheet() == theme.stylesheet()
+    assert "QMainWindow, QWidget#page, QDialog { background: #fafafa;" in theme.stylesheet()
+    assert (
+        win.stack.currentWidget() is home and win._items["Settings"].isHidden() and win._items["3D Profile"].isHidden()
+    )
+    assert win.exit_presenter.isVisible()
+    assert win.statusBar().currentMessage() == "Presenter theme on. An Admin turns it off with Exit presenter theme."
+    shown = drawn()
+    assert shown["banner"] == theme.verdict_style(verdict) and "font-size:48pt" in str(shown["banner"])
+    assert shown["image"] == theme.BG_IMAGE and shown["labels"] == {(18, theme.TEXT)}, shown
+    assert len(cast(list, shown["numbers"])) == 6 and all("26pt" in t for t in cast(list, shown["numbers"]))
+    assert shown["rows"] == {(theme.NG_TINT, "#000000", 18)}, shown
+
+    win.exit_presenter.click()
+    assert json.loads(Settings._file().read_text(encoding="utf-8"))["presenter_theme"] is False
+    entry = ctx.audit_entries(action="settings.change")[0]
+    assert (entry["before"], entry["after"]) == ({"presenter_theme": True}, {"presenter_theme": False})
+    assert not theme.presenter() and cast(QApplication, QApplication.instance()).styleSheet() == theme.QSS
+    assert not win.exit_presenter.isVisible() and not win._items["Settings"].isHidden()
+    assert drawn() == before
+
+
+def test_req_set_008_a_restart_keeps_the_presenter_theme_and_only_an_admin_leaves_it(
+    qtbot: QtBot, trained_ctx: AppContext
+) -> None:
+    """The presenter theme saved on, the app starts in it: the light stylesheet, Settings and 3D Profile hidden. An
+    Operator or Engineer cannot leave it (Q49): the header has no Exit presenter theme for them, and the service layer
+    refuses the setting below the Admin role (AOI-USR-001), so nothing changes; for an Admin the header has it.
+    settings.json with a value that is not true or false for it is refused at start-up with AOI-SET-008."""
+    ctx = trained_ctx
+    ctx.set_user("admin")
+    ctx.save_settings({"presenter_theme": True})  # as the Settings tick saves it
+    assert Settings.load().presenter_theme is True
+    win = _window(qtbot, ctx, "Operator")
+    assert theme.presenter() and cast(QApplication, QApplication.instance()).styleSheet() == theme.stylesheet()
+    assert win._items["Settings"].isHidden() and win._items["3D Profile"].isHidden()
+    for role in ("operator", "engineer"):
+        win.set_user(role)
+        assert not win.exit_presenter.isVisible(), role
+        with pytest.raises(AoiError) as e:
+            ctx.save_settings({"presenter_theme": False})
+        assert e.value.code == "AOI-USR-001", role
+    assert ctx.settings.presenter_theme and theme.presenter() and Settings.load().presenter_theme is True
+    win.set_user("admin")
+    assert win.exit_presenter.isVisible()
+    Settings._file().write_text('{"presenter_theme": "yes"}', encoding="utf-8")
+    with pytest.raises(AoiError) as e:
+        Settings.load()
+    assert e.value.code == "AOI-SET-008" and 'presenter_theme is "yes"; it must be true or false' in e.value.what

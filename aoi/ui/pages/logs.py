@@ -42,14 +42,11 @@ class LogsPage(Page):
         f = QHBoxLayout()
         self.d_from = QDateEdit(QDate.currentDate().addDays(-DEFAULT_DAYS))
         self.d_to = QDateEdit(QDate.currentDate())
-        weekend = QTextCharFormat()
-        weekend.setForeground(QColor(theme.TEXT))  # not Qt's red, which reads at 4.1:1 on the dark calendar (#239)
         for d in (self.d_from, self.d_to):
             d.setCalendarPopup(True)
             d.setDisplayFormat("yyyy-MM-dd")  # ISO dates everywhere (REQ-SET-017), not the locale's short form
             d.setDateRange(QDate(2000, 1, 1), QDate(2100, 12, 31))  # days every station's clock converts (#174)
-            for day in (Qt.DayOfWeek.Saturday, Qt.DayOfWeek.Sunday):
-                d.calendarWidget().setWeekdayTextFormat(day, weekend)
+        self.restyle()
         self.model = QComboBox()
         self.operator = QComboBox()
         self.archived = QCheckBox(self.tr("Include archived"))
@@ -313,6 +310,15 @@ class LogsPage(Page):
         n = self.ctx.archive_old(self._arch_days)  # the number on the button, never another one
         self.shell.status(self.tr("Archived {count} record(s)").format(count=n))
         self.refresh()
+
+    def restyle(self) -> None:
+        """The calendars' weekend days in the theme's TEXT, not Qt's red, which reads at 4.1:1 on the dark calendar
+        (#239); again when the theme is switched (REQ-SET-008)."""
+        weekend = QTextCharFormat()
+        weekend.setForeground(QColor(theme.TEXT))
+        for d in (self.d_from, self.d_to):
+            for day in (Qt.DayOfWeek.Saturday, Qt.DayOfWeek.Sunday):
+                d.calendarWidget().setWeekdayTextFormat(day, weekend)
 
     def update_actions(self) -> None:
         admin_or_eng = self.ctx.role in ("Engineer", "Admin")  # spec 8: Admin exports logs (Engineer allowed for PoC)

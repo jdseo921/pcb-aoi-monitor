@@ -1,7 +1,8 @@
 """Render every page offscreen, for every role that may open it, into PNG files (REQ-SET-004; stage S21).
 
-``pytest tests/screens`` renders at 1920x1080 and compares with ``tests/screens/approved/``; a page that differs
-fails, and CI uploads the new images. ``python tools/render_screens.py --approve`` rewrites the approved set after an
+``pytest tests/screens`` renders at 1920x1080 and compares with ``tests/screens/approved/``; a page that differs fails,
+and CI uploads the new images. The last images are the light presenter theme's (REQ-SET-008, PRESENTER_SHOTS), switched
+on and off again as an Admin does it. ``python tools/render_screens.py --approve`` rewrites the approved set after an
 intended change of a screen: the images are generated files, and Jay approves them by merging. ``--out DIR --size
 3840x2160 --scale 2`` renders a review set at another screen size and scale.
 
@@ -62,6 +63,11 @@ PAGE_VIEWS = {  # <page>-<view>-<role>
 STORED_STATES = (  # Compare
     "compare-stored-operator", "compare-golden-changed-operator", "compare-tried-engineer", "compare-save-engineer",
 )  # fmt: skip
+PRESENTER_SHOTS = {  # the presenter theme (REQ-SET-008): presenter-<page>-<role>, the pages a demo shows
+    "presenter-home-admin": ("Home", "admin"),  # Settings and 3D Profile hidden, Exit presenter theme in the header
+    "presenter-inspection-operator": ("Inspection", "operator"),  # the result, its verdict at 48 pt
+    "presenter-compare-engineer": ("Compare", "engineer"),
+}
 FIXED_WORKSPACE = "C:/AOI_Workspace"  # what the Settings page shows instead of the temporary folder
 TEST_FONT = '"DejaVu Sans"'  # the font the approved images are drawn with (Linux)
 DATASET_OK, DATASET_NG, DATASET_SEED = 30, 14, 7  # as tests/conftest.py
@@ -221,12 +227,13 @@ def pinned_rendering(app: QApplication, font: str) -> Iterator[None]:
     if font:
         pinned.setFamily(font.strip('"'))  # text drawn on the image (QGraphics items) takes the application font
     app.setFont(pinned)
-    app.setStyleSheet(theme.stylesheet(FONT_FAMILY=font) if font else theme.QSS)
-    try:
-        yield
-    finally:
-        app.setStyleSheet(before_sheet)
-        app.setFont(before_font)
+    with mock.patch.object(theme, "FONT_FAMILY", font or theme.FONT_FAMILY):  # a theme switched on meanwhile keeps it
+        app.setStyleSheet(theme.stylesheet())
+        try:
+            yield
+        finally:
+            app.setStyleSheet(before_sheet)
+            app.setFont(before_font)
 
 
 @contextmanager
@@ -391,10 +398,35 @@ def render_stored(win: Any, ctx: AppContext, out: Path) -> dict[str, Path]:
     return files
 
 
+def render_presenter(win: Any, dataset: Path, out: Path) -> dict[str, Path]:
+    """The presenter theme (REQ-SET-008), switched on as an Admin does it, with Settings' tick, and PRESENTER_SHOTS in
+    it, each page as `prepare` leaves it; then switched off again with the header's Exit presenter theme."""
+    from PySide6.QtWidgets import QApplication
+
+    files = {}
+    win.set_user("admin")
+    assert win.navigate("Settings")
+    win.pages["Settings"].presenter.click()
+    try:
+        for name, (title, role) in PRESENTER_SHOTS.items():
+            win.set_user(role)
+            win.statusBar().clearMessage()
+            assert win.navigate(title), title
+            prepare(win, title, dataset)
+            QApplication.processEvents()
+            files[name] = out / f"{name}.png"
+            assert win.grab().save(str(files[name])), files[name]
+    finally:
+        win.set_user("admin")
+        win.exit_presenter.click()
+    return files
+
+
 def render_pages(
     ctx: AppContext, dataset: Path, out: Path, size: tuple[int, int] = (1920, 1080), scale: float = 1.0
 ) -> dict[str, Path]:
-    """Render every page for every role that may open it into ``out``; returns {"home-operator": path, ...}.
+    """Render every page for every role that may open it into ``out``, then the stored Compare states and the presenter
+    theme's shots; returns {"home-operator": path, ...}.
     ``size`` is the screen in pixels: with ``scale`` (QT_SCALE_FACTOR, set before Qt starts) the window measures
     ``size / scale`` logical pixels, so the image still measures ``size``."""
     from PySide6.QtTest import QTest
@@ -429,6 +461,7 @@ def render_pages(
                 assert win.grab().save(str(files[name])), files[name]
             show_view(win, title, None)
     files.update(render_stored(win, ctx, out))
+    files.update(render_presenter(win, dataset, out))
     win.close()
     return files
 

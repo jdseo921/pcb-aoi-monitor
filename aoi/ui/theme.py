@@ -16,8 +16,16 @@ and TEXT_DISABLED, so it never looks ready to press. The lists, calendars and me
 are themed here too, never left on the platform's light background, and the calendar's bar stays BG_SELECTED, on which
 Qt's dark month arrows read at 3.4:1 (#239); the sidebar greys a page the role may not open on the item itself, since a
 rule for disabled items would also grey its headings.
+
+The light presenter theme (REQ-SET-008, frame sketch) is PRESENTER, a set of overrides of these tokens that `use()` puts
+in place while it is on: a #FAFAFA background, text 18 pt or more and the verdict at 48 pt, with the same verdict
+colours and shapes. There every text colour reads at 4.5:1 or more on its surface, bold and large text included, with
+black on the green, red and blue fills (Q53). The screens read the tokens when they draw, so `stylesheet()` and
+anything drawn after the switch follow it; what a screen drew before is drawn again by MainWindow.apply_theme.
 """
 
+from collections.abc import Callable
+from functools import partial
 from string import Template
 
 # Verdicts and severities (Engineering standard, "Look"); the shapes pair with the words (REQ-INSP-002)
@@ -27,6 +35,7 @@ WARN_COLOR = "#fdd835"
 INFO_COLOR = "#90a4ae"
 MAJOR_COLOR = "#fb8c00"  # severity Major, between Critical (NG red) and Minor (WARN amber)
 ACCENT = "#1e88e5"  # the one primary button on a page, progress
+ACCENT_TEXT = ACCENT  # text in the accent colour: the number on a Home card
 VERDICT_COLORS = {"OK": OK_COLOR, "NG": NG_COLOR, "WARN": WARN_COLOR, "INFO": INFO_COLOR}
 VERDICT_SHAPES = {"OK": "✓", "NG": "✗", "WARN": "▲", "INFO": "·"}
 SEVERITY_COLORS = {"Critical": NG_COLOR, "Major": MAJOR_COLOR, "Minor": WARN_COLOR}
@@ -77,6 +86,18 @@ MARK_W = 6  # the verdict-colour bar beside a verdict said next to a control, su
 
 TOKENS = {k: v for k, v in dict(globals()).items() if k.isupper()}
 
+# The light presenter theme (REQ-SET-008): what differs from the tokens above; ON_LIGHT, the text on amber, stays
+PRESENTER = {
+    "BG": "#fafafa", "BG_DEEP": "#ffffff", "BG_ALT": "#f1f4f7", "BG_RAISED": "#eceff1", "BG_IMAGE": "#e3e8ec",
+    "BG_BUTTON": "#e3e8ec", "BG_BUTTON_HOVER": "#d3dce3", "BG_NAV_HOVER": "#e3eef9", "BG_SELECTED": "#bbdefb",
+    "BG_ON": "#bbdefb", "BG_BUSY": "rgba(250, 250, 250, 220)", "LINE": "#cfd8dc", "LINE_STRONG": "#78909c",
+    "TEXT": "#1b1f24", "TEXT_MUTED": "#455a64", "TEXT_DISABLED": "#9aa6b0", "NG_TINT": "#ffcdd2",
+    "ON_DARK": "#000000",  # black on the green, red and blue fills: 6.4, 5.0 and 5.7:1 (Q53)
+    "ACCENT_TEXT": "#1565c0",  # 4.9:1 on BG_RAISED, where ACCENT reads at 3.1:1
+    "FONT_PT": 18, "FONT_LARGE_PT": 20, "FONT_H1_PT": 24, "FONT_STEP_PT": 26, "FONT_TILE_PT": 30,
+    "FONT_VERDICT_PT": 48,  # Q2
+}  # fmt: skip
+
 _QSS = Template("""
 * { font-family: ${FONT_FAMILY}; font-size: ${FONT_PT}pt; selection-background-color: $BG_SELECTED;
     selection-color: $ON_DARK; }
@@ -87,6 +108,7 @@ QLabel#muted { color: $TEXT_MUTED; }
 QLabel#logo, QLabel#busyText { font-size: ${FONT_LARGE_PT}pt; font-weight: 600; }
 QLabel#recoveryKey { font-family: ${FONT_MONO}; font-size: ${FONT_H1_PT}pt; }
 QLabel#badge { background: $WARN_COLOR; color: $ON_LIGHT; border-radius: ${RADIUS}px; padding: 4px ${SPACE_S}px; }
+QListWidget#nav QLabel#badge { padding: 0 4px; }  /* on the entry's line of text, clear of its name */
 QLabel#tile { background: $BG_RAISED; border-radius: ${RADIUS_L}px; padding: ${SPACE_S}px; }
 QFrame#header { background: $BG_DEEP; border-bottom: 1px solid $LINE; }
 QFrame#card { background: $BG_RAISED; border-radius: ${RADIUS_L}px; }
@@ -109,6 +131,7 @@ QRadioButton[sizeClass="T"]:focus { border-color: $TEXT; }
 QRadioButton[sizeClass="T"]:disabled { color: $TEXT_DISABLED; background: $BG_RAISED; }
 QPushButton[sizeClass="T+"] { min-height: ${RUN_CONTROL_H}px; }
 QCheckBox[sizeClass="F"] { min-height: ${FIELD_H}px; }
+QCheckBox[sizeClass="T"] { min-height: ${TARGET_H}px; }
 QPushButton:disabled { color: $TEXT_DISABLED; background: $BG_RAISED; }
 QPushButton#primary, QPushButton#start, QPushButton#stop, QPushButton#danger { color: $ON_DARK; font-weight: 700; }
 QPushButton#primary { background: $ACCENT; border-color: $ACCENT; }
@@ -165,11 +188,40 @@ QSlider::handle:horizontal:focus { border-color: $TEXT; }
 
 
 def stylesheet(**overrides: object) -> str:
-    """The application stylesheet built from the tokens; `overrides` serve another theme (REQ-SET-008)."""
-    return _QSS.substitute({**TOKENS, **overrides})
+    """The application stylesheet built from the tokens in use (the production theme's or the presenter theme's),
+    with `overrides`, such as the font the screenshots pin."""
+    return _QSS.substitute({**{k: globals()[k] for k in TOKENS}, **overrides})
 
 
 QSS = stylesheet()
+
+
+def use(presenter: bool) -> None:
+    """Put the presenter theme's tokens in place (REQ-SET-008), or the production theme's back. The caller applies
+    `stylesheet()` and draws again what it drew with the tokens before (MainWindow.apply_theme)."""
+    globals().update({k: (PRESENTER if presenter else TOKENS)[k] for k in PRESENTER})
+
+
+def presenter() -> bool:
+    """Whether the presenter theme's tokens are in use."""
+    return BG == PRESENTER["BG"]
+
+
+def verdict_styles() -> dict[str, Callable[[], str]]:
+    """Every verdict stylesheet a label can hold now, each with what makes it again from the tokens in use when it is
+    called: what a shown verdict is styled with again once the theme is switched (MainWindow.apply_theme)."""
+    styles: dict[str, Callable[[], str]] = {}
+    for v in VERDICT_COLORS:
+        styles[verdict_mark_style(v)] = partial(verdict_mark_style, v)
+        for big in (True, False):
+            styles[verdict_style(v, big)] = partial(verdict_style, v, big)
+    return styles
+
+
+def row_fill(colour: str) -> str:
+    """The fill of a table row in the theme in use: an NG row's tint is the theme's own (NG_TINT), the verdict and
+    severity colours are the same in both."""
+    return NG_TINT if colour in (TOKENS["NG_TINT"], PRESENTER["NG_TINT"]) else colour
 
 
 def verdict_label(verdict: str) -> str:
@@ -179,7 +231,8 @@ def verdict_label(verdict: str) -> str:
 
 def on_color(fill: str) -> str:
     """The text colour that reads on `fill`: dark on amber, grey and orange (5.6:1 or more), white on green, red and
-    blue (where white measures 3.3:1 to 4.2:1, so the text there is bold or 40 pt; see the module docstring)."""
+    blue (where white measures 3.3:1 to 4.2:1, so the text there is bold or 40 pt; see the module docstring), black
+    there in the presenter theme."""
     return ON_LIGHT if fill in (WARN_COLOR, INFO_COLOR, MAJOR_COLOR) else ON_DARK
 
 
@@ -195,7 +248,8 @@ def verdict_mark_style(verdict: str) -> str:
 
 
 def verdict_style(verdict: str, big: bool = True) -> str:
-    """Stylesheet of a verdict banner (`big`, size class V at 40 pt) or of a one-line verdict label."""
+    """Stylesheet of a verdict banner (`big`, size class V at 40 pt, 48 pt in the presenter theme) or of a one-line
+    verdict label."""
     c = VERDICT_COLORS.get(verdict, INFO_COLOR)
     size = FONT_VERDICT_PT if big else FONT_PT
     return (

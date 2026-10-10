@@ -30,6 +30,7 @@ EXPECTED = {  # what a setting must be, by its type and _LEAST
     (int, 1): QT_TRANSLATE_NOOP("Errors", "a whole number above 0"),
     (int, 0): QT_TRANSLATE_NOOP("Errors", "a whole number of 0 or more"),
     (str, None): QT_TRANSLATE_NOOP("Errors", "text"),
+    (bool, None): QT_TRANSLATE_NOOP("Errors", "true or false"),
 }
 RANGE = QT_TRANSLATE_NOOP("Errors", "a whole number from {least} to {most}")
 _LEAST = {  # the smallest whole number a count setting takes; a map retention of 0 deletes OK maps at the next start
@@ -79,6 +80,7 @@ class Settings:
     language: str = "en"  # en | ko (localization planned for 2H 2027)
     last_page: str = "Home"  # the page to reopen after a restart (REQ-LOG-005)
     demo_pace_s: int = 3  # seconds per board of the demo's scripted run, 1 to 10 (REQ-SET-009)
+    presenter_theme: bool = False  # REQ-SET-008: the light presenter theme, switched by an Admin on Settings
 
     # --- paths derived from workspace ------------------------------------
     @property
