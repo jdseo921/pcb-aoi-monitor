@@ -947,7 +947,7 @@ class ComparePage(Page):
         for d in r.defects:
             sev = taxonomy.BY_NAME.get(d.type, taxonomy.ANOMALY).severity
             color = theme.SEVERITY_COLORS.get(sev, theme.NG_COLOR)
-            self.test_view.add_box(d.x, d.y, d.w, d.h, color, f"{d.no} {d.type}")
+            self.test_view.add_box(d.x, d.y, d.w, d.h, color, f"{d.no} {d.type} {theme.severity_label(sev)}")
             self.ref_view.add_box(d.x, d.y, d.w, d.h, color, f"{d.no}", dashed=True)
 
     @property

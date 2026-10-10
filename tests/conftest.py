@@ -49,9 +49,17 @@ ZWSP = "\u200b"  # zero width space
 
 
 def wrapped(name: str) -> str:
-    """`name` as a page shows a file name that may wrap after each _ and - (`breakable` in aoi/ui/pages/base.py, #245),
+    """`name` as a page shows a file name that may wrap after each _ and -, and within a long run (`breakable` in
+    aoi/ui/pages/base.py, #245, #251),
     spelled out here, so that a test does not take its expected text from the code under test."""
-    return "".join(c + ZWSP if c in "_-" else c for c in name)
+    out, run = [], 0
+    for c in name:
+        if run == 24 and not c.isspace():  # 24 characters with no space, _ or - may break after the last (#251)
+            out.append(ZWSP)
+            run = 0
+        out.append(c + ZWSP if c in "_-/\\" else c)
+        run = 0 if c in "_-/\\" or c.isspace() else run + 1
+    return "".join(out)
 
 
 def distinct_copies(src: Path, folder: Path, n: int) -> list[Path]:

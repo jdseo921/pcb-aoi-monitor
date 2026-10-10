@@ -441,6 +441,7 @@ class VersionsPanel(QGroupBox):
         uuid, idle = self.picked(), self.page.idle()
         self.btn_verify.setEnabled(uuid is not None and idle)
         self.btn_export.setEnabled(uuid is not None and idle)
+        self.btn_export.setVisible(self.page.ctx.role == "Admin")  # an export is an Admin's (Q58, #151)
         locked = uuid is not None and bool(self.counts.get(uuid, {}).get("locked"))
         self.btn_split.setEnabled(uuid is not None and not locked and idle and not self.page.sheet_open())
         said = self.tr("Its validation set is locked: a new split needs a new dataset version")

@@ -81,7 +81,9 @@ CSS_COLOUR = re.compile(  # Qt takes "Background: Green" as it takes "background
 )
 CSS_NAMES = {n.lower() for n in QColor.colorNames()}  # green, white, darkred, transparent, …
 DESTRUCTIVE = re.compile(r"^(Delete|Remove|Reset Demo|Clear)\b")  # Reset Filters only changes a view
-QT_OVERRIDES = re.compile(r"Event$|^event$|^eventFilter$|[sS]izeHint$|^paintEngine$")  # Qt virtuals defined on purpose
+QT_OVERRIDES = re.compile(
+    r"Event$|^event$|^eventFilter$|[sS]izeHint$|^heightForWidth$|^paintEngine$"
+)  # Qt virtuals defined on purpose
 QT_INSTALLED = (Signal, SignalInstance, QMetaObject)
 NO_BOARD_MODEL_PAGES = ("Inspection", "Training", "AI Model Test", "Recipe Editor")  # Page.no_board_model()
 
@@ -315,10 +317,10 @@ def test_req_set_004_a_disabled_coloured_button_looks_disabled(qtbot: QtBot, tra
             grabs.append(shot := _pixels(b.grab().toImage()))
             measured = _contrast(shot)
             assert measured is not None, kind
-            want = (fill, theme.ON_DARK if kind else theme.TEXT) if enabled else (theme.BG_RAISED, theme.TEXT_DISABLED)
+            want = (fill, theme.ON_FILL if kind else theme.TEXT) if enabled else (theme.BG_RAISED, theme.TEXT_DISABLED)
             assert measured[1:] == want, (kind or "plain", enabled, measured)
         assert not np.array_equal(*grabs), f"a disabled {kind or 'plain'} button looks like an enabled one"
-    win = _window(qtbot, trained_ctx, "Engineer")
+    win = _window(qtbot, trained_ctx, "Admin")  # Save Image… shows for an Admin alone (#151)
     insp, recipe = win.pages["Inspection"], win.pages["Recipe Editor"]
     win.navigate("Inspection")  # nothing queued: Start, Stop and Next Board are off
     QApplication.processEvents()

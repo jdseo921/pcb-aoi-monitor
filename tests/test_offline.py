@@ -167,6 +167,7 @@ def _drive(
     assert len(test.rows) == 4
     done(STEPS[5])
 
+    win.set_user("admin")  # only an Admin exports (Q58, #151)
     win.navigate("Logs & Export")
     listed(qtbot, logs)  # the page lists its records on the pool (S55); the exports take what it lists
     (out / "overlays").mkdir()

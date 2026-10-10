@@ -39,6 +39,7 @@ from ..workers import Worker, start
 from .base import (
     QT_TRANSLATE_NOOP,
     Page,
+    WrappedLine,
     action_button,
     button,
     cell_text,
@@ -132,9 +133,7 @@ class InspectionPage(Page):
         self.verdict.setStyleSheet(theme.verdict_style("INFO"))
         self.verdict.setMinimumHeight(theme.BANNER_H)
         sl.addWidget(self.verdict)
-        self.summary = QLabel("")
-        self.summary.setObjectName("muted")
-        self.summary.setWordWrap(True)
+        self.summary = WrappedLine()  # names the board's file whole, which never widens the window (#251)
         sl.addWidget(self.summary)
         self.table = make_table(
             [
@@ -412,9 +411,8 @@ class InspectionPage(Page):
         self.view.set_image(res.image, keep_view=self.queue_pos > 0)
         for d in res.defects:
             sev = taxonomy.BY_NAME.get(d.type, taxonomy.ANOMALY).severity
-            self.view.add_box(
-                d.x, d.y, d.w, d.h, theme.SEVERITY_COLORS.get(sev, theme.NG_COLOR), f"{d.no} {d.type} {d.score:.2f}"
-            )
+            label = f"{d.no} {d.type} {theme.severity_label(sev)}  {d.score:.2f}"
+            self.view.add_box(d.x, d.y, d.w, d.h, theme.SEVERITY_COLORS.get(sev, theme.NG_COLOR), label)
         summary = self.tr("{file}  ·  AI score {score:.2f}× threshold  ·  {defects} defect(s)  ·  {ms:.0f} ms").format(
             file=path.name, score=res.score, defects=len(res.defects), ms=res.elapsed_ms
         )
@@ -543,6 +541,7 @@ class InspectionPage(Page):
         need = ROLES.index(REQUIRED_ROLE["export_board_image"])  # the service's @requires, never written out again here
         may_save = self.ctx.role in ROLES and ROLES.index(self.ctx.role) >= need
         self.act_save.setEnabled(self.last is not None and may_save and self._bg is None)
+        self.btn_save.setVisible(may_save)  # a board image leaves the station only by an Admin (#151)
         self.btn_compare.setEnabled(self.last_id is not None or self.last_path is not None)
 
     def update_actions(self) -> None:

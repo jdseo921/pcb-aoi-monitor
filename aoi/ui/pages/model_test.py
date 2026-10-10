@@ -18,7 +18,6 @@ from PySide6.QtWidgets import (
     QLabel,
     QMessageBox,
     QProgressBar,
-    QSizePolicy,
     QSplitter,
     QTabWidget,
     QVBoxLayout,
@@ -39,7 +38,7 @@ from ..widgets.busy import BusyOverlay
 from ..widgets.empty_state import EmptyState
 from ..widgets.image_view import ImageView
 from ..workers import Worker, start
-from .base import QT_TRANSLATE_NOOP, Page, breakable, button, cell_item, fill_table, make_table
+from .base import QT_TRANSLATE_NOOP, Page, WrappedLine, breakable, button, cell_item, fill_table, make_table
 
 if TYPE_CHECKING:
     from ..main_window import MainWindow
@@ -108,12 +107,11 @@ class ModelTestPage(Page):
         bar.addWidget(button(self.tr("Select Test Folder…"), slot=self.pick))
         self.btn_run = button(self.tr("Run Test"), "primary", self.run)
         bar.addWidget(self.btn_run)
-        bar.addWidget(button(self.tr("Export CSV"), slot=self.export_csv))
-        bar.addWidget(button(self.tr("Export Report"), slot=self.export_report))
-        self.folder_label = QLabel(self.tr("No folder selected"))
-        self.folder_label.setObjectName("muted")
-        self.folder_label.setWordWrap(True)  # a long folder or dataset version name wraps, never widens the window
-        self.folder_label.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
+        self.btn_csv = button(self.tr("Export CSV"), slot=self.export_csv)
+        self.btn_report = button(self.tr("Export Report"), slot=self.export_report)
+        bar.addWidget(self.btn_csv)
+        bar.addWidget(self.btn_report)
+        self.folder_label = WrappedLine(self.tr("No folder selected"))  # a long folder never widens the window
         bar.addWidget(self.folder_label, 1)
         run_layout.addLayout(bar)
         src = QHBoxLayout()  # a frozen dataset version's locked validation set, or a labelled folder (REQ-TST-001)
@@ -142,9 +140,7 @@ class ModelTestPage(Page):
         self.confusion = QLabel("")
         self.confusion.setObjectName("muted")
         run_layout.addWidget(self.confusion)
-        self.run_note = QLabel("")  # what judged the run and what is in use now, once they differ (#250)
-        self.run_note.setObjectName("muted")
-        self.run_note.setWordWrap(True)
+        self.run_note = WrappedLine()  # what judged the run and what is in use now, once they differ (#250, #251)
         self.run_note.hide()
         run_layout.addWidget(self.run_note)
         self.bar = QProgressBar()
@@ -202,7 +198,8 @@ class ModelTestPage(Page):
         hl.addWidget(self.history, 1)
         row = QHBoxLayout()
         row.addWidget(button(self.tr("Open"), slot=self.open_run))
-        row.addWidget(button(self.tr("Validation Report…"), slot=self.validation_report))
+        self.btn_validation = button(self.tr("Validation Report…"), slot=self.validation_report)
+        row.addWidget(self.btn_validation)
         row.addStretch(1)
         hl.addLayout(row)
         self._runs: list[dict[str, Any]] = []
@@ -663,7 +660,8 @@ class ModelTestPage(Page):
         self.view.set_image(res.image)
         for d in res.defects:
             sev = taxonomy.BY_NAME.get(d.type, taxonomy.ANOMALY).severity
-            self.view.add_box(d.x, d.y, d.w, d.h, theme.SEVERITY_COLORS.get(sev, theme.NG_COLOR), f"{d.no} {d.type}")
+            color = theme.SEVERITY_COLORS.get(sev, theme.NG_COLOR)
+            self.view.add_box(d.x, d.y, d.w, d.h, color, f"{d.no} {d.type} {theme.severity_label(sev)}")
         self.shell.last_inspected = (path, res, None)  # a preview is not recorded
 
     def on_board_model_changed(self, name: str | None) -> None:
@@ -686,7 +684,13 @@ class ModelTestPage(Page):
         for t in self.tiles.values():  # their sizes and caption colour are in their text
             t.set(t.rate)
 
+    def on_user_changed(self) -> None:
+        admin = self.ctx.role == "Admin"  # customer results leave the station only by an Admin (Q58, #151)
+        for b in (self.btn_csv, self.btn_report, self.btn_validation):
+            b.setVisible(admin)
+
     def on_show(self) -> None:
+        self.on_user_changed()
         bm = self.board_model
         if self.btn_run.isEnabled():  # a version frozen or locked on Training since; never in the middle of a run
             self._fill_sources()

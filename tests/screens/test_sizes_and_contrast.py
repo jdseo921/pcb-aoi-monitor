@@ -229,7 +229,10 @@ def _check_graphic(region: np.ndarray | None, name: str, seen: Counter) -> list[
 
 
 def _covered(win: QWidget, w: QWidget) -> bool:
-    """Another widget (an empty state, a busy overlay) is drawn over the middle of `w`: the pixels are not its own."""
+    """Another widget (an empty state, a busy overlay) is drawn over the middle of `w`, or the page's scroll area (#104)
+    has `w` partly out of view: the pixels are not all its own."""
+    if not w.visibleRegion().boundingRect().contains(w.rect()):
+        return True
     top = win.childAt(w.mapTo(win, w.rect().center()))
     return top is not None and top is not w and not w.isAncestorOf(top)
 
@@ -679,7 +682,8 @@ def test_req_set_004_theme_token_pairs_read() -> None:
     }
     normal |= {(theme.ON_LIGHT, theme.MAJOR_COLOR), (theme.TEXT, theme.BG_IMAGE), (theme.TEXT_MUTED, theme.BG_IMAGE)}
     normal |= {(theme.TEXT, theme.BG_BUTTON_HOVER), (theme.ON_DARK, theme.BG_BUTTON_HOVER)}  # a calendar's month (#239)
-    bold_only = {(theme.ON_DARK, theme.OK_COLOR), (theme.ON_DARK, theme.NG_COLOR), (theme.ON_DARK, theme.ACCENT)}
+    normal |= {(theme.ON_FILL, f) for f in (theme.OK_COLOR, theme.NG_COLOR, theme.ACCENT)}  # Q53 (#150)
+    bold_only = {(theme.ON_DARK, theme.ACCENT)}  # a progress bar's percentage, over the chunk and the trough
     bold_only |= {(theme.ACCENT, theme.BG_RAISED)}  # the 22 pt bold number on a Home card (#240)
     low = {(t, s): round(_ratio(t, s), 2) for t, s in normal if _ratio(t, s) < MIN_RATIO}
     assert not low, low
@@ -687,6 +691,8 @@ def test_req_set_004_theme_token_pairs_read() -> None:
     assert not low, low
     for fill in (theme.WARN_COLOR, theme.INFO_COLOR, theme.MAJOR_COLOR):
         assert theme.on_color(fill) == theme.ON_LIGHT, fill
+    for fill in (theme.OK_COLOR, theme.NG_COLOR, theme.ACCENT):
+        assert theme.on_color(fill) == theme.ON_FILL, fill
 
 
 def test_req_set_008_presenter_text_and_hidden_admin(
@@ -775,7 +781,10 @@ def test_req_set_008_presenter_token_pairs_read() -> None:
         pairs = {(theme.TEXT, s) for s in surfaces}
         pairs |= {(theme.TEXT_MUTED, s) for s in (*surfaces[:4], theme.BG_IMAGE)}  # BG, BG_DEEP, BG_ALT, BG_RAISED
         fills = (theme.OK_COLOR, theme.NG_COLOR, theme.ACCENT, theme.BG_SELECTED, theme.BG_ON, theme.BG_BUTTON_HOVER)
-        pairs |= {(theme.ON_DARK, f) for f in (*fills, theme.NG_TINT, theme.BG_DEEP)}  # BG_DEEP: a progress bar's
+        pairs |= {(theme.ON_DARK, f) for f in (*fills, theme.NG_TINT, theme.BG_DEEP)}
+        pairs |= {
+            (theme.ON_FILL, f) for f in (theme.OK_COLOR, theme.NG_COLOR, theme.ACCENT)
+        }  # BG_DEEP: a progress bar's
         pairs |= {(theme.on_color(f), f) for f in (*theme.VERDICT_COLORS.values(), *theme.SEVERITY_COLORS.values())}
         pairs |= {(theme.ACCENT_TEXT, theme.BG_RAISED)}  # the number on a Home card
         low = {(t, s): round(_ratio(t, s), 2) for t, s in pairs if _ratio(t, s) < MIN_RATIO}

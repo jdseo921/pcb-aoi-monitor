@@ -6,11 +6,11 @@ anywhere else under aoi/ui. The verdict and severity colours are the standard's,
 its colour with a word and a shape (REQ-INSP-002), never as colour alone.
 
 Contrast, by the WCAG 2.1 formula (tests/screens measures it on every rendered page): every text colour on its
-surface reads at 4.5:1 or more, except white on the standard's OK green (3.3:1), NG red (4.2:1) and accent blue
-(3.7:1). Those three fills carry only bold or 40 pt text (the verdict banner, coloured cells, the primary, Start and
-Stop buttons, a progress bar's percentage), for which WCAG AA asks 3:1; whether the standard's "4.5:1" allows that
-reading is open with Jay. The 22 pt bold number on a Home card, ACCENT on BG_RAISED (3.5:1), takes the same reading
-(#240). The selected sidebar entry, tab and row, and selected text, whose text is not bold, sit on BG_SELECTED instead
+surface reads at 4.5:1 or more. Text on the standard's OK green, NG red and accent blue is black, ON_FILL (6.4, 5.0
+and 5.7:1; Q53, #150): the verdict banner, coloured cells, the primary, Start, Stop and danger buttons. One exception
+is left: a progress bar's bold percentage straddles the accent chunk and the dark trough, so it stays white (3.7:1 on
+the chunk, the 3:1 WCAG AA asks of bold text), and so does the 22 pt bold number on a Home card, ACCENT on BG_RAISED
+(3.5:1, #240). The selected sidebar entry, tab and row, and selected text, whose text is not bold, sit on BG_SELECTED
 (5.7:1). A disabled control is exempt (WCAG 1.4.3), and every disabled button, coloured or not, greys out to BG_RAISED
 and TEXT_DISABLED, so it never looks ready to press. The lists, calendars and menus that open as windows of their own
 are themed here too, never left on the platform's light background, and the calendar's bar stays BG_SELECTED, on which
@@ -39,6 +39,7 @@ ACCENT_TEXT = ACCENT  # text in the accent colour: the number on a Home card
 VERDICT_COLORS = {"OK": OK_COLOR, "NG": NG_COLOR, "WARN": WARN_COLOR, "INFO": INFO_COLOR}
 VERDICT_SHAPES = {"OK": "✓", "NG": "✗", "WARN": "▲", "INFO": "·"}
 SEVERITY_COLORS = {"Critical": NG_COLOR, "Major": MAJOR_COLOR, "Minor": WARN_COLOR}
+SEVERITY_SHAPES = {"Critical": "◆", "Major": "■", "Minor": "●"}  # on a defect box's label (Q57, #152)
 NG_TINT = "#5d2a2a"  # an NG row in a long list, readable with normal text (9.7:1)
 ROI_SELECTED, ROI_COLOR, ROI_DISABLED = WARN_COLOR, OK_COLOR, "#6c7c8c"  # Recipe Editor: edited, saved, disabled
 
@@ -55,7 +56,8 @@ BG_BUSY = "rgba(15, 22, 29, 200)"
 LINE, LINE_STRONG = "#2f3e4e", "#3f5a75"
 TEXT, TEXT_MUTED, TEXT_DISABLED = "#e6edf3", "#9fb0c0", "#6c7c8c"
 ON_LIGHT = BG  # text on amber
-ON_DARK = "#ffffff"  # text on green, red and blue fills
+ON_DARK = "#ffffff"  # text on the selection blue and on dark surfaces
+ON_FILL = "#000000"  # text on the green, red and blue fills: 6.4, 5.0 and 5.7:1 (Q53, #150)
 PRINT_TEXT = "#000000"  # text in a PDF report, on paper
 
 # Point sizes, never below FONT_PT, and pixel sizes (Engineering standard, "Sizes"; the sketches' size classes)
@@ -103,6 +105,7 @@ _QSS = Template("""
 * { font-family: ${FONT_FAMILY}; font-size: ${FONT_PT}pt; selection-background-color: $BG_SELECTED;
     selection-color: $ON_DARK; }
 QMainWindow, QWidget#page, QDialog { background: $BG; color: $TEXT; }
+QScrollArea#pages, QScrollArea#pages > QWidget#qt_scrollarea_viewport, QStackedWidget#stack { background: $BG; }
 QWidget { color: $TEXT; }
 QLabel#h1 { font-size: ${FONT_H1_PT}pt; font-weight: 600; }
 QLabel#muted { color: $TEXT_MUTED; }
@@ -134,7 +137,7 @@ QPushButton[sizeClass="T+"] { min-height: ${RUN_CONTROL_H}px; }
 QCheckBox[sizeClass="F"] { min-height: ${FIELD_H}px; }
 QCheckBox[sizeClass="T"] { min-height: ${TARGET_H}px; }
 QPushButton:disabled { color: $TEXT_DISABLED; background: $BG_RAISED; }
-QPushButton#primary, QPushButton#start, QPushButton#stop, QPushButton#danger { color: $ON_DARK; font-weight: 700; }
+QPushButton#primary, QPushButton#start, QPushButton#stop, QPushButton#danger { color: $ON_FILL; font-weight: 700; }
 QPushButton#primary { background: $ACCENT; border-color: $ACCENT; }
 QPushButton#start { background: $OK_COLOR; border-color: $OK_COLOR; }
 QPushButton#stop, QPushButton#danger { background: $NG_COLOR; border-color: $NG_COLOR; }
@@ -230,11 +233,17 @@ def verdict_label(verdict: str) -> str:
     return f"{VERDICT_SHAPES.get(verdict, VERDICT_SHAPES['INFO'])} {verdict}"
 
 
+def severity_label(severity: str) -> str:
+    """A severity as a shape and a word, "◆ Critical", for a defect box's label (Q57, #152)."""
+    return f"{SEVERITY_SHAPES.get(severity, SEVERITY_SHAPES['Critical'])} {severity}"
+
+
 def on_color(fill: str) -> str:
-    """The text colour that reads on `fill`: dark on amber, grey and orange (5.6:1 or more), white on green, red and
-    blue (where white measures 3.3:1 to 4.2:1, so the text there is bold or 40 pt; see the module docstring), black
-    there in the presenter theme."""
-    return ON_LIGHT if fill in (WARN_COLOR, INFO_COLOR, MAJOR_COLOR) else ON_DARK
+    """The text colour that reads on `fill`: dark on amber, grey and orange (5.6:1 or more), black on green, red and
+    blue (5.0:1 or more, Q53), white on anything else."""
+    if fill in (WARN_COLOR, INFO_COLOR, MAJOR_COLOR):
+        return ON_LIGHT
+    return ON_FILL if fill in (OK_COLOR, NG_COLOR, ACCENT) else ON_DARK
 
 
 def verdict_mark_style(verdict: str) -> str:

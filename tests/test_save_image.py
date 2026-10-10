@@ -45,7 +45,7 @@ def test_req_log_004_save_image_records_who_saved_which_record_and_where(
     qtbot: QtBot, trained_ctx: AppContext, ng_board: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Before #241 an Operator's F9 wrote the picture to a folder outside the workspace (a USB stick) and added no
-    audit entry. Now the service runs once per save, on a pool thread as the Operator who pressed F9, and writes one
+    audit entry. Now the service runs once per save, on a pool thread as the Admin who pressed F9 (#151), and writes one
     `export.image` entry: the record's UUID as the object, the destination in full outside the workspace and relative
     to it inside, the board model, the board's file name and the verdict."""
     real = vars(AppContext).get("export_board_image")
@@ -57,11 +57,11 @@ def test_req_log_004_save_image_records_who_saved_which_record_and_where(
         return real(ctx, *args, **kwargs)
 
     monkeypatch.setattr(AppContext, "export_board_image", recorded, raising=False)
-    page = _inspected(qtbot, trained_ctx, "Operator", ng_board)
+    page = _inspected(qtbot, trained_ctx, "Admin", ng_board)
     assert page.last_id is not None and page.last is not None and page.act_save.isEnabled()
     record = trained_ctx.inspection(page.last_id)
     assert record is not None
-    operator, verdict = trained_ctx.db.user_uuid("operator"), page.last.verdict
+    admin, verdict = trained_ctx.db.user_uuid("admin"), page.last.verdict
     earlier = {e["uuid"] for e in trained_ctx.audit_entries()}
 
     usb = tmp_path / "usb_stick"
@@ -70,7 +70,7 @@ def test_req_log_004_save_image_records_who_saved_which_record_and_where(
     assert (usb / "board.png").stat().st_size > 0 and page.shell.statusBar().currentMessage() == "Saved board.png"
     new = [e for e in trained_ctx.audit_entries() if e["uuid"] not in earlier]
     seen = [(e["action"], e["role"], e["user_uuid"], e["object_type"], e["object_uuid"]) for e in new]
-    assert seen == [("export.image", "Operator", operator, "inspection", record["uuid"])], "one entry per picture"
+    assert seen == [("export.image", "Admin", admin, "inspection", record["uuid"])], "one entry per picture"
     after = {"path": str(usb / "board.png"), "board_model": BOARD, "board": ng_board.name, "verdict": verdict}
     assert new[0]["after"] == after and new[0]["before"] is None
     assert on_ui == [False], "the service ran once, on a pool thread"
@@ -92,7 +92,7 @@ def test_req_log_004_a_save_image_whose_entry_cannot_be_written_leaves_no_file(
 ) -> None:
     """A picture leaves the station only with its entry (#178). Before #241, F9 wrote none, so with the audit trail
     refusing every entry the picture was still written; now it is removed and the coded error is shown."""
-    page = _inspected(qtbot, trained_ctx, "Operator", ng_board)
+    page = _inspected(qtbot, trained_ctx, "Admin", ng_board)
     monkeypatch.setattr(AppContext, "audit", _refuse)
     usb = tmp_path / "usb_stick"
     usb.mkdir()
@@ -106,20 +106,19 @@ def test_req_usr_001_save_image_follows_the_role_its_service_requires(
 ) -> None:
     """Before #241, Save Image… came on for every role once there was a result, whatever the service allows. Now the
     action, its button and F9 follow the role `export_board_image`'s @requires names (REQUIRED_ROLE), also after a
-    Switch User on the page. The role shipped is Operator, so every role keeps F9 (REQ-INSP-005); Admin is the role
-    Jay's option 2 under #151 would set."""
-    monkeypatch.setitem(REQUIRED_ROLE, "export_board_image", "Admin")
+    Switch User on the page. The role shipped is Admin (Jay, #151): an Operator and an Engineer do not see the button
+    and F9 does nothing for them."""
     page = _inspected(qtbot, trained_ctx, "Operator", ng_board)
     win = page.shell
-    assert (page.act_save.isEnabled(), page.btn_save.isEnabled()) == (False, False), "an Operator under Admin"
+    assert (page.act_save.isEnabled(), page.btn_save.isHidden()) == (False, True), "an Operator under Admin"
     win.set_user("admin")
-    assert (page.act_save.isEnabled(), page.btn_save.isEnabled()) == (True, True), "after Switch User to the Admin"
+    assert (page.act_save.isEnabled(), page.btn_save.isHidden()) == (True, False), "after Switch User to the Admin"
     win.set_user("engineer")
-    assert not page.act_save.isEnabled()
-    monkeypatch.setitem(REQUIRED_ROLE, "export_board_image", "Operator")  # as shipped
+    assert not page.act_save.isEnabled() and page.btn_save.isHidden()
+    monkeypatch.setitem(REQUIRED_ROLE, "export_board_image", "Operator")  # were the role lowered again
     for user in ("operator", "engineer", "admin"):
         win.set_user(user)
-        assert page.act_save.isEnabled(), user
+        assert page.act_save.isEnabled() and not page.btn_save.isHidden(), user
 
 
 def test_req_log_004_f9_during_a_run_names_the_record_whose_picture_it_saved(
@@ -134,7 +133,7 @@ def test_req_log_004_f9_during_a_run_names_the_record_whose_picture_it_saved(
     #241 read the record's id and the board model after the dialog, so the next board finishing meanwhile made the
     entry name that board's record with the first board's picture (review of #241); now the page reads them when F9
     is pressed. The second board waits for F9 here, so it cannot finish before it."""
-    win = _window(qtbot, trained_ctx, "Operator")
+    win = _window(qtbot, trained_ctx, "Admin")
     page = win.pages["Inspection"]
     assert isinstance(page, InspectionPage)
     win.navigate("Inspection")
@@ -182,6 +181,7 @@ def test_req_log_004_a_read_that_fails_leaves_no_picture(
     insp = trained_ctx.inspector(BOARD)
     res = insp.inspect(trained_ctx.load_image(ng_board))
     iid = trained_ctx.log_result(BOARD, str(ng_board), res, insp)
+    trained_ctx.set_user("admin")  # only an Admin exports (Q58, #151)
     monkeypatch.setattr(trained_ctx.db, "inspection", _refuse)
     with pytest.raises(sqlite3.OperationalError):
         trained_ctx.export_board_image(res, BOARD, iid, ng_board.name, tmp_path / "out" / "board.png")
@@ -206,6 +206,7 @@ def test_req_log_004_a_refused_entry_leaves_every_destination_as_it_was(
     oks = sorted(synthetic_dataset.glob("test/ok/*.png"))[:3]
     results = [insp.inspect(trained_ctx.load_image(p)) for p in oks]
     other = trained_ctx.inspection(trained_ctx.log_result(BOARD, str(oks[0]), results[0], insp))
+    trained_ctx.set_user("admin")  # only an Admin exports (Q58, #151)
     golden = trained_ctx.reference_image(BOARD)
     assert other is not None and golden is not None
     held = [Path(golden), Path(other["overlay_path"]), Path(trained_ctx.samples(BOARD, "NG")[0]["path"]), board]
@@ -243,6 +244,7 @@ def test_req_log_004_a_save_whose_move_or_commit_fails_leaves_the_file_as_it_was
     over a file another program holds, rolls the entry back and is AOI-LOG-002, and a commit that fails after the move
     puts back the file the picture replaced. Either way the Golden board keeps its bytes and no entry is stored."""
     res = trained_ctx.inspect_file(BOARD, str(ng_board), save=False)
+    trained_ctx.set_user("admin")  # only an Admin exports (Q58, #151)
     golden = Path(trained_ctx.reference_image(BOARD) or "")
     before, real, moves = golden.read_bytes(), atomic.os.replace, list[str]()
 
@@ -278,5 +280,5 @@ def test_req_insp_005_save_image_and_compare_come_on_with_the_result(
         seen.append((page.act_save.isEnabled(), page.btn_compare.isEnabled()))
 
     monkeypatch.setattr(InspectionPage, "_on_result", on_result)
-    _inspected(qtbot, trained_ctx, "Operator", ng_board)
+    _inspected(qtbot, trained_ctx, "Admin", ng_board)
     assert seen == [(True, True)]

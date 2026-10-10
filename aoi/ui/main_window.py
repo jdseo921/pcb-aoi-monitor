@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
-from PySide6.QtCore import Qt, QTimer
+from PySide6.QtCore import QSize, Qt, QTimer
 from PySide6.QtGui import QCloseEvent, QColor
 from PySide6.QtWidgets import (
     QApplication,
@@ -41,6 +41,7 @@ from .pages.base import (
     page_text,
     restyle_table,
     role_text,
+    scrolled,
     size_class,
     time_left_text,
 )
@@ -79,7 +80,7 @@ class HomePage(Page):
         ),
         (
             "2",
-            QT_TRANSLATE_NOOP("HomePage", "Self-train"),
+            QT_TRANSLATE_NOOP("HomePage", "Train AI model"),
             QT_TRANSLATE_NOOP("HomePage", "The app learns the Golden board and an AI model from your OK boards."),
             "Training",
         ),
@@ -115,7 +116,7 @@ class HomePage(Page):
         grid = QGridLayout(self.cards)
         grid.setSpacing(theme.SPACE)
         self.status_labels: dict[str, QLabel] = {}
-        self.training_line = QLabel()  # on Self-train's card while a training run goes on (REQ-TRN-008)
+        self.training_line = QLabel()  # on Train AI model's card while a training run goes on (REQ-TRN-008)
         self.training_line.setWordWrap(True)
         self.training_line.hide()
         self.headings: list[tuple[QLabel, str, str]] = []  # each card's heading, its number and its name
@@ -135,7 +136,7 @@ class HomePage(Page):
             cl.addWidget(d)
             cl.addStretch(1)
             cl.addWidget(st)
-            if name == "Self-train":
+            if name == "Train AI model":
                 cl.addWidget(self.training_line)
             kind = "primary" if target == "Inspection" else ""  # the page's one blue primary: the Inspect card
             link = self.tr("Open {page} ›").format(page=page_text(target))
@@ -158,7 +159,7 @@ class HomePage(Page):
             h.setText(self._heading(n, name))
 
     def show_training(self, progress: RunProgress | None, running: bool) -> None:
-        """Self-train's line while a training run goes on, with its latest report; hidden once it ends."""
+        """Train AI model's line while a training run goes on, with its latest report; hidden once it ends."""
         if running:
             percent, left = (progress.percent, progress.left_s) if progress else (0, None)
             line = self.tr("Training running {percent} % · {left}")
@@ -179,7 +180,7 @@ class HomePage(Page):
             if st.ok_samples or st.ng_samples
             else self.tr("No samples yet. Add at least {count} OK boards.").format(count=FIRST_OK)
         )
-        self.status_labels["Self-train"].setText(
+        self.status_labels["Train AI model"].setText(
             self.tr("Active AI model {version}").format(version=st.model_version)
             if st.model_version
             else self.tr("No AI model yet. Train one from your OK boards.")
@@ -220,6 +221,32 @@ NAV = [
 ]
 
 
+class _PageStack(QStackedWidget):
+    """The pages in the scroll area round them (#104): as wide as the widest page needs, as a QStackedWidget is, so
+    every page keeps the width it was laid out for, but only as tall as the page shown needs. A QStackedWidget asks
+    for the tallest page's height, so every page would scroll as far down as the tallest one (Settings) needs, and
+    Compare's Try panel would sit below the fold of a 1600 x 900 window."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.currentChanged.connect(lambda _i: self.updateGeometry())
+
+    def minimumSizeHint(self) -> QSize:  # noqa: N802 (Qt's name)
+        page, hint = self.currentWidget(), super().minimumSizeHint()
+        if page is None:
+            return hint
+        return QSize(hint.width(), max(page.minimumSizeHint().height(), page.minimumHeight()))
+
+    def sizeHint(self) -> QSize:  # noqa: N802 (Qt's name)
+        page, hint = self.currentWidget(), super().sizeHint()
+        return hint if page is None else QSize(hint.width(), page.sizeHint().height())
+
+    def heightForWidth(self, width: int) -> int:  # noqa: N802 (Qt's name)
+        """None: the scroll area then gives the page the viewport's height, or its minimum where that is more, as the
+        window gave it before (a wrapped label's preferred height would make every page scroll)."""
+        return -1
+
+
 class MainWindow(QMainWindow):
     def __init__(self, ctx: AppContext) -> None:
         super().__init__()
@@ -244,9 +271,16 @@ class MainWindow(QMainWindow):
         self.nav = QListWidget()
         self.nav.setObjectName("nav")
         self.nav.setFixedWidth(theme.NAV_W)
-        self.stack = QStackedWidget()
+        self.stack = _PageStack()
         body.addWidget(self.nav)
-        body.addWidget(self.stack, 1)
+        # the pages scroll where the screen is smaller than the widest page, so a 1366 x 768 station shows every
+        # control (REQ-SET-004, #104): a QStackedWidget takes the largest minimum of its pages, which held the
+        # window at about 1886 x 821 px; at 1920 x 1080 every page fits and nothing scrolls
+        self.stack.setObjectName("stack")
+        pages = scrolled(self.stack)
+        pages.setObjectName("pages")  # on the window's background, BG, as the stack was before (theme.py)
+        pages.setMinimumSize(0, 0)
+        body.addWidget(pages, 1)
         outer.addLayout(body, 1)
         self.setCentralWidget(central)
         self.setStatusBar(QStatusBar())

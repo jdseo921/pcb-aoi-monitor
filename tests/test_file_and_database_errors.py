@@ -49,7 +49,7 @@ def test_req_set_019_save_image_to_a_name_that_cannot_be_written_says_why(
     name: str,
     code: str,
 ) -> None:
-    page = _inspect_one(qtbot, _window(qtbot, trained_ctx, "Operator"), ng_board)
+    page = _inspect_one(qtbot, _window(qtbot, trained_ctx, "Admin"), ng_board)  # only an Admin exports (Q58, #151)
     out = tmp_path / "out"
     (out / "taken.png").mkdir(parents=True)
     target = out / name
@@ -73,6 +73,7 @@ def test_req_log_002_export_csv_onto_a_held_file_says_so_and_writes_both_files_o
     The export runs on the pool (#194), so each one is awaited; its questions (#182) are answered Yes."""
     trained_ctx.inspect_file("TINY", str(ng_board))
     win = _window(qtbot, trained_ctx)
+    win.set_user("admin")  # only an Admin exports (Q58, #151)
     logs = win.pages["Logs & Export"]
     win.navigate("Logs & Export")
     listed(qtbot, logs)
@@ -116,6 +117,7 @@ def test_req_log_002_every_export_names_the_file_it_could_not_write(
 ) -> None:
     ctx = trained_ctx
     ctx.inspect_file("TINY", str(ng_board))
+    ctx.set_user("admin")  # only an Admin exports (Q58, #151)
     held = tmp_path / "held"
     held.mkdir()  # a folder where the file goes
     taken = tmp_path / "taken"

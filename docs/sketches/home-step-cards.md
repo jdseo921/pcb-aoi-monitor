@@ -90,6 +90,6 @@ string through `self.tr()`.
 ## Decisions (2026-10-02)
 
 - Q5: Operators see cards 1 to 4 as a status strip without buttons. Reason: Role first (MUST) keeps Engineer controls off Operator screens; the strip still shows that the line is set up and validated.
-- Q6: Card 2 is "Train AI model". Reason: Charter words (Training, AI model); "Self-train" is not one. The code (`aoi/ui/main_window.py:61` at 329f603) follows in the next Home change.
+- Q6: Card 2 is "Train AI model". Reason: Charter words (Training, AI model); "Self-train" is not one. Built (#154).
 - Q7: Card 5 counts today (local day). Reason: A shift reads today's counts; the whole history is on Logs & Export, one click away.
 - Q8: The header indicator shows any long job that continues off its page: training or a batch on AI Model Test. Reason: The busy pattern in frame-and-patterns.md: long work continues when the user changes page, and the header shows it (REQ-SET-021).

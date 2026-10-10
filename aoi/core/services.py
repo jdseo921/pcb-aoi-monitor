@@ -2718,7 +2718,7 @@ class AppContext:
         self._audit_files(written, "export.model", "model", model["uuid"], after, [s for s, _ in pairs])
         return Path(dest)
 
-    @requires("Engineer", QT_TRANSLATE_NOOP("Errors", "Exporting overlay images"))
+    @requires("Admin", QT_TRANSLATE_NOOP("Errors", "Exporting overlay images"))  # Q58 (#151)
     def export_overlays(
         self,
         inspections: list[dict[str, Any]],
@@ -2765,7 +2765,7 @@ class AppContext:
             raise AoiError("AOI-LOG-001", str(failed[1]), reason=why, **params) from failed[1]
         return len(copied)
 
-    @requires("Engineer", QT_TRANSLATE_NOOP("Errors", "Exporting CSV"))
+    @requires("Admin", QT_TRANSLATE_NOOP("Errors", "Exporting CSV"))  # Q58 (#151)
     def export_csv(
         self,
         path: str | Path,
@@ -2778,7 +2778,7 @@ class AppContext:
         self.export_csv_files([CsvFile(path, rows, what, fieldnames)])
         return len(rows)
 
-    @requires("Engineer", QT_TRANSLATE_NOOP("Errors", "Exporting CSV"))
+    @requires("Admin", QT_TRANSLATE_NOOP("Errors", "Exporting CSV"))  # Q58 (#151)
     def export_csv_files(self, files: list[CsvFile], listed: HistoryFilter | None = None) -> None:
         """Write `files` as CSV, all or none (Logs & Export's records and checks, #195), then audit each, every entry
         or none. A file that cannot be written (another program holds it open) is refused with AOI-LOG-002 naming it;
@@ -2802,7 +2802,7 @@ class AppContext:
             _remove([Path(f.path) for f in files])
             raise
 
-    @requires("Engineer", QT_TRANSLATE_NOOP("Errors", "Exporting a report"))
+    @requires("Admin", QT_TRANSLATE_NOOP("Errors", "Exporting a report"))  # Q58 (#151)
     def export_report(
         self, path: str | Path, pdf: bytes, board_model: str, run_uuid: str | None, model_version: str | None
     ) -> None:
@@ -2821,7 +2821,7 @@ class AppContext:
         }  # fmt: skip
         self._audit_files([Path(path)], "export.report", "test_run", run_uuid, after)
 
-    @requires("Operator", QT_TRANSLATE_NOOP("Errors", "Saving a board image"))
+    @requires("Admin", QT_TRANSLATE_NOOP("Errors", "Saving a board image"))  # an export (Q58, #151)
     def export_board_image(
         self,
         res: InspectionResult,

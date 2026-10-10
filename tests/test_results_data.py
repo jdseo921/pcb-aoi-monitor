@@ -172,6 +172,7 @@ def test_req_insp_008_saved_before_next_board(
     assert [Path(r["image_path"]).name for r in rows] == [b.name for b in reversed(boards)]  # newest first
     out = tmp_path / "picture.png"
     monkeypatch.setattr(QFileDialog, "getSaveFileName", staticmethod(lambda *a, **k: (str(out), "PNG (*.png)")))
+    win.set_user("admin")  # only an Admin exports (Q58, #151)
     page.act_save.trigger()
     qtbot.waitUntil(lambda: page._bg is None, timeout=30000)  # the save runs on the pool (#241)
     assert out.exists() and len(trained_ctx.inspections(board_model=BOARD)) == 3, "Save Image… adds no record"
@@ -193,7 +194,7 @@ def test_req_insp_012_all_five_present_in_csv(
         ctx.inspect_file(BOARD, str(path))
     older = {"board_model": BOARD, "result": "OK", "view": "Top", "image_path": str(regression_boards[3])}
     ctx.db.add_inspection(older, [], None)  # as a record from before migration 0006: no checks stored
-    win = _window(qtbot, ctx)  # an Engineer, since exports need the role
+    win = _window(qtbot, ctx, "Admin")  # only an Admin exports (Q58, #151)
     logs = win.pages["Logs & Export"]
     win.navigate("Logs & Export")
     listed(qtbot, logs)

@@ -3241,7 +3241,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/training.py" line="+527"/>
+        <location filename="../ui/pages/training.py" line="+529"/>
         <location filename="../ui/pages/training_import.py" line="+38"/>
         <source>{code} {title}</source>
         <translation type="unfinished"></translation>
@@ -3641,12 +3641,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+5"/>
-        <source>Self-train</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+1"/>
+        <location line="+6"/>
         <source>The app learns the Golden board and an AI model from your OK boards.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3691,7 +3686,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1"/>
+        <location line="-18"/>
+        <source>Train AI model</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+19"/>
         <source>Run boards; open Compare to see why any board was called NG.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4111,7 +4111,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+22"/>
+        <location line="+21"/>
         <source>{file}  ·  AI score {score:.2f}× threshold  ·  {defects} defect(s)  ·  {ms:.0f} ms</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4200,7 +4200,7 @@
         <translation>박스로 확대</translation>
     </message>
     <message>
-        <location line="+12"/>
+        <location line="+15"/>
         <source>Type</source>
         <translation>유형</translation>
     </message>
@@ -4519,7 +4519,7 @@
     </message>
     <message>
         <location line="-345"/>
-        <location line="+407"/>
+        <location line="+408"/>
         <source>All</source>
         <translation>전체</translation>
     </message>
@@ -4671,54 +4671,54 @@
     <name>ModelTestPage</name>
     <message>
         <location filename="../ui/pages/model_test.py" line="+47"/>
-        <location line="+607"/>
+        <location line="+617"/>
         <source>Select Test Folder…</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-606"/>
-        <location line="+354"/>
-        <location line="+220"/>
+        <location line="-616"/>
+        <location line="+357"/>
+        <location line="+221"/>
         <source>Run Test</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-572"/>
-        <location line="+610"/>
+        <location line="-576"/>
+        <location line="+620"/>
         <source>Export CSV</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-609"/>
+        <location line="-619"/>
         <source>Export Report</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1"/>
-        <location line="+293"/>
+        <location line="+3"/>
+        <location line="+294"/>
         <source>No folder selected</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-270"/>
-        <location line="+214"/>
+        <location line="-271"/>
+        <location line="+215"/>
         <source>Accuracy</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-215"/>
-        <location line="+214"/>
+        <location line="-216"/>
+        <location line="+215"/>
         <source>Precision</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-215"/>
-        <location line="+214"/>
+        <location line="-216"/>
+        <location line="+215"/>
         <source>Recall</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-192"/>
+        <location line="-193"/>
         <source>Image</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4738,12 +4738,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+476"/>
+        <location line="+477"/>
         <source>These results were judged by {run_model}, recipe revision {run_recipe}, {run_golden} and {run_scale}; {board_model} now uses {model}, recipe revision {recipe}, {golden} and {scale}. Rows are not previewed; select one for Run Test Again, which tests the run&apos;s folder with what is in use now.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-587"/>
+        <location line="-590"/>
         <source>Matches label</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4758,28 +4758,28 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+70"/>
+        <location line="+72"/>
         <source>Source</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location line="+12"/>
         <location line="+64"/>
-        <location line="+150"/>
-        <location line="+495"/>
+        <location line="+151"/>
+        <location line="+502"/>
         <source>Missed defects</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-708"/>
+        <location line="-716"/>
         <location line="+64"/>
-        <location line="+150"/>
-        <location line="+494"/>
+        <location line="+151"/>
+        <location line="+501"/>
         <source>False calls</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-681"/>
+        <location line="-689"/>
         <source>Matches label?</source>
         <comment>whether the verdict matches the image&apos;s label</comment>
         <translation type="unfinished"></translation>
@@ -4835,7 +4835,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+14"/>
+        <location line="+15"/>
         <source>recipe revision {revision}</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5025,7 +5025,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+83"/>
+        <location line="+90"/>
         <source>No AI model for {board_model} yet</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5056,8 +5056,8 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-488"/>
-        <location line="+478"/>
+        <location line="-495"/>
+        <location line="+485"/>
         <source>PDF (*.pdf)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5098,8 +5098,8 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-444"/>
-        <location line="+488"/>
+        <location line="-451"/>
+        <location line="+495"/>
         <source>{image}: labelled {label}, judged {verdict}, AI score {score}</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5217,7 +5217,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/logs.py" line="-427"/>
+        <location filename="../ui/pages/logs.py" line="-428"/>
         <source>Logs &amp; Export</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5232,7 +5232,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/inspection.py" line="-539"/>
+        <location filename="../ui/pages/inspection.py" line="-538"/>
         <source>Inspection</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5242,7 +5242,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/model_test.py" line="-756"/>
+        <location filename="../ui/pages/model_test.py" line="-766"/>
         <source>AI Model Test</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5273,7 +5273,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/training.py" line="-377"/>
+        <location filename="../ui/pages/training.py" line="-379"/>
         <source>Training</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6078,7 +6078,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+17"/>
+        <location line="+26"/>
         <source>Workspace (images, AI models, database)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6100,6 +6100,21 @@
     <message>
         <location line="+1"/>
         <source>Log retention (days)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Keep OK results&apos; maps (days)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Largest image (megapixels)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Largest image file (MB)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -6135,12 +6150,12 @@
     </message>
     <message>
         <location line="+0"/>
-        <location line="+52"/>
+        <location line="+55"/>
         <source>Role</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-50"/>
+        <location line="-53"/>
         <source>Add / Change User</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6170,7 +6185,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+24"/>
+        <location line="+27"/>
         <source>Saved. Restart the app to switch the workspace.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6198,7 +6213,7 @@
 <context>
     <name>SplitSheet</name>
     <message>
-        <location filename="../ui/pages/training_versions.py" line="+247"/>
+        <location filename="../ui/pages/training_versions.py" line="+248"/>
         <source>Seed</source>
         <translation>시드</translation>
     </message>
@@ -6586,23 +6601,23 @@
     </message>
     <message>
         <location line="+1"/>
-        <location line="+603"/>
+        <location line="+605"/>
         <source>Import Folder…</source>
         <translation>폴더 가져오기…</translation>
     </message>
     <message>
-        <location line="-591"/>
+        <location line="-593"/>
         <source>Training needs 20 OK images or more in a dataset version&apos;s training set</source>
         <translation>학습에는 데이터셋 버전의 학습 세트에 OK 이미지가 20장 이상 필요합니다</translation>
     </message>
     <message>
         <location line="+20"/>
-        <location line="+92"/>
+        <location line="+93"/>
         <source>ID</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-91"/>
+        <location line="-92"/>
         <source>Label</source>
         <translation>라벨</translation>
     </message>
@@ -6658,12 +6673,12 @@
     </message>
     <message>
         <location line="+3"/>
-        <location line="+463"/>
+        <location line="+465"/>
         <source>Remove</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-453"/>
+        <location line="-454"/>
         <source>Select a sample to preview</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6703,7 +6718,7 @@
         <translation type="unfinished">취소</translation>
     </message>
     <message>
-        <location line="+685"/>
+        <location line="+686"/>
         <source>{phase} · {percent} % · {left}</source>
         <translation>{phase} · {percent} % · {left}</translation>
     </message>
@@ -6723,12 +6738,12 @@
         <translation>취소됨: AI 모델을 저장하지 않았으며 활성 AI 모델은 바뀌지 않았습니다.</translation>
     </message>
     <message>
-        <location line="-685"/>
+        <location line="-686"/>
         <source>AI model versions</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-213"/>
+        <location line="-214"/>
         <source>All</source>
         <translation>전체</translation>
     </message>
@@ -6778,7 +6793,7 @@
         <translation>검토할 OK 라벨 추출</translation>
     </message>
     <message>
-        <location line="+64"/>
+        <location line="+65"/>
         <source>Version</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6809,13 +6824,13 @@
     </message>
     <message>
         <location line="+1"/>
-        <location line="+783"/>
+        <location line="+808"/>
         <location line="+40"/>
         <source>Roll Back</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-819"/>
+        <location line="-844"/>
         <source>AI Model Card</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6825,7 +6840,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+26"/>
+        <location line="+27"/>
         <source>Samples</source>
         <translation>샘플</translation>
     </message>
@@ -7005,7 +7020,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+42"/>
+        <location line="+66"/>
         <source>No frozen dataset version of {board_model} yet; training reads only a frozen version&apos;s training set, once its validation set is locked.</source>
         <translation>{board_model}의 고정된 데이터셋 버전이 아직 없습니다. 학습은 검증 세트가 잠긴 고정 버전의 학습 세트만 읽습니다.</translation>
     </message>
@@ -7030,7 +7045,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-312"/>
+        <location line="-336"/>
         <source>Add at least 20 OK boards with Add OK Images… or Import Folder…</source>
         <translation>OK 이미지 추가… 또는 폴더 가져오기…로 OK 보드를 20개 이상 추가하세요</translation>
     </message>
@@ -7040,7 +7055,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+291"/>
+        <location line="+315"/>
         <source>Rolled back to AI model {version}</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7078,7 +7093,7 @@
 <context>
     <name>VersionsPanel</name>
     <message>
-        <location filename="../ui/pages/training_versions.py" line="-309"/>
+        <location filename="../ui/pages/training_versions.py" line="-310"/>
         <source>own</source>
         <translation>자체</translation>
     </message>
@@ -7208,7 +7223,7 @@
         <translation>{line} 변경되었거나 없는 파일: {files}</translation>
     </message>
     <message>
-        <location line="+13"/>
+        <location line="+14"/>
         <source>Its validation set is locked: a new split needs a new dataset version</source>
         <translation>검증 세트가 잠겨 있습니다: 새로 분할하려면 새 데이터셋 버전이 필요합니다</translation>
     </message>
@@ -7274,7 +7289,7 @@
 <context>
     <name>WorkingSetPanel</name>
     <message>
-        <location filename="../ui/pages/training_versions.py" line="-476"/>
+        <location filename="../ui/pages/training_versions.py" line="-477"/>
         <source>Their own AI models</source>
         <translation>고객 자체 AI 모델</translation>
     </message>

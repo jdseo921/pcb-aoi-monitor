@@ -133,6 +133,7 @@ def test_req_insp_005_keys_and_buttons_do_the_same(
     anywhere on the page and does nothing from another page."""
     engine.release()
     win, page = inspection
+    win.set_user("admin")  # only an Admin exports (Q58, #151)
     controls = {page.act_start: page.btn_start, page.act_stop: page.btn_stop, page.act_next: page.btn_next}
     controls[page.act_save] = page.btn_save
     for act, b in controls.items():

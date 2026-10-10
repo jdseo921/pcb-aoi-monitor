@@ -189,7 +189,7 @@ def test_req_tst_003_an_image_with_no_label_never_reads_as_matching_it(
     for sub in ("ng", "misc"):
         (folder / sub).mkdir(parents=True)
         shutil.copy(board, folder / sub / board.name)
-    win = _window(qtbot, trained_ctx)
+    win = _window(qtbot, trained_ctx, "Admin")  # only an Admin exports (Q58, #151)
     win.navigate("AI Model Test")
     page = win.pages["AI Model Test"]
     assert isinstance(page, ModelTestPage)

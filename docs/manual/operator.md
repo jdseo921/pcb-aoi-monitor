@@ -35,7 +35,7 @@ or cycle it with Alt+V; the view is stored with every result.
 | ▶ Start | F5 | Inspects the queue board after board, until Stop or the end of the queue |
 | ■ Stop | F6 | Stops after the board in hand; nothing is deleted, so there is no confirmation |
 | Next Board | F8 | Inspects one board |
-| Save Image… | F9 | Writes the board shown when you press it, with its defect boxes, to a picture file you choose (a run goes on while you name the file); the result itself is already recorded. Each picture saved is recorded in the audit trail with who saved it, which result it shows and where it went |
+| Save Image… | F9 | Admin only: an Operator does not see it (#151). Writes the board shown when you press it, with its defect boxes, to a picture file you choose (a run goes on while you name the file); the result itself is already recorded. Each picture saved is recorded in the audit trail with who saved it, which result it shows and where it went |
 
 A button and its key do the same. The key works whichever control on the Inspection page is selected (the defect
 list, the View box, a button), and only while that page is shown. Both go grey while the action is not possible:

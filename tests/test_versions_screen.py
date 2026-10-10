@@ -141,6 +141,7 @@ def test_req_trn_005_export_manifest(
     v1 = ctx.freeze_dataset(CAL, "Top", "R3", "Acme")
     split = ctx.lock_validation_set(v1["uuid"], seed=1)
     page = _datasets(qtbot, ctx)
+    page.shell.set_user("admin")  # only an Admin exports (Q58, #151)
     asked, answers = [], [QMessageBox.StandardButton.No, QMessageBox.StandardButton.Yes, QMessageBox.StandardButton.Yes]
 
     def question(_parent: object, title: str, text: str, *_rest: object) -> QMessageBox.StandardButton:

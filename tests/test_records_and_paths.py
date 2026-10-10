@@ -178,6 +178,7 @@ def test_req_set_001_moved_workspace_opens_everything(tmp_path: Path, tiny_model
             assert r["p"] and not Path(r["p"]).is_absolute(), (table, r["p"])
     for r in old.db.query("SELECT results FROM test_runs"):
         assert all(not Path(x["image"]).is_absolute() for x in json.loads(r["results"])), r
+    old.set_user("admin")  # only an Admin exports (Q58, #151)
     old.export_csv(old.settings.exports_dir / "inspections.csv", old.inspections())  # the folder Logs suggests (#196)
     old.export_overlays(old.inspections(), old.settings.exports_dir)
     old.close()  # the database and the log file; an open file keeps the folder from moving on Windows
@@ -246,6 +247,7 @@ def test_req_set_001_exports_to_the_suggested_folder_are_audited_relative_to_the
     win.navigate("Logs & Export")
     logs = win.pages["Logs & Export"]
     listed(qtbot, logs)
+    win.set_user("admin")  # only an Admin exports (Q58, #151)
     monkeypatch.setattr(QMessageBox, "question", staticmethod(lambda *a, **k: QMessageBox.StandardButton.Yes))
     monkeypatch.setattr(QFileDialog, "getSaveFileName", staticmethod(lambda _p, _c, suggested, kind: (suggested, kind)))
     monkeypatch.setattr(QFileDialog, "getExistingDirectory", staticmethod(lambda _p, _c, suggested: suggested))
@@ -356,6 +358,7 @@ def test_req_set_017_validation_exports_name_the_run_and_the_ai_model(
     names the run and the AI model by UUID."""
     win = _window(qtbot, trained_ctx)
     page = win.pages["AI Model Test"]
+    win.set_user("admin")  # only an Admin exports (Q58, #151)
     page.folder = str(synthetic_dataset / "test" / "ng")
     page.run()
     qtbot.waitUntil(lambda: bool(page.rows) and page.btn_run.isEnabled(), timeout=60000)

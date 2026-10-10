@@ -541,6 +541,22 @@ def re_grade(
     return res
 
 
+def _severity_shape(img: np.ndarray, severity: str, at: tuple[int, int], size: int, color: tuple[int, int, int]) -> int:
+    """The severity's shape, filled, standing on the text baseline at `at`: ◆ Critical, ■ Major, ● Minor (Q57, #152).
+    OpenCV's fonts have no such glyphs, so the saved overlay draws them. Returns the width taken."""
+    size = max(6, size)
+    x, y = at
+    h = size // 2
+    if severity == "Major":
+        cv2.rectangle(img, (x, y - size), (x + size, y), color, -1)
+    elif severity == "Minor":
+        cv2.circle(img, (x + h, y - h), h, color, -1)
+    else:  # Critical, and a type the table does not know, as on screen
+        pts = np.array([(x + h, y - size), (x + size, y - h), (x + h, y), (x, y - h)], np.int32)
+        cv2.fillConvexPoly(img, pts, color)
+    return size
+
+
 def draw_overlay(res: InspectionResult) -> np.ndarray:
     """Annotated image: bounding boxes + labels, colour by severity (spec 4.1)."""
     if res.image is None:
@@ -551,8 +567,12 @@ def draw_overlay(res: InspectionResult) -> np.ndarray:
     for d in res.defects:
         c = colors.get(d.severity, (0, 0, 255))
         cv2.rectangle(img, (d.x, d.y), (d.x + d.w, d.y + d.h), c, th)
-        label = f"{d.no}:{d.type} {d.score:.2f}"
-        cv2.putText(img, label, (d.x, max(14, d.y - 4)), cv2.FONT_HERSHEY_SIMPLEX, 0.45 * th / 2 + 0.2, c, th // 2 + 1)
+        scale, weight, y = 0.45 * th / 2 + 0.2, th // 2 + 1, max(14, d.y - 4)
+        label = f"{d.no}:{d.type}"
+        cv2.putText(img, label, (d.x, y), cv2.FONT_HERSHEY_SIMPLEX, scale, c, weight)
+        x = d.x + cv2.getTextSize(label + " ", cv2.FONT_HERSHEY_SIMPLEX, scale, weight)[0][0]
+        x += _severity_shape(img, d.severity, (x, y), int(18 * scale), c)
+        cv2.putText(img, f" {d.severity} {d.score:.2f}", (x, y), cv2.FONT_HERSHEY_SIMPLEX, scale, c, weight)
     banner = {OK: (80, 175, 76), WARN: (53, 216, 253), NG: (53, 57, 229)}[res.verdict]
     cv2.rectangle(img, (0, 0), (110, 34), banner, -1)
     cv2.putText(img, res.verdict, (10, 26), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (255, 255, 255), 2)
