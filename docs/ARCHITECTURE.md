@@ -1081,7 +1081,9 @@ developer machine against its own `baseline.json` entry. Neither is the product'
 Scale (REQ-SET-020): `tests/test_performance_budgets.py` times the start (`tests/startup_worker.py` runs `main.main()`
 in a process of its own, timed from before it starts to the window painted) and every page switch, as the Admin, to the
 page painted, on a workspace `tools/seed_workspace.py` writes with 50 board models and 100,000 records, and asserts 5 s
-and 300 ms on any machine.
+and 300 ms on any machine. The 8-hour soak (REQ-INSP-011): `tools/soak.py` presses Next Board in the app's window
+every 3 s and judges the run by the medians of the first and last tenth after a warm-up; `tests/test_soak.py` runs it
+for 72 s.
 
 Public datasets (S30, REQ-INSP-014): `tools/dataset_check.py` runs the golden-board comparison with the AI check off on
 DeepPCB and PKU-Market-PCB, laid out as their authors publish them, and with `--ai` the AI model alone on DeepPCB's test
