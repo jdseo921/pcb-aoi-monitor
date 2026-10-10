@@ -17,6 +17,8 @@ on:
       - tools/make_synthetic_dataset.py
       - tests/regression/**
       - aoi/selftest.py
+      - tools/make_demo_bundle.py  # the demo bundle the build ships (REQ-SET-007), with what it loads it
+      - aoi/core/demo.py
       - .github/workflows/build.yml
   push:
     branches: [main]
@@ -52,6 +54,8 @@ jobs:
           python -m pip install --require-hashes --no-deps -r requirements-torch-cpu.lock
           python -m pip install --require-hashes -r requirements-build.lock
           python -m pip check
+      - name: Build the demo bundle the app ships (REQ-SET-007); stops unless its boards get the demo's verdicts
+        run: python tools/make_demo_bundle.py
       - name: Build; stops on a file no license check covers, and writes THIRD_PARTY_NOTICES.txt
         id: build
         run: pyinstaller --noconfirm --clean installer/aoi.spec

@@ -1179,6 +1179,39 @@ CODES: dict[str, ErrorCode] = {
                 "+ New.",
             ),
         ),
+        ErrorCode(
+            "AOI-SET-015",
+            QT_TRANSLATE_NOOP("Errors", "Demo bundle cannot be used"),
+            QT_TRANSLATE_NOOP("Errors", "The demo bundle {path} cannot be used: {reason}."),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Reinstall the app, or from the sources run python tools/make_demo_bundle.py. Nothing in the "
+                "production workspace was changed.",
+            ),
+        ),
+        ErrorCode(
+            "AOI-SET-016",
+            QT_TRANSLATE_NOOP("Errors", "Folder is not a demo workspace"),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "The folder {path} holds files and is not a demo workspace, so the demo was not written there.",
+            ),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Move or rename that folder, then load the demo again; the app never deletes a folder it did not "
+                "make for the demo.",
+            ),
+        ),
+        ErrorCode(
+            "AOI-SET-017",
+            QT_TRANSLATE_NOOP("Errors", "Demo reset did not finish"),
+            QT_TRANSLATE_NOOP("Errors", "The demo workspace could not be put back: {path}: {error}."),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Close the program that holds the file (an image viewer, Explorer or a backup), then press Reset "
+                "Demo again; the production workspace is not touched.",
+            ),
+        ),
     )
 }
 

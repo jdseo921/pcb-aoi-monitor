@@ -31,6 +31,7 @@ EXPECTED = {  # what a setting must be, by its type and _LEAST
     (int, 0): QT_TRANSLATE_NOOP("Errors", "a whole number of 0 or more"),
     (str, None): QT_TRANSLATE_NOOP("Errors", "text"),
 }
+RANGE = QT_TRANSLATE_NOOP("Errors", "a whole number from {least} to {most}")
 _LEAST = {  # the smallest whole number a count setting takes; a map retention of 0 deletes OK maps at the next start
     "max_image_megapixels": 1,
     "max_image_megabytes": 1,
@@ -38,13 +39,30 @@ _LEAST = {  # the smallest whole number a count setting takes; a map retention o
     "image_size": 1,
     "default_epochs": 1,
     "map_retention_days_ok": 0,
+    "demo_pace_s": 1,
 }
+_MOST = {"demo_pace_s": 10}  # the largest whole number a setting takes, where there is one
+
+
+_in_use: Path | None = None  # the folder use_workspace() set: the demo workspace while it is open (REQ-SET-007)
+
+
+def use_workspace(folder: Path | None) -> Path | None:
+    """Make `folder` the default workspace of this process, its settings.json included, in place of the station's
+    (REQ-SET-007): the demo workspace is opened so, and the station's settings.json is never read or written meanwhile.
+    None goes back to the station's. Returns the folder set before, None for the station's."""
+    global _in_use
+    before, _in_use = _in_use, folder
+    return before
 
 
 def default_workspace() -> Path:
-    """The workspace folder, and where settings.json lives: AOI_WORKSPACE or ~/AOI_Workspace as a full path, so the
-    workspace the app holds is one settings.json accepts (AOI-SET-008 refuses a relative one). os.path.abspath, not
-    Path.absolute(), which on Python 3.11 leaves a drive-relative "C:AOI_Workspace" relative on Windows (#170)."""
+    """The workspace folder, and where settings.json lives: the folder use_workspace() set, else AOI_WORKSPACE or
+    ~/AOI_Workspace as a full path, so the workspace the app holds is one settings.json accepts (AOI-SET-008 refuses a
+    relative one). os.path.abspath, not Path.absolute(), which on Python 3.11 leaves a drive-relative "C:AOI_Workspace"
+    relative on Windows (#170)."""
+    if _in_use is not None:
+        return _in_use
     return Path(os.path.abspath(os.path.expanduser(os.environ.get("AOI_WORKSPACE", Path.home() / "AOI_Workspace"))))
 
 
@@ -60,6 +78,7 @@ class Settings:
     max_image_megabytes: int = 200  # (the register's proposed values; an Admin edits them in settings.json)
     language: str = "en"  # en | ko (localization planned for 2H 2027)
     last_page: str = "Home"  # the page to reopen after a restart (REQ-LOG-005)
+    demo_pace_s: int = 3  # seconds per board of the demo's scripted run, 1 to 10 (REQ-SET-009)
 
     # --- paths derived from workspace ------------------------------------
     @property
@@ -136,16 +155,21 @@ class Settings:
     @classmethod
     def check(cls, name: str, value: object) -> None:
         """Refuse a value of the wrong JSON type for a known setting, an image limit, a log retention, an image size or
-        an epoch count below 1, a map retention below 0, and a workspace that is not an absolute path (empty, spaces
-        only or relative: Path("") is the folder the app was started in), with AOI-SET-008: at start-up, and on the
-        Settings page before it saves (REQ-INSP-001, S23c: a typo there used to fail every image load with
-        AOI-SET-007; #170: a log retention of 0 or below archived every record at start-up). An unknown key is
-        still ignored, so an old or a newer settings.json loads."""
+        an epoch count below 1, a map retention below 0, a demo pace outside 1 to 10 s, and a workspace that is not an
+        absolute path (empty, spaces only or relative: Path("") is the folder the app was started in), with
+        AOI-SET-008: at start-up, and on the Settings page before it saves (REQ-INSP-001, S23c: a typo there used to
+        fail every image load with AOI-SET-007; #170: a log retention of 0 or below archived every record at start-up).
+        An unknown key is still ignored, so an old or a newer settings.json loads."""
         want = type(getattr(cls(), name))
         least = _LEAST.get(name)
         typed = isinstance(value, want) and not (want is int and isinstance(value, bool))
         if name == "workspace" and typed and not Path(str(value)).is_absolute():
             raise AoiError("AOI-SET-008", name=name, value=json.dumps(value), expected=FULL_PATH)
+        most = _MOST.get(name)
+        if most is not None and least is not None and not (typed and isinstance(value, int) and least <= value <= most):
+            raise AoiError(
+                "AOI-SET-008", name=name, value=json.dumps(value), expected=RANGE.fill(least=least, most=most)
+            )
         if not typed or (least is not None and isinstance(value, int) and value < least):
             expected = EXPECTED.get((want, least), want.__name__)
             raise AoiError("AOI-SET-008", name=name, value=json.dumps(value), expected=expected)

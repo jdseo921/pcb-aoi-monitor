@@ -156,6 +156,11 @@ QScrollBar::handle:vertical { min-height: ${BUTTON_H}px; }
 QScrollBar::handle:horizontal { min-width: ${BUTTON_H}px; }
 QScrollBar::add-line, QScrollBar::sub-line, QScrollBar::add-page, QScrollBar::sub-page { background: none; border: none;
                                                                                         width: 0; height: 0; }
+QSlider[sizeClass="T"] { min-height: ${TARGET_H}px; }
+QSlider::groove:horizontal { background: $BG_DEEP; border: 1px solid $LINE_STRONG; height: 8px; border-radius: 4px; }
+QSlider::handle:horizontal { background: $ACCENT; border: 1px solid $LINE_STRONG; width: ${TARGET_H}px;
+                             margin: -20px 0; border-radius: ${RADIUS}px; }
+QSlider::handle:horizontal:focus { border-color: $TEXT; }
 """)
 
 

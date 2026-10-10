@@ -17,6 +17,9 @@ sample_data/
 *.sqlite-wal
 *.sqlite-shm
 
+# Written by tools/make_demo_bundle.py at build time (S53): the demo workspace the build ships
+demo-bundle/
+
 # Delivery archives
 *.zip
 

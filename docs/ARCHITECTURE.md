@@ -366,6 +366,29 @@ AOI_Workspace/                 (default ~/AOI_Workspace, set in Settings, used f
                                Encrypted as they are, in its board model's store (REQ-TRN-017)
 ```
 
+### Demo workspace (REQ-SET-007, REQ-SET-009; S53)
+
+The build runs `tools/make_demo_bundle.py`, which makes `demo-bundle/` and fails unless its boards get the verdicts the
+demo needs; PyInstaller ships it beside the app (`aoi/core/demo.py` `bundle_dir()`; `AOI_DEMO_BUNDLE` overrides it). It
+holds `bundle.json` (format, app version, board model DEMO-TBOX-A1, the ten boards in run order with their verdicts,
+and the SHA-256 of every other file), `store-key.json` (the key of the demo's dataset store: synthetic boards, ADR 0010)
+and `workspace/`, a workspace as the app leaves it with an AI model, its card and Golden board, and `demo-boards/`.
+
+Settings › Demo (Admin) loads it in one click into `<workspace>-Demo`, a folder beside the station's workspace and never
+inside it, marked by `demo.json`; a folder of that name that holds files and no `demo.json` is refused (AOI-SET-016),
+and a bundle whose files do not match its manifest is refused before anything is written (AOI-SET-015). The window
+then switches workspace (`MainWindow.switch_workspace`): the station's context closes, `config.use_workspace()` makes
+the demo folder the default workspace, so its own `settings.json` is read and written, and a new window opens on the
+same page as a user of the same role, with a Demo badge in the header. The store's key goes to the station's key store
+at each load and reset, never into a workspace. Reset Demo (red, confirmed) closes the demo, deletes every file in it
+but `settings.json` and `demo.json`, copies the bundle's workspace back (under 10 s; AOI-SET-017 for a file another
+program holds) and audits `demo.reset` in the demo's database; Leave Demo Workspace opens the station's again.
+`main.py --demo` starts in the demo, loading it first, so a presenter whose app crashed is back in it in seconds.
+
+The demo's boards wait on Inspection as a scripted run (`InspectionPage.play`) at `demo_pace_s` seconds per board (1
+to 10, default 3; Settings › Demo's slider), through the normal path: each board inspected, saved and alarmed. The run
+pauses at an NG board, so Compare can show why, and Start goes on. A queue the user loads has no pace.
+
 ---
 
 ## 3. How the app "trains itself" (Stage 1 AI)

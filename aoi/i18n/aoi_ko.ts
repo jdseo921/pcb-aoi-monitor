@@ -755,6 +755,76 @@
     </message>
 </context>
 <context>
+    <name>DemoPanel</name>
+    <message>
+        <location filename="../ui/pages/settings_demo.py" line="+29"/>
+        <source>Demo</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+13"/>
+        <source>Demo workspace: loaded, not open.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+0"/>
+        <source>Demo workspace: not loaded.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+12"/>
+        <source>Load Demo Workspace</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+4"/>
+        <source>Demo workspace: open, in the folder {folder}.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+6"/>
+        <source>Scripted run pace</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="-2"/>
+        <location line="+9"/>
+        <source>{seconds} s</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="-25"/>
+        <source>Opens a demo board model with its AI model, recipe and 10 drawn boards, one NG, in its own folder {folder}; production data is not touched. It shows how the app works, never how well it finds defects.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+28"/>
+        <source>Play Scripted Run ›</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Leave Demo Workspace</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <location line="+30"/>
+        <source>Reset Demo</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="-4"/>
+        <source>Reset the demo workspace? Every result, record, alarm and log of the demo, and every change made in it to its board model, AI model, recipe and samples, is deleted, and the demo is copied back from the installed bundle. The production workspace is not touched.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+8"/>
+        <source>Scripted run pace: {seconds} s per board</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
     <name>Errors</name>
     <message>
         <location filename="../core/services.py" line="+108"/>
@@ -1314,7 +1384,7 @@
     </message>
     <message>
         <location line="+21"/>
-        <location filename="../ui/main_window.py" line="+433"/>
+        <location filename="../ui/main_window.py" line="+517"/>
         <source>start-up</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2796,7 +2866,52 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-24"/>
+        <location line="+8"/>
+        <source>Demo bundle cannot be used</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>The demo bundle {path} cannot be used: {reason}.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Reinstall the app, or from the sources run python tools/make_demo_bundle.py. Nothing in the production workspace was changed.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+8"/>
+        <source>Folder is not a demo workspace</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>The folder {path} holds files and is not a demo workspace, so the demo was not written there.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+4"/>
+        <source>Move or rename that folder, then load the demo again; the app never deletes a folder it did not make for the demo.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+8"/>
+        <source>Demo reset did not finish</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>The demo workspace could not be put back: {path}: {error}.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Close the program that holds the file (an image viewer, Explorer or a backup), then press Reset Demo again; the production workspace is not touched.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="-57"/>
         <source>Close the other program (another copy of this app, a database tool or a backup), then choose the same folder in the window that opens next; or choose another workspace folder there. Cancel there closes the app.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2983,6 +3098,11 @@
     <message>
         <location line="+1"/>
         <source>text</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>a whole number from {least} to {most}</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -3180,6 +3300,31 @@
         <location line="+3"/>
         <source>its manifest is missing, and {changed} file(s) changed and {missing} missing</source>
         <translation>매니페스트가 없고, 파일 {changed}개가 변경되고 {missing}개가 없습니다</translation>
+    </message>
+    <message>
+        <location filename="../core/demo.py" line="+94"/>
+        <source>it has no readable bundle.json</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>its bundle.json is not one this version of the app reads</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>{count} file(s) do not match its bundle.json, the first {file}</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+79"/>
+        <source>its store-key.json cannot be read</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/main_window.py" line="-37"/>
+        <source>demo reset</source>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
@@ -3431,7 +3576,7 @@
 <context>
     <name>HomePage</name>
     <message>
-        <location filename="../ui/main_window.py" line="-375"/>
+        <location filename="../ui/main_window.py" line="-418"/>
         <source>Upload samples</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3717,14 +3862,14 @@
 <context>
     <name>InspectionPage</name>
     <message>
-        <location filename="../ui/pages/inspection.py" line="+93"/>
+        <location filename="../ui/pages/inspection.py" line="+103"/>
         <location line="+82"/>
-        <location line="+144"/>
+        <location line="+161"/>
         <source>Load Images…</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-225"/>
+        <location line="-242"/>
         <source>Load Folder…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3806,12 +3951,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+141"/>
+        <location line="+158"/>
         <source>Next Board ›</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-130"/>
+        <location line="-147"/>
         <source>Select PCB images</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3836,7 +3981,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+18"/>
+        <location line="+11"/>
+        <source>{count} demo board(s) queued · {pace} s per board</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+23"/>
         <source>Stopping after this board…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3856,7 +4006,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+50"/>
+        <location line="+51"/>
         <source>No AI model for {board_model} yet: only the Golden board comparison runs</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3911,7 +4061,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+42"/>
+        <location line="+25"/>
+        <source>Paused at the NG board {file}: Compare with Golden board › shows why, and Start goes on with the run.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+43"/>
         <source>Save annotated image</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4289,7 +4444,17 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+67"/>
+        <location line="+13"/>
+        <source>{title} · Demo</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+60"/>
+        <source>Demo</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+5"/>
         <source>Board model:</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4349,17 +4514,32 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+51"/>
-        <source>Work is still running: training, an AI model test, an inspection, an export or an image import. Stop it and close the app? Training stops without saving an AI model, so the active one stays; an AI model test finishes its folder first; an export or import keeps the files copied so far.</source>
+        <location line="+48"/>
+        <source>close the app</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+4"/>
+        <location line="+13"/>
+        <source>Work is still running: training, an AI model test, an inspection, an export or an image import. Stop it and {then}? Training stops without saving an AI model, so the active one stays; an AI model test finishes its folder first; an export or import keeps the files copied so far.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+16"/>
+        <source>switch the workspace</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+33"/>
+        <source>Demo reset in {seconds:.1f} s.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="-45"/>
         <source>Stop the running work?</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+3"/>
+        <location line="+2"/>
         <source>Stopping the running work…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4804,7 +4984,7 @@
 <context>
     <name>Page</name>
     <message>
-        <location filename="../ui/main_window.py" line="-365"/>
+        <location filename="../ui/main_window.py" line="-385"/>
         <source>Home</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4929,7 +5109,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/inspection.py" line="-488"/>
+        <location filename="../ui/pages/inspection.py" line="-539"/>
         <source>Inspection</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4959,7 +5139,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/settings.py" line="+46"/>
+        <location filename="../ui/pages/settings.py" line="+47"/>
         <source>Settings</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5794,7 +5974,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+8"/>
+        <location line="+10"/>
         <source>Users &amp; roles</source>
         <translation type="unfinished"></translation>
     </message>

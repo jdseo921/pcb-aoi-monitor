@@ -29,6 +29,7 @@ from PySide6.QtGui import QGuiApplication  # noqa: E402
 from PySide6.QtTest import QTest  # noqa: E402
 from PySide6.QtWidgets import QMessageBox, QWidget  # noqa: E402
 
+from aoi import config  # noqa: E402
 from aoi.config import Settings  # noqa: E402
 from aoi.core import anomaly, crypto, model_card  # noqa: E402
 from aoi.core.imaging import list_images, load_image  # noqa: E402
@@ -107,6 +108,17 @@ def synthetic_dataset(tmp_path_factory: pytest.TempPathFactory) -> Path:
     """The synthetic dataset (golden.png, train/ and test/ splits, labels.csv), written once per session."""
     out = tmp_path_factory.mktemp("synthetic")
     write_dataset(out, DATASET_OK, DATASET_NG, DATASET_SEED)
+    return out
+
+
+@pytest.fixture(scope="session")
+def demo_bundle(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    """The demo bundle as the build makes it (tools/make_demo_bundle.py, REQ-SET-007), built once per session.
+    Read-only by convention: a test loads it into a folder of its own."""
+    from tools.make_demo_bundle import build
+
+    out = tmp_path_factory.mktemp("demo") / "demo-bundle"
+    build(out)
     return out
 
 
@@ -204,8 +216,9 @@ def keys(monkeypatch: pytest.MonkeyPatch) -> credentials.MemoryCredentials:
 @pytest.fixture(autouse=True)
 def _settings_file_in_tmp(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """settings.json is read and written in the default workspace (Settings.load and save, REQ-LOG-005); point
-    it at a folder of this test so that no test touches ~/AOI_Workspace."""
+    it at a folder of this test so that no test touches ~/AOI_Workspace; a demo workspace a test opened is closed."""
     monkeypatch.setenv("AOI_WORKSPACE", str(tmp_path / "default_workspace"))
+    monkeypatch.setattr(config, "_in_use", None)  # use_workspace (REQ-SET-007): the next test starts on its own
 
 
 @pytest.fixture(autouse=True)

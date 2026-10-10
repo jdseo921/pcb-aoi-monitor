@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QCloseEvent, QColor
 from PySide6.QtWidgets import (
+    QApplication,
     QComboBox,
     QFrame,
     QGridLayout,
@@ -23,12 +25,14 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from ..config import APP_NAME, APP_VERSION
+from ..config import APP_NAME, APP_VERSION, use_workspace
+from ..core import demo
 from ..core.run_progress import RunProgress
 from ..core.services import AppContext
 from ..errors import AoiError
 from . import theme
-from .errors import install_excepthook, show_error
+from .demo_workspace import boards
+from .errors import install_excepthook, open_workspace, show_error
 from .pages.base import QT_TRANSLATE_NOOP, Page, button, page_text, role_text, size_class, time_left_text
 from .pages.compare import ComparePage
 from .pages.inspection import InspectionPage
@@ -200,7 +204,10 @@ class MainWindow(QMainWindow):
         self.ctx = ctx
         self.board_model: str | None = None
         self.last_inspected: tuple[str, InspectionResult, int | None] | None = None  # path, result, record id
-        self.setWindowTitle(f"{APP_NAME} {APP_VERSION}")
+        self.in_demo = demo.is_demo(ctx.settings.root)  # the demo workspace is open (REQ-SET-007)
+        self.switched = False  # closed by switch_workspace, which stopped the work and closed the context already
+        title = f"{APP_NAME} {APP_VERSION}"
+        self.setWindowTitle(self.tr("{title} · Demo").format(title=title) if self.in_demo else title)
         self.resize(1920, 1080)
 
         central = QWidget()
@@ -243,6 +250,10 @@ class MainWindow(QMainWindow):
         self._reload_board_models()
         # no board model yet: start with an Admin to set the station up; the role is the stored one either way (#197)
         self.set_user(ctx.start_user(setting_up=not ctx.board_models()))
+        if self.in_demo:  # its boards wait on Inspection as a scripted run at the demo's pace (REQ-SET-009)
+            cast(InspectionPage, self.pages["Inspection"]).play(
+                boards(ctx.settings.root), ctx.settings.demo_pace_s, False
+            )
         if not self.navigate(ctx.settings.last_page):  # reopen where the last session was (REQ-LOG-005)
             self.navigate("Home")
 
@@ -256,6 +267,10 @@ class MainWindow(QMainWindow):
         logo = QLabel(f"<b>{APP_NAME}</b>")
         logo.setObjectName("logo")
         layout.addWidget(logo)
+        self.demo_badge = QLabel(self.tr("Demo"))  # on every page while the demo workspace is open (settings sketch)
+        self.demo_badge.setObjectName("badge")
+        self.demo_badge.setVisible(self.in_demo)
+        layout.addWidget(self.demo_badge)
         layout.addSpacing(30)
         layout.addWidget(QLabel(self.tr("Board model:")))
         self.bm_combo = QComboBox()
@@ -403,21 +418,90 @@ class MainWindow(QMainWindow):
     def closeEvent(self, event: QCloseEvent) -> None:
         """Closing the window stops the background work and closes the context; while work runs it asks first, and No
         keeps the window open. A stopped training run saves nothing (REQ-TRN-008)."""
-        if not self.ctx.jobs.idle():
-            yes, no = QMessageBox.StandardButton.Yes, QMessageBox.StandardButton.No
-            question = self.tr(
-                "Work is still running: training, an AI model test, an inspection, an export or an image import. Stop "
-                "it and close the app? Training stops without saving an AI model, so the active one stays; an AI model "
-                "test finishes its folder first; an export or import keeps the files copied so far."
-            )
-            if QMessageBox.question(self, self.tr("Stop the running work?"), question, yes | no, no) != yes:
-                event.ignore()
-                return
-            self.status(self.tr("Stopping the running work…"), ms=0)
-            self.statusBar().repaint()  # the wait below holds the UI thread until each job has stopped
+        if not self.switched and not self._may_stop_work(self.tr("close the app")):
+            event.ignore()
+            return
         self.ctx.close()  # every job asked to stop and waited for, then the database and the log file closed
         drop_queued(self.ctx.jobs)  # slots the jobs queued before they stopped would meet the closed context
         event.accept()
+
+    def _may_stop_work(self, then: str) -> bool:
+        """True when no work runs, or the user agrees to stop it before `then`; the status bar says it is stopping."""
+        if self.ctx.jobs.idle():
+            return True
+        yes, no = QMessageBox.StandardButton.Yes, QMessageBox.StandardButton.No
+        question = self.tr(
+            "Work is still running: training, an AI model test, an inspection, an export or an image import. Stop "
+            "it and {then}? Training stops without saving an AI model, so the active one stays; an AI model "
+            "test finishes its folder first; an export or import keeps the files copied so far."
+        ).format(then=then)
+        if QMessageBox.question(self, self.tr("Stop the running work?"), question, yes | no, no) != yes:
+            return False
+        self.status(self.tr("Stopping the running work…"), ms=0)
+        self.statusBar().repaint()  # the wait that follows holds the UI thread until each job has stopped
+        return True
+
+    # --- demo workspace (REQ-SET-007, REQ-SET-009) ----------------------------------
+    def switch_workspace(self, folder: Path | None, reset: bool = False, play: bool = False) -> MainWindow | None:
+        """Close this workspace and open `folder`, the demo workspace (None: the station's own), in a new window on
+        the same page, signed in as a user of the same role; the demo is put back as the bundle holds it first when
+        `reset`, and its scripted run started when `play`. Running work is stopped first, if the user agrees; a folder
+        that does not open opens the one before again. Returns the new window, or None when nothing was switched."""
+        if not self._may_stop_work(self.tr("switch the workspace")):
+            return None
+        role, page, keys = self.ctx.role, self._page_title(), self.ctx.credentials
+        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)  # the busy indicator while the folders are copied
+        try:
+            self.switched = True
+            self.ctx.close()
+            drop_queued(self.ctx.jobs)
+            before = use_workspace(folder)
+            failed, took = None, None
+            if reset and folder is not None:
+                try:
+                    took = demo.reset(demo.bundle_dir(), folder, keys)
+                except AoiError as e:  # shown once the demo is open again, as it is
+                    failed = e
+            ctx = open_workspace()  # a refusal is shown, with a folder picker where another folder cures it
+            if ctx is None:
+                use_workspace(before)
+                ctx = open_workspace()
+            win = build_window(ctx) if ctx is not None else None
+        finally:
+            QApplication.restoreOverrideCursor()
+        if win is None:  # nothing opens: the app closes, as at a start that opens nothing
+            if ctx is not None:
+                ctx.close()
+            self.close()
+            return None
+        win._sign_in_as(role)
+        win.navigate(page)
+        if failed is not None:
+            show_error(win, win.ctx.report_error(failed, QT_TRANSLATE_NOOP("Errors", "demo reset")))
+        elif took is not None:
+            win.ctx.audit("demo.reset", "workspace", None, None, {"folder": str(folder), "seconds": round(took, 2)})
+            win.status(self.tr("Demo reset in {seconds:.1f} s.").format(seconds=took))
+        if play and win.in_demo:
+            win.play_demo()
+        win.showMaximized()
+        self.close()
+        self.deleteLater()
+        return win
+
+    def play_demo(self) -> None:
+        """Inspection with the demo's boards queued as a scripted run at its pace, and Start pressed (REQ-SET-009)."""
+        page = cast(InspectionPage, self.pages["Inspection"])
+        if self.navigate("Inspection"):
+            page.play(boards(self.ctx.settings.root), self.ctx.settings.demo_pace_s)
+
+    def _sign_in_as(self, role: str) -> None:
+        """Sign in the first user the workspace holds with `role`, if it holds one; else the start's user stays."""
+        if (name := next((u["name"] for u in self.ctx.users() if u["role"] == role), None)) is not None:
+            self.set_user(str(name))
+
+    def _page_title(self) -> str:
+        cur = self.stack.currentWidget()
+        return cur.title if isinstance(cur, Page) else "Home"
 
 
 def build_window(ctx: AppContext) -> MainWindow | None:

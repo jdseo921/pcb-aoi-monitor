@@ -67,8 +67,9 @@ using CPU".
 |---|---|---|---|
 | AOI-SET-001 | The workspace folder cannot be used | Not writable, or not found | Pick another folder; the old one stays in use |
 | AOI-SET-002 | CUDA cannot be used | No NVIDIA GPU or driver found | CPU is used; pick Auto or CPU |
-| AOI-SET-003 | The demo bundle cannot be loaded | Missing, or its hash does not match | Reinstall the app; nothing in production was changed |
-| AOI-SET-004 | The demo reset did not finish | It took longer than 10 s, or a file is locked | Close Inspection and try again |
+| AOI-SET-015 | The demo bundle cannot be used | Missing, or a file does not match its bundle.json | Reinstall the app; nothing in production was changed (built in S53 as AOI-SET-015; AOI-SET-003 was taken) |
+| AOI-SET-016 | Folder is not a demo workspace | The demo's folder holds files and no demo.json | Move or rename that folder; the app never deletes a folder it did not make (S53) |
+| AOI-SET-017 | Demo reset did not finish | Another program holds a file | Close it and press Reset Demo again (built in S53 as AOI-SET-017; AOI-SET-004 was taken) |
 | AOI-SET-005 | Settings were reset to defaults | settings.json could not be read | Check the values and save |
 | AOI-SET-006 | The move was stopped | Target folder is inside the current workspace, or the disk is full | Pick another target |
 | AOI-SET-007 | A limit was not saved | Outside 1 to 200 MP or 1 to 2,000 MB (proposed) | Enter a value in range |
