@@ -730,6 +730,40 @@ def test_req_set_008_presenter_text_and_hidden_admin(
     assert not findings, f"{len(findings)} findings:\n" + "\n".join(sorted(set(findings)))
 
 
+def test_req_set_008_presenter_training_rows_whole_with_the_import_sheet_closed(
+    screens: tuple[AppContext, Path], qtbot: QtBot, qapp: QApplication
+) -> None:
+    """Training as an Engineer or an Admin first sees it in the presenter theme, its import sheet closed (the walk
+    above shows it open, which widens the Samples pane past its button rows): at 1920×1080 every button of the Samples
+    tab shows its whole label by the walk's width rule, where the splitter's 650:500 weights, set for the 14 pt font,
+    gave the pane 626 px in the 18 pt font and cut "Add OK Images…" to "dd OK Images." (REQ-SET-008)."""
+    ctx, _dataset = screens
+    findings: list[str] = []
+    seen: Counter = Counter()
+    with _shell(ctx, qtbot, qapp) as win:
+        win.set_user("admin")
+        assert win.navigate("Settings")
+        win.pages["Settings"].presenter.click()
+        try:
+            assert theme.presenter() and theme.FONT_PT == LARGE_PT
+            for role in ("engineer", "admin"):
+                win.set_user(role)
+                assert win.navigate("Training")
+                QApplication.processEvents()
+                page = win.pages["Training"]
+                assert not page.sheet.isVisible() and win.width() == 1920, role  # type: ignore[attr-defined]
+                shot = _pixels(win.grab().toImage())
+                for button in page.findChildren(QPushButton):
+                    if button.isVisible() and button.width() > 0:
+                        findings += _check_widget(f"Training ({role})", win, shot, button, seen)
+        finally:
+            win.set_user("admin")
+            win.exit_presenter.click()
+    assert not theme.presenter()
+    assert seen["buttons"] >= 2 * 14, seen  # the three rows, the editor's and the training panel's, for both roles
+    assert not findings, f"{len(findings)} findings:\n" + "\n".join(sorted(set(findings)))
+
+
 def test_req_set_008_presenter_token_pairs_read() -> None:
     """In the presenter theme every text colour on every surface its stylesheet composes reads at 4.5:1 or more, bold
     and large text included (black on the standard's green, red and blue fills, Q53), the text is 18 pt or more with

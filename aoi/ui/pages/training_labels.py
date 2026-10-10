@@ -143,9 +143,12 @@ class LabelEditor(QWidget):
         form.setRowWrapPolicy(QFormLayout.RowWrapPolicy.DontWrapRows)  # a row that wrapped moved the image mid-drag
         self.type_box = TypeList()
         self.type_box.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
-        # 14 widths of X: the Type row then asks no more room than the image below it (IMAGE_MIN_W), so Training
-        # fits a 1600 px window beside the import buttons; a longer name shows cut there, whole in the drop-down
-        self.type_box.setMinimumContentsLength(14)
+        # 12 widths of X: the Type row then asks no more room than the image below it (IMAGE_MIN_W) in the 14 pt
+        # theme, so Training fits a 1600 px window beside the import buttons, and 32 px less than at 14 in the
+        # presenter theme's font, where the row rules the editor's least width (366 px) and the Samples pane's button
+        # rows need their 714 px of the tab's 1108 beside it (REQ-SET-008); a longer name shows cut there, whole in the
+        # drop-down
+        self.type_box.setMinimumContentsLength(12)
         for name in names():  # the 33 types, by category as the defect table lists them; never Anomaly (Q33)
             self.type_box.addItem(name, name)  # names from the classification table, English until it is translated
         self.severity = QLabel()  # read-only: the table's severity of the type
