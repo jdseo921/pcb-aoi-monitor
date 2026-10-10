@@ -1078,6 +1078,11 @@ boards at 0.3 MP and 5 MP for the base commit and the head on one runner (`tools
 head's median or 95th percentile at either size is over 1.10 times the base's; `tests/perf/test_timing.py` checks a
 developer machine against its own `baseline.json` entry. Neither is the product's speed (`tests/perf/README.md`).
 
+Scale (REQ-SET-020): `tests/test_performance_budgets.py` times the start (`tests/startup_worker.py` runs `main.main()`
+in a process of its own, timed from before it starts to the window painted) and every page switch, as the Admin, to the
+page painted, on a workspace `tools/seed_workspace.py` writes with 50 board models and 100,000 records, and asserts 5 s
+and 300 ms on any machine.
+
 Public datasets (S30, REQ-INSP-014): `tools/dataset_check.py` runs the golden-board comparison with the AI check off on
 DeepPCB and PKU-Market-PCB, laid out as their authors publish them, and with `--ai` the AI model alone on DeepPCB's test
 split, with `--min-area` as a what-if on the Minimum defect area; it hashes every file it reads before and after its
