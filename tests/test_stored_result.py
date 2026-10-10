@@ -6,10 +6,8 @@ from __future__ import annotations
 
 import copy
 import csv
-import json
 import sqlite3
 from dataclasses import replace
-from datetime import UTC, datetime
 from pathlib import Path
 
 import numpy as np
@@ -24,6 +22,7 @@ from aoi.core.recipe import Recipe
 from aoi.core.services import AppContext
 from aoi.data.db import Database
 from aoi.ui.pages.compare import ComparePage
+from tests.conftest import log_rows
 from tests.test_req_done_in_v01 import BOARD, _window
 
 EVIDENCE = ("overlay_path", "diff_map_path", "ai_map_path")
@@ -239,6 +238,5 @@ def test_req_insp_012_a_stored_result_that_cannot_be_read_does_not_stop_the_csv_
         with (tmp_path / name).open(encoding="utf-8-sig", newline="") as f:
             got = {(int(r[key]), r["model_version"], r["ai_check"]) for r in csv.DictReader(f)}
         assert got == {(ids[0], version, "RAN"), *((i, version, "") for i in damaged)}, name
-    log = ctx.settings.root / "logs" / f"aoi-{datetime.now(UTC):%Y-%m-%d}.jsonl"
-    rows = [json.loads(line) for line in log.read_text(encoding="utf-8").splitlines()]
+    rows = log_rows(ctx.settings.root / "logs")
     assert sorted(r["inspection_id"] for r in rows if r["event"] == "export.result_not_read") == sorted(damaged)

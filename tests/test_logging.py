@@ -13,7 +13,7 @@ import numpy as np
 from aoi import logging_setup
 from aoi.config import APP_VERSION, Settings
 from aoi.core.services import AppContext
-from tests.conftest import TrainedModel, restored
+from tests.conftest import TrainedModel, log_rows, restored
 
 DAY_1 = datetime(2026, 10, 1, 5, 5, 0, tzinfo=UTC)
 DAY_2 = datetime(2026, 10, 2, 0, 0, 1, tzinfo=UTC)
@@ -83,12 +83,9 @@ def test_req_log_004_app_events_reach_the_workspace_log(tmp_path: Path, tiny_mod
     restored(tiny_model, ws, shutil.ignore_patterns("logs"))
     ctx = AppContext(Settings(workspace=str(ws), device="cpu"))
     ctx.inspect_file("TINY", ctx.db.samples("TINY", "OK")[0]["path"])
-    today = datetime.now(UTC).strftime("%Y-%m-%d")
-    rows = lines(ws / "logs" / f"aoi-{today}.jsonl")
+    rows = log_rows(ws / "logs")
     events = [r["event"] for r in rows]
     assert events[0] == "app.start" and "inspection.saved" in events
     saved = next(r for r in rows if r["event"] == "inspection.saved")
     assert saved["board_model"] == "TINY" and saved["verdict"] in ("OK", "WARN", "NG") and saved["module"] == "aoi"
-    assert "schema.migrated" in [
-        r["event"] for r in lines(tiny_model.ctx.settings.root / "logs" / f"aoi-{today}.jsonl")
-    ]
+    assert "schema.migrated" in [r["event"] for r in log_rows(tiny_model.ctx.settings.root / "logs")]

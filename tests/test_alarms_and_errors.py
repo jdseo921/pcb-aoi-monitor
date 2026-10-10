@@ -9,7 +9,6 @@ import sqlite3
 import sys
 import threading
 import time
-from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, cast
 
@@ -28,7 +27,7 @@ from aoi.ui.main_window import MainWindow
 from aoi.ui.pages.compare import NO_VERDICT
 from aoi.ui.pages.inspection import InspectionPage
 from aoi.ui.pages.settings import SettingsPage
-from tests.conftest import plain, seal, wrapped
+from tests.conftest import log_rows, plain, seal, wrapped
 from tests.test_req_done_in_v01 import BOARD, _inspect_one, _window
 
 # ISO date, 24-hour time, level, code and message, two spaces apart (REQ-INSP-006)
@@ -43,9 +42,7 @@ def _restart(ctx: AppContext) -> AppContext:
 
 
 def _log_rows(ctx: AppContext, event: str) -> list[dict[str, object]]:
-    path = ctx.settings.root / "logs" / f"aoi-{datetime.now(UTC):%Y-%m-%d}.jsonl"
-    rows = [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines()]
-    return [r for r in rows if r["event"] == event]
+    return [r for r in log_rows(ctx.settings.root / "logs") if r["event"] == event]
 
 
 def _alarm_lines(win: MainWindow) -> list[str]:
