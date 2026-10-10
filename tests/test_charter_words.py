@@ -45,6 +45,7 @@ ALLOWED_WORDS = {  # (catalogue code or translation context, Not word): why the 
     ("AOI-LOG-002", "program"): OTHER_PROGRAM,
     ("AOI-SET-012", "program"): OTHER_PROGRAM,
     ("AOI-SET-013", "program"): OTHER_PROGRAM,
+    ("AOI-SET-017", "program"): OTHER_PROGRAM,
     ("AOI-SET-001", "window"): FOLDER_WINDOW,
     ("AOI-SET-002", "window"): FOLDER_WINDOW,
     ("AOI-SET-003", "window"): FOLDER_WINDOW,

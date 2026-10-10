@@ -2796,7 +2796,52 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-24"/>
+        <location line="+8"/>
+        <source>Demo bundle cannot be used</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>The demo bundle {path} cannot be used: {reason}.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Reinstall the app, or from the sources run python tools/make_demo_bundle.py. Nothing in the production workspace was changed.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+8"/>
+        <source>Folder is not a demo workspace</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>The folder {path} holds files and is not a demo workspace, so the demo was not written there.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+4"/>
+        <source>Move or rename that folder, then load the demo again; the app never deletes a folder it did not make for the demo.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+8"/>
+        <source>Demo reset did not finish</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>The demo workspace could not be put back: {path}: {error}.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Close the program that holds the file (an image viewer, Explorer or a backup), then press Reset Demo again; the production workspace is not touched.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="-57"/>
         <source>Close the other program (another copy of this app, a database tool or a backup), then choose the same folder in the window that opens next; or choose another workspace folder there. Cancel there closes the app.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3180,6 +3225,26 @@
         <location line="+3"/>
         <source>its manifest is missing, and {changed} file(s) changed and {missing} missing</source>
         <translation>매니페스트가 없고, 파일 {changed}개가 변경되고 {missing}개가 없습니다</translation>
+    </message>
+    <message>
+        <location filename="../core/demo.py" line="+94"/>
+        <source>it has no readable bundle.json</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>its bundle.json is not one this version of the app reads</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>{count} file(s) do not match its bundle.json, the first {file}</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+79"/>
+        <source>its store-key.json cannot be read</source>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
