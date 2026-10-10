@@ -389,6 +389,9 @@ def test_req_set_021_training_add_samples_does_not_freeze(
     assert_off_ui_thread(calls, "AppContext.import_samples")
     assert g["longest_s"] < BUDGET_S, g
     assert len(trained_ctx.samples(BOARD)) == before + n
+    # The job ends just after its result shows, and Add NG Images… is off until then: pressed sooner (the pool thread
+    # waiting for the GIL between the two), the page starts no second import and the Cancel below never shows
+    qtbot.waitUntil(page.btn_ng.isEnabled, timeout=60000)
 
     page.busy.SHOW_AFTER_S, page.busy.DETAIL_AFTER_S = 0.1, 0.3  # the 1 s and 10 s of the product, shortened
     ng_dir = trained_ctx.settings.images_dir / BOARD / "NG"
