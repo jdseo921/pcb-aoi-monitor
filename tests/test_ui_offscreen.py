@@ -20,6 +20,7 @@ from aoi.ui.main_window import MainWindow
 from aoi.ui.pages.base import row_key
 from aoi.ui.pages.compare import ComparePage
 from aoi.ui.pages.logs import LogsPage
+from tests.conftest import listed
 
 PAGES = [
     "Home",
@@ -69,6 +70,7 @@ def _logs(qtbot: QtBot, ctx: AppContext, monkeypatch: pytest.MonkeyPatch, record
     qtbot.addWidget(win)
     monkeypatch.setattr(ctx, "inspections", lambda *a, **k: list(records))
     assert win.navigate("Logs & Export")
+    listed(qtbot, win.pages["Logs & Export"])
     return cast(LogsPage, win.pages["Logs & Export"])
 
 
@@ -90,8 +92,9 @@ def test_logs_date_filter_never_raises_at_the_edges(qtbot: QtBot, ctx: AppContex
 
 def test_switch_user_refreshes_the_page_on_screen(qtbot: QtBot, ctx: AppContext) -> None:
     """#174: Switch User on a page the new role may still open shows that page again for the new role: an Engineer
-    can export from Logs & Export at once, and an Operator on Compare no longer sees Save to Recipe enabled, not even
-    with a threshold of the hidden form changed (on for the Engineer once a threshold differs from the recipe, S28d)."""
+    can export from Logs & Export once the page has listed its records again (S55), and an Operator on Compare no
+    longer sees Save to Recipe enabled, not even with a threshold of the hidden form changed (on for the Engineer once
+    a threshold differs from the recipe, S28d)."""
     ctx.ensure_board_model("TINY")  # a recipe for Compare's thresholds to differ from
     win = MainWindow(ctx)
     qtbot.addWidget(win)
@@ -101,6 +104,7 @@ def test_switch_user_refreshes_the_page_on_screen(qtbot: QtBot, ctx: AppContext)
     assert not logs.btn_csv.isEnabled()
     win.set_user("engineer")
     assert win.stack.currentWidget() is logs
+    listed(qtbot, logs)
     assert logs.btn_csv.isEnabled() and logs.btn_img.isEnabled() and logs.btn_arch.isEnabled()
     assert win.navigate("Compare")
     compare = cast(ComparePage, win.pages["Compare"])

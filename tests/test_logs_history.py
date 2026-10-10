@@ -34,6 +34,7 @@ from aoi.ui.main_window import MainWindow
 from aoi.ui.pages.base import row_key
 from aoi.ui.pages.logs import LogsPage
 from aoi.ui.pages.training import TrainingPage
+from tests.conftest import listed
 
 N = 100_000
 DAYS = 200  # spread over the last 200 days: 500 a day
@@ -135,18 +136,19 @@ def test_req_log_001_filters_over_100000_records_return_within_1_s(
     page = cast(LogsPage, win.pages["Logs & Export"])
     start = perf_counter()
     win.navigate("Logs & Export")  # a new page lists the last 7 days of every board model: timed, not held to 1 s
+    listed(qtbot, page)  # read on the pool thread (REQ-SET-020, S55)
     default, opened = perf_counter() - start, {r["id"] for r in page.rows}
     assert opened == cases["7 days, every board model"][1]
     for combo, value in ((page.model, "BM-3"), (page.operator, "engineer"), (page.result, "NG")):
         combo.setCurrentIndex(combo.findData(value))
-    listed = {}
+    on_page = {}
     for name, d_from in ((f"page: {combined}", page.d_from.date()), ("page: no match", QDate.currentDate().addDays(1))):
         page.d_from.setDate(d_from)
         start = perf_counter()
         page.refresh()  # Filter
         times[name] = perf_counter() - start
-        listed[name] = {r["id"] for r in page.rows}
-    assert listed == {f"page: {combined}": cases[combined][1], "page: no match": set()}
+        on_page[name] = {r["id"] for r in page.rows}
+    assert on_page == {f"page: {combined}": cases[combined][1], "page: no match": set()}
     assert page.empty.isVisibleTo(page)  # the empty state, with its link
 
     machine = f"{platform.platform()} {platform.machine()}, {os.cpu_count()} CPUs, Python {platform.python_version()}"
@@ -164,7 +166,9 @@ def _logs(qtbot: QtBot, ctx: AppContext, user: str = "operator") -> LogsPage:
     qtbot.addWidget(win)
     win.set_user(user)  # every role views the history
     win.navigate("Logs & Export")
-    return cast(LogsPage, win.pages["Logs & Export"])
+    page = cast(LogsPage, win.pages["Logs & Export"])
+    listed(qtbot, page)  # read on the pool thread (REQ-SET-020, S55)
+    return page
 
 
 def _record(
@@ -231,6 +235,7 @@ def test_req_log_001_the_filters_fit_a_1600_px_window(qtbot: QtBot, ctx: AppCont
     win.set_user("admin")  # the Admin sees every button of the page
     win.navigate("Logs & Export")
     page = cast(LogsPage, win.pages["Logs & Export"])
+    listed(qtbot, page)
     win.resize(1920, 1080)
     win.show()
     qtbot.waitExposed(win)
@@ -239,12 +244,14 @@ def test_req_log_001_the_filters_fit_a_1600_px_window(qtbot: QtBot, ctx: AppCont
     room = "PANEL-A1-REV2-TOP-SIDE-2"  # 24 characters: a whole name at 1920 px
     ctx.ensure_board_model(room)
     page.on_show()
+    listed(qtbot, page)
     page.model.setCurrentIndex(page.model.findText(room))
     qtbot.waitUntil(lambda: page.model.width() >= page.model.sizeHint().width() > 240)
     name = "PANEL-" + "X" * 34  # 40 characters: no rule limits a board model or user name's length
     ctx.ensure_board_model(name)
     ctx.add_user(name, "Operator")
     page.on_show()
+    listed(qtbot, page)
     assert [page.model.itemText(2), page.operator.itemText(page.operator.count() - 1)] == [name, name]
     assert win.minimumSizeHint().width() <= 1600, win.minimumSizeHint().width()
 

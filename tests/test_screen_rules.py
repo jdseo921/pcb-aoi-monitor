@@ -53,7 +53,7 @@ from aoi.ui.pages.base import button
 from aoi.ui.pages.compare import MODE_DIFF
 from aoi.ui.pages.profile3d import Stage2Card
 from aoi.ui.widgets.empty_state import EmptyState
-from tests.conftest import engineer
+from tests.conftest import engineer, listed
 from tests.screens.test_sizes_and_contrast import (
     MIN_RATIO,
     _check_widget,
@@ -500,6 +500,7 @@ def test_req_set_019_empty_states_link_next_step(
         "Logs & Export",
     ):
         win.navigate(title)
+        listed(qtbot, win.pages[title])
         empties = _empties(win.pages[title])
         assert empties, f"{title}: nothing says what to do in an empty workspace"
         for e in empties:
@@ -561,6 +562,7 @@ def test_req_set_019_empty_states_link_next_step(
     _inspect_one(qtbot, win2, ng_board)
     logs = win2.pages["Logs & Export"]
     win2.navigate("Logs & Export")
+    listed(qtbot, logs)
     assert logs.table.rowCount() == 1 and not _empties(logs)
     logs.d_to.setDate(logs.d_from.date().addDays(-1))
     logs.refresh()
@@ -585,6 +587,7 @@ def test_req_set_019_logs_link_brings_back_old_or_archived_records(
     db.close()
     logs = win.pages["Logs & Export"]
     win.navigate("Logs & Export")
+    listed(qtbot, logs)
     assert logs.table.rowCount() == 0 and logs.empty.heading.text() == "No records match"
     assert logs.empty.link.isVisibleTo(logs)
     logs.empty.link.click()

@@ -1,7 +1,8 @@
 """REQ-INSP-008, crash-safety part (S11): no finished result is lost and nothing is left half-written.
 
 A process kill is not a power cut: the operating system still flushes what the process handed it, and the
-disk's own cache is not involved. The full test on the reference PC, with the power pulled, is part of S55.
+disk's own cache is not involved. The full test, with the power pulled on the reference PC, is a station check
+(docs/tests/station-checks.md).
 
 Random kills seldom land inside a file write (a few milliseconds of each inspection), so they show that no finished
 result is lost, not that every file is written whole (#202). That rests on three other tests: every write in `aoi/` by

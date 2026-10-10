@@ -30,7 +30,7 @@ from aoi.data import migrate as mg
 from aoi.data.db import Database
 from aoi.ui.main_window import MainWindow
 from aoi.ui.pages.settings import SettingsPage
-from tests.conftest import TrainedModel, engineer, plain, restored
+from tests.conftest import TrainedModel, engineer, listed, plain, restored
 from tests.test_req_done_in_v01 import BOARD, _inspect_one, _window
 
 UUID4 = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$")
@@ -221,6 +221,7 @@ def test_req_set_001_exports_to_the_suggested_folder_are_audited_relative_to_the
     _inspect_one(qtbot, win, ng_board)
     win.navigate("Logs & Export")
     logs = win.pages["Logs & Export"]
+    listed(qtbot, logs)
     monkeypatch.setattr(QMessageBox, "question", staticmethod(lambda *a, **k: QMessageBox.StandardButton.Yes))
     monkeypatch.setattr(QFileDialog, "getSaveFileName", staticmethod(lambda _p, _c, suggested, kind: (suggested, kind)))
     monkeypatch.setattr(QFileDialog, "getExistingDirectory", staticmethod(lambda _p, _c, suggested: suggested))

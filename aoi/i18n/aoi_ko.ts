@@ -4263,7 +4263,7 @@
 <context>
     <name>LogsPage</name>
     <message>
-        <location filename="../ui/pages/logs.py" line="+72"/>
+        <location filename="../ui/pages/logs.py" line="+74"/>
         <source>Include archived</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4336,7 +4336,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+2"/>
+        <location line="+1"/>
+        <source>Loading records…</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+3"/>
         <source>Select a row to see its overlay</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4347,12 +4352,12 @@
     </message>
     <message>
         <location line="+5"/>
-        <location line="+125"/>
+        <location line="+180"/>
         <source>Export CSV</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-124"/>
+        <location line="-179"/>
         <source>Export Image Overlays</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4362,7 +4367,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+41"/>
+        <location line="+96"/>
         <source>{count:,} record(s) · OK {ok:,} of {count:,} ({rate:.1f} %) · NG {ng:,} · WARN {warn:,}</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4433,12 +4438,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-85"/>
+        <location line="-142"/>
         <source>AI model</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+85"/>
+        <location line="+142"/>
         <source>Reset Filters</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4498,8 +4503,8 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-288"/>
-        <location line="+348"/>
+        <location line="-345"/>
+        <location line="+407"/>
         <source>All</source>
         <translation>전체</translation>
     </message>
@@ -5197,7 +5202,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/logs.py" line="-368"/>
+        <location filename="../ui/pages/logs.py" line="-427"/>
         <source>Logs &amp; Export</source>
         <translation type="unfinished"></translation>
     </message>

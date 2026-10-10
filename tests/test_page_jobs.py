@@ -21,7 +21,7 @@ from aoi.core.services import AppContext
 from aoi.data import atomic
 from aoi.ui.main_window import MainWindow
 from aoi.ui.widgets.busy import BusyOverlay
-from tests.conftest import distinct_copies
+from tests.conftest import distinct_copies, listed
 from tests.test_req_done_in_v01 import BOARD, _button, _window
 
 N = 24  # files per action; each copy is slowed to 50 ms, so an action runs for about 1.2 s
@@ -110,6 +110,7 @@ def test_req_usr_001_a_background_import_or_export_works_for_the_user_who_starte
     _records_with_overlays(trained_ctx, ng_board, tmp_path / "overlays")
     logs = win.pages["Logs & Export"]
     win.navigate("Logs & Export")
+    listed(qtbot, logs)
     status = win.statusBar().currentMessage
     logs.export_overlays()
     _switch_when(qtbot, win, lambda: _copied(pickers) > 0, "Operator")
@@ -121,6 +122,7 @@ def test_req_usr_001_a_background_import_or_export_works_for_the_user_who_starte
 
     win.set_user("engineer")
     win.navigate("Logs & Export")
+    listed(qtbot, logs)
     gathered: list[int] = []
     real = trained_ctx.defects_for
     monkeypatch.setattr(trained_ctx, "defects_for", lambda iid: gathered.append(iid) or sleep(0.05) or real(iid))
@@ -149,6 +151,7 @@ def test_req_set_021_a_second_export_or_import_waits_for_the_first(
     win = _window(qtbot, trained_ctx)
     logs = win.pages["Logs & Export"]
     win.navigate("Logs & Export")
+    listed(qtbot, logs)
     status = win.statusBar().currentMessage
     exports = [_button(logs, "Export CSV"), _button(logs, "Export Image Overlays")]
     logs.export_overlays()
@@ -236,6 +239,7 @@ def test_req_set_021_an_empty_state_neither_stops_an_import_nor_hides_the_busy_o
         seen.append((name, len(trained_ctx.samples(name)), after["cancelled"], link_on))
     _records_with_overlays(trained_ctx, ng_board, tmp_path / "overlays")
     win.navigate("Logs & Export")
+    listed(qtbot, logs)
     logs.export_overlays()
     qtbot.waitUntil(logs.busy.cancel_button.isVisible, timeout=30000)
     logs.d_from.setDate(QDate(2001, 1, 1))

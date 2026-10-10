@@ -28,6 +28,7 @@ from PySide6.QtCore import Qt  # noqa: E402
 from PySide6.QtGui import QGuiApplication  # noqa: E402
 from PySide6.QtTest import QTest  # noqa: E402
 from PySide6.QtWidgets import QMessageBox, QWidget  # noqa: E402
+from pytestqt.qtbot import QtBot  # noqa: E402
 
 from aoi import config  # noqa: E402
 from aoi.config import Settings  # noqa: E402
@@ -175,6 +176,12 @@ def another_version(ctx: AppContext, board_model: str, version: str) -> int:
     for src, dst in zip(model_card.paths(Path(active["path"])), model_card.paths(path), strict=True):
         shutil.copyfile(src, dst)  # its card, which activation needs (REQ-TRN-011)
     return ctx.db.register_model(board_model, version, str(path), {}, activate=False, uid=uid)
+
+
+def listed(qtbot: QtBot, page: QWidget) -> None:
+    """Wait until `page` shows the records it lists when shown: Logs & Export reads them on the pool (`listing`, S55);
+    any other page shows its rows at once. A test reads the rows, the empty state or the exports after this."""
+    qtbot.waitUntil(lambda: getattr(page, "listing", None) is None, timeout=30000)
 
 
 def log_rows(folder: Path) -> list[dict[str, Any]]:
