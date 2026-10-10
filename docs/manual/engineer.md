@@ -44,8 +44,9 @@ in progress finishes on the device it started with, and the Training page shows 
 progress takes the new device from its next board once the Inspection page is shown again), the Training page's Epochs
 and Network input size boxes take the new defaults, and the Logs & Export archive button shows and archives by the new
 log retention. The language is stored for the localisation planned for 2H 2027; until then the app shows English. The folder must be a full path
-(`C:\AOI_Workspace`, not `AOI_Workspace`): an empty or relative folder, or a log retention, input size or epoch count
-below 1, is refused with AOI-SET-008, on the page before anything is saved and at start-up from `settings.json`. The
+(`C:\AOI_Workspace`, not `AOI_Workspace`): an empty or relative folder is refused with AOI-SET-008 on the page before
+anything is saved, and at start-up, where `settings.json` with a log retention, input size or epoch count below 1 is
+refused with the same code. The
 app writes only the settings it changes into `settings.json`, so a line you edit there while the app runs, such as an
 image limit, stays; it takes effect at the next start. Saving needs the Admin role (AOI-USR-001) and writes an audit
 entry, `settings.change`, with the values before and after. The last user with the Admin role cannot lose it
@@ -55,14 +56,42 @@ start too: the app starts with the Admin added first while the workspace has no 
 
 **Presenter theme (demos).** For a demo, an Admin ticks Presenter theme on the Settings page, in its own group. It
 applies at once, with no restart, and stays on after one: a light background, text of 18 pt or more, the verdict at 48
-pt in the same colours and shapes, and black text on the green, red and blue fills. Settings, the Admin page, and 3D
+pt in the same colours and shapes, and black text on the green, red and blue fills. Settings (the Admin page) and 3D
 Profile leave the sidebar for every role (the SYSTEM heading with Settings), so a demo never shows them, and the app
 opens Home in their place; every other page stays where it was. Only an Admin leaves the theme, with Exit presenter
 theme in the header, which the header shows to an Admin alone: an Operator or Engineer at the station switches the user
 to an Admin first (Switch User), then presses it. Each switch, on or off, is saved in `settings.json` as
 `presenter_theme` and written to the audit log as `settings.change`, like a save on Settings.
 
-(to be written: the workspace folder, device, limits, demo workspace)
+**The workspace folder.** The station keeps everything in one folder, its workspace: `aoi.sqlite`, the database of
+records, recipes, AI model versions, users, alarms and the audit trail; `images`, the samples by board model and label;
+`models`, each board model's AI model versions with their Golden boards and AI model cards; `datasets`, the manifests of
+frozen dataset versions; `results`, the overlay and maps of each record, by day; `exports`, the folder the exports
+offer; and `logs`, the app log (section 8). Paths inside it are stored relative to it, so the whole folder, copied with
+the app closed, opens again from another folder or PC (a customer's dataset store then needs its key: Restore Key…,
+section 3). By default it is `AOI_Workspace` in the Windows account's home folder, or the folder the `AOI_WORKSPACE`
+environment variable names; that folder also holds `settings.json`, whichever workspace it names. To use another
+workspace, type its full path in **Workspace (images, AI models, database)** or pick it with **Browse…**, then press
+**Save Settings**. Nothing is copied: the next start opens that folder as it is, and makes an empty workspace there when
+it holds none, with no board model and the users `operator`, `engineer` and `admin`; so copy the old folder's contents
+into it first, with the app closed.
+
+**The AI device.** **auto**, the default, trains and judges on a CUDA graphics card when PyTorch finds one, and on the
+CPU when it does not; **cuda** does the same, so on a PC without such a card it too goes on with the CPU, with no
+message; **cpu** keeps to the CPU. The **Device** line on Training names the device in use, and the app log names it
+at each start (`app.start`) and at each change (`device.change`). When a change applies is in "Settings and
+settings.json" above.
+
+**What each setting takes.** On the Settings page, **Default input size** is 128, 256, 384 or 512 (256 at first),
+**Default epochs** 5 to 1000 (60) and **Log retention (days)** 1 to 3650 (30): the age at which a record is archived,
+at each start and with the archive button on Logs & Export (section 8). Three more are only in `settings.json` and are
+read at the next start: `max_image_megapixels` (50) and `max_image_megabytes` (200), the most an image may hold before
+it is refused, undecoded, on Inspection and in an import (AOI-INSP-005), each a whole number of 1 or more; and
+`map_retention_days_ok` (7), 0 or more (section 8, Evidence files). AOI-SET-008 refuses any other value at start-up,
+naming the setting, the value and what it takes.
+
+**Demo workspace.** The demo has a workspace of its own, beside the station's, with its own `settings.json`; section 9
+says how an Admin opens and leaves it.
 
 ## 2. Board models and scale
 
@@ -109,7 +138,26 @@ can at a smaller scale. When the window is too short for every field of the Thre
 with this notice and the note under the AI score threshold shown, the tab scrolls: use the scroll bar at its right,
 the mouse wheel, or Tab, which brings each field into view.
 
-(to be written: creating a board model in full)
+**Creating a board model.** Press **+ New** in the header (Engineer or Admin; an Operator is refused with AOI-USR-001)
+and type the name under "Board model name (e.g. TBOX-A1 Rev2)"; spaces at its ends are dropped, and an empty name
+creates nothing. The new board model is chosen in the header at once, on every page. A name that exists, typed exactly,
+creates nothing and chooses that board model (the status bar says when it is already chosen); one that differs from an
+existing name only in case, or that cannot name a folder, is refused (Names, above). The app has no step to rename or
+delete a board model, so check the name before OK. Creating it writes `board_model.create` to the audit trail and
+stores the default recipe as revision 1, saved by the system (`recipe.default`), so its first boards already name the
+recipe revision that judged them. It has no Golden board, AI model or scale yet; Home shows how far it has come on six
+cards, each with a link to its page. The steps, in order:
+
+1. For a customer's images, an Admin moves the new board model into that customer's dataset store (Settings › Dataset
+   stores, Move Board Model In…, section 3) before the first import: each image is then encrypted as it is copied, and
+   never written plain.
+2. On Training, import OK and NG images and make an OK one the reference with Set Reference (section 3). From then on
+   Inspection compares boards with that Golden board, with AOI-TRN-003 in its alarm log while no AI model judges them.
+3. Label, check and freeze a dataset version and lock its validation set (section 3), then train an AI model version
+   from it and activate it (section 4).
+4. On the Recipe Editor, set the scale (Scale, above), draw the ROIs and set the thresholds (section 5), and save the
+   recipe.
+5. On AI Model Test, test the active AI model on the locked validation set (section 6).
 
 ## 3. Samples, labels and datasets
 
@@ -370,9 +418,10 @@ active (AOI-TRN-049), nor one whose Golden board cannot be read (AOI-TRN-048); t
 
 **AI model card.** Select a version and press AI Model Card to read its card under the list: what it is and what it
 was trained on (dataset version, customer, seed, code, settings, who trained it and when), the set-up, its thresholds,
-its known limits and the sign-off lines for the AI lead and the quality lead. Until it is tested on its locked
-validation set, its first line says so and it gives no rate. Export AI Model… writes the weights-only `.pt` with its
-card beside it, as `.card.md` and `.card.json`.
+its known limits and the sign-off lines for the AI lead and the quality lead. Its first line says it is not yet tested
+on a locked validation set, and it gives no rate: the card is written when the version is trained, and a later AI Model
+Test does not fill it in yet. The counts of a test are on AI Model Test's tiles and in its Validation Report…. Export
+AI Model… writes the weights-only `.pt` with its card beside it, as `.card.md` and `.card.json`.
 
 ## 5. Recipes
 
@@ -456,7 +505,29 @@ Restore as New Revision opens the Save Recipe sheet for a copy of the revision p
 it changes from the latest one; Save Revision saves it and shows it, after asking whether to discard any unsaved
 changes. The revisions before stay as they were.
 
-(to be written: the other thresholds)
+**The other thresholds** (Thresholds tab), each with its value in a new board model's recipe and the range its field
+takes:
+
+- **WARN band (fraction of the threshold)**, 0.80 (0.1 to 1): the AI score, the changed area and each ROI's AI score
+  are WARN from this fraction of their threshold up to it. The similarity, NG below its threshold, is WARN over the
+  same share of the distance from its threshold to 1 (from 0.80 to under 0.84 at the defaults). At 1 none of these
+  checks gives WARN.
+- **Pixel difference (0-255)**, 45 (1 to 255): how far a pixel's colour may differ from the Golden board's before it
+  counts as changed.
+- **Minimum defect area (px)**, 40 (1 to 100,000), or **Minimum defect size (mm)** under a scale (section 2): a region
+  of change, or of the AI map, smaller than this is dropped as noise.
+- **Similarity minimum (SSIM)**, 0.80 (0 to 1): the board's structural similarity to the Golden board, 1 for the same
+  picture; below it the board is NG.
+- **Maximum changed area %**, 0.50 (0 to 100): the share of the board's pixels changed by the pixel difference or more;
+  at or above it the board is NG.
+- **Allowed difference regions**, 0 (0 to 1000): the board is NG when the comparison finds more regions of change, each
+  at least the minimum defect area, than this; it has no WARN band.
+
+The pixel difference, the similarity, the changed area and the difference regions judge only while **Use the Golden
+board comparison** is ticked and the board model has a Golden board. While it runs, Compare's decision table also shows
+**Alignment points**, which no recipe sets: with fewer than 12 points matched between the board and the Golden board,
+the board is WARN, as the other checks may be off. A board is NG when any check is NG, else WARN when any check is WARN
+or a defect above Minor severity is on it, else OK.
 
 ## 6. AI model test and reports
 
@@ -479,7 +550,13 @@ validation on a dataset version also stores recall per defect type, by the type 
 
 **Validation Report.** On History, select a run made on a frozen dataset version's locked validation set and press Validation Report…: the PDF follows the validation steps a customer signs: the data and the labeller agreement check, the targets agreed before testing beside the results, the locked set's manifest SHA-256, the results with counts and bounds, a page for each missed defect and false call, the AI model card, known limits and signature lines for the customer and the AI lead. A run on a folder, or a board model with no agreement check, has none (AOI-TST-007). The Korean headings are drafts for native review.
 
-(to be written: Export Overlays)
+**Overlays.** AI Model Test has no overlay export. Each run keeps the overlay of each of its rows in the workspace,
+under `results/test_runs/<run UUID>`, for its previews, and Export Report and Validation Report… print the overlay of
+each missed defect and false call. The overlays of inspected boards are exported on Logs & Export with **Export Image
+Overlays** (section 8): it asks first, naming the count, then copies the overlay picture of each record **Filter**
+listed, under its own name (section 8, Evidence files), into the folder you pick, the workspace's `exports` folder
+offered first; a record whose overlay file is gone is left out. The audit trail records it as `export.overlays`, with
+the folder, the filter and the counts.
 
 Each validation run is stored with a UUID and the UUID of the AI model active when it ran. **Export CSV** writes one row
 per image (`image`, `gt` the label, `ai_result` the verdict, `score`, `defects`, `pass_fail`, `ai_check`, `defect_type` as
@@ -687,7 +764,34 @@ default workspace folder; 0 deletes them at the next start); NG and WARN maps, a
 kept until an Admin deletes the record (Delete Records…, above). Each sweep is in the audit trail as `maps.sweep`; a
 file the app cannot delete (open in another program) is tried again at the next start.
 
-(to be written: history, archive, the audit trail, error codes)
+**History.** Logs & Export reads the records in the background when it opens, with "Loading records…" over the table
+after a second, and the exports and Delete Records… wait until they are listed. Its **Operator** box lists every user
+of the workspace, whatever their role, and the line under the table adds how many records of the workspace are
+archived. The Operator manual (section 5) and the paragraphs above give the rest.
+
+**Archive.** At each start the app archives the records older than **Log retention (days)** (section 1), and **Archive
+older than 30 days** on Logs & Export, which names the retention in force, does the same at once; it is grey for an
+Operator. Archiving deletes and moves nothing: an archived record is only left out of the list until **Include
+archived** is ticked, and opens on Compare and goes into an export like any other. No step brings a record back, so a
+lower retention leaves the older records archived for good. The button's archive is in the audit trail as
+`inspection.archive`, with the days and the count; the one at start-up is in the app log as `retention.archived`.
+
+**The audit trail.** The audit trail keeps each change made in the app, from a recipe saved or an AI model version
+activated to a label set, a setting saved or a record deleted, and each export. An entry holds the time (UTC), the
+user's UUID and role, the action (such as `recipe.save` or `model.activate`), the object and its UUID, the object before
+and after, and the reason when one was asked for; the sections above name the entries of each step. No entry can be
+changed or deleted, by the app or by a database tool. A sign-in with Switch User is not an entry: each inspection record
+names its user. No page of this version lists the trail; it is the `audit` table of `aoi.sqlite`, so read it from a copy
+of that file, since a database tool that holds the station's file stops a change with AOI-SET-013 (section 1).
+
+**Codes.** Every message shown when the app cannot do what was asked carries a code, `AOI-<area>-<number>`, whose area
+names the part of the app: INSP Inspection, CMP Compare, TRN Training and datasets, TST AI Model Test, RCP recipes and
+scale, LOG Logs & Export, USR users and roles, SET settings and the workspace. [The list of codes](../error-codes.md)
+gives each one's title, what happened and what to do; it is made from the app's own catalogue, so it matches the build.
+Each message shown is written to the app log, `logs/aoi-<date>.jsonl` in the workspace (one file per UTC day), as
+`error.shown` with its code, the page, the details and the stack trace, naming a user only by UUID; and to the alarm log
+on Inspection as `[ERROR]` (Operator manual, section 4). For AOI-SET-007, a fault the app did not expect, send that
+day's log file to support (section 1 says where the log of a start that stopped goes).
 
 ## 9. Demo workspace
 
