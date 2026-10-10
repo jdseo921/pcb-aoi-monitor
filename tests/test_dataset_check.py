@@ -180,7 +180,21 @@ def test_req_trn_018_tune_chooses_the_comparisons_thresholds_on_pku(tmp_path: Pa
     assert tune["boards"] == {"train": 1, "held_out": 0}
     assert tune["train"]["chosen"]["found"] == 1 and tune["train"]["chosen"]["false_windows"] == 0
     assert tune["held_out"]["chosen"]["defects"] == 0
-    assert "comparison thresholds trained" in (out / "summary.md").read_text(encoding="utf-8")
+    assert tune["held_out_by"].startswith("a seeded share")
+    assert "pku comparison thresholds trained" in (out / "summary.md").read_text(encoding="utf-8")
+
+
+def test_req_trn_018_tune_on_deeppcb_holds_out_the_datasets_test_split(tmp_path: Path) -> None:
+    """--tune with --deeppcb chooses the pair on the trainval split and counts the test split at the chosen pair and
+    at the default, with no seeded share: the dataset's authors drew the split."""
+    deeppcb = _deeppcb(tmp_path / "d", boards=4)
+    out = tmp_path / "out"
+    assert dc.main(["--out", str(out), "--deeppcb", str(deeppcb), "--tune"]) == 0
+    tune = json.loads((out / "results.json").read_text(encoding="utf-8"))["deeppcb"]["tune"]
+    assert tune["boards"] == {"train": 3, "held_out": 1} and tune["held_out_by"].startswith("the dataset's test split")
+    assert tune["train"]["chosen"]["found"] == 3 and tune["held_out"]["chosen"]["found"] == 1
+    assert tune["held_out"]["chosen"]["defects"] == 1 and tune["held_out"]["chosen"]["false_windows"] == 0
+    assert "deeppcb comparison thresholds trained" in (out / "summary.md").read_text(encoding="utf-8")
 
 
 def test_req_trn_018_held_out_photos_are_a_seeded_share_of_each_board_and_type(tmp_path: Path) -> None:
