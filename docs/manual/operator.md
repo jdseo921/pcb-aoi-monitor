@@ -8,7 +8,21 @@ Words: verdicts are OK, NG and WARN (양품, 불량, 확인 필요); see the Cha
 
 ## 1. Starting a shift
 
-(to be written: picking your name, the board model, the view)
+**Your name.** Once the station is set up, the app starts signed in as the user `operator`; the header names the user
+signed in and their role, at its right. Press **Switch User** there, pick your name in the list (each name shows its
+role) and press OK: every board you start from then on is recorded under your name, which the Operator column of Logs &
+Export shows. There is nothing to type, so pick only your own name; if it is not in the list, ask an Admin to add it
+(Settings › Users & roles). The sidebar greys the pages your role cannot open, and pointing at one names the role it
+needs: an Operator opens Home, Inspection, Compare and Logs & Export. The app opens on the page shown when it was last
+closed, or on Home when your role cannot open that page.
+
+**The board model.** The **Board model** box at the left of the header names the board model the boards are judged as,
+on every page. When the app starts it shows the first board model by name, so pick the one of the boards on the line
+before you queue them. Only an Engineer or Admin creates a board model, with **+ New** beside the box. A change of board
+model during a run stops the run (section 2).
+
+**The view.** On Inspection, set the **View** box to the side the boards are photographed from before the first board:
+it shows Top each time the app starts (section 2).
 
 ## 2. Running boards
 
@@ -121,11 +135,26 @@ so you never see the verdict those values gave.
 
 ## 4. Alarms and messages
 
-(to be written: the alarm log, error codes and what to do)
+**The alarm log.** The list at the bottom of Inspection, under the run buttons, is the alarm log, newest line first.
+Each line gives the date and time, the level in brackets, the code and what happened, for example
+`2026-10-10 14:03:22  [NG]  AOI-INSP-003  board_07.png: 2 defect(s)`. `[NG]` marks an NG board: every NG board that is
+recorded has one, while a WARN board has none, only its banner and its record. `[WARN]` says that a run stopped because
+the board model changed (AOI-INSP-012), that a run goes on with a new AI model, recipe, scale or Golden board
+(AOI-INSP-013), or that the board model has no AI model yet (AOI-TRN-003). `[ERROR]` keeps the code and what happened
+of each message shown over a page (below). The log holds every board model and user, shows the newest 1000 lines and
+is still there after a restart.
+
+**Messages.** When the app cannot do what you asked, or has to stop, a message opens over the page. Its title is the
+code and a short name, such as `AOI-INSP-008 Result not saved`; under it comes what happened, then what to do. Do the
+step it gives, then press OK; when the step is for an Engineer or Admin, or the same message comes back, call one and
+give them the code. The code and what happened stay in the alarm log once the message is closed, and
+[the list of codes](../error-codes.md) gives each one with what happened and what to do. The status bar at the bottom
+says what the app is doing and what just happened, such as "End of queue" or why a run stopped; a line there goes after
+a few seconds or when the next one replaces it.
 
 ## 5. End of shift
 
-**History.** Logs & Export lists the boards inspected, newest first, from the last 7 days: every operator's, so the
+**History.** Logs & Export lists the boards inspected, newest first, from a week ago to today: every operator's, so the
 next shift sees the line's history. Narrow it with **From** and **To**, **Board model**, **Operator** and **Result**
 (All, OK, NG or WARN), then press **Filter**; the filters combine. Tick **Include archived** for records older than the
 retention (30 days unless an Admin changed it): they are archived, not deleted, and stay searchable. A click on a
@@ -134,4 +163,10 @@ Enter, or double-click the row) to see that board on Compare as it was decided, 
 under the table counts the listed records by verdict. Only an Admin deletes records, with a reason the audit trail
 keeps.
 
-(to be written: handing over)
+**Handing over.** Let the queue run to its end, or press ■ Stop: the board in hand is still judged and recorded. For
+your counts, set **From** and **To** to the days of your shift, pick your name under **Operator**, press **Filter** and
+read the line under the table. **Export CSV** and **Export Image Overlays** are grey for an Operator: an Engineer or
+Admin exports the records. The next operator signs in with **Switch User** (section 1); boards still queued stay
+queued, and Start goes on with them under the new name (section 2). Closing the app empties the queue, and the next
+start signs in `operator` with the View box on Top, so each operator picks their own name, the board model and the
+view again (section 1).

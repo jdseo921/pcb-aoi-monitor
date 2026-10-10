@@ -254,6 +254,7 @@ class TrainingPage(Page):
         g = QGroupBox(self.tr("Self-training"))
         f = QFormLayout(g)
         self.dataset_version = QComboBox()  # the board model's frozen versions, newest first (REQ-TRN-007)
+        self._cap_version_list()
         self.dataset_version.currentIndexChanged.connect(self._show_version)
         f.addRow(self.tr("Dataset version"), self.dataset_version)
         self.version_line = QLabel()  # its validation set and training set, or why there is nothing to train from
@@ -1013,6 +1014,15 @@ class TrainingPage(Page):
         self.dataset_version.setCurrentIndex(pick if pick >= 0 else max(self.dataset_version.findData(newest), 0))
         self.dataset_version.blockSignals(False)
         self._show_version()
+
+    def _cap_version_list(self) -> None:
+        """The Dataset version list sizes itself to its names, as Qt does, up to 16 characters in the theme's font, so
+        a long name never widens the page: "DS-DEMOTBOXA1-R1-TOP-v1" made the presenter theme 1953 px wide."""
+        self.dataset_version.ensurePolished()  # the stylesheet's font, not Qt's default, before the page is shown
+        self.dataset_version.setMaximumWidth(16 * self.dataset_version.fontMetrics().horizontalAdvance("X"))
+
+    def restyle(self) -> None:
+        self._cap_version_list()  # the presenter theme's font is larger
 
     def _show_version(self) -> None:
         """The line under the dataset version: its locked validation set and its training set, as the sketch counts

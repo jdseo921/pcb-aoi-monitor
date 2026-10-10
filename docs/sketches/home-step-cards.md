@@ -50,7 +50,7 @@ and the button still opens the page.
 
 | Card | Status when done | Status when not done (next step) |
 |---|---|---|
-| 1 | 40 OK · 3 NG · 1 UNSURE; "2 NG labels unchecked" when a check is pending | "No samples yet. Add at least 20 OK boards." |
+| 1 | 40 OK · 3 NG · 1 UNSURE; "2 NG labels unchecked" when a check is pending | "No samples yet. Add at least 70 OK boards." (S58: 50 for the locked validation set and 20 to train, aoi/core/datasets.py; it read 20) |
 | 2 | Active AI model v1.2; progress while training | "No AI model yet. Freeze a dataset, then train." |
 | 3 | Recipe revision 4 · 6 of 10 AOI checks (4 need Stage 2) | "Recipe uses defaults. Draw ROIs on the Golden board." |
 | 4 | Missed defects 0 of 30 · False calls 1 of 50 (counts, never a bare percent) | "Not validated yet. Run the locked validation set." |

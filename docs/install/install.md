@@ -8,7 +8,17 @@ SmartScreen warns about it and the User Account Control prompt names no publishe
 
 ## What you need
 
-- 64-bit (x64) Windows 10 from version 21H2 (build 19044) or Windows 11; the installer refuses older Windows.
+The station PC, as Customers & Launch publishes it ("One published PC spec"):
+
+| Part | Supported |
+|---|---|
+| Windows (64-bit) | Windows 11 IoT Enterprise LTSC 2024 (recommended); Windows 11 Enterprise LTSC 2024; Windows 10 IoT Enterprise LTSC 2021 on existing PCs; Windows 11 Pro or Enterprise yearly versions while Microsoft still patches them. Windows 10 Home and Pro are not supported |
+| Graphics | An NVIDIA card with CUDA speeds up training; without one the app trains and inspects on the processor, more slowly |
+| Disk | An SSD of 1 TB or more, 2 TB recommended |
+| Processor and memory | Not published yet: the reference PC is an open decision in the Charter |
+
+- The installer itself starts on 64-bit Windows 10 from version 21H2 (build 19044) or Windows 11 and refuses older
+  Windows; a Windows it starts on is not supported unless the table names it.
 - An administrator account: the app installs once per PC, into `C:\Program Files\AOI PoC Inspector`, and then runs
   as a standard user. Python is not needed.
 - About 700 MB of free disk for the program, plus the workspace.
@@ -57,6 +67,36 @@ The optional desktop shortcut opens the station's workspace, like the first one.
 | Dataset store keys | Windows Credential Manager, generic credentials named `AOI/dataset-store/<UUID>` | No |
 
 The app opens no port and makes no network connection ([ports.md](ports.md)).
+
+## Antivirus, AppLocker and App Control
+
+The app is built to run beside Microsoft Defender with real-time scanning on, with no exclusion: it opens no port
+([ports.md](ports.md)), starts no other process, and writes only to its workspace folder, the files a user picks and the
+dataset store keys in Windows Credential Manager (and, while the demo is loaded, the demo's folder beside the workspace,
+`<workspace>-Demo`). If a site's scanner slows inspection (Inspection shows each board's time; the budget is 1 s), the
+one exclusion to consider is the workspace folder, for real-time scanning only. Neither the scan nor the exclusion has
+been tried on the reference PC yet. Never exclude the app's folder: it is the part an attacker would change.
+
+Under AppLocker, the default rules allow apps in `C:\Program Files`, where the installer puts the app. Under App
+Control for Business, an unsigned build is blocked unless the policy allows it by path or hash; the signed release
+(not built yet, plan item J6) is meant to be allowed by its publisher.
+
+## Backup and restore
+
+There is no one-click backup yet. To back up a station:
+
+1. Close the app (a copy taken while it runs can miss the last records).
+2. Copy the whole workspace folder (`%USERPROFILE%\AOI_Workspace`, or the folder Settings names) to the backup drive:
+   it holds the database, images, AI models, recipes, results, exports and logs. When Settings names another folder,
+   copy `settings.json` from `%USERPROFILE%\AOI_Workspace` too.
+3. Keep each dataset store's recovery sheet apart from the backup. The stores' keys are not in the folder: a copy
+   opens as it is on the same PC and Windows account, and elsewhere only with the sheet printed when the store was
+   made (Settings › Dataset stores, New Store…).
+
+To restore, close the app, put the folder back where it was (or anywhere, and point Settings at it), and start the
+app. On a new PC or another Windows account, an Admin types each store's recovery sheet into Settings › Dataset
+stores › Restore Key…. A restore onto a newer build upgrades the database, keeping a copy of it first ("Going back to
+an earlier build", below). Neither step has been tried on the reference PC yet.
 
 ## Uninstall
 
