@@ -59,6 +59,7 @@ from .base import (
     cell_text,
     fill_table,
     make_table,
+    role_text,
     time_left_text,
     view_text,
 )
@@ -231,7 +232,8 @@ class TrainingPage(Page):
         act.addWidget(button(self.tr("Set Reference"), slot=self._set_reference))
         self.btn_draw = button(self.tr("Draw OK Labels to Check"), slot=self._draw)
         act.addWidget(self.btn_draw)
-        act.addWidget(button(self.tr("Remove"), "danger", self._remove))  # red, last in its row, never the default
+        self.btn_remove = button(self.tr("Remove"), "danger", self._remove)  # red, last in its row, never the default
+        act.addWidget(self.btn_remove)
         ll.addLayout(act)
         split.addWidget(left)
 
@@ -986,6 +988,10 @@ class TrainingPage(Page):
         for a in self.adds:
             a.setEnabled(idle)  # its button and its key
         self.btn_draw.setEnabled(idle)  # a draw would stop the import that runs: one job of the page's at a time
+        admin = self.ctx.role == "Admin"  # only an Admin removes a sample (REQ-LOG-003); the service checks too
+        self.btn_remove.setEnabled(admin)
+        why = self.tr("Removing samples needs the {role} role.").format(role=role_text("Admin"))
+        self.btn_remove.setToolTip("" if admin else why)
         self.samples_empty.link.setEnabled(idle)
         self.working.sync()  # Freeze Dataset… and Freeze, off while a job runs
         self.versions.sync()  # and Split and Lock Validation Set…, Lock and Verify Manifest

@@ -147,6 +147,7 @@ def test_req_trn_005_verify_detects_tampered_file(ctx: AppContext, tmp_path: Pat
     agree(ctx, cal, samples)
     v1 = ctx.freeze_dataset(CAL, "Top", "R3", "Acme")
     paths, root = [i["path"] for i in ctx.dataset_items(v1["uuid"])], ctx.settings.root
+    ctx.set_user("admin")  # only an Admin removes a sample (REQ-LOG-003)
     ctx.delete_sample(ctx.samples(CAL, "NG")[0]["id"])  # its record goes; the file the version names stays
     assert ctx.datasets(CAL) == [v1] and ctx.db.query("PRAGMA foreign_key_check") == []
     assert ctx.verify_dataset(v1["uuid"]) == {

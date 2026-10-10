@@ -145,6 +145,20 @@ class CsvFile:
 
 
 @dataclass(frozen=True)
+class HistoryFilter:
+    """Logs & Export's filter as Filter applied it: local dates YYYY-MM-DD, board model, operator and verdict (OK, NG or
+    WARN), None for All, and whether archived records are listed; the arguments of `AppContext.inspections`. An export
+    or a delete audits the one that listed its records, with their count (REQ-LOG-002, REQ-LOG-003)."""
+
+    date_from: str | None = None
+    date_to: str | None = None
+    board_model: str | None = None
+    operator: str | None = None
+    result: str | None = None
+    include_archived: bool = False
+
+
+@dataclass(frozen=True)
 class BoardStatus:
     """Where the six-step workflow stands for a board model (the Home page's cards)."""
 
@@ -1341,10 +1355,19 @@ class AppContext:
         board_model: str | None = None,
         operator: str | None = None,
         include_archived: bool = False,
+        result: str | None = None,
     ) -> list[dict[str, Any]]:
-        """Inspection records, newest first, filtered by local calendar dates (YYYY-MM-DD), board model and operator,
-        each with its defect_count and absolute image and overlay paths."""
-        return self.db.inspections(date_from, date_to, board_model, operator, include_archived)
+        """Inspection records, newest first, filtered by local calendar dates (YYYY-MM-DD), board model, operator and
+        verdict (`result`: OK, NG or WARN), each with its defect_count and absolute image and overlay paths; within 1 s
+        over 100,000 records (REQ-LOG-001)."""
+        return self.db.inspections(date_from, date_to, board_model, operator, include_archived, result)
+
+    def history_span(self) -> dict[str, Any] | None:
+        """`oldest` and `newest`, the stored times of the first and last record, archived ones included, and how many
+        are `archived`; None for a workspace with no record. Logs & Export's empty state reads it in place of every
+        record, so a filter that matches none over 100,000 records still returns within 1 s (REQ-LOG-001), and its
+        summary line the archived count."""
+        return self.db.inspection_span()
 
     def last_board(self, board_model: str) -> str | None:
         """The image file of the board last inspected under `board_model` (its newest record not archived), which the
@@ -1597,11 +1620,11 @@ class AppContext:
         old = {"label": before["label"], "defect_type": before["defect_type"]}
         self.audit("sample.update", "sample", before["uuid"], old, {"label": label, "defect_type": defect_type})
 
-    @requires("Engineer", QT_TRANSLATE_NOOP("Errors", "Removing a sample"))
+    @requires("Admin", QT_TRANSLATE_NOOP("Errors", "Removing a sample"))
     @transactional
     def delete_sample(self, sample_id: int) -> None:
-        """Remove a sample's record; its image file stays in the workspace. The reference sample cannot be removed
-        (AOI-TRN-007)."""
+        """Remove a sample's record, which only an Admin does (REQ-LOG-003); its image file stays in the workspace. The
+        reference sample cannot be removed (AOI-TRN-007)."""
         before = self.db.sample(sample_id)
         self._refuse_reference_change(before, QT_TRANSLATE_NOOP("Errors", "removed"))
         self.db.delete_sample(sample_id)
@@ -2593,6 +2616,35 @@ class AppContext:
         self.audit("inspection.archive", "inspections", None, None, {"days": days, "archived": n})
         return n
 
+    @requires("Admin", QT_TRANSLATE_NOOP("Errors", "Deleting records"))
+    def delete_inspections(self, inspection_ids: Sequence[int], listed: HistoryFilter, reason: str) -> dict[str, int]:
+        """Delete Records… (REQ-LOG-003, sketch Q25): delete the inspection records `inspection_ids`, which the filter
+        `listed` lists, with their defects and checks, then their evidence files under the results folder (overlay and
+        maps). Only an Admin deletes, and a blank `reason` is refused with AOI-LOG-003, nothing deleted. The rows and
+        the entry `inspection.delete` (before: the records' UUIDs; after: `filter`, `records` and `files`; the reason)
+        commit in one transaction; the files go after it, so no record is ever left without its evidence. A file that
+        would not go (held open) is logged as `records.evidence_left` and reported with AOI-LOG-004 once the rest are
+        gone; one outside the results folder, which only a row edited by hand names, is left. Returns the counts
+        `records` and `files` (those that were there)."""
+        if not reason.strip():
+            raise AoiError("AOI-LOG-003", count=len(inspection_ids))
+        rows = self.db.inspection_files(inspection_ids)
+        results, root = self.settings.results_dir.resolve(), self.settings.root
+        paths = [Path(r[k]).resolve() for r in rows for k in ("overlay_path", "diff_map_path", "ai_map_path") if r[k]]
+        files = [p for p in paths if p.is_relative_to(results) and p.is_file()]  # a swept OK map is gone already
+        with self.db.transaction():
+            self.db.delete_inspections([r["id"] for r in rows])
+            after = {"filter": dataclasses.asdict(listed), "records": len(rows), "files": len(files)}
+            before = {"uuids": [r["uuid"] for r in rows]}
+            self.audit("inspection.delete", "inspections", None, before, after, reason.strip())
+        left = _deleted(files, [])
+        for path, e in left:
+            self.log.warning("records.evidence_left", extra={"path": to_stored(path, root), "reason": str(e)})
+        if left:
+            first, why = to_stored(left[0][0], root), str(left[0][1])
+            raise AoiError("AOI-LOG-004", count=len(rows), left=len(left), file=first, reason=why)
+        return {"records": len(rows), "files": len(files)}
+
     def _sweep_ok_maps(self, days: int | None = None) -> int:
         """Delete the map files of OK results older than `days` (default: `map_retention_days_ok`) and forget their
         paths; NG and WARN maps stay, a disputed verdict needs its evidence (REQ-INSP-012). A system action at start-up,
@@ -2673,12 +2725,14 @@ class AppContext:
         folder: str | Path,
         progress: Callable[[int, int], None] | None = None,
         should_stop: Callable[[], bool] | None = None,
+        listed: HistoryFilter | None = None,
     ) -> int:
         """Copy the overlay images of `inspections` (records from `inspections()`) into `folder`; returns how many. A
         copy that fails stops the export with AOI-LOG-001; the entry names the files that left before it, which stay
         (#178), and stores `folder` relative to the workspace when inside it (REQ-SET-001), else in full. A page runs
         it on the pool (REQ-SET-021, #194): `progress(done, total)` follows each overlay, and once `should_stop()` is
-        true the copies made stay and the audit entry says the export was cancelled."""
+        true the copies made stay and the audit entry says the export was cancelled. `listed`, the filter that listed
+        the records, goes into the entry as `filter`, beside their count `records` (REQ-LOG-002)."""
         sources = [Path(r["overlay_path"]) for r in inspections if r.get("overlay_path")]
         sources = [p for p in sources if p.exists()]
         copied: list[Path] = []
@@ -2700,6 +2754,8 @@ class AppContext:
         after: dict[str, Any] = {
             "folder": stored, "records": len(inspections), "copied": len(copied), "cancelled": stopped
         }  # fmt: skip
+        if listed is not None:
+            after["filter"] = dataclasses.asdict(listed)
         if failed:
             after["error"] = f"{failed[0].name}: {failed[1].strerror or failed[1]}"
         self._audit_files(copied, "export.overlays", "inspections", None, after, sources)
@@ -2723,19 +2779,25 @@ class AppContext:
         return len(rows)
 
     @requires("Engineer", QT_TRANSLATE_NOOP("Errors", "Exporting CSV"))
-    def export_csv_files(self, files: list[CsvFile]) -> None:
+    def export_csv_files(self, files: list[CsvFile], listed: HistoryFilter | None = None) -> None:
         """Write `files` as CSV, all or none (Logs & Export's records and checks, #195), then audit each, every entry
         or none. A file that cannot be written (another program holds it open) is refused with AOI-LOG-002 naming it;
-        when the entries cannot be written the files are removed (#178). Paths are stored as #196 stores them."""
+        when the entries cannot be written the files are removed (#178). Paths are stored as #196 stores them. With
+        `listed`, the filter that listed the records, each entry also holds it as `filter` and the number of records
+        (the rows of the files of inspections) as `records` (REQ-LOG-002)."""
         try:
             atomic.write_all([(f.path, csv_bytes(f.rows, f.fieldnames)) for f in files])
         except OSError as e:
             raise _not_written(e, e.filename) from e
+        scope: dict[str, Any] = {}
+        if listed is not None:
+            records = sum(len(f.rows) for f in files if f.what == "inspections")
+            scope = {"filter": dataclasses.asdict(listed), "records": records}
         try:
             with self.db.transaction():
                 for f in files:
                     after = {"path": to_stored(Path(f.path).absolute(), self.settings.root), "rows": len(f.rows)}
-                    self.audit("export.csv", f.what, None, None, after)
+                    self.audit("export.csv", f.what, None, None, after | scope)
         except BaseException:
             _remove([Path(f.path) for f in files])
             raise

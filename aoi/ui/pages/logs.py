@@ -2,23 +2,34 @@
 
 from __future__ import annotations
 
+import dataclasses
 from collections.abc import Callable
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from PySide6.QtCore import QDate, Qt
 from PySide6.QtGui import QColor, QTextCharFormat
-from PySide6.QtWidgets import QCheckBox, QComboBox, QDateEdit, QFileDialog, QHBoxLayout, QLabel, QMessageBox, QSplitter
+from PySide6.QtWidgets import (
+    QCheckBox,
+    QComboBox,
+    QDateEdit,
+    QFileDialog,
+    QHBoxLayout,
+    QInputDialog,
+    QLabel,
+    QMessageBox,
+    QSplitter,
+)
 
 from ...core.inspector import ai_check
-from ...core.services import AppContext, CsvFile
+from ...core.services import AppContext, CsvFile, HistoryFilter
 from ...errors import AoiError
 from ...times import to_local
 from .. import theme
 from ..widgets.busy import BusyOverlay
 from ..widgets.empty_state import EmptyState
 from ..widgets.image_view import ImageView
-from .base import QT_TRANSLATE_NOOP, Page, button, cell_text, fill_table, make_table, view_text
+from .base import QT_TRANSLATE_NOOP, Page, button, fill_table, make_table, row_key, size_class, view_text
 
 # The columns of the checks file beside the records file (REQ-INSP-012), the header even when no record has checks;
 # ai_check says whether the AI check ran on the record: RAN, OFF or NO_AI_MODEL (`inspector.ai_check`, #246).
@@ -28,6 +39,7 @@ CHECK_COLUMNS = [
 ]  # fmt: skip
 
 DEFAULT_DAYS = 7  # a new page and Reset Filters show the last 7 days
+VERDICTS = ("OK", "NG", "WARN")  # the Result filter's verdicts after All, as the sketch lists them
 
 if TYPE_CHECKING:
     from ..main_window import MainWindow
@@ -39,6 +51,7 @@ class LogsPage(Page):
     def __init__(self, ctx: AppContext, shell: MainWindow) -> None:
         super().__init__(ctx, shell)
         self.rows: list[dict[str, Any]] = []
+        self.listed = HistoryFilter()  # the filter that listed `rows`, which an export audits (REQ-LOG-002)
         f = QHBoxLayout()
         self.d_from = QDateEdit(QDate.currentDate().addDays(-DEFAULT_DAYS))
         self.d_to = QDateEdit(QDate.currentDate())
@@ -49,12 +62,20 @@ class LogsPage(Page):
         self.restyle()
         self.model = QComboBox()
         self.operator = QComboBox()
+        for names in (self.model, self.operator):  # wide as their names where there is room; cut off in a narrow window
+            names.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToContents)
+            names.setMinimumWidth(theme.FILTER_MIN_W)  # rather than hold it past 1600 px with the Result filter
+        self.result = QComboBox()  # the verdict, All first (REQ-LOG-001)
+        self.result.addItem(self.tr("All"), None)
+        for verdict in VERDICTS:
+            self.result.addItem(theme.verdict_label(verdict), verdict)
         self.archived = QCheckBox(self.tr("Include archived"))
         fields = (
             (self.tr("From"), self.d_from),
             (self.tr("To"), self.d_to),
             (self.tr("Board model"), self.model),
             (self.tr("Operator"), self.operator),
+            (self.tr("Result"), self.result),
         )
         for label, w in fields:
             f.addWidget(QLabel(label))
@@ -67,47 +88,59 @@ class LogsPage(Page):
         split = QSplitter(Qt.Orientation.Horizontal)
         self.table = make_table(
             [
-                self.tr("ID"),
                 self.tr("Time"),
                 self.tr("Board model"),
+                self.tr("AI model"),
                 self.tr("Result"),
                 self.tr("Defects"),
-                self.tr("Score"),
                 self.tr("Operator"),
                 self.tr("View"),
+                self.tr("Recipe rev"),
                 self.tr("Image"),
             ]
         )
         self.table.verticalHeader().setDefaultSectionSize(theme.TARGET_H)  # a history row is an operator target
         self.table.itemSelectionChanged.connect(self._preview)
+        self.table.activated.connect(lambda _index: self.open_in_compare())  # Enter or a double-click on a row
         self.empty = EmptyState(self.table)
         self.busy = BusyOverlay(self.table, self.tr("Exporting…"))
+        self.busy_delete = BusyOverlay(self.table, self.tr("Deleting…"))
         split.addWidget(self.table)
         self.view = ImageView(placeholder=self.tr("Select a row to see its overlay"))
         split.addWidget(self.view)
-        split.setSizes([1000, 600])
+        split.setSizes([1100, 500])  # the nine columns of the sketch, the image name cut short at 1920 px
         self.root.addWidget(split, 1)
 
-        b = QHBoxLayout()
+        line = QHBoxLayout()  # the counts, and the selected record's way to Compare (the Logs sketch)
         self.summary = QLabel("")
         self.summary.setObjectName("muted")
-        b.addWidget(self.summary, 1)
+        line.addWidget(self.summary, 1)
+        self.btn_compare = size_class(button(self.tr("Open in Compare ›"), slot=self.open_in_compare), "T")
+        line.addWidget(self.btn_compare)
+        self.root.addLayout(line)
+        b = QHBoxLayout()
+        b.addStretch(1)
         self.btn_csv = button(self.tr("Export CSV"), slot=self.export_csv)
         self.btn_img = button(self.tr("Export Image Overlays"), slot=self.export_overlays)
         self._arch_days = ctx.settings.log_retention_days  # the day count the button shows and archives by (#201)
         self.btn_arch = button(self._archive_text(), slot=self.archive)
-        for x in (self.btn_csv, self.btn_img, self.btn_arch):
+        # red, the Admin's alone, last in its row and never the default (REQ-LOG-003, REQ-SET-018)
+        self.btn_delete = button(self.tr("Delete Records…"), "danger", self.delete_records)
+        for x in (self.btn_csv, self.btn_img, self.btn_arch, self.btn_delete):
             b.addWidget(x)
         self.root.addLayout(b)
 
     def refresh(self) -> None:
-        rows = self.ctx.inspections(
+        listed = HistoryFilter(
             self.d_from.date().toString("yyyy-MM-dd"),
             self.d_to.date().toString("yyyy-MM-dd"),
             self.model.currentData(),
             self.operator.currentData(),
+            self.result.currentData(),
             self.archived.isChecked(),
         )
+        rows = self.ctx.inspections(**dataclasses.asdict(listed))
+        self.listed = listed
         self.table.clearSelection()  # the preview follows the selection, so it clears now and never reads a row that
         # fill_table is replacing (#174): a selected row that survives a shrinking table still holds an old record's ID
         self.rows = rows
@@ -115,39 +148,40 @@ class LogsPage(Page):
             self.table,
             [
                 [
-                    r["id"],
                     to_local(r["time"]),
                     r["board_model"],
+                    r["model_version"] or "",
                     theme.verdict_label(r["result"]),
                     r["defect_count"],
-                    r["score"] or 0.0,
                     r["operator"],
                     view_text(r["view"]) if r["view"] else "",  # rows from before migration 0005 recorded no view
+                    r["recipe_rev"],
                     Path(r["image_path"]).name,
                 ]
                 for r in self.rows
             ],
             [theme.VERDICT_COLORS[r["result"]] if r["result"] != "OK" else None for r in self.rows],
+            keys=[r["id"] for r in self.rows],
+            color_column=3,  # the Result cell alone: a whole coloured row reads poorly at 14 pt (the Logs sketch)
         )
-        n = len(self.rows)
-        ng = sum(r["result"] == "NG" for r in self.rows)
-        self.summary.setText(
-            self.tr("{count} inspections · {ng} NG · yield {rate:.1%}").format(count=n, ng=ng, rate=(n - ng) / n)
-            if n
-            else self.tr("No records")
-        )
+        n, span = len(self.rows), self.ctx.history_span()  # not every record: seconds at 100,000 (REQ-LOG-001)
+        by = {v: sum(r["result"] == v for r in self.rows) for v in VERDICTS}
+        counts = self.tr("{count:,} record(s) · OK {ok:,} of {count:,} ({rate:.1f} %) · NG {ng:,} · WARN {warn:,}")
+        line = counts.format(count=n, ok=by["OK"], rate=100 * by["OK"] / max(n, 1), ng=by["NG"], warn=by["WARN"])
+        archived = span["archived"] if span else 0
+        line += self.tr(" · archived {archived:,}").format(archived=archived) if archived else ""
+        self.summary.setText(line if n else self.tr("No records"))
         if n:
             self.empty.hide()
-        elif every := self.ctx.inspections(include_archived=True):
+        elif span:  # not every record: that took seconds at 100,000 (REQ-LOG-001)
             if self.ctx.inspections(*self._default_dates()):  # what Reset Filters would show
                 todo = self.tr("Widen the dates or the filters."), self.tr("Reset Filters"), self.reset_filters
             else:  # Reset Filters would run the same empty query again (#200): the link shows every record instead
-                dates = sorted(to_local(r["time"])[:10] for r in every)  # local dates; the rows come sorted by id
-                archived = any(r["archived"] for r in every)
+                oldest, newest = (to_local(span[k])[:10] for k in ("oldest", "newest"))  # local dates
                 todo = (
                     self.tr("Every record is archived or older than {days} days.").format(days=DEFAULT_DAYS),
                     self.tr("Show All Records"),
-                    lambda: self.show_all_records(dates[0], dates[-1], archived),
+                    lambda: self.show_all_records(oldest, newest, bool(span["archived"])),
                 )
             self.empty.show_state(self.tr("No records match"), *todo)
         else:
@@ -165,7 +199,7 @@ class LogsPage(Page):
 
     def show_all_records(self, oldest: str, newest: str, archived: bool) -> None:
         """Every record (#200): From the oldest record's local date to today, or to the newest record's date when the
-        clock has gone back, every board model and operator, with archived records when there are any."""
+        clock has gone back, every board model, operator and verdict, with archived records when there are any."""
         today = QDate.currentDate().toString("yyyy-MM-dd")
         self._set_filters(oldest, max(newest, today), archived)
 
@@ -174,18 +208,28 @@ class LogsPage(Page):
         self.d_to.setDate(QDate.fromString(date_to, "yyyy-MM-dd"))
         self.model.setCurrentIndex(0)
         self.operator.setCurrentIndex(0)
+        self.result.setCurrentIndex(0)
         self.archived.setChecked(archived)
         self.refresh()
 
     def _preview(self) -> None:
         """The selected record's overlay, or the placeholder: never another record's board (#174)."""
-        rows = self.table.selectionModel().selectedRows()
-        r = None
-        if rows:
-            iid = int(cell_text(self.table, rows[0].row(), 0))
-            r = next((x for x in self.rows if x["id"] == iid), None)  # None: a row no longer listed
+        iid = self._selected_id()
+        r = next((x for x in self.rows if x["id"] == iid), None)  # None: a row no longer listed
         overlay = r["overlay_path"] if r else None
         self.view.set_image(self.ctx.load_image(overlay) if overlay and Path(overlay).exists() else None)
+        self.btn_compare.setEnabled(r is not None)
+
+    def _selected_id(self) -> int | None:
+        """The ID of the record of the first selected row, kept with the row as it sorts; None with none selected."""
+        rows = self.table.selectionModel().selectedRows()
+        return int(row_key(self.table, rows[0].row())) if rows else None
+
+    def open_in_compare(self) -> None:
+        """Open in Compare ›, Enter or a double-click: the selected record on Compare as it was decided, its failing
+        checks marked (REQ-INSP-009; MainWindow.open_stored, #130)."""
+        if (iid := self._selected_id()) is not None:
+            self.shell.open_stored(iid)
 
     def _confirm(self, question: str, overwrites: bool = False) -> bool:
         """Yes to `question`; for one that `overwrites` a file, No is the default, so Enter keeps it (REQ-SET-018)."""
@@ -211,7 +255,7 @@ class LogsPage(Page):
         ):
             return
         self.run_in_background(
-            self._write_csv, list(self.rows), f, checks_file, with_progress=True, busy=self.busy,
+            self._write_csv, list(self.rows), f, checks_file, self.listed, with_progress=True, busy=self.busy,
             on_result=lambda counts: self._csv_written(counts, Path(f), checks_file),
             on_cancel=lambda counts: self._csv_written(counts, Path(f), checks_file),
         )  # fmt: skip
@@ -221,6 +265,7 @@ class LogsPage(Page):
         rows: list[dict[str, Any]],
         f: str,
         checks_file: Path,
+        listed: HistoryFilter,
         progress: Callable[[int, int], None],
         should_stop: Callable[[], bool],
     ) -> tuple[int, int] | None:
@@ -266,7 +311,8 @@ class LogsPage(Page):
                 check_rows.append({"inspection_id": r["id"], "inspection_uuid": r["uuid"], **record, **evidence})
             progress(i, len(rows))
         # both files or neither (#195); one another program holds open is refused with AOI-LOG-002, shown as the dialog
-        self.ctx.export_csv_files([CsvFile(f, out), CsvFile(checks_file, check_rows, "checks", CHECK_COLUMNS)])
+        files = [CsvFile(f, out), CsvFile(checks_file, check_rows, "checks", CHECK_COLUMNS)]
+        self.ctx.export_csv_files(files, listed)  # each entry holds the filter and the count (REQ-LOG-002)
         return len(out), len(check_rows)
 
     def _ai_check(self, inspection_id: int) -> str:
@@ -298,7 +344,7 @@ class LogsPage(Page):
         stopped = self.tr("Stopped: copied {count} overlay image(s) to {folder}; the others were not copied.")
         # On the pool (REQ-SET-021, #194): Cancel keeps the overlays copied so far and says how many.
         self.run_in_background(
-            self.ctx.export_overlays, list(self.rows), d, with_progress=True, busy=self.busy,
+            self.ctx.export_overlays, list(self.rows), d, listed=self.listed, with_progress=True, busy=self.busy,
             on_result=lambda n: self.shell.status(copied.format(count=n, folder=d)),
             on_cancel=lambda n: self.shell.status(stopped.format(count=n or 0, folder=d)),
         )  # fmt: skip
@@ -320,11 +366,43 @@ class LogsPage(Page):
             for day in (Qt.DayOfWeek.Saturday, Qt.DayOfWeek.Sunday):
                 d.calendarWidget().setWeekdayTextFormat(day, weekend)
 
+    def delete_records(self) -> None:
+        """Delete Records… (REQ-LOG-003, Q25): the records the filter lists, once a question naming their count is
+        answered Yes (No is the default, REQ-SET-018) and a reason typed, which the audit trail keeps. The service
+        refuses any role but the Admin's, and a blank reason (AOI-LOG-003); it runs on the pool (REQ-SET-021)."""
+        n = len(self.rows)
+        question = self.tr(
+            "Delete {count} record(s) and their evidence files? This cannot be undone; the audit trail keeps who"
+            " deleted them, when and why."
+        ).format(count=n)
+        yes, no = QMessageBox.StandardButton.Yes, QMessageBox.StandardButton.No
+        if not n or QMessageBox.question(self, self.tr("Delete Records"), question, yes | no, no) != yes:
+            return
+        ask = self.tr("Why are these {count} record(s) deleted?").format(count=n)
+        reason, ok = QInputDialog.getText(self, self.tr("Delete Records"), ask)
+        if not ok:
+            return
+        said = self.tr("Deleted {records} record(s) and {files} evidence file(s)")
+
+        def deleted(counts: dict[str, int] | None) -> None:
+            if counts is not None:
+                self.shell.status(said.format(**counts))
+            self.refresh()
+
+        self.run_in_background(
+            self.ctx.delete_inspections, [r["id"] for r in self.rows], self.listed, reason, busy=self.busy_delete,
+            on_result=deleted, on_cancel=deleted, on_error=lambda _e: self.refresh(),
+        )  # fmt: skip
+
     def update_actions(self) -> None:
-        admin_or_eng = self.ctx.role in ("Engineer", "Admin")  # spec 8: Admin exports logs (Engineer allowed for PoC)
+        idle = self._bg is None  # one export or delete at a time: a second would stop the first (#194)
+        admin_or_eng = self.ctx.role in ("Engineer", "Admin")  # Q58 gives exports to the Admin alone: open for Jay
         for b in (self.btn_csv, self.btn_img):
-            b.setEnabled(admin_or_eng and self._bg is None)  # one at a time: a second would stop the first (#194)
+            b.setEnabled(admin_or_eng and idle)
         self.btn_arch.setEnabled(admin_or_eng)
+        self.btn_delete.setVisible(self.ctx.role == "Admin")  # shown to the Admin alone; the service checks the role
+        self.btn_compare.setEnabled(bool(self.table.selectionModel().selectedRows()))
+        self.btn_delete.setEnabled(idle)
 
     def on_show(self) -> None:
         self.update_actions()

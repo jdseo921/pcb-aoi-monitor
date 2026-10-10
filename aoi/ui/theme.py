@@ -77,6 +77,7 @@ DECISION_ROWS = 7  # and before the decision table shows fewer rows than this, t
 TRY_ROWS = 5  # the rows the Recipe Editor's Try checks table shows before it scrolls (recipe-editor sketch)
 NAV_W, HEADER_H, FIELD_W, CARD_W = 250, 64, 240, 720
 IMAGE_MIN_W, IMAGE_MIN_H, PROGRESS_W = 320, 240, 360
+FILTER_MIN_W = 80  # a name filter's drop-down gives way to this in a narrow window ("All" stays whole; S51)
 MARK_D = 12  # a point picked on an image (Calibrate Scale…): a ring this many px across at every zoom
 WHY_H = 150  # Compare's "why" box at most, AOI-RCP-007's line in it included (S29)
 HANDLE_PX = 16  # a corner handle of the selected defect box on Training's label editor (labels sketch)

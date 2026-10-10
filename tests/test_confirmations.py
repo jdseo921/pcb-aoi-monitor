@@ -62,7 +62,7 @@ def test_req_set_018_enter_on_remove_samples_keeps_them(
 ) -> None:
     """Training, a sample that is not the reference selected, Remove, then Enter on "Remove 1 sample(s) from the
     dataset?": No is the default and has the focus, and the sample stays."""
-    win = _window(qtbot, trained_ctx, "Engineer")
+    win = _window(qtbot, trained_ctx, "Admin")  # only an Admin removes a sample (REQ-LOG-003)
     win.navigate("Training")
     page = win.pages["Training"]
     assert isinstance(page, TrainingPage)
