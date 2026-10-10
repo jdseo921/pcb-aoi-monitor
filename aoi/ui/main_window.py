@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
-from PySide6.QtCore import Qt, QTimer
+from PySide6.QtCore import QSize, Qt, QTimer
 from PySide6.QtGui import QCloseEvent, QColor
 from PySide6.QtWidgets import (
     QApplication,
@@ -221,6 +221,24 @@ NAV = [
 ]
 
 
+class _PageStack(QStackedWidget):
+    """The pages, sized for the one shown (#104): a QStackedWidget asks for the largest minimum of all its pages, so in
+    the scroll area round it every page would scroll as far as the tallest or widest one (Settings, say) needs. Here
+    the stack asks for the page shown, and asks again when another is shown."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.currentChanged.connect(lambda _i: self.updateGeometry())
+
+    def minimumSizeHint(self) -> QSize:  # noqa: N802 (Qt's name)
+        page = self.currentWidget()
+        return page.minimumSizeHint().expandedTo(page.minimumSize()) if page is not None else super().minimumSizeHint()
+
+    def sizeHint(self) -> QSize:  # noqa: N802 (Qt's name)
+        page = self.currentWidget()
+        return page.sizeHint() if page is not None else super().sizeHint()
+
+
 class MainWindow(QMainWindow):
     def __init__(self, ctx: AppContext) -> None:
         super().__init__()
@@ -245,7 +263,7 @@ class MainWindow(QMainWindow):
         self.nav = QListWidget()
         self.nav.setObjectName("nav")
         self.nav.setFixedWidth(theme.NAV_W)
-        self.stack = QStackedWidget()
+        self.stack = _PageStack()
         body.addWidget(self.nav)
         # the pages scroll where the screen is smaller than the widest page, so a 1366 x 768 station shows every
         # control (REQ-SET-004, #104): a QStackedWidget takes the largest minimum of its pages, which held the

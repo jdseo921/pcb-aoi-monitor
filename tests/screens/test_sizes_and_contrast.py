@@ -229,7 +229,10 @@ def _check_graphic(region: np.ndarray | None, name: str, seen: Counter) -> list[
 
 
 def _covered(win: QWidget, w: QWidget) -> bool:
-    """Another widget (an empty state, a busy overlay) is drawn over the middle of `w`: the pixels are not its own."""
+    """Another widget (an empty state, a busy overlay) is drawn over the middle of `w`, or the page's scroll area (#104)
+    has `w` partly out of view: the pixels are not all its own."""
+    if not w.visibleRegion().boundingRect().contains(w.rect()):
+        return True
     top = win.childAt(w.mapTo(win, w.rect().center()))
     return top is not None and top is not w and not w.isAncestorOf(top)
 
