@@ -81,7 +81,9 @@ CSS_COLOUR = re.compile(  # Qt takes "Background: Green" as it takes "background
 )
 CSS_NAMES = {n.lower() for n in QColor.colorNames()}  # green, white, darkred, transparent, …
 DESTRUCTIVE = re.compile(r"^(Delete|Remove|Reset Demo|Clear)\b")  # Reset Filters only changes a view
-QT_OVERRIDES = re.compile(r"Event$|^event$|^eventFilter$|[sS]izeHint$|^paintEngine$")  # Qt virtuals defined on purpose
+QT_OVERRIDES = re.compile(
+    r"Event$|^event$|^eventFilter$|[sS]izeHint$|^heightForWidth$|^paintEngine$"
+)  # Qt virtuals defined on purpose
 QT_INSTALLED = (Signal, SignalInstance, QMetaObject)
 NO_BOARD_MODEL_PAGES = ("Inspection", "Training", "AI Model Test", "Recipe Editor")  # Page.no_board_model()
 

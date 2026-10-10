@@ -222,21 +222,29 @@ NAV = [
 
 
 class _PageStack(QStackedWidget):
-    """The pages, sized for the one shown (#104): a QStackedWidget asks for the largest minimum of all its pages, so in
-    the scroll area round it every page would scroll as far as the tallest or widest one (Settings, say) needs. Here
-    the stack asks for the page shown, and asks again when another is shown."""
+    """The pages in the scroll area round them (#104): as wide as the widest page needs, as a QStackedWidget is, so
+    every page keeps the width it was laid out for, but only as tall as the page shown needs. A QStackedWidget asks
+    for the tallest page's height, so every page would scroll as far down as the tallest one (Settings) needs, and
+    Compare's Try panel would sit below the fold of a 1600 x 900 window."""
 
     def __init__(self) -> None:
         super().__init__()
         self.currentChanged.connect(lambda _i: self.updateGeometry())
 
     def minimumSizeHint(self) -> QSize:  # noqa: N802 (Qt's name)
-        page = self.currentWidget()
-        return page.minimumSizeHint().expandedTo(page.minimumSize()) if page is not None else super().minimumSizeHint()
+        page, hint = self.currentWidget(), super().minimumSizeHint()
+        if page is None:
+            return hint
+        return QSize(hint.width(), max(page.minimumSizeHint().height(), page.minimumHeight()))
 
     def sizeHint(self) -> QSize:  # noqa: N802 (Qt's name)
-        page = self.currentWidget()
-        return page.sizeHint() if page is not None else super().sizeHint()
+        page, hint = self.currentWidget(), super().sizeHint()
+        return hint if page is None else QSize(hint.width(), page.sizeHint().height())
+
+    def heightForWidth(self, width: int) -> int:  # noqa: N802 (Qt's name)
+        """None: the scroll area then gives the page the viewport's height, or its minimum where that is more, as the
+        window gave it before (a wrapped label's preferred height would make every page scroll)."""
+        return -1
 
 
 class MainWindow(QMainWindow):
