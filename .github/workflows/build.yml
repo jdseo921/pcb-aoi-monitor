@@ -1,7 +1,8 @@
-# Builds the app for Windows with PyInstaller, one folder, and checks that it opens (REQ-SET-012; Engineering standard
-# "Build"; Legal & Compliance "Packaging" and "Notices shipped"; ADR 0007). The folder is kept as the run's artifact
-# for 30 days. It is an internal test build: unsigned, without an installer and not a release, since a release comes
-# only signed, from a tagged commit, after two approvals (Engineering, "Signing").
+# Builds the app for Windows with PyInstaller, one folder, and checks that it opens and inspects a synthetic board
+# (REQ-SET-012; Engineering standard "Build"; Legal & Compliance "Packaging" and "Notices shipped"; ADR 0007). The
+# folder is kept as the run's artifact for 30 days, named for its tag when a v* tag was pushed. It is an internal test
+# build: unsigned, without an installer and not a release, since a release comes only signed, from a tagged commit,
+# after two approvals (Engineering, "Signing"); a tag's build is the unsigned part of that.
 name: Windows build
 
 on:
@@ -12,9 +13,14 @@ on:
       - requirements*.lock
       - tools/third_party_notices.py
       - tools/smoke_test_build.py
+      - tools/make_selftest_data.py  # the self-test's boards: drawn from the regression set, judged by aoi/selftest.py
+      - tools/make_synthetic_dataset.py
+      - tests/regression/**
+      - aoi/selftest.py
       - .github/workflows/build.yml
   push:
     branches: [main]
+    tags: ["v*"]
   workflow_dispatch:
 
 permissions:
@@ -49,7 +55,7 @@ jobs:
       - name: Build; stops on a file no license check covers, and writes THIRD_PARTY_NOTICES.txt
         id: build
         run: pyinstaller --noconfirm --clean installer/aoi.spec
-      - name: Start the built app on an empty workspace and check that it opens
+      - name: Start the built app on an empty workspace, check that it opens, and inspect a board with --self-test
         id: smoke
         run: python tools/smoke_test_build.py dist/AOI-PoC-Inspector/AOI-PoC-Inspector.exe
       - name: After a failed start, rebuild with a console and start that, so the log shows the error
@@ -66,6 +72,7 @@ jobs:
           COMMIT: ${{ github.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
           REF: ${{ github.ref }}
+          TAG: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           import hashlib, os, sys
@@ -76,9 +83,12 @@ jobs:
           from aoi.config import APP_NAME, APP_VERSION
 
           env, short = os.environ, os.environ["HEAD_SHA"][:7]
+          tag = env["TAG"]  # a v* tag names the version the app says it is: v0.2.0, or v0.2.0-rc.1
+          if tag and tag != f"v{APP_VERSION}" and not tag.startswith(f"v{APP_VERSION}-"):
+              sys.exit(f"The tag {tag} does not name version {APP_VERSION}, the one in aoi/config.py")
           folder = Path("dist", APP_NAME.replace(" ", "-"))
           (folder / "BUILD-INFO.txt").write_text(
-              f"{APP_NAME} {APP_VERSION}, internal test build g{short}\n"
+              f"{APP_NAME} {APP_VERSION}, internal test build {tag + ' ' if tag else ''}g{short}\n"
               f"Built by GitHub Actions on {datetime.now(UTC).isoformat(timespec='seconds')} from commit {env['COMMIT']}"
               f" ({env['REF']}, head {env['HEAD_SHA']}): {env['RUN_URL']}\n\n"
               "Not a release. It is not signed and has no installer, so Windows may warn that the publisher is unknown,\n"
@@ -94,7 +104,7 @@ jobs:
               with path.open("rb") as f:
                   sums.append(f"{hashlib.file_digest(f, 'sha256').hexdigest()}  {path.relative_to(folder).as_posix()}")
           (folder / "SHA256SUMS.txt").write_text("\n".join(sums) + "\n", encoding="utf-8", newline="\r\n")
-          name = f"{folder.name}-{APP_VERSION}-g{short}-windows-x64-unsigned"
+          name = f"{folder.name}-{tag or APP_VERSION}-g{short}-windows-x64-unsigned"
           with open(env["GITHUB_OUTPUT"], "a", encoding="utf-8") as out:
               out.write(f"name={name}\n")
           print(f"{name}: {len(sums)} files, {sum(p.stat().st_size for p in folder.rglob('*') if p.is_file()) / 1e6:.0f} MB")

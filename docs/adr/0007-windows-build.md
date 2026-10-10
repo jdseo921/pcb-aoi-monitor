@@ -79,3 +79,54 @@ notice shipped. The installer, the certificate (J6) and a second approver (J8) d
 - Still to do for REQ-SET-012: the Inno Setup or MSIX installer with an uninstaller, signing once J6 lands, the GPU
   option with the CUDA runtime (blocked on J8's NVIDIA licenses), the CycloneDX SBOM, the About dialog's notices,
   and a written offer for the Qt source in the EULA and installer.
+
+## Update 2026-10-10 (stage S56): tag builds, a self-test of the build, and the GPU option
+
+Stage S56 of the Stage 1 plan asks for the build half of REQ-SET-012: "CI on a tag builds a one-folder Windows build
+that starts, inspects a board, and opens no console window". Decisions 1 to 7 stand; this adds to 6 and 7.
+
+1. **Tags.** `build.yml` also runs on every pushed `v*` tag, beside main, build pull requests and Run workflow. The
+   artifact and `BUILD-INFO.txt` carry the tag (`AOI-PoC-Inspector-v0.2.0-g<commit>-windows-x64-unsigned`), and a
+   tag that does not name the version in `aoi/config.py` (`v0.2.0`, or `v0.2.0-` and a suffix) fails the build. A
+   tag's build is still the unsigned internal test build of decision 7, kept 30 days: signing and the installer come
+   with S57 and the certificate (J6).
+2. **The build inspects a board.** The .exe has no console and nothing can click in it on CI, so `main.py
+   --self-test WORKSPACE [BOARDS]` (`aoi/selftest.py`, no Qt and no window) opens a new or empty workspace folder,
+   imports the synthetic regression set's golden board, saves the recipe the set is judged with, inspects one of its
+   boards through `AppContext.inspect_file` (the record saved as on the Inspection page), logs `selftest.verdict` with
+   the board, its verdict and the one `tests/regression/expected.json` records, and exits 0 when they match, 1 when
+   not, 2 on a folder that is not new and empty. The board is `ng_00_missing_component.png`, expected NG. For every
+   build the spec runs `tools/make_selftest_data.py`, which draws the set from its seed and keeps `golden.png`, that
+   board and `selftest.json` (about 0.5 MB) as the build's `_internal\selftest` folder: drawings only, never a
+   photograph or a customer's image, and a pass is never quoted as accuracy.
+3. **The smoke test runs the .exe twice** (`tools/smoke_test_build.py`): as before (opens, 15 s with no error, every
+   migration applied), then with `--self-test` (exit 0 and the expected verdict logged, with no error). It also reads
+   the .exe's PE header: subsystem 2 (GUI), which Windows starts without a console window; the console rebuild that
+   CI makes after a failed start is expected to be 3.
+
+The stage, checked against this record: PyInstaller's license is decision 5 (its Bootloader exception lets the
+bootloader go into any program without the GPL's terms reaching it, and the Legal standard's "Packaging" rule names
+PyInstaller); Qt stays as separate files a user can replace (decision 1); windowed with no console (item 3 checks
+it); Python 3.11 and PyTorch's CPU build (`build.yml`, `requirements-torch-cpu.lock`); third-party license texts
+(decision 4). **Not done: Noto Sans KR.** The app has no Korean UI yet (REQ-SET-006; when it ships is open in
+the Charter) and no font file is in the repository; bundling one adds a third-party file (OFL-1.1, which the Legal
+standard allows), so it is left to Jay to say whether it ships now or with the Korean UI, with its OFL text in the
+notices.
+
+### The GPU option (documented, not built in CI)
+
+The Engineering standard's "Build" rule asks for a GPU option that bundles the CUDA runtime. On a Windows PC with an
+NVIDIA GPU, the same spec builds it from PyTorch's CUDA build; untested so far:
+
+```powershell
+python -m pip install --require-hashes --no-deps -r requirements-torch-cuda.lock
+python -m pip install --require-hashes -r requirements-build.lock
+pyinstaller --noconfirm --clean --distpath dist-gpu --workpath build-gpu installer\aoi.spec
+python tools\smoke_test_build.py dist-gpu\AOI-PoC-Inspector\AOI-PoC-Inspector.exe
+```
+
+PyTorch's Windows CUDA wheel carries the CUDA libraries it needs inside its own `torch\lib` folder (the lock's
+NVIDIA packages are for Linux only), so they ship as part of torch, and the app uses the GPU when Settings' AI device
+is auto or CUDA and one is found. CI does not build it: GitHub's Windows runners have no GPU to test it on, and the
+NVIDIA licenses of those libraries are not yet allowed (J8, ADR 0003), nor has it been checked that the notices
+carry NVIDIA's texts. Until J8 decides them, a GPU folder stays on the PC that built it.
