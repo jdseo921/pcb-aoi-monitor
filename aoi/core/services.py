@@ -1619,11 +1619,11 @@ class AppContext:
         old = {"label": before["label"], "defect_type": before["defect_type"]}
         self.audit("sample.update", "sample", before["uuid"], old, {"label": label, "defect_type": defect_type})
 
-    @requires("Engineer", QT_TRANSLATE_NOOP("Errors", "Removing a sample"))
+    @requires("Admin", QT_TRANSLATE_NOOP("Errors", "Removing a sample"))
     @transactional
     def delete_sample(self, sample_id: int) -> None:
-        """Remove a sample's record; its image file stays in the workspace. The reference sample cannot be removed
-        (AOI-TRN-007)."""
+        """Remove a sample's record, which only an Admin does (REQ-LOG-003); its image file stays in the workspace. The
+        reference sample cannot be removed (AOI-TRN-007)."""
         before = self.db.sample(sample_id)
         self._refuse_reference_change(before, QT_TRANSLATE_NOOP("Errors", "removed"))
         self.db.delete_sample(sample_id)
@@ -2614,6 +2614,35 @@ class AppContext:
         n = self.db.archive_old(days)
         self.audit("inspection.archive", "inspections", None, None, {"days": days, "archived": n})
         return n
+
+    @requires("Admin", QT_TRANSLATE_NOOP("Errors", "Deleting records"))
+    def delete_inspections(self, inspection_ids: Sequence[int], listed: HistoryFilter, reason: str) -> dict[str, int]:
+        """Delete Records… (REQ-LOG-003, sketch Q25): delete the inspection records `inspection_ids`, which the filter
+        `listed` lists, with their defects and checks, then their evidence files under the results folder (overlay and
+        maps). Only an Admin deletes, and a blank `reason` is refused with AOI-LOG-003, nothing deleted. The rows and
+        the entry `inspection.delete` (before: the records' UUIDs; after: `filter`, `records` and `files`; the reason)
+        commit in one transaction; the files go after it, so no record is ever left without its evidence. A file that
+        would not go (held open) is logged as `records.evidence_left` and reported with AOI-LOG-004 once the rest are
+        gone; one outside the results folder, which only a row edited by hand names, is left. Returns the counts
+        `records` and `files` (those that were there)."""
+        if not reason.strip():
+            raise AoiError("AOI-LOG-003", count=len(inspection_ids))
+        rows = self.db.inspection_files(inspection_ids)
+        results, root = self.settings.results_dir.resolve(), self.settings.root
+        paths = [Path(r[k]).resolve() for r in rows for k in ("overlay_path", "diff_map_path", "ai_map_path") if r[k]]
+        files = [p for p in paths if p.is_relative_to(results) and p.is_file()]  # a swept OK map is gone already
+        with self.db.transaction():
+            self.db.delete_inspections([r["id"] for r in rows])
+            after = {"filter": dataclasses.asdict(listed), "records": len(rows), "files": len(files)}
+            before = {"uuids": [r["uuid"] for r in rows]}
+            self.audit("inspection.delete", "inspections", None, before, after, reason.strip())
+        left = _deleted(files, [])
+        for path, e in left:
+            self.log.warning("records.evidence_left", extra={"path": to_stored(path, root), "reason": str(e)})
+        if left:
+            first, why = to_stored(left[0][0], root), str(left[0][1])
+            raise AoiError("AOI-LOG-004", count=len(rows), left=len(left), file=first, reason=why)
+        return {"records": len(rows), "files": len(files)}
 
     def _sweep_ok_maps(self, days: int | None = None) -> int:
         """Delete the map files of OK results older than `days` (default: `map_retention_days_ok`) and forget their

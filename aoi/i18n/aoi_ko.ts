@@ -1272,7 +1272,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+166"/>
+        <location line="+195"/>
         <source>Exporting an AI model</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1282,7 +1282,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-225"/>
+        <location line="-254"/>
         <source>Changing users</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1357,7 +1357,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+82"/>
+        <location line="+9"/>
+        <source>Deleting records</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+102"/>
         <source>Exporting overlay images</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2637,6 +2642,36 @@
     </message>
     <message>
         <location line="+8"/>
+        <source>Reason needed</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Deleting {count} record(s) needs a reason, which the audit trail keeps with the deletion.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>Nothing was deleted. Press Delete Records… again and type why they go.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+4"/>
+        <source>Evidence files left</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>{count} record(s) were deleted and the audit trail records it, but {left} of their evidence file(s) would not go, {file} first ({reason}).</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>Close the image viewer or other app that has the file open, then delete the files the log names (records.evidence_left) from the results folder.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+8"/>
         <source>Not allowed for this role</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2916,7 +2951,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1048"/>
+        <location line="-1070"/>
         <source>Board judged NG</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3041,7 +3076,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+193"/>
+        <location line="+215"/>
         <source>Workspace in use</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3191,7 +3226,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/training.py" line="+524"/>
+        <location filename="../ui/pages/training.py" line="+526"/>
         <location filename="../ui/pages/training_import.py" line="+38"/>
         <source>{code} {title}</source>
         <translation type="unfinished"></translation>
@@ -4228,7 +4263,7 @@
 <context>
     <name>LogsPage</name>
     <message>
-        <location filename="../ui/pages/logs.py" line="+62"/>
+        <location filename="../ui/pages/logs.py" line="+72"/>
         <source>Include archived</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4301,23 +4336,33 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <location line="+1"/>
+        <source>Deleting…</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <location line="+2"/>
         <source>Select a row to see its overlay</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location line="+9"/>
-        <location line="+112"/>
+        <location line="+114"/>
         <source>Export CSV</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-111"/>
+        <location line="-113"/>
         <source>Export Image Overlays</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+54"/>
+        <location line="+4"/>
+        <source>Delete Records…</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+52"/>
         <source>Every record is archived or older than {days} days.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4342,7 +4387,28 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-174"/>
+        <location line="+22"/>
+        <source>Delete {count} record(s) and their evidence files? This cannot be undone; the audit trail keeps who deleted them, when and why.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+4"/>
+        <location line="+3"/>
+        <source>Delete Records</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="-1"/>
+        <source>Why are these {count} record(s) deleted?</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+4"/>
+        <source>Deleted {records} record(s) and {files} evidence file(s)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="-206"/>
         <source>{count} inspections · {ng} NG · yield {rate:.1%}</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4422,8 +4488,8 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-268"/>
-        <location line="+296"/>
+        <location line="-271"/>
+        <location line="+330"/>
         <source>All</source>
         <translation>전체</translation>
     </message>
@@ -5121,7 +5187,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/logs.py" line="-316"/>
+        <location filename="../ui/pages/logs.py" line="-350"/>
         <source>Logs &amp; Export</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5177,7 +5243,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/training.py" line="-375"/>
+        <location filename="../ui/pages/training.py" line="-376"/>
         <source>Training</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6441,7 +6507,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/services.py" line="-2706"/>
+        <location filename="../core/services.py" line="-2735"/>
         <source>Aligning {count} images to the reference board</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6490,23 +6556,23 @@
     </message>
     <message>
         <location line="+1"/>
-        <location line="+601"/>
+        <location line="+602"/>
         <source>Import Folder…</source>
         <translation>폴더 가져오기…</translation>
     </message>
     <message>
-        <location line="-589"/>
+        <location line="-590"/>
         <source>Training needs 20 OK images or more in a dataset version&apos;s training set</source>
         <translation>학습에는 데이터셋 버전의 학습 세트에 OK 이미지가 20장 이상 필요합니다</translation>
     </message>
     <message>
         <location line="+20"/>
-        <location line="+90"/>
+        <location line="+91"/>
         <source>ID</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-89"/>
+        <location line="-90"/>
         <source>Label</source>
         <translation>라벨</translation>
     </message>
@@ -6562,7 +6628,7 @@
     </message>
     <message>
         <location line="+3"/>
-        <location line="+461"/>
+        <location line="+462"/>
         <source>Remove</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6632,7 +6698,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-211"/>
+        <location line="-212"/>
         <source>All</source>
         <translation>전체</translation>
     </message>
@@ -6682,7 +6748,7 @@
         <translation>검토할 OK 라벨 추출</translation>
     </message>
     <message>
-        <location line="+62"/>
+        <location line="+63"/>
         <source>Version</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6713,13 +6779,13 @@
     </message>
     <message>
         <location line="+1"/>
-        <location line="+770"/>
+        <location line="+774"/>
         <location line="+40"/>
         <source>Roll Back</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-806"/>
+        <location line="-810"/>
         <source>AI Model Card</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6904,7 +6970,12 @@
         <translation>{type} ×{count}</translation>
     </message>
     <message>
-        <location line="+117"/>
+        <location line="+88"/>
+        <source>Removing samples needs the {role} role.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+33"/>
         <source>No frozen dataset version of {board_model} yet; training reads only a frozen version&apos;s training set, once its validation set is locked.</source>
         <translation>{board_model}의 고정된 데이터셋 버전이 아직 없습니다. 학습은 검증 세트가 잠긴 고정 버전의 학습 세트만 읽습니다.</translation>
     </message>
@@ -6929,7 +7000,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-299"/>
+        <location line="-303"/>
         <source>Add at least 20 OK boards with Add OK Images… or Import Folder…</source>
         <translation>OK 이미지 추가… 또는 폴더 가져오기…로 OK 보드를 20개 이상 추가하세요</translation>
     </message>
@@ -6939,7 +7010,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+278"/>
+        <location line="+282"/>
         <source>Rolled back to AI model {version}</source>
         <translation type="unfinished"></translation>
     </message>

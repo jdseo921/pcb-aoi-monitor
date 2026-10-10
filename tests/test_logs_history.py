@@ -9,6 +9,7 @@ without the machine it was measured on, and these are never quoted as the produc
 
 from __future__ import annotations
 
+import dataclasses
 import os
 import platform
 import random
@@ -22,13 +23,15 @@ from typing import Any, cast
 
 import pytest
 from PySide6.QtCore import QDate, Qt
-from PySide6.QtWidgets import QFileDialog, QMessageBox
+from PySide6.QtWidgets import QFileDialog, QInputDialog, QMessageBox
 from pytestqt.qtbot import QtBot
 
-from aoi.core.services import AppContext
+from aoi.core.services import AppContext, HistoryFilter
+from aoi.errors import AoiError
 from aoi.times import local_day_bounds_utc
 from aoi.ui.main_window import MainWindow
 from aoi.ui.pages.logs import LogsPage
+from aoi.ui.pages.training import TrainingPage
 
 N = 100_000
 DAYS = 200  # spread over the last 200 days: 500 a day
@@ -277,3 +280,99 @@ def test_req_log_002_each_export_audits_the_filter_that_listed_its_records(
     ]  # fmt: skip
     assert {(e["user_uuid"], e["role"]) for e in entries} == {(ctx.db.user_uuid("engineer"), "Engineer")}
     assert entries[0]["after"]["copied"] == 2 and all(e["at_utc"].endswith("+00:00") for e in entries)
+
+
+def _evidence(ctx: AppContext, inspection_id: int) -> list[Path]:
+    record = ctx.inspection(inspection_id) or {}
+    return [Path(record[k]) for k in ("overlay_path", "diff_map_path", "ai_map_path")]
+
+
+def test_req_log_003_only_an_admin_deletes_records_with_their_evidence_and_an_entry(ctx: AppContext) -> None:
+    """Deleting records is the Admin's alone, checked by the service whatever the screen shows: an Operator and an
+    Engineer are refused with AOI-USR-001, and a blank reason with AOI-LOG-003, nothing deleted or audited. The
+    Admin's delete takes the records with their defects and checks and their evidence files under results/, leaves the
+    other records and files, and writes one entry with the user, the time, the filter, the count, the records' UUIDs
+    and the reason."""
+    ctx.ensure_board_model("B")
+    gone = [_record(ctx, "NG", "kim", defects=2, evidence=True) for _ in range(2)]
+    kept = _record(ctx, "OK", "lee", evidence=True)
+    uuids = [(ctx.inspection(i) or {})["uuid"] for i in gone]
+    listed = HistoryFilter("2026-10-01", "2026-10-10", "B", "kim", "NG", True)
+    for user in ("operator", "engineer"):
+        ctx.set_user(user)
+        with pytest.raises(AoiError) as refused:
+            ctx.delete_inspections(gone, listed, "a test")
+        assert refused.value.code == "AOI-USR-001" and refused.value.what == "Deleting records needs the Admin role."
+    ctx.set_user("admin")
+    with pytest.raises(AoiError) as blank:
+        ctx.delete_inspections(gone, listed, "  ")
+    assert blank.value.code == "AOI-LOG-003"
+    assert len(ctx.inspections(include_archived=True)) == 3 and not ctx.audit_entries(action="inspection.delete")
+    assert all(p.is_file() for i in [*gone, kept] for p in _evidence(ctx, i))
+    files = [p for i in gone for p in _evidence(ctx, i)]
+
+    assert ctx.delete_inspections(gone, listed, "Test boards of the pilot run") == {"records": 2, "files": 6}
+    assert [r["id"] for r in ctx.inspections(include_archived=True)] == [kept]
+    assert ctx.db.query("SELECT inspection_id FROM defects") == [] and not any(p.exists() for p in files)
+    assert all(p.is_file() for p in _evidence(ctx, kept))
+    (entry,) = ctx.audit_entries(action="inspection.delete")
+    assert (entry["user_uuid"], entry["role"], entry["reason"]) == (
+        ctx.db.user_uuid("admin"), "Admin", "Test boards of the pilot run"
+    )  # fmt: skip
+    assert entry["before"] == {"uuids": uuids} and entry["at_utc"].endswith("+00:00")
+    assert entry["after"] == {"filter": dataclasses.asdict(listed), "records": 2, "files": 6}
+
+
+def test_req_log_003_delete_records_is_the_admins_red_button_and_names_the_count(
+    qtbot: QtBot, ctx: AppContext, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Delete Records… is shown to the Admin alone, red, last in its row and never the default button; it asks first,
+    naming the count, with No as the default, then for the reason, and deletes the records the filter lists."""
+    ctx.ensure_board_model("B")
+    ng, ok = _record(ctx, "NG", "kim", evidence=True), _record(ctx, "OK", "kim", evidence=True)
+    page = _logs(qtbot, ctx, "engineer")
+    assert not page.btn_delete.isVisibleTo(page)
+    page.shell.set_user("admin")  # the page shown follows the sign-in
+    rows = [page.root.itemAt(i).layout() for i in range(page.root.count())]
+    (row,) = [r for r in rows if r is not None and r.indexOf(page.btn_delete) >= 0]
+    assert page.btn_delete.isVisibleTo(page) and page.btn_delete.text() == "Delete Records…"
+    assert page.btn_delete.objectName() == "danger" and not page.btn_delete.autoDefault()
+    assert row.indexOf(page.btn_delete) == row.count() - 1  # last in its row
+    page.result.setCurrentIndex(page.result.findData("NG"))
+    page.refresh()
+    asked: list[tuple[str, object]] = []
+    no = QMessageBox.StandardButton.No
+
+    def question(*a: object) -> QMessageBox.StandardButton:
+        asked.append((str(a[2]), a[4]))
+        return QMessageBox.StandardButton.Yes
+
+    monkeypatch.setattr(QMessageBox, "question", staticmethod(question))
+    monkeypatch.setattr(QInputDialog, "getText", staticmethod(lambda *a, **k: ("Pilot test boards", True)))
+    page.delete_records()
+    qtbot.waitUntil(lambda: page._bg is None, timeout=30000)
+    assert asked[0][0].startswith("Delete 1 record(s) and their evidence files?") and asked[0][1] == no
+    assert [r["id"] for r in ctx.inspections(include_archived=True)] == [ok] and ng not in [r["id"] for r in page.rows]
+    assert page.shell.statusBar().currentMessage() == "Deleted 1 record(s) and 3 evidence file(s)"
+
+
+def test_req_log_003_only_an_admin_removes_a_sample(qtbot: QtBot, ctx: AppContext, synthetic_dataset: Path) -> None:
+    """Removing a training sample is the Admin's too: the service refuses an Engineer with AOI-USR-001, nothing removed
+    or audited, and Training's Remove is off for an Engineer, its tooltip saying who may; the Admin's removal is
+    audited as before."""
+    ctx.import_samples("B", [str(p) for p in sorted((synthetic_dataset / "train" / "ok").iterdir())[:2]], "OK")
+    sample = ctx.samples("B")[1]  # not the reference, which the first import set
+    with pytest.raises(AoiError) as refused:
+        ctx.delete_sample(sample["id"])
+    assert refused.value.what == "Removing a sample needs the Admin role."
+    assert ctx.samples("B")[1] == sample and not ctx.audit_entries(action="sample.delete")
+    win = MainWindow(ctx)
+    qtbot.addWidget(win)
+    page = cast(TrainingPage, win.pages["Training"])
+    for user, allowed, tip in (("engineer", False, "Removing samples needs the Admin role."), ("admin", True, "")):
+        win.set_user(user)
+        win.navigate("Training")
+        assert (page.btn_remove.isEnabled(), page.btn_remove.toolTip()) == (allowed, tip), user
+    ctx.delete_sample(sample["id"])
+    (entry,) = ctx.audit_entries(action="sample.delete")
+    assert (entry["object_uuid"], entry["role"]) == (sample["uuid"], "Admin")

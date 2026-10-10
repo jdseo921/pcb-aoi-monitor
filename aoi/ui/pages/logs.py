@@ -9,7 +9,17 @@ from typing import TYPE_CHECKING, Any
 
 from PySide6.QtCore import QDate, Qt
 from PySide6.QtGui import QColor, QTextCharFormat
-from PySide6.QtWidgets import QCheckBox, QComboBox, QDateEdit, QFileDialog, QHBoxLayout, QLabel, QMessageBox, QSplitter
+from PySide6.QtWidgets import (
+    QCheckBox,
+    QComboBox,
+    QDateEdit,
+    QFileDialog,
+    QHBoxLayout,
+    QInputDialog,
+    QLabel,
+    QMessageBox,
+    QSplitter,
+)
 
 from ...core.inspector import ai_check
 from ...core.services import AppContext, CsvFile, HistoryFilter
@@ -93,6 +103,7 @@ class LogsPage(Page):
         self.table.itemSelectionChanged.connect(self._preview)
         self.empty = EmptyState(self.table)
         self.busy = BusyOverlay(self.table, self.tr("Exporting…"))
+        self.busy_delete = BusyOverlay(self.table, self.tr("Deleting…"))
         split.addWidget(self.table)
         self.view = ImageView(placeholder=self.tr("Select a row to see its overlay"))
         split.addWidget(self.view)
@@ -107,7 +118,9 @@ class LogsPage(Page):
         self.btn_img = button(self.tr("Export Image Overlays"), slot=self.export_overlays)
         self._arch_days = ctx.settings.log_retention_days  # the day count the button shows and archives by (#201)
         self.btn_arch = button(self._archive_text(), slot=self.archive)
-        for x in (self.btn_csv, self.btn_img, self.btn_arch):
+        # red, the Admin's alone, last in its row and never the default (REQ-LOG-003, REQ-SET-018)
+        self.btn_delete = button(self.tr("Delete Records…"), "danger", self.delete_records)
+        for x in (self.btn_csv, self.btn_img, self.btn_arch, self.btn_delete):
             b.addWidget(x)
         self.root.addLayout(b)
 
@@ -336,11 +349,42 @@ class LogsPage(Page):
             for day in (Qt.DayOfWeek.Saturday, Qt.DayOfWeek.Sunday):
                 d.calendarWidget().setWeekdayTextFormat(day, weekend)
 
+    def delete_records(self) -> None:
+        """Delete Records… (REQ-LOG-003, Q25): the records the filter lists, once a question naming their count is
+        answered Yes (No is the default, REQ-SET-018) and a reason typed, which the audit trail keeps. The service
+        refuses any role but the Admin's, and a blank reason (AOI-LOG-003); it runs on the pool (REQ-SET-021)."""
+        n = len(self.rows)
+        question = self.tr(
+            "Delete {count} record(s) and their evidence files? This cannot be undone; the audit trail keeps who"
+            " deleted them, when and why."
+        ).format(count=n)
+        yes, no = QMessageBox.StandardButton.Yes, QMessageBox.StandardButton.No
+        if not n or QMessageBox.question(self, self.tr("Delete Records"), question, yes | no, no) != yes:
+            return
+        ask = self.tr("Why are these {count} record(s) deleted?").format(count=n)
+        reason, ok = QInputDialog.getText(self, self.tr("Delete Records"), ask)
+        if not ok:
+            return
+        said = self.tr("Deleted {records} record(s) and {files} evidence file(s)")
+
+        def deleted(counts: dict[str, int] | None) -> None:
+            if counts is not None:
+                self.shell.status(said.format(**counts))
+            self.refresh()
+
+        self.run_in_background(
+            self.ctx.delete_inspections, [r["id"] for r in self.rows], self.listed, reason, busy=self.busy_delete,
+            on_result=deleted, on_cancel=deleted, on_error=lambda _e: self.refresh(),
+        )  # fmt: skip
+
     def update_actions(self) -> None:
-        admin_or_eng = self.ctx.role in ("Engineer", "Admin")  # spec 8: Admin exports logs (Engineer allowed for PoC)
+        idle = self._bg is None  # one export or delete at a time: a second would stop the first (#194)
+        admin_or_eng = self.ctx.role in ("Engineer", "Admin")  # Q58 gives exports to the Admin alone: open for Jay
         for b in (self.btn_csv, self.btn_img):
-            b.setEnabled(admin_or_eng and self._bg is None)  # one at a time: a second would stop the first (#194)
+            b.setEnabled(admin_or_eng and idle)
         self.btn_arch.setEnabled(admin_or_eng)
+        self.btn_delete.setVisible(self.ctx.role == "Admin")  # shown to the Admin alone; the service checks the role
+        self.btn_delete.setEnabled(idle)
 
     def on_show(self) -> None:
         self.update_actions()

@@ -909,6 +909,7 @@ def test_req_trn_003_editor_a_batch_an_error_stops_shows_what_it_stored(
     page.editor.act_undo.trigger()  # put back one, then stopped
     assert stored() == ["OK", "UNSURE", "UNSURE"] and [t[:11] for t, _ in dialogs] == ["AOI-SET-013"] * 2
 
+    ctx.set_user("admin")  # only an Admin removes a sample (REQ-LOG-003)
     monkeypatch.setattr(ctx, "delete_sample", _held(2, ctx.delete_sample))
     _select(page, *(s["id"] for s in oks))
     page._remove()

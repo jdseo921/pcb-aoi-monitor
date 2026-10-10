@@ -711,6 +711,22 @@ class Database:
         rows = self.query(sql + " ORDER BY id DESC", p)
         return [self._resolved(r, "image_path", "overlay_path", "diff_map_path", "ai_map_path") for r in rows]
 
+    def inspection_files(self, inspection_ids: Iterable[int]) -> list[dict[str, Any]]:
+        """id, uuid and the overlay and map paths, absolute, of these inspections, IN_CHUNK ids at a time."""
+        ids, out = list(dict.fromkeys(inspection_ids)), []
+        paths = ("overlay_path", "diff_map_path", "ai_map_path")
+        for start in range(0, len(ids), IN_CHUNK):
+            chunk = ids[start : start + IN_CHUNK]
+            sql = f"SELECT id, uuid, {', '.join(paths)} FROM inspections WHERE id IN ({','.join('?' * len(chunk))})"
+            out += [self._resolved(r, *paths) for r in self.query(sql + " ORDER BY id", chunk)]
+        return out
+
+    def delete_inspections(self, inspection_ids: list[int]) -> None:
+        """Delete these inspections, their defects and checks with them (ON DELETE CASCADE), IN_CHUNK ids at a time."""
+        for start in range(0, len(inspection_ids), IN_CHUNK):
+            chunk = inspection_ids[start : start + IN_CHUNK]
+            self.execute(f"DELETE FROM inspections WHERE id IN ({','.join('?' * len(chunk))})", chunk)
+
     def inspection_span(self) -> dict[str, Any] | None:
         """The oldest and newest stored time of every record, archived or not, and whether one is archived (1 or 0),
         read through `inspections_time` rather than every row; None for a workspace with none."""

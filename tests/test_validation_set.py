@@ -136,6 +136,7 @@ def test_req_trn_006_overlap_by_hash_refused(ctx: AppContext, tmp_path: Path, mo
     assert (copied.value.code, copied.value.params["count"], read) == ("AOI-TRN-043", 1, [])
     assert ctx.models("COPY") == [] and len(ctx.audit_entries(action="model.train")) == 1  # CAL-1's alone
     [held] = [s for s in ctx.samples("COPY") if Path(s["path"]).name.startswith("another_name")]
+    ctx.set_user("admin")  # only an Admin removes a sample (REQ-LOG-003)
     ctx.delete_sample(held["id"])
     ctx.train(trainable(ctx, "COPY"), epochs=1, image_size=32)
     assert len(ctx.models("COPY")) == 1

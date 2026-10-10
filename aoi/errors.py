@@ -1001,6 +1001,28 @@ CODES: dict[str, ErrorCode] = {
             ),
         ),
         ErrorCode(
+            "AOI-LOG-003",
+            QT_TRANSLATE_NOOP("Errors", "Reason needed"),
+            QT_TRANSLATE_NOOP(
+                "Errors", "Deleting {count} record(s) needs a reason, which the audit trail keeps with the deletion."
+            ),
+            QT_TRANSLATE_NOOP("Errors", "Nothing was deleted. Press Delete Records… again and type why they go."),
+        ),
+        ErrorCode(
+            "AOI-LOG-004",
+            QT_TRANSLATE_NOOP("Errors", "Evidence files left"),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "{count} record(s) were deleted and the audit trail records it, but {left} of their evidence file(s)"
+                " would not go, {file} first ({reason}).",
+            ),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Close the image viewer or other app that has the file open, then delete the files the log names"
+                " (records.evidence_left) from the results folder.",
+            ),
+        ),
+        ErrorCode(
             "AOI-USR-001",
             QT_TRANSLATE_NOOP("Errors", "Not allowed for this role"),
             QT_TRANSLATE_NOOP("Errors", "{what} needs the {roles} role."),

@@ -243,6 +243,7 @@ def test_req_trn_007_a_model_that_cannot_judge_is_refused_before_it_is_saved(
         return ctx.models("B"), ctx.audit_entries(action="model.train"), ctx.reference_image("B"), files
 
     before = state()
+    ctx.set_user("admin")  # only an Admin removes a sample (REQ-LOG-003)
     for sample in ctx.samples("B"):
         ctx.delete_sample(sample["id"])
     twice = distinct_copies(oks[0], tmp_path / "twice", 20)  # one photo under 20 SHA-256s: no import skips one

@@ -129,6 +129,7 @@ so you never see the verdict those values gave.
 next shift sees the line's history. Narrow it with **From** and **To**, **Board model**, **Operator** and **Result**
 (All, OK, NG or WARN), then press **Filter**; the filters combine. Tick **Include archived** for records older than the
 retention (30 days unless an Admin changed it): they are archived, not deleted, and stay searchable. A click on a
-column's header sorts by it. Select a row to see its overlay beside the table.
+column's header sorts by it. Select a row to see its overlay beside the table. Only an Admin deletes records, with a
+reason the audit trail keeps.
 
 (to be written: handing over)

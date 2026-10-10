@@ -117,7 +117,9 @@ the mouse wheel, or Tab, which brings each field into view.
 next training run aligns the boards to it before it learns a new golden board. An NG sample is refused (AOI-TRN-006),
 and the sample that is the reference cannot be relabelled NG or UNSURE or removed until another OK sample is set
 (AOI-TRN-007); with several rows selected, Mark NG, Mark UNSURE and Remove change all the others and leave the
-reference as it is. Remove asks first, with No as the default: Enter keeps the samples.
+reference as it is. Remove asks first, with No as the default: Enter keeps the samples. Only an Admin removes a sample
+(REQ-LOG-003): for an Engineer, Remove is off and its tooltip names the Admin role. The sample's record goes, its image
+file stays in the workspace, and the audit trail records it as `sample.delete`.
 
 **Mark NG** asks for no defect type: an NG image's boxes, each of one of the 33 types, give its types (below), so an
 image marked NG has none until a box is drawn, which a second user's check needs before a freeze. An import gives each
@@ -653,6 +655,15 @@ every board model, operator and result, archived records hidden); when every rec
 it offers **Show All Records** instead, which sets **From** to the oldest record's date, **To** to today and ticks
 **Include archived** when any record is archived.
 
+**Delete Records…** is the Admin's alone: an Engineer and an Operator do not see it, and the service refuses them with
+AOI-USR-001. It deletes the records **Filter** listed, with their defects and checks and their overlay and map files in
+the results folder; there is no undo, so archive records to keep them out of the list. It asks first, naming the count,
+with No as the default, then asks why; a blank reason deletes nothing (AOI-LOG-003). The audit trail records it as
+`inspection.delete`, with the user, the time, the filter, the records' UUIDs, the number of records and files, and the
+reason. It runs in the background, "Deleting…" over the table. A file another app holds open stays: the records are
+gone, AOI-LOG-004 names the first such file and the log names each one (`records.evidence_left`); close that app and
+delete those files by hand (REQ-LOG-003).
+
 **Evidence files.** Each record's overlay picture is in the results folder, by day, named
 `<stem>_<record UUID>_<verdict>.png`: `<stem>` is the first 40 characters of the board's image file name without its
 extension, and the UUID is the record's own, as the `uuid` column of the CSV export gives it, so two boards with the
@@ -670,8 +681,8 @@ AOI-CMP-006; the stored verdict and decision table still stand. A map an image e
 another size or bit depth) counts as damaged, so edit copies of these files, never the files themselves. The maps of
 OK results are deleted at start-up once older than `map_retention_days_ok` days (7, set in `settings.json` in the
 default workspace folder; 0 deletes them at the next start); NG and WARN maps, and every record, overlay and check, are
-kept. Each sweep is in the audit trail as `maps.sweep`; a file the app cannot delete (open in another program) is tried
-again at the next start.
+kept until an Admin deletes the record (Delete Records…, above). Each sweep is in the audit trail as `maps.sweep`; a
+file the app cannot delete (open in another program) is tried again at the next start.
 
 (to be written: history, archive, the audit trail, error codes)
 

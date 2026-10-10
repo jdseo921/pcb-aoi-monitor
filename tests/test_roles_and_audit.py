@@ -20,7 +20,7 @@ from aoi.core import crypto
 from aoi.core.labels import DefectBox
 from aoi.core.recipe import Recipe
 from aoi.core.sample_import import ImportFile, ImportReport
-from aoi.core.services import REQUIRED_ROLE, ROLES, AppContext, CsvFile
+from aoi.core.services import REQUIRED_ROLE, ROLES, AppContext, CsvFile, HistoryFilter
 from aoi.errors import AoiError
 from aoi.ui.main_window import MainWindow
 from aoi.ui.pages.base import role_text
@@ -200,6 +200,12 @@ WRITES: dict[str, tuple[str, Callable[[AppContext, Path, Path], Any]]] = {
     "archive_old": ("inspection.archive", lambda ctx, data, tmp: ctx.archive_old(-1)),
     "add_user": ("user.change", lambda ctx, data, tmp: ctx.add_user("kim", "Engineer")),
     "save_settings": ("settings.change", lambda ctx, data, tmp: ctx.save_settings({"default_epochs": 7})),
+    "delete_inspections": (  # Delete Records… on the record inspected first, archived above (REQ-LOG-003, S51)
+        "inspection.delete",
+        lambda ctx, data, tmp: ctx.delete_inspections(
+            [r["id"] for r in ctx.inspections(include_archived=True)], HistoryFilter(include_archived=True), "a test"
+        ),
+    ),
 }
 # what only an Engineer does that writes no audit entry itself: re-evaluating a result (REQ-CMP-005, since S28a), and
 # starting a training run, whose job writes model.train once it ends (REQ-TRN-008, S40)
@@ -225,6 +231,7 @@ CALLS = {**{name: call for name, (_, call) in WRITES.items()}, **CHECKED_READS}
 # from the decorators under test (#181): built from REQUIRED_ROLE, a lowered @requires refused fewer roles and passed.
 EXPECTED_ROLE = {name: "Engineer" for name in CALLS} | {"add_user": "Admin", "save_settings": "Admin"}
 EXPECTED_ROLE |= {"create_store": "Admin", "restore_store_key": "Admin", "move_in": "Admin", "shred_store": "Admin"}
+EXPECTED_ROLE |= {"delete_sample": "Admin", "delete_inspections": "Admin"}  # only an Admin deletes (REQ-LOG-003)
 EXPECTED_ROLE["export_board_image"] = "Operator"  # Save Image… (F9): every role keeps it, audited (#241, REQ-INSP-005)
 REFUSED = [(name, role) for name in CALLS for role in ROLES[: ROLES.index(EXPECTED_ROLE[name])]]
 
@@ -278,6 +285,8 @@ def test_req_log_004_writes_are_audited(trained_ctx: AppContext, synthetic_datas
     assert by_action["user.change"]["before"] is None and by_action["user.change"]["after"]["role"] == "Engineer"
     assert by_action["settings.change"]["after"] == {"default_epochs": 7} and ctx.settings.default_epochs == 7
     assert by_action["inspection.archive"]["after"]["archived"] == 1 and by_action["export.csv"]["after"]["rows"] == 1
+    deleted = by_action["inspection.delete"]
+    assert deleted["after"]["records"] == 1 and deleted["reason"] == "a test"
     assert by_action["recipe.save"]["before"] == Recipe(board_model="TINY").to_dict()  # revision 1, the default
     assert by_action["test.run"]["after"]["model_version"] == versions[1]  # the test ran after the roll back to it
 

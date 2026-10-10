@@ -30,7 +30,9 @@ def test_req_usr_001_appcontext_reads_and_writes_what_the_screens_need(trained_c
     assert ctx.reference_image("TINY") == ctx.sample_path(ok[1]["id"]) == ok[1]["path"]
     ctx.update_sample(ok[0]["id"], "NG", "Scratch")
     assert next(s for s in ctx.samples("TINY", "NG") if s["id"] == ok[0]["id"])["defect_type"] == "Scratch"
+    ctx.set_user("admin")  # only an Admin removes a sample (REQ-LOG-003)
     ctx.delete_sample(ok[0]["id"])
+    ctx.set_user("engineer")
     assert all(s["id"] != ok[0]["id"] for s in ctx.samples("TINY"))
     (model,) = ctx.models("TINY")
     assert ctx.active_model("TINY") == model == ctx.model(model["id"]) and Path(model["path"]).is_file()
@@ -102,6 +104,7 @@ def test_req_trn_007_the_reference_sample_is_never_relabelled_ng_or_removed(
     first = ctx.samples("B", "OK")[0]
     assert ctx.reference_image("B") == first["path"]
     entries = ctx.audit_entries()
+    ctx.set_user("admin")  # only an Admin removes a sample (REQ-LOG-003)
     for change, call in (("relabelled NG", lambda: ctx.update_sample(first["id"], "NG", "Missing Component")),
                          ("removed", lambda: ctx.delete_sample(first["id"]))):  # fmt: skip
         with pytest.raises(AoiError) as refused:
@@ -110,7 +113,7 @@ def test_req_trn_007_the_reference_sample_is_never_relabelled_ng_or_removed(
     assert (ctx.samples("B", "OK")[0], ctx.audit_entries()) == (first, entries)
     win = MainWindow(ctx)
     qtbot.addWidget(win)
-    win.set_user("engineer")
+    win.set_user("admin")  # only an Admin removes a sample (REQ-LOG-003)
     win._on_board_model("B")
     win.navigate("Training")
     page = win.pages["Training"]
@@ -141,7 +144,7 @@ def test_req_trn_007_mark_ng_and_remove_skip_only_the_reference_whatever_the_sel
     assert ctx.reference_image("B") == ctx.sample_path(ref)
     win = MainWindow(ctx)
     qtbot.addWidget(win)
-    win.set_user("engineer")
+    win.set_user("admin")  # only an Admin removes a sample (REQ-LOG-003)
     win._on_board_model("B")
     win.navigate("Training")
     page = win.pages["Training"]
