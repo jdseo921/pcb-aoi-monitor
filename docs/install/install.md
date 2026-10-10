@@ -59,7 +59,7 @@ The optional desktop shortcut opens the station's workspace, like the first one.
 
 | What | Where | Removed by the uninstaller |
 |---|---|---|
-| The program: `AOI-PoC-Inspector.exe`, `_internal\`, `THIRD_PARTY_NOTICES.txt`, `BUILD-INFO.txt`, `SHA256SUMS.txt`, `unins000.exe` | `C:\Program Files\AOI PoC Inspector` | Yes |
+| The program: `AOI-PoC-Inspector.exe`, `_internal\`, `THIRD_PARTY_NOTICES.txt`, `sbom.cdx.json`, `BUILD-INFO.txt`, `SHA256SUMS.txt`, `unins000.exe` | `C:\Program Files\AOI PoC Inspector` | Yes |
 | Shortcuts | Start menu (all users), and the public desktop if chosen | Yes |
 | The workspace: database, images, models, recipes, results, exports and logs | `%USERPROFILE%\AOI_Workspace` for each Windows user, or the folder `AOI_WORKSPACE` names, or the folder chosen in Settings | No |
 | `settings.json` | In the default workspace folder above (`%USERPROFILE%\AOI_Workspace\settings.json`) | No |

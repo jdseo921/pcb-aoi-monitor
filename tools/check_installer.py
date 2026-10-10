@@ -1,15 +1,15 @@
 #!/usr/bin/env python
 """Install the built installer silently, self-test the installed app, uninstall it (REQ-SET-012, S57; build.yml).
 
-    python tools/check_installer.py dist/installer/AOI-PoC-Inspector-0.2.0-setup-x64-unsigned.exe
+    python tools/check_installer.py dist/installer/AOI-PoC-Inspector-0.3.0-setup-x64-unsigned.exe
 
 On Windows, with admin rights, for CI's runner:
 
 1. The installer runs with /VERYSILENT /SUPPRESSMSGBOXES /NORESTART into a new temporary folder (/DIR), with the
    optional desktop shortcut chosen (/TASKS=desktopicon). It passes when it exits 0 and the folder holds the .exe, a
-   GUI program that opens no console window, with THIRD_PARTY_NOTICES.txt and the uninstaller beside it; when the
-   Start menu holds the app's shortcut and the Demo shortcut, which starts the .exe with --demo, and the desktop the
-   app's shortcut; and when Windows lists the app as installed.
+   GUI program that opens no console window, with THIRD_PARTY_NOTICES.txt, sbom.cdx.json and the uninstaller beside
+   it; when the Start menu holds the app's shortcut and the Demo shortcut, which starts the .exe with --demo, and the
+   desktop the app's shortcut; and when Windows lists the app as installed.
 2. The installed .exe runs `--self-test` on a new folder, as tools/smoke_test_build.py does with the build: exit 0
    with the verdict the synthetic regression set expects.
 3. The uninstaller runs with /VERYSILENT /SUPPRESSMSGBOXES /NORESTART. It passes when it exits 0 and the program
@@ -103,7 +103,7 @@ def places() -> list[Path]:
 
 def after_install(app: Path, guid: str) -> list[str]:
     exe = app / EXE
-    names = (EXE, "THIRD_PARTY_NOTICES.txt", "unins000.exe")
+    names = (EXE, "THIRD_PARTY_NOTICES.txt", "sbom.cdx.json", "unins000.exe")
     problems = [f"no {name} in {app}" for name in names if not (app / name).is_file()]
     if exe.is_file() and subsystem(exe) != GUI:
         problems.append(f"the installed .exe's subsystem is {subsystem(exe)}, not {GUI} (no console window)")

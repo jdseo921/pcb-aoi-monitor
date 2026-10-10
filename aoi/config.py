@@ -17,7 +17,7 @@ from typing import Any
 from .errors import QT_TRANSLATE_NOOP, AoiError
 
 APP_NAME = "AOI PoC Inspector"
-APP_VERSION = "0.2.0"
+APP_VERSION = "0.3.0"
 
 
 # Why settings.json is refused (AOI-SET-010, AOI-SET-008), as phrases shown translated (#198)

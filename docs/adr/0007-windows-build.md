@@ -195,3 +195,14 @@ Still to do for REQ-SET-012: code signing of the installer and the .exe with a t
 LGPL carve-out and the written offer for Qt's source, once counsel has reviewed them; "© year company" in the
 installer (Legal, "Notices", SHOULD), waiting for the company and product names; a Korean installer, with the Korean
 UI (Inno Setup 6.7.1 ships Korean.isl); a one-step rollback; and the items of the S56 update that remain.
+
+## Update 2026-10-10 (stage S59): the bill of materials
+
+The spec writes `sbom.cdx.json`, a CycloneDX 1.5 bill of materials, beside `THIRD_PARTY_NOTICES.txt`, from the same
+list of shipped packages (`tools/sbom.py`): the app as its subject with `APP_VERSION`; each package with its version,
+`pkg:pypi` URL and the license its metadata declares (an SPDX expression where it gives one); Python; Inno Setup; and
+each AI model file in the folder, the demo's, with its SHA-256 and the version and dataset version on its AI model
+card. It reads only what is installed and bundled, and stops on a shipped package that is not installed. It travels
+in the artifact and the installer, and `tools/check_installer.py` stops when the installed folder lacks it
+(`tests/test_sbom.py`). This closes the "Scans and SBOM" item of the S56 list; publishing it beside a release waits
+for the first tagged release.

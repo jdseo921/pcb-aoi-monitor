@@ -2,13 +2,16 @@
 
 A workspace folder can be moved, copied or restored from a backup; everything it holds still opens
 because the database never stores where the folder was. A path outside the workspace (a test folder the
-user chose) is stored as given.
+user chose) is stored as given. A relative path always stays inside the workspace: one that leads out
+(`..`) is refused when it is read back (#112).
 """
 
 from __future__ import annotations
 
 import os
 from pathlib import Path
+
+from ..errors import AoiError
 
 DEVICES = {"CON", "PRN", "AUX", "NUL", "CONIN$", "CONOUT$"}  # what Windows keeps for a device, in any case
 DEVICES |= {port + n for port in ("COM", "LPT") for n in "0123456789¹²³"}
@@ -40,6 +43,12 @@ def to_stored(path: str | Path, root: Path) -> str:
 
 
 def resolve(stored: str, root: Path) -> Path:
-    """The stored form back to a path that opens on this computer, for this workspace."""
+    """The stored form back to a path that opens on this computer, for this workspace; AOI-SET-018 for a relative one
+    that leads outside the workspace, such as `../escape.png`, which `to_stored` never writes: only a database changed
+    outside the app holds one, and the app neither reads nor writes there (#112)."""
     p = Path(stored)
-    return p if p.is_absolute() else root / p
+    if p.is_absolute():
+        return p
+    if not inside(root / p, root):
+        raise AoiError("AOI-SET-018", path=stored, root=root)
+    return root / p

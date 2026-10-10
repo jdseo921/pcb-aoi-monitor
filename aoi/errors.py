@@ -1234,6 +1234,19 @@ CODES: dict[str, ErrorCode] = {
                 "Demo again; the production workspace is not touched.",
             ),
         ),
+        ErrorCode(
+            "AOI-SET-018",
+            QT_TRANSLATE_NOOP("Errors", "A stored path leads outside the workspace"),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "The database names {path}, which leads outside the workspace folder {root}, so the app neither opens "
+                "nor writes it. The app never stores such a path: the database was changed outside the app.",
+            ),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Ask an Admin to restore the workspace from its backup (installation guide, Backup and restore).",
+            ),
+        ),
     )
 }
 

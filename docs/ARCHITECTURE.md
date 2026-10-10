@@ -1132,9 +1132,10 @@ screen runs it on a board model's samples yet.
 
 ## 9. Known limits of this draft
 
-* Validated only on **synthetic** boards (`tools/make_synthetic_dataset.py`), where it scores 100 % on a 31-image
-  test set. Real T-Box images (reflections, connectors, shield cans) will need threshold tuning and probably a
-  higher input size or tiled inference for fine solder defects.
+* Tried only on **synthetic** boards (`tools/make_synthetic_dataset.py`), which show that the inspection path runs
+  end to end and are never quoted as accuracy; no customer board has been measured yet. Real T-Box images
+  (reflections, connectors, shield cans) will need threshold tuning and probably a higher input size or tiled
+  inference for fine solder defects.
 * Defect **type** is inferred from ROIs, not classified by the model yet.
 * Side-view and 3D checks in the mandatory set (Shield Can Gap, Pin Height, Coplanarity, Solder Volume) need Stage 2
   hardware.

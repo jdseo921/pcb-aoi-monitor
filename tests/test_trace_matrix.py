@@ -157,6 +157,45 @@ def test_git_changes_reads_a_pull_requests_own_commits_and_title_on_its_ci_run(
     assert "GATE G1: #175 '[REQ-ZZZ-998] fix: cites an unknown row' cites REQ-ZZZ-998" in capsys.readouterr().out
 
 
+def test_gate_stops_a_pull_request_change_with_no_requirement_or_bug_id(
+    register: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Engineering standard, "Traceability": code with no requirement or bug ID fails the release gate. On a pull
+    request's run, its title and each of its own commits must cite a requirement or a bug; a merge commit carries no
+    code of its own, and the history the pull request builds on is not checked again."""
+    git_in(tmp_path, "init", "-q", "-b", "main")
+    git_in(tmp_path, "commit", "-q", "--allow-empty", "-m", "chore: import the v0.1 baseline")  # history: not checked
+    git_in(tmp_path, "checkout", "-q", "-b", "feat/banner")
+    git_in(tmp_path, "commit", "-q", "--allow-empty", "-m", "[REQ-INSP-002] feat: verdict banner")
+    git_in(tmp_path, "commit", "-q", "--allow-empty", "-m", "fix: a typo")
+    typo = git_in(tmp_path, "rev-parse", "HEAD")
+    git_in(tmp_path, "commit", "-q", "--allow-empty", "-m", "[#12] fix: the banner's colour")
+    git_in(tmp_path, "checkout", "-q", "main")
+    git_in(tmp_path, "commit", "-q", "--allow-empty", "-m", "docs: the readme")  # the base's: not checked
+    git_in(tmp_path, "checkout", "-q", "feat/banner")
+    git_in(tmp_path, "merge", "-q", "--no-ff", "main", "-m", "Merge branch 'main' into feat/banner")
+    head = git_in(tmp_path, "rev-parse", "HEAD")
+    git_in(tmp_path, "checkout", "-q", "main")
+    base = git_in(tmp_path, "rev-parse", "HEAD")
+    git_in(tmp_path, "merge", "-q", "--no-ff", "feat/banner", "-m", f"Merge {head} into {base}")
+    real = tm.git_changes
+    monkeypatch.setattr(tm, "git_changes", lambda: real("HEAD", tmp_path))  # main reads the repository it runs in
+    monkeypatch.setenv("PR_NUMBER", "180")
+    monkeypatch.setenv("PR_TITLE", "chore: tidy the banner")
+    collected = tmp_path / "collected.txt"
+    collected.write_text("tests/test_a.py::test_req_insp_001_png_opens\n", encoding="utf-8")
+    args = ["--register", str(register), "--collected", str(collected), "--out", str(tmp_path / "out"), "--gate", "G1"]
+    args.append("--git-log")
+    assert tm.main(args) == 1
+    out = capsys.readouterr().out
+    assert "GATE G1: #180 'chore: tidy the banner' cites no requirement or bug ID" in out
+    assert f"GATE G1: commit {typo[:7]} 'fix: a typo' cites no requirement or bug ID" in out
+    assert "v0.1 baseline" not in out and "readme" not in out and "Merge branch" not in out and "colour" not in out
+    monkeypatch.setenv("PR_TITLE", "[REQ-INSP-002] feat: verdict banner")
+    assert tm.main(args) == 1  # still the commit
+    assert "#180" not in capsys.readouterr().out
+
+
 def test_collected_names_count_as_not_run_and_unknown_test_ids_are_reported(register: Path, tmp_path: Path) -> None:
     collected = tmp_path / "collected.txt"
     collected.write_text(

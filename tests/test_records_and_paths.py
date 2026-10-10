@@ -27,7 +27,9 @@ from aoi.core.recipe import Recipe
 from aoi.core.services import AppContext
 from aoi.data import db as dbmod
 from aoi.data import migrate as mg
+from aoi.data import paths
 from aoi.data.db import Database
+from aoi.errors import AoiError
 from aoi.ui.main_window import MainWindow
 from aoi.ui.pages.settings import SettingsPage
 from tests.conftest import TrainedModel, engineer, listed, plain, restored
@@ -208,6 +210,28 @@ def test_req_set_001_moved_workspace_opens_everything(tmp_path: Path, tiny_model
     absolute = [s for s in stored_strings(rows) if absolute_path(s) or str(old_root) in s or str(new_root) in s]
     assert rows and not absolute, absolute
     ctx.close()
+
+
+def test_req_set_001_a_stored_path_that_leads_outside_the_workspace_is_refused(tmp_path: Path) -> None:
+    """#112: a relative path in the database never leads outside the workspace. `to_stored` writes a path inside the
+    workspace relative to it and one outside as given, never with `..`; one written into aoi.sqlite by hand is refused
+    with AOI-SET-018 when it is read back, so the app neither opens nor writes there."""
+    root = tmp_path / "ws"
+    elsewhere = tmp_path / "elsewhere" / "b.png"
+    assert paths.to_stored(root / "images" / "a.png", root) == "images/a.png"
+    assert paths.to_stored(elsewhere, root) == str(elsewhere) and paths.resolve(str(elsewhere), root) == elsewhere
+    assert paths.resolve("images/a.png", root) == root / "images" / "a.png"
+    for stored in ("../escape.png", "images/../../escape.png"):
+        with pytest.raises(AoiError) as refused:
+            paths.resolve(stored, root)
+        assert refused.value.code == "AOI-SET-018" and stored in str(refused.value)
+    db = Database(root / "aoi.sqlite")
+    db.set_reference("TBOX-A1", str(root / "golden.png"))
+    assert db.reference("TBOX-A1") == str(root / "golden.png")
+    db.execute("UPDATE board_models SET reference_image=? WHERE name=?", ("../escape.png", "TBOX-A1"))
+    with pytest.raises(AoiError, match="AOI-SET-018"):
+        db.reference("TBOX-A1")
+    db.close()
 
 
 def test_req_set_001_exports_to_the_suggested_folder_are_audited_relative_to_the_workspace(
