@@ -61,6 +61,14 @@ From source, the same self-test takes the boards as a second folder: `python too
 then `python main.py --self-test <new folder> boards`. The GPU option (PyTorch's CUDA build, not built by CI until
 the NVIDIA licenses are decided) is described at the end of ADR 0007.
 
+The same run keeps an **installer** of that folder, `…-windows-x64-unsigned-installer` (Inno Setup,
+[installer/aoi.iss](installer/aoi.iss)): it installs into Program Files with a Start menu shortcut and an
+**AOI PoC Inspector (Demo)** shortcut that opens the demo workspace, and its uninstaller removes the program files and
+keeps the workspace. CI installs it silently, runs the installed app's `--self-test` and uninstalls it before keeping
+it (`tools/check_installer.py`). It is unsigned and internal like the folder: how to install it, where the files are
+and how to uninstall is in [docs/install/install.md](docs/install/install.md). To make it on a Windows PC after the
+build above, with Inno Setup 6.7.1: `iscc /DAppVersion=<version in aoi\config.py> installer\aoi.iss`.
+
 ## Try it in 5 minutes with synthetic boards
 
 ```powershell

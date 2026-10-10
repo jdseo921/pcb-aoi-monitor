@@ -22,7 +22,7 @@ interfaces that Stages 2–4 (cameras, robot, MES/ERP) plug into without changin
 | Vision | **OpenCV** | Registration, image differencing, morphology, SSIM (scikit-image's formula with OpenCV box filters since S08). |
 | Storage | **SQLite** (one file per workspace) | GUI §6 "Local SQLite or PostgreSQL". All SQL is in one module so PostgreSQL can be swapped in for multi-station / MES use. |
 | Reports | CSV, PNG overlays, PDF (Qt `QPdfWriter`) | GUI §6 export formats. |
-| Packaging | PyInstaller one folder, built and self-tested by CI (ADR 0007); a Windows installer next | Single-folder deploy for PoC stations. `main.py --self-test` (`aoi/selftest.py`) inspects one synthetic board with no window, so CI checks that the windowed .exe inspects. |
+| Packaging | PyInstaller one folder in an Inno Setup installer (`installer/aoi.iss`), built, installed, self-tested and uninstalled by CI (ADR 0007); unsigned and internal until code signing (J6) | Single-folder deploy for PoC stations, per machine into Program Files, with Start menu and Demo shortcuts and an uninstaller that keeps the workspace (`docs/install/install.md`). `main.py --self-test` (`aoi/selftest.py`) inspects one synthetic board with no window, so CI checks that the windowed .exe inspects, before and after it is installed (`tools/check_installer.py`). |
 
 ---
 
@@ -1116,5 +1116,6 @@ screen runs it on a board model's samples yet.
 * Defect **type** is inferred from ROIs, not classified by the model yet.
 * Side-view and 3D checks in the mandatory set (Shield Can Gap, Pin Height, Coplanarity, Solder Volume) need Stage 2
   hardware.
-* No Windows installer yet: stations run from source, and CI builds an unsigned one-folder test build on main and on
-  every `v*` tag, and inspects one synthetic board with it (ADR 0007).
+* No signed Windows installer yet: stations run from source, and CI builds an unsigned one-folder test build and an
+  unsigned installer of it on main and on every `v*` tag, both for internal tests only, and inspects one synthetic
+  board with the build and with the installed app (ADR 0007).

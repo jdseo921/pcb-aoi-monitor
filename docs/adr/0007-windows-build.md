@@ -3,10 +3,10 @@
 - Status: Proposed. Jay's merge of this record accepts it.
 - Date: 2026-10-08
 - Decides: the product owner (Jay), until a tech lead joins
-- Related: REQ-SET-012 (its build part; the installer and signing are still open); Engineering standard "Build",
-  "Signing", "Scans and SBOM" and "Release 1.0 polish"; Legal & Compliance "Open-source and third-party licenses";
-  Customers & Launch "Demos"; [ADR 0003](0003-dependency-pinning.md); threat model, Spoofing row; plan items J6
-  (code-signing certificate) and J8 (license exceptions, two-person release approval)
+- Related: REQ-SET-012 (its build part, and since S57 an internal installer; signing is still open); Engineering
+  standard "Build", "Signing", "Scans and SBOM" and "Release 1.0 polish"; Legal & Compliance "Open-source and
+  third-party licenses"; Customers & Launch "Demos"; [ADR 0003](0003-dependency-pinning.md); threat model, Spoofing
+  row; plan items J6 (code-signing certificate) and J8 (license exceptions, two-person release approval)
 
 ## Context
 
@@ -130,3 +130,67 @@ NVIDIA packages are for Linux only), so they ship as part of torch, and the app 
 is auto or CUDA and one is found. CI does not build it: GitHub's Windows runners have no GPU to test it on, and the
 NVIDIA licenses of those libraries are not yet allowed (J8, ADR 0003), nor has it been checked that the notices
 carry NVIDIA's texts. Until J8 decides them, a GPU folder stays on the PC that built it.
+
+## Update 2026-10-10 (stage S57): an internal installer, unsigned, made with Inno Setup
+
+Stage S57 wraps the one-folder build in an installer for our own tests. Decisions 1 to 7 and the S56 update stand;
+decision 7's "no installer" now holds for the folder build only, and the installer is as internal as the folder.
+
+1. **What it installs** (`installer/aoi.iss`). Per machine, into `C:\Program Files\AOI PoC Inspector`: only the
+   installer needs admin rights, and the app runs as a standard user (Engineering, "Offline and least privilege").
+   x64 Windows from Windows 10 build 19044 (the oldest edition in the Customers & Launch platform table, Windows 10
+   IoT Enterprise LTSC 2021); `x64compatible` also lets Windows 11 on Arm run it under emulation, untested. A Start
+   menu shortcut, a second one, *AOI PoC Inspector (Demo)*, that starts the .exe with `--demo` (REQ-SET-007), and a
+   desktop shortcut that is off unless ticked. The whole build folder goes in, `THIRD_PARTY_NOTICES.txt` beside the
+   .exe, and the compile stops when either is missing. The version comes from `aoi/config.py` through ISCC's
+   `/DAppVersion` (none is written in the script); the file is `AOI-PoC-Inspector-<version>-setup-x64-unsigned.exe`.
+   The AppId is fixed for the life of the product, since Windows finds an earlier install by it; an upgrade deletes
+   the old `_internal` folder first, so no file of an earlier build is left to load. No console window: the .exe is
+   a GUI program (S56 item 3), and the installer check reads it again once installed.
+2. **The uninstaller keeps the workspace.** It removes the program files and the shortcuts only. The script installs
+   nothing outside the program folder and has no `[Code]`, `[UninstallDelete]` or `[UninstallRun]`, so the workspace
+   (`%USERPROFILE%\AOI_Workspace`, with `settings.json`), the demo workspace beside it and the keys in Credential
+   Manager stay; its question before and its message after say so. An upgrade keeps them too, and the app copies the
+   database before a migration (`aoi/data/migrate.py`); going back to an earlier build is not one step yet.
+3. **Unsigned and internal.** The welcome page, the name in Installed apps (`… (internal, unsigned)`) and the file
+   name say so, and `docs/install/install.md` tells Jay how to install it, past SmartScreen. It must never go to a
+   customer or into a customer demo: a release is a signed installer from a tagged commit after two approvals.
+4. **CI makes and checks it** (`build.yml`). After the folder's smoke test, `choco install innosetup --version 6.7.1
+   --allow-downgrade` installs Inno Setup 6.7.1 (Chocolatey's package checks the SHA-256 of jrsoftware.org's
+   download; the runner images install the same package and listed 6.7.1 on 2026-10-04), and the job stops unless
+   `ISCC.exe` is that version. It compiles the script, then `tools/check_installer.py` installs it with
+   `/VERYSILENT /SUPPRESSMSGBOXES /NORESTART` into a temporary folder, checks the files, the shortcuts and the
+   uninstall entry, runs the installed .exe's `--self-test` on a new folder, uninstalls it silently and checks that
+   the program files, shortcuts and entry are gone while `AOI_Workspace` and `AOI_Workspace-Demo`, made beforehand
+   with a `settings.json`, hold the same files. Only then is the installer kept, as its own artifact
+   (`…-windows-x64-unsigned-installer`, 30 days). The job's time limit goes from 60 to 90 minutes.
+
+### Inno Setup's license
+
+- **What ships.** Inno Setup's setup program, inside every installer it makes, and its uninstaller, which the install
+  leaves beside the .exe as `unins000.exe`; both unmodified. Nothing of Inno Setup is linked into the app.
+- **The terms.** The Inno Setup License (`installer/licenses/InnoSetup.txt`, copied from `license.txt` at tag
+  `is-6_7_1` of jrsoftware/issrc, SHA-256 `2e534686…` as published, unchanged at its main branch on 2026-10-10; line
+  endings made LF): anyone may use it for any purpose, commercial ones included, and alter and redistribute it,
+  provided that (1) source copies keep its notices, (2) binary copies keep every copyright notice and web address in
+  place, as in the About box, (3) its origin is not misrepresented (an acknowledgment in the product documentation is
+  appreciated, not required), and (4) modified versions are marked. There is no fee, no copyleft and no limit on the
+  field of use.
+- **Why it is allowed.** It is a permissive license, like the MIT and BSD licenses the Legal standard allows: its
+  conditions are the zlib license's plus keeping the notices in binary copies. The Engineering standard names Inno
+  Setup for the installer ("Build"). We ship its binaries unmodified, so conditions 2 and 4 hold, and
+  `THIRD_PARTY_NOTICES.txt` now carries its notice and license text (`tools/third_party_notices.py`). The Legal
+  standard names MIT, BSD and Apache 2.0 by example and Inno Setup's own text is none of them, so, like zlib in
+  `tools/allowed_licenses.txt`, it waits for Jay's word with the other license exceptions (J8). The CI license gate
+  checks pip packages only, and Inno Setup is not one.
+- **A decision for Jay before a release.** jrsoftware.org's order page (read 2026-10-10) *requests* that commercial
+  users, for-profit organizations with more than USD 5,000 of yearly revenue, buy a commercial license, also when
+  they build installers only for in-house use; it says this "is not strictly required", and that the license may be
+  bought later, once the installers are ready to be used in production. The license text asks for no payment, and
+  this installer is internal and not in production, so nothing is due now. Before the first installer goes to a
+  customer, Jay decides whether to buy one (Single User, Team or Enterprise) or to leave the request, or to use MSIX.
+
+Still to do for REQ-SET-012: code signing of the installer and the .exe with a timestamp (J6); an EULA page with the
+LGPL carve-out and the written offer for Qt's source, once counsel has reviewed them; "© year company" in the
+installer (Legal, "Notices", SHOULD), waiting for the company and product names; a Korean installer, with the Korean
+UI (Inno Setup 6.7.1 ships Korean.isl); a one-step rollback; and the items of the S56 update that remain.
