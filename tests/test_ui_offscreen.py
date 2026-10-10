@@ -17,7 +17,7 @@ from pytestqt.qtbot import QtBot
 from aoi import times
 from aoi.core.services import AppContext
 from aoi.ui.main_window import MainWindow
-from aoi.ui.pages.base import cell_text
+from aoi.ui.pages.base import row_key
 from aoi.ui.pages.compare import ComparePage
 from aoi.ui.pages.logs import LogsPage
 
@@ -59,6 +59,7 @@ def _record(iid: int, overlay: str | None = None) -> dict[str, Any]:
     return {
         "id": iid, "time": "2026-10-01T05:05:00+00:00", "board_model": "TBOX-A1", "result": "NG", "defect_count": 1,
         "score": 0.5, "operator": "operator", "view": "Top", "image_path": f"board{iid}.png", "overlay_path": overlay,
+        "model_version": "v1.0", "recipe_rev": 1,
     }  # fmt: skip
 
 
@@ -137,7 +138,7 @@ def test_logs_preview_shows_only_the_selected_records_overlay(
     overlay = tmp_path / "overlay.png"
     assert cv2.imwrite(str(overlay), np.full((40, 60, 3), 200, np.uint8))
     page = _logs(qtbot, ctx, monkeypatch, [_record(2, str(tmp_path / "gone.png")), _record(1, str(overlay))])
-    row_of = {int(cell_text(page.table, i, 0)): i for i in range(page.table.rowCount())}
+    row_of = {row_key(page.table, i): i for i in range(page.table.rowCount())}
     page.table.selectRow(row_of[1])
     assert page.view._pix is not None
     page.table.selectRow(row_of[2])  # its overlay file was deleted, or the workspace was copied without results/

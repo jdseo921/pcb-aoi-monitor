@@ -865,12 +865,12 @@
     </message>
     <message>
         <location line="+170"/>
-        <location line="+1744"/>
+        <location line="+1745"/>
         <source>(none)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1713"/>
+        <location line="-1714"/>
         <source>Saving a recipe</source>
         <translation type="unfinished"></translation>
     </message>
@@ -896,7 +896,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+325"/>
+        <location line="+326"/>
         <source>Re-evaluating a result</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1061,14 +1061,14 @@
         <translation>검증 세트 잠금</translation>
     </message>
     <message>
-        <location line="-1919"/>
-        <location line="+1933"/>
+        <location line="-1920"/>
+        <location line="+1934"/>
         <location line="+39"/>
         <source>the workspace holds no such dataset version</source>
         <translation>작업 공간에 그런 데이터셋 버전이 없습니다</translation>
     </message>
     <message>
-        <location line="-1970"/>
+        <location line="-1971"/>
         <source>the run used a folder, not a frozen dataset version&apos;s locked validation set</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1083,7 +1083,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1929"/>
+        <location line="+1930"/>
         <source>its validation set is locked already, and a version is split only once</source>
         <translation>검증 세트가 이미 잠겨 있으며, 버전은 한 번만 분할됩니다</translation>
     </message>
@@ -1287,7 +1287,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-2482"/>
+        <location line="-2483"/>
         <source>no earlier version of this board model was active</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1317,7 +1317,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+872"/>
+        <location line="+873"/>
         <source>Labelling an image</source>
         <translation>이미지 라벨링</translation>
     </message>
@@ -4279,33 +4279,28 @@
     </message>
     <message>
         <location line="+1"/>
-        <location line="+17"/>
+        <location line="+16"/>
         <source>Board model</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-16"/>
-        <location line="+20"/>
+        <location line="-15"/>
+        <location line="+19"/>
         <source>Operator</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-13"/>
+        <location line="-12"/>
         <source>Filter</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location line="+7"/>
-        <source>ID</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+1"/>
         <source>Time</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-14"/>
+        <location line="-13"/>
         <location line="+16"/>
         <source>Result</source>
         <translation type="unfinished"></translation>
@@ -4316,14 +4311,14 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1"/>
-        <source>Score</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
         <location line="+2"/>
         <source>View</source>
         <translation>뷰</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Recipe rev</source>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location line="+1"/>
@@ -4331,7 +4326,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+6"/>
+        <location line="+7"/>
         <source>Exporting…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4347,12 +4342,17 @@
     </message>
     <message>
         <location line="+9"/>
-        <location line="+114"/>
+        <source>Open in Compare ›</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <location line="+125"/>
         <source>Export CSV</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-113"/>
+        <location line="-124"/>
         <source>Export Image Overlays</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4362,7 +4362,17 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+52"/>
+        <location line="+41"/>
+        <source>{count:,} record(s) · OK {ok:,} of {count:,} ({rate:.1f} %) · NG {ng:,} · WARN {warn:,}</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source> · archived {archived:,}</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+10"/>
         <source>Every record is archived or older than {days} days.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4372,7 +4382,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+137"/>
+        <location line="+146"/>
         <source>Export CSV stopped: no file was written.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4408,17 +4418,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-206"/>
-        <source>{count} inspections · {ng} NG · yield {rate:.1%}</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+2"/>
+        <location line="-212"/>
         <source>No records</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+14"/>
+        <location line="+13"/>
         <source>No records match</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4428,7 +4433,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+0"/>
+        <location line="-85"/>
+        <source>AI model</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+85"/>
         <source>Reset Filters</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4443,7 +4453,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+40"/>
+        <location line="+49"/>
         <source>Confirm export</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4488,8 +4498,8 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-271"/>
-        <location line="+330"/>
+        <location line="-288"/>
+        <location line="+348"/>
         <source>All</source>
         <translation>전체</translation>
     </message>
@@ -5187,7 +5197,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/logs.py" line="-350"/>
+        <location filename="../ui/pages/logs.py" line="-368"/>
         <source>Logs &amp; Export</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6507,7 +6517,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/services.py" line="-2735"/>
+        <location filename="../core/services.py" line="-2736"/>
         <source>Aligning {count} images to the reference board</source>
         <translation type="unfinished"></translation>
     </message>

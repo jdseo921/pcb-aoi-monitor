@@ -1363,9 +1363,10 @@ class AppContext:
         return self.db.inspections(date_from, date_to, board_model, operator, include_archived, result)
 
     def history_span(self) -> dict[str, Any] | None:
-        """`oldest` and `newest`, the stored times of the first and last record, archived ones included, and whether any
-        is `archived`; None for a workspace with no record. Logs & Export's empty state reads it in place of every
-        record, so a filter that matches none over 100,000 records still returns within 1 s (REQ-LOG-001)."""
+        """`oldest` and `newest`, the stored times of the first and last record, archived ones included, and how many
+        are `archived`; None for a workspace with no record. Logs & Export's empty state reads it in place of every
+        record, so a filter that matches none over 100,000 records still returns within 1 s (REQ-LOG-001), and its
+        summary line the archived count."""
         return self.db.inspection_span()
 
     def last_board(self, board_model: str) -> str | None:

@@ -55,11 +55,15 @@ Table with no match: "No inspections match these filters. Widen the dates or set
 
 | Code | What happened | Why | What to do |
 |---|---|---|---|
-| AOI-LOG-001 | The export failed | Disk full or folder not writable | Pick another folder; nothing was exported |
-| AOI-LOG-002 | The filter took too long | More than 1 s at this record count | Narrow the dates; the last result stays shown |
-| AOI-LOG-003 | The overlay is missing | The evidence file was removed from the workspace | The row shows "evidence missing"; the result data stays |
-| AOI-LOG-004 | Deletion refused | Role is not Admin | Switch User |
-| AOI-LOG-005 | Archiving failed | The database is locked or the disk is full | Try again; details in the log |
+| AOI-LOG-001 | Export stopped part-way | A copy of an overlay image did not succeed (drive removed or full) | Check the drive and the results folder, then export again; the audit trail records what was copied |
+| AOI-LOG-002 | Export not written | The folder cannot be written, the file is open elsewhere or the disk is full | Choose another folder or close the file, then export again; nothing was exported |
+| AOI-LOG-003 | Reason needed | Delete Records… was answered without a reason | Press Delete Records… again and type why the records go; nothing was deleted |
+| AOI-LOG-004 | Evidence files left | The records were deleted, but another app holds some of their evidence files | Close that app, then delete the files the log names from the results folder |
+| AOI-USR-001 | Not allowed for this role | Delete Records… by a user who is not an Admin (the button shows to the Admin only) | Sign in as an Admin |
+
+The catalogue in `aoi/errors.py` (docs/error-codes.md) holds the text the app shows; this table follows it. A slow filter
+is no message (REQ-LOG-001 holds it under 1 s), and a record whose overlay is gone shows the preview's placeholder,
+with its result data kept.
 
 ## Requirements served
 

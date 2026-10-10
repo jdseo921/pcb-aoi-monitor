@@ -647,7 +647,10 @@ or new folder left.
 
 The **From** and **To** boxes take days from 2000-01-01 to 2100-12-31. **Board model**, **Operator** and **Result**
 (All, OK, NG or WARN) each narrow the list, and every filter combines with the others and with **Include archived**;
-a click on a column's header sorts the table by it, again to reverse. With 100,000 records stored, **Filter** shows
+a click on a column's header sorts the table by it, again to reverse. The columns are Time, Board model, AI model
+(its version), Result (the verdict's colour on that cell alone), Defects, Operator, View, Recipe rev and Image; the
+record's ID and score are in the CSV export. **Open in Compare ›**, Enter or a double-click opens the selected record
+on Compare as it was decided. With 100,000 records stored, **Filter** shows
 its rows within 1 s (REQ-LOG-001); listing all of them at once takes much longer, so narrow the dates first. The
 picture beside the table is the selected record's overlay; it is empty when the record's overlay file is gone, when no
 row is selected and after **Filter**. When no record matches, the table offers **Reset Filters** (the last 7 days,

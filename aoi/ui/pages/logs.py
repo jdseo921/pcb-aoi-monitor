@@ -29,7 +29,7 @@ from .. import theme
 from ..widgets.busy import BusyOverlay
 from ..widgets.empty_state import EmptyState
 from ..widgets.image_view import ImageView
-from .base import QT_TRANSLATE_NOOP, Page, button, cell_text, fill_table, make_table, view_text
+from .base import QT_TRANSLATE_NOOP, Page, button, fill_table, make_table, row_key, size_class, view_text
 
 # The columns of the checks file beside the records file (REQ-INSP-012), the header even when no record has checks;
 # ai_check says whether the AI check ran on the record: RAN, OFF or NO_AI_MODEL (`inspector.ai_check`, #246).
@@ -88,32 +88,38 @@ class LogsPage(Page):
         split = QSplitter(Qt.Orientation.Horizontal)
         self.table = make_table(
             [
-                self.tr("ID"),
                 self.tr("Time"),
                 self.tr("Board model"),
+                self.tr("AI model"),
                 self.tr("Result"),
                 self.tr("Defects"),
-                self.tr("Score"),
                 self.tr("Operator"),
                 self.tr("View"),
+                self.tr("Recipe rev"),
                 self.tr("Image"),
             ]
         )
         self.table.verticalHeader().setDefaultSectionSize(theme.TARGET_H)  # a history row is an operator target
         self.table.itemSelectionChanged.connect(self._preview)
+        self.table.activated.connect(lambda _index: self.open_in_compare())  # Enter or a double-click on a row
         self.empty = EmptyState(self.table)
         self.busy = BusyOverlay(self.table, self.tr("Exporting…"))
         self.busy_delete = BusyOverlay(self.table, self.tr("Deleting…"))
         split.addWidget(self.table)
         self.view = ImageView(placeholder=self.tr("Select a row to see its overlay"))
         split.addWidget(self.view)
-        split.setSizes([1000, 600])
+        split.setSizes([1100, 500])  # the nine columns of the sketch, the image name cut short at 1920 px
         self.root.addWidget(split, 1)
 
-        b = QHBoxLayout()
+        line = QHBoxLayout()  # the counts, and the selected record's way to Compare (the Logs sketch)
         self.summary = QLabel("")
         self.summary.setObjectName("muted")
-        b.addWidget(self.summary, 1)
+        line.addWidget(self.summary, 1)
+        self.btn_compare = size_class(button(self.tr("Open in Compare ›"), slot=self.open_in_compare), "T")
+        line.addWidget(self.btn_compare)
+        self.root.addLayout(line)
+        b = QHBoxLayout()
+        b.addStretch(1)
         self.btn_csv = button(self.tr("Export CSV"), slot=self.export_csv)
         self.btn_img = button(self.tr("Export Image Overlays"), slot=self.export_overlays)
         self._arch_days = ctx.settings.log_retention_days  # the day count the button shows and archives by (#201)
@@ -142,30 +148,32 @@ class LogsPage(Page):
             self.table,
             [
                 [
-                    r["id"],
                     to_local(r["time"]),
                     r["board_model"],
+                    r["model_version"] or "",
                     theme.verdict_label(r["result"]),
                     r["defect_count"],
-                    r["score"] or 0.0,
                     r["operator"],
                     view_text(r["view"]) if r["view"] else "",  # rows from before migration 0005 recorded no view
+                    r["recipe_rev"],
                     Path(r["image_path"]).name,
                 ]
                 for r in self.rows
             ],
             [theme.VERDICT_COLORS[r["result"]] if r["result"] != "OK" else None for r in self.rows],
+            keys=[r["id"] for r in self.rows],
+            color_column=3,  # the Result cell alone: a whole coloured row reads poorly at 14 pt (the Logs sketch)
         )
-        n = len(self.rows)
-        ng = sum(r["result"] == "NG" for r in self.rows)
-        self.summary.setText(
-            self.tr("{count} inspections · {ng} NG · yield {rate:.1%}").format(count=n, ng=ng, rate=(n - ng) / n)
-            if n
-            else self.tr("No records")
-        )
+        n, span = len(self.rows), self.ctx.history_span()  # not every record: seconds at 100,000 (REQ-LOG-001)
+        by = {v: sum(r["result"] == v for r in self.rows) for v in VERDICTS}
+        counts = self.tr("{count:,} record(s) · OK {ok:,} of {count:,} ({rate:.1f} %) · NG {ng:,} · WARN {warn:,}")
+        line = counts.format(count=n, ok=by["OK"], rate=100 * by["OK"] / max(n, 1), ng=by["NG"], warn=by["WARN"])
+        archived = span["archived"] if span else 0
+        line += self.tr(" · archived {archived:,}").format(archived=archived) if archived else ""
+        self.summary.setText(line if n else self.tr("No records"))
         if n:
             self.empty.hide()
-        elif span := self.ctx.history_span():  # not every record: that took seconds at 100,000 (REQ-LOG-001)
+        elif span:  # not every record: that took seconds at 100,000 (REQ-LOG-001)
             if self.ctx.inspections(*self._default_dates()):  # what Reset Filters would show
                 todo = self.tr("Widen the dates or the filters."), self.tr("Reset Filters"), self.reset_filters
             else:  # Reset Filters would run the same empty query again (#200): the link shows every record instead
@@ -206,13 +214,22 @@ class LogsPage(Page):
 
     def _preview(self) -> None:
         """The selected record's overlay, or the placeholder: never another record's board (#174)."""
-        rows = self.table.selectionModel().selectedRows()
-        r = None
-        if rows:
-            iid = int(cell_text(self.table, rows[0].row(), 0))
-            r = next((x for x in self.rows if x["id"] == iid), None)  # None: a row no longer listed
+        iid = self._selected_id()
+        r = next((x for x in self.rows if x["id"] == iid), None)  # None: a row no longer listed
         overlay = r["overlay_path"] if r else None
         self.view.set_image(self.ctx.load_image(overlay) if overlay and Path(overlay).exists() else None)
+        self.btn_compare.setEnabled(r is not None)
+
+    def _selected_id(self) -> int | None:
+        """The ID of the record of the first selected row, kept with the row as it sorts; None with none selected."""
+        rows = self.table.selectionModel().selectedRows()
+        return int(row_key(self.table, rows[0].row())) if rows else None
+
+    def open_in_compare(self) -> None:
+        """Open in Compare ›, Enter or a double-click: the selected record on Compare as it was decided, its failing
+        checks marked (REQ-INSP-009; MainWindow.open_stored, #130)."""
+        if (iid := self._selected_id()) is not None:
+            self.shell.open_stored(iid)
 
     def _confirm(self, question: str, overwrites: bool = False) -> bool:
         """Yes to `question`; for one that `overwrites` a file, No is the default, so Enter keeps it (REQ-SET-018)."""
@@ -384,6 +401,7 @@ class LogsPage(Page):
             b.setEnabled(admin_or_eng and idle)
         self.btn_arch.setEnabled(admin_or_eng)
         self.btn_delete.setVisible(self.ctx.role == "Admin")  # shown to the Admin alone; the service checks the role
+        self.btn_compare.setEnabled(bool(self.table.selectionModel().selectedRows()))
         self.btn_delete.setEnabled(idle)
 
     def on_show(self) -> None:

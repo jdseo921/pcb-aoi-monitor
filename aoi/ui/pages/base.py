@@ -429,8 +429,11 @@ def fill_table(
     rows: Sequence[Sequence[object]],
     colors: Sequence[str | None] | None = None,
     tooltips: Sequence[str | None] | None = None,
+    keys: Sequence[object] | None = None,
+    color_column: int | None = None,
 ) -> None:
-    """Replace the rows of `t`; `colors[i]` and `tooltips[i]` go on every cell of row `i`.
+    """Replace the rows of `t`; `colors[i]` and `tooltips[i]` go on every cell of row `i`, or `colors[i]` on its cell in
+    `color_column` alone; `keys[i]`, such as a record's ID that no column shows, is what `row_key` reads of row `i`.
 
     Sorting is off while the rows are set and comes back at the end, which sorts the table at once by the header's
     indicator; so anything a row carries is set here, never by a loop over the data after this returns (#111)."""
@@ -445,13 +448,15 @@ def fill_table(
         tip = tooltips[i] if tooltips else None
         for j, v in enumerate(row):
             it = QTableWidgetItem()
+            if keys is not None:
+                it.setData(Qt.ItemDataRole.UserRole, keys[i])
             if isinstance(v, float):
                 it.setData(Qt.ItemDataRole.DisplayRole, round(v, 4))
             elif isinstance(v, int):
                 it.setData(Qt.ItemDataRole.DisplayRole, v)
             else:
                 it.setText("" if v is None else str(v))
-            if color:
+            if color and color_column in (None, j):
                 it.setBackground(QColor(color))
                 it.setForeground(QColor(theme.on_color(color)))
                 it.setFont(bold)
@@ -460,6 +465,11 @@ def fill_table(
             t.setItem(i, j, it)
     t.resizeColumnsToContents()
     t.setSortingEnabled(sortable)
+
+
+def row_key(t: QTableWidget, row: int) -> Any:
+    """The key `fill_table` was given for the row shown at `row`, wherever sorting moved it."""
+    return cell_item(t, row, 0).data(Qt.ItemDataRole.UserRole)
 
 
 def cell_text(t: QTableWidget, row: int, column: int) -> str:
