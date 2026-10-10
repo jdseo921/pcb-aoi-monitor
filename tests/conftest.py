@@ -9,6 +9,7 @@ standard, "Validation and accuracy claims").
 from __future__ import annotations
 
 import gc
+import json
 import os
 import shutil
 from collections.abc import Callable, Iterator
@@ -162,6 +163,14 @@ def another_version(ctx: AppContext, board_model: str, version: str) -> int:
     for src, dst in zip(model_card.paths(Path(active["path"])), model_card.paths(path), strict=True):
         shutil.copyfile(src, dst)  # its card, which activation needs (REQ-TRN-011)
     return ctx.db.register_model(board_model, version, str(path), {}, activate=False, uid=uid)
+
+
+def log_rows(folder: Path) -> list[dict[str, Any]]:
+    """Every line of the JSON-lines log in `folder` (REQ-LOG-004), oldest UTC day first. A test reads every day's file,
+    not today's alone: a line logged before midnight UTC, by a session fixture or earlier in the test, is in the
+    day before's."""
+    files = sorted(folder.glob("aoi-*.jsonl"))
+    return [json.loads(line) for path in files for line in path.read_text(encoding="utf-8").splitlines()]
 
 
 def restored(tiny_model: TrainedModel, ws: Path, ignore: Callable[..., Any] | None = None) -> Path:
