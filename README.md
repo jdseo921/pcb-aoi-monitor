@@ -25,6 +25,9 @@ python -m pip check
 python main.py
 ```
 
+The app needs no network and opens no port: [docs/install/ports.md](docs/install/ports.md) lists its ports (none) and
+how to check a station with `tools/check_offline.ps1`.
+
 Linux: same steps with `source .venv/bin/activate` (macOS is not a target: PyTorch's index has no 2.14.1+cpu
 build for it). Developers install `requirements-dev.lock` in place of `requirements.lock` and run `ruff check .`,
 `ruff format --check .`, `mypy` and `pytest -q` before pushing. `requirements.txt` and `requirements-dev.txt` hold
