@@ -28,7 +28,7 @@ from aoi.ui.pages.recipe_editor import RecipeEditorPage
 from aoi.ui.widgets.ai_threshold import AiThresholdField
 from tests.conftest import activated
 from tests.test_compare_stored import _table, save_to_recipe
-from tests.test_req_done_in_v01 import BOARD, _button, _inspect_one, _window
+from tests.test_req_done_in_v01 import BOARD, _inspect_one, _save_recipe, _window
 from tools.trainable import trainable
 
 EDITOR_TICK = "Override {value}"  # the Recipe Editor sketch's words for the tick, beside the field
@@ -207,11 +207,16 @@ def test_req_trn_015_a_later_save_keeps_the_override_as_stored(
     kept to every decimal by a later Save Recipe on the Recipe Editor and Save to Recipe on Compare: each is a new
     revision with no entry of the override, which did not change, so opening and saving a recipe never changes what
     judges a board (release note, first section). On Compare the override shown rounded is no change, so Save to Recipe
-    stays off until another threshold changes (S28d)."""
+    stays off until another threshold changes (S28d); on the Recipe Editor too another threshold changes first, as Save
+    Revision is off while nothing changes (S50)."""
     ctx = trained_ctx
     win, editor = _editor(qtbot, ctx, monkeypatch)
     compare = win.pages["Compare"]
     assert isinstance(compare, ComparePage)
+
+    def save_on_editor() -> None:
+        editor.diff.setValue(editor.diff.value() + 1)  # a change: a revision never repeats the one before (S50)
+        _save_recipe(qtbot, editor)
 
     def save_on_compare() -> None:
         assert not compare.btn_save.isEnabled(), "the override the field cannot show is no change"
@@ -221,7 +226,7 @@ def test_req_trn_015_a_later_save_keeps_the_override_as_stored(
     for kept in (4.5954, 20000.0):
         _save_override(ctx, kept)
         entries = len(ctx.audit_entries(action="recipe.ai_threshold"))
-        for title, save in (("Recipe Editor", _button(editor, "Save Recipe").click), ("Compare", save_on_compare)):
+        for title, save in (("Recipe Editor", save_on_editor), ("Compare", save_on_compare)):
             win.navigate("Home")
             assert win.navigate(title)  # shown again: the revision saved since is loaded
             qtbot.waitUntil(ctx.jobs.idle, timeout=10000)

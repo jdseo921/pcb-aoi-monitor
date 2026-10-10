@@ -20,7 +20,7 @@ from aoi.ui import theme
 from aoi.ui.pages.recipe_editor import RecipeEditorPage
 from tests.conftest import engineer
 from tests.test_label_editor import CTRL, LEFT, NONE, SHIFT, _at, _drag, _finger, _shift, _wheel
-from tests.test_req_done_in_v01 import BOARD, _button, _window
+from tests.test_req_done_in_v01 import BOARD, _button, _save_recipe, _window
 
 if TYPE_CHECKING:
     from aoi.ui.widgets.box_editor import RoiEditor
@@ -122,7 +122,7 @@ def test_req_rcp_001_move_resize_survives_reload(
     assert page._sel_index() == 1
     assert _pens(view) == {(width - w, 0, w, h): (YELLOW, True), (300, 200, 60, 60): (YELLOW, False)}
     assert page.edited_recipe.rois[0].mm is None
-    qtbot.mouseClick(_button(page, "Save Recipe"), LEFT)
+    _save_recipe(qtbot, page)
     assert _pens(view) == {(width - w, 0, w, h): (GREEN, False), (300, 200, 60, 60): (GREEN, False)}
 
     page.window().close()  # a restart: the app closes first, one copy per workspace (#204)
@@ -206,7 +206,7 @@ def test_req_rcp_001_an_roi_moved_under_a_scale_is_saved_where_it_was_moved(
     a = _at(page.view, 140, 130)
     d = _shift(page.view, a, a + QPoint(40, 0))
     _drag(page.view, a, a + QPoint(40, 0))
-    qtbot.mouseClick(_button(page, "Save Recipe"), LEFT)
+    _save_recipe(qtbot, page)
     roi = trained_ctx.recipe(BOARD)[1].in_px(scale).rois[0]
     assert roi.mm is not None and (roi.x, roi.y, roi.w, roi.h) == (round(100 + d.x()), 100, 80, 60)
 
@@ -281,7 +281,7 @@ def test_req_rcp_001_keys_draw_leave_delete_undo_and_redo(
     assert page.r_name.text().lower() == "d" + name[1:].lower(), "the keys edited the name"
     assert len(page.edited_recipe.rois) == count and not page.draw_btn.isChecked(), "and did nothing else"
     monkeypatch.setattr(QMessageBox, "information", staticmethod(lambda *_: QMessageBox.StandardButton.Ok))
-    qtbot.mouseClick(_button(page, "Save Recipe"), LEFT)
+    _save_recipe(qtbot, page)
     assert not page.act_undo.isEnabled(), "nothing to undo past the revision saved"
     view.roiDrawn.emit(QRectF(50, 50, 40, 40))
     page.set_scale(476, 10)

@@ -586,6 +586,16 @@ class Database:
             (board_model,),
         )
 
+    def recipe_revisions(self, board_model: str) -> list[dict[str, Any]]:
+        """`recipe_history` with each revision's `body`, decoded, and the `reason` of its save's audit entry."""
+        rows = self.query(
+            "SELECT r.revision, r.uuid, r.user, r.created_at, r.body, a.reason FROM recipes r LEFT JOIN audit a"
+            " ON a.object_type='recipe' AND a.action='recipe.save' AND a.object_uuid=r.uuid"
+            " WHERE r.board_model=? ORDER BY r.revision DESC",
+            (board_model,),
+        )
+        return [r | {"body": json.loads(r["body"])} for r in rows]
+
     # --- inspections -------------------------------------------------------
     def add_inspection(
         self,

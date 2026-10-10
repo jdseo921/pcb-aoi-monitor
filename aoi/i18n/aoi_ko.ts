@@ -795,12 +795,12 @@
     </message>
     <message>
         <location line="+170"/>
-        <location line="+1724"/>
+        <location line="+1736"/>
         <source>(none)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1693"/>
+        <location line="-1705"/>
         <source>Saving a recipe</source>
         <translation type="unfinished"></translation>
     </message>
@@ -826,7 +826,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+305"/>
+        <location line="+317"/>
         <source>Re-evaluating a result</source>
         <translation type="unfinished"></translation>
     </message>
@@ -991,14 +991,14 @@
         <translation>검증 세트 잠금</translation>
     </message>
     <message>
-        <location line="-1885"/>
-        <location line="+1899"/>
+        <location line="-1897"/>
+        <location line="+1911"/>
         <location line="+39"/>
         <source>the workspace holds no such dataset version</source>
         <translation>작업 공간에 그런 데이터셋 버전이 없습니다</translation>
     </message>
     <message>
-        <location line="-1936"/>
+        <location line="-1948"/>
         <source>the run used a folder, not a frozen dataset version&apos;s locked validation set</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1013,7 +1013,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1895"/>
+        <location line="+1907"/>
         <source>its validation set is locked already, and a version is split only once</source>
         <translation>검증 세트가 이미 잠겨 있으며, 버전은 한 번만 분할됩니다</translation>
     </message>
@@ -1217,7 +1217,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-2448"/>
+        <location line="-2460"/>
         <source>no earlier version of this board model was active</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1247,7 +1247,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+852"/>
+        <location line="+864"/>
         <source>Labelling an image</source>
         <translation>이미지 라벨링</translation>
     </message>
@@ -1324,12 +1324,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/recipe_editor.py" line="+56"/>
+        <location filename="../ui/pages/recipe_editor.py" line="+58"/>
         <source>its Golden board was replaced after the points were picked on it</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+402"/>
+        <location line="+426"/>
         <source>Height</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4974,7 +4974,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/recipe_editor.py" line="-389"/>
+        <location filename="../ui/pages/recipe_editor.py" line="-413"/>
         <source>Recipe Editor</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5058,7 +5058,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+36"/>
+        <location line="+37"/>
         <location line="+2"/>
         <source>Draw ROI</source>
         <translation type="unfinished"></translation>
@@ -5074,12 +5074,27 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+126"/>
+        <location line="+84"/>
+        <source>The 10 mandatory AOI checks (defect classification table, section 4):</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>• whole board: the AI model and the Golden board comparison cover it without an ROI.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+4"/>
+        <source>AOI checks</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+59"/>
         <source>AI score</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-113"/>
+        <location line="-137"/>
         <source>Selected ROI</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5090,7 +5105,7 @@
     </message>
     <message>
         <location line="+1"/>
-        <location line="+103"/>
+        <location line="+127"/>
         <source>Name</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5120,7 +5135,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-100"/>
+        <location line="-124"/>
         <source>ROI type</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5190,7 +5205,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+20"/>
+        <location line="+22"/>
         <source>AI score threshold</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5225,17 +5240,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+6"/>
-        <source>Mandatory AOI defect set (every recipe must cover it):</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+3"/>
-        <source>Mandatory Set</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+6"/>
+        <location line="+22"/>
         <source>Revision</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5250,7 +5255,27 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+2"/>
+        <location line="+0"/>
+        <source>Changes (before → after)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Reason</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+4"/>
+        <source>Open</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Restore as New Revision</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+8"/>
         <source>Revisions</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5285,17 +5310,17 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+4"/>
+        <location line="+5"/>
         <source>Try Recipe…</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+2"/>
+        <location line="+3"/>
         <source>Save Recipe</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+14"/>
+        <location line="+15"/>
         <source>px</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5310,7 +5335,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+93"/>
+        <location line="+92"/>
         <source>Train an AI model or set a reference image on Training.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5330,22 +5355,27 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+14"/>
-        <source>◌  needs Stage 2 (3D / side camera)</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+2"/>
-        <source>✓  ROI defined</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+2"/>
-        <source>•  covered by the whole-board AI model and the Golden board comparison</source>
+        <location line="+11"/>
+        <source>✓  ROI {names}</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location line="+1"/>
+        <source>•  whole board</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>○  not covered</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>◌  needs Stage 2 (3D / side camera)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+5"/>
         <source>{defect:&lt;24}  {mark}</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5385,24 +5415,58 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+19"/>
+        <location line="+58"/>
         <source>Saved revision {revision} by {user}.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location line="+1"/>
-        <location line="+23"/>
+        <location line="+24"/>
+        <location line="+50"/>
         <source>Recipe</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-12"/>
+        <location line="-63"/>
         <source>Revision {latest}, saved after revision {revision}, is shown now.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+7"/>
+        <location line="+9"/>
+        <source>Revision {old}, restored as revision {next}, is shown once saved, in place of your unsaved changes. Restore it and discard them?</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+13"/>
+        <source>first revision</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+36"/>
         <source>Revision {latest} of {board_model} was saved after revision {revision}, which you are editing. Load revision {latest} and discard your unsaved changes? With No, they stay on screen, but Save Recipe refuses them until revision {latest} is loaded.</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>RevisionPane</name>
+    <message>
+        <location filename="../ui/pages/recipe_save.py" line="+180"/>
+        <source>Revision {revision}, read-only: saved by {user}, {saved}</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>{setting}: {value}</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+4"/>
+        <source>What the recipe as edited changes from revision {revision}:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>The recipe as edited is the same as revision {revision}.</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -5421,6 +5485,204 @@
     <message>
         <location line="+1"/>
         <source>Admin</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>SaveSheet</name>
+    <message>
+        <location filename="../ui/pages/recipe_save.py" line="-168"/>
+        <source>AI check</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>AI score threshold</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>WARN band</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Golden board comparison</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Pixel difference</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Minimum defect area (px)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Minimum defect size (mm)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Similarity minimum (SSIM)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Maximum changed area %</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Allowed difference regions</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>type</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>X (px)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Y (px)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>W (px)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>H (px)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>box in mm</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>AI score</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>height min</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>height max</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>volume min</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>volume max</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>side</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>enabled</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+12"/>
+        <source>Save Recipe</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+19"/>
+        <source>Cancel</source>
+        <translation type="unfinished">취소</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Save Revision</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+23"/>
+        <source>Save the recipe of {board_model} as revision {next}? Revision {revision} stays as it was saved.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+4"/>
+        <source>Restore revision {old} of {board_model} as revision {next}? Revision {revision} stays as it was saved.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+4"/>
+        <source>Nothing changed since revision {revision}.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>Not covered: {checks}. A reason is needed to save without them, and is kept with the revision.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>Reason (required)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+0"/>
+        <source>Reason</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Save Revision {next}</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+10"/>
+        <source>ROI {roi} added</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+0"/>
+        <source>ROI {roi} removed</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>ROI {roi}, {setting}</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>{setting}: {before} → {after}</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+10"/>
+        <source>on</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+0"/>
+        <source>off</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -5945,7 +6207,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/services.py" line="-2662"/>
+        <location filename="../core/services.py" line="-2674"/>
         <source>Aligning {count} images to the reference board</source>
         <translation type="unfinished"></translation>
     </message>

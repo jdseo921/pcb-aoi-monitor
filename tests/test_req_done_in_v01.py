@@ -31,6 +31,7 @@ from aoi.errors import AoiError
 from aoi.ui.main_window import MainWindow
 from aoi.ui.pages.compare import check_text
 from aoi.ui.pages.inspection import InspectionPage
+from aoi.ui.pages.recipe_editor import RecipeEditorPage
 from aoi.ui.workers import _live
 from tests.conftest import TrainedModel, engineer, wrapped
 
@@ -60,6 +61,16 @@ def _inspect_one(qtbot: QtBot, win: MainWindow, path: Path) -> InspectionPage:
 def _button(page: QWidget, text: str) -> QPushButton:
     """The button on `page` labelled `text`, for a test to click as a user would."""
     return next(b for b in page.findChildren(QPushButton) if b.text() == text)
+
+
+def _save_recipe(qtbot: QtBot, page: RecipeEditorPage, reason: str = "uncovered on the test board") -> None:
+    """Save Recipe as a user does: the button, then Save Revision on the sheet it opens (REQ-RCP-004), `reason` typed
+    when the recipe leaves a mandatory AOI check uncovered, as the sheet then asks (REQ-RCP-005)."""
+    qtbot.mouseClick(_button(page, "Save Recipe"), Qt.MouseButton.LeftButton)
+    assert page.save_sheet.isVisible()
+    if not page.save_sheet.missing.isHidden():
+        page.save_sheet.reason.setText(reason)
+    qtbot.mouseClick(page.save_sheet.btn_save, Qt.MouseButton.LeftButton)
 
 
 def test_req_insp_003_one_box_per_defect_and_the_file_is_unchanged(
@@ -324,7 +335,7 @@ def test_req_rcp_002_five_roi_types_and_five_fields_save_and_reload(
         for spin, value in zip(spins, fields[i], strict=True):
             spin.setValue(value)
         qtbot.mouseClick(_button(page, "Apply"), Qt.MouseButton.LeftButton)
-    qtbot.mouseClick(_button(page, "Save Recipe"), Qt.MouseButton.LeftButton)
+    _save_recipe(qtbot, page)
 
     win.close()  # a restart: the app closes first, one copy per workspace (#204)
     reopened = engineer(AppContext(Settings(workspace=trained_ctx.settings.workspace, device="cpu")))
@@ -418,7 +429,7 @@ def test_req_rcp_004_a_revision_saved_since_is_shown_and_never_reverted_by_save(
     saved_elsewhere(0.9, 30)  # nothing unsaved in the editor: it shows the new revision without asking
     assert (page.rev, page.ssim.value(), page.diff.value()) == (first + 1, pytest.approx(0.9), 30)
     page.view.roiDrawn.emit(QRectF(10, 10, 20, 20))
-    qtbot.mouseClick(_button(page, "Save Recipe"), Qt.MouseButton.LeftButton)
+    _save_recipe(qtbot, page)
     rev, r = trained_ctx.recipe(BOARD)
     assert (rev, r.ssim_min, r.diff_threshold, len(r.rois)) == (first + 2, pytest.approx(0.9), 30, 1)
 

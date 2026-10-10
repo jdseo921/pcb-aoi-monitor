@@ -70,7 +70,7 @@ from .inspector import NG, OK, WARN, AiEvidence, InspectionResult, Inspector, Ju
 from .jobs import Job, JobCancelled, Jobs
 from .labels import DefectBox
 from .maps import load_maps, map_paths, picture_shape, save_maps
-from .recipe import Recipe
+from .recipe import Recipe, changes
 from .sample_import import LABELS, REFUSED, ImportFile, ImportReport
 
 ALARM_LIMIT = 1000  # REQ-INSP-006: the alarms a screen shows and that survive a restart
@@ -1321,6 +1321,18 @@ class AppContext:
     def recipe_history(self, board_model: str) -> list[dict[str, Any]]:
         """Recipe revisions (revision, uuid, user, created_at), newest first; revision 1 by "system" is the default."""
         return self.db.recipe_history(board_model)
+
+    def recipe_revisions(self, board_model: str) -> list[dict[str, Any]]:
+        """Every recipe revision of `board_model`, newest first, as the Recipe Editor's Revisions tab lists them
+        (REQ-RCP-004): revision, uuid, user and created_at as `recipe_history` gives them, the `recipe` it holds as
+        stored, the `reason` its save was audited with (None: none) and its `changes` from the revision before it
+        (`recipe.changes`; None for the first)."""
+        rows = self.db.recipe_revisions(board_model)
+        for r in rows:
+            r["recipe"] = Recipe.from_dict(r.pop("body"))
+        for r, older in zip(rows, [*rows[1:], None] if rows else [], strict=True):
+            r["changes"] = changes(older["recipe"], r["recipe"]) if older is not None else None
+        return rows
 
     def inspections(
         self,

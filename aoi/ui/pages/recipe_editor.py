@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import copy
-from typing import TYPE_CHECKING
+from dataclasses import replace
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 from PySide6.QtCore import QPointF, QRectF, Qt
@@ -27,10 +28,10 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from ... import defects as taxonomy
+from ...core import checklist
 from ...core.imaging import IMAGE_EXTS
 from ...core.inspector import InspectionResult
-from ...core.recipe import ROI, ROI_TYPES, Recipe
+from ...core.recipe import ROI, ROI_TYPES, Change, Recipe, changes
 from ...core.services import AppContext
 from ...errors import AoiError
 from ...times import to_local
@@ -42,6 +43,7 @@ from ..widgets.empty_state import EmptyState
 from ..widgets.scale import CalibrationSheet, DefectSizeField
 from .base import QT_TRANSLATE_NOOP, Page, action_button, button, fill_table, make_table, scrolled
 from .compare import check_rows
+from .recipe_save import RevisionPane, SaveSheet
 
 if TYPE_CHECKING:
     from ..main_window import MainWindow
@@ -81,6 +83,7 @@ class RecipeEditorPage(Page):
         self.px_per_mm: float | None = None  # the board model's scale, which load() reads (REQ-RCP-006)
         self._undo: list[list[ROI]] = []  # the ROIs before each edit since load(), the last edit last (Ctrl+Z)
         self._redo: list[list[ROI]] = []  # and the edits undone, which Ctrl+Y does again
+        self._revisions: list[dict[str, Any]] = []  # the Revisions tab's rows (`AppContext.recipe_revisions`)
 
         split = QSplitter(Qt.Orientation.Horizontal)
         left = QWidget()
@@ -180,6 +183,8 @@ class RecipeEditorPage(Page):
         tf = QFormLayout(thr_tab)
         self.use_ai = QCheckBox(self.tr("Use the self-trained AI model"))
         self.use_cmp = QCheckBox(self.tr("Use the Golden board comparison"))
+        for tick in (self.use_ai, self.use_cmp):
+            tick.toggled.connect(self._show_coverage)  # a whole-board check is covered by either
         self.ai_thr = self.ai_threshold_field()
         self.ai_thr.ticking.connect(lambda: self.show_calibrated(self.ai_thr, self.board_model))  # trained since shown
         self.warn = QDoubleSpinBox()
@@ -213,21 +218,40 @@ class RecipeEditorPage(Page):
             tf.addRow(label, w) if label else tf.addRow(w)
         tabs.addTab(scrolled(thr_tab), self.tr("Thresholds"))  # scrolls where the window is too short for its rows
 
-        # Mandatory defect set tab (classification table §4)
+        # AOI checks tab: the 10 mandatory checks of the classification table (§4) and how the recipe covers each
         mand = QWidget()
         mand.setObjectName("page")
         ml = QVBoxLayout(mand)
-        ml.addWidget(QLabel(self.tr("Mandatory AOI defect set (every recipe must cover it):")))
+        ml.addWidget(QLabel(self.tr("The 10 mandatory AOI checks (defect classification table, section 4):")))
         self.mand_list = QListWidget()
         ml.addWidget(self.mand_list, 1)
-        tabs.addTab(mand, self.tr("Mandatory Set"))
+        whole = QLabel(self.tr("• whole board: the AI model and the Golden board comparison cover it without an ROI."))
+        whole.setObjectName("muted")
+        whole.setWordWrap(True)
+        ml.addWidget(whole)
+        tabs.addTab(mand, self.tr("AOI checks"))
 
-        # History tab
+        self.save_sheet = SaveSheet(self._confirm_save, self._type_text)  # Save Recipe's confirmation (REQ-RCP-004)
+
+        # Revisions tab (REQ-RCP-004): every revision, newest first, with what its save changed and why; Open shows one
+        # read-only beside the recipe as edited, Restore as New Revision saves a copy as the next one, confirmed (Q24)
         hist = QWidget()
         hist.setObjectName("page")
         hl = QVBoxLayout(hist)
-        self.history = make_table([self.tr("Revision"), self.tr("User"), self.tr("Saved")])
-        hl.addWidget(self.history)
+        cols = [self.tr("Revision"), self.tr("User"), self.tr("Saved"), self.tr("Changes (before → after)")]
+        self.history = make_table([*cols, self.tr("Reason")], sortable=False)  # its rows are self._revisions'
+        self.history.itemSelectionChanged.connect(self._sync_revision_buttons)
+        hl.addWidget(self.history, 1)
+        row = QHBoxLayout()
+        self.open_btn = button(self.tr("Open"), slot=self.open_revision)
+        self.restore_btn = button(self.tr("Restore as New Revision"), slot=self.restore_revision)
+        row.addWidget(self.open_btn)
+        row.addWidget(self.restore_btn)
+        row.addStretch(1)
+        hl.addLayout(row)
+        self._sync_revision_buttons()
+        self.revision_pane = RevisionPane(self.save_sheet)
+        hl.addWidget(self.revision_pane, 1)
         tabs.addTab(hist, self.tr("Revisions"))
 
         right = QWidget()
@@ -241,10 +265,13 @@ class RecipeEditorPage(Page):
         self.try_checks = make_table([*checks, self.tr("Result")], sortable=False)  # the Try's checks (REQ-RCP-003)
         self.try_checks.hide()
         rv.addWidget(self.try_checks)
+        rv.addWidget(self.save_sheet)
         b = QHBoxLayout()
         self.act_try = self.action(self.tr("Try Recipe…"), "Ctrl+T", self.test_run)
         b.addWidget(action_button(self.act_try, show_key=False))
-        b.addWidget(button(self.tr("Save Recipe"), "primary", self.save))
+        # a lambda, as triggered passes its checked flag, which ask_save would take for a revision to restore
+        self.act_save = self.action(self.tr("Save Recipe"), "Ctrl+S", lambda: self.ask_save())
+        b.addWidget(action_button(self.act_save, "primary", show_key=False))
         rv.addLayout(b)
         split.addWidget(right)
         split.setSizes([1000, 640])
@@ -291,6 +318,7 @@ class RecipeEditorPage(Page):
     # --- load / show ------------------------------------------------------------
     def load(self) -> None:
         self.roi_table.clearSelection()  # row i of the recipe before is not ROI i of this one: the form empties (#173)
+        self.save_sheet.close_sheet()  # it named the revision before, or the board model before
         self._forget()
         if not self.board_model:
             self.calibrate_btn.setEnabled(False)  # no Golden board to click on, nor to take the focus back
@@ -301,6 +329,7 @@ class RecipeEditorPage(Page):
             self.scale_text.hide()  # no board model, so no scale and no AOI-RCP-005 to show
             self.scale_badge.hide()
             self.held_badge.hide()
+            self._show_revisions()  # none, rather than the board model before's
             return
         self.rev, r = self.ctx.recipe(self.board_model)
         try:
@@ -321,10 +350,7 @@ class RecipeEditorPage(Page):
         self.ssim.setValue(r.ssim_min)
         self.chg.setValue(r.changed_pct_max)
         self.maxreg.setValue(r.max_diff_regions)
-        fill_table(
-            self.history,
-            [[h["revision"], h["user"], to_local(h["created_at"])] for h in self.ctx.recipe_history(self.board_model)],
-        )
+        self._show_revisions()
         self._loaded = self._collect().to_dict()  # as the form shows it, rounded to its spin boxes
         self.view.saved = self._saved_rois()
         self._refresh_rois()
@@ -370,24 +396,24 @@ class RecipeEditorPage(Page):
         else:
             self.roi_empty.show_state(self.tr("No ROIs yet"), self.tr("Press Draw ROI and drag on the Golden board."))
         self._draw_rois()
-        covered = {x.type for x in r.rois}
-        self.mand_list.clear()
-        roi_for = {
-            "Missing Component": "Presence",
-            "Polarity Error": "Polarity",
-            "Solder Bridge": "Solder Bridge",
-            "Connector Pin Height": "Height",
-            "3D Coplanarity": "Height",
-            "Solder Volume": "Height",
+        self._show_coverage()
+
+    def _show_coverage(self, *_: object) -> None:
+        """The AOI checks tab (REQ-RCP-005): each mandatory check with how the recipe as edited covers it, its ROIs
+        and the two ticks that turn the AI check and the Golden board comparison on, as the sketch marks them."""
+        if self.recipe is None:
+            return
+        r = replace(self.recipe, use_ai=self.use_ai.isChecked(), use_compare=self.use_cmp.isChecked())
+        marks = {
+            checklist.ROI: self.tr("✓  ROI {names}"),
+            checklist.WHOLE_BOARD: self.tr("•  whole board"),
+            checklist.NOT_COVERED: self.tr("○  not covered"),
+            checklist.STAGE_2: self.tr("◌  needs Stage 2 (3D / side camera)"),
         }
-        for name in taxonomy.MANDATORY_AOI_SET:
-            if name in taxonomy.REQUIRES_3D_OR_SIDE:
-                mark = self.tr("◌  needs Stage 2 (3D / side camera)")
-            elif roi_for.get(name) in covered:
-                mark = self.tr("✓  ROI defined")
-            else:
-                mark = self.tr("•  covered by the whole-board AI model and the Golden board comparison")
-            self.mand_list.addItem(self.tr("{defect:<24}  {mark}").format(defect=name, mark=mark))
+        self.mand_list.clear()
+        for c in checklist.coverage(r):
+            mark = marks[c.how].format(names=", ".join(c.rois))
+            self.mand_list.addItem(self.tr("{defect:<24}  {mark}").format(defect=c.check, mark=mark))
 
     def _sel_index(self) -> int:
         rows = self.roi_table.selectionModel().selectedRows() if self.roi_table.selectionModel() else []
@@ -660,14 +686,53 @@ class RecipeEditorPage(Page):
         t.setFixedHeight(t.horizontalHeader().sizeHint().height() + rows + 2 * t.frameWidth())
         t.show()
 
-    def save(self) -> None:
-        if (bm := self.checked_board_model()) is None:
+    def ask_save(self, restoring: tuple[int, Recipe] | None = None) -> None:
+        """Save Recipe (Ctrl+S, REQ-RCP-004): the sheet naming the revision it makes, with what it changes and the
+        mandatory checks left uncovered, which need a reason (REQ-RCP-005); nothing is saved until Save Revision. With
+        `restoring`, a revision and its recipe as stored, the sheet is Restore as New Revision's for a copy of it."""
+        if (bm := self._latest_held()) is not None:
+            r = self._to_save(restoring)
+            self.save_sheet.open_for(bm, self.rev, self._changes(bm, r), checklist.uncovered(r), restoring)
+
+    def _to_save(self, restoring: tuple[int, Recipe] | None) -> Recipe:
+        """The recipe a save stores, as stored: the recipe as edited, or the revision `restoring` copies; under a
+        scale, every size in mm, as `in_mm` gives it at the scale now (REQ-RCP-006)."""
+        return (restoring[1] if restoring else self._collect()).in_mm(self.px_per_mm)
+
+    def _changes(self, bm: str, r: Recipe) -> list[Change]:
+        """What a save of `r`, as stored, changes from the latest revision."""
+        return changes(self.ctx.recipe(bm)[1], r)
+
+    def _confirm_save(self) -> None:
+        """Save Revision on the sheet: saved as shown, else, as an edit came since, shown again to confirm."""
+        if (bm := self.board_model) is None:
             return
-        if (latest := self.ctx.recipe(bm)[0]) != self.rev:  # saved since, on Compare: saving would undo it unseen
+        restoring = self.save_sheet.restoring
+        r = self._to_save(restoring)
+        if ([self.save_sheet.line(c) for c in self._changes(bm, r)], checklist.uncovered(r)) != self.save_sheet.shown:
+            self.ask_save(restoring)
+            return
+        self.save()
+
+    def _latest_held(self) -> str | None:
+        """The board model, when the editor holds its latest revision; else None, the newer one shown or AOI-RCP-001
+        said: a save over a revision saved since, on Compare, would undo it unseen."""
+        if (bm := self.checked_board_model()) is None:
+            return None
+        if (latest := self.ctx.recipe(bm)[0]) != self.rev:
             if not self._show_latest(latest):
                 self.error(AoiError("AOI-RCP-001", board_model=bm, latest=latest, revision=self.rev))
+            return None
+        return bm
+
+    def save(self) -> None:
+        """Store the recipe as edited, or the revision Restore as New Revision copies, as the next revision, the reason
+        typed in its audit entry (Save Revision). A copy is shown once saved, so first unsaved changes are asked."""
+        if self._latest_held() is None:
             return
-        rev = self.ctx.save_recipe(self._collect().in_mm(self.px_per_mm))  # under a scale, every size in mm
+        if (restoring := self.save_sheet.restoring) is not None and not self._replace_ok(restoring[0]):
+            return
+        rev = self.ctx.save_recipe(self._to_save(restoring), self.save_sheet.reason.text().strip() or None)
         saved = self.tr("Saved revision {revision} by {user}.").format(revision=rev, user=self.ctx.user)
         QMessageBox.information(self, self.tr("Recipe"), saved)
         self.load()
@@ -683,6 +748,57 @@ class RecipeEditorPage(Page):
         shown = self.tr("Revision {latest}, saved after revision {revision}, is shown now.")
         self.shell.status(shown.format(latest=latest, revision=before))
         return True
+
+    def _replace_ok(self, old: int) -> bool:
+        """Ask before a copy of revision `old`, saved, replaces unsaved changes on screen; True when there are none."""
+        if self._collect().to_dict() == self._loaded:
+            return True
+        ask = self.tr(
+            "Revision {old}, restored as revision {next}, is shown once saved, in place of your unsaved changes. "
+            "Restore it and discard them?"
+        ).format(old=old, next=self.rev + 1)
+        buttons = QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+        answer = QMessageBox.question(self, self.tr("Recipe"), ask, buttons, QMessageBox.StandardButton.No)
+        return answer == QMessageBox.StandardButton.Yes
+
+    # --- revisions (REQ-RCP-004) ---------------------------------------------------
+    def _show_revisions(self) -> None:
+        """Fill the Revisions tab: each revision with what its save changed from the one before, and its reason."""
+        self._revisions = self.ctx.recipe_revisions(self.board_model) if self.board_model else []
+        self.history.clearSelection()  # row i is another revision now
+        self.revision_pane.hide()  # it showed a revision of the recipe before
+        first = self.tr("first revision")
+        rows, tips = [], []
+        for r in self._revisions:
+            lines = [self.save_sheet.line(c) for c in r["changes"]] if r["changes"] is not None else [first]
+            rows.append([r["revision"], r["user"], to_local(r["created_at"]), "; ".join(lines), r["reason"] or "—"])
+            tips.append("\n".join(lines))
+        fill_table(self.history, rows, tooltips=tips)
+        self._sync_revision_buttons()
+
+    def _picked_revision(self) -> dict[str, Any] | None:
+        rows = self.history.selectionModel().selectedRows() if self.history.selectionModel() else []
+        return self._revisions[rows[0].row()] if rows else None
+
+    def _sync_revision_buttons(self) -> None:
+        on = self._picked_revision() is not None
+        self.open_btn.setEnabled(on)
+        self.restore_btn.setEnabled(on)
+
+    def open_revision(self) -> None:
+        """Open: the revision picked, read-only beside the recipe as edited, with what the edits change from it."""
+        if (r := self._picked_revision()) is None or self.recipe is None:
+            return
+        shown = r["recipe"].in_px(self.px_per_mm)
+        rois = [[x.name, self._type_text(x.type), *self._box(x), x.ai_score] for x in shown.rois]
+        against = changes(r["recipe"], self._collect().in_mm(self.px_per_mm))
+        self.revision_pane.show_revision(r, self._roi_headers(), rois, against)
+
+    def restore_revision(self) -> None:
+        """Restore as New Revision (Q24): Save Recipe's sheet for a copy of the revision picked as the next revision,
+        which never replaces one; nothing changes until Save Revision."""
+        if (r := self._picked_revision()) is not None:
+            self.ask_save((r["revision"], r["recipe"]))
 
     def _discard_ok(self, latest: int) -> bool:
         """Ask before unsaved changes are discarded for revision `latest`; No is the default, so Enter keeps them."""
