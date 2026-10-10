@@ -145,6 +145,20 @@ class CsvFile:
 
 
 @dataclass(frozen=True)
+class HistoryFilter:
+    """Logs & Export's filter as Filter applied it: local dates YYYY-MM-DD, board model, operator and verdict (OK, NG or
+    WARN), None for All, and whether archived records are listed; the arguments of `AppContext.inspections`. An export
+    or a delete audits the one that listed its records, with their count (REQ-LOG-002, REQ-LOG-003)."""
+
+    date_from: str | None = None
+    date_to: str | None = None
+    board_model: str | None = None
+    operator: str | None = None
+    result: str | None = None
+    include_archived: bool = False
+
+
+@dataclass(frozen=True)
 class BoardStatus:
     """Where the six-step workflow stands for a board model (the Home page's cards)."""
 
@@ -2681,12 +2695,14 @@ class AppContext:
         folder: str | Path,
         progress: Callable[[int, int], None] | None = None,
         should_stop: Callable[[], bool] | None = None,
+        listed: HistoryFilter | None = None,
     ) -> int:
         """Copy the overlay images of `inspections` (records from `inspections()`) into `folder`; returns how many. A
         copy that fails stops the export with AOI-LOG-001; the entry names the files that left before it, which stay
         (#178), and stores `folder` relative to the workspace when inside it (REQ-SET-001), else in full. A page runs
         it on the pool (REQ-SET-021, #194): `progress(done, total)` follows each overlay, and once `should_stop()` is
-        true the copies made stay and the audit entry says the export was cancelled."""
+        true the copies made stay and the audit entry says the export was cancelled. `listed`, the filter that listed
+        the records, goes into the entry as `filter`, beside their count `records` (REQ-LOG-002)."""
         sources = [Path(r["overlay_path"]) for r in inspections if r.get("overlay_path")]
         sources = [p for p in sources if p.exists()]
         copied: list[Path] = []
@@ -2708,6 +2724,8 @@ class AppContext:
         after: dict[str, Any] = {
             "folder": stored, "records": len(inspections), "copied": len(copied), "cancelled": stopped
         }  # fmt: skip
+        if listed is not None:
+            after["filter"] = dataclasses.asdict(listed)
         if failed:
             after["error"] = f"{failed[0].name}: {failed[1].strerror or failed[1]}"
         self._audit_files(copied, "export.overlays", "inspections", None, after, sources)
@@ -2731,19 +2749,25 @@ class AppContext:
         return len(rows)
 
     @requires("Engineer", QT_TRANSLATE_NOOP("Errors", "Exporting CSV"))
-    def export_csv_files(self, files: list[CsvFile]) -> None:
+    def export_csv_files(self, files: list[CsvFile], listed: HistoryFilter | None = None) -> None:
         """Write `files` as CSV, all or none (Logs & Export's records and checks, #195), then audit each, every entry
         or none. A file that cannot be written (another program holds it open) is refused with AOI-LOG-002 naming it;
-        when the entries cannot be written the files are removed (#178). Paths are stored as #196 stores them."""
+        when the entries cannot be written the files are removed (#178). Paths are stored as #196 stores them. With
+        `listed`, the filter that listed the records, each entry also holds it as `filter` and the number of records
+        (the rows of the files of inspections) as `records` (REQ-LOG-002)."""
         try:
             atomic.write_all([(f.path, csv_bytes(f.rows, f.fieldnames)) for f in files])
         except OSError as e:
             raise _not_written(e, e.filename) from e
+        scope: dict[str, Any] = {}
+        if listed is not None:
+            records = sum(len(f.rows) for f in files if f.what == "inspections")
+            scope = {"filter": dataclasses.asdict(listed), "records": records}
         try:
             with self.db.transaction():
                 for f in files:
                     after = {"path": to_stored(Path(f.path).absolute(), self.settings.root), "rows": len(f.rows)}
-                    self.audit("export.csv", f.what, None, None, after)
+                    self.audit("export.csv", f.what, None, None, after | scope)
         except BaseException:
             _remove([Path(f.path) for f in files])
             raise

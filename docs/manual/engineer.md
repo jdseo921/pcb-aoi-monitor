@@ -621,8 +621,10 @@ on the record: `RAN`, `OFF` (turned off in the recipe; the AI model version is t
 the board) or `NO_AI_MODEL` (none trained), and is empty for a record stored without its result or one whose stored
 result cannot be read (damaged), which the log names (`export.result_not_read`) without stopping the export. Records
 from before the checks were stored have no rows in the second file.
-Each export is confirmed first and written whole or not at all, the two CSV files together, and the audit trail
-records it: a file or folder inside the workspace, such as the suggested `exports` folder, relative to the workspace
+Each export is confirmed first, naming the number of records, and written whole or not at all, the two CSV files
+together. The audit trail records it with the filter that listed the records (From, To, board model, operator, result
+and Include archived, as **Filter** applied them, not a box changed since) and their count, and the destination: a file
+or folder inside the workspace, such as the suggested `exports` folder, relative to the workspace
 (`exports/inspections.csv`), so the entry still holds after the workspace folder moves; a folder outside it, such as a USB drive, with its full path. If
 that entry cannot be written, the exported file is removed (never the station's own file, when exported onto itself).
 A file that cannot be written, such as one still open in Excel, stops the export with AOI-LOG-002, which names it: close

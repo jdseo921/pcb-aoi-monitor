@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 from collections.abc import Callable
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -11,7 +12,7 @@ from PySide6.QtGui import QColor, QTextCharFormat
 from PySide6.QtWidgets import QCheckBox, QComboBox, QDateEdit, QFileDialog, QHBoxLayout, QLabel, QMessageBox, QSplitter
 
 from ...core.inspector import ai_check
-from ...core.services import AppContext, CsvFile
+from ...core.services import AppContext, CsvFile, HistoryFilter
 from ...errors import AoiError
 from ...times import to_local
 from .. import theme
@@ -40,6 +41,7 @@ class LogsPage(Page):
     def __init__(self, ctx: AppContext, shell: MainWindow) -> None:
         super().__init__(ctx, shell)
         self.rows: list[dict[str, Any]] = []
+        self.listed = HistoryFilter()  # the filter that listed `rows`, which an export audits (REQ-LOG-002)
         f = QHBoxLayout()
         self.d_from = QDateEdit(QDate.currentDate().addDays(-DEFAULT_DAYS))
         self.d_to = QDateEdit(QDate.currentDate())
@@ -110,14 +112,16 @@ class LogsPage(Page):
         self.root.addLayout(b)
 
     def refresh(self) -> None:
-        rows = self.ctx.inspections(
+        listed = HistoryFilter(
             self.d_from.date().toString("yyyy-MM-dd"),
             self.d_to.date().toString("yyyy-MM-dd"),
             self.model.currentData(),
             self.operator.currentData(),
-            self.archived.isChecked(),
             self.result.currentData(),
+            self.archived.isChecked(),
         )
+        rows = self.ctx.inspections(**dataclasses.asdict(listed))
+        self.listed = listed
         self.table.clearSelection()  # the preview follows the selection, so it clears now and never reads a row that
         # fill_table is replacing (#174): a selected row that survives a shrinking table still holds an old record's ID
         self.rows = rows
@@ -221,7 +225,7 @@ class LogsPage(Page):
         ):
             return
         self.run_in_background(
-            self._write_csv, list(self.rows), f, checks_file, with_progress=True, busy=self.busy,
+            self._write_csv, list(self.rows), f, checks_file, self.listed, with_progress=True, busy=self.busy,
             on_result=lambda counts: self._csv_written(counts, Path(f), checks_file),
             on_cancel=lambda counts: self._csv_written(counts, Path(f), checks_file),
         )  # fmt: skip
@@ -231,6 +235,7 @@ class LogsPage(Page):
         rows: list[dict[str, Any]],
         f: str,
         checks_file: Path,
+        listed: HistoryFilter,
         progress: Callable[[int, int], None],
         should_stop: Callable[[], bool],
     ) -> tuple[int, int] | None:
@@ -276,7 +281,8 @@ class LogsPage(Page):
                 check_rows.append({"inspection_id": r["id"], "inspection_uuid": r["uuid"], **record, **evidence})
             progress(i, len(rows))
         # both files or neither (#195); one another program holds open is refused with AOI-LOG-002, shown as the dialog
-        self.ctx.export_csv_files([CsvFile(f, out), CsvFile(checks_file, check_rows, "checks", CHECK_COLUMNS)])
+        files = [CsvFile(f, out), CsvFile(checks_file, check_rows, "checks", CHECK_COLUMNS)]
+        self.ctx.export_csv_files(files, listed)  # each entry holds the filter and the count (REQ-LOG-002)
         return len(out), len(check_rows)
 
     def _ai_check(self, inspection_id: int) -> str:
@@ -308,7 +314,7 @@ class LogsPage(Page):
         stopped = self.tr("Stopped: copied {count} overlay image(s) to {folder}; the others were not copied.")
         # On the pool (REQ-SET-021, #194): Cancel keeps the overlays copied so far and says how many.
         self.run_in_background(
-            self.ctx.export_overlays, list(self.rows), d, with_progress=True, busy=self.busy,
+            self.ctx.export_overlays, list(self.rows), d, listed=self.listed, with_progress=True, busy=self.busy,
             on_result=lambda n: self.shell.status(copied.format(count=n, folder=d)),
             on_cancel=lambda n: self.shell.status(stopped.format(count=n or 0, folder=d)),
         )  # fmt: skip

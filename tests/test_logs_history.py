@@ -22,6 +22,7 @@ from typing import Any, cast
 
 import pytest
 from PySide6.QtCore import QDate, Qt
+from PySide6.QtWidgets import QFileDialog, QMessageBox
 from pytestqt.qtbot import QtBot
 
 from aoi.core.services import AppContext
@@ -153,17 +154,27 @@ def test_req_log_001_filters_over_100000_records_return_within_1_s(
     assert max(times.values()) < BUDGET_S, times
 
 
-def _logs(qtbot: QtBot, ctx: AppContext) -> LogsPage:
+def _logs(qtbot: QtBot, ctx: AppContext, user: str = "operator") -> LogsPage:
     win = MainWindow(ctx)
     qtbot.addWidget(win)
-    win.set_user("operator")  # every role views the history
+    win.set_user(user)  # every role views the history
     win.navigate("Logs & Export")
     return cast(LogsPage, win.pages["Logs & Export"])
 
 
-def _record(ctx: AppContext, result: str, operator: str, board_model: str = "B", defects: int = 0) -> int:
+def _record(
+    ctx: AppContext, result: str, operator: str, board_model: str = "B", defects: int = 0, evidence: bool = False
+) -> int:
+    """A record written through the data layer; with `evidence`, an overlay and two map files under results/."""
     rec = {"board_model": board_model, "result": result, "operator": operator, "image_path": f"{result}.png",
            "model_version": "v1.0", "recipe_rev": 1, "view": "Top", "score": 0.5}  # fmt: skip
+    if evidence:
+        overlay = ctx.settings.results_dir / "2026-10-10" / f"board_{uuid.uuid4()}_{result}.png"
+        overlay.parent.mkdir(parents=True, exist_ok=True)
+        for key, path in (("overlay_path", overlay), ("diff_map_path", overlay.with_name(f"{overlay.stem}_diff.png")),
+                          ("ai_map_path", overlay.with_name(f"{overlay.stem}_ai2.png"))):  # fmt: skip
+            path.write_bytes(b"evidence")
+            rec[key] = str(path)
     box = {"type": "Scratch", "score": 0.9, "x": 1, "y": 1, "w": 4, "h": 4}
     return ctx.db.add_inspection(rec, [{"no": n, **box} for n in range(1, defects + 1)])
 
@@ -231,3 +242,38 @@ def test_req_log_001_the_filters_fit_a_1600_px_window(qtbot: QtBot, ctx: AppCont
     page.on_show()
     assert [page.model.itemText(2), page.operator.itemText(page.operator.count() - 1)] == [name, name]
     assert win.minimumSizeHint().width() <= 1600, win.minimumSizeHint().width()
+
+
+def test_req_log_002_each_export_audits_the_filter_that_listed_its_records(
+    qtbot: QtBot, ctx: AppContext, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Export CSV and Export Image Overlays ask first, naming the record count, and write into their audit entries the
+    filter that listed the records (From, To, board model, operator, result, archived included) and their count,
+    beside the user and time every entry holds: the filter Filter applied, not a box changed after it."""
+    ctx.ensure_board_model("B")
+    for verdict in ("NG", "NG", "OK"):
+        _record(ctx, verdict, "kim", evidence=True)
+    page = _logs(qtbot, ctx, "engineer")
+    page.result.setCurrentIndex(page.result.findData("NG"))
+    page.refresh()  # Filter
+    page.result.setCurrentIndex(page.result.findData("WARN"))  # not applied: the table still lists the NG records
+    asked: list[str] = []
+    monkeypatch.setattr(
+        QMessageBox, "question", staticmethod(lambda *a: asked.append(a[2]) or QMessageBox.StandardButton.Yes)
+    )
+    out = tmp_path / "out"
+    monkeypatch.setattr(QFileDialog, "getSaveFileName", staticmethod(lambda *a, **k: (str(out / "history.csv"), "")))
+    monkeypatch.setattr(QFileDialog, "getExistingDirectory", staticmethod(lambda *a, **k: str(out)))
+    for export in (page.export_csv, page.export_overlays):
+        export()
+        qtbot.waitUntil(lambda: page._bg is None, timeout=30000)
+    assert [q.split("?")[0] for q in asked] == ["Export CSV for 2 record(s)", "Export overlay images for 2 record(s)"]
+    dates = (page.d_from.date().toString("yyyy-MM-dd"), page.d_to.date().toString("yyyy-MM-dd"))
+    listed = {"date_from": dates[0], "date_to": dates[1], "board_model": None, "operator": None, "result": "NG",
+              "include_archived": False}  # fmt: skip
+    entries = [*ctx.audit_entries(action="export.overlays"), *ctx.audit_entries(action="export.csv")]
+    assert [(e["object_type"], e["after"]["filter"], e["after"]["records"]) for e in entries] == [
+        ("inspections", listed, 2), ("checks", listed, 2), ("inspections", listed, 2)
+    ]  # fmt: skip
+    assert {(e["user_uuid"], e["role"]) for e in entries} == {(ctx.db.user_uuid("engineer"), "Engineer")}
+    assert entries[0]["after"]["copied"] == 2 and all(e["at_utc"].endswith("+00:00") for e in entries)
