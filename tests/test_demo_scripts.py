@@ -19,6 +19,7 @@ from aoi.ui import errors as ui_errors
 from aoi.ui import main_window
 from aoi.ui.pages.base import Page
 from aoi.ui.pages.inspection import InspectionPage
+from tests.budgets import LONG_TRIES, judged
 from tests.test_demo_ui import VERDICTS, _windows_closed, click, records, station  # noqa: F401 (an autouse fixture)
 from tests.test_explain import not_words
 from tools.make_demo_bundle import BOARD_MODEL
@@ -73,7 +74,8 @@ def test_req_set_007_the_five_minute_script_runs_in_the_presenter_theme(
 ) -> None:
     """docs/demo/stage1-5min.md as clicks: load the demo, switch the presenter theme on, Start, the pause at the NG
     board, Compare, Start again to the end, Logs & Export with both exports, then Exit presenter theme and Reset Demo
-    in under 10 s; no message on the way, and the run inside its five minutes at the default pace of 3 s."""
+    in under 10 s, three resets judged by tests/budgets.py; no message on the way, and the run inside its five
+    minutes at the default pace of 3 s."""
     shown: list[str] = []
     monkeypatch.setattr(ui_errors, "show_error", lambda _parent, report: shown.append(str(report)))
     monkeypatch.setattr(main_window, "show_error", lambda _parent, report: shown.append(str(report)))
@@ -116,9 +118,15 @@ def test_req_set_007_the_five_minute_script_runs_in_the_presenter_theme(
 
     qtbot.mouseClick(win.exit_presenter, Qt.MouseButton.LeftButton)
     assert win.navigate("Settings")
-    started = time.monotonic()
-    win = click(qtbot, win.pages["Settings"].demo.btn_reset)  # type: ignore[attr-defined]
-    assert time.monotonic() - started < 10 and win.in_demo and records(win) == []
+    resets: list[float] = []
+    for _ in range(LONG_TRIES):  # judged by tests/budgets.py; the first puts back the run just played, the next two
+        # the bundle as loaded (tests/test_demo.py plays the boards before each of its resets)
+        started = time.monotonic()
+        win = click(qtbot, win.pages["Settings"].demo.btn_reset)  # type: ignore[attr-defined]
+        resets.append(time.monotonic() - started)
+        assert win.in_demo and records(win) == [] and win.stack.currentWidget() is win.pages["Settings"]
+    print("\nREQ-SET-007 Reset Demo, s:", [round(s, 2) for s in resets])
+    assert judged(resets) < 10, resets
     assert shown == []
 
 

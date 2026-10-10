@@ -24,6 +24,7 @@ from aoi.ui.demo_workspace import open_demo
 from aoi.ui.errors import open_workspace
 from aoi.ui.main_window import MainWindow, build_window
 from aoi.ui.pages.inspection import InspectionPage
+from tests.budgets import LONG_TRIES, judged
 
 VERDICTS = ["OK"] * 3 + ["NG"] + ["OK"] * 6  # the bundle's boards in run order
 
@@ -120,10 +121,16 @@ def test_req_set_007_settings_loads_plays_resets_and_leaves_with_production_unto
     assert records(win) == VERDICTS
 
     win.navigate("Settings")
-    win = click(qtbot, win.pages["Settings"].demo.btn_reset)  # type: ignore[attr-defined]
-    assert win.in_demo and records(win) == [] and win.stack.currentWidget() is win.pages["Settings"]
-    (entry,) = win.ctx.audit_entries(action="demo.reset")
-    assert entry["after"]["seconds"] < 10 and entry["role"] == "Admin"
+    resets: list[float] = []
+    for _ in range(LONG_TRIES):  # the reset's seconds, as the app records them, judged by tests/budgets.py; the first
+        # puts back the run just played, the next two the bundle as loaded (tests/test_demo.py plays before each)
+        win = click(qtbot, win.pages["Settings"].demo.btn_reset)  # type: ignore[attr-defined]
+        assert win.in_demo and records(win) == [] and win.stack.currentWidget() is win.pages["Settings"]
+        (entry,) = win.ctx.audit_entries(action="demo.reset")  # a reset puts back the database: its own entry alone
+        assert entry["role"] == "Admin"
+        resets.append(entry["after"]["seconds"])
+    print("\nREQ-SET-007 Reset Demo, s:", [round(s, 2) for s in resets])
+    assert judged(resets) < 10, resets
     assert win.ctx.settings.demo_pace_s == 1  # the demo's own settings stay through a reset
     assert hashes(production) == before
 
