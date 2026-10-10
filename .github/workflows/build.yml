@@ -1,8 +1,9 @@
 # Builds the app for Windows with PyInstaller, one folder, and checks that it opens and inspects a synthetic board
-# (REQ-SET-012; Engineering standard "Build"; Legal & Compliance "Packaging" and "Notices shipped"; ADR 0007). The
-# folder is kept as the run's artifact for 30 days, named for its tag when a v* tag was pushed. It is an internal test
-# build: unsigned, without an installer and not a release, since a release comes only signed, from a tagged commit,
-# after two approvals (Engineering, "Signing"); a tag's build is the unsigned part of that.
+# (REQ-SET-012; Engineering standard "Build"; Legal & Compliance "Packaging" and "Notices shipped"; ADR 0007). Then
+# Inno Setup wraps the folder in an installer, which is installed silently, self-tested and uninstalled on the runner
+# (stage S57). The folder and the installer are kept as the run's artifacts for 30 days, named for the tag when a v*
+# tag was pushed. Both are internal test builds: unsigned and not a release, since a release comes only as a signed
+# installer from a tagged commit after two approvals (Engineering, "Signing"); a tag's build is the unsigned part.
 name: Windows build
 
 on:
@@ -19,6 +20,8 @@ on:
       - aoi/selftest.py
       - tools/make_demo_bundle.py  # the demo bundle the build ships (REQ-SET-007), with what it loads it
       - aoi/core/demo.py
+      - installer/aoi.iss  # the installer (S57) and its check on the runner
+      - tools/check_installer.py
       - .github/workflows/build.yml
   push:
     branches: [main]
@@ -35,12 +38,15 @@ concurrency:
 env:
   PYTHON_VERSION: "3.11"
   PIP_DISABLE_PIP_VERSION_CHECK: "1"
+  # Inno Setup's compiler, from Chocolatey's community package of that version, which checks the download's SHA-256;
+  # the runner images document 6.7.1 preinstalled. tools/third_party_notices.py names the same version (ADR 0007).
+  INNO_SETUP_VERSION: "6.7.1"
 
 jobs:
   windows:
     name: Windows one-folder build
     runs-on: windows-latest
-    timeout-minutes: 60
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
@@ -95,9 +101,9 @@ jobs:
               f"{APP_NAME} {APP_VERSION}, internal test build {tag + ' ' if tag else ''}g{short}\n"
               f"Built by GitHub Actions on {datetime.now(UTC).isoformat(timespec='seconds')} from commit {env['COMMIT']}"
               f" ({env['REF']}, head {env['HEAD_SHA']}): {env['RUN_URL']}\n\n"
-              "Not a release. It is not signed and has no installer, so Windows may warn that the publisher is unknown,\n"
-              "and it must not go to a customer or into a demo: a release is a signed installer built from a tagged\n"
-              "commit after two approvals (Engineering standard, \"Signing\"; Customers & Launch, \"Demos\").\n\n"
+              "Not a release. Neither it nor its installer is signed, so Windows may warn that the publisher is\n"
+              "unknown, and it must not go to a customer or into a demo: a release is a signed installer built from a\n"
+              "tagged commit after two approvals (Engineering standard, \"Signing\"; Customers & Launch, \"Demos\").\n\n"
               "Start AOI-PoC-Inspector.exe. The workspace is %USERPROFILE%\\AOI_Workspace, or the folder AOI_WORKSPACE\n"
               "names. Third-party licenses: THIRD_PARTY_NOTICES.txt. The hash of every file: SHA256SUMS.txt.\n",
               encoding="utf-8",
@@ -116,5 +122,45 @@ jobs:
         with:
           name: ${{ steps.info.outputs.name }}
           path: dist/
+          retention-days: 30
+          if-no-files-found: error
+      - name: Install Inno Setup ${{ env.INNO_SETUP_VERSION }}, and stop unless the one installed is that version
+        id: inno
+        run: |
+          choco install innosetup --version $env:INNO_SETUP_VERSION --allow-downgrade --yes --no-progress
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $iscc = Join-Path ${env:ProgramFiles(x86)} "Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) { throw "No ISCC.exe at $iscc" }
+          # ISCC.exe has no file version (it reads 0.0.0): take the version Inno Setup's own setup records in its
+          # uninstall entry, else the file version of Compil32.exe beside ISCC.exe
+          $keys = "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\Inno Setup 6_is1",
+            "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Inno Setup 6_is1"
+          $found = (Get-ItemProperty $keys -ErrorAction SilentlyContinue | Select-Object -First 1).DisplayVersion
+          if (-not $found) {
+            $v = (Get-Item (Join-Path (Split-Path $iscc) "Compil32.exe")).VersionInfo
+            $found = "$($v.FileMajorPart).$($v.FileMinorPart).$($v.FileBuildPart)"
+          }
+          "Inno Setup found: $found"
+          if ($found -ne $env:INNO_SETUP_VERSION) { throw "Inno Setup $found is installed, not the version pinned" }
+          "ISCC=$iscc" >> $env:GITHUB_ENV
+      - name: Compile the installer with the app's version from aoi/config.py
+        id: installer
+        run: |
+          $version = python -c "from aoi.config import APP_VERSION; print(APP_VERSION)"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          & $env:ISCC "/DAppVersion=$version" installer\aoi.iss
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $setup = "dist\installer\AOI-PoC-Inspector-$version-setup-x64-unsigned.exe"
+          if (-not (Test-Path $setup)) { throw "The compiler made no $setup" }
+          "setup=$setup" >> $env:GITHUB_OUTPUT
+      - name: Install it silently, run the installed app's --self-test, and uninstall it, which must keep the workspace
+        id: check_installer
+        env:
+          SETUP: ${{ steps.installer.outputs.setup }}
+        run: python tools/check_installer.py $env:SETUP
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: ${{ steps.info.outputs.name }}-installer
+          path: ${{ steps.installer.outputs.setup }}
           retention-days: 30
           if-no-files-found: error

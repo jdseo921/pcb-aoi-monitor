@@ -72,3 +72,13 @@ def test_req_set_012_qt_gets_the_lgpl_notice_and_the_texts_its_wheels_lack(site:
     assert "you may replace them with your own builds of the same version" in text
     assert "GNU LESSER GENERAL PUBLIC LICENSE\n                       Version 3, 29 June 2007" in text
     assert "GNU GENERAL PUBLIC LICENSE\n                       Version 3, 29 June 2007" in text
+
+
+def test_req_set_012_the_notices_carry_inno_setup_s_license_for_the_installer(site: Path) -> None:
+    """The installer's setup program and the uninstaller it leaves beside the .exe are Inno Setup's, under its own
+    license, which asks that its copyright notice stays in every copy (ADR 0007, update of S57)."""
+    text = tpn.notices({"shipped"}, "app", installed(site))
+    assert f"\nInno Setup {tpn.INNO_SETUP_VERSION} (the installer's setup program and its uninstaller, unins000" in text
+    assert "Permission is granted to anyone to use this software for any purpose, including commercial" in text
+    assert "Copyright (C) 1997-2026 Jordan Russell. All rights reserved." in text
+    assert text.index("\nInno Setup ") < text.index("\nPython 3.")  # Python's own license stays last

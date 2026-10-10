@@ -9,8 +9,10 @@ third-party licenses"):
   PyInstaller's work folder, such as a DLL found on the build machine's PATH. The build stops on any refusal.
 - `notices` writes THIRD_PARTY_NOTICES.txt ("Notices shipped"): Qt's LGPL notice first, with where to get Qt's
   source, then for each bundled package its version, the license its metadata declares and the full text of every
-  license file it installs, then Python's own license, which also covers the libraries Python bundles. The PySide6
-  and Shiboken6 wheels carry no LGPL text, so the texts come from installer/licenses/.
+  license file it installs, then Inno Setup's license, since installer/aoi.iss wraps the build in an installer whose
+  setup program and uninstaller are Inno Setup's, and last Python's own license, which also covers the libraries
+  Python bundles. The PySide6 and Shiboken6 wheels carry no LGPL text, and Inno Setup is no Python package, so those
+  texts come from installer/licenses/.
 """
 
 from __future__ import annotations
@@ -30,6 +32,9 @@ ROOT = Path(__file__).resolve().parents[1]
 GNU_TEXTS = [ROOT / "installer" / "licenses" / "LGPL-3.0.txt", ROOT / "installer" / "licenses" / "GPL-3.0.txt"]
 EMBEDDED_TOOLS = {"pyinstaller", "pyinstaller-hooks-contrib"}  # their loader and run-time hooks go into the .exe
 QT_PACKAGES = {"pyside6-essentials", "shiboken6"}
+# The Inno Setup that CI makes the installer with (.github/workflows/build.yml pins the same), and its license
+INNO_SETUP_VERSION = "6.7.1"
+INNO_SETUP_LICENSE = ROOT / "installer" / "licenses" / "InnoSetup.txt"
 LICENSE_FILE = re.compile(r"^(licen[cs]e|copying|notice|authors|copyright)", re.IGNORECASE)
 # Microsoft's Visual C++ runtime (msvcp140.dll, msvcp140_atomic_wait.dll, vcruntime140_1.dll ...), which Python and
 # the wheels are built against; redistributable, and covered by Python's license text on Windows. PyInstaller may
@@ -144,6 +149,14 @@ def notices(packages: Iterable[str], app: str, dists: Iterable[md.Distribution] 
         if name in EMBEDDED_TOOLS:
             title += " (its loader and run-time hooks, embedded in the .exe)"
         out.append(section(title, declared(dist), files))
+    out.append(
+        section(
+            f"Inno Setup {INNO_SETUP_VERSION} (the installer's setup program and its uninstaller, unins000.exe, beside"
+            " the .exe; not part of the app)",
+            "the Inno Setup License, below",
+            [("license.txt", INNO_SETUP_LICENSE.read_text(encoding="utf-8"))],
+        )
+    )
     out.append(
         section(
             f"Python {platform.python_version()} (the runtime and standard library, with the libraries it bundles)",
