@@ -124,15 +124,24 @@ jobs:
           path: dist/
           retention-days: 30
           if-no-files-found: error
-      - name: Install Inno Setup ${{ env.INNO_SETUP_VERSION }}, and stop unless its compiler is that version
+      - name: Install Inno Setup ${{ env.INNO_SETUP_VERSION }}, and stop unless the one installed is that version
         id: inno
         run: |
           choco install innosetup --version $env:INNO_SETUP_VERSION --allow-downgrade --yes --no-progress
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           $iscc = Join-Path ${env:ProgramFiles(x86)} "Inno Setup 6\ISCC.exe"
-          $v = (Get-Item $iscc).VersionInfo
-          $found = "$($v.FileMajorPart).$($v.FileMinorPart).$($v.FileBuildPart)"
-          if ($found -ne $env:INNO_SETUP_VERSION) { throw "ISCC.exe is Inno Setup $found, not the version pinned" }
+          if (-not (Test-Path $iscc)) { throw "No ISCC.exe at $iscc" }
+          # ISCC.exe has no file version (it reads 0.0.0): take the version Inno Setup's own setup records in its
+          # uninstall entry, else the file version of Compil32.exe beside ISCC.exe
+          $keys = "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\Inno Setup 6_is1",
+            "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Inno Setup 6_is1"
+          $found = (Get-ItemProperty $keys -ErrorAction SilentlyContinue | Select-Object -First 1).DisplayVersion
+          if (-not $found) {
+            $v = (Get-Item (Join-Path (Split-Path $iscc) "Compil32.exe")).VersionInfo
+            $found = "$($v.FileMajorPart).$($v.FileMinorPart).$($v.FileBuildPart)"
+          }
+          "Inno Setup found: $found"
+          if ($found -ne $env:INNO_SETUP_VERSION) { throw "Inno Setup $found is installed, not the version pinned" }
           "ISCC=$iscc" >> $env:GITHUB_ENV
       - name: Compile the installer with the app's version from aoi/config.py
         id: installer

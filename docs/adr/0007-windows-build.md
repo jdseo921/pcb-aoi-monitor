@@ -158,7 +158,8 @@ decision 7's "no installer" now holds for the folder build only, and the install
 4. **CI makes and checks it** (`build.yml`). After the folder's smoke test, `choco install innosetup --version 6.7.1
    --allow-downgrade` installs Inno Setup 6.7.1 (Chocolatey's package checks the SHA-256 of jrsoftware.org's
    download; the runner images install the same package and listed 6.7.1 on 2026-10-04), and the job stops unless
-   `ISCC.exe` is that version. It compiles the script, then `tools/check_installer.py` installs it with
+   the Inno Setup installed is that version, as its uninstall entry records it (`ISCC.exe` itself carries no file
+   version: the first run read 0.0.0). It compiles the script, then `tools/check_installer.py` installs it with
    `/VERYSILENT /SUPPRESSMSGBOXES /NORESTART` into a temporary folder, checks the files, the shortcuts and the
    uninstall entry, runs the installed .exe's `--self-test` on a new folder, uninstalls it silently and checks that
    the program files, shortcuts and entry are gone while `AOI_Workspace` and `AOI_Workspace-Demo`, made beforehand
