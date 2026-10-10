@@ -1341,10 +1341,18 @@ class AppContext:
         board_model: str | None = None,
         operator: str | None = None,
         include_archived: bool = False,
+        result: str | None = None,
     ) -> list[dict[str, Any]]:
-        """Inspection records, newest first, filtered by local calendar dates (YYYY-MM-DD), board model and operator,
-        each with its defect_count and absolute image and overlay paths."""
-        return self.db.inspections(date_from, date_to, board_model, operator, include_archived)
+        """Inspection records, newest first, filtered by local calendar dates (YYYY-MM-DD), board model, operator and
+        verdict (`result`: OK, NG or WARN), each with its defect_count and absolute image and overlay paths; within 1 s
+        over 100,000 records (REQ-LOG-001)."""
+        return self.db.inspections(date_from, date_to, board_model, operator, include_archived, result)
+
+    def history_span(self) -> dict[str, Any] | None:
+        """`oldest` and `newest`, the stored times of the first and last record, archived ones included, and whether any
+        is `archived`; None for a workspace with no record. Logs & Export's empty state reads it in place of every
+        record, so a filter that matches none over 100,000 records still returns within 1 s (REQ-LOG-001)."""
+        return self.db.inspection_span()
 
     def last_board(self, board_model: str) -> str | None:
         """The image file of the board last inspected under `board_model` (its newest record not archived), which the

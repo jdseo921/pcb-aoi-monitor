@@ -125,4 +125,10 @@ so you never see the verdict those values gave.
 
 ## 5. End of shift
 
-(to be written: history and export, handing over)
+**History.** Logs & Export lists the boards inspected, newest first, from the last 7 days: every operator's, so the
+next shift sees the line's history. Narrow it with **From** and **To**, **Board model**, **Operator** and **Result**
+(All, OK, NG or WARN), then press **Filter**; the filters combine. Tick **Include archived** for records older than the
+retention (30 days unless an Admin changed it): they are archived, not deleted, and stay searchable. A click on a
+column's header sorts by it. Select a row to see its overlay beside the table.
+
+(to be written: handing over)

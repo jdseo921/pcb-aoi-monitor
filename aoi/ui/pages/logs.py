@@ -28,6 +28,7 @@ CHECK_COLUMNS = [
 ]  # fmt: skip
 
 DEFAULT_DAYS = 7  # a new page and Reset Filters show the last 7 days
+VERDICTS = ("OK", "NG", "WARN")  # the Result filter's verdicts after All, as the sketch lists them
 
 if TYPE_CHECKING:
     from ..main_window import MainWindow
@@ -49,12 +50,20 @@ class LogsPage(Page):
         self.restyle()
         self.model = QComboBox()
         self.operator = QComboBox()
+        for names in (self.model, self.operator):  # wide as their names where there is room; cut off in a narrow window
+            names.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToContents)
+            names.setMinimumWidth(theme.FILTER_MIN_W)  # rather than hold it past 1600 px with the Result filter
+        self.result = QComboBox()  # the verdict, All first (REQ-LOG-001)
+        self.result.addItem(self.tr("All"), None)
+        for verdict in VERDICTS:
+            self.result.addItem(theme.verdict_label(verdict), verdict)
         self.archived = QCheckBox(self.tr("Include archived"))
         fields = (
             (self.tr("From"), self.d_from),
             (self.tr("To"), self.d_to),
             (self.tr("Board model"), self.model),
             (self.tr("Operator"), self.operator),
+            (self.tr("Result"), self.result),
         )
         for label, w in fields:
             f.addWidget(QLabel(label))
@@ -107,6 +116,7 @@ class LogsPage(Page):
             self.model.currentData(),
             self.operator.currentData(),
             self.archived.isChecked(),
+            self.result.currentData(),
         )
         self.table.clearSelection()  # the preview follows the selection, so it clears now and never reads a row that
         # fill_table is replacing (#174): a selected row that survives a shrinking table still holds an old record's ID
@@ -138,16 +148,15 @@ class LogsPage(Page):
         )
         if n:
             self.empty.hide()
-        elif every := self.ctx.inspections(include_archived=True):
+        elif span := self.ctx.history_span():  # not every record: that took seconds at 100,000 (REQ-LOG-001)
             if self.ctx.inspections(*self._default_dates()):  # what Reset Filters would show
                 todo = self.tr("Widen the dates or the filters."), self.tr("Reset Filters"), self.reset_filters
             else:  # Reset Filters would run the same empty query again (#200): the link shows every record instead
-                dates = sorted(to_local(r["time"])[:10] for r in every)  # local dates; the rows come sorted by id
-                archived = any(r["archived"] for r in every)
+                oldest, newest = (to_local(span[k])[:10] for k in ("oldest", "newest"))  # local dates
                 todo = (
                     self.tr("Every record is archived or older than {days} days.").format(days=DEFAULT_DAYS),
                     self.tr("Show All Records"),
-                    lambda: self.show_all_records(dates[0], dates[-1], archived),
+                    lambda: self.show_all_records(oldest, newest, bool(span["archived"])),
                 )
             self.empty.show_state(self.tr("No records match"), *todo)
         else:
@@ -165,7 +174,7 @@ class LogsPage(Page):
 
     def show_all_records(self, oldest: str, newest: str, archived: bool) -> None:
         """Every record (#200): From the oldest record's local date to today, or to the newest record's date when the
-        clock has gone back, every board model and operator, with archived records when there are any."""
+        clock has gone back, every board model, operator and verdict, with archived records when there are any."""
         today = QDate.currentDate().toString("yyyy-MM-dd")
         self._set_filters(oldest, max(newest, today), archived)
 
@@ -174,6 +183,7 @@ class LogsPage(Page):
         self.d_to.setDate(QDate.fromString(date_to, "yyyy-MM-dd"))
         self.model.setCurrentIndex(0)
         self.operator.setCurrentIndex(0)
+        self.result.setCurrentIndex(0)
         self.archived.setChecked(archived)
         self.refresh()
 

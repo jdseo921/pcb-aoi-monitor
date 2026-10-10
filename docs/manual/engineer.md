@@ -641,11 +641,15 @@ was pressed, even if the run moves on while the file is named. A picture goes in
 the entry cannot be written, the destination is left exactly as it was, a file of that name unchanged and no picture
 or new folder left.
 
-The **From** and **To** boxes take days from 2000-01-01 to 2100-12-31. The picture beside the table is the selected
-record's overlay; it is empty when the record's overlay file is gone, when no row is selected and after **Filter**.
-When no record matches, the table offers **Reset Filters** (the last 7 days, every board model and operator, archived
-records hidden); when every record is older than that or archived, it offers **Show All Records** instead, which sets
-**From** to the oldest record's date, **To** to today and ticks **Include archived** when any record is archived.
+The **From** and **To** boxes take days from 2000-01-01 to 2100-12-31. **Board model**, **Operator** and **Result**
+(All, OK, NG or WARN) each narrow the list, and every filter combines with the others and with **Include archived**;
+a click on a column's header sorts the table by it, again to reverse. With 100,000 records stored, **Filter** shows
+its rows within 1 s (REQ-LOG-001); listing all of them at once takes much longer, so narrow the dates first. The
+picture beside the table is the selected record's overlay; it is empty when the record's overlay file is gone, when no
+row is selected and after **Filter**. When no record matches, the table offers **Reset Filters** (the last 7 days,
+every board model, operator and result, archived records hidden); when every record is older than that or archived,
+it offers **Show All Records** instead, which sets **From** to the oldest record's date, **To** to today and ticks
+**Include archived** when any record is archived.
 
 **Evidence files.** Each record's overlay picture is in the results folder, by day, named
 `<stem>_<record UUID>_<verdict>.png`: `<stem>` is the first 40 characters of the board's image file name without its

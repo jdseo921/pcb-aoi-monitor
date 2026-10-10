@@ -865,12 +865,12 @@
     </message>
     <message>
         <location line="+170"/>
-        <location line="+1736"/>
+        <location line="+1744"/>
         <source>(none)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1705"/>
+        <location line="-1713"/>
         <source>Saving a recipe</source>
         <translation type="unfinished"></translation>
     </message>
@@ -896,7 +896,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+317"/>
+        <location line="+325"/>
         <source>Re-evaluating a result</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1061,14 +1061,14 @@
         <translation>검증 세트 잠금</translation>
     </message>
     <message>
-        <location line="-1897"/>
-        <location line="+1911"/>
+        <location line="-1905"/>
+        <location line="+1919"/>
         <location line="+39"/>
         <source>the workspace holds no such dataset version</source>
         <translation>작업 공간에 그런 데이터셋 버전이 없습니다</translation>
     </message>
     <message>
-        <location line="-1948"/>
+        <location line="-1956"/>
         <source>the run used a folder, not a frozen dataset version&apos;s locked validation set</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1083,7 +1083,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1907"/>
+        <location line="+1915"/>
         <source>its validation set is locked already, and a version is split only once</source>
         <translation>검증 세트가 이미 잠겨 있으며, 버전은 한 번만 분할됩니다</translation>
     </message>
@@ -1287,7 +1287,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-2460"/>
+        <location line="-2468"/>
         <source>no earlier version of this board model was active</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1317,7 +1317,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+864"/>
+        <location line="+872"/>
         <source>Labelling an image</source>
         <translation>이미지 라벨링</translation>
     </message>
@@ -4228,7 +4228,7 @@
 <context>
     <name>LogsPage</name>
     <message>
-        <location filename="../ui/pages/logs.py" line="+52"/>
+        <location filename="../ui/pages/logs.py" line="+60"/>
         <source>Include archived</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4244,13 +4244,13 @@
     </message>
     <message>
         <location line="+1"/>
-        <location line="+16"/>
+        <location line="+17"/>
         <source>Board model</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-15"/>
-        <location line="+19"/>
+        <location line="-16"/>
+        <location line="+20"/>
         <source>Operator</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4270,7 +4270,8 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+2"/>
+        <location line="-14"/>
+        <location line="+16"/>
         <source>Result</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4306,12 +4307,12 @@
     </message>
     <message>
         <location line="+9"/>
-        <location line="+109"/>
+        <location line="+110"/>
         <source>Export CSV</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-108"/>
+        <location line="-109"/>
         <source>Export Image Overlays</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4326,7 +4327,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+134"/>
+        <location line="+135"/>
         <source>Export CSV stopped: no file was written.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4351,12 +4352,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+15"/>
+        <location line="+14"/>
         <source>No records match</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-9"/>
+        <location line="-8"/>
         <source>Widen the dates or the filters.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4366,7 +4367,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+11"/>
+        <location line="+10"/>
         <source>Run boards on Inspection.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4376,7 +4377,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+39"/>
+        <location line="+40"/>
         <source>Confirm export</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4421,7 +4422,8 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+28"/>
+        <location line="-264"/>
+        <location line="+292"/>
         <source>All</source>
         <translation>전체</translation>
     </message>
@@ -5119,7 +5121,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/logs.py" line="-302"/>
+        <location filename="../ui/pages/logs.py" line="-311"/>
         <source>Logs &amp; Export</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6439,7 +6441,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/services.py" line="-2674"/>
+        <location filename="../core/services.py" line="-2682"/>
         <source>Aligning {count} images to the reference board</source>
         <translation type="unfinished"></translation>
     </message>

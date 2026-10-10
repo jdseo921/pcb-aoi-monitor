@@ -683,7 +683,10 @@ class Database:
         board_model: str | None = None,
         operator: str | None = None,
         include_archived: bool = False,
+        result: str | None = None,
     ) -> list[dict[str, Any]]:
+        """Each filter reads through its index of migration 0022 (REQ-LOG-001), the defect count through
+        `defects_inspection`."""
         sql = (  # every column but result_json and the golden board's, which `inspection_result` and `inspection`
             # read for one record at a time
             "SELECT i.id, i.uuid, i.time, i.board_model, i.model_version, i.model_uuid, i.recipe_rev, i.recipe_uuid,"
@@ -701,14 +704,19 @@ class Database:
         if end:
             sql += " AND time < ?"
             p.append(end)
-        if board_model:
-            sql += " AND board_model = ?"
-            p.append(board_model)
-        if operator:
-            sql += " AND operator = ?"
-            p.append(operator)
+        for column, value in (("board_model", board_model), ("operator", operator), ("result", result)):
+            if value:
+                sql += f" AND {column} = ?"  # a column name of this method's, never a user's
+                p.append(value)
         rows = self.query(sql + " ORDER BY id DESC", p)
         return [self._resolved(r, "image_path", "overlay_path", "diff_map_path", "ai_map_path") for r in rows]
+
+    def inspection_span(self) -> dict[str, Any] | None:
+        """The oldest and newest stored time of every record, archived or not, and whether one is archived (1 or 0),
+        read through `inspections_time` rather than every row; None for a workspace with none."""
+        sql = "SELECT MIN(time) oldest, MAX(time) newest, EXISTS(SELECT 1 FROM inspections WHERE archived=1) archived"
+        row = self.query(f"{sql} FROM inspections")[0]
+        return row if row["oldest"] is not None else None
 
     def last_board(self, board_model: str) -> str | None:
         """The image file of the newest inspection of `board_model` not archived, absolute; None without one."""
