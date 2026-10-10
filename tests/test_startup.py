@@ -41,6 +41,10 @@ class _App:
     def exec(self) -> int:
         return type(self).loop()
 
+    @staticmethod
+    def topLevelWidgets() -> list[QWidget]:  # noqa: N802 (Qt's name)
+        return QApplication.topLevelWidgets()
+
 
 @pytest.fixture
 def opened(monkeypatch: pytest.MonkeyPatch) -> list[AppContext]:

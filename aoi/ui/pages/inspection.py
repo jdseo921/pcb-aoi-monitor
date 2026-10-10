@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+import math
+import time
 import weakref
 from collections.abc import Callable
 from pathlib import Path
 from typing import TYPE_CHECKING, TypeAlias
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QKeySequence
 from PySide6.QtWidgets import (
     QComboBox,
@@ -87,6 +89,14 @@ class InspectionPage(Page):
         self._no_ai_warned: str | None = None  # the board model AOI-TRN-003 was stored for on this page visit (#243)
         # The board being inspected, if one is: Start and Next Board wait for it (#120).
         self.worker: Worker | None = None
+        # A scripted run (REQ-SET-009): its seconds per board, None for a queue the user loads, which plays as fast as
+        # it goes; it pauses at an NG board, so Compare can show why before the run goes on.
+        self.pace_s: int | None = None
+        self._board_started = 0.0  # when the board in hand started, on the monotonic clock
+        self._pace_timer = QTimer(self)
+        self._pace_timer.setSingleShot(True)
+        self._pace_timer.setTimerType(Qt.TimerType.PreciseTimer)  # a coarse timer may fire 5 % early
+        self._pace_timer.timeout.connect(self._paced_next)
 
         # Source bar. Every control is an action with a key (REQ-INSP-005); the keys work wherever the focus is on
         # this page, and only while this page is shown.
@@ -193,18 +203,33 @@ class InspectionPage(Page):
             self._set_queue(list_images(d))
 
     def _set_queue(self, paths: list[Path]) -> None:
-        self.queue, self.queue_pos, self.skipped = paths, -1, None
+        self.queue, self.queue_pos, self.skipped, self.pace_s = paths, -1, None, None
         self._drop_engine()  # a new queue builds its engine from what is active (#243)
         self.queue_label.setText(self.tr("{count} image(s) queued").format(count=len(paths)))
         self.shell.status(self.tr("Loaded {count} image(s)").format(count=len(paths)))
         self._update_buttons()
         self._show_empty()
 
+    def play(self, paths: list[Path], pace_s: int, start: bool = True) -> None:
+        """Queue the demo's boards as a scripted run at `pace_s` seconds per board (REQ-SET-009), and press Start
+        unless not `start`. The boards go through the same path as any other: inspected, saved and alarmed."""
+        self._pace_timer.stop()
+        self._set_queue(paths)
+        self.pace_s = pace_s
+        self.queue_label.setText(
+            self.tr("{count} demo board(s) queued · {pace} s per board").format(count=len(paths), pace=pace_s)
+        )
+        if start:
+            self.start_run()
+
     # --- run control -------------------------------------------------------------
     def start_run(self) -> None:
-        """F5: inspect the queue board after board until Stop or the end of the queue."""
+        """F5: inspect the queue board after board until Stop or the end of the queue. A scripted run that has played
+        to its end starts again from its first board."""
         if not self.need_board_model():
             return
+        if self.pace_s is not None and self.queue_pos + 1 >= len(self.queue):
+            self.queue_pos = -1
         self.running, self.run_board_model, self.run_actor = True, self.board_model, self.ctx.actor
         self.run_inputs = None
         self._update_buttons()
@@ -213,6 +238,7 @@ class InspectionPage(Page):
     def stop_run(self) -> None:
         """F6: stop after the board being inspected; nothing is deleted, so no confirmation."""
         self.running = False
+        self._pace_timer.stop()
         if self.worker is not None:
             self.shell.status(self.tr("Stopping after this board…"), ms=0)  # until the board's result replaces it
         else:
@@ -241,6 +267,7 @@ class InspectionPage(Page):
             return
         self.queue_pos += 1
         path = self.queue[self.queue_pos]
+        self._board_started = time.monotonic()
         view = str(self.view_combo.currentData())  # the English key the engine stores on every defect
         insp = self.inspector  # None on the first board: built on the pool thread, so no key waits for a model load
         gen = self._engine_gen  # the engine this board builds is kept only while nothing has dropped it meanwhile
@@ -402,7 +429,33 @@ class InspectionPage(Page):
         if res.verdict == NG:
             self._refresh_alarms()
         if self.running:
+            self._go_on(path, res)
+
+    def _go_on(self, path: Path, res: InspectionResult) -> None:
+        """The run goes on with the next board: at once, or in a scripted run once the pace has passed since the board
+        started, and not at all after an NG board, where a scripted run pauses until Start (REQ-SET-009)."""
+        if self.pace_s is None:
             self.next_board()
+        elif res.verdict == NG:
+            self.running = False
+            self._update_buttons()
+            msg = self.tr(
+                "Paused at the NG board {file}: Compare with Golden board › shows why, and Start goes on with the run."
+            ).format(file=path.name)
+            self.summary.setText("\n".join([self.summary.text(), msg]))
+            self.shell.status(msg, ms=0)
+        else:
+            wait_s = self.pace_s - (time.monotonic() - self._board_started)
+            self._pace_timer.start(max(0, round(wait_s * 1000)))
+
+    def _paced_next(self) -> None:
+        """The pace of a scripted run has passed: its next board, unless the run was stopped meanwhile."""
+        if not self.running or self.worker is not None or self.pace_s is None:
+            return
+        if (left_s := self.pace_s - (time.monotonic() - self._board_started)) > 0:  # the timer fired early
+            self._pace_timer.start(math.ceil(left_s * 1000))
+            return
+        self.next_board()
 
     def _not_saved(self, path: Path, e: BaseException) -> None:
         """The result was shown but could not be saved (the disk is full, the workspace cannot be written, a database

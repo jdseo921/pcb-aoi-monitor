@@ -29,6 +29,7 @@ from PySide6.QtGui import QGuiApplication  # noqa: E402
 from PySide6.QtTest import QTest  # noqa: E402
 from PySide6.QtWidgets import QMessageBox, QWidget  # noqa: E402
 
+from aoi import config  # noqa: E402
 from aoi.config import Settings  # noqa: E402
 from aoi.core import anomaly, crypto, model_card  # noqa: E402
 from aoi.core.imaging import list_images, load_image  # noqa: E402
@@ -215,8 +216,9 @@ def keys(monkeypatch: pytest.MonkeyPatch) -> credentials.MemoryCredentials:
 @pytest.fixture(autouse=True)
 def _settings_file_in_tmp(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """settings.json is read and written in the default workspace (Settings.load and save, REQ-LOG-005); point
-    it at a folder of this test so that no test touches ~/AOI_Workspace."""
+    it at a folder of this test so that no test touches ~/AOI_Workspace; a demo workspace a test opened is closed."""
     monkeypatch.setenv("AOI_WORKSPACE", str(tmp_path / "default_workspace"))
+    monkeypatch.setattr(config, "_in_use", None)  # use_workspace (REQ-SET-007): the next test starts on its own
 
 
 @pytest.fixture(autouse=True)

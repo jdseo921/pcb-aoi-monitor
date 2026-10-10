@@ -22,6 +22,7 @@ from ...config import APP_VERSION
 from ...core.services import AppContext
 from ...errors import AoiError
 from .base import QT_TRANSLATE_NOOP, ROLES, Page, button, fill_table, make_table, role_text
+from .settings_demo import DemoPanel
 from .settings_stores import StoresPanel
 
 if TYPE_CHECKING:
@@ -92,6 +93,8 @@ class SettingsPage(Page):
         body.addLayout(left, 1)
 
         right = QVBoxLayout()
+        self.demo = DemoPanel(self)  # load, play, reset and leave the demo workspace (REQ-SET-007, REQ-SET-009)
+        right.addWidget(self.demo)
         ug = QGroupBox(self.tr("Users & roles").replace("&", "&&"))  # a lone & would be a mnemonic, not shown
         ul = QVBoxLayout(ug)
         self.users = make_table([self.tr("Name"), self.tr("Role")])
