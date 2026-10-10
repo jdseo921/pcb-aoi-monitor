@@ -54,9 +54,12 @@ class Job(Generic[T]):
     def __init__(self, name: str, fn: Callable[..., T], *args: Any, with_progress: bool = False, **kwargs: Any) -> None:
         self.name = name
         self._fn, self._args, self._kwargs = fn, args, dict(kwargs)
-        if with_progress:
-            self._kwargs["progress"] = self.report
-            self._kwargs["should_stop"] = lambda: self.cancelled
+        if (
+            with_progress
+        ):  # the callables hold the job weakly, so reference counting frees it, never the collector (#136)
+            ref = weakref.ref(self)
+            self._kwargs["progress"] = lambda *values: _report(ref, values)
+            self._kwargs["should_stop"] = lambda: _stopped(ref)
         self._cancel, self._done = threading.Event(), threading.Event()
         self._started: float | None = None
         self._last: tuple[int, int, str] = (0, 0, "")
@@ -118,26 +121,29 @@ class Job(Generic[T]):
         return Progress(done, total, text, elapsed, left)
 
     def run(self) -> None:
-        """Run the function on the calling thread and tell the listeners; `Jobs.submit` calls this on a pool thread."""
-        self._started = time.monotonic()
+        """Run the function on the calling thread and tell the listeners; `Jobs.submit` calls this on a pool thread.
+
+        A failed function's traceback keeps this frame as the `f_back` of `_invoke`'s, so the frame must hold neither
+        the job nor the exception once it returns: it ends with `del self`, and `_ended` holds the outcome (#136)."""
         try:
-            self.check_cancelled()  # cancelled while still queued: never run
-            if self.context is None:
-                value = self._fn(*self._args, **self._kwargs)
-            else:
-                value = self.context.run(self._fn, *self._args, **self._kwargs)
-        except JobCancelled:
-            pass
-        except Exception as e:  # never kills the pool thread; on_error's listener reports it (on a page: logged and
-            # alarmed, with a coded dialog unless the job was cancelled or replaced, #206)
-            self.error = e
-            self._call("error", e)
-        else:
-            self.result = value
-            self._call("result", value)
+            self._started = time.monotonic()
+            if not self.cancelled:  # cancelled while still queued: never run
+                self._ended(*_invoke(self._fn, self._args, self._kwargs, self.context))
         finally:
             self._done.set()
             self._call("finished")
+            del self
+
+    def _ended(self, value: Any, error: Exception | None, stopped: bool) -> None:
+        if stopped:
+            return
+        if error is not None:  # never kills the pool thread; on_error's listener reports it (on a page: logged and
+            # alarmed, with a coded dialog unless the job was cancelled or replaced, #206)
+            self.error = error
+            self._call("error", error)
+        else:
+            self.result = value
+            self._call("result", value)
 
     def _call(self, event: str, *args: Any) -> None:
         for cb in self._listeners[event]:
@@ -145,6 +151,34 @@ class Job(Generic[T]):
                 cb(*args)
             except Exception:  # a listener's failure (a widget already closed) is not the job's: the result stands
                 log.warning("job.listener_failed", exc_info=True, extra={"job": self.name, "listener": event})
+
+
+def _invoke(
+    fn: Callable[..., Any], args: tuple[Any, ...], kwargs: dict[str, Any], context: contextvars.Context | None
+) -> tuple[Any, Exception | None, bool]:
+    """Run a job's function: its value, the exception it raised, and whether it raised `JobCancelled`. The exception is
+    caught here, in a frame that holds no job, so a failed job's traceback never holds the job: reference counting frees
+    the job, its traceback and the frames' locals (a board picture, its maps) together, never the collector (#136)."""
+    try:
+        value = fn(*args, **kwargs) if context is None else context.run(fn, *args, **kwargs)
+    except JobCancelled:
+        return None, None, True
+    except Exception as e:
+        return None, e, False
+    return value, None, False
+
+
+def _report(ref: weakref.ref[Job[Any]], values: tuple[Any, ...]) -> None:
+    """A progress job's `progress(...)`, through a weak reference to the job (#136)."""
+    job = ref()
+    if job is not None:
+        job.report(*values)
+
+
+def _stopped(ref: weakref.ref[Job[Any]]) -> bool:
+    """A progress job's `should_stop()`: True once it is cancelled, or once nothing holds the job any more (#136)."""
+    job = ref()
+    return job is None or job.cancelled
 
 
 class Jobs:

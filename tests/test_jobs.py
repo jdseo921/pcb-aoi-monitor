@@ -277,3 +277,48 @@ def test_req_set_021_idle_is_false_while_a_job_is_queued_or_running() -> None:
     gate.set()
     assert running.wait(10) and queued.wait(10) and pool.idle()
     pool.shutdown()
+
+
+class _Picture:
+    """Stands in for a board picture a failing inspection holds in its frame."""
+
+
+def test_issue_136_a_progress_job_and_a_failed_job_are_freed_by_reference_counting() -> None:
+    """With the collector off, a progress job, and a failed job with its traceback and what its frames held, go as soon
+    as nothing holds them; before, each held itself in a cycle until the collector's next pass. The error still reaches
+    on_error with its traceback, and should_stop still sees a cancel."""
+    seen: list[BaseException] = []
+
+    def counts(progress: Callable[..., None], should_stop: Callable[[], bool]) -> int:
+        progress(1, 2, "half")
+        return 1 if should_stop() else 2
+
+    def fails() -> None:
+        picture = _Picture()
+        pictures.append(weakref.ref(picture))
+        raise ValueError("the board cannot be read")
+
+    pictures: list[weakref.ref[_Picture]] = []
+    enabled = gc.isenabled()
+    gc.disable()
+    try:
+        progress_job = Job("count", counts, with_progress=True)
+        progress_job.cancel()
+        progress_job._cancel.clear()  # let it run, then cancel from inside the next one
+        progress_job.run()
+        assert progress_job.result == 2 and progress_job.progress().message == "half"
+        stopping = Job("count", counts, with_progress=True)
+        stopping.cancel()
+        assert stopping._kwargs["should_stop"]() is True  # Stop still stops a progress job
+        failed = Job("inspect", fails).on_error(seen.append)
+        failed.run()
+        assert isinstance(failed.error, ValueError) and seen == [failed.error]
+        assert seen[0].__traceback__ is not None  # the page's report_error logs it with its trace
+        seen.clear()
+        refs = [weakref.ref(j) for j in (progress_job, stopping, failed)]
+        del progress_job, stopping, failed
+        assert [r() for r in refs] == [None, None, None]
+        assert pictures and pictures[0]() is None, "the failed frame's picture went with the job"
+    finally:
+        if enabled:
+            gc.enable()
