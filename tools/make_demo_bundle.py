@@ -4,8 +4,9 @@
 
 The build runs this before PyInstaller, which ships the folder with the app (aoi/core/demo.py says what it holds). It
 makes a workspace the way an engineer would: the board model DEMO-TBOX-A1 with the synthetic boards of
-tools/make_synthetic_dataset.py as its OK and NG samples, in a dataset store of their own (ADR 0010), an AI model
-trained on them and activated, with its model card and Golden board; then the ten boards a scripted run plays, nine OK
+tools/make_synthetic_dataset.py as its OK and NG samples, in a dataset store of their own (ADR 0010), frozen as a
+version whose held-out boards are its locked validation set, for AI Model Test (S58); an AI model trained on the rest
+and activated, with its model card and Golden board; then the ten boards a scripted run plays, nine OK
 and the fourth NG (a missing component), inspected once with that model before they are bundled. The build fails,
 writing no bundle, unless they get those verdicts with a margin: an OK board's AI score at most MARGIN of the
 threshold, so the same verdicts come back on any PC, whose CPU rounds a little differently.
@@ -42,7 +43,8 @@ from tools.trainable import key_of, trainable  # noqa: E402
 
 BOARD_MODEL = "DEMO-TBOX-A1"
 CUSTOMER = "Demo (synthetic boards)"  # the store's customer: our own synthetic boards (ADR 0010)
-OK, NG, SEED = 60, 14, 7  # the generator's defaults: 40 OK boards train, 20 are held out
+OK, NG, SEED = 60, 14, 7  # the generator's defaults: 40 OK and 3 NG boards train; 20 OK and 11 NG are held out,
+# the version's locked validation set
 EPOCHS, IMAGE_SIZE = 20, 128
 FAILING = "ng_007_missing_component.png"  # a held-out NG board: a part is missing from its pads, as Compare shows
 FAIL_AT = 4  # the failing board's place in the run: the run is under way, and it stops early enough to explain
@@ -64,10 +66,9 @@ def build(out: Path, epochs: int = EPOCHS, image_size: int = IMAGE_SIZE) -> dict
         ctx = AppContext(Settings(workspace=str(out / demo.WORKSPACE), device="cpu"), keys)
         try:
             ctx.set_user("engineer")
-            ctx.import_samples(BOARD_MODEL, [str(p) for p in list_images(dataset / "train" / "ok")], "OK")
-            for p in list_images(dataset / "train" / "ng"):  # one call each: an NG sample is imported with its type
-                ctx.import_samples(BOARD_MODEL, [str(p)], "NG", ng_type(p))
-            version = trainable(ctx, BOARD_MODEL, customer=CUSTOMER)
+            _import(ctx, dataset / "train")
+            held = _import(ctx, dataset / "test")  # the held-out boards: the locked validation set AI Model Test runs
+            version = trainable(ctx, BOARD_MODEL, customer=CUSTOMER, held=held)
             meta = ctx.train(version, epochs=epochs, image_size=image_size)
             ctx.activate_model(int(ctx.models(BOARD_MODEL)[0]["id"]))  # a version installs inactive (REQ-TRN-010)
             store = ctx.db.board_model_store(BOARD_MODEL) or {}
@@ -91,6 +92,15 @@ def build(out: Path, epochs: int = EPOCHS, image_size: int = IMAGE_SIZE) -> dict
     (out / demo.BUNDLE_FILE).write_text(json.dumps(manifest, indent=1), encoding="utf-8")
     print(f"Built {out} in {time.monotonic() - started:.0f} s: {len(manifest['files'])} files")
     return manifest
+
+
+def _import(ctx: AppContext, folder: Path) -> set[str]:
+    """Import `folder`'s ok/ and ng/ boards as OK and NG samples of the board model; return their sample UUIDs."""
+    before = {s["uuid"] for s in ctx.db.samples(BOARD_MODEL)}
+    ctx.import_samples(BOARD_MODEL, [str(p) for p in list_images(folder / "ok")], "OK")
+    for p in list_images(folder / "ng"):  # one call each: an NG sample is imported with its type
+        ctx.import_samples(BOARD_MODEL, [str(p)], "NG", ng_type(p))
+    return {s["uuid"] for s in ctx.db.samples(BOARD_MODEL)} - before
 
 
 def _boards(ctx: AppContext, dataset: Path, folder: Path) -> list[dict[str, Any]]:

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import html
+import re
 from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -17,6 +18,7 @@ from PySide6.QtWidgets import (
     QLabel,
     QMessageBox,
     QProgressBar,
+    QSizePolicy,
     QSplitter,
     QTabWidget,
     QVBoxLayout,
@@ -68,17 +70,19 @@ class MetricTile(QLabel):
         self.name = name
         self.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.setObjectName("tile")
+        self.setWordWrap(True)  # a bound's line wraps on a narrow screen rather than widen the window past it
         self.setMinimumHeight(theme.BANNER_H)
         self.set(None)
 
     def set(self, rate: dict[str, Any] | None) -> None:
         self.rate = rate  # drawn again in the theme in use when it is switched (ModelTestPage.restyle)
         count = "—" if rate is None else phrase_text(stats.COUNT_ONLY.fill(n=rate["n"], of=rate["of"]))
-        bound = stats.bound_text(rate) if rate else None
+        bound = stats.bound_text(rate) if rate else None  # its number keeps its % when the line wraps
+        shown = re.sub(r"(\d) %$", "\\1\u00a0%", phrase_text(bound)) if bound else "&nbsp;"
         self.setText(
             f"<div style='font-size:{theme.FONT_PT}pt;color:{theme.TEXT_MUTED}'>{self.name}</div>"
             f"<div style='font-size:{theme.FONT_TILE_PT}pt;font-weight:700'>{count}</div>"
-            f"<div style='font-size:{theme.FONT_PT}pt'>{phrase_text(bound) if bound else '&nbsp;'}</div>"
+            f"<div style='font-size:{theme.FONT_PT}pt'>{shown}</div>"
         )
 
 
@@ -108,11 +112,15 @@ class ModelTestPage(Page):
         bar.addWidget(button(self.tr("Export Report"), slot=self.export_report))
         self.folder_label = QLabel(self.tr("No folder selected"))
         self.folder_label.setObjectName("muted")
+        self.folder_label.setWordWrap(True)  # a long folder or dataset version name wraps, never widens the window
+        self.folder_label.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
         bar.addWidget(self.folder_label, 1)
         run_layout.addLayout(bar)
         src = QHBoxLayout()  # a frozen dataset version's locked validation set, or a labelled folder (REQ-TST-001)
         src.addWidget(QLabel(self.tr("Source")))
         self.source = QComboBox()
+        self.source.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
+        self.source.setMinimumContentsLength(24)  # its row gives it the page's width; a long name never widens it
         self.source.currentIndexChanged.connect(self._source_changed)
         src.addWidget(self.source, 1)
         run_layout.addLayout(src)

@@ -55,7 +55,8 @@ def test_req_tst_002_tiles_show_counts_and_bounds(qtbot: QtBot, trained_ctx: App
         r = rates[key]
         assert f"{r['n']} of {r['of']}" in tile.text(), key
         if r["of"]:
-            assert f"95 % {r['bound']} bound {round(100 * r['limit'], 1)} %" in tile.text(), key
+            shown = tile.text().replace("\u00a0", " ")  # the number and its % are kept together on a wrapped line
+            assert f"95 % {r['bound']} bound {round(100 * r['limit'], 1)} %" in shown, key
 
 
 def test_req_tst_001_100_images_no_freeze(
