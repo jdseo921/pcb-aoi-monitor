@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import dataclasses
+import weakref
 from collections.abc import Callable
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -29,6 +30,7 @@ from .. import theme
 from ..widgets.busy import BusyOverlay
 from ..widgets.empty_state import EmptyState
 from ..widgets.image_view import ImageView
+from ..workers import Worker, start
 from .base import QT_TRANSLATE_NOOP, Page, button, fill_table, make_table, row_key, size_class, view_text
 
 # The columns of the checks file beside the records file (REQ-INSP-012), the header even when no record has checks;
@@ -105,6 +107,8 @@ class LogsPage(Page):
         self.empty = EmptyState(self.table)
         self.busy = BusyOverlay(self.table, self.tr("Exporting…"))
         self.busy_delete = BusyOverlay(self.table, self.tr("Deleting…"))
+        self.loading = BusyOverlay(self.table, self.tr("Loading records…"))
+        self.listing: Worker | None = None  # the records being read for the page shown, if they are (`list_records`)
         split.addWidget(self.table)
         self.view = ImageView(placeholder=self.tr("Select a row to see its overlay"))
         split.addWidget(self.view)
@@ -131,7 +135,18 @@ class LogsPage(Page):
         self.root.addLayout(b)
 
     def refresh(self) -> None:
-        listed = HistoryFilter(
+        """Filter, Reset Filters, Show All Records, Archive and a delete: the records the filter lists, read and shown
+        at once. A listing the page started when it was shown is dropped: this one is newer."""
+        self._drop_listing()
+        listed = self._filter()
+        rows = self.ctx.inspections(**dataclasses.asdict(listed))
+        self.listed = listed
+        self.show_rows(rows)
+
+    def _filter(self) -> HistoryFilter:
+        """The filter in the boxes, as `AppContext.inspections` takes it: local dates, board model, operator, result,
+        archived or not; the exports and Delete Records… audit it (REQ-LOG-002, REQ-LOG-003)."""
+        return HistoryFilter(
             self.d_from.date().toString("yyyy-MM-dd"),
             self.d_to.date().toString("yyyy-MM-dd"),
             self.model.currentData(),
@@ -139,8 +154,52 @@ class LogsPage(Page):
             self.result.currentData(),
             self.archived.isChecked(),
         )
-        rows = self.ctx.inspections(**dataclasses.asdict(listed))
-        self.listed = listed
+
+    def list_records(self) -> None:
+        """The page shown: the records the filter lists are read on the pool thread and shown when they arrive, so the
+        page is up at once (REQ-SET-020). At 100,000 records, reading the last 7 days on the UI thread held the switch
+        to this page for 6.5 s (S55). `loading` covers the table meanwhile, from 1 s on with the seconds so far, and the
+        exports and Delete Records… wait for the listing, so none of them takes the rows shown before. Filter, or the
+        page shown again, drops it: the newest listing wins. Rows that arrive after another page is shown are dropped
+        too, since filling the table then would hold that page, and this one lists again when shown."""
+        self._drop_listing()
+        listed = self._filter()
+        w = self.listing = Worker(self.ctx.inspections, **dataclasses.asdict(listed))
+        ref = weakref.ref(w)  # the slots hold the worker weakly, as Page.run_in_background's do (#132)
+
+        def arrived(rows: list[dict[str, Any]]) -> None:
+            if (worker := ref()) is not None and worker is self.listing and self.shell.stack.currentWidget() is self:
+                self.listed = listed
+                self.show_rows(rows)
+
+        def failed(exc: BaseException) -> None:
+            if (worker := ref()) is not None and worker is self.listing:
+                self.error(exc)
+            else:  # a listing dropped meanwhile shows nothing, but its error is logged (#206)
+                self.ctx.report_error(exc, self.title)
+
+        def finished() -> None:
+            if (worker := ref()) is not None and worker is self.listing:
+                self.listing = None
+                self.loading.finish()
+                self.update_actions()
+
+        w.signals.result.connect(arrived)
+        w.signals.error.connect(failed)
+        w.signals.finished.connect(finished)
+        self.loading.watch(w.job)
+        self.update_actions()
+        start(w, self.ctx.jobs)
+
+    def _drop_listing(self) -> None:
+        if self.listing is not None:
+            self.listing.stop()  # a read cannot stop half-way: its rows arrive and are dropped
+            self.listing = None
+            self.loading.finish()
+            self.update_actions()
+
+    def show_rows(self, rows: list[dict[str, Any]]) -> None:
+        """Show `rows`, the records the filter listed, with their summary, or the empty state that says why none are."""
         self.table.clearSelection()  # the preview follows the selection, so it clears now and never reads a row that
         # fill_table is replacing (#174): a selected row that survives a shrinking table still holds an old record's ID
         self.rows = rows
@@ -395,7 +454,9 @@ class LogsPage(Page):
         )  # fmt: skip
 
     def update_actions(self) -> None:
-        idle = self._bg is None  # one export or delete at a time: a second would stop the first (#194)
+        # one export or delete at a time, as a second would stop the first (#194), and none while the page is still
+        # listing records, which would take the rows shown before (S55)
+        idle = self._bg is None and self.listing is None
         admin_or_eng = self.ctx.role in ("Engineer", "Admin")  # Q58 gives exports to the Admin alone: open for Jay
         for b in (self.btn_csv, self.btn_img):
             b.setEnabled(admin_or_eng and idle)
@@ -419,4 +480,4 @@ class LogsPage(Page):
                 combo.addItem(v, v)
             i = combo.findData(cur)
             combo.setCurrentIndex(max(0, i))
-        self.refresh()
+        self.list_records()

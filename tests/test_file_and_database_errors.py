@@ -17,6 +17,7 @@ from pytestqt.qtbot import QtBot
 from aoi.core.services import AppContext, ErrorReport
 from aoi.errors import AoiError
 from aoi.ui.errors import install_excepthook
+from tests.conftest import listed
 from tests.test_req_done_in_v01 import _inspect_one, _window
 
 
@@ -74,6 +75,7 @@ def test_req_log_002_export_csv_onto_a_held_file_says_so_and_writes_both_files_o
     win = _window(qtbot, trained_ctx)
     logs = win.pages["Logs & Export"]
     win.navigate("Logs & Export")
+    listed(qtbot, logs)
     out = tmp_path / "exports"
     out.mkdir()
     records, checks = out / "inspections.csv", out / "inspections_checks.csv"

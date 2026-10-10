@@ -13,6 +13,7 @@ from pytestqt.qtbot import QtBot
 from aoi.core.services import AppContext
 from aoi.hal import VIEWS
 from aoi.ui.pages.base import cell_text
+from tests.conftest import listed
 from tests.test_req_done_in_v01 import BOARD, _inspect_one, _window
 
 
@@ -52,6 +53,7 @@ def test_req_insp_010_view_stored_and_exported(
     assert stored is not None and stored.view == "Side"
     logs = win.pages["Logs & Export"]
     win.navigate("Logs & Export")
+    listed(qtbot, logs)
     headers = [logs.table.horizontalHeaderItem(c).text() for c in range(logs.table.columnCount())]
     assert cell_text(logs.table, 0, headers.index("View")) == "Side"  # wherever a later redesign puts the column
     out = tmp_path / "inspections.csv"

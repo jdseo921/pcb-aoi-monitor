@@ -22,7 +22,7 @@ from aoi.core.recipe import Recipe
 from aoi.core.services import AppContext
 from aoi.data.db import Database
 from aoi.ui.pages.compare import ComparePage
-from tests.conftest import log_rows
+from tests.conftest import listed, log_rows
 from tests.test_req_done_in_v01 import BOARD, _window
 
 EVIDENCE = ("overlay_path", "diff_map_path", "ai_map_path")
@@ -192,6 +192,7 @@ def test_req_insp_012_both_csv_files_say_whether_the_ai_check_ran(
     ctx.db.execute("UPDATE inspections SET result_json=NULL WHERE id=?", (ids[""],))
     win = _window(qtbot, ctx)
     win.navigate("Logs & Export")
+    listed(qtbot, win.pages["Logs & Export"])
     out = tmp_path / "inspections.csv"
     monkeypatch.setattr(QFileDialog, "getSaveFileName", staticmethod(lambda *a, **k: (str(out), "CSV (*.csv)")))
     monkeypatch.setattr(QMessageBox, "question", staticmethod(lambda *a, **k: QMessageBox.StandardButton.Yes))
@@ -227,6 +228,7 @@ def test_req_insp_012_a_stored_result_that_cannot_be_read_does_not_stop_the_csv_
         ctx.db.execute("UPDATE inspections SET result_json=? WHERE id=?", (doc, i))
     win = _window(qtbot, ctx)
     win.navigate("Logs & Export")
+    listed(qtbot, win.pages["Logs & Export"])
     out = tmp_path / "inspections.csv"
     monkeypatch.setattr(QFileDialog, "getSaveFileName", staticmethod(lambda *a, **k: (str(out), "CSV (*.csv)")))
     win.pages["Logs & Export"].export_csv()

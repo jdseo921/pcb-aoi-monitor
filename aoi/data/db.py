@@ -810,10 +810,17 @@ class Database:
             self.execute(f"UPDATE inspections SET diff_map_path=NULL, ai_map_path=NULL WHERE id IN ({marks})", chunk)
 
     def archive_old(self, days: int) -> int:
+        """Archive the records older than `days` that are not archived yet, and return how many, in one pass over the
+        history: a count first and then the update read every record twice at each start-up (S55)."""
         cutoff = (datetime.now(UTC) - timedelta(days=days)).isoformat(timespec="seconds")
-        n: int = self.query("SELECT COUNT(*) c FROM inspections WHERE archived=0 AND time < ?", (cutoff,))[0]["c"]
-        self.execute("UPDATE inspections SET archived=1 WHERE time < ?", (cutoff,))
-        return n
+        with self._lock:
+            try:
+                cur = self._conn.execute("UPDATE inspections SET archived=1 WHERE archived=0 AND time < ?", (cutoff,))
+                self._commit()
+            except BaseException:
+                self._rollback()
+                raise
+            return cur.rowcount
 
     # --- test runs / alarms ------------------------------------------------
     def add_test_run(

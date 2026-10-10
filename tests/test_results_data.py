@@ -20,7 +20,7 @@ from aoi.core.recipe import ROI, Recipe
 from aoi.core.services import AppContext, export_csv
 from aoi.data.db import Database
 from aoi.ui import theme
-from tests.conftest import TrainedModel
+from tests.conftest import TrainedModel, listed
 from tests.regression import make_regression_set as rs
 from tests.test_req_done_in_v01 import BOARD, _window
 
@@ -196,6 +196,7 @@ def test_req_insp_012_all_five_present_in_csv(
     win = _window(qtbot, ctx)  # an Engineer, since exports need the role
     logs = win.pages["Logs & Export"]
     win.navigate("Logs & Export")
+    listed(qtbot, logs)
     out = tmp_path / "inspections.csv"
     monkeypatch.setattr(QFileDialog, "getSaveFileName", staticmethod(lambda *a, **k: (str(out), "CSV (*.csv)")))
     monkeypatch.setattr(QMessageBox, "question", staticmethod(lambda *a, **k: QMessageBox.StandardButton.Yes))

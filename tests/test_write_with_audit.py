@@ -22,6 +22,7 @@ from aoi.core.services import AppContext
 from aoi.data import atomic
 from aoi.ui.main_window import MainWindow
 from aoi.ui.pages.base import cell_text
+from tests.conftest import listed
 from tests.test_req_done_in_v01 import BOARD, _window
 from tests.test_roles_and_audit import (
     WRITES,
@@ -250,6 +251,7 @@ def test_req_log_002_an_overlay_export_that_fails_part_way_records_what_left(
     win = _window(qtbot, trained_ctx)
     win.navigate("Logs & Export")
     page = win.pages["Logs & Export"]
+    listed(qtbot, page)
     first, second = (Path(r["overlay_path"]).name for r in page.rows)
     dest = tmp_path / "usb"
     (dest / second).mkdir(parents=True)  # a name the copy cannot take

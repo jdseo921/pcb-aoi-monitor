@@ -39,7 +39,7 @@ from aoi.data import atomic
 from aoi.ui import theme
 from aoi.ui.widgets.busy import BusyOverlay
 from aoi.ui.workers import Worker, start
-from tests.conftest import distinct_copies
+from tests.conftest import distinct_copies, listed
 from tests.test_jobs import count_to
 from tests.test_req_done_in_v01 import BOARD, _window
 
@@ -310,6 +310,7 @@ def test_req_set_021_logs_export_does_not_freeze(
     win = _window(qtbot, trained_ctx)  # an Engineer, since exports need the role
     page = win.pages["Logs & Export"]
     win.navigate("Logs & Export")
+    listed(qtbot, page)
     assert len(page.rows) == n
     folder = {"out": tmp_path / "out"}
     folder["out"].mkdir()
