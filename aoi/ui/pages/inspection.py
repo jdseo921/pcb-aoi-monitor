@@ -412,9 +412,8 @@ class InspectionPage(Page):
         self.view.set_image(res.image, keep_view=self.queue_pos > 0)
         for d in res.defects:
             sev = taxonomy.BY_NAME.get(d.type, taxonomy.ANOMALY).severity
-            self.view.add_box(
-                d.x, d.y, d.w, d.h, theme.SEVERITY_COLORS.get(sev, theme.NG_COLOR), f"{d.no} {d.type} {d.score:.2f}"
-            )
+            label = f"{d.no} {d.type} {theme.severity_label(sev)}  {d.score:.2f}"
+            self.view.add_box(d.x, d.y, d.w, d.h, theme.SEVERITY_COLORS.get(sev, theme.NG_COLOR), label)
         summary = self.tr("{file}  ·  AI score {score:.2f}× threshold  ·  {defects} defect(s)  ·  {ms:.0f} ms").format(
             file=path.name, score=res.score, defects=len(res.defects), ms=res.elapsed_ms
         )

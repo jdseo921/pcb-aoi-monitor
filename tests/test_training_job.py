@@ -215,7 +215,7 @@ def test_req_trn_008_survives_page_change(
     qtbot: QtBot, ctx: AppContext, synthetic_dataset: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """A run started on Training goes on while another page is shown: the header shows it on every page, and Home's
-    Self-train card too, and the header opens Training; once it ends, the header and the card hide it and Training
+    Train AI model card too, and the header opens Training; once it ends, the header and the card hide it and Training
     shows the AI model saved."""
     boards(ctx, synthetic_dataset, 20)
     trainable(ctx, BOARD)

@@ -112,6 +112,7 @@ def test_req_log_002_overlays_of_two_days_with_one_file_name_export_as_two_files
         trained_ctx.inspect_file(BOARD, str(board))
     rows = trained_ctx.inspections(board_model=BOARD)
     out = tmp_path / "export"
+    trained_ctx.set_user("admin")  # only an Admin exports (Q58, #151)
     assert trained_ctx.export_overlays(rows, out) == 2
     assert sorted(_sha(str(p)) for p in out.iterdir()) == sorted(_sha(r["overlay_path"]) for r in rows)
 

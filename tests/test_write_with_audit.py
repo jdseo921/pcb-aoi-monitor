@@ -228,6 +228,7 @@ def test_req_log_004_an_export_onto_its_own_file_is_never_removed(
     exported onto (the model's .pt, an overlay exported into the results folder)."""
     ctx = trained_ctx
     _a_result(ctx)
+    ctx.set_user("admin")  # only an Admin exports (Q58, #151)
     overlay = Path(ctx.inspections()[0]["overlay_path"])
     model = Path(ctx.models("TINY")[0]["path"])
     _fail_audit(monkeypatch, ctx, "export.model")
@@ -249,6 +250,7 @@ def test_req_log_002_an_overlay_export_that_fails_part_way_records_what_left(
     for s in trained_ctx.samples(BOARD, "OK")[:2]:
         trained_ctx.inspect_file(BOARD, s["path"])
     win = _window(qtbot, trained_ctx)
+    win.set_user("admin")  # only an Admin exports (Q58, #151)
     win.navigate("Logs & Export")
     page = win.pages["Logs & Export"]
     listed(qtbot, page)

@@ -76,7 +76,7 @@ class Settings:
     log_retention_days: int = 30  # spec 4.4: inspection records older than this are archived at start-up (REQ-LOG-003)
     map_retention_days_ok: int = 7  # REQ-INSP-012: the map files of OK results older than this go at start-up (0: next)
     max_image_megapixels: int = 50  # REQ-INSP-001: an image over either limit is refused before it is decoded
-    max_image_megabytes: int = 200  # (the register's proposed values; an Admin edits them in settings.json)
+    max_image_megabytes: int = 200  # (the register's proposed values; an Admin sets them on Settings, Q56)
     language: str = "en"  # en | ko (localization planned for 2H 2027)
     last_page: str = "Home"  # the page to reopen after a restart (REQ-LOG-005)
     demo_pace_s: int = 3  # seconds per board of the demo's scripted run, 1 to 10 (REQ-SET-009)

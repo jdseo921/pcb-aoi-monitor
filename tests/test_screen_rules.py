@@ -315,7 +315,7 @@ def test_req_set_004_a_disabled_coloured_button_looks_disabled(qtbot: QtBot, tra
             grabs.append(shot := _pixels(b.grab().toImage()))
             measured = _contrast(shot)
             assert measured is not None, kind
-            want = (fill, theme.ON_DARK if kind else theme.TEXT) if enabled else (theme.BG_RAISED, theme.TEXT_DISABLED)
+            want = (fill, theme.ON_FILL if kind else theme.TEXT) if enabled else (theme.BG_RAISED, theme.TEXT_DISABLED)
             assert measured[1:] == want, (kind or "plain", enabled, measured)
         assert not np.array_equal(*grabs), f"a disabled {kind or 'plain'} button looks like an enabled one"
     win = _window(qtbot, trained_ctx, "Engineer")

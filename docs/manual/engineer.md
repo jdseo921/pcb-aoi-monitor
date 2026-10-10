@@ -84,11 +84,17 @@ settings.json" above.
 
 **What each setting takes.** On the Settings page, **Default input size** is 128, 256, 384 or 512 (256 at first),
 **Default epochs** 5 to 1000 (60) and **Log retention (days)** 1 to 3650 (30): the age at which a record is archived,
-at each start and with the archive button on Logs & Export (section 8). Three more are only in `settings.json` and are
-read at the next start: `max_image_megapixels` (50) and `max_image_megabytes` (200), the most an image may hold before
-it is refused, undecoded, on Inspection and in an import (AOI-INSP-005), each a whole number of 1 or more; and
-`map_retention_days_ok` (7), 0 or more (section 8, Evidence files). AOI-SET-008 refuses any other value at start-up,
-naming the setting, the value and what it takes.
+at each start and with the archive button on Logs & Export (section 8). **Largest image (megapixels)** (50) and
+**Largest image file (MB)** (200), `max_image_megapixels` and `max_image_megabytes` in `settings.json`, are the most an
+image may hold before it is refused, undecoded, on Inspection and in an import (AOI-INSP-005), each a whole number of 1
+or more; **Keep OK results' maps (days)** (7), `map_retention_days_ok`, is 0 or more (section 8, Evidence files). An
+Admin sets them on Settings (#153). AOI-SET-008 refuses any other value, on Settings and at start-up, naming the
+setting, the value and what it takes.
+
+**Exports are an Admin's.** Customer images and results leave the station only by an Admin (#151): Export CSV and
+Export Image Overlays on Logs & Export, Export CSV, Export Report and Validation Report… on AI Model Test and Export
+Manifest… on Training show for an Admin alone, and AOI-USR-001 refuses an Engineer. An Engineer still archives, and
+exports an AI model.
 
 **Demo workspace.** The demo has a workspace of its own, beside the station's, with its own `settings.json`; section 9
 says how an Admin opens and leaves it.
@@ -367,7 +373,7 @@ Freeze a version and lock its validation set on the Datasets tab (section 3).
 image 12 of 53", "Building the Golden board: step 3 of 16", "Training epoch 23 of 60", "Calibrating: map 4 of 16", then
 "Saving AI model v1.3". The time left reads "estimating…" for the run's first image only, then "about 6 min left", or
 "less than a minute left"; the line and the bar change at least every 10 s. The run goes on whichever page you open: the
-header shows "Training 38 % · about 6 min left" on every page, and Home's Self-train card "Training running 38 % · about
+header shows "Training 38 % · about 6 min left" on every page, and Home's Train AI model card "Training running 38 % · about
 6 min left"; press the header's button to come back to Training. Start Training stays off while a run goes on, one run
 at a time (AOI-TRN-047).
 

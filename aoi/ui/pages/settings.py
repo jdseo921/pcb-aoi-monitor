@@ -77,6 +77,15 @@ class SettingsPage(Page):
         self.ret = QSpinBox()
         self.ret.setRange(1, 3650)
         self.ret.setValue(s.log_retention_days)
+        self.map_ret = QSpinBox()  # the map retention and the two image limits, kept in Settings.check's bounds (Q56)
+        self.map_ret.setRange(0, 3650)
+        self.map_ret.setValue(s.map_retention_days_ok)
+        self.max_mp = QSpinBox()
+        self.max_mp.setRange(1, 1000)
+        self.max_mp.setValue(s.max_image_megapixels)
+        self.max_mb = QSpinBox()
+        self.max_mb.setRange(1, 10000)
+        self.max_mb.setValue(s.max_image_megabytes)
         self.lang = QComboBox()
         for code, name in LANGUAGES:
             self.lang.addItem(name, code)
@@ -86,6 +95,9 @@ class SettingsPage(Page):
         f.addRow(self.tr("Default input size"), self.input_size)
         f.addRow(self.tr("Default epochs"), self.epochs)
         f.addRow(self.tr("Log retention (days)"), self.ret)
+        f.addRow(self.tr("Keep OK results' maps (days)"), self.map_ret)
+        f.addRow(self.tr("Largest image (megapixels)"), self.max_mp)
+        f.addRow(self.tr("Largest image file (MB)"), self.max_mb)
         f.addRow(self.tr("Language"), self.lang)
         f.addRow(button(self.tr("Save Settings"), "primary", self.save))
         left = QVBoxLayout()
@@ -143,6 +155,9 @@ class SettingsPage(Page):
             "image_size": int(self.input_size.currentText()),
             "default_epochs": self.epochs.value(),
             "log_retention_days": self.ret.value(),
+            "map_retention_days_ok": self.map_ret.value(),
+            "max_image_megapixels": self.max_mp.value(),
+            "max_image_megabytes": self.max_mb.value(),
             "language": self.lang.currentData(),
         }
         try:

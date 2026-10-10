@@ -155,6 +155,7 @@ def test_req_tst_003_a_preview_is_judged_by_what_judged_its_row_or_not_at_all(
         assert (run_version, active) == ("v1.0", "v1.1")
         rows_csv = tmp_path / "rows.csv"
         monkeypatch.setattr(QFileDialog, "getSaveFileName", staticmethod(lambda *a, **k: (str(rows_csv), "")))
+        win.set_user("admin")  # only an Admin exports (Q58, #151)
         page.export_csv()
         with rows_csv.open(encoding="utf-8-sig", newline="") as f:
             assert {r["model_version"] for r in csv.DictReader(f)} == {"v1.0"}
@@ -560,6 +561,7 @@ def test_req_log_004_export_report_is_written_whole_or_not_at_all_and_audited(
     "Report saved", writes no entry and leaves an earlier report whole; an Operator is refused with AOI-USR-001."""
     win = _window(qtbot, trained_ctx)
     page = _tested_page(qtbot, win, synthetic_dataset / "test" / "ng")
+    win.set_user("admin")  # only an Admin exports (Q58, #151)
     audited = lambda: trained_ctx.audit_entries(action="export.report")  # noqa: E731
 
     good = tmp_path / "report.pdf"
@@ -616,6 +618,7 @@ def test_req_log_004_export_report_is_written_whole_or_not_at_all_and_audited(
 def test_req_log_004_export_writes_that_fail_carry_a_code(trained_ctx: AppContext, tmp_path: Path) -> None:
     """A CSV or a report that cannot be written, and a report with no bytes, are refused with AOI-LOG-002 and are not
     audited as exported."""
+    trained_ctx.set_user("admin")  # only an Admin exports (Q58, #151)
     (tmp_path / "blocker").write_text("a file where the folder should be")
     with pytest.raises(AoiError) as csv_refused:
         trained_ctx.export_csv(tmp_path / "blocker" / "rows.csv", [{"a": 1}])
@@ -658,6 +661,7 @@ def test_req_tst_005_a_run_judged_with_the_ai_check_off_says_so(
     assert run is not None
     out = tmp_path / "model_test.csv"
     monkeypatch.setattr(QFileDialog, "getSaveFileName", staticmethod(lambda *a, **k: (str(out), "CSV (*.csv)")))
+    win.set_user("admin")  # only an Admin exports (Q58, #151)
     page.export_csv()
     with out.open(encoding="utf-8-sig", newline="") as f:
         exported = list(csv.DictReader(f))

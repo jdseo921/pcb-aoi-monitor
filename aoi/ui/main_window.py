@@ -79,7 +79,7 @@ class HomePage(Page):
         ),
         (
             "2",
-            QT_TRANSLATE_NOOP("HomePage", "Self-train"),
+            QT_TRANSLATE_NOOP("HomePage", "Train AI model"),
             QT_TRANSLATE_NOOP("HomePage", "The app learns the Golden board and an AI model from your OK boards."),
             "Training",
         ),
@@ -115,7 +115,7 @@ class HomePage(Page):
         grid = QGridLayout(self.cards)
         grid.setSpacing(theme.SPACE)
         self.status_labels: dict[str, QLabel] = {}
-        self.training_line = QLabel()  # on Self-train's card while a training run goes on (REQ-TRN-008)
+        self.training_line = QLabel()  # on Train AI model's card while a training run goes on (REQ-TRN-008)
         self.training_line.setWordWrap(True)
         self.training_line.hide()
         self.headings: list[tuple[QLabel, str, str]] = []  # each card's heading, its number and its name
@@ -135,7 +135,7 @@ class HomePage(Page):
             cl.addWidget(d)
             cl.addStretch(1)
             cl.addWidget(st)
-            if name == "Self-train":
+            if name == "Train AI model":
                 cl.addWidget(self.training_line)
             kind = "primary" if target == "Inspection" else ""  # the page's one blue primary: the Inspect card
             link = self.tr("Open {page} ›").format(page=page_text(target))
@@ -158,7 +158,7 @@ class HomePage(Page):
             h.setText(self._heading(n, name))
 
     def show_training(self, progress: RunProgress | None, running: bool) -> None:
-        """Self-train's line while a training run goes on, with its latest report; hidden once it ends."""
+        """Train AI model's line while a training run goes on, with its latest report; hidden once it ends."""
         if running:
             percent, left = (progress.percent, progress.left_s) if progress else (0, None)
             line = self.tr("Training running {percent} % · {left}")
@@ -179,7 +179,7 @@ class HomePage(Page):
             if st.ok_samples or st.ng_samples
             else self.tr("No samples yet. Add at least {count} OK boards.").format(count=FIRST_OK)
         )
-        self.status_labels["Self-train"].setText(
+        self.status_labels["Train AI model"].setText(
             self.tr("Active AI model {version}").format(version=st.model_version)
             if st.model_version
             else self.tr("No AI model yet. Train one from your OK boards.")

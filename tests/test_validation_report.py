@@ -59,6 +59,7 @@ def test_req_tst_004_export_asks_first_and_is_audited(
     """Export Report asks first, naming the images, missed defects and false calls; No writes and audits nothing, Yes
     writes the PDF and audits it under the run."""
     page = run_page(qtbot, trained_ctx, synthetic_dataset / "test")
+    page.shell.set_user("admin")  # only an Admin exports (Q58, #151)
     out = tmp_path / "report.pdf"
     monkeypatch.setattr(QFileDialog, "getSaveFileName", staticmethod(lambda *a, **k: (str(out), "PDF (*.pdf)")))
     asked: list[str] = []
@@ -87,6 +88,7 @@ def test_req_tst_004_csv_bom_and_korean_round_trip(trained_ctx: AppContext, tmp_
     """The CSV starts with a UTF-8 BOM, so Excel opens Korean text intact, and reads back row for row."""
     rows = [{"image": "보드_001.png", "gt": "NG", "ai_result": "NG", "defect_type": "솔더 브리지"},
             {"image": "보드_002.png", "gt": "OK", "ai_result": "OK", "defect_type": ""}]  # fmt: skip
+    trained_ctx.set_user("admin")  # only an Admin exports (Q58, #151)
     out = tmp_path / "결과.csv"
     trained_ctx.export_csv(out, rows, "test results")
     data = out.read_bytes()
@@ -101,6 +103,7 @@ def test_req_tst_004_no_csv_cell_runs_as_a_formula(trained_ctx: AppContext, tmp_
     text are written as they are."""
     risky = ['=HYPERLINK("http://x")', "+1+1", "-2+3", "@SUM(A1)", "\tx", "\rx"]
     rows = [{"image": text, "score": -0.5, "shown": "-0.250", "operator": "op=1"} for text in risky]
+    trained_ctx.set_user("admin")  # only an Admin exports (Q58, #151)
     out = tmp_path / "results.csv"
     trained_ctx.export_csv(out, rows, "test results")
     with out.open(encoding="utf-8-sig", newline="") as f:

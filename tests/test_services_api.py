@@ -47,6 +47,7 @@ def test_req_usr_001_appcontext_reads_and_writes_what_the_screens_need(trained_c
     assert status.model_version == model["version"] and status.recipe_revision == 1 and status.last_test is None
     assert status.recipe_is_default, "the Home card still says the recipe uses defaults"
     assert (status.inspected, status.ng) == (1, int(row["result"] == "NG"))
+    ctx.set_user("admin")  # only an Admin exports (Q58, #151)
     assert ctx.export_overlays(ctx.inspections(), tmp_path / "overlays") == 1
     assert ctx.inspections(board_model="OTHER") == [] and ctx.archive_old() == 0
     assert ctx.archive_old(-1) == 1  # a cutoff in the future, so the record saved this second counts

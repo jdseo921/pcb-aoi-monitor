@@ -213,7 +213,7 @@ def test_req_insp_016_six_step_cards_open_their_pages_and_show_status(
 
     _, before = open_home()  # the warm-up: a first opening's one-off costs are not Home's
     ok, ng = len(trained_ctx.samples(BOARD, "OK")), len(trained_ctx.samples(BOARD, "NG"))
-    assert before["Upload samples"] == f"{ok} OK · {ng} NG uploaded" and "Active AI model" in before["Self-train"]
+    assert before["Upload samples"] == f"{ok} OK · {ng} NG uploaded" and "Active AI model" in before["Train AI model"]
     assert before["Inspect"] == "No boards inspected yet. Load images on Inspection."
     # The data behind four cards changes between two openings: one more OK sample, a saved recipe, an inspected board.
     trained_ctx.import_samples(BOARD, [str(next((synthetic_dataset / "test" / "ok").glob("*.png")))], "OK")

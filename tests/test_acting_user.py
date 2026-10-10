@@ -185,12 +185,13 @@ def test_req_usr_001_a_queued_job_acts_as_the_user_who_submitted_it(ctx: AppCont
         assert start.wait(30)
         return ctx.export_csv(tmp_path / "rows.csv", [{"a": 1}])
 
+    ctx.set_user("admin")  # only an Admin exports (Q58, #151)
     job = ctx.jobs.submit(Job("export", export))
     ctx.set_user("operator")
     start.set()
     assert job.wait(30) and job.error is None and job.result == 1
     (entry,) = ctx.audit_entries(action="export.csv")
-    assert _who(entry) == ("Engineer", ctx.db.user_uuid("engineer"))
+    assert _who(entry) == ("Admin", ctx.db.user_uuid("admin"))
     assert (ctx.user, ctx.role, ctx.user_uuid) == ("operator", "Operator", ctx.db.user_uuid("operator"))
 
 

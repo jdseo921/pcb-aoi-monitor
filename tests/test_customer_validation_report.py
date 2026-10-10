@@ -119,7 +119,7 @@ def test_req_tst_008_report_written_and_audited(
 ) -> None:
     """Validation Report… on History writes the PDF and audits it under the run."""
     run_uuid, _ = validated(trained_ctx)
-    win = _window(qtbot, trained_ctx, "Engineer")
+    win = _window(qtbot, trained_ctx, "Admin")  # only an Admin exports (Q58, #151)
     assert win.navigate("AI Model Test")
     page = cast(ModelTestPage, win.pages["AI Model Test"])
     page.tabs.setCurrentIndex(1)

@@ -89,10 +89,11 @@ def test_req_usr_001_a_background_import_or_export_works_for_the_user_who_starte
     monkeypatch: pytest.MonkeyPatch,
     dialogs: list[tuple[str, str]],
 ) -> None:
-    """An Engineer starts + OK Images, Export Image Overlays and Export CSV, and an Operator takes the station while
-    each runs: each job finishes, and its audit entry names the Engineer who started it, not the Operator."""
+    """An Engineer starts + OK Images and an Admin Export Image Overlays and Export CSV, and an Operator takes the
+    station while each runs: each job finishes, and its audit entry names the user who started it, not the Operator."""
     engineer = (trained_ctx.db.user_uuid("engineer"), "Engineer")
-    assert engineer[0] is not None
+    admin = (trained_ctx.db.user_uuid("admin"), "Admin")
+    assert engineer[0] is not None and admin[0] is not None
     win = _window(qtbot, trained_ctx)
     training = win.pages["Training"]
     win.navigate("Training")
@@ -106,7 +107,7 @@ def test_req_usr_001_a_background_import_or_export_works_for_the_user_who_starte
     assert [(e["after"]["added"], e["after"]["cancelled"]) for e in entries] == [(1, False)] * N
     assert len(trained_ctx.samples(BOARD)) == before + N and trained_ctx.role == "Operator"
 
-    win.set_user("engineer")
+    win.set_user("admin")  # only an Admin exports (Q58, #151)
     _records_with_overlays(trained_ctx, ng_board, tmp_path / "overlays")
     logs = win.pages["Logs & Export"]
     win.navigate("Logs & Export")
@@ -116,11 +117,11 @@ def test_req_usr_001_a_background_import_or_export_works_for_the_user_who_starte
     _switch_when(qtbot, win, lambda: _copied(pickers) > 0, "Operator")
     qtbot.waitUntil(lambda: logs._bg is None, timeout=60000)
     entry = _last(trained_ctx, "export.overlays")
-    assert (entry["user_uuid"], entry["role"]) == engineer, "the export is the Engineer's, not the next user's"
+    assert (entry["user_uuid"], entry["role"]) == admin, "the export is the Admin's, not the next user's"
     assert (entry["after"]["copied"], entry["after"]["cancelled"]) == (N, False)
     assert status() == f"Copied {N} overlay image(s) to {pickers}"
 
-    win.set_user("engineer")
+    win.set_user("admin")
     win.navigate("Logs & Export")
     listed(qtbot, logs)
     gathered: list[int] = []
@@ -129,10 +130,10 @@ def test_req_usr_001_a_background_import_or_export_works_for_the_user_who_starte
     logs.export_csv()
     _switch_when(qtbot, win, lambda: bool(gathered), "Operator")
     qtbot.waitUntil(lambda: logs._bg is None, timeout=60000)
-    assert not dialogs, "the Operator is not refused an export the Engineer started"
+    assert not dialogs, "the Operator is not refused an export the Admin started"
     assert status().startswith(f"Exported {len(logs.rows)} records"), status()
     for entry in trained_ctx.audit_entries(action="export.csv")[:2]:  # the records and the checks file
-        assert (entry["user_uuid"], entry["role"]) == engineer, entry["object_type"]
+        assert (entry["user_uuid"], entry["role"]) == admin, entry["object_type"]
 
 
 @pytest.mark.usefixtures("slow_copies")
@@ -148,7 +149,7 @@ def test_req_set_021_a_second_export_or_import_waits_for_the_first(
     Admin, who may export; while + OK Images runs, + NG Images, Import Folder… and Start Training are off. A click on
     one does nothing, the first job copies every file, and the buttons come back when it ends."""
     _records_with_overlays(trained_ctx, ng_board, tmp_path / "overlays")
-    win = _window(qtbot, trained_ctx)
+    win = _window(qtbot, trained_ctx, "Admin")  # only an Admin exports (Q58, #151)
     logs = win.pages["Logs & Export"]
     win.navigate("Logs & Export")
     listed(qtbot, logs)
@@ -237,6 +238,7 @@ def test_req_set_021_an_empty_state_neither_stops_an_import_nor_hides_the_busy_o
         qtbot.waitUntil(lambda: training._bg is None, timeout=60000)
         after = _last(trained_ctx, "sample.import")["after"]
         seen.append((name, len(trained_ctx.samples(name)), after["cancelled"], link_on))
+    win.set_user("admin")  # only an Admin exports (Q58, #151)
     _records_with_overlays(trained_ctx, ng_board, tmp_path / "overlays")
     win.navigate("Logs & Export")
     listed(qtbot, logs)

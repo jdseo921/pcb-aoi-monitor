@@ -193,7 +193,7 @@ def test_req_insp_012_all_five_present_in_csv(
         ctx.inspect_file(BOARD, str(path))
     older = {"board_model": BOARD, "result": "OK", "view": "Top", "image_path": str(regression_boards[3])}
     ctx.db.add_inspection(older, [], None)  # as a record from before migration 0006: no checks stored
-    win = _window(qtbot, ctx)  # an Engineer, since exports need the role
+    win = _window(qtbot, ctx, "Admin")  # only an Admin exports (Q58, #151)
     logs = win.pages["Logs & Export"]
     win.navigate("Logs & Export")
     listed(qtbot, logs)

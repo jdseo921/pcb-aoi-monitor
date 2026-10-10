@@ -190,7 +190,7 @@ def test_req_insp_012_both_csv_files_say_whether_the_ai_check_ran(
         ctx.inspect_file(BOARD, str(ng_board))
         ids[key] = ctx.inspections(board_model=BOARD)[0]["id"]
     ctx.db.execute("UPDATE inspections SET result_json=NULL WHERE id=?", (ids[""],))
-    win = _window(qtbot, ctx)
+    win = _window(qtbot, ctx, "Admin")  # only an Admin exports (Q58, #151)
     win.navigate("Logs & Export")
     listed(qtbot, win.pages["Logs & Export"])
     out = tmp_path / "inspections.csv"
@@ -226,7 +226,7 @@ def test_req_insp_012_a_stored_result_that_cannot_be_read_does_not_stop_the_csv_
     damaged = dict(zip(ids[1:], ("{not json", "[]", '{"verdict": "NG"}'), strict=True))
     for i, doc in damaged.items():
         ctx.db.execute("UPDATE inspections SET result_json=? WHERE id=?", (doc, i))
-    win = _window(qtbot, ctx)
+    win = _window(qtbot, ctx, "Admin")  # only an Admin exports (Q58, #151)
     win.navigate("Logs & Export")
     listed(qtbot, win.pages["Logs & Export"])
     out = tmp_path / "inspections.csv"

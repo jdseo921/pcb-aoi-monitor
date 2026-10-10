@@ -307,7 +307,7 @@ def test_req_set_021_logs_export_does_not_freeze(
         os.link(board_5mp, overlay)
         rec = {"board_model": BOARD, "result": "OK", "view": "Top", "image_path": str(overlay)}
         trained_ctx.db.add_inspection({**rec, "overlay_path": str(overlay)}, [], None)
-    win = _window(qtbot, trained_ctx)  # an Engineer, since exports need the role
+    win = _window(qtbot, trained_ctx, "Admin")  # only an Admin exports (Q58, #151)
     page = win.pages["Logs & Export"]
     win.navigate("Logs & Export")
     listed(qtbot, page)

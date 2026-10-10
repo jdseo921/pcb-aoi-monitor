@@ -457,9 +457,10 @@ class LogsPage(Page):
         # one export or delete at a time, as a second would stop the first (#194), and none while the page is still
         # listing records, which would take the rows shown before (S55)
         idle = self._bg is None and self.listing is None
-        admin_or_eng = self.ctx.role in ("Engineer", "Admin")  # Q58 gives exports to the Admin alone: open for Jay
-        for b in (self.btn_csv, self.btn_img):
-            b.setEnabled(admin_or_eng and idle)
+        admin_or_eng = self.ctx.role in ("Engineer", "Admin")
+        for b in (self.btn_csv, self.btn_img):  # customer results leave the station only by an Admin (Q58, #151)
+            b.setVisible(self.ctx.role == "Admin")
+            b.setEnabled(idle)
         self.btn_arch.setEnabled(admin_or_eng)
         self.btn_delete.setVisible(self.ctx.role == "Admin")  # shown to the Admin alone; the service checks the role
         self.btn_compare.setEnabled(bool(self.table.selectionModel().selectedRows()))

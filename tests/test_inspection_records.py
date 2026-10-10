@@ -41,7 +41,7 @@ def test_req_insp_010_view_stored_and_exported(
     """The view picked on Inspection stays with the result: on the record (new), in its stored result as Compare reads
     it back (#246: only the column was checked), on every defect and in the Side column (as in v0.1), in the Logs &
     Export table's View column and in the CSV export (new)."""
-    win = _window(qtbot, trained_ctx)  # an Engineer, since exports need the role
+    win = _window(qtbot, trained_ctx, "Admin")  # only an Admin exports (Q58, #151)
     page = win.pages["Inspection"]
     page.view_combo.setCurrentIndex(VIEWS.index("Side"))
     _inspect_one(qtbot, win, ng_board)
