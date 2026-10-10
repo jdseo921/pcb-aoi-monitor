@@ -195,6 +195,10 @@ class Page(QWidget):
     def update_actions(self) -> None:
         """Enable the page's buttons for the role and for whether a background job runs (`self._bg`)."""
 
+    def restyle(self) -> None:
+        """The theme was switched (REQ-SET-008): draw again what the page drew with the tokens, beyond the stylesheet,
+        verdict labels, tables and images, which MainWindow.apply_theme restyles on every page."""
+
     def on_board_model_changed(self, name: str | None) -> None: ...
 
     def need_board_model(self) -> bool:
@@ -398,6 +402,25 @@ def make_table(headers: list[str], sortable: bool = True) -> QTableWidget:
     t.horizontalHeader().setStretchLastSection(True)
     t.setSortingEnabled(sortable)
     return t
+
+
+def restyle_table(t: QTableWidget) -> None:
+    """The rows `fill_table` drew, in the theme in use (REQ-SET-008): a coloured row's fill, the text colour that reads
+    on it and the bold of the table's font at its size now, and every column sized to its contents again, as
+    `fill_table` leaves them. Sorting is off meanwhile, as there."""
+    sortable = t.isSortingEnabled()
+    t.setSortingEnabled(False)
+    t.ensurePolished()
+    bold = QFont(t.font())
+    bold.setBold(True)
+    for it in (t.item(r, c) for r in range(t.rowCount()) for c in range(t.columnCount())):
+        if it is not None and it.background().style() != Qt.BrushStyle.NoBrush:
+            colour = theme.row_fill(it.background().color().name())
+            it.setBackground(QColor(colour))
+            it.setForeground(QColor(theme.on_color(colour)))
+            it.setFont(bold)
+    t.resizeColumnsToContents()
+    t.setSortingEnabled(sortable)
 
 
 def fill_table(

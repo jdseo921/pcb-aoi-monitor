@@ -138,6 +138,10 @@ class Boxes(ImageView, Generic[B]):
         """Box `n`'s colour, and whether its line is dashed: the selected box yellow, the others green."""
         return (theme.ROI_SELECTED if n == self.chosen else theme.ROI_COLOR), False
 
+    def restyle(self) -> None:
+        super().restyle()
+        self.redraw()  # a label cut at the pane's edge is placed again for its new width
+
     def redraw(self) -> None:
         self.clear_overlays()
         for n, b in enumerate(self.boxes):

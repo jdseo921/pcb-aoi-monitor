@@ -5,12 +5,14 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from PySide6.QtWidgets import (
+    QCheckBox,
     QComboBox,
     QFileDialog,
     QFormLayout,
     QGroupBox,
     QHBoxLayout,
     QInputDialog,
+    QLabel,
     QLineEdit,
     QMessageBox,
     QSpinBox,
@@ -21,7 +23,7 @@ from PySide6.QtWidgets import (
 from ...config import APP_VERSION
 from ...core.services import AppContext
 from ...errors import AoiError
-from .base import QT_TRANSLATE_NOOP, ROLES, Page, button, fill_table, make_table, role_text
+from .base import QT_TRANSLATE_NOOP, ROLES, Page, button, fill_table, make_table, role_text, size_class
 from .settings_demo import DemoPanel
 from .settings_stores import StoresPanel
 
@@ -95,6 +97,18 @@ class SettingsPage(Page):
         right = QVBoxLayout()
         self.demo = DemoPanel(self)  # load, play, reset and leave the demo workspace (REQ-SET-007, REQ-SET-009)
         right.addWidget(self.demo)
+        pg = QGroupBox(self.tr("Presenter theme"))  # the settings-demo sketch's group (REQ-SET-008)
+        pl = QVBoxLayout(pg)
+        self.presenter = size_class(QCheckBox(self.tr("Presenter theme")), "T")
+        self.presenter.clicked.connect(self._switch_presenter)
+        about = QLabel(
+            self.tr("Light, text 18 pt or more, verdict 48 pt, for demos. It applies at once; untick it to leave it.")
+        )
+        about.setObjectName("muted")
+        about.setWordWrap(True)
+        pl.addWidget(self.presenter)
+        pl.addWidget(about)
+        right.addWidget(pg)
         ug = QGroupBox(self.tr("Users & roles").replace("&", "&&"))  # a lone & would be a mnemonic, not shown
         ul = QVBoxLayout(ug)
         self.users = make_table([self.tr("Name"), self.tr("Role")])
@@ -137,6 +151,12 @@ class SettingsPage(Page):
         saved = self.tr("Saved. Restart the app to switch the workspace.") if moved else self.tr("Saved.")
         QMessageBox.information(self, self.tr("Settings"), saved)
 
+    def _switch_presenter(self, on: bool) -> None:
+        """The tick saves and applies the presenter theme at once (MainWindow.save_presenter_theme); on a refusal it
+        goes back to what is in effect."""
+        if not self.shell.save_presenter_theme(on):
+            self.presenter.setChecked(self.ctx.settings.presenter_theme)
+
     def add_user(self) -> None:
         name, ok = QInputDialog.getText(self, self.tr("User"), self.tr("User name"))
         if ok and name:
@@ -166,6 +186,7 @@ class SettingsPage(Page):
         self.stores.close_sheet()  # the recovery sheet, or a key half typed, never stays for the next user
 
     def on_show(self) -> None:
+        self.presenter.setChecked(self.ctx.settings.presenter_theme)
         fill_table(self.users, [[u["name"], role_text(u["role"])] for u in self.ctx.users()])
         self.stores.refresh()
         fill_table(self.hw, [[self.tr(cell) for cell in row] for row in HARDWARE])

@@ -72,6 +72,7 @@ class MetricTile(QLabel):
         self.set(None)
 
     def set(self, rate: dict[str, Any] | None) -> None:
+        self.rate = rate  # drawn again in the theme in use when it is switched (ModelTestPage.restyle)
         count = "—" if rate is None else phrase_text(stats.COUNT_ONLY.fill(n=rate["n"], of=rate["of"]))
         bound = stats.bound_text(rate) if rate else None
         self.setText(
@@ -672,6 +673,10 @@ class ModelTestPage(Page):
         fill_table(self.table, [])
         self._clear_preview()
         self.btn_run.setText(self.tr("Run Test"))
+
+    def restyle(self) -> None:
+        for t in self.tiles.values():  # their sizes and caption colour are in their text
+            t.set(t.rate)
 
     def on_show(self) -> None:
         bm = self.board_model

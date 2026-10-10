@@ -660,6 +660,32 @@ def test_req_set_004_theme_token_pairs_read() -> None:
         assert theme.on_color(fill) == theme.ON_LIGHT, fill
 
 
+def test_req_set_008_presenter_token_pairs_read() -> None:
+    """In the presenter theme every text colour on every surface its stylesheet composes reads at 4.5:1 or more, bold
+    and large text included (black on the standard's green, red and blue fills, Q53), the text is 18 pt or more with
+    the verdict at 48 pt, and the stylesheet is light (#FAFAFA); `use(False)` puts the production theme back whole."""
+    theme.use(True)
+    try:
+        surfaces = (theme.BG, theme.BG_DEEP, theme.BG_ALT, theme.BG_RAISED, theme.BG_BUTTON, theme.BG_BUTTON_HOVER)
+        surfaces += (theme.BG_NAV_HOVER, theme.BG_SELECTED, theme.BG_IMAGE, theme.NG_TINT)
+        pairs = {(theme.TEXT, s) for s in surfaces}
+        pairs |= {(theme.TEXT_MUTED, s) for s in (*surfaces[:4], theme.BG_IMAGE)}  # BG, BG_DEEP, BG_ALT, BG_RAISED
+        fills = (theme.OK_COLOR, theme.NG_COLOR, theme.ACCENT, theme.BG_SELECTED, theme.BG_ON, theme.BG_BUTTON_HOVER)
+        pairs |= {(theme.ON_DARK, f) for f in (*fills, theme.NG_TINT, theme.BG_DEEP)}  # BG_DEEP: a progress bar's
+        pairs |= {(theme.on_color(f), f) for f in (*theme.VERDICT_COLORS.values(), *theme.SEVERITY_COLORS.values())}
+        pairs |= {(theme.ACCENT_TEXT, theme.BG_RAISED)}  # the number on a Home card
+        low = {(t, s): round(_ratio(t, s), 2) for t, s in pairs if _ratio(t, s) < MIN_RATIO}
+        assert not low, low
+        sizes = (theme.FONT_PT, theme.FONT_LARGE_PT, theme.FONT_H1_PT, theme.FONT_STEP_PT, theme.FONT_TILE_PT)
+        assert min(sizes) == LARGE_PT and theme.FONT_VERDICT_PT == 48, sizes
+        sheet = theme.stylesheet()
+        assert "font-size: 18pt" in sheet and "QMainWindow, QWidget#page, QDialog { background: #fafafa;" in sheet
+        assert "font-size:48pt" in theme.verdict_style("NG") and "color:#000000" in theme.verdict_style("NG")
+    finally:
+        theme.use(False)
+    assert not theme.presenter() and theme.stylesheet() == theme.QSS and theme.FONT_PT == 14
+
+
 def test_req_set_004_the_walk_holds_every_size_class_t_control_to_48_px(
     screens: tuple[AppContext, Path], qtbot: QtBot, qapp: QApplication
 ) -> None:

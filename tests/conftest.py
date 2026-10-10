@@ -36,7 +36,7 @@ from aoi.core.imaging import list_images, load_image  # noqa: E402
 from aoi.core.services import AppContext  # noqa: E402
 from aoi.data import credentials  # noqa: E402
 from aoi.data.db import new_uuid  # noqa: E402
-from aoi.ui import workers  # noqa: E402
+from aoi.ui import theme, workers  # noqa: E402
 from aoi.ui.theme import QSS  # noqa: E402
 from tools.make_synthetic_dataset import ng_type, write_dataset  # noqa: E402
 from tools.trainable import trainable  # noqa: E402
@@ -311,3 +311,13 @@ def _young_garbage_freed() -> Iterator[None]:
 def _theme(qapp: Any) -> None:
     """The shell's stylesheet, as main.py applies it, so page tests see the app's fonts and sizes (REQ-SET-004)."""
     qapp.setStyleSheet(QSS)
+
+
+@pytest.fixture(autouse=True)
+def _production_theme(qapp: Any) -> Iterator[None]:
+    """A test that leaves the presenter theme on (REQ-SET-008) leaves the next one the production theme's tokens and
+    stylesheet, as main.py starts with them."""
+    yield
+    if theme.presenter():
+        theme.use(False)
+        qapp.setStyleSheet(QSS)

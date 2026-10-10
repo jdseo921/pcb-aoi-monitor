@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import cast
+
 import cv2
 import numpy as np
 from PySide6.QtCore import QLineF, QPoint, QPointF, QRectF, QSize, Qt, Signal
@@ -33,10 +35,22 @@ from .. import theme
 
 
 def label_font() -> QFont:
-    """14 pt for text drawn on an image: a QGraphics item takes the application font, not the stylesheet's."""
+    """FONT_PT (14 pt, 18 in the presenter theme) for text drawn on an image: a QGraphics item takes the application
+    font, not the stylesheet's."""
     font = QFont()
     font.setPointSize(theme.FONT_PT)
     return font
+
+
+def _style_label(t: QGraphicsSimpleTextItem, dx: float) -> None:
+    """A box's label in the theme: TEXT (15:1 on the backing, whatever the board behind it looks like) at FONT_PT, `dx`
+    px right of the box's corner and above it, on its backing in BG_IMAGE (its one child)."""
+    t.setFont(label_font())
+    t.setBrush(QBrush(QColor(theme.TEXT)))
+    t.setTransform(QTransform.fromTranslate(dx, -t.boundingRect().height() - 6))  # above the corner, in pixels
+    backing = cast(QGraphicsRectItem, t.childItems()[0])
+    backing.setRect(t.boundingRect().adjusted(-4, -3, 4, 3))
+    backing.setBrush(QBrush(QColor(theme.BG_IMAGE)))
 
 
 def to_qpixmap(img: np.ndarray) -> QPixmap:
@@ -124,19 +138,26 @@ class ImageView(QGraphicsView):
             pen.setStyle(Qt.PenStyle.DashLine)
         r = self.scene().addRect(QRectF(x, y, w, h), pen)
         self._overlay_items.append(r)
-        if label:  # 14 pt text on a dark backing above the box's corner, the same size at every zoom (REQ-SET-004)
+        if label:  # text on a backing above the box's corner, the same size at every zoom (REQ-SET-004)
             t = QGraphicsSimpleTextItem(label)
-            t.setFont(label_font())
-            t.setBrush(QBrush(QColor(theme.TEXT)))  # 15:1 on the backing, whatever the board behind it looks like
             t.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIgnoresTransformations)
             t.setPos(x, y)
-            t.setTransform(QTransform.fromTranslate(4, -t.boundingRect().height() - 6))  # above the corner, in pixels
-            backing = QGraphicsRectItem(t.boundingRect().adjusted(-4, -3, 4, 3), t)
+            backing = QGraphicsRectItem(t)
             backing.setPen(QPen(Qt.PenStyle.NoPen))
-            backing.setBrush(QBrush(QColor(theme.BG_IMAGE)))
             backing.setFlag(QGraphicsItem.GraphicsItemFlag.ItemStacksBehindParent)
+            _style_label(t, 4)
             self.scene().addItem(t)
             self._overlay_items.append(t)
+
+    def restyle(self) -> None:
+        """The theme was switched (REQ-SET-008): the background, the "No image" hint and every box's label again in the
+        theme's colours and text size, each label where it was across."""
+        self.setBackgroundBrush(QColor(theme.BG_IMAGE))
+        self._placeholder.setFont(label_font())
+        self._placeholder.setBrush(QColor(theme.TEXT_MUTED))
+        for t in self._overlay_items:
+            if isinstance(t, QGraphicsSimpleTextItem):
+                _style_label(t, t.transform().dx())
 
     def add_measure(self, points: list[QPointF], color: str = theme.ROI_SELECTED) -> None:
         """Points picked: a ring theme.MARK_D px across at every zoom each, and the line between the first two."""

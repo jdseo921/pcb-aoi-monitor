@@ -21,6 +21,7 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QStackedWidget,
     QStatusBar,
+    QTableWidget,
     QVBoxLayout,
     QWidget,
 )
@@ -33,7 +34,16 @@ from ..errors import AoiError
 from . import theme
 from .demo_workspace import boards
 from .errors import install_excepthook, open_workspace, show_error
-from .pages.base import QT_TRANSLATE_NOOP, Page, button, page_text, role_text, size_class, time_left_text
+from .pages.base import (
+    QT_TRANSLATE_NOOP,
+    Page,
+    button,
+    page_text,
+    restyle_table,
+    role_text,
+    size_class,
+    time_left_text,
+)
 from .pages.compare import ComparePage
 from .pages.inspection import InspectionPage
 from .pages.logs import LogsPage
@@ -43,6 +53,7 @@ from .pages.recipe_editor import RecipeEditorPage
 from .pages.settings import SettingsPage
 from .pages.training import TrainingPage
 from .widgets.empty_state import EmptyState
+from .widgets.image_view import ImageView
 from .workers import drop_queued
 
 if TYPE_CHECKING:
@@ -106,14 +117,13 @@ class HomePage(Page):
         self.training_line = QLabel()  # on Self-train's card while a training run goes on (REQ-TRN-008)
         self.training_line.setWordWrap(True)
         self.training_line.hide()
+        self.headings: list[tuple[QLabel, str, str]] = []  # each card's heading, its number and its name
         for i, (n, name, desc, target) in enumerate(self.STEPS):
             card = QFrame()
             card.setObjectName("card")
             cl = QVBoxLayout(card)
-            h = QLabel(
-                f"<span style='font-size:{theme.FONT_STEP_PT}pt;font-weight:700;color:{theme.ACCENT}'>{n}</span>"
-                f"&nbsp;&nbsp;<span style='font-size:{theme.FONT_LARGE_PT}pt;font-weight:600'>{self.tr(name)}</span>"
-            )
+            h = QLabel(self._heading(n, name))
+            self.headings.append((h, n, name))
             d = QLabel(self.tr(desc))
             d.setWordWrap(True)
             d.setObjectName("muted")
@@ -134,6 +144,17 @@ class HomePage(Page):
         self.empty = EmptyState()  # no board model yet: one block in place of the cards (REQ-SET-019)
         self.root.addWidget(self.empty)
         self.root.addStretch(1)
+
+    def _heading(self, n: str, name: str) -> str:
+        """A card's heading: its step number, large in the accent colour, then its name."""
+        return (
+            f"<span style='font-size:{theme.FONT_STEP_PT}pt;font-weight:700;color:{theme.ACCENT_TEXT}'>{n}</span>"
+            f"&nbsp;&nbsp;<span style='font-size:{theme.FONT_LARGE_PT}pt;font-weight:600'>{self.tr(name)}</span>"
+        )
+
+    def restyle(self) -> None:
+        for h, n, name in self.headings:
+            h.setText(self._heading(n, name))
 
     def show_training(self, progress: RunProgress | None, running: bool) -> None:
         """Self-train's line while a training run goes on, with its latest report; hidden once it ends."""
@@ -209,6 +230,8 @@ class MainWindow(QMainWindow):
         title = f"{APP_NAME} {APP_VERSION}"
         self.setWindowTitle(self.tr("{title} · Demo").format(title=title) if self.in_demo else title)
         self.resize(1920, 1080)
+        if ctx.settings.presenter_theme != theme.presenter():  # start in the theme saved, before anything is drawn
+            self._set_theme(ctx.settings.presenter_theme)
 
         central = QWidget()
         outer = QVBoxLayout(central)
@@ -230,12 +253,15 @@ class MainWindow(QMainWindow):
         self.pages: dict[str, Page] = {}
         self._items: dict[str, QListWidgetItem] = {}
         self._badges: dict[str, QLabel] = {}
+        self._sections: list[tuple[QListWidgetItem, list[str]]] = []  # each heading and the pages under it
         for section, cls in NAV:
             if section:
                 sec = QListWidgetItem(self.tr(section))
                 sec.setFlags(Qt.ItemFlag.NoItemFlags)
-                sec.setForeground(QColor(theme.TEXT_MUTED))  # a heading, not a disabled control: 7.4:1 (#239)
                 self.nav.addItem(sec)
+                self._sections.append((sec, []))
+            if self._sections:
+                self._sections[-1][1].append(cls.title)
             page = cls(ctx, self)
             self.pages[cls.title] = page
             self.stack.addWidget(page)
@@ -353,6 +379,19 @@ class MainWindow(QMainWindow):
         self.ctx.set_user(user)
         role = self.ctx.role
         self.user_label.setText(self.tr("{user}  ·  {role}").format(user=user, role=role_text(role)))
+        self._sync_nav()
+        for page in self.pages.values():  # shown or not: what a page keeps for the role before goes now
+            page.on_user_changed()
+        cur = self.stack.currentWidget()
+        if isinstance(cur, Page) and role not in cur.roles:
+            self.navigate("Home")
+        elif isinstance(cur, Page) and self.nav.currentItem() is not None:  # none yet while the window is built
+            cur.on_show()  # the page stays: its role-gated buttons and links follow the new role (#174)
+
+    def _sync_nav(self) -> None:
+        """The sidebar for the role and the theme: an entry the role may not open is greyed, its tooltip naming the
+        roles that may, and its badge hidden; the section headings are in the theme's muted colour."""
+        role = self.ctx.role
         for title, it in self._items.items():
             allowed = role in self.pages[title].roles
             it.setFlags(
@@ -364,13 +403,43 @@ class MainWindow(QMainWindow):
             it.setData(Qt.ItemDataRole.ForegroundRole, None if allowed else QColor(theme.TEXT_DISABLED))
             if title in self._badges:  # a greyed entry says only which role it needs; the badge, not its row: Qt
                 self._badges[title].setVisible(allowed)  # shows a row again on every layout of the list
-        for page in self.pages.values():  # shown or not: what a page keeps for the role before goes now
-            page.on_user_changed()
-        cur = self.stack.currentWidget()
-        if isinstance(cur, Page) and role not in cur.roles:
-            self.navigate("Home")
-        elif isinstance(cur, Page) and self.nav.currentItem() is not None:  # none yet while the window is built
-            cur.on_show()  # the page stays: its role-gated buttons and links follow the new role (#174)
+        for heading, _ in self._sections:
+            heading.setForeground(QColor(theme.TEXT_MUTED))  # a heading, not a disabled control: 7.4:1 (#239)
+
+    def _set_theme(self, presenter: bool) -> None:
+        theme.use(presenter)
+        cast(QApplication, QApplication.instance()).setStyleSheet(theme.stylesheet())
+
+    def apply_theme(self) -> None:
+        """The theme settings.json holds, at once (REQ-SET-008): the stylesheet, then what the pages drew with the
+        tokens, each in the new theme (verdict labels, coloured table rows, the text on images, each page's own
+        `restyle`), and the sidebar."""
+        if self.ctx.settings.presenter_theme != theme.presenter():
+            styled = theme.verdict_styles()  # read with the tokens they were drawn with
+            self._set_theme(self.ctx.settings.presenter_theme)
+            for label in self.findChildren(QLabel):
+                if (style := styled.get(label.styleSheet())) is not None:
+                    label.setStyleSheet(style())
+            for table in self.findChildren(QTableWidget):
+                restyle_table(table)
+            for view in self.findChildren(ImageView):
+                view.restyle()
+            for page in self.pages.values():
+                page.restyle()
+        self._sync_nav()
+
+    def save_presenter_theme(self, on: bool) -> bool:
+        """Switch the presenter theme on or off, as an Admin does on Settings: saved through the service layer (Admin
+        only, audited as settings.change, Q49), then applied at once. A refusal is shown with its code and changes
+        nothing. Returns whether it was saved."""
+        try:
+            self.ctx.save_settings({"presenter_theme": on})
+        except (AoiError, OSError) as e:  # AOI-USR-001 below the Admin role, AOI-SET-010, a disk error
+            show_error(self, self.ctx.report_error(e, "Settings"))
+            return False
+        self.apply_theme()
+        self.status(self.tr("Presenter theme on.") if on else self.tr("Presenter theme off."))
+        return True
 
     def _badge(self, it: QListWidgetItem, text: str, tip: str) -> QLabel:
         """A badge after a sidebar entry's name, such as 3D Profile's "Stage 2" (sketch profile3d-card.md), 14 pt in

@@ -180,7 +180,7 @@
 <context>
     <name>BoxEditor</name>
     <message>
-        <location filename="../ui/widgets/box_editor.py" line="+331"/>
+        <location filename="../ui/widgets/box_editor.py" line="+335"/>
         <source>{number} {type} ◆ {severity}</source>
         <translation>{number} {type} ◆ {severity}</translation>
     </message>
@@ -1384,7 +1384,7 @@
     </message>
     <message>
         <location line="+21"/>
-        <location filename="../ui/main_window.py" line="+538"/>
+        <location filename="../ui/main_window.py" line="+607"/>
         <source>start-up</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3101,6 +3101,11 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <location line="+1"/>
+        <source>true or false</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <location line="+2"/>
         <source>a whole number from {least} to {most}</source>
         <translation type="unfinished"></translation>
@@ -3576,7 +3581,7 @@
 <context>
     <name>HomePage</name>
     <message>
-        <location filename="../ui/main_window.py" line="-439"/>
+        <location filename="../ui/main_window.py" line="-497"/>
         <source>Upload samples</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3636,12 +3641,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+35"/>
+        <location line="+34"/>
         <source>Open {page} ›</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+12"/>
+        <location line="+23"/>
         <source>Training running {percent} % · {left}</source>
         <translation>학습 중 {percent} % · {left}</translation>
     </message>
@@ -4223,7 +4228,7 @@
 <context>
     <name>LogsPage</name>
     <message>
-        <location filename="../ui/pages/logs.py" line="+55"/>
+        <location filename="../ui/pages/logs.py" line="+52"/>
         <source>Include archived</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4416,7 +4421,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+19"/>
+        <location line="+28"/>
         <source>All</source>
         <translation>전체</translation>
     </message>
@@ -4449,7 +4454,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+63"/>
+        <location line="+68"/>
         <source>Demo</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4509,7 +4514,17 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+39"/>
+        <location line="+60"/>
+        <source>Presenter theme on.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+0"/>
+        <source>Presenter theme off.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+22"/>
         <source>{page} needs the {roles} role</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4547,13 +4562,13 @@
 <context>
     <name>ModelTestPage</name>
     <message>
-        <location filename="../ui/pages/model_test.py" line="+44"/>
-        <location line="+599"/>
+        <location filename="../ui/pages/model_test.py" line="+45"/>
+        <location line="+603"/>
         <source>Select Test Folder…</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-598"/>
+        <location line="-602"/>
         <location line="+350"/>
         <location line="+220"/>
         <source>Run Test</source>
@@ -4561,12 +4576,12 @@
     </message>
     <message>
         <location line="-568"/>
-        <location line="+602"/>
+        <location line="+606"/>
         <source>Export CSV</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-601"/>
+        <location line="-605"/>
         <source>Export Report</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4620,7 +4635,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-580"/>
+        <location line="-581"/>
         <source>Matches label</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4635,7 +4650,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+65"/>
+        <location line="+66"/>
         <source>Source</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4643,20 +4658,20 @@
         <location line="+10"/>
         <location line="+64"/>
         <location line="+150"/>
-        <location line="+491"/>
+        <location line="+495"/>
         <source>Missed defects</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-704"/>
+        <location line="-708"/>
         <location line="+64"/>
         <location line="+150"/>
-        <location line="+490"/>
+        <location line="+494"/>
         <source>False calls</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-677"/>
+        <location line="-681"/>
         <source>Matches label?</source>
         <comment>whether the verdict matches the image&apos;s label</comment>
         <translation type="unfinished"></translation>
@@ -4902,7 +4917,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+79"/>
+        <location line="+83"/>
         <source>No AI model for {board_model} yet</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4933,8 +4948,8 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-484"/>
-        <location line="+474"/>
+        <location line="-488"/>
+        <location line="+478"/>
         <source>PDF (*.pdf)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4975,8 +4990,8 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-440"/>
-        <location line="+484"/>
+        <location line="-444"/>
+        <location line="+488"/>
         <source>{image}: labelled {label}, judged {verdict}, AI score {score}</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4984,7 +4999,7 @@
 <context>
     <name>Page</name>
     <message>
-        <location filename="../ui/main_window.py" line="-406"/>
+        <location filename="../ui/main_window.py" line="-464"/>
         <source>Home</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5049,7 +5064,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+32"/>
+        <location line="+36"/>
         <source>Open {page} ›</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5094,7 +5109,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/logs.py" line="-296"/>
+        <location filename="../ui/pages/logs.py" line="-302"/>
         <source>Logs &amp; Export</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5119,7 +5134,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/model_test.py" line="-748"/>
+        <location filename="../ui/pages/model_test.py" line="-752"/>
         <source>AI Model Test</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5145,7 +5160,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/settings.py" line="+47"/>
+        <location filename="../ui/pages/settings.py" line="+49"/>
         <source>Settings</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5669,7 +5684,7 @@
 <context>
     <name>Role</name>
     <message>
-        <location filename="../ui/pages/base.py" line="-327"/>
+        <location filename="../ui/pages/base.py" line="-331"/>
         <source>Operator</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5991,6 +6006,17 @@
     </message>
     <message>
         <location line="+10"/>
+        <location line="+2"/>
+        <source>Presenter theme</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>Light, text 18 pt or more, verdict 48 pt, for demos. It applies at once; untick it to leave it.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+7"/>
         <source>Users &amp; roles</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6001,12 +6027,12 @@
     </message>
     <message>
         <location line="+0"/>
-        <location line="+46"/>
+        <location line="+52"/>
         <source>Role</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-44"/>
+        <location line="-50"/>
         <source>Add / Change User</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6051,7 +6077,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+3"/>
+        <location line="+9"/>
         <source>User</source>
         <translation type="unfinished"></translation>
     </message>

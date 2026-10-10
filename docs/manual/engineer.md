@@ -53,6 +53,12 @@ entry, `settings.change`, with the values before and after. The last user with t
 start too: the app starts with the Admin added first while the workspace has no board model, and with
 `operator` after that, so a role you change holds after a restart.
 
+**Presenter theme (demos).** For a demo, an Admin ticks Presenter theme on the Settings page, in its own group. It
+applies at once, with no restart, and stays on after one: a light background, text of 18 pt or more, the verdict at 48
+pt in the same colours and shapes, and black text on the green, red and blue fills. Untick it to leave it. Each switch,
+on or off, is saved in `settings.json` as `presenter_theme` and written to the audit log as `settings.change`, like a
+save on Settings.
+
 (to be written: the workspace folder, device, limits, demo workspace)
 
 ## 2. Board models and scale
