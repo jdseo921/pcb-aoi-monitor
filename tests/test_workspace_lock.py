@@ -7,12 +7,10 @@ mid-run leaves no lock behind, and a temporary file the sweep cannot delete is l
 
 from __future__ import annotations
 
-import json
 import subprocess
 import sys
 import threading
 import time
-from datetime import UTC, datetime
 from pathlib import Path
 from typing import BinaryIO
 
@@ -25,6 +23,7 @@ from aoi.data import atomic
 from aoi.data.db import Database
 from aoi.errors import AoiError
 from aoi.ui import errors as ui_errors
+from tests.conftest import log_rows
 
 ROOT = Path(__file__).resolve().parents[1]
 FIRST_COPY = """
@@ -42,9 +41,7 @@ def _second_copy(settings: Settings) -> AppContext:
 
 
 def _log_rows(root: Path, event: str) -> list[dict[str, object]]:
-    path = root / "logs" / f"aoi-{datetime.now(UTC):%Y-%m-%d}.jsonl"
-    rows = [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines()]
-    return [r for r in rows if r["event"] == event]
+    return [r for r in log_rows(root / "logs") if r["event"] == event]
 
 
 def test_req_insp_008_a_second_copy_is_refused_and_deletes_no_file_the_first_is_writing(workspace: Settings) -> None:
