@@ -87,6 +87,7 @@ def _walk(win: MainWindow, widgets: list[QWidget]) -> tuple[list[str], Counter[s
     app = QApplication.instance()
     assert isinstance(app, QApplication)
     seen: Counter[str] = Counter()
+    win.resize(1920, 1080)  # the whole Try panel in view: at 1600 px the page area scrolls its right end (#104)
     with render_screens.pinned_rendering(app, render_screens.TEST_FONT if sys.platform == "linux" else ""):
         QApplication.processEvents()
         shot = _pixels(win.grab().toImage())
