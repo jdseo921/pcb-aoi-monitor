@@ -657,3 +657,28 @@ kept. Each sweep is in the audit trail as `maps.sweep`; a file the app cannot de
 again at the next start.
 
 (to be written: history, archive, the audit trail, error codes)
+
+## 9. Demo workspace
+
+The demo shows a customer how the app works on drawn boards, never how well it finds defects: its results are not a
+measure of accuracy and are never quoted as one. An Admin opens it on Settings › Demo with **Load Demo Workspace**. The
+app closes the station's workspace and opens the demo's, a folder of its own beside the workspace named after it with
+`-Demo` added (for `C:\AOI_Workspace`, `C:\AOI_Workspace-Demo`); the header shows a **Demo** badge and the board model
+DEMO-TBOX-A1, with its AI model and card, its recipe, and 10 boards queued on Inspection, the fourth of them NG (a
+missing IC). Nothing in the station's workspace is read or written while the demo is open, its `settings.json`
+included: the demo has its own.
+
+- **Play Scripted Run ›** opens Inspection and presses Start: the boards are inspected and saved one after another at
+  the **Scripted run pace** set on the slider, 1 to 10 s per board (3 s at first). The run pauses at the NG board, so
+  **Compare with Golden board ›** can show why; Start goes on with the run, and Start after the last board plays it
+  again from the first.
+- **Reset Demo** (red) asks first, then deletes every result, record, alarm and log of the demo and every change made in
+  it, and copies the demo back as installed, in under 10 s. The audit trail of the demo keeps the reset as
+  `demo.reset`. If another program holds a file of the demo (AOI-SET-017), close it and press Reset Demo again.
+- **Leave Demo Workspace** opens the station's workspace again. The demo stays as it is for the next time.
+- To start straight in the demo, for example from a desktop shortcut kept for demos, start the app with `--demo`
+  (`AOI-PoC-Inspector.exe --demo`); if the app closes during a demo, the same shortcut brings it back in the demo.
+
+A folder of the demo's name that holds other files is never written to (AOI-SET-016): move or rename it. If the
+installed demo is missing or was changed on disk, it is refused with AOI-SET-015: reinstall the app. Before a demo,
+press Reset Demo so it starts clean (Customers & Launch, "Demos").
