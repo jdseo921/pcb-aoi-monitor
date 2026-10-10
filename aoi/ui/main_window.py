@@ -250,9 +250,10 @@ class MainWindow(QMainWindow):
         # the pages scroll where the screen is smaller than the widest page, so a 1366 x 768 station shows every
         # control (REQ-SET-004, #104): a QStackedWidget takes the largest minimum of its pages, which held the
         # window at about 1886 x 821 px; at 1920 x 1080 every page fits and nothing scrolls
+        self.stack.setObjectName("stack")
         pages = scrolled(self.stack)
+        pages.setObjectName("pages")  # on the window's background, BG, as the stack was before (theme.py)
         pages.setMinimumSize(0, 0)
-        pages.viewport().setAutoFillBackground(False)  # the window's background, as around the stack before
         body.addWidget(pages, 1)
         outer.addLayout(body, 1)
         self.setCentralWidget(central)

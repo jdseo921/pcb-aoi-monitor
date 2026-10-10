@@ -105,6 +105,7 @@ _QSS = Template("""
 * { font-family: ${FONT_FAMILY}; font-size: ${FONT_PT}pt; selection-background-color: $BG_SELECTED;
     selection-color: $ON_DARK; }
 QMainWindow, QWidget#page, QDialog { background: $BG; color: $TEXT; }
+QScrollArea#pages, QScrollArea#pages > QWidget#qt_scrollarea_viewport, QStackedWidget#stack { background: $BG; }
 QWidget { color: $TEXT; }
 QLabel#h1 { font-size: ${FONT_H1_PT}pt; font-weight: 600; }
 QLabel#muted { color: $TEXT_MUTED; }
