@@ -2,15 +2,22 @@
 
 installer/aoi.iss wraps the PyInstaller one-folder build in an Inno Setup installer. Inno Setup's compiler runs on
 Windows only, so CI compiles it (.github/workflows/build.yml) and installs, self-tests and uninstalls the result; these
-tests read the script itself: the settings a reviewer would check, parsed as Inno Setup reads them.
+tests read the script itself, the settings a reviewer would check, parsed as Inno Setup reads them; and the workflow
+and tools/check_installer.py, which does the install, the self-test and the uninstall on the runner.
 """
 
 from __future__ import annotations
 
 import re
+import sys
 from pathlib import Path
+from typing import Any
+
+import yaml
 
 from aoi.config import APP_NAME, APP_VERSION
+from tools import check_installer, smoke_test_build
+from tools import third_party_notices as tpn
 
 ROOT = Path(__file__).resolve().parents[1]
 ISS = ROOT / "installer" / "aoi.iss"
@@ -146,3 +153,75 @@ def test_req_set_012_the_installer_says_it_is_unsigned_and_for_internal_use_only
     assert "Windows SmartScreen and the User Account Control prompt name no publisher" in welcome
     assert setup["AppVerName"] == "{#AppName} {#AppVersion} (internal, unsigned)"
     assert setup["OutputBaseFilename"].endswith("-unsigned")
+
+
+def workflow() -> dict[Any, Any]:
+    return dict(yaml.safe_load((ROOT / ".github" / "workflows" / "build.yml").read_text(encoding="utf-8")))
+
+
+def steps() -> list[dict[str, Any]]:
+    return list(workflow()["jobs"]["windows"]["steps"])
+
+
+def by_id(step_id: str) -> dict[str, Any]:
+    (found,) = [step for step in steps() if step.get("id") == step_id]
+    return found
+
+
+def test_req_set_012_ci_compiles_the_installer_with_the_app_s_version_at_a_pinned_inno_setup() -> None:
+    """After the build passes its smoke test: Inno Setup at the pinned version, checked, then the .iss compiled with
+    the version aoi/config.py holds; the version the notices name is the one CI installs."""
+    build = workflow()
+    pin = build["env"]["INNO_SETUP_VERSION"]
+    assert re.fullmatch(r"\d+\.\d+\.\d+", pin) and pin == tpn.INNO_SETUP_VERSION
+    inno = by_id("inno")["run"]
+    assert "choco install innosetup --version $env:INNO_SETUP_VERSION " in inno
+    assert "$found -ne $env:INNO_SETUP_VERSION" in inno  # ISCC.exe's own file version
+    compiled = by_id("installer")["run"]
+    assert '$version = python -c "from aoi.config import APP_VERSION; print(APP_VERSION)"' in compiled
+    assert '& $env:ISCC "/DAppVersion=$version" installer\\aoi.iss' in compiled
+    assert '"dist\\installer\\AOI-PoC-Inspector-$version-setup-x64-unsigned.exe"' in compiled
+    ids = [step.get("id") for step in steps()]
+    assert ids.index("build") < ids.index("smoke") < ids.index("info") < ids.index("inno") < ids.index("installer")
+    assert {"installer/aoi.iss", "tools/check_installer.py"} <= set(build[True]["pull_request"]["paths"])  # "on"
+    assert build["permissions"] == {"contents": "read"}
+    for step in steps():  # every action pinned to a full commit
+        assert "uses" not in step or re.fullmatch(r"actions/[\w-]+@[0-9a-f]{40}", step["uses"]), step
+
+
+def test_req_set_012_ci_installs_self_tests_and_uninstalls_the_installer_before_keeping_it() -> None:
+    """The installer is checked on the runner by tools/check_installer.py, then kept as an artifact of its own."""
+    check = by_id("check_installer")
+    assert check["env"] == {"SETUP": "${{ steps.installer.outputs.setup }}"}
+    assert check["run"] == "python tools/check_installer.py $env:SETUP"
+    (kept,) = [step for step in steps() if step.get("with", {}).get("path") == "${{ steps.installer.outputs.setup }}"]
+    assert kept["uses"].startswith("actions/upload-artifact@") and steps().index(kept) > steps().index(check)
+    assert kept["with"]["name"] == "${{ steps.info.outputs.name }}-installer"
+    assert (kept["with"]["retention-days"], kept["with"]["if-no-files-found"]) == (30, "error")
+    assert check_installer.QUIET == ("/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART")
+    assert check_installer.SHORTCUTS == {f"{APP_NAME}.lnk": "", f"{APP_NAME} (Demo).lnk": "--demo"}
+    assert check_installer.app_id() == APP_ID
+    assert check_installer.self_test is smoke_test_build.self_test  # the build's own self-test, on the installed .exe
+
+
+def test_req_set_012_the_installer_check_sees_any_change_to_a_workspace(tmp_path: Path) -> None:
+    """The uninstall must leave the workspace and the demo workspace as they were: any file changed, added or removed
+    shows; the check itself runs on Windows only."""
+    workspace, demo = tmp_path / "AOI_Workspace", tmp_path / "AOI_Workspace-Demo"
+    for folder in (workspace, demo / "images"):
+        folder.mkdir(parents=True)
+    (workspace / "settings.json").write_text("{}", encoding="utf-8")
+    (demo / "images" / "board.png").write_bytes(b"png")
+    before = check_installer.snapshot([workspace, demo])
+    assert sorted(Path(p).name for p in before) == ["board.png", "settings.json"]
+    (workspace / "settings.json").write_text('{"language": "ko"}', encoding="utf-8")
+    assert check_installer.snapshot([workspace, demo]) != before
+    (workspace / "settings.json").write_text("{}", encoding="utf-8")
+    assert check_installer.snapshot([workspace, demo]) == before
+    (workspace / "aoi.sqlite").write_bytes(b"")
+    assert check_installer.snapshot([workspace, demo]) != before
+    (workspace / "aoi.sqlite").unlink()
+    (demo / "images" / "board.png").unlink()
+    assert check_installer.snapshot([workspace, demo]) != before
+    if sys.platform != "win32":
+        assert check_installer.main([str(tmp_path / "setup.exe")]) == 2
