@@ -116,8 +116,9 @@ tested offscreen (`QT_QPA_PLATFORM=offscreen`), so no display is needed. [`tests
 holds the synthetic regression set: forty boards whose verdicts and metrics must not change unless a release
 note says so. On every CI run `tools/trace_matrix.py` writes the trace matrix (each requirement in
 `docs/requirements/` with the pull requests, or commits not merged yet, and tests that cite it and the last test
-result) as the `trace-matrix` artifact; its G1 gate reports the rows still unproven and becomes blocking at the
-release candidate (S59).
+result) as the `trace-matrix` artifact. Its G1 gate fails the run, since the release candidate (S59): every MUST
+G1 row needs a passing test and no failing one, every cited ID must be in the register, and a pull request's title
+and each of its own commits must cite a requirement or a bug.
 
 CI also runs three security scans: Bandit (a High finding fails the build), pip-audit (any known vulnerability in
 a dependency fails it) and gitleaks (a secret in any commit fails it). The threat model in

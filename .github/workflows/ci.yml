@@ -115,9 +115,8 @@ jobs:
           name: screens-review
           path: screens-review/
           retention-days: 30
-      - name: Trace matrix (requirement to commits and tests; the G1 gate only reports until S59)
+      - name: Trace matrix (requirement to commits and tests) and the G1 gate, which fails the run since S59
         if: runner.os == 'Linux' && always()
-        continue-on-error: true
         env:
           # A pull request's run checks out GitHub's merge of it into its base; the tool reads the pull request's own
           # commits from that merge, and its number and title from here. They stay in the environment, never in

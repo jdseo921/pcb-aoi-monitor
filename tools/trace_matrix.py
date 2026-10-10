@@ -12,9 +12,11 @@ request into its base ("Merge <sha> into <sha>"), whose first parent is the base
 the second parent, are read too, and its number and title come from the environment (PR_NUMBER and PR_TITLE, which
 the workflow sets). A title cites a requirement as `[REQ-TRN-014] fix: …`. Writes
 trace-matrix.md and trace-matrix.csv, one row per requirement with the pull requests (or commits) and tests that cite
-it. With --gate G1 it exits 1 when any MUST G1 row has no passing test or a failing one, or a test or change cites a
-requirement ID the register does not know (Engineering standard, "Traceability"). A title that cites only an issue,
-`[#5] …`, names no requirement row, so it is neither listed nor checked.
+it. With --gate G1 it exits 1 when any MUST G1 row has no passing test or a failing one, when a test or change cites
+a requirement ID the register does not know, or, on a pull request's run, when its title or one of its own commits
+cites neither a requirement nor a bug (Engineering standard, "Traceability": "A requirement with no test, or code with
+no requirement or bug ID, fails the release gate"). A title that cites only an issue, `[#5] …`, names no requirement
+row, so it is neither listed nor checked against the register.
 """
 
 from __future__ import annotations
@@ -26,7 +28,7 @@ import re
 import subprocess
 import sys
 from collections.abc import Mapping
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 
 import defusedxml.ElementTree as ET  # the JUnit file is our own, but parse it defensively (bandit B314)
@@ -52,11 +54,13 @@ class Requirement:
 
 @dataclass
 class Change:
-    """A change on the first-parent history: a merged pull request (`pr`, its number) or a commit not merged yet."""
+    """A change on the first-parent history: a merged pull request (`pr`, its number) or a commit not merged yet;
+    `own` marks a commit of the pull request a CI run checks."""
 
     title: str
     pr: int | None = None
     sha: str = ""
+    own: bool = False
 
     @property
     def label(self) -> str:
@@ -162,7 +166,8 @@ def git_changes(ref: str = "HEAD", repo: Path = ROOT) -> list[Change]:
     changes = parse_log(_git(repo, "log", "--first-parent", LOG_FORMAT, ref))
     parents = _git(repo, "rev-list", "--parents", "-n", "1", ref).split()[1:]
     if len(parents) == 2 and changes and PR_MERGE_REF.match(changes[0].title):
-        changes[1:1] = parse_log(_git(repo, "log", LOG_FORMAT, f"{parents[0]}..{parents[1]}"))
+        own = parse_log(_git(repo, "log", LOG_FORMAT, f"{parents[0]}..{parents[1]}"))
+        changes[1:1] = [replace(c, own=True) for c in own]
     return changes
 
 
@@ -242,6 +247,16 @@ def gate(rows: list[Row], unknown: list[str], release: str) -> list[str]:
     return problems
 
 
+def uncited(changes: list[Change]) -> list[str]:
+    """The changes whose title cites no requirement and no bug (an issue): code with no requirement or bug ID stops a
+    release. A merge commit carries no code of its own and is left out."""
+    return [
+        f"{c.label} {c.title!r} cites no requirement or bug ID"
+        for c in changes
+        if not SUBJECT_REF.search(c.title) and not c.title.startswith("Merge ")
+    ]
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--register", type=Path, default=ROOT / "docs" / "requirements")
@@ -259,6 +274,7 @@ def main(argv: list[str] | None = None) -> int:
     changes = git_changes() if a.git_log else []
     if pr := pr_change(os.environ):
         changes.insert(0, pr)
+    checked = [pr, *(c for c in changes if c.own)] if pr else []  # a pull request's own changes, not the history
     rows, unknown = build(reqs, tests, outcomes, changes)
     md, csv_path = write(rows, a.out)
     covered = sum(1 for r in rows if r.tests)
@@ -266,7 +282,7 @@ def main(argv: list[str] | None = None) -> int:
         f"{len(rows)} requirements, {covered} with tests, {sum(r.passed for r in rows)} passing tests: {md}, {csv_path}"
     )
     if a.gate:
-        problems = gate(rows, unknown, a.gate)
+        problems = gate(rows, unknown, a.gate) + uncited(checked)
         for p in problems:
             print(f"GATE {a.gate}: {p}")
         print(f"GATE {a.gate}: {'passed' if not problems else f'{len(problems)} problem(s)'}")
