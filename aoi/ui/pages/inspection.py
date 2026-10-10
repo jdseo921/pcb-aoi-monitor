@@ -39,6 +39,7 @@ from ..workers import Worker, start
 from .base import (
     QT_TRANSLATE_NOOP,
     Page,
+    WrappedLine,
     action_button,
     button,
     cell_text,
@@ -132,9 +133,7 @@ class InspectionPage(Page):
         self.verdict.setStyleSheet(theme.verdict_style("INFO"))
         self.verdict.setMinimumHeight(theme.BANNER_H)
         sl.addWidget(self.verdict)
-        self.summary = QLabel("")
-        self.summary.setObjectName("muted")
-        self.summary.setWordWrap(True)
+        self.summary = WrappedLine()  # names the board's file whole, which never widens the window (#251)
         sl.addWidget(self.summary)
         self.table = make_table(
             [

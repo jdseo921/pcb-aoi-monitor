@@ -23,7 +23,7 @@ None. / 없음.
 
 ## Fixed / 수정 (draft)
 
-None. / 없음.
+- [REQ-SET-004] A long folder, board model or file name, even one with no _ or -, no longer widens the window past the screen: AI Model Test's folder line and note, Compare's labels and Inspection's summary line wrap it, and a line that cuts it shows it whole in its tooltip (#251). / 긴 폴더, 보드 모델 또는 파일 이름(_ 나 - 가 없는 이름 포함)이 더 이상 창을 화면보다 넓히지 않습니다. AI 모델 테스트의 폴더 줄과 안내, 비교 화면의 라벨, 검사 화면의 요약 줄이 줄을 바꾸며, 이름이 잘리면 툴팁에 전체 이름이 표시됩니다(#251).
 
 ## Security / 보안 (draft)
 

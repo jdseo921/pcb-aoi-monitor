@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import weakref
 from collections.abc import Callable, Sequence
 from pathlib import Path
@@ -15,6 +16,7 @@ from PySide6.QtWidgets import (
     QLabel,
     QPushButton,
     QScrollArea,
+    QSizePolicy,
     QTableWidget,
     QTableWidgetItem,
     QVBoxLayout,
@@ -77,13 +79,33 @@ def time_left_text(seconds: float | None) -> str:
 
 
 ZWSP = "\u200b"  # zero width space: a place where a wrapped label may break a line, never shown
+RUN_CHARS = 24  # breakable() lets a line break after this many characters with no other place to break
 
 
 def breakable(name: str) -> str:
     """A file name that a wrapped label may break after each _ and -, so that a long one never sets the page's minimum
     width (REQ-SET-004, #245): Qt breaks a line only between words, and inside a UUID only at a hyphen no digit follows,
-    so `<stem>_<UUID>.png` was often one word."""
-    return name.replace("_", "_" + ZWSP).replace("-", "-" + ZWSP)
+    so `<stem>_<UUID>.png` was often one word. A run of RUN_CHARS characters with no space, _ or - may break after
+    its last one too, so a name with neither wraps as well (#251)."""
+    broken = name.replace("_", "_" + ZWSP).replace("-", "-" + ZWSP)
+    return re.sub(rf"[^\s{ZWSP}]{{{RUN_CHARS}}}(?=[^\s{ZWSP}])", lambda m: m.group(0) + ZWSP, broken)
+
+
+class WrappedLine(QLabel):
+    """A wrapped line that never sets the page's minimum width, however long a name in it (REQ-SET-004, #251): the
+    layout gives it its width, and its whole text is its tooltip, for a name the line has to cut. Inspection's summary
+    line, AI Model Test's folder line and its note use it, whose texts name a file, a folder or a board model whole."""
+
+    def __init__(self, text: str = "") -> None:
+        super().__init__()
+        self.setObjectName("muted")
+        self.setWordWrap(True)
+        self.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
+        self.setText(text)
+
+    def setText(self, text: str) -> None:  # noqa: N802 (Qt's name)
+        super().setText(text)
+        self.setToolTip(text)
 
 
 def breakable_names(e: AoiError) -> AoiError:
