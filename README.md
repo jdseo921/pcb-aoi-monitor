@@ -6,6 +6,7 @@ boards and compare any board side by side with the learned golden board.
 * Architecture, navigation and requirement traceability: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
 * Screenshots: [docs/screenshots/](docs/screenshots/)
 * Release notes, one file per build from 0.2.0 on: [docs/release-notes/](docs/release-notes/)
+* Release gate, one record per release candidate: [docs/release-gate/](docs/release-gate/)
 * Threat model, one page per product area, reviewed at every minor release: [docs/security/threat-model.md](docs/security/threat-model.md)
 
 ## Install (Windows 10/11)

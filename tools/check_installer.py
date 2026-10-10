@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """Install the built installer silently, self-test the installed app, uninstall it (REQ-SET-012, S57; build.yml).
 
-    python tools/check_installer.py dist/installer/AOI-PoC-Inspector-0.2.0-setup-x64-unsigned.exe
+    python tools/check_installer.py dist/installer/AOI-PoC-Inspector-0.3.0-setup-x64-unsigned.exe
 
 On Windows, with admin rights, for CI's runner:
 

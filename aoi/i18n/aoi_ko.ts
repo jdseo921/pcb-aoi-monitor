@@ -3241,7 +3241,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/training.py" line="+528"/>
+        <location filename="../ui/pages/training.py" line="+527"/>
         <location filename="../ui/pages/training_import.py" line="+38"/>
         <source>{code} {title}</source>
         <translation type="unfinished"></translation>
@@ -5273,7 +5273,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/training.py" line="-378"/>
+        <location filename="../ui/pages/training.py" line="-377"/>
         <source>Training</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6586,23 +6586,23 @@
     </message>
     <message>
         <location line="+1"/>
-        <location line="+604"/>
+        <location line="+603"/>
         <source>Import Folder…</source>
         <translation>폴더 가져오기…</translation>
     </message>
     <message>
-        <location line="-592"/>
+        <location line="-591"/>
         <source>Training needs 20 OK images or more in a dataset version&apos;s training set</source>
         <translation>학습에는 데이터셋 버전의 학습 세트에 OK 이미지가 20장 이상 필요합니다</translation>
     </message>
     <message>
         <location line="+20"/>
-        <location line="+93"/>
+        <location line="+92"/>
         <source>ID</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-92"/>
+        <location line="-91"/>
         <source>Label</source>
         <translation>라벨</translation>
     </message>
@@ -6658,12 +6658,12 @@
     </message>
     <message>
         <location line="+3"/>
-        <location line="+464"/>
+        <location line="+463"/>
         <source>Remove</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-454"/>
+        <location line="-453"/>
         <source>Select a sample to preview</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6673,7 +6673,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+6"/>
+        <location line="+5"/>
         <source>Dataset version</source>
         <translation>데이터셋 버전</translation>
     </message>
@@ -6728,7 +6728,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-214"/>
+        <location line="-213"/>
         <source>All</source>
         <translation>전체</translation>
     </message>
@@ -6778,7 +6778,7 @@
         <translation>검토할 OK 라벨 추출</translation>
     </message>
     <message>
-        <location line="+65"/>
+        <location line="+64"/>
         <source>Version</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6809,13 +6809,13 @@
     </message>
     <message>
         <location line="+1"/>
-        <location line="+774"/>
+        <location line="+783"/>
         <location line="+40"/>
         <source>Roll Back</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-810"/>
+        <location line="-819"/>
         <source>AI Model Card</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7005,7 +7005,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+33"/>
+        <location line="+42"/>
         <source>No frozen dataset version of {board_model} yet; training reads only a frozen version&apos;s training set, once its validation set is locked.</source>
         <translation>{board_model}의 고정된 데이터셋 버전이 아직 없습니다. 학습은 검증 세트가 잠긴 고정 버전의 학습 세트만 읽습니다.</translation>
     </message>
@@ -7030,7 +7030,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-303"/>
+        <location line="-312"/>
         <source>Add at least 20 OK boards with Add OK Images… or Import Folder…</source>
         <translation>OK 이미지 추가… 또는 폴더 가져오기…로 OK 보드를 20개 이상 추가하세요</translation>
     </message>
@@ -7040,7 +7040,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+282"/>
+        <location line="+291"/>
         <source>Rolled back to AI model {version}</source>
         <translation type="unfinished"></translation>
     </message>
