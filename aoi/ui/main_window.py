@@ -27,7 +27,7 @@ from PySide6.QtWidgets import (
 )
 
 from ..config import APP_NAME, APP_VERSION, use_workspace
-from ..core import demo
+from ..core import datasets, demo
 from ..core.run_progress import RunProgress
 from ..core.services import AppContext
 from ..errors import AoiError
@@ -55,6 +55,9 @@ from .pages.training import TrainingPage
 from .widgets.empty_state import EmptyState
 from .widgets.image_view import ImageView
 from .workers import drop_queued
+
+# The OK boards a board model needs before it trains: a locked validation set's and a training set's (REQ-TRN-007).
+FIRST_OK = datasets.VALIDATION_OK + datasets.TRAIN_OK
 
 if TYPE_CHECKING:
     from ..core.inspector import InspectionResult
@@ -89,9 +92,7 @@ class HomePage(Page):
         (
             "4",
             QT_TRANSLATE_NOOP("HomePage", "Validate"),
-            QT_TRANSLATE_NOOP(
-                "HomePage", "Validate the AI model on a labelled folder; check accuracy, recall and false calls."
-            ),
+            QT_TRANSLATE_NOOP("HomePage", "Test the AI model on the locked validation set."),
             "AI Model Test",
         ),
         (
@@ -176,7 +177,7 @@ class HomePage(Page):
         self.status_labels["Upload samples"].setText(
             self.tr("{ok} OK · {ng} NG uploaded").format(ok=st.ok_samples, ng=st.ng_samples)
             if st.ok_samples or st.ng_samples
-            else self.tr("No samples yet. Add at least 20 OK boards.")
+            else self.tr("No samples yet. Add at least {count} OK boards.").format(count=FIRST_OK)
         )
         self.status_labels["Self-train"].setText(
             self.tr("Active AI model {version}").format(version=st.model_version)
@@ -188,12 +189,12 @@ class HomePage(Page):
             if st.recipe_revision and not st.recipe_is_default
             else self.tr("Recipe uses defaults. Draw ROIs on the Golden board.")
         )
-        self.status_labels["Validate"].setText(
-            self.tr(
-                "Last validation: accuracy {accuracy:.0%}, recall {recall:.0%}, false calls {false_calls:.0%}"
-            ).format(accuracy=tm["accuracy"], recall=tm["recall"], false_calls=tm["false_call_rate"])
+        self.status_labels["Validate"].setText(  # counts, never a bare percent (Customers & Launch, Validation)
+            self.tr("Missed defects {missed} of {ng} · False calls {false_calls} of {ok}").format(
+                missed=tm["FN"], ng=tm["TP"] + tm["FN"], false_calls=tm["FP"], ok=tm["FP"] + tm["TN"]
+            )
             if tm
-            else self.tr("Not validated yet. Run a labelled folder on AI Model Test.")
+            else self.tr("Not validated yet. Run the locked validation set.")
         )
         self.status_labels["Inspect"].setText(
             self.tr("{count} boards inspected · {ng} NG").format(count=st.inspected, ng=st.ng)

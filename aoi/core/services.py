@@ -608,11 +608,11 @@ class AppContext:
         use: str = "own",
     ) -> dict[str, Any]:
         """Train an AI model of a frozen dataset version's board model on the version's training set, for `use` (its
-        customer's own AI models by default), then save, register, activate and audit it (REQ-TRN-007). The OK images
-        train it and make the Golden board; the NG images only calibrate its threshold; the locked validation set is
-        never read. Refused, before any image is read, as `_training_set` gives. A file whose SHA-256, of the bytes
-        read, is not the one frozen stops the run with AOI-TRN-045. The run reads the device once, before it loads
-        anything, and keeps it to the end (#201).
+        customer's own AI models by default), then save, register (inactive, REQ-TRN-010) and audit it (REQ-TRN-007).
+        The OK images train it and make the Golden board; the NG images only calibrate its threshold; the locked
+        validation set is never read. Refused, before any image is read, as `_training_set` gives. A file whose SHA-256,
+        of the bytes read, is not the one frozen stops the run with AOI-TRN-045. The run reads the device once, before
+        it loads anything, and keeps it to the end (#201).
 
         Memory (REQ-TRN-007): each image is read, registered onto the board model's reference board (else the first OK
         image) and warped, then kept only as its tensor at the network's input size and its band of the Golden board's

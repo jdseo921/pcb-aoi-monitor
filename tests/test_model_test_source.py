@@ -10,7 +10,9 @@ from typing import cast
 
 from pytestqt.qtbot import QtBot
 
+from aoi.core import datasets
 from aoi.core.services import AppContext
+from aoi.ui.main_window import HomePage, MainWindow
 from aoi.ui.pages.model_test import ModelTestPage
 from tests.conftest import distinct_copies
 from tests.test_no_freeze import BUDGET_S, board_5mp, gap_meter  # noqa: F401  # the 5 MP fixture
@@ -74,3 +76,28 @@ def test_req_tst_001_100_images_no_freeze(
     with gap_meter(qtbot) as g:
         ran(qtbot, page)
     assert len(page.rows) == 100 and g["longest_s"] < BUDGET_S, g
+
+
+def test_req_tst_002_home_shows_the_last_test_as_counts(qtbot: QtBot, trained_ctx: AppContext) -> None:
+    """Home's Validate card gives the last AI Model Test's missed defects and false calls as n of N, never a bare
+    percent (Customers & Launch, Validation: every claim carries its counts; docs/sketches/home-step-cards.md, card
+    4); and for a board model with no samples, its Upload card asks for as many OK boards as a locked validation set
+    and a training set need together."""
+    held_out(trained_ctx)
+    page = page_of(qtbot, trained_ctx)
+    ran(qtbot, page)
+    run = trained_ctx.db.latest_test_run(BOARD)
+    assert run is not None
+    m = run["metrics"]
+    ng, ok = m["TP"] + m["FN"], m["FP"] + m["TN"]
+    win = cast(MainWindow, page.window())
+    assert win.navigate("Home")
+    home = cast(HomePage, win.pages["Home"])
+    shown = home.status_labels["Validate"].text()
+    assert shown == f"Missed defects {m['FN']} of {ng} · False calls {m['FP']} of {ok}"
+    assert "%" not in shown and ng and ok
+    trained_ctx.ensure_board_model("EMPTY-A1")
+    win._on_board_model("EMPTY-A1")
+    least = datasets.VALIDATION_OK + datasets.TRAIN_OK
+    assert home.status_labels["Upload samples"].text() == f"No samples yet. Add at least {least} OK boards."
+    assert home.status_labels["Validate"].text() == "Not validated yet. Run the locked validation set."

@@ -1389,7 +1389,7 @@
     </message>
     <message>
         <location line="+21"/>
-        <location filename="../ui/main_window.py" line="+629"/>
+        <location filename="../ui/main_window.py" line="+630"/>
         <source>start-up</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3616,7 +3616,7 @@
 <context>
     <name>HomePage</name>
     <message>
-        <location filename="../ui/main_window.py" line="-519"/>
+        <location filename="../ui/main_window.py" line="-517"/>
         <source>Upload samples</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3652,11 +3652,26 @@
     </message>
     <message>
         <location line="+1"/>
-        <source>Validate the AI model on a labelled folder; check accuracy, recall and false calls.</source>
+        <source>Test the AI model on the locked validation set.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+7"/>
+        <location line="+85"/>
+        <source>No samples yet. Add at least {count} OK boards.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+13"/>
+        <source>Missed defects {missed} of {ng} · False calls {false_calls} of {ok}</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+4"/>
+        <source>Not validated yet. Run the locked validation set.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="-97"/>
         <source>Inspect</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3691,12 +3706,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+2"/>
-        <source>No samples yet. Add at least 20 OK boards.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+3"/>
+        <location line="+5"/>
         <source>Active AI model {version}</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3716,17 +3726,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+4"/>
-        <source>Last validation: accuracy {accuracy:.0%}, recall {recall:.0%}, false calls {false_calls:.0%}</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+3"/>
-        <source>Not validated yet. Run a labelled folder on AI Model Test.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+3"/>
+        <location line="+10"/>
         <source>{count} boards inspected · {ng} NG</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5092,7 +5092,7 @@
 <context>
     <name>Page</name>
     <message>
-        <location filename="../ui/main_window.py" line="-486"/>
+        <location filename="../ui/main_window.py" line="-484"/>
         <source>Home</source>
         <translation type="unfinished"></translation>
     </message>
