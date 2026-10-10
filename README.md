@@ -47,8 +47,9 @@ CI starts it, checks that it opens no console window, and runs `AOI-PoC-Inspecto
 which inspects one synthetic board it ships and exits 0 only with the expected verdict. The build is not signed,
 so Windows SmartScreen warns about an unknown publisher (**More info → Run anyway**), and it is **not a release**: no
 customer or demo gets it (Engineering standard, "Signing"; Customers & Launch, "Demos"). `BUILD-INFO.txt` names its
-commit, `THIRD_PARTY_NOTICES.txt` holds the third-party licenses and `SHA256SUMS.txt` the hash of every file. To
-build it on a Windows PC:
+commit, `THIRD_PARTY_NOTICES.txt` holds the third-party licenses, `sbom.cdx.json` the bill of materials (CycloneDX:
+every package, Python, Inno Setup and each AI model file, with its version) and `SHA256SUMS.txt` the hash of every
+file. To build it on a Windows PC:
 
 ```powershell
 python -m pip install --require-hashes --no-deps -r requirements-torch-cpu.lock

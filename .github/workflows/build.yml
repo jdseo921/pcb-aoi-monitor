@@ -13,6 +13,7 @@ on:
       - requirements*.txt
       - requirements*.lock
       - tools/third_party_notices.py
+      - tools/sbom.py  # the bill of materials the build writes beside the notices
       - tools/smoke_test_build.py
       - tools/make_selftest_data.py  # the self-test's boards: drawn from the regression set, judged by aoi/selftest.py
       - tools/make_synthetic_dataset.py
@@ -62,7 +63,7 @@ jobs:
           python -m pip check
       - name: Build the demo bundle the app ships (REQ-SET-007); stops unless its boards get the demo's verdicts
         run: python tools/make_demo_bundle.py
-      - name: Build; stops on a file no license check covers, and writes THIRD_PARTY_NOTICES.txt
+      - name: Build; stops on a file no license check covers, and writes THIRD_PARTY_NOTICES.txt and sbom.cdx.json
         id: build
         run: pyinstaller --noconfirm --clean installer/aoi.spec
       - name: Start the built app on an empty workspace, check that it opens, and inspect a board with --self-test
@@ -105,7 +106,8 @@ jobs:
               "unknown, and it must not go to a customer or into a demo: a release is a signed installer built from a\n"
               "tagged commit after two approvals (Engineering standard, \"Signing\"; Customers & Launch, \"Demos\").\n\n"
               "Start AOI-PoC-Inspector.exe. The workspace is %USERPROFILE%\\AOI_Workspace, or the folder AOI_WORKSPACE\n"
-              "names. Third-party licenses: THIRD_PARTY_NOTICES.txt. The hash of every file: SHA256SUMS.txt.\n",
+              "names. Third-party licenses: THIRD_PARTY_NOTICES.txt. The bill of materials (CycloneDX):\n"
+              "sbom.cdx.json. The hash of every file: SHA256SUMS.txt.\n",
               encoding="utf-8",
               newline="\r\n",
           )

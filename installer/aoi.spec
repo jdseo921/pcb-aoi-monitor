@@ -7,8 +7,10 @@
 #
 # One folder keeps the Qt libraries separate files a user can replace (Legal & Compliance, "Packaging"). The build
 # stops before it ships a file from outside the app, Python and the packages whose licenses CI checks, and it writes
-# THIRD_PARTY_NOTICES.txt beside the .exe for the packages it ships ("Notices shipped"). PyInstaller runs this file
-# with SPECPATH, DISTPATH, workpath, Analysis, PYZ, EXE and COLLECT defined.
+# THIRD_PARTY_NOTICES.txt beside the .exe for the packages it ships ("Notices shipped"), with sbom.cdx.json, their
+# bill of materials (Engineering, "Scans and SBOM"). PyInstaller runs this file with SPECPATH, DISTPATH, workpath,
+# Analysis, PYZ, EXE and COLLECT defined.
+import json
 import os
 import re
 import subprocess
@@ -19,6 +21,7 @@ ROOT = Path(SPECPATH).parent
 sys.path.insert(0, str(ROOT))
 
 from aoi.config import APP_NAME, APP_VERSION
+from tools import sbom
 from tools import third_party_notices as tpn
 
 NAME = APP_NAME.replace(" ", "-")
@@ -73,3 +76,5 @@ coll = COLLECT(exe, a.binaries, a.datas, name=NAME, upx=False)
 
 notices = tpn.notices(used | {"pyinstaller"}, f"{APP_NAME} {APP_VERSION}")  # its bootloader is in every .exe
 (Path(DISTPATH) / NAME / "THIRD_PARTY_NOTICES.txt").write_text(notices, encoding="utf-8", newline="\r\n")
+bill = sbom.bom(used | {"pyinstaller"}, APP_NAME, APP_VERSION, Path(DISTPATH) / NAME)  # with the AI model files in it
+(Path(DISTPATH) / NAME / sbom.FILE_NAME).write_text(json.dumps(bill, indent=1) + "\n", encoding="utf-8")
