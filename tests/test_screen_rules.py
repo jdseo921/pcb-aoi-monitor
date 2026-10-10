@@ -318,7 +318,7 @@ def test_req_set_004_a_disabled_coloured_button_looks_disabled(qtbot: QtBot, tra
             want = (fill, theme.ON_FILL if kind else theme.TEXT) if enabled else (theme.BG_RAISED, theme.TEXT_DISABLED)
             assert measured[1:] == want, (kind or "plain", enabled, measured)
         assert not np.array_equal(*grabs), f"a disabled {kind or 'plain'} button looks like an enabled one"
-    win = _window(qtbot, trained_ctx, "Engineer")
+    win = _window(qtbot, trained_ctx, "Admin")  # Save Image… shows for an Admin alone (#151)
     insp, recipe = win.pages["Inspection"], win.pages["Recipe Editor"]
     win.navigate("Inspection")  # nothing queued: Start, Stop and Next Board are off
     QApplication.processEvents()

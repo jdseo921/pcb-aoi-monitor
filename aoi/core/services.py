@@ -2821,7 +2821,7 @@ class AppContext:
         }  # fmt: skip
         self._audit_files([Path(path)], "export.report", "test_run", run_uuid, after)
 
-    @requires("Operator", QT_TRANSLATE_NOOP("Errors", "Saving a board image"))
+    @requires("Admin", QT_TRANSLATE_NOOP("Errors", "Saving a board image"))  # an export (Q58, #151)
     def export_board_image(
         self,
         res: InspectionResult,

@@ -304,7 +304,7 @@ def test_req_log_002_each_export_audits_the_filter_that_listed_its_records(
     ctx.ensure_board_model("B")
     for verdict in ("NG", "NG", "OK"):
         _record(ctx, verdict, "kim", evidence=True)
-    page = _logs(qtbot, ctx, "engineer")
+    page = _logs(qtbot, ctx, "admin")  # only an Admin exports (Q58, #151)
     page.result.setCurrentIndex(page.result.findData("NG"))
     page.refresh()  # Filter
     page.result.setCurrentIndex(page.result.findData("WARN"))  # not applied: the table still lists the NG records
@@ -326,7 +326,7 @@ def test_req_log_002_each_export_audits_the_filter_that_listed_its_records(
     assert [(e["object_type"], e["after"]["filter"], e["after"]["records"]) for e in entries] == [
         ("inspections", listed, 2), ("checks", listed, 2), ("inspections", listed, 2)
     ]  # fmt: skip
-    assert {(e["user_uuid"], e["role"]) for e in entries} == {(ctx.db.user_uuid("engineer"), "Engineer")}
+    assert {(e["user_uuid"], e["role"]) for e in entries} == {(ctx.db.user_uuid("admin"), "Admin")}
     assert entries[0]["after"]["copied"] == 2 and all(e["at_utc"].endswith("+00:00") for e in entries)
 
 

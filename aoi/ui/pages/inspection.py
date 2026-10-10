@@ -541,6 +541,7 @@ class InspectionPage(Page):
         need = ROLES.index(REQUIRED_ROLE["export_board_image"])  # the service's @requires, never written out again here
         may_save = self.ctx.role in ROLES and ROLES.index(self.ctx.role) >= need
         self.act_save.setEnabled(self.last is not None and may_save and self._bg is None)
+        self.btn_save.setVisible(may_save)  # a board image leaves the station only by an Admin (#151)
         self.btn_compare.setEnabled(self.last_id is not None or self.last_path is not None)
 
     def update_actions(self) -> None:

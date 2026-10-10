@@ -233,7 +233,7 @@ EXPECTED_ROLE = {name: "Engineer" for name in CALLS} | {"add_user": "Admin", "sa
 EXPECTED_ROLE |= {"create_store": "Admin", "restore_store_key": "Admin", "move_in": "Admin", "shred_store": "Admin"}
 EXPECTED_ROLE |= {"delete_sample": "Admin", "delete_inspections": "Admin"}  # only an Admin deletes (REQ-LOG-003)
 EXPECTED_ROLE |= {f"export_{what}": "Admin" for what in ("overlays", "csv", "csv_files", "report")}  # Q58 (#151)
-EXPECTED_ROLE["export_board_image"] = "Operator"  # Save Image… (F9): every role keeps it, audited (#241, REQ-INSP-005)
+EXPECTED_ROLE["export_board_image"] = "Admin"  # Save Image… (F9): an export, an Admin's alone (#151, Jay 2026-10-10)
 REFUSED = [(name, role) for name in CALLS for role in ROLES[: ROLES.index(EXPECTED_ROLE[name])]]
 
 

@@ -49,7 +49,7 @@ def test_req_set_019_save_image_to_a_name_that_cannot_be_written_says_why(
     name: str,
     code: str,
 ) -> None:
-    page = _inspect_one(qtbot, _window(qtbot, trained_ctx, "Operator"), ng_board)
+    page = _inspect_one(qtbot, _window(qtbot, trained_ctx, "Admin"), ng_board)  # only an Admin exports (Q58, #151)
     out = tmp_path / "out"
     (out / "taken.png").mkdir(parents=True)
     target = out / name

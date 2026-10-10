@@ -57,8 +57,8 @@ def wrapped(name: str) -> str:
         if run == 24 and not c.isspace():  # 24 characters with no space, _ or - may break after the last (#251)
             out.append(ZWSP)
             run = 0
-        out.append(c + ZWSP if c in "_-" else c)
-        run = 0 if c in "_-" or c.isspace() else run + 1
+        out.append(c + ZWSP if c in "_-/\\" else c)
+        run = 0 if c in "_-/\\" or c.isspace() else run + 1
     return "".join(out)
 
 

@@ -41,6 +41,7 @@ from .pages.base import (
     page_text,
     restyle_table,
     role_text,
+    scrolled,
     size_class,
     time_left_text,
 )
@@ -246,7 +247,13 @@ class MainWindow(QMainWindow):
         self.nav.setFixedWidth(theme.NAV_W)
         self.stack = QStackedWidget()
         body.addWidget(self.nav)
-        body.addWidget(self.stack, 1)
+        # the pages scroll where the screen is smaller than the widest page, so a 1366 x 768 station shows every
+        # control (REQ-SET-004, #104): a QStackedWidget takes the largest minimum of its pages, which held the
+        # window at about 1886 x 821 px; at 1920 x 1080 every page fits and nothing scrolls
+        pages = scrolled(self.stack)
+        pages.setMinimumSize(0, 0)
+        pages.viewport().setAutoFillBackground(False)  # the window's background, as around the stack before
+        body.addWidget(pages, 1)
         outer.addLayout(body, 1)
         self.setCentralWidget(central)
         self.setStatusBar(QStatusBar())

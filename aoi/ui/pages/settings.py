@@ -155,11 +155,13 @@ class SettingsPage(Page):
             "image_size": int(self.input_size.currentText()),
             "default_epochs": self.epochs.value(),
             "log_retention_days": self.ret.value(),
-            "map_retention_days_ok": self.map_ret.value(),
-            "max_image_megapixels": self.max_mp.value(),
-            "max_image_megabytes": self.max_mb.value(),
             "language": self.lang.currentData(),
         }
+        s = self.ctx.settings
+        limits = {"map_retention_days_ok": self.map_ret, "max_image_megapixels": self.max_mp}
+        limits["max_image_megabytes"] = self.max_mb
+        # only a limit changed here is written, so a hand edit of settings.json made while the app runs stays (#170)
+        values |= {name: box.value() for name, box in limits.items() if box.value() != getattr(s, name)}
         try:
             self.ctx.save_settings(values)
         except (AoiError, OSError) as e:  # AOI-USR-001 below the Admin role, AOI-SET-008, AOI-SET-010, a disk error

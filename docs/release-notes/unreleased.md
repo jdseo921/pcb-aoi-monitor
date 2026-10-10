@@ -23,11 +23,12 @@ None. / 없음.
 
 ## Fixed / 수정 (draft)
 
+- [REQ-SET-004] Every page scrolls where the screen is smaller than the page, so a 1366 × 768 station shows every control; before, the window could not shrink below about 1886 × 821 px and the right-hand controls sat off-screen (#104). / 화면이 페이지보다 작으면 모든 페이지가 스크롤되어 1366 × 768 스테이션에서도 모든 컨트롤이 보입니다. 이전에는 창이 약 1886 × 821 px 아래로 줄어들지 않아 오른쪽 컨트롤이 화면 밖에 있었습니다(#104).
 - [REQ-SET-004] A long folder, board model or file name, even one with no _ or -, no longer widens the window past the screen: AI Model Test's folder line and note, Compare's labels and Inspection's summary line wrap it, and a line that cuts it shows it whole in its tooltip (#251). / 긴 폴더, 보드 모델 또는 파일 이름(_ 나 - 가 없는 이름 포함)이 더 이상 창을 화면보다 넓히지 않습니다. AI 모델 테스트의 폴더 줄과 안내, 비교 화면의 라벨, 검사 화면의 요약 줄이 줄을 바꾸며, 이름이 잘리면 툴팁에 전체 이름이 표시됩니다(#251).
 
 ## Security / 보안 (draft)
 
-- [REQ-USR-001] Only an Admin exports customer results: Export CSV and Export Image Overlays on Logs & Export, Export CSV, Export Report and Validation Report… on AI Model Test, and Export Manifest… on Training are hidden for an Engineer and refused with AOI-USR-001 (#151). Save Image… (F9) stays with every role. / 고객 결과는 관리자만 내보낼 수 있습니다. 로그 및 내보내기, AI 모델 테스트, 학습 페이지의 내보내기 버튼은 엔지니어에게 숨겨지고 AOI-USR-001로 거부됩니다(#151). 이미지 저장(F9)은 모든 역할에 그대로 남습니다.
+- [REQ-USR-001] Only an Admin exports customer results: Export CSV and Export Image Overlays on Logs & Export, Export CSV, Export Report and Validation Report… on AI Model Test, and Export Manifest… on Training are hidden for an Engineer and refused with AOI-USR-001 (#151). Save Image… (F9) on Inspection is the Admin's too. / 고객 결과는 관리자만 내보낼 수 있습니다. 로그 및 내보내기, AI 모델 테스트, 학습 페이지의 내보내기 버튼은 엔지니어에게 숨겨지고 AOI-USR-001로 거부됩니다(#151). 검사 화면의 이미지 저장(F9)도 관리자만 사용할 수 있습니다.
 
 ## Known issues / 알려진 문제 (draft)
 
