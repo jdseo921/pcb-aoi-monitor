@@ -757,7 +757,7 @@
 <context>
     <name>DemoPanel</name>
     <message>
-        <location filename="../ui/pages/settings_demo.py" line="+30"/>
+        <location filename="../ui/pages/settings_demo.py" line="+29"/>
         <source>Demo</source>
         <translation type="unfinished"></translation>
     </message>
@@ -772,12 +772,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+4"/>
-        <source>Load Demo Workspace opens the demo board model with its AI model, recipe and 10 boards, one of them NG, in a folder of its own beside this workspace, {folder}; production data is not touched. The boards are drawn, not photographed: the demo shows how the app works, never how well it finds defects.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+9"/>
+        <location line="+12"/>
         <source>Load Demo Workspace</source>
         <translation type="unfinished"></translation>
     </message>
@@ -787,18 +782,23 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+2"/>
+        <location line="+6"/>
         <source>Scripted run pace</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1"/>
-        <location line="+8"/>
+        <location line="-2"/>
+        <location line="+9"/>
         <source>{seconds} s</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+5"/>
+        <location line="-25"/>
+        <source>Opens a demo board model with its AI model, recipe and 10 drawn boards, one NG, in its own folder {folder}; production data is not touched. It shows how the app works, never how well it finds defects.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+28"/>
         <source>Play Scripted Run ›</source>
         <translation type="unfinished"></translation>
     </message>
@@ -809,7 +809,7 @@
     </message>
     <message>
         <location line="+1"/>
-        <location line="+27"/>
+        <location line="+30"/>
         <source>Reset Demo</source>
         <translation type="unfinished"></translation>
     </message>
@@ -820,7 +820,7 @@
     </message>
     <message>
         <location line="+8"/>
-        <source>= {seconds} s per board</source>
+        <source>Scripted run pace: {seconds} s per board</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -3302,7 +3302,7 @@
         <translation>매니페스트가 없고, 파일 {changed}개가 변경되고 {missing}개가 없습니다</translation>
     </message>
     <message>
-        <location filename="../core/demo.py" line="+92"/>
+        <location filename="../core/demo.py" line="+94"/>
         <source>it has no readable bundle.json</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3317,7 +3317,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+67"/>
+        <location line="+79"/>
         <source>its store-key.json cannot be read</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3862,7 +3862,7 @@
 <context>
     <name>InspectionPage</name>
     <message>
-        <location filename="../ui/pages/inspection.py" line="+101"/>
+        <location filename="../ui/pages/inspection.py" line="+103"/>
         <location line="+82"/>
         <location line="+161"/>
         <source>Load Images…</source>
@@ -4066,7 +4066,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+39"/>
+        <location line="+43"/>
         <source>Save annotated image</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5109,7 +5109,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/inspection.py" line="-534"/>
+        <location filename="../ui/pages/inspection.py" line="-539"/>
         <source>Inspection</source>
         <translation type="unfinished"></translation>
     </message>

@@ -6,9 +6,9 @@ The build runs this before PyInstaller, which ships the folder with the app (aoi
 makes a workspace the way an engineer would: the board model DEMO-TBOX-A1 with the synthetic boards of
 tools/make_synthetic_dataset.py as its OK and NG samples, in a dataset store of their own (ADR 0010), an AI model
 trained on them and activated, with its model card and Golden board; then the ten boards a scripted run plays, nine OK
-and the fourth NG (a missing IC), inspected once with that model before they are bundled. The build fails, writing no
-bundle, unless they get those verdicts with a margin: an OK board's AI score at most MARGIN of the threshold, so the
-same verdicts come back on any PC, whose CPU rounds a little differently.
+and the fourth NG (a missing component), inspected once with that model before they are bundled. The build fails,
+writing no bundle, unless they get those verdicts with a margin: an OK board's AI score at most MARGIN of the
+threshold, so the same verdicts come back on any PC, whose CPU rounds a little differently.
 
 The boards are drawn, never photographed: what the demo shows is how the app works, never how well it finds defects
 (Customers & Launch, "Validation"), and its model card says so.
@@ -44,7 +44,7 @@ BOARD_MODEL = "DEMO-TBOX-A1"
 CUSTOMER = "Demo (synthetic boards)"  # the store's customer: our own synthetic boards (ADR 0010)
 OK, NG, SEED = 60, 14, 7  # the generator's defaults: 40 OK boards train, 20 are held out
 EPOCHS, IMAGE_SIZE = 20, 128
-FAILING = "ng_007_missing_component.png"  # a held-out NG board: its first IC is missing, which Compare shows
+FAILING = "ng_007_missing_component.png"  # a held-out NG board: a part is missing from its pads, as Compare shows
 FAIL_AT = 4  # the failing board's place in the run: the run is under way, and it stops early enough to explain
 BOARDS = 10
 MARGIN = 0.6  # an OK board's AI score over its threshold at most this (WARN starts at 0.8 by default)

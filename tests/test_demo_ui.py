@@ -12,7 +12,7 @@ from pathlib import Path
 
 import pytest
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QApplication, QMessageBox
+from PySide6.QtWidgets import QApplication, QMessageBox, QPushButton
 from pytestqt.qtbot import QtBot
 
 from aoi import config
@@ -222,4 +222,17 @@ def test_req_set_007_reset_asks_first_and_no_keeps_the_demo(
     qtbot.mouseClick(reset, Qt.MouseButton.LeftButton)
     assert shown_window() is win and len(records(win)) == 4
     assert "Every result, record, alarm and log of the demo" in asked[0]
+    win.close()
+
+
+def test_req_set_007_the_demo_panel_keeps_its_buttons_whole_in_the_narrowest_window(qtbot: QtBot, bundle: Path) -> None:
+    win = click(qtbot, station(qtbot).pages["Settings"].demo.btn_load)  # type: ignore[attr-defined]
+    win.showNormal()
+    win.resize(win.minimumSizeHint().width(), 1080)  # as narrow as the window goes: a presenter's smaller screen
+    qtbot.waitUntil(lambda: win.width() == win.minimumSizeHint().width())
+    panel = win.pages["Settings"].demo  # type: ignore[attr-defined]
+    cut = [(b.text(), b.width(), b.sizeHint().width()) for b in panel.findChildren(QPushButton)
+           if b.width() < b.sizeHint().width()]  # fmt: skip
+    assert cut == []  # each label shown in full
+    assert panel.btn_reset.y() > panel.btn_play.y()  # the red button on a row of its own, last
     win.close()

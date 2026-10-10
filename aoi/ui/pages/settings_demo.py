@@ -43,10 +43,9 @@ class DemoPanel(QGroupBox):
             )
             what = QLabel(
                 self.tr(
-                    "Load Demo Workspace opens the demo board model with its AI model, recipe and 10 boards, one of"
-                    " them NG, in a folder of its own beside this workspace, {folder}; production data is not"
-                    " touched. The boards are drawn, not photographed: the demo shows how the app works, never how"
-                    " well it finds defects."
+                    "Opens a demo board model with its AI model, recipe and 10 drawn boards, one NG, in its own folder"
+                    " {folder}; production data is not touched. It shows how the app works, never how well it finds"
+                    " defects."
                 ).format(folder=folder.name)
             )
             what.setObjectName("muted")
@@ -57,10 +56,12 @@ class DemoPanel(QGroupBox):
             row.addStretch(1)
         else:
             self.state.setText(self.tr("Demo workspace: open, in the folder {folder}.").format(folder=root.name))
+            self.pace_label = QLabel()  # the pace on a line of its own over the slider, so the panel stays narrow
+            lay.addWidget(self.pace_label)
             pace = QHBoxLayout()
-            pace.addWidget(QLabel(self.tr("Scripted run pace")))
             pace.addWidget(QLabel(self.tr("{seconds} s").format(seconds=PACE_MIN)))
             self.pace = size_class(QSlider(Qt.Orientation.Horizontal), "T")
+            self.pace.setAccessibleName(self.tr("Scripted run pace"))
             self.pace.setRange(PACE_MIN, PACE_MAX)
             self.pace.setValue(self.ctx.settings.demo_pace_s)
             self.pace.setTracking(False)  # stored once the knob is let go, or at each arrow key
@@ -68,8 +69,6 @@ class DemoPanel(QGroupBox):
             self.pace.valueChanged.connect(self._save_pace)
             pace.addWidget(self.pace, 1)
             pace.addWidget(QLabel(self.tr("{seconds} s").format(seconds=PACE_MAX)))
-            self.pace_label = QLabel()
-            pace.addWidget(self.pace_label)
             self._show_pace(self.pace.value())
             lay.addLayout(pace)
             self.btn_play = button(self.tr("Play Scripted Run ›"), slot=self.page.shell.play_demo)
@@ -77,6 +76,9 @@ class DemoPanel(QGroupBox):
             self.btn_reset = button(self.tr("Reset Demo"), "danger", self._reset)  # red, last, never the default
             row.addWidget(self.btn_play)
             row.addWidget(self.btn_leave)
+            row.addStretch(1)
+            lay.addLayout(row)
+            row = QHBoxLayout()  # the red button on a row of its own, last
             row.addStretch(1)
             row.addWidget(self.btn_reset)
         lay.addLayout(row)
@@ -105,7 +107,7 @@ class DemoPanel(QGroupBox):
             self.page.shell.switch_workspace(self.ctx.settings.root, reset=True)
 
     def _show_pace(self, seconds: int) -> None:
-        self.pace_label.setText(self.tr("= {seconds} s per board").format(seconds=seconds))
+        self.pace_label.setText(self.tr("Scripted run pace: {seconds} s per board").format(seconds=seconds))
 
     def _save_pace(self, seconds: int) -> None:
         """Store the pace in the demo workspace's settings.json, audited as an Admin's change of settings."""

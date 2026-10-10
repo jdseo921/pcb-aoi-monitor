@@ -665,7 +665,7 @@ measure of accuracy and are never quoted as one. An Admin opens it on Settings â
 app closes the station's workspace and opens the demo's, a folder of its own beside the workspace named after it with
 `-Demo` added (for `C:\AOI_Workspace`, `C:\AOI_Workspace-Demo`); the header shows a **Demo** badge and the board model
 DEMO-TBOX-A1, with its AI model and card, its recipe, and 10 boards queued on Inspection, the fourth of them NG (a
-missing IC). Nothing in the station's workspace is read or written while the demo is open, its `settings.json`
+missing component). Nothing in the station's workspace is read or written while the demo is open, its `settings.json`
 included: the demo has its own.
 
 - **Play Scripted Run â€º** opens Inspection and presses Start: the boards are inspected and saved one after another at
