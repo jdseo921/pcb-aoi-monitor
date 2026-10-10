@@ -108,6 +108,7 @@ class Page(QWidget):
     roles: tuple[str, ...] = ROLES  # who may open it (spec 8)
     badge: str = ""  # a badge after the page's sidebar entry, with its tooltip, both marked like the title
     badge_tip: str = ""
+    in_presenter_theme: bool = True  # shown in the presenter theme unless Admin only (REQ-SET-008, MainWindow.hidden)
 
     def __init__(self, ctx: AppContext, shell: MainWindow) -> None:
         super().__init__()

@@ -1384,7 +1384,7 @@
     </message>
     <message>
         <location line="+21"/>
-        <location filename="../ui/main_window.py" line="+607"/>
+        <location filename="../ui/main_window.py" line="+629"/>
         <source>start-up</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3581,7 +3581,7 @@
 <context>
     <name>HomePage</name>
     <message>
-        <location filename="../ui/main_window.py" line="-497"/>
+        <location filename="../ui/main_window.py" line="-519"/>
         <source>Upload samples</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4469,7 +4469,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+8"/>
+        <location line="+6"/>
+        <source>Exit presenter theme</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+5"/>
         <source>Switch User</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4514,12 +4519,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+60"/>
-        <source>Presenter theme on.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+0"/>
+        <location line="+76"/>
         <source>Presenter theme off.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4529,7 +4529,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+48"/>
+        <location line="+6"/>
+        <source>{page} is hidden in the presenter theme</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+45"/>
         <source>close the app</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4554,7 +4559,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+2"/>
+        <location line="-92"/>
+        <source>Presenter theme on. An Admin turns it off with Exit presenter theme.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+94"/>
         <source>Stopping the running work…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4999,7 +5009,7 @@
 <context>
     <name>Page</name>
     <message>
-        <location filename="../ui/main_window.py" line="-464"/>
+        <location filename="../ui/main_window.py" line="-486"/>
         <source>Home</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5024,7 +5034,7 @@
         <translation>약 {minutes}분 남음</translation>
     </message>
     <message>
-        <location line="+70"/>
+        <location line="+71"/>
         <source>No board model yet</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5188,7 +5198,7 @@
 <context>
     <name>Profile3DPage</name>
     <message>
-        <location filename="../ui/pages/profile3d.py" line="+4"/>
+        <location filename="../ui/pages/profile3d.py" line="+5"/>
         <source>Open Recipe Editor ›</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5684,7 +5694,7 @@
 <context>
     <name>Role</name>
     <message>
-        <location filename="../ui/pages/base.py" line="-331"/>
+        <location filename="../ui/pages/base.py" line="-332"/>
         <source>Operator</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6011,12 +6021,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+3"/>
-        <source>Light, text 18 pt or more, verdict 48 pt, for demos. It applies at once; untick it to leave it.</source>
+        <location line="+4"/>
+        <source>Light, text 18 pt or more, verdict 48 pt; Settings and 3D Profile hidden. An Admin leaves it with Exit presenter theme in the header.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+7"/>
+        <location line="+9"/>
         <source>Users &amp; roles</source>
         <translation type="unfinished"></translation>
     </message>

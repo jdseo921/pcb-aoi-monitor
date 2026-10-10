@@ -297,14 +297,18 @@ The light presenter theme (REQ-SET-008, since S54) is `theme.PRESENTER`, overrid
 text 18 pt or more (`FONT_PT` 18), the verdict at 48 pt, the same verdict colours and shapes, and every text colour at
 4.5:1 or more on its surface, bold and large text included, with black (`ON_DARK`) on the green, red and blue fills
 (Q53) and `ACCENT_TEXT` for the Home card numbers. `settings.json` holds it as `presenter_theme`; an Admin switches it
-with Settings' Presenter theme tick, through `MainWindow.save_presenter_theme` and so through
-`AppContext.save_settings` (Admin, audited as `settings.change`; Q49).
+with Settings' Presenter theme tick and leaves it with the header's Exit presenter theme, both through
+`MainWindow.save_presenter_theme` and so through `AppContext.save_settings` (Admin, audited as `settings.change`; Q49).
 `theme.use()` puts the tokens in place: before anything is drawn when `MainWindow` is built with it saved on, or at once
 in `MainWindow.apply_theme`, which applies `theme.stylesheet()` to the application and draws again what the pages drew
 with the tokens: verdict labels (`theme.verdict_styles()` maps each verdict stylesheet to its maker), coloured table
 rows (`restyle_table`: fill, text colour, bold font at the new size, columns resized), the background, hint and box
 labels of every `ImageView` (`restyle`; the box editors draw their boxes again), and each page's own `Page.restyle`
-(Home's card headings, AI Model Test's tiles, Logs & Export's weekend days).
+(Home's card headings, AI Model Test's tiles, Logs & Export's weekend days). The sidebar then hides the Admin pages and
+3D Profile (Roles, below). `tools/render_screens.py` pins the font by patching `theme.FONT_FAMILY`, so a theme switched
+on during a render keeps it, and renders three presenter shots (`PRESENTER_SHOTS`: `presenter-<page>-<role>.png`);
+`tests/screens/test_sizes_and_contrast.py` walks every page the presenter theme shows, for every role, with large text
+held to 4.5:1 too, and reads a widget's rounded corners as its fill.
 
 Every page is rendered offscreen for every role that may open it and compared with an approved image (REQ-SET-004,
 since S21): `tools/render_screens.py` builds the synthetic workspace with pinned ids, times, inspection time and fonts
@@ -744,7 +748,11 @@ and maps has ended, and "Would be" shows within 300 ms of the key at 5 MP (`test
 * **Cross-links:** Inspection → "Compare with Golden ›" opens Compare on the current board; Home step cards open
   the page for each step; AI Model Test row preview feeds "Use Last Inspected" on Compare (only a preview judged by
   what judged its run, #250).
-* **Roles** (GUI §8). Disabled entries show a tooltip naming the required role.
+* **Roles** (GUI §8). Disabled entries show a tooltip naming the required role. In the presenter theme
+  (REQ-SET-008) the pages for the Admin alone (`roles == ("Admin",)`: Settings) and those marked
+  `in_presenter_theme = False` (3D Profile) leave the sidebar for every role, with a section heading left over none
+  (`MainWindow.hidden`, `_sync_nav`); `navigate()` refuses them with a status line, and the page shown when the theme
+  is switched on goes to Home. Exit presenter theme shows in the header to an Admin only (Q49).
 
 | Page | Operator | Engineer | Admin |
 |---|:-:|:-:|:-:|

@@ -102,7 +102,10 @@ class SettingsPage(Page):
         self.presenter = size_class(QCheckBox(self.tr("Presenter theme")), "T")
         self.presenter.clicked.connect(self._switch_presenter)
         about = QLabel(
-            self.tr("Light, text 18 pt or more, verdict 48 pt, for demos. It applies at once; untick it to leave it.")
+            self.tr(
+                "Light, text 18 pt or more, verdict 48 pt; Settings and 3D Profile hidden. An Admin leaves it with Exit"
+                " presenter theme in the header."
+            )
         )
         about.setObjectName("muted")
         about.setWordWrap(True)

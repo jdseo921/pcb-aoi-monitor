@@ -51,6 +51,7 @@ class Profile3DPage(Page):
     roles = ("Engineer", "Admin")
     badge = QT_TRANSLATE_NOOP("Page", "Stage 2")  # the entry stays, so nobody looks for the page elsewhere (Q9)
     badge_tip = QT_TRANSLATE_NOOP("Page", "Available with the 3D camera in Stage 2")
+    in_presenter_theme = False  # so a demo never shows it (sketch; C&L Demos)
 
     def __init__(self, ctx: AppContext, shell: MainWindow) -> None:
         super().__init__(ctx, shell)

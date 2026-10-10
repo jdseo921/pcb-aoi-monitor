@@ -20,6 +20,11 @@ drop-down list and every date field's calendar on the page, and one text field's
 their own and not in the page grab, and measures each entry, day and weekday name, the month and year (at rest and under
 the pointer) and the month list; the calendar's previous and next month arrows, a control's graphic, need 3:1 (WCAG
 1.4.11) (#239). The walk runs on Linux and Windows: sizes and colours do not depend on the font file.
+
+A widget's four corners are read as its fill, since a rounded corner shows the surface behind the widget: on the light
+presenter theme's page that surface is farther from a blue or red fill than the black text on it. The presenter theme
+(REQ-SET-008) is walked the same way, on every page it shows for every role, with its 18 pt text and large text held to
+4.5:1.
 """
 
 from __future__ import annotations
@@ -169,6 +174,21 @@ def _region(shot: np.ndarray, win: QWidget, w: QWidget, rect: QRect | None = Non
     return None if r.isEmpty() else shot[r.top() : r.bottom() + 1, r.left() : r.right() + 1]
 
 
+def _corners_off(region: np.ndarray | None) -> np.ndarray | None:
+    """`region` with its four corners, RADIUS_L px square, in its most common colour: a rounded corner shows the surface
+    behind the widget, not the widget's own. On the presenter theme's light page that surface is farther from a blue or
+    red fill than the black text on it, and would be read as the text (REQ-SET-008); a widget too small to have corners
+    beside its text is read whole."""
+    r = theme.RADIUS_L
+    if region is None or min(region.shape[:2]) <= 2 * r:
+        return region
+    out, fill = region.copy(), np.array(_rgb(str(_fill(region))), dtype=region.dtype)
+    for rows in (slice(0, r), slice(-r, None)):
+        for cols in (slice(0, r), slice(-r, None)):
+            out[rows, cols] = fill
+    return out
+
+
 def _text(w: QWidget) -> str:
     for attr in ("text", "currentText", "title", "currentMessage", "toPlainText"):
         f = getattr(w, attr, None)
@@ -240,7 +260,7 @@ def _check_widget(where: str, win: QWidget, shot: np.ndarray, w: QWidget, seen: 
             out.append(f"{name}: disabled, but drawn on {fill}, not the disabled fill {theme.BG_RAISED}")
         return out
     if (isinstance(w, PLAIN_TEXT) and _text(w)) or (isinstance(w, QHeaderView) and w.count()):
-        out += _check_contrast(region := _region(shot, win, w), w.font(), name, seen)
+        out += _check_contrast(_corners_off(region := _region(shot, win, w)), w.font(), name, seen)
         if isinstance(w, QLabel) and region is not None:
             out += _check_label_colours(w, region, name, seen)
     elif isinstance(w, QProgressBar) and w.isTextVisible() and w.text():
@@ -258,6 +278,8 @@ def _check_widget(where: str, win: QWidget, shot: np.ndarray, w: QWidget, seen: 
         for it in (it for it in items if it is not None and it.text()):
             region = _region(shot, win, w.viewport(), w.visualItemRect(it) & w.viewport().rect())
             font = it.font() if it.data(Qt.ItemDataRole.FontRole) is not None else w.font()
+            if QFontInfo(font).pointSizeF() < theme.FONT_PT:  # a font of its own, such as a coloured row's bold
+                out.append(f"{name} item '{it.text()}': {QFontInfo(font).pointSizeF():.1f} pt text")
             if not _locked_page(w, it):
                 out += _check_contrast(region, font, f"{name} item '{it.text()}'", seen)
             elif (measured := _contrast(region) if region is not None else None) and measured[2] != theme.TEXT_DISABLED:
@@ -474,7 +496,7 @@ def _check_targets(where: str, win: MainWindow, title: str, seen: Counter) -> li
     page: Any = win.pages[title]
     targets: list[tuple[str, int, int]] = []
     for it in (win.nav.item(i) for i in range(win.nav.count())):
-        if it.flags() & Qt.ItemFlag.ItemIsEnabled:
+        if it.flags() & Qt.ItemFlag.ItemIsEnabled and not it.isHidden():  # hidden in the presenter theme: not shown
             targets.append((f"sidebar entry '{it.text()}'", win.nav.visualItemRect(it).height(), theme.TARGET_H))
     if title in ("Inspection", "Logs & Export"):
         table = page.table
@@ -527,6 +549,34 @@ def _show(win: MainWindow, title: str, dataset: Path) -> None:
     QApplication.processEvents()
 
 
+def _walk(win: MainWindow, role: str, dataset: Path, seen: Counter) -> list[str]:
+    """The findings on every page `role` may open and the sidebar shows, in each view the screenshots show."""
+    findings: list[str] = []
+    win.set_user(role.lower())
+    for title, page in win.pages.items():
+        if role not in page.roles or win._items[title].isHidden():
+            continue
+        _show(win, title, dataset)
+        for view in (None, *render_screens.PAGE_VIEWS.get(title, ())):  # each tab, as the screenshots show it
+            render_screens.show_view(win, title, view)
+            QApplication.processEvents()
+            seen["pages"] += 1
+            shot = _pixels(win.grab().toImage())
+            where = f"{title}{f' {view}' if view else ''} ({role})"
+            for w in win.findChildren(QWidget):
+                if w.isVisible() and w.width() > 0:
+                    findings += _check_widget(where, win, shot, w, seen)
+            for w in win.findChildren(QWidget):  # the lists and calendars they open, after the page grab
+                if isinstance(w, QComboBox) and w.isVisible() and w.isEnabled() and not _covered(win, w):
+                    findings += check_popup(where, w, seen)
+                elif isinstance(w, QDateEdit) and w.isVisible() and w.calendarPopup() and w.isEnabled():
+                    findings += check_calendar(where, w, seen)
+            findings += check_field_menu(where, win, seen)
+            findings += _check_targets(where, win, title, seen)
+        render_screens.show_view(win, title, None)
+    return findings
+
+
 def test_req_set_004_sizes_and_contrast_on_every_page(
     screens: tuple[AppContext, Path], qtbot: QtBot, qapp: QApplication
 ) -> None:
@@ -537,28 +587,7 @@ def test_req_set_004_sizes_and_contrast_on_every_page(
     seen: Counter = Counter()
     with _shell(ctx, qtbot, qapp) as win:
         for role in ROLES:
-            win.set_user(role.lower())
-            for title, page in win.pages.items():
-                if role not in page.roles:
-                    continue
-                _show(win, title, dataset)
-                for view in (None, *render_screens.PAGE_VIEWS.get(title, ())):  # each tab, as the screenshots show it
-                    render_screens.show_view(win, title, view)
-                    QApplication.processEvents()
-                    seen["pages"] += 1
-                    shot = _pixels(win.grab().toImage())
-                    where = f"{title}{f' {view}' if view else ''} ({role})"
-                    for w in win.findChildren(QWidget):
-                        if w.isVisible() and w.width() > 0:
-                            findings += _check_widget(where, win, shot, w, seen)
-                    for w in win.findChildren(QWidget):  # the lists and calendars they open, after the page grab
-                        if isinstance(w, QComboBox) and w.isVisible() and w.isEnabled() and not _covered(win, w):
-                            findings += check_popup(where, w, seen)
-                        elif isinstance(w, QDateEdit) and w.isVisible() and w.calendarPopup() and w.isEnabled():
-                            findings += check_calendar(where, w, seen)
-                    findings += check_field_menu(where, win, seen)
-                    findings += _check_targets(where, win, title, seen)
-                render_screens.show_view(win, title, None)
+            findings += _walk(win, role, dataset, seen)
     enough = {"pages": 21, "text": 500, "buttons": 100, "contrast": 500, "targets": 200, "image_text": 2}
     enough |= {"popup_rows": 80, "calendar_cells": 300, "calendar_hover": 12}  # 6 calendars: Logs From and To, 3 roles
     enough |= {"calendar_arrows": 24, "field_menus": 10, "menu_entries": 72 + 10 * 7}  # 12 months; 7 entries a field
@@ -658,6 +687,47 @@ def test_req_set_004_theme_token_pairs_read() -> None:
     assert not low, low
     for fill in (theme.WARN_COLOR, theme.INFO_COLOR, theme.MAJOR_COLOR):
         assert theme.on_color(fill) == theme.ON_LIGHT, fill
+
+
+def test_req_set_008_presenter_text_and_hidden_admin(
+    screens: tuple[AppContext, Path], qtbot: QtBot, qapp: QApplication
+) -> None:
+    """The presenter theme, switched on as an Admin does it, with Settings' Presenter theme tick: for every role, every
+    page the sidebar shows passes the walk above with the presenter theme's tokens, so every text is 18 pt or more,
+    tables and text on images included, operator targets are 48 px or more, and every text colour reads at 4.5:1 or
+    more on its surface, large and bold text held to 4.5:1 too (LARGE_RATIO); the verdict banner is 48 pt. The Admin
+    page (Settings, with the SYSTEM heading over it alone) and 3D Profile are hidden from the sidebar for every role and
+    cannot be opened; the header's Exit presenter theme is shown to an Admin only, and turns the theme off."""
+    ctx, dataset = screens
+    findings: list[str] = []
+    seen: Counter = Counter()
+    with _shell(ctx, qtbot, qapp) as win, mock.patch.object(sys.modules[__name__], "LARGE_RATIO", MIN_RATIO):
+        win.set_user("admin")
+        assert win.navigate("Settings")
+        win.pages["Settings"].presenter.click()
+        try:
+            assert theme.presenter() and ctx.settings.presenter_theme and theme.FONT_PT == LARGE_PT
+            assert win.stack.currentWidget() is win.pages["Home"], "Settings is hidden, so Home shows"
+            (system,) = [it for it in map(win.nav.item, range(win.nav.count())) if it.text() == "SYSTEM"]
+            for role in ROLES:
+                win.set_user(role.lower())
+                hidden = [title for title, it in win._items.items() if it.isHidden()]
+                assert hidden == ["3D Profile", "Settings"] and system.isHidden(), (role, hidden)
+                for title in hidden:
+                    assert not win.navigate(title) and win.stack.currentWidget() is not win.pages[title], title
+                    assert win.statusBar().currentMessage() == f"{title} is hidden in the presenter theme"
+                assert win.exit_presenter.isVisible() == (role == "Admin"), role
+                findings += _walk(win, role, dataset, seen)
+                verdict = win.pages["Inspection"].verdict
+                assert QFontInfo(verdict.font()).pointSizeF() == theme.FONT_VERDICT_PT == 48, role
+        finally:
+            win.set_user("admin")
+            win.exit_presenter.click()
+    assert not theme.presenter() and not ctx.settings.presenter_theme
+    enough = {"pages": 26, "text": 400, "buttons": 80, "contrast": 400, "targets": 150, "image_text": 2}
+    enough |= {"popup_rows": 60, "calendar_cells": 300, "field_menus": 8}
+    assert all(seen[k] >= n for k, n in enough.items()), seen
+    assert not findings, f"{len(findings)} findings:\n" + "\n".join(sorted(set(findings)))
 
 
 def test_req_set_008_presenter_token_pairs_read() -> None:

@@ -312,11 +312,14 @@ class MainWindow(QMainWindow):
         self.training_link = button("", slot=lambda: self.navigate("Training"))  # while a training run goes on
         self.training_link.hide()
         layout.addWidget(self.training_link)
+        self.exit_presenter = button(self.tr("Exit presenter theme"), slot=lambda: self.save_presenter_theme(False))
+        self.exit_presenter.hide()  # shown in the presenter theme, to an Admin (_sync_nav)
+        layout.addWidget(self.exit_presenter)
         self.user_label = QLabel("")
         layout.addWidget(self.user_label)
         switch = button(self.tr("Switch User"), slot=self.switch_user)
         layout.addWidget(switch)
-        for control in (self.bm_combo, new, self.training_link, switch):
+        for control in (self.bm_combo, new, self.training_link, self.exit_presenter, switch):
             size_class(control, "T")  # header controls are operator targets (frame sketch, size class T)
         return h
 
@@ -389,8 +392,9 @@ class MainWindow(QMainWindow):
             cur.on_show()  # the page stays: its role-gated buttons and links follow the new role (#174)
 
     def _sync_nav(self) -> None:
-        """The sidebar for the role and the theme: an entry the role may not open is greyed, its tooltip naming the
-        roles that may, and its badge hidden; the section headings are in the theme's muted colour."""
+        """The sidebar and the header for the role and the theme. An entry the role may not open is greyed, its tooltip
+        naming the roles that may, and its badge hidden. In the presenter theme the Admin pages and 3D Profile leave the
+        sidebar, with a heading left over none, and Exit presenter theme shows to an Admin only (REQ-SET-008, Q49)."""
         role = self.ctx.role
         for title, it in self._items.items():
             allowed = role in self.pages[title].roles
@@ -403,8 +407,17 @@ class MainWindow(QMainWindow):
             it.setData(Qt.ItemDataRole.ForegroundRole, None if allowed else QColor(theme.TEXT_DISABLED))
             if title in self._badges:  # a greyed entry says only which role it needs; the badge, not its row: Qt
                 self._badges[title].setVisible(allowed)  # shows a row again on every layout of the list
-        for heading, _ in self._sections:
+            it.setHidden(self.hidden(title))
+        for heading, titles in self._sections:
             heading.setForeground(QColor(theme.TEXT_MUTED))  # a heading, not a disabled control: 7.4:1 (#239)
+            heading.setHidden(all(self.hidden(t) for t in titles))
+        self.exit_presenter.setVisible(theme.presenter() and role in SettingsPage.roles)  # where it was switched on
+
+    def hidden(self, title: str) -> bool:
+        """Whether page `title` is out of the sidebar, and cannot be opened: in the presenter theme, a page for the
+        Admin alone (Settings) and a page marked not `in_presenter_theme` (3D Profile) (REQ-SET-008)."""
+        page = self.pages[title]
+        return theme.presenter() and (page.roles == ("Admin",) or not page.in_presenter_theme)
 
     def _set_theme(self, presenter: bool) -> None:
         theme.use(presenter)
@@ -413,7 +426,7 @@ class MainWindow(QMainWindow):
     def apply_theme(self) -> None:
         """The theme settings.json holds, at once (REQ-SET-008): the stylesheet, then what the pages drew with the
         tokens, each in the new theme (verdict labels, coloured table rows, the text on images, each page's own
-        `restyle`), and the sidebar."""
+        `restyle`), the sidebar and the header. The page shown goes to Home when the theme hides it."""
         if self.ctx.settings.presenter_theme != theme.presenter():
             styled = theme.verdict_styles()  # read with the tokens they were drawn with
             self._set_theme(self.ctx.settings.presenter_theme)
@@ -427,18 +440,24 @@ class MainWindow(QMainWindow):
             for page in self.pages.values():
                 page.restyle()
         self._sync_nav()
+        cur = self.stack.currentWidget()
+        if isinstance(cur, Page) and self.hidden(cur.title):
+            self.navigate("Home")
 
     def save_presenter_theme(self, on: bool) -> bool:
-        """Switch the presenter theme on or off, as an Admin does on Settings: saved through the service layer (Admin
-        only, audited as settings.change, Q49), then applied at once. A refusal is shown with its code and changes
-        nothing. Returns whether it was saved."""
+        """Switch the presenter theme on or off, as an Admin does on Settings or with the header's Exit presenter
+        theme: saved through the service layer (Admin only, audited as settings.change, Q49), then applied at once. A
+        refusal is shown with its code and changes nothing. Returns whether it was saved."""
         try:
             self.ctx.save_settings({"presenter_theme": on})
         except (AoiError, OSError) as e:  # AOI-USR-001 below the Admin role, AOI-SET-010, a disk error
             show_error(self, self.ctx.report_error(e, "Settings"))
             return False
         self.apply_theme()
-        self.status(self.tr("Presenter theme on.") if on else self.tr("Presenter theme off."))
+        if on:
+            self.status(self.tr("Presenter theme on. An Admin turns it off with Exit presenter theme."))
+        else:
+            self.status(self.tr("Presenter theme off."))
         return True
 
     def _badge(self, it: QListWidgetItem, text: str, tip: str) -> QLabel:
@@ -465,6 +484,9 @@ class MainWindow(QMainWindow):
     # --- navigation -----------------------------------------------------------------
     def navigate(self, title: str) -> bool:
         it = self._items.get(title)
+        if it and self.hidden(title):
+            self.status(self.tr("{page} is hidden in the presenter theme").format(page=page_text(title)))
+            return False
         if it and it.flags() & Qt.ItemFlag.ItemIsEnabled:
             self.nav.setCurrentItem(it)
             return True

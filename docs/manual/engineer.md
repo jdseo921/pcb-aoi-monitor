@@ -55,9 +55,12 @@ start too: the app starts with the Admin added first while the workspace has no 
 
 **Presenter theme (demos).** For a demo, an Admin ticks Presenter theme on the Settings page, in its own group. It
 applies at once, with no restart, and stays on after one: a light background, text of 18 pt or more, the verdict at 48
-pt in the same colours and shapes, and black text on the green, red and blue fills. Untick it to leave it. Each switch,
-on or off, is saved in `settings.json` as `presenter_theme` and written to the audit log as `settings.change`, like a
-save on Settings.
+pt in the same colours and shapes, and black text on the green, red and blue fills. Settings, the Admin page, and 3D
+Profile leave the sidebar for every role (the SYSTEM heading with Settings), so a demo never shows them, and the app
+opens Home in their place; every other page stays where it was. Only an Admin leaves the theme, with Exit presenter
+theme in the header, which the header shows to an Admin alone: an Operator or Engineer at the station switches the user
+to an Admin first (Switch User), then presses it. Each switch, on or off, is saved in `settings.json` as
+`presenter_theme` and written to the audit log as `settings.change`, like a save on Settings.
 
 (to be written: the workspace folder, device, limits, demo workspace)
 
