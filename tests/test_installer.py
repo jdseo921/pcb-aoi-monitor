@@ -176,7 +176,11 @@ def test_req_set_012_ci_compiles_the_installer_with_the_app_s_version_at_a_pinne
     assert re.fullmatch(r"\d+\.\d+\.\d+", pin) and pin == tpn.INNO_SETUP_VERSION
     inno = by_id("inno")["run"]
     assert "choco install innosetup --version $env:INNO_SETUP_VERSION " in inno
-    assert "$found -ne $env:INNO_SETUP_VERSION" in inno  # ISCC.exe's own file version
+    assert "$found -ne $env:INNO_SETUP_VERSION" in inno
+    # ISCC.exe has no file version (the runner read 0.0.0), so the version is the one Inno Setup's own setup records in
+    # its uninstall entry, else Compil32.exe's file version
+    assert "Uninstall\\Inno Setup 6_is1" in inno and ").DisplayVersion" in inno and '"Compil32.exe"' in inno
+    assert "$iscc).VersionInfo" not in inno
     compiled = by_id("installer")["run"]
     assert '$version = python -c "from aoi.config import APP_VERSION; print(APP_VERSION)"' in compiled
     assert '& $env:ISCC "/DAppVersion=$version" installer\\aoi.iss' in compiled
