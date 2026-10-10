@@ -39,10 +39,12 @@ first, then the steps above.
 
 ## Windows build without Python (internal test build)
 
-GitHub Actions builds the app for Windows on every push to main
-([.github/workflows/build.yml](.github/workflows/build.yml), ADR 0007): open the latest **Windows build** run under
-**Actions**, download its `AOI-PoC-Inspector-…-unsigned` artifact, unzip it and start
-`AOI-PoC-Inspector\AOI-PoC-Inspector.exe`. **Run workflow** on that page builds any branch. The build is not signed,
+GitHub Actions builds the app for Windows on every push to main and every pushed `v*` tag, whose artifact is named
+for the tag ([.github/workflows/build.yml](.github/workflows/build.yml), ADR 0007): open the latest **Windows build**
+run under **Actions**, download its `AOI-PoC-Inspector-…-unsigned` artifact, unzip it and start
+`AOI-PoC-Inspector\AOI-PoC-Inspector.exe`. **Run workflow** on that page builds any branch. Before keeping a build,
+CI starts it, checks that it opens no console window, and runs `AOI-PoC-Inspector.exe --self-test <new folder>`,
+which inspects one synthetic board it ships and exits 0 only with the expected verdict. The build is not signed,
 so Windows SmartScreen warns about an unknown publisher (**More info → Run anyway**), and it is **not a release**: no
 customer or demo gets it (Engineering standard, "Signing"; Customers & Launch, "Demos"). `BUILD-INFO.txt` names its
 commit, `THIRD_PARTY_NOTICES.txt` holds the third-party licenses and `SHA256SUMS.txt` the hash of every file. To
@@ -54,6 +56,10 @@ python -m pip install --require-hashes -r requirements-build.lock    # the runti
 pyinstaller --noconfirm --clean installer\aoi.spec                 # -> dist\AOI-PoC-Inspector\
 python tools\smoke_test_build.py dist\AOI-PoC-Inspector\AOI-PoC-Inspector.exe
 ```
+
+From source, the same self-test takes the boards as a second folder: `python tools\make_selftest_data.py boards`,
+then `python main.py --self-test <new folder> boards`. The GPU option (PyTorch's CUDA build, not built by CI until
+the NVIDIA licenses are decided) is described at the end of ADR 0007.
 
 ## Try it in 5 minutes with synthetic boards
 

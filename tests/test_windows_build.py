@@ -10,6 +10,7 @@ app judges as the code does, never how well it finds defects.
 
 from __future__ import annotations
 
+import importlib.metadata as md
 import json
 import os
 import shutil
@@ -20,13 +21,16 @@ from typing import Any
 
 import cv2
 import pytest
+import yaml
 
 from aoi import selftest
+from aoi.config import APP_VERSION
 from tools import make_selftest_data
-from tools.smoke_test_build import log_lines
+from tools.smoke_test_build import CONSOLE, GUI, log_lines, subsystem
 
 ROOT = Path(__file__).resolve().parents[1]
 EXPECTED = json.loads((ROOT / "tests" / "regression" / "expected.json").read_text(encoding="utf-8"))
+WORKFLOW = yaml.safe_load((ROOT / ".github" / "workflows" / "build.yml").read_text(encoding="utf-8"))
 
 
 @pytest.fixture(scope="module")
@@ -101,3 +105,47 @@ def test_req_set_012_the_self_test_opens_only_a_new_or_empty_folder(boards: Path
     assert selftest.main([]) == 2
     assert selftest.main([str(tmp_path / "new")]) == 2  # from source the boards are named; a built app has its own
     assert not (tmp_path / "new").exists()
+
+
+def test_req_set_012_the_windows_build_runs_on_v_tags_too() -> None:
+    """A pushed v* tag builds, as main and the pull requests that change the build or its self-test still do."""
+    on = WORKFLOW[True]  # YAML 1.1 reads the key "on" as true
+    assert on["push"] == {"branches": ["main"], "tags": ["v*"]} and "workflow_dispatch" in on
+    paths = {"installer/**", "tools/smoke_test_build.py", "tools/make_selftest_data.py", "aoi/selftest.py"}
+    assert paths <= set(on["pull_request"]["paths"])
+    assert WORKFLOW["jobs"]["windows"]["runs-on"] == "windows-latest"
+
+
+def info_step(tmp_path: Path, tag: str) -> subprocess.CompletedProcess[str]:
+    """The workflow's step that writes BUILD-INFO.txt and names the artifact, run on a stand-in build folder."""
+    (step,) = [s for s in WORKFLOW["jobs"]["windows"]["steps"] if s.get("id") == "info"]
+    (tmp_path / "dist" / "AOI-PoC-Inspector").mkdir(parents=True, exist_ok=True)
+    (tmp_path / "dist" / "AOI-PoC-Inspector" / "AOI-PoC-Inspector.exe").write_bytes(b"MZ")
+    env = {**os.environ, "PYTHONPATH": str(ROOT), "GITHUB_OUTPUT": str(tmp_path / "output"), "TAG": tag}
+    env |= {"COMMIT": "a" * 40, "HEAD_SHA": "a" * 40, "REF": f"refs/tags/{tag}", "RUN_URL": "https://example.invalid/1"}
+    return subprocess.run([sys.executable, "-c", step["run"]], cwd=tmp_path, env=env, capture_output=True, text=True)
+
+
+def test_req_set_012_a_tag_s_build_is_named_for_the_tag(tmp_path: Path) -> None:
+    """The artifact and BUILD-INFO.txt carry the tag, which must name the version the app says it is."""
+    tag = f"v{APP_VERSION}"
+    assert info_step(tmp_path, tag).returncode == 0
+    output = (tmp_path / "output").read_text(encoding="utf-8")
+    assert output == f"name=AOI-PoC-Inspector-{tag}-gaaaaaaa-windows-x64-unsigned\n"
+    info = (tmp_path / "dist" / "AOI-PoC-Inspector" / "BUILD-INFO.txt").read_text(encoding="utf-8")
+    assert info.startswith(f"AOI PoC Inspector {APP_VERSION}, internal test build {tag} gaaaaaaa\n")
+    assert "Not a release." in info
+    assert info_step(tmp_path / "main", "").returncode == 0  # a push to main, as before: named for the version
+    untagged = (tmp_path / "main" / "output").read_text(encoding="utf-8")
+    assert untagged == f"name=AOI-PoC-Inspector-{APP_VERSION}-gaaaaaaa-windows-x64-unsigned\n"
+    refused = info_step(tmp_path, "v99.0.0")
+    assert refused.returncode == 1
+    assert f"The tag v99.0.0 does not name version {APP_VERSION}" in refused.stderr
+
+
+def test_req_set_012_the_smoke_test_tells_a_windowed_exe_from_a_console_one() -> None:
+    """Windows opens a console window only for an .exe of the console subsystem; pip's launchers are one of each."""
+    pip = md.distribution("pip")
+    assert subsystem(Path(str(pip.locate_file("pip/_vendor/distlib/w64.exe")))) == GUI
+    assert subsystem(Path(str(pip.locate_file("pip/_vendor/distlib/t64.exe")))) == CONSOLE
+    assert subsystem(ROOT / "main.py") is None  # not a Windows executable
