@@ -1,7 +1,8 @@
 """REQ-INSP-011 (stage S55): tools/soak.py, the 8-hour soak test the reference PC runs, judges a run against the 10 %
-limits, and a short run of it inspects and saves every board through the app's own window.
+limits, and a short run of it inspects and saves every board through the app's own window; REQ-INSP-008: its --check,
+the count after each of the 20 forced power-offs, finds a board lost and a file cut short.
 
-The 8-hour run itself is a station check on the reference PC: a run of a minute or two on a shared CI runner
+The 8-hour run itself is a station check (docs/tests/station-checks.md): a run of a minute or two on a shared CI runner
 measures its neighbours' load as much as the app, so the short run here asserts everything but the 10 % time limit,
 which the judgement tests below prove instead, and prints the figure it measured."""
 
@@ -9,6 +10,7 @@ from __future__ import annotations
 
 import csv
 import json
+import shutil
 import sqlite3
 import subprocess
 import sys
@@ -18,7 +20,7 @@ from pathlib import Path
 
 import pytest
 
-from tools.soak import Board, judge
+from tools.soak import Board, check, judge
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -87,3 +89,26 @@ def test_req_insp_011_soak_inspects_and_saves_every_board_through_the_window(soa
         stored = db.execute("SELECT id, result, model_version FROM inspections ORDER BY id").fetchall()
     assert [(str(i), v) for i, v, _ in stored] == [(r["record"], r["verdict"]) for r in rows]
     assert all(version for _, _, version in stored), "a board was judged without the AI model"
+
+
+def test_req_insp_008_check_finds_a_lost_board_and_a_file_cut_short(soaked: tuple[Path, str], tmp_path: Path) -> None:
+    """--check passes the run as it ended, and fails a copy of it with one record gone (its row, checks and defects)
+    and another's overlay cut to half, naming the board and the file; the database stays whole."""
+    out = tmp_path / "run"
+    shutil.copytree(soaked[0], out)
+    ws = out / "workspace"
+    saved, records, problems = check(out, ws)
+    assert (saved, problems) == (records, []) and saved > 200
+    with closing(sqlite3.connect(ws / "aoi.sqlite")) as db, db:
+        for table in ("checks", "defects"):
+            db.execute(f"DELETE FROM {table} WHERE inspection_id = 5")
+        db.execute("DELETE FROM inspections WHERE id = 5")
+        (overlay,) = db.execute("SELECT overlay_path FROM inspections WHERE id = 7").fetchone()
+    cut = ws / overlay
+    cut.write_bytes(cut.read_bytes()[: cut.stat().st_size // 2])
+    with open(out / "soak.csv", newline="", encoding="utf-8") as f:
+        fifth = next(line for line in csv.DictReader(f) if line["record"] == "5")
+    saved, records, problems = check(out, ws)
+    assert (records, len(problems)) == (saved - 1, 2), problems
+    assert problems[0] == "lost: board {board}, {file}, {verdict}, record 5".format(**fifth)
+    assert problems[1].startswith("record 7, overlay_path: AOI-INSP-006") and cut.name in problems[1]

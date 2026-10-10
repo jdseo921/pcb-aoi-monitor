@@ -3,6 +3,7 @@ time per board slowing by at most 10 % and its memory growing by at most 10 %.
 
     python tools/soak.py --out <new folder> [--hours 8] [--pace 3] [--warm-up 10] [--device auto]
         [--workspace <folder> --board-model <name> --boards <folder>] [--epochs <n>] [--image-size <px>]
+    python tools/soak.py --check --out <a run's folder> --workspace <its workspace>
 
 The app opens as main.py opens it, its window shown, on the workspace; the Operator is signed in, Inspection shows the
 board model and the boards are queued, as Load Images… queues them, over and over; Next Board (F8) is pressed every
@@ -27,6 +28,11 @@ last / median of the first - 1. PASS needs the whole run done, every board inspe
 least 10 boards in each tenth, a slowdown of at most 10 % and a growth of at most 10 %; anything else is FAIL, with
 the reasons. A crash prints nothing: the CSV stops. Exit codes: 0 PASS, 1 FAIL, 2 a usage error.
 
+--check is the count after a forced power-off (REQ-INSP-008, docs/tests/station-checks.md): it opens the workspace as
+the next start opens it, which sweeps an interrupted write's temporary file away, and passes when the database is
+whole, every board soak.csv names as saved is there with its verdict, and every record there is whole, as
+tests/test_power_cut.py checks one: its checks and result stored, its defects counted, and its overlay and maps there,
+each decoding. A record saved after the last line reached the disk is no loss: the board was in hand at the cut.
 """
 
 from __future__ import annotations
@@ -52,7 +58,7 @@ from PySide6.QtCore import QTimer  # noqa: E402
 from PySide6.QtWidgets import QApplication  # noqa: E402
 
 from aoi.config import Settings  # noqa: E402
-from aoi.core.imaging import list_images  # noqa: E402
+from aoi.core.imaging import list_images, load_image  # noqa: E402
 from aoi.core.services import AppContext  # noqa: E402
 from aoi.data import credentials  # noqa: E402
 from aoi.ui.main_window import build_window  # noqa: E402
@@ -229,6 +235,36 @@ class Run:
             self.app.quit()
 
 
+def check(out: Path, workspace: Path) -> tuple[int, int, list[str]]:
+    """The boards `out`/soak.csv names as saved, the records `workspace` holds, and what --check finds lost or not
+    whole: nothing, for a pass."""
+    with open(out / "soak.csv", newline="", encoding="utf-8") as f:
+        saved = [line for line in csv.DictReader(f) if line["record"]]
+    problems: list[str] = []
+    ctx = AppContext(Settings(workspace=str(workspace), device="cpu"))
+    try:
+        if (state := ctx.db.query("PRAGMA integrity_check")) != [{"integrity_check": "ok"}]:
+            problems.append(f"the database is damaged: {state[:5]}")
+        rows = {r["id"]: r for r in ctx.inspections(include_archived=True)}
+        for line in saved:
+            r = rows.get(int(line["record"]))
+            if r is None or r["result"] != line["verdict"]:
+                problems.append("lost: board {board}, {file}, {verdict}, record {record}".format(**line))
+        for r in rows.values():
+            if not ctx.checks_for(r["id"]) or ctx.inspection_result(r["id"]) is None:
+                problems.append(f"record {r['id']}: its checks or its result are missing")
+            if r["defect_count"] != len(ctx.defects_for(r["id"])):
+                problems.append(f"record {r['id']}: {r['defect_count']} defect(s) counted, others stored")
+            for key in ("overlay_path", "diff_map_path", "ai_map_path"):
+                try:
+                    load_image(r[key])
+                except Exception as e:  # missing, cut short or damaged: each is a loss
+                    problems.append(f"record {r['id']}, {key}: {e}")  # the error names the file
+    finally:
+        ctx.close()
+    return len(saved), len(rows), problems
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--out", type=Path, required=True, help="a new folder for soak.csv, soak.json and any set-up")
@@ -241,7 +277,15 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--boards", type=Path, help="with --workspace: the folder of board images to inspect")
     ap.add_argument("--epochs", type=int, help="the synthetic set-up's training epochs (the app's setting if omitted)")
     ap.add_argument("--image-size", type=int, help="the synthetic set-up's network input size (the app's if omitted)")
+    ap.add_argument("--check", action="store_true", help="after a power cut: check a run's soak.csv and --workspace")
     a = ap.parse_args(argv)
+    if a.check:
+        if a.workspace is None:
+            ap.error("--check needs the run's --workspace")
+        saved, records, problems = check(a.out, a.workspace)
+        print(f"{saved} board(s) saved in soak.csv; {records} record(s) in the workspace; {len(problems)} problem(s)")
+        print("\n".join(problems[:50]) + ("\n" if problems else "") + ("FAIL" if problems else "PASS"))
+        return 1 if problems else 0
     own = (a.workspace, a.board_model, a.boards)
     if any(own) and not all(own):
         ap.error("--workspace, --board-model and --boards go together")
