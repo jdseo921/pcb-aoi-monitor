@@ -29,6 +29,8 @@ from aoi.times import to_local
 from aoi.ui import theme
 from aoi.ui.pages.base import cell_item
 from aoi.ui.pages.compare import JUDGED, ComparePage, check_text
+from aoi.ui.pages.inspection import InspectionPage
+from tests.budgets import TRIES, judged
 from tests.conftest import wrapped
 from tests.regression import make_regression_set as rs
 from tests.test_alarms_and_errors import _log_rows
@@ -122,7 +124,9 @@ def test_req_insp_009_one_click_opens_within_300_ms(
 ) -> None:
     """A 5 MP board inspected on Inspection; "Compare with Golden board" opens its record: the verdict, the table with
     failing rows highlighted and the note are on screen when the click returns, within 300 ms, before any picture is
-    read; the pictures and stored maps follow from the pool thread. Without a record it opens the file, as before."""
+    read; the pictures and stored maps follow from the pool thread. The click is timed five times, each in a window
+    of its own, so that every try opens Compare for the first time as the operator's click does, on the record just
+    saved, and judged as tests/budgets.py judges a budget. Without a record it opens the file, as before."""
     ctx = trained_ctx
     win = _window(qtbot, ctx, "Operator")
     insp, compare = win.pages["Inspection"], win.pages["Compare"]
@@ -136,17 +140,28 @@ def test_req_insp_009_one_click_opens_within_300_ms(
     assert insp.last_id == row["id"] and win.last_inspected is not None and win.last_inspected[2] == row["id"]
     qtbot.waitUntil(ctx.jobs.idle, timeout=10000)
     _refuse_inspection(monkeypatch)
-    t0 = perf_counter()
-    insp.open_compare()  # the one click
-    took = perf_counter() - t0
     checks = ctx.checks_for(row["id"])
-    assert win.stack.currentWidget() is compare and compare.verdict.text() == theme.verdict_label(row["result"])
-    rows = _table(compare)
-    assert rows[:-1] == _expected(compare, checks) and took < 0.3, took
-    assert any(r[6] for r in rows[:-1]), "an NG board has highlighted rows"
-    assert compare.note.isVisible() and "recipe revision" in compare.note.text()
-    assert compare.test_view._pix is None, "the 5 MP picture and maps are read on the pool thread, after the click"
-    qtbot.waitUntil(lambda: compare.test_view._pix is not None and compare.ref_view._pix is not None, timeout=20000)
+    clicks: list[float] = []
+    for n in range(TRIES):
+        if n:  # a new window, where Compare was never shown, on Inspection as its own inspection of the board left it
+            qtbot.waitUntil(ctx.jobs.idle, timeout=10000)
+            win = _window(qtbot, ctx, "Operator")
+            insp, compare = win.pages["Inspection"], win.pages["Compare"]
+            assert isinstance(insp, InspectionPage) and isinstance(compare, ComparePage)
+            assert win.navigate("Inspection")
+            insp.last_id, insp.last_path = row["id"], board_5mp
+        t0 = perf_counter()
+        insp.open_compare()  # the one click
+        clicks.append(perf_counter() - t0)
+        assert win.stack.currentWidget() is compare and compare.verdict.text() == theme.verdict_label(row["result"])
+        rows = _table(compare)
+        assert rows[:-1] == _expected(compare, checks)
+        assert any(r[6] for r in rows[:-1]), "an NG board has highlighted rows"
+        assert compare.note.isVisible() and "recipe revision" in compare.note.text()
+        assert compare.test_view._pix is None, "the 5 MP picture and maps are read on the pool thread, after the click"
+        qtbot.waitUntil(lambda c=compare: c.test_view._pix is not None and c.ref_view._pix is not None, timeout=20000)
+    print("\nREQ-INSP-009 one click, ms:", [round(s * 1000) for s in clicks])
+    assert judged(clicks) < 0.3, clicks
     assert compare.res is not None and compare.res.anomaly_map is not None and compare.res.compare is not None
     assert compare.res.compare.diff_map is not None, "the stored maps serve the heat views"
     compare.mode.setCurrentIndex(2)  # the AI heatmap, drawn from the stored map

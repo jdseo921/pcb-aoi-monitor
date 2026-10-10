@@ -17,6 +17,7 @@ from aoi.core import demo
 from aoi.core.services import AppContext
 from aoi.data import credentials
 from aoi.errors import AoiError
+from tests.budgets import LONG_TRIES, judged
 
 
 def hashes(folder: Path) -> dict[str, str]:
@@ -64,15 +65,23 @@ def test_req_set_007_bundle_holds_the_ten_boards_with_one_failing(bundle: Path) 
 
 
 def test_req_set_007_load_and_reset_under_10s(bundle: Path, tmp_path: Path) -> None:
+    """Load Demo and Reset Demo each take under 10 s, three of each judged by tests/budgets.py: three loads beside
+    three stations' production workspaces, then three resets of the last, each after its ten boards were played."""
     keys = credentials.MemoryCredentials()  # a station's key store: the demo store's key goes there at each load
-    folder = demo.demo_folder(production(tmp_path))
-    started = time.monotonic()
-    demo.load(bundle, folder, {"language": "en"}, keys)
-    loaded_in = time.monotonic() - started
-    assert run_boards(bundle, folder, keys) == ["OK"] * 3 + ["NG"] + ["OK"] * 6  # the same verdicts as at the build
-    assert len(list((folder / "results").rglob("*_NG.png"))) == 1
-    seconds = demo.reset(bundle, folder, keys)
-    assert loaded_in < 10 and seconds < 10, (loaded_in, seconds)
+    loads: list[float] = []
+    for n in range(LONG_TRIES):
+        (tmp_path / f"station{n}").mkdir()
+        folder = demo.demo_folder(production(tmp_path / f"station{n}"))
+        started = time.monotonic()
+        demo.load(bundle, folder, {"language": "en"}, keys)
+        loads.append(time.monotonic() - started)
+    resets: list[float] = []
+    for _ in range(LONG_TRIES):  # each reset puts back a demo that was played, as a presenter's reset does
+        assert run_boards(bundle, folder, keys) == ["OK"] * 3 + ["NG"] + ["OK"] * 6  # the verdicts at the build
+        assert len(list((folder / "results").rglob("*_NG.png"))) == 1
+        resets.append(demo.reset(bundle, folder, keys))
+    print("\nREQ-SET-007 Load Demo, s:", [round(s, 2) for s in loads], "Reset Demo, s:", [round(s, 2) for s in resets])
+    assert judged(loads) < 10 and judged(resets) < 10, (loads, resets)
     after = hashes(folder)
     assert {k: v for k, v in after.items() if k not in demo.KEEP} == hashes(bundle / demo.WORKSPACE)
     assert json.loads((folder / "settings.json").read_text(encoding="utf-8"))["workspace"] == str(folder)
