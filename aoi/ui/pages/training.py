@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from PySide6.QtCore import QEvent, QItemSelectionModel, QObject, Qt
-from PySide6.QtGui import QAction, QKeyEvent, QKeySequence, QResizeEvent
+from PySide6.QtGui import QAction, QKeyEvent, QKeySequence, QResizeEvent, QShowEvent
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QAbstractSpinBox,
@@ -235,6 +235,7 @@ class TrainingPage(Page):
         self.btn_remove = button(self.tr("Remove"), "danger", self._remove)  # red, last in its row, never the default
         act.addWidget(self.btn_remove)
         ll.addLayout(act)
+        self.samples_layout, self.rows = ll, (up, marks, act)  # for _fit_rows
         split.addWidget(left)
 
         # Middle: the label editor, the selected image with its defect boxes (REQ-TRN-003) ----------------------
@@ -326,6 +327,7 @@ class TrainingPage(Page):
         # the table as wide as its reference line needs at 1920 px, the editor next; with S31's import sheet open the
         # table takes 742 px and the editor 407 px, its buttons whole, the training panel keeping its 457 px (outer)
         split.setSizes([650, 500])
+        self.samples_split = split
         kl = QVBoxLayout(self.keys)
         kl.setContentsMargins(0, 0, 0, 0)
         kl.addWidget(split)
@@ -1023,6 +1025,30 @@ class TrainingPage(Page):
 
     def restyle(self) -> None:
         self._cap_version_list()  # the presenter theme's font is larger
+
+    def showEvent(self, event: QShowEvent) -> None:
+        super().showEvent(event)
+        self._fit_rows()
+
+    def _fit_rows(self) -> None:
+        """The Samples pane as wide as its widest button row needs in the theme's font, the label editor giving the
+        room (REQ-SET-008): the splitter's weights, set for the 14 pt font, gave the pane 626 px of the tab's 1108 at
+        1920 px in the presenter theme's 18 pt font, where the rows need 714, and cut every label to "dd OK Images."
+        until the import sheet opened. The rows are read button by button, since a row caches its own hint until the
+        page's next show, and the theme is switched on Settings. Asked of the splitter at each show rather than set as
+        the pane's least width: a least width that follows the font put the 14 pt theme over the 1600 px the pages are
+        laid out for, in DejaVu Sans, where the rows need 639 px; there the editor keeps its own least width and the
+        pane gets what the window has, as before."""
+        sizes = self.samples_split.sizes()
+        margins = self.samples_layout.contentsMargins()
+        widest = 0
+        for row in self.rows:
+            items = [row.itemAt(i) for i in range(row.count())]
+            width = sum(item.sizeHint().width() for item in items if item is not None)
+            widest = max(widest, width + row.spacing() * (len(items) - 1))
+        need = widest + margins.left() + margins.right()
+        if 0 < sizes[0] < need:  # 0: not laid out yet, or the pane dragged shut
+            self.samples_split.setSizes([need, sum(sizes) - need])
 
     def _show_version(self) -> None:
         """The line under the dataset version: its locked validation set and its training set, as the sketch counts
