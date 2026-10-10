@@ -28,7 +28,7 @@ from aoi.core.services import AppContext
 from aoi.times import to_local
 from aoi.ui import theme
 from aoi.ui.pages.base import cell_item
-from aoi.ui.pages.compare import JUDGED, ComparePage
+from aoi.ui.pages.compare import JUDGED, ComparePage, check_text
 from tests.conftest import wrapped
 from tests.regression import make_regression_set as rs
 from tests.test_alarms_and_errors import _log_rows
@@ -77,7 +77,7 @@ def _expected(page: ComparePage, checks: list[dict[str, object]]) -> list[tuple[
     for c in checks:
         fields = {k: c[k] for k in ("value", "threshold", "rule", "source", "explain", "region")}
         check = Check(name=str(c["metric"]), verdict=str(c["result"]), **fields)  # type: ignore[arg-type]
-        name, source, rule = page._check_text(check)
+        name, source, rule = check_text(check)
         color = theme.VERDICT_COLORS[check.verdict].lower() if check.verdict in FAILING else None
         rows.append((name, source, round(check.value, 4), round(check.threshold, 4), rule, check.verdict, color))
     return rows

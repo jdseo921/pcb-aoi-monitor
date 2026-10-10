@@ -217,7 +217,7 @@ UNCHECKED = {
     "boxes", "box_history", "unsure_samples", "label_check_status", "labels_ready_to_freeze", "calibration_sets",
     "agreement_checks", "propose_calibration_set", "blind_labelled", "datasets", "dataset_items", "verify_dataset",
     "validation_split", "stores", "store_of", "store_contents", "training_version", "freeze_gate",
-    "dataset_counts", "previous_model", "model_card", "card_files", "card_text", "test_runs", "test_run",
+    "dataset_counts", "previous_model", "model_card", "card_files", "card_text", "last_board", "test_runs", "test_run",
     "report_images", "model_card_text", "validation_report_data",
 }  # fmt: skip
 CALLS = {**{name: call for name, (_, call) in WRITES.items()}, **CHECKED_READS}

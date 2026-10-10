@@ -65,6 +65,7 @@ FIELD_H = 40  # F
 BANNER_H = 90  # the verdict banner and a metric tile
 WHY_MIN_H = 60  # Compare's "why" box gives way to two lines before the decision table's rows are squeezed
 DECISION_ROWS = 7  # and before the decision table shows fewer rows than this, the sketch's seven; more scroll
+TRY_ROWS = 5  # the rows the Recipe Editor's Try checks table shows before it scrolls (recipe-editor sketch)
 NAV_W, HEADER_H, FIELD_W, CARD_W = 250, 64, 240, 720
 IMAGE_MIN_W, IMAGE_MIN_H, PROGRESS_W = 320, 240, 360
 MARK_D = 12  # a point picked on an image (Calibrate Scale…): a ring this many px across at every zoom

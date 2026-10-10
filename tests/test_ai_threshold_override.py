@@ -21,7 +21,7 @@ from aoi.core.inspector import InspectionResult, ai_check
 from aoi.core.services import AppContext
 from aoi.ui import theme
 from aoi.ui.main_window import MainWindow
-from aoi.ui.pages.compare import ComparePage
+from aoi.ui.pages.compare import ComparePage, check_text
 from aoi.ui.pages.inspection import InspectionPage
 from aoi.ui.pages.model_test import ModelTestPage
 from aoi.ui.pages.recipe_editor import RecipeEditorPage
@@ -280,7 +280,7 @@ def test_req_trn_015_compare_names_the_value_that_judges_its_board(
     compare.ai_thr.tick.setChecked(False)
     res = ctx.inspection_result(rec["id"])
     assert res is not None
-    ai_check = compare._check_text(next(c for c in res.checks if c.source == "AI"))[0]
+    ai_check = check_text(next(c for c in res.checks if c.source == "AI"))[0]
     compare.re_evaluate()
     qtbot.waitUntil(compare.would_be.isVisible, timeout=10000)
     assert [r[3] for r in _table(compare) if r[0] == ai_check] == [round(cal, 4)], "Re-evaluate applies it"

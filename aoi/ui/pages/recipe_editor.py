@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 from PySide6.QtCore import QPointF, QRectF, Qt
+from PySide6.QtGui import QKeySequence
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -35,11 +36,12 @@ from ...errors import AoiError
 from ...times import to_local
 from .. import theme
 from ..errors import phrase_text
+from ..widgets.box_editor import RoiEditor
 from ..widgets.busy import BusyOverlay
 from ..widgets.empty_state import EmptyState
-from ..widgets.image_view import ImageView
 from ..widgets.scale import CalibrationSheet, DefectSizeField
-from .base import QT_TRANSLATE_NOOP, Page, button, fill_table, make_table, scrolled
+from .base import QT_TRANSLATE_NOOP, Page, action_button, button, fill_table, make_table, scrolled
+from .compare import check_rows
 
 if TYPE_CHECKING:
     from ..main_window import MainWindow
@@ -77,6 +79,8 @@ class RecipeEditorPage(Page):
         self.golden_seen: tuple[str | None, int, int] | None = None  # the Golden board file last read (#176)
         self.golden_error: AoiError | None = None  # and why it could not be
         self.px_per_mm: float | None = None  # the board model's scale, which load() reads (REQ-RCP-006)
+        self._undo: list[list[ROI]] = []  # the ROIs before each edit since load(), the last edit last (Ctrl+Z)
+        self._redo: list[list[ROI]] = []  # and the edits undone, which Ctrl+Y does again
 
         split = QSplitter(Qt.Orientation.Horizontal)
         left = QWidget()
@@ -85,6 +89,13 @@ class RecipeEditorPage(Page):
         tools = QHBoxLayout()
         self.draw_btn = button(self.tr("Draw ROI"), slot=self.toggle_draw)  # Save Recipe is the page's one blue primary
         self.draw_btn.setCheckable(True)
+        self.action(self.tr("Draw ROI"), "D", self.draw_btn.click)  # off while Calibrate Scale… picks points
+        leave = self.action(self.tr("Leave Draw ROI"), "Esc", self.draw_btn.click)  # on only in Draw ROI mode: the
+        leave.setEnabled(False)  # sheet's Esc, the only other one on the page, is never on with it
+        self.draw_btn.toggled.connect(leave.setEnabled)
+        self.action(self.tr("Delete ROI"), QKeySequence.StandardKey.Delete, self.delete_roi)  # undoable: no question
+        self.act_undo = self.action(self.tr("Undo"), "Ctrl+Z", lambda: self._swap(self._undo, self._redo))
+        self.act_redo = self.action(self.tr("Redo"), "Ctrl+Y", lambda: self._swap(self._redo, self._undo))
         tools.addWidget(self.draw_btn)
         tools.addWidget(QLabel(self.tr("Type:")))
         self.roi_type = QComboBox()
@@ -117,9 +128,12 @@ class RecipeEditorPage(Page):
         self.sheet.submitted.connect(self.set_scale)
         self.sheet.cancelled.connect(self._close_sheet)
         ll.addWidget(self.sheet)
-        self.view = ImageView(placeholder="")
+        self.view = RoiEditor(placeholder="")
+        self.view.type_text = self._type_text
         self.view_empty = EmptyState(self.view)
         self.view.roiDrawn.connect(self.add_roi)
+        self.view.picked.connect(self._picked)  # an ROI pressed on the Golden board: its row, and the form
+        self.view.edited.connect(self._moved)
         self.view.pointPicked.connect(self._pick)
         self.busy = BusyOverlay(self.view, self.tr("Trying the recipe…"))
         ll.addWidget(self.view, 1)
@@ -223,8 +237,13 @@ class RecipeEditorPage(Page):
         self.test_verdict = QLabel("")
         self.test_verdict.setMinimumHeight(theme.FIELD_H)
         rv.addWidget(self.test_verdict)
+        checks = [self.tr("Check"), self.tr("Source"), self.tr("Value"), self.tr("Threshold"), self.tr("Rule")]
+        self.try_checks = make_table([*checks, self.tr("Result")], sortable=False)  # the Try's checks (REQ-RCP-003)
+        self.try_checks.hide()
+        rv.addWidget(self.try_checks)
         b = QHBoxLayout()
-        b.addWidget(button(self.tr("Try Recipe…"), slot=self.test_run))
+        self.act_try = self.action(self.tr("Try Recipe…"), "Ctrl+T", self.test_run)
+        b.addWidget(action_button(self.act_try, show_key=False))
         b.addWidget(button(self.tr("Save Recipe"), "primary", self.save))
         rv.addLayout(b)
         split.addWidget(right)
@@ -272,6 +291,7 @@ class RecipeEditorPage(Page):
     # --- load / show ------------------------------------------------------------
     def load(self) -> None:
         self.roi_table.clearSelection()  # row i of the recipe before is not ROI i of this one: the form empties (#173)
+        self._forget()
         if not self.board_model:
             self.calibrate_btn.setEnabled(False)  # no Golden board to click on, nor to take the focus back
             if not self.sheet.isHidden():  # no Golden board to pick points on: Draw ROI and panning come back
@@ -305,12 +325,19 @@ class RecipeEditorPage(Page):
             self.history,
             [[h["revision"], h["user"], to_local(h["created_at"])] for h in self.ctx.recipe_history(self.board_model)],
         )
-        self._refresh_rois()
         self._loaded = self._collect().to_dict()  # as the form shows it, rounded to its spin boxes
+        self.view.saved = self._saved_rois()
+        self._refresh_rois()
+
+    def _saved_rois(self) -> list[ROI]:
+        """The ROIs of the revision loaded, as shown: any other ROI on the Golden board is a change not saved yet."""
+        return Recipe.from_dict(copy.deepcopy(self._loaded)).rois
 
     def _read_golden_board(self) -> None:
-        """Read the board model's Golden board into the view. A file gone or damaged must not stop the window opening
-        on this board model (#176): its error is kept for the pane, logged and alarmed (#195)."""
+        """Read the board model's Golden board into the view, in place of a Try's board and its defects. A file gone
+        or damaged must not stop the window opening on this board model (#176): its error is kept for the pane, logged
+        and alarmed (#195)."""
+        self.view.extra = []
         self.golden_seen, self.golden_error = self.golden_board_stamp(), None
         try:
             self.ref = self.ctx.load_image(self.golden_seen[0]) if self.golden_seen[0] else None
@@ -371,6 +398,7 @@ class RecipeEditorPage(Page):
         self.view.set_draw_mode(self.draw_btn.isChecked())
 
     def add_roi(self, rect: QRectF) -> None:
+        self._remember()
         rois = self.edited_recipe.rois
         n = len(rois) + 1
         rois.append(
@@ -403,13 +431,23 @@ class RecipeEditorPage(Page):
         ):
             w.setValue(-1 if v is None else v)
         self.r_enabled.setChecked(x.enabled)
-        if i < 0:
-            return
-        self.view.clear_overlays()
-        for j, r in enumerate(rois):
-            color = theme.ROI_SELECTED if j == i else theme.ROI_COLOR
-            self.view.add_box(r.x, r.y, r.w, r.h, color, f"{r.name} [{self._type_text(r.type)}]")
-        self.view.add_measure(self.sheet.points)  # the points picked stay in view (S29 review)
+        if self.recipe is not None:
+            self._draw_rois()  # the points picked stay in view (S29 review)
+
+    def _picked(self, i: int) -> None:
+        if i != self._sel_index():
+            self.roi_table.selectRow(i) if i >= 0 else self.roi_table.clearSelection()
+
+    def _moved(self) -> None:
+        """ROIs moved or resized on the Golden board (REQ-RCP-001): each takes its new box in px, and drops its box in
+        mm, so that Save Recipe stores the new box in mm at the scale (`Recipe.in_mm`)."""
+        i = self._sel_index()
+        self._remember()
+        for x, shown in zip(self.edited_recipe.rois, self.view.boxes, strict=True):
+            if (shown.x, shown.y, shown.w, shown.h) != (x.x, x.y, x.w, x.h):
+                x.x, x.y, x.w, x.h, x.mm = shown.x, shown.y, shown.w, shown.h, None
+        self._refresh_rois()
+        self.roi_table.selectRow(i)
 
     def apply_roi(self) -> None:
         i = self._sel_index()
@@ -424,6 +462,7 @@ class RecipeEditorPage(Page):
                 shown = ["—" if v is None else f"{v:g}" for v in (low, high)]
                 self.error(AoiError("AOI-RCP-002", roi=x.name, quantity=quantity, low=shown[0], high=shown[1]))
                 return  # nothing applied: a Stage 2 check would judge every board NG on these thresholds (#173)
+        self._remember()
         x.name, x.type, x.ai_score, x.enabled = (
             self.r_name.text(),
             self.r_type.currentData(),
@@ -431,6 +470,9 @@ class RecipeEditorPage(Page):
             self.r_enabled.isChecked(),
         )
         x.height_min, x.height_max, x.volume_min, x.volume_max = thresholds
+        if self.edited_recipe.rois == self._undo[-1]:
+            self._undo.pop()  # an Apply that changed nothing: nothing to undo
+            self._sync_undo()
         self._refresh_rois()
 
     @staticmethod
@@ -441,9 +483,36 @@ class RecipeEditorPage(Page):
     def delete_roi(self) -> None:
         i = self._sel_index()
         if i >= 0:
+            self._remember()
             self.roi_table.clearSelection()  # the next ROI moves up to row i: the form must not stay on the deleted one
             del self.edited_recipe.rois[i]
             self._refresh_rois()
+
+    def _remember(self) -> None:
+        """Keep the ROIs as they are before an edit, for Undo; a new edit drops the edits Redo would do again."""
+        self._undo.append(copy.deepcopy(self.edited_recipe.rois))
+        self._redo.clear()
+        self._sync_undo()
+
+    def _forget(self) -> None:
+        """No edit to undo or redo: the ROIs are a revision as loaded, or moved to a new scale (`set_scale`)."""
+        self._undo.clear()
+        self._redo.clear()
+        self._sync_undo()
+
+    def _swap(self, take: list[list[ROI]], keep: list[list[ROI]]) -> None:
+        """Undo (Ctrl+Z, `take` the undo list) or Redo (Ctrl+Y): the ROIs before the last edit, or after the last
+        undone, the ROIs shown kept on the other list; none selected, as row i may now be another ROI."""
+        if take:
+            keep.append(self.edited_recipe.rois)
+            self.roi_table.clearSelection()
+            self.edited_recipe.rois = take.pop()
+            self._sync_undo()
+            self._refresh_rois()
+
+    def _sync_undo(self) -> None:
+        self.act_undo.setEnabled(bool(self._undo))
+        self.act_redo.setEnabled(bool(self._redo))
 
     def _collect(self) -> Recipe:
         r = self.edited_recipe
@@ -537,6 +606,8 @@ class RecipeEditorPage(Page):
         scale = self.ctx.set_scale(bm, length_px, distance_mm)
         self.recipe = self._collect().in_px(scale)
         self._loaded = Recipe.from_dict(copy.deepcopy(self._loaded)).in_px(scale).to_dict()  # as load() shows it now
+        self.view.saved = self._saved_rois()
+        self._forget()  # the ROIs before held their place in px at the scale before
         self.px_per_mm = scale
         self._close_sheet()
         self.min_size.show_recipe(self.recipe, scale)
@@ -549,11 +620,14 @@ class RecipeEditorPage(Page):
 
     # --- actions ----------------------------------------------------------------
     def test_run(self) -> None:
-        if not self.need_board_model():
+        """Try Recipe… (Ctrl+T): pick the board to try the recipe on, the last one inspected under this board model
+        picked already (Q23)."""
+        if not self.need_board_model() or (bm := self.board_model) is None:
             return
         exts = " ".join(f"*{e}" for e in sorted(IMAGE_EXTS))
+        last = self.ctx.last_board(bm) or ""
         f, _ = QFileDialog.getOpenFileName(
-            self, self.tr("Image to try the recipe on"), "", self.tr("Images ({extensions})").format(extensions=exts)
+            self, self.tr("Image to try the recipe on"), last, self.tr("Images ({extensions})").format(extensions=exts)
         )
         if f:
             self.run_test(f)
@@ -573,15 +647,18 @@ class RecipeEditorPage(Page):
 
     def _show_test(self, res: InspectionResult) -> None:
         self.view.set_image(res.image, keep_view=True)
-        for d in res.defects:
-            self.view.add_box(d.x, d.y, d.w, d.h, theme.NG_COLOR, f"{d.no} {d.type}")
-        for x in self.edited_recipe.rois:
-            self.view.add_box(x.x, x.y, x.w, x.h, theme.ROI_COLOR, dashed=True)
+        self.view.extra = [(d.x, d.y, d.w, d.h, theme.NG_COLOR, f"{d.no} {d.type}") for d in res.defects]
+        self._draw_rois()
         result = self.tr("Try result: {verdict}  ·  {defects} defect(s)  ·  {ms:.0f} ms")
         self.test_verdict.setText(
             result.format(verdict=theme.verdict_label(res.verdict), defects=len(res.defects), ms=res.elapsed_ms)
         )
         self.test_verdict.setStyleSheet(theme.verdict_style(res.verdict, big=False))
+        fill_table(self.try_checks, *check_rows(res))
+        t = self.try_checks  # tall enough for its rows, up to theme.TRY_ROWS of them; more scroll
+        rows = sum(t.rowHeight(r) for r in range(min(t.rowCount(), theme.TRY_ROWS)))
+        t.setFixedHeight(t.horizontalHeader().sizeHint().height() + rows + 2 * t.frameWidth())
+        t.show()
 
     def save(self) -> None:
         if (bm := self.checked_board_model()) is None:
@@ -626,15 +703,13 @@ class RecipeEditorPage(Page):
             self.busy.finish()
         self.test_verdict.clear()
         self.test_verdict.setStyleSheet("")
+        self.try_checks.hide()
+        self.view.extra = []
 
     def _draw_rois(self) -> None:
-        self.view.clear_overlays()
-        sel = self._sel_index()
-        for i, x in enumerate(self.edited_recipe.rois):
-            # spec: yellow = active (being edited), green = saved
-            color = theme.ROI_SELECTED if i == sel else theme.ROI_COLOR if x.enabled else theme.ROI_DISABLED
-            self.view.add_box(x.x, x.y, x.w, x.h, color, f"{x.name} [{self._type_text(x.type)}]")
-        self.view.add_measure(self.sheet.points)  # none while the sheet is closed
+        """The ROIs on the board shown, the selected one with its handles (`RoiEditor`), and the points picked."""
+        self.view.marks = self.sheet.points  # none while the sheet is closed
+        self.view.show_boxes(self.edited_recipe.rois, self._sel_index())
 
     def on_board_model_changed(self, name: str | None) -> None:
         self._drop_try()

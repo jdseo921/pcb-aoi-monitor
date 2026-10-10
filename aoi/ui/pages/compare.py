@@ -17,11 +17,12 @@ import copy
 import dataclasses
 import html
 import itertools
+from collections.abc import Mapping
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, TypeAlias
 
 import numpy as np
-from PySide6.QtCore import Qt
+from PySide6.QtCore import QCoreApplication, Qt
 from PySide6.QtGui import QAction, QKeySequence
 from PySide6.QtWidgets import (
     QComboBox,
@@ -125,6 +126,35 @@ RULES = {
     "> thr → NG": QT_TRANSLATE_NOOP("ComparePage", "> threshold → NG"),
     "info only": QT_TRANSLATE_NOOP("ComparePage", "info only"),
 }
+
+
+def check_text(c: Check) -> tuple[str, str, str]:
+    """A check's name, source and rule in the UI language (CHECK_NAMES, SOURCES, RULES)."""
+
+    def shown(table: Mapping[str, str], text: str) -> str:
+        return QCoreApplication.translate("ComparePage", table.get(text, text))
+
+    name = shown(CHECK_NAMES, c.name) if c.name in CHECK_NAMES else c.name  # an ROI check, named after its ROI
+    return name, shown(SOURCES, c.source), shown(RULES, c.rule)
+
+
+def check_rows(r: InspectionResult) -> tuple[list[list[object]], list[str | None]]:
+    """The decision table of `r`: a row per check (name, source, value, threshold, rule and result, in the UI language)
+    and the inspection time against its 1 s budget (REQ-INSP-007), with each row's colour, a failing check's verdict.
+    Compare and the Recipe Editor's Try show it (REQ-RCP-003)."""
+    rows: list[list[object]] = []
+    colors: list[str | None] = []
+    for c in r.checks:
+        name, source, rule = check_text(c)
+        rows.append([name, source, float(c.value), float(c.threshold), rule, c.verdict])
+        colors.append(None if c.verdict in ("OK", "INFO") else theme.VERDICT_COLORS[c.verdict])
+    time = QCoreApplication.translate("ComparePage", "Inspection time (ms)")
+    system = QCoreApplication.translate("ComparePage", "System")
+    spec = QCoreApplication.translate("ComparePage", "spec < 1 s")
+    rows.append([time, system, float(r.elapsed_ms), 1000.0, spec, "OK" if r.elapsed_ms < 1000 else "WARN"])
+    return rows, [*colors, None]
+
+
 THRESHOLDS = {  # the recipe's thresholds the panel holds, in its order: field -> its label, shown through tr()
     "anomaly_threshold": QT_TRANSLATE_NOOP("ComparePage", "AI score threshold"),
     "diff_threshold": QT_TRANSLATE_NOOP("ComparePage", "Pixel difference (0-255)"),
@@ -746,23 +776,7 @@ class ComparePage(Page):
 
     def _show_checks(self, r: InspectionResult, tried: bool = False) -> None:
         """The decision table and "why" box of `r`: the result shown, or (`tried`) what the thresholds tried give it."""
-        rows, colors = [], []
-        for c in r.checks:
-            name, source, rule = self._check_text(c)
-            rows.append([name, source, float(c.value), float(c.threshold), rule, c.verdict])
-            colors.append(None if c.verdict in ("OK", "INFO") else theme.VERDICT_COLORS[c.verdict])
-        rows.append(
-            [
-                self.tr("Inspection time (ms)"),
-                self.tr("System"),
-                float(r.elapsed_ms),
-                1000.0,
-                self.tr("spec < 1 s"),
-                "OK" if r.elapsed_ms < 1000 else "WARN",
-            ]
-        )
-        colors.append(None)
-        fill_table(self.metrics, rows, colors)
+        fill_table(self.metrics, *check_rows(r))
         self._hold_rows()
         self._show_why(self._explain(r, tried))
 
@@ -898,11 +912,6 @@ class ComparePage(Page):
             parts.append(f"{e.code} {phrase_text(e.what)} {phrase_text(e.action)}")
         self.note.setText(" ".join(parts))
         self.note.show()
-
-    def _check_text(self, c: Check) -> tuple[str, str, str]:
-        """A check's name, source and rule in the UI language (CHECK_NAMES, SOURCES, RULES)."""
-        name = self.tr(CHECK_NAMES[c.name]) if c.name in CHECK_NAMES else c.name
-        return name, self.tr(SOURCES.get(c.source, c.source)), self.tr(RULES.get(c.rule, c.rule))
 
     def _explain(self, r: InspectionResult, tried: bool = False) -> str:
         """The "why" box (REQ-CMP-004; sketch docs/sketches/compare-decision-table.md of PR #79): a heading with the
