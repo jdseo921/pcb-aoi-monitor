@@ -93,3 +93,18 @@ def test_req_tst_004_csv_bom_and_korean_round_trip(trained_ctx: AppContext, tmp_
     assert data.startswith(b"\xef\xbb\xbf")
     with out.open(encoding="utf-8-sig", newline="") as f:
         assert list(csv.DictReader(f)) == rows
+
+
+def test_req_tst_004_no_csv_cell_runs_as_a_formula(trained_ctx: AppContext, tmp_path: Path) -> None:
+    """#113: a text cell that starts with =, +, -, @, a tab or a carriage return is written with a ' before it, so a
+    spreadsheet opens it as the text it is and runs nothing; numbers, a number written as text among them, and other
+    text are written as they are."""
+    risky = ['=HYPERLINK("http://x")', "+1+1", "-2+3", "@SUM(A1)", "\tx", "\rx"]
+    rows = [{"image": text, "score": -0.5, "shown": "-0.250", "operator": "op=1"} for text in risky]
+    out = tmp_path / "results.csv"
+    trained_ctx.export_csv(out, rows, "test results")
+    with out.open(encoding="utf-8-sig", newline="") as f:
+        read = list(csv.DictReader(f))
+    assert [r["image"] for r in read] == [f"'{text}" for text in risky]
+    assert {r["score"] for r in read} == {"-0.5"} and {r["operator"] for r in read} == {"op=1"}
+    assert {r["shown"] for r in read} == {"-0.250"}

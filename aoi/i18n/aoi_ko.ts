@@ -2946,7 +2946,22 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-57"/>
+        <location line="+8"/>
+        <source>A stored path leads outside the workspace</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>The database names {path}, which leads outside the workspace folder {root}, so the app neither opens nor writes it. The app never stores such a path: the database was changed outside the app.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>Ask an Admin to restore the workspace from its backup (installation guide, Backup and restore).</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="-71"/>
         <source>Close the other program (another copy of this app, a database tool or a backup), then choose the same folder in the window that opens next; or choose another workspace folder there. Cancel there closes the app.</source>
         <translation type="unfinished"></translation>
     </message>

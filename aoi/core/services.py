@@ -2942,13 +2942,28 @@ def export_csv(path: str | Path, rows: list[dict[str, Any]], fieldnames: list[st
     atomic.write_bytes(path, csv_bytes(rows, fieldnames))
 
 
+FORMULA_START = ("=", "+", "-", "@", "\t", "\r")  # what makes a spreadsheet read a cell as a formula
+
+
+def csv_cell(value: Any) -> Any:
+    """A text cell that a spreadsheet would run as a formula, with a ' before it, so it opens as the text it is (#113);
+    numbers, a number written as text ("-0.5") among them, and other values as they are."""
+    if not isinstance(value, str) or not value.startswith(FORMULA_START):
+        return value
+    try:
+        float(value)
+    except ValueError:
+        return f"'{value}"
+    return value
+
+
 def csv_bytes(rows: list[dict[str, Any]], fieldnames: list[str] | None = None) -> bytes:
     """`rows` as CSV, UTF-8 with a BOM so Excel opens Korean; the header comes from `fieldnames` or the first row, so a
-    file with no rows still names its columns when `fieldnames` is given."""
+    file with no rows still names its columns when `fieldnames` is given. No cell runs as a formula (`csv_cell`)."""
     buf = io.StringIO(newline="")
     names = fieldnames or (list(rows[0].keys()) if rows else None)
     if names:
         w = csv.DictWriter(buf, fieldnames=names)
         w.writeheader()
-        w.writerows(rows)
+        w.writerows({k: csv_cell(v) for k, v in row.items()} for row in rows)
     return buf.getvalue().encode("utf-8-sig" if names else "utf-8")
