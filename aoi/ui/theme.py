@@ -87,6 +87,7 @@ QLabel#muted { color: $TEXT_MUTED; }
 QLabel#logo, QLabel#busyText { font-size: ${FONT_LARGE_PT}pt; font-weight: 600; }
 QLabel#recoveryKey { font-family: ${FONT_MONO}; font-size: ${FONT_H1_PT}pt; }
 QLabel#badge { background: $WARN_COLOR; color: $ON_LIGHT; border-radius: ${RADIUS}px; padding: 4px ${SPACE_S}px; }
+QListWidget#nav QLabel#badge { padding: 0 4px; }  /* on the entry's line of text, clear of its name */
 QLabel#tile { background: $BG_RAISED; border-radius: ${RADIUS_L}px; padding: ${SPACE_S}px; }
 QFrame#header { background: $BG_DEEP; border-bottom: 1px solid $LINE; }
 QFrame#card { background: $BG_RAISED; border-radius: ${RADIUS_L}px; }

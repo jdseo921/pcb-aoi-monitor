@@ -1384,7 +1384,7 @@
     </message>
     <message>
         <location line="+21"/>
-        <location filename="../ui/main_window.py" line="+517"/>
+        <location filename="../ui/main_window.py" line="+538"/>
         <source>start-up</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3576,7 +3576,7 @@
 <context>
     <name>HomePage</name>
     <message>
-        <location filename="../ui/main_window.py" line="-418"/>
+        <location filename="../ui/main_window.py" line="-439"/>
         <source>Upload samples</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4449,7 +4449,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+60"/>
+        <location line="+63"/>
         <source>Demo</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4509,7 +4509,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+21"/>
+        <location line="+39"/>
         <source>{page} needs the {roles} role</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4984,7 +4984,7 @@
 <context>
     <name>Page</name>
     <message>
-        <location filename="../ui/main_window.py" line="-385"/>
+        <location filename="../ui/main_window.py" line="-406"/>
         <source>Home</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5009,7 +5009,7 @@
         <translation>약 {minutes}분 남음</translation>
     </message>
     <message>
-        <location line="+68"/>
+        <location line="+70"/>
         <source>No board model yet</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5129,13 +5129,19 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/profile3d.py" line="+20"/>
+        <location filename="../ui/pages/profile3d.py" line="+49"/>
         <source>3D Profile</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location line="+1"/>
-        <source>Height and coplanarity · available after Stage 2 (3D camera integration)</source>
+        <location line="+2"/>
+        <source>Stage 2</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Available with the 3D camera in Stage 2</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -5167,18 +5173,28 @@
 <context>
     <name>Profile3DPage</name>
     <message>
-        <location filename="../ui/pages/profile3d.py" line="+9"/>
+        <location filename="../ui/pages/profile3d.py" line="+4"/>
+        <source>Open Recipe Editor ›</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+2"/>
         <source>Back to Home</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+6"/>
-        <source>Height and coplanarity need the 3D camera. Height and volume thresholds (min and max) can be entered per ROI in the Recipe Editor; they are stored now and checked from Stage 2.</source>
+        <location line="+2"/>
+        <source>Coming in Stage 2</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+3"/>
-        <source>3D Profile arrives with Stage 2</source>
+        <location line="+2"/>
+        <source>This page needs the 3D camera of Stage 2. It will show the height map of a board, the four AOI checks that need height data (Shield Can Gap, Connector Pin Height, 3D Coplanarity, Solder Volume), and Accept / Reject for each height defect.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>Height and volume thresholds (min and max) can be entered per ROI in the Recipe Editor until then; they are stored now and checked from Stage 2.</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -5653,7 +5669,7 @@
 <context>
     <name>Role</name>
     <message>
-        <location filename="../ui/pages/base.py" line="-325"/>
+        <location filename="../ui/pages/base.py" line="-327"/>
         <source>Operator</source>
         <translation type="unfinished"></translation>
     </message>

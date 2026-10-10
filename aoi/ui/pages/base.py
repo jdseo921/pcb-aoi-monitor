@@ -106,6 +106,8 @@ class Page(QWidget):
     title: str = "Page"
     subtitle: str = ""
     roles: tuple[str, ...] = ROLES  # who may open it (spec 8)
+    badge: str = ""  # a badge after the page's sidebar entry, with its tooltip, both marked like the title
+    badge_tip: str = ""
 
     def __init__(self, ctx: AppContext, shell: MainWindow) -> None:
         super().__init__()

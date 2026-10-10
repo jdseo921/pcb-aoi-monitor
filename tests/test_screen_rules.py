@@ -22,18 +22,26 @@ import pytest
 from PySide6.QtCore import QMetaObject, QPoint, QRect, Qt, Signal, SignalInstance
 from PySide6.QtGui import QColor, QPalette
 from PySide6.QtWidgets import (
+    QAbstractItemView,
+    QAbstractSlider,
+    QAbstractSpinBox,
     QApplication,
     QBoxLayout,
+    QCheckBox,
     QComboBox,
     QFileDialog,
     QFrame,
+    QGraphicsView,
     QInputDialog,
+    QLabel,
     QLineEdit,
     QListWidget,
     QListWidgetItem,
     QPlainTextEdit,
     QPushButton,
+    QRadioButton,
     QTableWidget,
+    QTextEdit,
     QWidget,
 )
 from pytestqt.qtbot import QtBot
@@ -43,6 +51,7 @@ from aoi.ui import theme
 from aoi.ui.main_window import MainWindow
 from aoi.ui.pages.base import button
 from aoi.ui.pages.compare import MODE_DIFF
+from aoi.ui.pages.profile3d import Stage2Card
 from aoi.ui.widgets.empty_state import EmptyState
 from tests.conftest import engineer
 from tests.screens.test_sizes_and_contrast import (
@@ -461,8 +470,11 @@ def test_req_set_004_a_progress_bar_past_half_reads_and_is_measured(qtbot: QtBot
     assert len(findings) == 1 and "reads at 3.1:1, needs 4.5:1" in findings[0], findings
 
 
-def _empties(page: QWidget) -> list[EmptyState]:
-    return [e for e in page.findChildren(EmptyState) if e.isVisibleTo(page)]
+def _empties(page: QWidget) -> list[EmptyState | Stage2Card]:
+    """The empty-state blocks shown on `page`: EmptyState, and 3D Profile's card, the same pattern with a second
+    button (sketch profile3d-card.md)."""
+    blocks: list[EmptyState | Stage2Card] = [*page.findChildren(EmptyState), *page.findChildren(Stage2Card)]
+    return [e for e in blocks if e.isVisibleTo(page)]
 
 
 def test_req_set_019_empty_states_link_next_step(
@@ -476,7 +488,7 @@ def test_req_set_019_empty_states_link_next_step(
     win.resize(1600, 900)
     win.show()
     qtbot.waitExposed(win)
-    seen: dict[str, EmptyState] = {}
+    seen: dict[str, EmptyState | Stage2Card] = {}
     for title in (
         "Home",
         "Inspection",
@@ -674,6 +686,59 @@ def test_req_p3d_001_profile_page_is_a_stage_2_card(qtbot: QtBot, trained_ctx: A
     win.navigate("3D Profile")
     next(b for b in buttons if b.text() == "Back to Home").click()
     assert win.stack.currentWidget() is win.pages["Home"]
+
+
+HEIGHT_CHECKS = ("Shield Can Gap", "Connector Pin Height", "3D Coplanarity", "Solder Volume")  # DCT §4, Stage 2
+INPUTS = (QAbstractItemView, QGraphicsView, QLineEdit, QAbstractSpinBox, QComboBox, QAbstractSlider, QTextEdit)
+INPUTS += (QPlainTextEdit, QCheckBox, QRadioButton)
+
+
+def test_req_p3d_001_card_only(qtbot: QtBot, trained_ctx: AppContext) -> None:
+    """3D Profile is the sketch's card and nothing else (profile3d-card.md): "Stage 2" beside the title, one card
+    CARD_W px wide headed "Coming in Stage 2" that names the four AOI checks needing height data and Accept / Reject,
+    says where the height and volume thresholds are entered now, and offers two enabled buttons, Open Recipe Editor ›
+    (Enter, the page's one primary) and Back to Home (Esc). For both roles that open the page, a walk of its widget
+    tree, hidden widgets included, finds labels, those two buttons and the card only: no table, list or image area, no
+    field, box, slider or tick to type in or pick, and no disabled button. The sidebar entry carries a "Stage 2" badge
+    with its tooltip for those roles, and none where an Operator sees the entry greyed."""
+    win = _window(qtbot, trained_ctx, "Engineer")
+    win.resize(1920, 1080)
+    page = win.pages["3D Profile"]
+    row = win.nav.itemWidget(win._items["3D Profile"])
+    assert row is not None
+    (badge,) = [w for w in row.findChildren(QLabel) if w.text() == "Stage 2"]
+
+    def badge_shown() -> bool:
+        win.nav.doItemsLayout()  # Qt shows the badge's row again on every layout of the list
+        QApplication.processEvents()
+        return badge.isVisibleTo(win.nav)
+
+    for role in ("engineer", "admin"):
+        win.set_user(role)
+        assert win.navigate("3D Profile")
+        QApplication.processEvents()
+        tree = page.findChildren(QWidget)
+        assert not [type(w).__name__ for w in tree if isinstance(w, INPUTS)], role
+        assert not [type(w).__name__ for w in tree if not isinstance(w, (QLabel, QPushButton)) and w is not page.card]
+        buttons = page.findChildren(QPushButton)
+        assert sorted(b.text() for b in buttons) == ["Back to Home", "Open Recipe Editor ›"], role
+        assert all(b.isEnabled() and b.isVisibleTo(page) for b in buttons), role
+        assert page.card.link.objectName() == "primary" and page.card.link.text() == "Open Recipe Editor ›"
+        assert page.card.width() == theme.CARD_W and page.card.isAncestorOf(page.card.back), page.card.width()
+        assert page.card.heading.text() == "Coming in Stage 2" and page.card.heading.objectName() == "h1"
+        text = " ".join(w.text() for w in page.card.findChildren(QLabel))
+        assert all(name in text for name in HEIGHT_CHECKS) and "Accept / Reject" in text, text
+        assert "Height and volume thresholds" in text and "Recipe Editor" in text, text
+        assert "Stage 2" in [w.text() for w in page.findChildren(QLabel, "muted")], "the title row says Stage 2"
+        assert badge_shown() and badge.objectName() == "badge", role
+        assert badge.toolTip() == win._items["3D Profile"].toolTip() == "Available with the 3D camera in Stage 2"
+        qtbot.keyClick(win, Qt.Key.Key_Return)
+        assert win.stack.currentWidget() is win.pages["Recipe Editor"], role
+        assert win.navigate("3D Profile")
+        qtbot.keyClick(win, Qt.Key.Key_Escape)
+        assert win.stack.currentWidget() is win.pages["Home"], role
+    win.set_user("operator")
+    assert not badge_shown(), "an Operator's 3D Profile entry is greyed, with no badge"
 
 
 def test_issue_5_no_page_attribute_shadows_a_qt_member(qtbot: QtBot, trained_ctx: AppContext) -> None:

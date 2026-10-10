@@ -229,6 +229,7 @@ class MainWindow(QMainWindow):
 
         self.pages: dict[str, Page] = {}
         self._items: dict[str, QListWidgetItem] = {}
+        self._badges: dict[str, QLabel] = {}
         for section, cls in NAV:
             if section:
                 sec = QListWidgetItem(self.tr(section))
@@ -242,6 +243,8 @@ class MainWindow(QMainWindow):
             it.setData(Qt.ItemDataRole.UserRole, cls.title)
             self.nav.addItem(it)
             self._items[cls.title] = it
+            if cls.badge:
+                self._badges[cls.title] = self._badge(it, cls.badge, cls.badge_tip)
         self.nav.currentItemChanged.connect(self._on_nav)
 
         self._training_timer = QTimer(self)  # the header and Home follow a training run on every page (REQ-TRN-008)
@@ -355,10 +358,12 @@ class MainWindow(QMainWindow):
             it.setFlags(
                 Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable if allowed else Qt.ItemFlag.NoItemFlags
             )
-            it.setToolTip("" if allowed else self._needs_role(title))
+            it.setToolTip(page_text(self.pages[title].badge_tip) if allowed else self._needs_role(title))
             # greyed as a disabled control here, not by a stylesheet rule for disabled items: that rule would grey
             # the section headings too, which have no flags either (#239)
             it.setData(Qt.ItemDataRole.ForegroundRole, None if allowed else QColor(theme.TEXT_DISABLED))
+            if title in self._badges:  # a greyed entry says only which role it needs; the badge, not its row: Qt
+                self._badges[title].setVisible(allowed)  # shows a row again on every layout of the list
         for page in self.pages.values():  # shown or not: what a page keeps for the role before goes now
             page.on_user_changed()
         cur = self.stack.currentWidget()
@@ -366,6 +371,22 @@ class MainWindow(QMainWindow):
             self.navigate("Home")
         elif isinstance(cur, Page) and self.nav.currentItem() is not None:  # none yet while the window is built
             cur.on_show()  # the page stays: its role-gated buttons and links follow the new role (#174)
+
+    def _badge(self, it: QListWidgetItem, text: str, tip: str) -> QLabel:
+        """A badge after a sidebar entry's name, such as 3D Profile's "Stage 2" (sketch profile3d-card.md), 14 pt in
+        amber at the entry's right end; returns the badge. The row holding it lets the pointer through, so a click on
+        the entry selects it as on any other, and the entry shows the badge's tooltip."""
+        row = QWidget()
+        row.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
+        layout = QHBoxLayout(row)
+        layout.setContentsMargins(0, 0, 0, 0)  # Qt gives it the entry's text line, inside its margin and padding
+        layout.addStretch(1)
+        badge = QLabel(page_text(text))
+        badge.setObjectName("badge")
+        badge.setToolTip(page_text(tip))
+        layout.addWidget(badge, 0, Qt.AlignmentFlag.AlignVCenter)
+        self.nav.setItemWidget(it, row)
+        return badge
 
     def _needs_role(self, title: str) -> str:
         """One sentence naming the page and the roles that may open it, for the tooltip and the status bar."""
