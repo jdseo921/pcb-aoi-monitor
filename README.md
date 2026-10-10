@@ -71,24 +71,21 @@ it (`tools/check_installer.py`). It is unsigned and internal like the folder: ho
 and how to uninstall is in [docs/install/install.md](docs/install/install.md). To make it on a Windows PC after the
 build above, with Inno Setup 6.7.1: `iscc /DAppVersion=<version in aoi\config.py> installer\aoi.iss`.
 
-## Try it in 5 minutes with synthetic boards
+## Try the demo in 5 minutes
 
 ```powershell
-python tools\make_synthetic_dataset.py --out sample_data
-python main.py
+python tools\make_demo_bundle.py    # draws the demo's boards and trains its AI model (a few minutes, once)
+python main.py --demo
 ```
 
-1. Top bar → **+ New** → board model `TBOX-A1`.
-2. **Training** → **Import Folder…** → `sample_data\train` (picks up `ok\` and `ng\`) → **Start Training** (about 1
-   minute on CPU at 60 epochs). Start Training stays off here: training reads only a frozen dataset version with a
-   locked validation set, and freezing one needs checked labels, two labellers' agreement check and a customer's dataset
-   store first (Engineer manual, section 3). Select an OK image and press **Set Reference** instead: steps 4 and 5 then
-   judge by the Golden board comparison alone, and step 3 waits for an AI model.
-3. **AI Model Test** → **Select Test Folder…** → `sample_data\test` → **Run Test**.
-4. **Inspection** → **Load Folder…** → `sample_data\test\ng` → **Start**.
-5. Click **Compare with Golden ›** to see the board next to the golden template and the metrics that decided the verdict.
-
-The first launch opens as `admin`; use **Switch User** to see the Operator view.
+The app opens in the demo workspace (`AOI_Workspace-Demo`, beside your own workspace, which it never touches): the
+board model `DEMO-TBOX-A1` with its AI model v1.0, its locked validation set and ten boards queued on **Inspection**,
+nine OK and the fourth NG. Follow [docs/demo/stage1-5min.md](docs/demo/stage1-5min.md) click by click: **Start**, the
+pause at the NG board, **Compare with Golden ›**, **Start** again to the end, then **Logs & Export**. **Settings** has
+**Presenter theme** for a projector, **Reset Demo** to put the ten boards back, and the pace of a scripted run; the
+installer's **AOI PoC Inspector (Demo)** shortcut opens the same workspace. The demo's boards are drawn by
+`tools/make_synthetic_dataset.py`: they show how the app works, never how well it finds defects, so no number from
+them is an accuracy. The first launch opens as `admin`; use **Switch User** to see the Operator view.
 
 ## With your own boards
 
