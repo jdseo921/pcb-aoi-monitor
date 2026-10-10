@@ -1098,9 +1098,10 @@ PKU-Market-PCB on Jay's laptop), and ADR 0008 (proposed) keeps the default Minim
 Training the comparison (REQ-TRN-018): `aoi/core/tuning.py` counts, for each pair of Pixel difference and Minimum defect
 area it tries, the boxed defects a labelled board's difference map finds and its defect-free 512 px windows that a
 region falls in, and chooses the pair with the fewest false calls among those that miss at most 1 % of the boxed
-defects. `tools/dataset_check.py --tune` runs it on PKU-Market-PCB with 30 % of each board's photos of each type held
-out (`docs/tests/2026-10-09-comparison-training.md`); the app's defaults do not change, and no AppContext method or
-screen runs it on a board model's samples yet.
+defects. `tools/dataset_check.py --tune` runs it on each public dataset given: on PKU-Market-PCB with 30 % of each
+board's photos of each type held out (`docs/tests/2026-10-09-comparison-training.md`), and on DeepPCB with the pair
+chosen on its trainval split and counted on its test split (`docs/tests/2026-10-10-deeppcb-tuning.md`); the app's
+defaults do not change, and no AppContext method or screen runs it on a board model's samples yet.
 
 | Requirement | Where | Status |
 |---|---|---|
