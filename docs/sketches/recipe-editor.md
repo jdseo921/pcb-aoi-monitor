@@ -29,7 +29,8 @@ Recipe Editor    TBOX-A1 · revision 4 (unsaved changes ●) · scale 47.6 px/mm
 
 Thresholds tab: Use AI model ▣ · AI threshold [▢ override 5.69] · WARN band [0.80] · Use Golden board ▣ ·
 Pixel difference [45] · Min defect size [0.80 mm] = 38 px ✓ · Similarity minimum [0.80] · Max changed area [0.50 %]
-· Allowed difference regions [0]. A size under 4 px shows an amber badge: "0.05 mm is 2.4 px at 47.6 px/mm; the
+· Allowed difference regions [0] · Copper defect names [Off (assembled boards) ▾ / Light copper / Dark copper] with a
+note under it naming the six types and that names never change a verdict (REQ-INSP-018, ADR 0015). A size under 4 px shows an amber badge: "0.05 mm is 2.4 px at 47.6 px/mm; the
 smallest size the camera resolves is 4 px = 0.08 mm" (REQ-INSP-014, REQ-RCP-006).
 
 AOI checks tab, the 10 mandatory checks (DCT §4): Missing Component ✓ ROI R1 · Misalignment • whole board ·

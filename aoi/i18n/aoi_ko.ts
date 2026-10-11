@@ -1051,12 +1051,7 @@
         <translation>보정 세트의 이미지가 아닙니다</translation>
     </message>
     <message>
-        <location line="+2"/>
-        <source>a blind label is OK, or NG with one of the 33 defect types</source>
-        <translation>블라인드 라벨은 OK이거나, 33개 결함 유형 중 하나를 지정한 NG입니다</translation>
-    </message>
-    <message>
-        <location line="+2"/>
+        <location line="+4"/>
         <source>you labelled it blind already</source>
         <translation>이미 블라인드로 라벨링했습니다</translation>
     </message>
@@ -1138,7 +1133,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+2069"/>
+        <location line="+1860"/>
+        <source>a blind label is OK, or NG with one of the 37 defect types</source>
+        <translation>블라인드 라벨은 OK이거나, 37개 결함 유형 중 하나를 지정한 NG입니다</translation>
+    </message>
+    <message>
+        <location line="+209"/>
         <source>its validation set is locked already, and a version is split only once</source>
         <translation>검증 세트가 이미 잠겨 있으며, 버전은 한 번만 분할됩니다</translation>
     </message>
@@ -1459,7 +1459,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+426"/>
+        <location line="+441"/>
         <source>Height</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1544,7 +1544,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/inspector.py" line="+33"/>
+        <location filename="../core/inspector.py" line="+36"/>
         <source>no Golden board is set</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1564,7 +1564,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+283"/>
+        <location line="+284"/>
         <source>board image</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2065,7 +2065,12 @@
         <translation>NG 이미지에는 결함 유형이 필요합니다</translation>
     </message>
     <message>
-        <location line="+10"/>
+        <location line="+1"/>
+        <source>{path} was not taken as an NG sample: an NG sample needs one of the 37 defect types of the defect classification table, and {why}.</source>
+        <translation>{path}을(를) NG 샘플로 받지 않았습니다. NG 샘플에는 결함 분류표의 결함 유형 37개 중 하나가 필요하지만 {why}.</translation>
+    </message>
+    <message>
+        <location line="+9"/>
         <source>Image changed while it was copied</source>
         <translation>복사하는 동안 이미지가 바뀌었습니다</translation>
     </message>
@@ -2266,12 +2271,7 @@
         <translation>{sample}의 라벨이 바뀌지 않았습니다: {reason}.</translation>
     </message>
     <message>
-        <location line="+1"/>
-        <source>Label the image OK, NG or UNSURE, and give an NG image&apos;s defect boxes one of the 33 defect types each; then save the label again.</source>
-        <translation>이미지를 OK, NG 또는 UNSURE로 라벨링하고 NG 이미지의 결함 박스마다 33가지 결함 유형 중 하나를 지정한 뒤 라벨을 다시 저장하십시오.</translation>
-    </message>
-    <message>
-        <location line="+8"/>
+        <location line="+9"/>
         <source>Defect box outside the image</source>
         <translation>이미지 밖의 결함 박스</translation>
     </message>
@@ -2356,12 +2356,7 @@
         <translation>{sample}의 블라인드 라벨이 저장되지 않았습니다: {reason}.</translation>
     </message>
     <message>
-        <location line="+1"/>
-        <source>Label each image of the set once, as yourself: OK, or NG with one of the 33 defect types.</source>
-        <translation>세트의 각 이미지를 본인으로 한 번씩 라벨링하십시오. OK, 또는 33개 결함 유형 중 하나를 지정한 NG입니다.</translation>
-    </message>
-    <message>
-        <location line="+6"/>
+        <location line="+7"/>
         <source>Agreement check did not run</source>
         <translation>일치도 검사가 실행되지 않음</translation>
     </message>
@@ -3126,12 +3121,7 @@
         <translation>{path}을(를) 가져오지 못해({reason}) 가져오기가 이미지 {total}개 중 {at}번째에서 멈췄습니다. 그 전에 가져온 이미지 {imported}개는 샘플 표에 남아 있습니다.</translation>
     </message>
     <message>
-        <location line="+42"/>
-        <source>{path} was not taken as an NG sample: an NG sample needs one of the 33 defect types of the defect classification table, and {why}.</source>
-        <translation>{path}을(를) NG 샘플로 받지 않았습니다. NG 샘플에는 결함 분류표의 결함 유형 33개 중 하나가 필요하지만 {why}.</translation>
-    </message>
-    <message>
-        <location line="+5"/>
+        <location line="+47"/>
         <source>Pick the defect type the image shows, then try again.</source>
         <translation>이미지에 보이는 결함 유형을 고른 다음 다시 시도하십시오.</translation>
     </message>
@@ -3156,7 +3146,17 @@
         <translation>{name}이(가) 동결되지 않았습니다: 검토할 OK 라벨 {needed}개({ok}개의 10 %) 중 {checked}개만 검토되었습니다.</translation>
     </message>
     <message>
-        <location line="+189"/>
+        <location line="+60"/>
+        <source>Label the image OK, NG or UNSURE, and give an NG image&apos;s defect boxes one of the 37 defect types each; then save the label again.</source>
+        <translation>이미지를 OK, NG 또는 UNSURE로 라벨링하고 NG 이미지의 결함 박스마다 37가지 결함 유형 중 하나를 지정한 뒤 라벨을 다시 저장하십시오.</translation>
+    </message>
+    <message>
+        <location line="+53"/>
+        <source>Label each image of the set once, as yourself: OK, or NG with one of the 37 defect types.</source>
+        <translation>세트의 각 이미지를 본인으로 한 번씩 라벨링하십시오. OK, 또는 37개 결함 유형 중 하나를 지정한 NG입니다.</translation>
+    </message>
+    <message>
+        <location line="+76"/>
         <source>{name} was not trained: {count} of its training set&apos;s images are, by their content, in a locked validation set, and an AI model is never trained on one.</source>
         <translation>{name}이(가) 학습되지 않았습니다: 학습 세트 이미지 중 {count}개가 내용으로 볼 때 잠긴 검증 세트에 있으며, AI 모델은 잠긴 검증 이미지로 학습하지 않습니다.</translation>
     </message>
@@ -3382,7 +3382,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/recipe.py" line="+14"/>
+        <location filename="../core/recipe.py" line="+15"/>
         <source>minimum defect size</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3413,13 +3413,13 @@
     </message>
     <message>
         <location line="+3"/>
-        <source>the image&apos;s defect type, {type}, is not one of the 33 defect types (an earlier version stored it): press Mark NG, which labels the image NG again with no defect type, as its boxes give the types, then draw its boxes again</source>
-        <translation>이미지의 결함 유형 {type}은(는) 이전 버전에서 저장된 것으로, 33가지 결함 유형 중 하나가 아닙니다. NG로 표시를 누르면 이미지가 결함 유형 없이 다시 NG로 라벨링되며 유형은 박스가 정합니다. 그런 다음 박스를 다시 그리십시오</translation>
+        <source>the image&apos;s defect type, {type}, is not one of the 37 defect types (an earlier version stored it): press Mark NG, which labels the image NG again with no defect type, as its boxes give the types, then draw its boxes again</source>
+        <translation>이미지의 결함 유형 {type}은(는) 이전 버전에서 저장된 것으로, 37가지 결함 유형 중 하나가 아닙니다. NG로 표시를 누르면 이미지가 결함 유형 없이 다시 NG로 라벨링되며 유형은 박스가 정합니다. 그런 다음 박스를 다시 그리십시오</translation>
     </message>
     <message>
         <location line="+7"/>
-        <source>{type} is not one of the 33 defect types</source>
-        <translation>{type}은(는) 33가지 결함 유형 중 하나가 아닙니다</translation>
+        <source>{type} is not one of the 37 defect types</source>
+        <translation>{type}은(는) 37가지 결함 유형 중 하나가 아닙니다</translation>
     </message>
     <message>
         <location line="+2"/>
@@ -3902,12 +3902,7 @@
         <translation>모든 분류</translation>
     </message>
     <message>
-        <location line="+5"/>
-        <source>Pick one of the 33 defect types</source>
-        <translation>33가지 결함 유형 중 하나를 고르세요</translation>
-    </message>
-    <message>
-        <location line="+6"/>
+        <location line="+11"/>
         <source>File</source>
         <translation>파일</translation>
     </message>
@@ -3974,7 +3969,12 @@
         <translation>유형을 고르세요</translation>
     </message>
     <message>
-        <location line="+2"/>
+        <location line="-131"/>
+        <source>Pick one of the 37 defect types</source>
+        <translation>37가지 결함 유형 중 하나를 고르세요</translation>
+    </message>
+    <message>
+        <location line="+133"/>
         <source>ready</source>
         <translation>준비됨</translation>
     </message>
@@ -5463,7 +5463,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/recipe_editor.py" line="-413"/>
+        <location filename="../ui/pages/recipe_editor.py" line="-428"/>
         <source>Recipe Editor</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5573,7 +5573,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+84"/>
+        <location line="+98"/>
         <source>The 10 mandatory AOI checks (defect classification table, section 4):</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5593,7 +5593,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-137"/>
+        <location line="-151"/>
         <source>Selected ROI</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5604,7 +5604,7 @@
     </message>
     <message>
         <location line="+1"/>
-        <location line="+127"/>
+        <location line="+141"/>
         <source>Name</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5634,7 +5634,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-124"/>
+        <location line="-138"/>
         <source>ROI type</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5704,7 +5704,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+22"/>
+        <location line="+25"/>
+        <source>On a bare board, each difference outside an ROI is named Open Circuit, Short Circuit, Mousebite, Spur, Spurious Copper or Pin-hole / Missing Hole. Pick the shade copper has on the Golden board. Names never change a verdict.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+9"/>
         <source>AI score threshold</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5734,7 +5739,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+3"/>
+        <location line="+1"/>
+        <source>Copper defect names</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+4"/>
         <source>Thresholds</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5834,7 +5844,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+92"/>
+        <location line="+93"/>
         <source>Train an AI model or set a reference image on Training.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5879,7 +5889,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+156"/>
+        <location line="+157"/>
         <source>Scale {scale:.2f} px/mm</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6014,7 +6024,7 @@
 <context>
     <name>RevisionPane</name>
     <message>
-        <location filename="../ui/pages/recipe_save.py" line="+180"/>
+        <location filename="../ui/pages/recipe_save.py" line="+188"/>
         <source>Revision {revision}, read-only: saved by {user}, {saved}</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6055,7 +6065,22 @@
 <context>
     <name>SaveSheet</name>
     <message>
-        <location filename="../ui/pages/recipe_save.py" line="-168"/>
+        <location filename="../ui/pages/recipe_save.py" line="-176"/>
+        <source>Off (assembled boards)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Light copper</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Dark copper</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+3"/>
         <source>AI check</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6102,6 +6127,11 @@
     <message>
         <location line="+1"/>
         <source>Allowed difference regions</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Copper defect names</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -6240,7 +6270,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+10"/>
+        <location line="+12"/>
         <source>on</source>
         <translation type="unfinished"></translation>
     </message>

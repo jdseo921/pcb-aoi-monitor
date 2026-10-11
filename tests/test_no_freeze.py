@@ -401,7 +401,7 @@ def test_req_set_021_training_add_samples_does_not_freeze(
     picked["ok"] = [str(p) for p in distinct_copies(board_5mp, tmp_path / "ng", n)]
     page.add_ng()
     page.sheet.type_box.setCurrentIndex(0)
-    page.sheet.type_box.activated.emit(0)  # one of the 33 types for all the NG files
+    page.sheet.type_box.activated.emit(0)  # one of the 37 types for all the NG files
     page.sheet.btn_import.click()
     _cancel_when_started(qtbot, page.busy, lambda: len(list(ng_dir.glob("board_5mp_*.png"))) > files_before)
     qtbot.waitUntil(lambda: status().startswith("Import cancelled"), timeout=60000)

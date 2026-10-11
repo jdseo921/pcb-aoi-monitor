@@ -1,5 +1,5 @@
 """REQ-TRN-001 (stage S31): an import copies each sample into the workspace and never changes its source, checks it as
-Inspection checks an image, skips one already imported, and gives every NG sample one of the 33 DCT types."""
+Inspection checks an image, skips one already imported, and gives every NG sample one of the 37 DCT types."""
 
 from __future__ import annotations
 
@@ -119,10 +119,10 @@ def test_req_trn_001_source_unchanged(
 def test_req_trn_001_ng_has_dct_type(
     ctx: AppContext, synthetic_dataset: Path, ng_board: Path, defect_type: str | None
 ) -> None:
-    """An NG sample is imported only with one of the 33 types of the defect classification table, named as the table
+    """An NG sample is imported only with one of the 37 types of the defect classification table, named as the table
     names it: no type, "Unknown", the model's "Anomaly" or a name the table does not hold is refused with AOI-TRN-013
     before anything is copied. OK samples need none."""
-    assert len(names()) == 33
+    assert len(names()) == 37
     with pytest.raises(AoiError) as refused:
         ctx.import_samples(BOARD, [str(ng_board)], "NG", defect_type)
     assert refused.value.code == "AOI-TRN-013", refused.value
@@ -135,7 +135,7 @@ def test_req_trn_001_ng_has_dct_type(
 def test_req_trn_001_update_sample_relabels_ng_only_with_one_of_the_33_types(
     ctx: AppContext, synthetic_dataset: Path
 ) -> None:
-    """AppContext.update_sample holds to the import's rule: it refuses NG without one of the 33 types (none, "Unknown /
+    """AppContext.update_sample holds to the import's rule: it refuses NG without one of the 37 types (none, "Unknown /
     mixed", "Anomaly") with AOI-TRN-013, and a label other than OK or NG with AOI-TRN-018, which says the sample was not
     given that label, leaving the sample as it was; a relabel to OK clears the type. Training's marks do not call it:
     they write through set_label (S33, test_req_trn_003_editor_mark)."""

@@ -10,6 +10,7 @@ from typing import Any
 from ..errors import QT_TRANSLATE_NOOP, AoiError
 
 ROI_TYPES = ["Presence", "Polarity", "Solder Bridge", "Height", "Anomaly"]
+COPPER = ("light", "dark")  # a recipe's `copper`: the shade of copper on its Golden board (REQ-INSP-018)
 MAX_MM = 10000  # the largest size or place in mm a recipe holds, 10 m: past any board (AOI-RCP-011, S29 review)
 MIN_SIZE = QT_TRANSLATE_NOOP("Errors", "minimum defect size")  # what AOI-RCP-011 names
 ROI_BOX = QT_TRANSLATE_NOOP("Errors", "box of ROI {roi}")
@@ -61,13 +62,19 @@ class Recipe:
     changed_pct_max: float = 0.50  # % of board pixels allowed to differ
     max_diff_regions: int = 0  # NG when more difference blobs than this
     rois: list[ROI] = field(default_factory=list)
+    # Bare-board copper naming (REQ-INSP-018, ADR 0015): "light" or "dark", the copper's shade on the Golden board,
+    # names each region outside an ROI as one of the six copper defects (aoi/core/copper.py); None, as any other
+    # value, names none. Naming never changes a verdict.
+    copper: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         """The recipe as stored; a size in mm it does not set is left out, so a recipe in px, as every recipe before
-        S29, is stored, compared and audited exactly as before."""
+        S29, is stored, compared and audited exactly as before, and so is a recipe that names no copper defect
+        (REQ-INSP-018)."""
         d = asdict(self)
-        if d["min_defect_mm"] is None:
-            del d["min_defect_mm"]
+        for key in ("min_defect_mm", "copper"):  # an older recipe, without them, is stored as it was
+            if d[key] is None:
+                del d[key]
         for roi in d["rois"]:
             if roi["mm"] is None:
                 del roi["mm"]

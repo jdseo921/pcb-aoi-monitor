@@ -91,10 +91,10 @@ def test_req_insp_014_a_source_file_the_run_changes_is_reported(
     deeppcb = _deeppcb(tmp_path / "d")
     check = dc.golden_check
 
-    def changing(items: list[dc.Item], min_area: int) -> dict[str, object]:
+    def changing(items: list[dc.Item], min_area: int, copper: str | None = None) -> dict[str, object]:
         with open(items[0].good, "ab") as f:
             f.write(b"x")
-        return check(items, min_area)
+        return check(items, min_area, copper)
 
     monkeypatch.setattr(dc, "golden_check", changing)
     out = tmp_path / "out"
@@ -209,3 +209,17 @@ def test_req_trn_018_held_out_photos_are_a_seeded_share_of_each_board_and_type(t
     assert all(
         sum(p.parent.name == k and p.stem[:2] == b for p in test) == 3 for b in ("01", "04") for k in ("Short", "Spur")
     )
+
+
+def test_req_insp_018_copper_names_are_counted_for_each_found_box(tmp_path: Path) -> None:
+    """With --copper the recipe names copper defects of that shade (ADR 0015): each type counts its found boxes named
+    right, and `named` counts them by the name of the first region over them; the record says which shade ran."""
+    deeppcb, out = _deeppcb(tmp_path / "d"), tmp_path / "out"
+    assert dc.main(["--out", str(out), "--deeppcb", str(deeppcb), "--copper", "light"]) == 0
+    results = json.loads((out / "results.json").read_text(encoding="utf-8"))
+    golden = results["deeppcb"]["golden"]
+    assert results["settings"]["copper"] == golden["copper"] == "light"
+    assert sum(golden["named"]["short"].values()) == golden["by_type"]["short"]["found"] == 1
+    assert golden["by_type"]["short"]["named_right"] == golden["named"]["short"].get("Short Circuit", 0)
+    assert "Named with light copper, of the boxes found:" in (out / "summary.md").read_text(encoding="utf-8")
+    assert dc.COPPER_TYPES["pin-hole"] == dc.COPPER_TYPES["missing_hole"] == "Pin-hole / Missing Hole"

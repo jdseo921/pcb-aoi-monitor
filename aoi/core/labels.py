@@ -22,7 +22,7 @@ CALIBRATION_NG = 30  # NG images a proposed calibration set holds at most (the l
 @dataclass(frozen=True)
 class DefectBox:
     """One defect on an NG image: its box in pixels of the image as decoded and shown, turned by its EXIF Orientation
-    (x, y of the top left corner, w by h), and one of the 33 defect types; the severity is always the one
+    (x, y of the top left corner, w by h), and one of the 37 defect types; the severity is always the one
     aoi/defects.py gives the type (REQ-TRN-003)."""
 
     x: int
@@ -39,7 +39,7 @@ class DefectBox:
 
 def check(sample: str, size: Size, label: str, defect_type: str | None, boxes: list[DefectBox]) -> None:
     """Refuse a label `sample` cannot take: AOI-TRN-030 for a label other than OK, NG or UNSURE, a box or defect type on
-    an image that is not NG, a type that is not one of the 33 (no Anomaly: a person names the defect) or a box not in
+    an image that is not NG, a type that is not one of the 37 (no Anomaly: a person names the defect) or a box not in
     whole pixels, and AOI-TRN-031 for a box that does not lie inside the image of `size` (width, height); None skips
     that, for boxes kept from the label before, which were checked when drawn."""
     why, known = None, names()
@@ -52,12 +52,12 @@ def check(sample: str, size: Size, label: str, defect_type: str | None, boxes: l
     elif defect_type and defect_type not in known:  # an older label's type, Anomaly for one
         why = QT_TRANSLATE_NOOP(
             "Errors",
-            "the image's defect type, {type}, is not one of the 33 defect types (an earlier version stored it): press"
+            "the image's defect type, {type}, is not one of the 37 defect types (an earlier version stored it): press"
             " Mark NG, which labels the image NG again with no defect type, as its boxes give the types, then draw its"
             " boxes again",
         ).fill(type=defect_type)
     elif unknown:
-        why = QT_TRANSLATE_NOOP("Errors", "{type} is not one of the 33 defect types").fill(type=unknown[0])
+        why = QT_TRANSLATE_NOOP("Errors", "{type} is not one of the 37 defect types").fill(type=unknown[0])
     elif not all(_whole(v) for b in boxes for v in (b.x, b.y, b.w, b.h)):
         why = QT_TRANSLATE_NOOP("Errors", "a defect box's position and size are not whole pixels")
     if why is not None:
@@ -91,7 +91,7 @@ def image_size(path: str, read: Reader | None = None) -> tuple[int, int]:
 
 
 def blind_label_ok(label: str, defect_type: str | None) -> bool:
-    """A blind label of a calibration image is OK with no defect type, or NG with one of the 33 (REQ-TRN-016)."""
+    """A blind label of a calibration image is OK with no defect type, or NG with one of the 37 (REQ-TRN-016)."""
     return label == "OK" and defect_type is None or label == "NG" and defect_type in names()
 
 

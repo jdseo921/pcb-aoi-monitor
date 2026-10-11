@@ -16,6 +16,11 @@ from ...core.recipe import ADDED, REMOVED, Change, Recipe
 from ...times import to_local
 from .base import QT_TRANSLATE_NOOP, button, fill_table, make_table
 
+COPPER_SHOWN = {  # a recipe's `copper` as the sheet, the Revisions tab and the Recipe Editor name it (REQ-INSP-018)
+    None: QT_TRANSLATE_NOOP("SaveSheet", "Off (assembled boards)"),
+    "light": QT_TRANSLATE_NOOP("SaveSheet", "Light copper"),
+    "dark": QT_TRANSLATE_NOOP("SaveSheet", "Dark copper"),
+}
 SETTINGS = {  # a Change's field as the sheet and the Revisions tab name it; a field not here is shown as stored
     "use_ai": QT_TRANSLATE_NOOP("SaveSheet", "AI check"),
     "anomaly_threshold": QT_TRANSLATE_NOOP("SaveSheet", "AI score threshold"),
@@ -27,6 +32,7 @@ SETTINGS = {  # a Change's field as the sheet and the Revisions tab name it; a f
     "ssim_min": QT_TRANSLATE_NOOP("SaveSheet", "Similarity minimum (SSIM)"),
     "changed_pct_max": QT_TRANSLATE_NOOP("SaveSheet", "Maximum changed area %"),
     "max_diff_regions": QT_TRANSLATE_NOOP("SaveSheet", "Allowed difference regions"),
+    "copper": QT_TRANSLATE_NOOP("SaveSheet", "Copper defect names"),
     "type": QT_TRANSLATE_NOOP("SaveSheet", "type"),
     "x": QT_TRANSLATE_NOOP("SaveSheet", "X (px)"),
     "y": QT_TRANSLATE_NOOP("SaveSheet", "Y (px)"),
@@ -130,6 +136,8 @@ class SaveSheet(QGroupBox):
 
     def value(self, field: str, v: object) -> str:
         """A setting's value as stored, as the sheet and the Revisions tab show it."""
+        if field == "copper" and (v is None or v in COPPER_SHOWN):
+            return self.tr(COPPER_SHOWN[v if isinstance(v, str) else None])
         if v is None:
             return "—"
         if isinstance(v, bool):

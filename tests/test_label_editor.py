@@ -1,5 +1,5 @@
 """REQ-TRN-003, the screen half (stage S33): the label editor beside Training's samples table, where an Engineer draws,
-selects, moves and resizes the defect boxes of an NG image, by mouse and by touch, and gives each one of the 33 types,
+selects, moves and resizes the defect boxes of an NG image, by mouse and by touch, and gives each one of the 37 types,
 whose severity the defect table fills in; every change is stored through `AppContext.set_boxes`, which keeps the
 boxes before in the image's history (labels sketch, docs/sketches/training-labels.md)."""
 
@@ -361,7 +361,7 @@ def test_req_trn_003_editor_resize(qtbot: QtBot, trained_ctx: AppContext) -> Non
 
 
 def test_req_trn_003_editor_type_and_severity(qtbot: QtBot, trained_ctx: AppContext) -> None:
-    """The Type field offers the 33 defect types of aoi/defects.py, by category and with no Anomaly; the selected box
+    """The Type field offers the 37 defect types of aoi/defects.py, by category and with no Anomaly; the selected box
     takes the type picked, by Enter on the type shown or by a choice in the open list, stored with the severity the
     defect table gives it, shown beside the field, in the list and on the image. The arrow keys only show a type, which
     leaving the list puts back; the wheel turns it only while the list has the focus, and stores nothing. With no box
@@ -372,7 +372,7 @@ def test_req_trn_003_editor_type_and_severity(qtbot: QtBot, trained_ctx: AppCont
     page = _open(qtbot, ctx, sample)
     editor, view, types = page.editor, page.editor.view, page.editor.type_box
     offered = [types.itemData(i) for i in range(types.count())]
-    assert offered == defects.names() and len(offered) == 33 and "Anomaly" not in offered
+    assert offered == defects.names() and len(offered) == 37 and "Anomaly" not in offered
     editor.box_list.setCurrentRow(0)
     assert view.chosen == 0 and types.currentData() == "Scratch" and editor.severity.text() == "Minor"
     rows = len(ctx.label_history(sample["uuid"]))
@@ -392,7 +392,8 @@ def test_req_trn_003_editor_type_and_severity(qtbot: QtBot, trained_ctx: AppCont
         assert _stored(page, sample["uuid"]) == [(50, 60, 40, 30, kind.name, kind.severity)]
         assert editor.severity.text() == kind.severity
         assert editor.box_list.item(0).text() == f"1 {kind.name} ({kind.severity}) 50,60 40×30 px"
-    assert len(ctx.label_history(sample["uuid"])) == rows + 33, "one label row per type picked, each a change"
+    picked = len(defects.DEFECT_TYPES)
+    assert len(ctx.label_history(sample["uuid"])) == rows + picked, "one label row per type picked, each a change"
     on_image = [i.text() for i in view.scene().items() if isinstance(i, QGraphicsSimpleTextItem) and i.isVisible()]
     last = defects.DEFECT_TYPES[-1]
     assert f"1 {last.name} ◆ {last.severity}" in on_image
@@ -982,7 +983,7 @@ def test_req_trn_003_editor_mark_after_a_box_adds_no_row(qtbot: QtBot, trained_c
 def test_req_trn_003_editor_mark_ng_drops_a_type_not_of_the_33(
     qtbot: QtBot, trained_ctx: AppContext, dialogs: list[tuple[str, str]]
 ) -> None:
-    """An NG image whose label an earlier version stored with a type that is not one of the 33 (Missing), carried over
+    """An NG image whose label an earlier version stored with a type that is not one of the 37 (Missing), carried over
     with no labeller, takes no box: AOI-TRN-030 says so and that Mark NG labels it NG again with no type. Mark NG does,
     as the user acting, and its boxes are then drawn; Mark OK on another such image, then Undo, puts it back NG with no
     type, the one it can take (the review of the joined stack)."""
@@ -996,7 +997,7 @@ def test_req_trn_003_editor_mark_ng_drops_a_type_not_of_the_33(
     editor.draw_btn.click()
     _drag(view, _at(view, 100, 100), _at(view, 160, 140))
     assert _stored(page, ng["uuid"]) == [] and [t[:11] for t, _ in dialogs] == ["AOI-TRN-030"]
-    assert "Missing, is not one of the 33" in dialogs[0][1] and "Mark NG" in dialogs[0][1]
+    assert "Missing, is not one of the 37" in dialogs[0][1] and "Mark NG" in dialogs[0][1]
     _key(page.samples, Qt.Key.Key_N)
     _wait(page)
     label = ctx.label_history(ng["uuid"])[0]

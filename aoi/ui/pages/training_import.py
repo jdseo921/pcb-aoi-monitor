@@ -79,7 +79,7 @@ class _RowChoice(QStyledItemDelegate):
 class ImportSheet(QGroupBox):
     """The files of one import, picked for one board model, and what to import them as. `on_import(files)` runs the
     import of copies of the rows (the page puts it on the pool, into `board_model`) and `on_close()` closes the sheet;
-    Import is off until every NG file has one of the 33 DCT types, and while the header shows another board model
+    Import is off until every NG file has one of the 37 DCT types, and while the header shows another board model
     (`follow_header`), and the files left without a label are listed as such (AOI-TRN-016)."""
 
     def __init__(self, on_import: Callable[[list[ImportFile]], None], on_close: Callable[[], None]) -> None:
@@ -115,7 +115,7 @@ class ImportSheet(QGroupBox):
             self.category.addItem(category, category)
         self.category.currentIndexChanged.connect(self._fill_types)
         self.type_box = QComboBox()
-        self.type_box.setPlaceholderText(self.tr("Pick one of the 33 defect types"))
+        self.type_box.setPlaceholderText(self.tr("Pick one of the 37 defect types"))
         self.type_box.activated.connect(lambda _i: self._for_all(TYPE, self.type_box.currentData()))
         self._fill_types()
         types.addWidget(self.category)
@@ -183,7 +183,7 @@ class ImportSheet(QGroupBox):
     def _fill_types(self, _index: int = 0) -> None:
         category = self.category.currentData()
         self.type_box.clear()
-        for d in taxonomy.DEFECT_TYPES:  # the 33: never "Unknown", never the AI model's "Anomaly"
+        for d in taxonomy.DEFECT_TYPES:  # the 37: never "Unknown", never the AI model's "Anomaly"
             if category is None or d.category == category:
                 self.type_box.addItem(self.tr("{type} · {severity}").format(type=d.name, severity=d.severity), d.name)
         self.type_box.setCurrentIndex(-1)  # a pick, not a category change, sets the NG rows' type

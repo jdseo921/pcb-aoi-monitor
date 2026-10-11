@@ -637,11 +637,11 @@ class TrainingPage(Page):
         """Mark OK, Mark NG, Mark UNSURE (O, N, U): each selected image not already so labelled, on a pool thread, with
         no question and no defect type, which the boxes give; the rows stay selected, and Undo puts back each image's
         label and boxes. Mark NG then puts the focus on the image, for its boxes (labels sketch). A label carried over
-        with no labeller is labelled again, keeping its type if it is one of the 33, so that it can be checked (S32),
-        which Undo leaves; a type an earlier version stored that is not one of the 33 goes, with no other in its place
+        with no labeller is labelled again, keeping its type if it is one of the 37, so that it can be checked (S32),
+        which Undo leaves; a type an earlier version stored that is not one of the 37 goes, with no other in its place
         (the boxes give the types), and Undo puts back none either (review). The marks write through set_label, which
         takes UNSURE and an NG with no type until its boxes are drawn, where update_sample keeps the import's rule, OK
-        or NG with one of the 33 types (S31). A batch an error stops part-way shows what it stored, which Undo puts
+        or NG with one of the 37 types (S31). A batch an error stops part-way shows what it stored, which Undo puts
         back, then the error (review)."""
         ctx = self.ctx
         before = [s for i in self._selected_ids() if (s := self.shown[i])["label"] != label or not s["labelled_by"]]

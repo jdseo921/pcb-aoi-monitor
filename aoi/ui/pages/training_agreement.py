@@ -270,7 +270,7 @@ class BlindPanel(QWidget):
         self.act_ng = self._action(self.tr("Label NG"), "N", lambda: self._label("NG"))
         row.addWidget(action_button(self.act_ok, show_key=False))
         row.addWidget(QLabel(self.tr("Type")))
-        self.type_box = QComboBox()  # the label editor's 33 types, by category; none picked for each new image
+        self.type_box = QComboBox()  # the label editor's 37 types, by category; none picked for each new image
         self.type_box.setMinimumContentsLength(14)
         self.type_box.addItem(self.tr("Pick its defect type"), None)
         for name in names():

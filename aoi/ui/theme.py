@@ -78,6 +78,7 @@ WHY_MIN_H = 60  # Compare's "why" box gives way to two lines before the decision
 DECISION_ROWS = 7  # and before the decision table shows fewer rows than this, the sketch's seven; more scroll
 TRY_ROWS = 5  # the rows the Recipe Editor's Try checks table shows before it scrolls (recipe-editor sketch)
 NAV_W, HEADER_H, FIELD_W, CARD_W = 250, 64, 240, 720
+NAV_TEXT_X = 18  # a sidebar entry's text from its left edge, as QListWidget#nav::item's padding sets it
 IMAGE_MIN_W, IMAGE_MIN_H, PROGRESS_W = 320, 240, 360
 FILTER_MIN_W = 80  # a name filter's drop-down gives way to this in a narrow window ("All" stays whole; S51)
 MARK_D = 12  # a point picked on an image (Calibrate Scale…): a ring this many px across at every zoom
@@ -119,7 +120,7 @@ QFrame#card { background: $BG_RAISED; border-radius: ${RADIUS_L}px; }
 QWidget#empty { background: $BG_DEEP; border: 1px dashed $LINE_STRONG; border-radius: ${RADIUS_L}px; }
 QLabel#emptyHeading { font-size: ${FONT_LARGE_PT}pt; font-weight: 600; }
 QListWidget#nav { background: $BG_DEEP; border: none; padding-top: ${SPACE_S}px; }
-QListWidget#nav::item { padding: ${SPACE}px 18px; margin: 2px ${SPACE_S}px; border-radius: ${RADIUS}px; }
+QListWidget#nav::item { padding: ${SPACE}px ${NAV_TEXT_X}px; margin: 2px ${SPACE_S}px; border-radius: ${RADIUS}px; }
 QListWidget#nav::item:selected { background: $BG_SELECTED; color: $ON_DARK; }
 QListWidget#nav::item:hover:!selected { background: $BG_NAV_HOVER; }
 QPushButton { background: $BG_BUTTON; border: 1px solid $LINE_STRONG; border-radius: ${RADIUS}px;

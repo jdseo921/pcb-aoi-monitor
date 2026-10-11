@@ -1,5 +1,5 @@
 """PCBA defect taxonomy, transcribed from
-"PCBA Defect Classification Table" v1.0 (27 April 2026).
+"PCBA Defect Classification Table" v1.0 (27 April 2026), with four bare-board copper types added (REQ-INSP-018).
 
 Used for labeling uploaded NG samples, for the defect-type column in result
 tables, and for severity-based verdicts (Critical/Major -> NG, Minor -> Warning).
@@ -60,6 +60,12 @@ DEFECT_TYPES: list[DefectType] = [
     _T("Pin Height Error", "Connector", "Major", "3D AOI", "Incorrect pin height"),
     _T("Partial Insertion", "Connector", "Critical", "AOI / Visual", "Connector not fully seated"),
     _T("Shield Can Gap", "Connector", "Major", "Side-View AOI", "Gap between shield can and PCB"),
+    # Added for bare boards (REQ-INSP-018, ADR 0015), not in the table: copper defects as bare-board AOI names them,
+    # with Open Circuit and Short Circuit above; a recipe's Copper setting names them (aoi/core/copper.py).
+    _T("Mousebite", "Bare Board", "Major", "AOI", "Notch missing from the edge of a copper trace"),
+    _T("Spur", "Bare Board", "Major", "AOI", "Unwanted copper projecting from a trace"),
+    _T("Spurious Copper", "Bare Board", "Major", "AOI", "Stray residual copper left on the board"),
+    _T("Pin-hole / Missing Hole", "Bare Board", "Major", "AOI", "Hole or via missing, clogged or badly drilled"),
 ]
 
 # Generic label for regions the unsupervised model flags before a type is known.
