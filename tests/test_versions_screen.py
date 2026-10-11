@@ -68,7 +68,8 @@ def test_req_trn_005_versions_empty_state(qtbot: QtBot, ctx: AppContext, tmp_pat
     page = _datasets(qtbot, ctx)
     empty = page.versions.empty
     assert empty.isVisible() and empty.heading.text() == "No frozen dataset for CAL-1 yet"
-    assert empty.sentence.text() == "Check the labels, Freeze Dataset, then split and lock its validation set."
+    steps = "Check the labels, Freeze Dataset, then split and lock its validation set."
+    assert empty.sentence.text() == f"{steps} Remove and Export Manifest… need the Admin role."  # REQ-USR-001
     assert empty.link.text() == "Freeze Dataset…" and not page.versions.btn_verify.isEnabled()
     empty.link.click()
     assert page.working.sheet.isVisible() and not empty.link.isEnabled()  # off, as Freeze Dataset… is

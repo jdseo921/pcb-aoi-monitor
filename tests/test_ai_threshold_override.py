@@ -315,7 +315,8 @@ def test_req_trn_015_compare_names_the_value_that_judges_its_board(
     assert compare.ai_thr.tick.text() == OWN and compare.ai_thr.note.text().startswith(said)
     assert compare.ai_thr.tick.parentWidget() is compare.ai_thr and _tick_in_panel(compare), "back beside the field"
     win.set_user("operator")
-    assert not compare.ai_thr.isVisibleTo(win) and not win.navigate("Recipe Editor")
+    greyed = compare.ai_thr.isVisibleTo(win) and not compare.ai_thr.isEnabled()  # greyed with the reason (REQ-USR-001)
+    assert greyed and not win.navigate("Recipe Editor")
 
 
 def test_req_trn_015_compare_names_no_value_of_an_ai_model_that_judged_nothing(
