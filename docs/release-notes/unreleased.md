@@ -14,6 +14,7 @@ None. / 없음.
 ## New / 신규 (draft)
 
 - [REQ-INSP-012] An Admin sets how long OK results' maps are kept and the largest image (megapixels and MB) on Settings; before, only in settings.json (#153). / 관리자가 설정 페이지에서 OK 결과 맵 보관 기간과 최대 이미지 크기(메가픽셀, MB)를 설정합니다. 이전에는 settings.json에서만 가능했습니다(#153).
+- [REQ-TRN-007] Training and Settings offer a 640 px AI model input size next to 128 to 512, for board models with small defects; 256 px stays the default, and each run keeps its size in its AI model (ADR 0012). 640 px trains about 9 times longer, so it suits a station with a CUDA graphics card. / 학습 및 설정 화면에서 128~512에 더해 640 px AI 모델 입력 크기를 선택할 수 있어 작은 결함이 있는 보드 모델에 사용할 수 있습니다. 기본값은 256 px로 유지되며, 각 학습 실행의 크기는 해당 AI 모델에 저장됩니다(ADR 0012). 640 px는 학습 시간이 약 9배 길어 CUDA 그래픽 카드가 있는 스테이션에 적합합니다.
 
 ## Improved / 개선 (draft)
 

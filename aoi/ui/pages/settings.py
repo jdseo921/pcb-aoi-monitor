@@ -69,7 +69,7 @@ class SettingsPage(Page):
         self.device.addItems(["auto", "cpu", "cuda"])
         self.device.setCurrentText(s.device)
         self.input_size = QComboBox()
-        self.input_size.addItems(["128", "256", "384", "512"])
+        self.input_size.addItems(["128", "256", "384", "512", "640"])  # ADR 0012: 256 by default, 640 for small defects
         self.input_size.setCurrentText(str(s.image_size))
         self.epochs = QSpinBox()
         self.epochs.setRange(5, 1000)
