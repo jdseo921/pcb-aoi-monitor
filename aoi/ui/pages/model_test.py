@@ -27,6 +27,7 @@ from PySide6.QtWidgets import (
 from ... import defects as taxonomy
 from ...core import report as reporting
 from ...core import stats
+from ...core.imaging import PREVIEW_PX
 from ...core.inspector import InspectionResult, JudgedBy
 from ...core.recipe import scale_digits
 from ...core.services import AppContext
@@ -108,8 +109,10 @@ class ModelTestPage(Page):
         self.btn_run = button(self.tr("Run Test"), "primary", self.run)
         bar.addWidget(self.btn_run)
         self.btn_csv = button(self.tr("Export CSV"), slot=self.export_csv)
+        self.btn_img = button(self.tr("Export Image Overlays"), slot=self.export_overlays)  # annotated images (GUI §5)
         self.btn_report = button(self.tr("Export Report"), slot=self.export_report)
         bar.addWidget(self.btn_csv)
+        bar.addWidget(self.btn_img)
         bar.addWidget(self.btn_report)
         self.folder_label = WrappedLine(self.tr("No folder selected"))  # a long folder never widens the window
         bar.addWidget(self.folder_label, 1)
@@ -158,6 +161,7 @@ class ModelTestPage(Page):
         self.table = make_table(self.headers)
         self.table.itemSelectionChanged.connect(self._preview)
         self.empty = EmptyState(self.table)
+        self.busy_export = BusyOverlay(self.table, self.tr("Exporting…"))
         split.addWidget(self.table)
         preview = QWidget()
         pl = QVBoxLayout(preview)
@@ -693,7 +697,7 @@ class ModelTestPage(Page):
 
     def on_user_changed(self) -> None:
         admin = self.ctx.role == "Admin"  # customer results leave the station only by an Admin (Q58, #151)
-        for b in (self.btn_csv, self.btn_report, self.btn_validation):
+        for b in (self.btn_csv, self.btn_img, self.btn_report, self.btn_validation):
             b.setVisible(admin)
 
     def on_show(self) -> None:
@@ -733,6 +737,30 @@ class ModelTestPage(Page):
         )
         if f:
             self.ctx.export_csv(f, self.rows, "test results")
+
+    def export_overlays(self) -> None:
+        """The run's annotated images, which Stage 1 delivers beside the test result CSV (GUI §5, REQ-TST-004), after a
+        question naming their count, into a folder picked then; copied on the pool with progress and Cancel, which keeps
+        the images copied so far (REQ-SET-021)."""
+        if not self.rows:
+            return
+        ask = self.tr(
+            "Export the annotated images of {images} images? Each is the overlay the run stored, at most {px} px on its"
+            " longer side, named by its row, image and verdict."
+        ).format(images=len(self.rows), px=PREVIEW_PX)
+        buttons = QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+        if QMessageBox.question(self, self.tr("Export Image Overlays"), ask, buttons) != QMessageBox.StandardButton.Yes:
+            return
+        d = QFileDialog.getExistingDirectory(self, self.tr("Export overlays to"), str(self.ctx.settings.exports_dir))
+        if not d:
+            return
+        copied = self.tr("Copied {count} annotated image(s) to {folder}")
+        stopped = self.tr("Stopped: copied {count} annotated image(s) to {folder}; the others were not copied.")
+        self.run_in_background(
+            self.ctx.export_test_overlays, list(self.rows), d, with_progress=True, busy=self.busy_export,
+            on_result=lambda n: self.shell.status(copied.format(count=n, folder=d)),
+            on_cancel=lambda n: self.shell.status(stopped.format(count=n or 0, folder=d)),
+        )  # fmt: skip
 
     def export_report(self) -> None:
         if not self.rows:

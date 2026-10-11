@@ -194,6 +194,13 @@ WRITES: dict[str, tuple[str, Callable[[AppContext, Path, Path], Any]]] = {
         "export.overlays",
         lambda ctx, data, tmp: ctx.export_overlays(ctx.inspections(), tmp / "overlays"),
     ),
+    # the annotated images of the newest validation run above, as AI Model Test exports them (REQ-TST-004)
+    "export_test_overlays": (
+        "export.test_overlays",
+        lambda ctx, data, tmp: ctx.export_test_overlays(
+            next(iter(ctx.test_runs("TINY")), {"results": []})["results"], tmp / "annotated"
+        ),
+    ),
     "export_csv": ("export.csv", lambda ctx, data, tmp: ctx.export_csv(tmp / "rows.csv", [{"a": 1}])),
     "export_report": (
         "export.report",
@@ -252,7 +259,8 @@ CALLS = {**{name: call for name, (_, call) in WRITES.items()}, **CHECKED_READS}
 EXPECTED_ROLE = {name: "Engineer" for name in CALLS} | {"add_user": "Admin", "save_settings": "Admin"}
 EXPECTED_ROLE |= {"create_store": "Admin", "restore_store_key": "Admin", "move_in": "Admin", "shred_store": "Admin"}
 EXPECTED_ROLE |= {"delete_sample": "Admin", "delete_inspections": "Admin"}  # only an Admin deletes (REQ-LOG-003)
-EXPECTED_ROLE |= {f"export_{what}": "Admin" for what in ("overlays", "csv", "csv_files", "report")}  # Q58 (#151)
+# Q58 (#151): customer images and results leave the station only by an Admin
+EXPECTED_ROLE |= {f"export_{what}": "Admin" for what in ("overlays", "test_overlays", "csv", "csv_files", "report")}
 EXPECTED_ROLE["review_result"] = "Operator"  # the operator at the line reviews each call (ADR 0013)
 EXPECTED_ROLE["run_shift_check"] = "Operator"  # the operator starts the shift (ADR 0014)
 EXPECTED_ROLE["export_board_image"] = "Admin"  # Save Image… (F9): an export, an Admin's alone (#151, Jay 2026-10-10)

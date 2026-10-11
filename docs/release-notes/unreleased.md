@@ -28,6 +28,8 @@ None. / 없음.
 
 - [REQ-RCP-007] Recipe Editor › Thresholds › Fine alignment: each board is matched to the Golden board to a fraction of a pixel before the comparison, for fewer false calls along copper edges, at about 0.1 s more per board. Off by default, and stored only when on, so no existing recipe or verdict changes. / 레시피 편집기 › 임계값 › 정밀 정렬: 비교 전에 각 보드를 골든 보드에 1픽셀 미만 정밀도로 맞춰 구리 가장자리의 오검출을 줄이며, 보드당 약 0.1초가 더 걸립니다. 기본값은 꺼짐이며 켰을 때만 저장되므로 기존 레시피와 판정은 바뀌지 않습니다.
 
+- [REQ-TST-004] AI Model Test › Export Image Overlays (an Admin's, Q58) copies a run's annotated images, one per row named `<row>_<image>_<verdict>.png`, every missed defect and false call first, after a question naming the count, audited on the run as `export.test_overlays`: the Stage 1 annotated images beside the test result CSV. / AI 모델 테스트 › Export Image Overlays(관리자 전용, Q58)는 개수를 묻고 확인한 뒤 실행의 주석 이미지를 행마다 하나씩 `<행>_<이미지>_<판정>.png`로 복사하며, 놓친 결함과 오검출을 먼저 복사하고 실행에 `export.test_overlays`로 감사 기록합니다. 테스트 결과 CSV와 함께 전달하는 1단계 주석 이미지입니다.
+
 ## Improved / 개선 (draft)
 
 - [REQ-SET-004] Text on the green, red and blue fills (verdict banner, Start, Stop, primary and danger buttons) is black, reading at 5.0:1 or more; it was white at 3.3 to 4.2:1 (#150). / 녹색, 빨간색, 파란색 배경 위 글자(판정 배너, 시작, 정지, 주요 및 위험 버튼)가 검은색이 되어 5.0:1 이상으로 읽힙니다. 이전에는 흰색으로 3.3~4.2:1이었습니다(#150).

@@ -103,8 +103,8 @@ about 4 times slower; use it on a station with a CUDA graphics card, watch the t
 model's validation run decide.
 
 **Exports are an Admin's.** Customer images and results leave the station only by an Admin (#151): Export CSV and
-Export Image Overlays on Logs & Export, Export CSV, Export Report and Validation Report… on AI Model Test and Export
-Manifest… on Training show for an Admin alone, and AOI-USR-001 refuses an Engineer. An Engineer still archives, and
+Export Image Overlays on Logs & Export, Export CSV, Export Image Overlays, Export Report and Validation Report… on AI
+Model Test and Export Manifest… on Training show for an Admin alone, and AOI-USR-001 refuses an Engineer. An Engineer still archives, and
 exports an AI model.
 
 **Demo workspace.** The demo has a workspace of its own, beside the station's, with its own `settings.json`; section 9
@@ -611,10 +611,15 @@ validation on a dataset version also stores recall per defect type, by the type 
 
 **Validation Report.** On History, select a run made on a frozen dataset version's locked validation set and press Validation Report…: the PDF follows the validation steps a customer signs: the data and the labeller agreement check, the product's proposed targets beside the results (a customer's own targets are not yet stored with a run, so state any agreed ones beside that table), the engine's time per image (reading the file, saving and display are not counted), the locked set's manifest SHA-256, the results with counts and bounds, a page for each missed defect and false call, the AI model card, known limits and signature lines for the customer and the AI lead. A run on a folder, or a board model with no agreement check, has none (AOI-TST-007). The Korean headings are drafts for native review.
 
-**Overlays.** AI Model Test has no overlay export. Each run keeps the overlay of each of its rows in the workspace,
-under `results/test_runs/<run UUID>`, for its previews, and Export Report and Validation Report… print the overlay of
-each missed defect and false call. The overlays of inspected boards are exported on Logs & Export with **Export Image
-Overlays** (section 8): it asks first, naming the count, then copies the overlay picture of each record **Filter**
+**Export Image Overlays.** Each run keeps the overlay of each of its rows in the workspace, under
+`results/test_runs/<run UUID>`, for its previews, and Export Report and Validation Report… print the overlay of each
+missed defect and false call. Export Image Overlays on AI Model Test hands over all of them, the annotated images Stage 1
+delivers beside the test result CSV: it asks first, naming how many images, then copies each row's overlay, at most
+1600 px on its longer side, into the folder you pick (the workspace's `exports` folder offered first) as
+`<row>_<image name>_<verdict>.png`, such as `0007_ng_003_NG.png`, every missed defect and false call first, so Cancel
+keeps those. A row whose overlay is gone, or a run stored before overlays were kept, is left out and counted. The audit
+trail records it as `export.test_overlays` on the run, with the folder and the counts. The overlays of inspected boards
+are exported on Logs & Export with **Export Image Overlays** (section 8): it asks first, naming the count, then copies the overlay picture of each record **Filter**
 listed, under its own name (section 8, Evidence files), into the folder you pick, the workspace's `exports` folder
 offered first; a record whose overlay file is gone is left out. The audit trail records it as `export.overlays`, with
 the folder, the filter and the counts.

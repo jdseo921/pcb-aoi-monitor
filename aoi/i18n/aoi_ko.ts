@@ -1367,12 +1367,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+128"/>
+        <location line="+179"/>
         <source>Saving a board image</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-254"/>
+        <location line="-305"/>
         <source>Changing users</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1453,11 +1453,12 @@
     </message>
     <message>
         <location line="+102"/>
+        <location line="+47"/>
         <source>Exporting overlay images</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+47"/>
+        <location line="+51"/>
         <location line="+13"/>
         <source>Exporting CSV</source>
         <translation type="unfinished"></translation>
@@ -3397,7 +3398,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/model_test.py" line="+54"/>
+        <location filename="../ui/pages/model_test.py" line="+55"/>
         <source>AI model {version}</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5065,54 +5066,54 @@
     <name>ModelTestPage</name>
     <message>
         <location filename="../ui/pages/model_test.py" line="+47"/>
-        <location line="+619"/>
+        <location line="+622"/>
         <source>Select Test Folder…</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-618"/>
-        <location line="+359"/>
+        <location line="-621"/>
+        <location line="+362"/>
         <location line="+221"/>
         <source>Run Test</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-578"/>
-        <location line="+622"/>
+        <location line="-581"/>
+        <location line="+625"/>
         <source>Export CSV</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-621"/>
+        <location line="-623"/>
         <source>Export Report</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+3"/>
-        <location line="+296"/>
+        <location line="+4"/>
+        <location line="+297"/>
         <source>No folder selected</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-276"/>
-        <location line="+220"/>
+        <location line="-277"/>
+        <location line="+221"/>
         <source>Accuracy</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-221"/>
-        <location line="+220"/>
+        <location line="-222"/>
+        <location line="+221"/>
         <source>Precision</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-221"/>
-        <location line="+220"/>
+        <location line="-222"/>
+        <location line="+221"/>
         <source>Recall</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-200"/>
+        <location line="-201"/>
         <source>Image</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5132,12 +5133,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+484"/>
+        <location line="+485"/>
         <source>These results were judged by {run_model}, recipe revision {run_recipe}, {run_golden} and {run_scale}; {board_model} now uses {model}, recipe revision {recipe}, {golden} and {scale}. Rows are not previewed; select one for Run Test Again, which tests the run&apos;s folder with what is in use now.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-592"/>
+        <location line="-595"/>
         <source>Matches label</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5152,34 +5153,45 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+69"/>
+        <location line="+62"/>
+        <location line="+640"/>
+        <source>Export Image Overlays</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="-631"/>
         <source>Source</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location line="+12"/>
-        <location line="+62"/>
+        <location line="+63"/>
         <location line="+158"/>
-        <location line="+502"/>
+        <location line="+526"/>
         <source>Missed defects</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-721"/>
-        <location line="+62"/>
+        <location line="-746"/>
+        <location line="+63"/>
         <location line="+158"/>
-        <location line="+501"/>
+        <location line="+525"/>
         <source>False calls</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-696"/>
+        <location line="-721"/>
         <source>Matches label?</source>
         <comment>whether the verdict matches the image&apos;s label</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+11"/>
+        <location line="+5"/>
+        <source>Exporting…</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+7"/>
         <source>Select a row to preview</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5444,24 +5456,44 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+10"/>
+        <location line="+12"/>
+        <source>Export the annotated images of {images} images? Each is the overlay the run stored, at most {px} px on its longer side, named by its row, image and verdict.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+6"/>
+        <source>Export overlays to</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>Copied {count} annotated image(s) to {folder}</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Stopped: copied {count} annotated image(s) to {folder}; the others were not copied.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+12"/>
         <location line="+12"/>
         <source>Export report</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-502"/>
-        <location line="+492"/>
+        <location line="-526"/>
+        <location line="+516"/>
         <source>PDF (*.pdf)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-421"/>
+        <location line="-445"/>
         <source>Engine time per image, 95th percentile (reading, saving, display not counted)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+427"/>
+        <location line="+451"/>
         <source>Export the validation report of {images} images? It shows each of its {misses} missed defects and {false_calls} false calls with its overlay, and the AI model card.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5497,8 +5529,8 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-451"/>
-        <location line="+495"/>
+        <location line="-475"/>
+        <location line="+519"/>
         <source>{image}: labelled {label}, judged {verdict}, AI score {score}</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5641,7 +5673,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/model_test.py" line="-768"/>
+        <location filename="../ui/pages/model_test.py" line="-795"/>
         <source>AI Model Test</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7088,7 +7120,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/services.py" line="-3052"/>
+        <location filename="../core/services.py" line="-3103"/>
         <source>Aligning {count} images to the reference board</source>
         <translation type="unfinished"></translation>
     </message>

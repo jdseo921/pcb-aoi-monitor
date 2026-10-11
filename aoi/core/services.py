@@ -3084,6 +3084,57 @@ class AppContext:
             raise AoiError("AOI-LOG-001", str(failed[1]), reason=why, **params) from failed[1]
         return len(copied)
 
+    @requires("Admin", QT_TRANSLATE_NOOP("Errors", "Exporting overlay images"))  # Q58 (#151)
+    def export_test_overlays(
+        self,
+        rows: list[dict[str, Any]],
+        folder: str | Path,
+        progress: Callable[[int, int], None] | None = None,
+        should_stop: Callable[[], bool] | None = None,
+    ) -> int:
+        """Copy the annotated image of each row of a validation run (rows as `test_runs` gives them) into `folder`, as
+        `<row>_<image name>_<verdict>.png`: what Stage 1 delivers beside the test result CSV (GUI §5, REQ-TST-004);
+        returns how many. Each is the overlay the run stored for its preview, at most PREVIEW_PX on its longer side,
+        every miss and false call copied first; a row whose overlay is not kept is left out, and the entry counts it as
+        `missing`. The entry is `export.test_overlays` on the run, with `folder` as `export_overlays` stores it; a copy
+        that fails stops the export with AOI-LOG-001, the files copied before it staying and named, and
+        `progress(done, total)` and `should_stop()` work as there. A page runs it on the pool (REQ-SET-021)."""
+        pairs = []
+        for i, r in enumerate(rows, 1):
+            src = resolve(r["overlay"], self.settings.root) if r.get("overlay") else None
+            if src is not None and src.exists():
+                name = f"{i:04d}_{Path(str(r['image'])).stem}_{r.get('ai_result') or 'NONE'}.png"
+                pairs.append((r.get("pass_fail") != "FAIL", i, src, Path(folder) / name))
+        pairs.sort(key=lambda p: (p[0], p[1]))  # every miss and false call first, as the sketch has it, then the rest
+        copied: list[Path] = []
+        failed: tuple[Path, OSError] | None = None
+        stopped = False
+        for _, _, src, dest in pairs:
+            if should_stop is not None and should_stop():
+                stopped = True
+                break
+            try:
+                atomic.copy_file(src, dest)
+            except OSError as e:  # the drive full or pulled out, a name the folder cannot take
+                failed = (dest, e)
+                break
+            copied.append(dest)
+            if progress is not None:
+                progress(len(copied), len(pairs))
+        after: dict[str, Any] = {
+            "folder": to_stored(Path(folder).absolute(), self.settings.root), "rows": len(rows),
+            "copied": len(copied), "missing": len(rows) - len(pairs), "cancelled": stopped,
+        }  # fmt: skip
+        if failed:
+            after["error"] = f"{failed[0].name}: {failed[1].strerror or failed[1]}"
+        run_uuid = str(rows[0].get("run_uuid")) if rows and rows[0].get("run_uuid") else None
+        self._audit_files(copied, "export.test_overlays", "test_run", run_uuid, after, [p[2] for p in pairs])
+        if failed:
+            params = {"copied": len(copied), "total": len(pairs), "folder": str(folder), "file": failed[0].name}
+            why = failed[1].strerror or str(failed[1])
+            raise AoiError("AOI-LOG-001", str(failed[1]), reason=why, **params) from failed[1]
+        return len(copied)
+
     @requires("Admin", QT_TRANSLATE_NOOP("Errors", "Exporting CSV"))  # Q58 (#151)
     def export_csv(
         self,
