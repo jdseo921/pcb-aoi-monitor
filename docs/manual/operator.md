@@ -24,6 +24,15 @@ model during a run stops the run (section 2).
 **The view.** On Inspection, set the **View** box to the side the boards are photographed from before the first board:
 it shows Top each time the app starts (section 2).
 
+**The shift check.** Before the first board of each shift, press **Shift Check** (F7) on Inspection. The app judges the
+board model's master samples: a known-OK board and a known-NG board of each Critical defect type. The line above the
+verdict then reads "Shift check passed" with the time until which boards may be inspected, and the summary lists each
+master sample with the verdict it was given. Until a check passes, Start and Next Board stop with AOI-INSP-016 and no
+board is inspected. The check is asked for again after 12 hours (an Admin sets the hours on Settings) and whenever the
+AI model, recipe, Golden board or scale changes. If a master sample is judged wrongly, the check fails with an NG alarm:
+do not inspect boards, call an Engineer, and press Shift Check again once they have fixed it. If the board model has no
+master samples, the app says so (AOI-INSP-017); ask an Engineer to add them.
+
 ## 2. Running boards
 
 Queue the boards with **Load Images…** (Ctrl+O) or **Load Folder…** (Ctrl+Shift+O); the count of queued images shows

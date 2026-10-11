@@ -24,6 +24,7 @@ import threading
 from collections import Counter
 from collections.abc import Callable, Iterator, Sequence
 from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
 from pathlib import Path, PureWindowsPath
 from typing import Any, Concatenate, Literal, ParamSpec, TypeVar, cast
 
@@ -100,6 +101,14 @@ NOT_LOCKED = QT_TRANSLATE_NOOP(
 )  # the audit actions that change the active version
 NO_TYPE = QT_TRANSLATE_NOOP("Errors", "no defect type was given")  # why AOI-TRN-013 refused an NG sample
 NOT_A_TYPE = QT_TRANSLATE_NOOP("Errors", "{name} is not one of them")
+SHIFT_CHECK_REASONS = {  # why AOI-INSP-016 stops a board, by `AppContext.shift_check`'s state (REQ-INSP-017)
+    "none": QT_TRANSLATE_NOOP("Errors", "no shift check has run for it yet"),
+    "failed": QT_TRANSLATE_NOOP("Errors", "its last shift check judged a master sample wrongly"),
+    "expired": QT_TRANSLATE_NOOP("Errors", "its last shift check is more than {hours} hours old"),
+    "changed": QT_TRANSLATE_NOOP(
+        "Errors", "its AI model, recipe, Golden board or scale changed after its last shift check"
+    ),
+}
 STEM_CHARS = 40  # how much of a source file's stem names its evidence or sample file (#245)
 WINDOWS = os.name == "nt"
 MAX_PATH = 260  # the UTF-16 units of a path, its ending NUL included, that Windows takes with long paths off
@@ -916,10 +925,14 @@ class AppContext:
         Model Test asks it with the `JudgedBy` of a run before a row is previewed (#250), so both pages agree on when a
         result is current; that page then passes over the AI model for a run judged with the AI check off (#246), and
         the scale for a recipe that holds no size in mm (S29)."""
+        return insp.inputs == self._engine_inputs(board_model)
+
+    def _engine_inputs(self, board_model: str) -> tuple[str | None, str | None, str | None, float | None]:
+        """What `inspector(board_model)` would be built from now, as `Inspector.inputs` gives it, from the database."""
         active = self.db.active_model(board_model)
         latest = self.db.latest_recipe(board_model)
         model, recipe = str(active["uuid"]) if active else None, latest[2] if latest else None
-        return insp.inputs == (model, recipe, self.db.reference(board_model), self.db.scale(board_model))
+        return model, recipe, self.db.reference(board_model), self.db.scale(board_model)
 
     def inspect(
         self,
@@ -1535,6 +1548,103 @@ class AppContext:
             "inspection.reviewed", extra={"inspection_id": inspection_id, "review": review, "verdict": record["result"]}
         )
         return {**record, "review": review, "review_reason": reason, "review_by": self.user, "review_time": when}
+
+    # --- the start-of-shift check (REQ-INSP-017, ADR 0014) -----------------------
+    def master_samples(self, board_model: str) -> list[dict[str, Any]]:
+        """The master samples a shift check judges: the board model's oldest sample labelled OK, and its oldest sample
+        labelled NG of each Critical defect type it has (the classification table's severity); with no Critical NG
+        sample, its oldest NG sample of any type. The Golden board's own sample is left out, as it is judged against
+        itself. Oldest first, so each shift judges the same boards until a label changes. Each is a sample row with
+        `expected`, OK or NG."""
+        golden = self.db.reference(board_model)
+        rows = [s for s in self.db.samples(board_model) if s["path"] != golden]
+        ok = [s for s in rows if s["label"] == OK][:1]
+        ng = [s for s in rows if s["label"] == NG]
+        chosen: dict[str, dict[str, Any]] = {}
+        for s in ng:
+            if report.critical(s["defect_type"]):
+                chosen.setdefault(s["defect_type"], s)
+        picked = list(chosen.values()) or ng[:1]
+        return [{**s, "expected": OK} for s in ok] + [{**s, "expected": NG} for s in picked]
+
+    @requires("Operator", QT_TRANSLATE_NOOP("Errors", "Running the shift check"))
+    def run_shift_check(self, board_model: str, progress: Callable[[int, int], None] | None = None) -> dict[str, Any]:
+        """Judge the master samples with the engine in use and store the check (REQ-INSP-017, ADR 0014): a known-OK
+        board must come out OK, and each known-NG board NG or WARN, as an AI Model Test counts them. The check, what
+        judged it and each sample's verdict are stored and audited together (inspection.shift_check); a failed check
+        also stores an NG alarm AOI-INSP-016, as the line stays stopped. Any role runs it, as the operator starts the
+        shift. AOI-INSP-017, with nothing stored, when the board model has no OK or no NG sample to judge. Returns the
+        check as `shift_check` gives it, with `rows`."""
+        samples = self.master_samples(board_model)
+        missing = [lbl for lbl in (OK, NG) if not any(s["expected"] == lbl for s in samples)]
+        if missing:
+            raise AoiError("AOI-INSP-017", board_model=board_model, label=" / ".join(missing))
+        insp = self.inspector(board_model)
+        rows = []
+        for i, s in enumerate(samples, 1):
+            res = insp.inspect(self.load_image(s["path"]))
+            given = NG if res.verdict in (NG, WARN) else OK
+            rows.append(
+                {
+                    "sample_uuid": s["uuid"],
+                    "file": s["path"],
+                    "defect_type": s["defect_type"],
+                    "expected": s["expected"],
+                    "verdict": res.verdict,
+                    "right": given == s["expected"],
+                }
+            )
+            if progress:
+                progress(i, len(samples))
+        passed = all(r["right"] for r in rows)
+        model_uuid, recipe_uuid, reference_path, scale = insp.inputs
+        inputs: dict[str, Any] = {"model_uuid": model_uuid, "recipe_uuid": recipe_uuid, "scale": scale}
+        inputs["reference_path"] = reference_path
+        with self.db.transaction():  # the check and its entry, or neither (#178)
+            uid = self.db.add_shift_check(board_model, self.user, passed, inputs, rows)
+            after = {"uuid": uid, "passed": passed, "model_version": insp.model_version, "recipe_rev": insp.recipe_rev}
+            after["rows"] = [{k: r[k] for k in ("sample_uuid", "expected", "verdict", "right")} for r in rows]
+            self.audit("inspection.shift_check", "board_model", board_model, None, after)
+            if not passed:
+                wrong = sum(not r["right"] for r in rows)
+                text = QT_TRANSLATE_NOOP("Errors", "Shift check failed for {board_model}: {wrong} of {count} wrong")
+                self.db.alarm("NG", text.fill(board_model=board_model, wrong=wrong, count=len(rows)), "AOI-INSP-016")
+        self.log.info("inspection.shift_check", extra={"board_model": board_model, "passed": passed})
+        return self.shift_check(board_model)
+
+    def require_shift_check(self, board_model: str) -> dict[str, Any]:
+        """`shift_check(board_model)` when boards of it may be inspected now, its state "off" or "passed"; otherwise
+        AOI-INSP-016, saying why (REQ-INSP-017). The Inspection page asks it before each board, so a run stops at the
+        board where a check stops counting."""
+        found = self.shift_check(board_model)
+        why = SHIFT_CHECK_REASONS.get(found["state"])
+        if why is not None:
+            raise AoiError("AOI-INSP-016", board_model=board_model, reason=why.fill(hours=found["hours"]))
+        return found
+
+    def shift_check(self, board_model: str) -> dict[str, Any]:
+        """Whether boards of `board_model` may be inspected now (REQ-INSP-017): `state` is "off" when the setting
+        `shift_check_hours` is 0, else "passed" while the newest check passed, is under that many hours old and was
+        judged by the AI model, recipe revision, Golden board and scale in use now (`engine_is_current`'s inputs),
+        and otherwise "none", "failed", "expired" or "changed". `check` is the newest check or None, and `until` the
+        time (UTC) a passed check stops counting. It reads the database only, so the Inspection page asks it before
+        each board."""
+        hours = self.settings.shift_check_hours
+        check = self.db.latest_shift_check(board_model)
+        until = None
+        if check is not None:
+            until = (datetime.fromisoformat(check["time"]) + timedelta(hours=hours)).isoformat(timespec="seconds")
+        state = "off" if hours == 0 else "none" if check is None else "failed" if not check["passed"] else ""
+        if not state and check is not None and until is not None:
+            i = check["inputs"]
+            judged = (i["model_uuid"], i["recipe_uuid"], i["reference_path"], i["scale"])
+            if datetime.fromisoformat(until) <= datetime.now(UTC):
+                state = "expired"
+            elif judged != self._engine_inputs(board_model):
+                state = "changed"
+            else:
+                state = "passed"
+        return {"state": state, "check": check, "until": until, "hours": hours}
 
     def users(self) -> list[dict[str, Any]]:
         """Users (uuid, name, role), oldest first."""

@@ -31,6 +31,7 @@ testpaths = ["tests"]
 # Tests import the app as a package from the repository root.
 pythonpath = ["."]
 qt_api = "pyside6"
+markers = ["shift_check: keep the shift check of REQ-INSP-017 on, as a station has it (tests/conftest.py)"]
 
 [tool.coverage.run]
 # Line coverage of the engine and data layers (Engineering standard, "Tests": 80 % target), measured on every CI run.

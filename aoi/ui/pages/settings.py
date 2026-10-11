@@ -86,6 +86,9 @@ class SettingsPage(Page):
         self.max_mb = QSpinBox()
         self.max_mb.setRange(1, 10000)
         self.max_mb.setValue(s.max_image_megabytes)
+        self.shift_hours = QSpinBox()  # REQ-INSP-017: 0 asks for no shift check, as Settings.check bounds it
+        self.shift_hours.setRange(0, 24)
+        self.shift_hours.setValue(s.shift_check_hours)
         self.lang = QComboBox()
         for code, name in LANGUAGES:
             self.lang.addItem(name, code)
@@ -98,6 +101,7 @@ class SettingsPage(Page):
         f.addRow(self.tr("Keep OK results' maps (days)"), self.map_ret)
         f.addRow(self.tr("Largest image (megapixels)"), self.max_mp)
         f.addRow(self.tr("Largest image file (MB)"), self.max_mb)
+        f.addRow(self.tr("Shift check counts for (hours, 0 off)"), self.shift_hours)
         f.addRow(self.tr("Language"), self.lang)
         f.addRow(button(self.tr("Save Settings"), "primary", self.save))
         left = QVBoxLayout()
@@ -160,6 +164,7 @@ class SettingsPage(Page):
         s = self.ctx.settings
         limits = {"map_retention_days_ok": self.map_ret, "max_image_megapixels": self.max_mp}
         limits["max_image_megabytes"] = self.max_mb
+        limits["shift_check_hours"] = self.shift_hours
         # only a limit changed here is written, so a hand edit of settings.json made while the app runs stays (#170)
         values |= {name: box.value() for name, box in limits.items() if box.value() != getattr(s, name)}
         try:

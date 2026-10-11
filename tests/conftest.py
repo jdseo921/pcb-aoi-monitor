@@ -237,6 +237,15 @@ def _settings_file_in_tmp(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> No
 
 
 @pytest.fixture(autouse=True)
+def _shift_check_off(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch) -> None:
+    """A station asks for a passed shift check before every board (REQ-INSP-017, 12 h by default). The Settings a test
+    makes have it off (0), so the tests not about it inspect boards at once, unless the test is marked `shift_check`,
+    as tests/test_shift_check.py is."""
+    if request.node.get_closest_marker("shift_check") is None:
+        monkeypatch.setattr(config, "SHIFT_CHECK_HOURS", 0)
+
+
+@pytest.fixture(autouse=True)
 def dialogs(monkeypatch: pytest.MonkeyPatch) -> Iterator[list[tuple[str, str]]]:
     """Error dialogs shown during a test, as (title, text), in place of a modal box that would block offscreen.
     At the end every title must start with an error code: no error reaches a user without one (REQ-SET-019)."""

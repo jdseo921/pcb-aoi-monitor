@@ -107,6 +107,17 @@ exports an AI model.
 **Demo workspace.** The demo has a workspace of its own, beside the station's, with its own `settings.json`; section 9
 says how an Admin opens and leaves it.
 
+**The shift check (REQ-INSP-017, ADR 0014).** Inspection asks for a passed shift check before every board. Its master
+samples are picked from the board model's labelled samples, the same ones every shift: the oldest sample labelled OK,
+and the oldest sample labelled NG of each Critical defect type (or, with none, the oldest NG sample), leaving out the
+Golden board's own sample. Keep a known-OK board and a known-NG board of each Critical type labelled in Training for
+each board model on the line; without them the check cannot run (AOI-INSP-017). A check counts for **Shift check
+counts for (hours, 0 off)** on Settings, 12 by default, and only while the AI model, recipe revision, Golden board and
+scale that judged it are in use, so after saving a recipe or activating a version, run Shift Check before the line goes
+on. Each check is in the audit trail as `inspection.shift_check`; a failed one also leaves an NG alarm AOI-INSP-016.
+Setting 0 asks for no check: it skips a MUST of the Engineering standard, so use it only for a board model still
+gathering samples, with Jay's approval. The demo workspace is loaded with 0.
+
 ## 2. Board models and scale
 
 **Names.** A new board model's name must differ from every existing one in more than upper and lower case: `tbox-a1`

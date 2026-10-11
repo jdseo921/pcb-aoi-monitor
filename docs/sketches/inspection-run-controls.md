@@ -13,8 +13,9 @@ every result is saved with its evidence before the next board starts (REQ-INSP-0
 
 ```
 Inspection                                                                       Board model TBOX-A1
-[Load Images…] [Load Folder…]   View  (● Top) ( Side) ( Bottom)          Queue 3 of 12 · ng_003.png
+[Load Images…] [Load Folder…] [Shift Check]   View  (● Top) ( Side) ( Bottom)  Queue 3 of 12 · ng_003.png
 ┌───────────────────────────────────────────────┐ ┌────────────────────────────────────────────────┐
+│                                               │ │ ✓ Shift check passed · until 2026-10-01 18:02   │
 │                                               │ │ ┌────────────────────────────────────────────┐ │
 │                                               │ │ │          ✗   NG                            │ │ V, 40 pt
 │         board image, boxes coloured by        │ │ └────────────────────────────────────────────┘ │
@@ -45,6 +46,7 @@ Severity on a box label is a word and a shape: ◆ Critical (red), ■ Major (or
 |---|---|---|---|---|
 | Load images | Load Images… | Ctrl+O | T | PNG, JPG, BMP, TIFF; refused files go to the alarm log, the rest are queued |
 | Load folder | Load Folder… | Ctrl+Shift+O | T | Same limits; sub-folders included |
+| Shift check | Shift Check | F7 | T | Judges the master samples, a known-OK board and a known-NG board of each Critical type (REQ-INSP-017, ADR 0014); the line above the verdict says whether boards may be inspected and until when. Until a check passes, Start and Next Board stop with AOI-INSP-016; off while a board, a run or a save is in hand |
 | View picker | View: Top / Side / Bottom | Alt+V cycles | T (segmented, 48 px) | Tag kept with every result and shown in the Side column and exports (REQ-INSP-010) |
 | Start | ▶ Start | F5 | T+ | Green #43A047; runs the queue board after board; disabled while running |
 | Stop | ■ Stop | F6 | T+ | Red; stops after the current board; nothing is deleted, so no confirmation; never the default focus |
