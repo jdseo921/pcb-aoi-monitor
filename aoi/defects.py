@@ -2,7 +2,8 @@
 "PCBA Defect Classification Table" v1.0 (27 April 2026), with four bare-board copper types added (REQ-INSP-018).
 
 Used for labeling uploaded NG samples, for the defect-type column in result
-tables, and for severity-based verdicts (Critical/Major -> NG, Minor -> Warning).
+tables, and for the verdict rule's severity (REQ-INSP-015): a Critical or Major defect on a board whose checks pass
+makes it WARN, a Minor one changes nothing; NG and WARN otherwise come from the checks.
 """
 
 from __future__ import annotations

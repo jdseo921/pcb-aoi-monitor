@@ -15,7 +15,7 @@ The station PC, as Customers & Launch publishes it ("One published PC spec"):
 | Windows (64-bit) | Windows 11 IoT Enterprise LTSC 2024 (recommended); Windows 11 Enterprise LTSC 2024; Windows 10 IoT Enterprise LTSC 2021 on existing PCs; Windows 11 Pro or Enterprise yearly versions while Microsoft still patches them. Windows 10 Home and Pro are not supported |
 | Graphics | An NVIDIA card with CUDA speeds up training; without one the app trains and inspects on the processor, more slowly |
 | Disk | An SSD of 1 TB or more, 2 TB recommended |
-| Processor and memory | Not published yet: the reference PC is an open decision in the Charter |
+| Processor and memory | At least the reference configuration of ADR 0011: an Intel Core i5-12500 or AMD Ryzen 5 7600 (6 performance cores) and 16 GB of memory. The speed and 8-hour checks on it (`docs/tests/station-checks.md`) are not yet run |
 
 - The installer itself starts on 64-bit Windows 10 from version 21H2 (build 19044) or Windows 11 and refuses older
   Windows; a Windows it starts on is not supported unless the table names it.

@@ -6,7 +6,7 @@ A one-page handout for the customer, given at the end of every demo.
 
 - An inspection station for photos of your boards. Each board gets a verdict, OK or NG, with the time it took,
   and the run stops at an NG board so a person looks at it.
-- Every verdict explains itself. **Compare shows the board beside the Golden board, the good board it is compared
+- Every verdict explains itself. **Compare** shows the board beside the Golden board, the good board it is compared
   with, every check with its value and threshold, and why the board is NG in plain words.
 - An AI model that learns from photos of your good boards, and two checks that judge each board independently:
   the difference to the Golden board, and the AI model.
@@ -33,14 +33,15 @@ case.
 
 1. Photos of good boards: at least 70 of one board model, from the same camera position. 50 of them are kept apart
    to check the AI model and never used to train it; more is better.
-2. Photos of boards with known defects: as many as you have, each with its defect type. We keep them apart and
-   use them only to check the AI model, never to train it.
+2. Photos of boards with known defects: as many as you have, each with its defect type and, where you can, a box
+   around each defect. Some are locked apart and only ever used to check the station; the rest help set its
+   thresholds, so that it calls such defects NG.
 3. An engineer of yours for about an hour, to check how the photos are labelled.
-4. A PC for the station** (see below).
+4. A PC for the station (see below).
 
 ## What you get
 
-- The station set up for your board model, trained on your good boards.
+- The station set up for your board model, trained on your good boards and tuned on your labelled defects.
 - A report with the counts above, measured on your boards with known defects.
 - The demo again, on your own boards.
 

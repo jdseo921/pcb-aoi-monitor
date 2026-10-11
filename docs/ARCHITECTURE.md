@@ -762,7 +762,8 @@ and maps has ended, and "Would be" shows within 300 ms of the key at 5 MP (`test
 | Home, Inspection, Compare, Logs (view) | ✓ | ✓ | ✓ |
 | Inspection, Logs → Real defect / False call… (review a call, REQ-INSP-013, ADR 0013) | ✓ | ✓ | ✓ |
 | Inspection → Shift Check (master samples, REQ-INSP-017, ADR 0014) | ✓ | ✓ | ✓ |
-| Logs export / archive | | ✓ | ✓ |
+| Logs archive | | ✓ | ✓ |
+| Logs export, AI Model Test export, Save Image… (Q58, #151) | | | ✓ |
 | Logs → Delete Records…, Training → Remove (REQ-LOG-003) | | | ✓ |
 | Training, AI Model Test, Recipe Editor, 3D Profile | | ✓ | ✓ |
 | Compare → Try other thresholds (thresholds, Re-evaluate, Save to Recipe) | | ✓ | ✓ |
