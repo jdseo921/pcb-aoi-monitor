@@ -827,7 +827,7 @@
 <context>
     <name>Errors</name>
     <message>
-        <location filename="../core/services.py" line="+122"/>
+        <location filename="../core/services.py" line="+123"/>
         <source>a length of {length} px over {distance} mm gives no scale: both must be numbers above 0, and the scale from {least} to {most} px per mm</source>
         <translation type="unfinished"></translation>
     </message>
@@ -852,8 +852,8 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+215"/>
-        <location line="+131"/>
+        <location line="+210"/>
+        <location line="+138"/>
         <source>Importing samples</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1127,14 +1127,14 @@
         <translation>검증 세트 잠금</translation>
     </message>
     <message>
-        <location line="-2285"/>
-        <location line="+2299"/>
+        <location line="-2287"/>
+        <location line="+2301"/>
         <location line="+39"/>
         <source>the workspace holds no such dataset version</source>
         <translation>작업 공간에 그런 데이터셋 버전이 없습니다</translation>
     </message>
     <message>
-        <location line="-2336"/>
+        <location line="-2338"/>
         <source>the run used a folder, not a frozen dataset version&apos;s locked validation set</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1169,7 +1169,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+775"/>
+        <location line="+777"/>
         <source>Setting the comparison&apos;s thresholds from labelled boards</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1393,7 +1393,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-2848"/>
+        <location line="-2850"/>
         <source>no earlier version of this board model was active</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1418,7 +1418,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+699"/>
+        <location line="+701"/>
         <source>its UUID {found} is not {uuid}, as in the AI model registry</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4663,7 +4663,7 @@
 <context>
     <name>LogsPage</name>
     <message>
-        <location filename="../ui/pages/logs.py" line="+149"/>
+        <location filename="../ui/pages/logs.py" line="+148"/>
         <source>Include archived</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7258,7 +7258,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/services.py" line="-3152"/>
+        <location filename="../core/services.py" line="-3154"/>
         <source>Aligning {count} images to the reference board</source>
         <translation type="unfinished"></translation>
     </message>

@@ -299,11 +299,6 @@ def _units(text: str) -> int:
     return len(text.encode("utf-16-le", "surrogatepass")) // 2
 
 
-def _sha256(path: Path) -> str:
-    with open(path, "rb") as f:
-        return hashlib.file_digest(f, "sha256").hexdigest()
-
-
 def _remove(files: list[Path]) -> None:
     """Remove files a write made before it failed, so none is left that its records or audit entry do not name."""
     for f in files:
@@ -525,22 +520,29 @@ class AppContext:
         of `known`, copies nothing and comes back with that sample (decision Q31). The copy is a crash-safe write; then
         the source and the copy are read again, and a SHA-256 other than the one checked (a writer still at the source)
         refuses the file with AOI-TRN-014 and removes the copy. A board model in a customer's dataset store gets its
-        copy encrypted from the bytes checked, never written plain, and read back decrypted (REQ-TRN-017). A source
-        lost since its check (removed, unreadable) is refused with AOI-INSP-001, as Inspection's check would; a copy
-        that cannot be written raises AOI-TRN-008, or AOI-TRN-011 when the system refuses its path as too long
+        copy encrypted from the bytes checked, never written plain, and read back decrypted (REQ-TRN-017); a source
+        that is itself a file of a store, such as a board inspected from a stored sample (REQ-TRN-020), is read
+        decrypted in memory, and its copy outside a store written from the bytes checked, never copied encrypted. A
+        source lost since its check (removed, unreadable) is refused with AOI-INSP-001, as Inspection's check would; a
+        copy that cannot be written raises AOI-TRN-008, or AOI-TRN-011 when the system refuses its path as too long
         (#245)."""
-        data = imaging.checked_bytes(src, self.settings.max_image_megapixels, self.settings.max_image_megabytes)
+        limits = (self.settings.max_image_megapixels, self.settings.max_image_megabytes)
+        data = imaging.checked_bytes(src, *limits, read=self._plain_bytes)
         digest = hashlib.sha256(data).hexdigest()
         if (had := known.get(digest) or self.db.sample_with_sha256(board_model, digest)) is not None:
             return digest, had
         sealed = self._sealed(to_stored(target, self.settings.root), data)  # the bytes checked, in the store's form
+        plain = data if sealed is None and self._store_for(src) is not None else None  # a store's file, decrypted
         del data  # up to the size limit in memory: not kept through the copy
         try:
-            if sealed is None:
-                atomic.copy_file(src, target)
-            else:  # a board model in a customer's dataset store: its copy is encrypted from the start (REQ-TRN-017)
+            if sealed is not None:  # a board model in a customer's store: encrypted from the start (REQ-TRN-017)
                 atomic.write_bytes(target, sealed)
                 del sealed
+            elif plain is not None:
+                atomic.write_bytes(target, plain)
+                del plain
+            else:
+                atomic.copy_file(src, target)
         except OSError as e:  # gone, unreadable, the workspace drive full, or a path the system refuses
             if str(e.filename) == str(src):  # the source's own: that file's to fix, listed by import_files
                 raise AoiError("AOI-INSP-001", str(e), path=str(src)) from e
@@ -550,7 +552,7 @@ class AppContext:
             why = e.strerror or str(e)
             raise AoiError("AOI-TRN-008", str(e), path=str(src), reason=why, count=count) from e
         try:
-            same = _sha256(src) == digest == self._file_sha256(target)
+            same = self._file_sha256(src) == digest == self._file_sha256(target)
         except (OSError, AoiError):  # the source gone right after its copy, or a copy that does not read back
             same = False
         if not same:

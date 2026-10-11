@@ -19,6 +19,7 @@ from aoi.ui.main_window import MainWindow
 from aoi.ui.pages.logs import LogsPage
 from tests.conftest import listed
 from tests.test_no_freeze import BUDGET_S, assert_off_ui_thread, gap_meter, heavy_calls
+from tools.trainable import in_store
 
 
 def _board(tmp_path: Path, name: str, seed: int) -> str:
@@ -29,8 +30,8 @@ def _board(tmp_path: Path, name: str, seed: int) -> str:
     return str(path)
 
 
-def _record(ctx: AppContext, image: str | None, view: str | None = "Bottom") -> int:
-    rec = {"board_model": "B", "result": "NG", "operator": "kim", "image_path": image, "model_version": "v1.0",
+def _record(ctx: AppContext, image: str | None, view: str | None = "Bottom", board: str = "B") -> int:
+    rec = {"board_model": board, "result": "NG", "operator": "kim", "image_path": image, "model_version": "v1.0",
            "recipe_rev": 1, "view": view, "score": 0.9}  # fmt: skip
     return ctx.db.add_inspection(rec, [])
 
@@ -81,6 +82,28 @@ def test_req_trn_020_a_record_not_reviewed_as_a_false_call_is_refused_and_nothin
     old = _record(ctx, _board(tmp_path, "old", 5), view=None)
     ctx.review_result(old, FALSE_CALL, "Dust on the board")
     assert ctx.add_false_call_sample(old)["view"] == "Top"
+
+
+def test_req_trn_020_a_board_inspected_from_a_customer_s_store_is_added_decrypted(
+    ctx: AppContext, tmp_path: Path
+) -> None:
+    """A record whose board image is a file of a customer's dataset store (REQ-TRN-017), such as a stored sample
+    inspected again, is read decrypted: another board model outside a store gets the image plain, its SHA-256 the
+    picture's; the store's own board model holds it already, so nothing is added."""
+    ctx.ensure_board_model("B")
+    source = _board(tmp_path, "stored", 7)
+    ctx.import_samples("S", [source], "NG", "Missing Component")
+    in_store(ctx, "S", "Acme Electronics")
+    (stored,) = ctx.samples("S")
+    assert Path(stored["path"]).read_bytes() != Path(source).read_bytes()  # encrypted on disk
+    other, own = _record(ctx, stored["path"]), _record(ctx, stored["path"], board="S")
+    for iid in (other, own):
+        ctx.review_result(iid, FALSE_CALL, "Dust on the board")
+    assert ctx.add_false_call_sample(other)["added"] == 1
+    (sample,) = ctx.samples("B")
+    assert Path(sample["path"]).read_bytes() == Path(source).read_bytes()  # plain, outside a store
+    out = ctx.add_false_call_sample(own)
+    assert (out["added"], out["sample"], out["label"]) == (0, stored["uuid"], "NG") and len(ctx.samples("S")) == 1
 
 
 def test_req_trn_020_logs_adds_the_selected_false_call_to_training(
