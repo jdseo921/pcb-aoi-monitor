@@ -38,6 +38,8 @@ None. / 없음.
 
 - [REQ-INSP-019] Drift alarm: after each saved board and each False call, the station compares the newest boards (50) and reviews (20) of a board model and view with those before them under the same AI model and recipe. When the NG rate, the WARN rate, the OK boards' AI score or alignment, or the False calls' share moves beyond a 3-sigma control limit, one [WARN] alarm AOI-INSP-018 gives the counts, and Home's Inspect card says "Drift:". It changes no verdict. / 드리프트 경보: 보드를 저장할 때마다, 그리고 오검출 검토마다 장비는 보드 모델과 면별로 최신 보드(50개)와 검토(20건)를 같은 AI 모델과 레시피로 판정한 이전 기록과 비교합니다. NG 비율, WARN 비율, OK 보드의 AI 점수나 정렬, 오검출 비율이 3시그마 관리 한계를 넘으면 [WARN] 경보 AOI-INSP-018이 건수와 함께 한 번 기록되고, 홈의 검사 카드에 "드리프트:"가 표시됩니다. 판정은 바뀌지 않습니다.
 
+- [REQ-TST-008] AI Model Test › Agreed Targets… (Engineer and Admin) records the targets a customer agreed before testing: the most missed Critical defects, the highest false call rate and the longest time per image, and with whom. The next validation run keeps them and the customer validation report holds the run to them, naming who agreed them; a run made before keeps the targets it started with, and a run with none agreed is held to the proposed defaults, as before. / AI 모델 테스트 › 합의된 목표…(엔지니어, 관리자)는 고객이 테스트 전에 합의한 목표를 기록합니다: 허용되는 최대 치명 결함 누락 수, 최대 오검출률, 이미지당 최대 시간, 그리고 합의한 사람. 다음 검증 실행은 이 목표를 보관하며, 고객 검증 보고서는 합의한 사람을 밝히고 그 목표로 실행을 평가합니다. 이전 실행은 시작 당시의 목표를 유지하며, 합의된 목표가 없는 실행은 이전처럼 제안된 기본값으로 평가합니다.
+
 ## Improved / 개선 (draft)
 
 - [REQ-SET-004] Text on the green, red and blue fills (verdict banner, Start, Stop, primary and danger buttons) is black, reading at 5.0:1 or more; it was white at 3.3 to 4.2:1 (#150). / 녹색, 빨간색, 파란색 배경 위 글자(판정 배너, 시작, 정지, 주요 및 위험 버튼)가 검은색이 되어 5.0:1 이상으로 읽힙니다. 이전에는 흰색으로 3.3~4.2:1이었습니다(#150).
@@ -70,6 +72,8 @@ None. / 없음.
 - [REQ-INSP-013] Migration 0023 adds the review columns to each inspection record at the first start; records before it read as not reviewed. A reader of the CSV export finds four columns after ai_check: review, review_reason, review_by, review_time. / 마이그레이션 0023이 첫 시작 시 검사 기록에 검토 열을 추가합니다. 이전 기록은 검토되지 않은 것으로 표시됩니다. CSV 내보내기에는 ai_check 뒤에 review, review_reason, review_by, review_time 4개 열이 추가됩니다.
 
 - [REQ-INSP-017] After the upgrade, Inspection asks for Shift Check (F7) before the first board of each board model; a board model needs a labelled OK sample and a labelled NG sample for it. Migration 0024 adds the shift_checks table. An Admin can set the hours to 0 on Settings while samples are gathered (ADR 0014). / 업그레이드 후 검사 화면은 각 보드 모델의 첫 보드 전에 교대 점검(F7)을 요청합니다. 보드 모델에는 라벨이 지정된 정상 샘플과 불량 샘플이 필요합니다. 마이그레이션 0024가 shift_checks 테이블을 추가합니다. 샘플을 모으는 동안 관리자는 설정에서 시간을 0으로 설정할 수 있습니다(ADR 0014).
+
+- [REQ-TST-008] Migration 0025 adds the validation_targets table. Runs stored before it hold no targets: their validation report says they are held to the proposed defaults, as it did. / 마이그레이션 0025가 validation_targets 테이블을 추가합니다. 이전에 저장된 실행에는 목표가 없으므로, 검증 보고서는 이전처럼 제안된 기본값으로 평가한다고 표시합니다.
 
 - [REQ-USR-001] An Engineer who exported results before now asks an Admin to do it (#151). / 이전에 결과를 내보내던 엔지니어는 이제 관리자에게 요청해야 합니다(#151).
 

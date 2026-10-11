@@ -827,7 +827,7 @@
 <context>
     <name>Errors</name>
     <message>
-        <location filename="../core/services.py" line="+150"/>
+        <location filename="../core/services.py" line="+161"/>
         <source>a length of {length} px over {distance} mm gives no scale: both must be numbers above 0, and the scale from {least} to {most} px per mm</source>
         <translation type="unfinished"></translation>
     </message>
@@ -880,12 +880,12 @@
     </message>
     <message>
         <location line="+170"/>
-        <location line="+2112"/>
+        <location line="+2173"/>
         <source>(none)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-2081"/>
+        <location line="-2142"/>
         <source>Saving a recipe</source>
         <translation type="unfinished"></translation>
     </message>
@@ -921,7 +921,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+340"/>
+        <location line="+223"/>
+        <source>Recording a customer&apos;s targets</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+178"/>
         <source>Re-evaluating a result</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1127,14 +1132,14 @@
         <translation>검증 세트 잠금</translation>
     </message>
     <message>
-        <location line="-2338"/>
-        <location line="+2352"/>
+        <location line="-2410"/>
+        <location line="+2424"/>
         <location line="+39"/>
         <source>the workspace holds no such dataset version</source>
         <translation>작업 공간에 그런 데이터셋 버전이 없습니다</translation>
     </message>
     <message>
-        <location line="-2430"/>
+        <location line="-2502"/>
         <source>Drift on {board} ({view}): {count} of the last {of} boards called NG; {before} % of the {baseline} before</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1169,7 +1174,37 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <location line="+3"/>
+        <source>the workspace holds no such board model</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <location line="+1"/>
+        <source>missed Critical defects must be a whole number from {low} to {high}</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>the false call rate must be from {low} % to {high} %</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>the time per image must be from {low} s to {high} s</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>who at the customer agreed them is not given</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>who agreed them is longer than {chars} characters</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+2"/>
         <source>its validation set is not split and locked</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1204,7 +1239,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+942"/>
+        <location line="+1003"/>
         <source>Shift check of {board_model}: {wrong} of {count} master samples judged wrongly</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1418,7 +1453,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-2901"/>
+        <location line="-2973"/>
         <source>no earlier version of this board model was active</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1428,7 +1463,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+13"/>
+        <location line="+24"/>
         <source>no defect type was given</source>
         <translation>결함 유형이 지정되지 않았습니다</translation>
     </message>
@@ -1448,7 +1483,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1240"/>
+        <location line="+1301"/>
         <source>Labelling an image</source>
         <translation>이미지 라벨링</translation>
     </message>
@@ -2689,6 +2724,21 @@
     </message>
     <message>
         <location line="+8"/>
+        <source>Targets not saved</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>The targets of {board_model} were not saved: {reason}. Nothing was changed.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Enter each target within its range and who at the customer agreed them, then save again; the next run keeps the targets in force until then.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+8"/>
         <source>Recipe saved since it was opened</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3183,7 +3233,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1145"/>
+        <location line="-1155"/>
         <source>Board judged NG</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3288,7 +3338,7 @@
         <translation>새 버전을 고정하고 검증 세트를 잠그면 해당 이미지는 잠긴 채로 유지됩니다. 그 버전으로 학습하십시오. 아무것도 저장되지 않았으며, 활성 AI 모델은 바뀌지 않았습니다.</translation>
     </message>
     <message>
-        <location line="+126"/>
+        <location line="+136"/>
         <source>ROI thresholds refused</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3469,7 +3519,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/model_test.py" line="+55"/>
+        <location filename="../ui/pages/model_test.py" line="+56"/>
         <source>AI model {version}</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5263,55 +5313,55 @@
     <name>ModelTestPage</name>
     <message>
         <location filename="../ui/pages/model_test.py" line="+47"/>
-        <location line="+622"/>
+        <location line="+709"/>
         <source>Select Test Folder…</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-621"/>
-        <location line="+362"/>
-        <location line="+221"/>
+        <location line="-708"/>
+        <location line="+442"/>
+        <location line="+223"/>
         <source>Run Test</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-581"/>
-        <location line="+628"/>
+        <location line="-663"/>
+        <location line="+715"/>
         <location line="+3"/>
         <source>Export CSV</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-629"/>
+        <location line="-716"/>
         <source>Export Report</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location line="+4"/>
-        <location line="+297"/>
+        <location line="+377"/>
         <source>No folder selected</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-277"/>
-        <location line="+221"/>
+        <location line="-349"/>
+        <location line="+226"/>
         <source>Accuracy</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-222"/>
-        <location line="+221"/>
+        <location line="-227"/>
+        <location line="+226"/>
         <source>Precision</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-222"/>
-        <location line="+221"/>
+        <location line="-227"/>
+        <location line="+226"/>
         <source>Recall</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-201"/>
+        <location line="-206"/>
         <source>Image</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5331,12 +5381,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+485"/>
+        <location line="+557"/>
         <source>These results were judged by {run_model}, recipe revision {run_recipe}, {run_golden} and {run_scale}; {board_model} now uses {model}, recipe revision {recipe}, {golden} and {scale}. Rows are not previewed; select one for Run Test Again, which tests the run&apos;s folder with what is in use now.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-595"/>
+        <location line="-675"/>
         <source>Matches label</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5352,33 +5402,38 @@
     </message>
     <message>
         <location line="+62"/>
-        <location line="+651"/>
+        <location line="+738"/>
         <source>Export Image Overlays</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-642"/>
+        <location line="-729"/>
         <source>Source</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+12"/>
+        <location line="+10"/>
+        <source>Agreed Targets…</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+10"/>
         <location line="+63"/>
-        <location line="+158"/>
-        <location line="+537"/>
+        <location line="+163"/>
+        <location line="+611"/>
         <source>Missed defects</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-757"/>
+        <location line="-836"/>
         <location line="+63"/>
-        <location line="+158"/>
-        <location line="+536"/>
+        <location line="+163"/>
+        <location line="+610"/>
         <source>False calls</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-732"/>
+        <location line="-811"/>
         <source>Matches label?</source>
         <comment>whether the verdict matches the image&apos;s label</comment>
         <translation type="unfinished"></translation>
@@ -5479,12 +5534,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+14"/>
-        <source>These are the product&apos;s proposed targets. A customer&apos;s own targets, agreed in writing before testing, are not yet stored with a run: state them beside this table.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+5"/>
+        <location line="+23"/>
         <source>Missed Critical defects</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5495,11 +5545,12 @@
     </message>
     <message>
         <location line="+11"/>
+        <location line="+65"/>
         <source>{s:.2f} s</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+2"/>
+        <location line="-63"/>
         <source>not measured</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5514,7 +5565,17 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+9"/>
+        <location line="+2"/>
+        <source>Agreed</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+0"/>
+        <source>Proposed</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+8"/>
         <source>Manifest SHA-256 {sha}; split with seed {seed}, locked {at}; never trained on.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5579,7 +5640,17 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+14"/>
+        <location line="+8"/>
+        <source>{rate} %</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+61"/>
+        <source>Targets saved for {board_model}: the next run is held to them.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+12"/>
         <source>{name}: its locked validation set, {count} images</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5629,7 +5700,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+90"/>
+        <location line="+97"/>
         <source>No AI model for {board_model} yet</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5690,18 +5761,48 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-537"/>
-        <location line="+527"/>
+        <location line="-616"/>
+        <location line="+606"/>
         <source>PDF (*.pdf)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-456"/>
+        <location line="-543"/>
+        <source>Agreed with {who} before testing: recorded by {user} on {date}, before this run started.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+4"/>
+        <source>No targets were agreed for {board_model} before this run started, so it is held to the product&apos;s proposed targets.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+8"/>
         <source>Engine time per image, 95th percentile (reading, saving, display not counted)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+462"/>
+        <location line="+89"/>
+        <source>at most {missed} missed Critical defects, a false call rate of {rate} or less, {seconds} or less per image</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>no missed Critical defect, a false call rate of {rate} or less, {seconds} or less per image</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+8"/>
+        <source>Targets for the next run: {targets}. Agreed with {who}; recorded by {user} on {date}.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+6"/>
+        <source>Targets for the next run: {targets}. These are the proposed defaults: none were agreed for {board_model}.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+429"/>
         <source>Export the validation report of {images} images? It shows each of its {misses} missed defects and {false_calls} false calls with its overlay, and the AI model card.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5737,8 +5838,8 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-486"/>
-        <location line="+530"/>
+        <location line="-560"/>
+        <location line="+604"/>
         <source>{image}: labelled {label}, judged {verdict}, AI score {score}</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5881,7 +5982,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/model_test.py" line="-806"/>
+        <location filename="../ui/pages/model_test.py" line="-893"/>
         <source>AI Model Test</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7296,6 +7397,49 @@
     </message>
 </context>
 <context>
+    <name>TargetsSheet</name>
+    <message>
+        <location filename="../ui/pages/model_test_targets.py" line="+34"/>
+        <source>Agreed Targets</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+24"/>
+        <source>Missed Critical defects, at most</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>False call rate, at most (%)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Engine time per image, 95th percentile, at most (s)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Agreed with (customer, name and role)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+4"/>
+        <source>Cancel</source>
+        <translation type="unfinished">취소</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Save Targets</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+14"/>
+        <source>Targets for {board_model}, as agreed with the customer in writing before testing. The next run is held to them; a run made before keeps the targets it started with.</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
     <name>Training</name>
     <message>
         <location filename="../core/anomaly.py" line="-299"/>
@@ -7328,7 +7472,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/services.py" line="-3205"/>
+        <location filename="../core/services.py" line="-3277"/>
         <source>Aligning {count} images to the reference board</source>
         <translation type="unfinished"></translation>
     </message>

@@ -60,6 +60,7 @@ PAGE_VIEWS = {  # <page>-<view>-<role>
     "Training": ("datasets", "freeze", "split", "blind"),
     "Settings": ("restore", "move-in", "shred"),
     "Logs & Export": ("types",),
+    "AI Model Test": ("targets",),
 }
 STORED_STATES = (  # Compare
     "compare-stored-operator", "compare-golden-changed-operator", "compare-tried-engineer", "compare-save-engineer",
@@ -332,7 +333,8 @@ def show_view(win: MainWindow, title: str, view: str | None) -> None:
     fewer): Stop closes it, the status line saying so until the next page clears it, and with None the focus is
     cleared, as Training opens with none, so the pages after render alike.
     Settings' are Restore Key…, Move Board Model In… and Shred Store… on the store the screenshot workspace's version
-    is in. Logs & Export's is its Defect types tab, counted on the records the filter lists (REQ-LOG-008)."""
+    is in. Logs & Export's is its Defect types tab, counted on the records the filter lists (REQ-LOG-008). AI Model
+    Test's is Agreed Targets…' sheet with who agreed them typed, nothing saved (REQ-TST-008)."""
     from PySide6.QtWidgets import QApplication
 
     page: Any = win.pages[title]
@@ -357,6 +359,14 @@ def show_view(win: MainWindow, title: str, view: str | None) -> None:
     if title == "Logs & Export":
         page.tabs.setCurrentIndex(1 if view == "types" else 0)
         wait_until(lambda: page.counting is None)  # counted on a pool thread
+    if title == "AI Model Test":
+        page.targets_sheet.close_sheet()
+        if view == "targets":
+            page.open_targets()
+            page.targets_sheet.agreed_with.setText("Acme Electronics, J. Kim (quality lead), minutes of 2026-01-01")
+            page.targets_sheet.missed.clearFocus()  # no caret, which blinks, in the image
+        elif (focus := QApplication.focusWidget()) is not None:
+            focus.clearFocus()
     if title == "Settings":
         page.stores.close_sheet()
         steps = {"restore": page.stores.btn_restore, "move-in": page.stores.btn_move, "shred": page.stores.btn_shred}

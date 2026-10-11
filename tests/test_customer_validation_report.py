@@ -22,7 +22,7 @@ from aoi.ui.pages.model_test import ModelTestPage
 from tests.test_req_done_in_v01 import BOARD, _window
 from tests.test_test_dataset import held_out
 
-SECTIONS = ("1. Data", "2. Targets: the proposed defaults", "3. Locked validation set", "4. Results",
+SECTIONS = ("1. Data", "2. Targets", "3. Locked validation set", "4. Results",
             "5. AI model card", "6. Known limits", "7. Sign-off")  # fmt: skip
 
 
@@ -82,7 +82,7 @@ def test_req_tst_008_targets_compared_with_results(qtbot: QtBot, trained_ctx: Ap
     engine = "Engine time per image, 95th percentile (reading, saving, display not counted)"  # not image in to screen
     for name in ("Missed Critical defects", "False call rate", engine):
         assert re.search(rf"<td>{re.escape(name)}</td><td>[^<]+</td><td>[^<]+</td><td>(Met|Not met)</td>", html), name
-    assert "not yet stored with a run" in html  # the targets are the defaults, and the report says so
+    assert f"No targets were agreed for {BOARD} before this run started" in html  # the defaults, said to be
 
 
 def test_req_tst_008_every_miss_has_a_page(qtbot: QtBot, trained_ctx: AppContext) -> None:
