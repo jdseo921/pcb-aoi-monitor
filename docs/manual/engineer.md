@@ -209,6 +209,13 @@ opens no sheet, and the status line says so. A name too long for its cell is cut
 screen reader reads its whole path. Import Folder… labels each image by its sub-folders: under `ok/` or `good/` OK,
 under `ng/`, `bad/`, `defect/` or `defects/` NG, with the defect type of its folder when that folder is named after one
 of the 37 types (`ng/solder_bridge/`, spaces or underscores, any case); an image in neither is "unsorted: pick a label".
+A labelled dataset's own boxes come in with it: an image with a Pascal VOC (`.xml`) or YOLO (`.txt`) annotation file,
+beside it or under an `Annotations/` or `labels/` folder that mirrors the image folders, as PKU-Market-PCB and most
+annotation tools save them, is NG with its boxes' most common type (its Defect type cell reads "Mousebite · 2 box(es)"),
+and one whose annotation file holds no box is OK; a folder's own label or type stays. YOLO class names come from a
+`classes.txt`, `obj.names` or `data.yaml` beside the images or above them. Import stores the boxes as if drawn, and each
+row says "copied with 2 box(es)"; a box of a class that is not a defect type (a silkscreen label, say) is left out, and
+a file over 1 MB or made for an image of another size gives none, the row's line saying why (REQ-TRN-019).
 An import labels an image OK or NG only, as the user who pressed Import; UNSURE is only ever a later label.
 **View** (Top for every new batch) and **Label for all** set every row; **Defect type for NG files** (a category, then a
 type with its severity) sets every NG row; a row's own label, type or view is picked in its cell (tap a selected cell,

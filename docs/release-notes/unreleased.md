@@ -22,6 +22,8 @@ None. / 없음.
 
 - [REQ-INSP-018] Bare boards: a recipe set to Light copper or Dark copper (Recipe Editor, Thresholds) names each difference outside an ROI Open Circuit, Short Circuit, Mousebite, Spur, Spurious Copper or Pin-hole / Missing Hole; Mousebite, Spur, Spurious Copper and Pin-hole / Missing Hole join the defect types, 37 in all. Names never change a verdict, and the setting is off for every recipe until it is set (ADR 0015). / 베어 보드: 레시피에서 밝은 동박 또는 어두운 동박을 설정하면(레시피 편집기, 임계값) ROI 밖의 각 차이를 단선, 단락, 마우스바이트, 스퍼, 잔류 동박 또는 핀홀/홀 누락으로 이름 붙입니다. 마우스바이트, 스퍼, 잔류 동박, 핀홀/홀 누락이 결함 유형에 추가되어 모두 37개입니다. 이름은 판정을 바꾸지 않으며, 설정하기 전까지 모든 레시피에서 꺼져 있습니다(ADR 0015).
 
+- [REQ-TRN-019] Import Folder… and Add NG Images… read each image's Pascal VOC (.xml) or YOLO (.txt) annotation file, beside it or under a mirrored Annotations/ or labels/ folder: the image is labelled NG with its boxes' type (OK when the file holds no box), and the import stores its boxes as if drawn, audited. A box of a class that is not a defect type is left out and the row says so (ADR 0016). / 폴더 가져오기와 불량 이미지 추가가 각 이미지의 Pascal VOC(.xml) 또는 YOLO(.txt) 주석 파일(이미지 옆 또는 Annotations/, labels/ 폴더)을 읽습니다. 이미지는 상자의 결함 유형으로 불량 라벨이 지정되고(상자가 없으면 정상), 가져오기 시 상자가 직접 그린 것처럼 감사 기록과 함께 저장됩니다. 결함 유형이 아닌 클래스의 상자는 제외되며 해당 행에 표시됩니다(ADR 0016).
+
 ## Improved / 개선 (draft)
 
 - [REQ-SET-004] Text on the green, red and blue fills (verdict banner, Start, Stop, primary and danger buttons) is black, reading at 5.0:1 or more; it was white at 3.3 to 4.2:1 (#150). / 녹색, 빨간색, 파란색 배경 위 글자(판정 배너, 시작, 정지, 주요 및 위험 버튼)가 검은색이 되어 5.0:1 이상으로 읽힙니다. 이전에는 흰색으로 3.3~4.2:1이었습니다(#150).

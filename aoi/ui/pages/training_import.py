@@ -247,6 +247,8 @@ class ImportSheet(QGroupBox):
         name = Path(f.path).relative_to(self._base).as_posix() if self._base else Path(f.path).name
         label = f.label or "—"
         kind = f.defect_type or (self.tr("pick a type") if f.label == "NG" else "—")
+        if f.label == "NG" and f.box_types:  # boxes its annotation file names, stored with it (REQ-TRN-019)
+            kind = self.tr("{type} · {count} box(es)").format(type=kind, count=len(f.box_types))
         if status is None:
             status = self.tr("ready")
             if f.label is None:
@@ -320,6 +322,11 @@ class ImportSheet(QGroupBox):
             self.done.add(rows[id(f)])
             self.copied.add(rows[id(f)])
             self._show_row(rows[id(f)], self.tr("copied"))
+        for f, count, why in report.boxes:  # the boxes its annotation file gave, and why not all of them
+            self._show_row(rows[id(f)], self.tr("copied with {count} box(es)").format(count=count))
+            if why:
+                said = self.tr("Copied, but not every box of its annotation file was stored: {why}.")
+                cell_item(self.table, rows[id(f)], STATUS).setToolTip(said.format(why=phrase_text(why)))
         problems = [*report.refused, *([report.stopped] if report.stopped else [])]
         for f, e in problems:
             i = rows[id(f)]

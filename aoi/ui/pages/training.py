@@ -38,7 +38,7 @@ from ...core.imaging import IMAGE_EXTS
 from ...core.jobs import Job
 from ...core.labels import DefectBox
 from ...core.run_progress import RunProgress
-from ...core.sample_import import ImportFile, ImportReport, folder_files
+from ...core.sample_import import ImportFile, ImportReport, annotate, folder_files
 from ...core.services import AppContext
 from ...defects import names
 from ...errors import AoiError
@@ -429,7 +429,7 @@ class TrainingPage(Page):
 
     def add_ng(self) -> None:
         if (bm := self.checked_board_model()) and (files := self._pick()):
-            self._open_sheet(bm, [ImportFile(f, "NG") for f in files])
+            self._open_sheet(bm, annotate([ImportFile(f, "NG") for f in files]))  # their boxes, where annotated
 
     def import_folder(self) -> None:
         """Folder with ok/ and ng/ sub-folders (ng/<defect type>/ pre-fills the type)."""

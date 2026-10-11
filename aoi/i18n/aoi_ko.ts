@@ -827,7 +827,7 @@
 <context>
     <name>Errors</name>
     <message>
-        <location filename="../core/services.py" line="+117"/>
+        <location filename="../core/services.py" line="+118"/>
         <source>a length of {length} px over {distance} mm gives no scale: both must be numbers above 0, and the scale from {least} to {most} px per mm</source>
         <translation type="unfinished"></translation>
     </message>
@@ -853,12 +853,27 @@
     </message>
     <message>
         <location line="+215"/>
-        <location line="+125"/>
+        <location line="+129"/>
         <source>Importing samples</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+39"/>
+        <location line="+49"/>
+        <source>its annotation file is gone</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+4"/>
+        <source>its annotation file was not read: {why}</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>{count} box(es) of classes that are not defect types were left out: {names}</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+8"/>
         <location line="+28"/>
         <source>Training an AI model</source>
         <translation type="unfinished"></translation>
@@ -1091,14 +1106,14 @@
         <translation>검증 세트 잠금</translation>
     </message>
     <message>
-        <location line="-2068"/>
-        <location line="+2082"/>
+        <location line="-2096"/>
+        <location line="+2110"/>
         <location line="+39"/>
         <source>the workspace holds no such dataset version</source>
         <translation>작업 공간에 그런 데이터셋 버전이 없습니다</translation>
     </message>
     <message>
-        <location line="-2119"/>
+        <location line="-2147"/>
         <source>the run used a folder, not a frozen dataset version&apos;s locked validation set</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1133,7 +1148,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1860"/>
+        <location line="+1888"/>
         <source>a blind label is OK, or NG with one of the 37 defect types</source>
         <translation>블라인드 라벨은 OK이거나, 37개 결함 유형 중 하나를 지정한 NG입니다</translation>
     </message>
@@ -1342,7 +1357,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-2631"/>
+        <location line="-2659"/>
         <source>no earlier version of this board model was active</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1367,7 +1382,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+666"/>
+        <location line="+694"/>
         <source>its UUID {found} is not {uuid}, as in the AI model registry</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1444,7 +1459,7 @@
     </message>
     <message>
         <location line="+21"/>
-        <location filename="../ui/main_window.py" line="+666"/>
+        <location filename="../ui/main_window.py" line="+702"/>
         <source>start-up</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3731,7 +3746,7 @@
 <context>
     <name>HomePage</name>
     <message>
-        <location filename="../ui/main_window.py" line="-552"/>
+        <location filename="../ui/main_window.py" line="-585"/>
         <source>Upload samples</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3929,12 +3944,12 @@
     <message>
         <location line="+1"/>
         <location line="+64"/>
-        <location line="+96"/>
+        <location line="+98"/>
         <source>Cancel</source>
         <translation>취소</translation>
     </message>
     <message>
-        <location line="-159"/>
+        <location line="-161"/>
         <source>Import</source>
         <translation>가져오기</translation>
     </message>
@@ -3954,7 +3969,22 @@
         <translation>이 파일들은 보드 모델 {name}용이었습니다. 나머지를 가져오려면 헤더에서 그 보드 모델을 고르세요</translation>
     </message>
     <message>
-        <location line="+139"/>
+        <location line="+52"/>
+        <source>{type} · {count} box(es)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+75"/>
+        <source>copied with {count} box(es)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>Copied, but not every box of its annotation file was stored: {why}.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+17"/>
         <source>Nothing to import: every file is already imported.</source>
         <translation>가져올 파일이 없습니다. 모든 파일을 이미 가져왔습니다.</translation>
     </message>
@@ -3964,7 +3994,7 @@
         <translation>{added}개 가져옴 · {skipped}개 이미 있음 · {count}개 가져오지 않음</translation>
     </message>
     <message>
-        <location line="-91"/>
+        <location line="-98"/>
         <source>pick a type</source>
         <translation>유형을 고르세요</translation>
     </message>
@@ -3974,7 +4004,7 @@
         <translation>37가지 결함 유형 중 하나를 고르세요</translation>
     </message>
     <message>
-        <location line="+133"/>
+        <location line="+135"/>
         <source>ready</source>
         <translation>준비됨</translation>
     </message>
@@ -4004,7 +4034,7 @@
         <translation>복사됨</translation>
     </message>
     <message>
-        <location line="+11"/>
+        <location line="+16"/>
         <source>not imported</source>
         <translation>가져오지 않음</translation>
     </message>
@@ -4727,12 +4757,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+39"/>
+        <location line="+70"/>
         <source>{title} · Demo</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+75"/>
+        <location line="+77"/>
         <source>Demo</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5287,7 +5317,7 @@
 <context>
     <name>Page</name>
     <message>
-        <location filename="../ui/main_window.py" line="-519"/>
+        <location filename="../ui/main_window.py" line="-552"/>
         <source>Home</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6832,7 +6862,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/services.py" line="-2884"/>
+        <location filename="../core/services.py" line="-2912"/>
         <source>Aligning {count} images to the reference board</source>
         <translation type="unfinished"></translation>
     </message>
