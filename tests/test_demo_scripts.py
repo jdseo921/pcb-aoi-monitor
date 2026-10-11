@@ -134,7 +134,7 @@ def test_req_set_007_the_fifteen_minute_script_checks_trains_and_tries_a_thresho
     qtbot: QtBot, bundle: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """docs/demo/stage1-15min.md as clicks, in the presenter theme: AI Model Test runs on the demo version's locked
-    validation set, the 20 OK and 11 NG boards its AI model never trained on, and gives counts; Start Training makes
+    validation set, the 50 OK and 11 NG boards its AI model never trained on, and gives counts; Start Training makes
     v1.1, whose AI Model Card says it is not yet tested and which judges nothing until Activate Selected, and Roll Back
     makes v1.0 active again; the NG record opened in Compare from Logs & Export, Allowed difference regions 2 and
     Re-evaluate still give NG, as the AI score check decides on its own, and the recipe is unchanged. Every page shown
@@ -159,11 +159,11 @@ def test_req_set_007_the_fifteen_minute_script_checks_trains_and_tries_a_thresho
 
     assert win.navigate("AI Model Test")
     test = win.pages["AI Model Test"]
-    assert test.source.currentData() and "31 images" in test.source.currentText()  # type: ignore[attr-defined]
+    assert test.source.currentData() and "61 images" in test.source.currentText()  # type: ignore[attr-defined]
     qtbot.mouseClick(test.btn_run, Qt.MouseButton.LeftButton)  # type: ignore[attr-defined]
     qtbot.waitUntil(lambda: test.btn_run.isEnabled(), timeout=60000)  # type: ignore[attr-defined]
     tiles = {k: re.sub(r"<[^>]+>", " ", t.text()) for k, t in test.tiles.items()}  # type: ignore[attr-defined]
-    assert " of 11" in tiles["missed_defects"] and " of 20" in tiles["false_calls"]
+    assert " of 11" in tiles["missed_defects"] and " of 50" in tiles["false_calls"]
     widths["AI Model Test"] = win.minimumSizeHint().width()
 
     assert win.navigate("Training")

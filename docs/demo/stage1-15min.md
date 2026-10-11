@@ -13,27 +13,27 @@ run of 10 boards, the NG board, **Compare**, and the run finished. Keep the repo
 
 ## 3:45 to 6:00, check it on boards with known defects
 
-1. Click **AI Model Test**. **Source** reads "DS-DEMOTBOXA1-R1-TOP-v1: its locked validation set, 31 images".
+1. Click **AI Model Test**. **Source** reads "DS-DEMOTBOXA1-R1-TOP-v1: its locked validation set, 61 images".
 
-> "Before training, we set 31 boards aside and locked them: the AI model never sees them. 11 of them have a known
+> "Before training, we set 61 boards aside and locked them: the AI model never sees them. 11 of them have a known
 > defect. We check every AI model on them before anyone uses it."
 
-2. Press **Run Test**. It takes a few seconds. The tiles fill: **Missed defects** 0 of 11, **False calls** 1 of 20,
+2. Press **Run Test**. It takes a few seconds. The tiles fill: **Missed defects** 0 of 11, **False calls** 3 of 50,
    then **Recall**, **Precision** and **Accuracy**.
 
-> "Two numbers matter on the line: defects it let through, here none of 11, and good boards it stopped, here 1 of 20.
+> "Two numbers matter on the line: defects it let through, here none of 11, and good boards it stopped, here 3 of 50.
 > Always as counts. The small line under each count is the worst case those counts still allow: with 11 defective
 > boards we cannot promise more than that, so on your boards we ask for enough samples to make it small. These boards
 > are drawn, so these counts say nothing about your boards; they show what you will get on yours."
 
-3. Select the red row in the table: the one good board it stopped. Its picture shows beside the table.
+3. Select a red row in the table: a good board it stopped. Its picture shows beside the table.
 
 Speak about missed defects and false calls; do not lead with **Accuracy**.
 
 ## 6:00 to 9:30, train live
 
 1. Click **Training**. Under **Self-training**: **Dataset version** DS-DEMOTBOXA1-R1-TOP-v1, and the line
-   "Validation set locked ✓ 20 OK / 11 NG · training set 40 OK, 3 NG". Leave **Epochs** at 60 and **Network input
+   "Validation set locked ✓ 50 OK / 11 NG · training set 40 OK, 3 NG". Leave **Epochs** at 60 and **Network input
    size** at 256.
 2. Press **Start Training**. The bar moves and the line under it reads, for example, "Training epoch 7 of 60 · 15 % ·
    about 1 min left". On our 4-core test PC it took 98 s.

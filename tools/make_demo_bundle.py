@@ -43,8 +43,9 @@ from tools.trainable import key_of, trainable  # noqa: E402
 
 BOARD_MODEL = "DEMO-TBOX-A1"
 CUSTOMER = "Demo (synthetic boards)"  # the store's customer: our own synthetic boards (ADR 0010)
-OK, NG, SEED = 60, 14, 7  # the generator's defaults: 40 OK and 3 NG boards train; 20 OK and 11 NG are held out,
-# the version's locked validation set
+OK, NG, SEED = 60, 14, 7  # the generator's defaults: 40 OK and 3 NG boards train; 20 OK and 11 NG are held out
+MORE_HELD_OK = 30  # and 30 more OK boards, drawn after them: the locked validation set holds 50 OK boards and 11 NG,
+# as a customer's does (REQ-TRN-006; Customers & Launch, "Validation": freeze the 50 held-out OK images)
 EPOCHS, IMAGE_SIZE = 20, 128
 FAILING = "ng_007_missing_component.png"  # a held-out NG board: a part is missing from its pads, as Compare shows
 FAIL_AT = 4  # the failing board's place in the run: the run is under way, and it stops early enough to explain
@@ -61,7 +62,7 @@ def build(out: Path, epochs: int = EPOCHS, image_size: int = IMAGE_SIZE) -> dict
     started = time.monotonic()
     with tempfile.TemporaryDirectory() as tmp, mock.patch.dict(os.environ, AOI_WORKSPACE=str(Path(tmp) / "settings")):
         dataset = Path(tmp) / "dataset"
-        write_dataset(dataset, OK, NG, SEED)
+        write_dataset(dataset, OK, NG, SEED, MORE_HELD_OK)
         keys = credentials.MemoryCredentials()  # the store key goes to store-key.json, never to the station
         ctx = AppContext(Settings(workspace=str(out / demo.WORKSPACE), device="cpu"), keys)
         try:
