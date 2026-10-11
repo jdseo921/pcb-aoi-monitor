@@ -148,8 +148,9 @@ def synthetic_workspace(
         ctx.import_samples(BOARD_MODEL, [str(p) for p in list_images(boards / "train" / "ok")], "OK")
         for p in list_images(boards / "train" / "ng"):  # one call each: an NG sample is imported with its type
             ctx.import_samples(BOARD_MODEL, [str(p)], "NG", ng_type(p))
-        ctx.train(trainable(ctx, BOARD_MODEL), epochs=epochs, image_size=image_size)
-        ctx.activate_model(int(ctx.models(BOARD_MODEL)[0]["id"]))  # a version installs inactive (REQ-TRN-010)
+        meta = ctx.train(trainable(ctx, BOARD_MODEL), epochs=epochs, image_size=image_size)
+        if not meta["activated"]:  # a board model's first version goes live when trained (ADR 0018), unless refused
+            ctx.activate_model(int(ctx.models(BOARD_MODEL)[0]["id"]))  # which this raises again, with its code
     finally:
         ctx.close()
     return ws, BOARD_MODEL, boards / "test"

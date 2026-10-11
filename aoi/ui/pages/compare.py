@@ -46,7 +46,7 @@ from PySide6.QtWidgets import (
 from ... import defects as taxonomy
 from ...core.explain import explain
 from ...core.imaging import IMAGE_EXTS
-from ...core.inspector import Check, InspectionResult, ai_check
+from ...core.inspector import NO_AI_NOTE, Check, InspectionResult, ai_check
 from ...core.recipe import Recipe, disc_width, scale_digits
 from ...core.services import REQUIRED_ROLE, ROLES_FROM, AppContext, ErrorReport, Judged
 from ...core.views import ai_view, difference_view
@@ -927,10 +927,22 @@ class ComparePage(Page):
         heading = self.tr("Why this board is {verdict}:").format(verdict=r.verdict)
         if tried:
             heading = self.tr("Why this board would be {verdict} with these thresholds:").format(verdict=r.verdict)
-        sentences = explain(r, stored=self.stored is not None, tried=tried)  # tried: the board keeps the stored boxes
+        inactive = self._inactive_version() if self.stored is None and NO_AI_NOTE in r.notes else None
+        sentences = explain(r, self.stored is not None, tried, inactive)  # tried: the board keeps the stored boxes
         return "<br>".join(
             [f"<b>{html.escape(heading)}</b>", *(f"• {html.escape(sentence_text(t))}" for t in sentences)]
         )
+
+    def _inactive_version(self) -> str | None:
+        """The header's board model's version trained but not active, which the "why" box names on a board just judged
+        with no AI model (ADR 0018); None while one is active, none is trained, or the database cannot be read (logged:
+        the box then says no AI model is trained, as before)."""
+        try:
+            waiting = self.ctx.inactive_model(self.board_model) if self.board_model else None
+        except Exception:
+            self.ctx.log.warning("models.not_read", exc_info=True)
+            return None
+        return str(waiting["version"]) if waiting else None
 
     def redraw(self) -> None:
         """The view chosen under Show: the test board's picture for it, with a labelled box per defect, beside the

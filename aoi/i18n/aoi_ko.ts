@@ -402,12 +402,12 @@
     </message>
     <message>
         <location line="+15"/>
-        <location line="+885"/>
+        <location line="+897"/>
         <source>Test board</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-879"/>
+        <location line="-891"/>
         <source>Inspecting…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -493,7 +493,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+64"/>
+        <location line="+76"/>
         <source>{threshold}: {before} → {after}</source>
         <translation type="unfinished"></translation>
     </message>
@@ -528,7 +528,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-965"/>
+        <location line="-977"/>
         <source>AI score threshold</source>
         <translation type="unfinished"></translation>
     </message>
@@ -622,13 +622,13 @@
     <message>
         <location line="+0"/>
         <location line="+140"/>
-        <location line="+224"/>
+        <location line="+236"/>
         <location line="+12"/>
         <source>Re-evaluate ›</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-362"/>
+        <location line="-374"/>
         <source>Train an AI model on Training.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -681,12 +681,12 @@
         <location line="+1"/>
         <location line="+6"/>
         <location line="+4"/>
-        <location line="+128"/>
+        <location line="+140"/>
         <source>none</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-133"/>
+        <location line="-145"/>
         <source>Since then the board model moved to AI model {model} and recipe revision {revision}.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -706,7 +706,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+135"/>
+        <location line="+147"/>
         <source>Recipe saved as revision {revision}</source>
         <translation type="unfinished"></translation>
     </message>
@@ -884,7 +884,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+176"/>
+        <location line="+180"/>
         <location line="+2182"/>
         <source>(none)</source>
         <translation type="unfinished"></translation>
@@ -1137,14 +1137,14 @@
         <translation>검증 세트 잠금</translation>
     </message>
     <message>
-        <location line="-2463"/>
-        <location line="+2477"/>
+        <location line="-2467"/>
+        <location line="+2481"/>
         <location line="+39"/>
         <source>the workspace holds no such dataset version</source>
         <translation>작업 공간에 그런 데이터셋 버전이 없습니다</translation>
     </message>
     <message>
-        <location line="-2559"/>
+        <location line="-2563"/>
         <source>Drift on {board} ({view}): {count} of the last {of} boards called NG; {before} % of the {baseline} before</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1234,7 +1234,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+822"/>
+        <location line="+826"/>
         <source>Setting the comparison&apos;s thresholds from labelled boards</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1443,7 +1443,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+210"/>
+        <location line="+211"/>
         <source>Exporting an AI model</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1458,7 +1458,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-3045"/>
+        <location line="-3050"/>
         <source>no earlier version of this board model was active</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1483,7 +1483,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+746"/>
+        <location line="+750"/>
         <source>its UUID {found} is not {uuid}, as in the AI model registry</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1518,7 +1518,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+93"/>
+        <location line="+94"/>
         <source>Changing settings</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1561,7 +1561,7 @@
     </message>
     <message>
         <location line="+21"/>
-        <location filename="../ui/main_window.py" line="+844"/>
+        <location filename="../ui/main_window.py" line="+849"/>
         <source>start-up</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1672,7 +1672,7 @@
     </message>
     <message>
         <location line="+3"/>
-        <source>no AI model is trained</source>
+        <source>no AI model is active</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -1851,12 +1851,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+4"/>
-        <source>An Engineer sets a Golden board or trains an AI model on Training, or turns on the Golden board comparison or the AI model in the Recipe Editor; then inspect the board again.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+8"/>
+        <location line="+12"/>
         <source>Image too small to inspect</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2122,7 +2117,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1"/>
+        <location line="-32"/>
+        <source>An Engineer sets a Golden board, or trains or activates an AI model, on Training, or turns on the Golden board comparison or the AI model in the Recipe Editor; then inspect the board again.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+33"/>
         <source>The AI model, recipe, scale or Golden board of {board} changed during a run (training ended, a version was activated while the recipe has the AI check on, a recipe saved, a scale set while it holds a size in mm, or a Golden board set), so {file} and the boards after it are judged with what is active now; the boards before keep what judged them.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3787,7 +3787,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+17"/>
+        <location line="+16"/>
+        <source>AI model {version} is trained for this board model but not active, so the AI check did not run: an Engineer activates it on Inspection or Training.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+6"/>
         <source>No Golden board was in use for this board model when the board was inspected, so it was not compared with one: inspect the board again once one is set.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3923,7 +3928,7 @@
 <context>
     <name>HomePage</name>
     <message>
-        <location filename="../ui/main_window.py" line="-728"/>
+        <location filename="../ui/main_window.py" line="-733"/>
         <source>Upload samples</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3988,7 +3993,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+51"/>
+        <location line="+52"/>
         <source>Open to every role.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3998,7 +4003,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+29"/>
+        <location line="+33"/>
         <source>For {roles}</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4023,7 +4028,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-144"/>
+        <location line="-149"/>
         <source>Inspect</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4043,17 +4048,17 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+98"/>
+        <location line="+103"/>
         <source>Open {page} ›</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-12"/>
+        <location line="-15"/>
         <source>Training running {percent} % · {left}</source>
         <translation>학습 중 {percent} % · {left}</translation>
     </message>
     <message>
-        <location line="+27"/>
+        <location line="+30"/>
         <source>{ok} OK · {ng} NG uploaded</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4448,7 +4453,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+55"/>
+        <location line="+57"/>
         <source>No AI model for {board_model} yet: only the Golden board comparison runs</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4458,7 +4463,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+30"/>
+        <location line="+28"/>
         <source>Shift check: judging the master samples of {board_model}…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4603,7 +4608,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+15"/>
+        <location line="+20"/>
         <source>AI model {version} of {board_model} is trained but not active: only the Golden board comparison judges its boards.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5755,6 +5760,11 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <location line="+0"/>
+        <source>AI model not active</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <location line="+2"/>
         <source>AI model {version} is not active: the results use the Golden board comparison only. Activate it on Training to test it.</source>
         <translation type="unfinished"></translation>
@@ -5947,7 +5957,7 @@
 <context>
     <name>Page</name>
     <message>
-        <location filename="../ui/main_window.py" line="-695"/>
+        <location filename="../ui/main_window.py" line="-700"/>
         <source>Home</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6062,7 +6072,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/compare.py" line="-789"/>
+        <location filename="../ui/pages/compare.py" line="-801"/>
         <source>Compare</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6072,7 +6082,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/inspection.py" line="-710"/>
+        <location filename="../ui/pages/inspection.py" line="-715"/>
         <source>Inspection</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7572,7 +7582,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/services.py" line="-3349"/>
+        <location filename="../core/services.py" line="-3354"/>
         <source>Aligning {count} images to the reference board</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7748,17 +7758,17 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+8"/>
+        <location line="+15"/>
         <source>AI model {version} trained: select it and press Activate Selected to judge boards with it</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+8"/>
+        <location line="+10"/>
         <source>Cancelled: no AI model was saved; the active AI model is unchanged.</source>
         <translation>취소됨: AI 모델을 저장하지 않았으며 활성 AI 모델은 바뀌지 않았습니다.</translation>
     </message>
     <message>
-        <location line="-694"/>
+        <location line="-703"/>
         <source>AI model versions</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7849,13 +7859,13 @@
     </message>
     <message>
         <location line="+1"/>
-        <location line="+813"/>
+        <location line="+822"/>
         <location line="+40"/>
         <source>Roll Back</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-849"/>
+        <location line="-858"/>
         <source>AI Model Card</source>
         <translation type="unfinished"></translation>
     </message>
@@ -8040,12 +8050,17 @@
         <translation>{type} ×{count}</translation>
     </message>
     <message>
-        <location line="+68"/>
+        <location line="+70"/>
         <source>AI model {version} trained and active: the first AI model of {board_model} judges its boards from now on. Each later version installs inactive until you activate it.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+91"/>
+        <location line="+5"/>
+        <source>AI model {version} trained, but not made active, so {board_model} is still judged by the Golden board comparison alone: {code}. Activate it with Activate Selected once the cause is fixed.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+93"/>
         <source>No frozen dataset version of {board_model} yet; training reads only a frozen version&apos;s training set, once its validation set is locked.</source>
         <translation>{board_model}의 고정된 데이터셋 버전이 아직 없습니다. 학습은 검증 세트가 잠긴 고정 버전의 학습 세트만 읽습니다.</translation>
     </message>
@@ -8070,7 +8085,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-341"/>
+        <location line="-350"/>
         <source>Add at least 20 OK boards with Add OK Images… or Import Folder…</source>
         <translation>OK 이미지 추가… 또는 폴더 가져오기…로 OK 보드를 20개 이상 추가하세요</translation>
     </message>
@@ -8080,7 +8095,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+320"/>
+        <location line="+329"/>
         <source>Rolled back to AI model {version}</source>
         <translation type="unfinished"></translation>
     </message>

@@ -90,8 +90,9 @@ started with and the boards after it use the new one; the line under the banner 
 AOI-INSP-013. Each record names the AI model version active when its board was judged, the recipe revision that
 judged it (which says whether the AI check ran) and the Golden board it was judged against. When the recipe turns the
 AI check off, no AI model judges the boards, so an AI model version activated during a run changes nothing that judges
-them and the run goes on with no AOI-INSP-013 (the boards after it name the version now active); a saved recipe or a
-Golden board set still moves the run, and a training run does too, as it sets a new Golden board, and the line then
+them while the Golden board stays, and the run goes on with no AOI-INSP-013 (the boards after it name the version now
+active); a saved recipe or a Golden board set still moves the run, and so does a board model's first training run, as
+its AI model goes live with a new Golden board (a later one installs inactive and moves nothing), and the line then
 says the AI check was off in place of naming an AI model.
 A scale set changes nothing that judges a board while the recipe holds its sizes in px, so the run then goes on with no
 AOI-INSP-013.

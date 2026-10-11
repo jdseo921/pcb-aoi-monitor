@@ -745,11 +745,13 @@ class AppContext:
     ) -> dict[str, Any]:
         """Train an AI model of a frozen dataset version's board model on the version's training set, for `use` (its
         customer's own AI models by default), then save, register (inactive, REQ-TRN-010) and audit it (REQ-TRN-007),
-        and return its metadata with `activated`: a board model's first version is then made active, with its own audit
-        entry (`_first_live`); a later one stays inactive. The OK images train it and make the Golden board; the NG
-        images only calibrate its threshold; the locked validation set is never read. Refused, before any image is read,
-        as `_training_set` gives. A file whose SHA-256, of the bytes read, is not the one frozen stops the run with
-        AOI-TRN-045. The run reads the device once, before it loads anything, and keeps it to the end (#201).
+        and return its metadata with `activated` and `not_live`: a board model's first version, trained for its
+        customer's own AI models, is then made active with its own audit entry (`_first_live`, ADR 0018), and `not_live`
+        holds the error that kept it inactive, if one did; a later version, or one for another use, stays inactive. The
+        OK images train it and make the Golden board; the NG images only calibrate its threshold; the locked validation
+        set is never read. Refused, before any image is read, as `_training_set` gives. A file whose SHA-256, of the
+        bytes read, is not the one frozen stops the run with AOI-TRN-045. The run reads the device once, before it loads
+        anything, and keeps it to the end (#201).
 
         Memory (REQ-TRN-007): each image is read, registered onto the board model's reference board (else the first OK
         image) and warped, then kept only as its tensor at the network's input size and its band of the Golden board's
@@ -843,7 +845,8 @@ class AppContext:
         model = anomaly.train(ok_in, ng_in, cfg, engine, should_stop)
         check()
         previous = self.db.active_model(board_model)
-        first = not self.db.models(board_model)  # the board model's first AI model: it goes live once registered (D3)
+        # the board model's first AI model, for the line's own use, goes live once registered (D3, ADR 0018)
+        first = use == "own" and not self.db.models(board_model)
         out.mkdir(parents=True, exist_ok=True)
 
         def files(v: str) -> list[Path]:
@@ -890,9 +893,10 @@ class AppContext:
             _remove(files(version))  # not registered: no file is left for a later run to take for its own
             raise
         self._model_cache.pop(board_model, None)
-        live = first and self._first_live(board_model, model_id)
+        not_live = self._first_live(board_model, model_id) if first else None
+        live = first and not_live is None
         self.log.info("training.finished", extra={"board_model": board_model, "model_version": version, "live": live})
-        return {**model.meta, "activated": live}
+        return {**model.meta, "activated": live, "not_live": not_live}
 
     def load_model(self, board_model: str) -> tuple[str, anomaly.AnomalyModel, str] | None:
         """The active model of a board model as (version, model, uuid), the three from one row so a record never names
@@ -1581,8 +1585,8 @@ class AppContext:
     def inactive_model(self, board_model: str) -> dict[str, Any] | None:
         """The newest trained version of a board model while none is active, which an Engineer activates (Inspection
         offers it, as Activate Selected on Training does); None while one is active or none is trained. A board model's
-        first version goes live when trained (`train`), so this is one trained before that, or one whose activation
-        was refused."""
+        first version for its own use goes live when trained (`train`), so this is one trained before that, one trained
+        for another use, or one whose activation was refused."""
         if self.db.active_model(board_model) is not None:
             return None
         return next(iter(self.db.models(board_model)), None)  # newest first
@@ -3117,19 +3121,20 @@ class AppContext:
                 return by_version.get(previous) if previous and previous != made else None
         return None
 
-    def _first_live(self, board_model: str, model_id: int) -> bool:
+    def _first_live(self, board_model: str, model_id: int) -> Exception | None:
         """Make a board model's first AI model version, just registered, the active one with its Golden board
         (`_switch_to`), audited as `model.activate` by the Engineer who trained it with FIRST_LIVE as the reason
-        (business-readiness decision D3; REQ-TRN-012). Its own transaction, after the version's: a refusal (AOI-TRN-048,
-        AOI-TRN-049) or a failure such as a full disk leaves the version registered and inactive, which is logged, and
-        which Inspection then offers to activate (`inactive_model`). Whether it went live."""
+        (business-readiness decision D3, ADR 0018; REQ-TRN-012). Its own transaction, after the version's: a refusal
+        (AOI-TRN-048, AOI-TRN-049) or a failure such as a full disk leaves the version registered and inactive, which is
+        logged and returned, for Training to show, and which Inspection then offers to activate (`inactive_model`).
+        None once it is live."""
         try:
             with self.db.transaction():
                 self._switch_to(self.db.model(model_id), "model.activate", FIRST_LIVE)
-        except Exception:
+        except Exception as e:
             self.log.warning("training.first_not_live", exc_info=True, extra={"board_model": board_model})
-            return False
-        return True
+            return e
+        return None
 
     def _switch_to(self, target: dict[str, Any], action: str, reason: str | None = None) -> None:
         """Make `target` its board model's active version and its Golden board the board model's, together, with an

@@ -339,8 +339,10 @@ class InspectionPage(Page):
                 moved = self.run_inputs is not None and engine.judging_inputs != self.run_inputs
                 self.run_inputs = engine.judging_inputs
             self._on_result(out)  # first: the result, and a failed save's error, never wait for the alarm below (#179)
+            if engine.model is None and bm == self.board_model:  # each board judged with no AI model: a version
+                self._show_waiting()  # trained meanwhile, on Training or by another station, is named at once
             if no_ai_model:  # a version trained but not active is named, never taken for no AI model (decision D3)
-                waiting = self.ctx.inactive_model(bm)
+                waiting = self.waiting
                 if waiting is None:
                     msg = self.tr("No AI model for {board_model} yet: only the Golden board comparison runs").format(
                         board_model=bm
@@ -352,8 +354,6 @@ class InspectionPage(Page):
                         " Engineer activates it with Activate {version}."
                     ).format(version=waiting["version"], board_model=bm)
                     self._alarm("WARN", msg, "AOI-TRN-051")
-                    if bm == self.board_model:
-                        self._show_waiting()
             if bm != self.board_model:  # the header moved on meanwhile: saved under bm, not the current board (#172)
                 self._not_current(out, bm, in_run)
             if moved:  # after _not_current, whose line it is added to
@@ -749,9 +749,14 @@ class InspectionPage(Page):
     def _show_waiting(self) -> dict[str, Any] | None:
         """The line that names the header's board model's trained AI model while none is active, with Activate; hidden
         while one is active or none is trained (`AppContext.inactive_model`). For a role that may not activate it, the
-        line says which role may, as Activate's tooltip does (REQ-USR-001). Returns the version it names."""
+        line says which role may, as Activate's tooltip does (REQ-USR-001). A database that cannot be read hides it,
+        logged, and never stops the result or the run that asked (#179). Returns the version it names."""
         bm = self.board_model
-        self.waiting = self.ctx.inactive_model(bm) if bm else None
+        try:
+            self.waiting = self.ctx.inactive_model(bm) if bm else None
+        except Exception:
+            self.ctx.log.warning("models.not_read", exc_info=True)
+            self.waiting = None
         self.ai_row.setVisible(self.waiting is not None)
         if self.waiting is not None:
             version = self.waiting["version"]

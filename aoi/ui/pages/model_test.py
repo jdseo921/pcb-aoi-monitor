@@ -527,7 +527,7 @@ class ModelTestPage(Page):
             waiting = self.ctx.inactive_model(bm)  # trained but not active: named, never "no AI model yet" (D3)
             QMessageBox.information(
                 self,
-                self.tr("No AI model"),
+                self.tr("AI model not active") if waiting else self.tr("No AI model"),
                 self.tr(
                     "AI model {version} is not active: the results use the Golden board comparison only. Activate it"
                     " on Training to test it."

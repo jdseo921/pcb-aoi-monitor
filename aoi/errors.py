@@ -185,8 +185,8 @@ CODES: dict[str, ErrorCode] = {
             ),
             QT_TRANSLATE_NOOP(
                 "Errors",
-                "An Engineer sets a Golden board or trains an AI model on Training, or turns on the Golden board"
-                " comparison or the AI model in the Recipe Editor; then inspect the board again.",
+                "An Engineer sets a Golden board, or trains or activates an AI model, on Training, or turns on the"
+                " Golden board comparison or the AI model in the Recipe Editor; then inspect the board again.",
             ),
         ),
         ErrorCode(

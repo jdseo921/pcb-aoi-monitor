@@ -177,7 +177,7 @@ def test_req_insp_015_no_board_is_judged_without_its_golden_board_or_with_no_che
     with pytest.raises(AoiError) as nothing:
         ctx.inspect_file("EMPTY", str(ng_board))
     assert nothing.value.code == "AOI-INSP-010"
-    assert "of board model EMPTY: no Golden board is set; no AI model is trained." in nothing.value.what
+    assert "of board model EMPTY: no Golden board is set; no AI model is active." in nothing.value.what
     with pytest.raises(AoiError) as turned_off:  # thresholds that turn every check off judge nothing either
         re_grade(judged, Recipe(board_model=BOARD, use_compare=False, use_ai=False), None)
     assert turned_off.value.code == "AOI-INSP-010"

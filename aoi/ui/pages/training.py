@@ -45,7 +45,7 @@ from ...errors import AoiError
 from ...hal import VIEWS
 from ...times import to_local
 from .. import theme
-from ..errors import phrase_text
+from ..errors import phrase_text, show_error
 from ..widgets.box_editor import ENTER
 from ..widgets.busy import BusyOverlay
 from ..widgets.empty_state import EmptyState
@@ -976,17 +976,26 @@ class TrainingPage(Page):
         self.bar.setValue(self.bar.maximum())
         saved = self.tr("Saved AI model {version} ({seconds} s) with its Golden board and AI model card.")
         self.log.appendPlainText(saved.format(version=meta["version"], seconds=meta["train_seconds"]))
+        not_live = meta.get("not_live")  # the error that kept a board model's first AI model inactive (ADR 0018)
+        report = self.ctx.report_error(not_live, self.title) if isinstance(not_live, BaseException) else None
         if meta.get("activated"):  # a board model's first AI model goes live when trained (decision D3), audited
             done = self.tr(
                 "AI model {version} trained and active: the first AI model of {board_model} judges its boards from now"
                 " on. Each later version installs inactive until you activate it."
             )
+        elif report is not None:  # logged, and stored as an alarm with its code
+            done = self.tr(
+                "AI model {version} trained, but not made active, so {board_model} is still judged by the Golden board"
+                " comparison alone: {code}. Activate it with Activate Selected once the cause is fixed."
+            )
         else:  # a later version installs inactive (REQ-TRN-010)
             done = self.tr("AI model {version} trained: select it and press Activate Selected to judge boards with it")
-        said = done.format(version=meta["version"], board_model=meta["board_model"])
+        said = done.format(version=meta["version"], board_model=meta["board_model"], code=report.code if report else "")
         self.log.appendPlainText(said)
         self.shell.status(said)
         self.refresh()
+        if report is not None:  # what happened and what to do, as any error a user sees (REQ-SET-019)
+            show_error(self, report)
 
     def _finished(self) -> None:
         if self.worker is not None and self.worker.job.cancelled and self.worker.job.result is None:  # Cancel (#171)

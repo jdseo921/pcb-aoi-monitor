@@ -178,7 +178,7 @@ def test_req_cmp_005_a_check_that_did_not_run_is_not_judged_again(tiny_model: Tr
     assert re_grade(by_ai, on, _evidence(by_ai, model)).notes == [NOT_COMPARED_NOTE]
     with pytest.raises(AoiError) as nothing:  # judged by no check, as a build before #169 stored it
         re_grade(InspectionResult("OK", 0.0, notes=[NO_AI_NOTE]), on, None)
-    why = "TINY: the Golden board comparison did not run when the board was inspected; no AI model is trained."
+    why = "TINY: the Golden board comparison did not run when the board was inspected; no AI model is active."
     assert nothing.value.code == "AOI-INSP-010" and why in nothing.value.what, "the comparison's reason first"
 
     full = Inspector(on, model, golden).inspect(img)

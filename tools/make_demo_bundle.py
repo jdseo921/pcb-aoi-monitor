@@ -71,7 +71,8 @@ def build(out: Path, epochs: int = EPOCHS, image_size: int = IMAGE_SIZE) -> dict
             held = _import(ctx, dataset / "test")  # the held-out boards: the locked validation set AI Model Test runs
             version = trainable(ctx, BOARD_MODEL, customer=CUSTOMER, held=held, manifest=True)
             meta = ctx.train(version, epochs=epochs, image_size=image_size)
-            ctx.activate_model(int(ctx.models(BOARD_MODEL)[0]["id"]))  # a version installs inactive (REQ-TRN-010)
+            if not meta["activated"]:  # a board model's first version goes live when trained (ADR 0018), unless
+                ctx.activate_model(int(ctx.models(BOARD_MODEL)[0]["id"]))  # refused, which this raises again
             store = ctx.db.board_model_store(BOARD_MODEL) or {}
             key = {"store_uuid": store["uuid"], "key": key_of(ctx, store["uuid"]).hex()}
             boards = _boards(ctx, dataset, out / demo.WORKSPACE / demo.BOARDS)

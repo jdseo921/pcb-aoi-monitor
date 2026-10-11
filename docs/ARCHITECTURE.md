@@ -239,7 +239,9 @@ queue, a board model change or a revisit drops the engine (a generation counter,
 meanwhile is never kept), and one worker runs at a time per page (#120). A board model with no AI model gets its WARN
 alarm AOI-TRN-003 once per page visit and board model, not for each engine a new queue builds; one with a version
 trained but none active (`AppContext.inactive_model`) gets AOI-TRN-051 naming that version instead, and a line under
-the shift check's names it with Activate <version>, an Engineer's, greyed for an Operator (decision D3). AI Model Test asks
+the shift check's names it with Activate <version>, an Engineer's, greyed for an Operator (decision D3), read again
+after each board judged with no AI model, so a version trained meanwhile is named at once; a database that cannot be
+read hides the line, logged, and the alarm falls back to AOI-TRN-003 (#179). AI Model Test asks
 `engine_is_current` the same of the `JudgedBy` that `AppContext.batch_test` returns with a run (the recipe revision,
 Golden board and scale that judged it, the AI model version active then and, in `use_ai`, whether the recipe ran the AI
 check), so
@@ -556,11 +558,16 @@ images ([measurement](tests/2026-10-09-training-memory.md)).
 An AI model the loader would refuse, such as one with an image threshold of 0 from OK images that are copies of one
 photo, is refused at step 5 with AOI-TRN-004: nothing is saved, registered or audited, and the active version stays.
 Step 6 writes the version's model card (`aoi/core/model_card.py`, REQ-TRN-011) and registers the version inactive with
-`model.train` in one transaction: if it fails, the run's four files are removed. A board model's first version is then
-made active with its Golden board in a transaction of its own (`_first_live`, decision D3 of the 2026-10
-business-readiness brief: there is no version in use to keep), audited as `model.activate` by the Engineer who trained
-it with the reason `FIRST_LIVE`; an activation that fails leaves it registered and inactive, logged as
-`training.first_not_live`, and `train` returns `activated` with the metadata. The Engineer activates a later version
+`model.train` in one transaction: if it fails, the run's four files are removed. A board model's first version, trained
+for the customer's own AI models (`use` "own", which Training always passes), is then made active with its Golden board
+in a transaction of its own (`_first_live`; decision D3 of the 2026-10 business-readiness brief, ADR 0018: there is no
+version in use to keep), audited as `model.activate` by the Engineer who trained it with the reason `FIRST_LIVE`; an
+activation that fails leaves it registered and inactive, logged as `training.first_not_live`, and `train` returns
+`activated` and, in `not_live`, the error, which Training reports as any error (`report_error`: an alarm with its code
+and the dialog) and names in its status line. Home's Train AI model card is read again when a run ends while Home is
+shown. On Compare, a board just judged with no AI model while a version waits is explained by `INACTIVE_AI_NOTE`
+(`aoi/core/explain.py`), naming the version, not "No AI model is trained"; a stored result keeps the past tense of
+`STORED_NOTES`, and AOI-INSP-010 says "no AI model is active". The Engineer activates a later version
 (`activate_model`), or rolls back to the version active before (`rollback_model`): either switches the AI model and its
 Golden board together, audited, and refuses a version without a card (AOI-TRN-049) or whose Golden board cannot be read
 (AOI-TRN-048) (REQ-TRN-010). A version
