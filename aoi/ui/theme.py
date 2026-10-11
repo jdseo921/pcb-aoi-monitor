@@ -78,6 +78,7 @@ WHY_MIN_H = 60  # Compare's "why" box gives way to two lines before the decision
 DECISION_ROWS = 7  # and before the decision table shows fewer rows than this, the sketch's seven; more scroll
 TRY_ROWS = 5  # the rows the Recipe Editor's Try checks table shows before it scrolls (recipe-editor sketch)
 NAV_W, HEADER_H, FIELD_W, CARD_W = 250, 64, 240, 720
+CELL_PAD = 6  # px of space each side of a table cell's and its heading's text, so no two cells' text runs together
 NAV_TEXT_X = 18  # a sidebar entry's text from its left edge, as QListWidget#nav::item's padding sets it
 IMAGE_MIN_W, IMAGE_MIN_H, PROGRESS_W = 320, 240, 360
 FILTER_MIN_W = 80  # a name filter's drop-down gives way to this in a narrow window ("All" stays whole; S51)
@@ -163,7 +164,8 @@ QMenu::item:selected { background: $BG_SELECTED; color: $ON_DARK; }
 QMenu::item:disabled { color: $TEXT_DISABLED; }
 QTableWidget, QListWidget, QPlainTextEdit, QTextEdit {
     background: $BG_DEEP; alternate-background-color: $BG_ALT; gridline-color: $LINE; border: 1px solid $LINE; }
-QHeaderView::section { background: $BG_RAISED; padding: 6px; border: none; font-weight: 600; }
+QHeaderView::section { background: $BG_RAISED; padding: ${CELL_PAD}px; border: none; font-weight: 600; }
+QTableWidget::item { padding: 0 ${CELL_PAD}px; }  /* a cell's text as clear of the next as its heading's */
 QGroupBox { border: 1px solid $LINE; border-radius: ${RADIUS}px; margin-top: 18px; padding-top: ${SPACE_S}px; }
 QGroupBox::title { subcontrol-origin: margin; left: 10px; padding: 0 4px; color: $TEXT_MUTED; }
 QProgressBar { background: $BG_DEEP; border: 1px solid $LINE_STRONG; border-radius: 4px; text-align: center;
