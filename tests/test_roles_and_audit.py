@@ -238,6 +238,7 @@ WRITES: dict[str, tuple[str, Callable[[AppContext, Path, Path], Any]]] = {
 CHECKED_READS: dict[str, Callable[[AppContext, Path, Path], Any]] = {
     "re_evaluate": lambda ctx, data, tmp: ctx.re_evaluate("a-result-uuid", Recipe(board_model="TINY")),
     "start_training": lambda ctx, data, tmp: ctx.start_training(ctx.training_version("TINY")["uuid"], 5, 32).wait(60),
+    "learn_comparison": lambda ctx, data, tmp: ctx.learn_comparison("TINY", seed=0),  # REQ-TRN-018: stores nothing
 }
 # every public AppContext call that is not role-checked: reads, what an Operator does, and the lifecycle
 UNCHECKED = {
