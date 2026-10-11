@@ -68,7 +68,7 @@ def build(out: Path, epochs: int = EPOCHS, image_size: int = IMAGE_SIZE) -> dict
             ctx.set_user("engineer")
             _import(ctx, dataset / "train")
             held = _import(ctx, dataset / "test")  # the held-out boards: the locked validation set AI Model Test runs
-            version = trainable(ctx, BOARD_MODEL, customer=CUSTOMER, held=held)
+            version = trainable(ctx, BOARD_MODEL, customer=CUSTOMER, held=held, manifest=True)
             meta = ctx.train(version, epochs=epochs, image_size=image_size)
             ctx.activate_model(int(ctx.models(BOARD_MODEL)[0]["id"]))  # a version installs inactive (REQ-TRN-010)
             store = ctx.db.board_model_store(BOARD_MODEL) or {}

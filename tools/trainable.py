@@ -1,8 +1,9 @@
 """A frozen, split dataset version to train from, in a customer's dataset store, written through the database rather
 than through the app's freeze, lock and move-in (REQ-TRN-005, REQ-TRN-006, REQ-TRN-017; S39): for the screenshots
-(tools/render_screens.py) and the tests, which then need no checked labels, no agreement check and no 50 OK images to
-lock. Those steps have tests of their own (tests/test_datasets.py, test_validation_set.py, test_dataset_stores.py).
-Never for a customer's data: the app's own steps are the ones that check it."""
+(tools/render_screens.py), the tests and the demo workspace's drawn boards (tools/make_demo_bundle.py), which then need
+no checked labels, no agreement check and no 50 OK images to lock. Those steps have tests of their own
+(tests/test_datasets.py, test_validation_set.py, test_dataset_stores.py). Never for a customer's data: the app's own
+steps are the ones that check it, and the demo's version has no agreement check, so Validation Report… says so there."""
 
 from __future__ import annotations
 
@@ -55,11 +56,13 @@ def trainable(
     held: Collection[str] = (),
     split: bool = True,
     stored: bool = True,
+    manifest: bool = False,
 ) -> str:
     """The UUID of a new frozen version of `board_model`'s OK and NG samples of the first sample's view, split with
     every file in its training set but those of the sample UUIDs `held`, locked for validation (not split at all
     unless `split`); the board model is in `customer`'s store first (`in_store`), unless not `stored`, and the version
-    names that customer and allows `uses`."""
+    names that customer and allows `uses`. With `manifest` its manifest file is written as the freeze writes it,
+    sealed in the store, so Verify Manifest finds the version unchanged (the demo workspace); otherwise none is."""
     if stored:
         in_store(ctx, board_model, customer)
     samples = [s for s in ctx.db.samples(board_model) if s["label"] in ("OK", "NG")]
@@ -76,6 +79,10 @@ def trainable(
         for s in samples
         if s["side"] == view
     ]
+    head = {k: v for k, v in version.items() if not k.startswith("manifest_")} | {"frozen_by": who, "frozen_at": AT}
+    data, sha = datasets.manifest(head, files)  # the freeze's bytes for these rows, but no agreement check or draws
+    if manifest:
+        version["manifest_sha256"] = sha
     with ctx.db.transaction():
         ctx.db.add_dataset(version | {"frozen_by": who, "frozen_at": AT}, files)
         items = ctx.db.dataset_items(uid) if split else []
@@ -84,4 +91,8 @@ def trainable(
         if split:
             row = {"uuid": new_uuid(), "dataset_uuid": uid, "seed": 0, "locked_by": who, "locked_at": AT}
             ctx.db.add_split(row, parts)
+    if manifest:  # sealed once the row names the version's board model, so its store is found, as the freeze does
+        path = ctx.settings.root / version["manifest_path"]
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(ctx._sealed(version["manifest_path"], data) or data)
     return uid
