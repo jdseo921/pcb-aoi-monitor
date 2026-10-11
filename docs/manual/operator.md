@@ -20,7 +20,12 @@ last closed, or on Home when your role cannot open that page.
 **Keys to move around.** Ctrl+1 to Ctrl+9 open the sidebar's pages in its order from any page: Ctrl+1 Home, Ctrl+2
 Inspection, Ctrl+3 Compare, Ctrl+8 Logs & Export (pointing at a sidebar entry shows its key). Press **F1** on any page
 for the list of that page's keys and the pages your role opens. On Home, a card for a page your role cannot open is
-greyed and reads "For Engineer / Admin", so every button you can press leads somewhere.
+greyed and reads "For Engineer / Admin", so every button you can press leads somewhere, and each card says which
+role its step needs. The Export card names where the PDF reports are: AI Model Test, an Admin's.
+
+**Grey buttons.** A button your role may not use stays in its place, greyed. Point at it, or press it on a touch
+screen, and the tooltip or the status bar at the bottom says which role it needs; a page with nothing listed yet also
+says what your role cannot do there.
 
 **The board model.** The **Board model** box at the left of the header names the board model the boards are judged as,
 on every page. When the app starts it shows the first board model by name, so pick the one of the boards on the line
@@ -50,7 +55,7 @@ or cycle it with Alt+V; the view is stored with every result.
 | ▶ Start | F5 | Inspects the queue board after board, until Stop or the end of the queue |
 | ■ Stop | F6 | Stops after the board in hand; nothing is deleted, so there is no confirmation |
 | Next Board | F8 | Inspects one board |
-| Save Image… | F9 | Admin only: an Operator does not see it (#151). Writes the board shown when you press it, with its defect boxes, to a picture file you choose (a run goes on while you name the file); the result itself is already recorded. Each picture saved is recorded in the audit trail with who saved it, which result it shows and where it went |
+| Save Image… | F9 | Admin only: greyed for an Operator, its tooltip saying so (#151). Writes the board shown when you press it, with its defect boxes, to a picture file you choose (a run goes on while you name the file); the result itself is already recorded. Each picture saved is recorded in the audit trail with who saved it, which result it shows and where it went |
 
 A button and its key do the same. The key works whichever control on the Inspection page is selected (the defect
 list, the View box, a button), and only while that page is shown. Both go grey while the action is not possible:
@@ -140,7 +145,7 @@ one, or saved before this version), the pane says "Golden board not available" a
 board, and Re-evaluate › under it inspects the board again with today's Golden board, or without one while the board
 model has none, as the pane then says; the line under the verdict names today's when an Engineer or a training run has
 set another. A long file name over a picture, in a message on its pane or in the line under the verdict wraps onto the
-next line after a _ or -. The thresholds panel, "Try other thresholds", is for Engineers and is not shown to an
+next line after a _ or -. The thresholds panel, "Try other thresholds", is for Engineers and is greyed for an
 Operator: every board Compare inspects for you is judged by the board model's recipe, and a board left on Compare that
 was inspected with values the recipe does not hold when you sign in (an Engineer's thresholds not saved, a recipe
 revision saved since, or a scale set since that gives a size in mm other px; values that did not judge the board, such
@@ -204,8 +209,8 @@ keeps.
 
 **Handing over.** Let the queue run to its end, or press ■ Stop: the board in hand is still judged and recorded. For
 your counts, set **From** and **To** to the days of your shift, pick your name under **Operator**, press **Filter** and
-read the line under the table. **Export CSV** and **Export Image Overlays** are grey for an Operator: an Engineer or
-Admin exports the records. The next operator signs in with **Switch User** (section 1); boards still queued stay
+read the line under the table. **Export CSV** and **Export Image Overlays** are grey for an Operator: an Admin
+exports the records. The next operator signs in with **Switch User** (section 1); boards still queued stay
 queued, and Start goes on with them under the new name (section 2). Closing the app empties the queue, and the next
 start signs in the user who signed in last with the View box on Top, so each operator checks the name, picks their own
 with **Switch User** when it is not theirs, and picks the board model and the view again (section 1).

@@ -255,6 +255,7 @@ ROLES_FROM = {  # a role and the roles above it, as AOI-USR-001 names them: one 
     "Admin": QT_TRANSLATE_NOOP("Errors", "Admin"),
 }
 REQUIRED_ROLE: dict[str, str] = {}  # AppContext write, or Engineer-only call -> the lowest role allowed to call it
+REQUIRED_WHAT: dict[str, str] = {}  # the same call -> the action its refusal names ("Removing a sample")
 P = ParamSpec("P")
 R = TypeVar("R")
 # A stored result's golden board, as `judged_reference` finds it.
@@ -284,7 +285,7 @@ def requires(
     acts as that user to its end, whoever signs in meanwhile (#177)."""
 
     def wrap(fn: Callable[Concatenate[AppContext, P], R]) -> Callable[Concatenate[AppContext, P], R]:
-        REQUIRED_ROLE[fn.__name__] = role
+        REQUIRED_ROLE[fn.__name__], REQUIRED_WHAT[fn.__name__] = role, what
 
         @functools.wraps(fn)
         def checked(self: AppContext, *args: P.args, **kwargs: P.kwargs) -> R:
@@ -300,6 +301,13 @@ def requires(
         return cast("Callable[Concatenate[AppContext, P], R]", checked)
 
     return wrap
+
+
+def refusal(call: str) -> AoiError:
+    """The AOI-USR-001 refusal AppContext's `call` raises for a role below the one its @requires names: what a screen
+    says on a control the role may not use, before anyone presses it, in the words the refusal would use (REQ-USR-001).
+    KeyError for a call that checks no role."""
+    return AoiError("AOI-USR-001", what=REQUIRED_WHAT[call], roles=ROLES_FROM[REQUIRED_ROLE[call]])
 
 
 def transactional(fn: Callable[Concatenate[AppContext, P], R]) -> Callable[Concatenate[AppContext, P], R]:

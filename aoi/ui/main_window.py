@@ -33,14 +33,15 @@ from PySide6.QtWidgets import (
 from ..config import APP_NAME, APP_VERSION, use_workspace
 from ..core import datasets, demo, drift
 from ..core.run_progress import RunProgress
-from ..core.services import AppContext
+from ..core.services import REQUIRED_ROLE, ROLES_FROM, AppContext
 from ..errors import AoiError
 from . import theme
 from .demo_workspace import boards
-from .errors import install_excepthook, open_workspace, show_error
+from .errors import install_excepthook, open_workspace, phrase_text, show_error
 from .pages.base import (
     QT_TRANSLATE_NOOP,
     Page,
+    RoleGates,
     button,
     page_text,
     restyle_table,
@@ -75,42 +76,53 @@ class HomePage(Page):
     subtitle = QT_TRANSLATE_NOOP("Page", "Stage 1 workflow: upload → train → validate → inspect")
 
     STEPS = [
-        # (step, name, what it does, page); the name is also the key of its status label. Words from the Charter list.
+        # (step, name, what it does, page, the AppContext call whose role the step needs, None for every role); the name
+        # is also the key of its status label. Words from the Charter list.
         (
             "1",
             QT_TRANSLATE_NOOP("HomePage", "Upload samples"),
             QT_TRANSLATE_NOOP("HomePage", "Add good (OK) and defective (NG) photos of this board model."),
             "Training",
+            "import_samples",
         ),
         (
             "2",
             QT_TRANSLATE_NOOP("HomePage", "Train AI model"),
             QT_TRANSLATE_NOOP("HomePage", "The app learns the Golden board and an AI model from your OK boards."),
             "Training",
+            "start_training",
         ),
         (
             "3",
             QT_TRANSLATE_NOOP("HomePage", "Tune recipe"),
             QT_TRANSLATE_NOOP("HomePage", "Draw ROIs and adjust thresholds on the Golden board."),
             "Recipe Editor",
+            "save_recipe",
         ),
         (
             "4",
             QT_TRANSLATE_NOOP("HomePage", "Validate"),
             QT_TRANSLATE_NOOP("HomePage", "Test the AI model on the locked validation set."),
             "AI Model Test",
+            "test_dataset",
         ),
         (
             "5",
             QT_TRANSLATE_NOOP("HomePage", "Inspect"),
             QT_TRANSLATE_NOOP("HomePage", "Run boards; open Compare to see why any board was called NG."),
             "Inspection",
+            None,
         ),
         (
             "6",
             QT_TRANSLATE_NOOP("HomePage", "Export"),
-            QT_TRANSLATE_NOOP("HomePage", "CSV, overlay images and PDF reports for the customer."),
+            QT_TRANSLATE_NOOP(
+                "HomePage",
+                "CSV files and overlay images on Logs & Export; the PDF reports on AI Model Test (Export Report, "
+                "Validation Report…).",
+            ),
             "Logs & Export",
+            "export_csv_files",
         ),
     ]
 
@@ -134,7 +146,8 @@ class HomePage(Page):
         self.training_line.hide()
         self.headings: list[tuple[QLabel, str, str]] = []  # each card's heading, its number and its name
         self.links: list[tuple[QPushButton, str]] = []  # each card's button and the page it opens
-        for i, (n, name, desc, target) in enumerate(self.STEPS):
+        self.who: dict[str, QLabel] = {}  # each card's line naming the role its step needs (REQ-USR-001)
+        for i, (n, name, desc, target, call) in enumerate(self.STEPS):
             card = QFrame()
             card.setObjectName("card")
             cl = QVBoxLayout(card)
@@ -143,11 +156,15 @@ class HomePage(Page):
             d = QLabel(self.tr(desc))
             d.setWordWrap(True)
             d.setObjectName("muted")
+            who = QLabel(self._who(call))
+            who.setWordWrap(True)
+            self.who[name] = who
             st = QLabel("")
             st.setWordWrap(True)
             self.status_labels[name] = st
             cl.addWidget(h)
             cl.addWidget(d)
+            cl.addWidget(who)
             cl.addStretch(1)
             cl.addWidget(st)
             if name == "Train AI model":
@@ -161,6 +178,13 @@ class HomePage(Page):
         self.empty = EmptyState()  # no board model yet: one block in place of the cards (REQ-SET-019)
         self.root.addWidget(self.empty)
         self.root.addStretch(1)
+
+    def _who(self, call: str | None) -> str:
+        """The role a step needs, as its card says it to every role: the role AppContext's `call` requires and those
+        above it (REQUIRED_ROLE), or every role for a step with no call that checks one."""
+        if call is None:
+            return self.tr("Open to every role.")
+        return self.tr("Needs the {roles} role.").format(roles=phrase_text(ROLES_FROM[REQUIRED_ROLE[call]]))
 
     def _heading(self, n: str, name: str) -> str:
         """A card's heading: its step number, large in the accent colour, then its name."""
@@ -321,6 +345,7 @@ class MainWindow(QMainWindow):
         self.last_inspected: tuple[str, InspectionResult, int | None] | None = None  # path, result, record id
         self.in_demo = demo.is_demo(ctx.settings.root)  # the demo workspace is open (REQ-SET-007)
         self.switched = False  # closed by switch_workspace, which stopped the work and closed the context already
+        self.gates = RoleGates(self, ctx, self.status)  # the header's controls a role may not use (REQ-USR-001)
         title = f"{APP_NAME} {APP_VERSION}"
         self.setWindowTitle(self.tr("{title} · Demo").format(title=title) if self.in_demo else title)
         self.resize(1920, 1080)
@@ -438,8 +463,8 @@ class MainWindow(QMainWindow):
         self.bm_combo.setMinimumWidth(theme.FIELD_W)
         self.bm_combo.currentTextChanged.connect(self._on_board_model)
         layout.addWidget(self.bm_combo)
-        new = button(self.tr("+ New"), slot=self.new_board_model)
-        layout.addWidget(new)
+        self.btn_new = button(self.tr("+ New"), slot=self.new_board_model)  # greyed for an Operator (_sync_nav)
+        layout.addWidget(self.btn_new)
         layout.addStretch(1)
         self.training_link = button("", slot=lambda: self.navigate("Training"))  # while a training run goes on
         self.training_link.hide()
@@ -451,7 +476,7 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.user_label)
         switch = button(self.tr("Switch User"), slot=self.switch_user)
         layout.addWidget(switch)
-        for control in (self.bm_combo, new, self.training_link, self.exit_presenter, switch):
+        for control in (self.bm_combo, self.btn_new, self.training_link, self.exit_presenter, switch):
             size_class(control, "T")  # header controls are operator targets (frame sketch, size class T)
         return h
 
@@ -523,6 +548,7 @@ class MainWindow(QMainWindow):
         self._sync_nav()
         for page in self.pages.values():  # shown or not: what a page keeps for the role before goes now
             page.on_user_changed()
+            page.limits_changed()  # an empty state names what the new role may not do
         cur = self.stack.currentWidget()
         if isinstance(cur, Page) and role not in cur.roles:
             self.navigate("Home")
@@ -551,6 +577,7 @@ class MainWindow(QMainWindow):
             heading.setForeground(QColor(theme.TEXT_MUTED))  # a heading, not a disabled control: 7.4:1 (#239)
             heading.setHidden(all(self.hidden(t) for t in titles))
         self.exit_presenter.setVisible(theme.presenter() and role in SettingsPage.roles)  # where it was switched on
+        self.gates.gate(self.btn_new, "ensure_board_model")  # never hidden: greyed, saying who may (REQ-USR-001)
 
     def hidden(self, title: str) -> bool:
         """Whether page `title` is out of the sidebar, and cannot be opened: in the presenter theme, a page for the

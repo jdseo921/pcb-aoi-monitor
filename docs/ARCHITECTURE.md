@@ -775,7 +775,14 @@ and maps has ended, and "Would be" shows within 300 ms of the key at 5 MP (`test
 
 Since S16 the check lives in the service layer (ADR 0002, decision 5): every `AppContext` write is decorated with
 `@requires(role, what)` in `aoi/core/services.py` and raises `AOI-USR-001` when the current user's role is lower, so
-hiding a page or disabling a button is only a convenience. Every write also appends an audit entry (REQ-LOG-004), in
+greying a page or a button is only a convenience. The screens read the role each call needs and the action its
+refusal names from the decorator (`REQUIRED_ROLE`, `REQUIRED_WHAT`, `refusal(call)`), never writing either out again:
+a control a role may not use stays in its place for every role, greyed, never hidden (the presenter theme aside), with
+the refusal it would meet as its tooltip ("Exporting CSV needs the Admin role."), and a press on it, as a finger makes
+on a touch screen with no tooltip, puts the same sentence on the status bar (`RoleGates` in `aoi/ui/pages/base.py`,
+`Page.role_gate`; the header's + New through `MainWindow.gates`). A page's main empty state adds what the role signed in
+may not do there, from the page's `role_notes` (`Page.show_empty`), and says it again for the next role after a
+sign-in; Home's cards each name the role their step needs (REQ-USR-001). Every write also appends an audit entry (REQ-LOG-004), in
 the same transaction as its rows (`Database.transaction()`, `@transactional`): both are stored or neither, on an error
 or a crash (#178). A file cannot join it, so file writes come first and are removed when what records them fails: an
 import's copies, a training run's files, an export whose entry cannot be written (never its own source). An import is all
@@ -852,7 +859,7 @@ User switching is a local picker for the PoC; Stage 4 replaces it with MES authe
 A switch leaves a page the new role may not open for Home, and shows any other page again (`on_show`), so its
 role-gated buttons and links follow the new role at once (#174). Before that, `MainWindow.set_user` calls
 `Page.on_user_changed` on every page, shown or not, so a page opened later never keeps what the user before left for
-another role: Compare's hidden thresholds form goes back to the recipe's when an Operator signs in (REQ-CMP-005), and
+another role: Compare's greyed thresholds form goes back to the recipe's when an Operator signs in (REQ-CMP-005), and
 any sign-in closes its Save to Recipe sheet, so a revision never carries the reason of a user it does not name.
 
 ### Pages

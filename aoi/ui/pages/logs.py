@@ -116,6 +116,16 @@ class ShareBar(QStyledItemDelegate):
 
 class LogsPage(Page):
     title = QT_TRANSLATE_NOOP("Page", "Logs & Export")
+    role_notes = (  # each control below is greyed for a role that may not use it, never hidden (REQ-USR-001)
+        (
+            QT_TRANSLATE_NOOP("LogsPage", "Exports and Delete Records… need the {roles} role."),
+            ("export_csv_files", "export_overlays", "delete_inspections"),
+        ),
+        (
+            QT_TRANSLATE_NOOP("LogsPage", "Archive and Add to Training as OK need the {roles} role."),
+            ("archive_old", "add_false_call_sample"),
+        ),
+    )
 
     def __init__(self, ctx: AppContext, shell: MainWindow) -> None:
         super().__init__(ctx, shell)
@@ -365,10 +375,10 @@ class LogsPage(Page):
                     self.tr("Show All Records"),
                     lambda: self.show_all_records(oldest, newest, bool(span["archived"])),
                 )
-            self.empty.show_state(self.tr("No records match"), *todo)
+            self.show_empty(self.empty, self.tr("No records match"), *todo)
         else:
             step = self.empty_step(self.tr("Run boards on Inspection."), "Inspection")
-            self.empty.show_state(self.tr("No inspections yet"), *step)
+            self.show_empty(self.empty, self.tr("No inspections yet"), *step)
 
     @staticmethod
     def _default_dates() -> tuple[str, str]:
@@ -674,18 +684,17 @@ class LogsPage(Page):
     def update_actions(self) -> None:
         # one export or delete at a time, as a second would stop the first (#194), and none while the page is still
         # listing records, which would take the rows shown before (S55)
+        # and each greyed, never hidden, for a role the service refuses, saying who may (REQ-USR-001): the exports and
+        # Delete Records… are the Admin's, as customer results leave the station only by an Admin (Q58, #151)
         idle = self._bg is None and self.listing is None
-        admin_or_eng = self.ctx.role in ("Engineer", "Admin")
-        for b in (self.btn_csv, self.btn_img):  # customer results leave the station only by an Admin (Q58, #151)
-            b.setVisible(self.ctx.role == "Admin")
-            b.setEnabled(idle)
-        self.btn_arch.setEnabled(admin_or_eng)
-        self.btn_delete.setVisible(self.ctx.role == "Admin")  # shown to the Admin alone; the service checks the role
+        self.role_gate(self.btn_csv, "export_csv_files", idle)
+        self.role_gate(self.btn_img, "export_overlays", idle)
+        self.role_gate(self.btn_arch, "archive_old")
         self.btn_compare.setEnabled(bool(self.table.selectionModel().selectedRows()))
-        self.btn_delete.setEnabled(idle)
-        self.btn_train.setVisible(admin_or_eng)  # Training's roles; the service checks the role
+        self.role_gate(self.btn_delete, "delete_inspections", idle)
         selected = self._selected()
-        self.btn_train.setEnabled(idle and selected is not None and selected["review"] == FALSE_CALL)
+        false_call = selected is not None and selected["review"] == FALSE_CALL
+        self.role_gate(self.btn_train, "add_false_call_sample", idle and false_call)
 
     def _selected(self) -> dict[str, Any] | None:
         """The listed record of the first selected row, or None."""

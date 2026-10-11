@@ -107,8 +107,10 @@ model's validation run decide.
 
 **Exports are an Admin's.** Customer images and results leave the station only by an Admin (#151): Export CSV and
 Export Image Overlays on Logs & Export, Export CSV, Export Image Overlays, Export Report and Validation Report… on AI
-Model Test and Export Manifest… on Training show for an Admin alone, and AOI-USR-001 refuses an Engineer. An Engineer
-still archives, and exports an AI model.
+Model Test and Export Manifest… on Training are greyed for an Engineer, and AOI-USR-001 refuses one. An Engineer
+still archives, and exports an AI model. Across the app, a control your role may not use stays in its place, greyed:
+point at it, or press it on a touch screen, and the tooltip or the status bar names the role it needs, and a page's
+empty state lists what your role may not do there.
 
 **Demo workspace.** The demo has a workspace of its own, beside the station's, with its own `settings.json`; section 9
 says how an Admin opens and leaves it.
@@ -679,7 +681,7 @@ line under the verdict keeps the error's code. When nothing of the result's pict
 both panes say why, with the message's code (AOI-SET-013 when another program holds the workspace
 database), and the Golden board pane what to do; neither pane ever shows the result opened before.
 The thresholds form, Re-evaluate and Save to Recipe are in the Try other thresholds panel under the two pictures, for
-Engineer and Admin, so the decision table beside the pictures shows all its rows; an Operator does not see it, and
+Engineer and Admin, so the decision table beside the pictures shows all its rows; an Operator sees it greyed, and
 Compare judges an Operator's boards by the board model's recipe, never by values left in the form. Its AI score
 threshold works as on the Recipe Editor (section 5), with the tick under the field, reading
 "Override the AI model's value 3.063", except that on a stored result the tick
@@ -814,7 +816,7 @@ every board model, operator, result and review, archived records hidden); when e
 it offers **Show All Records** instead, which sets **From** to the oldest record's date, **To** to today and ticks
 **Include archived** when any record is archived.
 
-**Delete Records…** is the Admin's alone: an Engineer and an Operator do not see it, and the service refuses them with
+**Delete Records…** is the Admin's alone: an Engineer and an Operator see it greyed, and the service refuses them with
 AOI-USR-001. It deletes the records **Filter** listed, with their defects and checks and their overlay and map files in
 the results folder; there is no undo, so archive records to keep them out of the list. It asks first, naming the count,
 with No as the default, then asks why; a blank reason deletes nothing (AOI-LOG-003). The audit trail records it as
