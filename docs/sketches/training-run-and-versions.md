@@ -32,7 +32,8 @@ Training   TBOX-A1                                              │ Samples │ 
 Training runs off the UI thread. Steps shown in the progress bar: Checking the dataset, Aligning images n of N,
 Building the Golden board, Training epoch n of N, Calibrating the threshold, Validating, Writing the model card.
 Progress and time left update at least every 10 s; Cancel stops within 10 s, deletes the partial version and
-keeps the active AI model (REQ-TRN-008). The new version installs inactive with its model card; every version
+keeps the active AI model (REQ-TRN-008). The new version installs inactive with its model card, but a board model's
+first, which goes live when its training ends, audited, and says so on the status bar (decision D3); every version
 records seed, code commit, settings and dataset version (REQ-TRN-009).
 
 Model Card view (inline panel, printable): identity (version, board model, dataset version, seed, commit,

@@ -187,7 +187,7 @@ cards, each with a link to its page. The steps, in order:
 2. On Training, import OK and NG images and make an OK one the reference with Set Reference (section 3). From then on
    Inspection compares boards with that Golden board, with AOI-TRN-003 in its alarm log while no AI model judges them.
 3. Label, check and freeze a dataset version and lock its validation set (section 3), then train an AI model version
-   from it and activate it (section 4).
+   from it (section 4). The board model's first version goes live when its training ends; you activate each later one.
 4. On the Recipe Editor, set the scale (Scale, above), draw the ROIs and set the thresholds (section 5), and save the
    recipe.
 5. On AI Model Test, test the active AI model on the locked validation set (section 6).
@@ -437,7 +437,7 @@ shows a stored board beside the Golden board it was judged against. A run whose 
 when the recipe, the scale or the Golden board changes, as no AI model judges its boards: an activation or a rollback
 during it
 raises no AOI-INSP-013, though the boards after it name the version now active, and neither does a training run, which
-installs its version inactive with its Golden board (section 4, Versions).
+installs its version inactive with its Golden board, but a board model's first (section 4, Versions).
 A scale set changes nothing that judges a board while the recipe holds its sizes in px, so it then moves no run, with
 the AI check on or off.
 
@@ -449,8 +449,12 @@ own for the board model (section 5). Where such a row's sample counts cannot be 
 empty.
 
 **Versions, activation and rollback.** Each training run adds a version to the AI models list with its Golden board
-and its AI model card, inactive: boards stay judged by the active version until you select the new one and press
-Activate Selected. Activating a version makes its own Golden board the one boards are compared with, in the same step.
+and its AI model card. A board model's first version goes live when its training ends, with its Golden board, as there
+is no version in use to keep: the status bar and the run's log say so, and the audit trail records it as an activation
+by the Engineer who trained it, with the reason. Each later version installs inactive: boards stay judged by the active
+version until you select the new one and press Activate Selected. A version trained but not active while none is (one
+trained before this release, or whose activation failed) is named on Home, on AI Model Test and on Inspection, whose
+line offers Activate <version> and whose alarm log says AOI-TRN-051, where they said there was no AI model yet. Activating a version makes its own Golden board the one boards are compared with, in the same step.
 Roll Back goes back, in one click, to the version that was active before the active one, with its Golden board; its
 label names that version ("Roll Back to v1.0") and it is off while there is none. Every activation and rollback is in
 the audit trail with the version and Golden board before and after. A version without an AI model card cannot be made

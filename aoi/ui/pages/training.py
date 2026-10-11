@@ -976,8 +976,16 @@ class TrainingPage(Page):
         self.bar.setValue(self.bar.maximum())
         saved = self.tr("Saved AI model {version} ({seconds} s) with its Golden board and AI model card.")
         self.log.appendPlainText(saved.format(version=meta["version"], seconds=meta["train_seconds"]))
-        done = self.tr("AI model {version} trained: select it and press Activate Selected to judge boards with it")
-        self.shell.status(done.format(version=meta["version"]))  # it installs inactive (REQ-TRN-010)
+        if meta.get("activated"):  # a board model's first AI model goes live when trained (decision D3), audited
+            done = self.tr(
+                "AI model {version} trained and active: the first AI model of {board_model} judges its boards from now"
+                " on. Each later version installs inactive until you activate it."
+            )
+        else:  # a later version installs inactive (REQ-TRN-010)
+            done = self.tr("AI model {version} trained: select it and press Activate Selected to judge boards with it")
+        said = done.format(version=meta["version"], board_model=meta["board_model"])
+        self.log.appendPlainText(said)
+        self.shell.status(said)
         self.refresh()
 
     def _finished(self) -> None:

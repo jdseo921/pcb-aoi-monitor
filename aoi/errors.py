@@ -873,6 +873,20 @@ CODES: dict[str, ErrorCode] = {
             ),
         ),
         ErrorCode(
+            "AOI-TRN-051",
+            QT_TRANSLATE_NOOP("Errors", "AI model not active"),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Board model {board} has AI model {version}, trained but not active, so only the golden-board"
+                " comparison runs.",
+            ),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "An Engineer activates it with Activate {version} on Inspection, or with Activate Selected on"
+                " Training.",
+            ),
+        ),
+        ErrorCode(
             "AOI-TST-001",
             QT_TRANSLATE_NOOP("Errors", "AI model, recipe, scale or Golden board changed since the run"),
             QT_TRANSLATE_NOOP(

@@ -524,10 +524,16 @@ class ModelTestPage(Page):
             return
         folder = picked
         if not self.ctx.active_model(bm):
+            waiting = self.ctx.inactive_model(bm)  # trained but not active: named, never "no AI model yet" (D3)
             QMessageBox.information(
                 self,
                 self.tr("No AI model"),
-                self.tr("No AI model yet: the results use the Golden board comparison only."),
+                self.tr(
+                    "AI model {version} is not active: the results use the Golden board comparison only. Activate it"
+                    " on Training to test it."
+                ).format(version=waiting["version"])
+                if waiting
+                else self.tr("No AI model yet: the results use the Golden board comparison only."),
             )
         self.btn_run.setEnabled(False)
         self.bar.setVisible(True)
@@ -823,6 +829,11 @@ class ModelTestPage(Page):
             self.empty.hide()
         elif not bm:
             self.show_empty(self.empty, *self.no_board_model())
+        elif not self.ctx.active_model(bm) and (waiting := self.ctx.inactive_model(bm)):  # trained, not active (D3)
+            heading = self.tr("AI model {version} of {board_model} is not active").format(
+                version=waiting["version"], board_model=bm
+            )
+            self.show_empty(self.empty, heading, *self.empty_step(self.tr("Activate it on Training."), "Training"))
         elif not self.ctx.active_model(bm):
             heading = self.tr("No AI model for {board_model} yet").format(board_model=bm)
             self.show_empty(self.empty, heading, *self.empty_step(self.tr("Train one on Training."), "Training"))
