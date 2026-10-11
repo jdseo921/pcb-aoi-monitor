@@ -31,6 +31,7 @@ from tests.test_roles_and_audit import (
     calibration_set,
     frozen_for_lock,
     labelled_blind,
+    ng_record,
     ready_to_freeze,
     validation_version,
 )
@@ -107,6 +108,7 @@ SETUP: dict[str, Callable[[AppContext], object]] = {
     "restore_store_key": lambda ctx: a_store(ctx, "Gamma"),
     "move_in": lambda ctx: a_store(ctx, "Acme Electronics"),
     "shred_store": lambda ctx: a_store(ctx, "Delta"),
+    "review_result": ng_record,  # the NG board to review, inspected before the workspace is compared
 }
 
 
