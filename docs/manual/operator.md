@@ -186,8 +186,9 @@ a few seconds or when the next one replaces it.
 ## 5. End of shift
 
 **History.** Logs & Export lists the boards inspected, newest first, from a week ago to today: every operator's, so the
-next shift sees the line's history. Narrow it with **From** and **To**, **Board model**, **Operator** and **Result**
-(All, OK, NG or WARN), then press **Filter**; the filters combine. Tick **Include archived** for records older than the
+next shift sees the line's history. Narrow it with **From** and **To**, **Board model**, **Operator**, **Result**
+(All, OK, NG or WARN) and **Review** (Not reviewed lists the NG and WARN boards still to review), then press
+**Filter**; the filters combine. Tick **Include archived** for records older than the
 retention (30 days unless an Admin changed it): they are archived, not deleted, and stay searchable. A click on a
 column's header sorts by it. Select a row to see its overlay beside the table, and press **Open in Compare ›** (or
 Enter, or double-click the row) to see that board on Compare as it was decided, its failing checks marked. The line

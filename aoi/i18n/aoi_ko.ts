@@ -837,7 +837,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+64"/>
+        <location line="+67"/>
         <source>Operator, Engineer or Admin</source>
         <translation type="unfinished"></translation>
     </message>
@@ -880,12 +880,12 @@
     </message>
     <message>
         <location line="+170"/>
-        <location line="+2031"/>
+        <location line="+2033"/>
         <source>(none)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-2000"/>
+        <location line="-2002"/>
         <source>Saving a recipe</source>
         <translation type="unfinished"></translation>
     </message>
@@ -921,7 +921,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+338"/>
+        <location line="+340"/>
         <source>Re-evaluating a result</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1111,14 +1111,14 @@
         <translation>검증 세트 잠금</translation>
     </message>
     <message>
-        <location line="-2249"/>
-        <location line="+2263"/>
+        <location line="-2254"/>
+        <location line="+2268"/>
         <location line="+39"/>
         <source>the workspace holds no such dataset version</source>
         <translation>작업 공간에 그런 데이터셋 버전이 없습니다</translation>
     </message>
     <message>
-        <location line="-2300"/>
+        <location line="-2305"/>
         <source>the run used a folder, not a frozen dataset version&apos;s locked validation set</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1153,7 +1153,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+770"/>
+        <location line="+773"/>
         <source>Setting the comparison&apos;s thresholds from labelled boards</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1163,7 +1163,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+862"/>
+        <location line="+864"/>
         <source>Shift check of {board_model}: {wrong} of {count} master samples judged wrongly</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1377,7 +1377,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-2812"/>
+        <location line="-2817"/>
         <source>no earlier version of this board model was active</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1402,12 +1402,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+694"/>
+        <location line="+697"/>
         <source>its UUID {found} is not {uuid}, as in the AI model registry</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1159"/>
+        <location line="+1161"/>
         <source>Labelling an image</source>
         <translation>이미지 라벨링</translation>
     </message>
@@ -4632,7 +4632,7 @@
 <context>
     <name>LogsPage</name>
     <message>
-        <location filename="../ui/pages/logs.py" line="+130"/>
+        <location filename="../ui/pages/logs.py" line="+149"/>
         <source>Include archived</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4648,34 +4648,40 @@
     </message>
     <message>
         <location line="+1"/>
-        <location line="+16"/>
+        <location line="+15"/>
         <source>Board model</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-15"/>
-        <location line="+20"/>
+        <location line="-14"/>
+        <location line="+19"/>
         <source>Operator</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-13"/>
+        <location line="-12"/>
         <source>Filter</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+7"/>
+        <location line="+6"/>
         <source>Time</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-13"/>
-        <location line="+16"/>
+        <location line="-12"/>
+        <location line="+15"/>
         <source>Result</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1"/>
+        <location line="-23"/>
+        <source>Not reviewed</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+9"/>
+        <location line="+15"/>
         <source>Review</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4732,12 +4738,12 @@
     </message>
     <message>
         <location line="+5"/>
-        <location line="+303"/>
+        <location line="+306"/>
         <source>Export CSV</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-302"/>
+        <location line="-305"/>
         <source>Export Image Overlays</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4767,7 +4773,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+96"/>
+        <location line="+97"/>
         <source>{count:,} record(s) · OK {ok:,} of {count:,} ({rate:.1f} %) · NG {ng:,} · WARN {warn:,}</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4792,7 +4798,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+53"/>
+        <location line="+55"/>
         <source>Review saved: {review} for record {record}.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4807,7 +4813,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-266"/>
+        <location line="-269"/>
         <location line="+40"/>
         <source>Records</source>
         <translation type="unfinished"></translation>
@@ -4828,7 +4834,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+222"/>
+        <location line="+225"/>
         <source>{type}: {defects:,} defect(s), {share:.1f} % of those listed, on {boards:,} record(s); {reviewed:,} of them reviewed, {false_calls:,} as a false call</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4879,29 +4885,29 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-304"/>
-        <location line="+136"/>
+        <location line="-306"/>
+        <location line="+138"/>
         <source>No records</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-122"/>
+        <location line="-124"/>
         <source>No records match</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location line="-8"/>
-        <location line="+130"/>
+        <location line="+132"/>
         <source>Widen the dates or the filters.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-318"/>
+        <location line="-321"/>
         <source>AI model</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+188"/>
+        <location line="+189"/>
         <source>Reset Filters</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4916,7 +4922,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+136"/>
+        <location line="+138"/>
         <source>Confirm export</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4961,8 +4967,9 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-482"/>
-        <location line="+545"/>
+        <location line="-491"/>
+        <location line="+6"/>
+        <location line="+548"/>
         <source>All</source>
         <translation>전체</translation>
     </message>
@@ -5733,7 +5740,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/logs.py" line="-565"/>
+        <location filename="../ui/pages/logs.py" line="-574"/>
         <source>Logs &amp; Export</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7205,7 +7212,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/services.py" line="-3116"/>
+        <location filename="../core/services.py" line="-3121"/>
         <source>Aligning {count} images to the reference board</source>
         <translation type="unfinished"></translation>
     </message>

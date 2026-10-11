@@ -26,6 +26,7 @@ from .migrate import migrate
 from .paths import resolve, to_stored
 
 IN_CHUNK = 500  # ids per IN (…) query, under SQLite's 999 bound variables on older builds
+NOT_REVIEWED = "NOT_REVIEWED"  # the history filter's review: an NG or WARN record no one has reviewed (REQ-LOG-009)
 WAIT_MS = 5000  # how long a write waits for another program's lock on the database before SQLite refuses it
 DbError = sqlite3.Error  # what a Database call raises when SQLite refuses it, for callers that do not import sqlite3
 SAMPLES = (  # a sample with its current label, the one label row no other has superseded (migration 0014), and the
@@ -684,9 +685,11 @@ class Database:
         operator: str | None = None,
         include_archived: bool = False,
         result: str | None = None,
+        review: str | None = None,
     ) -> list[dict[str, Any]]:
         """Each filter reads through its index of migration 0022 (REQ-LOG-001), the defect count through
-        `defects_inspection`."""
+        `defects_inspection`. `review` is DEFECT or FALSE_CALL, or NOT_REVIEWED for the NG and WARN records with no
+        review yet (REQ-LOG-009); the dates' or board model's index narrows the rows it is read on."""
         sql = (  # every column but result_json and the golden board's, which `inspection_result` and `inspection`
             # read for one record at a time
             "SELECT i.id, i.uuid, i.time, i.board_model, i.model_version, i.model_uuid, i.recipe_rev, i.recipe_uuid,"
@@ -708,6 +711,11 @@ class Database:
             if value:
                 sql += f" AND {column} = ?"  # a column name of this method's, never a user's
                 p.append(value)
+        if review == NOT_REVIEWED:
+            sql += " AND review IS NULL AND result IN ('NG', 'WARN')"  # an OK board is never reviewed
+        elif review:
+            sql += " AND review = ?"
+            p.append(review)
         rows = self.query(sql + " ORDER BY id DESC", p)
         return [self._resolved(r, "image_path", "overlay_path", "diff_map_path", "ai_map_path") for r in rows]
 
