@@ -30,10 +30,13 @@ None. / 없음.
 - [REQ-INSP-002] Defect box labels on Inspection, Compare and AI Model Test, and in the saved overlay, carry the severity word and shape: "1 Polarity Error ◆ Critical", ■ Major, ● Minor (#152). / 검사, 비교, AI 모델 테스트 화면과 저장된 오버레이의 결함 상자 라벨에 심각도 단어와 모양이 표시됩니다: "1 Polarity Error ◆ Critical", ■ Major, ● Minor(#152).
 - [REQ-INSP-016] Home's second step card reads "Train AI model" (was "Self-train") (#154). / 홈의 두 번째 단계 카드 이름이 "Train AI model"이 되었습니다(이전 "Self-train")(#154).
 
+- [REQ-SET-004] Ctrl+1 to Ctrl+9 open the sidebar's pages from any page, F1 lists the keys of the page shown and the pages the role opens, and the sidebar names each page's key in its tooltip. Home greys a card whose page the role cannot open and reads "For Engineer / Admin", so an Operator's Home has no button that leads nowhere. / Ctrl+1~Ctrl+9로 어느 페이지에서나 사이드바의 페이지를 열 수 있고, F1은 현재 페이지의 단축키와 역할이 열 수 있는 페이지를 보여 주며, 사이드바 툴팁에 각 페이지의 단축키가 표시됩니다. 홈에서 역할이 열 수 없는 페이지의 카드는 회색으로 표시되고 열 수 있는 역할을 알려 주므로, 작업자의 홈에는 아무 곳으로도 가지 않는 버튼이 없습니다.
+
 ## Fixed / 수정 (draft)
 
 - [REQ-SET-004] Every page scrolls where the screen is smaller than the page, so a 1366 × 768 station shows every control; before, the window could not shrink below about 1886 × 821 px and the right-hand controls sat off-screen (#104). / 화면이 페이지보다 작으면 모든 페이지가 스크롤되어 1366 × 768 스테이션에서도 모든 컨트롤이 보입니다. 이전에는 창이 약 1886 × 821 px 아래로 줄어들지 않아 오른쪽 컨트롤이 화면 밖에 있었습니다(#104).
 - [REQ-SET-004] A long folder, board model or file name, even one with no _ or -, no longer widens the window past the screen: AI Model Test's folder line and note, Compare's labels and Inspection's summary line wrap it, and a line that cuts it shows it whole in its tooltip (#251). / 긴 폴더, 보드 모델 또는 파일 이름(_ 나 - 가 없는 이름 포함)이 더 이상 창을 화면보다 넓히지 않습니다. AI 모델 테스트의 폴더 줄과 안내, 비교 화면의 라벨, 검사 화면의 요약 줄이 줄을 바꾸며, 이름이 잘리면 툴팁에 전체 이름이 표시됩니다(#251).
+- [REQ-SET-004] On Logs & Export, the Board model and Operator filters keep their width; a moment after the page opened, the Board model list could shrink and leave a gap beside it. / 로그 및 내보내기에서 보드 모델과 작업자 필터가 너비를 유지합니다. 이전에는 페이지가 열린 직후 보드 모델 목록이 줄어들어 옆에 빈칸이 생길 수 있었습니다.
 
 ## Security / 보안 (draft)
 

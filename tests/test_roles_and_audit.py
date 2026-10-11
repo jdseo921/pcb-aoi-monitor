@@ -106,10 +106,15 @@ def validation_version(ctx: AppContext) -> str:
     return trainable(ctx, "TINY", held=[ctx.samples("TINY", "NG")[-1]["uuid"]])
 
 
-def ng_record(ctx: AppContext, data: Path) -> int:
-    """The record of an NG board of the synthetic test split, inspected and saved now."""
-    board = next(data.glob("test/ng/*missing_component*.png"))
-    assert ctx.inspect_file("TINY", str(board)).verdict == "NG"
+def ng_record(ctx: AppContext, data: Path | None = None) -> int:
+    """The newest NG record of TINY; with none, an NG board of the synthetic test split (or of TINY's NG samples
+    without `data`) inspected and saved now, so a write's set-up can make it before the workspace is compared."""
+    found = ctx.inspections(board_model="TINY", result="NG")
+    if found:
+        return int(found[0]["id"])
+    boards = data.glob("test/ng/*missing_component*.png") if data else (s["path"] for s in ctx.samples("TINY", "NG"))
+    board = next(str(b) for b in boards if "missing_component" in str(b))
+    assert ctx.inspect_file("TINY", board).verdict == "NG"
     return int(ctx.inspections(board_model="TINY")[0]["id"])
 
 

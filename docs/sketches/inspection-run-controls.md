@@ -15,7 +15,7 @@ every result is saved with its evidence before the next board starts (REQ-INSP-0
 Inspection                                                                       Board model TBOX-A1
 [Load Images…] [Load Folder…] [Shift Check]   View  (● Top) ( Side) ( Bottom)  Queue 3 of 12 · ng_003.png
 ┌───────────────────────────────────────────────┐ ┌────────────────────────────────────────────────┐
-│                                               │ │ ✓ Shift check passed · until 2026-10-01 18:02   │
+│                                               │ │ ✓ Shift check: every verdict right · to 18:02  │
 │                                               │ │ ┌────────────────────────────────────────────┐ │
 │                                               │ │ │          ✗   NG                            │ │ V, 40 pt
 │         board image, boxes coloured by        │ │ └────────────────────────────────────────────┘ │

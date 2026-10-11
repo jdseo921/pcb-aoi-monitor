@@ -880,12 +880,12 @@
     </message>
     <message>
         <location line="+170"/>
-        <location line="+1881"/>
+        <location line="+1883"/>
         <source>(none)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1850"/>
+        <location line="-1852"/>
         <source>Saving a recipe</source>
         <translation type="unfinished"></translation>
     </message>
@@ -976,12 +976,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+40"/>
-        <source>Shift check failed for {board_model}: {wrong} of {count} wrong</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+64"/>
+        <location line="+106"/>
         <source>Creating a board model</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1106,14 +1101,14 @@
         <translation>검증 세트 잠금</translation>
     </message>
     <message>
-        <location line="-2096"/>
-        <location line="+2110"/>
+        <location line="-2098"/>
+        <location line="+2112"/>
         <location line="+39"/>
         <source>the workspace holds no such dataset version</source>
         <translation>작업 공간에 그런 데이터셋 버전이 없습니다</translation>
     </message>
     <message>
-        <location line="-2147"/>
+        <location line="-2149"/>
         <source>the run used a folder, not a frozen dataset version&apos;s locked validation set</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1148,7 +1143,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1888"/>
+        <location line="+1530"/>
+        <source>Shift check of {board_model}: {wrong} of {count} master samples judged wrongly</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+360"/>
         <source>a blind label is OK, or NG with one of the 37 defect types</source>
         <translation>블라인드 라벨은 OK이거나, 37개 결함 유형 중 하나를 지정한 NG입니다</translation>
     </message>
@@ -1357,7 +1357,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-2659"/>
+        <location line="-2661"/>
         <source>no earlier version of this board model was active</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1387,7 +1387,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1009"/>
+        <location line="+1011"/>
         <source>Labelling an image</source>
         <translation>이미지 라벨링</translation>
     </message>
@@ -1459,7 +1459,7 @@
     </message>
     <message>
         <location line="+21"/>
-        <location filename="../ui/main_window.py" line="+702"/>
+        <location filename="../ui/main_window.py" line="+757"/>
         <source>start-up</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1799,7 +1799,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+47"/>
+        <location line="+20"/>
+        <source>Boards of {board_model} are inspected only after a shift check judges every master sample right, and {reason}. No board was inspected.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+27"/>
         <source>Result has no stored heatmaps</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2040,12 +2045,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1"/>
-        <source>Boards of {board_model} are inspected only after a shift check passes, and {reason}. No board was inspected.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+5"/>
+        <location line="+6"/>
         <source>Press Shift Check (F7) to judge the master samples. If one is judged wrongly, call an Engineer to check the recipe, the AI model and the Golden board before production goes on.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3746,7 +3746,7 @@
 <context>
     <name>HomePage</name>
     <message>
-        <location filename="../ui/main_window.py" line="-585"/>
+        <location filename="../ui/main_window.py" line="-639"/>
         <source>Upload samples</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3781,7 +3781,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+85"/>
+        <location line="+83"/>
+        <source>For {roles}</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+17"/>
         <source>No samples yet. Add at least {count} OK boards.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3796,7 +3801,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-97"/>
+        <location line="-112"/>
         <source>Inspect</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3821,17 +3826,17 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+34"/>
+        <location line="+71"/>
         <source>Open {page} ›</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+23"/>
+        <location line="-12"/>
         <source>Training running {percent} % · {left}</source>
         <translation>학습 중 {percent} % · {left}</translation>
     </message>
     <message>
-        <location line="+14"/>
+        <location line="+27"/>
         <source>{ok} OK · {ng} NG uploaded</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4054,12 +4059,12 @@
     <message>
         <location filename="../ui/pages/inspection.py" line="+105"/>
         <location line="+88"/>
-        <location line="+232"/>
+        <location line="+236"/>
         <source>Load Images…</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-319"/>
+        <location line="-323"/>
         <source>Load Folder…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4141,12 +4146,22 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+229"/>
+        <location line="+212"/>
+        <source>✓ Shift check: every verdict right · boards may be inspected until {until}</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>✗ Shift check: a master sample judged wrongly. Call an Engineer, then press Shift Check (F7)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+16"/>
         <source>Next Board ›</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-218"/>
+        <location line="-222"/>
         <source>Select PCB images</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4231,22 +4246,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1"/>
-        <source>✓ Shift check passed · boards may be inspected until {until}</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+1"/>
+        <location line="+4"/>
         <source>Shift check needed: press Shift Check (F7) before the first board</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1"/>
-        <source>✗ Shift check failed: call an Engineer, then press Shift Check (F7) again</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+1"/>
+        <location line="+4"/>
         <source>Shift check expired: press Shift Check (F7)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4473,7 +4478,7 @@
 <context>
     <name>LogsPage</name>
     <message>
-        <location filename="../ui/pages/logs.py" line="+76"/>
+        <location filename="../ui/pages/logs.py" line="+87"/>
         <source>Include archived</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4762,7 +4767,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+77"/>
+        <location line="+92"/>
         <source>Demo</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4827,7 +4832,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+76"/>
+        <location line="+77"/>
         <source>Presenter theme off.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4842,7 +4847,33 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+45"/>
+        <location line="+14"/>
+        <source>On {page}:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <location line="+5"/>
+        <source>{key}   {action}</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="-3"/>
+        <source>Open a page:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+4"/>
+        <source>F1   This list of keys</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>Keys</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+38"/>
         <source>close the app</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4867,12 +4898,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-92"/>
+        <location line="-115"/>
         <source>Presenter theme on. An Admin turns it off with Exit presenter theme.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+94"/>
+        <location line="+117"/>
         <source>Stopping the running work…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5317,7 +5348,7 @@
 <context>
     <name>Page</name>
     <message>
-        <location filename="../ui/main_window.py" line="-552"/>
+        <location filename="../ui/main_window.py" line="-606"/>
         <source>Home</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5442,7 +5473,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/inspection.py" line="-627"/>
+        <location filename="../ui/pages/inspection.py" line="-631"/>
         <source>Inspection</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6862,7 +6893,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/services.py" line="-2912"/>
+        <location filename="../core/services.py" line="-2914"/>
         <source>Aligning {count} images to the reference board</source>
         <translation type="unfinished"></translation>
     </message>

@@ -16,6 +16,11 @@ Export shows. There is nothing to type, so pick only your own name; if it is not
 needs: an Operator opens Home, Inspection, Compare and Logs & Export. The app opens on the page shown when it was last
 closed, or on Home when your role cannot open that page.
 
+**Keys to move around.** Ctrl+1 to Ctrl+9 open the sidebar's pages in its order from any page: Ctrl+1 Home, Ctrl+2
+Inspection, Ctrl+3 Compare, Ctrl+8 Logs & Export (pointing at a sidebar entry shows its key). Press **F1** on any page
+for the list of that page's keys and the pages your role opens. On Home, a card for a page your role cannot open is
+greyed and reads "For Engineer / Admin", so every button you can press leads somewhere.
+
 **The board model.** The **Board model** box at the left of the header names the board model the boards are judged as,
 on every page. When the app starts it shows the first board model by name, so pick the one of the boards on the line
 before you queue them. Only an Engineer or Admin creates a board model, with **+ New** beside the box. A change of board
@@ -26,7 +31,7 @@ it shows Top each time the app starts (section 2).
 
 **The shift check.** Before the first board of each shift, press **Shift Check** (F7) on Inspection. The app judges the
 board model's master samples: a known-OK board and a known-NG board of each Critical defect type. The line above the
-verdict then reads "Shift check passed" with the time until which boards may be inspected, and the summary lists each
+verdict then reads "Shift check: every verdict right" with the time until which boards may be inspected, and the summary lists each
 master sample with the verdict it was given. Until a check passes, Start and Next Board stop with AOI-INSP-016 and no
 board is inspected. The check is asked for again after 12 hours (an Admin sets the hours on Settings) and whenever the
 AI model, recipe, Golden board or scale changes. If a master sample is judged wrongly, the check fails with an NG alarm:

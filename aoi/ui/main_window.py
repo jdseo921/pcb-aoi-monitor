@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
 from PySide6.QtCore import QModelIndex, QPersistentModelIndex, QSize, Qt, QTimer
-from PySide6.QtGui import QCloseEvent, QColor, QPainter
+from PySide6.QtGui import QAction, QCloseEvent, QColor, QKeySequence, QPainter
 from PySide6.QtWidgets import (
     QApplication,
     QComboBox,
@@ -19,6 +19,7 @@ from PySide6.QtWidgets import (
     QListWidgetItem,
     QMainWindow,
     QMessageBox,
+    QPushButton,
     QStackedWidget,
     QStatusBar,
     QStyle,
@@ -123,6 +124,7 @@ class HomePage(Page):
         self.training_line.setWordWrap(True)
         self.training_line.hide()
         self.headings: list[tuple[QLabel, str, str]] = []  # each card's heading, its number and its name
+        self.links: list[tuple[QPushButton, str]] = []  # each card's button and the page it opens
         for i, (n, name, desc, target) in enumerate(self.STEPS):
             card = QFrame()
             card.setObjectName("card")
@@ -142,8 +144,9 @@ class HomePage(Page):
             if name == "Train AI model":
                 cl.addWidget(self.training_line)
             kind = "primary" if target == "Inspection" else ""  # the page's one blue primary: the Inspect card
-            link = self.tr("Open {page} ›").format(page=page_text(target))
-            cl.addWidget(button(link, kind, lambda _=False, t=target: shell.navigate(t)))
+            go = button("", kind, lambda _=False, t=target: shell.navigate(t))
+            self.links.append((go, target))
+            cl.addWidget(go)
             grid.addWidget(card, i // 3, i % 3)
         self.root.addWidget(self.cards)
         self.empty = EmptyState()  # no board model yet: one block in place of the cards (REQ-SET-019)
@@ -169,7 +172,20 @@ class HomePage(Page):
             self.training_line.setText(line.format(percent=percent, left=time_left_text(left)))
         self.training_line.setVisible(running)
 
+    def _sync_links(self) -> None:
+        """Each card's button opens its page, or, for a page the role may not open, is greyed and reads "For Engineer /
+        Admin", its tooltip naming the page too: an Operator's Home holds no button that leads nowhere (Engineering
+        standard, "No dead ends")."""
+        for go, target in self.links:
+            allowed = self.ctx.role in self.shell.pages[target].roles
+            go.setEnabled(allowed)
+            roles = " / ".join(role_text(r) for r in self.shell.pages[target].roles)
+            text = self.tr("Open {page} ›").format(page=page_text(target)) if allowed else self.tr("For {roles}")
+            go.setText(text.format(roles=roles).replace("&", "&&"))  # "Logs & Export" as written, not a mnemonic
+            go.setToolTip("" if allowed else self.shell.needs_role(target))  # the page and the roles that open it
+
     def on_show(self) -> None:
+        self._sync_links()
         bm = self.board_model
         self.cards.setVisible(bool(bm))
         if not bm:
@@ -345,6 +361,21 @@ class MainWindow(QMainWindow):
             if cls.badge:
                 self._badges[cls.title] = self._badge(it, cls.badge, cls.badge_tip)
         self.nav.currentItemChanged.connect(self._on_nav)
+        # Ctrl+1 to Ctrl+9 open the sidebar's pages in its order, from any page, and F1 lists the keys of the page
+        # shown (Engineering standard, "Short paths": one key to any page; "Input": every action by keyboard)
+        self.page_keys: dict[str, str] = {}
+        for n, title in enumerate(self.pages, 1):
+            if n <= 9:
+                key = QKeySequence(f"Ctrl+{n}")
+                self.page_keys[title] = key.toString(QKeySequence.SequenceFormat.NativeText)
+                go = QAction(self)
+                go.setShortcut(key)
+                go.triggered.connect(lambda _=False, t=title: self.navigate(t))
+                self.addAction(go)
+        keys = QAction(self)
+        keys.setShortcut(QKeySequence(Qt.Key.Key_F1))
+        keys.triggered.connect(self.show_keys)
+        self.addAction(keys)
 
         self._training_timer = QTimer(self)  # the header and Home follow a training run on every page (REQ-TRN-008)
         self._training_timer.timeout.connect(self.show_training)
@@ -474,7 +505,8 @@ class MainWindow(QMainWindow):
             it.setFlags(
                 Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable if allowed else Qt.ItemFlag.NoItemFlags
             )
-            it.setToolTip(page_text(self.pages[title].badge_tip) if allowed else self._needs_role(title))
+            tip = " · ".join(t for t in (page_text(self.pages[title].badge_tip), self.page_keys.get(title, "")) if t)
+            it.setToolTip(tip if allowed else self.needs_role(title))
             # greyed as a disabled control here, not by a stylesheet rule for disabled items: that rule would grey
             # the section headings too, which have no flags either (#239)
             it.setData(Qt.ItemDataRole.ForegroundRole, None if allowed else QColor(theme.TEXT_DISABLED))
@@ -549,7 +581,7 @@ class MainWindow(QMainWindow):
         self.nav.setItemWidget(it, row)
         return badge
 
-    def _needs_role(self, title: str) -> str:
+    def needs_role(self, title: str) -> str:
         """One sentence naming the page and the roles that may open it, for the tooltip and the status bar."""
         roles = " / ".join(role_text(r) for r in self.pages[title].roles)
         return self.tr("{page} needs the {roles} role").format(page=page_text(title), roles=roles)
@@ -564,8 +596,31 @@ class MainWindow(QMainWindow):
             self.nav.setCurrentItem(it)
             return True
         if title in self.pages:
-            self.status(self._needs_role(title))
+            self.status(self.needs_role(title))
         return False
+
+    def keys_text(self) -> str:
+        """The keys of the page shown, then the keys that open each page the role may open, one per line (F1)."""
+        cur = self.stack.currentWidget()
+        lines: list[str] = []
+        if isinstance(cur, Page):
+            lines.append(self.tr("On {page}:").format(page=page_text(cur.title)))
+            for a in cur.actions():
+                key = a.shortcut().toString(QKeySequence.SequenceFormat.NativeText)
+                if key and a.text():
+                    name = a.text().replace("▶", "").replace("■", "").strip()
+                    lines.append(self.tr("{key}   {action}").format(key=key, action=name))
+            lines.append("")
+        lines.append(self.tr("Open a page:"))
+        for title, key in self.page_keys.items():
+            if self.ctx.role in self.pages[title].roles and not self.hidden(title):
+                lines.append(self.tr("{key}   {action}").format(key=key, action=page_text(title)))
+        lines += ["", self.tr("F1   This list of keys")]
+        return "\n".join(lines)
+
+    def show_keys(self) -> None:
+        """F1: the keys of the page shown and of every page, so a new user learns them where they work."""
+        QMessageBox.information(self, self.tr("Keys"), self.keys_text())
 
     def _on_nav(self, cur: QListWidgetItem | None, _prev: QListWidgetItem | None) -> None:
         if cur is None or not cur.data(Qt.ItemDataRole.UserRole):
