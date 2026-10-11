@@ -64,7 +64,7 @@ Cancel.
 AOI checks tab, the 10 mandatory checks (DCT §4): Missing Component ✓ ROI R1 · Misalignment • whole board ·
 Polarity Error ✓ ROI R2 · Solder Bridge ○ not covered · Tombstone • whole board · Cold Joint • whole board ·
 Shield Can Gap ◌ Stage 2 · Connector Pin Height ◌ Stage 2 · 3D Coplanarity ◌ Stage 2 · Solder Volume ◌ Stage 2.
-"• whole board" means the AI model and Golden board comparison cover it without an ROI.
+"• whole board" means the AI model and Golden board comparison find it without an ROI, as a difference from the Golden board, and name it Anomaly: no check names Misalignment, Tombstone or Cold Joint itself.
 
 Revisions tab: Revision | User | Saved | Changes (before → after) | [Open] opens it read-only beside the current
 one; [Restore as New Revision] copies it into a new revision after the usual confirmation.

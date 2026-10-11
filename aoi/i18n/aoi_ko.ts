@@ -1494,7 +1494,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+474"/>
+        <location line="+479"/>
         <source>Height</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5065,54 +5065,54 @@
     <name>ModelTestPage</name>
     <message>
         <location filename="../ui/pages/model_test.py" line="+47"/>
-        <location line="+612"/>
+        <location line="+619"/>
         <source>Select Test Folder…</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-611"/>
-        <location line="+352"/>
+        <location line="-618"/>
+        <location line="+359"/>
         <location line="+221"/>
         <source>Run Test</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-571"/>
-        <location line="+615"/>
+        <location line="-578"/>
+        <location line="+622"/>
         <source>Export CSV</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-614"/>
+        <location line="-621"/>
         <source>Export Report</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location line="+3"/>
-        <location line="+289"/>
+        <location line="+296"/>
         <source>No folder selected</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-269"/>
-        <location line="+213"/>
+        <location line="-276"/>
+        <location line="+220"/>
         <source>Accuracy</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-214"/>
-        <location line="+213"/>
+        <location line="-221"/>
+        <location line="+220"/>
         <source>Precision</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-214"/>
-        <location line="+213"/>
+        <location line="-221"/>
+        <location line="+220"/>
         <source>Recall</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-193"/>
+        <location line="-200"/>
         <source>Image</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5132,12 +5132,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+477"/>
+        <location line="+484"/>
         <source>These results were judged by {run_model}, recipe revision {run_recipe}, {run_golden} and {run_scale}; {board_model} now uses {model}, recipe revision {recipe}, {golden} and {scale}. Rows are not previewed; select one for Run Test Again, which tests the run&apos;s folder with what is in use now.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-585"/>
+        <location line="-592"/>
         <source>Matches label</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5159,21 +5159,21 @@
     <message>
         <location line="+12"/>
         <location line="+62"/>
-        <location line="+151"/>
+        <location line="+158"/>
         <location line="+502"/>
         <source>Missed defects</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-714"/>
+        <location line="-721"/>
         <location line="+62"/>
-        <location line="+151"/>
+        <location line="+158"/>
         <location line="+501"/>
         <source>False calls</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-689"/>
+        <location line="-696"/>
         <source>Matches label?</source>
         <comment>whether the verdict matches the image&apos;s label</comment>
         <translation type="unfinished"></translation>
@@ -5270,6 +5270,11 @@
     </message>
     <message>
         <location line="+14"/>
+        <source>These are the product&apos;s proposed targets. A customer&apos;s own targets, agreed in writing before testing, are not yet stored with a run: state them beside this table.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+5"/>
         <source>Missed Critical defects</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5279,12 +5284,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1"/>
-        <source>Time per image, 95th percentile</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+8"/>
+        <location line="+11"/>
         <source>{s:.2f} s</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5450,13 +5450,18 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-495"/>
-        <location line="+485"/>
+        <location line="-502"/>
+        <location line="+492"/>
         <source>PDF (*.pdf)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+6"/>
+        <location line="-421"/>
+        <source>Engine time per image, 95th percentile (reading, saving, display not counted)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+427"/>
         <source>Export the validation report of {images} images? It shows each of its {misses} missed defects and {false_calls} false calls with its overlay, and the AI model card.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5636,7 +5641,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/model_test.py" line="-761"/>
+        <location filename="../ui/pages/model_test.py" line="-768"/>
         <source>AI Model Test</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5677,7 +5682,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/recipe_editor.py" line="-461"/>
+        <location filename="../ui/pages/recipe_editor.py" line="-466"/>
         <source>Recipe Editor</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5792,12 +5797,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+3"/>
-        <source>• whole board: the AI model and the Golden board comparison cover it without an ROI.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+4"/>
+        <location line="+12"/>
         <source>AOI checks</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5807,7 +5807,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-180"/>
+        <location line="-185"/>
         <source>Selected ROI</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5818,7 +5818,7 @@
     </message>
     <message>
         <location line="+1"/>
-        <location line="+170"/>
+        <location line="+175"/>
         <source>Name</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5848,7 +5848,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-167"/>
+        <location line="-172"/>
         <source>ROI type</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5983,7 +5983,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+22"/>
+        <location line="+11"/>
+        <source>• whole board: the AI model and the Golden board comparison find it without an ROI, as a difference from the Golden board, and name it Anomaly.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+16"/>
         <source>Revision</source>
         <translation type="unfinished"></translation>
     </message>
