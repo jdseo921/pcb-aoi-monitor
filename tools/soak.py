@@ -5,8 +5,8 @@ time per board slowing by at most 10 % and its memory growing by at most 10 %.
         [--workspace <folder> --board-model <name> --boards <folder>] [--epochs <n>] [--image-size <px>]
     python tools/soak.py --check --out <a run's folder> --workspace <its workspace>
 
-The app opens as main.py opens it, its window shown, on the workspace; the Operator is signed in, Inspection shows the
-board model and the boards are queued, as Load Images… queues them, over and over; Next Board (F8) is pressed every
+The app opens as main.py opens it, its window shown, on the workspace; the Operator is signed in and runs the shift
+check (REQ-INSP-017), Inspection shows the board model and the boards are queued, as Load Images… queues them, over and over; Next Board (F8) is pressed every
 `--pace` seconds until `--hours` have passed, and each board is judged and saved as on a station. A board still being
 inspected when Next Board is due delays the next one to the press after it, and the summary counts those presses.
 
@@ -168,6 +168,9 @@ class Run:
         win.showMaximized()
         win.set_user("operator")
         win.bm_combo.setCurrentText(board_model)
+        # the shift starts as a station's does, with the master samples judged (REQ-INSP-017); inspection waits for it
+        if ctx.run_shift_check(board_model)["state"] not in ("passed", "off"):
+            raise SystemExit(f"the shift check of {board_model} judged a master sample wrongly: see the alarms")
         if win.board_model != board_model or not win.navigate("Inspection"):
             raise SystemExit(f"Inspection cannot be opened on {board_model}")
         self.page: Any = win.pages["Inspection"]
