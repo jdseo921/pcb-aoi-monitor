@@ -29,8 +29,7 @@ from PySide6.QtWidgets import (
 )
 
 from ...core.inspector import ai_check
-from ...core.services import REVIEW_FILTERS, AppContext, CsvFile, HistoryFilter
-from ...data.db import NOT_REVIEWED
+from ...core.services import NOT_REVIEWED, REVIEW_FILTERS, AppContext, CsvFile, HistoryFilter
 from ...errors import AoiError
 from ...times import to_local
 from .. import theme

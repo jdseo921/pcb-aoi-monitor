@@ -34,7 +34,8 @@ from .. import defects as taxonomy
 from .. import logging_setup
 from ..config import Settings, resolve_device
 from ..data import atomic, credentials
-from ..data.db import NOT_REVIEWED, Database, DbError, is_busy, new_uuid
+from ..data.db import NOT_REVIEWED as NOT_REVIEWED  # screens name it through here (REQ-LOG-009)
+from ..data.db import Database, DbError, is_busy, new_uuid
 from ..data.errors import WorkspaceError
 from ..data.paths import inside, one_folder_name, resolve, to_stored
 from ..data.workspace_lock import WorkspaceLock
