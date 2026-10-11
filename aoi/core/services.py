@@ -22,7 +22,7 @@ import secrets
 import shutil
 import threading
 from collections import Counter
-from collections.abc import Callable, Iterator, Sequence
+from collections.abc import Callable, Iterable, Iterator, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from pathlib import Path, PureWindowsPath
@@ -1554,6 +1554,18 @@ class AppContext:
         record, so a filter that matches none over 100,000 records still returns within 1 s (REQ-LOG-001), and its
         summary line the archived count."""
         return self.db.inspection_span()
+
+    def defect_pareto(self, inspection_ids: Iterable[int]) -> list[dict[str, Any]]:
+        """The defects of these inspections by type, most first (a defect Pareto, REQ-LOG-008): per type its `type`
+        ("" for a defect stored without one), `defects`, `share` and `cumulative` of every defect listed (0 to 1),
+        `boards`, the inspections holding one, and of those the `reviewed` ones and the `false_calls`, reviewed as a
+        false call (REQ-INSP-013). Logs & Export reads it on the pool thread; it stores nothing, so it needs no role."""
+        rows = sorted(self.db.defect_types(inspection_ids), key=lambda r: (-r["defects"], r["type"]))
+        total, running = sum(r["defects"] for r in rows), 0
+        for r in rows:
+            running += r["defects"]
+            r["share"], r["cumulative"] = r["defects"] / total, running / total
+        return rows
 
     def last_board(self, board_model: str) -> str | None:
         """The image file of the board last inspected under `board_model` (its newest record not archived), which the

@@ -191,7 +191,9 @@ next shift sees the line's history. Narrow it with **From** and **To**, **Board 
 retention (30 days unless an Admin changed it): they are archived, not deleted, and stay searchable. A click on a
 column's header sorts by it. Select a row to see its overlay beside the table, and press **Open in Compare ›** (or
 Enter, or double-click the row) to see that board on Compare as it was decided, its failing checks marked. The line
-under the table counts the listed records by verdict. Only an Admin deletes records, with a reason the audit trail
+under the table counts the listed records by verdict. The **Defect types** tab beside **Records** counts the listed
+records' defects by type, most first, with a bar for each: the types the line finds most, and in **False calls** how
+many records holding each were reviewed as a false call. Only an Admin deletes records, with a reason the audit trail
 keeps.
 
 **Handing over.** Let the queue run to its end, or press ■ Stop: the board in hand is still judged and recorded. For

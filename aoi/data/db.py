@@ -721,6 +721,27 @@ class Database:
             out += [self._resolved(r, *paths) for r in self.query(sql + " ORDER BY id", chunk)]
         return out
 
+    def defect_types(self, inspection_ids: Iterable[int]) -> list[dict[str, Any]]:
+        """Per defect type over these inspections, IN_CHUNK ids at a time through `defects_inspection`: its `defects`,
+        the `boards` holding one, and of those the `reviewed` ones and the `false_calls`, reviewed as a false call
+        (migration 0023)."""
+        ids, out = list(dict.fromkeys(inspection_ids)), dict[str, dict[str, Any]]()
+        counts = ("defects", "boards", "reviewed", "false_calls")
+        for start in range(0, len(ids), IN_CHUNK):
+            chunk = ids[start : start + IN_CHUNK]
+            sql = (
+                "SELECT d.type type, COUNT(*) defects, COUNT(DISTINCT d.inspection_id) boards,"
+                " COUNT(DISTINCT CASE WHEN i.review IS NOT NULL THEN d.inspection_id END) reviewed,"
+                " COUNT(DISTINCT CASE WHEN i.review = 'FALSE_CALL' THEN d.inspection_id END) false_calls"
+                " FROM defects d JOIN inspections i ON i.id = d.inspection_id"
+                f" WHERE d.inspection_id IN ({','.join('?' * len(chunk))}) GROUP BY d.type"
+            )
+            for r in self.query(sql, chunk):  # a chunk holds each board whole, so the counts add up across chunks
+                t = out.setdefault(r["type"] or "", dict.fromkeys(counts, 0) | {"type": r["type"] or ""})
+                for k in counts:
+                    t[k] += r[k]
+        return list(out.values())
+
     def delete_inspections(self, inspection_ids: list[int]) -> None:
         """Delete these inspections, their defects and checks with them (ON DELETE CASCADE), IN_CHUNK ids at a time."""
         for start in range(0, len(inspection_ids), IN_CHUNK):

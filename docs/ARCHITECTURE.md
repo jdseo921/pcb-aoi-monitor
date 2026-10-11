@@ -924,7 +924,8 @@ a day the clock cannot convert is no bound on its side, never an error (#174).
 Migration 0022 indexes `inspections` by time, and by board model, operator and result each followed by time, and
 `defects` by inspection, so each filter reads only its own rows and each listed record's defect count one index entry
 (REQ-LOG-001); the empty state and the summary line read the history's first and last time and its archived count
-(`AppContext.history_span`), never every record.
+(`AppContext.history_span`), never every record. The Defect types tab counts the listed records' defects by type
+through the same `defects` index, 500 records per query, on the pool thread (`AppContext.defect_pareto`, REQ-LOG-008).
 Every file the app writes (images, overlays, AI models, exports, settings) goes through `aoi/data/atomic.py`:
 a temporary name in the same folder, flush and fsync, then an atomic rename, and an inspection's row, checks and
 defects commit in one transaction, so a crash leaves a whole result or none (REQ-INSP-008). A save that fails before its

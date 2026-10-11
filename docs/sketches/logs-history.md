@@ -24,9 +24,31 @@ From [2026-09-24] To [2026-10-01] Board model [All▾] Operator [All▾] Result 
 [Export CSV…] [Export Overlays…] Admin      [Archive Now]                    [Delete Records…] red, Admin
 ```
 
+Above the table, two tabs: **Records** (the table and the overlay, as drawn) and **Defect types** (below).
+
 NG rows carry the red cross and WARN rows the amber triangle in the Result cell; whole rows are not coloured, so
 the table stays readable at 14 pt. Filters combine; 100,000 records filter within 1 s (REQ-LOG-001). Archived
 records stay searchable with "Include archived" (REQ-LOG-003).
+
+## Defect types tab (REQ-LOG-008)
+
+```
+[ Records ] [■ Defect types ]
+The listed records' defects by type, most first. Records: the records holding the type; Reviewed and False calls: …
+┌─────────────────────────┬─────────┬─────────┬──────────┬─────────────┬────────────┬──────────────────────────────┐
+│ Defect type             │ Defects │ Records │ Reviewed │ False calls │ Cumulative │ Share                        │
+│ Open Circuit            │ 9       │ 1       │ 0        │ 0           │ 45.0 %     │ 45.0 % ████████████████████  │
+│ Pin-hole / Missing Hole │ 4       │ 1       │ 1        │ 1           │ 65.0 %     │ 20.0 % █████████             │
+│ Short Circuit           │ 4       │ 2       │ 0        │ 0           │ 85.0 %     │ 20.0 % █████████             │
+└─────────────────────────┴─────────┴─────────┴──────────┴─────────────┴────────────┴──────────────────────────────┘
+```
+
+The defect Pareto of an AOI line's reports, with the false calls by type beside it, from the records the filter lists:
+most defects first, ties by name. Records counts the records holding the type; Reviewed and False calls count those of
+them reviewed on the line (REQ-INSP-013), and reviewed as a false call. The bar is as long as the type's defects
+against the most any type has, in the accent colour (no Qt Charts: LGPL modules only). Counted on the pool thread when
+the tab is shown, and again on Filter and on a saved review; "No defects" or "No records" says why it is empty. Rows
+are read, not acted on: no selection. Every role sees it.
 
 ## Controls
 
@@ -38,6 +60,7 @@ records stay searchable with "Include archived" (REQ-LOG-003).
 | Result | Result | — | F | All, OK, NG, WARN |
 | Include archived | Include archived | — | T (check box, 48 px row) | |
 | Apply filter | Apply Filter | Enter | B | The page's one blue primary; busy indicator in the table over 1 s |
+| Tabs | Records, Defect types | Tab to the tab bar, then ← → | T | Records opens first; Defect types counts the listed records when shown (REQ-LOG-008) |
 | Table | Time, Board model, AI model, Result, Review (Real defect or False call, REQ-INSP-013), Defects, Operator, View, Recipe rev, Image | ↑ ↓, click header sorts | rows 48 px for Operators, 14 pt | Selecting a row shows its overlay within 300 ms |
 | Open in Compare | Open in Compare › | Enter | T | Stored result with failing checks highlighted (REQ-INSP-009) |
 | Export CSV | Export CSV… | — | B | Confirmation: "Export 128 records as CSV?"; UTF-8 with BOM; carries verdict, regions, metrics, thresholds, AI model version, recipe revision and view (REQ-INSP-012, REQ-INSP-010); audit entry with user, time, filter and count (REQ-LOG-002) |
@@ -67,7 +90,8 @@ with its result data kept.
 
 ## Requirements served
 
-REQ-LOG-001, -002, -003, -004 (audit entries), REQ-INSP-009, -010, -012, REQ-USR-001, REQ-SET-019, REQ-SET-021.
+REQ-LOG-001, -002, -003, -004 (audit entries), -008 (Defect types), REQ-INSP-009, -010, -012, -013, REQ-USR-001,
+REQ-SET-019, REQ-SET-021.
 
 ## Rules applied
 

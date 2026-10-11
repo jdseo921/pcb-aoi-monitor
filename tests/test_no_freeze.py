@@ -50,7 +50,8 @@ HEAVY: dict[type, tuple[str, ...]] = {
     AppContext: ("load_image", "inspector", "inspect", "inspect_file", "log_result", "import_samples")
     + ("re_evaluate",)  # Compare's Re-evaluate on a stored result (REQ-CMP-005)
     + ("checks_for_many", "export_csv_files", "export_overlays")  # the Logs exports' work (#194)
-    + ("export_csv", "export_test_overlays"),  # AI Model Test's exports (REQ-TST-004)
+    + ("export_csv", "export_test_overlays")  # AI Model Test's exports (REQ-TST-004)
+    + ("defect_pareto",),  # Logs & Export's Defect types tab (REQ-LOG-008)
     Inspector: ("inspect",),
 }
 
@@ -369,6 +370,25 @@ def test_req_set_021_logs_export_does_not_freeze(
     assert status() == "Export CSV stopped: no file was written."
     for d in ("out", "out2"):
         shutil.rmtree(tmp_path / d)  # up to 2 GB of copies: free the disk now, not when pytest prunes old runs
+
+
+def test_req_set_020_logs_defect_types_are_counted_on_the_pool(qtbot: QtBot, ctx: AppContext) -> None:
+    """REQ-LOG-008: the Defect types tab counts the listed records' defects on a pool thread, so a count that takes
+    longer than the budget holds no frame; the table fills when it arrives."""
+    ctx.ensure_board_model(BOARD)
+    box = {"no": 1, "type": "Spur", "score": 0.9, "side": "Top", "x": 1, "y": 1, "w": 4, "h": 4}
+    ctx.db.add_inspection({"board_model": BOARD, "result": "NG", "view": "Top", "image_path": "ng.png"}, [box])
+    win = _window(qtbot, ctx, "Operator")
+    page = win.pages["Logs & Export"]
+    win.navigate("Logs & Export")
+    listed(qtbot, page)
+    with heavy_calls(stall="AppContext.defect_pareto") as calls, gap_meter(qtbot) as g:
+        page.tabs.setCurrentIndex(1)
+        assert page.type_table.rowCount() == 0, "counted on a pool thread: nothing before the tab is shown"
+        qtbot.waitUntil(lambda: page.counting is None, timeout=30000)
+    assert_off_ui_thread(calls, "AppContext.defect_pareto")
+    assert g["longest_s"] < BUDGET_S, g
+    assert page.type_table.rowCount() == 1
 
 
 def test_req_set_021_model_test_exports_do_not_freeze(

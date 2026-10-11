@@ -8,9 +8,10 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from PySide6.QtCore import QDate, QSize, Qt
-from PySide6.QtGui import QColor, QTextCharFormat
+from PySide6.QtCore import QDate, QModelIndex, QPersistentModelIndex, QRect, QSize, Qt
+from PySide6.QtGui import QColor, QFontMetrics, QPainter, QTextCharFormat
 from PySide6.QtWidgets import (
+    QAbstractItemView,
     QCheckBox,
     QComboBox,
     QDateEdit,
@@ -20,6 +21,11 @@ from PySide6.QtWidgets import (
     QLabel,
     QMessageBox,
     QSplitter,
+    QStyledItemDelegate,
+    QStyleOptionViewItem,
+    QTabWidget,
+    QVBoxLayout,
+    QWidget,
 )
 
 from ...core.inspector import ai_check
@@ -31,7 +37,17 @@ from ..widgets.busy import BusyOverlay
 from ..widgets.empty_state import EmptyState
 from ..widgets.image_view import ImageView
 from ..workers import Worker, start
-from .base import QT_TRANSLATE_NOOP, Page, button, fill_table, make_table, row_key, size_class, view_text
+from .base import (
+    QT_TRANSLATE_NOOP,
+    Page,
+    WrappedLine,
+    button,
+    fill_table,
+    make_table,
+    row_key,
+    size_class,
+    view_text,
+)
 from .review import ReviewBar, review_text
 
 # The columns of the checks file beside the records file (REQ-INSP-012), the header even when no record has checks;
@@ -44,6 +60,8 @@ CHECK_COLUMNS = [
 DEFAULT_DAYS = 7  # a new page and Reset Filters show the last 7 days
 VERDICTS = ("OK", "NG", "WARN")  # the Result filter's verdicts after All, as the sketch lists them
 REVIEW_COLUMN = 4  # the table's Review column, after Result (REQ-INSP-013)
+RECORDS_TAB, TYPES_TAB = 0, 1  # the page's tabs: the records with the selected one's overlay, their defects by type
+SHARE_COLUMN = 6  # the Defect types tab's last column: the share, with its bar
 
 if TYPE_CHECKING:
     from ..main_window import MainWindow
@@ -58,6 +76,32 @@ class NameFilter(QComboBox):
 
     def sizeHint(self) -> QSize:
         return super().sizeHint().expandedTo(self.minimumSizeHint())
+
+
+class ShareBar(QStyledItemDelegate):
+    """The Share cell of the Defect types tab: the type's share as text, then a bar as long as its defects against the
+    most any type has, SHARE_BAR_W at most, so the table reads as a Pareto chart (REQ-LOG-008) without Qt Charts, which
+    is not LGPL. The bar's length is the row's key (`fill_table`); its colour is the theme's accent, read as it is
+    drawn, so a theme switch redraws it."""
+
+    def sizeHint(self, option: QStyleOptionViewItem, index: QModelIndex | QPersistentModelIndex) -> QSize:
+        hint = super().sizeHint(option, index)  # the text's
+        return QSize(QFontMetrics(option.font).horizontalAdvance("100.0 %") + theme.SHARE_BAR_W, hint.height())
+
+    def paint(
+        self, painter: QPainter, option: QStyleOptionViewItem, index: QModelIndex | QPersistentModelIndex
+    ) -> None:
+        super().paint(painter, option, index)  # the cell and its text, the share
+        length = index.data(Qt.ItemDataRole.UserRole)
+        if not isinstance(length, float):
+            return
+        rect: QRect = option.rect
+        cell = rect.adjusted(theme.CELL_PAD, theme.CELL_PAD, -theme.CELL_PAD, -theme.CELL_PAD)
+        text = QFontMetrics(option.font).horizontalAdvance("100.0 %")
+        left = cell.left() + text + theme.CELL_PAD
+        width = round((cell.right() - left) * length)
+        if width > 0:
+            painter.fillRect(QRect(left, cell.top(), width, cell.height()), QColor(theme.ACCENT))
 
 
 class LogsPage(Page):
@@ -127,7 +171,13 @@ class LogsPage(Page):
         self.view = ImageView(placeholder=self.tr("Select a row to see its overlay"))
         split.addWidget(self.view)
         split.setSizes([1100, 500])  # the nine columns of the sketch, the image name cut short at 1920 px
-        self.root.addWidget(split, 1)
+        # The records, and their defects by type, most first: the defect Pareto of an AOI line's reports, with the
+        # false calls by type beside it (REQ-LOG-008), on the page's whole width
+        self.tabs = QTabWidget()
+        self.tabs.addTab(split, self.tr("Records"))
+        self.tabs.addTab(self._types_tab(), self.tr("Defect types"))
+        self.tabs.currentChanged.connect(lambda _index: self.count_types())
+        self.root.addWidget(self.tabs, 1)
 
         line = QHBoxLayout()  # the counts, and the selected record's way to Compare (the Logs sketch)
         self.summary = QLabel("")
@@ -150,6 +200,34 @@ class LogsPage(Page):
         for x in (self.btn_csv, self.btn_img, self.btn_arch, self.btn_delete):
             b.addWidget(x)
         self.root.addLayout(b)
+
+    def _types_tab(self) -> QWidget:
+        """The Defect types tab: a note on what it counts, over the table `count_types` fills."""
+        tab = QWidget()
+        layout = QVBoxLayout(tab)
+        layout.setContentsMargins(0, theme.SPACE_S, 0, 0)
+        note = self.tr(
+            "The listed records' defects by type, most first. Records: the records holding the type; Reviewed and"
+            " False calls: those of them reviewed on the line, and reviewed as a false call."
+        )
+        line = WrappedLine(note)
+        line.setContentsMargins(theme.SPACE_S, 0, theme.SPACE_S, 0)  # clear of the tab's frame
+        layout.addWidget(line)
+        headers = [
+            self.tr("Defect type"), self.tr("Defects"), self.tr("Records"), self.tr("Reviewed"), self.tr("False calls"),
+            self.tr("Cumulative"), self.tr("Share"),
+        ]  # fmt: skip
+        self.type_table = make_table(headers, sortable=False)  # most first is the order it is read in
+        self.type_table.setSelectionMode(QAbstractItemView.SelectionMode.NoSelection)  # nothing to do with a row
+        self.type_table.setItemDelegateForColumn(SHARE_COLUMN, ShareBar(self.type_table))
+        # Share sized as the others, to its contents, the bar's room included (`ShareBar.sizeHint`): a stretched last
+        # section is sized to its text when the rows are filled, which left no room for a bar
+        self.type_table.horizontalHeader().setStretchLastSection(False)
+        layout.addWidget(self.type_table, 1)
+        self.types_empty = EmptyState(self.type_table)
+        self.counting_types = BusyOverlay(self.type_table, self.tr("Counting defects…"))
+        self.counting: Worker | None = None  # the defects being counted for the tab, if they are (`count_types`)
+        return tab
 
     def refresh(self) -> None:
         """Filter, Reset Filters, Show All Records, Archive and a delete: the records the filter lists, read and shown
@@ -254,6 +332,7 @@ class LogsPage(Page):
                 reviewed=len(reviewed), false_calls=false_calls
             )
         self.summary.setText(line if n else self.tr("No records"))
+        self.count_types()  # the Defect types tab, if it is shown, counts the records now listed
         if n:
             self.empty.hide()
         elif span:  # not every record: that took seconds at 100,000 (REQ-LOG-001)
@@ -314,11 +393,80 @@ class LogsPage(Page):
         for row in range(self.table.rowCount()):
             if int(row_key(self.table, row)) == record["id"] and (item := self.table.item(row, column)) is not None:
                 item.setText(review_text(record["review"]))
+        self.count_types()  # a false call changes its types' false calls, if the tab is shown
         self.shell.status(
             self.tr("Review saved: {review} for record {record}.").format(
                 review=review_text(record["review"]), record=record["id"]
             )
         )
+
+    def count_types(self) -> None:
+        """The Defect types tab shown: the listed records' defects counted by type on the pool thread (REQ-SET-020),
+        again whenever the records listed or a review changes while it is shown; the newest count wins, and one
+        dropped meanwhile shows nothing. A separate worker from the exports', which `run_in_background` would stop."""
+        if self.tabs.currentIndex() != TYPES_TAB:
+            return
+        if self.counting is not None:
+            self.counting.stop()  # a count cannot stop half-way: it arrives and is dropped
+        ids = [r["id"] for r in self.rows]
+        w = self.counting = Worker(self.ctx.defect_pareto, ids)
+        ref = weakref.ref(w)  # the slots hold the worker weakly, as Page.run_in_background's do (#132)
+
+        def arrived(types: list[dict[str, Any]]) -> None:
+            if (worker := ref()) is not None and worker is self.counting:
+                self.show_types(types, len(ids))
+
+        def failed(exc: BaseException) -> None:
+            if (worker := ref()) is not None and worker is self.counting:
+                self.error(exc)
+            else:  # a count dropped meanwhile shows nothing, but its error is logged (#206)
+                self.ctx.report_error(exc, self.title)
+
+        def finished() -> None:
+            if (worker := ref()) is not None and worker is self.counting:
+                self.counting = None
+                self.counting_types.finish()
+
+        w.signals.result.connect(arrived)
+        w.signals.error.connect(failed)
+        w.signals.finished.connect(finished)
+        self.counting_types.watch(w.job)
+        start(w, self.ctx.jobs)
+
+    def show_types(self, types: list[dict[str, Any]], records: int) -> None:
+        """Fill the Defect types tab with `AppContext.defect_pareto`'s rows for `records` listed records, or say why
+        it has none."""
+        tip = self.tr(
+            "{type}: {defects:,} defect(s), {share:.1f} % of those listed, on {boards:,} record(s); {reviewed:,} of"
+            " them reviewed, {false_calls:,} as a false call"
+        )
+        percent = self.tr("{percent:.1f} %")
+        named = [t | {"type": t["type"] or self.tr("No type")} for t in types]
+        most = max((t["defects"] for t in types), default=1)
+        fill_table(
+            self.type_table,
+            [
+                [
+                    t["type"],
+                    t["defects"],
+                    t["boards"],
+                    t["reviewed"],
+                    t["false_calls"],
+                    percent.format(percent=100 * t["cumulative"]),
+                    percent.format(percent=100 * t["share"]),
+                ]
+                for t in named
+            ],
+            tooltips=[tip.format(**(t | {"share": 100 * t["share"]})) for t in named],
+            keys=[t["defects"] / most for t in types],  # the length of each Share bar, the most defects the longest
+        )
+        if types:
+            self.types_empty.hide()
+        elif records:
+            sentence = self.tr("None of the {count:,} listed record(s) holds a defect.").format(count=records)
+            self.types_empty.show_state(self.tr("No defects"), sentence)
+        else:
+            self.types_empty.show_state(self.tr("No records"), self.tr("Widen the dates or the filters."))
 
     def _selected_id(self) -> int | None:
         """The ID of the record of the first selected row, kept with the row as it sorts; None with none selected."""

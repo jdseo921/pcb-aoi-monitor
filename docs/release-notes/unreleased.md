@@ -30,6 +30,8 @@ None. / 없음.
 
 - [REQ-TST-004] AI Model Test › Export Image Overlays (an Admin's, Q58) copies a run's annotated images, one per row named `<row>_<image>_<verdict>.png`, every missed defect and false call first, after a question naming the count, audited on the run as `export.test_overlays`: the Stage 1 annotated images beside the test result CSV. / AI 모델 테스트 › Export Image Overlays(관리자 전용, Q58)는 개수를 묻고 확인한 뒤 실행의 주석 이미지를 행마다 하나씩 `<행>_<이미지>_<판정>.png`로 복사하며, 놓친 결함과 오검출을 먼저 복사하고 실행에 `export.test_overlays`로 감사 기록합니다. 테스트 결과 CSV와 함께 전달하는 1단계 주석 이미지입니다.
 
+- [REQ-LOG-008] Logs & Export has two tabs, Records and Defect types. Defect types counts the listed records' defects by type, most first, as a Pareto chart: per type its defects, the records holding it, how many of those were reviewed and how many as a false call, the running total and the share, with a bar for each type. It follows the filter and every review saved, and is read in the background. Every role sees it. / 로그 및 내보내기에 Records와 Defect types 두 탭이 생겼습니다. Defect types는 목록에 있는 기록의 결함을 유형별로 많은 순서대로 세어 파레토 차트로 보여 줍니다. 유형마다 결함 수, 그 유형이 있는 기록 수, 그중 검토된 수와 오검출로 검토된 수, 누적 비율과 점유율을 막대와 함께 보여 줍니다. 필터와 저장된 검토를 따라가며 백그라운드에서 읽습니다. 모든 역할이 볼 수 있습니다.
+
 ## Improved / 개선 (draft)
 
 - [REQ-SET-004] Text on the green, red and blue fills (verdict banner, Start, Stop, primary and danger buttons) is black, reading at 5.0:1 or more; it was white at 3.3 to 4.2:1 (#150). / 녹색, 빨간색, 파란색 배경 위 글자(판정 배너, 시작, 정지, 주요 및 위험 버튼)가 검은색이 되어 5.0:1 이상으로 읽힙니다. 이전에는 흰색으로 3.3~4.2:1이었습니다(#150).
