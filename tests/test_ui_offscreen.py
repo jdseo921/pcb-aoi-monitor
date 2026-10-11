@@ -60,7 +60,7 @@ def _record(iid: int, overlay: str | None = None) -> dict[str, Any]:
     return {
         "id": iid, "time": "2026-10-01T05:05:00+00:00", "board_model": "TBOX-A1", "result": "NG", "defect_count": 1,
         "score": 0.5, "operator": "operator", "view": "Top", "image_path": f"board{iid}.png", "overlay_path": overlay,
-        "model_version": "v1.0", "recipe_rev": 1,
+        "model_version": "v1.0", "recipe_rev": 1, "review": None,
     }  # fmt: skip
 
 

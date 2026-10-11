@@ -170,6 +170,8 @@ class BoardStatus:
     last_test: dict[str, Any] | None  # metrics of the latest AI model test run
     inspected: int
     ng: int
+    reviewed: int = 0  # NG and WARN boards reviewed on the line (REQ-INSP-013)
+    false_calls: int = 0  # of them, reviewed as False call
 
 
 @dataclass(frozen=True)
@@ -186,6 +188,8 @@ class Actor:
 # the moment it is submitted, so a job acts as the user who started it whoever signs in meanwhile (#177).
 _ACTING: contextvars.ContextVar[tuple[AppContext, Actor] | None] = contextvars.ContextVar("aoi_acting", default=None)
 
+DEFECT, FALSE_CALL = "DEFECT", "FALSE_CALL"  # an NG or WARN board's review on the line (REQ-INSP-013)
+REVIEWS = (DEFECT, FALSE_CALL)
 ROLES = ("Operator", "Engineer", "Admin")  # lowest to highest (GUI §8, docs/ARCHITECTURE.md §5)
 ROLES_FROM = {  # a role and the roles above it, as AOI-USR-001 names them: one phrase each, never joined (#198)
     "Operator": QT_TRANSLATE_NOOP("Errors", "Operator, Engineer or Admin"),
@@ -1500,6 +1504,38 @@ class AppContext:
             )
         return re_grade(res, thresholds, ai, changed=changed[0] if changed else None)
 
+    @requires("Operator", QT_TRANSLATE_NOOP("Errors", "Reviewing a board"))
+    @transactional
+    def review_result(self, inspection_id: int, review: str, reason: str | None = None) -> dict[str, Any]:
+        """Record the review of an NG or WARN board on the line (REQ-INSP-013, ADR 0013): `review` is DEFECT, the
+        defect is real, or FALSE_CALL, the board is good and the call was false, which needs a `reason`. The verdict the
+        board was given is kept as it was; the review, who gave it and when stand beside it, and the audit entry
+        (inspection.review) holds the review before and after, so a changed review keeps its history. Any role may
+        review, as the operator at the line verifies each call (industry practice); AOI-INSP-015 refuses an unknown or
+        OK record, an unknown review, or a False call without a reason, and changes nothing. Returns the record."""
+        record = self.db.inspection(inspection_id)
+        why = None
+        if record is None:
+            why = QT_TRANSLATE_NOOP("Errors", "no such record")
+        elif record["result"] not in (NG, WARN):
+            why = QT_TRANSLATE_NOOP("Errors", "only an NG or WARN board is reviewed")
+        elif review not in REVIEWS:
+            why = QT_TRANSLATE_NOOP("Errors", "the review is neither Real defect nor False call")
+        elif review == FALSE_CALL and not (reason or "").strip():
+            why = QT_TRANSLATE_NOOP("Errors", "a False call needs a reason")
+        if why is not None or record is None:
+            raise AoiError("AOI-INSP-015", record=inspection_id, reason=why)
+        reason = (reason or "").strip() or None
+        before = {k: record[k] for k in ("review", "review_reason", "review_by")} if record["review"] else None
+        when = now_utc()
+        self.db.set_review(inspection_id, review, reason, self.user, when)
+        after = {"review": review, "review_reason": reason, "review_by": self.user, "verdict": record["result"]}
+        self.audit("inspection.review", "inspection", record["uuid"], before, after, reason)
+        self.log.info(
+            "inspection.reviewed", extra={"inspection_id": inspection_id, "review": review, "verdict": record["result"]}
+        )
+        return {**record, "review": review, "review_reason": reason, "review_by": self.user, "review_time": when}
+
     def users(self) -> list[dict[str, Any]]:
         """Users (uuid, name, role), oldest first."""
         return self.db.users()
@@ -1510,6 +1546,7 @@ class AppContext:
         history = self.db.recipe_history(board_model)  # newest first
         run = self.db.latest_test_run(board_model)
         inspected, ng = self.db.inspection_counts(board_model)
+        reviewed, false_calls = self.db.review_counts(board_model)
         return BoardStatus(
             ok_samples=len(self.db.samples(board_model, "OK")),
             ng_samples=len(self.db.samples(board_model, "NG")),
@@ -1519,6 +1556,8 @@ class AppContext:
             last_test=run["metrics"] if run else None,
             inspected=inspected,
             ng=ng,
+            reviewed=reviewed,
+            false_calls=false_calls,
         )
 
     # --- what the screens change: each checks the role and appends an audit entry (REQ-USR-001, REQ-LOG-004) ---

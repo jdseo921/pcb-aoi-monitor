@@ -7,7 +7,7 @@ import time
 import weakref
 from collections.abc import Callable
 from pathlib import Path
-from typing import TYPE_CHECKING, TypeAlias
+from typing import TYPE_CHECKING, Any, TypeAlias
 
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QKeySequence
@@ -49,6 +49,7 @@ from .base import (
     size_class,
     view_text,
 )
+from .review import ReviewBar, review_text
 
 if TYPE_CHECKING:
     from ...core.inspector import Inspector  # a type hint only: a page never builds one (REQ-USR-001)
@@ -148,6 +149,9 @@ class InspectionPage(Page):
         self.table.verticalHeader().setDefaultSectionSize(theme.TARGET_H)  # a defect row is an operator target
         self.table.itemSelectionChanged.connect(self._focus_defect)
         sl.addWidget(self.table, 1)
+        # The operator's review of an NG or WARN call, F10 Real defect and F11 False call (REQ-INSP-013)
+        self.review = ReviewBar(self, self._reviewed)
+        sl.addWidget(self.review)
         self.btn_compare = button(self.tr("Compare with Golden board ›"), slot=self.open_compare)
         sl.addWidget(self.btn_compare)
         split.addWidget(side)
@@ -543,6 +547,15 @@ class InspectionPage(Page):
         self.act_save.setEnabled(self.last is not None and may_save and self._bg is None)
         self.btn_save.setVisible(may_save)  # a board image leaves the station only by an Admin (#151)
         self.btn_compare.setEnabled(self.last_id is not None or self.last_path is not None)
+        shown = self.review.record["id"] if self.review.record is not None else None
+        if shown != self.last_id or (self.last_id is None and self.review.record is not None):
+            board = {"id": self.last_id, "result": self.last.verdict} if self.last and self.last_id else None
+            self.review.show_record(board)  # the board just saved, or none: never a board shown before
+
+    def _reviewed(self, record: dict[str, Any]) -> None:
+        """A review saved: the status bar says so (REQ-INSP-013)."""
+        line = self.tr("Review saved: {review} for record {record}.")
+        self.shell.status(line.format(review=review_text(record["review"]), record=record["id"]))
 
     def update_actions(self) -> None:
         """A Save Image… job starting or ending (`run_in_background`): Save Image… is off while it runs (#241)."""

@@ -210,8 +210,9 @@ def test_req_insp_012_all_five_present_in_csv(
     rows = ctx.inspections(board_model=BOARD)
     active = ctx.active_model(BOARD)
     assert active is not None and [int(r["id"]) for r in records] == [r["id"] for r in rows] and len(rows) == 4
-    assert list(records[0])[:4] == ["id", "time", "board_model", "view"] and list(records[0])[-4:] == [
+    assert list(records[0])[:4] == ["id", "time", "board_model", "view"] and list(records[0])[-8:] == [
         "uuid", "model_uuid", "recipe_uuid", "ai_check",
+        "review", "review_reason", "review_by", "review_time",  # REQ-INSP-013 (ADR 0013): appended after ai_check
     ]  # fmt: skip
     assert [rec["ai_check"] for rec in records] == ["", "RAN", "RAN", "RAN"], "the older record has no stored result"
     for rec, r in zip(records, rows, strict=True):

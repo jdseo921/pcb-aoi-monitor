@@ -691,7 +691,7 @@ class Database:
             # read for one record at a time
             "SELECT i.id, i.uuid, i.time, i.board_model, i.model_version, i.model_uuid, i.recipe_rev, i.recipe_uuid,"
             " i.image_path, i.overlay_path, i.diff_map_path, i.ai_map_path, i.view, i.result, i.score, i.metrics,"
-            " i.operator, i.archived,"
+            " i.operator, i.archived, i.review, i.review_reason, i.review_by, i.review_time,"
             " (SELECT COUNT(*) FROM defects d WHERE d.inspection_id=i.id) AS defect_count FROM inspections i WHERE 1=1"
         )
         p: list[Any] = []
@@ -777,6 +777,7 @@ class Database:
         """One inspection record by id with its paths absolute, or None for an unknown id (REQ-INSP-009)."""
         paths = ("image_path", "overlay_path", "diff_map_path", "ai_map_path", "reference_path")
         cols = "id, uuid, time, board_model, model_version, model_uuid, recipe_rev, recipe_uuid, view, result, score"
+        cols += ", review, review_reason, review_by, review_time"  # the review on the line (migration 0023)
         sql = f"SELECT {cols}, reference_sha256, {', '.join(paths)} FROM inspections WHERE id=?"
         r = self.query(sql, (inspection_id,))
         return self._resolved(r[0], *paths) if r else None
@@ -887,6 +888,22 @@ class Database:
         """One validation run by UUID, decoded, or None."""
         r = self.query("SELECT * FROM test_runs WHERE uuid=?", (uid,))
         return self._run(r[0]) if r else None
+
+    def set_review(self, inspection_id: int, review: str, reason: str | None, by: str, time: str) -> None:
+        """Store an NG or WARN board's review (migration 0023): DEFECT or FALSE_CALL, why, who and when (UTC). The
+        verdict in `result` is never touched; the caller writes the audit entry in the same transaction."""
+        sql = "UPDATE inspections SET review=?, review_reason=?, review_by=?, review_time=? WHERE id=?"
+        self.execute(sql, (review, reason, by, time, inspection_id))
+
+    def review_counts(self, board_model: str) -> tuple[int, int]:
+        """(boards reviewed, of them false calls) of a board model, archived ones included, through
+        `inspections_review`."""
+        sql = (
+            "SELECT COUNT(review) n, COALESCE(SUM(review='FALSE_CALL'), 0) fc FROM inspections"
+            " WHERE board_model=? AND review IS NOT NULL"
+        )
+        r = self.query(sql, (board_model,))[0]
+        return int(r["n"]), int(r["fc"])
 
     def inspection_counts(self, board_model: str) -> tuple[int, int]:
         """(inspections, NG inspections) of a board model, archived ones included."""

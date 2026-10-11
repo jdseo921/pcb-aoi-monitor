@@ -259,10 +259,10 @@ def test_req_log_001_the_filters_fit_a_1600_px_window(qtbot: QtBot, ctx: AppCont
 def test_req_log_001_the_table_has_the_sketchs_columns_and_opens_a_record_in_compare(
     qtbot: QtBot, ctx: AppContext, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """The columns of the Logs sketch: Time, Board model, AI model, Result, Defects, Operator, View, Recipe rev and
-    Image; the verdict colours its Result cell alone, so the row reads as text. The line under the table counts the
-    listed records by verdict and the archived ones. Open in Compare ›, Enter or a double-click opens the selected
-    record on Compare as it was decided (REQ-INSP-009, MainWindow.open_stored, #130)."""
+    """The columns of the Logs sketch: Time, Board model, AI model, Result, Review (REQ-INSP-013, ADR 0013), Defects,
+    Operator, View, Recipe rev and Image; the verdict colours its Result cell alone, so the row reads as text. The line
+    under the table counts the listed records by verdict and the archived ones. Open in Compare ›, Enter or a
+    double-click opens the selected record on Compare as it was decided (REQ-INSP-009, MainWindow.open_stored, #130)."""
     ctx.ensure_board_model("B")
     ok, _, ng, _ = (_record(ctx, v, "kim", defects=int(v != "OK")) for v in ("OK", "OK", "NG", "WARN"))
     ctx.db.execute("UPDATE inspections SET archived=1 WHERE id=?", (_record(ctx, "NG", "lee"),))
@@ -273,14 +273,25 @@ def test_req_log_001_the_table_has_the_sketchs_columns_and_opens_a_record_in_com
     opened: list[int] = []
     monkeypatch.setattr(win, "open_stored", opened.append)
     headers = [page.table.horizontalHeaderItem(c).text() for c in range(page.table.columnCount())]
-    sketch = ["Time", "Board model", "AI model", "Result", "Defects", "Operator", "View", "Recipe rev", "Image"]
+    sketch = [
+        "Time",
+        "Board model",
+        "AI model",
+        "Result",
+        "Review",
+        "Defects",
+        "Operator",
+        "View",
+        "Recipe rev",
+        "Image",
+    ]
     assert headers == sketch
     row_of = {row_key(page.table, i): i for i in range(page.table.rowCount())}  # the archived record is not listed
     row = row_of[ng]
-    cells = [page.table.item(row, c).data(Qt.ItemDataRole.DisplayRole) for c in range(1, 9)]
-    assert cells == ["B", "v1.0", "✗ NG", 1, "kim", "Top", 1, "NG.png"]
-    painted = [page.table.item(row, c).background().style() != Qt.BrushStyle.NoBrush for c in range(9)]
-    assert painted == [c == 3 for c in range(9)]
+    cells = [page.table.item(row, c).data(Qt.ItemDataRole.DisplayRole) for c in range(1, 10)]
+    assert cells == ["B", "v1.0", "✗ NG", "", 1, "kim", "Top", 1, "NG.png"]
+    painted = [page.table.item(row, c).background().style() != Qt.BrushStyle.NoBrush for c in range(10)]
+    assert painted == [c == 3 for c in range(10)]
     assert page.table.item(row, 3).background().color().name() == theme.VERDICT_COLORS["NG"].lower()
     assert page.summary.text() == "4 record(s) · OK 2 of 4 (50.0 %) · NG 1 · WARN 1 · archived 1"
     assert not page.btn_compare.isEnabled() and page.btn_compare.property("sizeClass") == "T"
