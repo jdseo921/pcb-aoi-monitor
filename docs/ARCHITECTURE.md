@@ -812,9 +812,10 @@ Reads, inspections (`inspect_file`, `log_result`), alarms and error reports need
 A picture leaves through Save Image… only by `export_board_image`, an Admin's export like the others (#151);
 `tests/test_layers.py` fails a page that imports or calls `save_image` or `QImageWriter`, or calls `cv2.imwrite` or a
 `.save(` with an argument, as a QImage's or a QPixmap's (#241).
-One call that writes nothing needs a role: `re_evaluate`, judging a stored result with other thresholds (REQ-CMP-005),
-is for an Engineer, through the same check; it stores nothing, so it writes no audit entry.
-`tests/test_roles_and_audit.py` keeps the Role column above (and `re_evaluate`: Engineer) as a table of its own,
+Two calls that write nothing need a role: `re_evaluate`, judging a stored result with other thresholds (REQ-CMP-005),
+and `learn_comparison`, learning the comparison's thresholds from the labelled boards (REQ-TRN-018), are for an
+Engineer, through the same check; they store nothing, so they write no audit entry (Save Recipe audits what is kept).
+`tests/test_roles_and_audit.py` keeps the Role column above (and those two: Engineer) as a table of its own,
 fails when a `@requires` names another role, and calls each of them with every role below its own (#181).
 Until sign-in ships (REQ-USR-002, 1.0) the user is the one picked in the header, so an entry names who was picked.
 The user is one immutable `Actor` (name, role, UUID) that `set_user` replaces whole. Work acts as the user who started
