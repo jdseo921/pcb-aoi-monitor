@@ -16,6 +16,11 @@ Export shows. There is nothing to type, so pick only your own name; if it is not
 needs: an Operator opens Home, Inspection, Compare and Logs & Export. The app opens on the page shown when it was last
 closed, or on Home when your role cannot open that page.
 
+**Keys to move around.** Ctrl+1 to Ctrl+9 open the sidebar's pages in its order from any page: Ctrl+1 Home, Ctrl+2
+Inspection, Ctrl+3 Compare, Ctrl+8 Logs & Export (pointing at a sidebar entry shows its key). Press **F1** on any page
+for the list of that page's keys and the pages your role opens. On Home, a card for a page your role cannot open is
+greyed and reads "For Engineer / Admin", so every button you can press leads somewhere.
+
 **The board model.** The **Board model** box at the left of the header names the board model the boards are judged as,
 on every page. When the app starts it shows the first board model by name, so pick the one of the boards on the line
 before you queue them. Only an Engineer or Admin creates a board model, with **+ New** beside the box. A change of board
