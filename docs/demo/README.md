@@ -52,7 +52,7 @@ Rehearse once on the demo laptop, the day before or in the room, and tick each l
 
 | What happens | What to do |
 |---|---|
-| The app closes | Start `AOI PoC Inspector (Demo)` from the Start menu: it opens the demo workspace again on the page it showed, signed in as `admin`, in the theme it had, in under 30 s. Say "let me open that again" and carry on from the last step; if you were showing the Operator view, sign in as `operator` again with **Switch User** first |
+| The app closes by itself | Start `AOI PoC Inspector (Demo)` from the Start menu: it opens the demo workspace again on the page it showed (after you close it yourself, at **Home**), signed in as `admin`, in the theme it had, in under 30 s. Say "let me open that again" and carry on from the last step; if you were showing the Operator view, sign in as `operator` again with **Switch User** first |
 | Training is slow | If the time left reads over 2 minutes, press **Cancel** and use AI model v1.0, which is already trained: "here is one trained on the same boards earlier". Nothing is lost |
 | A verdict looks wrong | Open **Compare**: the table shows each check, its value and its threshold, and the box under it says why in plain words. Explain it from there; never guess |
 | A message appears | Read it out: it says what happened and what to do, with a code. Do what it says, then carry on |

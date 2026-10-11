@@ -813,7 +813,7 @@ The writes, their roles and entries:
 | `delete_inspections` | Admin | `inspection.delete` (before: the records' UUIDs; after: the `HistoryFilter` that listed them, `records` and `files`; the typed reason; a blank one is `AOI-LOG-003`, nothing deleted); no object UUID. The rows (defects and checks by cascade) and the entry commit together, then the overlay and map files under results/ are deleted; one that will not go is logged as `records.evidence_left` and reported as `AOI-LOG-004` (REQ-LOG-003) |
 | `_sweep_ok_maps` | system, at start-up; no page calls it | `maps.sweep` (days, swept, skipped): the map files of OK results past `map_retention_days_ok` are deleted and forgotten, NG and WARN maps stay; audited, unlike the start-up archive, because it deletes evidence. A file that cannot be deleted, or lies outside results/, is skipped with a warning and kept for the next start |
 | `add_user` | Admin | `user.change` (role); object = user UUID. The last Admin keeps the role: `AOI-USR-002`, nothing written |
-| `sign_in` | anyone | `user.sign_in` (the user signed in before → the user signed in now, each with the role); object = user UUID. Switch User, and the user carried into a workspace switched to; the newest entry names the user the next start signs in (`last_signed_in`, REQ-USR-003). With `start`, `user.start` (before: none; after: the user and role a start signs in), which no later start reads |
+| `sign_in` | anyone | `user.sign_in` (the user signed in before → the user signed in now, each with the role); object = user UUID. Switch User; the newest entry names the user the next start signs in (`last_signed_in`, REQ-USR-003). With `start`, `user.start` (before: none; after: the user and role a window opens with: at a start, or at a workspace switch the first user of the role carried, the demo's Admin say), which no later start reads |
 | `save_settings` | Admin | `settings.change` (the Settings page's values: what settings.json held before → what it holds now); object type `settings`, no object UUID (#197). Two system writes to settings.json go past the check, unaudited, since no user asks for them: the page in use (`last_page`, `MainWindow._on_nav`) and the folder chosen after a refused workspace at start-up (`workspace`, `aoi/ui/errors.py`) |
 
 Reads, inspections (`inspect_file`, `log_result`), alarms and error reports need no role: an Operator inspects boards.
@@ -837,12 +837,16 @@ a user who did not start it.
 
 The role is always the one the users table holds for that user (`AppContext.set_user(name)`; a name it does not hold
 is refused with `AOI-USR-003`), so the check and the entries never name a role the table contradicts (#197). A start
-signs in the first stored Admin in the demo workspace (`main.py --demo`, the Demo shortcut; it opens at Home, where the
-demo scripts begin) and while the workspace has no board model, to set the station up; otherwise the user who signed in
-last on the station, else `operator`; each with the stored role (`AppContext.start_user`). Switch User signs in
-through `AppContext.sign_in`, which anyone may call: `set_user`, then an audit entry `user.sign_in` (object = the user's
-UUID, the user before and after), and the newest such entry names the user the next start signs in (index
-`audit_action`, migration 0026). An entry that cannot be written leaves the user before signed in.
+signs in the first stored Admin in the demo workspace (`main.py --demo`, the Demo shortcut; it opens at Home after a
+normal close, where the demo scripts begin) and while the workspace has no board model, to set the station up;
+otherwise the user who signed in last on the station, named on the status bar, else `operator`; each with the stored
+role (`AppContext.start_user`). A workspace switch opens the new window with the first user of the role carried
+(`build_window(ctx, carried)`). Switch User signs in through `AppContext.sign_in`, which anyone may call: `set_user`,
+then an audit entry `user.sign_in` (object = the user's UUID, the user before and after), and the newest such entry
+names the user the next start signs in (index `audit_action`, migration 0026). The user a window opens with is
+audited as `user.start`, which no later start reads, so neither a start nor a role carried, the demo's Admin say,
+becomes the station's next start user. An entry that cannot be written leaves the user before signed in; at a start,
+the window is not built and the coded dialog says why (`build_window`).
 
 User switching is a local picker for the PoC; Stage 4 replaces it with MES authentication (`MesClient.authenticate`).
 A switch leaves a page the new role may not open for Home, and shows any other page again (`on_show`), so its

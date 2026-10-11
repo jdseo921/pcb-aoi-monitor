@@ -26,11 +26,14 @@ from aoi.core import demo
 from aoi.core.services import AppContext
 from aoi.data import credentials
 from aoi.errors import AoiError
-from aoi.ui.main_window import MainWindow
+from aoi.ui.demo_workspace import open_demo
+from aoi.ui.errors import open_workspace
+from aoi.ui.main_window import MainWindow, build_window
 from tests.budgets import LONG_TRIES, judged
 
 ROOT = Path(__file__).resolve().parents[1]
 START_BUDGET_S = 5.0  # REQ-SET-020: usable within 5 s of starting
+LOAD_BUDGET_S = 10.0  # REQ-SET-007: the demo loaded (or reset) within 10 s; the first --demo start loads it, then opens
 
 
 def _reopened(ctx: AppContext) -> AppContext:
@@ -156,11 +159,50 @@ def test_req_set_007_the_demo_window_opens_as_its_first_admin_at_home(
         win.close()
 
 
+def test_req_usr_003_a_workspace_switch_signs_in_the_role_carried_once_and_never_as_the_last(
+    qtbot: QtBot, demo_bundle: Path, keys: credentials.MemoryCredentials, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The demo opened with its Admin, then Leave Demo: the station's window opens with its first Admin, the role
+    carried, audited once as user.start, with no line saying who signed in last; the station's next start still signs
+    in the Engineer who signed in last with Switch User, not the Admin the demo signed in by itself."""
+    monkeypatch.setenv("AOI_DEMO_BUNDLE", str(demo_bundle))
+    ctx = open_workspace()
+    assert ctx is not None
+    ctx.set_user("engineer")
+    ctx.ensure_board_model("B")  # set up
+    ctx.sign_in("engineer")
+    production = ctx.settings.root
+    ctx.close()
+    opened = open_demo()
+    assert opened is not None
+    win = build_window(opened)
+    assert win is not None and win.in_demo and opened.role == "Admin"
+    win.show()
+    station = win.switch_workspace(None)  # Leave Demo
+    assert station is not None and station.ctx.settings.root == production
+    try:
+        assert (station.ctx.user, station.ctx.role) == ("admin", "Admin")
+        assert "signed in last" not in station.statusBar().currentMessage()
+        started = [e["after"]["user"] for e in station.ctx.audit_entries(action="user.start")]
+        assert started == ["admin"]  # one sign-in, as the window opened
+        assert [e["after"]["user"] for e in station.ctx.audit_entries(action="user.sign_in")] == ["engineer"]
+        assert station.ctx.last_signed_in() == station.ctx.start_user() == "engineer"
+    finally:
+        station.close()
+    again = build_window(AppContext(Settings.load(), keys))
+    assert again is not None
+    try:
+        assert again.ctx.user == "engineer" and "signed in last" in again.statusBar().currentMessage()
+    finally:
+        again.close()
+
+
 def test_req_set_007_main_demo_starts_as_the_first_admin_at_home_in_its_theme_within_5_s(
     demo_bundle: Path, tmp_path: Path
 ) -> None:
     """`main.py --demo` (the installer's Demo shortcut), each start in a process of its own through main.main()
-    (tests/startup_worker.py): the first loads the demo beside the station's workspace, and is not timed; the presenter
+    (tests/startup_worker.py): the first loads the demo beside the station's workspace, once after an install, and is
+    held to REQ-SET-007's 10 s for a load, one try as it happens once (about 4 s on a 4-core cloud VM); the presenter
     then turns the presenter theme on and signs in as the Operator, as the 45-minute script does, and quits. Each start
     after opens the demo as its first Admin, at Home, in the presenter theme, usable within REQ-SET-020's 5 s of the
     process starting, judged as tests/budgets.py judges a start."""
@@ -179,6 +221,8 @@ def test_req_set_007_main_demo_starts_as_the_first_admin_at_home_in_its_theme_wi
 
     first = start()
     assert (first["user"], first["role"], first["page"], first["presenter"]) == ("admin", "Admin", "Home", False)
+    print("\nmain.py --demo, first start (the demo loaded), s:", round(first["usable"], 2))
+    assert first["usable"] <= LOAD_BUDGET_S, f"the first start, loading the demo, took {first['usable']:.2f} s: {first}"
     folder = demo.demo_folder(station)
     settings = json.loads((folder / "settings.json").read_text(encoding="utf-8"))
     (folder / "settings.json").write_text(json.dumps(settings | {"presenter_theme": True}), encoding="utf-8")

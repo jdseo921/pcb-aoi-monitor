@@ -312,7 +312,9 @@ class _PageStack(QStackedWidget):
 
 
 class MainWindow(QMainWindow):
-    def __init__(self, ctx: AppContext) -> None:
+    def __init__(self, ctx: AppContext, carried: str | None = None) -> None:
+        """The window on `ctx`'s workspace. `carried`: the role of the user signed in in the window before, when a
+        workspace switch builds this one (`switch_workspace`)."""
         super().__init__()
         self.ctx = ctx
         self.board_model: str | None = None
@@ -394,8 +396,12 @@ class MainWindow(QMainWindow):
         self._training_timer.start(1000)
         self._reload_board_models()
         # the demo, and a station with no board model yet to set up, start with an Admin; any other start with the user
-        # who signed in last on the station; the role is the stored one either way (#197); audited as user.start
+        # who signed in last on the station; a workspace switch with the first user of the role carried, if the folder
+        # holds one; the role is the stored one either way (#197). Audited as user.start, which no later start reads,
+        # so a role carried, the demo's Admin say, is never the station's next start user (REQ-USR-003)
         start = ctx.start_user(setting_up=not ctx.board_models())
+        if carried is not None:
+            start = next((str(u["name"]) for u in ctx.users() if u["role"] == carried), start)
         ctx.sign_in(start, start=True)
         self.set_user(start)
         if self.in_demo:  # its boards wait on Inspection as a scripted run at the demo's pace (REQ-SET-009)
@@ -405,7 +411,8 @@ class MainWindow(QMainWindow):
         # where the last session was (REQ-LOG-005); the demo after a normal close at Home, where its scripts begin
         if not self.navigate(ctx.settings.last_page):
             self.navigate("Home")
-        if not self.in_demo and ctx.board_models() and start == ctx.last_signed_in():  # someone else may be at it now
+        resumed = carried is None and not self.in_demo and bool(ctx.board_models()) and start == ctx.last_signed_in()
+        if resumed:  # someone else may be at the station now
             said = self.tr(
                 "Signed in as {user} ({role}), who signed in last on this station. Not you? Press Switch User."
             )
@@ -741,7 +748,7 @@ class MainWindow(QMainWindow):
             if ctx is None:
                 use_workspace(before)
                 ctx = open_workspace()
-            win = build_window(ctx) if ctx is not None else None
+            win = build_window(ctx, role) if ctx is not None else None  # signed in as the role carried
         finally:
             QApplication.restoreOverrideCursor()
         if win is None:  # nothing opens: the app closes, as at a start that opens nothing
@@ -749,7 +756,6 @@ class MainWindow(QMainWindow):
                 ctx.close()
             self.close()
             return None
-        win._sign_in_as(role)
         win.navigate(page)
         if failed is not None:
             show_error(win, win.ctx.report_error(failed, QT_TRANSLATE_NOOP("Errors", "demo reset")))
@@ -769,26 +775,21 @@ class MainWindow(QMainWindow):
         if self.navigate("Inspection"):
             page.play(boards(self.ctx.settings.root), self.ctx.settings.demo_pace_s)
 
-    def _sign_in_as(self, role: str) -> None:
-        """Sign in the first user the workspace holds with `role`, if it holds one; else the start's user stays."""
-        if (name := next((u["name"] for u in self.ctx.users() if u["role"] == role), None)) is not None:
-            self.ctx.sign_in(str(name))  # the user carries on in this workspace: its next start signs them in
-            self.set_user(str(name))
-
     def _page_title(self) -> str:
         cur = self.stack.currentWidget()
         return cur.title if isinstance(cur, Page) else "Home"
 
 
-def build_window(ctx: AppContext) -> MainWindow | None:
-    """The main window at start-up, with the unhandled-error hook in place (REQ-LOG-005, REQ-SET-019), or None when
-    it could not be built. The hook goes in before the window exists, so a slot that raises while the pages are built
-    is logged and shown too, and again with the window as the dialog's parent once it is built. An error raised out of
-    building it (a page that cannot read the database, #205) is shown as one coded dialog with its trace in the log;
-    the caller closes the workspace and ends the app."""
+def build_window(ctx: AppContext, carried: str | None = None) -> MainWindow | None:
+    """The main window at start-up, or at a workspace switch with the role `carried` from the window before, with the
+    unhandled-error hook in place (REQ-LOG-005, REQ-SET-019), or None when it could not be built. The hook goes in
+    before the window exists, so a slot that raises while the pages are built is logged and shown too, and again with
+    the window as the dialog's parent once it is built. An error raised out of building it (a page that cannot read the
+    database, #205; a start's sign-in whose audit entry cannot be written, so no one is signed in unaudited) is shown
+    as one coded dialog with its trace in the log; the caller closes the workspace and ends the app."""
     install_excepthook(ctx, None)
     try:
-        win = MainWindow(ctx)
+        win = MainWindow(ctx, carried)
     except Exception as e:
         show_error(None, ctx.report_error(e, QT_TRANSLATE_NOOP("Errors", "start-up")))
         return None

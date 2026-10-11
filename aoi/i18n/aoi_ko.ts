@@ -1556,7 +1556,7 @@
     </message>
     <message>
         <location line="+21"/>
-        <location filename="../ui/main_window.py" line="+793"/>
+        <location filename="../ui/main_window.py" line="+794"/>
         <source>start-up</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3649,7 +3649,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="-38"/>
+        <location filename="../ui/main_window.py" line="-33"/>
         <source>demo reset</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3903,7 +3903,7 @@
 <context>
     <name>HomePage</name>
     <message>
-        <location filename="../ui/main_window.py" line="-674"/>
+        <location filename="../ui/main_window.py" line="-680"/>
         <source>Upload samples</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5163,12 +5163,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+70"/>
+        <location line="+72"/>
         <source>{title} · Demo</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+87"/>
+        <location line="+92"/>
         <source>Signed in as {user} ({role}), who signed in last on this station. Not you? Press Switch User.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5294,12 +5294,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+35"/>
+        <location line="+34"/>
         <source>Demo reset in {seconds:.1f} s.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-47"/>
+        <location line="-46"/>
         <source>Stop the running work?</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5852,7 +5852,7 @@
 <context>
     <name>Page</name>
     <message>
-        <location filename="../ui/main_window.py" line="-639"/>
+        <location filename="../ui/main_window.py" line="-646"/>
         <source>Home</source>
         <translation type="unfinished"></translation>
     </message>
