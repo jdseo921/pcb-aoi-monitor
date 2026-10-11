@@ -905,6 +905,31 @@ class Database:
         r = self.query(sql, (board_model,))[0]
         return int(r["n"]), int(r["fc"])
 
+    def add_shift_check(
+        self, board_model: str, user: str, passed: bool, inputs: dict[str, Any], rows: list[dict[str, Any]]
+    ) -> str:
+        """Store a start-of-shift check (migration 0024) and return its UUID; the Golden board's path in `inputs` and
+        each row's file are stored relative to the workspace (REQ-SET-001). The caller audits it in the same
+        transaction."""
+        uid, ref = new_uuid(), inputs.get("reference_path")
+        stored_inputs = inputs | {"reference_path": self._stored(ref) if ref else None}
+        stored_rows = [{**r, "file": self._stored(r["file"])} for r in rows]
+        self._insert(
+            "INSERT INTO shift_checks(uuid, time, board_model, user, passed, inputs, rows) VALUES(?,?,?,?,?,?,?)",
+            (uid, now_utc(), board_model, user, int(passed), json.dumps(stored_inputs), json.dumps(stored_rows)),
+        )
+        return uid
+
+    def latest_shift_check(self, board_model: str) -> dict[str, Any] | None:
+        """A board model's newest shift check, its inputs and rows decoded with paths absolute; None if none."""
+        r = self.query("SELECT * FROM shift_checks WHERE board_model=? ORDER BY id DESC LIMIT 1", (board_model,))
+        if not r:
+            return None
+        check = {**r[0], "passed": bool(r[0]["passed"])}
+        check["inputs"] = self._resolved(json.loads(check["inputs"]), "reference_path")
+        check["rows"] = [self._resolved(x, "file") for x in json.loads(check["rows"])]
+        return check
+
     def inspection_counts(self, board_model: str) -> tuple[int, int]:
         """(inspections, NG inspections) of a board model, archived ones included."""
         sql = "SELECT COUNT(*) n, COALESCE(SUM(result='NG'), 0) ng FROM inspections WHERE board_model=?"

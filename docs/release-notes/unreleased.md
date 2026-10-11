@@ -18,6 +18,8 @@ None. / 없음.
 
 - [REQ-INSP-013] Review each NG or WARN board on the line: Real defect (F10) or False call (F11, with a reason), on Inspection and on Logs & Export. The verdict never changes; the review, who gave it and when stand beside it and in the audit trail, and Home, the Logs Review column, its summary line and the CSV export (four new columns at the end) count the false calls (ADR 0013). / 라인에서 NG 또는 WARN 보드를 검토합니다: 실제 결함(F10) 또는 오검출(F11, 사유 포함)을 검사 화면과 로그 및 내보내기 화면에서 선택합니다. 판정은 바뀌지 않으며, 검토 결과와 검토자, 시간이 판정 옆과 감사 기록에 저장되고, 홈, 로그의 검토 열과 요약 줄, CSV 내보내기(끝에 4개 열 추가)에서 오검출 수를 셉니다(ADR 0013).
 
+- [REQ-INSP-017] Each shift starts with Shift Check (F7) on Inspection: the board model's master samples, a known-OK board and a known-NG board of each Critical defect type, are judged with the engine in use, and no board is inspected until every verdict is right. A check counts for 12 hours (0 to 24 on Settings) and until the AI model, recipe, Golden board or scale changes; each check is audited, and a failed one raises an NG alarm (ADR 0014). / 각 교대 근무는 검사 화면의 교대 점검(F7)으로 시작합니다. 보드 모델의 마스터 샘플(정상 보드 1개와 치명 결함 유형별 불량 보드 1개)을 현재 엔진으로 판정하며, 모든 판정이 맞을 때까지 보드를 검사하지 않습니다. 점검은 12시간(설정에서 0~24) 동안, 그리고 AI 모델, 레시피, 골든 보드 또는 스케일이 바뀔 때까지 유효합니다. 모든 점검은 감사 기록에 남고, 실패하면 NG 알람이 발생합니다(ADR 0014).
+
 ## Improved / 개선 (draft)
 
 - [REQ-SET-004] Text on the green, red and blue fills (verdict banner, Start, Stop, primary and danger buttons) is black, reading at 5.0:1 or more; it was white at 3.3 to 4.2:1 (#150). / 녹색, 빨간색, 파란색 배경 위 글자(판정 배너, 시작, 정지, 주요 및 위험 버튼)가 검은색이 되어 5.0:1 이상으로 읽힙니다. 이전에는 흰색으로 3.3~4.2:1이었습니다(#150).
@@ -30,6 +32,7 @@ None. / 없음.
 
 - [REQ-SET-004] Every page scrolls where the screen is smaller than the page, so a 1366 × 768 station shows every control; before, the window could not shrink below about 1886 × 821 px and the right-hand controls sat off-screen (#104). / 화면이 페이지보다 작으면 모든 페이지가 스크롤되어 1366 × 768 스테이션에서도 모든 컨트롤이 보입니다. 이전에는 창이 약 1886 × 821 px 아래로 줄어들지 않아 오른쪽 컨트롤이 화면 밖에 있었습니다(#104).
 - [REQ-SET-004] A long folder, board model or file name, even one with no _ or -, no longer widens the window past the screen: AI Model Test's folder line and note, Compare's labels and Inspection's summary line wrap it, and a line that cuts it shows it whole in its tooltip (#251). / 긴 폴더, 보드 모델 또는 파일 이름(_ 나 - 가 없는 이름 포함)이 더 이상 창을 화면보다 넓히지 않습니다. AI 모델 테스트의 폴더 줄과 안내, 비교 화면의 라벨, 검사 화면의 요약 줄이 줄을 바꾸며, 이름이 잘리면 툴팁에 전체 이름이 표시됩니다(#251).
+- [REQ-SET-004] On Logs & Export, the Board model and Operator filters keep their width; a moment after the page opened, the Board model list could shrink and leave a gap beside it. / 로그 및 내보내기에서 보드 모델과 작업자 필터가 너비를 유지합니다. 이전에는 페이지가 열린 직후 보드 모델 목록이 줄어들어 옆에 빈칸이 생길 수 있었습니다.
 
 ## Security / 보안 (draft)
 
@@ -42,6 +45,8 @@ None. / 없음.
 ## Upgrade notes / 업그레이드 안내 (draft)
 
 - [REQ-INSP-013] Migration 0023 adds the review columns to each inspection record at the first start; records before it read as not reviewed. A reader of the CSV export finds four columns after ai_check: review, review_reason, review_by, review_time. / 마이그레이션 0023이 첫 시작 시 검사 기록에 검토 열을 추가합니다. 이전 기록은 검토되지 않은 것으로 표시됩니다. CSV 내보내기에는 ai_check 뒤에 review, review_reason, review_by, review_time 4개 열이 추가됩니다.
+
+- [REQ-INSP-017] After the upgrade, Inspection asks for Shift Check (F7) before the first board of each board model; a board model needs a labelled OK sample and a labelled NG sample for it. Migration 0024 adds the shift_checks table. An Admin can set the hours to 0 on Settings while samples are gathered (ADR 0014). / 업그레이드 후 검사 화면은 각 보드 모델의 첫 보드 전에 교대 점검(F7)을 요청합니다. 보드 모델에는 라벨이 지정된 정상 샘플과 불량 샘플이 필요합니다. 마이그레이션 0024가 shift_checks 테이블을 추가합니다. 샘플을 모으는 동안 관리자는 설정에서 시간을 0으로 설정할 수 있습니다(ADR 0014).
 
 - [REQ-USR-001] An Engineer who exported results before now asks an Admin to do it (#151). / 이전에 결과를 내보내던 엔지니어는 이제 관리자에게 요청해야 합니다(#151).
 

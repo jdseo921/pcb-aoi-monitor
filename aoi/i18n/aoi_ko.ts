@@ -827,7 +827,7 @@
 <context>
     <name>Errors</name>
     <message>
-        <location filename="../core/services.py" line="+108"/>
+        <location filename="../core/services.py" line="+117"/>
         <source>a length of {length} px over {distance} mm gives no scale: both must be numbers above 0, and the scale from {least} to {most} px per mm</source>
         <translation type="unfinished"></translation>
     </message>
@@ -865,12 +865,12 @@
     </message>
     <message>
         <location line="+170"/>
-        <location line="+1780"/>
+        <location line="+1883"/>
         <source>(none)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1749"/>
+        <location line="-1852"/>
         <source>Saving a recipe</source>
         <translation type="unfinished"></translation>
     </message>
@@ -885,7 +885,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+71"/>
+        <location line="+75"/>
         <source>{file}: {defects} defect(s)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -956,7 +956,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+39"/>
+        <location line="+32"/>
+        <source>Running the shift check</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+106"/>
         <source>Creating a board model</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1086,14 +1091,14 @@
         <translation>검증 세트 잠금</translation>
     </message>
     <message>
-        <location line="-1959"/>
-        <location line="+1973"/>
+        <location line="-2070"/>
+        <location line="+2084"/>
         <location line="+39"/>
         <source>the workspace holds no such dataset version</source>
         <translation>작업 공간에 그런 데이터셋 버전이 없습니다</translation>
     </message>
     <message>
-        <location line="-2010"/>
+        <location line="-2121"/>
         <source>the run used a folder, not a frozen dataset version&apos;s locked validation set</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1108,7 +1113,32 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1969"/>
+        <location line="+6"/>
+        <source>no shift check has run for it yet</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>its last shift check judged a master sample wrongly</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>its last shift check is more than {hours} hours old</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>its AI model, recipe, Golden board or scale changed after its last shift check</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1502"/>
+        <source>Shift check of {board_model}: {wrong} of {count} master samples judged wrongly</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+569"/>
         <source>its validation set is locked already, and a version is split only once</source>
         <translation>검증 세트가 이미 잠겨 있으며, 버전은 한 번만 분할됩니다</translation>
     </message>
@@ -1312,7 +1342,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-2522"/>
+        <location line="-2633"/>
         <source>no earlier version of this board model was active</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1332,7 +1362,7 @@
         <translation>{name}은(는) 그중 하나가 아닙니다</translation>
     </message>
     <message>
-        <location line="+5"/>
+        <location line="+13"/>
         <source>there is no board model of that name</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1342,7 +1372,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+908"/>
+        <location line="+1011"/>
         <source>Labelling an image</source>
         <translation>이미지 라벨링</translation>
     </message>
@@ -1754,7 +1784,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+19"/>
+        <location line="+20"/>
+        <source>Boards of {board_model} are inspected only after a shift check judges every master sample right, and {reason}. No board was inspected.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+27"/>
         <source>Result has no stored heatmaps</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1965,7 +2000,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-256"/>
+        <location line="-284"/>
         <source>AI model, recipe, scale or Golden board changed during a run</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1987,6 +2022,31 @@
     <message>
         <location line="+1"/>
         <source>Review an NG or WARN board that is still in Logs &amp; Export, and give a reason when you mark a False call.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+8"/>
+        <source>Shift check needed</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+6"/>
+        <source>Press Shift Check (F7) to judge the master samples. If one is judged wrongly, call an Engineer to check the recipe, the AI model and the Golden board before production goes on.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+8"/>
+        <source>Shift check has no master samples</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Board model {board_model} has no sample labelled {label} to judge, so the shift check cannot run. Nothing was stored.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>Ask an Engineer to import a known-OK board and a known-NG board of each Critical defect type in Training. Until then, an Admin can turn the shift check off on Settings.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -3006,7 +3066,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1080"/>
+        <location line="-1108"/>
         <source>Board judged NG</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3021,7 +3081,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+40"/>
+        <location line="+68"/>
         <source>The decision table is the stored one; use Side by side or Defect boxes only, or inspect the board again on Inspection to see its heatmaps.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3412,7 +3472,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+79"/>
+        <location line="+81"/>
         <source>its store-key.json cannot be read</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3968,13 +4028,13 @@
     <name>InspectionPage</name>
     <message>
         <location filename="../ui/pages/inspection.py" line="+105"/>
-        <location line="+83"/>
-        <location line="+161"/>
+        <location line="+88"/>
+        <location line="+236"/>
         <source>Load Images…</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-243"/>
+        <location line="-323"/>
         <source>Load Folder…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3984,13 +4044,13 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+6"/>
+        <location line="+9"/>
         <source>View:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location line="+6"/>
-        <location line="+69"/>
+        <location line="+71"/>
         <source>No images loaded</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4056,17 +4116,32 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+158"/>
+        <location line="+212"/>
+        <source>✓ Shift check: every verdict right · boards may be inspected until {until}</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>✗ Shift check: a master sample judged wrongly. Call an Engineer, then press Shift Check (F7)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+16"/>
         <source>Next Board ›</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-147"/>
+        <location line="-222"/>
         <source>Select PCB images</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+0"/>
+        <location line="-95"/>
+        <source>Shift Check</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+95"/>
         <source>Images ({extensions})</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4111,12 +4186,52 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+51"/>
+        <location line="+53"/>
         <source>No AI model for {board_model} yet: only the Golden board comparison runs</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+30"/>
+        <location line="+28"/>
+        <source>Shift check: judging the master samples of {board_model}…</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+9"/>
+        <source>{mark} {file}{kind}: expected {expected}, judged {verdict}</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+10"/>
+        <source>Shift check of {board_model}: {right} of {count} master samples judged right</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+20"/>
+        <source>Stopped: a shift check is needed first</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+13"/>
+        <source>Shift check off</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+4"/>
+        <source>Shift check needed: press Shift Check (F7) before the first board</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+4"/>
+        <source>Shift check expired: press Shift Check (F7)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Shift check needed again: the AI model, recipe, Golden board or scale changed</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+14"/>
         <source>Press Next Board to carry on with the queue.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4186,7 +4301,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+65"/>
+        <location line="+67"/>
         <source>Review saved: {review} for record {record}.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5328,7 +5443,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/inspection.py" line="-549"/>
+        <location filename="../ui/pages/inspection.py" line="-631"/>
         <source>Inspection</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6239,7 +6354,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+26"/>
+        <location line="+29"/>
         <source>Workspace (images, AI models, database)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6280,6 +6395,11 @@
     </message>
     <message>
         <location line="+1"/>
+        <source>Shift check counts for (hours, 0 off)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
         <source>Language</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6311,12 +6431,12 @@
     </message>
     <message>
         <location line="+0"/>
-        <location line="+57"/>
+        <location line="+58"/>
         <source>Role</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-55"/>
+        <location line="-56"/>
         <source>Add / Change User</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6346,7 +6466,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+29"/>
+        <location line="+30"/>
         <source>Saved. Restart the app to switch the workspace.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6713,7 +6833,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/services.py" line="-2775"/>
+        <location filename="../core/services.py" line="-2886"/>
         <source>Aligning {count} images to the reference board</source>
         <translation type="unfinished"></translation>
     </message>

@@ -223,6 +223,8 @@ WRITES: dict[str, tuple[str, Callable[[AppContext, Path, Path], Any]]] = {
         "inspection.review",
         lambda ctx, data, tmp: ctx.review_result(ng_record(ctx, data), "FALSE_CALL", "Dust on the board"),
     ),
+    # the master samples left after the writes above, judged at the start of a shift by any role (REQ-INSP-017)
+    "run_shift_check": ("inspection.shift_check", lambda ctx, data, tmp: ctx.run_shift_check("TINY")),
 }
 # what only an Engineer does that writes no audit entry itself: re-evaluating a result (REQ-CMP-005, since S28a), and
 # starting a training run, whose job writes model.train once it ends (REQ-TRN-008, S40)
@@ -242,6 +244,7 @@ UNCHECKED = {
     "validation_split", "stores", "store_of", "store_contents", "training_version", "freeze_gate",
     "dataset_counts", "previous_model", "model_card", "card_files", "card_text", "last_board", "test_runs", "test_run",
     "report_images", "model_card_text", "validation_report_data", "recipe_revisions", "history_span",
+    "master_samples", "shift_check", "require_shift_check",
 }  # fmt: skip
 CALLS = {**{name: call for name, (_, call) in WRITES.items()}, **CHECKED_READS}
 # The lowest role allowed each call, copied from the write table of docs/ARCHITECTURE.md §5 and REQ-CMP-005, never read
@@ -251,6 +254,7 @@ EXPECTED_ROLE |= {"create_store": "Admin", "restore_store_key": "Admin", "move_i
 EXPECTED_ROLE |= {"delete_sample": "Admin", "delete_inspections": "Admin"}  # only an Admin deletes (REQ-LOG-003)
 EXPECTED_ROLE |= {f"export_{what}": "Admin" for what in ("overlays", "csv", "csv_files", "report")}  # Q58 (#151)
 EXPECTED_ROLE["review_result"] = "Operator"  # the operator at the line reviews each call (ADR 0013)
+EXPECTED_ROLE["run_shift_check"] = "Operator"  # the operator starts the shift (ADR 0014)
 EXPECTED_ROLE["export_board_image"] = "Admin"  # Save Image… (F9): an export, an Admin's alone (#151, Jay 2026-10-10)
 REFUSED = [(name, role) for name in CALLS for role in ROLES[: ROLES.index(EXPECTED_ROLE[name])]]
 

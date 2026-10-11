@@ -41,10 +41,12 @@ _LEAST = {  # the smallest whole number a count setting takes; a map retention o
     "default_epochs": 1,
     "map_retention_days_ok": 0,
     "demo_pace_s": 1,
+    "shift_check_hours": 0,  # 0: no shift check is asked for (REQ-INSP-017)
 }
-_MOST = {"demo_pace_s": 10}  # the largest whole number a setting takes, where there is one
+_MOST = {"demo_pace_s": 10, "shift_check_hours": 24}  # the largest whole number a setting takes, where there is one
 
 
+SHIFT_CHECK_HOURS = 12  # the default: a shift of up to 12 h (ADR 0014); tests/conftest.py sets 0 for tests not about it
 _in_use: Path | None = None  # the folder use_workspace() set: the demo workspace while it is open (REQ-SET-007)
 
 
@@ -81,6 +83,8 @@ class Settings:
     last_page: str = "Home"  # the page to reopen after a restart (REQ-LOG-005)
     demo_pace_s: int = 3  # seconds per board of the demo's scripted run, 1 to 10 (REQ-SET-009)
     presenter_theme: bool = False  # REQ-SET-008: the light presenter theme, switched by an Admin on Settings
+    # REQ-INSP-017: the hours a passed shift check lets boards be inspected, 0 to ask for none (ADR 0014)
+    shift_check_hours: int = field(default_factory=lambda: SHIFT_CHECK_HOURS)
 
     # --- paths derived from workspace ------------------------------------
     @property

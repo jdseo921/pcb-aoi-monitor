@@ -27,7 +27,7 @@ from ... import defects as taxonomy
 from ...core.explain import notes
 from ...core.imaging import IMAGE_EXTS, list_images
 from ...core.inspector import NG, InspectionResult
-from ...core.services import BUSY_ALARM_WAIT_MS, REQUIRED_ROLE, ROLES, Actor, AppContext
+from ...core.services import BUSY_ALARM_WAIT_MS, REQUIRED_ROLE, ROLES, SHIFT_CHECK_REASONS, Actor, AppContext
 from ...errors import AoiError
 from ...hal import VIEWS
 from ...times import to_local
@@ -105,11 +105,14 @@ class InspectionPage(Page):
         self.act_load = self.action(self.tr("Load Images…"), QKeySequence.StandardKey.Open, self.load_files)
         self.act_folder = self.action(self.tr("Load Folder…"), "Ctrl+Shift+O", self.load_folder)
         self.act_view = self.action(self.tr("Next view"), "Alt+V", self.next_view)
+        self.act_check = self.action(self.tr("Shift Check"), "F7", self.run_shift_check)  # REQ-INSP-017
         bar = QHBoxLayout()
         self.btn_load = size_class(action_button(self.act_load, show_key=False), "T")  # 48 px: the sketch's size T
         self.btn_folder = size_class(action_button(self.act_folder, show_key=False), "T")
+        self.btn_check = size_class(action_button(self.act_check, show_key=False), "T")
         bar.addWidget(self.btn_load)
         bar.addWidget(self.btn_folder)
+        bar.addWidget(self.btn_check)
         bar.addWidget(QLabel(self.tr("View:")))
         self.view_combo = QComboBox()
         for view in VIEWS:
@@ -130,6 +133,8 @@ class InspectionPage(Page):
         side = QWidget()
         sl = QVBoxLayout(side)
         sl.setContentsMargins(8, 0, 0, 0)
+        self.shift_line = WrappedLine()  # whether boards may be inspected: the shift check's state (REQ-INSP-017)
+        sl.addWidget(self.shift_line)
         self.verdict = QLabel(NO_VERDICT)
         self.verdict.setStyleSheet(theme.verdict_style("INFO"))
         self.verdict.setMinimumHeight(theme.BANNER_H)
@@ -268,6 +273,8 @@ class InspectionPage(Page):
         if self.running and self.ctx.user != self.run_actor.name:  # a board of a run names who pressed Start (#177)
             self._stop_for_user()  # another user signed in; a change of the same user's role goes on
             return
+        if not self._shift_checked(bm):
+            return
         self.queue_pos += 1
         path = self.queue[self.queue_pos]
         self._board_started = time.monotonic()
@@ -332,6 +339,79 @@ class InspectionPage(Page):
         w.signals.error.connect(lambda e: self._not_inspected(path, e))
         w.signals.finished.connect(done)
         start(w, self.ctx.jobs)
+
+    # --- the start-of-shift check (REQ-INSP-017, ADR 0014) ---------------------------
+    def run_shift_check(self) -> None:
+        """F7: judge the board model's master samples with the engine in use, on the pool thread. A pass lets Start and
+        Next Board inspect boards; a failure keeps them stopped and says which sample was judged wrongly."""
+        if self.running or self.worker is not None or self._bg is not None:
+            return
+        if (bm := self.checked_board_model()) is None:
+            return
+        self.shell.status(self.tr("Shift check: judging the master samples of {board_model}…").format(board_model=bm))
+        self.run_in_background(self.ctx.run_shift_check, bm, on_result=lambda found: self._shift_check_done(bm, found))
+
+    def _shift_check_done(self, bm: str, found: dict[str, Any]) -> None:
+        """The check is stored: the line above the verdict and the summary show it, sample by sample; a failed one is
+        AOI-INSP-016's dialog, as Start would show it."""
+        rows = found["check"]["rows"]
+        mark = {True: "✓", False: "✗"}
+        lines = [
+            self.tr("{mark} {file}{kind}: expected {expected}, judged {verdict}").format(
+                mark=mark[r["right"]],
+                file=Path(r["file"]).name,
+                kind=f" ({r['defect_type']})" if r["defect_type"] else "",
+                expected=r["expected"],
+                verdict=r["verdict"],
+            )
+            for r in rows
+        ]
+        right = sum(r["right"] for r in rows)
+        head = self.tr("Shift check of {board_model}: {right} of {count} master samples judged right").format(
+            board_model=bm, right=right, count=len(rows)
+        )
+        self.summary.setText("\n".join([head, *lines]))
+        self.shell.status(head)
+        self._show_shift_check()
+        if not found["check"]["passed"]:
+            self._refresh_alarms()
+            self.error(AoiError("AOI-INSP-016", board_model=bm, reason=SHIFT_CHECK_REASONS["failed"]))
+
+    def _shift_checked(self, bm: str) -> bool:
+        """Whether a board of `bm` may be inspected now (`AppContext.require_shift_check`); when not, the run stops
+        before taking a board from the queue, and AOI-INSP-016 says why and to press Shift Check."""
+        try:
+            self.ctx.require_shift_check(bm)
+        except AoiError as e:
+            self.running = False
+            self._pace_timer.stop()
+            self._update_buttons()
+            self._show_shift_check()
+            self.shell.status(self.tr("Stopped: a shift check is needed first"), ms=0)
+            self.error(e)
+            return False
+        return True
+
+    def _show_shift_check(self) -> None:
+        """The line above the verdict: the shift check's state for the header's board model, and what to do."""
+        bm = self.board_model
+        found = self.ctx.shift_check(bm) if bm else None
+        state = found["state"] if found else None
+        until = to_local(found["until"])[:16] if found and found["until"] else ""
+        text = {
+            None: "",
+            "off": self.tr("Shift check off"),
+            "passed": self.tr("✓ Shift check: every verdict right · boards may be inspected until {until}").format(
+                until=until
+            ),
+            "none": self.tr("Shift check needed: press Shift Check (F7) before the first board"),
+            "failed": self.tr(
+                "✗ Shift check: a master sample judged wrongly. Call an Engineer, then press Shift Check (F7)"
+            ),
+            "expired": self.tr("Shift check expired: press Shift Check (F7)"),
+            "changed": self.tr("Shift check needed again: the AI model, recipe, Golden board or scale changed"),
+        }[state]
+        self.shift_line.setText(text)
 
     def _not_inspected(self, path: Path, e: BaseException) -> None:
         """The board was not inspected: the run stops, and the page shows that board, not the one before (#182): the
@@ -542,6 +622,8 @@ class InspectionPage(Page):
         self.act_start.setEnabled(has and not self.running and not busy)
         self.act_stop.setEnabled(self.running)
         self.act_next.setEnabled(has and not self.running and not busy)
+        idle = self.board_model is not None and not self.running and not busy and self._bg is None
+        self.act_check.setEnabled(idle)  # never beside a board, a run or a Save Image… job
         need = ROLES.index(REQUIRED_ROLE["export_board_image"])  # the service's @requires, never written out again here
         may_save = self.ctx.role in ROLES and ROLES.index(self.ctx.role) >= need
         self.act_save.setEnabled(self.last is not None and may_save and self._bg is None)
@@ -635,11 +717,13 @@ class InspectionPage(Page):
                 self._show_verdict(None)
                 self.summary.clear()
         self._update_buttons()  # on every change: Start and Next Board follow the header's board model (#244)
+        self._show_shift_check()
         self._show_empty()
 
     def on_show(self) -> None:
         self._drop_engine()  # pick up newly trained models or saved recipes
         self._no_ai_warned = None  # each visit says once that a board model has no AI model yet
         self._update_buttons()  # Save Image… follows the role after a Switch User (#241)
+        self._show_shift_check()  # a recipe saved or a version activated elsewhere asks for the check again
         self._refresh_alarms()
         self._show_empty()

@@ -158,7 +158,8 @@ def build_workspace(root: Path) -> AppContext:
     write_dataset(dataset, DATASET_OK, DATASET_NG, DATASET_SEED)
     with mock.patch("uuid.uuid4", side_effect=counted_uuids()), mock.patch("aoi.core.crypto.new_key", pinned_key):
         keys = credentials.MemoryCredentials()  # the store key trainable makes, never written to the Credential Manager
-        ctx = AppContext(Settings(workspace=str(root / "workspace"), device="cpu"), keys)
+        settings = Settings(workspace=str(root / "workspace"), device="cpu", shift_check_hours=0)  # no clock in renders
+        ctx = AppContext(settings, keys)
         ctx.set_user("engineer")
         ctx.import_samples(BOARD_MODEL, [str(p) for p in list_images(dataset / "train" / "ok")], "OK")
         for p in list_images(dataset / "train" / "ng"):  # one call each: an NG sample is imported with its type

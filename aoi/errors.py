@@ -256,6 +256,34 @@ CODES: dict[str, ErrorCode] = {
             ),
         ),
         ErrorCode(
+            "AOI-INSP-016",
+            QT_TRANSLATE_NOOP("Errors", "Shift check needed"),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Boards of {board_model} are inspected only after a shift check judges every master sample right, and"
+                " {reason}. No board was inspected.",
+            ),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Press Shift Check (F7) to judge the master samples. If one is judged wrongly, call an Engineer to"
+                " check the recipe, the AI model and the Golden board before production goes on.",
+            ),
+        ),
+        ErrorCode(
+            "AOI-INSP-017",
+            QT_TRANSLATE_NOOP("Errors", "Shift check has no master samples"),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Board model {board_model} has no sample labelled {label} to judge, so the shift check cannot run."
+                " Nothing was stored.",
+            ),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Ask an Engineer to import a known-OK board and a known-NG board of each Critical defect type in"
+                " Training. Until then, an Admin can turn the shift check off on Settings.",
+            ),
+        ),
+        ErrorCode(
             "AOI-CMP-001",
             QT_TRANSLATE_NOOP("Errors", "Result has no stored heatmaps"),
             QT_TRANSLATE_NOOP(
