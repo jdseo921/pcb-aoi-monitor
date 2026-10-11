@@ -157,6 +157,7 @@ def test_req_tst_003_a_preview_is_judged_by_what_judged_its_row_or_not_at_all(
         monkeypatch.setattr(QFileDialog, "getSaveFileName", staticmethod(lambda *a, **k: (str(rows_csv), "")))
         win.set_user("admin")  # only an Admin exports (Q58, #151)
         page.export_csv()
+        qtbot.waitUntil(lambda: page._bg is None, timeout=30000)  # written on the pool (REQ-SET-021)
         with rows_csv.open(encoding="utf-8-sig", newline="") as f:
             assert {r["model_version"] for r in csv.DictReader(f)} == {"v1.0"}
         _save_as(monkeypatch, tmp_path / "report.pdf")
@@ -663,6 +664,7 @@ def test_req_tst_005_a_run_judged_with_the_ai_check_off_says_so(
     monkeypatch.setattr(QFileDialog, "getSaveFileName", staticmethod(lambda *a, **k: (str(out), "CSV (*.csv)")))
     win.set_user("admin")  # only an Admin exports (Q58, #151)
     page.export_csv()
+    qtbot.waitUntil(lambda: page._bg is None, timeout=30000)  # written on the pool (REQ-SET-021)
     with out.open(encoding="utf-8-sig", newline="") as f:
         exported = list(csv.DictReader(f))
     report = page._report_html()

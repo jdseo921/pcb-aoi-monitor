@@ -132,7 +132,7 @@ def test_req_trn_001_ng_has_dct_type(
     assert [(r["label"], r["defect_type"]) for r in ctx.samples(BOARD)] == [("NG", "Missing Component"), ("OK", None)]
 
 
-def test_req_trn_001_update_sample_relabels_ng_only_with_one_of_the_33_types(
+def test_req_trn_001_update_sample_relabels_ng_only_with_one_of_the_defect_types(
     ctx: AppContext, synthetic_dataset: Path
 ) -> None:
     """AppContext.update_sample holds to the import's rule: it refuses NG without one of the 37 types (none, "Unknown /

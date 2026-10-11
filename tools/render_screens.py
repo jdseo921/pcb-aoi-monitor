@@ -59,6 +59,7 @@ FIXED_SSIM, FIXED_INLIERS = 0.95, 400  # the similarity and alignment points Com
 PAGE_VIEWS = {  # <page>-<view>-<role>
     "Training": ("datasets", "freeze", "split", "blind"),
     "Settings": ("restore", "move-in", "shred"),
+    "Logs & Export": ("types",),
 }
 STORED_STATES = (  # Compare
     "compare-stored-operator", "compare-golden-changed-operator", "compare-tried-engineer", "compare-save-engineer",
@@ -331,7 +332,7 @@ def show_view(win: MainWindow, title: str, view: str | None) -> None:
     fewer): Stop closes it, the status line saying so until the next page clears it, and with None the focus is
     cleared, as Training opens with none, so the pages after render alike.
     Settings' are Restore Key…, Move Board Model In… and Shred Store… on the store the screenshot workspace's version
-    is in."""
+    is in. Logs & Export's is its Defect types tab, counted on the records the filter lists (REQ-LOG-008)."""
     from PySide6.QtWidgets import QApplication
 
     page: Any = win.pages[title]
@@ -353,6 +354,9 @@ def show_view(win: MainWindow, title: str, view: str | None) -> None:
             page.versions.split.seed.setText(str(DATASET_SEED))  # not a random one, so a render does not change
         if view is None and (focus := QApplication.focusWidget()) is not None:
             focus.clearFocus()
+    if title == "Logs & Export":
+        page.tabs.setCurrentIndex(1 if view == "types" else 0)
+        wait_until(lambda: page.counting is None)  # counted on a pool thread
     if title == "Settings":
         page.stores.close_sheet()
         steps = {"restore": page.stores.btn_restore, "move-in": page.stores.btn_move, "shred": page.stores.btn_shred}

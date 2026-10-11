@@ -265,7 +265,12 @@ class RecipeEditorPage(Page):
         ml.addWidget(QLabel(self.tr("The 10 mandatory AOI checks (defect classification table, section 4):")))
         self.mand_list = QListWidget()
         ml.addWidget(self.mand_list, 1)
-        whole = QLabel(self.tr("• whole board: the AI model and the Golden board comparison cover it without an ROI."))
+        whole = QLabel(
+            self.tr(
+                "• whole board: the AI model and the Golden board comparison find it without an ROI, as a difference"
+                " from the Golden board, and name it Anomaly."
+            )
+        )
         whole.setObjectName("muted")
         whole.setWordWrap(True)
         ml.addWidget(whole)

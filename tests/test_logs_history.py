@@ -1,5 +1,6 @@
 """Logs & Export at scale (stage S51): REQ-LOG-001, filters over 100,000 records within 1 s through the indexes of
-migration 0022, a Result filter and every column sorting.
+migration 0022, a Result filter and every column sorting; and REQ-LOG-008, the defects of a week's records counted by
+type within the same 1 s.
 
 The 100,000 records are written straight into the workspace's database in one transaction, as many as a line stores in
 months, rather than inspected one by one; their verdicts are drawn at random, so nothing here is an accuracy. The
@@ -129,6 +130,16 @@ def test_req_log_001_filters_over_100000_records_return_within_1_s(
     for name, plan in zip(cases, plans, strict=True):
         assert not any(d.startswith("SCAN i") for d in plan), (name, plan)  # through an index of 0022
         assert any("defects_inspection" in d for d in plan), (name, plan)
+    week_rows = [r for r in rows if r["id"] in cases["7 days, every board model"][1]]
+    start = perf_counter()
+    (types,) = ctx.defect_pareto(r["id"] for r in week_rows)  # the Defect types tab on the page's 7 days (REQ-LOG-008)
+    times["defect types, 7 days"] = perf_counter() - start
+    with_defects = [r for r in week_rows if r["defect_count"]]
+    assert (types["type"], types["defects"], types["boards"]) == (
+        "Scratch",
+        sum(r["defect_count"] for r in with_defects),
+        len(with_defects),
+    )
 
     win = MainWindow(ctx)
     qtbot.addWidget(win)
@@ -156,6 +167,7 @@ def test_req_log_001_filters_over_100000_records_return_within_1_s(
     for (name, (_, expected)), plan in zip(cases.items(), plans, strict=True):
         print(f"  {name}: {len(expected)} records in {times[name] * 1000:.1f} ms; plan {plan}")
     print(f"  page opened on 7 days, every board model: {len(opened)} rows in {default * 1000:.1f} ms")
+    print(f"  defect types of those {len(week_rows)} records: {times['defect types, 7 days'] * 1000:.1f} ms")
     for name in (f"page: {combined}", "page: no match"):
         print(f"  {name}: {times[name] * 1000:.1f} ms")
     assert max(times.values()) < BUDGET_S, times

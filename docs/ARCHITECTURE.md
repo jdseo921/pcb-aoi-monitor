@@ -762,7 +762,8 @@ and maps has ended, and "Would be" shows within 300 ms of the key at 5 MP (`test
 | Home, Inspection, Compare, Logs (view) | ✓ | ✓ | ✓ |
 | Inspection, Logs → Real defect / False call… (review a call, REQ-INSP-013, ADR 0013) | ✓ | ✓ | ✓ |
 | Inspection → Shift Check (master samples, REQ-INSP-017, ADR 0014) | ✓ | ✓ | ✓ |
-| Logs export / archive | | ✓ | ✓ |
+| Logs archive | | ✓ | ✓ |
+| Logs export, AI Model Test export, Save Image… (Q58, #151) | | | ✓ |
 | Logs → Delete Records…, Training → Remove (REQ-LOG-003) | | | ✓ |
 | Training, AI Model Test, Recipe Editor, 3D Profile | | ✓ | ✓ |
 | Compare → Try other thresholds (thresholds, Re-evaluate, Save to Recipe) | | ✓ | ✓ |
@@ -798,7 +799,7 @@ The writes, their roles and entries:
 | `save_recipe` | Engineer | `recipe.save` (the latest revision's body before, the new one after, and the reason typed on Save Recipe's sheet, REQ-RCP-004 and REQ-RCP-005); object = recipe UUID. A revision that sets, changes or clears the AI score threshold's override is also audited as `recipe.ai_threshold` (revision, override, the threshold that judges, the active AI model's version and calibrated value); object = board model name (REQ-TRN-015). A size in mm the engine cannot apply is `AOI-RCP-011`, and any recipe while the board model's scale cannot be read `AOI-RCP-012`, nothing written (S29) |
 | `batch_test` | Engineer | `test.run` (folder, model version, metrics); object = board model name |
 | `export_model` | Engineer | `export.model` (destination, stored as below). An AI model is the station's own, not a customer's result |
-| `export_overlays`, `export_csv` | Admin | `export.model`, `export.overlays`, `export.csv` (destination, relative to the workspace when inside it, else in full (#196); counts; Logs & Export's overlays also the `filter` that listed the records, REQ-LOG-002). Customer images and results leave the station only by an Admin (Q58, #151): the export buttons of Logs & Export, AI Model Test and Training show for an Admin alone |
+| `export_overlays`, `export_test_overlays`, `export_csv` | Admin | `export.model`, `export.overlays`, `export.test_overlays` (a validation run's annotated images, on the run: copied, rows, missing), `export.csv` (destination, relative to the workspace when inside it, else in full (#196); counts; Logs & Export's overlays also the `filter` that listed the records, REQ-LOG-002). Customer images and results leave the station only by an Admin (Q58, #151): the export buttons of Logs & Export, AI Model Test and Training show for an Admin alone |
 | `export_csv_files` | Admin | `export.csv` once per file (destination, stored as above, and row count; with `listed`, the `HistoryFilter` that listed the records, also `filter` and the record count `records`, REQ-LOG-002); object type = what the rows are. Logs & Export's records and checks: the files are written all or none (`atomic.write_all`), a file that cannot be written is `AOI-LOG-002` naming it, the entries go in one transaction, and the files are removed when the entries cannot be written (#195) |
 | `export_report` | Admin | `export.report` (destination, stored as for the exports above, board model, run UUID, AI model version, bytes); object = test run UUID. The page renders the PDF in memory and the service writes it through `atomic.py`; an export that cannot be written is `AOI-LOG-002`, as for `export_csv` (#180) |
 | `export_board_image` | Admin | `export.image` (destination, stored as for the exports above, board model, the board's file name, verdict); object type `inspection`, object = the record's UUID, none for a result that was not saved. Save Image… (F9) on Inspection, run on the pool as the user who pressed it: the picture with its defect boxes is encoded first (a name with no image format is `AOI-INSP-002`), written beside the destination under a temporary name (`atomic.staged`; a file that cannot be written is `AOI-LOG-002`), and moved into place in the transaction that writes its entry: when the entry cannot be written, the move fails or the commit fails, the destination is left exactly as it was, a file of that name unchanged and a folder made for it removed (#178, #241). The record is read before the write, so a read that fails leaves no picture. The page reads the result, the record and the board model when F9 is pressed, before the file dialog, whose event loop lets a run go on, so the entry always names the record whose picture it saved. Operator is the lowest role, so every role keeps F9 (REQ-INSP-005); the page enables F9 for the role in `REQUIRED_ROLE`, so whether #151 takes it from Operators is one word |
@@ -923,7 +924,8 @@ a day the clock cannot convert is no bound on its side, never an error (#174).
 Migration 0022 indexes `inspections` by time, and by board model, operator and result each followed by time, and
 `defects` by inspection, so each filter reads only its own rows and each listed record's defect count one index entry
 (REQ-LOG-001); the empty state and the summary line read the history's first and last time and its archived count
-(`AppContext.history_span`), never every record.
+(`AppContext.history_span`), never every record. The Defect types tab counts the listed records' defects by type
+through the same `defects` index, 500 records per query, on the pool thread (`AppContext.defect_pareto`, REQ-LOG-008).
 Every file the app writes (images, overlays, AI models, exports, settings) goes through `aoi/data/atomic.py`:
 a temporary name in the same folder, flush and fsync, then an atomic rename, and an inspection's row, checks and
 defects commit in one transaction, so a crash leaves a whole result or none (REQ-INSP-008). A save that fails before its

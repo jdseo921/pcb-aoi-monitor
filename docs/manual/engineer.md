@@ -103,9 +103,9 @@ about 4 times slower; use it on a station with a CUDA graphics card, watch the t
 model's validation run decide.
 
 **Exports are an Admin's.** Customer images and results leave the station only by an Admin (#151): Export CSV and
-Export Image Overlays on Logs & Export, Export CSV, Export Report and Validation Report… on AI Model Test and Export
-Manifest… on Training show for an Admin alone, and AOI-USR-001 refuses an Engineer. An Engineer still archives, and
-exports an AI model.
+Export Image Overlays on Logs & Export, Export CSV, Export Image Overlays, Export Report and Validation Report… on AI
+Model Test and Export Manifest… on Training show for an Admin alone, and AOI-USR-001 refuses an Engineer. An Engineer
+still archives, and exports an AI model.
 
 **Demo workspace.** The demo has a workspace of its own, beside the station's, with its own `settings.json`; section 9
 says how an Admin opens and leaves it.
@@ -609,18 +609,23 @@ validation on a dataset version also stores recall per defect type, by the type 
 
 **Export Report.** Asks first, naming how many images, missed defects and false calls the report holds; the PDF then gives the rates with their counts and bounds, recall per defect type, each missed defect and false call with its overlay, every row, and the card of the AI model that judged the run. It is written whole or not at all and recorded in the audit trail.
 
-**Validation Report.** On History, select a run made on a frozen dataset version's locked validation set and press Validation Report…: the PDF follows the validation steps a customer signs: the data and the labeller agreement check, the targets agreed before testing beside the results, the locked set's manifest SHA-256, the results with counts and bounds, a page for each missed defect and false call, the AI model card, known limits and signature lines for the customer and the AI lead. A run on a folder, or a board model with no agreement check, has none (AOI-TST-007). The Korean headings are drafts for native review.
+**Validation Report.** On History, select a run made on a frozen dataset version's locked validation set and press Validation Report…: the PDF follows the validation steps a customer signs: the data and the labeller agreement check, the product's proposed targets beside the results (a customer's own targets are not yet stored with a run, so state any agreed ones beside that table), the engine's time per image (reading the file, saving and display are not counted), the locked set's manifest SHA-256, the results with counts and bounds, a page for each missed defect and false call, the AI model card, known limits and signature lines for the customer and the AI lead. A run on a folder, or a board model with no agreement check, has none (AOI-TST-007). The Korean headings are drafts for native review.
 
-**Overlays.** AI Model Test has no overlay export. Each run keeps the overlay of each of its rows in the workspace,
-under `results/test_runs/<run UUID>`, for its previews, and Export Report and Validation Report… print the overlay of
-each missed defect and false call. The overlays of inspected boards are exported on Logs & Export with **Export Image
-Overlays** (section 8): it asks first, naming the count, then copies the overlay picture of each record **Filter**
-listed, under its own name (section 8, Evidence files), into the folder you pick, the workspace's `exports` folder
-offered first; a record whose overlay file is gone is left out. The audit trail records it as `export.overlays`, with
-the folder, the filter and the counts.
+**Export Image Overlays.** Each run keeps the overlay of each of its rows in the workspace, under
+`results/test_runs/<run UUID>`, for its previews, and Export Report and Validation Report… print the overlay of each
+missed defect and false call. Export Image Overlays on AI Model Test hands over all of them, the annotated images Stage
+1 delivers beside the test result CSV: it asks first, naming how many images, then copies each row's overlay, at most
+1600 px on its longer side, into the folder you pick (the workspace's `exports` folder offered first) as
+`<row>_<image>_<verdict>.png`, such as `0007_ng_003_NG.png`, every missed defect and false call first, so Cancel keeps
+those. A row whose overlay is gone, or a run stored before overlays were kept, is left out and counted. The audit trail
+records it as `export.test_overlays` on the run, with the folder and the counts. The overlays of inspected boards are
+exported on Logs & Export with **Export Image Overlays** (section 8): it asks first, naming the count, then copies the
+overlay picture of each record **Filter** listed, under its own name (section 8, Evidence files), into the folder you
+pick, the workspace's `exports` folder offered first; a record whose overlay file is gone is left out. The audit trail
+records it as `export.overlays`, with the folder, the filter and the counts.
 
-Each validation run is stored with a UUID and the UUID of the AI model active when it ran. **Export CSV** writes one row
-per image (`image`, `gt` the label, `ai_result` the verdict, `score`, `defects`, `pass_fail`, `ai_check`, `defect_type` as
+Each validation run is stored with a UUID and the UUID of the AI model active when it ran. **Export CSV** asks first,
+naming how many images, then writes one row per image (`image`, `gt` the label, `ai_result` the verdict, `score`, `defects`, `pass_fail`, `ai_check`, `defect_type` as
 frozen, empty for a folder), then
 `run_uuid`, `model_version` and `model_uuid`. `ai_check` is `RAN`, `OFF` or `NO_AI_MODEL`, as on Logs & Export: with
 `OFF` the recipe turned the AI check off, so the AI model named did not judge the images, and the report says so under
@@ -829,6 +834,15 @@ file the app cannot delete (open in another program) is tried again at the next 
 after a second, and the exports and Delete Records… wait until they are listed. Its **Operator** box lists every user
 of the workspace, whatever their role, and the line under the table adds how many records of the workspace are
 archived. The Operator manual (section 5) and the paragraphs above give the rest.
+
+**Defect types.** The **Defect types** tab of Logs & Export is the line's defect Pareto: the listed records' defects
+counted by type, most first, with **Defects**, **Records** (the records holding the type), **Reviewed** and **False
+calls** (of those records, the ones reviewed on the line, and reviewed as a false call), **Cumulative** (the running
+share) and **Share**, with a bar beside it. Set the filter to a board model and a week and the first rows are the types
+to work on: a type with many false calls is a recipe to tighten, for instance with Learn From Labelled Boards…
+(section 5), and a type with many real defects is one for the process upstream. A review is of a whole record, so a record
+holding two types reviewed as a false call counts as one false call under each. The tab counts in the background, again
+when the filter or a review changes, and Export CSV's `defect_types` column carries the same names per record.
 
 **Archive.** At each start the app archives the records older than **Log retention (days)** (section 1), and **Archive
 older than 30 days** on Logs & Export, which names the retention in force, does the same at once; it is grey for an

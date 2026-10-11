@@ -88,6 +88,7 @@ HANDLE_PX = 16  # a corner handle of the selected defect box on Training's label
 SPACE, SPACE_S = 14, 8  # between blocks; inside a block
 RADIUS, RADIUS_L = 6, 10
 MARK_W = 6  # the verdict-colour bar beside a verdict said next to a control, such as Compare's "Would be"
+SHARE_BAR_W = 320  # the longest bar of Logs & Export's Defect types tab, the type with the most defects (REQ-LOG-008)
 
 TOKENS = {k: v for k, v in dict(globals()).items() if k.isupper()}
 

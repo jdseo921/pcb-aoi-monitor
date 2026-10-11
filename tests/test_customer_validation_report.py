@@ -22,7 +22,7 @@ from aoi.ui.pages.model_test import ModelTestPage
 from tests.test_req_done_in_v01 import BOARD, _window
 from tests.test_test_dataset import held_out
 
-SECTIONS = ("1. Data", "2. Targets agreed before testing", "3. Locked validation set", "4. Results",
+SECTIONS = ("1. Data", "2. Targets: the proposed defaults", "3. Locked validation set", "4. Results",
             "5. AI model card", "6. Known limits", "7. Sign-off")  # fmt: skip
 
 
@@ -79,8 +79,10 @@ def test_req_tst_008_targets_compared_with_results(qtbot: QtBot, trained_ctx: Ap
     assert targets["missed_critical"]["met"] == (len(missed) == 0)
     assert targets["seconds_per_image"]["result"] == report.p95([r["ms"] / 1000 for r in rows])
     html = page_html(qtbot, trained_ctx, data)
-    for name in ("Missed Critical defects", "False call rate", "Time per image, 95th percentile"):
-        assert re.search(rf"<td>{name}</td><td>[^<]+</td><td>[^<]+</td><td>(Met|Not met)</td>", html), name
+    engine = "Engine time per image, 95th percentile (reading, saving, display not counted)"  # not image in to screen
+    for name in ("Missed Critical defects", "False call rate", engine):
+        assert re.search(rf"<td>{re.escape(name)}</td><td>[^<]+</td><td>[^<]+</td><td>(Met|Not met)</td>", html), name
+    assert "not yet stored with a run" in html  # the targets are the defaults, and the report says so
 
 
 def test_req_tst_008_every_miss_has_a_page(qtbot: QtBot, trained_ctx: AppContext) -> None:

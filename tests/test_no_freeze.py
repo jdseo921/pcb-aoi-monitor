@@ -49,7 +49,9 @@ STALL_S = BUDGET_S + 0.5  # longer than the budget: on the UI thread it is one g
 HEAVY: dict[type, tuple[str, ...]] = {
     AppContext: ("load_image", "inspector", "inspect", "inspect_file", "log_result", "import_samples")
     + ("re_evaluate",)  # Compare's Re-evaluate on a stored result (REQ-CMP-005)
-    + ("checks_for_many", "export_csv_files", "export_overlays"),  # the Logs exports' work (#194)
+    + ("checks_for_many", "export_csv_files", "export_overlays")  # the Logs exports' work (#194)
+    + ("export_csv", "export_test_overlays")  # AI Model Test's exports (REQ-TST-004)
+    + ("defect_pareto",),  # Logs & Export's Defect types tab (REQ-LOG-008)
     Inspector: ("inspect",),
 }
 
@@ -366,6 +368,84 @@ def test_req_set_021_logs_export_does_not_freeze(
     qtbot.waitUntil(lambda: status().startswith("Export CSV stopped"), timeout=60000)
     assert not out_csv.exists() and not out_csv.with_name("inspections_checks.csv").exists()
     assert status() == "Export CSV stopped: no file was written."
+    for d in ("out", "out2"):
+        shutil.rmtree(tmp_path / d)  # up to 2 GB of copies: free the disk now, not when pytest prunes old runs
+
+
+def test_req_set_020_logs_defect_types_are_counted_on_the_pool(qtbot: QtBot, ctx: AppContext) -> None:
+    """REQ-LOG-008: the Defect types tab counts the listed records' defects on a pool thread, so a count that takes
+    longer than the budget holds no frame; the table fills when it arrives."""
+    ctx.ensure_board_model(BOARD)
+    box = {"no": 1, "type": "Spur", "score": 0.9, "side": "Top", "x": 1, "y": 1, "w": 4, "h": 4}
+    ctx.db.add_inspection({"board_model": BOARD, "result": "NG", "view": "Top", "image_path": "ng.png"}, [box])
+    win = _window(qtbot, ctx, "Operator")
+    page = win.pages["Logs & Export"]
+    win.navigate("Logs & Export")
+    listed(qtbot, page)
+    with heavy_calls(stall="AppContext.defect_pareto") as calls, gap_meter(qtbot) as g:
+        page.tabs.setCurrentIndex(1)
+        assert page.type_table.rowCount() == 0, "counted on a pool thread: nothing before the tab is shown"
+        qtbot.waitUntil(lambda: page.counting is None, timeout=30000)
+    assert_off_ui_thread(calls, "AppContext.defect_pareto")
+    assert g["longest_s"] < BUDGET_S, g
+    assert page.type_table.rowCount() == 1
+
+
+def test_req_set_021_model_test_exports_do_not_freeze(
+    qtbot: QtBot, trained_ctx: AppContext, board_5mp: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """AI Model Test's Export Image Overlays and Export CSV run on a pool thread under the table's busy overlay
+    (REQ-TST-004); Cancel on the overlays keeps those copied, every miss and false call among the first, and says so."""
+    n = _copies_for_a_stall(board_5mp, tmp_path)
+    (tmp_path / "overlays").mkdir()
+    rows: list[dict[str, object]] = []
+    for i in range(n):  # one 5 MP overlay per row, each under its own name (hard links: no disk for n copies)
+        overlay = tmp_path / "overlays" / f"overlay_{i:03d}.png"
+        os.link(board_5mp, overlay)
+        row = {"image": str(tmp_path / f"board_{i:03d}.png"), "gt": "NG", "ai_result": "NG", "score": 1.0}
+        rows.append(row | {"defects": 1, "pass_fail": "PASS", "overlay": str(overlay)})
+    rows[-1] |= {"ai_result": "OK", "pass_fail": "FAIL"}  # a missed defect, last in the run
+    win = _window(qtbot, trained_ctx, "Admin")  # only an Admin exports (Q58, #151)
+    page = win.pages["AI Model Test"]
+    win.navigate("AI Model Test")
+    page._show((classification_metrics(rows), rows, trained_ctx.inspector(BOARD).judged_by), str(tmp_path), BOARD)
+    folder = {"out": tmp_path / "out"}
+    folder["out"].mkdir()
+    monkeypatch.setattr(QMessageBox, "question", staticmethod(lambda *a, **k: QMessageBox.StandardButton.Yes))
+    monkeypatch.setattr(QFileDialog, "getExistingDirectory", staticmethod(lambda *a, **k: str(folder["out"])))
+    out_csv = tmp_path / "results.csv"
+    monkeypatch.setattr(QFileDialog, "getSaveFileName", staticmethod(lambda *a, **k: (str(out_csv), "CSV (*.csv)")))
+    status = win.statusBar().currentMessage
+
+    def copied(d: Path) -> list[str]:
+        return sorted(p.name for p in d.glob("*_NG.png")) + sorted(p.name for p in d.glob("*_OK.png"))
+
+    with heavy_calls(stall="AppContext.export_test_overlays") as calls, gap_meter(qtbot) as g:
+        page.export_overlays()
+        assert not copied(folder["out"]), "the copy runs on a pool thread: no image before the action returns"
+        qtbot.waitUntil(lambda: status().startswith("Copied"), timeout=120000)
+    assert_off_ui_thread(calls, "AppContext.export_test_overlays")
+    assert g["longest_s"] < BUDGET_S, g
+    assert len(copied(folder["out"])) == n and status() == f"Copied {n} annotated image(s) to {folder['out']}"
+    with heavy_calls(stall="AppContext.export_csv") as calls, gap_meter(qtbot) as g:
+        page.export_csv()
+        assert not out_csv.exists(), "the CSV export runs on a pool thread: no file before the action returns"
+        qtbot.waitUntil(lambda: status().startswith("Exported"), timeout=60000)
+    assert_off_ui_thread(calls, "AppContext.export_csv")
+    assert g["longest_s"] < BUDGET_S, g
+    assert out_csv.read_text(encoding="utf-8-sig").count("\n") == n + 1  # the header and one line per row
+
+    page.busy_export.SHOW_AFTER_S, page.busy_export.DETAIL_AFTER_S = 0.1, 0.3  # the 1 s and 10 s of the product
+    folder["out"] = tmp_path / "out2"
+    folder["out"].mkdir()
+    page.export_overlays()
+    _cancel_when_started(qtbot, page.busy_export, lambda: bool(copied(folder["out"])))
+    qtbot.waitUntil(lambda: status().startswith("Stopped"), timeout=60000)
+    kept = copied(folder["out"])
+    assert 0 < len(kept) < n and f"{n:04d}_board_{n - 1:03d}_OK.png" in kept  # the miss was copied first
+    assert status() == (
+        f"Stopped: copied {len(kept)} annotated image(s) to {folder['out']}; the others were not copied."
+    )
     for d in ("out", "out2"):
         shutil.rmtree(tmp_path / d)  # up to 2 GB of copies: free the disk now, not when pytest prunes old runs
 

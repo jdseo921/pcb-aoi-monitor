@@ -25,7 +25,7 @@ Source (● Dataset version [DS-TBOXA1-R3-TOP-v4 ▾], its locked validation set
 │ Solder Bridge    │ 0 of 0   │ Critical  │ │ ok_014.png │ OK    │ ✗ NG    │ 1.12    │ Fail ■   │ │ selected row       │
 └─────────────────────────────────────────┘ │ ng_003.png │ NG    │ ✗ NG    │ 3.81    │ Pass     │ │ [Open in Compare ›]│
                                             └───────────────────────────────────────────────────┘ └────────────────────┘
-[Export CSV…] [Export Overlays…] [Export Report (PDF)…] [Validation Report…]   Stored 2026-10-01 13:52 · v1.2
+[Export CSV…] [Export Image Overlays] [Export Report (PDF)…] [Validation Report…]   Stored 2026-10-01 13:52 · v1.2
 ```
 
 Every rate reads "n of N" with a one-sided 95 % Clopper-Pearson bound, so 0 of 50 reads "95 % upper bound
@@ -54,7 +54,7 @@ run with its tiles, table and exports (REQ-TST-005).
 | Results table | Image, Label, Verdict, AI score, Pass/Fail | ↑ ↓ | rows 14 pt | Columns in that order (names as built in #102); Verdict cells carry the shape; sortable after the run |
 | Preview | Open in Compare › | Enter | B | Opens Compare on that stored result, failing checks highlighted |
 | Export CSV | Export CSV… | — | B | UTF-8 with BOM, one row per image; confirmation names the count (REQ-TST-004) |
-| Export overlays | Export Overlays… | — | B | Every miss and false call, then the rest; confirmation names the count |
+| Export overlays | Export Image Overlays | — | B | Every miss and false call, then the rest; confirmation names the count; an Admin's (Q58, #151); `<row>_<image>_<verdict>.png` (REQ-TST-004) |
 | Export report | Export Report (PDF)… | — | B | Metrics with counts and bounds, overlays of every miss and false call, the model card; the same PDF serves the demo |
 | Validation report | Validation Report… | — | B | The C&L validation steps: data, targets, locked set, results with counts and bounds, every miss and false call, signature lines for the customer and the AI lead (REQ-TST-008); needs a dataset-version run |
 

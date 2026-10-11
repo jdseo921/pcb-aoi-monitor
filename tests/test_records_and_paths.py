@@ -368,6 +368,7 @@ def test_req_set_017_validation_exports_name_the_run_and_the_ai_model(
     out = tmp_path / "model_test.csv"
     monkeypatch.setattr(QFileDialog, "getSaveFileName", staticmethod(lambda *a, **k: (str(out), "CSV (*.csv)")))
     page.export_csv()
+    qtbot.waitUntil(lambda: page._bg is None, timeout=30000)  # written on the pool (REQ-SET-021)
     with out.open(encoding="utf-8-sig", newline="") as f:
         exported = list(csv.DictReader(f))
     assert len(exported) == len(run["results"]) > 0

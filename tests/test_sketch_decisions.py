@@ -30,21 +30,21 @@ def test_req_set_004_text_on_the_green_red_and_blue_fills_is_black() -> None:
 
 
 def test_req_usr_001_only_an_admin_sees_the_exports(qtbot: QtBot, trained_ctx: AppContext) -> None:
-    """Q58: Export CSV and Export Image Overlays on Logs & Export, Export CSV, Export Report and Validation Report… on
-    AI Model Test, and Export Manifest… on Training show for an Admin alone; the services refuse the rest (see
-    test_roles_and_audit)."""
+    """Q58: Export CSV and Export Image Overlays on Logs & Export, Export CSV, Export Image Overlays, Export Report and
+    Validation Report… on AI Model Test, and Export Manifest… on Training show for an Admin alone; the services refuse
+    the rest (see test_roles_and_audit)."""
     win = _window(qtbot, trained_ctx)
     logs, test, training = (win.pages[p] for p in ("Logs & Export", "AI Model Test", "Training"))
 
     def exports() -> list[bool]:
         for name in ("Logs & Export", "AI Model Test", "Training"):
             win.navigate(name)
-        buttons = (logs.btn_csv, logs.btn_img, test.btn_csv, test.btn_report, test.btn_validation)
+        buttons = (logs.btn_csv, logs.btn_img, test.btn_csv, test.btn_img, test.btn_report, test.btn_validation)
         return [not b.isHidden() for b in (*buttons, training.versions.btn_export)]
 
-    assert exports() == [False] * 6
+    assert exports() == [False] * 7
     win.set_user("admin")
-    assert exports() == [True] * 6
+    assert exports() == [True] * 7
 
 
 def test_req_insp_002_a_box_label_carries_the_severity_word_and_shape(

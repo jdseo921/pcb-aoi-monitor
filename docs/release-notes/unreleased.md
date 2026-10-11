@@ -28,6 +28,10 @@ None. / 없음.
 
 - [REQ-RCP-007] Recipe Editor › Thresholds › Fine alignment: each board is matched to the Golden board to a fraction of a pixel before the comparison, for fewer false calls along copper edges, at about 0.1 s more per board. Off by default, and stored only when on, so no existing recipe or verdict changes. / 레시피 편집기 › 임계값 › 정밀 정렬: 비교 전에 각 보드를 골든 보드에 1픽셀 미만 정밀도로 맞춰 구리 가장자리의 오검출을 줄이며, 보드당 약 0.1초가 더 걸립니다. 기본값은 꺼짐이며 켰을 때만 저장되므로 기존 레시피와 판정은 바뀌지 않습니다.
 
+- [REQ-TST-004] AI Model Test › Export Image Overlays (an Admin's, Q58) copies a run's annotated images, one per row named `<row>_<image>_<verdict>.png`, every missed defect and false call first, after a question naming the count, audited on the run as `export.test_overlays`: the Stage 1 annotated images beside the test result CSV. / AI 모델 테스트 › Export Image Overlays(관리자 전용, Q58)는 개수를 묻고 확인한 뒤 실행의 주석 이미지를 행마다 하나씩 `<행>_<이미지>_<판정>.png`로 복사하며, 놓친 결함과 오검출을 먼저 복사하고 실행에 `export.test_overlays`로 감사 기록합니다. 테스트 결과 CSV와 함께 전달하는 1단계 주석 이미지입니다.
+
+- [REQ-LOG-008] Logs & Export has two tabs, Records and Defect types. Defect types counts the listed records' defects by type, most first, as a Pareto chart: per type its defects, the records holding it, how many of those were reviewed and how many as a false call, the running total and the share, with a bar for each type. It follows the filter and every review saved, and is read in the background. Every role sees it. / 로그 및 내보내기에 Records와 Defect types 두 탭이 생겼습니다. Defect types는 목록에 있는 기록의 결함을 유형별로 많은 순서대로 세어 파레토 차트로 보여 줍니다. 유형마다 결함 수, 그 유형이 있는 기록 수, 그중 검토된 수와 오검출로 검토된 수, 누적 비율과 점유율을 막대와 함께 보여 줍니다. 필터와 저장된 검토를 따라가며 백그라운드에서 읽습니다. 모든 역할이 볼 수 있습니다.
+
 ## Improved / 개선 (draft)
 
 - [REQ-SET-004] Text on the green, red and blue fills (verdict banner, Start, Stop, primary and danger buttons) is black, reading at 5.0:1 or more; it was white at 3.3 to 4.2:1 (#150). / 녹색, 빨간색, 파란색 배경 위 글자(판정 배너, 시작, 정지, 주요 및 위험 버튼)가 검은색이 되어 5.0:1 이상으로 읽힙니다. 이전에는 흰색으로 3.3~4.2:1이었습니다(#150).
@@ -36,11 +40,16 @@ None. / 없음.
 
 - [REQ-SET-004] Ctrl+1 to Ctrl+9 open the sidebar's pages from any page, F1 lists the keys of the page shown and the pages the role opens, and the sidebar names each page's key in its tooltip. Home greys a card whose page the role cannot open and reads "For Engineer / Admin", so an Operator's Home has no button that leads nowhere. / Ctrl+1~Ctrl+9로 어느 페이지에서나 사이드바의 페이지를 열 수 있고, F1은 현재 페이지의 단축키와 역할이 열 수 있는 페이지를 보여 주며, 사이드바 툴팁에 각 페이지의 단축키가 표시됩니다. 홈에서 역할이 열 수 없는 페이지의 카드는 회색으로 표시되고 열 수 있는 역할을 알려 주므로, 작업자의 홈에는 아무 곳으로도 가지 않는 버튼이 없습니다.
 
+- [REQ-TST-004] AI Model Test's Export CSV asks first, naming how many images, as Logs & Export and Export Image Overlays do, and writes the file without holding up the window. / AI 모델 테스트의 Export CSV는 로그 및 내보내기와 Export Image Overlays처럼 이미지 개수를 먼저 묻고, 창을 멈추지 않고 파일을 씁니다.
+
 ## Fixed / 수정 (draft)
 
 - [REQ-SET-004] Every page scrolls where the screen is smaller than the page, so a 1366 × 768 station shows every control; before, the window could not shrink below about 1886 × 821 px and the right-hand controls sat off-screen (#104). / 화면이 페이지보다 작으면 모든 페이지가 스크롤되어 1366 × 768 스테이션에서도 모든 컨트롤이 보입니다. 이전에는 창이 약 1886 × 821 px 아래로 줄어들지 않아 오른쪽 컨트롤이 화면 밖에 있었습니다(#104).
 - [REQ-SET-004] A long folder, board model or file name, even one with no _ or -, no longer widens the window past the screen: AI Model Test's folder line and note, Compare's labels and Inspection's summary line wrap it, and a line that cuts it shows it whole in its tooltip (#251). / 긴 폴더, 보드 모델 또는 파일 이름(_ 나 - 가 없는 이름 포함)이 더 이상 창을 화면보다 넓히지 않습니다. AI 모델 테스트의 폴더 줄과 안내, 비교 화면의 라벨, 검사 화면의 요약 줄이 줄을 바꾸며, 이름이 잘리면 툴팁에 전체 이름이 표시됩니다(#251).
 - [REQ-SET-004] On Logs & Export, the Board model and Operator filters keep their width; a moment after the page opened, the Board model list could shrink and leave a gap beside it. / 로그 및 내보내기에서 보드 모델과 작업자 필터가 너비를 유지합니다. 이전에는 페이지가 열린 직후 보드 모델 목록이 줄어들어 옆에 빈칸이 생길 수 있었습니다.
+- [REQ-SET-007] On the demo workspace, Verify Manifest finds the demo's dataset version unchanged; before, it found the manifest missing and marked the version changed for the session. / 데모 작업 공간에서 Verify Manifest가 데모 데이터셋 버전을 변경 없음으로 확인합니다. 이전에는 매니페스트가 없다고 나오고 해당 세션 동안 버전이 변경됨으로 표시되었습니다.
+- [REQ-TST-008] The validation report says its targets are the product's proposed defaults, as a customer's own are not yet stored with a run, and that its time per image is the engine's, without reading the file, saving or display; before, it headed them "Targets agreed before testing". / 검증 보고서가 목표를 제품의 제안 기본값이라고 밝히고(고객이 합의한 목표는 아직 실행과 함께 저장되지 않음), 이미지당 시간이 파일 읽기·저장·표시를 뺀 엔진 시간임을 밝힙니다. 이전 제목은 "사전 합의 목표"였습니다.
+- [REQ-RCP-005] The Recipe Editor's AOI checks tab says a check covered by the whole board is found as a difference from the Golden board and named Anomaly; before, it said only that the AI model and the comparison cover it. / 레시피 편집기의 AOI 검사 탭이 보드 전체로 다루는 검사는 Golden board와의 차이로 찾아 Anomaly로 이름 붙인다고 밝힙니다.
 
 ## Security / 보안 (draft)
 

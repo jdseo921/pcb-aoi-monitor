@@ -89,6 +89,24 @@ def test_req_set_007_load_and_reset_under_10s(bundle: Path, tmp_path: Path) -> N
     assert run_boards(bundle, folder, keys)[3] == "NG"  # the store's key is still there: a reset changes no key
 
 
+def test_req_set_007_verify_manifest_finds_the_demo_version_unchanged(bundle: Path, tmp_path: Path) -> None:
+    """The demo's dataset version is written through the database (tools/trainable.py), and its manifest file was not:
+    Verify Manifest on the demo's Datasets tab found the manifest missing and marked the version changed for the
+    session (AOI-TRN-023), in front of a client. The bundle now holds the manifest the freeze would write, sealed in
+    the demo's store, and every file matches it."""
+    keys = credentials.MemoryCredentials()
+    folder = demo.demo_folder(production(tmp_path))
+    demo.load(bundle, folder, {"language": "en"}, keys)
+    ctx = AppContext(Settings(workspace=str(folder), device="cpu"), keys)
+    try:
+        (version,) = ctx.db.datasets(demo.read_bundle(bundle)["board_model"])
+        found = ctx.verify_dataset(version["uuid"])
+        assert (found["manifest"], found["changed"], found["missing"]) == ("same", [], [])
+        assert found["files"] == len(found["matched"]) > 0
+    finally:
+        ctx.close()
+
+
 def test_req_set_007_production_untouched(bundle: Path, tmp_path: Path) -> None:
     root = production(tmp_path)
     before = hashes(root)
