@@ -180,6 +180,33 @@ def test_req_set_002_saved_training_defaults_reach_the_training_page(
     training.worker = None
 
 
+def test_req_trn_007_the_input_size_is_256_by_default_and_640_is_offered_for_small_defects(
+    qtbot: QtBot, trained_ctx: AppContext, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """ADR 0012, decision 1: the AI model's input size stays 256 px by default, the size that trains 50 OK images within
+    REQ-TRN-007's budget on a CPU, and each run may take 640 px, which finds smaller defects at more time and more false
+    calls; the size is the run's, kept in its AI model's metadata, so each board model has its own."""
+    monkeypatch.setattr(QMessageBox, "information", staticmethod(lambda *a: QMessageBox.StandardButton.Ok))
+    win = _window(qtbot, trained_ctx, "Admin")
+    training = cast(TrainingPage, win.pages["Training"])
+    settings = cast(SettingsPage, win.pages["Settings"])
+    offered = ["128", "256", "384", "512", "640"]
+    for box in (settings.input_size, training.input_size):
+        assert [box.itemText(i) for i in range(box.count())] == offered
+        assert box.currentText() == "256"
+    assert all(int(size) % anomaly.STRIDE == 0 for size in offered)  # each a whole number of the network's steps
+    win.navigate("Settings")
+    settings.input_size.setCurrentText("640")
+    settings.save()
+    assert trained_ctx.settings.image_size == 640
+    win.navigate("Training")
+    assert training.input_size.currentText() == "640"
+    runs: list[int] = []
+    monkeypatch.setattr(trained_ctx, "start_training", lambda version, epochs, size, listen: runs.append(size))
+    training.train()
+    assert runs == [640]
+
+
 def test_req_set_002_a_run_keeps_the_device_it_started_with(
     qtbot: QtBot, trained_ctx: AppContext, monkeypatch: pytest.MonkeyPatch
 ) -> None:

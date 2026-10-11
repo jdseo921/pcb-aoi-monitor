@@ -19,9 +19,9 @@ from time import perf_counter
 from typing import Any
 
 import pytest
-from PySide6.QtCore import Qt
+from PySide6.QtCore import QPoint, QRect, Qt
 from PySide6.QtGui import QColor, QGuiApplication, QPalette
-from PySide6.QtWidgets import QAbstractButton, QAbstractSpinBox, QApplication, QPushButton, QWidget
+from PySide6.QtWidgets import QAbstractButton, QAbstractSpinBox, QApplication, QPushButton, QScrollArea, QWidget
 from pytestqt.qtbot import QtBot
 
 from aoi.core.explain import TRIED_AI_OFF, explain
@@ -1109,3 +1109,40 @@ def test_req_cmp_005_reevaluate_at_5_mp_answers_within_300_ms_off_the_window_thr
     median, worst = statistics.median(took), max(took)
     print(f"Re-evaluate on Compare at 5 MP: median {median * 1000:.0f} ms, worst {worst * 1000:.0f} ms")
     assert median < 0.3, took
+
+
+@pytest.mark.parametrize("size", [(1600, 900), (1366, 768)])
+def test_req_set_004_tab_shows_each_try_panel_field_whole_below_the_reference_screen(
+    qtbot: QtBot, trained_ctx: AppContext, ng_board: Path, size: tuple[int, int]
+) -> None:
+    """Below the 1920 x 1080 screen the pages are laid out for (REQ-SET-004), the page area scrolls (#104) and hides no
+    control (ADR 0012, decision 2): at 1600 x 900 every field of Compare's Try other thresholds panel is in view as laid
+    out; at 1366 x 768, where the panel runs past the area's edge, Tab brings each field whole into view, as the mouse
+    can by scrolling."""
+    win, compare, _iid = _stored_on_compare(qtbot, trained_ctx, ng_board, "Engineer")
+    win.resize(*size)
+    QApplication.processEvents()
+    area = win.findChild(QScrollArea, "pages")
+    assert area is not None and area.isAncestorOf(compare)
+    view = area.viewport()
+    panel = _panel(compare)
+    fields = [  # a spin box's own line edit is its focus proxy, not a field of its own
+        w
+        for w in panel.findChildren(QWidget)
+        if w.isVisible()
+        and w.isEnabled()
+        and w.focusPolicy() & Qt.FocusPolicy.TabFocus
+        and not isinstance(w.parentWidget(), QAbstractSpinBox)
+    ]
+    beyond = [w for w in fields if not view.rect().contains(QRect(w.mapTo(view, QPoint(0, 0)), w.size()))]
+    if size == (1600, 900):  # the panel fits as laid out
+        assert not beyond, [type(w).__name__ for w in beyond]
+    else:  # some field starts past the area's edge, or this test would check nothing there
+        assert beyond, f"at {size[0]} x {size[1]} every field is in view without scrolling"
+    fields[0].setFocus(Qt.FocusReason.TabFocusReason)
+    shown = []  # each field Tab reaches in the panel, and where it shows in the page area
+    while (field := QApplication.focusWidget()) in fields and len(shown) < len(fields):
+        QApplication.processEvents()
+        shown.append((type(field).__name__, QRect(field.mapTo(view, QPoint(0, 0)), field.size())))
+        qtbot.keyClick(field, Qt.Key.Key_Tab)
+    assert len(shown) >= len(beyond) and all(view.rect().contains(r) for _, r in shown), (size, shown)

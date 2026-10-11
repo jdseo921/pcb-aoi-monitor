@@ -82,14 +82,22 @@ message; **cpu** keeps to the CPU. The **Device** line on Training names the dev
 at each start (`app.start`) and at each change (`device.change`). When a change applies is in "Settings and
 settings.json" above.
 
-**What each setting takes.** On the Settings page, **Default input size** is 128, 256, 384 or 512 (256 at first),
-**Default epochs** 5 to 1000 (60) and **Log retention (days)** 1 to 3650 (30): the age at which a record is archived,
-at each start and with the archive button on Logs & Export (section 8). **Largest image (megapixels)** (50) and
-**Largest image file (MB)** (200), `max_image_megapixels` and `max_image_megabytes` in `settings.json`, are the most an
-image may hold before it is refused, undecoded, on Inspection and in an import (AOI-INSP-005), each a whole number of 1
-or more; **Keep OK results' maps (days)** (7), `map_retention_days_ok`, is 0 or more (section 8, Evidence files). An
+**What each setting takes.** On the Settings page, **Default input size** is 128, 256, 384, 512 or 640 (256 at first;
+see below), **Default epochs** 5 to 1000 (60) and **Log retention (days)** 1 to 3650 (30): the age at which a record is
+archived, at each start and with the archive button on Logs & Export (section 8). **Largest image (megapixels)** (50)
+and **Largest image file (MB)** (200), `max_image_megapixels` and `max_image_megabytes` in `settings.json`, are the most
+an image may hold before it is refused, undecoded, on Inspection and in an import (AOI-INSP-005), each a whole number of
+1 or more; **Keep OK results' maps (days)** (7), `map_retention_days_ok`, is 0 or more (section 8, Evidence files). An
 Admin sets them on Settings (#153). AOI-SET-008 refuses any other value, on Settings and at start-up, naming the
 setting, the value and what it takes.
+
+**Choosing the input size.** The AI model scales each board image to this many pixels square before it learns or judges
+it, and each run keeps the size it was trained at in its AI model and model card, so each board model's AI model has its
+own (ADR 0012). Keep 256 unless the board model's smallest agreed defect is lost at that size: it trains 50 OK images
+within the 10 minutes on a CPU. 640 keeps small defects larger, and in an internal check on public scans it missed far
+fewer defective boards, but it called more defect-free boards NG or Warning, trained about 9 times longer and judged
+about 4 times slower; use it on a station with a CUDA graphics card, watch the time left on Training, and let the board
+model's validation run decide.
 
 **Exports are an Admin's.** Customer images and results leave the station only by an Admin (#151): Export CSV and
 Export Image Overlays on Logs & Export, Export CSV, Export Report and Validation Report… on AI Model Test and Export
