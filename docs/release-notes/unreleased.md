@@ -51,6 +51,7 @@ None. / 없음.
 - [REQ-TST-004] AI Model Test's Export CSV asks first, naming how many images, as Logs & Export and Export Image Overlays do, and writes the file without holding up the window. / AI 모델 테스트의 Export CSV는 로그 및 내보내기와 Export Image Overlays처럼 이미지 개수를 먼저 묻고, 창을 멈추지 않고 파일을 씁니다.
 
 - [REQ-TRN-006] The demo workspace's locked validation set holds 50 good boards and 11 defective ones, as the standard asks of a customer's (was 20 and 11). Run Test in the demo now reads 0 of 11 missed defects and 3 of 50 false calls on the drawn boards; the 15- and 45-minute demo scripts say so. / 데모 작업 공간의 잠긴 검증 세트가 표준이 고객 데이터에 요구하는 대로 양품 50장과 불량 11장을 갖습니다(이전 20장과 11장). 데모의 Run Test는 이제 그린 보드에서 놓친 불량 11장 중 0장, 오검출 50장 중 3장을 보여 주며, 15분과 45분 데모 스크립트에 반영했습니다.
+- [REQ-USR-003] [REQ-SET-007] A start signs in the user who last signed in on the station with Switch User, or `operator` if no one has; each sign-in is now an audit entry (`user.sign_in`). The demo (`--demo`, the Demo shortcut) always opens at Home signed in as its first Admin, as the demo scripts begin, where it opened on Inspection as `operator`. / 시작 시 이 스테이션에서 사용자 전환(Switch User)으로 마지막에 로그인한 사용자로, 아무도 없으면 `operator`로 로그인합니다. 각 로그인은 감사 항목(`user.sign_in`)으로 기록됩니다. 데모(`--demo`, Demo 바로 가기)는 데모 스크립트대로 항상 첫 번째 관리자로 로그인하여 홈에서 열립니다. 이전에는 `operator`로 검사 화면에서 열렸습니다.
 
 ## Fixed / 수정 (draft)
 
@@ -78,6 +79,8 @@ None. / 없음.
 - [REQ-TST-008] Migration 0025 adds the validation_targets table. Runs stored before it hold no targets: their validation report says they are held to the proposed defaults, as it did. / 마이그레이션 0025가 validation_targets 테이블을 추가합니다. 이전에 저장된 실행에는 목표가 없으므로, 검증 보고서는 이전처럼 제안된 기본값으로 평가한다고 표시합니다.
 
 - [REQ-USR-001] An Engineer who exported results before now asks an Admin to do it (#151). / 이전에 결과를 내보내던 엔지니어는 이제 관리자에게 요청해야 합니다(#151).
+
+- [REQ-USR-003] Migration 0026 adds an index to the audit table at the first start; no row changes, and the database is copied beside itself first, as before every migration. Until someone signs in with Switch User, a start signs in `operator`. / 마이그레이션 0026은 첫 시작 시 감사 테이블에 인덱스를 추가합니다. 행은 변경되지 않으며, 모든 마이그레이션 전과 같이 데이터베이스가 먼저 옆에 복사됩니다. 누군가 사용자 전환으로 로그인하기 전까지 시작 시 `operator`로 로그인합니다.
 
 <!--
 Item format: "- [REQ-INSP-005] Start, Stop, Next Board and Save Result work by F5, F6, F8 and F9. / F5, F6, F8, F9 키로

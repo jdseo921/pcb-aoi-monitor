@@ -120,15 +120,15 @@ def load(bundle: Path, folder: Path, settings: dict[str, Any], keys: credentials
 
 def load_beside(settings: Settings, keys: credentials.Credentials | None = None) -> Path:
     """The demo workspace beside the workspace of `settings`, loaded from the installed bundle (`bundle_dir`) when it
-    is not there yet and kept as it is when it is, with the station's own settings (AI device, language and the rest),
-    opening at Inspection, where its boards are queued, and asking for no shift check, so the scripted run plays at
-    once (ADR 0014); its folder. The key goes to `keys`, else to the station's key store. AoiError as `load` refuses
-    it (AOI-SET-015, AOI-SET-016)."""
+    is not there yet and kept as it is when it is, with the station's own settings (AI device, language and the rest)
+    and asking for no shift check, so the scripted run its boards are queued for on Inspection plays at once (ADR
+    0014); its folder. It opens at Home, signed in as its first Admin (MainWindow). The key goes to `keys`, else to the
+    station's key store. AoiError as `load` refuses it (AOI-SET-015, AOI-SET-016)."""
     folder = demo_folder(settings.root)
     values = asdict(settings)
     del values["workspace"]  # load() sets the demo folder
-    opening = {"last_page": "Inspection", "shift_check_hours": 0}  # the scripted run plays at once (ADR 0014)
-    load(bundle_dir(), folder, values | opening, keys or credentials.default())
+    no_check = {"shift_check_hours": 0}  # the scripted run plays at once (ADR 0014)
+    load(bundle_dir(), folder, values | no_check, keys or credentials.default())
     return folder
 
 

@@ -1,6 +1,6 @@
 """One start of the app in a process of its own, for REQ-SET-020's start-up budget (stage S55):
 
-    python -m tests.startup_worker   (from the repository root; AOI_WORKSPACE names the folder of settings.json)
+    python -m tests.startup_worker [--demo]   (from the repository root; AOI_WORKSPACE: the folder of settings.json)
 
 Runs main.main() as `python main.py` runs it, with the real QApplication on the platform QT_QPA_PLATFORM names. Once
 the window main.main() built is shown and exposed and the events the start queued are processed (its first paint
@@ -8,7 +8,10 @@ among them), it prints one line of JSON and closes the window, which ends the ap
 AOI_STARTUP_LAUNCHED (the caller's time.time() just before it started this process) to then, so the interpreter's own
 start counts; "in_process", the seconds from the top of this module; and the phases, each in seconds: "imports" (main
 and what it imports: Qt, the engine, PyTorch), "open_workspace" (settings.json, the database, the start-up archive and
-sweeps) and "build_window" (every page, and the first one's data)."""
+sweeps) and "build_window" (every page, and the first one's data). It names what the start opened, too: "user" and
+"role" signed in, "page", "presenter" (the presenter theme on) and "demo" (the demo workspace, with --demo). With
+AOI_MEMORY_KEYS set, the keys a start writes (the demo store's) stay in the process, never in the station's key store
+(Windows Credential Manager)."""
 
 from __future__ import annotations
 
@@ -27,7 +30,10 @@ from PySide6.QtWidgets import QApplication  # noqa: E402
 
 import main  # noqa: E402
 from aoi.core.services import AppContext  # noqa: E402
+from aoi.data import credentials  # noqa: E402
+from aoi.ui import theme  # noqa: E402
 from aoi.ui.main_window import MainWindow  # noqa: E402
+from aoi.ui.pages.base import Page  # noqa: E402
 
 IMPORTED = perf_counter()
 
@@ -54,10 +60,15 @@ def run() -> int:
         exposed = QTest.qWaitForWindowExposed(win)
         QApplication.processEvents()  # the first paint, and whatever else the start queued
         usable_s = time.time() - float(os.environ["AOI_STARTUP_LAUNCHED"])
-        print(json.dumps({"usable": usable_s, "in_process": perf_counter() - T0, "exposed": exposed, **marks}))
+        page = win.stack.currentWidget()
+        opened = {"user": win.ctx.user, "role": win.ctx.role, "page": page.title if isinstance(page, Page) else None}
+        opened |= {"presenter": theme.presenter(), "demo": win.in_demo, "exposed": exposed}
+        print(json.dumps({"usable": usable_s, "in_process": perf_counter() - T0, **marks, **opened}))
         win.close()
 
     main.open_workspace, main.build_window = open_workspace, build_window
+    if os.environ.get("AOI_MEMORY_KEYS"):
+        credentials.default = lambda: credentials.MEMORY
     return main.main()
 
 

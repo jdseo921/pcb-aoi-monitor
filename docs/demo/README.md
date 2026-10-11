@@ -32,8 +32,9 @@ Korean drafts of each file are in [ko/](ko/), marked for review by a native spea
 Rehearse once on the demo laptop, the day before or in the room, and tick each line:
 
 - [ ] The release build is installed. Note its version: the title bar and the line under **Settings** show it.
-- [ ] The demo workspace is reset: start `AOI PoC Inspector (Demo)` from the Start menu, open **Settings**, press
-      **Reset Demo** and confirm. Leave it at **Home** with the **Presenter theme** on.
+- [ ] The demo workspace is reset: start `AOI PoC Inspector (Demo)` from the Start menu (it opens at **Home**,
+      signed in as `admin`), open **Settings**, press **Reset Demo** and confirm. Leave it at **Home** with the
+      **Presenter theme** on.
 - [ ] Wi-Fi is off. The app needs no network ([ports.md](../install/ports.md)).
 - [ ] The projector is checked at 1920 × 1080 and at 1366 × 768: every page of the script reads from the back row.
       The pages need a screen 1920 × 1080 or larger (the app needs at least 1888 × 907 px in the presenter theme);
@@ -50,7 +51,7 @@ Rehearse once on the demo laptop, the day before or in the room, and tick each l
 
 | What happens | What to do |
 |---|---|
-| The app closes | Start `AOI PoC Inspector (Demo)` from the Start menu: it opens the demo workspace again, in the theme it had, in under 30 s. Say "let me open that again" and carry on from the last step |
+| The app closes | Start `AOI PoC Inspector (Demo)` from the Start menu: it opens the demo workspace again at **Home**, signed in as `admin`, in the theme it had, in under 30 s. Say "let me open that again", click the page of the last step and carry on |
 | Training is slow | If the time left reads over 2 minutes, press **Cancel** and use AI model v1.0, which is already trained: "here is one trained on the same boards earlier". Nothing is lost |
 | A verdict looks wrong | Open **Compare**: the table shows each check, its value and its threshold, and the box under it says why in plain words. Explain it from there; never guess |
 | A message appears | Read it out: it says what happened and what to do, with a code. Do what it says, then carry on |

@@ -425,17 +425,35 @@ class AppContext:
             raise AoiError("AOI-USR-003", name=name)
         self._actor = Actor(name, str(row["role"]), str(row["uuid"]))
 
-    def start_user(self, setting_up: bool = False) -> str:
-        """The name of the user a start signs in: while the station is set up (no board model yet), the first user
-        the table holds as Admin; otherwise 'operator'. Without either (a table edited outside the app), the first
-        user of the lowest stored role. Its role is the stored one, whatever the name (#197)."""
+    def start_user(self, setting_up: bool = False, demo: bool = False) -> str:
+        """The name of the user a start signs in. In the demo workspace (`main.py --demo`, the Demo shortcut) and while
+        the station is set up (no board model yet): the first user the table holds as Admin. Otherwise the user who
+        signed in last on this station (`sign_in`), else 'operator'. Without either (a table edited outside the app),
+        the first user of the lowest stored role. Its role is the stored one, whatever the name (#197)."""
         users = self.db.users()  # never empty: the database seeds operator, engineer and admin
-        if setting_up and (admin := next((u for u in users if u["role"] == "Admin"), None)):
+        if (setting_up or demo) and (admin := next((u for u in users if u["role"] == "Admin"), None)):
             return str(admin["name"])
+        last = self.db.last_sign_in()
+        if last is not None and (row := next((u for u in users if u["uuid"] == last), None)):
+            return str(row["name"])
         if any(u["name"] == "operator" for u in users):
             return "operator"
         rank = {r: i for i, r in enumerate(ROLES)}
         return str(min(users, key=lambda u: rank.get(u["role"], len(ROLES)))["name"]) if users else "operator"
+
+    def sign_in(self, name: str) -> None:
+        """Sign `name` in as a person does with Switch User: `set_user`, audited as `user.sign_in` with the user signed
+        in before, and remembered, so the station's next start signs them in again (`start_user`). Anyone may sign in;
+        AOI-USR-003 refuses a name the users table does not hold, and an entry that cannot be written leaves the user
+        before signed in."""
+        previous = self._actor
+        self.set_user(name)
+        try:
+            after = {"user": self.user, "role": self.role}
+            self.audit("user.sign_in", "user", self.user_uuid, {"user": previous.name, "role": previous.role}, after)
+        except BaseException:
+            self._actor = previous  # signed in only once audited
+            raise
 
     @property
     def actor(self) -> Actor:

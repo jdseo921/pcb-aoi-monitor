@@ -1028,6 +1028,12 @@ class Database:
         r = self.query("SELECT uuid FROM users WHERE name=?", (name,))
         return str(r[0]["uuid"]) if r else None
 
+    def last_sign_in(self) -> str | None:
+        """The UUID of the user who signed in last on this station, from the newest `user.sign_in` audit entry (found
+        by the index of migration 0026); None while no one has."""
+        r = self.query("SELECT object_uuid FROM audit WHERE action='user.sign_in' ORDER BY id DESC LIMIT 1")
+        return str(r[0]["object_uuid"]) if r and r[0]["object_uuid"] is not None else None
+
     # --- audit trail (REQ-LOG-004): append only, enforced by triggers in migration 0003 ----
     def add_audit(
         self,

@@ -393,13 +393,15 @@ class MainWindow(QMainWindow):
         self._training_timer.timeout.connect(self.show_training)
         self._training_timer.start(1000)
         self._reload_board_models()
-        # no board model yet: start with an Admin to set the station up; the role is the stored one either way (#197)
-        self.set_user(ctx.start_user(setting_up=not ctx.board_models()))
+        # the demo, and a station with no board model yet to set up, start with an Admin; any other start with the user
+        # who signed in last on the station; the role is the stored one either way (#197)
+        self.set_user(ctx.start_user(setting_up=not ctx.board_models(), demo=self.in_demo))
         if self.in_demo:  # its boards wait on Inspection as a scripted run at the demo's pace (REQ-SET-009)
             cast(InspectionPage, self.pages["Inspection"]).play(
                 boards(ctx.settings.root), ctx.settings.demo_pace_s, False
             )
-        if not self.navigate(ctx.settings.last_page):  # reopen where the last session was (REQ-LOG-005)
+        # the demo opens at Home, where its script starts; any other start where the last session was (REQ-LOG-005)
+        if self.in_demo or not self.navigate(ctx.settings.last_page):
             self.navigate("Home")
 
     # --- header -------------------------------------------------------------------
@@ -491,7 +493,13 @@ class MainWindow(QMainWindow):
         names = [self.tr("{user} ({role})").format(user=u["name"], role=role_text(u["role"])) for u in users]
         sel, ok = QInputDialog.getItem(self, self.tr("Switch user"), self.tr("User"), names, 0, False)
         if ok:
-            self.set_user(users[names.index(sel)]["name"])
+            name = str(users[names.index(sel)]["name"])
+            try:
+                self.ctx.sign_in(name)  # audited, and the station's next start signs them in again
+            except AoiError as e:
+                show_error(self, self.ctx.report_error(e, "Switch user"))
+                return
+            self.set_user(name)
 
     def set_user(self, user: str) -> None:
         """Sign `user` in with the role the users table holds for them (#197); the header and the pages follow it."""
