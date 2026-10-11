@@ -66,15 +66,20 @@ class Recipe:
     # names each region outside an ROI as one of the six copper defects (aoi/core/copper.py); None, as any other
     # value, names none. Naming never changes a verdict.
     copper: str | None = None
+    # Fine alignment (REQ-RCP-007): the ORB homography refined to a fraction of a pixel before the comparison
+    # (`imaging.refine`), for fewer false calls on copper edges at about 0.1 s more per board; off by default.
+    fine_alignment: bool = False
 
     def to_dict(self) -> dict[str, Any]:
         """The recipe as stored; a size in mm it does not set is left out, so a recipe in px, as every recipe before
         S29, is stored, compared and audited exactly as before, and so is a recipe that names no copper defect
-        (REQ-INSP-018)."""
+        (REQ-INSP-018) or leaves fine alignment off (REQ-RCP-007)."""
         d = asdict(self)
         for key in ("min_defect_mm", "copper"):  # an older recipe, without them, is stored as it was
             if d[key] is None:
                 del d[key]
+        if not d["fine_alignment"]:
+            del d["fine_alignment"]
         for roi in d["rois"]:
             if roi["mm"] is None:
                 del roi["mm"]

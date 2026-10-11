@@ -10,7 +10,9 @@ a false call, so a pair is never picked for fewer false calls while it misses mo
 The units counted: each boxed defect of an NG board, found when a difference region overlaps its box grown by MARGIN
 px; and each WINDOW x WINDOW px window of a board that touches no grown box, a false call when a region that overlaps no
 grown box lies in it. An OK board is all such windows, and is called NG as the recipe's region count, changed area and
-SSIM decide. Boxes are in px of the difference map, the board as aligned onto the Golden board.
+SSIM decide. Boxes are in px of the difference map, the board as aligned onto the Golden board: `board_tables` maps a
+labelled image's boxes there through the homography that aligns it, and counts it with fine alignment off and on
+(REQ-RCP-007), so `choose_setting` can choose that too.
 """
 
 from __future__ import annotations
@@ -21,7 +23,8 @@ from dataclasses import astuple, dataclass
 import cv2
 import numpy as np
 
-from .compare import changed_mask
+from .compare import changed_mask, compare
+from .imaging import refine, registration, warp_to
 from .recipe import Recipe
 
 THRESHOLDS = (8, 10, 12, 15, 18, 20, 25, 30, 35, 40, 45, 50, 60, 70)  # Pixel difference values tried (0-255)
@@ -31,6 +34,7 @@ WINDOW = 512  # px: the side of the windows a board's defect-free area is counte
 MAX_MISS = 0.01  # the share of boxed defects a chosen pair may miss (proposed)
 
 Box = tuple[int, int, int, int]  # x, y, w, h
+Setting = tuple[bool, int, int]  # fine alignment, Pixel difference, Minimum defect area
 
 
 @dataclass(frozen=True)
@@ -146,10 +150,98 @@ def total(tables: Iterable[Table]) -> Table:
 
 def choose(table: Table, max_miss: float = MAX_MISS) -> tuple[int, int]:
     """The pair with the fewest false calls among those that miss at most `max_miss` of the boxed defects (with none
-    that does, among those that miss fewest), then the fewest missed, then the higher Pixel difference and Minimum
-    defect area, which judge more like the defaults."""
-    if not table:
+    that does, among those that miss fewest), then the fewest missed; of pairs that tie, the one deepest among them
+    (`_deepest`), then the higher Pixel difference and Minimum defect area, which judge more like the defaults."""
+    _, threshold, area = choose_setting({False: table}, max_miss)
+    return threshold, area
+
+
+def choose_setting(tables: dict[bool, Table], max_miss: float = MAX_MISS) -> Setting:
+    """As `choose`, over the pairs counted with fine alignment off (False) and on (True): the setting with the fewest
+    false calls among those that miss at most `max_miss` of the boxed defects, then the fewest missed, then fine
+    alignment off, which is faster; of pairs that still tie, the one deepest among them (`_deepest`), then the higher
+    Pixel difference and Minimum defect area."""
+    flat = {(fine, *key): counts for fine, table in tables.items() for key, counts in table.items()}
+    if not flat:
         raise ValueError("no counts to choose from")
-    fewest = min(c.missed for c in table.values())
-    allowed = [k for k, c in table.items() if c.missed <= max(max_miss * c.defects, fewest)]
-    return min(allowed, key=lambda k: (table[k].false_calls, table[k].missed, -k[0], -k[1]))
+    fewest = min(c.missed for c in flat.values())
+    allowed = [k for k, c in flat.items() if c.missed <= max(max_miss * c.defects, fewest)]
+    best = min((flat[k].false_calls, flat[k].missed, k[0]) for k in allowed)
+    tied = [k for k in allowed if (flat[k].false_calls, flat[k].missed, k[0]) == best]
+    fine = tied[0][0]
+    pairs = _deepest({k[1:] for k in tied}, set(tables[fine]))
+    return (fine, *max(pairs))
+
+
+def _deepest(tied: set[tuple[int, int]], grid: set[tuple[int, int]]) -> list[tuple[int, int]]:
+    """Of the pairs in `tied` (all found, and all as good, on the boards counted), those furthest, in steps of the
+    Pixel differences and Minimum defect areas tried (`grid`), from any pair not among them, a step past the values
+    tried counting as one not among them. On a few boards many pairs find every defect with no false call, and the
+    highest of them sits a step from missing one; the one deepest among them keeps a margin both ways, so a board a
+    little unlike the ones counted is judged alike."""
+    ts, areas = sorted({t for t, _ in grid}), sorted({a for _, a in grid})
+    rank = {(t, a): (ts.index(t), areas.index(a)) for t, a in grid}
+    outside = [(i, j) for i in range(-1, len(ts) + 1) for j in range(-1, len(areas) + 1)]
+    others = [p for p in outside if not (0 <= p[0] < len(ts) and 0 <= p[1] < len(areas))]
+    others += [rank[k] for k in grid if k not in tied]
+
+    def depth(k: tuple[int, int]) -> int:
+        i, j = rank[k]
+        return min(max(abs(i - oi), abs(j - oj)) for oi, oj in others)
+
+    most = max(depth(k) for k in tied)
+    return [k for k in tied if depth(k) == most]
+
+
+def map_boxes(
+    boxes: Iterable[Box], homography: np.ndarray | None, image: tuple[int, int], golden: tuple[int, int]
+) -> list[Box]:
+    """`boxes`, in px of an image `image` (width, height), in px of the Golden board `golden` (width, height) as the
+    image is aligned onto it: each box's corners through `homography`, or scaled as a plain resize when it is None,
+    the box around them cut to the board; a box that lands wholly off the board is dropped."""
+    out: list[Box] = []
+    gw, gh = golden
+    for x, y, w, h in boxes:
+        corners = np.array([[[x, y]], [[x + w, y]], [[x, y + h]], [[x + w, y + h]]], dtype=np.float64)
+        if homography is None:
+            pts = corners * np.array([gw / image[0], gh / image[1]])
+        else:
+            pts = cv2.perspectiveTransform(corners, homography)
+        x0, y0 = np.floor(pts.min(axis=(0, 1))).astype(int)
+        x1, y1 = np.ceil(pts.max(axis=(0, 1))).astype(int)
+        x0, y0, x1, y1 = max(0, int(x0)), max(0, int(y0)), min(gw, int(x1)), min(gh, int(y1))
+        if x1 > x0 and y1 > y0:
+            out.append((x0, y0, x1 - x0, y1 - y0))
+    return out
+
+
+def board_tables(
+    image: np.ndarray,
+    golden: np.ndarray,
+    boxes: Iterable[Box],
+    ng: bool,
+    recipe: Recipe,
+    thresholds: Iterable[int] = THRESHOLDS,
+    areas: Iterable[int] = AREAS,
+) -> dict[bool, Table]:
+    """One labelled board's counts at each pair of `thresholds` and `areas`, with fine alignment off (False) and on
+    (True): the board aligned onto the Golden board as the Inspector aligns it, compared, and `measure`d with its boxes
+    mapped onto the board (`map_boxes`). Where fine alignment finds nothing better, both are the same counts, as the
+    Inspector then judges alike."""
+    thresholds, areas = tuple(thresholds), tuple(areas)
+    size = (golden.shape[1], golden.shape[0])
+    homography, info = registration(image, golden)
+    fine = refine(image, golden, homography) if homography is not None else None
+    out: dict[bool, Table] = {}
+    for on, h, method in ((False, homography, info["method"]), (True, fine, "orb-homography+fine")):
+        if on and h is None:
+            out[True] = out[False]
+            continue
+        aligned = warp_to(image, h, size)
+        result = compare(
+            image, golden, recipe.diff_threshold, recipe.min_defect_area, aligned, info | {"method": method}
+        )
+        mapped = map_boxes(boxes, h, (image.shape[1], image.shape[0]), size)
+        assert result.diff_map is not None
+        out[on] = measure(result.diff_map, mapped, ng, recipe, result.metrics["ssim"], thresholds, areas)
+    return out

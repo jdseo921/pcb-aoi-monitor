@@ -336,7 +336,7 @@ class Inspector:
         # golden board comparison (its maps and metrics) and from the AI model (its map, score and calibration).
         align_info = None
         if self.reference is not None:
-            work, align_info = align_to_reference(img, self.reference)
+            work, align_info = align_to_reference(img, self.reference, fine=r.fine_alignment is True)
         if r.use_compare and self.reference is not None:
             res.compare = compare(img, self.reference, r.diff_threshold, r.min_defect_area, work, align_info)
         elif r.use_compare:

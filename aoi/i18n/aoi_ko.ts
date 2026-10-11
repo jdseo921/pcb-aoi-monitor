@@ -827,7 +827,7 @@
 <context>
     <name>Errors</name>
     <message>
-        <location filename="../core/services.py" line="+118"/>
+        <location filename="../core/services.py" line="+122"/>
         <source>a length of {length} px over {distance} mm gives no scale: both must be numbers above 0, and the scale from {least} to {most} px per mm</source>
         <translation type="unfinished"></translation>
     </message>
@@ -880,17 +880,37 @@
     </message>
     <message>
         <location line="+170"/>
-        <location line="+1881"/>
+        <location line="+2016"/>
         <source>(none)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1850"/>
+        <location line="-1985"/>
         <source>Saving a recipe</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+96"/>
+        <location line="+33"/>
+        <source>Learning the comparison&apos;s thresholds</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+25"/>
+        <source>it has no Golden board; set one on Training</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+24"/>
+        <source>it has {count} NG image(s) with defect boxes in the {view} view, and learning needs {least}</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+28"/>
+        <source>too few of its NG images with defect boxes could be read</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+125"/>
         <source>it cannot be read ({code} {title})</source>
         <translation type="unfinished"></translation>
     </message>
@@ -900,7 +920,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+75"/>
+        <location line="+71"/>
         <source>{file}: {defects} defect(s)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1106,14 +1126,14 @@
         <translation>검증 세트 잠금</translation>
     </message>
     <message>
-        <location line="-2096"/>
-        <location line="+2110"/>
+        <location line="-2234"/>
+        <location line="+2248"/>
         <location line="+39"/>
         <source>the workspace holds no such dataset version</source>
         <translation>작업 공간에 그런 데이터셋 버전이 없습니다</translation>
     </message>
     <message>
-        <location line="-2147"/>
+        <location line="-2285"/>
         <source>the run used a folder, not a frozen dataset version&apos;s locked validation set</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1148,7 +1168,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1888"/>
+        <location line="+2026"/>
         <source>a blind label is OK, or NG with one of the 37 defect types</source>
         <translation>블라인드 라벨은 OK이거나, 37개 결함 유형 중 하나를 지정한 NG입니다</translation>
     </message>
@@ -1357,7 +1377,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-2659"/>
+        <location line="-2797"/>
         <source>no earlier version of this board model was active</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1377,7 +1397,7 @@
         <translation>{name}은(는) 그중 하나가 아닙니다</translation>
     </message>
     <message>
-        <location line="+13"/>
+        <location line="+16"/>
         <source>there is no board model of that name</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1387,7 +1407,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1009"/>
+        <location line="+1144"/>
         <source>Labelling an image</source>
         <translation>이미지 라벨링</translation>
     </message>
@@ -1469,12 +1489,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/recipe_editor.py" line="+58"/>
+        <location filename="../ui/pages/recipe_editor.py" line="+59"/>
         <source>its Golden board was replaced after the points were picked on it</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+441"/>
+        <location line="+474"/>
         <source>Height</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2722,6 +2742,21 @@
     </message>
     <message>
         <location line="+8"/>
+        <source>Too few labelled boards to learn from</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>The comparison&apos;s thresholds of board model {board_model} cannot be learned: {reason}.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>Nothing was changed. On Training, label more boards of this board model: NG images with each defect boxed, and OK images, in the Golden board&apos;s view; then press Learn From Labelled Boards… again.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+8"/>
         <source>Export stopped part-way</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3076,7 +3111,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1108"/>
+        <location line="-1120"/>
         <source>Board judged NG</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3206,7 +3241,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+215"/>
+        <location line="+227"/>
         <source>Workspace in use</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4471,6 +4506,124 @@
     </message>
 </context>
 <context>
+    <name>LearnSheet</name>
+    <message>
+        <location filename="../ui/pages/recipe_learn.py" line="+31"/>
+        <source>Learned From Labelled Boards</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+15"/>
+        <source>This recipe</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+0"/>
+        <source>Learned</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>Pixel difference</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Minimum defect area (px)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Fine alignment</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Missed defects</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>False calls (512 px squares)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>OK boards called NG</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+18"/>
+        <source>Counted on the held-out boards, which no value was chosen on. Use Learned Values puts them in the fields; Save Recipe stores them as a revision.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+9"/>
+        <source>Close</source>
+        <translation type="unfinished">닫기</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Use Learned Values</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+21"/>
+        <source>Chosen on {boards} board(s): {ok} OK and {ng} NG with {boxes} defect box(es).</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+4"/>
+        <source>Counted on {boards} other board(s) of the locked validation set: {ok} OK and {ng} NG.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>Counted on {boards} other board(s), a third held out with seed {seed}: {ok} OK and {ng} NG.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+10"/>
+        <source>on</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+0"/>
+        <source>off</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+17"/>
+        <source>{count} NG image(s) with no defect box</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>{count} image(s) of another view</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>{count} image(s) labelled UNSURE</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>{count} image(s) that could not be read, first {why}</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+4"/>
+        <source>Left out: {parts}.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+7"/>
+        <source>Learned from {chosen} labelled board(s); on {held} held out: missed defects {missed}, false calls {false}.</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
     <name>LogsPage</name>
     <message>
         <location filename="../ui/pages/logs.py" line="+76"/>
@@ -5493,7 +5646,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/recipe_editor.py" line="-428"/>
+        <location filename="../ui/pages/recipe_editor.py" line="-461"/>
         <source>Recipe Editor</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5587,7 +5740,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+37"/>
+        <location line="+38"/>
         <location line="+2"/>
         <source>Draw ROI</source>
         <translation type="unfinished"></translation>
@@ -5603,7 +5756,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+98"/>
+        <location line="+122"/>
         <source>The 10 mandatory AOI checks (defect classification table, section 4):</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5618,12 +5771,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+59"/>
+        <location line="+64"/>
         <source>AI score</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-151"/>
+        <location line="-180"/>
         <source>Selected ROI</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5634,7 +5787,7 @@
     </message>
     <message>
         <location line="+1"/>
-        <location line="+141"/>
+        <location line="+170"/>
         <source>Name</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5664,7 +5817,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-138"/>
+        <location line="-167"/>
         <source>ROI type</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5724,6 +5877,16 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <location line="+8"/>
+        <source>Learn From Labelled Boards…</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>Chooses the Pixel difference, Minimum defect area and fine alignment with the fewest false calls that miss at most 1 % of the boxed defects on this board model&apos;s labelled boards.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <location line="+6"/>
         <source>Use the self-trained AI model</source>
         <translation type="unfinished"></translation>
@@ -5734,12 +5897,22 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+25"/>
+        <location line="+1"/>
+        <source>Fine alignment</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>Matches each board to the Golden board to a fraction of a pixel before comparing: fewer false calls along copper edges, about {ms} ms more per board.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+30"/>
         <source>On a bare board, each difference outside an ROI is named Open Circuit, Short Circuit, Mousebite, Spur, Spurious Copper or Pin-hole / Missing Hole. Pick the shade copper has on the Golden board. Names never change a verdict.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+9"/>
+        <location line="+11"/>
         <source>AI score threshold</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5749,7 +5922,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+2"/>
+        <location line="+4"/>
         <source>Pixel difference (0-255)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5819,7 +5992,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+9"/>
+        <location line="+7"/>
+        <source>Learning from the labelled boards…</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+4"/>
         <source>Check</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5849,7 +6027,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+5"/>
+        <location line="+8"/>
         <source>Try Recipe…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5874,7 +6052,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+93"/>
+        <location line="+96"/>
         <source>Train an AI model or set a reference image on Training.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5919,7 +6097,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+157"/>
+        <location line="+158"/>
         <source>Scale {scale:.2f} px/mm</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5954,7 +6132,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+58"/>
+        <location line="+38"/>
+        <source>Learned values set. Press Save Recipe to keep them as a new revision.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+63"/>
         <source>Saved revision {revision} by {user}.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6054,7 +6237,7 @@
 <context>
     <name>RevisionPane</name>
     <message>
-        <location filename="../ui/pages/recipe_save.py" line="+188"/>
+        <location filename="../ui/pages/recipe_save.py" line="+191"/>
         <source>Revision {revision}, read-only: saved by {user}, {saved}</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6095,7 +6278,7 @@
 <context>
     <name>SaveSheet</name>
     <message>
-        <location filename="../ui/pages/recipe_save.py" line="-176"/>
+        <location filename="../ui/pages/recipe_save.py" line="-179"/>
         <source>Off (assembled boards)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6162,6 +6345,11 @@
     <message>
         <location line="+1"/>
         <source>Copper defect names</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Fine alignment</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -6300,12 +6488,14 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+12"/>
+        <location line="+10"/>
+        <location line="+4"/>
         <source>on</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+0"/>
+        <location line="-4"/>
+        <location line="+4"/>
         <source>off</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6862,7 +7052,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/services.py" line="-2912"/>
+        <location filename="../core/services.py" line="-3050"/>
         <source>Aligning {count} images to the reference board</source>
         <translation type="unfinished"></translation>
     </message>

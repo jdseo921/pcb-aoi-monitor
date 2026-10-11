@@ -593,22 +593,69 @@ def list_images(folder: str | Path) -> list[Path]:
     return sorted(p for p in Path(folder).rglob("*") if p.suffix.lower() in IMAGE_EXTS)
 
 
-def align_to_reference(img: np.ndarray, ref: np.ndarray, max_features: int = 4000) -> tuple[np.ndarray, dict[str, Any]]:
-    """Register `img` onto `ref` with ORB features + RANSAC homography.
+def align_to_reference(
+    img: np.ndarray, ref: np.ndarray, max_features: int = 4000, fine: bool = False
+) -> tuple[np.ndarray, dict[str, Any]]:
+    """Register `img` onto `ref` with ORB features + RANSAC homography, refined to a fraction of a pixel when `fine`
+    (`refine`).
 
     Boards are never placed at exactly the same spot, so every pixel comparison
     (golden-sample diff, ROI checks) happens after this step. Falls back to a plain
     resize when not enough features match; `info["aligned"]` tells the UI which.
     """
-    homography, info = registration(img, ref, max_features)
+    homography, info = registration(img, ref, max_features, fine)
     return warp_to(img, homography, (ref.shape[1], ref.shape[0])), info
 
 
+FINE_SIDE = 1024  # px: the longest side the fine alignment matches at; a larger board is matched scaled down to it
+FINE_STEPS = 30  # the most steps it takes
+FINE_EPS = 1e-4  # it stops once a step moves the homography less than this
+FINE_COST_MS = 100  # about what it adds to a board's inspection, measured (docs/tests/2026-10-11-fine-alignment.md)
+FINE_SHIFT_PX = 8.0  # a refinement that moves a corner of the board further than this px is a wrong match: not taken
+
+
+def refine(img: np.ndarray, ref: np.ndarray, homography: np.ndarray) -> np.ndarray | None:
+    """`homography`, which maps `img` onto `ref`, refined by maximising the correlation of their blurred grey levels
+    (OpenCV's ECC, REQ-RCP-007), or None when that does not improve it: no convergence, a correlation no higher than
+    before, or a corner moved more than FINE_SHIFT_PX. ORB places a board to within a pixel or two, and the comparison
+    then marks the copper edges it is off by as changed: the false calls of a misaligned board. The match runs on the
+    boards scaled so their longest side is at most FINE_SIDE px, so a 5 MP board costs about what a 1 MP one does."""
+    h, w = ref.shape[:2]
+    f = min(1.0, FINE_SIDE / max(h, w))
+    scale = np.diag([f, f, 1.0])
+    small = (max(1, round(w * f)), max(1, round(h * f)))
+    grey = []
+    for im, size in ((ref, small), (img, (max(1, round(img.shape[1] * f)), max(1, round(img.shape[0] * f))))):
+        g = cv2.cvtColor(im, cv2.COLOR_BGR2GRAY)
+        g = cv2.resize(g, size, interpolation=cv2.INTER_AREA) if f < 1 else g
+        grey.append(g.astype(np.float32))
+    template, moving = grey
+    start = np.linalg.inv(scale @ homography @ np.linalg.inv(scale))  # ECC maps the template's points onto the image's
+    start = (start / start[2, 2]).astype(np.float32)
+    before = cv2.warpPerspective(moving, start, small, flags=cv2.INTER_LINEAR | cv2.WARP_INVERSE_MAP)
+    criteria = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, FINE_STEPS, FINE_EPS)
+    try:  # findTransformECC blurs both 5 x 5 first, as the correlation before is measured
+        cc0 = cv2.computeECC(cv2.GaussianBlur(template, (5, 5), 0), cv2.GaussianBlur(before, (5, 5), 0))
+        cc, warp = cv2.findTransformECC(template, moving, start.copy(), cv2.MOTION_HOMOGRAPHY, criteria, None)
+    except cv2.error:  # no convergence, or images with no texture to match
+        return None
+    if not np.isfinite(warp).all() or cc <= cc0:
+        return None
+    refined = np.linalg.inv(scale) @ np.linalg.inv(warp.astype(np.float64)) @ scale
+    refined /= refined[2, 2]
+    corners = np.array([[[0, 0]], [[img.shape[1], 0]], [[0, img.shape[0]]], [[img.shape[1], img.shape[0]]]], np.float64)
+    moved = cv2.perspectiveTransform(corners, refined) - cv2.perspectiveTransform(corners, homography)
+    if float(np.abs(moved).max()) > FINE_SHIFT_PX:
+        return None
+    return refined
+
+
 def registration(
-    img: np.ndarray, ref: np.ndarray, max_features: int = 4000
+    img: np.ndarray, ref: np.ndarray, max_features: int = 4000, fine: bool = False
 ) -> tuple[np.ndarray | None, dict[str, Any]]:
     """The homography `align_to_reference` warps `img` onto `ref` with, or None for its plain resize, and its info. A
-    training run keeps it, so it can warp an image read again exactly as the first time (REQ-TRN-007)."""
+    training run keeps it, so it can warp an image read again exactly as the first time (REQ-TRN-007). With `fine`
+    a homography ORB found is refined (`refine`), and the method says whether it was: "orb-homography+fine"."""
     info: dict[str, Any] = {"aligned": False, "inliers": 0, "method": "resize"}
     g1 = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     g2 = cv2.cvtColor(ref, cv2.COLOR_BGR2GRAY)
@@ -624,6 +671,8 @@ def registration(
             H, mask = cv2.findHomography(src, dst, cv2.RANSAC, 4.0)
             if H is not None and mask is not None and int(mask.sum()) >= 12:
                 info.update(aligned=True, inliers=int(mask.sum()), method="orb-homography")
+                if fine and (better := refine(img, ref, H)) is not None:
+                    H, info["method"] = better, "orb-homography+fine"
                 return H, info
     return None, info
 

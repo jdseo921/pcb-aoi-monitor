@@ -1010,6 +1010,18 @@ CODES: dict[str, ErrorCode] = {
             ),
         ),
         ErrorCode(
+            "AOI-RCP-013",
+            QT_TRANSLATE_NOOP("Errors", "Too few labelled boards to learn from"),
+            QT_TRANSLATE_NOOP(
+                "Errors", "The comparison's thresholds of board model {board_model} cannot be learned: {reason}."
+            ),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Nothing was changed. On Training, label more boards of this board model: NG images with each defect"
+                " boxed, and OK images, in the Golden board's view; then press Learn From Labelled Boards… again.",
+            ),
+        ),
+        ErrorCode(
             "AOI-LOG-001",
             QT_TRANSLATE_NOOP("Errors", "Export stopped part-way"),
             QT_TRANSLATE_NOOP(

@@ -27,11 +27,39 @@ Recipe Editor    TBOX-A1 · revision 4 (unsaved changes ●) · scale 47.6 px/mm
                                                  [Try Recipe…]               [■ Save Recipe]  blue primary
 ```
 
-Thresholds tab: Use AI model ▣ · AI threshold [▢ override 5.69] · WARN band [0.80] · Use Golden board ▣ ·
-Pixel difference [45] · Min defect size [0.80 mm] = 38 px ✓ · Similarity minimum [0.80] · Max changed area [0.50 %]
+Thresholds tab: [Learn From Labelled Boards…] with a muted line saying what it chooses (REQ-TRN-018, ADR 0017) ·
+Use AI model ▣ · AI threshold [▢ override 5.69] · WARN band [0.80] · Use Golden board ▣ · Fine alignment ▢ with a
+muted line: fewer false calls along copper edges, about 100 ms more per board (REQ-RCP-007) · Pixel difference [45] · Min defect size [0.80 mm] = 38 px ✓ · Similarity minimum [0.80] · Max changed area [0.50 %]
 · Allowed difference regions [0] · Copper defect names [Off (assembled boards) ▾ / Light copper / Dark copper] with a
 note under it naming the six types and that names never change a verdict (REQ-INSP-018, ADR 0015). A size under 4 px shows an amber badge: "0.05 mm is 2.4 px at 47.6 px/mm; the
 smallest size the camera resolves is 4 px = 0.08 mm" (REQ-INSP-014, REQ-RCP-006).
+
+Learned sheet (Learn From Labelled Boards…, in the tabs' place until Close or Use Learned Values, so it has the column's
+height):
+
+```
+Learned From Labelled Boards
+Chosen on 8 board(s): 4 OK and 4 NG with 4 defect box(es). Counted on 4 other board(s), a third held out with
+seed 11: 2 OK and 2 NG.                      (or: "...of the locked validation set: 1 OK and 2 NG.")
+                               This recipe                 Learned
+Pixel difference               45                          35
+Minimum defect area (px)       40                          20
+Fine alignment                 off                         off
+Missed defects                 0 of 2                      0 of 2
+                               95 % upper bound 77.6 %     95 % upper bound 77.6 %
+False calls (512 px squares)   0 of 6 ...                  0 of 6 ...
+OK boards called NG            0 of 2 ...                  0 of 2 ...
+Left out: 1 NG image(s) with no defect box; 2 image(s) of another view.          (muted; only when any was)
+Counted on the held-out boards, which no value was chosen on. Use Learned Values puts them in the fields;
+Save Recipe stores them as a revision.                                            (muted)
+                                                        [Close]  [Use Learned Values]
+```
+
+Every cell wraps, so nothing is cut at any width. Use Learned Values sets Pixel difference, Minimum defect size (in mm
+at a scale) and Fine alignment, and the status line says Save Recipe keeps them; Save Recipe then offers "Learned from
+8 labelled board(s); on 4 held out: missed defects 0 of 2, 95 % upper bound 77.6 %, false calls ..." as the reason,
+which the revision's audit entry keeps. While it learns, a busy indicator over the tabs shows the boards done and
+Cancel.
 
 AOI checks tab, the 10 mandatory checks (DCT §4): Missing Component ✓ ROI R1 · Misalignment • whole board ·
 Polarity Error ✓ ROI R2 · Solder Bridge ○ not covered · Tombstone • whole board · Cold Joint • whole board ·
@@ -54,6 +82,8 @@ one; [Restore as New Revision] copies it into a new revision after the usual con
 | Selected ROI form | Name, Type, AI Score, Height Min/Max, Volume Min/Max, Enabled, Apply | — | F, B | Height and Volume stored now, checked from Stage 2 |
 | Calibrate scale | Calibrate Scale… | — | B | Inline sheet: click two points on the Golden board, enter the distance in mm; stores px per mm per board model (REQ-RCP-006) |
 | Thresholds | as listed above | — | F | mm fields show their px value at this scale beside them |
+| Learn From Labelled Boards | Learn From Labelled Boards… | Ctrl+L | B | Runs `AppContext.learn_comparison` off the UI thread with a busy indicator and Cancel; shows the Learned sheet; changes nothing until Use Learned Values, and stores nothing until Save Recipe (REQ-TRN-018) |
+| Fine alignment | Fine alignment | — | F (tick) | Off by default; stored only while on, so every earlier recipe judges as before (REQ-RCP-007) |
 | Try Recipe | Try Recipe… | Ctrl+T | B | Named in #103 (Charter: "test run" is not used); picks an image (default: last inspected board); runs off the UI thread with a busy indicator; shows verdict, defects and the checks table; stores nothing (REQ-RCP-003) |
 | Save Recipe | Save Recipe | Ctrl+S | B | The one blue primary; confirmation sheet lists before → after and asks for a reason when a Stage 1 AOI check is uncovered; creates revision n+1 with user, time and audit entry (REQ-RCP-004, -005) |
 | Revisions | Open, Restore as New Revision | — | B | Never overwrites |
@@ -75,11 +105,12 @@ sizes in px" with [Calibrate Scale…].
 | AOI-RCP-004 | The recipe was not saved | A newer revision was saved meanwhile | Reload; your changes are kept as unsaved |
 | AOI-RCP-005 | Sizes are shown in px | The board model has no scale yet | Calibrate Scale… |
 | AOI-RCP-006 | The Try Recipe image was refused | Same limits as AOI-INSP-001 to -003 | Pick another image |
+| AOI-RCP-013 | Too few labelled boards to learn from | No Golden board, or under 3 NG images with defect boxes in the Golden board's view | Label more boards on Training, then Learn again |
 | AOI-RCP-007 | Warning: the minimum defect size is under 4 px | Below what the camera resolves | Raise the size or use a higher resolution; saving is allowed, the warning is kept with the revision |
 
 ## Requirements served
 
-REQ-RCP-001, -002, -003, -004, -005, -006, REQ-INSP-014, REQ-TRN-015, REQ-SET-021, REQ-SET-019.
+REQ-RCP-001, -002, -003, -004, -005, -006, -007, REQ-TRN-018, REQ-INSP-014, REQ-TRN-015, REQ-SET-021, REQ-SET-019.
 
 ## Rules applied
 
@@ -94,3 +125,11 @@ WARN, Threshold, AI model); sizes; every string through `self.tr()`.
 - Q22: Minimum defect size is one value per board model, in the recipe. Reason: S29 and REQ-INSP-014 set it per board model; a per-ROI value has no requirement behind it.
 - Q23: Try Recipe… uses the last inspected board by default; its sheet can pick another image. Reason: The board just inspected is the one being tuned for; the name follows #103 (Q54 in model-test.md).
 - Q24: Restore as New Revision ships at G1. Reason: It never overwrites (a new revision, confirmed and audited) and gives a bad save an undo (Short paths: make everything undoable); REQ-RCP-004 asks at least for viewing.
+
+## Decisions (2026-10-11, ADR 0017)
+
+- Q61: Learn From Labelled Boards… sits on the Thresholds tab, and its result in the tabs' place, not in a dialog. Reason:
+  it chooses three of the tab's values; the column is too short at 1600 × 900 for the tabs and the sheet together, and
+  a sheet, not a dialog over the page, is the frame's pattern for a step with Close and a confirm button.
+- Q62: The learned values go into the fields, never straight into a revision. Reason: a recipe decides verdicts, so the
+  Engineer reviews them in Save Recipe's before → after list, which audits them with the evidence as its reason.

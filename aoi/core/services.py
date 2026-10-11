@@ -55,6 +55,7 @@ from . import (
     run_progress,
     stats,
     stores,
+    tuning,
 )
 from .compare import Region, changed_regions
 from .imaging import (
@@ -110,6 +111,9 @@ SHIFT_CHECK_REASONS = {  # why AOI-INSP-016 stops a board, by `AppContext.shift_
         "Errors", "its AI model, recipe, Golden board or scale changed after its last shift check"
     ),
 }
+LEARN_CHOOSE_NG = 2  # the fewest NG boards with boxes a setting is chosen on (REQ-TRN-018)
+LEARN_HELD_NG = 1  # and the fewest it is counted on, held out of choosing
+LEARN_HELD_SHARE = 1 / 3  # the share of the boards held out when no locked validation set holds enough of them
 STEM_CHARS = 40  # how much of a source file's stem names its evidence or sample file (#245)
 WINDOWS = os.name == "nt"
 MAX_PATH = 260  # the UTF-16 units of a path, its ending NUL included, that Windows takes with long paths off
@@ -873,6 +877,135 @@ class AppContext:
             self.audit("recipe.ai_threshold", "board_model", recipe.board_model, before | named, after | named, reason)
         return rev
 
+    @requires("Engineer", QT_TRANSLATE_NOOP("Errors", "Learning the comparison's thresholds"))
+    def learn_comparison(
+        self,
+        board_model: str,
+        progress: Callable[[int, int], None] | None = None,
+        should_stop: Callable[[], bool] | None = None,
+        seed: int | None = None,
+    ) -> dict[str, Any]:
+        """Learn the golden board comparison's Pixel difference, Minimum defect area and fine alignment from the board
+        model's labelled boards (REQ-TRN-018, REQ-RCP-007, ADR 0017), writing nothing: an Engineer sets what it chose on
+        the Recipe Editor, which Save Recipe stores as an audited revision.
+
+        The boards are its samples in the Golden board's view labelled OK, and labelled NG with defect boxes, the
+        Golden board's own sample left out. Those whose SHA-256 a locked validation set holds are held out and counted
+        on, never chosen on; with too few of them (under LEARN_HELD_NG NG boards, or under LEARN_CHOOSE_NG NG boards
+        left to choose on), a third of the OK and of the NG boards drawn with `seed` (a new one when None) is held out
+        instead. Each board is aligned, compared and counted at every setting (`tuning.board_tables`), and the setting
+        chosen on the others (`tuning.choose_setting`): the fewest false calls among those that miss at most 1 % of
+        the boxed defects. The held-out boards then count the chosen setting and the recipe's own, with their 95 %
+        upper bounds. AOI-RCP-013 with no Golden board or too few NG boards with boxes; AOI-INSP-009 when the Golden
+        board cannot be read. `progress(done, total)` follows the boards, and once `should_stop()` is true the run
+        stops with JobCancelled. Returns the setting chosen and the recipe's, the boards each part holds and why any
+        was left out, and each setting's counts on the held-out boards."""
+        golden_path = self.db.reference(board_model)
+        if golden_path is None:
+            why = QT_TRANSLATE_NOOP("Errors", "it has no Golden board; set one on Training")
+            raise AoiError("AOI-RCP-013", board_model=board_model, reason=why)
+        golden = self._read_golden(board_model, golden_path)[0]
+        rev, saved = self.recipe(board_model)
+        recipe = saved.in_px(self.db.scale(board_model))  # the pair as the engine applies it
+        rows = self.db.samples(board_model)
+        view = next((s["side"] for s in rows if s["path"] == golden_path), "Top")
+        left_out: dict[str, Any] = {"other_view": 0, "unsure": 0, "no_boxes": 0, "unreadable": 0, "why": None}
+        boards: list[tuple[dict[str, Any], list[tuning.Box]]] = []
+        for s in rows:
+            if s["path"] == golden_path:
+                continue
+            if s["side"] != view:
+                left_out["other_view"] += 1
+            elif s["label"] not in (OK, NG):
+                left_out["unsure"] += 1
+            elif s["label"] == OK:
+                boards.append((s, []))
+            elif boxes := [(b["x"], b["y"], b["w"], b["h"]) for b in self.db.boxes(s["uuid"])]:
+                boards.append((s, boxes))
+            else:
+                left_out["no_boxes"] += 1
+        ng = sum(s["label"] == NG for s, _ in boards)
+        if ng < LEARN_CHOOSE_NG + LEARN_HELD_NG:
+            why = QT_TRANSLATE_NOOP(
+                "Errors", "it has {count} NG image(s) with defect boxes in the {view} view, and learning needs {least}"
+            )
+            why = why.fill(count=ng, view=view, least=LEARN_CHOOSE_NG + LEARN_HELD_NG)
+            raise AoiError("AOI-RCP-013", board_model=board_model, reason=why)
+        held, by = self._held_out([s for s, _ in boards], seed)
+        thresholds = sorted({*tuning.THRESHOLDS, recipe.diff_threshold})
+        areas = sorted({*tuning.AREAS, recipe.min_defect_area})
+        parts: dict[bool, list[dict[bool, tuning.Table]]] = {False: [], True: []}
+        counted = {False: {"ok": 0, "ng": 0, "boxes": 0}, True: {"ok": 0, "ng": 0, "boxes": 0}}
+        for i, (s, boxes) in enumerate(boards):
+            if should_stop is not None and should_stop():
+                raise JobCancelled(f"learning the comparison of {board_model}")
+            try:
+                image = self.load_image(s["path"])
+            except AoiError as e:
+                left_out["unreadable"] += 1
+                left_out["why"] = left_out["why"] or f"{Path(s['path']).name}: {e.code} {e.title}"
+            else:
+                part = s["uuid"] in held
+                tables = tuning.board_tables(image, golden, boxes, s["label"] == NG, recipe, thresholds, areas)
+                parts[part].append(tables)
+                counted[part]["ok" if s["label"] == OK else "ng"] += 1
+                counted[part]["boxes"] += len(boxes)
+            if progress is not None:
+                progress(i + 1, len(boards))
+        chosen_on = {fine: tuning.total(t[fine] for t in parts[False]) for fine in (False, True)}
+        if not counted[False]["ng"] or not counted[True]["ng"]:  # the unreadable boards were the NG boards of a part
+            why = QT_TRANSLATE_NOOP("Errors", "too few of its NG images with defect boxes could be read")
+            raise AoiError("AOI-RCP-013", board_model=board_model, reason=why)
+        chosen = tuning.choose_setting(chosen_on)
+        current = (recipe.fine_alignment is True, recipe.diff_threshold, recipe.min_defect_area)
+        held_out = {fine: tuning.total(t[fine] for t in parts[True]) for fine in (False, True)}
+
+        def setting(k: tuning.Setting) -> dict[str, Any]:
+            return {"fine_alignment": k[0], "diff_threshold": k[1], "min_defect_area": k[2]}
+
+        def rates(c: tuning.Counts) -> dict[str, Any]:
+            return {
+                "missed": stats.rate(c.missed, c.defects),
+                "false_calls": stats.rate(c.false_windows, c.windows),
+                "ok_called_ng": stats.rate(c.ok_called_ng, c.ok_boards),
+                "counts": dataclasses.asdict(c),
+            }
+
+        result = {
+            "board_model": board_model,
+            "revision": rev,
+            "view": view,
+            "chosen": setting(chosen),
+            "current": setting(current),
+            "chosen_on": counted[False] | {"rates": rates(chosen_on[chosen[0]][chosen[1:]])},
+            "counted_on": counted[True] | by,
+            "held_out": {
+                "chosen": rates(held_out[chosen[0]][chosen[1:]]),
+                "current": rates(held_out[current[0]][current[1:]]),
+            },
+            "left_out": left_out,
+        }
+        self.log.info("recipe.learned", extra={"board_model": board_model, "chosen": result["chosen"]})
+        return result
+
+    def _held_out(self, boards: list[dict[str, Any]], seed: int | None) -> tuple[set[str], dict[str, Any]]:
+        """The UUIDs of the boards `learn_comparison` counts on, never chooses on, and how they were drawn: those a
+        locked validation set holds by SHA-256, while they hold LEARN_HELD_NG NG boards and leave LEARN_CHOOSE_NG to
+        choose on; else a third of the OK and of the NG boards, rounded, at least LEARN_HELD_NG NG, drawn with `seed`
+        (a new one when None) from the boards in their UUIDs' order."""
+        locked = self.db.split_sha256("validation")
+        held = {s["uuid"] for s in boards if s["sha256"] in locked}
+        held_ng = sum(s["label"] == NG for s in boards if s["uuid"] in held)
+        if held_ng >= LEARN_HELD_NG and sum(s["label"] == NG for s in boards) - held_ng >= LEARN_CHOOSE_NG:
+            return held, {"by": "validation", "seed": None}
+        seed = secrets.randbelow(2**31) if seed is None else seed
+        held = set()
+        for label, least in ((OK, 0), (NG, LEARN_HELD_NG)):
+            uuids = sorted(s["uuid"] for s in boards if s["label"] == label)
+            random.Random(f"{seed}/{label}").shuffle(uuids)
+            held.update(uuids[: max(least, round(len(uuids) * LEARN_HELD_SHARE))])
+        return held, {"by": "seed", "seed": seed}
+
     # --- audit trail (REQ-LOG-004) --------------------------------------------
     def audit(
         self,
@@ -933,18 +1066,24 @@ class AppContext:
         golden = self.db.reference(board_model) if reference is None else None
         sha: str | None = None
         if golden:
-            try:
-                reference, sha = self._load_image_sha256(golden)  # one read: the bytes hashed are the bytes judged
-            except AoiError as e:  # the comparison and the alignment the AI model was trained on would silently go
-                unreadable = QT_TRANSLATE_NOOP("Errors", "it cannot be read ({code} {title})").fill(
-                    code=e.code, title=e.title
-                )
-                why = unreadable if Path(golden).exists() else QT_TRANSLATE_NOOP("Errors", "the file is gone")
-                raise AoiError("AOI-INSP-009", detail=str(e), board=board_model, file=golden, reason=why) from e
+            reference, sha = self._read_golden(board_model, golden)
         model, version, model_uuid = (mv[1], mv[0], mv[2]) if mv else (None, None, None)
         scale = self.db.scale(board_model)  # the recipe's sizes in mm are applied at it (REQ-RCP-006)
         args = (model, reference, side, version, rev, model_uuid, recipe_uuid, golden, sha, scale)
         return Inspector(recipe or rcp, *args)
+
+    def _read_golden(self, board_model: str, golden: str) -> tuple[np.ndarray, str]:
+        """The Golden board file `golden` of `board_model`, decoded, with the SHA-256 of the bytes read (one read: the
+        bytes hashed are the bytes judged); AOI-INSP-009 when it is gone or cannot be read, as the comparison, and the
+        alignment the AI model was trained on, would otherwise silently go (#169)."""
+        try:
+            return self._load_image_sha256(golden)
+        except AoiError as e:
+            unreadable = QT_TRANSLATE_NOOP("Errors", "it cannot be read ({code} {title})").fill(
+                code=e.code, title=e.title
+            )
+            why = unreadable if Path(golden).exists() else QT_TRANSLATE_NOOP("Errors", "the file is gone")
+            raise AoiError("AOI-INSP-009", detail=str(e), board=board_model, file=golden, reason=why) from e
 
     def engine_is_current(self, board_model: str, insp: Inspector | JudgedBy) -> bool:
         """Whether `insp` was built from what `inspector(board_model)` would use now: the active AI model, the latest

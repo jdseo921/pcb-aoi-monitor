@@ -33,6 +33,7 @@ SETTINGS = {  # a Change's field as the sheet and the Revisions tab name it; a f
     "changed_pct_max": QT_TRANSLATE_NOOP("SaveSheet", "Maximum changed area %"),
     "max_diff_regions": QT_TRANSLATE_NOOP("SaveSheet", "Allowed difference regions"),
     "copper": QT_TRANSLATE_NOOP("SaveSheet", "Copper defect names"),
+    "fine_alignment": QT_TRANSLATE_NOOP("SaveSheet", "Fine alignment"),
     "type": QT_TRANSLATE_NOOP("SaveSheet", "type"),
     "x": QT_TRANSLATE_NOOP("SaveSheet", "X (px)"),
     "y": QT_TRANSLATE_NOOP("SaveSheet", "Y (px)"),
@@ -138,6 +139,8 @@ class SaveSheet(QGroupBox):
         """A setting's value as stored, as the sheet and the Revisions tab show it."""
         if field == "copper" and (v is None or v in COPPER_SHOWN):
             return self.tr(COPPER_SHOWN[v if isinstance(v, str) else None])
+        if field == "fine_alignment":  # stored only while on (REQ-RCP-007): not stored is off
+            return self.tr("on") if v else self.tr("off")
         if v is None:
             return "—"
         if isinstance(v, bool):
