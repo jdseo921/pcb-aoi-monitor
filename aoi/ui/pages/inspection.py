@@ -401,9 +401,13 @@ class InspectionPage(Page):
         text = {
             None: "",
             "off": self.tr("Shift check off"),
-            "passed": self.tr("✓ Shift check passed · boards may be inspected until {until}").format(until=until),
+            "passed": self.tr("✓ Shift check: every verdict right · boards may be inspected until {until}").format(
+                until=until
+            ),
             "none": self.tr("Shift check needed: press Shift Check (F7) before the first board"),
-            "failed": self.tr("✗ Shift check failed: call an Engineer, then press Shift Check (F7) again"),
+            "failed": self.tr(
+                "✗ Shift check: a master sample judged wrongly. Call an Engineer, then press Shift Check (F7)"
+            ),
             "expired": self.tr("Shift check expired: press Shift Check (F7)"),
             "changed": self.tr("Shift check needed again: the AI model, recipe, Golden board or scale changed"),
         }[state]

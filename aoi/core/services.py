@@ -1775,7 +1775,9 @@ class AppContext:
             self.audit("inspection.shift_check", "board_model", board_model, None, after)
             if not passed:
                 wrong = sum(not r["right"] for r in rows)
-                text = QT_TRANSLATE_NOOP("Errors", "Shift check failed for {board_model}: {wrong} of {count} wrong")
+                text = QT_TRANSLATE_NOOP(
+                    "Errors", "Shift check of {board_model}: {wrong} of {count} master samples judged wrongly"
+                )
                 self.db.alarm("NG", text.fill(board_model=board_model, wrong=wrong, count=len(rows)), "AOI-INSP-016")
         self.log.info("inspection.shift_check", extra={"board_model": board_model, "passed": passed})
         return self.shift_check(board_model)

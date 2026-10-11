@@ -34,7 +34,9 @@ at most 10 %.
    The defaults are the requirement's: `--hours 8 --pace 3 --warm-up 10 --device auto`. The tool first draws the
    synthetic boards, makes a workspace in the run's folder and trains its AI model with the app's own training
    settings (60 epochs at 256 px: minutes on a GPU, longer on a CPU), then opens the app's window, signs the Operator
-   in and presses Next Board every 3 s. The boards and their saved results take about 0.55 MB each: keep 10 GB free.
+   in and presses Next Board every 3 s. That workspace asks for no shift check, as the demo workspace does (ADR 0014,
+   decision 5): the soak measures stability, not verdicts. A run on a station's own workspace (`--workspace`) runs the
+   shift check first where its settings ask for one, and stops if a master sample is judged wrongly. The boards and their saved results take about 0.55 MB each: keep 10 GB free.
 2. Leave the PC alone until the tool prints its summary, about 8 hours after the window opened. Do not use the window.
 3. Record the summary lines it prints (boards, late presses, the medians and PASS or FAIL), and keep `soak.csv` (one
    line per board: UTC time, seconds from Next Board to the result shown and saved, the process's memory in MB, the
