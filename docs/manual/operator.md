@@ -8,8 +8,9 @@ Words: verdicts are OK, NG and WARN (양품, 불량, 확인 필요); see the Cha
 
 ## 1. Starting a shift
 
-**Your name.** Once the station is set up, the app starts signed in as the user `operator`; the header names the user
-signed in and their role, at its right. Press **Switch User** there, pick your name in the list (each name shows its
+**Your name.** Once the station is set up, the app starts signed in as the user who signed in last on this station
+with Switch User, and the status bar at the bottom says so (`operator` until anyone has); the header names the user
+signed in and their role, at its right. If that is not you, sign in as yourself first. Press **Switch User** there, pick your name in the list (each name shows its
 role) and press OK: every board you start from then on is recorded under your name, which the Operator column of Logs &
 Export shows. There is nothing to type, so pick only your own name; if it is not in the list, ask an Admin to add it
 (Settings › Users & roles). The sidebar greys the pages your role cannot open, and pointing at one names the role it
@@ -206,5 +207,5 @@ your counts, set **From** and **To** to the days of your shift, pick your name u
 read the line under the table. **Export CSV** and **Export Image Overlays** are grey for an Operator: an Engineer or
 Admin exports the records. The next operator signs in with **Switch User** (section 1); boards still queued stay
 queued, and Start goes on with them under the new name (section 2). Closing the app empties the queue, and the next
-start signs in `operator` with the View box on Top, so each operator picks their own name, the board model and the
-view again (section 1).
+start signs in the user who signed in last with the View box on Top, so each operator checks the name, picks their own
+with **Switch User** when it is not theirs, and picks the board model and the view again (section 1).

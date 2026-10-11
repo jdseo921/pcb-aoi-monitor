@@ -50,8 +50,8 @@ with `/TASKS=desktopicon` for the desktop shortcut.
 
 | Shortcut (Start menu) | Opens |
 |---|---|
-| **AOI PoC Inspector** | The station's workspace, signed in as the user who signed in last on this PC with **Switch User**, or as `operator` if no one has yet. The first start of a new workspace, with no board model yet, opens as `admin` to set it up. |
-| **AOI PoC Inspector (Demo)** | The demo workspace (`AOI-PoC-Inspector.exe --demo`, REQ-SET-007), loaded first if it is not there yet: the board model DEMO-TBOX-A1 with its AI model, recipe and 10 boards. It opens at **Home**, signed in as `admin`, every time. It is for rehearsing on our own PCs; a customer demo runs on a release build only. |
+| **AOI PoC Inspector** | The station's workspace, signed in as the user who signed in last in this workspace with **Switch User**, or as `operator` if no one has yet. The first start of a new workspace, with no board model yet, opens as `admin` to set it up. |
+| **AOI PoC Inspector (Demo)** | The demo workspace (`AOI-PoC-Inspector.exe --demo`, REQ-SET-007), loaded first if it is not there yet: the board model DEMO-TBOX-A1 with its AI model, recipe and 10 boards. It opens signed in as `admin`, at **Home** after a normal close and on the page it showed after a crash. It is for rehearsing on our own PCs; a customer demo runs on a release build only. |
 
 The optional desktop shortcut opens the station's workspace, like the first one.
 

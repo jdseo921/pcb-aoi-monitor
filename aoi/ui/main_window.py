@@ -394,15 +394,22 @@ class MainWindow(QMainWindow):
         self._training_timer.start(1000)
         self._reload_board_models()
         # the demo, and a station with no board model yet to set up, start with an Admin; any other start with the user
-        # who signed in last on the station; the role is the stored one either way (#197)
-        self.set_user(ctx.start_user(setting_up=not ctx.board_models(), demo=self.in_demo))
+        # who signed in last on the station; the role is the stored one either way (#197); audited as user.start
+        start = ctx.start_user(setting_up=not ctx.board_models())
+        ctx.sign_in(start, start=True)
+        self.set_user(start)
         if self.in_demo:  # its boards wait on Inspection as a scripted run at the demo's pace (REQ-SET-009)
             cast(InspectionPage, self.pages["Inspection"]).play(
                 boards(ctx.settings.root), ctx.settings.demo_pace_s, False
             )
-        # the demo opens at Home, where its script starts; any other start where the last session was (REQ-LOG-005)
-        if self.in_demo or not self.navigate(ctx.settings.last_page):
+        # where the last session was (REQ-LOG-005); the demo after a normal close at Home, where its scripts begin
+        if not self.navigate(ctx.settings.last_page):
             self.navigate("Home")
+        if not self.in_demo and ctx.board_models() and start == ctx.last_signed_in():  # someone else may be at it now
+            said = self.tr(
+                "Signed in as {user} ({role}), who signed in last on this station. Not you? Press Switch User."
+            )
+            self.status(said.format(user=start, role=role_text(ctx.role)), ms=0)
 
     # --- header -------------------------------------------------------------------
     def _header(self) -> QWidget:
@@ -648,10 +655,14 @@ class MainWindow(QMainWindow):
         page = self.pages[cur.data(Qt.ItemDataRole.UserRole)]
         self.stack.setCurrentWidget(page)
         page.on_show()
-        if self.ctx.settings.last_page != page.title:
-            self.ctx.settings.last_page = page.title
+        self._save_page(page.title)
+
+    def _save_page(self, title: str) -> None:
+        """`title` as the page the next start opens (REQ-LOG-005), unaudited, as no user asks for it."""
+        if self.ctx.settings.last_page != title:
+            self.ctx.settings.last_page = title
             try:  # that key alone, over the file as it is now: a hand edit made while the app runs stays (#170)
-                self.ctx.settings.save_keys({"last_page": page.title})
+                self.ctx.settings.save_keys({"last_page": title})
             except (OSError, AoiError):  # a file that cannot be written, or read (AOI-SET-010): left as it is
                 self.ctx.log.warning("settings.save_failed", exc_info=True)
 
@@ -681,6 +692,8 @@ class MainWindow(QMainWindow):
         if not self.switched and not self._may_stop_work(self.tr("close the app")):
             event.ignore()
             return
+        if self.in_demo and not self.switched:  # closed, the demo opens at Home next, where its scripts begin; after a
+            self._save_page("Home")  # crash, on the page it showed, so the presenter carries on (REQ-LOG-005)
         self.ctx.close()  # every job asked to stop and waited for, then the database and the log file closed
         drop_queued(self.ctx.jobs)  # slots the jobs queued before they stopped would meet the closed context
         event.accept()
@@ -710,6 +723,8 @@ class MainWindow(QMainWindow):
         if not self._may_stop_work(self.tr("switch the workspace")):
             return None
         role, page, keys = self.ctx.role, self._page_title(), self.ctx.credentials
+        if self.in_demo:  # the demo, left, opens at Home next as after a close; saved before another settings.json
+            self._save_page("Home")
         QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)  # the busy indicator while the folders are copied
         try:
             self.switched = True
@@ -757,6 +772,7 @@ class MainWindow(QMainWindow):
     def _sign_in_as(self, role: str) -> None:
         """Sign in the first user the workspace holds with `role`, if it holds one; else the start's user stays."""
         if (name := next((u["name"] for u in self.ctx.users() if u["role"] == role), None)) is not None:
+            self.ctx.sign_in(str(name))  # the user carries on in this workspace: its next start signs them in
             self.set_user(str(name))
 
     def _page_title(self) -> str:

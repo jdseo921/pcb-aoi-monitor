@@ -813,7 +813,7 @@ The writes, their roles and entries:
 | `delete_inspections` | Admin | `inspection.delete` (before: the records' UUIDs; after: the `HistoryFilter` that listed them, `records` and `files`; the typed reason; a blank one is `AOI-LOG-003`, nothing deleted); no object UUID. The rows (defects and checks by cascade) and the entry commit together, then the overlay and map files under results/ are deleted; one that will not go is logged as `records.evidence_left` and reported as `AOI-LOG-004` (REQ-LOG-003) |
 | `_sweep_ok_maps` | system, at start-up; no page calls it | `maps.sweep` (days, swept, skipped): the map files of OK results past `map_retention_days_ok` are deleted and forgotten, NG and WARN maps stay; audited, unlike the start-up archive, because it deletes evidence. A file that cannot be deleted, or lies outside results/, is skipped with a warning and kept for the next start |
 | `add_user` | Admin | `user.change` (role); object = user UUID. The last Admin keeps the role: `AOI-USR-002`, nothing written |
-| `sign_in` | anyone | `user.sign_in` (the user signed in before → the user signed in now, each with the role); object = user UUID. Switch User; the newest entry names the user the next start signs in (A1) |
+| `sign_in` | anyone | `user.sign_in` (the user signed in before → the user signed in now, each with the role); object = user UUID. Switch User, and the user carried into a workspace switched to; the newest entry names the user the next start signs in (`last_signed_in`, REQ-USR-003). With `start`, `user.start` (before: none; after: the user and role a start signs in), which no later start reads |
 | `save_settings` | Admin | `settings.change` (the Settings page's values: what settings.json held before → what it holds now); object type `settings`, no object UUID (#197). Two system writes to settings.json go past the check, unaudited, since no user asks for them: the page in use (`last_page`, `MainWindow._on_nav`) and the folder chosen after a refused workspace at start-up (`workspace`, `aoi/ui/errors.py`) |
 
 Reads, inspections (`inspect_file`, `log_result`), alarms and error reports need no role: an Operator inspects boards.
@@ -1024,7 +1024,8 @@ only the picture: the pane shows the golden board as judged, the dialog names th
 keeps its code. Any other error (a database another program holds: AOI-SET-013) leaves both panes empty, each with the
 dialog's code. Each is logged and alarmed on the pool thread, and nothing of a load shows once the page has moved on
 (#247). The page in use is kept in `settings.json` and reopened at start-up (REQ-INSP-006, REQ-LOG-005);
-a page change writes that key alone. A workspace saved on Settings goes to `settings.json` only: the running app keeps
+a page change writes that key alone. The demo workspace writes Home there when its window is closed or left, so it
+opens at Home, where its scripts begin, after a normal close and on the page it showed after a crash (REQ-SET-007). A workspace saved on Settings goes to `settings.json` only: the running app keeps
 its database, log and folders on the open workspace until the restart (REQ-SET-001, #170). The AI device, the
 default epochs and input size and the log retention apply at once: `save_settings` resolves the AI device again and,
 when it changes, logs `device.change` and drops the cached weights; the cache holds a model with the device it sits

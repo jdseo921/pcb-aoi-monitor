@@ -85,8 +85,8 @@ pause at the NG board, **Compare with Golden ›**, **Start** again to the end, 
 **Presenter theme** for a projector, **Reset Demo** to put the ten boards back, and the pace of a scripted run; the
 installer's **AOI PoC Inspector (Demo)** shortcut opens the same workspace. The demo's boards are drawn by
 `tools/make_synthetic_dataset.py`: they show how the app works, never how well it finds defects, so no number from
-them is an accuracy. Every start of the demo opens at **Home**, signed in as `admin`, its first Admin, as the scripts
-begin; use **Switch User** to see the Operator view.
+them is an accuracy. Every start of the demo signs in `admin`, its first Admin, and opens at **Home** after a normal
+close, as the scripts begin; use **Switch User** to see the Operator view.
 
 ## With your own boards
 

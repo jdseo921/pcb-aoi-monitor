@@ -122,13 +122,13 @@ def load_beside(settings: Settings, keys: credentials.Credentials | None = None)
     """The demo workspace beside the workspace of `settings`, loaded from the installed bundle (`bundle_dir`) when it
     is not there yet and kept as it is when it is, with the station's own settings (AI device, language and the rest)
     and asking for no shift check, so the scripted run its boards are queued for on Inspection plays at once (ADR
-    0014); its folder. It opens at Home, signed in as its first Admin (MainWindow). The key goes to `keys`, else to the
-    station's key store. AoiError as `load` refuses it (AOI-SET-015, AOI-SET-016)."""
+    0014); its folder. It opens at Home, signed in as its first Admin (`AppContext.start_user`). The key goes to `keys`,
+    else to the station's key store. AoiError as `load` refuses it (AOI-SET-015, AOI-SET-016)."""
     folder = demo_folder(settings.root)
     values = asdict(settings)
     del values["workspace"]  # load() sets the demo folder
-    no_check = {"shift_check_hours": 0}  # the scripted run plays at once (ADR 0014)
-    load(bundle_dir(), folder, values | no_check, keys or credentials.default())
+    opening = {"last_page": "Home", "shift_check_hours": 0}  # where its scripts begin; its run plays at once (ADR 0014)
+    load(bundle_dir(), folder, values | opening, keys or credentials.default())
     return folder
 
 
