@@ -109,6 +109,8 @@ SETUP: dict[str, Callable[[AppContext], object]] = {
     "move_in": lambda ctx: a_store(ctx, "Acme Electronics"),
     "shred_store": lambda ctx: a_store(ctx, "Delta"),
     "review_result": ng_record,  # the NG board to review, inspected before the workspace is compared
+    # the NG board reviewed as a false call, so the import is all its call writes (REQ-TRN-020)
+    "add_false_call_sample": lambda ctx: ctx.review_result(ng_record(ctx), "FALSE_CALL", "Dust on the board"),
 }
 
 

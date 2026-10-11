@@ -439,6 +439,7 @@ class AppContext:
         should_stop: Callable[[], bool] | None = None,
         already: list[dict[str, Any]] | None = None,
         added: list[str] | None = None,
+        origin: dict[str, str] | None = None,
     ) -> int:
         """Copy uploads into the workspace so training data survives the source folder moving; returns how many were
         added. Each file goes through `_copy_checked` (REQ-TRN-001): checked as Inspection checks an image, never
@@ -452,7 +453,8 @@ class AppContext:
         true the files not yet copied are left out, the ones copied are added and the audit entry says so
         (`cancelled`); `import_files` passes one file a call and stops between calls, so the entries it writes never
         say so. `already`, when given, gets the sample each skipped image is already (`import_files` names it), and
-        `added` the UUID of each sample added."""
+        `added` the UUID of each sample added. `origin` goes into the audit entry as it is: where the images came from,
+        such as the record of a false call (`add_false_call_sample`)."""
         self._refuse_unsafe_name(board_model)  # a new board model is created by its first import
         self._refuse_case_variant(board_model)
         first = paths[0] if paths else ""
@@ -497,7 +499,7 @@ class AppContext:
                 after |= {"skipped": len(kept), "cancelled": stopped}
                 after["samples"] = [{"uuid": uid, "sha256": digest} for _, uid, digest in copies]
                 after["already"] = [{"uuid": had["uuid"], "sha256": digest} for digest, had in kept]
-                self.audit("sample.import", "board_model", board_model, None, after)
+                self.audit("sample.import", "board_model", board_model, None, after | (origin or {}))
         except BaseException:
             _remove([target for target, _, _ in copies])
             raise
@@ -1735,6 +1737,35 @@ class AppContext:
             "inspection.reviewed", extra={"inspection_id": inspection_id, "review": review, "verdict": record["result"]}
         )
         return {**record, "review": review, "review_reason": reason, "review_by": self.user, "review_time": when}
+
+    @requires("Engineer", QT_TRANSLATE_NOOP("Errors", "Adding a board to Training"))
+    def add_false_call_sample(self, inspection_id: int) -> dict[str, Any]:
+        """Add a board reviewed as a false call (REQ-INSP-013) to its board model's Training samples as OK, in one step
+        (REQ-TRN-020, ADR 0013): the board is good by the review, so the next AI model trained learns its look as
+        normal. The record's stored image is imported as `import_samples` imports a file (checked, copied, its SHA-256
+        kept), in the record's view, and the import's audit entry names the record (`from_inspection`, its UUID). An
+        image the board model already holds is not added again. AOI-TRN-050 refuses an unknown record or one not
+        reviewed as a false call, and changes nothing. Returns `added` (1, or 0 when the image was already a sample),
+        `sample` (the UUID of the sample holding the image), its `label`, and the `board_model` and `view`."""
+        record = self.db.inspection(inspection_id)
+        if record is None:
+            raise AoiError("AOI-TRN-050", record=inspection_id, reason=QT_TRANSLATE_NOOP("Errors", "no such record"))
+        if record["review"] != FALSE_CALL:
+            why = QT_TRANSLATE_NOOP("Errors", "it is not reviewed as a false call")
+            raise AoiError("AOI-TRN-050", record=inspection_id, reason=why)
+        if not record["image_path"]:
+            why = QT_TRANSLATE_NOOP("Errors", "its board image was not stored")
+            raise AoiError("AOI-TRN-050", record=inspection_id, reason=why)
+        view = record["view"] or VIEWS[0]  # a record stored before views were (S35) was a top view
+        already: list[dict[str, Any]] = []
+        added: list[str] = []
+        self.import_samples(
+            record["board_model"], [record["image_path"]], "OK", side=view, already=already, added=added,
+            origin={"from_inspection": record["uuid"]},
+        )  # fmt: skip
+        sample = {"uuid": added[0], "label": "OK"} if added else already[0]
+        out = {"added": len(added), "sample": sample["uuid"], "label": sample["label"]}
+        return out | {"board_model": record["board_model"], "view": view}
 
     # --- the start-of-shift check (REQ-INSP-017, ADR 0014) -----------------------
     def master_samples(self, board_model: str) -> list[dict[str, Any]]:

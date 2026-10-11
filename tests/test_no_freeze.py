@@ -51,7 +51,8 @@ HEAVY: dict[type, tuple[str, ...]] = {
     + ("re_evaluate",)  # Compare's Re-evaluate on a stored result (REQ-CMP-005)
     + ("checks_for_many", "export_csv_files", "export_overlays")  # the Logs exports' work (#194)
     + ("export_csv", "export_test_overlays")  # AI Model Test's exports (REQ-TST-004)
-    + ("defect_pareto",),  # Logs & Export's Defect types tab (REQ-LOG-008)
+    + ("defect_pareto",)  # Logs & Export's Defect types tab (REQ-LOG-008)
+    + ("add_false_call_sample",),  # Logs & Export's Add to Training as OK (REQ-TRN-020)
     Inspector: ("inspect",),
 }
 

@@ -791,8 +791,14 @@ or new folder left.
 The **From** and **To** boxes take days from 2000-01-01 to 2100-12-31. **Board model**, **Operator**, **Result**
 (All, OK, NG or WARN) and **Review** (All; Not reviewed, the NG and WARN records no one has reviewed yet; Real defect;
 False call) each narrow the list, and every filter combines with the others and with **Include archived**. Review set
-to False call with a board model and a week lists that line's false calls to open in Compare, one by one. A click
-on a column's header sorts the table by it, again to reverse. The columns are Time, Board model, AI model
+to False call with a board model and a week lists that line's false calls to open in Compare, one by one. A board
+reviewed as a false call is a good board, so **Add to Training as OK** (an Engineer's and an Admin's) copies the
+selected record's board image into its board model's Training samples, labelled OK in the record's view, so the next AI
+model trained learns its look as normal. It needs no confirmation: the sample can be relabelled or deleted on Training.
+The status bar names the board model and view; an image the board model holds already is not added again, and the
+status bar says how it is labelled. The audit trail records it as `sample.import` with `from_inspection`, the record's
+UUID. A record not reviewed as a false call, or one whose board image was not stored, is refused with AOI-TRN-050.
+A click on a column's header sorts the table by it, again to reverse. The columns are Time, Board model, AI model
 (its version), Result (the verdict's colour on that cell alone), Defects, Operator, View, Recipe rev and Image; the
 record's ID and score are in the CSV export. **Open in Compare ›**, Enter or a double-click opens the selected record
 on Compare as it was decided. With 100,000 records stored, **Filter** shows

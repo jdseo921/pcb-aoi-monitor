@@ -8,7 +8,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from PySide6.QtCore import QDate, QModelIndex, QPersistentModelIndex, QRect, QSize, Qt
+from PySide6.QtCore import QCoreApplication, QDate, QModelIndex, QPersistentModelIndex, QRect, QSize, Qt
 from PySide6.QtGui import QColor, QPainter, QTextCharFormat
 from PySide6.QtWidgets import (
     QAbstractItemView,
@@ -29,7 +29,7 @@ from PySide6.QtWidgets import (
 )
 
 from ...core.inspector import ai_check
-from ...core.services import NOT_REVIEWED, REVIEW_FILTERS, AppContext, CsvFile, HistoryFilter
+from ...core.services import FALSE_CALL, NOT_REVIEWED, REVIEW_FILTERS, AppContext, CsvFile, HistoryFilter
 from ...errors import AoiError
 from ...times import to_local
 from .. import theme
@@ -202,6 +202,9 @@ class LogsPage(Page):
         # The selected NG or WARN record's review, F10 Real defect and F11 False call, as on Inspection (REQ-INSP-013)
         self.review = ReviewBar(self, self._reviewed, compact=True)
         line.addWidget(self.review)
+        # a board reviewed as a false call into Training as an OK sample, the Engineer's and Admin's (REQ-TRN-020)
+        self.btn_train = size_class(button(self.tr("Add to Training as OK"), slot=self.add_to_training), "T")
+        line.addWidget(self.btn_train)
         self.btn_compare = size_class(button(self.tr("Open in Compare ›"), slot=self.open_in_compare), "T")
         line.addWidget(self.btn_compare)
         self.root.addLayout(line)
@@ -401,6 +404,7 @@ class LogsPage(Page):
         self.view.set_image(self.ctx.load_image(overlay) if overlay and Path(overlay).exists() else None)
         self.btn_compare.setEnabled(r is not None)
         self.review.show_record(r)
+        self.update_actions()  # Add to Training as OK follows the selected record's review
 
     def _reviewed(self, record: dict[str, Any]) -> None:
         """A review saved: the listed row and its Review cell show it at once, without listing again (REQ-INSP-013)."""
@@ -413,6 +417,7 @@ class LogsPage(Page):
             if int(row_key(self.table, row)) == record["id"] and (item := self.table.item(row, column)) is not None:
                 item.setText(review_text(record["review"]))
         self.count_types()  # a false call changes its types' false calls, if the tab is shown
+        self.update_actions()  # and makes the board one to add to Training
         self.shell.status(
             self.tr("Review saved: {review} for record {record}.").format(
                 review=review_text(record["review"]), record=record["id"]
@@ -678,6 +683,33 @@ class LogsPage(Page):
         self.btn_delete.setVisible(self.ctx.role == "Admin")  # shown to the Admin alone; the service checks the role
         self.btn_compare.setEnabled(bool(self.table.selectionModel().selectedRows()))
         self.btn_delete.setEnabled(idle)
+        self.btn_train.setVisible(admin_or_eng)  # Training's roles; the service checks the role
+        selected = self._selected()
+        self.btn_train.setEnabled(idle and selected is not None and selected["review"] == FALSE_CALL)
+
+    def _selected(self) -> dict[str, Any] | None:
+        """The listed record of the first selected row, or None."""
+        iid = self._selected_id()
+        return next((r for r in self.rows if r["id"] == iid), None)
+
+    def add_to_training(self) -> None:
+        """Add to Training as OK: the selected board, reviewed as a false call, becomes an OK sample of its board model
+        in its view, on the pool thread (REQ-TRN-020). No confirmation: the sample can be deleted on Training."""
+        r = self._selected()
+        if r is None or r["review"] != FALSE_CALL:
+            return
+        record = r["id"]
+
+        def added(out: dict[str, Any]) -> None:
+            if out["added"]:
+                said = self.tr("Record {record}'s board is now an OK sample of {board} ({view}) on Training.")
+            else:
+                said = self.tr("Record {record}'s board is already a sample of {board}, labelled {label}, on Training.")
+            label = QCoreApplication.translate("TrainingPage", out["label"])  # OK, NG or UNSURE, as Training says it
+            board, view = out["board_model"], view_text(out["view"])
+            self.shell.status(said.format(record=record, board=board, view=view, label=label))
+
+        self.run_in_background(self.ctx.add_false_call_sample, record, on_result=added)
 
     def on_show(self) -> None:
         self.update_actions()

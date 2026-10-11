@@ -848,6 +848,16 @@ CODES: dict[str, ErrorCode] = {
             ),
         ),
         ErrorCode(
+            "AOI-TRN-050",
+            QT_TRANSLATE_NOOP("Errors", "Board not added to Training"),
+            QT_TRANSLATE_NOOP("Errors", "Record {record} was not added to Training: {reason}. Nothing was changed."),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Add a board that is still listed on Logs & Export with its board image and reviewed as a False call"
+                " (F11); review it first if the board is good.",
+            ),
+        ),
+        ErrorCode(
             "AOI-TST-001",
             QT_TRANSLATE_NOOP("Errors", "AI model, recipe, scale or Golden board changed since the run"),
             QT_TRANSLATE_NOOP(

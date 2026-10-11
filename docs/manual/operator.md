@@ -162,7 +162,8 @@ line then reads "Reviewed: False call (Dust or debris on the board, not a defect
 change your mind; both reviews stay in the audit trail. You can review any NG or WARN record later on Logs & Export:
 select its row and press the same keys. Home's Inspect card counts the false calls of the board model ("False calls 2
 of 15 reviewed"), and Logs & Export's Review column and summary line show them, so an Engineer can open each false call
-in Compare and tune the recipe or retrain (ADR 0013).
+in Compare and tune the recipe or retrain (ADR 0013): an Engineer adds a board you marked False call to Training as
+an OK sample with one button on Logs & Export.
 
 ## 4. Alarms and messages
 
