@@ -50,9 +50,14 @@ order:
    and the public Sigstore log. Anyone verifies a file with `gh attestation verify FILE -R jdseo921/pcb-aoi-monitor`.
    This is the supply-chain norm SLSA asks for (build level 2) and needs no secret and no person. It is not an
    Authenticode signature: Windows still names the publisher unknown, so builds stay labelled "unsigned, internal".
-2. **For the Stage 1 pilot station:** the customer's IT checks the installer's attestation (or its SHA-256 against
-   `SHA256SUMS.txt`) before installing, and may allow the app by hash in its application control. This is enough for
-   one supervised pilot; it is not enough for a product handed over without us.
+2. **For the Stage 1 pilot stations (private trust, free):** builds of `main` and of tags are also signed with
+   Authenticode, SHA-256 and an RFC 3161 timestamp, by a certificate from our own pilot CA, which only the pilot
+   stations trust, through the customer's IT (`docs/install/pilot-signing.md`). This is the usual practice for
+   internal line-of-business software. `tools/new_pilot_signing.ps1` makes the CA (its key not exportable, on the
+   release engineer's machine) and the signing certificate, which it stores in the repository's encrypted Actions
+   secrets and nowhere else; `tools/pilot_sign.ps1` signs in CI and checks the signature chains to
+   `installer/pilot-ca.cer`. Until the script has been run once the build is unsigned, as before. A pilot-signed
+   build must not go to anyone but a pilot station.
 3. **Before a second customer or any download outside the pilot:** add an Authenticode signature, SHA-256 with an
    RFC 3161 timestamp, by the first route that becomes open: Azure Artifact Signing (cheapest, once Jay has a paid
    subscription and a documented US address, or a company), else a public CA's OV certificate with cloud signing.
