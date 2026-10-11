@@ -1444,7 +1444,7 @@
     </message>
     <message>
         <location line="+21"/>
-        <location filename="../ui/main_window.py" line="+666"/>
+        <location filename="../ui/main_window.py" line="+721"/>
         <source>start-up</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3731,7 +3731,7 @@
 <context>
     <name>HomePage</name>
     <message>
-        <location filename="../ui/main_window.py" line="-552"/>
+        <location filename="../ui/main_window.py" line="-606"/>
         <source>Upload samples</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3766,7 +3766,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+85"/>
+        <location line="+83"/>
+        <source>For {roles}</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+17"/>
         <source>No samples yet. Add at least {count} OK boards.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3781,7 +3786,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-97"/>
+        <location line="-112"/>
         <source>Inspect</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3806,17 +3811,17 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+34"/>
+        <location line="+71"/>
         <source>Open {page} ›</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+23"/>
+        <location line="-12"/>
         <source>Training running {percent} % · {left}</source>
         <translation>학습 중 {percent} % · {left}</translation>
     </message>
     <message>
-        <location line="+14"/>
+        <location line="+27"/>
         <source>{ok} OK · {ng} NG uploaded</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4732,7 +4737,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+75"/>
+        <location line="+90"/>
         <source>Demo</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4797,7 +4802,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+76"/>
+        <location line="+77"/>
         <source>Presenter theme off.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4812,7 +4817,33 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+45"/>
+        <location line="+14"/>
+        <source>On {page}:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <location line="+5"/>
+        <source>{key}   {action}</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="-3"/>
+        <source>Open a page:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+4"/>
+        <source>F1   This list of keys</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>Keys</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+38"/>
         <source>close the app</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4837,12 +4868,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-92"/>
+        <location line="-115"/>
         <source>Presenter theme on. An Admin turns it off with Exit presenter theme.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+94"/>
+        <location line="+117"/>
         <source>Stopping the running work…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5287,7 +5318,7 @@
 <context>
     <name>Page</name>
     <message>
-        <location filename="../ui/main_window.py" line="-519"/>
+        <location filename="../ui/main_window.py" line="-573"/>
         <source>Home</source>
         <translation type="unfinished"></translation>
     </message>
