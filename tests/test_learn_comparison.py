@@ -6,18 +6,21 @@ choosing. The boards here are drawings: what they show is that the steps work, n
 from __future__ import annotations
 
 import functools
+import itertools
 import math
+import uuid
 from pathlib import Path
+from unittest import mock
 
 import cv2
 import numpy as np
 import pytest
 from PySide6.QtCore import Qt
 from PySide6.QtTest import QTest
-from PySide6.QtWidgets import QLabel, QMessageBox
+from PySide6.QtWidgets import QLabel, QMessageBox, QVBoxLayout, QWidget
 from pytestqt.qtbot import QtBot
 
-from aoi.core import tuning
+from aoi.core import stats, tuning
 from aoi.core.imaging import refine, registration, save_image
 from aoi.core.inspector import Inspector
 from aoi.core.jobs import JobCancelled
@@ -27,6 +30,7 @@ from aoi.core.services import AppContext
 from aoi.errors import AoiError
 from aoi.ui.main_window import MainWindow
 from aoi.ui.pages.recipe_editor import RecipeEditorPage
+from aoi.ui.pages.recipe_learn import LearnSheet
 
 BOARD = "LEARN-01"
 DEFECT = (300, 200, 14, 10)  # x, y, w, h of the copper speck drawn on each NG board, before it is moved
@@ -142,7 +146,16 @@ def test_req_trn_018_of_settings_that_tie_the_one_deepest_among_them_is_chosen()
 
 
 def _labelled(ctx: AppContext, golden: np.ndarray, folder: Path, ok: int, ng: int) -> None:
-    """The board model with the Golden board, then `ok` OK boards and `ng` NG boards each with its speck boxed."""
+    """The board model with the Golden board, then `ok` OK boards and `ng` NG boards each with its speck boxed. Their
+    UUIDs are counted, 1, 2, 3…, not drawn: the held-out third is drawn with the seed from the boards in their UUIDs'
+    order, so random UUIDs held out other boards on each run, and the learned Pixel difference came out 35 on one run
+    and 40 on the next (#389)."""
+    counted = (uuid.UUID(int=n, version=4) for n in itertools.count(1))
+    with mock.patch("uuid.uuid4", side_effect=counted):
+        _write_labelled(ctx, golden, folder, ok, ng)
+
+
+def _write_labelled(ctx: AppContext, golden: np.ndarray, folder: Path, ok: int, ng: int) -> None:
     folder.mkdir()
     save_image(folder / "golden.png", golden)
     ctx.import_samples(BOARD, [str(folder / "golden.png")], "OK")
@@ -229,6 +242,43 @@ def test_req_trn_018_too_few_boards_no_golden_board_and_cancel(
     assert math.isfinite(found["held_out"]["chosen"]["missed"]["limit"])
 
 
+def _cut(sheet: LearnSheet) -> list[str]:
+    """The sheet's wrapped lines shown with less height than their text needs at their width."""
+    return [
+        label.text()
+        for label in sheet.findChildren(QLabel)
+        if label.isVisible() and label.wordWrap() and label.heightForWidth(label.width()) > label.height()
+    ]
+
+
+def test_req_trn_018_the_learn_sheet_keeps_every_line_whole_in_a_narrow_column(qtbot: QtBot) -> None:
+    """#389's Windows CI: the sheet's grid gave a count over its bound 73 px where its three lines needed 76, and cut
+    the last. Each wrapped line now asks for the height its text needs at the width it has, so the column lays it out
+    whole: in columns 260 to 400 px wide, where plain wrapped labels were cut in the test font, nothing is."""
+    rates = {"missed": stats.rate(0, 2), "false_calls": stats.rate(0, 6), "ok_called_ng": stats.rate(0, 2)}
+    found = {
+        "chosen_on": {"ok": 4, "ng": 4, "boxes": 4},
+        "counted_on": {"by": "split", "ok": 2, "ng": 2, "seed": 11},
+        "current": {"diff_threshold": 45, "min_defect_area": 40, "fine_alignment": False},
+        "chosen": {"diff_threshold": 35, "min_defect_area": 20, "fine_alignment": True},
+        "held_out": {"current": rates, "chosen": rates},
+        "left_out": {"no_boxes": 1, "other_view": 0, "unsure": 2, "unreadable": 0, "why": ""},
+    }
+    column = QWidget()
+    qtbot.addWidget(column)
+    sheet = LearnSheet(lambda _found: None)
+    QVBoxLayout(column).addWidget(sheet, 1)  # as the Recipe Editor's column holds it, in the tabs' place
+    sheet.show_found(found)
+    column.show()
+    cut = {}
+    for width in range(260, 401, 20):
+        column.resize(width, 900)
+        qtbot.wait(20)
+        cut[width] = _cut(sheet)
+    assert cut == {width: [] for width in range(260, 401, 20)}
+    assert sheet.text_at(4, 2) == "0 of 2\n95 % upper bound 77.6 %"
+
+
 def test_req_trn_018_learn_on_the_recipe_editor_sets_the_fields_and_save_keeps_the_evidence(
     qtbot: QtBot, ctx: AppContext, golden: np.ndarray, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -258,25 +308,23 @@ def test_req_trn_018_learn_on_the_recipe_editor_sets_the_fields_and_save_keeps_t
         " with seed 11: 2 OK and 2 NG."
     )
     assert [sheet.text_at(r, 1) for r in (1, 2, 3)] == ["45", "40", "off"]
-    assert [sheet.text_at(r, 2) for r in (1, 2, 3)] == ["35", "20", "off"]
+    assert [sheet.text_at(r, 2) for r in (1, 2, 3)] == ["40", "20", "off"]
     assert sheet.text_at(4, 2).split("\n") == ["0 of 2", "95 % upper bound 77.6 %"]
     assert sheet.text_at(5, 2).split("\n")[0] == "0 of 6" and sheet.left.isHidden()
-    for label in sheet.findChildren(QLabel):
-        if label.isVisible() and label.wordWrap():
-            assert label.heightForWidth(label.width()) <= label.height(), f"'{label.text()}' is cut"
+    qtbot.waitUntil(lambda: not _cut(sheet), timeout=5000)  # a line's height follows its width in one more pass
     assert page.diff.value() == 45, "nothing changes before Use Learned Values"
     sheet.btn_use.click()
-    assert sheet.isHidden() and (page.diff.value(), page.area.value(), page.fine.isChecked()) == (35, 20, False)
+    assert sheet.isHidden() and (page.diff.value(), page.area.value(), page.fine.isChecked()) == (40, 20, False)
     page.ask_save()
     assert page.save_sheet.changes.text().split("\n") == [
-        "Pixel difference: 45 → 35",
+        "Pixel difference: 45 → 40",
         "Minimum defect area (px): 40 → 20",
     ]
     reason = page.save_sheet.reason.text()
     assert reason.startswith("Learned from 8 labelled board(s); on 4 held out: missed defects 0 of 2, 95 % upper")
     page.save_sheet.btn_save.click()
     entry = ctx.audit_entries(action="recipe.save", object_uuid=ctx.recipe_history(BOARD)[0]["uuid"])[0]
-    assert entry["reason"] == reason and entry["after"]["diff_threshold"] == 35 and page.rev == rev + 1
+    assert entry["reason"] == reason and entry["after"]["diff_threshold"] == 40 and page.rev == rev + 1
     page.fine.setChecked(True)
     page.ask_save()
     assert page.save_sheet.changes.text() == "Fine alignment: off → on" and not page.save_sheet.reason.text()

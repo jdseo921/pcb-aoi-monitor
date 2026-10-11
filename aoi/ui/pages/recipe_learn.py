@@ -7,13 +7,40 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Any
 
-from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QAction, QFont, QKeySequence
+from PySide6.QtCore import QSize, Qt, Signal
+from PySide6.QtGui import QAction, QFont, QKeySequence, QResizeEvent
 from PySide6.QtWidgets import QGridLayout, QGroupBox, QHBoxLayout, QLabel, QVBoxLayout
 
 from ...core import stats
 from ..errors import phrase_text
 from .base import button
+
+
+class WholeLines(QLabel):
+    """A word-wrapped line of the sheet that is never given less height than its text needs at the width it has. Its
+    minimum height follows its width, so the grid and the column lay it out whole: on Windows the grid gave a count
+    over its bound, three lines at 160 px, 73 px where it needed 76, which cut its last line (#389's CI). Its width
+    never depends on its height, so one more layout pass settles it."""
+
+    def __init__(self, text: str = "") -> None:
+        super().__init__(text)
+        self.setWordWrap(True)
+        self._need = 0  # the height the text needs at the width it was last given
+
+    def minimumSizeHint(self) -> QSize:
+        hint = super().minimumSizeHint()
+        return QSize(hint.width(), max(hint.height(), self._need))
+
+    def resizeEvent(self, event: QResizeEvent) -> None:
+        super().resizeEvent(event)
+        self.fit()
+
+    def fit(self) -> None:
+        """Ask for the height the text needs at the width the line has now; after a resize, and after new text."""
+        need = max(self.heightForWidth(self.width()), 0) if self.width() > 0 else 0
+        if need != self._need:
+            self._need = need
+            self.updateGeometry()
 
 
 class LearnSheet(QGroupBox):
@@ -36,13 +63,12 @@ class LearnSheet(QGroupBox):
         esc.triggered.connect(self.close_sheet)
         self.addAction(esc)
         lay = QVBoxLayout(self)
-        self.what = QLabel()  # the boards chosen on and counted on
-        self.what.setWordWrap(True)
+        self.what = WholeLines()  # the boards chosen on and counted on
         lay.addWidget(self.what)
         self.grid = QGridLayout()
         self.grid.setColumnStretch(1, 1)
         self.grid.setColumnStretch(2, 1)
-        self.cells: dict[tuple[int, int], QLabel] = {}
+        self.cells: dict[tuple[int, int], WholeLines] = {}
         heads = ["", self.tr("This recipe"), self.tr("Learned")]
         names = [
             self.tr("Pixel difference"),
@@ -62,18 +88,16 @@ class LearnSheet(QGroupBox):
             self._cell(r, 1, "")
             self._cell(r, 2, "")
         lay.addLayout(self.grid)
-        self.left = QLabel()  # why boards were left out, when any was
+        self.left = WholeLines()  # why boards were left out, when any was
         self.left.setObjectName("muted")
-        self.left.setWordWrap(True)
         lay.addWidget(self.left)
-        note = QLabel(
+        note = WholeLines(
             self.tr(
                 "Counted on the held-out boards, which no value was chosen on. Use Learned Values puts them in the"
                 " fields; Save Recipe stores them as a revision."
             )
         )
         note.setObjectName("muted")
-        note.setWordWrap(True)
         lay.addWidget(note)
         row = QHBoxLayout()
         row.addStretch(1)
@@ -84,9 +108,8 @@ class LearnSheet(QGroupBox):
         lay.addStretch(1)
         self.hide()
 
-    def _cell(self, r: int, c: int, text: str) -> QLabel:
-        label = QLabel(text)
-        label.setWordWrap(True)
+    def _cell(self, r: int, c: int, text: str) -> WholeLines:
+        label = WholeLines(text)
         label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
         self.grid.addWidget(label, r, c)
         self.cells[r, c] = label
@@ -121,6 +144,8 @@ class LearnSheet(QGroupBox):
                 self.cells[r, c].setText(self._rate(rates[rate]))
         self.left.setText(self._left_out(found["left_out"]))
         self.left.setVisible(bool(self.left.text()))
+        for line in self.findChildren(WholeLines):  # new text at an unchanged width: no resize tells them
+            line.fit()
         self.show()
         self.btn_use.setFocus()
 
