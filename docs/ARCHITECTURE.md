@@ -759,6 +759,7 @@ and maps has ended, and "Would be" shows within 300 ms of the key at 5 MP (`test
 | Page | Operator | Engineer | Admin |
 |---|:-:|:-:|:-:|
 | Home, Inspection, Compare, Logs (view) | ✓ | ✓ | ✓ |
+| Inspection, Logs → Real defect / False call… (review a call, REQ-INSP-013, ADR 0013) | ✓ | ✓ | ✓ |
 | Logs export / archive | | ✓ | ✓ |
 | Logs → Delete Records…, Training → Remove (REQ-LOG-003) | | | ✓ |
 | Training, AI Model Test, Recipe Editor, 3D Profile | | ✓ | ✓ |

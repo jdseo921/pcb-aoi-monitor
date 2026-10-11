@@ -106,6 +106,13 @@ def validation_version(ctx: AppContext) -> str:
     return trainable(ctx, "TINY", held=[ctx.samples("TINY", "NG")[-1]["uuid"]])
 
 
+def ng_record(ctx: AppContext, data: Path) -> int:
+    """The record of an NG board of the synthetic test split, inspected and saved now."""
+    board = next(data.glob("test/ng/*missing_component*.png"))
+    assert ctx.inspect_file("TINY", str(board)).verdict == "NG"
+    return int(ctx.inspections(board_model="TINY")[0]["id"])
+
+
 WRITES: dict[str, tuple[str, Callable[[AppContext, Path, Path], Any]]] = {
     "ensure_board_model": ("board_model.create", lambda ctx, data, tmp: ctx.ensure_board_model("NEW")),
     "import_samples": (
@@ -206,6 +213,11 @@ WRITES: dict[str, tuple[str, Callable[[AppContext, Path, Path], Any]]] = {
             [r["id"] for r in ctx.inspections(include_archived=True)], HistoryFilter(include_archived=True), "a test"
         ),
     ),
+    # an NG board inspected after the delete above, reviewed on the line by any role (REQ-INSP-013, ADR 0013)
+    "review_result": (
+        "inspection.review",
+        lambda ctx, data, tmp: ctx.review_result(ng_record(ctx, data), "FALSE_CALL", "Dust on the board"),
+    ),
 }
 # what only an Engineer does that writes no audit entry itself: re-evaluating a result (REQ-CMP-005, since S28a), and
 # starting a training run, whose job writes model.train once it ends (REQ-TRN-008, S40)
@@ -233,6 +245,7 @@ EXPECTED_ROLE = {name: "Engineer" for name in CALLS} | {"add_user": "Admin", "sa
 EXPECTED_ROLE |= {"create_store": "Admin", "restore_store_key": "Admin", "move_in": "Admin", "shred_store": "Admin"}
 EXPECTED_ROLE |= {"delete_sample": "Admin", "delete_inspections": "Admin"}  # only an Admin deletes (REQ-LOG-003)
 EXPECTED_ROLE |= {f"export_{what}": "Admin" for what in ("overlays", "csv", "csv_files", "report")}  # Q58 (#151)
+EXPECTED_ROLE["review_result"] = "Operator"  # the operator at the line reviews each call (ADR 0013)
 EXPECTED_ROLE["export_board_image"] = "Admin"  # Save Image… (F9): an export, an Admin's alone (#151, Jay 2026-10-10)
 REFUSED = [(name, role) for name in CALLS for role in ROLES[: ROLES.index(EXPECTED_ROLE[name])]]
 
