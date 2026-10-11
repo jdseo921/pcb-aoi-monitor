@@ -41,7 +41,7 @@ if ($NewCa -or -not $ca) {
     $ca = New-SelfSignedCertificate -Subject $caSubject -CertStoreLocation Cert:\CurrentUser\My `
         -KeyUsage CertSign, CRLSign, DigitalSignature -KeyExportPolicy NonExportable -KeyAlgorithm RSA -KeyLength 3072 `
         -HashAlgorithm SHA256 -NotAfter (Get-Date).AddYears(5) `
-        -TextExtension @("2.5.29.19={critical}{text}ca=true&pathlength=0")
+        -Type Custom -TextExtension @("2.5.29.19={critical}{text}ca=true&pathlength=0", "2.5.29.37={text}1.3.6.1.5.5.7.3.3")  # code signing only: Windows refuses a chain whose CA names other usages
     Write-Host "Created the pilot root CA $($ca.Thumbprint), valid to $($ca.NotAfter.ToString('yyyy-MM-dd'))."
 } else {
     Write-Host "Reusing the pilot root CA $($ca.Thumbprint), valid to $($ca.NotAfter.ToString('yyyy-MM-dd'))."
