@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from PySide6.QtCore import QDate, QModelIndex, QPersistentModelIndex, QRect, QSize, Qt
-from PySide6.QtGui import QColor, QFontMetrics, QPainter, QTextCharFormat
+from PySide6.QtGui import QColor, QPainter, QTextCharFormat
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QCheckBox,
@@ -61,7 +61,7 @@ DEFAULT_DAYS = 7  # a new page and Reset Filters show the last 7 days
 VERDICTS = ("OK", "NG", "WARN")  # the Result filter's verdicts after All, as the sketch lists them
 REVIEW_COLUMN = 4  # the table's Review column, after Result (REQ-INSP-013)
 RECORDS_TAB, TYPES_TAB = 0, 1  # the page's tabs: the records with the selected one's overlay, their defects by type
-SHARE_COLUMN = 6  # the Defect types tab's last column: the share, with its bar
+BAR_COLUMN = 7  # the Defect types tab's last column, after Share: the bar of the type's defects (`ShareBar`)
 
 if TYPE_CHECKING:
     from ..main_window import MainWindow
@@ -79,29 +79,28 @@ class NameFilter(QComboBox):
 
 
 class ShareBar(QStyledItemDelegate):
-    """The Share cell of the Defect types tab: the type's share as text, then a bar as long as its defects against the
-    most any type has, SHARE_BAR_W at most, so the table reads as a Pareto chart (REQ-LOG-008) without Qt Charts, which
-    is not LGPL. The bar's length is the row's key (`fill_table`); its colour is the theme's accent, read as it is
-    drawn, so a theme switch redraws it."""
+    """The bar beside a Defect types row's Share, as long as the type's defects against the most any type has,
+    SHARE_BAR_W at most, so the table reads as a Pareto chart (REQ-LOG-008) without Qt Charts, which is not LGPL. It
+    has a column of its own with no text: drawn in the Share cell beside the number, it filled more of the cell than the
+    cell's ground and was read as the ground of the text, white on the accent at 3.7:1 in the presenter theme (#390's
+    CI). The bar's length is the row's key (`fill_table`); its colour is the theme's accent, read as it is drawn, which
+    reads on the table's rows at 3:1 or more in both themes, as a graphic must (WCAG 1.4.11)."""
 
     def sizeHint(self, option: QStyleOptionViewItem, index: QModelIndex | QPersistentModelIndex) -> QSize:
-        hint = super().sizeHint(option, index)  # the text's
-        return QSize(QFontMetrics(option.font).horizontalAdvance("100.0 %") + theme.SHARE_BAR_W, hint.height())
+        return QSize(theme.SHARE_BAR_W + 2 * theme.CELL_PAD, super().sizeHint(option, index).height())
 
     def paint(
         self, painter: QPainter, option: QStyleOptionViewItem, index: QModelIndex | QPersistentModelIndex
     ) -> None:
-        super().paint(painter, option, index)  # the cell and its text, the share
+        super().paint(painter, option, index)  # the cell's ground
         length = index.data(Qt.ItemDataRole.UserRole)
         if not isinstance(length, float):
             return
         rect: QRect = option.rect
         cell = rect.adjusted(theme.CELL_PAD, theme.CELL_PAD, -theme.CELL_PAD, -theme.CELL_PAD)
-        text = QFontMetrics(option.font).horizontalAdvance("100.0 %")
-        left = cell.left() + text + theme.CELL_PAD
-        width = round((cell.right() - left) * length)
+        width = round(cell.width() * length)
         if width > 0:
-            painter.fillRect(QRect(left, cell.top(), width, cell.height()), QColor(theme.ACCENT))
+            painter.fillRect(QRect(cell.left(), cell.top(), width, cell.height()), QColor(theme.ACCENT))
 
 
 class LogsPage(Page):
@@ -215,13 +214,13 @@ class LogsPage(Page):
         layout.addWidget(line)
         headers = [
             self.tr("Defect type"), self.tr("Defects"), self.tr("Records"), self.tr("Reviewed"), self.tr("False calls"),
-            self.tr("Cumulative"), self.tr("Share"),
+            self.tr("Cumulative"), self.tr("Share"), "",  # the bar, beside Share, needs no heading of its own
         ]  # fmt: skip
         self.type_table = make_table(headers, sortable=False)  # most first is the order it is read in
         self.type_table.setSelectionMode(QAbstractItemView.SelectionMode.NoSelection)  # nothing to do with a row
-        self.type_table.setItemDelegateForColumn(SHARE_COLUMN, ShareBar(self.type_table))
-        # Share sized as the others, to its contents, the bar's room included (`ShareBar.sizeHint`): a stretched last
-        # section is sized to its text when the rows are filled, which left no room for a bar
+        self.type_table.setItemDelegateForColumn(BAR_COLUMN, ShareBar(self.type_table))
+        # the bar's column sized as the others, to its contents (`ShareBar.sizeHint`): a stretched last section is sized
+        # to its text when the rows are filled, which left no room for a bar
         self.type_table.horizontalHeader().setStretchLastSection(False)
         layout.addWidget(self.type_table, 1)
         self.types_empty = EmptyState(self.type_table)
@@ -454,11 +453,12 @@ class LogsPage(Page):
                     t["false_calls"],
                     percent.format(percent=100 * t["cumulative"]),
                     percent.format(percent=100 * t["share"]),
+                    None,  # the bar (`ShareBar`)
                 ]
                 for t in named
             ],
             tooltips=[tip.format(**(t | {"share": 100 * t["share"]})) for t in named],
-            keys=[t["defects"] / most for t in types],  # the length of each Share bar, the most defects the longest
+            keys=[t["defects"] / most for t in types],  # the length of each bar, the most defects the longest
         )
         if types:
             self.types_empty.hide()

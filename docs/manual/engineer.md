@@ -838,11 +838,11 @@ archived. The Operator manual (section 5) and the paragraphs above give the rest
 **Defect types.** The **Defect types** tab of Logs & Export is the line's defect Pareto: the listed records' defects
 counted by type, most first, with **Defects**, **Records** (the records holding the type), **Reviewed** and **False
 calls** (of those records, the ones reviewed on the line, and reviewed as a false call), **Cumulative** (the running
-share) and **Share** with its bar. Set the filter to a board model and a week and the first rows are the types to work
-on: a type with many false calls is a recipe to tighten, for instance with Learn From Labelled Boards… (section 5), and
-a type with many real defects is one for the process upstream. A review is of a whole record, so a record holding two
-types reviewed as a false call counts as one false call under each. The tab counts in the background, again when the
-filter or a review changes, and Export CSV's `defect_types` column carries the same names per record.
+share) and **Share**, with a bar beside it. Set the filter to a board model and a week and the first rows are the types
+to work on: a type with many false calls is a recipe to tighten, for instance with Learn From Labelled Boards…
+(section 5), and a type with many real defects is one for the process upstream. A review is of a whole record, so a record
+holding two types reviewed as a false call counts as one false call under each. The tab counts in the background, again
+when the filter or a review changes, and Export CSV's `defect_types` column carries the same names per record.
 
 **Archive.** At each start the app archives the records older than **Log retention (days)** (section 1), and **Archive
 older than 30 days** on Logs & Export, which names the retention in force, does the same at once; it is grey for an

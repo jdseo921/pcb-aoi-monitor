@@ -4514,12 +4514,12 @@
 <context>
     <name>LearnSheet</name>
     <message>
-        <location filename="../ui/pages/recipe_learn.py" line="+31"/>
+        <location filename="../ui/pages/recipe_learn.py" line="+58"/>
         <source>Learned From Labelled Boards</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+15"/>
+        <location line="+14"/>
         <source>This recipe</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4559,12 +4559,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+18"/>
+        <location line="+17"/>
         <source>Counted on the held-out boards, which no value was chosen on. Use Learned Values puts them in the fields; Save Recipe stores them as a revision.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+9"/>
+        <location line="+8"/>
         <source>Close</source>
         <translation type="unfinished">닫기</translation>
     </message>
@@ -4574,7 +4574,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+21"/>
+        <location line="+20"/>
         <source>Chosen on {boards} board(s): {ok} OK and {ng} NG with {boxes} defect box(es).</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4599,7 +4599,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+17"/>
+        <location line="+19"/>
         <source>{count} NG image(s) with no defect box</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4632,7 +4632,7 @@
 <context>
     <name>LogsPage</name>
     <message>
-        <location filename="../ui/pages/logs.py" line="+131"/>
+        <location filename="../ui/pages/logs.py" line="+130"/>
         <source>Include archived</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4732,12 +4732,12 @@
     </message>
     <message>
         <location line="+5"/>
-        <location line="+302"/>
+        <location line="+303"/>
         <source>Export CSV</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-301"/>
+        <location line="-302"/>
         <source>Export Image Overlays</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4833,7 +4833,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+26"/>
+        <location line="+27"/>
         <source>None of the {count:,} listed record(s) holds a defect.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4879,24 +4879,24 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-303"/>
-        <location line="+135"/>
+        <location line="-304"/>
+        <location line="+136"/>
         <source>No records</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-121"/>
+        <location line="-122"/>
         <source>No records match</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location line="-8"/>
-        <location line="+129"/>
+        <location line="+130"/>
         <source>Widen the dates or the filters.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-317"/>
+        <location line="-318"/>
         <source>AI model</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4916,7 +4916,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+135"/>
+        <location line="+136"/>
         <source>Confirm export</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4961,8 +4961,8 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-481"/>
-        <location line="+544"/>
+        <location line="-482"/>
+        <location line="+545"/>
         <source>All</source>
         <translation>전체</translation>
     </message>
@@ -5733,7 +5733,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/logs.py" line="-564"/>
+        <location filename="../ui/pages/logs.py" line="-565"/>
         <source>Logs &amp; Export</source>
         <translation type="unfinished"></translation>
     </message>

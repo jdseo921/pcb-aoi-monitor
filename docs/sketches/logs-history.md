@@ -35,18 +35,19 @@ records stay searchable with "Include archived" (REQ-LOG-003).
 ```
 [ Records ] [■ Defect types ]
 The listed records' defects by type, most first. Records: the records holding the type; Reviewed and False calls: …
-┌─────────────────────────┬─────────┬─────────┬──────────┬─────────────┬────────────┬──────────────────────────────┐
-│ Defect type             │ Defects │ Records │ Reviewed │ False calls │ Cumulative │ Share                        │
-│ Open Circuit            │ 9       │ 1       │ 0        │ 0           │ 45.0 %     │ 45.0 % ████████████████████  │
-│ Pin-hole / Missing Hole │ 4       │ 1       │ 1        │ 1           │ 65.0 %     │ 20.0 % █████████             │
-│ Short Circuit           │ 4       │ 2       │ 0        │ 0           │ 85.0 %     │ 20.0 % █████████             │
-└─────────────────────────┴─────────┴─────────┴──────────┴─────────────┴────────────┴──────────────────────────────┘
+┌─────────────────────────┬─────────┬─────────┬──────────┬─────────────┬────────────┬────────┬─────────────────────┐
+│ Defect type             │ Defects │ Records │ Reviewed │ False calls │ Cumulative │ Share  │                     │
+│ Open Circuit            │ 9       │ 1       │ 0        │ 0           │ 45.0 %     │ 45.0 % │ ███████████████████ │
+│ Pin-hole / Missing Hole │ 4       │ 1       │ 1        │ 1           │ 65.0 %     │ 20.0 % │ ████████            │
+│ Short Circuit           │ 4       │ 2       │ 0        │ 0           │ 85.0 %     │ 20.0 % │ ████████            │
+└─────────────────────────┴─────────┴─────────┴──────────┴─────────────┴────────────┴────────┴─────────────────────┘
 ```
 
 The defect Pareto of an AOI line's reports, with the false calls by type beside it, from the records the filter lists:
 most defects first, ties by name. Records counts the records holding the type; Reviewed and False calls count those of
-them reviewed on the line (REQ-INSP-013), and reviewed as a false call. The bar is as long as the type's defects
-against the most any type has, in the accent colour (no Qt Charts: LGPL modules only). Counted on the pool thread when
+them reviewed on the line (REQ-INSP-013), and reviewed as a false call. The bar, in a column of its own beside Share so
+that no text is drawn on it, is as long as the type's defects against the most any type has, in the accent colour,
+which reads at 3:1 or more on the rows in both themes (no Qt Charts: LGPL modules only). Counted on the pool thread when
 the tab is shown, and again on Filter and on a saved review; "No defects" or "No records" says why it is empty. Rows
 are read, not acted on: no selection. Every role sees it.
 

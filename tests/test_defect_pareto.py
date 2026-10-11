@@ -12,10 +12,12 @@ from pytestqt.qtbot import QtBot
 
 from aoi.core.services import DEFECT, FALSE_CALL, AppContext
 from aoi.data import db as db_module
+from aoi.ui import theme
 from aoi.ui.main_window import MainWindow
 from aoi.ui.pages.base import row_key
-from aoi.ui.pages.logs import RECORDS_TAB, SHARE_COLUMN, TYPES_TAB, LogsPage
+from aoi.ui.pages.logs import BAR_COLUMN, RECORDS_TAB, TYPES_TAB, LogsPage
 from tests.conftest import listed
+from tests.screens.test_sizes_and_contrast import GRAPHIC_RATIO, _ratio
 
 
 def _record(ctx: AppContext, result: str, *types: str) -> int:
@@ -71,17 +73,29 @@ def _counted(qtbot: QtBot, page: LogsPage) -> None:
     qtbot.waitUntil(lambda: page.counting is None, timeout=30000)
 
 
+def _colours(page: LogsPage, row: int, column: int) -> set[str]:
+    """The colours drawn in a cell of the Defect types table."""
+    t = page.type_table
+    image = t.viewport().grab(t.visualItemRect(t.item(row, column))).toImage()
+    return {image.pixelColor(x, y).name() for x in range(image.width()) for y in range(image.height())}
+
+
 def test_req_log_008_the_defect_types_tab_counts_the_listed_records_and_follows_the_filter_and_reviews(
     qtbot: QtBot, ctx: AppContext
 ) -> None:
     """Two tabs, Records and Defect types. Defect types counts the records listed, most first: per type its defects,
     the records holding it, how many of those were reviewed and how many as a false call, the running total and the
-    share, which a bar draws as long as the type's defects against the most; a tooltip says it in a sentence. It counts
-    only when shown, and again when Filter lists other records and when a review is saved, and says why it is empty."""
+    share, and beside it a bar as long as the type's defects against the most, in a column of its own, so that no text
+    is drawn on it (#390's CI), in a colour that reads at 3:1 on the rows in both themes; a tooltip says it in a
+    sentence. It counts only when shown, and again when Filter lists other records and when a review is saved, and says
+    why it is empty."""
     ids = _line(ctx)
     ctx.review_result(ids["warn"], DEFECT)
     win = MainWindow(ctx)
     qtbot.addWidget(win)
+    win.resize(1920, 1080)  # the whole table in view, its bars drawn
+    win.show()
+    qtbot.waitExposed(win)
     win.set_user("operator")  # every role reads it, as every role views the history
     win.navigate("Logs & Export")
     page = cast(LogsPage, win.pages["Logs & Export"])
@@ -89,17 +103,21 @@ def test_req_log_008_the_defect_types_tab_counts_the_listed_records_and_follows_
     assert [page.tabs.tabText(i) for i in range(page.tabs.count())] == ["Records", "Defect types"]
     assert page.tabs.currentIndex() == RECORDS_TAB and page.counting is None  # counted only when shown
     headers = [page.type_table.horizontalHeaderItem(c).text() for c in range(page.type_table.columnCount())]
-    assert headers == ["Defect type", "Defects", "Records", "Reviewed", "False calls", "Cumulative", "Share"]
+    assert headers == ["Defect type", "Defects", "Records", "Reviewed", "False calls", "Cumulative", "Share", ""]
 
     page.tabs.setCurrentIndex(TYPES_TAB)
     _counted(qtbot, page)
     assert _cells(page) == [
-        ["Open Circuit", 4, 2, 0, 0, "57.1 %", "57.1 %"],
-        ["Spur", 2, 1, 1, 0, "85.7 %", "28.6 %"],
-        ["Short Circuit", 1, 1, 0, 0, "100.0 %", "14.3 %"],
+        ["Open Circuit", 4, 2, 0, 0, "57.1 %", "57.1 %", ""],
+        ["Spur", 2, 1, 1, 0, "85.7 %", "28.6 %", ""],
+        ["Short Circuit", 1, 1, 0, 0, "100.0 %", "14.3 %", ""],
     ]
-    bars = [page.type_table.item(r, SHARE_COLUMN).data(Qt.ItemDataRole.UserRole) for r in range(3)]
+    bars = [page.type_table.item(r, BAR_COLUMN).data(Qt.ItemDataRole.UserRole) for r in range(3)]
     assert bars == [1.0, 0.5, 0.25]  # against the most defects, Open Circuit's 4
+    assert all(theme.ACCENT in _colours(page, r, BAR_COLUMN) for r in range(3))  # drawn, in its own column
+    assert not any(theme.ACCENT in _colours(page, r, c) for r in range(3) for c in range(BAR_COLUMN))
+    for tokens in (theme.TOKENS, theme.PRESENTER):  # the rows' two grounds, in the production and presenter themes
+        assert min(_ratio(theme.ACCENT, tokens[ground]) for ground in ("BG_DEEP", "BG_ALT")) >= GRAPHIC_RATIO
     assert page.type_table.item(1, 0).toolTip() == (
         "Spur: 2 defect(s), 28.6 % of those listed, on 1 record(s); 1 of them reviewed, 0 as a false call"
     )
@@ -109,8 +127,8 @@ def test_req_log_008_the_defect_types_tab_counts_the_listed_records_and_follows_
     page.refresh()  # Filter: the NG records alone
     _counted(qtbot, page)
     assert _cells(page) == [
-        ["Open Circuit", 4, 2, 0, 0, "80.0 %", "80.0 %"],
-        ["Short Circuit", 1, 1, 0, 0, "100.0 %", "20.0 %"],
+        ["Open Circuit", 4, 2, 0, 0, "80.0 %", "80.0 %", ""],
+        ["Short Circuit", 1, 1, 0, 0, "100.0 %", "20.0 %", ""],
     ]
 
     page.tabs.setCurrentIndex(RECORDS_TAB)
