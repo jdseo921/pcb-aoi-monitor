@@ -736,7 +736,8 @@ def test_req_p3d_001_card_only(qtbot: QtBot, trained_ctx: AppContext) -> None:
         assert "Height and volume thresholds" in text and "Recipe Editor" in text, text
         assert "Stage 2" in [w.text() for w in page.findChildren(QLabel, "muted")], "the title row says Stage 2"
         assert badge_shown() and badge.objectName() == "badge", role
-        assert badge.toolTip() == win._items["3D Profile"].toolTip() == "Available with the 3D camera in Stage 2"
+        assert badge.toolTip() == "Available with the 3D camera in Stage 2"
+        assert win._items["3D Profile"].toolTip() == "Available with the 3D camera in Stage 2 · Ctrl+7"  # its key
         qtbot.keyClick(win, Qt.Key.Key_Return)
         assert win.stack.currentWidget() is win.pages["Recipe Editor"], role
         assert win.navigate("3D Profile")

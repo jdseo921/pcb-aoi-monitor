@@ -1389,7 +1389,7 @@
     </message>
     <message>
         <location line="+21"/>
-        <location filename="../ui/main_window.py" line="+630"/>
+        <location filename="../ui/main_window.py" line="+719"/>
         <source>start-up</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3247,7 +3247,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/model_test.py" line="+55"/>
+        <location filename="../ui/pages/model_test.py" line="+54"/>
         <source>AI model {version}</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3631,7 +3631,7 @@
 <context>
     <name>HomePage</name>
     <message>
-        <location filename="../ui/main_window.py" line="-517"/>
+        <location filename="../ui/main_window.py" line="-604"/>
         <source>Upload samples</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3666,7 +3666,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+85"/>
+        <location line="+83"/>
+        <source>For {roles}</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+17"/>
         <source>No samples yet. Add at least {count} OK boards.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3681,7 +3686,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-97"/>
+        <location line="-112"/>
         <source>Inspect</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3706,17 +3711,17 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+34"/>
+        <location line="+71"/>
         <source>Open {page} ›</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+23"/>
+        <location line="-12"/>
         <source>Training running {percent} % · {left}</source>
         <translation>학습 중 {percent} % · {left}</translation>
     </message>
     <message>
-        <location line="+14"/>
+        <location line="+27"/>
         <source>{ok} OK · {ng} NG uploaded</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3917,14 +3922,14 @@
 <context>
     <name>InspectionPage</name>
     <message>
-        <location filename="../ui/pages/inspection.py" line="+103"/>
-        <location line="+82"/>
+        <location filename="../ui/pages/inspection.py" line="+104"/>
+        <location line="+80"/>
         <location line="+161"/>
         <source>Load Images…</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-242"/>
+        <location line="-240"/>
         <source>Load Folder…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3940,7 +3945,7 @@
     </message>
     <message>
         <location line="+6"/>
-        <location line="+68"/>
+        <location line="+66"/>
         <source>No images loaded</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4136,7 +4141,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+74"/>
+        <location line="+75"/>
         <source>Run stopped: the board model changed from {old} to {new}. Boards inspected before the change are saved under {old}; press Start to carry on with the queue under {new}.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4547,12 +4552,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+13"/>
+        <location line="+39"/>
         <source>{title} · Demo</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+68"/>
+        <location line="+90"/>
         <source>Demo</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4617,7 +4622,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+76"/>
+        <location line="+77"/>
         <source>Presenter theme off.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4632,7 +4637,33 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+45"/>
+        <location line="+14"/>
+        <source>On {page}:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <location line="+5"/>
+        <source>{key}   {action}</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="-3"/>
+        <source>Open a page:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+4"/>
+        <source>F1   This list of keys</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>Keys</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+38"/>
         <source>close the app</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4657,12 +4688,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-92"/>
+        <location line="-115"/>
         <source>Presenter theme on. An Admin turns it off with Exit presenter theme.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+94"/>
+        <location line="+117"/>
         <source>Stopping the running work…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4671,49 +4702,49 @@
     <name>ModelTestPage</name>
     <message>
         <location filename="../ui/pages/model_test.py" line="+47"/>
-        <location line="+617"/>
+        <location line="+612"/>
         <source>Select Test Folder…</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-616"/>
-        <location line="+357"/>
+        <location line="-611"/>
+        <location line="+352"/>
         <location line="+221"/>
         <source>Run Test</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-576"/>
-        <location line="+620"/>
+        <location line="-571"/>
+        <location line="+615"/>
         <source>Export CSV</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-619"/>
+        <location line="-614"/>
         <source>Export Report</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location line="+3"/>
-        <location line="+294"/>
+        <location line="+289"/>
         <source>No folder selected</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-271"/>
-        <location line="+215"/>
+        <location line="-269"/>
+        <location line="+213"/>
         <source>Accuracy</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-216"/>
-        <location line="+215"/>
+        <location line="-214"/>
+        <location line="+213"/>
         <source>Precision</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-216"/>
-        <location line="+215"/>
+        <location line="-214"/>
+        <location line="+213"/>
         <source>Recall</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4743,7 +4774,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-590"/>
+        <location line="-585"/>
         <source>Matches label</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4758,21 +4789,21 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+72"/>
+        <location line="+69"/>
         <source>Source</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location line="+12"/>
-        <location line="+64"/>
+        <location line="+62"/>
         <location line="+151"/>
         <location line="+502"/>
         <source>Missed defects</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-716"/>
-        <location line="+64"/>
+        <location line="-714"/>
+        <location line="+62"/>
         <location line="+151"/>
         <location line="+501"/>
         <source>False calls</source>
@@ -5107,7 +5138,7 @@
 <context>
     <name>Page</name>
     <message>
-        <location filename="../ui/main_window.py" line="-484"/>
+        <location filename="../ui/main_window.py" line="-571"/>
         <source>Home</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5117,7 +5148,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/base.py" line="+73"/>
+        <location filename="../ui/pages/base.py" line="+76"/>
         <source>estimating…</source>
         <translation>계산 중…</translation>
     </message>
@@ -5132,7 +5163,7 @@
         <translation>약 {minutes}분 남음</translation>
     </message>
     <message>
-        <location line="+71"/>
+        <location line="+92"/>
         <source>No board model yet</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5232,7 +5263,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/inspection.py" line="-538"/>
+        <location filename="../ui/pages/inspection.py" line="-537"/>
         <source>Inspection</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5242,7 +5273,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/model_test.py" line="-766"/>
+        <location filename="../ui/pages/model_test.py" line="-761"/>
         <source>AI Model Test</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5792,7 +5823,7 @@
 <context>
     <name>Role</name>
     <message>
-        <location filename="../ui/pages/base.py" line="-332"/>
+        <location filename="../ui/pages/base.py" line="-353"/>
         <source>Operator</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6150,12 +6181,12 @@
     </message>
     <message>
         <location line="+0"/>
-        <location line="+55"/>
+        <location line="+57"/>
         <source>Role</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-53"/>
+        <location line="-55"/>
         <source>Add / Change User</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6185,7 +6216,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+27"/>
+        <location line="+29"/>
         <source>Saved. Restart the app to switch the workspace.</source>
         <translation type="unfinished"></translation>
     </message>
