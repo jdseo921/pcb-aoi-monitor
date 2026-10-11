@@ -865,12 +865,12 @@
     </message>
     <message>
         <location line="+170"/>
-        <location line="+1881"/>
+        <location line="+1883"/>
         <source>(none)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1850"/>
+        <location line="-1852"/>
         <source>Saving a recipe</source>
         <translation type="unfinished"></translation>
     </message>
@@ -961,12 +961,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+40"/>
-        <source>Shift check failed for {board_model}: {wrong} of {count} wrong</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+64"/>
+        <location line="+106"/>
         <source>Creating a board model</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1096,14 +1091,14 @@
         <translation>검증 세트 잠금</translation>
     </message>
     <message>
-        <location line="-2068"/>
-        <location line="+2082"/>
+        <location line="-2070"/>
+        <location line="+2084"/>
         <location line="+39"/>
         <source>the workspace holds no such dataset version</source>
         <translation>작업 공간에 그런 데이터셋 버전이 없습니다</translation>
     </message>
     <message>
-        <location line="-2119"/>
+        <location line="-2121"/>
         <source>the run used a folder, not a frozen dataset version&apos;s locked validation set</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1138,7 +1133,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+2069"/>
+        <location line="+1502"/>
+        <source>Shift check of {board_model}: {wrong} of {count} master samples judged wrongly</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+569"/>
         <source>its validation set is locked already, and a version is split only once</source>
         <translation>검증 세트가 이미 잠겨 있으며, 버전은 한 번만 분할됩니다</translation>
     </message>
@@ -1342,7 +1342,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-2631"/>
+        <location line="-2633"/>
         <source>no earlier version of this board model was active</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1372,7 +1372,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1009"/>
+        <location line="+1011"/>
         <source>Labelling an image</source>
         <translation>이미지 라벨링</translation>
     </message>
@@ -1784,7 +1784,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+47"/>
+        <location line="+20"/>
+        <source>Boards of {board_model} are inspected only after a shift check judges every master sample right, and {reason}. No board was inspected.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+27"/>
         <source>Result has no stored heatmaps</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2025,12 +2030,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1"/>
-        <source>Boards of {board_model} are inspected only after a shift check passes, and {reason}. No board was inspected.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+5"/>
+        <location line="+6"/>
         <source>Press Shift Check (F7) to judge the master samples. If one is judged wrongly, call an Engineer to check the recipe, the AI model and the Golden board before production goes on.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4024,12 +4024,12 @@
     <message>
         <location filename="../ui/pages/inspection.py" line="+105"/>
         <location line="+88"/>
-        <location line="+232"/>
+        <location line="+236"/>
         <source>Load Images…</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-319"/>
+        <location line="-323"/>
         <source>Load Folder…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4111,12 +4111,22 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+229"/>
+        <location line="+212"/>
+        <source>✓ Shift check: every verdict right · boards may be inspected until {until}</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>✗ Shift check: a master sample judged wrongly. Call an Engineer, then press Shift Check (F7)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+16"/>
         <source>Next Board ›</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-218"/>
+        <location line="-222"/>
         <source>Select PCB images</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4201,22 +4211,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1"/>
-        <source>✓ Shift check passed · boards may be inspected until {until}</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+1"/>
+        <location line="+4"/>
         <source>Shift check needed: press Shift Check (F7) before the first board</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1"/>
-        <source>✗ Shift check failed: call an Engineer, then press Shift Check (F7) again</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+1"/>
+        <location line="+4"/>
         <source>Shift check expired: press Shift Check (F7)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5412,7 +5412,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/inspection.py" line="-627"/>
+        <location filename="../ui/pages/inspection.py" line="-631"/>
         <source>Inspection</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6802,7 +6802,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/services.py" line="-2884"/>
+        <location filename="../core/services.py" line="-2886"/>
         <source>Aligning {count} images to the reference board</source>
         <translation type="unfinished"></translation>
     </message>

@@ -67,7 +67,10 @@ def test_req_insp_017_a_wrong_verdict_fails_the_check_and_alarms(trained_ctx: Ap
     wrong = [r for r in found["check"]["rows"] if not r["right"]]
     assert [(r["sample_uuid"], r["expected"], r["verdict"]) for r in wrong] == [(ok_master["uuid"], "NG", "OK")]
     alarm = trained_ctx.alarms()[0]
-    assert (alarm["level"], alarm["code"]) == ("NG", "AOI-INSP-016") and "1 of 3 wrong" in alarm["message"]
+    assert (alarm["level"], alarm["code"]) == (
+        "NG",
+        "AOI-INSP-016",
+    ) and "1 of 3 master samples judged wrongly" in alarm["message"]
     with pytest.raises(AoiError, match="judged a master sample wrongly"):
         trained_ctx.require_shift_check(BOARD)
 
@@ -98,7 +101,7 @@ def test_req_insp_017_inspection_waits_for_the_check(
     assert dialogs and dialogs[-1][0].startswith("AOI-INSP-016") and page.queue_pos == -1 and page.worker is None
     assert page.act_check.isEnabled() and page.act_check.shortcut().toString() == "F7"
     page.act_check.trigger()
-    qtbot.waitUntil(lambda: "Shift check passed" in page.shift_line.text(), timeout=30000)
+    qtbot.waitUntil(lambda: "Shift check: every verdict right" in page.shift_line.text(), timeout=30000)
     assert "3 of 3 master samples judged right" in page.summary.text()
     assert trained_ctx.audit_entries(action="inspection.shift_check")[0]["role"] == "Operator"
     page.next_board()

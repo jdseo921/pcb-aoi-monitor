@@ -260,8 +260,8 @@ CODES: dict[str, ErrorCode] = {
             QT_TRANSLATE_NOOP("Errors", "Shift check needed"),
             QT_TRANSLATE_NOOP(
                 "Errors",
-                "Boards of {board_model} are inspected only after a shift check passes, and {reason}. No board was"
-                " inspected.",
+                "Boards of {board_model} are inspected only after a shift check judges every master sample right, and"
+                " {reason}. No board was inspected.",
             ),
             QT_TRANSLATE_NOOP(
                 "Errors",
