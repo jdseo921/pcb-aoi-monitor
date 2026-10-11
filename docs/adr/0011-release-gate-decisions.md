@@ -35,28 +35,28 @@ The station checks (`docs/tests/station-checks.md`) are run by the release engin
 machine that meets the table, and the results are kept under `docs/tests/` with the machine's exact parts. A slower
 customer station is a known risk to note, not a failed gate.
 
-### 2. Code signing: an OV certificate held in a CA's cloud signing service, timestamped (J6, gate box 5)
+### 2. Signing: keyless build provenance now, Authenticode when it can be paid for (J6, gate box 5)
 
 Since June 2023 the CA/Browser Forum requires code-signing keys to live in certified hardware, so a key in a file on a
-build machine is no longer an option, and since March 2026 a certificate lasts at most 460 days. Azure Artifact
-Signing was considered first and set aside: it issues public certificates to individual developers only in the USA and
-Canada, and to organisations with a verifiable history, which Jay, in Australia and not yet trading as a company, is
-not. SignPath Foundation's free signing is for open-source projects only, which this one is not. So:
+build machine is no longer an option. Every route to an Authenticode signature Windows trusts costs money or an
+eligibility Jay does not have today: Azure Artifact Signing needs a paid subscription and, for an individual, a
+documented US or Canadian address; a public CA's OV certificate costs about US$120 to US$320 a year; SignPath
+Foundation's free signing is for projects under an open-source license, which this repository does not have. So, in
+order:
 
-- **Stage 1 pilot (now, free):** the installer and executables are signed in CI with a certificate from our own
-  private code-signing CA, and the customer's IT trusts that CA on the pilot stations only (Group Policy or `certlm`,
-  "Trusted Publishers" and "Trusted Root"). This is the usual practice for internal line-of-business software. The
-  private key stays offline with Jay; CI receives a short-lived signing certificate per release. `SHA256SUMS.txt` keeps
-  shipping beside the installer. The build still says it is not publicly signed.
-- **Before any second customer or public download:** buy an Individual or Organisation Validation (OV) code-signing
-  certificate from a public CA that offers cloud signing usable from GitHub Actions (for example Certum's cloud OV,
-  SSL.com eSigner or Sectigo with a cloud key; about US$120 to US$320 a year), and sign every `.exe`, `.dll` and the
-  installer with Authenticode, SHA-256, with an RFC 3161 timestamp. EV is not needed: since 2024 Windows SmartScreen
-  gives EV no head start, and reputation builds per certificate with either.
-- If Jay later registers a company with a verifiable history, Azure Artifact Signing becomes the cheaper option and
-  replaces the bought certificate at its renewal.
-
-The actions left are Jay's: create the private CA key offline for the pilot, and later buy the OV certificate.
+1. **Now, free, nothing to keep or pay for:** every build of `main` and of a tag signs its provenance with GitHub's
+   keyless signing (Sigstore, `actions/attest-build-provenance` in `build.yml`): the installer, the app's executable
+   and `SHA256SUMS.txt` carry a signed record of the repository, commit and workflow that built them, kept in GitHub
+   and the public Sigstore log. Anyone verifies a file with `gh attestation verify FILE -R jdseo921/pcb-aoi-monitor`.
+   This is the supply-chain norm SLSA asks for (build level 2) and needs no secret and no person. It is not an
+   Authenticode signature: Windows still names the publisher unknown, so builds stay labelled "unsigned, internal".
+2. **For the Stage 1 pilot station:** the customer's IT checks the installer's attestation (or its SHA-256 against
+   `SHA256SUMS.txt`) before installing, and may allow the app by hash in its application control. This is enough for
+   one supervised pilot; it is not enough for a product handed over without us.
+3. **Before a second customer or any download outside the pilot:** add an Authenticode signature, SHA-256 with an
+   RFC 3161 timestamp, by the first route that becomes open: Azure Artifact Signing (cheapest, once Jay has a paid
+   subscription and a documented US address, or a company), else a public CA's OV certificate with cloud signing.
+   The workflow step goes in next to the provenance step; the provenance stays.
 
 ### 3. Two-person release approval: a written exception with compensating controls, until a second engineer (J8)
 
@@ -97,7 +97,8 @@ real data as soon as it exists:
 
 ## Consequences
 
-- The release gate lists actions with an owner instead of open questions: set up pilot signing, switch on branch
+- The release gate lists actions with an owner instead of open questions: an Authenticode route when it can be
+  paid for, switch on branch
   protection, run the station checks on a machine meeting decision 1, and rehearse the upgrade (decision 5).
 - 0.3.0 can be released to a Stage 1 customer once boxes 2, 3, 5 and 6 pass on a signed build; Korean is out of scope
   for that release by decision 4.
