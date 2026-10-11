@@ -94,10 +94,10 @@ linguist's revision). The UI loads no Korean translation before the 2H 2027 loca
 Upgrades are tested on data shaped like production when production data is not yet available, and again on a copy of
 real data as soon as it exists:
 
-- Now: build a workspace with the previous build from the public DeepPCB boards on the engineering laptop (the photos
-  never leave it), upgrade it with 0.3.0, check every record, image and AI model opens, then follow "Going back to an
-  earlier build" in `docs/install/install.md` and check the earlier build opens its backup. The result is recorded
-  under `docs/tests/`.
+- Now: build a workspace with the previous build from synthetic boards (`tools/make_synthetic_dataset.py`), so no
+  customer or licensed photo is copied, upgrade it with the current build, check every record, image and AI model
+  opens, then follow "Going back to an earlier build" in `docs/install/install.md` and check the earlier build opens
+  its backup. Done on 2026-10-11, all steps passed: `docs/tests/2026-10-11-upgrade-rollback.md`.
 - Later: the same steps on a copy of the first customer's workspace, before that customer's station is upgraded.
 
 ## Consequences
