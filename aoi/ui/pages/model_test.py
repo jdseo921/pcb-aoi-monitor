@@ -310,11 +310,18 @@ class ModelTestPage(Page):
             type_target=agree["type_target"],
         )
         out.append(f"<p>{e(agreed_on)}</p>")
-        out.append(f"<h3>{self.tr('2. Targets agreed before testing / 사전 합의 목표 (draft)')}</h3>")
+        out.append(f"<h3>{self.tr('2. Targets: the proposed defaults / 목표: 제안된 기본값 (draft)')}</h3>")
+        defaults = self.tr(
+            "These are the product's proposed targets. A customer's own targets, agreed in writing before testing, are"
+            " not yet stored with a run: state them beside this table."
+        )
+        out.append(f"<p>{e(defaults)}</p>")
         names = {
             "missed_critical": self.tr("Missed Critical defects"),
             "false_call_rate": self.tr("False call rate"),
-            "seconds_per_image": self.tr("Time per image, 95th percentile"),
+            "seconds_per_image": self.tr(
+                "Engine time per image, 95th percentile (reading, saving, display not counted)"
+            ),
         }
         rows = []
         for tg in data["targets"]:
