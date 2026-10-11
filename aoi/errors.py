@@ -246,6 +246,16 @@ CODES: dict[str, ErrorCode] = {
             ),
         ),
         ErrorCode(
+            "AOI-INSP-015",
+            QT_TRANSLATE_NOOP("Errors", "Board cannot be reviewed"),
+            QT_TRANSLATE_NOOP("Errors", "Record {record} cannot be reviewed: {reason}. Nothing was changed."),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Review an NG or WARN board that is still in Logs & Export, and give a reason when you mark a False"
+                " call.",
+            ),
+        ),
+        ErrorCode(
             "AOI-CMP-001",
             QT_TRANSLATE_NOOP("Errors", "Result has no stored heatmaps"),
             QT_TRANSLATE_NOOP(

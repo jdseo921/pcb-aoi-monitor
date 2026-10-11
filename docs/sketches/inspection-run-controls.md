@@ -51,6 +51,7 @@ Severity on a box label is a word and a shape: ◆ Critical (red), ■ Major (or
 | Next Board | Next Board | F8 | T+ | The page's one blue primary button; inspects one board; default focus when idle |
 | Save Image | Save Image… | F9 | T+ | Writes the board picture with its defect boxes to a file the user picks and makes no second record: every result is saved as it arrives (#128). The rename is still for Jay (below) |
 | Compare | Compare › | Enter on the banner, or C | T | One click opens Compare on the stored result with the failing checks highlighted (REQ-INSP-009); hidden for OK |
+| Review | Real defect / False call… | F10 / F11 | T | Under the defect list for an NG or WARN board that was saved: the operator's review on the line (REQ-INSP-013, ADR 0013). False call asks for a reason from five common causes or typed; the verdict never changes; the line above the buttons names the review, who gave it and its reason. Logs & Export has the same buttons for the selected record |
 | Defect row | — | ↑ ↓ | row 48 px | Selecting a row centres its box within 300 ms (REQ-INSP-004) |
 | Alarm log | Alarms | — | rows 14 pt | Time (ISO date, 24-hour), code, message; last 1,000 kept across restarts (REQ-INSP-006) |
 

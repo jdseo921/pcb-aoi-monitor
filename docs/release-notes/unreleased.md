@@ -16,6 +16,8 @@ None. / 없음.
 - [REQ-INSP-012] An Admin sets how long OK results' maps are kept and the largest image (megapixels and MB) on Settings; before, only in settings.json (#153). / 관리자가 설정 페이지에서 OK 결과 맵 보관 기간과 최대 이미지 크기(메가픽셀, MB)를 설정합니다. 이전에는 settings.json에서만 가능했습니다(#153).
 - [REQ-TRN-007] Training and Settings offer a 640 px AI model input size next to 128 to 512, for board models with small defects; 256 px stays the default, and each run keeps its size in its AI model (ADR 0012). 640 px trains about 9 times longer, so it suits a station with a CUDA graphics card. / 학습 및 설정 화면에서 128~512에 더해 640 px AI 모델 입력 크기를 선택할 수 있어 작은 결함이 있는 보드 모델에 사용할 수 있습니다. 기본값은 256 px로 유지되며, 각 학습 실행의 크기는 해당 AI 모델에 저장됩니다(ADR 0012). 640 px는 학습 시간이 약 9배 길어 CUDA 그래픽 카드가 있는 스테이션에 적합합니다.
 
+- [REQ-INSP-013] Review each NG or WARN board on the line: Real defect (F10) or False call (F11, with a reason), on Inspection and on Logs & Export. The verdict never changes; the review, who gave it and when stand beside it and in the audit trail, and Home, the Logs Review column, its summary line and the CSV export (four new columns at the end) count the false calls (ADR 0013). / 라인에서 NG 또는 WARN 보드를 검토합니다: 실제 결함(F10) 또는 오검출(F11, 사유 포함)을 검사 화면과 로그 및 내보내기 화면에서 선택합니다. 판정은 바뀌지 않으며, 검토 결과와 검토자, 시간이 판정 옆과 감사 기록에 저장되고, 홈, 로그의 검토 열과 요약 줄, CSV 내보내기(끝에 4개 열 추가)에서 오검출 수를 셉니다(ADR 0013).
+
 ## Improved / 개선 (draft)
 
 - [REQ-SET-004] Text on the green, red and blue fills (verdict banner, Start, Stop, primary and danger buttons) is black, reading at 5.0:1 or more; it was white at 3.3 to 4.2:1 (#150). / 녹색, 빨간색, 파란색 배경 위 글자(판정 배너, 시작, 정지, 주요 및 위험 버튼)가 검은색이 되어 5.0:1 이상으로 읽힙니다. 이전에는 흰색으로 3.3~4.2:1이었습니다(#150).
@@ -36,6 +38,8 @@ None. / 없음.
 None. / 없음.
 
 ## Upgrade notes / 업그레이드 안내 (draft)
+
+- [REQ-INSP-013] Migration 0023 adds the review columns to each inspection record at the first start; records before it read as not reviewed. A reader of the CSV export finds four columns after ai_check: review, review_reason, review_by, review_time. / 마이그레이션 0023이 첫 시작 시 검사 기록에 검토 열을 추가합니다. 이전 기록은 검토되지 않은 것으로 표시됩니다. CSV 내보내기에는 ai_check 뒤에 review, review_reason, review_by, review_time 4개 열이 추가됩니다.
 
 - [REQ-USR-001] An Engineer who exported results before now asks an Admin to do it (#151). / 이전에 결과를 내보내던 엔지니어는 이제 관리자에게 요청해야 합니다(#151).
 

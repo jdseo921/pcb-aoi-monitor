@@ -197,10 +197,12 @@ class HomePage(Page):
             if tm
             else self.tr("Not validated yet. Run the locked validation set.")
         )
+        inspected = self.tr("{count} boards inspected · {ng} NG").format(count=st.inspected, ng=st.ng)
+        if st.reviewed:  # the calls reviewed on the line, and how many were false (REQ-INSP-013)
+            reviewed = self.tr("False calls {false_calls} of {reviewed} reviewed")
+            inspected += "\n" + reviewed.format(false_calls=st.false_calls, reviewed=st.reviewed)
         self.status_labels["Inspect"].setText(
-            self.tr("{count} boards inspected · {ng} NG").format(count=st.inspected, ng=st.ng)
-            if st.inspected
-            else self.tr("No boards inspected yet. Load images on Inspection.")
+            inspected if st.inspected else self.tr("No boards inspected yet. Load images on Inspection.")
         )
         self.status_labels["Export"].setText(
             self.tr("Ready") if st.inspected else self.tr("Nothing to export yet. Inspect a board first.")

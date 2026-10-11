@@ -133,6 +133,23 @@ as the AI score threshold when its AI check did not
 run, are not counted) is cleared when you sign in, on any page, and inspected again by the recipe once Compare is shown,
 so you never see the verdict those values gave.
 
+### Review the call: Real defect or False call
+
+Look at the board itself, then tell the app what you found. Under the defect list on Inspection, the line "Review this
+call" has two buttons:
+
+| Button | Key | When |
+|---|---|---|
+| Real defect | F10 | The defect is on the board |
+| False call… | F11 | The board is good; pick why from the list (normal variation, dust or debris, glare or lighting, board out of position, marking or label) or type the reason, then OK |
+
+The verdict the board was given never changes: your review is saved beside it with your name and the time, and the
+line then reads "Reviewed: False call (Dust or debris on the board, not a defect) by operator". Press the other button to
+change your mind; both reviews stay in the audit trail. You can review any NG or WARN record later on Logs & Export:
+select its row and press the same keys. Home's Inspect card counts the false calls of the board model ("False calls 2
+of 15 reviewed"), and Logs & Export's Review column and summary line show them, so an Engineer can open each false call
+in Compare and tune the recipe or retrain (ADR 0013).
+
 ## 4. Alarms and messages
 
 **The alarm log.** The list at the bottom of Inspection, under the run buttons, is the alarm log, newest line first.

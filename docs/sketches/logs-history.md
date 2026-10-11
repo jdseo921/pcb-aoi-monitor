@@ -38,7 +38,7 @@ records stay searchable with "Include archived" (REQ-LOG-003).
 | Result | Result | — | F | All, OK, NG, WARN |
 | Include archived | Include archived | — | T (check box, 48 px row) | |
 | Apply filter | Apply Filter | Enter | B | The page's one blue primary; busy indicator in the table over 1 s |
-| Table | Time, Board model, AI model, Result, Defects, Operator, View, Recipe rev, Image | ↑ ↓, click header sorts | rows 48 px for Operators, 14 pt | Selecting a row shows its overlay within 300 ms |
+| Table | Time, Board model, AI model, Result, Review (Real defect or False call, REQ-INSP-013), Defects, Operator, View, Recipe rev, Image | ↑ ↓, click header sorts | rows 48 px for Operators, 14 pt | Selecting a row shows its overlay within 300 ms |
 | Open in Compare | Open in Compare › | Enter | T | Stored result with failing checks highlighted (REQ-INSP-009) |
 | Export CSV | Export CSV… | — | B | Confirmation: "Export 128 records as CSV?"; UTF-8 with BOM; carries verdict, regions, metrics, thresholds, AI model version, recipe revision and view (REQ-INSP-012, REQ-INSP-010); audit entry with user, time, filter and count (REQ-LOG-002) |
 | Export overlays | Export Overlays… | — | B | Confirmation names the count; same audit entry |

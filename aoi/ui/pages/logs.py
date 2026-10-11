@@ -32,6 +32,7 @@ from ..widgets.empty_state import EmptyState
 from ..widgets.image_view import ImageView
 from ..workers import Worker, start
 from .base import QT_TRANSLATE_NOOP, Page, button, fill_table, make_table, row_key, size_class, view_text
+from .review import ReviewBar, review_text
 
 # The columns of the checks file beside the records file (REQ-INSP-012), the header even when no record has checks;
 # ai_check says whether the AI check ran on the record: RAN, OFF or NO_AI_MODEL (`inspector.ai_check`, #246).
@@ -42,6 +43,7 @@ CHECK_COLUMNS = [
 
 DEFAULT_DAYS = 7  # a new page and Reset Filters show the last 7 days
 VERDICTS = ("OK", "NG", "WARN")  # the Result filter's verdicts after All, as the sketch lists them
+REVIEW_COLUMN = 4  # the table's Review column, after Result (REQ-INSP-013)
 
 if TYPE_CHECKING:
     from ..main_window import MainWindow
@@ -94,6 +96,7 @@ class LogsPage(Page):
                 self.tr("Board model"),
                 self.tr("AI model"),
                 self.tr("Result"),
+                self.tr("Review"),
                 self.tr("Defects"),
                 self.tr("Operator"),
                 self.tr("View"),
@@ -119,6 +122,9 @@ class LogsPage(Page):
         self.summary = QLabel("")
         self.summary.setObjectName("muted")
         line.addWidget(self.summary, 1)
+        # The selected NG or WARN record's review, F10 Real defect and F11 False call, as on Inspection (REQ-INSP-013)
+        self.review = ReviewBar(self, self._reviewed, compact=True)
+        line.addWidget(self.review)
         self.btn_compare = size_class(button(self.tr("Open in Compare ›"), slot=self.open_in_compare), "T")
         line.addWidget(self.btn_compare)
         self.root.addLayout(line)
@@ -211,6 +217,7 @@ class LogsPage(Page):
                     r["board_model"],
                     r["model_version"] or "",
                     theme.verdict_label(r["result"]),
+                    review_text(r["review"]),
                     r["defect_count"],
                     r["operator"],
                     view_text(r["view"]) if r["view"] else "",  # rows from before migration 0005 recorded no view
@@ -229,6 +236,12 @@ class LogsPage(Page):
         line = counts.format(count=n, ok=by["OK"], rate=100 * by["OK"] / max(n, 1), ng=by["NG"], warn=by["WARN"])
         archived = span["archived"] if span else 0
         line += self.tr(" · archived {archived:,}").format(archived=archived) if archived else ""
+        reviewed = [r["review"] for r in self.rows if r["review"]]  # the reviews on the line (REQ-INSP-013)
+        if reviewed:
+            false_calls = reviewed.count("FALSE_CALL")
+            line += self.tr(" · reviewed {reviewed:,}, false calls {false_calls:,}").format(
+                reviewed=len(reviewed), false_calls=false_calls
+            )
         self.summary.setText(line if n else self.tr("No records"))
         if n:
             self.empty.hide()
@@ -278,6 +291,23 @@ class LogsPage(Page):
         overlay = r["overlay_path"] if r else None
         self.view.set_image(self.ctx.load_image(overlay) if overlay and Path(overlay).exists() else None)
         self.btn_compare.setEnabled(r is not None)
+        self.review.show_record(r)
+
+    def _reviewed(self, record: dict[str, Any]) -> None:
+        """A review saved: the listed row and its Review cell show it at once, without listing again (REQ-INSP-013)."""
+        keys = ("review", "review_reason", "review_by", "review_time")
+        for r in self.rows:
+            if r["id"] == record["id"]:
+                r.update({k: record[k] for k in keys})
+        column = REVIEW_COLUMN
+        for row in range(self.table.rowCount()):
+            if int(row_key(self.table, row)) == record["id"] and (item := self.table.item(row, column)) is not None:
+                item.setText(review_text(record["review"]))
+        self.shell.status(
+            self.tr("Review saved: {review} for record {record}.").format(
+                review=review_text(record["review"]), record=record["id"]
+            )
+        )
 
     def _selected_id(self) -> int | None:
         """The ID of the record of the first selected row, kept with the row as it sorts; None with none selected."""
@@ -358,7 +388,11 @@ class LogsPage(Page):
                     "uuid": r["uuid"],
                     "model_uuid": r["model_uuid"],
                     "recipe_uuid": r["recipe_uuid"],
-                    "ai_check": ai,  # last, so the columns before it keep their places
+                    "ai_check": ai,  # after the columns before it, so they keep their places
+                    "review": r["review"] or "",  # the review on the line, after them all (REQ-INSP-013)
+                    "review_reason": r["review_reason"] or "",
+                    "review_by": r["review_by"] or "",
+                    "review_time": r["review_time"] or "",
                 }
             )
             record = {k: r[k] for k in ("time", "board_model", "view", "model_version", "model_uuid", "recipe_rev")}
