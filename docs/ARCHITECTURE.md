@@ -325,7 +325,9 @@ images with a diff per failing page stay in `tests/screens/actual/`, which CI up
 change is approved with `python tools/render_screens.py --approve`; the images are generated files that Jay approves by
 merging. On Linux, CI also renders every page at 1366×768 and at 3840×2160 with 150 % and 200 % scaling into the
 `screens-review` artifact of the run (kept 30 days), which is how the layouts are checked at the standard's other sizes
-(#104 records that the pages do not yet fit 1366×768). `tests/screens/test_sizes_and_contrast.py` walks the same pages on Linux and Windows and measures every visible
+(since #104 a page larger than the window scrolls, and Tab scrolls each field whole into view; 1920×1080 stays the
+reference screen, ADR 0012).
+`tests/screens/test_sizes_and_contrast.py` walks the same pages on Linux and Windows and measures every visible
 widget against the standard's "Sizes": 14 pt text (QGraphics text on an image takes `label_font()`), 120×40 buttons whose
 text fits, 48 px operator targets (sidebar entries, header controls, defect and history rows, the Inspection source
 bar), 56 px run controls, and every visible control of size class T, T+ or F, named or not, to its class (#240), and

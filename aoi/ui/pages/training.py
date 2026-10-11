@@ -266,7 +266,7 @@ class TrainingPage(Page):
         self.epochs.setRange(5, 1000)
         self.epochs.setValue(ctx.settings.default_epochs)
         self.input_size = QComboBox()
-        self.input_size.addItems(["128", "256", "384", "512"])
+        self.input_size.addItems(["128", "256", "384", "512", "640"])  # ADR 0012: 256 by default, 640 for small defects
         self.input_size.setCurrentText(str(ctx.settings.image_size))
         self._defaults = (ctx.settings.default_epochs, ctx.settings.image_size)  # the saved defaults the boxes show
         f.addRow(self.tr("Epochs"), self.epochs)
