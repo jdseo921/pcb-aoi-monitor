@@ -877,7 +877,7 @@ class AppContext:
             self.audit("recipe.ai_threshold", "board_model", recipe.board_model, before | named, after | named, reason)
         return rev
 
-    @requires("Engineer", QT_TRANSLATE_NOOP("Errors", "Learning the comparison's thresholds"))
+    @requires("Engineer", QT_TRANSLATE_NOOP("Errors", "Setting the comparison's thresholds from labelled boards"))
     def learn_comparison(
         self,
         board_model: str,
@@ -927,7 +927,8 @@ class AppContext:
         ng = sum(s["label"] == NG for s, _ in boards)
         if ng < LEARN_CHOOSE_NG + LEARN_HELD_NG:
             why = QT_TRANSLATE_NOOP(
-                "Errors", "it has {count} NG image(s) with defect boxes in the {view} view, and learning needs {least}"
+                "Errors",
+                "it has {count} NG image(s) with defect boxes in the {view} view, and at least {least} are needed",
             )
             why = why.fill(count=ng, view=view, least=LEARN_CHOOSE_NG + LEARN_HELD_NG)
             raise AoiError("AOI-RCP-013", board_model=board_model, reason=why)
