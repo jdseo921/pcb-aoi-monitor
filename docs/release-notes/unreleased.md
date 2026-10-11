@@ -34,6 +34,7 @@ None. / 없음.
 
 ## Improved / 개선 (draft)
 
+- [REQ-RCP-002] A difference found inside a Height ROI is named Anomaly, not Pin Height Error: a 2D camera cannot measure a pin's height, so Stage 1 does not claim it did. Both are Major, so no verdict changes; records stored before keep their name, and Pin Height Error stays in the defect table for labelling and for Stage 2. / Height ROI 안에서 찾은 차이는 이제 Pin Height Error가 아니라 Anomaly로 표시됩니다. 2D 카메라는 핀 높이를 측정할 수 없으므로 1단계에서 측정했다고 표시하지 않습니다. 둘 다 Major이므로 판정은 바뀌지 않으며, 이전에 저장된 기록은 기존 이름을 유지하고 Pin Height Error는 라벨링과 2단계를 위해 불량 표에 남습니다.
 - [REQ-SET-004] Text on the green, red and blue fills (verdict banner, Start, Stop, primary and danger buttons) is black, reading at 5.0:1 or more; it was white at 3.3 to 4.2:1 (#150). / 녹색, 빨간색, 파란색 배경 위 글자(판정 배너, 시작, 정지, 주요 및 위험 버튼)가 검은색이 되어 5.0:1 이상으로 읽힙니다. 이전에는 흰색으로 3.3~4.2:1이었습니다(#150).
 - [REQ-INSP-002] Defect box labels on Inspection, Compare and AI Model Test, and in the saved overlay, carry the severity word and shape: "1 Polarity Error ◆ Critical", ■ Major, ● Minor (#152). / 검사, 비교, AI 모델 테스트 화면과 저장된 오버레이의 결함 상자 라벨에 심각도 단어와 모양이 표시됩니다: "1 Polarity Error ◆ Critical", ■ Major, ● Minor(#152).
 - [REQ-INSP-016] Home's second step card reads "Train AI model" (was "Self-train") (#154). / 홈의 두 번째 단계 카드 이름이 "Train AI model"이 되었습니다(이전 "Self-train")(#154).

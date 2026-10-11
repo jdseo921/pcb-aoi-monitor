@@ -18,12 +18,14 @@ RESOLVED_PX = 4  # the smallest defect width, in px, told from image noise (REQ-
 IN_MM = QT_TRANSLATE_NOOP("Errors", "{mm:.2f} mm")  # AOI-RCP-007's sizes, with a scale or without one
 IN_AREA = QT_TRANSLATE_NOOP("Errors", "{area} px of area")
 
-# Defect name reported when a region fails inside an ROI of this type.
+# Defect name reported when a region fails inside an ROI of this type. A Height ROI's region is a 2D difference until
+# the Stage 2 3D camera measures height, so it is named Anomaly, not Pin Height Error, a defect no 2D camera can
+# measure (Jay, 2026-10-11); both are Major, so no verdict changes, only the name new records carry.
 ROI_DEFECT = {
     "Presence": "Missing Component",
     "Polarity": "Polarity Error",
     "Solder Bridge": "Solder Bridge",
-    "Height": "Pin Height Error",
+    "Height": "Anomaly",
     "Anomaly": "Anomaly",
 }
 
