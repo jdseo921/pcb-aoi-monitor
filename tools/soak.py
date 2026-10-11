@@ -6,9 +6,10 @@ time per board slowing by at most 10 % and its memory growing by at most 10 %.
     python tools/soak.py --check --out <a run's folder> --workspace <its workspace>
 
 The app opens as main.py opens it, its window shown, on the workspace; the Operator is signed in and runs the shift
-check (REQ-INSP-017), Inspection shows the board model and the boards are queued, as Load Images… queues them, over and over; Next Board (F8) is pressed every
-`--pace` seconds until `--hours` have passed, and each board is judged and saved as on a station. A board still being
-inspected when Next Board is due delays the next one to the press after it, and the summary counts those presses.
+check (REQ-INSP-017) where the workspace asks for one, Inspection shows the board model and the boards are queued, as
+Load Images… queues them, over and over; Next Board (F8) is pressed every `--pace` seconds until `--hours` have passed,
+and each board is judged and saved as on a station. A board still being inspected when Next Board is due delays the next
+one to the press after it, and the summary counts those presses.
 
 Without --workspace the tool first writes, under --out, the synthetic boards of tools/make_synthetic_dataset.py
 (boards/) and a workspace (workspace/) with board model SOAK, trains its AI model on the boards' training split (with
@@ -134,12 +135,14 @@ def judge(boards: Sequence[Board], warm_up_s: float, finished: bool, failures: i
     return j
 
 
-def synthetic_workspace(out: Path, device: str, epochs: int | None, image_size: int | None) -> tuple[Path, str, Path]:
+def synthetic_workspace(
+    out: Path, device: str, epochs: int | None, image_size: int | None, keys: credentials.Credentials
+) -> tuple[Path, str, Path]:
     """A workspace under `out` with board model SOAK and an active AI model trained on synthetic boards, and the
-    folder of the boards the run inspects."""
+    folder of the boards the run inspects. Its dataset store's key goes in `keys`, which the run must open it with."""
     boards, ws = out / "boards", out / "workspace"
     write_dataset(boards)
-    ctx = AppContext(Settings(workspace=str(ws), device=device), credentials.MemoryCredentials())
+    ctx = AppContext(Settings(workspace=str(ws), device=device), keys)
     try:
         ctx.set_user("engineer")
         ctx.import_samples(BOARD_MODEL, [str(p) for p in list_images(boards / "train" / "ok")], "OK")
@@ -169,7 +172,7 @@ class Run:
         win.set_user("operator")
         win.bm_combo.setCurrentText(board_model)
         # the shift starts as a station's does, with the master samples judged (REQ-INSP-017); inspection waits for it
-        if ctx.run_shift_check(board_model)["state"] not in ("passed", "off"):
+        if ctx.settings.shift_check_hours and ctx.run_shift_check(board_model)["state"] != "passed":
             raise SystemExit(f"the shift check of {board_model} judged a master sample wrongly: see the alarms")
         if win.board_model != board_model or not win.navigate("Inspection"):
             raise SystemExit(f"Inspection cannot be opened on {board_model}")
@@ -300,13 +303,19 @@ def main(argv: list[str] | None = None) -> int:
     app = QApplication(sys.argv[:1])
     app.setStyleSheet(QSS)
     collect_on_ui_thread()  # as main.py: no pool thread runs Python's cycle collector
-    ws, board_model, folder = own if all(own) else synthetic_workspace(a.out, a.device, a.epochs, a.image_size)
+    # the synthetic set-up's store key stays in this process, never in the station's key store; a station's own
+    # workspace opens with the station's
+    keys = credentials.default() if all(own) else credentials.MemoryCredentials()
+    ws, board_model, folder = own if all(own) else synthetic_workspace(a.out, a.device, a.epochs, a.image_size, keys)
     boards = list_images(folder)
     if not boards:
         ap.error(f"no board images in {folder}")
     seconds = a.hours * 3600
     warm_up = min(a.warm_up * 60, seconds / 5)
-    ctx = AppContext(Settings(workspace=str(ws), device=a.device))
+    settings = Settings(workspace=str(ws), device=a.device)
+    if not all(own):  # the synthetic set-up's quick AI model measures stability, not verdicts: no shift check is
+        settings.shift_check_hours = 0  # asked for, as in the demo workspace (ADR 0014, decision 5)
+    ctx = AppContext(settings, keys)
     try:
         with open(a.out / "soak.csv", "w", newline="", encoding="utf-8") as out:
             run = Run(app, ctx, board_model, boards, out)
