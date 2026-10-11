@@ -56,6 +56,8 @@ BOARD_MODEL = "TINY"
 FIXED_TIME = "2026-01-01T09:00:00+00:00"  # every stored time, so a render does not change with the clock
 FIXED_MS = 480.0  # the inspection time Inspection and Compare show
 FIXED_SSIM, FIXED_INLIERS = 0.95, 400  # the similarity and alignment points Compare shows (module docstring)
+SETTLE_MS = 40  # past the 20 ms after which Qt resizes a list to its contents (`settle`)
+SETTLE_PASSES = 100  # event loop passes a page may take to lay itself out before a grab
 PAGE_VIEWS = {  # <page>-<view>-<role>
     "Training": ("datasets", "freeze", "split", "blind"),
     "Settings": ("restore", "move-in", "shred"),
@@ -283,6 +285,46 @@ def wait_until(condition: Callable[[], bool], timeout_ms: int = 60000) -> None:
         QApplication.processEvents()
 
 
+def settle() -> None:
+    """Let the window finish laying out, so a grab draws a page alike however busy the machine is. A list that adjusts
+    to its contents resizes itself to its size hint 20 ms after its items change, outside its layout, and each layout
+    above a widget whose size hint changed lays out on a LayoutRequest posted while the one below it was laid out: one
+    pass of the event loop each. A grab one pass after `prepare` caught Logs & Export's Operator list in the width it
+    had before its names were added or, on a busy machine, with Qt's resize done and the layout not: the list 7 px wider
+    than its place, its arrow cut off (#396's CI). So sleep past that resize without handling events, then handle
+    events until a pass moves, resizes and lays out nothing."""
+    from PySide6.QtCore import QCoreApplication, QEvent, QObject
+    from PySide6.QtTest import QTest
+
+    class Layouts(QObject):
+        """Counts the layout events the application delivers: a widget moved or resized, or a layout asked for."""
+
+        kinds = (QEvent.Type.LayoutRequest, QEvent.Type.Move, QEvent.Type.Resize)
+
+        def __init__(self) -> None:
+            super().__init__()
+            self.seen = 0
+
+        def eventFilter(self, watched: QObject, event: QEvent) -> bool:
+            self.seen += event.type() in self.kinds
+            return False
+
+    QTest.qSleep(SETTLE_MS)
+    app = QCoreApplication.instance()
+    assert app is not None
+    layouts = Layouts()
+    app.installEventFilter(layouts)
+    try:
+        for _ in range(SETTLE_PASSES):
+            layouts.seen = 0
+            QCoreApplication.processEvents()
+            if not layouts.seen:
+                return
+        raise TimeoutError("the page kept laying itself out")
+    finally:
+        app.removeEventFilter(layouts)
+
+
 def prepare(win: MainWindow, title: str, dataset: Path) -> None:
     """Put the page in the state the screenshot shows: content where the workspace has some, fixed values where
     the real ones would change from run to run."""
@@ -381,7 +423,6 @@ def render_stored(win: Any, ctx: AppContext, out: Path) -> dict[str, Path]:
     it was judged against, then with that file changed, which the pane explains (REQ-CMP-003); the file is put back.
     Then as an Engineer judges it again with other thresholds: the would-be verdict beside Re-evaluate, and Save to
     Recipe's sheet with a reason typed, nothing saved (REQ-CMP-005)."""
-    from PySide6.QtWidgets import QApplication
 
     page, files = win.pages["Compare"], {}
     record = ctx.inspections(board_model=BOARD_MODEL)[0]["id"]
@@ -405,7 +446,7 @@ def render_stored(win: Any, ctx: AppContext, out: Path) -> dict[str, Path]:
             if name == STORED_STATES[3]:
                 page.act_save.trigger()
                 page.reason.setText("No pixel differs enough on this board")
-            QApplication.processEvents()
+            settle()
             files[name] = out / f"{name}.png"
             assert win.grab().save(str(files[name])), files[name]
     finally:
@@ -416,7 +457,6 @@ def render_stored(win: Any, ctx: AppContext, out: Path) -> dict[str, Path]:
 def render_presenter(win: Any, dataset: Path, out: Path) -> dict[str, Path]:
     """The presenter theme (REQ-SET-008), switched on as an Admin does it, with Settings' tick, and PRESENTER_SHOTS in
     it, each page as `prepare` leaves it; then switched off again with the header's Exit presenter theme."""
-    from PySide6.QtWidgets import QApplication
 
     files = {}
     win.set_user("admin")
@@ -428,7 +468,7 @@ def render_presenter(win: Any, dataset: Path, out: Path) -> dict[str, Path]:
             win.statusBar().clearMessage()
             assert win.navigate(title), title
             prepare(win, title, dataset)
-            QApplication.processEvents()
+            settle()
             files[name] = out / f"{name}.png"
             assert win.grab().save(str(files[name])), files[name]
     finally:
@@ -445,7 +485,6 @@ def render_pages(
     ``size`` is the screen in pixels: with ``scale`` (QT_SCALE_FACTOR, set before Qt starts) the window measures
     ``size / scale`` logical pixels, so the image still measures ``size``."""
     from PySide6.QtTest import QTest
-    from PySide6.QtWidgets import QApplication
 
     from aoi.ui.main_window import MainWindow
     from aoi.ui.pages.base import ROLES
@@ -464,13 +503,13 @@ def render_pages(
             win.statusBar().clearMessage()  # the page before's message is not this page's; what it says itself stays
             assert win.navigate(title), title
             prepare(win, title, dataset)
-            QApplication.processEvents()
+            settle()
             name = f"{slug(title)}-{role.lower()}"
             files[name] = out / f"{name}.png"
             assert win.grab().save(str(files[name])), files[name]
             for view in PAGE_VIEWS.get(title, ()):
                 show_view(win, title, view)
-                QApplication.processEvents()
+                settle()
                 name = f"{slug(title)}-{view}-{role.lower()}"
                 files[name] = out / f"{name}.png"
                 assert win.grab().save(str(files[name])), files[name]
