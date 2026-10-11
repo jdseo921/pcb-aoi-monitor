@@ -18,6 +18,13 @@ board on **Compare**, the check on the locked boards, training live, and a thres
 
 > "A recipe is the set of thresholds for one board model. Your engineers own it."
 
+   Point at **Learn From Labelled Boards…** at the top of the tab, without pressing it: the demo's boards carry no
+   defect boxes, so it would only say what it needs (AOI-RCP-013).
+
+> "With your boards labelled, and each defect boxed or imported with its annotation file, this button chooses these
+> numbers for you: the fewest false calls that still find your defects. It counts its choice on boards it did not
+> learn from, and nothing changes until an engineer saves it."
+
 3. **ROIs** tab: a region of the board with its own threshold, for a part that needs a closer look. Show
    **Draw ROI** if they ask, then leave without saving.
 4. **AOI checks** tab: the checklist of what the station checks for this board model, each with the reason it is on or

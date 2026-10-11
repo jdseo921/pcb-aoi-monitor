@@ -564,6 +564,26 @@ takes:
   verdict; they show on the defect boxes, in the defect table and in the CSV export. Check them on your own boards
   before quoting counts by type: on public scans about one box in six was named wrongly.
 
+- **Fine alignment**, off: each board is matched to the Golden board to a fraction of a pixel before the comparison.
+  Where boards land a pixel off, the comparison marks the copper edges they are off by as changed, and those are false
+  calls; fine alignment removed about half of them on public scans, at about 0.1 s more per board. Compare's decision
+  table then names the alignment method "orb-homography+fine"; a board it cannot improve keeps ORB's alignment.
+
+**Learn From Labelled Boards…** (Ctrl+L, top of the Thresholds tab) learns the Pixel difference, Minimum defect area
+and Fine alignment from your own labelled boards, instead of guessing them. It needs a Golden board and at least three
+NG images with their defects boxed (section 3), in the Golden board's view; OK images make its false-call counts
+meaningful, so import some too. It aligns and compares every labelled board at each setting and picks, on part of the
+boards, the setting with the fewest false calls among those that miss at most 1 % of the boxed defects. It then counts
+that setting and the recipe's own on the boards it did not pick on: the locked validation set when a frozen dataset
+version of the board model has one holding enough NG boards, else a third of the boards drawn with the seed the sheet
+names. The sheet shows both settings side by side with missed defects, false calls (counted per 512 px square of board
+that holds no boxed defect) and OK boards called NG, each as a count over its 95 % upper bound. With a few boards the
+bounds are wide: 0 missed of 2 still allows up to 77.6 %. Label more boards before trusting the counts. Use Learned
+Values puts the values in the fields; nothing is stored until you press Save Recipe, whose sheet lists the changes and
+offers the counts as the reason, kept in the revision's audit entry. Close or Esc leaves the recipe as it was. A board
+labelled UNSURE, an NG image with no box, an image of another view and one that cannot be read are left out, and the
+sheet says how many.
+
 The pixel difference, the similarity, the changed area and the difference regions judge only while **Use the Golden
 board comparison** is ticked and the board model has a Golden board. While it runs, Compare's decision table also shows
 **Alignment points**, which no recipe sets: with fewer than 12 points matched between the board and the Golden board,

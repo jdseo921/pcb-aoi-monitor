@@ -29,7 +29,7 @@ from PySide6.QtWidgets import (
 )
 
 from ...core import checklist
-from ...core.imaging import IMAGE_EXTS
+from ...core.imaging import FINE_COST_MS, IMAGE_EXTS
 from ...core.inspector import InspectionResult
 from ...core.recipe import ROI, ROI_TYPES, Change, Recipe, changes
 from ...core.services import AppContext
@@ -43,6 +43,7 @@ from ..widgets.empty_state import EmptyState
 from ..widgets.scale import CalibrationSheet, DefectSizeField
 from .base import QT_TRANSLATE_NOOP, Page, action_button, button, fill_table, make_table, scrolled
 from .compare import check_rows
+from .recipe_learn import LearnSheet
 from .recipe_save import COPPER_SHOWN, RevisionPane, SaveSheet
 
 if TYPE_CHECKING:
@@ -84,6 +85,7 @@ class RecipeEditorPage(Page):
         self._undo: list[list[ROI]] = []  # the ROIs before each edit since load(), the last edit last (Ctrl+Z)
         self._redo: list[list[ROI]] = []  # and the edits undone, which Ctrl+Y does again
         self._revisions: list[dict[str, Any]] = []  # the Revisions tab's rows (`AppContext.recipe_revisions`)
+        self._learned: tuple[tuple[bool, int, int], str] | None = None  # the setting Use Learned Values set, and why
 
         split = QSplitter(Qt.Orientation.Horizontal)
         left = QWidget()
@@ -181,8 +183,28 @@ class RecipeEditorPage(Page):
         thr_tab = QWidget()
         thr_tab.setObjectName("page")
         tf = QFormLayout(thr_tab)
+        # Learn From Labelled Boards… (REQ-TRN-018): the comparison's values chosen from the board model's labelled
+        # boards and counted on boards held out, shown in the sheet under the tabs; it changes nothing stored
+        self.act_learn = self.action(self.tr("Learn From Labelled Boards…"), "Ctrl+L", self.learn)
+        learn_note = QLabel(
+            self.tr(
+                "Chooses the Pixel difference, Minimum defect area and fine alignment with the fewest false calls"
+                " that miss at most 1 % of the boxed defects on this board model's labelled boards."
+            )
+        )
+        learn_note.setObjectName("muted")
+        learn_note.setWordWrap(True)
         self.use_ai = QCheckBox(self.tr("Use the self-trained AI model"))
         self.use_cmp = QCheckBox(self.tr("Use the Golden board comparison"))
+        self.fine = QCheckBox(self.tr("Fine alignment"))  # REQ-RCP-007: ORB's homography refined to a fraction of a px
+        fine_note = QLabel(
+            self.tr(
+                "Matches each board to the Golden board to a fraction of a pixel before comparing: fewer false calls"
+                " along copper edges, about {ms} ms more per board."
+            ).format(ms=FINE_COST_MS)
+        )
+        fine_note.setObjectName("muted")
+        fine_note.setWordWrap(True)
         for tick in (self.use_ai, self.use_cmp):
             tick.toggled.connect(self._show_coverage)  # a whole-board check is covered by either
         self.ai_thr = self.ai_threshold_field()
@@ -215,11 +237,15 @@ class RecipeEditorPage(Page):
         copper_note.setObjectName("muted")
         copper_note.setWordWrap(True)
         for w, label in (
+            (action_button(self.act_learn, show_key=False), None),
+            (learn_note, None),
             (self.use_ai, None),
             (self.ai_thr, self.tr("AI score threshold")),
             (self.ai_thr.note, None),  # why no calibrated value is named, as wide as the form
             (self.warn, self.tr("WARN band (fraction of the threshold)")),
             (self.use_cmp, None),
+            (self.fine, None),
+            (fine_note, None),
             (self.diff, self.tr("Pixel difference (0-255)")),
             (self.min_size, self.min_size.label),
             (self.min_size.notice, None),
@@ -272,6 +298,8 @@ class RecipeEditorPage(Page):
         rv = QVBoxLayout(right)
         rv.setContentsMargins(8, 0, 0, 0)
         rv.addWidget(tabs, 1)
+        self.tabs = tabs
+        self.learn_busy = BusyOverlay(tabs, self.tr("Trying each setting on the labelled boards…"))
         self.test_verdict = QLabel("")
         self.test_verdict.setMinimumHeight(theme.FIELD_H)
         rv.addWidget(self.test_verdict)
@@ -279,6 +307,9 @@ class RecipeEditorPage(Page):
         self.try_checks = make_table([*checks, self.tr("Result")], sortable=False)  # the Try's checks (REQ-RCP-003)
         self.try_checks.hide()
         rv.addWidget(self.try_checks)
+        self.learn_sheet = LearnSheet(self._use_learned)  # in the tabs' place while it is shown: the column's height
+        self.learn_sheet.closed.connect(tabs.show)
+        rv.insertWidget(rv.indexOf(tabs) + 1, self.learn_sheet, 1)
         rv.addWidget(self.save_sheet)
         b = QHBoxLayout()
         self.act_try = self.action(self.tr("Try Recipe…"), "Ctrl+T", self.test_run)
@@ -333,6 +364,8 @@ class RecipeEditorPage(Page):
     def load(self) -> None:
         self.roi_table.clearSelection()  # row i of the recipe before is not ROI i of this one: the form empties (#173)
         self.save_sheet.close_sheet()  # it named the revision before, or the board model before
+        self.learn_sheet.close_sheet()  # it was learned for the board model, and against the revision, before
+        self._learned = None
         self._forget()
         if not self.board_model:
             self.calibrate_btn.setEnabled(False)  # no Golden board to click on, nor to take the focus back
@@ -356,6 +389,7 @@ class RecipeEditorPage(Page):
         self._close_sheet()
         self.use_ai.setChecked(r.use_ai)
         self.use_cmp.setChecked(r.use_compare)
+        self.fine.setChecked(r.fine_alignment is True)
         self.show_calibrated(self.ai_thr, self.board_model)
         self.ai_thr.set_override(r.anomaly_threshold)
         self.warn.setValue(r.warn_ratio)
@@ -563,6 +597,7 @@ class RecipeEditorPage(Page):
         self.min_size.apply(r)  # a size left in px stays in px until save() stores it in mm (Recipe.in_mm)
         r.ssim_min, r.changed_pct_max, r.max_diff_regions = self.ssim.value(), self.chg.value(), self.maxreg.value()
         r.copper = self.copper.currentData()
+        r.fine_alignment = self.fine.isChecked()
         return r
 
     # --- scale (REQ-RCP-006) -----------------------------------------------------
@@ -702,13 +737,56 @@ class RecipeEditorPage(Page):
         t.setFixedHeight(t.horizontalHeader().sizeHint().height() + rows + 2 * t.frameWidth())
         t.show()
 
+    def learn(self) -> None:
+        """Learn From Labelled Boards… (Ctrl+L, REQ-TRN-018): `AppContext.learn_comparison` on a pool thread, its
+        progress and Cancel over the tabs, then its sheet; the fields change only on Use Learned Values."""
+        if (bm := self.checked_board_model()) is None:
+            return
+        self.learn_sheet.close_sheet()
+        self.run_in_background(
+            self.ctx.learn_comparison, bm, on_result=self._show_learned, busy=self.learn_busy, with_progress=True
+        )
+
+    def _show_learned(self, found: dict[str, Any]) -> None:
+        if found["board_model"] != self.board_model:  # another board model was picked meanwhile: not this one's
+            return
+        self.save_sheet.close_sheet()  # one sheet under the tabs at a time
+        self.tabs.hide()
+        self.learn_sheet.show_found(found)
+
+    def _use_learned(self, found: dict[str, Any]) -> None:
+        """Use Learned Values: the learned Pixel difference, Minimum defect area (in px, shown in mm at a scale) and
+        fine alignment in the fields, the rest as edited, and a line saying Save Recipe keeps them."""
+        chosen = found["chosen"]
+        self.diff.setValue(chosen["diff_threshold"])
+        sized = replace(self._collect(), min_defect_area=chosen["min_defect_area"], min_defect_mm=None)
+        self.min_size.show_recipe(sized, self.px_per_mm)
+        self.fine.setChecked(chosen["fine_alignment"])
+        setting = (chosen["fine_alignment"], chosen["diff_threshold"], chosen["min_defect_area"])
+        self._learned = setting, self.learn_sheet.reason(found)
+        self.shell.status(self.tr("Learned values set. Press Save Recipe to keep them as a new revision."))
+
     def ask_save(self, restoring: tuple[int, Recipe] | None = None) -> None:
         """Save Recipe (Ctrl+S, REQ-RCP-004): the sheet naming the revision it makes, with what it changes and the
         mandatory checks left uncovered, which need a reason (REQ-RCP-005); nothing is saved until Save Revision. With
-        `restoring`, a revision and its recipe as stored, the sheet is Restore as New Revision's for a copy of it."""
+        `restoring`, a revision and its recipe as stored, the sheet is Restore as New Revision's for a copy of it. While
+        the fields hold the values Use Learned Values set, the reason offered says where they were learned."""
         if (bm := self._latest_held()) is not None:
             r = self._to_save(restoring)
+            self.learn_sheet.close_sheet()  # one sheet under the tabs at a time
             self.save_sheet.open_for(bm, self.rev, self._changes(bm, r), checklist.uncovered(r), restoring)
+            edited = self._collect()
+            if (
+                restoring is None
+                and self._learned is not None
+                and self._learned[0]
+                == (
+                    edited.fine_alignment,
+                    edited.diff_threshold,
+                    edited.min_defect_area,
+                )
+            ):
+                self.save_sheet.reason.setText(self._learned[1])
 
     def _to_save(self, restoring: tuple[int, Recipe] | None) -> Recipe:
         """The recipe a save stores, as stored: the recipe as edited, or the revision `restoring` copies; under a
@@ -833,6 +911,7 @@ class RecipeEditorPage(Page):
             self._bg.stop()  # run_in_background drops the result of a cancelled job
             self._bg = None
             self.busy.finish()
+            self.learn_busy.finish()  # a Learn From Labelled Boards… run, which judges the same recipe
         self.test_verdict.clear()
         self.test_verdict.setStyleSheet("")
         self.try_checks.hide()

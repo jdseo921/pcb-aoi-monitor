@@ -12,7 +12,7 @@ from pathlib import Path
 
 import pytest
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QFileDialog, QMessageBox, QPushButton
+from PySide6.QtWidgets import QFileDialog, QInputDialog, QMessageBox, QPushButton
 from pytestqt.qtbot import QtBot
 
 from aoi.ui import errors as ui_errors
@@ -203,4 +203,96 @@ def test_req_set_007_the_fifteen_minute_script_checks_trains_and_tries_a_thresho
     assert "NG" in compare.would_be.text() and win.ctx.recipe(bm) == revision  # type: ignore[attr-defined]
     widths["Compare"] = win.minimumSizeHint().width()
     assert max(widths.values()) <= 1920, widths
+    assert shown == []
+
+
+def test_req_set_007_the_forty_five_minute_script_after_the_fifteen(
+    qtbot: QtBot, bundle: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """docs/demo/stage1-45min.md from 12:30 as clicks, in the presenter theme, after the 15-minute script's run, check
+    on the locked boards and training (clicked in full above): the Recipe Editor's four tabs with Learn From Labelled
+    Boards… on Thresholds and the revisions listed; v1.1's AI Model Card, Activate Selected, Run Test again and both
+    runs on History, then Roll Back; the frozen versions on Training's Datasets tab; Switch User to the Operator, whose
+    Training, AI Model Test and Recipe Editor are greyed and who sees no Exit presenter theme, and back to the Admin;
+    and after they leave, Exit presenter theme and Reset Demo remove v1.1, the runs and the records. No message on the
+    way, and the recipe unchanged."""
+    shown: list[str] = []
+    monkeypatch.setattr(ui_errors, "show_error", lambda _parent, report: shown.append(str(report)))
+    monkeypatch.setattr(main_window, "show_error", lambda _parent, report: shown.append(str(report)))
+    monkeypatch.setattr(QMessageBox, "question", lambda *_a, **_k: QMessageBox.StandardButton.Yes)
+    win = click(qtbot, station(qtbot).pages["Settings"].demo.btn_load)  # type: ignore[attr-defined]
+    bm = BOARD_MODEL
+    revision = win.ctx.recipe(bm)
+    win.pages["Settings"].demo.pace.setValue(1)  # type: ignore[attr-defined]  # the test's own pace
+    win.pages["Settings"].presenter.click()  # type: ignore[attr-defined]
+    assert win.navigate("Inspection")
+    page = win.pages["Inspection"]
+    assert isinstance(page, InspectionPage)
+    for _ in range(2):  # to the NG board, then to the end of the queue
+        qtbot.mouseClick(page.btn_start, Qt.MouseButton.LeftButton)
+        qtbot.waitUntil(lambda: not page.running and page.worker is None, timeout=60000)
+    assert win.navigate("AI Model Test")
+    test = win.pages["AI Model Test"]
+    qtbot.mouseClick(test.btn_run, Qt.MouseButton.LeftButton)  # type: ignore[attr-defined]
+    qtbot.waitUntil(lambda: test.btn_run.isEnabled(), timeout=60000)  # type: ignore[attr-defined]
+    assert win.navigate("Training")
+    training = win.pages["Training"]
+    training.epochs.setValue(2)  # type: ignore[attr-defined]
+    training.input_size.setCurrentText("128")  # type: ignore[attr-defined]
+    qtbot.mouseClick(training.btn_train, Qt.MouseButton.LeftButton)  # type: ignore[attr-defined]
+    qtbot.waitUntil(lambda: training.worker is None and win.ctx.training.done, timeout=120000)  # type: ignore
+
+    # 12:30 to 20:00, recipes
+    assert win.navigate("Recipe Editor")
+    recipe = win.pages["Recipe Editor"]
+    tabs = recipe.tabs  # type: ignore[attr-defined]
+    assert [tabs.tabText(i) for i in range(tabs.count())] == ["ROIs", "Thresholds", "AOI checks", "Revisions"]
+    for i in (1, 0, 2, 3):  # Thresholds, ROIs, AOI checks, Revisions, as the script shows them
+        tabs.setCurrentIndex(i)
+        qtbot.waitUntil(lambda i=i: tabs.currentWidget().isVisible(), timeout=5000)  # type: ignore[misc]
+    assert recipe.act_learn.isEnabled() and recipe.history.rowCount() >= 1  # type: ignore[attr-defined]
+
+    # 20:00 to 28:00, AI model versions
+    assert win.navigate("Training")
+    versions = training.models  # type: ignore[attr-defined]
+    assert [versions.item(r, 1).text() for r in range(versions.rowCount())] == ["v1.1", "v1.0"]
+    versions.selectRow(0)
+    card = next(b for b in training.findChildren(QPushButton) if b.text() == "AI Model Card")
+    qtbot.mouseClick(card, Qt.MouseButton.LeftButton)
+    assert training.card_view.toPlainText().startswith(f"# Model card: {bm} v1.1")  # type: ignore[attr-defined]
+    activate = next(b for b in training.findChildren(QPushButton) if b.text() == "Activate Selected")
+    qtbot.mouseClick(activate, Qt.MouseButton.LeftButton)
+    assert (win.ctx.active_model(bm) or {}).get("version") == "v1.1"
+    assert win.navigate("AI Model Test")
+    qtbot.mouseClick(test.btn_run, Qt.MouseButton.LeftButton)  # type: ignore[attr-defined]
+    qtbot.waitUntil(lambda: test.btn_run.isEnabled(), timeout=60000)  # type: ignore[attr-defined]
+    test.tabs.setCurrentIndex(1)  # type: ignore[attr-defined]  # History: both runs, newest first
+    qtbot.waitUntil(lambda: test.history.rowCount() == 2, timeout=10000)  # type: ignore[attr-defined]
+    assert win.navigate("Training")
+    qtbot.mouseClick(training.btn_rollback, Qt.MouseButton.LeftButton)  # type: ignore[attr-defined]
+    assert (win.ctx.active_model(bm) or {}).get("version") == "v1.0"
+
+    # 28:00 to 36:00, their data: the frozen dataset versions on the Datasets tab
+    training.tabs.setCurrentIndex(1)  # type: ignore[attr-defined]
+    assert training.versions.table.rowCount() >= 1 and training.versions.table.isVisible()  # type: ignore
+
+    # 36:00 to 40:00, who may do what
+    switch = next(b for b in win.findChildren(QPushButton) if b.text() == "Switch User")
+    for pick in ("operator (Operator)", "admin (Admin)"):
+        monkeypatch.setattr(QInputDialog, "getItem", staticmethod(lambda *_a, pick=pick, **_k: (pick, True)))
+        qtbot.mouseClick(switch, Qt.MouseButton.LeftButton)
+        operator = pick.startswith("operator")
+        assert win.ctx.role == ("Operator" if operator else "Admin")
+        greyed = [t for t in ("Training", "AI Model Test", "Recipe Editor") if not win._items[t].flags()]
+        assert greyed == (["Training", "AI Model Test", "Recipe Editor"] if operator else [])
+        assert win.exit_presenter.isVisible() is not operator
+        assert win.navigate("Inspection")
+
+    # After they leave
+    qtbot.mouseClick(win.exit_presenter, Qt.MouseButton.LeftButton)
+    assert win.navigate("Settings")
+    win = click(qtbot, win.pages["Settings"].demo.btn_reset)  # type: ignore[attr-defined]
+    assert [m["version"] for m in win.ctx.models(bm)] == ["v1.0"]
+    assert win.ctx.test_runs(bm) == [] and records(win) == []
+    assert win.ctx.recipe(bm) == revision
     assert shown == []
