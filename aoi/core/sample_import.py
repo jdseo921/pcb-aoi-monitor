@@ -23,7 +23,7 @@ REFUSED = frozenset(
 
 @dataclass
 class ImportFile:
-    """One file to import: its path, its label ("OK" or "NG"; None while it has none), its defect type (one of the 33
+    """One file to import: its path, its label ("OK" or "NG"; None while it has none), its defect type (one of the 37
     DCT types for NG) and its camera view."""
 
     path: str
@@ -46,7 +46,7 @@ class ImportReport:
 
 def defect_type_named(name: str) -> str | None:
     """The DCT type a folder is named after, with spaces or underscores and in any case ("solder_bridge" is Solder
-    Bridge), or None: "Unknown" and the AI model's "Anomaly" are not among the 33."""
+    Bridge), or None: "Unknown" and the AI model's "Anomaly" are not among the 37."""
     key = name.replace("_", " ").strip().casefold()
     return next((n for n in taxonomy.names() if n.casefold() == key), None)
 

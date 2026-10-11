@@ -5,8 +5,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
-from PySide6.QtCore import QSize, Qt, QTimer
-from PySide6.QtGui import QAction, QCloseEvent, QColor, QKeySequence
+from PySide6.QtCore import QModelIndex, QPersistentModelIndex, QSize, Qt, QTimer
+from PySide6.QtGui import QAction, QCloseEvent, QColor, QKeySequence, QPainter
 from PySide6.QtWidgets import (
     QApplication,
     QComboBox,
@@ -22,6 +22,9 @@ from PySide6.QtWidgets import (
     QPushButton,
     QStackedWidget,
     QStatusBar,
+    QStyle,
+    QStyledItemDelegate,
+    QStyleOptionViewItem,
     QTableWidget,
     QVBoxLayout,
     QWidget,
@@ -239,6 +242,37 @@ NAV = [
 ]
 
 
+HEADING = Qt.ItemDataRole.UserRole + 1  # a sidebar row that is a section's heading, not a page
+
+
+class _NavDelegate(QStyledItemDelegate):
+    """The sidebar's rows: a page's entry as the theme draws it, an operator target (TARGET_H); a section's heading,
+    which no one clicks, a line of muted text only as tall as it needs, so that every entry, badge and all, fits a
+    768 px tall screen without a scroll bar narrowing the sidebar under its badges."""
+
+    def sizeHint(self, option: QStyleOptionViewItem, index: QModelIndex | QPersistentModelIndex) -> QSize:  # noqa: N802
+        hint = super().sizeHint(option, index)
+        if not index.data(HEADING):
+            return hint
+        return QSize(hint.width(), option.fontMetrics.height() + 2 * theme.SPACE_S)
+
+    def paint(
+        self, painter: QPainter, option: QStyleOptionViewItem, index: QModelIndex | QPersistentModelIndex
+    ) -> None:
+        if not index.data(HEADING):
+            super().paint(painter, option, index)
+            return
+        painter.save()
+        painter.setFont(option.font)
+        painter.setPen(QColor(theme.TEXT_MUTED))  # a heading, not a disabled control: 7.4:1 (#239)
+        style = option.widget.style() if option.widget is not None else QApplication.style()
+        inset = style.pixelMetric(QStyle.PixelMetric.PM_FocusFrameHMargin, option, option.widget) + 1  # as Qt's text
+        text = option.rect.adjusted(theme.SPACE_S + theme.NAV_TEXT_X + inset, 0, -theme.SPACE_S, 0)
+        align = Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignBottom
+        painter.drawText(text.adjusted(0, 0, 0, -theme.SPACE_S // 2), align, str(index.data()))
+        painter.restore()
+
+
 class _PageStack(QStackedWidget):
     """The pages in the scroll area round them (#104): as wide as the widest page needs, as a QStackedWidget is, so
     every page keeps the width it was laid out for, but only as tall as the page shown needs. A QStackedWidget asks
@@ -289,6 +323,7 @@ class MainWindow(QMainWindow):
         self.nav = QListWidget()
         self.nav.setObjectName("nav")
         self.nav.setFixedWidth(theme.NAV_W)
+        self.nav.setItemDelegate(_NavDelegate(self.nav))
         self.stack = _PageStack()
         body.addWidget(self.nav)
         # the pages scroll where the screen is smaller than the widest page, so a 1366 x 768 station shows every
@@ -311,6 +346,7 @@ class MainWindow(QMainWindow):
             if section:
                 sec = QListWidgetItem(self.tr(section))
                 sec.setFlags(Qt.ItemFlag.NoItemFlags)
+                sec.setData(HEADING, True)
                 self.nav.addItem(sec)
                 self._sections.append((sec, []))
             if self._sections:

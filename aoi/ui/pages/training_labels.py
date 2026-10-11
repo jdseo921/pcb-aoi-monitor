@@ -1,6 +1,6 @@
 """Training's label editor (REQ-TRN-003, the screen half; stage S33): the box editor of docs/sketches/training-labels.md
 beside the samples table. It shows the selected image with its defect boxes; on an NG image boxes are drawn, moved,
-resized and deleted, each of one of the 33 defect types, whose severity the defect table gives, the selected box taking
+resized and deleted, each of one of the 37 defect types, whose severity the defect table gives, the selected box taking
 the type picked, and Undo (Ctrl+Z) puts back what the last change replaced, on any image. Every change is stored at once
 through `AppContext.set_boxes` (an Undo through `set_label`), which keeps the boxes before in the image's history and
 audits the change (S32); nothing here reads or writes the database itself. The image and its boxes are read, and each
@@ -149,7 +149,7 @@ class LabelEditor(QWidget):
         # rows need their 714 px of the tab's 1108 beside it (REQ-SET-008); a longer name shows cut there, whole in the
         # drop-down
         self.type_box.setMinimumContentsLength(12)
-        for name in names():  # the 33 types, by category as the defect table lists them; never Anomaly (Q33)
+        for name in names():  # the 37 types, by category as the defect table lists them; never Anomaly (Q33)
             self.type_box.addItem(name, name)  # names from the classification table, English until it is translated
         self.severity = QLabel()  # read-only: the table's severity of the type
         form.addRow(self.tr("Type"), self.type_box)

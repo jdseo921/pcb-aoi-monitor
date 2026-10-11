@@ -45,7 +45,7 @@ def test_req_trn_001_the_sheet_takes_each_file_with_its_view_and_an_ng_file_with
     qtbot: QtBot,
 ) -> None:
     """Opened on a folder's files: OK, NG typed by its folder, NG with no type, and no label. Import is off while an
-    NG file has no type; the type picker holds the 33 types alone (no "Unknown", no "Anomaly"), none picked. The view,
+    NG file has no type; the type picker holds the 37 types alone (no "Unknown", no "Anomaly"), none picked. The view,
     label and type for all, then a row's own by F2; an OK file's type, a file's name and its status are not picked.
     The note says how many NG files need a type until none does. Enter sends the files; while they import nothing can
     be changed. The report shows each file copied, skipped or refused with its code, or not imported, the sheet's
@@ -76,7 +76,7 @@ def test_req_trn_001_the_sheet_takes_each_file_with_its_view_and_an_ng_file_with
     assert not sheet.btn_import.isEnabled() and sheet.note.text() == "1 NG file(s) need a defect type"
     assert sheet.views.checkedId() == 0 and sheet.labels.checkedId() == -1, "Top for all; a mixed batch, no label"
     kinds = [sheet.type_box.itemData(i) for i in range(sheet.type_box.count())]
-    assert kinds == names() and len(kinds) == 33 and sheet.type_box.currentIndex() == -1
+    assert kinds == names() and len(kinds) == 37 and sheet.type_box.currentIndex() == -1
     sheet.category.setCurrentIndex(sheet.category.findData("Solder"))
     assert {sheet.type_box.itemData(i) for i in range(sheet.type_box.count())} < set(names())
     editable = [[bool(cell_item(sheet.table, r, col).flags() & Qt.ItemFlag.ItemIsEditable) for col in range(5)]

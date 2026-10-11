@@ -197,9 +197,9 @@ reference as it is. Remove asks first, with No as the default: Enter keeps the s
 (REQ-LOG-003): for an Engineer, Remove is off and its tooltip names the Admin role. The sample's record goes, its image
 file stays in the workspace, and the audit trail records it as `sample.delete`.
 
-**Mark NG** asks for no defect type: an NG image's boxes, each of one of the 33 types, give its types (below), so an
+**Mark NG** asks for no defect type: an NG image's boxes, each of one of the 37 types, give its types (below), so an
 image marked NG has none until a box is drawn, which a second user's check needs before a freeze. An import gives each
-NG sample one of the 33 types (AOI-TRN-013). **Mark OK** clears the type. Neither changes a sample's view.
+NG sample one of the 37 types (AOI-TRN-013). **Mark OK** clears the type. Neither changes a sample's view.
 
 **Importing images.** **Add OK Images…** (Ctrl+O), **Add NG Images…** (Ctrl+N) and **Import Folder…**
 (Ctrl+Shift+O) open the import sheet above the sample table, with the files picked or found in the folder; no dialog
@@ -211,11 +211,11 @@ who started it, and the sheet closes once it ends. A folder with no image
 opens no sheet, and the status line says so. A name too long for its cell is cut at its start, so its end shows, and a
 screen reader reads its whole path. Import Folder… labels each image by its sub-folders: under `ok/` or `good/` OK,
 under `ng/`, `bad/`, `defect/` or `defects/` NG, with the defect type of its folder when that folder is named after one
-of the 33 types (`ng/solder_bridge/`, spaces or underscores, any case); an image in neither is "unsorted: pick a label".
+of the 37 types (`ng/solder_bridge/`, spaces or underscores, any case); an image in neither is "unsorted: pick a label".
 An import labels an image OK or NG only, as the user who pressed Import; UNSURE is only ever a later label.
 **View** (Top for every new batch) and **Label for all** set every row; **Defect type for NG files** (a category, then a
 type with its severity) sets every NG row; a row's own label, type or view is picked in its cell (tap a selected cell,
-double-click it or press F2). **Import** (Enter) stays grey until every NG file has one of the 33 types; "Unknown" is
+double-click it or press F2). **Import** (Enter) stays grey until every NG file has one of the 37 types; "Unknown" is
 not offered. The files are copied into the workspace one at a time in the background and are never changed where they
 are. Each row then says "copied", "not imported", or the code and title of what refused it; the row selected (a tap or
 the arrow keys) shows what happened and what to do in a line under the table, as pointing at it does: a file Inspection
@@ -235,16 +235,16 @@ board model and the file it stopped at; the user who pressed Import, if signed i
 
 **Labels keep their history.** Each image is labelled OK, NG or UNSURE, and an NG image can carry defect boxes, each
 with its position and size in whole pixels of the image as it is shown, turned upright as its EXIF Orientation says, one
-of the 33 defect types and the severity the defect table gives the type. Mark OK and Mark NG on Training, and every
+of the 37 defect types and the severity the defect table gives the type. Mark OK and Mark NG on Training, and every
 later label or box change, add a label to the image's history and keep the one before, with its boxes, who labelled it
 and when; nothing is deleted, and the audit trail records each change (`sample.update`, `label.set`). Images labelled
 before this version keep their label, with no labeller recorded. Marking an image as it is labelled already changes
 nothing, unless no labeller is recorded for its label: then it is labelled again, by you, so that a second user can
-check it. An NG image whose defect type is not one of the 33, as an earlier version could store, takes no box until
+check it. An NG image whose defect type is not one of the 37, as an earlier version could store, takes no box until
 you mark it NG again (AOI-TRN-030 says so): Mark NG labels it NG with no type, as for any image, and its boxes then
 give its types; Undo after another mark puts it back with no type either. An UNSURE image is left out of training and
 its calibration and counted as neither OK nor NG on Training and Home. A box must lie inside the image (AOI-TRN-031);
-a label an image cannot take, such as a box on an OK image or a type not one of the 33, is refused (AOI-TRN-030). The
+a label an image cannot take, such as a box on an OK image or a type not one of the 37, is refused (AOI-TRN-030). The
 label editor draws boxes and Mark UNSURE marks an image UNSURE (below); no screen lists UNSURE images for the
 customer's quality engineer yet.
 
@@ -550,6 +550,12 @@ takes:
   at or above it the board is NG.
 - **Allowed difference regions**, 0 (0 to 1000): the board is NG when the comparison finds more regions of change, each
   at least the minimum defect area, than this; it has no WARN band.
+- **Copper defect names**, Off (assembled boards), or Light copper or Dark copper for a bare board (ADR 0015): each
+  region outside every ROI is named Open Circuit, Short Circuit, Mousebite, Spur, Spurious Copper or Pin-hole / Missing
+  Hole from how its copper changed against the Golden board, and stays Anomaly where its window shows no clear copper.
+  Pick the shade copper has on the Golden board: the wrong one names almost nothing right. Names never change a
+  verdict; they show on the defect boxes, in the defect table and in the CSV export. Check them on your own boards
+  before quoting counts by type: on public scans about one box in six was named wrongly.
 
 The pixel difference, the similarity, the changed area and the difference regions judge only while **Use the Golden
 board comparison** is ticked and the board model has a Golden board. While it runs, Compare's decision table also shows

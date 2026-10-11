@@ -302,7 +302,7 @@ class ComparePage(Page):
         self.try_busy.cancel_button.clicked.connect(self._cancel_tried)  # the stored checks again (REQ-SET-021, review)
 
         split.addWidget(panel)
-        split.setSizes([800, 920])  # the decision table shows all six columns at 1920 x 1080
+        split.setSizes([700, 1020])  # the decision table shows all six columns, cells padded, at 1920 x 1080
         self.root.addWidget(split, 1)
         self.root.addWidget(self._tryout())  # under the images, the panel's full height left to the decision (sketch)
         self.root.addWidget(self._save_sheet())

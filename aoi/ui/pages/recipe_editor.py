@@ -7,7 +7,7 @@ from dataclasses import replace
 from typing import TYPE_CHECKING, Any
 
 import numpy as np
-from PySide6.QtCore import QPointF, QRectF, Qt
+from PySide6.QtCore import QCoreApplication, QPointF, QRectF, Qt
 from PySide6.QtGui import QKeySequence
 from PySide6.QtWidgets import (
     QCheckBox,
@@ -43,7 +43,7 @@ from ..widgets.empty_state import EmptyState
 from ..widgets.scale import CalibrationSheet, DefectSizeField
 from .base import QT_TRANSLATE_NOOP, Page, action_button, button, fill_table, make_table, scrolled
 from .compare import check_rows
-from .recipe_save import RevisionPane, SaveSheet
+from .recipe_save import COPPER_SHOWN, RevisionPane, SaveSheet
 
 if TYPE_CHECKING:
     from ..main_window import MainWindow
@@ -202,6 +202,18 @@ class RecipeEditorPage(Page):
         self.chg.setSingleStep(0.05)
         self.maxreg = QSpinBox()
         self.maxreg.setRange(0, 1000)
+        self.copper = QComboBox()  # bare-board copper naming (REQ-INSP-018): off, or the copper's shade
+        for shade, shown in COPPER_SHOWN.items():
+            self.copper.addItem(QCoreApplication.translate("SaveSheet", shown), shade)  # as the sheet names it
+        copper_note = QLabel(
+            self.tr(
+                "On a bare board, each difference outside an ROI is named Open Circuit, Short Circuit, Mousebite, Spur,"
+                " Spurious Copper or Pin-hole / Missing Hole. Pick the shade copper has on the Golden board. Names"
+                " never change a verdict."
+            )
+        )
+        copper_note.setObjectName("muted")
+        copper_note.setWordWrap(True)
         for w, label in (
             (self.use_ai, None),
             (self.ai_thr, self.tr("AI score threshold")),
@@ -214,6 +226,8 @@ class RecipeEditorPage(Page):
             (self.ssim, self.tr("Similarity minimum (SSIM)")),
             (self.chg, self.tr("Maximum changed area %")),
             (self.maxreg, self.tr("Allowed difference regions")),
+            (self.copper, self.tr("Copper defect names")),
+            (copper_note, None),
         ):
             tf.addRow(label, w) if label else tf.addRow(w)
         tabs.addTab(scrolled(thr_tab), self.tr("Thresholds"))  # scrolls where the window is too short for its rows
@@ -350,6 +364,7 @@ class RecipeEditorPage(Page):
         self.ssim.setValue(r.ssim_min)
         self.chg.setValue(r.changed_pct_max)
         self.maxreg.setValue(r.max_diff_regions)
+        self.copper.setCurrentIndex(max(0, self.copper.findData(r.copper)))  # a value it does not know shows Off
         self._show_revisions()
         self._loaded = self._collect().to_dict()  # as the form shows it, rounded to its spin boxes
         self.view.saved = self._saved_rois()
@@ -547,6 +562,7 @@ class RecipeEditorPage(Page):
         r.warn_ratio, r.diff_threshold = self.warn.value(), self.diff.value()
         self.min_size.apply(r)  # a size left in px stays in px until save() stores it in mm (Recipe.in_mm)
         r.ssim_min, r.changed_pct_max, r.max_diff_regions = self.ssim.value(), self.chg.value(), self.maxreg.value()
+        r.copper = self.copper.currentData()
         return r
 
     # --- scale (REQ-RCP-006) -----------------------------------------------------

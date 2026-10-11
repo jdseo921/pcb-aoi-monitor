@@ -434,7 +434,7 @@ class AppContext:
         added. Each file goes through `_copy_checked` (REQ-TRN-001): checked as Inspection checks an image, never
         written, its SHA-256 recorded with the sample; an image the board model already has, or one earlier in
         `paths`, is skipped (decision Q31), and the audit entry counts it and names the sample that has it by UUID and
-        SHA-256 (`skipped`, `already`). An NG import names one of the 33 DCT types (AOI-TRN-013). All or nothing
+        SHA-256 (`skipped`, `already`). An NG import names one of the 37 DCT types (AOI-TRN-013). All or nothing
         (#178): a file refused, or one that cannot be copied (AOI-TRN-008, or AOI-TRN-011 when the system refuses the
         copy's path as too long, #245), stops the import with its code and removes the copies made; then the samples, a
         new board model's default recipe and reference, and the audit entry, which names each sample added by its UUID
@@ -495,7 +495,7 @@ class AppContext:
         return len(copies)
 
     def _refuse_untyped(self, path: str, label: str, defect_type: str | None) -> None:
-        """Refuse an NG sample without one of the 33 DCT types, named as the classification table names it
+        """Refuse an NG sample without one of the 37 DCT types, named as the classification table names it
         (AOI-TRN-013, REQ-TRN-001): no type, "Unknown" or the AI model's "Anomaly" is never a sample's type."""
         if label == "NG" and defect_type not in taxonomy.names():
             why = NOT_A_TYPE.fill(name=defect_type) if defect_type else NO_TYPE
@@ -1754,7 +1754,7 @@ class AppContext:
     @transactional
     def update_sample(self, sample_id: int, label: str, defect_type: str | None) -> None:
         """Relabel a sample OK or NG (else AOI-TRN-018) and set its defect type as an import does (REQ-TRN-001): one of
-        the 33 DCT types for NG (else AOI-TRN-013), none for OK, whatever is given, with a new label row; the one before
+        the 37 DCT types for NG (else AOI-TRN-013), none for OK, whatever is given, with a new label row; the one before
         stays in history (REQ-TRN-002). A sample a labeller gave that label and type already is left as it is; one
         carried over with no labeller is labelled again, by the user acting, so it can be checked. The reference sample
         cannot be relabelled NG (AOI-TRN-007): inspections would compare against a defective board. The new label row
@@ -1960,14 +1960,14 @@ class AppContext:
     @transactional
     def label_blind(self, set_uuid: str, sample_uuid: str, label: str, defect_type: str | None = None) -> str:
         """Record the user acting's own label of an image of a calibration set, kept apart from the image's label: OK,
-        or NG with one of the 33 defect types, once per image and user. Returns its UUID, audited as `label.blind`.
+        or NG with one of the 37 defect types, once per image and user. Returns its UUID, audited as `label.blind`.
         AOI-TRN-036 refuses an image outside the set, any other label, and a second blind label of an image."""
         cal, sample = self.db.calibration_sets("", set_uuid), self.db.sample_by_uuid(sample_uuid)
         why = None
         if not cal or sample_uuid not in cal[0]["sample_uuids"]:
             why = QT_TRANSLATE_NOOP("Errors", "it is not an image of the calibration set")
         elif not labels.blind_label_ok(label, defect_type):
-            why = QT_TRANSLATE_NOOP("Errors", "a blind label is OK, or NG with one of the 33 defect types")
+            why = QT_TRANSLATE_NOOP("Errors", "a blind label is OK, or NG with one of the 37 defect types")
         elif sample_uuid in self.db.blind_labels(set_uuid, self.user_uuid):
             why = QT_TRANSLATE_NOOP("Errors", "you labelled it blind already")
         if why is not None:

@@ -1,7 +1,7 @@
 """Check the engine on public PCB defect datasets, for an internal test record (plan stage S30, issue #10).
 
     python tools/dataset_check.py --out <folder> [--deeppcb <PCBData folder>] [--pku <PCB_DATASET folder>]
-        [--min-area <px>] [--ai] [--tune]
+        [--min-area <px>] [--copper light|dark] [--ai] [--tune]
 
 DeepPCB (PCBData: `*_temp.jpg` defect-free, `*_test.jpg` defective, boxes in `*_not/*.txt`, splits in test.txt and
 trainval.txt) and PKU-Market-PCB (PCB_DATASET: `PCB_USED/<board>.JPG` defect-free, `images/<type>/` defective, VOC boxes
@@ -19,6 +19,9 @@ With --tune it trains the comparison's Pixel difference and Minimum defect area 
 on PKU-Market-PCB a seeded --held-out share of each board's photos of each defect type is set aside, the pair is chosen
 on the rest, and the held-out photos are counted at the chosen pair and at the default recipe; on DeepPCB the pair is
 chosen on the dataset's trainval split and counted on its test split.
+
+With --copper the recipe names copper defects (REQ-INSP-018, ADR 0015) with copper of that shade (DeepPCB's is dark),
+and each found box counts as named right when a region over it carries the box's type (COPPER_TYPES).
 """
 
 from __future__ import annotations
@@ -50,10 +53,22 @@ if str(ROOT) not in sys.path:  # run as a script: the repository root holds the 
 from aoi.core import anomaly, tuning  # noqa: E402
 from aoi.core.imaging import load_image  # noqa: E402
 from aoi.core.inspector import Inspector  # noqa: E402
-from aoi.core.recipe import Recipe  # noqa: E402
+from aoi.core.recipe import COPPER, Recipe  # noqa: E402
 
 MARGIN = 10  # px a region may lie off a labelled box and still find it
 DEEPPCB_TYPES = {1: "open", 2: "short", 3: "mousebite", 4: "spur", 5: "copper", 6: "pin-hole"}
+COPPER_TYPES = {  # each dataset's defect type as the taxonomy names it (aoi/defects.py)
+    "open": "Open Circuit",
+    "short": "Short Circuit",
+    "mousebite": "Mousebite",
+    "spur": "Spur",
+    "copper": "Spurious Copper",
+    "pin-hole": "Pin-hole / Missing Hole",
+    "open_circuit": "Open Circuit",  # PKU-Market-PCB
+    "mouse_bite": "Mousebite",
+    "spurious_copper": "Spurious Copper",
+    "missing_hole": "Pin-hole / Missing Hole",
+}
 DEEPPCB_PX_PER_MM = 48.0  # "around 48 pixels per 1 millimetre" (the dataset's README)
 
 
@@ -148,18 +163,22 @@ def found(box: tuple[int, int, int, int, str], regions: list[tuple[int, int, int
     )
 
 
-def golden_check(items: list[Item], min_area: int = Recipe.min_defect_area) -> dict[str, Any]:
+def golden_check(
+    items: list[Item], min_area: int = Recipe.min_defect_area, copper: str | None = None
+) -> dict[str, Any]:
     """Each board judged against its own defect-free board by the default recipe with the AI check off, its Minimum
-    defect area min_area px."""
+    defect area min_area px, naming copper defects of the shade `copper` when given: then each type counts its boxes
+    named right, and `named` counts each type's found boxes by the name of the first region over them."""
     verdicts: dict[str, int] = {}
     per_type: dict[str, dict[str, int]] = {}
+    named: dict[str, dict[str, int]] = {}
     ms: list[float] = []
     false_regions = smallest = 0
     smallest_box: tuple[int, int] | None = None
     for item in items:
         good, test = load_image(item.good), load_image(item.test)
         t0 = perf_counter()
-        recipe = Recipe(board_model=item.group, use_ai=False, min_defect_area=min_area)
+        recipe = Recipe(board_model=item.group, use_ai=False, min_defect_area=min_area, copper=copper)
         result = Inspector(recipe, reference=good).inspect(test)
         ms.append((perf_counter() - t0) * 1000)
         verdicts[result.verdict] = verdicts.get(result.verdict, 0) + 1
@@ -169,6 +188,11 @@ def golden_check(items: list[Item], min_area: int = Recipe.min_defect_area) -> d
             row = per_type.setdefault(box[4], {"boxes": 0, "found": 0})
             row["boxes"] += 1
             row["found"] += hit
+            if copper and hit:
+                over = [d.type for d in result.defects if found(box, [(d.x, d.y, d.w, d.h)])]
+                row["named_right"] = row.get("named_right", 0) + (COPPER_TYPES.get(box[4]) in over)
+                by_name = named.setdefault(box[4], {})
+                by_name[over[0]] = by_name.get(over[0], 0) + 1
             side = max(box[2], box[3])
             if hit and (smallest_box is None or side < max(smallest_box)):
                 smallest_box, smallest = (box[2], box[3]), side
@@ -191,6 +215,7 @@ def golden_check(items: list[Item], min_area: int = Recipe.min_defect_area) -> d
         "smallest_box_found_px": list(smallest_box) if smallest_box else None,
         "smallest_side_found_px": smallest if smallest_box else None,
         "ms": timing(ms),
+        **({"copper": copper, "named": dict(sorted(named.items()))} if copper else {}),
     }
 
 
@@ -337,6 +362,8 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         raise SystemExit("give --deeppcb, --pku or both")
     if args.min_area < 1:
         raise SystemExit("--min-area must be 1 px or more")
+    if args.copper not in (None, *COPPER):
+        raise SystemExit("--copper must be light or dark")
     if not outside(out, [ROOT, *roots]):
         raise SystemExit("--out must lie outside the repository and the datasets")
     out.mkdir(parents=True, exist_ok=True)
@@ -349,6 +376,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             "recipe": "default, AI check off"
             if args.min_area == Recipe.min_defect_area
             else f"default except Minimum defect area {args.min_area} px, AI check off",
+            "copper": args.copper,
             "min_defect_area_px": args.min_area,
             "ok_train": args.ok_train,
             **vars(cfg),
@@ -364,14 +392,14 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
     with open(out / "manifest.csv", "w", newline="", encoding="utf-8") as f:
         csv.writer(f).writerows([("file", "sha256"), *before.items()])
     if args.deeppcb:
-        results["deeppcb"] = {"golden": golden_check(test, args.min_area), "px_per_mm": DEEPPCB_PX_PER_MM}
+        results["deeppcb"] = {"golden": golden_check(test, args.min_area, args.copper), "px_per_mm": DEEPPCB_PX_PER_MM}
         if args.ai:
             results["deeppcb"]["ai"] = ai_check(train, test, args.ok_train, cfg)
         if args.tune:
             held = {i.test for i in test}
             results["deeppcb"]["tune"] = tune_check(train + test, held, "the dataset's test split (test.txt)")
     if args.pku:
-        results["pku"] = {"golden": golden_check(items, args.min_area)}
+        results["pku"] = {"golden": golden_check(items, args.min_area, args.copper)}
         if args.tune:
             held = held_out(items, args.held_out, args.seed)
             by = f"a seeded share of each board's photos of each defect type ({args.held_out}, seed {args.seed})"
@@ -392,6 +420,12 @@ def summary(r: dict[str, Any]) -> str:
             lines += [f"## {name} golden board, AI check off", f"Boards {g['boards']}, verdicts {g['verdicts']}."]
             lines += [f"Boxes {g['boxes']}, missed {g['boxes_missed']} (95 % upper {g['boxes_missed_upper_95']})."]
             lines += [f"- {t}: {v['found']} of {v['boxes']} found" for t, v in g["by_type"].items()]
+            if g.get("copper"):
+                lines += [f"Named with {g['copper']} copper, of the boxes found:"]
+                lines += [
+                    f"- {t}: {v.get('named_right', 0)} named right, {g['named'].get(t, {})}"
+                    for t, v in g["by_type"].items()
+                ]
             lines += [f"Regions on no box {g['regions_on_no_box']}; time per board {g['ms']}.", ""]
     for name in ("deeppcb", "pku"):
         if "tune" not in r.get(name, {}):
@@ -447,6 +481,7 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--deeppcb", help="DeepPCB's PCBData folder")
     p.add_argument("--pku", help="PKU-Market-PCB's PCB_DATASET folder")
     p.add_argument("--min-area", type=int, default=Recipe.min_defect_area, help="Minimum defect area in px (a what-if)")
+    p.add_argument("--copper", choices=COPPER, help="name copper defects, copper this shade (DeepPCB's: dark)")
     p.add_argument("--ai", action="store_true", help="also train and test the AI model on DeepPCB")
     p.add_argument("--ok-train", type=int, default=20)
     p.add_argument("--epochs", type=int, default=anomaly.TrainConfig.epochs)

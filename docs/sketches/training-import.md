@@ -15,7 +15,7 @@ Training   TBOX-A1 · 40 OK · 3 NG · 1 UNSURE            │ Samples │ Datas
 [Add OK Images…] [Add NG Images…] [Import Folder…]
 ┌ Import 200 files ───────────────────────────────────────────────────────────────────────────────┐
 │ View (● Top) ( Side) ( Bottom)     Label for all: (● OK) ( NG) ( UNSURE)                         │
-│ Defect type for NG files  [Component ▾] [Polarity Error · Critical ▾]   (one of the 33 DCT types) │
+│ Defect type for NG files  [Component ▾] [Polarity Error · Critical ▾]   (one of the 37 DCT types) │
 │ ┌──────────────────────────┬───────┬────────────────┬──────┬──────────────────────────────────┐ │
 │ │ File                     │ Label │ Defect type    │ View │ Status                           │ │
 │ │ ok/ok_041.png            │ OK    │ —              │ Top  │ ✓ copied                         │ │
@@ -31,8 +31,8 @@ Training   TBOX-A1 · 40 OK · 3 NG · 1 UNSURE            │ Samples │ Datas
 ```
 
 Files are copied into the workspace and never modified; the source stays where it was. Folder import reads `ok/`
-and `ng/` sub-folders; `ng/<Defect Type>/` pre-fills the type (folder names matched to the 33 DCT names, spaces
-or underscores). Every NG file needs one of the 33 types before Import enables; "Unknown" is not offered
+and `ng/` sub-folders; `ng/<Defect Type>/` pre-fills the type (folder names matched to the 37 DCT names, spaces
+or underscores). Every NG file needs one of the 37 types before Import enables; "Unknown" is not offered
 (REQ-TRN-001). Import runs off the UI thread: 200 files of 20 MP without a freeze over 2 s; the sheet shows
 progress, time left and Cancel once it passes 10 s.
 
@@ -45,7 +45,7 @@ progress, time left and Cancel once it passes 10 s.
 | Import folder | Import Folder… | Ctrl+Shift+O | B | Folder with ok/ and ng/; files elsewhere are listed as "unsorted: pick a label" |
 | View | Top / Side / Bottom | — | T (segmented) | Applies to all rows; a row can override it |
 | Label for all | OK / NG / UNSURE | — | T (segmented) | Applies to all rows; a row can override it |
-| Defect type | category, then type with its severity | — | F | 33 DCT types grouped by the 6 categories; severity shown read-only |
+| Defect type | category, then type with its severity | — | F | 37 DCT types grouped by the 6 categories; severity shown read-only |
 | Row override | per row Label, Defect type, View | — | F in table | For mixed batches |
 | Import | Import | Enter | B | The page's one blue primary while the sheet is open; disabled until every NG row has a type |
 | Cancel | Cancel | Esc | B | Keeps the files already copied, lists the rest as "not imported" |

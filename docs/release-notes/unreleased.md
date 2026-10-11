@@ -20,6 +20,8 @@ None. / 없음.
 
 - [REQ-INSP-017] Each shift starts with Shift Check (F7) on Inspection: the board model's master samples, a known-OK board and a known-NG board of each Critical defect type, are judged with the engine in use, and no board is inspected until every verdict is right. A check counts for 12 hours (0 to 24 on Settings) and until the AI model, recipe, Golden board or scale changes; each check is audited, and a failed one raises an NG alarm (ADR 0014). / 각 교대 근무는 검사 화면의 교대 점검(F7)으로 시작합니다. 보드 모델의 마스터 샘플(정상 보드 1개와 치명 결함 유형별 불량 보드 1개)을 현재 엔진으로 판정하며, 모든 판정이 맞을 때까지 보드를 검사하지 않습니다. 점검은 12시간(설정에서 0~24) 동안, 그리고 AI 모델, 레시피, 골든 보드 또는 스케일이 바뀔 때까지 유효합니다. 모든 점검은 감사 기록에 남고, 실패하면 NG 알람이 발생합니다(ADR 0014).
 
+- [REQ-INSP-018] Bare boards: a recipe set to Light copper or Dark copper (Recipe Editor, Thresholds) names each difference outside an ROI Open Circuit, Short Circuit, Mousebite, Spur, Spurious Copper or Pin-hole / Missing Hole; Mousebite, Spur, Spurious Copper and Pin-hole / Missing Hole join the defect types, 37 in all. Names never change a verdict, and the setting is off for every recipe until it is set (ADR 0015). / 베어 보드: 레시피에서 밝은 동박 또는 어두운 동박을 설정하면(레시피 편집기, 임계값) ROI 밖의 각 차이를 단선, 단락, 마우스바이트, 스퍼, 잔류 동박 또는 핀홀/홀 누락으로 이름 붙입니다. 마우스바이트, 스퍼, 잔류 동박, 핀홀/홀 누락이 결함 유형에 추가되어 모두 37개입니다. 이름은 판정을 바꾸지 않으며, 설정하기 전까지 모든 레시피에서 꺼져 있습니다(ADR 0015).
+
 ## Improved / 개선 (draft)
 
 - [REQ-SET-004] Text on the green, red and blue fills (verdict banner, Start, Stop, primary and danger buttons) is black, reading at 5.0:1 or more; it was white at 3.3 to 4.2:1 (#150). / 녹색, 빨간색, 파란색 배경 위 글자(판정 배너, 시작, 정지, 주요 및 위험 버튼)가 검은색이 되어 5.0:1 이상으로 읽힙니다. 이전에는 흰색으로 3.3~4.2:1이었습니다(#150).

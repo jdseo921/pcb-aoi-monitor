@@ -509,7 +509,7 @@ CODES: dict[str, ErrorCode] = {
             QT_TRANSLATE_NOOP("Errors", "NG image needs a defect type"),
             QT_TRANSLATE_NOOP(
                 "Errors",
-                "{path} was not taken as an NG sample: an NG sample needs one of the 33 defect types of the defect"
+                "{path} was not taken as an NG sample: an NG sample needs one of the 37 defect types of the defect"
                 " classification table, and {why}.",
             ),
             QT_TRANSLATE_NOOP("Errors", "Pick the defect type the image shows, then try again."),
@@ -650,7 +650,7 @@ CODES: dict[str, ErrorCode] = {
             QT_TRANSLATE_NOOP("Errors", "The label of {sample} was not changed: {reason}."),
             QT_TRANSLATE_NOOP(
                 "Errors",
-                "Label the image OK, NG or UNSURE, and give an NG image's defect boxes one of the 33 defect types each;"
+                "Label the image OK, NG or UNSURE, and give an NG image's defect boxes one of the 37 defect types each;"
                 " then save the label again.",
             ),
         ),
@@ -702,7 +702,7 @@ CODES: dict[str, ErrorCode] = {
             QT_TRANSLATE_NOOP("Errors", "Blind label not kept"),
             QT_TRANSLATE_NOOP("Errors", "The blind label of {sample} was not kept: {reason}."),
             QT_TRANSLATE_NOOP(
-                "Errors", "Label each image of the set once, as yourself: OK, or NG with one of the 33 defect types."
+                "Errors", "Label each image of the set once, as yourself: OK, or NG with one of the 37 defect types."
             ),
         ),
         ErrorCode(

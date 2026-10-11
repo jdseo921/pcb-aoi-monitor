@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import math
 import time
+from collections.abc import Callable
 from dataclasses import asdict, dataclass, field
 from typing import Any
 
@@ -18,10 +19,12 @@ from .. import defects as taxonomy
 from ..errors import QT_TRANSLATE_NOOP, AoiError, joined
 from .anomaly import AnomalyModel
 from .compare import MIN_SIDE, CompareResult, Region, changed_regions, compare, regions_from_mask
+from .copper import copper_level, copper_type
 from .imaging import align_to_reference
 from .recipe import ROI_DEFECT, Recipe
 
 OK, WARN, NG = "OK", "WARN", "NG"
+MAX_NAMED = 200  # regions named as copper defects on one board (REQ-INSP-018): past it they stay Anomaly, in time
 # The engine's notes, stored with each result as written; aoi/core/explain.py words them for the screen.
 NO_GOLDEN_NOTE = "No golden reference image set for this board model; comparison skipped."
 NO_AI_NOTE = "No trained model for this board model; AI check skipped."
@@ -290,6 +293,7 @@ class Inspector:
         self.recipe_uuid = recipe_uuid
         self.reference_path = reference_path
         self.reference_sha256 = reference_sha256
+        self._copper_level: tuple[np.ndarray, float | None] | None = None  # the Golden board's, for copper naming
 
     @property
     def inputs(self) -> tuple[str | None, str | None, str | None, float | None]:
@@ -476,17 +480,36 @@ class Inspector:
             res.verdict = WARN
 
     def _defects(self, regions: list[Region], res: InspectionResult) -> list[Defect]:
+        """A defect for each region: an ROI's type where it overlaps an enabled ROI; outside every ROI, the copper
+        defect its window shows when the recipe names them (REQ-INSP-018), for the first MAX_NAMED regions; else
+        Anomaly. Every type it gives is Major or Critical, as Anomaly is, so naming never changes a verdict."""
         out = []
+        named = self._copper_naming(res)
         for i, reg in enumerate(merge_regions(regions), 1):
             dtype = "Anomaly"
             for roi in self.recipe.rois:
                 if roi.enabled and _overlap(reg, roi.x, roi.y, roi.w, roi.h):
                     dtype = ROI_DEFECT.get(roi.type, "Anomaly")
                     break
+            else:
+                if named is not None and i <= MAX_NAMED:
+                    dtype = named(reg) or dtype
             score = reg.peak if reg.source == "ai" else reg.peak / max(1, self.recipe.diff_threshold)
             sev = taxonomy.BY_NAME.get(dtype, taxonomy.ANOMALY).severity
             out.append(Defect(i, dtype, float(score), res.view, reg.x, reg.y, reg.w, reg.h, reg.source, sev))
         return out
+
+    def _copper_naming(self, res: InspectionResult) -> Callable[[Region], str | None] | None:
+        """What names a region's copper defect on `res`'s aligned board against its Golden board, when the recipe sets
+        the copper's shade and both images are there; else None. The Golden board's level is found once per engine."""
+        light = {"light": True, "dark": False}.get(self.recipe.copper or "")
+        board, golden = res.image, res.reference
+        if light is None or board is None or golden is None or board.shape[:2] != golden.shape[:2]:
+            return None
+        if self._copper_level is None or self._copper_level[0] is not golden:
+            self._copper_level = (golden, copper_level(golden))
+        level = self._copper_level[1]
+        return lambda reg: copper_type(board, golden, reg.x, reg.y, reg.w, reg.h, light, level)
 
 
 def re_grade(

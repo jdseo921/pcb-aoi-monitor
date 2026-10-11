@@ -174,10 +174,10 @@ def test_req_trn_003_relabel_keeps_history(trained_ctx: AppContext) -> None:
 
 
 def test_req_trn_003_severity_matches_dct(trained_ctx: AppContext, monkeypatch: pytest.MonkeyPatch) -> None:
-    """Each box stores its position and size, one of the 33 defect types and the severity aoi/defects.py gives that
-    type; a box outside the image or not in whole pixels, a type that is not one of the 33 (Anomaly included), and a box
+    """Each box stores its position and size, one of the 37 defect types and the severity aoi/defects.py gives that
+    type; a box outside the image or not in whole pixels, a type that is not one of the 37 (Anomaly included), and a box
     or defect type on an OK or UNSURE image are refused with a code and nothing is written. An NG image whose own type
-    is not one of the 33 (an older label's Anomaly) is refused boxes with a message naming that type and what to do.
+    is not one of the 37 (an older label's Anomaly) is refused boxes with a message naming that type and what to do.
     The image's size is read for the boxes before the database is locked, so no file is read while other writes wait."""
     ctx = trained_ctx
     sample = ctx.samples(BOARD, "NG")[-1]
@@ -188,7 +188,7 @@ def test_req_trn_003_severity_matches_dct(trained_ctx: AppContext, monkeypatch: 
     ctx.set_boxes(sample["uuid"], boxes)
     assert depth == [0]
     stored = ctx.boxes(sample["uuid"])
-    assert len(stored) == 33 == len(defects.names())
+    assert len(stored) == 37 == len(defects.names())
     assert [(r["x"], r["y"], r["w"], r["h"], r["dct_type"]) for r in stored] == [
         (b.x, b.y, b.w, b.h, b.dct_type) for b in boxes
     ]

@@ -32,7 +32,7 @@ Training   TBOX-A1 · 40 OK · 3 NG · 1 UNSURE · 2 NG unchecked · 4 of 40 OK 
 
 Labels: OK, NG, UNSURE. UNSURE images are left out of training and validation and appear under the filter
 "UNSURE", which [Export List…] turns into a CSV for the customer's quality engineer (REQ-TRN-002). Every NG image
-needs at least one box; a box is a position, size, one of the 33 DCT types and the severity the table gives that
+needs at least one box; a box is a position, size, one of the 37 DCT types and the severity the table gives that
 type (REQ-TRN-003). Relabelling writes a history line and keeps the old boxes in it.
 
 ## Controls
@@ -46,7 +46,7 @@ type (REQ-TRN-003). Relabelling writes a history line and keeps the old boxes in
 | Check label | Check Label | Enter | B | The page's one blue primary on this tab; disabled with the tooltip "You labelled this image" for the labeller; records user and time (REQ-TRN-004) |
 | Draw box | Draw Box | D | B (toggle) | Drag on the image; Esc leaves the mode |
 | Move / resize box | — | drag; arrows 1 px, Shift 10 px | handles 16 px | |
-| Type | Type | — | F | 33 DCT types by category; Severity fills from the table and is read-only |
+| Type | Type | — | F | 37 DCT types by category; Severity fills from the table and is read-only |
 | Delete box | Delete Box | Delete | B | Red, undoable with Ctrl+Z, no confirmation |
 | Box list | Boxes | ↑ ↓ | rows 14 pt | Selecting a row selects its box |
 | Next / previous image | — | PgDn / PgUp | — | Moves the editor to the next or previous image of the filtered list (S33) |
@@ -88,7 +88,7 @@ Critical/Major/Minor, Validation); sizes; every string through `self.tr()`.
 
 ## Decisions (2026-10-02)
 
-- Q33: Every box is one of the 33 DCT types; no "Anomaly". Reason: REQ-TRN-003 and Engineering, Labels (MUST).
+- Q33: Every box is one of the 37 DCT types; no "Anomaly". Reason: REQ-TRN-003 and Engineering, Labels (MUST).
 - Q34: Any other Engineer or Admin checks a label. Reason: S34: a different user, enforced in AppContext; labelling is the Engineer role (S32).
 - Q35: The UNSURE list is a CSV (Export List…), exported by an Admin like every export (Q58 in logs-history.md). Reason: A CSV opens on the customer's PC with no station login; the export rule keeps customer data on the station otherwise.
 - Q36: Targets 98 % and 90 % on 100 images until a customer names its own. Reason: S34 and the Engineering standard's proposed values.
