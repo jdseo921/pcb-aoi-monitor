@@ -4,6 +4,9 @@ For the engineer who sets up board models, recipes, datasets and AI models. Each
 stage that delivers the feature (Engineering, "Docs as code"). Admin tasks (users, deletion, support bundle)
 get their own chapter at release 1.0.
 
+**Keys.** Ctrl+1 to Ctrl+9 open the sidebar's pages in order (Ctrl+4 Training, Ctrl+5 AI Model Test, Ctrl+6 Recipe
+Editor), and F1 lists the keys of the page shown.
+
 ## 1. Workspace and settings
 
 **Upgrades and rollback.** When a new version of the app changes the database, it first copies the workspace database
