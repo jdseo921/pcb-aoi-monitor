@@ -852,6 +852,19 @@ to work on: a type with many false calls is a recipe to tighten, for instance wi
 holding two types reviewed as a false call counts as one false call under each. The tab counts in the background, again
 when the filter or a review changes, and Export CSV's `defect_types` column carries the same names per record.
 
+**Drift.** The station watches each board model and view for drift (Engineering standard, "Watch and retrain"): after
+each board is saved, the newest 50 boards judged by the active AI model and recipe revision are compared with the 500
+before them, and after each False call the newest 20 reviews with the 200 before them. A measure that moves further than
+chance explains (beyond a 3-sigma control limit: for a rate, a count less likely than 0.135 % at the earlier rate,
+counted exactly) raises one `[WARN]` alarm, AOI-INSP-018, on the board or review that crosses the limit, naming the
+counts, and Home's Inspect card says "Drift:" with the measures out now until they come back. The measures are the NG
+rate and the WARN rate going up, the mean AI score of the OK boards going up (good boards look less normal to the AI
+model before they start to be called NG), the mean number of features matched to the Golden board by the OK boards going
+down (alignment), and the share of the reviewed calls that were False calls going up. Nothing is judged before 200
+boards (50 reviews) are on record for the AI model and recipe revision in use, so a new AI model or recipe revision
+starts afresh. A drift alarm changes no verdict; look at the lighting, the camera and its focus, the board revision and
+the parts supplier, review the calls, and retrain or tune the recipe if one changed (section 4, section 5).
+
 **Archive.** At each start the app archives the records older than **Log retention (days)** (section 1), and **Archive
 older than 30 days** on Logs & Export, which names the retention in force, does the same at once; it is grey for an
 Operator. Archiving deletes and moves nothing: an archived record is only left out of the list until **Include

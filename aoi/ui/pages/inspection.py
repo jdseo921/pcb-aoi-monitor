@@ -180,6 +180,7 @@ class InspectionPage(Page):
         # Alarm log
         self.alarms = QListWidget()
         self.alarms.setMaximumHeight(110)
+        self.newest_alarm: int | None = None  # the newest alarm the list shows, by its ID
         self.root.addWidget(self.alarms)
         self._update_buttons()
 
@@ -508,8 +509,7 @@ class InspectionPage(Page):
         if save_error is not None:
             self._not_saved(path, save_error)
             return
-        if res.verdict == NG:
-            self._refresh_alarms()
+        self._alarms_if_new()  # an NG board's alarm, or a drift alarm its save raised (REQ-INSP-019)
         if self.running:
             self._go_on(path, res)
 
@@ -608,9 +608,21 @@ class InspectionPage(Page):
         except Exception:
             self.ctx.log.warning("alarms.not_read", exc_info=True)
             return
+        self.newest_alarm = rows[0]["id"] if rows else None
         self.alarms.clear()
         for a in rows:
             self.alarms.addItem(alarm_line(a["time"], a["level"], a["code"], alarm_text(a)))
+
+    def _alarms_if_new(self) -> None:
+        """After a saved board: show the alarms again when one was stored since the list was shown, reading only the
+        newest alarm otherwise, so a run of OK boards never rebuilds the list (REQ-INSP-006, REQ-INSP-019)."""
+        try:
+            newest = self.ctx.alarms(1)
+        except Exception:
+            self.ctx.log.warning("alarms.not_read", exc_info=True)
+            return
+        if (newest[0]["id"] if newest else None) != self.newest_alarm:
+            self._refresh_alarms()
 
     def _update_buttons(self) -> None:
         """Enable the actions, and with them the buttons and the keys, for the state: Start and Next Board need a queue
@@ -638,6 +650,7 @@ class InspectionPage(Page):
         """A review saved: the status bar says so (REQ-INSP-013)."""
         line = self.tr("Review saved: {review} for record {record}.")
         self.shell.status(line.format(review=review_text(record["review"]), record=record["id"]))
+        self._alarms_if_new()  # a false call may have raised the false calls' drift alarm (REQ-INSP-019)
 
     def update_actions(self) -> None:
         """A Save Image… job starting or ending (`run_in_background`): Save Image… is off while it runs (#241)."""

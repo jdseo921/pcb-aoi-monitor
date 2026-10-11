@@ -35,6 +35,11 @@ def _binom_cdf(k: int, n: int, p: float) -> float:
                         for i in range(k + 1)))  # fmt: skip
 
 
+def at_least(x: int, n: int, p: float) -> float:
+    """P(X >= x) for X ~ Binomial(n, p): how likely `x` or more in `n` is at the rate `p` (drift, REQ-INSP-019)."""
+    return 1.0 if x <= 0 else max(0.0, 1.0 - _binom_cdf(x - 1, n, p))
+
+
 def _solve(f: Callable[[float], float], target: float) -> float:
     """The p in [0, 1] where the decreasing function f(p) crosses `target`."""
     lo, hi = 0.0, 1.0
