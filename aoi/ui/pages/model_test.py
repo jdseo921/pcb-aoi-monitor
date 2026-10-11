@@ -730,13 +730,24 @@ class ModelTestPage(Page):
             self.empty.show_state(heading, what, self.tr("Select Test Folder…"), self.pick)
 
     def export_csv(self) -> None:
+        """The run's rows, one per image, as UTF-8 CSV with a BOM, after a question naming their count, as the sketch
+        and Logs & Export ask (REQ-TST-004), into a file picked then; written on the pool (REQ-SET-021)."""
         if not self.rows:
+            return
+        ask = self.tr("Export the results of {images} images as CSV, one row per image?").format(images=len(self.rows))
+        buttons = QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+        if QMessageBox.question(self, self.tr("Export CSV"), ask, buttons) != QMessageBox.StandardButton.Yes:
             return
         f, _ = QFileDialog.getSaveFileName(
             self, self.tr("Export CSV"), str(self.ctx.settings.exports_dir / "model_test.csv"), self.tr("CSV (*.csv)")
         )
-        if f:
-            self.ctx.export_csv(f, self.rows, "test results")
+        if not f:
+            return
+        written = self.tr("Exported {count} rows to {file}")
+        self.run_in_background(
+            self.ctx.export_csv, f, list(self.rows), "test results", busy=self.busy_export,
+            on_result=lambda n: self.shell.status(written.format(count=n, file=f)),
+        )  # fmt: skip
 
     def export_overlays(self) -> None:
         """The run's annotated images, which Stage 1 delivers beside the test result CSV (GUI §5, REQ-TST-004), after a

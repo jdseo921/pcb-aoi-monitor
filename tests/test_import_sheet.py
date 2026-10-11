@@ -41,7 +41,7 @@ def _pick(qtbot: QtBot, table: QTableWidget, row: int, column: int, key: str) ->
     qtbot.keyClick(box, Qt.Key.Key_Escape)
 
 
-def test_req_trn_001_the_sheet_takes_each_file_with_its_view_and_an_ng_file_with_one_of_the_33_types(
+def test_req_trn_001_the_sheet_takes_each_file_with_its_view_and_an_ng_file_with_one_of_the_defect_types(
     qtbot: QtBot,
 ) -> None:
     """Opened on a folder's files: OK, NG typed by its folder, NG with no type, and no label. Import is off while an

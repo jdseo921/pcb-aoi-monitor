@@ -214,6 +214,7 @@ def test_req_tst_003_an_image_with_no_label_never_reads_as_matching_it(
     out = tmp_path / "model_test.csv"
     monkeypatch.setattr(QFileDialog, "getSaveFileName", staticmethod(lambda *a, **k: (str(out), "CSV (*.csv)")))
     page.export_csv()
+    qtbot.waitUntil(lambda: page._bg is None, timeout=30000)  # written on the pool (REQ-SET-021)
     with out.open(encoding="utf-8-sig", newline="") as f:
         exported = {Path(r["image"]).parent.name: r["pass_fail"] for r in csv.DictReader(f)}
     assert exported == {"misc": "NO_LABEL", "ng": matches}

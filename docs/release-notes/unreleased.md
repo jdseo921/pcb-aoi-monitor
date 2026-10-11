@@ -38,6 +38,8 @@ None. / 없음.
 
 - [REQ-SET-004] Ctrl+1 to Ctrl+9 open the sidebar's pages from any page, F1 lists the keys of the page shown and the pages the role opens, and the sidebar names each page's key in its tooltip. Home greys a card whose page the role cannot open and reads "For Engineer / Admin", so an Operator's Home has no button that leads nowhere. / Ctrl+1~Ctrl+9로 어느 페이지에서나 사이드바의 페이지를 열 수 있고, F1은 현재 페이지의 단축키와 역할이 열 수 있는 페이지를 보여 주며, 사이드바 툴팁에 각 페이지의 단축키가 표시됩니다. 홈에서 역할이 열 수 없는 페이지의 카드는 회색으로 표시되고 열 수 있는 역할을 알려 주므로, 작업자의 홈에는 아무 곳으로도 가지 않는 버튼이 없습니다.
 
+- [REQ-TST-004] AI Model Test's Export CSV asks first, naming how many images, as Logs & Export and Export Image Overlays do, and writes the file without holding up the window. / AI 모델 테스트의 Export CSV는 로그 및 내보내기와 Export Image Overlays처럼 이미지 개수를 먼저 묻고, 창을 멈추지 않고 파일을 씁니다.
+
 ## Fixed / 수정 (draft)
 
 - [REQ-SET-004] Every page scrolls where the screen is smaller than the page, so a 1366 × 768 station shows every control; before, the window could not shrink below about 1886 × 821 px and the right-hand controls sat off-screen (#104). / 화면이 페이지보다 작으면 모든 페이지가 스크롤되어 1366 × 768 스테이션에서도 모든 컨트롤이 보입니다. 이전에는 창이 약 1886 × 821 px 아래로 줄어들지 않아 오른쪽 컨트롤이 화면 밖에 있었습니다(#104).

@@ -59,11 +59,11 @@ def test_req_tst_004_an_admin_exports_a_runs_annotated_images_audited_on_the_run
     assert trained_ctx.audit_entries(action="export.test_overlays")[0]["after"]["missing"] == 1
 
 
-def test_req_tst_004_export_image_overlays_asks_naming_the_count_then_copies_on_the_pool(
+def test_req_tst_004_export_image_overlays_and_csv_ask_naming_the_count_then_write_on_the_pool(
     qtbot: QtBot, trained_ctx: AppContext, synthetic_dataset: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """On AI Model Test an Admin's Export Image Overlays asks first, naming the run's image count, then copies the
-    images into the folder picked and says how many; No copies nothing."""
+    images into the folder picked and says how many; No copies nothing. Export CSV asks and writes the same way."""
     win = _window(qtbot, trained_ctx, "Admin")
     assert win.navigate("AI Model Test")
     page = win.pages["AI Model Test"]
@@ -89,3 +89,14 @@ def test_req_tst_004_export_image_overlays_asks_naming_the_count_then_copies_on_
     qtbot.waitUntil(lambda: len(list(out.iterdir())) == len(page.rows), timeout=30000)
     qtbot.waitUntil(lambda: "annotated image(s)" in win.statusBar().currentMessage(), timeout=10000)
     assert f"Copied {len(page.rows)} annotated image(s)" in win.statusBar().currentMessage()
+    # Export CSV beside them asks the same way, naming the count, then writes on the pool (REQ-SET-021)
+    rows_csv = tmp_path / "results.csv"
+    monkeypatch.setattr(QFileDialog, "getSaveFileName", staticmethod(lambda *_a, **_k: (str(rows_csv), "")))
+    answer[0] = QMessageBox.StandardButton.No
+    page.btn_csv.click()
+    assert asked[-1] == f"Export the results of {len(page.rows)} images as CSV, one row per image?"
+    assert not rows_csv.exists()
+    answer[0] = QMessageBox.StandardButton.Yes
+    page.btn_csv.click()
+    qtbot.waitUntil(lambda: f"Exported {len(page.rows)} rows to" in win.statusBar().currentMessage(), timeout=10000)
+    assert len(rows_csv.read_text(encoding="utf-8-sig").splitlines()) == len(page.rows) + 1
