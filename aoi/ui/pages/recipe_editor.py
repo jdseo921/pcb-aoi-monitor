@@ -304,7 +304,7 @@ class RecipeEditorPage(Page):
         rv.setContentsMargins(8, 0, 0, 0)
         rv.addWidget(tabs, 1)
         self.tabs = tabs
-        self.learn_busy = BusyOverlay(tabs, self.tr("Learning from the labelled boards…"))
+        self.learn_busy = BusyOverlay(tabs, self.tr("Trying each setting on the labelled boards…"))
         self.test_verdict = QLabel("")
         self.test_verdict.setMinimumHeight(theme.FIELD_H)
         rv.addWidget(self.test_verdict)

@@ -880,32 +880,22 @@
     </message>
     <message>
         <location line="+170"/>
-        <location line="+2018"/>
+        <location line="+2019"/>
         <source>(none)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1987"/>
+        <location line="-1988"/>
         <source>Saving a recipe</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+33"/>
-        <source>Learning the comparison&apos;s thresholds</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+25"/>
+        <location line="+58"/>
         <source>it has no Golden board; set one on Training</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+24"/>
-        <source>it has {count} NG image(s) with defect boxes in the {view} view, and learning needs {least}</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+28"/>
+        <location line="+53"/>
         <source>too few of its NG images with defect boxes could be read</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1121,14 +1111,14 @@
         <translation>검증 세트 잠금</translation>
     </message>
     <message>
-        <location line="-2236"/>
-        <location line="+2250"/>
+        <location line="-2237"/>
+        <location line="+2251"/>
         <location line="+39"/>
         <source>the workspace holds no such dataset version</source>
         <translation>작업 공간에 그런 데이터셋 버전이 없습니다</translation>
     </message>
     <message>
-        <location line="-2287"/>
+        <location line="-2288"/>
         <source>the run used a folder, not a frozen dataset version&apos;s locked validation set</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1163,7 +1153,17 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1668"/>
+        <location line="+770"/>
+        <source>Setting the comparison&apos;s thresholds from labelled boards</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+49"/>
+        <source>it has {count} NG image(s) with defect boxes in the {view} view, and at least {least} are needed</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+850"/>
         <source>Shift check of {board_model}: {wrong} of {count} master samples judged wrongly</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1377,7 +1377,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-2799"/>
+        <location line="-2800"/>
         <source>no earlier version of this board model was active</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1407,7 +1407,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1146"/>
+        <location line="+1147"/>
         <source>Labelling an image</source>
         <translation>이미지 라벨링</translation>
     </message>
@@ -5845,7 +5845,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+64"/>
+        <location line="+30"/>
+        <source>Trying each setting on the labelled boards…</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+34"/>
         <source>AI score</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6071,12 +6076,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+7"/>
-        <source>Learning from the labelled boards…</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+4"/>
+        <location line="+11"/>
         <source>Check</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7131,7 +7131,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/services.py" line="-3103"/>
+        <location filename="../core/services.py" line="-3104"/>
         <source>Aligning {count} images to the reference board</source>
         <translation type="unfinished"></translation>
     </message>

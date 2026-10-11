@@ -566,8 +566,8 @@ takes:
 
 - **Fine alignment**, off: each board is matched to the Golden board to a fraction of a pixel before the comparison.
   Where boards land a pixel off, the comparison marks the copper edges they are off by as changed, and those are false
-  calls; fine alignment removes most of them, at about 0.1 s more per board. Compare's decision table then names the
-  alignment method "orb-homography+fine"; a board it cannot improve keeps ORB's alignment.
+  calls; fine alignment removed about half of them on public scans, at about 0.1 s more per board. Compare's decision
+  table then names the alignment method "orb-homography+fine"; a board it cannot improve keeps ORB's alignment.
 
 **Learn From Labelled Boards…** (Ctrl+L, top of the Thresholds tab) learns the Pixel difference, Minimum defect area
 and Fine alignment from your own labelled boards, instead of guessing them. It needs a Golden board and at least three

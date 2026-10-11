@@ -18,10 +18,12 @@ missed under 2 % (docs/tests/2026-10-09-comparison-training.md, docs/tests/2026-
 only the public dataset check could learn the pair: an Engineer with a customer's labelled boards had no way to do it
 in the app, and so no way to make "any training data" improve what the comparison finds.
 
-On DeepPCB, 129 of 1,016 defect-free 512 px squares held a false call even at the learned pair. ORB's homography
-places a board to within a pixel or two, and the comparison marks a copper edge it is off by as changed; refining the
-alignment to a fraction of a pixel, by the method below, removed most of them in a first check (48 of 1,016, with the
-boxes found unchanged). AOI systems align on fiducials to a fraction of a pixel for this reason.
+On DeepPCB, 129 of 1,016 defect-free 512 px squares held a false call even at the learned pair
+(docs/tests/2026-10-10-deeppcb-tuning.md). ORB's homography places a board to within a pixel or two, and the comparison
+marks a copper edge it is off by as changed; refining the alignment to a fraction of a pixel, by the method below,
+halved them as the app counts them (127 to 62 of about 1,013 windows on the test split, with 3,093 and 3,092 of 3,140
+boxed defects found: docs/tests/2026-10-11-fine-alignment.md). AOI systems align on fiducials to a fraction of a pixel
+for this reason.
 
 ## Decision
 
