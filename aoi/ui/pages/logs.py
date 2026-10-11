@@ -8,7 +8,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from PySide6.QtCore import QDate, Qt
+from PySide6.QtCore import QDate, QSize, Qt
 from PySide6.QtGui import QColor, QTextCharFormat
 from PySide6.QtWidgets import (
     QCheckBox,
@@ -49,6 +49,17 @@ if TYPE_CHECKING:
     from ..main_window import MainWindow
 
 
+class NameFilter(QComboBox):
+    """A Board model or Operator filter, as wide as its longest name where there is room (AdjustToContents). Qt
+    resizes such a list to its size hint 20 ms after its names change, outside the layout, which lays it out at least
+    as wide as its minimum size hint: the list was drawn 29 px narrower than its place, with a gap beside it, until the
+    page was laid out again, so the same page showed two widths (#386's CI). Its size hint is never narrower than that
+    minimum, so the resize keeps the width the layout gives it."""
+
+    def sizeHint(self) -> QSize:
+        return super().sizeHint().expandedTo(self.minimumSizeHint())
+
+
 class LogsPage(Page):
     title = QT_TRANSLATE_NOOP("Page", "Logs & Export")
 
@@ -64,8 +75,8 @@ class LogsPage(Page):
             d.setDisplayFormat("yyyy-MM-dd")  # ISO dates everywhere (REQ-SET-017), not the locale's short form
             d.setDateRange(QDate(2000, 1, 1), QDate(2100, 12, 31))  # days every station's clock converts (#174)
         self.restyle()
-        self.model = QComboBox()
-        self.operator = QComboBox()
+        self.model = NameFilter()
+        self.operator = NameFilter()
         for names in (self.model, self.operator):  # wide as their names where there is room; cut off in a narrow window
             names.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToContents)
             names.setMinimumWidth(theme.FILTER_MIN_W)  # rather than hold it past 1600 px with the Result filter

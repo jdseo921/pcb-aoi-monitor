@@ -34,6 +34,7 @@ None. / 없음.
 
 - [REQ-SET-004] Every page scrolls where the screen is smaller than the page, so a 1366 × 768 station shows every control; before, the window could not shrink below about 1886 × 821 px and the right-hand controls sat off-screen (#104). / 화면이 페이지보다 작으면 모든 페이지가 스크롤되어 1366 × 768 스테이션에서도 모든 컨트롤이 보입니다. 이전에는 창이 약 1886 × 821 px 아래로 줄어들지 않아 오른쪽 컨트롤이 화면 밖에 있었습니다(#104).
 - [REQ-SET-004] A long folder, board model or file name, even one with no _ or -, no longer widens the window past the screen: AI Model Test's folder line and note, Compare's labels and Inspection's summary line wrap it, and a line that cuts it shows it whole in its tooltip (#251). / 긴 폴더, 보드 모델 또는 파일 이름(_ 나 - 가 없는 이름 포함)이 더 이상 창을 화면보다 넓히지 않습니다. AI 모델 테스트의 폴더 줄과 안내, 비교 화면의 라벨, 검사 화면의 요약 줄이 줄을 바꾸며, 이름이 잘리면 툴팁에 전체 이름이 표시됩니다(#251).
+- [REQ-SET-004] On Logs & Export, the Board model and Operator filters keep their width; a moment after the page opened, the Board model list could shrink and leave a gap beside it. / 로그 및 내보내기에서 보드 모델과 작업자 필터가 너비를 유지합니다. 이전에는 페이지가 열린 직후 보드 모델 목록이 줄어들어 옆에 빈칸이 생길 수 있었습니다.
 
 ## Security / 보안 (draft)
 
