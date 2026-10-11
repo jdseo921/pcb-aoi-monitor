@@ -42,6 +42,7 @@ from ..errors import QT_TRANSLATE_NOOP, AoiError, Phrase, joined
 from ..hal import VIEWS
 from ..times import local_date, now_utc
 from . import (
+    annotation_files,
     anomaly,
     crypto,
     datasets,
@@ -429,6 +430,7 @@ class AppContext:
         progress: Callable[[int, int], None] | None = None,
         should_stop: Callable[[], bool] | None = None,
         already: list[dict[str, Any]] | None = None,
+        added: list[str] | None = None,
     ) -> int:
         """Copy uploads into the workspace so training data survives the source folder moving; returns how many were
         added. Each file goes through `_copy_checked` (REQ-TRN-001): checked as Inspection checks an image, never
@@ -441,7 +443,8 @@ class AppContext:
         and SHA-256 (`samples`), commit together. `progress(done, total)` follows each file, and once `should_stop()` is
         true the files not yet copied are left out, the ones copied are added and the audit entry says so
         (`cancelled`); `import_files` passes one file a call and stops between calls, so the entries it writes never
-        say so. `already`, when given, gets the sample each skipped image is already (`import_files` names it)."""
+        say so. `already`, when given, gets the sample each skipped image is already (`import_files` names it), and
+        `added` the UUID of each sample added."""
         self._refuse_unsafe_name(board_model)  # a new board model is created by its first import
         self._refuse_case_variant(board_model)
         first = paths[0] if paths else ""
@@ -492,6 +495,8 @@ class AppContext:
             raise
         if already is not None:
             already.extend(had for _, had in kept)
+        if added is not None:
+            added.extend(uid for _, uid, _ in copies)
         return len(copies)
 
     def _refuse_untyped(self, path: str, label: str, defect_type: str | None) -> None:
@@ -568,10 +573,15 @@ class AppContext:
                 if f.label is None:
                     raise AoiError("AOI-TRN-016", path=f.path)
                 had: list[dict[str, Any]] = []
-                if not self.import_samples(board_model, [f.path], f.label, f.defect_type, f.side, already=had):
+                uids: list[str] = []
+                if not self.import_samples(
+                    board_model, [f.path], f.label, f.defect_type, f.side, already=had, added=uids
+                ):
                     sample = {"sample": Path(had[0]["path"]).name, "label": had[0]["label"]}
                     raise AoiError("AOI-TRN-015", path=f.path, board_model=board_model, **sample)
                 report.added.append(f)
+                if f.label == "NG" and f.boxes_from is not None:
+                    report.boxes.append((f, *self._import_boxes(uids[0], f)))
             except Exception as e:
                 if not (isinstance(e, AoiError) and e.code in REFUSED):
                     report.stopped, report.left = (f, e), files[i + 1 :]
@@ -580,6 +590,25 @@ class AppContext:
             if progress is not None:
                 progress(i + 1, len(files))
         return report
+
+    def _import_boxes(self, sample_uuid: str, f: ImportFile) -> tuple[int, str]:
+        """Store the boxes `f`'s annotation file gives at the size of the image as imported, as `set_boxes` stores a
+        drawing (REQ-TRN-019), and return how many, with why none or not all were read ("" when all were)."""
+        root = Path(f.boxes_from) if f.boxes_from is not None else None
+        found = annotation_files.read(Path(f.path), self._image_size(self._sample(sample_uuid)["path"]), root)
+        if found is None:  # moved since the sheet listed it
+            return 0, QT_TRANSLATE_NOOP("Errors", "its annotation file is gone").fill()
+        if found.boxes:
+            self.set_boxes(sample_uuid, found.boxes)
+        if found.why:
+            return 0, QT_TRANSLATE_NOOP("Errors", "its annotation file was not read: {why}").fill(why=found.why)
+        if found.left_out:
+            left = QT_TRANSLATE_NOOP(
+                "Errors", "{count} box(es) of classes that are not defect types were left out: {names}"
+            )
+            names = ", ".join(dict.fromkeys(found.left_out))
+            return len(found.boxes), left.fill(count=len(found.left_out), names=names)
+        return len(found.boxes), ""
 
     # --- training ------------------------------------------------------------
     @requires("Engineer", QT_TRANSLATE_NOOP("Errors", "Training an AI model"))

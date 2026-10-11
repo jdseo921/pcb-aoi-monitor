@@ -32,7 +32,11 @@ Training   TBOX-A1 · 40 OK · 3 NG · 1 UNSURE            │ Samples │ Datas
 
 Files are copied into the workspace and never modified; the source stays where it was. Folder import reads `ok/`
 and `ng/` sub-folders; `ng/<Defect Type>/` pre-fills the type (folder names matched to the 37 DCT names, spaces
-or underscores). Every NG file needs one of the 37 types before Import enables; "Unknown" is not offered
+or underscores). An image's Pascal VOC or YOLO annotation file, beside it or under a mirrored `Annotations/` or
+`labels/` folder, labels and types it too: with boxes it is NG with its boxes' most common type, and its Defect type
+cell reads "Mousebite · 2 box(es)"; with none it is OK; after Import its Status reads "copied with 2 box(es)", and a row
+whose boxes were not all read says why in its line under the table (REQ-TRN-019, ADR 0016). Every NG file needs one of
+the 37 types before Import enables; "Unknown" is not offered
 (REQ-TRN-001). Import runs off the UI thread: 200 files of 20 MP without a freeze over 2 s; the sheet shows
 progress, time left and Cancel once it passes 10 s.
 
