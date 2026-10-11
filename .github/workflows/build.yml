@@ -48,6 +48,13 @@ jobs:
     name: Windows one-folder build
     runs-on: windows-latest
     timeout-minutes: 90
+    permissions:
+      contents: read
+      id-token: write  # the build's own short-lived identity, for the provenance below (ADR 0011, decision 2)
+      attestations: write
+    env:  # the Stage 1 pilot's signing certificate (tools/new_pilot_signing.ps1); empty until it is made
+      PILOT_SIGNING_PFX: ${{ secrets.PILOT_SIGNING_PFX }}
+      PILOT_SIGNING_PASSWORD: ${{ secrets.PILOT_SIGNING_PASSWORD }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
@@ -66,6 +73,9 @@ jobs:
       - name: Build; stops on a file no license check covers, and writes THIRD_PARTY_NOTICES.txt and sbom.cdx.json
         id: build
         run: pyinstaller --noconfirm --clean installer/aoi.spec
+      - name: Sign the app's executable with the pilot certificate, on main and tags once it exists (ADR 0011)
+        if: github.event_name != 'pull_request' && env.PILOT_SIGNING_PFX != ''
+        run: tools/pilot_sign.ps1 dist/AOI-PoC-Inspector/AOI-PoC-Inspector.exe
       - name: Start the built app on an empty workspace, check that it opens, and inspect a board with --self-test
         id: smoke
         run: python tools/smoke_test_build.py dist/AOI-PoC-Inspector/AOI-PoC-Inspector.exe
@@ -155,6 +165,11 @@ jobs:
           $setup = "dist\installer\AOI-PoC-Inspector-$version-setup-x64-unsigned.exe"
           if (-not (Test-Path $setup)) { throw "The compiler made no $setup" }
           "setup=$setup" >> $env:GITHUB_OUTPUT
+      - name: Sign the installer with the pilot certificate, on main and tags once it exists (ADR 0011)
+        if: github.event_name != 'pull_request' && env.PILOT_SIGNING_PFX != ''
+        env:
+          SETUP: ${{ steps.installer.outputs.setup }}
+        run: tools/pilot_sign.ps1 $env:SETUP
       - name: Install it silently, run the installed app's --self-test, and uninstall it, which must keep the workspace
         id: check_installer
         env:
@@ -166,3 +181,14 @@ jobs:
           path: ${{ steps.installer.outputs.setup }}
           retention-days: 30
           if-no-files-found: error
+      - name: Sign the build's provenance with GitHub's keyless signing (Sigstore), on main and tags only
+        # Who built which file from which commit, verifiable by anyone with `gh attestation verify FILE -R
+        # jdseo921/pcb-aoi-monitor`: no key to keep, no account to pay for (ADR 0011, decision 2). It is not an
+        # Authenticode signature, so Windows still calls the publisher unknown.
+        if: github.event_name != 'pull_request'
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: |
+            ${{ steps.installer.outputs.setup }}
+            dist/AOI-PoC-Inspector/AOI-PoC-Inspector.exe
+            dist/AOI-PoC-Inspector/SHA256SUMS.txt

@@ -114,5 +114,8 @@ be read again).
 
 Uninstall, then install the earlier build's installer. Before a newer build changes the database, the app copies it
 beside itself (`aoi.sqlite.bak-<old>-to-<new>-<UTC time>`); an earlier build refuses a database a newer one changed
-(AOI-SET-002). To use the earlier build on that workspace, close the app and put the copy back as `aoi.sqlite`;
-records saved since the copy are then lost. One-step rollback is not built yet.
+(AOI-SET-002). To use the earlier build on that workspace, close the app and put the copy back as `aoi.sqlite`, and
+delete `aoi.sqlite-wal` and `aoi.sqlite-shm` beside it if they are there (they belong to the newer database);
+records saved since the copy are then lost, and the pictures of those records stay in the workspace's `results`
+folder with no record naming them, where they may be deleted. One-step rollback is not built yet. Rehearsed on
+2026-10-11: `docs/tests/2026-10-11-upgrade-rollback.md`.

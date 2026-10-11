@@ -157,8 +157,10 @@ artifacts, the demo bundle, the update path.
 4. Verdict rows: a trigger that refuses changes to `inspections`, `checks` and `defects` while letting the archived
    flag and Delete Records… (REQ-LOG-003) through, a hash chain over the rows for customer evidence, or both; and
    whether `inspection.delete` keeps the deleted verdicts (page 1).
-5. Written exception for two-person release approval until a second approver exists (page 4, J8).
-6. Order the code-signing certificate (page 4, J6).
+5. Written exception for two-person release approval until a second approver exists (page 4, J8): taken in
+   ADR 0011, decision 3, with branch protection, an automated review on every pull request and CI-only signed builds.
+6. Order the code-signing certificate (page 4, J6): ADR 0011, decision 2: keyless signed build provenance on every
+   build now; an Authenticode signature before any second customer, when it can be paid for (Jay's).
 7. Whether an AI model deliverable may leave the site without the customer's written note (page 2).
 8. Exports: the standard says an Admin exports customer images, and the code lets an Engineer. Sketch decision Q58
    (`docs/sketches/logs-history.md`) and #151, taken under Jay's delegation of 2026-10-02, give every export to the
