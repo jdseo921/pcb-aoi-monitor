@@ -48,7 +48,7 @@ from ...core.explain import explain
 from ...core.imaging import IMAGE_EXTS
 from ...core.inspector import Check, InspectionResult, ai_check
 from ...core.recipe import Recipe, disc_width, scale_digits
-from ...core.services import REQUIRED_ROLE, ROLES, ROLES_FROM, AppContext, ErrorReport, Judged
+from ...core.services import REQUIRED_ROLE, ROLES_FROM, AppContext, ErrorReport, Judged
 from ...core.views import ai_view, difference_view
 from ...errors import AoiError
 from ...times import to_local
@@ -1084,13 +1084,14 @@ class ComparePage(Page):
     def _sync_save(self) -> None:
         """Save to Recipe on for a role that may save a recipe while a threshold differs, no sheet is open and no
         re-evaluation runs (Ctrl+S opens no sheet over one), and Save Revision while the sheet has a reason."""
-        free = self._may_save() and not self._asking and self._trying is None
-        self.act_save.setEnabled(free and bool(self._changes()))
+        free = not self._asking and self._trying is None
+        self.role_gate(self.btn_save, "save_recipe", free and bool(self._changes()))  # greyed with why (REQ-USR-001)
+        self.act_save.setEnabled(self.btn_save.isEnabled())  # Ctrl+S with it
         self.btn_confirm.setEnabled(self._asking and bool(self.reason.text().strip()))
 
     def _may_save(self) -> bool:
         """The role signed in is at or above the one `AppContext.save_recipe`'s @requires names (#241)."""
-        return self.ctx.role in ROLES and ROLES.index(self.ctx.role) >= ROLES.index(REQUIRED_ROLE["save_recipe"])
+        return self.gates.may("save_recipe")
 
     def _clear_result(self) -> None:
         """No result on the page: the banner, the decision table, the explanation and the board's pictures go."""
@@ -1160,10 +1161,12 @@ class ComparePage(Page):
             self.why.setFocus(Qt.FocusReason.OtherFocusReason)
             self._refocus = True
         self.tryout.setVisible(not self._asking)
-        self.role_gate(self.tryout, "re_evaluate")  # its fields and buttons with it
+        self.role_gate(self.tryout, "re_evaluate")  # its fields with it, which pass a press on to it
+        self.role_gate(self.btn_try, "re_evaluate", on)  # a button or a tick takes a press for itself, greyed or not
+        self.gates.explain(self.ai_thr.tick, "re_evaluate")  # on and off by its own state, greyed by the panel's
+        self.act_try.setEnabled(self.btn_try.isEnabled())  # Ctrl+R with it
         self._show_why()  # AOI-RCP-007 with the panel only
         self.sheet.setVisible(engineer and self._asking)
-        self.act_try.setEnabled(on)
         self._sync_save()
         if on and self._refocus and focus is self.why:
             self.btn_try.setFocus(Qt.FocusReason.OtherFocusReason)

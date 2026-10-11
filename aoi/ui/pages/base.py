@@ -116,11 +116,18 @@ class RoleGates(QObject):
         """`control`, which makes AppContext's `call`: on when the role signed in may make it and `on` holds; for a role
         that may not, off, with the refusal's sentence as its tooltip and the status bar's line on a press. Returns
         whether the role may."""
+        allowed = self.explain(control, call)
+        control.setEnabled(allowed and on)
+        return allowed
+
+    def explain(self, control: QWidget, call: str) -> bool:
+        """`control`, inside a control `gate` greys, keeping its own on and off: for a role that may not make `call`,
+        the refusal's sentence as its tooltip and on a press, which a button or a tick, greyed or not, takes for itself
+        and never passes on to the control around it. Returns whether the role may."""
         if control not in self.own:
             self.own[control] = control.toolTip()
             control.installEventFilter(self)
         allowed = self.may(call)
-        control.setEnabled(allowed and on)
         if allowed:
             self.why.pop(control, None)
             control.setToolTip(self.own[control])
@@ -217,7 +224,7 @@ class Page(QWidget):
         slot. The header list is empty whenever no board model is chosen, so the step is to create one: an Engineer or
         Admin gets the "+ New board model" link, an Operator, whom the service layer refuses, is told to ask (#200)."""
         heading = QCoreApplication.translate("Page", "No board model yet")
-        if self.ctx.role == "Operator":
+        if not self.gates.may("ensure_board_model"):
             return heading, QCoreApplication.translate("Page", "Ask an Engineer to create one."), "", None
         new = QCoreApplication.translate("Page", "+ New board model")
         return heading, QCoreApplication.translate("Page", "Create one to begin."), new, self.shell.new_board_model

@@ -242,7 +242,9 @@ class ModelTestPage(Page):
         if self._runs:
             self.history_empty.hide()
         else:
-            self.history_empty.show_state(self.tr("No runs stored yet"), self.tr("Run Test stores each run here."))
+            self.show_empty(
+                self.history_empty, self.tr("No runs stored yet"), self.tr("Run Test stores each run here.")
+            )
 
     def open_run(self) -> None:
         """The run selected on History, shown on Run as it was stored: rows, tiles and previews (REQ-TST-005)."""
@@ -820,7 +822,7 @@ class ModelTestPage(Page):
         if self.rows:
             self.empty.hide()
         elif not bm:
-            self.empty.show_state(*self.no_board_model())
+            self.show_empty(self.empty, *self.no_board_model())
         elif not self.ctx.active_model(bm):
             heading = self.tr("No AI model for {board_model} yet").format(board_model=bm)
             self.show_empty(self.empty, heading, *self.empty_step(self.tr("Train one on Training."), "Training"))

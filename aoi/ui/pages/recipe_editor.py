@@ -376,7 +376,7 @@ class RecipeEditorPage(Page):
             self.calibrate_btn.setEnabled(False)  # no Golden board to click on, nor to take the focus back
             if not self.sheet.isHidden():  # no Golden board to pick points on: Draw ROI and panning come back
                 self._close_sheet()
-            self.view_empty.show_state(*self.no_board_model())
+            self.show_empty(self.view_empty, *self.no_board_model())
             self.show_calibrated(self.ai_thr, None)  # nothing to name, never the board model before's value (review)
             self.scale_text.hide()  # no board model, so no scale and no AOI-RCP-005 to show
             self.scale_badge.hide()

@@ -14,6 +14,7 @@ from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QWidget
 from pytestqt.qtbot import QtBot
 
+from aoi.config import Settings
 from aoi.core.services import REQUIRED_ROLE, ROLES, AppContext
 from aoi.ui.main_window import NAV, HomePage, MainWindow
 from aoi.ui.pages.compare import ComparePage
@@ -51,7 +52,11 @@ def _gated(win: MainWindow) -> dict[str, list[tuple[QWidget, str]]]:
             (logs.btn_train, "add_false_call_sample"),
         ],
         "Inspection": [(cast(InspectionPage, win.pages["Inspection"]).btn_save, "export_board_image")],
-        "Compare": [(cast(ComparePage, win.pages["Compare"]).tryout, "re_evaluate")],
+        "Compare": [
+            (cast(ComparePage, win.pages["Compare"]).tryout, "re_evaluate"),
+            (cast(ComparePage, win.pages["Compare"]).btn_try, "re_evaluate"),
+            (cast(ComparePage, win.pages["Compare"]).btn_save, "save_recipe"),
+        ],
         "AI Model Test": [
             (test.btn_csv, "export_csv"),
             (test.btn_img, "export_test_overlays"),
@@ -103,14 +108,44 @@ def test_req_usr_001_a_control_the_role_may_not_use_is_greyed_with_why_never_hid
 
 
 def test_req_usr_001_a_field_of_compares_greyed_panel_says_who_may_on_a_press(qtbot: QtBot, ctx: AppContext) -> None:
-    """Compare's Try other thresholds, greyed for an Operator: a press on a field of it says why on the status bar."""
+    """Compare's Try other thresholds, greyed for an Operator: a press on a field of it, on its tick, or on Re-evaluate
+    or Save to Recipe, which take a press for themselves, says why on the status bar, and each button's tooltip says
+    it in place of its key, which does nothing for an Operator."""
     win = _window(qtbot, ctx)
     win.set_user("operator")
     assert win.navigate("Compare")
     compare = cast(ComparePage, win.pages["Compare"])
     assert compare.tryout.isVisible() and not compare.diff_thr.isEnabled() and not compare.btn_try.isEnabled()
-    _press(win, compare.diff_thr)
-    assert win.statusBar().currentMessage() == "Re-evaluating a result needs the Engineer or Admin role."
+    re_evaluate = "Re-evaluating a result needs the Engineer or Admin role."
+    for control, said in (
+        (compare.diff_thr, re_evaluate),
+        (compare.ai_thr.tick, re_evaluate),
+        (compare.btn_try, re_evaluate),
+        (compare.btn_save, "Saving a recipe needs the Engineer or Admin role."),
+    ):
+        win.statusBar().clearMessage()
+        _press(win, control)
+        assert win.statusBar().currentMessage() == said, control
+    assert (compare.btn_try.toolTip(), compare.btn_save.toolTip()) == (re_evaluate, compare.gates.why[compare.btn_save])
+    assert not compare.act_try.isEnabled() and not compare.act_save.isEnabled()  # Ctrl+R and Ctrl+S with them
+    win.set_user("engineer")
+    assert (compare.btn_try.toolTip(), compare.btn_save.toolTip()) == ("Ctrl+R", "Ctrl+S")
+
+
+def test_req_usr_001_a_press_on_a_greyed_sidebar_entry_says_who_may_open_it(qtbot: QtBot, ctx: AppContext) -> None:
+    """A greyed sidebar entry takes no click; a press on it says on the status bar which role opens its page, as its
+    tooltip does, for a touch screen, and the page shown stays."""
+    win = _window(qtbot, ctx)
+    win.set_user("operator")
+    assert win.navigate("Home")
+    it = next(
+        i for i in (win.nav.item(n) for n in range(win.nav.count())) if i.data(Qt.ItemDataRole.UserRole) == "Training"
+    )
+    win.statusBar().clearMessage()
+    at = win.nav.viewport().mapTo(win, win.nav.visualItemRect(it).center())
+    QTest.mouseClick(win.windowHandle(), Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, at)
+    assert win.statusBar().currentMessage() == it.toolTip() == "Training needs the Engineer / Admin role"
+    assert win.stack.currentWidget() is win.pages["Home"]
 
 
 def test_req_usr_001_an_empty_state_names_what_the_role_may_not_do_and_follows_a_sign_in(
@@ -142,6 +177,35 @@ def test_req_usr_001_an_empty_state_names_what_the_role_may_not_do_and_follows_a
     assert said.endswith("Trying other thresholds and Save to Recipe need the Engineer or Admin role."), said
     win.set_user("engineer")  # the page shown follows the sign-in
     assert "need the" not in compare.test_empty.sentence.text()
+
+
+def test_req_usr_001_every_empty_state_of_a_page_names_its_limits(
+    qtbot: QtBot, ctx: AppContext, tmp_path: Path
+) -> None:
+    """The no-board-model state names what the role may not do on the page too, and so do the empty states of the tabs
+    that hold a greyed control: AI Model Test's History (Validation Report…) and Training's Datasets (Export
+    Manifest…), for an Engineer. Training's samples and AI Model Test's run say theirs the same way."""
+    win = MainWindow(AppContext(Settings(workspace=str(tmp_path / "empty"), device="cpu")))  # no board model
+    qtbot.addWidget(win)
+    win.show()
+    qtbot.waitExposed(win)
+    win.set_user("operator")
+    assert win.navigate("Inspection")
+    said = cast(InspectionPage, win.pages["Inspection"]).empty.sentence.text()
+    assert said == "Ask an Engineer to create one. Save Image… needs the Admin role.", said
+    win.close()
+    win = _window(qtbot, ctx)
+    win.set_user("engineer")
+    test = cast(ModelTestPage, win.pages["AI Model Test"])
+    training = cast(TrainingPage, win.pages["Training"])
+    assert win.navigate("AI Model Test")
+    exports = "Exports and Validation Report… need the Admin role."
+    assert test.empty.sentence.text().endswith(exports) and test.history_empty.sentence.text().endswith(exports)
+    assert win.navigate("Training")
+    listed(qtbot, training)
+    manifest = "Remove and Export Manifest… need the Admin role."
+    assert training.samples_empty.sentence.text().endswith(manifest)
+    assert training.versions.empty.sentence.text().endswith(manifest)
 
 
 def test_req_usr_001_each_role_note_names_one_role() -> None:

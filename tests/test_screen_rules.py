@@ -524,13 +524,15 @@ def test_req_set_019_empty_states_link_next_step(
             win.navigate(title)
             e = _empties(win.pages[title])[0]
             got = (e.heading.text(), e.sentence.text(), e.link.text(), e.link.isVisibleTo(win.pages[title]))
-            assert got == ("No board model yet", "Create one to begin.", "+ New board model", True), (role, title)
+            said = " ".join(s for s in ("Create one to begin.", win.pages[title].role_limits()) if s)  # REQ-USR-001
+            assert got == ("No board model yet", said, "+ New board model", True), (role, title)
             e.link.click()
             assert asked.pop() == "New board model", (role, title)
     win.set_user("operator")
     win.navigate("Inspection")
     e = _empties(win.pages["Inspection"])[0]
-    assert (e.sentence.text(), e.link.isVisibleTo(win.pages["Inspection"])) == ("Ask an Engineer to create one.", False)
+    said = "Ask an Engineer to create one. Save Image… needs the Admin role."  # what the Operator may not do there too
+    assert (e.sentence.text(), e.link.isVisibleTo(win.pages["Inspection"])) == (said, False)
     win.set_user("admin")
     assert seen["3D Profile"].link.objectName() == "primary"
     seen["3D Profile"].link.click()

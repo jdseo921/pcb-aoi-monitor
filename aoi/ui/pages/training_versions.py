@@ -390,7 +390,7 @@ class VersionsPanel(QGroupBox):
             none = self.tr("No frozen dataset for {board_model} yet").format(board_model=board_model)
             then = self.tr("Check the labels, Freeze Dataset, then split and lock its validation set.")
             link = self.tr("Freeze Dataset…") if self.page.working.views else ""
-            self.empty.show_state(none, then, link, self.page.working.open_sheet)
+            self.page.show_empty(self.empty, none, then, link, self.page.working.open_sheet)
         else:
             self.empty.hide()
         self.table.blockSignals(False)

@@ -191,7 +191,7 @@ class InspectionPage(Page):
         if self.last is not None:
             self.empty.hide()
         elif not self.board_model:
-            self.empty.show_state(*self.no_board_model())
+            self.show_empty(self.empty, *self.no_board_model())
         elif not self.queue:
             what = self.tr("Load Images… or Load Folder… to queue boards. In Stage 2 the camera fills this view.")
             self.show_empty(self.empty, self.tr("No images loaded"), what, self.tr("Load Images…"), self.load_files)

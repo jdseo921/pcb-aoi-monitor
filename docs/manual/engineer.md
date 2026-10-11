@@ -171,7 +171,7 @@ can at a smaller scale. When the window is too short for every field of the Thre
 with this notice and the note under the AI score threshold shown, the tab scrolls: use the scroll bar at its right,
 the mouse wheel, or Tab, which brings each field into view.
 
-**Creating a board model.** Press **+ New** in the header (Engineer or Admin; an Operator is refused with AOI-USR-001)
+**Creating a board model.** Press **+ New** in the header (Engineer or Admin; greyed for an Operator, naming the role it needs)
 and type the name under "Board model name (e.g. TBOX-A1 Rev2)"; spaces at its ends are dropped, and an empty name
 creates nothing. The new board model is chosen in the header at once, on every page. A name that exists, typed exactly,
 creates nothing and chooses that board model (the status bar says when it is already chosen); one that differs from an

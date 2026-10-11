@@ -5,8 +5,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
-from PySide6.QtCore import QModelIndex, QPersistentModelIndex, QSize, Qt, QTimer
-from PySide6.QtGui import QAction, QCloseEvent, QColor, QKeySequence, QPainter
+from PySide6.QtCore import QEvent, QModelIndex, QObject, QPersistentModelIndex, QSize, Qt, QTimer
+from PySide6.QtGui import QAction, QCloseEvent, QColor, QKeySequence, QMouseEvent, QPainter
 from PySide6.QtWidgets import (
     QApplication,
     QComboBox,
@@ -222,7 +222,7 @@ class HomePage(Page):
         bm = self.board_model
         self.cards.setVisible(bool(bm))
         if not bm:
-            self.empty.show_state(*self.no_board_model())
+            self.show_empty(self.empty, *self.no_board_model())
             return
         self.empty.hide()
         st = self.ctx.board_status(bm)
@@ -307,6 +307,23 @@ class _NavDelegate(QStyledItemDelegate):
         align = Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignBottom
         painter.drawText(text.adjusted(0, 0, 0, -theme.SPACE_S // 2), align, str(index.data()))
         painter.restore()
+
+
+class _GreyedEntryPress(QObject):
+    """A press on a greyed sidebar entry says on the status bar which role opens its page, as its tooltip does: a
+    touch screen shows no tooltip, and a greyed entry takes no click (REQ-USR-001)."""
+
+    def __init__(self, win: MainWindow) -> None:
+        super().__init__(win)
+        self.win = win
+
+    def eventFilter(self, watched: QObject, e: QEvent) -> bool:  # noqa: N802 (Qt's name)
+        if e.type() == QEvent.Type.MouseButtonPress and isinstance(e, QMouseEvent):
+            it = self.win.nav.itemAt(e.position().toPoint())
+            title = it.data(Qt.ItemDataRole.UserRole) if it is not None else None
+            if it is not None and title in self.win.pages and not it.flags() & Qt.ItemFlag.ItemIsEnabled:
+                self.win.navigate(title)  # refused, and says why on the status bar
+        return False
 
 
 class _PageStack(QStackedWidget):
@@ -400,6 +417,7 @@ class MainWindow(QMainWindow):
             if cls.badge:
                 self._badges[cls.title] = self._badge(it, cls.badge, cls.badge_tip)
         self.nav.currentItemChanged.connect(self._on_nav)
+        self.nav.viewport().installEventFilter(_GreyedEntryPress(self))
         # Ctrl+1 to Ctrl+9 open the sidebar's pages in its order, from any page, and F1 lists the keys of the page
         # shown (Engineering standard, "Short paths": one key to any page; "Input": every action by keyboard)
         self.page_keys: dict[str, str] = {}

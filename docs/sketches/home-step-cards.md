@@ -5,9 +5,10 @@ Sketch for stage S02; used by stage S40 (training indicator). Frame, size classe
 
 ## Page and roles
 
-Home. All roles. An Operator sees cards 5 and 6 at full size with their buttons; cards 1 to 4 shrink to a status
-strip with no buttons ("Set up by an Engineer"), because their pages need the Engineer role. Engineer and Admin
-see all six cards with buttons.
+Home. All roles. Every role sees all six cards. A card whose page the role cannot open keeps its place, its button
+greyed with "For Engineer / Admin", never hidden (REQ-USR-001; this replaced the Operator's status strip of the first
+sketch). Each card says which role its step needs ("Needs the Engineer or Admin role.", "Open to every role.",
+"Needs the Admin role.") on a line of its own, and the Export card names where the PDF reports are.
 
 ## Wireframe (1920 × 1080; 3 × 2 cards; at 1366 × 768 the cards stack 2 × 3)
 
@@ -21,9 +22,9 @@ Home   Stage 1: upload → train → tune recipe → validate → inspect → ex
 │ [Open Training ›]            │ │ Active AI model v1.2 [Open ›]  │ │ [Open Recipe Editor ›]          │
 └──────────────────────────────┘ └────────────────────────────────┘ └─────────────────────────────────┘
 ┌─ 4 Validate ─────────────────┐ ┌─ 5 Inspect ────────────────────┐ ┌─ 6 Export ──────────────────────┐
-│ Test the AI model on the     │ │ Run boards; an NG or WARN      │ │ CSV, overlay images and the PDF │
-│ locked validation set.       │ │ opens Compare in one click.    │ │ report for customer validation. │
-│ Missed defects 0 of 30       │ │ Today 128 boards · 3 NG ·      │ │ 128 records ready               │
+│ Test the AI model on the     │ │ Run boards; an NG or WARN      │ │ CSV and overlays on Logs & Ex-  │
+│ locked validation set.       │ │ opens Compare in one click.    │ │ port; the PDF reports on AI     │
+│ Missed defects 0 of 30       │ │ Today 128 boards · 3 NG ·      │ │ Model Test. Needs the Admin role│
 │ False calls 1 of 50          │ │ 1 WARN · last 13:33            │ │ last export 2026-09-30          │
 │ [Open AI Model Test ›]       │ │ [■ Open Inspection ›] primary  │ │ [Open Logs & Export ›]          │
 └──────────────────────────────┘ └────────────────────────────────┘ └─────────────────────────────────┘
@@ -41,9 +42,9 @@ the database within 300 ms of Home opening and refreshed every 5 s while the pag
 | Card 3 button | Open Recipe Editor › | Alt+3 | T | Engineer, Admin |
 | Card 4 button | Open AI Model Test › | Alt+4 | T | Engineer, Admin; opens the Run tab with the newest dataset version's locked validation set chosen |
 | Card 5 button | Open Inspection › | Alt+5 or Enter | T | The page's one blue primary button; default focus for Operators |
-| Card 6 button | Open Logs & Export › | Alt+6 | T | All roles (Operators view only) |
+| Card 6 button | Open Logs & Export › | Alt+6 | T | All roles; its exports are the Admin's, greyed for another role with the role they need |
+| Role line | Needs the Engineer or Admin role. | — | text | On every card, under its sentence: the role the card's step needs, from the service's @requires (REQ-USR-001) |
 | Training indicator | ⟳ Training running 42 % · about 3 min left | — | text | On card 2 and mirrored in the header (S40); click opens Training; when training ends it reads "v1.3 trained, not active" or "Training failed, AOI-TRN-033" until the card is opened |
-| Status strip (Operator) | Set up by an Engineer: AI model v1.2 · Recipe rev 4 · validated 2026-09-30 | — | text | Replaces cards 1 to 4 for Operators; no buttons |
 
 Status text per card, when something is missing, is the empty-state sentence below in the card's status lines,
 and the button still opens the page.
@@ -75,7 +76,7 @@ an Operator sees "No board model yet. Ask an Engineer to create one." with no bu
 
 REQ-INSP-016 (six cards, one click, status within 300 ms), REQ-TRN-008 (training visible from Home), REQ-SET-018
 (one frame, one primary button), REQ-SET-019 (every card's empty state says what to do and links there),
-REQ-USR-001 (Operator sees no Engineer controls), REQ-TST-002 (counts, not bare percentages).
+REQ-USR-001 (a control a role may not use is greyed with the role it needs, never hidden), REQ-TST-002 (counts, not bare percentages).
 
 ## Rules applied
 

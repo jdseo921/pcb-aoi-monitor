@@ -1126,7 +1126,7 @@ class TrainingPage(Page):
             self.counts.set_line(lambda _name: "", "")
             self.checks_line.hide()
             self.tip.hide()
-            self.samples_empty.show_state(*self.no_board_model())
+            self.show_empty(self.samples_empty, *self.no_board_model())
             self.models_empty.hide()
             self.agreement.show_board_model(None, [])
             self.working.show_board_model(None, [])

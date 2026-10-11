@@ -21,7 +21,7 @@ last closed, or on Home when your role cannot open that page.
 Inspection, Ctrl+3 Compare, Ctrl+8 Logs & Export (pointing at a sidebar entry shows its key). Press **F1** on any page
 for the list of that page's keys and the pages your role opens. On Home, a card for a page your role cannot open is
 greyed and reads "For Engineer / Admin", so every button you can press leads somewhere, and each card says which
-role its step needs. The Export card names where the PDF reports are: AI Model Test, an Admin's.
+role its step needs. The Export card names where the PDF reports are: on AI Model Test, where an Admin exports them.
 
 **Grey buttons.** A button your role may not use stays in its place, greyed. Point at it, or press it on a touch
 screen, and the tooltip or the status bar at the bottom says which role it needs; a page with nothing listed yet also
