@@ -216,7 +216,7 @@ def test_req_set_007_main_demo_starts_as_the_first_admin_at_home_in_its_theme_wi
         done = subprocess.run(cmd, cwd=ROOT, env=env | launched, capture_output=True, text=True, timeout=180)
         assert done.returncode == 0, done.stderr
         opened: dict[str, Any] = json.loads(done.stdout.strip().splitlines()[-1])
-        assert opened["exposed"] and opened["demo"], opened
+        assert opened["exposed"] and opened["demo"] and opened["dialogs"] == [], opened  # the watch closes a dialog
         return opened
 
     first = start()

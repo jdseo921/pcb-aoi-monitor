@@ -86,6 +86,7 @@ def test_req_set_020_starts_usable_within_5_s(seeded: Path, tmp_path: Path) -> N
         assert done.returncode == 0, done.stderr
         start = json.loads(done.stdout.strip().splitlines()[-1])
         assert start["exposed"], "the window was never exposed"
+        assert start["dialogs"] == [], start  # tests/startup_worker.py closes a dialog: the start must show none
         starts.append(start)
     shown = [{k: round(v, 2) if isinstance(v, float) else v for k, v in s.items()} for s in starts]
     print("\nREQ-SET-020 start-up, seconds (the first a warm-up):", *map(json.dumps, shown))
