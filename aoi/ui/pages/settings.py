@@ -23,6 +23,7 @@ from PySide6.QtWidgets import (
 from ...config import APP_VERSION
 from ...core.services import AppContext
 from ...errors import AoiError
+from .. import theme
 from .base import QT_TRANSLATE_NOOP, ROLES, Page, button, fill_table, make_table, role_text, size_class
 from .settings_demo import DemoPanel
 from .settings_stores import StoresPanel
@@ -57,7 +58,7 @@ class SettingsPage(Page):
         super().__init__(ctx, shell)
         body = QHBoxLayout()
         g = QGroupBox(self.tr("System"))
-        f = QFormLayout(g)
+        f = self.form = QFormLayout(g)
         s = ctx.settings
         self.ws = QLineEdit(s.workspace)
         ws_row = QWidget()
@@ -119,7 +120,8 @@ class SettingsPage(Page):
         self.presenter.clicked.connect(self._switch_presenter)
         about = QLabel(
             self.tr(
-                "Light, text 18 pt or more, verdict 48 pt; Settings and 3D Profile hidden. An Admin leaves it with Exit"
+                "Light, text 18 pt or more, verdict 48 pt. 3D Profile and the hardware table are hidden; Settings is"
+                " hidden too, except for an Admin, who keeps it for Reset Demo. An Admin leaves the theme with Exit"
                 " presenter theme in the header."
             )
         )
@@ -134,13 +136,22 @@ class SettingsPage(Page):
         ul.addWidget(self.users)
         ul.addWidget(button(self.tr("Add / Change User"), slot=self.add_user))
         right.addWidget(ug, 1)
-        hg = QGroupBox(self.tr("Hardware interfaces"))
-        hl = QVBoxLayout(hg)
+        self.hardware = QGroupBox(self.tr("Hardware interfaces"))
+        hl = QVBoxLayout(self.hardware)
         self.hw = make_table([self.tr("Interface"), self.tr("Stage"), self.tr("Status")])
         hl.addWidget(self.hw)
-        right.addWidget(hg, 1)
+        right.addWidget(self.hardware, 1)
         body.addLayout(right, 1)
         self.root.addLayout(body, 1)
+        self.restyle()
+
+    def restyle(self) -> None:
+        """The presenter theme leaves out the hardware table, whose Stage 2 to 4 rows read "Not connected": a demo shows
+        only what is finished (Customers & Launch, "Demos"; A4 of the 2026-10 business-readiness brief). Its 18 pt
+        labels leave a field beside them a few letters, so there each field goes under its label."""
+        self.hardware.setVisible(not theme.presenter())
+        wrap = QFormLayout.RowWrapPolicy
+        self.form.setRowWrapPolicy(wrap.WrapAllRows if theme.presenter() else wrap.DontWrapRows)
 
     def _browse(self) -> None:
         d = QFileDialog.getExistingDirectory(self, self.tr("Workspace folder"), self.ws.text())

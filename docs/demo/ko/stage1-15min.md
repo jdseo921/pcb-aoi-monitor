@@ -16,29 +16,29 @@
 
 ## 3:45 ~ 6:00, 불량이 알려진 보드로 확인
 
-1. **AI Model Test**를 누릅니다. **Source**에 "DS-DEMOTBOXA1-R1-TOP-v1: its locked validation set, 31 images"가
+1. **AI Model Test**를 누릅니다. **Source**에 "DS-DEMOTBOXA1-R1-TOP-v1: its locked validation set, 61 images"가
    나옵니다.
 
-> "학습 전에 보드 31장을 따로 떼어 잠가 두었습니다. AI 모델은 이 보드를 한 번도 보지 않습니다. 그중 11장은 불량이
+> "학습 전에 보드 61장을 따로 떼어 잠가 두었습니다. AI 모델은 이 보드를 한 번도 보지 않습니다. 그중 11장은 불량이
 > 알려져 있습니다. 어떤 AI 모델이든 쓰기 전에 이 보드로 확인합니다."
 
 2. **Run Test**를 누릅니다. 몇 초 걸립니다. 타일이 채워집니다: **Missed defects** 11장 중 0장, **False calls**
-   20장 중 1장, 그리고 **Recall**, **Precision**, **Accuracy**.
+   50장 중 3장, 그리고 **Recall**, **Precision**, **Accuracy**.
 
-> "라인에서 중요한 숫자는 두 가지입니다. 놓친 불량, 여기서는 11장 중 0장. 그리고 멈춘 양품, 여기서는 20장 중
-> 1장. 항상 건수로 드립니다. 각 건수 아래 작은 줄은 그 건수로도 남는 최악의 경우입니다. 불량 보드 11장으로는 그
+> "라인에서 중요한 숫자는 두 가지입니다. 놓친 불량, 여기서는 11장 중 0장. 그리고 멈춘 양품, 여기서는 50장 중
+> 3장. 항상 건수로 드립니다. 각 건수 아래 작은 줄은 그 건수로도 남는 최악의 경우입니다. 불량 보드 11장으로는 그
 > 이상을 약속할 수 없어서, 고객님 보드에서는 이 값이 작아지도록 샘플을 충분히 부탁드립니다. 이 보드는 그린
 > 것이라 이 건수는 고객님 보드에 대해 아무것도 말해 주지 않습니다. 고객님 보드에서 받으실 결과의 형태를 보여
 > 드리는 것입니다."
 
-3. 표의 빨간 줄을 고릅니다: 멈춘 양품 한 장입니다. 표 옆에 사진이 나옵니다.
+3. 표의 빨간 줄 하나를 고릅니다: 멈춘 양품입니다. 표 옆에 사진이 나옵니다.
 
 놓친 불량과 멈춘 양품을 이야기하고, **Accuracy**로 시작하지 않습니다.
 
 ## 6:00 ~ 9:30, 현장 학습
 
 1. **Training**을 누릅니다. **Self-training** 아래에 **Dataset version** DS-DEMOTBOXA1-R1-TOP-v1과
-   "Validation set locked ✓ 20 OK / 11 NG · training set 40 OK, 3 NG" 줄이 있습니다. **Epochs**는 60,
+   "Validation set locked ✓ 50 OK / 11 NG · training set 40 OK, 3 NG" 줄이 있습니다. **Epochs**는 60,
    **Network input size**는 256 그대로 둡니다.
 2. **Start Training**을 누릅니다. 진행 막대가 움직이고 아래 줄에 예를 들어 "Training epoch 7 of 60 · 15 % · about
    1 min left"가 나옵니다. 우리 4코어 시험 PC에서 98초 걸렸습니다.
@@ -52,7 +52,8 @@
 3. 끝나면 상태 표시줄에 "AI model v1.1 trained: select it and press Activate Selected to judge boards with it"이
    나옵니다. **AI model versions** 아래에 v1.1이 v1.0 위에 있고, **Active**의 점은 아직 v1.0에 있습니다.
 
-> "새 AI 모델은 절대 저절로 바뀌지 않습니다. 엔지니어가 잠긴 보드로 확인하고 켭니다."
+> "보드 모델의 첫 AI 모델은 학습이 끝나면 바로 적용되어 라인은 첫날부터 AI 검사를 쓰고, 이것은 기록됩니다. 그 뒤의 새
+> 버전은 절대 저절로 바뀌지 않습니다. 엔지니어가 잠긴 보드로 확인하고 켭니다."
 
 4. v1.1 줄을 고르고 **AI Model Card**를 누릅니다: 무엇으로 학습했는지와 임계값이 나옵니다. 첫 줄은 "Not yet tested on a
    locked validation set: nothing on this card is a measure of accuracy."입니다.
@@ -100,5 +101,5 @@
 
 ## 고객이 떠난 뒤
 
-**Exit presenter theme**, **Settings**, **Reset Demo**를 차례로 누르고 확인합니다. 그다음 다음 데모를 위해
-**Presenter theme**를 다시 켭니다. 초기화하면 데모가 설치 당시 상태로 돌아가 테마가 꺼지기 때문입니다.
+**Settings**, **Reset Demo**를 차례로 누르고 확인합니다. 데모가 설치 당시 상태로 돌아가고, 발표자 테마는 다음
+데모를 위해 켜진 채로 남습니다.

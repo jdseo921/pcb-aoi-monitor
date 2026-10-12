@@ -85,7 +85,7 @@ def test_req_set_005_error_dialogs_alarms_and_notes_show_in_the_ui_language(
         ]
         compare = win.pages["Compare"]
         unexpected = dialog_text(ctx.report_error(ValueError("x"), compare.title))
-        assert unexpected[1].startswith("§An unexpected error (ValueError) stopped the last action§ (§Compare).")
+        assert unexpected[1].startswith("§An unexpected error stopped the last action§ (§Compare).")
         for path in ctx.db.map_paths(page.last_id):
             Path(str(path)).unlink()
         compare.show_stored(page.last_id)

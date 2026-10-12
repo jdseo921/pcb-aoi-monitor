@@ -66,16 +66,21 @@ class StoresPanel(QGroupBox):
         self.none.setObjectName("muted")
         self.none.setWordWrap(True)
         lay.addWidget(self.none)
+        # Two rows, a store's own steps under the ones that make or restore one: four in a row are wider than the
+        # column at the presenter theme's 18 pt (A4 of the 2026-10 business-readiness brief).
         self.steps = QWidget()
-        row = QHBoxLayout(self.steps)
-        row.setContentsMargins(0, 0, 0, 0)
+        rows = QVBoxLayout(self.steps)
+        rows.setContentsMargins(0, 0, 0, 0)
         self.btn_new = button(self.tr("New Store…"), slot=self._new)
         self.btn_restore = button(self.tr("Restore Key…"), slot=self._restore)
         self.btn_move = button(self.tr("Move Board Model In…"), slot=self._move)
         self.btn_shred = button(self.tr("Shred Store…"), "danger", self._shred)  # red, last, never the default
-        for b in (self.btn_new, self.btn_restore, self.btn_move):
-            row.addWidget(b)
-        row.addStretch(1)
+        for row_buttons in ((self.btn_new, self.btn_restore), (self.btn_move,)):
+            row = QHBoxLayout()
+            for b in row_buttons:
+                row.addWidget(b)
+            row.addStretch(1)
+            rows.addLayout(row)
         row.addWidget(self.btn_shred)
         lay.addWidget(self.steps)
         self.sheets: list[QGroupBox] = []

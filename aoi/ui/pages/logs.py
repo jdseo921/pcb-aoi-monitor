@@ -8,7 +8,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from PySide6.QtCore import QDate, QModelIndex, QPersistentModelIndex, QRect, QSize, Qt
+from PySide6.QtCore import QCoreApplication, QDate, QModelIndex, QPersistentModelIndex, QRect, QSize, Qt
 from PySide6.QtGui import QColor, QPainter, QTextCharFormat
 from PySide6.QtWidgets import (
     QAbstractItemView,
@@ -29,12 +29,13 @@ from PySide6.QtWidgets import (
 )
 
 from ...core.inspector import ai_check
-from ...core.services import AppContext, CsvFile, HistoryFilter
+from ...core.services import FALSE_CALL, NOT_REVIEWED, REVIEW_FILTERS, AppContext, CsvFile, HistoryFilter
 from ...errors import AoiError
 from ...times import to_local
 from .. import theme
 from ..widgets.busy import BusyOverlay
 from ..widgets.empty_state import EmptyState
+from ..widgets.flow import FlowLayout
 from ..widgets.image_view import ImageView
 from ..workers import Worker, start
 from .base import (
@@ -78,6 +79,16 @@ class NameFilter(QComboBox):
         return super().sizeHint().expandedTo(self.minimumSizeHint())
 
 
+def _labelled(label: str, field: QWidget) -> QWidget:
+    """A filter with its label before it: one item of the filter row, which wraps between items, never inside one."""
+    pair = QWidget()
+    row = QHBoxLayout(pair)
+    row.setContentsMargins(0, 0, 0, 0)
+    row.addWidget(QLabel(label))
+    row.addWidget(field)
+    return pair
+
+
 class ShareBar(QStyledItemDelegate):
     """The bar beside a Defect types row's Share, as long as the type's defects against the most any type has,
     SHARE_BAR_W at most, so the table reads as a Pareto chart (REQ-LOG-008) without Qt Charts, which is not LGPL. It
@@ -105,12 +116,22 @@ class ShareBar(QStyledItemDelegate):
 
 class LogsPage(Page):
     title = QT_TRANSLATE_NOOP("Page", "Logs & Export")
+    role_notes = (  # each control below is greyed for a role that may not use it, never hidden (REQ-USR-001)
+        (
+            QT_TRANSLATE_NOOP("LogsPage", "Exports and Delete Records… need the {roles} role."),
+            ("export_csv_files", "export_overlays", "delete_inspections"),
+        ),
+        (
+            QT_TRANSLATE_NOOP("LogsPage", "Archive and Add to Training as OK need the {roles} role."),
+            ("archive_old", "add_false_call_sample"),
+        ),
+    )
 
     def __init__(self, ctx: AppContext, shell: MainWindow) -> None:
         super().__init__(ctx, shell)
         self.rows: list[dict[str, Any]] = []
         self.listed = HistoryFilter()  # the filter that listed `rows`, which an export audits (REQ-LOG-002)
-        f = QHBoxLayout()
+        f = FlowLayout()  # one row at 1920 px, two where the page is narrower (REQ-LOG-009)
         self.d_from = QDateEdit(QDate.currentDate().addDays(-DEFAULT_DAYS))
         self.d_to = QDateEdit(QDate.currentDate())
         for d in (self.d_from, self.d_to):
@@ -127,6 +148,13 @@ class LogsPage(Page):
         self.result.addItem(self.tr("All"), None)
         for verdict in VERDICTS:
             self.result.addItem(theme.verdict_label(verdict), verdict)
+        # the review on the line, All first: the false calls alone, the real defects, or the NG and WARN records no one
+        # has reviewed yet (REQ-LOG-009, ADR 0013)
+        self.review_filter = QComboBox()
+        self.review_filter.addItem(self.tr("All"), None)
+        for review in REVIEW_FILTERS:
+            name = self.tr("Not reviewed") if review == NOT_REVIEWED else review_text(review)
+            self.review_filter.addItem(name, review)
         self.archived = QCheckBox(self.tr("Include archived"))
         fields = (
             (self.tr("From"), self.d_from),
@@ -134,13 +162,12 @@ class LogsPage(Page):
             (self.tr("Board model"), self.model),
             (self.tr("Operator"), self.operator),
             (self.tr("Result"), self.result),
+            (self.tr("Review"), self.review_filter),
         )
         for label, w in fields:
-            f.addWidget(QLabel(label))
-            f.addWidget(w)
+            f.addWidget(_labelled(label, w))
         f.addWidget(self.archived)
         f.addWidget(button(self.tr("Filter"), "primary", self.refresh))
-        f.addStretch(1)
         self.root.addLayout(f)
 
         split = QSplitter(Qt.Orientation.Horizontal)
@@ -185,6 +212,9 @@ class LogsPage(Page):
         # The selected NG or WARN record's review, F10 Real defect and F11 False call, as on Inspection (REQ-INSP-013)
         self.review = ReviewBar(self, self._reviewed, compact=True)
         line.addWidget(self.review)
+        # a board reviewed as a false call into Training as an OK sample, the Engineer's and Admin's (REQ-TRN-020)
+        self.btn_train = size_class(button(self.tr("Add to Training as OK"), slot=self.add_to_training), "T")
+        line.addWidget(self.btn_train)
         self.btn_compare = size_class(button(self.tr("Open in Compare ›"), slot=self.open_in_compare), "T")
         line.addWidget(self.btn_compare)
         self.root.addLayout(line)
@@ -239,7 +269,7 @@ class LogsPage(Page):
 
     def _filter(self) -> HistoryFilter:
         """The filter in the boxes, as `AppContext.inspections` takes it: local dates, board model, operator, result,
-        archived or not; the exports and Delete Records… audit it (REQ-LOG-002, REQ-LOG-003)."""
+        archived or not, and review; the exports and Delete Records… audit it (REQ-LOG-002, REQ-LOG-003)."""
         return HistoryFilter(
             self.d_from.date().toString("yyyy-MM-dd"),
             self.d_to.date().toString("yyyy-MM-dd"),
@@ -247,6 +277,7 @@ class LogsPage(Page):
             self.operator.currentData(),
             self.result.currentData(),
             self.archived.isChecked(),
+            self.review_filter.currentData(),
         )
 
     def list_records(self) -> None:
@@ -344,10 +375,10 @@ class LogsPage(Page):
                     self.tr("Show All Records"),
                     lambda: self.show_all_records(oldest, newest, bool(span["archived"])),
                 )
-            self.empty.show_state(self.tr("No records match"), *todo)
+            self.show_empty(self.empty, self.tr("No records match"), *todo)
         else:
             step = self.empty_step(self.tr("Run boards on Inspection."), "Inspection")
-            self.empty.show_state(self.tr("No inspections yet"), *step)
+            self.show_empty(self.empty, self.tr("No inspections yet"), *step)
 
     @staticmethod
     def _default_dates() -> tuple[str, str]:
@@ -360,7 +391,8 @@ class LogsPage(Page):
 
     def show_all_records(self, oldest: str, newest: str, archived: bool) -> None:
         """Every record (#200): From the oldest record's local date to today, or to the newest record's date when the
-        clock has gone back, every board model, operator and verdict, with archived records when there are any."""
+        clock has gone back, every board model, operator, verdict and review, with archived records when there are
+        any."""
         today = QDate.currentDate().toString("yyyy-MM-dd")
         self._set_filters(oldest, max(newest, today), archived)
 
@@ -370,6 +402,7 @@ class LogsPage(Page):
         self.model.setCurrentIndex(0)
         self.operator.setCurrentIndex(0)
         self.result.setCurrentIndex(0)
+        self.review_filter.setCurrentIndex(0)
         self.archived.setChecked(archived)
         self.refresh()
 
@@ -381,6 +414,7 @@ class LogsPage(Page):
         self.view.set_image(self.ctx.load_image(overlay) if overlay and Path(overlay).exists() else None)
         self.btn_compare.setEnabled(r is not None)
         self.review.show_record(r)
+        self.update_actions()  # Add to Training as OK follows the selected record's review
 
     def _reviewed(self, record: dict[str, Any]) -> None:
         """A review saved: the listed row and its Review cell show it at once, without listing again (REQ-INSP-013)."""
@@ -393,6 +427,7 @@ class LogsPage(Page):
             if int(row_key(self.table, row)) == record["id"] and (item := self.table.item(row, column)) is not None:
                 item.setText(review_text(record["review"]))
         self.count_types()  # a false call changes its types' false calls, if the tab is shown
+        self.update_actions()  # and makes the board one to add to Training
         self.shell.status(
             self.tr("Review saved: {review} for record {record}.").format(
                 review=review_text(record["review"]), record=record["id"]
@@ -649,15 +684,41 @@ class LogsPage(Page):
     def update_actions(self) -> None:
         # one export or delete at a time, as a second would stop the first (#194), and none while the page is still
         # listing records, which would take the rows shown before (S55)
+        # and each greyed, never hidden, for a role the service refuses, saying who may (REQ-USR-001): the exports and
+        # Delete Records… are the Admin's, as customer results leave the station only by an Admin (Q58, #151)
         idle = self._bg is None and self.listing is None
-        admin_or_eng = self.ctx.role in ("Engineer", "Admin")
-        for b in (self.btn_csv, self.btn_img):  # customer results leave the station only by an Admin (Q58, #151)
-            b.setVisible(self.ctx.role == "Admin")
-            b.setEnabled(idle)
-        self.btn_arch.setEnabled(admin_or_eng)
-        self.btn_delete.setVisible(self.ctx.role == "Admin")  # shown to the Admin alone; the service checks the role
+        self.role_gate(self.btn_csv, "export_csv_files", idle)
+        self.role_gate(self.btn_img, "export_overlays", idle)
+        self.role_gate(self.btn_arch, "archive_old")
         self.btn_compare.setEnabled(bool(self.table.selectionModel().selectedRows()))
-        self.btn_delete.setEnabled(idle)
+        self.role_gate(self.btn_delete, "delete_inspections", idle)
+        selected = self._selected()
+        false_call = selected is not None and selected["review"] == FALSE_CALL
+        self.role_gate(self.btn_train, "add_false_call_sample", idle and false_call)
+
+    def _selected(self) -> dict[str, Any] | None:
+        """The listed record of the first selected row, or None."""
+        iid = self._selected_id()
+        return next((r for r in self.rows if r["id"] == iid), None)
+
+    def add_to_training(self) -> None:
+        """Add to Training as OK: the selected board, reviewed as a false call, becomes an OK sample of its board model
+        in its view, on the pool thread (REQ-TRN-020). No confirmation: the sample can be deleted on Training."""
+        r = self._selected()
+        if r is None or r["review"] != FALSE_CALL:
+            return
+        record = r["id"]
+
+        def added(out: dict[str, Any]) -> None:
+            if out["added"]:
+                said = self.tr("Record {record}'s board is now an OK sample of {board} ({view}) on Training.")
+            else:
+                said = self.tr("Record {record}'s board is already a sample of {board}, labelled {label}, on Training.")
+            label = QCoreApplication.translate("TrainingPage", out["label"])  # OK, NG or UNSURE, as Training says it
+            board, view = out["board_model"], view_text(out["view"])
+            self.shell.status(said.format(record=record, board=board, view=view, label=label))
+
+        self.run_in_background(self.ctx.add_false_call_sample, record, on_result=added)
 
     def on_show(self) -> None:
         self.update_actions()

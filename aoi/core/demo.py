@@ -19,6 +19,7 @@ in it marks it as a demo workspace, so a load or a reset never deletes or overwr
 
 from __future__ import annotations
 
+import contextlib
 import hashlib
 import json
 import os
@@ -31,7 +32,7 @@ from typing import Any
 
 from ..config import Settings
 from ..data import atomic, credentials
-from ..errors import QT_TRANSLATE_NOOP, AoiError
+from ..errors import QT_TRANSLATE_NOOP, AoiError, system_detail, system_reason
 from ..times import now_utc
 
 FORMAT = 1
@@ -80,10 +81,19 @@ def read_bundle(bundle: Path) -> dict[str, Any]:
     try:
         manifest: dict[str, Any] = json.loads((bundle / BUNDLE_FILE).read_text(encoding="utf-8"))
     except (OSError, ValueError) as e:
-        raise AoiError("AOI-SET-015", str(e), path=str(bundle), reason=NO_MANIFEST) from e
-    if not isinstance(manifest, dict) or manifest.get("format") != FORMAT:
+        raise AoiError("AOI-SET-015", system_detail(e), path=str(bundle), reason=NO_MANIFEST) from e
+    if (
+        not isinstance(manifest, dict)
+        or manifest.get("format") != FORMAT
+        or not isinstance(manifest.get("files"), dict)
+        or not all(isinstance(manifest.get(k), str) for k in ("built_at", "board_model"))
+    ):
         raise AoiError("AOI-SET-015", path=str(bundle), reason=OTHER_FORMAT)
-    files = {n: h for n, h in file_hashes(bundle).items() if n != BUNDLE_FILE}
+    try:
+        files = {n: h for n, h in file_hashes(bundle).items() if n != BUNDLE_FILE}
+    except OSError as e:  # a file of the installed bundle that cannot be read: refused with its code, never uncoded
+        why = NOT_READ.fill(reason=system_reason(e))
+        raise AoiError("AOI-SET-015", system_detail(e), path=str(bundle), reason=why) from e
     wrong = sorted(set(files) ^ set(manifest.get("files", {})))
     wrong += sorted(n for n, h in files.items() if manifest["files"].get(n, h) != h)
     if wrong:
@@ -93,6 +103,7 @@ def read_bundle(bundle: Path) -> dict[str, Any]:
 
 NO_MANIFEST = QT_TRANSLATE_NOOP("Errors", "it has no readable bundle.json")
 OTHER_FORMAT = QT_TRANSLATE_NOOP("Errors", "its bundle.json is not one this version of the app reads")
+NOT_READ = QT_TRANSLATE_NOOP("Errors", "a file of it could not be read: {reason}")
 CHANGED = QT_TRANSLATE_NOOP("Errors", "{count} file(s) do not match its bundle.json, the first {file}")
 
 
@@ -106,28 +117,33 @@ def load(bundle: Path, folder: Path, settings: dict[str, Any], keys: credentials
     if not is_demo(folder):
         if folder.exists() and any(folder.iterdir()):
             raise AoiError("AOI-SET-016", path=str(folder))
-        _copy_in(bundle, folder)
-        atomic.write_text(folder / "settings.json", json.dumps(settings | {"workspace": str(folder)}, indent=2))
-        marker = {
-            "bundle_built_at": manifest["built_at"],
-            "loaded_at": now_utc(),
-            "board_model": manifest["board_model"],
-        }
-        atomic.write_text(folder / MARKER, json.dumps(marker, indent=2))  # last: a folder half copied is no demo yet
+        made = not folder.exists()
+        try:
+            _copy_in(bundle, folder)
+            atomic.write_text(folder / "settings.json", json.dumps(settings | {"workspace": str(folder)}, indent=2))
+            marker = {
+                "bundle_built_at": manifest["built_at"],
+                "loaded_at": now_utc(),
+                "board_model": manifest["board_model"],
+            }
+            atomic.write_text(folder / MARKER, json.dumps(marker, indent=2))  # last: a folder half copied is no demo
+        except OSError:  # the drive full or refusing part-way: what this load copied goes; the next load starts clean
+            _clear(folder, made)
+            raise
     _store_key(bundle, keys)
     return manifest
 
 
 def load_beside(settings: Settings, keys: credentials.Credentials | None = None) -> Path:
     """The demo workspace beside the workspace of `settings`, loaded from the installed bundle (`bundle_dir`) when it
-    is not there yet and kept as it is when it is, with the station's own settings (AI device, language and the rest),
-    opening at Inspection, where its boards are queued, and asking for no shift check, so the scripted run plays at
-    once (ADR 0014); its folder. The key goes to `keys`, else to the station's key store. AoiError as `load` refuses
-    it (AOI-SET-015, AOI-SET-016)."""
+    is not there yet and kept as it is when it is, with the station's own settings (AI device, language and the rest)
+    and asking for no shift check, so the scripted run its boards are queued for on Inspection plays at once (ADR
+    0014); its folder. It opens at Home, signed in as its first Admin (`AppContext.start_user`). The key goes to `keys`,
+    else to the station's key store. AoiError as `load` refuses it (AOI-SET-015, AOI-SET-016)."""
     folder = demo_folder(settings.root)
     values = asdict(settings)
     del values["workspace"]  # load() sets the demo folder
-    opening = {"last_page": "Inspection", "shift_check_hours": 0}  # the scripted run plays at once (ADR 0014)
+    opening = {"last_page": "Home", "shift_check_hours": 0}  # where its scripts begin; its run plays at once (ADR 0014)
     load(bundle_dir(), folder, values | opening, keys or credentials.default())
     return folder
 
@@ -152,9 +168,23 @@ def reset(bundle: Path, folder: Path, keys: credentials.Credentials) -> float:
                 child.unlink()
         _copy_in(bundle, folder)
     except OSError as e:
-        raise AoiError("AOI-SET-017", str(e), path=str(e.filename or folder), error=e.strerror or str(e)) from e
+        raise AoiError("AOI-SET-017", system_detail(e), path=str(e.filename or folder), error=system_reason(e)) from e
     _store_key(bundle, keys)
     return time.monotonic() - started
+
+
+def _clear(folder: Path, made: bool) -> None:
+    """Delete what a load that stopped part-way copied into `folder`, which was empty or not there before it (`made`);
+    nothing that cannot be deleted stops the error that stopped the load."""
+    if made:
+        shutil.rmtree(folder, ignore_errors=True)
+        return
+    for child in folder.iterdir():
+        with contextlib.suppress(OSError):
+            if child.is_dir() and not child.is_symlink():
+                shutil.rmtree(child)
+            else:
+                child.unlink()
 
 
 def _copy_in(bundle: Path, folder: Path) -> None:
@@ -171,7 +201,7 @@ def _store_key(bundle: Path, keys: credentials.Credentials) -> None:
         held = json.loads((bundle / KEY_FILE).read_text(encoding="utf-8"))
         keys.write(credentials.STORE_PREFIX + held["store_uuid"], bytes.fromhex(held["key"]))
     except (OSError, ValueError, KeyError, TypeError) as e:
-        raise AoiError("AOI-SET-015", str(e), path=str(bundle), reason=NO_KEY) from e
+        raise AoiError("AOI-SET-015", system_detail(e), path=str(bundle), reason=NO_KEY) from e
 
 
 NO_KEY = QT_TRANSLATE_NOOP("Errors", "its store-key.json cannot be read")

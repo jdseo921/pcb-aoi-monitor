@@ -26,8 +26,9 @@ evidence it is judged on, which AI model's calibration applies, who may call it 
    changes, and Save to Recipe writes the audited revision.
 4. **Engineer and Admin only, checked in the service.** ADR 0002 decision 5 checks the role on every write; this one
    call writes nothing but takes the same check (`requires("Engineer", ...)`, AOI-USR-001), since trying thresholds
-   is an Engineer's task and a would-be verdict next to a stored one is easy to misread on the line. Compare hides
-   the panel from Operators (S28b).
+   is an Engineer's task and a would-be verdict next to a stored one is easy to misread on the line. Compare hid
+   the panel from Operators (S28b); since REQ-USR-001's rule that a control a role may not use is greyed with the
+   reason, never hidden (Jay, 2026-10-11), it shows greyed to them, so they still produce no would-be verdict.
 5. **What cannot be judged says so.** AOI-CMP-002 for no such result or no stored decision table, AOI-CMP-003 for a
    map file that is there but cannot be read or is not the map written (ADR 0005 decision 5), and AOI-CMP-004 for a
    map or calibration that a check the thresholds use needs but is gone, naming it; turning that check off lets the

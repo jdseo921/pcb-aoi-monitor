@@ -71,7 +71,7 @@ def test_req_set_005_every_training_log_line_is_translated(
     assert page.worker is not None
     qtbot.waitUntil(lambda: page.worker is None, timeout=120000)
     lines = page.log.toPlainText().splitlines()
-    assert len(lines) == 6 and [line for line in lines if not line.startswith("§")] == [], lines
+    assert len(lines) == 7 and [line for line in lines if not line.startswith("§")] == [], lines
     assert [line.split(" ")[0] for line in lines] == [
         "§Aligning",
         "§Training",
@@ -79,6 +79,7 @@ def test_req_set_005_every_training_log_line_is_translated(
         "§Epoch",
         "§Calibrated",
         "§Saved",
+        "§AI",  # the status bar's line too: a later version installs inactive
     ]
     assert "(§" in lines[4], lines[4]  # the rule is a phrase of its own
     assert shown and all(re.fullmatch(r"§§\S.* · \d+ % · §.+", line) for line in shown), shown

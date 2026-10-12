@@ -118,6 +118,13 @@ def ng_record(ctx: AppContext, data: Path | None = None) -> int:
     return int(ctx.inspections(board_model="TINY")[0]["id"])
 
 
+def false_call(ctx: AppContext, data: Path | None = None) -> int:
+    """The newest record of TINY reviewed as a false call; with none, `ng_record`, not reviewed, for a call refused by
+    its role before it reads the record."""
+    found = ctx.inspections(board_model="TINY", review="FALSE_CALL")
+    return int(found[0]["id"]) if found else ng_record(ctx, data)
+
+
 WRITES: dict[str, tuple[str, Callable[[AppContext, Path, Path], Any]]] = {
     "ensure_board_model": ("board_model.create", lambda ctx, data, tmp: ctx.ensure_board_model("NEW")),
     "import_samples": (
@@ -232,6 +239,13 @@ WRITES: dict[str, tuple[str, Callable[[AppContext, Path, Path], Any]]] = {
     ),
     # the master samples left after the writes above, judged at the start of a shift by any role (REQ-INSP-017)
     "run_shift_check": ("inspection.shift_check", lambda ctx, data, tmp: ctx.run_shift_check("TINY")),
+    # the board reviewed as a false call above, added to Training as OK in one step (REQ-TRN-020)
+    "add_false_call_sample": ("sample.import", lambda ctx, data, tmp: ctx.add_false_call_sample(false_call(ctx, data))),
+    # the targets a customer agreed for TINY's validation, before testing (REQ-TST-008)
+    "set_validation_targets": (
+        "validation.targets",
+        lambda ctx, data, tmp: ctx.set_validation_targets("TINY", 0, 0.05, 1.0, "Acme Electronics, quality lead"),
+    ),
 }
 # what only an Engineer does that writes no audit entry itself: re-evaluating a result (REQ-CMP-005, since S28a), and
 # starting a training run, whose job writes model.train once it ends (REQ-TRN-008, S40)
@@ -240,9 +254,12 @@ CHECKED_READS: dict[str, Callable[[AppContext, Path, Path], Any]] = {
     "start_training": lambda ctx, data, tmp: ctx.start_training(ctx.training_version("TINY")["uuid"], 5, 32).wait(60),
     "learn_comparison": lambda ctx, data, tmp: ctx.learn_comparison("TINY", seed=0),  # REQ-TRN-018: stores nothing
 }
-# every public AppContext call that is not role-checked: reads, what an Operator does, and the lifecycle
+# every public AppContext call that is not role-checked: reads, what an Operator does, and the lifecycle, signing in
+# among it (sign_in, audited as user.sign_in or user.start: anyone may sign in; last_signed_in reads who did last)
 UNCHECKED = {
-    "alarm", "alarms", "audit", "audit_entries", "report_error", "close", "set_user", "load_model", "recipe",
+    "alarm", "alarms", "audit", "audit_entries", "report_error", "close", "set_user", "sign_in", "last_signed_in",
+    "load_model", "recipe",
+    "note_window",  # the window's handle beside the lock, for a second start (A6): any role's window, not the database
     "inspector", "inspect", "inspect_file", "load_image", "log_result", "board_models", "reference_image", "samples",
     "sample_path", "models", "model", "active_model", "recipe_history", "inspections", "defects_for", "checks_for",
     "checks_for_many", "inspection_result", "inspection", "judged_reference", "users", "board_status", "start_user",
@@ -250,9 +267,10 @@ UNCHECKED = {
     "boxes", "box_history", "unsure_samples", "label_check_status", "labels_ready_to_freeze", "calibration_sets",
     "agreement_checks", "propose_calibration_set", "blind_labelled", "datasets", "dataset_items", "verify_dataset",
     "validation_split", "stores", "store_of", "store_contents", "training_version", "freeze_gate",
-    "dataset_counts", "previous_model", "model_card", "card_files", "card_text", "last_board", "test_runs", "test_run",
+    "dataset_counts", "previous_model", "inactive_model", "model_card", "card_files", "card_text", "last_board",
+    "test_runs", "test_run",
     "report_images", "model_card_text", "validation_report_data", "recipe_revisions", "history_span",
-    "master_samples", "shift_check", "require_shift_check", "defect_pareto",
+    "master_samples", "shift_check", "require_shift_check", "defect_pareto", "drifted", "validation_targets",
 }  # fmt: skip
 CALLS = {**{name: call for name, (_, call) in WRITES.items()}, **CHECKED_READS}
 # The lowest role allowed each call, copied from the write table of docs/ARCHITECTURE.md §5 and REQ-CMP-005, never read

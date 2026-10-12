@@ -74,8 +74,8 @@ def write_all(files: Sequence[tuple[str | Path, bytes]]) -> None:
                     os.replace(old, done)
         for _, tmp in staged:
             tmp.unlink(missing_ok=True)
-        if isinstance(e, OSError):  # named by the file that could not be written, not by a temporary name
-            raise OSError(e.errno, e.strerror, str(target)) from e
+        if isinstance(e, OSError):  # named by the file that could not be written, not by a temporary name; Windows'
+            raise OSError(e.errno, e.strerror, str(target), getattr(e, "winerror", None)) from e  # own number kept
         raise
     for _, old in moved:
         if old is not None:

@@ -67,4 +67,4 @@ Give them [for-clients.md](for-clients.md).
 
 ## After they leave
 
-**Exit presenter theme**, then **Settings**, **Reset Demo**, and confirm: the demo is ready for the next time.
+**Settings**, **Reset Demo**, and confirm: the demo is ready for the next time, in the presenter theme still.

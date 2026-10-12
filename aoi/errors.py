@@ -1,7 +1,8 @@
 """One catalogue of error codes (REQ-LOG-004, REQ-SET-019; stage S12).
 
 Every error a user can see is an ``AoiError`` with a code ``AOI-<AREA>-<NNN>``, a plain message that says
-what happened and what to do, and optional ``detail`` for the log, never for the dialog. The areas are the
+what happened and what to do, and optional ``detail``, the technical words for the log and the dialog's Show Details,
+never for the message (A5 of the 2026-10 business-readiness brief). The areas are the
 requirement register's (docs/requirements/README.md). ``docs/error-codes.md`` is generated from ``CODES``
 by ``python -m aoi.errors``; a test fails when the two differ.
 """
@@ -9,6 +10,8 @@ by ``python -m aoi.errors``; a test fails when the two differ.
 from __future__ import annotations
 
 import argparse
+import errno
+import sqlite3
 import sys
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
@@ -73,6 +76,83 @@ def QT_TRANSLATE_NOOP(context: str, text: str) -> Phrase:
     """Mark `text` for pyside6-lupdate, which finds the call by this name, under `context`, as a phrase a screen
     translates; no Qt here, since the engine raises errors too. Pages take it from aoi/ui/pages/base.py."""
     return Phrase(context, text)
+
+
+# What a refusal of the system means, in words a user acts on (A5 of the 2026-10 business-readiness brief, F8). The
+# system's own text, which can name an exception class, an errno or SQLite's words, goes to an error's detail, which the
+# log and the dialog's Details hold, and never into what a message says (`system_reason`, `system_detail`).
+FULL = QT_TRANSLATE_NOOP("Errors", "the drive is full")
+DENIED = QT_TRANSLATE_NOOP("Errors", "the system refused access to it: it may be read-only, or open in another app")
+IN_USE = QT_TRANSLATE_NOOP("Errors", "another app has it open")
+MISSING = QT_TRANSLATE_NOOP("Errors", "it is not there")
+GONE = QT_TRANSLATE_NOOP("Errors", "its folder or drive is not there")  # MISSING, for a file being written
+WRITE_PROTECTED = QT_TRANSLATE_NOOP("Errors", "the drive is write-protected")
+NOT_READY = QT_TRANSLATE_NOOP("Errors", "the drive is not ready: it may have been removed")
+NOT_READ = QT_TRANSLATE_NOOP("Errors", "the drive could not be read or written")
+TOO_LONG = QT_TRANSLATE_NOOP("Errors", "its path is too long")
+TAKEN = QT_TRANSLATE_NOOP("Errors", "something of that name is already there")
+NOT_EMPTY = QT_TRANSLATE_NOOP("Errors", "the folder still holds files, which another app may have open")
+A_FOLDER = QT_TRANSLATE_NOOP("Errors", "it is a folder, not a file")
+NOT_A_FOLDER = QT_TRANSLATE_NOOP("Errors", "part of its path is a file, not a folder")
+DB_HELD = QT_TRANSLATE_NOOP("Errors", "another app holds the database")
+DB_DAMAGED = QT_TRANSLATE_NOOP("Errors", "the database file is damaged")
+DB_NOT_OPENED = QT_TRANSLATE_NOOP("Errors", "the database file could not be opened")
+DB_READ_ONLY = QT_TRANSLATE_NOOP("Errors", "the database file or its folder is set to read-only")
+DB_REFUSED = QT_TRANSLATE_NOOP("Errors", "the database refused it")
+REFUSED = QT_TRANSLATE_NOOP("Errors", "the system refused it")
+_BY_ERRNO = {  # by name: a system without one of these numbers leaves it out
+    getattr(errno, name): reason
+    for names, reason in (
+        (("ENOSPC", "EDQUOT"), FULL), (("EACCES", "EPERM"), DENIED), (("EBUSY", "ETXTBSY"), IN_USE),
+        (("ENOENT",), MISSING), (("EROFS",), WRITE_PROTECTED), (("ENODEV", "ENXIO"), NOT_READY), (("EIO",), NOT_READ),
+        (("ENAMETOOLONG",), TOO_LONG), (("EEXIST",), TAKEN), (("ENOTEMPTY",), NOT_EMPTY),
+        (("EISDIR",), A_FOLDER), (("ENOTDIR",), NOT_A_FOLDER),
+    )
+    for name in names
+    if hasattr(errno, name)
+}  # fmt: skip
+_BY_WINERROR = {  # Windows' own numbers, which say more than the errno Python maps them to
+    5: DENIED, 32: IN_USE, 33: IN_USE, 2: MISSING, 3: MISSING, 19: WRITE_PROTECTED, 21: NOT_READY, 15: NOT_READY,
+    112: FULL, 39: FULL, 23: NOT_READ, 1117: NOT_READ, 206: TOO_LONG, 80: TAKEN, 183: TAKEN, 145: NOT_EMPTY,
+    267: NOT_A_FOLDER,
+}  # fmt: skip
+
+
+def system_reason(e: BaseException | None, writing: bool = False) -> Phrase:
+    """What the system's refusal `e` means for the user, as a phrase that names no exception, errno or SQLite text: a
+    full, removed or write-protected drive, a file another app has open, one that is not there (its folder or drive,
+    when `writing` it), a damaged database; "the system refused it" for anything else. Windows' own number is read from
+    `e` or the error it was raised from, as a file written crash-safe re-raises one under the file's name. The words of
+    `e` itself go in the error's detail (`system_detail`)."""
+    reason = _system_reason(e)
+    return GONE if writing and reason == MISSING else reason
+
+
+def _system_reason(e: BaseException | None) -> Phrase:
+    if isinstance(e, sqlite3.Error):
+        text = str(e).lower()
+        if "locked" in text or "busy" in text:
+            return DB_HELD
+        if "not a database" in text or "malformed" in text or "corrupt" in text:
+            return DB_DAMAGED
+        if "disk i/o" in text or "disk is full" in text or "full" in text:
+            return NOT_READ if "i/o" in text else FULL
+        if "unable to open" in text:
+            return DB_NOT_OPENED
+        if "readonly" in text or "read-only" in text:
+            return DB_READ_ONLY
+        return DB_REFUSED
+    if isinstance(e, OSError):
+        winerror = getattr(e, "winerror", None) or getattr(e.__cause__, "winerror", None)
+        if winerror in _BY_WINERROR:
+            return _BY_WINERROR[winerror]
+        return _BY_ERRNO.get(e.errno or 0, REFUSED)
+    return REFUSED
+
+
+def system_detail(e: BaseException | None) -> str | None:
+    """The technical words of `e` for the log and the dialog's Details: its class and its own text."""
+    return None if e is None else f"{type(e).__name__}: {e}"
 
 
 @dataclass(frozen=True)
@@ -185,8 +265,8 @@ CODES: dict[str, ErrorCode] = {
             ),
             QT_TRANSLATE_NOOP(
                 "Errors",
-                "An Engineer sets a Golden board or trains an AI model on Training, or turns on the Golden board"
-                " comparison or the AI model in the Recipe Editor; then inspect the board again.",
+                "An Engineer sets a Golden board, or trains or activates an AI model, on Training, or turns on the"
+                " Golden board comparison or the AI model in the Recipe Editor; then inspect the board again.",
             ),
         ),
         ErrorCode(
@@ -284,6 +364,21 @@ CODES: dict[str, ErrorCode] = {
             ),
         ),
         ErrorCode(
+            "AOI-INSP-018",
+            QT_TRANSLATE_NOOP("Errors", "The line has drifted"),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "On {board} ({view}), a measure of the newest boards judged by the active AI model and recipe moved"
+                " further than chance explains from the boards judged before them: {measure}. No verdict was changed.",
+            ),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Look at the boards and the station: the lighting, the camera and its focus, the board revision and the"
+                " parts supplier. Review the calls on Logs & Export; if one of these changed, retrain the AI model or"
+                " tune the recipe and validate it again.",
+            ),
+        ),
+        ErrorCode(
             "AOI-CMP-001",
             QT_TRANSLATE_NOOP("Errors", "Result has no stored heatmaps"),
             QT_TRANSLATE_NOOP(
@@ -364,8 +459,7 @@ CODES: dict[str, ErrorCode] = {
             QT_TRANSLATE_NOOP("Errors", "AI model file refused"),
             QT_TRANSLATE_NOOP(
                 "Errors",
-                "AI model file refused: {path} could not be loaded as a weights-only AI model file this app wrote "
-                "({reason}).",
+                "AI model file refused: {path} could not be loaded as an AI model file this app wrote ({reason}).",
             ),
             QT_TRANSLATE_NOOP("Errors", "Train the board model again."),
         ),
@@ -636,7 +730,13 @@ CODES: dict[str, ErrorCode] = {
             "AOI-TRN-027",
             QT_TRANSLATE_NOOP("Errors", "Dataset not frozen"),
             QT_TRANSLATE_NOOP("Errors", "{name} was not frozen: {reason}."),
-            QT_TRANSLATE_NOOP("Errors", "Do what the reason says, then freeze the dataset again; nothing was written."),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Nothing was written. Type a board revision of 1 to 16 letters and digits, or the customer whose "
+                "dataset store holds the images, and tick at least one use; label images OK or NG and run an "
+                "agreement check that reaches its targets; an Admin moves the board model into a dataset store first. "
+                "A board model whose store was shredded is never frozen again.",
+            ),
         ),
         ErrorCode(
             "AOI-TRN-028",
@@ -685,7 +785,9 @@ CODES: dict[str, ErrorCode] = {
             QT_TRANSLATE_NOOP("Errors", "Label cannot be checked"),
             QT_TRANSLATE_NOOP("Errors", "The label of {sample} was not checked: {reason}."),
             QT_TRANSLATE_NOOP(
-                "Errors", "Do what the reason says, then check the label again; a label checked already needs nothing."
+                "Errors",
+                "Draw an NG image's defect boxes, or label the image again, then check its label; an UNSURE image is "
+                "not checked, and a label checked already needs nothing.",
             ),
         ),
         ErrorCode(
@@ -792,7 +894,12 @@ CODES: dict[str, ErrorCode] = {
             "AOI-TRN-044",
             QT_TRANSLATE_NOOP("Errors", "Dataset store not changed"),
             QT_TRANSLATE_NOOP("Errors", "The dataset store of {store} was not changed: {reason}."),
-            QT_TRANSLATE_NOOP("Errors", "Do what the reason says, then try again."),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "A move-in or a shred stopped part-way keeps the steps it made: start it again to finish. Anything "
+                "else changed nothing: type the customer, the board model or the store's key again, or close the app "
+                "that has a file of the store open, then try again.",
+            ),
         ),
         ErrorCode(
             "AOI-TRN-045",
@@ -800,7 +907,10 @@ CODES: dict[str, ErrorCode] = {
             QT_TRANSLATE_NOOP("Errors", "{name} was not trained: {reason}."),
             QT_TRANSLATE_NOOP(
                 "Errors",
-                "Do what the reason says, then train again; nothing was saved, and the active AI model is unchanged.",
+                "Nothing was saved, and the active AI model is unchanged. Freeze a dataset version with enough OK "
+                "images and lock its validation set on Training's Datasets tab, then start again from it; for a file "
+                "changed since the freeze, put the frozen file back or freeze a new version (in the demo workspace, "
+                "Reset Demo puts it back).",
             ),
         ),
         ErrorCode(
@@ -848,6 +958,30 @@ CODES: dict[str, ErrorCode] = {
             ),
         ),
         ErrorCode(
+            "AOI-TRN-050",
+            QT_TRANSLATE_NOOP("Errors", "Board not added to Training"),
+            QT_TRANSLATE_NOOP("Errors", "Record {record} was not added to Training: {reason}. Nothing was changed."),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Add a board that is still listed on Logs & Export with its board image and reviewed as a False call"
+                " (F11); review it first if the board is good.",
+            ),
+        ),
+        ErrorCode(
+            "AOI-TRN-051",
+            QT_TRANSLATE_NOOP("Errors", "AI model not active"),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Board model {board} has AI model {version}, trained but not active, so only the golden-board"
+                " comparison runs.",
+            ),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "An Engineer activates it with Activate {version} on Inspection, or with Activate Selected on"
+                " Training.",
+            ),
+        ),
+        ErrorCode(
             "AOI-TST-001",
             QT_TRANSLATE_NOOP("Errors", "AI model, recipe, scale or Golden board changed since the run"),
             QT_TRANSLATE_NOOP(
@@ -880,6 +1014,16 @@ CODES: dict[str, ErrorCode] = {
                 "Errors",
                 "Run Test on a frozen dataset version's locked validation set, with a labeller agreement check stored"
                 " on Training's Datasets tab, then make the report from that run.",
+            ),
+        ),
+        ErrorCode(
+            "AOI-TST-008",
+            QT_TRANSLATE_NOOP("Errors", "Targets not saved"),
+            QT_TRANSLATE_NOOP("Errors", "The targets of {board_model} were not saved: {reason}. Nothing was changed."),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Enter each target within its range and who at the customer agreed them, then save again; the next run"
+                " keeps the targets in force until then.",
             ),
         ),
         ErrorCode(
@@ -1164,7 +1308,7 @@ CODES: dict[str, ErrorCode] = {
         ErrorCode(
             "AOI-SET-007",
             QT_TRANSLATE_NOOP("Errors", "Unexpected error"),
-            QT_TRANSLATE_NOOP("Errors", "An unexpected error ({error_type}) stopped the last action{context}."),
+            QT_TRANSLATE_NOOP("Errors", "An unexpected error stopped the last action{context}{reason}."),
             QT_TRANSLATE_NOOP(
                 "Errors",
                 "Try again; if it happens again, restart the app and send the log file (the workspace's logs folder) "
@@ -1223,9 +1367,8 @@ CODES: dict[str, ErrorCode] = {
             ),
             QT_TRANSLATE_NOOP(
                 "Errors",
-                "Close the other program (another copy of this app, a database tool or a backup), then choose the "
-                "same folder in the window that opens next; or choose another workspace folder there. Cancel there "
-                "closes the app.",
+                "Close the other program (a database tool or a backup), then choose the same folder in the window "
+                "that opens next; or choose another workspace folder there. Cancel there closes the app.",
             ),
         ),
         ErrorCode(
@@ -1233,12 +1376,11 @@ CODES: dict[str, ErrorCode] = {
             QT_TRANSLATE_NOOP("Errors", "Workspace database busy"),
             QT_TRANSLATE_NOOP(
                 "Errors",
-                "Another program holds the workspace database {path}, so the app could not write to it: {error}.",
+                "Another program holds the workspace database {path}, so the app could not write to it.",
             ),
             QT_TRANSLATE_NOOP(
                 "Errors",
-                "Close the other program (another copy of this app, a database tool or a backup), then do the last "
-                "action again.",
+                "Close the other program (a database tool or a backup), then do the last action again.",
             ),
         ),
         ErrorCode(
@@ -1257,8 +1399,7 @@ CODES: dict[str, ErrorCode] = {
             QT_TRANSLATE_NOOP("Errors", "The demo bundle {path} cannot be used: {reason}."),
             QT_TRANSLATE_NOOP(
                 "Errors",
-                "Reinstall the app, or from the sources run python tools/make_demo_bundle.py. Nothing in the "
-                "production workspace was changed.",
+                "Reinstall the app, which puts the demo bundle back. Nothing in the production workspace was changed.",
             ),
         ),
         ErrorCode(
@@ -1295,6 +1436,20 @@ CODES: dict[str, ErrorCode] = {
             QT_TRANSLATE_NOOP(
                 "Errors",
                 "Ask an Admin to restore the workspace from its backup (installation guide, Backup and restore).",
+            ),
+        ),
+        ErrorCode(  # one sentence and one button when the copy open cannot be brought to the front (A6, F12)
+            "AOI-SET-019",
+            QT_TRANSLATE_NOOP("Errors", "App already open"),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "AOI PoC Inspector is already open on this workspace: switch to it on the taskbar, or, if it is not "
+                "there, ask whoever has it open on another account or PC to close it.",
+            ),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Switch to the copy that is open, on the taskbar; if it is open on another account or another PC, have "
+                "it closed there and start the app again. This start changed nothing in the workspace.",
             ),
         ),
     )

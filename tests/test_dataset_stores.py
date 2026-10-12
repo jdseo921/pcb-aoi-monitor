@@ -62,7 +62,7 @@ def test_req_trn_017_key_saved_only_with_its_store(
     monkeypatch.setattr(ctx.db, "add_audit", add)
     monkeypatch.setattr(keys, "write", lambda name, secret: (_ for _ in ()).throw(OSError("Access is denied")))
     refused = refusal(as_admin, ctx, ctx.create_store, "Acme")
-    assert refused == ("AOI-TRN-044", "this station's key store refused the key (Access is denied)")
+    assert refused == ("AOI-TRN-044", "this station's key store refused the key")  # its words: the detail (A5)
     assert ctx.stores() == [] and ctx.audit_entries(action="store.create") == []
 
 
@@ -184,7 +184,8 @@ def test_req_trn_017_interrupted_move_in_resumes(
     code, reason = refusal(as_admin, ctx, ctx.move_in, "RES", acme)
     samples = ctx.samples("RES")
     stopped = samples[2]["path"]
-    assert code == "AOI-TRN-044" and reason.startswith(f"{Path(stopped).relative_to(ctx.settings.root).as_posix()} did")
+    left_plain = "could not be written encrypted, and was left plain: the drive is full"
+    assert code == "AOI-TRN-044" and reason == f"{Path(stopped).relative_to(ctx.settings.root).as_posix()} {left_plain}"
     assert Path(stopped).read_bytes() == sources[2].read_bytes() and (ctx.store_of("RES") or {})["uuid"] == acme
     assert ctx.load_image(samples[0]["path"]).shape == (32, 32, 3)
     assert refusal(ctx.load_image, stopped)[1].endswith(" is not encrypted")
@@ -369,7 +370,7 @@ def test_req_trn_017_interrupted_shred_resumes(
     delete = keys.delete
     monkeypatch.setattr(keys, "delete", lambda n: (_ for _ in ()).throw(OSError("Access is denied")))
     refused = refusal(as_admin, ctx, ctx.shred_store, store["uuid"])
-    assert refused == ("AOI-TRN-044", "this station's key store did not delete the key (Access is denied)")
+    assert refused == ("AOI-TRN-044", "this station's key store did not delete the key")  # its words: the detail
     assert keys.read(name) is not None and not ctx.stores()[0]["shredded_at"] and all(p.exists() for p in paths)
     assert ctx.load_image(paths[0]).shape == (32, 32, 3) and ctx.audit_entries(action="store.shred") == []
     monkeypatch.setattr(keys, "delete", delete)
@@ -390,7 +391,8 @@ def test_req_trn_017_interrupted_shred_resumes(
     monkeypatch.setattr(Path, "unlink", held)
     code, reason = refusal(as_admin, ctx, ctx.shred_store, store["uuid"])
     stuck = paths[1].relative_to(root).as_posix()
-    assert code == "AOI-TRN-044" and reason.startswith(f"1 file(s) would not go, {stuck} first ([Errno 13] The file")
+    denied = "the system refused access to it: it may be read-only, or open in another app"  # its words: the detail
+    assert code == "AOI-TRN-044" and reason == f"1 file(s) would not go, {stuck} first ({denied}); shred it again"
     assert reason.endswith("; shred it again") and [p.exists() for p in paths] == [False, True, False]
     assert ctx.stores()[0]["shredded_at"]
     monkeypatch.setattr(Path, "unlink", unlink)

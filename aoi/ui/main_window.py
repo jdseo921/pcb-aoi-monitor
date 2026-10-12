@@ -5,8 +5,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
-from PySide6.QtCore import QModelIndex, QPersistentModelIndex, QSize, Qt, QTimer
-from PySide6.QtGui import QAction, QCloseEvent, QColor, QKeySequence, QPainter
+from PySide6.QtCore import QEvent, QModelIndex, QObject, QPersistentModelIndex, QSize, Qt, QTimer
+from PySide6.QtGui import QAction, QCloseEvent, QColor, QKeySequence, QMouseEvent, QPainter, QShowEvent
 from PySide6.QtWidgets import (
     QApplication,
     QComboBox,
@@ -30,17 +30,18 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from ..config import APP_NAME, APP_VERSION, use_workspace
-from ..core import datasets, demo
+from ..config import APP_NAME, APP_VERSION, Settings, use_workspace
+from ..core import datasets, demo, drift
 from ..core.run_progress import RunProgress
-from ..core.services import AppContext
+from ..core.services import REQUIRED_ROLE, ROLES_FROM, AppContext, workspace_in_use
 from ..errors import AoiError
 from . import theme
 from .demo_workspace import boards
-from .errors import install_excepthook, open_workspace, show_error
+from .errors import install_excepthook, open_workspace, phrase_text, show_already_open, show_error
 from .pages.base import (
     QT_TRANSLATE_NOOP,
     Page,
+    RoleGates,
     button,
     page_text,
     restyle_table,
@@ -75,44 +76,64 @@ class HomePage(Page):
     subtitle = QT_TRANSLATE_NOOP("Page", "Stage 1 workflow: upload → train → validate → inspect")
 
     STEPS = [
-        # (step, name, what it does, page); the name is also the key of its status label. Words from the Charter list.
+        # (step, name, what it does, page, the AppContext call whose role the step needs, None for every role); the name
+        # is also the key of its status label. Words from the Charter list.
         (
             "1",
             QT_TRANSLATE_NOOP("HomePage", "Upload samples"),
             QT_TRANSLATE_NOOP("HomePage", "Add good (OK) and defective (NG) photos of this board model."),
             "Training",
+            "import_samples",
         ),
         (
             "2",
             QT_TRANSLATE_NOOP("HomePage", "Train AI model"),
             QT_TRANSLATE_NOOP("HomePage", "The app learns the Golden board and an AI model from your OK boards."),
             "Training",
+            "start_training",
         ),
         (
             "3",
             QT_TRANSLATE_NOOP("HomePage", "Tune recipe"),
             QT_TRANSLATE_NOOP("HomePage", "Draw ROIs and adjust thresholds on the Golden board."),
             "Recipe Editor",
+            "save_recipe",
         ),
         (
             "4",
             QT_TRANSLATE_NOOP("HomePage", "Validate"),
             QT_TRANSLATE_NOOP("HomePage", "Test the AI model on the locked validation set."),
             "AI Model Test",
+            "test_dataset",
         ),
         (
             "5",
             QT_TRANSLATE_NOOP("HomePage", "Inspect"),
             QT_TRANSLATE_NOOP("HomePage", "Run boards; open Compare to see why any board was called NG."),
             "Inspection",
+            None,
         ),
         (
             "6",
             QT_TRANSLATE_NOOP("HomePage", "Export"),
-            QT_TRANSLATE_NOOP("HomePage", "CSV, overlay images and PDF reports for the customer."),
+            QT_TRANSLATE_NOOP(
+                "HomePage",
+                "CSV files and overlay images on Logs & Export; the PDF reports on AI Model Test (Export Report, "
+                "Validation Report…).",
+            ),
             "Logs & Export",
+            "export_csv_files",
         ),
     ]
+
+    # each drift measure out of its control limits, as the Inspect card names it (REQ-INSP-019)
+    DRIFT_NAMES = {
+        drift.NG_RATE: QT_TRANSLATE_NOOP("HomePage", "NG rate up"),
+        drift.WARN_RATE: QT_TRANSLATE_NOOP("HomePage", "WARN rate up"),
+        drift.OK_SCORE: QT_TRANSLATE_NOOP("HomePage", "OK boards' AI score up"),
+        drift.ALIGNMENT: QT_TRANSLATE_NOOP("HomePage", "alignment to the Golden board down"),
+        drift.FALSE_CALLS: QT_TRANSLATE_NOOP("HomePage", "false calls up"),
+    }
 
     def __init__(self, ctx: AppContext, shell: MainWindow) -> None:
         super().__init__(ctx, shell)
@@ -121,11 +142,13 @@ class HomePage(Page):
         grid.setSpacing(theme.SPACE)
         self.status_labels: dict[str, QLabel] = {}
         self.training_line = QLabel()  # on Train AI model's card while a training run goes on (REQ-TRN-008)
+        self._training = False  # whether the last show_training saw a run going on
         self.training_line.setWordWrap(True)
         self.training_line.hide()
         self.headings: list[tuple[QLabel, str, str]] = []  # each card's heading, its number and its name
         self.links: list[tuple[QPushButton, str]] = []  # each card's button and the page it opens
-        for i, (n, name, desc, target) in enumerate(self.STEPS):
+        self.who: dict[str, QLabel] = {}  # each card's line naming the role its step needs (REQ-USR-001)
+        for i, (n, name, desc, target, call) in enumerate(self.STEPS):
             card = QFrame()
             card.setObjectName("card")
             cl = QVBoxLayout(card)
@@ -134,11 +157,15 @@ class HomePage(Page):
             d = QLabel(self.tr(desc))
             d.setWordWrap(True)
             d.setObjectName("muted")
+            who = QLabel(self._who(call))
+            who.setWordWrap(True)
+            self.who[name] = who
             st = QLabel("")
             st.setWordWrap(True)
             self.status_labels[name] = st
             cl.addWidget(h)
             cl.addWidget(d)
+            cl.addWidget(who)
             cl.addStretch(1)
             cl.addWidget(st)
             if name == "Train AI model":
@@ -153,6 +180,13 @@ class HomePage(Page):
         self.root.addWidget(self.empty)
         self.root.addStretch(1)
 
+    def _who(self, call: str | None) -> str:
+        """The role a step needs, as its card says it to every role: the role AppContext's `call` requires and those
+        above it (REQUIRED_ROLE), or every role for a step with no call that checks one."""
+        if call is None:
+            return self.tr("Open to every role.")
+        return self.tr("Needs the {roles} role.").format(roles=phrase_text(ROLES_FROM[REQUIRED_ROLE[call]]))
+
     def _heading(self, n: str, name: str) -> str:
         """A card's heading: its step number, large in the accent colour, then its name."""
         return (
@@ -165,12 +199,16 @@ class HomePage(Page):
             h.setText(self._heading(n, name))
 
     def show_training(self, progress: RunProgress | None, running: bool) -> None:
-        """Train AI model's line while a training run goes on, with its latest report; hidden once it ends."""
+        """Train AI model's line while a training run goes on, with its latest report; hidden once it ends, when the
+        cards shown say what the run left: its version active, or trained and not active (ADR 0018)."""
         if running:
             percent, left = (progress.percent, progress.left_s) if progress else (0, None)
             line = self.tr("Training running {percent} % · {left}")
             self.training_line.setText(line.format(percent=percent, left=time_left_text(left)))
         self.training_line.setVisible(running)
+        ended, self._training = self._training and not running, running
+        if ended and self.isVisible():
+            self.on_show()
 
     def _sync_links(self) -> None:
         """Each card's button opens its page, or, for a page the role may not open, is greyed and reads "For Engineer /
@@ -189,7 +227,7 @@ class HomePage(Page):
         bm = self.board_model
         self.cards.setVisible(bool(bm))
         if not bm:
-            self.empty.show_state(*self.no_board_model())
+            self.show_empty(self.empty, *self.no_board_model())
             return
         self.empty.hide()
         st = self.ctx.board_status(bm)
@@ -199,9 +237,14 @@ class HomePage(Page):
             if st.ok_samples or st.ng_samples
             else self.tr("No samples yet. Add at least {count} OK boards.").format(count=FIRST_OK)
         )
+        waiting = None if st.model_version else self.ctx.inactive_model(bm)  # trained, not active: named (D3)
         self.status_labels["Train AI model"].setText(
             self.tr("Active AI model {version}").format(version=st.model_version)
             if st.model_version
+            else self.tr("AI model {version} trained, not active. Activate it on Training.").format(
+                version=waiting["version"]
+            )
+            if waiting
             else self.tr("No AI model yet. Train one from your OK boards.")
         )
         self.status_labels["Tune recipe"].setText(
@@ -220,6 +263,9 @@ class HomePage(Page):
         if st.reviewed:  # the calls reviewed on the line, and how many were false (REQ-INSP-013)
             reviewed = self.tr("False calls {false_calls} of {reviewed} reviewed")
             inspected += "\n" + reviewed.format(false_calls=st.false_calls, reviewed=st.reviewed)
+        if st.drifted:  # measures out of their control limits now: look at the line (REQ-INSP-019)
+            names = ", ".join(self.tr(self.DRIFT_NAMES[m]) for m in st.drifted)
+            inspected += "\n" + self.tr("Drift: {measures}. See the alarm log on Inspection.").format(measures=names)
         self.status_labels["Inspect"].setText(
             inspected if st.inspected else self.tr("No boards inspected yet. Load images on Inspection.")
         )
@@ -273,6 +319,23 @@ class _NavDelegate(QStyledItemDelegate):
         painter.restore()
 
 
+class _GreyedEntryPress(QObject):
+    """A press on a greyed sidebar entry says on the status bar which role opens its page, as its tooltip does: a
+    touch screen shows no tooltip, and a greyed entry takes no click (REQ-USR-001)."""
+
+    def __init__(self, win: MainWindow) -> None:
+        super().__init__(win)
+        self.win = win
+
+    def eventFilter(self, watched: QObject, e: QEvent) -> bool:  # noqa: N802 (Qt's name)
+        if e.type() == QEvent.Type.MouseButtonPress and isinstance(e, QMouseEvent):
+            it = self.win.nav.itemAt(e.position().toPoint())
+            title = it.data(Qt.ItemDataRole.UserRole) if it is not None else None
+            if it is not None and title in self.win.pages and not it.flags() & Qt.ItemFlag.ItemIsEnabled:
+                self.win.navigate(title)  # refused, and says why on the status bar
+        return False
+
+
 class _PageStack(QStackedWidget):
     """The pages in the scroll area round them (#104): as wide as the widest page needs, as a QStackedWidget is, so
     every page keeps the width it was laid out for, but only as tall as the page shown needs. A QStackedWidget asks
@@ -300,13 +363,17 @@ class _PageStack(QStackedWidget):
 
 
 class MainWindow(QMainWindow):
-    def __init__(self, ctx: AppContext) -> None:
+    def __init__(self, ctx: AppContext, carried: str | None = None) -> None:
+        """The window on `ctx`'s workspace. `carried`: the role of the user signed in in the window before, when a
+        workspace switch builds this one (`switch_workspace`)."""
         super().__init__()
         self.ctx = ctx
         self.board_model: str | None = None
         self.last_inspected: tuple[str, InspectionResult, int | None] | None = None  # path, result, record id
         self.in_demo = demo.is_demo(ctx.settings.root)  # the demo workspace is open (REQ-SET-007)
         self.switched = False  # closed by switch_workspace, which stopped the work and closed the context already
+        self._noted = False  # this window noted beside the workspace's lock, for a second start to find (F12)
+        self.gates = RoleGates(self, ctx, self.status)  # the header's controls a role may not use (REQ-USR-001)
         title = f"{APP_NAME} {APP_VERSION}"
         self.setWindowTitle(self.tr("{title} · Demo").format(title=title) if self.in_demo else title)
         self.resize(1920, 1080)
@@ -361,6 +428,7 @@ class MainWindow(QMainWindow):
             if cls.badge:
                 self._badges[cls.title] = self._badge(it, cls.badge, cls.badge_tip)
         self.nav.currentItemChanged.connect(self._on_nav)
+        self.nav.viewport().installEventFilter(_GreyedEntryPress(self))
         # Ctrl+1 to Ctrl+9 open the sidebar's pages in its order, from any page, and F1 lists the keys of the page
         # shown (Engineering standard, "Short paths": one key to any page; "Input": every action by keyboard)
         self.page_keys: dict[str, str] = {}
@@ -381,14 +449,28 @@ class MainWindow(QMainWindow):
         self._training_timer.timeout.connect(self.show_training)
         self._training_timer.start(1000)
         self._reload_board_models()
-        # no board model yet: start with an Admin to set the station up; the role is the stored one either way (#197)
-        self.set_user(ctx.start_user(setting_up=not ctx.board_models()))
+        # the demo, and a station with no board model yet to set up, start with an Admin; any other start with the user
+        # who signed in last on the station; a workspace switch with the first user of the role carried, if the folder
+        # holds one; the role is the stored one either way (#197). Audited as user.start, which no later start reads,
+        # so a role carried, the demo's Admin say, is never the station's next start user (REQ-USR-003)
+        start = ctx.start_user(setting_up=not ctx.board_models())
+        if carried is not None:
+            start = next((str(u["name"]) for u in ctx.users() if u["role"] == carried), start)
+        ctx.sign_in(start, start=True)
+        self.set_user(start)
         if self.in_demo:  # its boards wait on Inspection as a scripted run at the demo's pace (REQ-SET-009)
             cast(InspectionPage, self.pages["Inspection"]).play(
                 boards(ctx.settings.root), ctx.settings.demo_pace_s, False
             )
-        if not self.navigate(ctx.settings.last_page):  # reopen where the last session was (REQ-LOG-005)
+        # where the last session was (REQ-LOG-005); the demo after a normal close at Home, where its scripts begin
+        if not self.navigate(ctx.settings.last_page):
             self.navigate("Home")
+        resumed = carried is None and not self.in_demo and bool(ctx.board_models()) and start == ctx.last_signed_in()
+        if resumed:  # someone else may be at the station now
+            said = self.tr(
+                "Signed in as {user} ({role}), who signed in last on this station. Not you? Press Switch User."
+            )
+            self.status(said.format(user=start, role=role_text(ctx.role)), ms=0)
 
     # --- header -------------------------------------------------------------------
     def _header(self) -> QWidget:
@@ -410,8 +492,8 @@ class MainWindow(QMainWindow):
         self.bm_combo.setMinimumWidth(theme.FIELD_W)
         self.bm_combo.currentTextChanged.connect(self._on_board_model)
         layout.addWidget(self.bm_combo)
-        new = button(self.tr("+ New"), slot=self.new_board_model)
-        layout.addWidget(new)
+        self.btn_new = button(self.tr("+ New"), slot=self.new_board_model)  # greyed for an Operator (_sync_nav)
+        layout.addWidget(self.btn_new)
         layout.addStretch(1)
         self.training_link = button("", slot=lambda: self.navigate("Training"))  # while a training run goes on
         self.training_link.hide()
@@ -423,7 +505,7 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.user_label)
         switch = button(self.tr("Switch User"), slot=self.switch_user)
         layout.addWidget(switch)
-        for control in (self.bm_combo, new, self.training_link, self.exit_presenter, switch):
+        for control in (self.bm_combo, self.btn_new, self.training_link, self.exit_presenter, switch):
             size_class(control, "T")  # header controls are operator targets (frame sketch, size class T)
         return h
 
@@ -479,7 +561,13 @@ class MainWindow(QMainWindow):
         names = [self.tr("{user} ({role})").format(user=u["name"], role=role_text(u["role"])) for u in users]
         sel, ok = QInputDialog.getItem(self, self.tr("Switch user"), self.tr("User"), names, 0, False)
         if ok:
-            self.set_user(users[names.index(sel)]["name"])
+            name = str(users[names.index(sel)]["name"])
+            try:
+                self.ctx.sign_in(name)  # audited, and the station's next start signs them in again
+            except AoiError as e:
+                show_error(self, self.ctx.report_error(e, "Switch user"))
+                return
+            self.set_user(name)
 
     def set_user(self, user: str) -> None:
         """Sign `user` in with the role the users table holds for them (#197); the header and the pages follow it."""
@@ -489,6 +577,7 @@ class MainWindow(QMainWindow):
         self._sync_nav()
         for page in self.pages.values():  # shown or not: what a page keeps for the role before goes now
             page.on_user_changed()
+            page.limits_changed()  # an empty state names what the new role may not do
         cur = self.stack.currentWidget()
         if isinstance(cur, Page) and role not in cur.roles:
             self.navigate("Home")
@@ -497,8 +586,9 @@ class MainWindow(QMainWindow):
 
     def _sync_nav(self) -> None:
         """The sidebar and the header for the role and the theme. An entry the role may not open is greyed, its tooltip
-        naming the roles that may, and its badge hidden. In the presenter theme the Admin pages and 3D Profile leave the
-        sidebar, with a heading left over none, and Exit presenter theme shows to an Admin only (REQ-SET-008, Q49)."""
+        naming the roles that may, and its badge hidden. In the presenter theme 3D Profile, and the Admin pages for
+        every role but the Admin, leave the sidebar, with a heading left over none, and Exit presenter theme shows to an
+        Admin only (REQ-SET-008, Q49)."""
         role = self.ctx.role
         for title, it in self._items.items():
             allowed = role in self.pages[title].roles
@@ -517,12 +607,17 @@ class MainWindow(QMainWindow):
             heading.setForeground(QColor(theme.TEXT_MUTED))  # a heading, not a disabled control: 7.4:1 (#239)
             heading.setHidden(all(self.hidden(t) for t in titles))
         self.exit_presenter.setVisible(theme.presenter() and role in SettingsPage.roles)  # where it was switched on
+        self.gates.gate(self.btn_new, "ensure_board_model")  # never hidden: greyed, saying who may (REQ-USR-001)
 
     def hidden(self, title: str) -> bool:
-        """Whether page `title` is out of the sidebar, and cannot be opened: in the presenter theme, a page for the
-        Admin alone (Settings) and a page marked not `in_presenter_theme` (3D Profile) (REQ-SET-008)."""
+        """Whether page `title` is out of the sidebar, and cannot be opened: in the presenter theme, a page marked not
+        `in_presenter_theme` (3D Profile), and a page for the Admin alone (Settings) for every other role (REQ-SET-008).
+        The Admin presenting keeps Settings, so Reset Demo is three clicks from any page and the theme stays on (A4 of
+        the 2026-10 business-readiness brief); Settings then leaves out its hardware table (`SettingsPage.restyle`)."""
         page = self.pages[title]
-        return theme.presenter() and (page.roles == ("Admin",) or not page.in_presenter_theme)
+        if not theme.presenter():
+            return False
+        return not page.in_presenter_theme or (page.roles == ("Admin",) and self.ctx.role not in page.roles)
 
     def _set_theme(self, presenter: bool) -> None:
         theme.use(presenter)
@@ -628,10 +723,14 @@ class MainWindow(QMainWindow):
         page = self.pages[cur.data(Qt.ItemDataRole.UserRole)]
         self.stack.setCurrentWidget(page)
         page.on_show()
-        if self.ctx.settings.last_page != page.title:
-            self.ctx.settings.last_page = page.title
+        self._save_page(page.title)
+
+    def _save_page(self, title: str) -> None:
+        """`title` as the page the next start opens (REQ-LOG-005), unaudited, as no user asks for it."""
+        if self.ctx.settings.last_page != title:
+            self.ctx.settings.last_page = title
             try:  # that key alone, over the file as it is now: a hand edit made while the app runs stays (#170)
-                self.ctx.settings.save_keys({"last_page": page.title})
+                self.ctx.settings.save_keys({"last_page": title})
             except (OSError, AoiError):  # a file that cannot be written, or read (AOI-SET-010): left as it is
                 self.ctx.log.warning("settings.save_failed", exc_info=True)
 
@@ -654,6 +753,14 @@ class MainWindow(QMainWindow):
         """A message in the status bar, for 8 s by default; `ms=0` keeps it until the next message replaces it."""
         self.statusBar().showMessage(msg, ms)
 
+    def showEvent(self, event: QShowEvent) -> None:
+        """Once shown, the window has the system's handle: noted beside the workspace's lock, a second start of the app
+        on this workspace brings this window to the front (A6 of the 2026-10 business-readiness brief, F12)."""
+        super().showEvent(event)
+        if not self._noted:
+            self._noted = True
+            self.ctx.note_window(int(self.winId()))
+
     # --- closing (#171) -------------------------------------------------------------
     def closeEvent(self, event: QCloseEvent) -> None:
         """Closing the window stops the background work and closes the context; while work runs it asks first, and No
@@ -661,12 +768,15 @@ class MainWindow(QMainWindow):
         if not self.switched and not self._may_stop_work(self.tr("close the app")):
             event.ignore()
             return
+        if self.in_demo and not self.switched:  # closed, the demo opens at Home next, where its scripts begin; after a
+            self._save_page("Home")  # crash, on the page it showed, so the presenter carries on (REQ-LOG-005)
         self.ctx.close()  # every job asked to stop and waited for, then the database and the log file closed
         drop_queued(self.ctx.jobs)  # slots the jobs queued before they stopped would meet the closed context
         event.accept()
 
-    def _may_stop_work(self, then: str) -> bool:
-        """True when no work runs, or the user agrees to stop it before `then`; the status bar says it is stopping."""
+    def _may_stop_work(self, then: str, agreed: bool = False) -> bool:
+        """True when no work runs, or the user agrees to stop it before `then`, or `agreed` to it already in the one
+        question before (Reset Demo's); the status bar says it is stopping."""
         if self.ctx.jobs.idle():
             return True
         yes, no = QMessageBox.StandardButton.Yes, QMessageBox.StandardButton.No
@@ -675,21 +785,32 @@ class MainWindow(QMainWindow):
             "it and {then}? Training stops without saving an AI model, so the active one stays; an AI model "
             "test finishes its folder first; an export or import keeps the files copied so far."
         ).format(then=then)
-        if QMessageBox.question(self, self.tr("Stop the running work?"), question, yes | no, no) != yes:
+        if not agreed and QMessageBox.question(self, self.tr("Stop the running work?"), question, yes | no, no) != yes:
             return False
         self.status(self.tr("Stopping the running work…"), ms=0)
         self.statusBar().repaint()  # the wait that follows holds the UI thread until each job has stopped
         return True
 
     # --- demo workspace (REQ-SET-007, REQ-SET-009) ----------------------------------
-    def switch_workspace(self, folder: Path | None, reset: bool = False, play: bool = False) -> MainWindow | None:
+    def switch_workspace(
+        self, folder: Path | None, reset: bool = False, play: bool = False, agreed: bool = False
+    ) -> MainWindow | None:
         """Close this workspace and open `folder`, the demo workspace (None: the station's own), in a new window on
         the same page, signed in as a user of the same role; the demo is put back as the bundle holds it first when
-        `reset`, and its scripted run started when `play`. Running work is stopped first, if the user agrees; a folder
-        that does not open opens the one before again. Returns the new window, or None when nothing was switched."""
-        if not self._may_stop_work(self.tr("switch the workspace")):
+        `reset`, and its scripted run started when `play`. Running work is stopped first, if the user agrees, or
+        `agreed` already (Reset Demo's question names it, so a reset is three clicks while boards run too); a folder
+        that does not open opens the one before again. A workspace another copy of the app has open is not switched to:
+        that copy comes to the front, or one sentence says it is open (AOI-SET-019; A6 of the 2026-10 business-readiness
+        brief, F12), and this window stays as it is. Returns the new window, or None when nothing was switched."""
+        target = folder if folder is not None else self._station_root()
+        if target is not None and target.resolve() != self.ctx.settings.root.resolve() and workspace_in_use(target):
+            show_already_open(AoiError("AOI-SET-019", path=str(target)), target, self, wait=False)
+            return None
+        if not self._may_stop_work(self.tr("switch the workspace"), agreed):
             return None
         role, page, keys = self.ctx.role, self._page_title(), self.ctx.credentials
+        if self.in_demo:  # the demo, left, opens at Home next as after a close; saved before another settings.json
+            self._save_page("Home")
         QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)  # the busy indicator while the folders are copied
         try:
             self.switched = True
@@ -706,7 +827,7 @@ class MainWindow(QMainWindow):
             if ctx is None:
                 use_workspace(before)
                 ctx = open_workspace()
-            win = build_window(ctx) if ctx is not None else None
+            win = build_window(ctx, role) if ctx is not None else None  # signed in as the role carried
         finally:
             QApplication.restoreOverrideCursor()
         if win is None:  # nothing opens: the app closes, as at a start that opens nothing
@@ -714,8 +835,7 @@ class MainWindow(QMainWindow):
                 ctx.close()
             self.close()
             return None
-        win._sign_in_as(role)
-        win.navigate(page)
+        win.navigate("Home" if reset and theme.presenter() else page)  # the projector never left on Settings
         if failed is not None:
             show_error(win, win.ctx.report_error(failed, QT_TRANSLATE_NOOP("Errors", "demo reset")))
         elif took is not None:
@@ -728,31 +848,39 @@ class MainWindow(QMainWindow):
         self.deleteLater()
         return win
 
+    @staticmethod
+    def _station_root() -> Path | None:
+        """The station's own workspace folder, as its settings.json names it; None when that file cannot be read, which
+        the switch then shows as it opens it."""
+        before = use_workspace(None)
+        try:
+            return Settings.load().root
+        except AoiError:
+            return None
+        finally:
+            use_workspace(before)
+
     def play_demo(self) -> None:
         """Inspection with the demo's boards queued as a scripted run at its pace, and Start pressed (REQ-SET-009)."""
         page = cast(InspectionPage, self.pages["Inspection"])
         if self.navigate("Inspection"):
             page.play(boards(self.ctx.settings.root), self.ctx.settings.demo_pace_s)
 
-    def _sign_in_as(self, role: str) -> None:
-        """Sign in the first user the workspace holds with `role`, if it holds one; else the start's user stays."""
-        if (name := next((u["name"] for u in self.ctx.users() if u["role"] == role), None)) is not None:
-            self.set_user(str(name))
-
     def _page_title(self) -> str:
         cur = self.stack.currentWidget()
         return cur.title if isinstance(cur, Page) else "Home"
 
 
-def build_window(ctx: AppContext) -> MainWindow | None:
-    """The main window at start-up, with the unhandled-error hook in place (REQ-LOG-005, REQ-SET-019), or None when
-    it could not be built. The hook goes in before the window exists, so a slot that raises while the pages are built
-    is logged and shown too, and again with the window as the dialog's parent once it is built. An error raised out of
-    building it (a page that cannot read the database, #205) is shown as one coded dialog with its trace in the log;
-    the caller closes the workspace and ends the app."""
+def build_window(ctx: AppContext, carried: str | None = None) -> MainWindow | None:
+    """The main window at start-up, or at a workspace switch with the role `carried` from the window before, with the
+    unhandled-error hook in place (REQ-LOG-005, REQ-SET-019), or None when it could not be built. The hook goes in
+    before the window exists, so a slot that raises while the pages are built is logged and shown too, and again with
+    the window as the dialog's parent once it is built. An error raised out of building it (a page that cannot read the
+    database, #205; a start's sign-in whose audit entry cannot be written, so no one is signed in unaudited) is shown
+    as one coded dialog with its trace in the log; the caller closes the workspace and ends the app."""
     install_excepthook(ctx, None)
     try:
-        win = MainWindow(ctx)
+        win = MainWindow(ctx, carried)
     except Exception as e:
         show_error(None, ctx.report_error(e, QT_TRANSLATE_NOOP("Errors", "start-up")))
         return None

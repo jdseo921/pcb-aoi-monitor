@@ -40,6 +40,7 @@ from ..widgets.empty_state import EmptyState
 from ..widgets.image_view import ImageView
 from ..workers import Worker, start
 from .base import QT_TRANSLATE_NOOP, Page, WrappedLine, breakable, button, cell_item, fill_table, make_table
+from .model_test_targets import TargetsSheet
 
 if TYPE_CHECKING:
     from ..main_window import MainWindow
@@ -90,6 +91,12 @@ class ModelTestPage(Page):
     title = QT_TRANSLATE_NOOP("Page", "AI Model Test")
     subtitle = QT_TRANSLATE_NOOP("Page", "Labels come from the sub-folder names: ok/ and ng/")
     roles = ("Engineer", "Admin")
+    role_notes = (  # the exports are greyed for a role that may not use them, never hidden (REQ-USR-001)
+        (
+            QT_TRANSLATE_NOOP("ModelTestPage", "Exports and Validation Report… need the {roles} role."),
+            ("export_csv", "export_test_overlays", "export_report"),
+        ),
+    )
 
     def __init__(self, ctx: AppContext, shell: MainWindow) -> None:
         super().__init__(ctx, shell)
@@ -125,6 +132,14 @@ class ModelTestPage(Page):
         self.source.currentIndexChanged.connect(self._source_changed)
         src.addWidget(self.source, 1)
         run_layout.addLayout(src)
+        goals = QHBoxLayout()  # what the next run is held to: targets agreed with the customer before it (REQ-TST-008)
+        self.targets_line = WrappedLine()
+        goals.addWidget(self.targets_line, 1)
+        self.btn_targets = button(self.tr("Agreed Targets…"), slot=self.open_targets)
+        goals.addWidget(self.btn_targets)
+        run_layout.addLayout(goals)
+        self.targets_sheet = TargetsSheet(self.save_targets)
+        run_layout.addWidget(self.targets_sheet)
 
         tiles = QGridLayout()
         self.tiles = {
@@ -227,7 +242,9 @@ class ModelTestPage(Page):
         if self._runs:
             self.history_empty.hide()
         else:
-            self.history_empty.show_state(self.tr("No runs stored yet"), self.tr("Run Test stores each run here."))
+            self.show_empty(
+                self.history_empty, self.tr("No runs stored yet"), self.tr("Run Test stores each run here.")
+            )
 
     def open_run(self) -> None:
         """The run selected on History, shown on Run as it was stored: rows, tiles and previews (REQ-TST-005)."""
@@ -314,12 +331,16 @@ class ModelTestPage(Page):
             type_target=agree["type_target"],
         )
         out.append(f"<p>{e(agreed_on)}</p>")
-        out.append(f"<h3>{self.tr('2. Targets: the proposed defaults / 목표: 제안된 기본값 (draft)')}</h3>")
-        defaults = self.tr(
-            "These are the product's proposed targets. A customer's own targets, agreed in writing before testing, are"
-            " not yet stored with a run: state them beside this table."
-        )
-        out.append(f"<p>{e(defaults)}</p>")
+        out.append(f"<h3>{self.tr('2. Targets / 목표 (draft)')}</h3>")
+        if agreed := data.get("agreed"):  # those in force when the run started, kept with it
+            said = self.tr("Agreed with {who} before testing: recorded by {user} on {date}, before this run started.")
+            said = said.format(who=agreed["agreed_with"], user=agreed["user"], date=to_local(agreed["time"]))
+        else:
+            said = self.tr(
+                "No targets were agreed for {board_model} before this run started, so it is held to the product's"
+                " proposed targets."
+            ).format(board_model=run["board_model"])
+        out.append(f"<p>{e(said)}</p>")
         names = {
             "missed_critical": self.tr("Missed Critical defects"),
             "false_call_rate": self.tr("False call rate"),
@@ -336,11 +357,12 @@ class ModelTestPage(Page):
                 shown = self.tr("{s:.2f} s").format(s=result)
             else:
                 shown = self.tr("not measured")
-            agreed = f"{tg['agreed']:.0%}" if tg["target"] == "false_call_rate" else str(tg["agreed"])
+            target = self._target_value(tg["target"], tg["agreed"])
             met = self.tr("Met") if tg["met"] else self.tr("Not met")
-            rows.append(f"<tr><td>{names[tg['target']]}</td><td>{e(agreed)}</td><td>{e(shown)}</td><td>{met}</td></tr>")
+            rows.append(f"<tr><td>{names[tg['target']]}</td><td>{e(target)}</td><td>{e(shown)}</td><td>{met}</td></tr>")
+        held_to = self.tr("Agreed") if agreed else self.tr("Proposed")
         head = (
-            f"<tr><th>{self.tr('Target')}</th><th>{self.tr('Agreed')}</th><th>{self.tr('Result')}</th>"
+            f"<tr><th>{self.tr('Target')}</th><th>{held_to}</th><th>{self.tr('Result')}</th>"
             f"<th>{self.tr('Met?')}</th></tr>"
         )
         out.append(f"<table border=1 cellpadding=3 cellspacing=0>{head}{''.join(rows)}</table>")
@@ -392,6 +414,73 @@ class ModelTestPage(Page):
         out.append(f"<table border=1 cellpadding=8 cellspacing=0><tr>{heads}</tr>{sign}</table>")
         return "".join(out)
 
+    def _target_value(self, target: str, value: float) -> str:
+        """A target's value as the report and the targets line say it: a count, a percent or seconds."""
+        if target == "false_call_rate":
+            return self.tr("{rate} %").format(rate=f"{value * 100:g}")
+        if target == "seconds_per_image":
+            return self.tr("{s:.2f} s").format(s=value)
+        return str(int(value))
+
+    def _show_targets(self) -> None:
+        """The line naming the targets the next run is held to: those agreed with the customer, with whom, who recorded
+        them and when, or the product's proposed defaults while none were agreed (REQ-TST-008)."""
+        bm = self.board_model
+        self.targets_line.setVisible(bm is not None)
+        self.btn_targets.setVisible(bm is not None)
+        if bm is None:
+            return
+        agreed = self.ctx.validation_targets(bm)
+        values = reporting.target_values(agreed) or reporting.DEFAULT_TARGETS
+        if missed := int(values["missed_critical"]):
+            said = self.tr(
+                "at most {missed} missed Critical defects, a false call rate of {rate} or less, {seconds} or less per"
+                " image"
+            )
+        else:
+            said = self.tr(
+                "no missed Critical defect, a false call rate of {rate} or less, {seconds} or less per image"
+            )
+        said = said.format(
+            missed=missed,
+            rate=self._target_value("false_call_rate", values["false_call_rate"]),
+            seconds=self._target_value("seconds_per_image", values["seconds_per_image"]),
+        )
+        if agreed:
+            line = self.tr("Targets for the next run: {targets}. Agreed with {who}; recorded by {user} on {date}.")
+            line = line.format(
+                targets=said, who=agreed["agreed_with"], user=agreed["user"], date=to_local(agreed["time"])
+            )
+        else:
+            line = self.tr(
+                "Targets for the next run: {targets}. These are the proposed defaults: none were agreed for"
+                " {board_model}."
+            ).format(targets=said, board_model=bm)
+        self.targets_line.setText(line)
+
+    def open_targets(self) -> None:
+        """Agreed Targets…: the sheet with the targets in force, to record those the customer agreed (REQ-TST-008)."""
+        if (bm := self.checked_board_model()) is None:
+            return
+        self.targets_sheet.open_for(bm, self.ctx.validation_targets(bm))
+
+    def save_targets(self) -> None:
+        """Save Targets on the sheet: recorded and audited by the service layer for the board model the sheet was
+        opened for; AOI-TST-008 keeps the sheet open with what was typed."""
+        if (bm := self.targets_sheet.board_model) is None:
+            return
+        missed, rate, seconds, who = self.targets_sheet.values()
+        try:
+            self.ctx.set_validation_targets(bm, missed, rate, seconds, who)
+        except AoiError as e:
+            self.error(e)
+            return
+        self.targets_sheet.close_sheet()
+        self._show_targets()
+        self.shell.status(
+            self.tr("Targets saved for {board_model}: the next run is held to them.").format(board_model=bm)
+        )
+
     def _fill_sources(self) -> None:
         """The board model's frozen versions whose validation set is locked, newest first and picked, then a labelled
         folder (sketch: the dataset version by default)."""
@@ -435,10 +524,16 @@ class ModelTestPage(Page):
             return
         folder = picked
         if not self.ctx.active_model(bm):
+            waiting = self.ctx.inactive_model(bm)  # trained but not active: named, never "no AI model yet" (D3)
             QMessageBox.information(
                 self,
-                self.tr("No AI model"),
-                self.tr("No AI model yet: the results use the Golden board comparison only."),
+                self.tr("AI model not active") if waiting else self.tr("No AI model"),
+                self.tr(
+                    "AI model {version} is not active: the results use the Golden board comparison only. Activate it"
+                    " on Training to test it."
+                ).format(version=waiting["version"])
+                if waiting
+                else self.tr("No AI model yet: the results use the Golden board comparison only."),
             )
         self.btn_run.setEnabled(False)
         self.bar.setVisible(True)
@@ -676,6 +771,8 @@ class ModelTestPage(Page):
         self.shell.last_inspected = (path, res, None)  # a preview is not recorded
 
     def on_board_model_changed(self, name: str | None) -> None:
+        self.targets_sheet.close_sheet()  # never saved under the board model chosen since it opened
+        self._show_targets()
         self._fill_sources()
         self._fill_history()
         if self.run_board_model not in (None, name):  # another board model's run is not shown, previewed or reported
@@ -696,12 +793,23 @@ class ModelTestPage(Page):
             t.set(t.rate)
 
     def on_user_changed(self) -> None:
-        admin = self.ctx.role == "Admin"  # customer results leave the station only by an Admin (Q58, #151)
-        for b in (self.btn_csv, self.btn_img, self.btn_report, self.btn_validation):
-            b.setVisible(admin)
+        self.targets_sheet.close_sheet()  # targets are recorded under the user who typed who agreed them
+        self._show_exports()
+
+    def _show_exports(self) -> None:
+        """Customer results leave the station only by an Admin (Q58, #151): the exports greyed for another role, never
+        hidden, saying who may (REQ-USR-001)."""
+        for b, call in (
+            (self.btn_csv, "export_csv"),
+            (self.btn_img, "export_test_overlays"),
+            (self.btn_report, "export_report"),
+            (self.btn_validation, "export_report"),
+        ):
+            self.role_gate(b, call)
 
     def on_show(self) -> None:
-        self.on_user_changed()
+        self._show_exports()
+        self._show_targets()
         bm = self.board_model
         if self.btn_run.isEnabled():  # a version frozen or locked on Training since; never in the middle of a run
             self._fill_sources()
@@ -720,14 +828,19 @@ class ModelTestPage(Page):
         if self.rows:
             self.empty.hide()
         elif not bm:
-            self.empty.show_state(*self.no_board_model())
+            self.show_empty(self.empty, *self.no_board_model())
+        elif not self.ctx.active_model(bm) and (waiting := self.ctx.inactive_model(bm)):  # trained, not active (D3)
+            heading = self.tr("AI model {version} of {board_model} is not active").format(
+                version=waiting["version"], board_model=bm
+            )
+            self.show_empty(self.empty, heading, *self.empty_step(self.tr("Activate it on Training."), "Training"))
         elif not self.ctx.active_model(bm):
             heading = self.tr("No AI model for {board_model} yet").format(board_model=bm)
-            self.empty.show_state(heading, *self.empty_step(self.tr("Train one on Training."), "Training"))
+            self.show_empty(self.empty, heading, *self.empty_step(self.tr("Train one on Training."), "Training"))
         else:
             what = self.tr("Select a folder with ok/ and ng/ sub-folders, then press Run Test.")
             heading = self.tr("No validation run for {board_model} yet").format(board_model=bm)
-            self.empty.show_state(heading, what, self.tr("Select Test Folder…"), self.pick)
+            self.show_empty(self.empty, heading, what, self.tr("Select Test Folder…"), self.pick)
 
     def export_csv(self) -> None:
         """The run's rows, one per image, as UTF-8 CSV with a BOM, after a question naming their count, as the sketch

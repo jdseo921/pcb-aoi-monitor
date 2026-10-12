@@ -25,17 +25,23 @@ After the message a window asks for another workspace folder: the folder you cho
 `settings.json`, in the default workspace folder, as the Settings page saves it (if that folder cannot be written, the
 next start asks again); Cancel closes the app. The refused folder is left as it is. The same window follows AOI-SET-011:
 the workspace folder cannot be created or opened (a USB or network drive that is not connected) or its `aoi.sqlite` is
-not a database the app can open or write (restore the backup, as above); and AOI-SET-012: another copy of the app has
-the workspace open (on this PC, or in another user's session), or another program holds `aoi.sqlite` (a database
-tool): close it, then choose the same folder. A copy of the app that crashed, or a power cut, never blocks the next
-start. The workspace folder holds an empty file `.aoi.lock` while the app runs; leave it where it is. If another program
-takes hold of `aoi.sqlite` while the app runs, a change that cannot be stored is refused after 5 s with AOI-SET-013:
-close that program and do the change again.
+not a database the app can open or write (restore the backup, as above); and AOI-SET-012: another program holds
+`aoi.sqlite` (a database tool): close it, then choose the same folder. Starting the app while it is already open on the
+same workspace brings the copy that is open to the front and changes nothing, once that copy shows its window if it is
+still starting; so does Load Demo Workspace or Leave Demo Workspace onto a workspace another copy has open, which leaves
+this window as it is. Where Windows cannot do that (the copy is open on another Windows account or PC, or does not
+answer), AOI-SET-019 says in one sentence that the app is already open and to switch to it on the taskbar or have it
+closed, with one OK, and no folder window follows. A copy of the app that crashed, or a power cut, never blocks the next
+start. The workspace folder holds a small file `.aoi.lock` while the app runs, which names the copy that has it open;
+leave it where it is. If another program takes hold of `aoi.sqlite` while the app runs, a change that cannot be stored
+is refused after 5 s with AOI-SET-013: close that program and do the change again.
 
 **Settings the app cannot read.** A `settings.json` that is not valid JSON, not UTF-8 text or not a JSON object stops
 the start with AOI-SET-010, naming the file and, for JSON, the line and column; correct it, or rename it to start with
 the default settings. An error at start-up that has no code of its own shows AOI-SET-007; its details are written to
-the log in the default workspace folder (`logs/aoi-<date>.jsonl`, event `app.start_failed`) for support. One that
+the log in the default workspace folder (`logs/aoi-<date>.jsonl`, event `app.start_failed`) for support, and a coded
+refusal before the workspace opens goes there too, with its code and the technical words of its Show Details (event
+`app.start_refused`). One that
 comes once the workspace is open, while the main window is built (a damaged database, for example), shows
 AOI-SET-007 too, writes its details to that workspace's log (event `error.shown`, context `start-up`) and closes the
 app with the workspace closed; send that log file to support.
@@ -54,17 +60,22 @@ app writes only the settings it changes into `settings.json`, so a line you edit
 image limit, stays; it takes effect at the next start. Saving needs the Admin role (AOI-USR-001) and writes an audit
 entry, `settings.change`, with the values before and after. The last user with the Admin role cannot lose it
 (AOI-USR-002): give another user the Admin role first. A user's role is the one set under Users & roles, at every
-start too: the app starts with the Admin added first while the workspace has no board model, and with
-`operator` after that, so a role you change holds after a restart.
+start too: the app starts with the Admin added first while the workspace has no board model, and after that with
+the user who signed in last on this station with Switch User (`operator` until anyone has; the start's status line
+names them), so a role you change holds after a restart. Each sign-in is an audit entry: `user.sign_in` for Switch
+User, with the user before, and `user.start` for the user a start signs in. The demo workspace always starts with its
+first Admin.
 
 **Presenter theme (demos).** For a demo, an Admin ticks Presenter theme on the Settings page, in its own group. It
 applies at once, with no restart, and stays on after one: a light background, text of 18 pt or more, the verdict at 48
-pt in the same colours and shapes, and black text on the green, red and blue fills. Settings (the Admin page) and 3D
-Profile leave the sidebar for every role (the SYSTEM heading with Settings), so a demo never shows them, and the app
-opens Home in their place; every other page stays where it was. Only an Admin leaves the theme, with Exit presenter
-theme in the header, which the header shows to an Admin alone: an Operator or Engineer at the station switches the user
-to an Admin first (Switch User), then presses it. Each switch, on or off, is saved in `settings.json` as
-`presenter_theme` and written to the audit log as `settings.change`, like a save on Settings.
+pt in the same colours and shapes, and black text on the green, red and blue fills. 3D Profile leaves the sidebar for
+every role, and Settings (the Admin page, with the SYSTEM heading) for every role but the Admin; a page the theme hides
+shows Home in its place, and every other page stays where it was. The Admin presenting keeps Settings, without its
+hardware table, for Reset Demo: three clicks from any page (Settings, Reset Demo, Yes), and the theme stays on after the
+reset, which opens the demo at Home. Only an Admin leaves the theme, with Exit presenter theme in the header, which the
+header shows to an Admin alone: an Operator or Engineer at the station switches the user to an Admin first (Switch
+User), then presses it. Each switch, on or off, is saved in `settings.json` as `presenter_theme` and written to the
+audit log as `settings.change`, like a save on Settings.
 
 **The workspace folder.** The station keeps everything in one folder, its workspace: `aoi.sqlite`, the database of
 records, recipes, AI model versions, users, alarms and the audit trail; `images`, the samples by board model and label;
@@ -104,8 +115,10 @@ model's validation run decide.
 
 **Exports are an Admin's.** Customer images and results leave the station only by an Admin (#151): Export CSV and
 Export Image Overlays on Logs & Export, Export CSV, Export Image Overlays, Export Report and Validation Report… on AI
-Model Test and Export Manifest… on Training show for an Admin alone, and AOI-USR-001 refuses an Engineer. An Engineer
-still archives, and exports an AI model.
+Model Test and Export Manifest… on Training are greyed for an Engineer, and AOI-USR-001 refuses one. An Engineer
+still archives, and exports an AI model. Across the app, a control your role may not use stays in its place, greyed:
+point at it, or press it on a touch screen, and the tooltip or the status bar names the role it needs, and a page's
+empty state lists what your role may not do there.
 
 **Demo workspace.** The demo has a workspace of its own, beside the station's, with its own `settings.json`; section 9
 says how an Admin opens and leaves it.
@@ -166,7 +179,7 @@ can at a smaller scale. When the window is too short for every field of the Thre
 with this notice and the note under the AI score threshold shown, the tab scrolls: use the scroll bar at its right,
 the mouse wheel, or Tab, which brings each field into view.
 
-**Creating a board model.** Press **+ New** in the header (Engineer or Admin; an Operator is refused with AOI-USR-001)
+**Creating a board model.** Press **+ New** in the header (Engineer or Admin; greyed for an Operator, naming the role it needs)
 and type the name under "Board model name (e.g. TBOX-A1 Rev2)"; spaces at its ends are dropped, and an empty name
 creates nothing. The new board model is chosen in the header at once, on every page. A name that exists, typed exactly,
 creates nothing and chooses that board model (the status bar says when it is already chosen); one that differs from an
@@ -182,7 +195,7 @@ cards, each with a link to its page. The steps, in order:
 2. On Training, import OK and NG images and make an OK one the reference with Set Reference (section 3). From then on
    Inspection compares boards with that Golden board, with AOI-TRN-003 in its alarm log while no AI model judges them.
 3. Label, check and freeze a dataset version and lock its validation set (section 3), then train an AI model version
-   from it and activate it (section 4).
+   from it (section 4). The board model's first version goes live when its training ends; you activate each later one.
 4. On the Recipe Editor, set the scale (Scale, above), draw the ROIs and set the thresholds (section 5), and save the
    recipe.
 5. On AI Model Test, test the active AI model on the locked validation set (section 6).
@@ -430,9 +443,9 @@ version active when its board was judged, the recipe revision that judged it (wh
 and the Golden board it was judged against: the CSV export of Logs & Export lists the AI model version and recipe revision of each board, and Compare
 shows a stored board beside the Golden board it was judged against. A run whose recipe turns the AI check off moves only
 when the recipe, the scale or the Golden board changes, as no AI model judges its boards: an activation or a rollback
-during it
-raises no AOI-INSP-013, though the boards after it name the version now active, and neither does a training run, which
-installs its version inactive with its Golden board (section 4, Versions).
+during it raises no AOI-INSP-013 while the Golden board stays, though the boards after it name the version now active,
+and neither does a later training run, which installs its version inactive with its Golden board. A board model's
+first training run does move it, as its version goes live with a new Golden board (section 4, Versions).
 A scale set changes nothing that judges a board while the recipe holds its sizes in px, so it then moves no run, with
 the AI check on or off.
 
@@ -443,13 +456,21 @@ and in a line under the table: for the next boards, train again or activate anot
 own for the board model (section 5). Where such a row's sample counts cannot be read either, its OK/NG cell stays
 empty.
 
-**Versions, activation and rollback.** Each training run adds a version to the AI models list with its Golden board
-and its AI model card, inactive: boards stay judged by the active version until you select the new one and press
-Activate Selected. Activating a version makes its own Golden board the one boards are compared with, in the same step.
-Roll Back goes back, in one click, to the version that was active before the active one, with its Golden board; its
-label names that version ("Roll Back to v1.0") and it is off while there is none. Every activation and rollback is in
-the audit trail with the version and Golden board before and after. A version without an AI model card cannot be made
-active (AOI-TRN-049), nor one whose Golden board cannot be read (AOI-TRN-048); the version in use stays.
+**Versions, activation and rollback.** Each training run adds a version to the AI models list with its Golden board and
+its AI model card. A board model's first version goes live when its training ends, with its Golden board, as there is no
+version in use to keep: the status bar and the run's log say so, and the audit trail records it as an activation by the
+Engineer who trained it, with the reason. Each later version installs inactive: boards stay judged by the active version
+until you select the new one and press Activate Selected. A version trained but not active while none is (one trained
+before this release, or whose activation failed) is named on Home, on AI Model Test and on Inspection, whose line offers
+Activate <version> and whose alarm log says AOI-TRN-051, where they said there was no AI model yet. Activating a version
+makes its own Golden board the one boards are compared with, in the same step. Roll Back goes back, in one click, to the
+version that was active before the active one, with its Golden board; its label names that version ("Roll Back to v1.0")
+and it is off while there is none, as after a board model's first version went live. To stop that first version judging
+boards, untick Use the self-trained AI model in the Recipe Editor and save the recipe (section 5), and to compare boards
+with another Golden board, choose an OK sample with Set Reference (section 3). Test a first version on AI Model Test, on
+the locked validation set, before you rely on its verdicts (section 6). Every activation and rollback is in the audit
+trail with the version and Golden board before and after. A version without an AI model card cannot be made active
+(AOI-TRN-049), nor one whose Golden board cannot be read (AOI-TRN-048); the version in use stays.
 
 **AI model card.** Select a version and press AI Model Card to read its card under the list: what it is and what it
 was trained on (dataset version, customer, seed, code, settings, who trained it and when), the set-up, its thresholds,
@@ -609,7 +630,9 @@ validation on a dataset version also stores recall per defect type, by the type 
 
 **Export Report.** Asks first, naming how many images, missed defects and false calls the report holds; the PDF then gives the rates with their counts and bounds, recall per defect type, each missed defect and false call with its overlay, every row, and the card of the AI model that judged the run. It is written whole or not at all and recorded in the audit trail.
 
-**Validation Report.** On History, select a run made on a frozen dataset version's locked validation set and press Validation Report…: the PDF follows the validation steps a customer signs: the data and the labeller agreement check, the product's proposed targets beside the results (a customer's own targets are not yet stored with a run, so state any agreed ones beside that table), the engine's time per image (reading the file, saving and display are not counted), the locked set's manifest SHA-256, the results with counts and bounds, a page for each missed defect and false call, the AI model card, known limits and signature lines for the customer and the AI lead. A run on a folder, or a board model with no agreement check, has none (AOI-TST-007). The Korean headings are drafts for native review.
+**Agreed Targets.** Before a customer's validation, agree the targets in writing (Customers & Launch, "Validation", step 2) and record them: on Run, the line under Source names the targets the next run is held to, and Agreed Targets… opens a sheet with the most missed Critical defects, the highest false call rate (%) and the longest engine time per image at the 95th percentile (s), the proposed defaults filled in while none were agreed (no missed Critical defect, 5 %, 1 s). Type who at the customer agreed them, and where it is written, then press Save Targets (Esc or Cancel closes the sheet unsaved). They are in force from the next run, which keeps a copy; a run made before keeps the targets it started with, so targets recorded after a run never change its report. Each save is recorded in the audit trail with the targets before it; a value out of its range or no one named is refused with AOI-TST-008.
+
+**Validation Report.** On History, select a run made on a frozen dataset version's locked validation set and press Validation Report…: the PDF follows the validation steps a customer signs: the data and the labeller agreement check, the targets beside the results (those agreed with the customer and in force when the run started, with whom they were agreed, who recorded them and when; else the product's proposed defaults, said to be), the engine's time per image (reading the file, saving and display are not counted), the locked set's manifest SHA-256, the results with counts and bounds, a page for each missed defect and false call, the AI model card, known limits and signature lines for the customer and the AI lead. A run on a folder, or a board model with no agreement check, has none (AOI-TST-007). The Korean headings are drafts for native review.
 
 **Export Image Overlays.** Each run keeps the overlay of each of its rows in the workspace, under
 `results/test_runs/<run UUID>`, for its previews, and Export Report and Validation Report… print the overlay of each
@@ -674,7 +697,7 @@ line under the verdict keeps the error's code. When nothing of the result's pict
 both panes say why, with the message's code (AOI-SET-013 when another program holds the workspace
 database), and the Golden board pane what to do; neither pane ever shows the result opened before.
 The thresholds form, Re-evaluate and Save to Recipe are in the Try other thresholds panel under the two pictures, for
-Engineer and Admin, so the decision table beside the pictures shows all its rows; an Operator does not see it, and
+Engineer and Admin, so the decision table beside the pictures shows all its rows; an Operator sees it greyed, and
 Compare judges an Operator's boards by the board model's recipe, never by values left in the form. Its AI score
 threshold works as on the Recipe Editor (section 5), with the tick under the field, reading
 "Override the AI model's value 3.063", except that on a stored result the tick
@@ -767,8 +790,8 @@ the board) or `NO_AI_MODEL` (none trained), and is empty for a record stored wit
 result cannot be read (damaged), which the log names (`export.result_not_read`) without stopping the export. Records
 from before the checks were stored have no rows in the second file.
 Each export is confirmed first, naming the number of records, and written whole or not at all, the two CSV files
-together. The audit trail records it with the filter that listed the records (From, To, board model, operator, result
-and Include archived, as **Filter** applied them, not a box changed since) and their count, and the destination: a file
+together. The audit trail records it with the filter that listed the records (From, To, board model, operator, result,
+review and Include archived, as **Filter** applied them, not a box changed since) and their count, and the destination: a file
 or folder inside the workspace, such as the suggested `exports` folder, relative to the workspace
 (`exports/inspections.csv`), so the entry still holds after the workspace folder moves; a folder outside it, such as a USB drive, with its full path. If
 that entry cannot be written, the exported file is removed (never the station's own file, when exported onto itself).
@@ -788,20 +811,28 @@ was pressed, even if the run moves on while the file is named. A picture goes in
 the entry cannot be written, the destination is left exactly as it was, a file of that name unchanged and no picture
 or new folder left.
 
-The **From** and **To** boxes take days from 2000-01-01 to 2100-12-31. **Board model**, **Operator** and **Result**
-(All, OK, NG or WARN) each narrow the list, and every filter combines with the others and with **Include archived**;
-a click on a column's header sorts the table by it, again to reverse. The columns are Time, Board model, AI model
+The **From** and **To** boxes take days from 2000-01-01 to 2100-12-31. **Board model**, **Operator**, **Result**
+(All, OK, NG or WARN) and **Review** (All; Not reviewed, the NG and WARN records no one has reviewed yet; Real defect;
+False call) each narrow the list, and every filter combines with the others and with **Include archived**. Review set
+to False call with a board model and a week lists that line's false calls to open in Compare, one by one. A board
+reviewed as a false call is a good board, so **Add to Training as OK** (an Engineer's and an Admin's) copies the
+selected record's board image into its board model's Training samples, labelled OK in the record's view, so the next AI
+model trained learns its look as normal. It needs no confirmation: the sample can be relabelled or deleted on Training.
+The status bar names the board model and view; an image the board model holds already is not added again, and the
+status bar says how it is labelled. The audit trail records it as `sample.import` with `from_inspection`, the record's
+UUID. A record not reviewed as a false call, or one whose board image was not stored, is refused with AOI-TRN-050.
+A click on a column's header sorts the table by it, again to reverse. The columns are Time, Board model, AI model
 (its version), Result (the verdict's colour on that cell alone), Defects, Operator, View, Recipe rev and Image; the
 record's ID and score are in the CSV export. **Open in Compare ›**, Enter or a double-click opens the selected record
 on Compare as it was decided. With 100,000 records stored, **Filter** shows
 its rows within 1 s (REQ-LOG-001); listing all of them at once takes much longer, so narrow the dates first. The
 picture beside the table is the selected record's overlay; it is empty when the record's overlay file is gone, when no
 row is selected and after **Filter**. When no record matches, the table offers **Reset Filters** (the last 7 days,
-every board model, operator and result, archived records hidden); when every record is older than that or archived,
+every board model, operator, result and review, archived records hidden); when every record is older than that or archived,
 it offers **Show All Records** instead, which sets **From** to the oldest record's date, **To** to today and ticks
 **Include archived** when any record is archived.
 
-**Delete Records…** is the Admin's alone: an Engineer and an Operator do not see it, and the service refuses them with
+**Delete Records…** is the Admin's alone: an Engineer and an Operator see it greyed, and the service refuses them with
 AOI-USR-001. It deletes the records **Filter** listed, with their defects and checks and their overlay and map files in
 the results folder; there is no undo, so archive records to keep them out of the list. It asks first, naming the count,
 with No as the default, then asks why; a blank reason deletes nothing (AOI-LOG-003). The audit trail records it as
@@ -844,6 +875,19 @@ to work on: a type with many false calls is a recipe to tighten, for instance wi
 holding two types reviewed as a false call counts as one false call under each. The tab counts in the background, again
 when the filter or a review changes, and Export CSV's `defect_types` column carries the same names per record.
 
+**Drift.** The station watches each board model and view for drift (Engineering standard, "Watch and retrain"): after
+each board is saved, the newest 50 boards judged by the active AI model and recipe revision are compared with the 500
+before them, and after each False call the newest 20 reviews with the 200 before them. A measure that moves further than
+chance explains (beyond a 3-sigma control limit: for a rate, a count less likely than 0.135 % at the earlier rate,
+counted exactly) raises one `[WARN]` alarm, AOI-INSP-018, on the board or review that crosses the limit, naming the
+counts, and Home's Inspect card says "Drift:" with the measures out now until they come back. The measures are the NG
+rate and the WARN rate going up, the mean AI score of the OK boards going up (good boards look less normal to the AI
+model before they start to be called NG), the mean number of features matched to the Golden board by the OK boards going
+down (alignment), and the share of the reviewed calls that were False calls going up. Nothing is judged before 200
+boards (50 reviews) are on record for the AI model and recipe revision in use, so a new AI model or recipe revision
+starts afresh. A drift alarm changes no verdict; look at the lighting, the camera and its focus, the board revision and
+the parts supplier, review the calls, and retrain or tune the recipe if one changed (section 4, section 5).
+
 **Archive.** At each start the app archives the records older than **Log retention (days)** (section 1), and **Archive
 older than 30 days** on Logs & Export, which names the retention in force, does the same at once; it is grey for an
 Operator. Archiving deletes and moves nothing: an archived record is only left out of the list until **Include
@@ -863,10 +907,12 @@ of that file, since a database tool that holds the station's file stops a change
 names the part of the app: INSP Inspection, CMP Compare, TRN Training and datasets, TST AI Model Test, RCP recipes and
 scale, LOG Logs & Export, USR users and roles, SET settings and the workspace. [The list of codes](../error-codes.md)
 gives each one's title, what happened and what to do; it is made from the app's own catalogue, so it matches the build.
-Each message shown is written to the app log, `logs/aoi-<date>.jsonl` in the workspace (one file per UTC day), as
-`error.shown` with its code, the page, the details and the stack trace, naming a user only by UUID; and to the alarm log
-on Inspection as `[ERROR]` (Operator manual, section 4). For AOI-SET-007, a fault the app did not expect, send that
-day's log file to support (section 1 says where the log of a start that stopped goes).
+A message says what happened in plain words; where there is more, **Show Details** in the message holds the technical
+words, the same the log holds, for support. Each message shown is written to the app log, `logs/aoi-<date>.jsonl` in the
+workspace (one file per UTC day), as `error.shown` with its code, the page, the details and the stack trace, naming a
+user only by UUID; and to the alarm log on Inspection as `[ERROR]` (Operator manual, section 4). For AOI-SET-007, a
+fault the app did not expect, send that day's log file to support (section 1 says where the log of a start that stopped
+goes).
 
 ## 9. Demo workspace
 
@@ -887,7 +933,8 @@ included: the demo has its own.
   `demo.reset`. If another program holds a file of the demo (AOI-SET-017), close it and press Reset Demo again.
 - **Leave Demo Workspace** opens the station's workspace again. The demo stays as it is for the next time.
 - To start straight in the demo, for example from a desktop shortcut kept for demos, start the app with `--demo`
-  (`AOI-PoC-Inspector.exe --demo`); if the app closes during a demo, the same shortcut brings it back in the demo.
+  (`AOI-PoC-Inspector.exe --demo`). It opens signed in as the demo's first Admin, at Home after a normal close; if
+the app closes during a demo, the same shortcut brings it back in the demo on the page it showed.
 
 A folder of the demo's name that holds other files is never written to (AOI-SET-016): move or rename it. If the
 installed demo is missing or was changed on disk, it is refused with AOI-SET-015: reinstall the app. Before a demo,

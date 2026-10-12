@@ -43,8 +43,9 @@ from tools.trainable import key_of, trainable  # noqa: E402
 
 BOARD_MODEL = "DEMO-TBOX-A1"
 CUSTOMER = "Demo (synthetic boards)"  # the store's customer: our own synthetic boards (ADR 0010)
-OK, NG, SEED = 60, 14, 7  # the generator's defaults: 40 OK and 3 NG boards train; 20 OK and 11 NG are held out,
-# the version's locked validation set
+OK, NG, SEED = 60, 14, 7  # the generator's defaults: 40 OK and 3 NG boards train; 20 OK and 11 NG are held out
+MORE_HELD_OK = 30  # and 30 more OK boards, drawn after them: the locked validation set holds 50 OK boards and 11 NG,
+# as a customer's does (REQ-TRN-006; Customers & Launch, "Validation": freeze the 50 held-out OK images)
 EPOCHS, IMAGE_SIZE = 20, 128
 FAILING = "ng_007_missing_component.png"  # a held-out NG board: a part is missing from its pads, as Compare shows
 FAIL_AT = 4  # the failing board's place in the run: the run is under way, and it stops early enough to explain
@@ -61,7 +62,7 @@ def build(out: Path, epochs: int = EPOCHS, image_size: int = IMAGE_SIZE) -> dict
     started = time.monotonic()
     with tempfile.TemporaryDirectory() as tmp, mock.patch.dict(os.environ, AOI_WORKSPACE=str(Path(tmp) / "settings")):
         dataset = Path(tmp) / "dataset"
-        write_dataset(dataset, OK, NG, SEED)
+        write_dataset(dataset, OK, NG, SEED, MORE_HELD_OK)
         keys = credentials.MemoryCredentials()  # the store key goes to store-key.json, never to the station
         ctx = AppContext(Settings(workspace=str(out / demo.WORKSPACE), device="cpu"), keys)
         try:
@@ -70,7 +71,8 @@ def build(out: Path, epochs: int = EPOCHS, image_size: int = IMAGE_SIZE) -> dict
             held = _import(ctx, dataset / "test")  # the held-out boards: the locked validation set AI Model Test runs
             version = trainable(ctx, BOARD_MODEL, customer=CUSTOMER, held=held, manifest=True)
             meta = ctx.train(version, epochs=epochs, image_size=image_size)
-            ctx.activate_model(int(ctx.models(BOARD_MODEL)[0]["id"]))  # a version installs inactive (REQ-TRN-010)
+            if not meta["activated"]:  # a board model's first version goes live when trained (ADR 0018), unless
+                ctx.activate_model(int(ctx.models(BOARD_MODEL)[0]["id"]))  # refused, which this raises again
             store = ctx.db.board_model_store(BOARD_MODEL) or {}
             key = {"store_uuid": store["uuid"], "key": key_of(ctx, store["uuid"]).hex()}
             boards = _boards(ctx, dataset, out / demo.WORKSPACE / demo.BOARDS)

@@ -5,17 +5,18 @@ presenter theme, REQ-SET-008) is one file, and `tests/test_screen_rules.py` fail
 anywhere else under aoi/ui. The verdict and severity colours are the standard's, and a verdict is always shown as
 its colour with a word and a shape (REQ-INSP-002), never as colour alone.
 
-Contrast, by the WCAG 2.1 formula (tests/screens measures it on every rendered page): every text colour on its
-surface reads at 4.5:1 or more. Text on the standard's OK green, NG red and accent blue is black, ON_FILL (6.4, 5.0
-and 5.7:1; Q53, #150): the verdict banner, coloured cells, the primary, Start, Stop and danger buttons. One exception
-is left: a progress bar's bold percentage straddles the accent chunk and the dark trough, so it stays white (3.7:1 on
-the chunk, the 3:1 WCAG AA asks of bold text), and so does the 22 pt bold number on a Home card, ACCENT on BG_RAISED
-(3.5:1, #240). The selected sidebar entry, tab and row, and selected text, whose text is not bold, sit on BG_SELECTED
-(5.7:1). A disabled control is exempt (WCAG 1.4.3), and every disabled button, coloured or not, greys out to BG_RAISED
-and TEXT_DISABLED, so it never looks ready to press. The lists, calendars and menus that open as windows of their own
-are themed here too, never left on the platform's light background, and the calendar's bar stays BG_SELECTED, on which
-Qt's dark month arrows read at 3.4:1 (#239); the sidebar greys a page the role may not open on the item itself, since a
-rule for disabled items would also grey its headings.
+Contrast, by the WCAG 2.1 formula (tests/screens measures it on every rendered page): every text colour on its surface
+reads at 4.5:1 or more. Text on the standard's OK green, NG red and accent blue is black, ON_FILL (6.4, 5.0 and 5.7:1;
+Q53, #150): the verdict banner, coloured cells, the primary, Start, Stop and danger buttons. One exception is left: a
+progress bar's bold percentage straddles the accent chunk and the dark trough, so it stays white (3.7:1 on the chunk,
+the 3:1 WCAG AA asks of bold text), and so does the 22 pt bold number on a Home card, ACCENT on BG_RAISED (3.5:1, #240).
+The selected sidebar entry, tab and row, and selected text, whose text is not bold, sit on BG_SELECTED (5.7:1). A
+disabled control is exempt (WCAG 1.4.3), and every disabled button, coloured or not, greys out to BG_RAISED and
+TEXT_DISABLED, so it never looks ready to press; a disabled field, its label and its group's title take TEXT_DISABLED
+too, as Compare's thresholds do for an Operator (REQ-USR-001). The lists, calendars and menus that open as windows of
+their own are themed here too, never left on the platform's light background, and the calendar's bar stays BG_SELECTED,
+on which Qt's dark month arrows read at 3.4:1 (#239); the sidebar greys a page the role may not open on the item itself,
+since a rule for disabled items would also grey its headings.
 
 The light presenter theme (REQ-SET-008, frame sketch) is PRESENTER, a set of overrides of these tokens that `use()` puts
 in place while it is on: a #FAFAFA background, text 18 pt or more and the verdict at 48 pt, with the same verdict
@@ -149,6 +150,8 @@ QPushButton#primary:disabled, QPushButton#start:disabled, QPushButton#stop:disab
 QComboBox, QLineEdit, QSpinBox, QDoubleSpinBox, QDateEdit {
     background: $BG_DEEP; border: 1px solid $LINE_STRONG; border-radius: 4px; min-height: ${FIELD_H}px;
     padding: 0 6px; }
+QLabel:disabled, QCheckBox:disabled, QComboBox:disabled, QLineEdit:disabled, QSpinBox:disabled, QDoubleSpinBox:disabled,
+QDateEdit:disabled { color: $TEXT_DISABLED; }  /* a field or its label a role may not use looks it (REQ-USR-001) */
 QDoubleSpinBox#calibrated:disabled { color: $TEXT_MUTED; }
 QComboBox QAbstractItemView { background: $BG_DEEP; color: $TEXT; border: 1px solid $LINE_STRONG;
     selection-background-color: $BG_SELECTED; selection-color: $ON_DARK; }
@@ -169,6 +172,7 @@ QHeaderView::section { background: $BG_RAISED; padding: ${CELL_PAD}px; border: n
 QTableWidget::item { padding: 0 ${CELL_PAD}px; }  /* a cell's text as clear of the next as its heading's */
 QGroupBox { border: 1px solid $LINE; border-radius: ${RADIUS}px; margin-top: 18px; padding-top: ${SPACE_S}px; }
 QGroupBox::title { subcontrol-origin: margin; left: 10px; padding: 0 4px; color: $TEXT_MUTED; }
+QGroupBox::title:disabled { color: $TEXT_DISABLED; }
 QProgressBar { background: $BG_DEEP; border: 1px solid $LINE_STRONG; border-radius: 4px; text-align: center;
                min-height: 24px; color: $ON_DARK; font-weight: 700; }
 QProgressBar::chunk { background: $ACCENT; }

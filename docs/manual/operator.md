@@ -8,18 +8,24 @@ Words: verdicts are OK, NG and WARN (양품, 불량, 확인 필요); see the Cha
 
 ## 1. Starting a shift
 
-**Your name.** Once the station is set up, the app starts signed in as the user `operator`; the header names the user
-signed in and their role, at its right. Press **Switch User** there, pick your name in the list (each name shows its
-role) and press OK: every board you start from then on is recorded under your name, which the Operator column of Logs &
-Export shows. There is nothing to type, so pick only your own name; if it is not in the list, ask an Admin to add it
-(Settings › Users & roles). The sidebar greys the pages your role cannot open, and pointing at one names the role it
-needs: an Operator opens Home, Inspection, Compare and Logs & Export. The app opens on the page shown when it was last
-closed, or on Home when your role cannot open that page.
+**Your name.** Once the station is set up, the app starts signed in as the user who signed in last on this station with
+Switch User, and the status bar at the bottom says so (`operator` until anyone has); the header names the user signed in
+and their role, at its right. If that is not you, press **Switch User** there, pick your name in the list (each name
+shows its role) and press OK: every board you start from then on is recorded under your name, which the Operator column
+of Logs & Export shows. There is nothing to type, so pick only your own name; if it is not in the list, ask an Admin to
+add it (Settings › Users & roles). The sidebar greys the pages your role cannot open, and pointing at one names the role
+it needs: an Operator opens Home, Inspection, Compare and Logs & Export. The app opens on the page shown when it was
+last closed, or on Home when your role cannot open that page.
 
 **Keys to move around.** Ctrl+1 to Ctrl+9 open the sidebar's pages in its order from any page: Ctrl+1 Home, Ctrl+2
 Inspection, Ctrl+3 Compare, Ctrl+8 Logs & Export (pointing at a sidebar entry shows its key). Press **F1** on any page
 for the list of that page's keys and the pages your role opens. On Home, a card for a page your role cannot open is
-greyed and reads "For Engineer / Admin", so every button you can press leads somewhere.
+greyed and reads "For Engineer / Admin", so every button you can press leads somewhere, and each card says which
+role its step needs. The Export card names where the PDF reports are: on AI Model Test, where an Admin exports them.
+
+**Grey buttons.** A button your role may not use stays in its place, greyed. Point at it, or press it on a touch
+screen, and the tooltip or the status bar at the bottom says which role it needs; a page with nothing listed yet also
+says what your role cannot do there.
 
 **The board model.** The **Board model** box at the left of the header names the board model the boards are judged as,
 on every page. When the app starts it shows the first board model by name, so pick the one of the boards on the line
@@ -49,7 +55,7 @@ or cycle it with Alt+V; the view is stored with every result.
 | ▶ Start | F5 | Inspects the queue board after board, until Stop or the end of the queue |
 | ■ Stop | F6 | Stops after the board in hand; nothing is deleted, so there is no confirmation |
 | Next Board | F8 | Inspects one board |
-| Save Image… | F9 | Admin only: an Operator does not see it (#151). Writes the board shown when you press it, with its defect boxes, to a picture file you choose (a run goes on while you name the file); the result itself is already recorded. Each picture saved is recorded in the audit trail with who saved it, which result it shows and where it went |
+| Save Image… | F9 | Admin only: greyed for an Operator, its tooltip saying so (#151). Writes the board shown when you press it, with its defect boxes, to a picture file you choose (a run goes on while you name the file); the result itself is already recorded. Each picture saved is recorded in the audit trail with who saved it, which result it shows and where it went |
 
 A button and its key do the same. The key works whichever control on the Inspection page is selected (the defect
 list, the View box, a button), and only while that page is shown. Both go grey while the action is not possible:
@@ -84,8 +90,9 @@ started with and the boards after it use the new one; the line under the banner 
 AOI-INSP-013. Each record names the AI model version active when its board was judged, the recipe revision that
 judged it (which says whether the AI check ran) and the Golden board it was judged against. When the recipe turns the
 AI check off, no AI model judges the boards, so an AI model version activated during a run changes nothing that judges
-them and the run goes on with no AOI-INSP-013 (the boards after it name the version now active); a saved recipe or a
-Golden board set still moves the run, and a training run does too, as it sets a new Golden board, and the line then
+them while the Golden board stays, and the run goes on with no AOI-INSP-013 (the boards after it name the version now
+active); a saved recipe or a Golden board set still moves the run, and so does a board model's first training run, as
+its AI model goes live with a new Golden board (a later one installs inactive and moves nothing), and the line then
 says the AI check was off in place of naming an AI model.
 A scale set changes nothing that judges a board while the recipe holds its sizes in px, so the run then goes on with no
 AOI-INSP-013.
@@ -139,7 +146,7 @@ one, or saved before this version), the pane says "Golden board not available" a
 board, and Re-evaluate › under it inspects the board again with today's Golden board, or without one while the board
 model has none, as the pane then says; the line under the verdict names today's when an Engineer or a training run has
 set another. A long file name over a picture, in a message on its pane or in the line under the verdict wraps onto the
-next line after a _ or -. The thresholds panel, "Try other thresholds", is for Engineers and is not shown to an
+next line after a _ or -. The thresholds panel, "Try other thresholds", is for Engineers and is greyed for an
 Operator: every board Compare inspects for you is judged by the board model's recipe, and a board left on Compare that
 was inspected with values the recipe does not hold when you sign in (an Engineer's thresholds not saved, a recipe
 revision saved since, or a scale set since that gives a size in mm other px; values that did not judge the board, such
@@ -162,7 +169,8 @@ line then reads "Reviewed: False call (Dust or debris on the board, not a defect
 change your mind; both reviews stay in the audit trail. You can review any NG or WARN record later on Logs & Export:
 select its row and press the same keys. Home's Inspect card counts the false calls of the board model ("False calls 2
 of 15 reviewed"), and Logs & Export's Review column and summary line show them, so an Engineer can open each false call
-in Compare and tune the recipe or retrain (ADR 0013).
+in Compare and tune the recipe or retrain (ADR 0013): an Engineer adds a board you marked False call to Training as
+an OK sample with one button on Logs & Export.
 
 ## 4. Alarms and messages
 
@@ -171,23 +179,29 @@ Each line gives the date and time, the level in brackets, the code and what happ
 `2026-10-10 14:03:22  [NG]  AOI-INSP-003  board_07.png: 2 defect(s)`. `[NG]` marks an NG board: every NG board that is
 recorded has one, while a WARN board has none, only its banner and its record. `[WARN]` says that a run stopped because
 the board model changed (AOI-INSP-012), that a run goes on with a new AI model, recipe, scale or Golden board
-(AOI-INSP-013), or that the board model has no AI model yet (AOI-TRN-003). `[ERROR]` keeps the code and what happened
+(AOI-INSP-013), that the board model has no AI model yet (AOI-TRN-003) or one trained but not active (AOI-TRN-051, an
+Engineer activates it with the Activate button the line above the verdict shows), or that the line has drifted
+(AOI-INSP-018):
+the newest boards are called NG or WARN more often, good boards score or line up worse, or more calls are reviewed as
+False calls than before, beyond chance. A drift alarm changes no verdict; tell an Engineer, who checks the lighting,
+camera, boards and parts, and Home's Inspect card says "Drift:" until it passes. `[ERROR]` keeps the code and what happened
 of each message shown over a page (below). The log holds every board model and user, shows the newest 1000 lines and
 is still there after a restart.
 
 **Messages.** When the app cannot do what you asked, or has to stop, a message opens over the page. Its title is the
 code and a short name, such as `AOI-INSP-008 Result not saved`; under it comes what happened, then what to do. Do the
-step it gives, then press OK; when the step is for an Engineer or Admin, or the same message comes back, call one and
-give them the code. The code and what happened stay in the alarm log once the message is closed, and
-[the list of codes](../error-codes.md) gives each one with what happened and what to do. The status bar at the bottom
-says what the app is doing and what just happened, such as "End of queue" or why a run stopped; a line there goes after
-a few seconds or when the next one replaces it.
+step it gives, then press OK; **Show Details**, when there, holds technical words for support, which you need not read;
+when the step is for an Engineer or Admin, or the same message comes back, call one and give them the code. The code and
+what happened stay in the alarm log once the message is closed, and [the list of codes](../error-codes.md) gives each
+one with what happened and what to do. The status bar at the bottom says what the app is doing and what just happened,
+such as "End of queue" or why a run stopped; a line there goes after a few seconds or when the next one replaces it.
 
 ## 5. End of shift
 
 **History.** Logs & Export lists the boards inspected, newest first, from a week ago to today: every operator's, so the
-next shift sees the line's history. Narrow it with **From** and **To**, **Board model**, **Operator** and **Result**
-(All, OK, NG or WARN), then press **Filter**; the filters combine. Tick **Include archived** for records older than the
+next shift sees the line's history. Narrow it with **From** and **To**, **Board model**, **Operator**, **Result**
+(All, OK, NG or WARN) and **Review** (Not reviewed lists the NG and WARN boards still to review), then press
+**Filter**; the filters combine. Tick **Include archived** for records older than the
 retention (30 days unless an Admin changed it): they are archived, not deleted, and stay searchable. A click on a
 column's header sorts by it. Select a row to see its overlay beside the table, and press **Open in Compare ›** (or
 Enter, or double-click the row) to see that board on Compare as it was decided, its failing checks marked. The line
@@ -198,8 +212,8 @@ keeps.
 
 **Handing over.** Let the queue run to its end, or press ■ Stop: the board in hand is still judged and recorded. For
 your counts, set **From** and **To** to the days of your shift, pick your name under **Operator**, press **Filter** and
-read the line under the table. **Export CSV** and **Export Image Overlays** are grey for an Operator: an Engineer or
-Admin exports the records. The next operator signs in with **Switch User** (section 1); boards still queued stay
+read the line under the table. **Export CSV** and **Export Image Overlays** are grey for an Operator: an Admin
+exports the records. The next operator signs in with **Switch User** (section 1); boards still queued stay
 queued, and Start goes on with them under the new name (section 2). Closing the app empties the queue, and the next
-start signs in `operator` with the View box on Top, so each operator picks their own name, the board model and the
-view again (section 1).
+start signs in the user who signed in last with the View box on Top, so each operator checks the name, picks their own
+with **Switch User** when it is not theirs, and picks the board model and the view again (section 1).

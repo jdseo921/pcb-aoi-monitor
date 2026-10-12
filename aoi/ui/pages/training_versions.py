@@ -390,7 +390,7 @@ class VersionsPanel(QGroupBox):
             none = self.tr("No frozen dataset for {board_model} yet").format(board_model=board_model)
             then = self.tr("Check the labels, Freeze Dataset, then split and lock its validation set.")
             link = self.tr("Freeze Dataset…") if self.page.working.views else ""
-            self.empty.show_state(none, then, link, self.page.working.open_sheet)
+            self.page.show_empty(self.empty, none, then, link, self.page.working.open_sheet)
         else:
             self.empty.hide()
         self.table.blockSignals(False)
@@ -440,8 +440,7 @@ class VersionsPanel(QGroupBox):
         Validation Set…, a version not split, and no sheet of the tab open."""
         uuid, idle = self.picked(), self.page.idle()
         self.btn_verify.setEnabled(uuid is not None and idle)
-        self.btn_export.setEnabled(uuid is not None and idle)
-        self.btn_export.setVisible(self.page.ctx.role == "Admin")  # an export is an Admin's (Q58, #151)
+        self.page.role_gate(self.btn_export, "export_csv", uuid is not None and idle)  # an Admin's (Q58, #151)
         locked = uuid is not None and bool(self.counts.get(uuid, {}).get("locked"))
         self.btn_split.setEnabled(uuid is not None and not locked and idle and not self.page.sheet_open())
         said = self.tr("Its validation set is locked: a new split needs a new dataset version")

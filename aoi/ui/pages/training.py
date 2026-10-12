@@ -41,11 +41,11 @@ from ...core.run_progress import RunProgress
 from ...core.sample_import import ImportFile, ImportReport, annotate, folder_files
 from ...core.services import AppContext
 from ...defects import names
-from ...errors import AoiError
+from ...errors import AoiError, system_detail, system_reason
 from ...hal import VIEWS
 from ...times import to_local
 from .. import theme
-from ..errors import phrase_text
+from ..errors import phrase_text, show_error
 from ..widgets.box_editor import ENTER
 from ..widgets.busy import BusyOverlay
 from ..widgets.empty_state import EmptyState
@@ -59,7 +59,6 @@ from .base import (
     cell_text,
     fill_table,
     make_table,
-    role_text,
     time_left_text,
     view_text,
 )
@@ -152,6 +151,12 @@ class TrainingPage(Page):
         "Page", "Upload good (OK) and defective (NG) boards; the AI model trains itself on them"
     )
     roles = ("Engineer", "Admin")
+    role_notes = (  # Remove and Export Manifest… greyed for a role that may not use them, never hidden (REQ-USR-001)
+        (
+            QT_TRANSLATE_NOOP("TrainingPage", "Remove and Export Manifest… need the {roles} role."),
+            ("delete_sample", "export_csv"),
+        ),
+    )
 
     def __init__(self, ctx: AppContext, shell: MainWindow) -> None:
         super().__init__(ctx, shell)
@@ -527,13 +532,14 @@ class TrainingPage(Page):
             reason, code = e.params["reason"], "AOI-TRN-009"
         elif n["imported"]:  # files went in before it: the message must say how many (#206)
             title = QT_TRANSLATE_NOOP("Errors", "{code} {title}")  # the title in the UI language (#198)
-            reason = title.fill(code=e.code, title=e.title) if isinstance(e, AoiError) else type(e).__name__
+            reason = title.fill(code=e.code, title=e.title) if isinstance(e, AoiError) else system_reason(e)
             code = "AOI-TRN-010"
         elif isinstance(e, AoiError) and e.code == "AOI-TRN-011":  # none of the images went in, not 1
             return AoiError("AOI-TRN-011", e.detail, path=f.path, workspace=e.params["workspace"], count=total)
         else:  # nothing imported yet: the error is shown as it is
             return e
-        stopped = AoiError(code, e.detail if isinstance(e, AoiError) else str(e), path=f.path, reason=reason, **n)
+        detail = e.detail if isinstance(e, AoiError) else system_detail(e)
+        stopped = AoiError(code, detail, path=f.path, reason=reason, **n)
         stopped.__cause__ = e
         return stopped
 
@@ -774,7 +780,7 @@ class TrainingPage(Page):
         elif not self.shown:
             what = self.tr("Add at least 20 OK boards with Add OK Images… or Import Folder…")
             heading = self.tr("No samples for {board_model} yet").format(board_model=self.board_model)
-            self.samples_empty.show_state(heading, what, self.tr("Import Folder…"), self.import_folder)
+            self.show_empty(self.samples_empty, heading, what, self.tr("Import Folder…"), self.import_folder)
         elif shown == "Unchecked" and self._statuses and all(st["ready"] for st in self._statuses):
             done = self.tr("A second user has checked every NG label and every OK label drawn.")
             self.samples_empty.show_state(self.tr("Nothing left to check"), done)
@@ -971,9 +977,26 @@ class TrainingPage(Page):
         self.bar.setValue(self.bar.maximum())
         saved = self.tr("Saved AI model {version} ({seconds} s) with its Golden board and AI model card.")
         self.log.appendPlainText(saved.format(version=meta["version"], seconds=meta["train_seconds"]))
-        done = self.tr("AI model {version} trained: select it and press Activate Selected to judge boards with it")
-        self.shell.status(done.format(version=meta["version"]))  # it installs inactive (REQ-TRN-010)
+        not_live = meta.get("not_live")  # the error that kept a board model's first AI model inactive (ADR 0018)
+        report = self.ctx.report_error(not_live, self.title) if isinstance(not_live, BaseException) else None
+        if meta.get("activated"):  # a board model's first AI model goes live when trained (decision D3), audited
+            done = self.tr(
+                "AI model {version} trained and active: the first AI model of {board_model} judges its boards from now"
+                " on. Each later version installs inactive until you activate it."
+            )
+        elif report is not None:  # logged, and stored as an alarm with its code
+            done = self.tr(
+                "AI model {version} trained, but not made active, so {board_model} is still judged by the Golden board"
+                " comparison alone: {code}. Activate it with Activate Selected once the cause is fixed."
+            )
+        else:  # a later version installs inactive (REQ-TRN-010)
+            done = self.tr("AI model {version} trained: select it and press Activate Selected to judge boards with it")
+        said = done.format(version=meta["version"], board_model=meta["board_model"], code=report.code if report else "")
+        self.log.appendPlainText(said)
+        self.shell.status(said)
         self.refresh()
+        if report is not None:  # what happened and what to do, as any error a user sees (REQ-SET-019)
+            show_error(self, report)
 
     def _finished(self) -> None:
         if self.worker is not None and self.worker.job.cancelled and self.worker.job.result is None:  # Cancel (#171)
@@ -991,10 +1014,7 @@ class TrainingPage(Page):
         for a in self.adds:
             a.setEnabled(idle)  # its button and its key
         self.btn_draw.setEnabled(idle)  # a draw would stop the import that runs: one job of the page's at a time
-        admin = self.ctx.role == "Admin"  # only an Admin removes a sample (REQ-LOG-003); the service checks too
-        self.btn_remove.setEnabled(admin)
-        why = self.tr("Removing samples needs the {role} role.").format(role=role_text("Admin"))
-        self.btn_remove.setToolTip("" if admin else why)
+        self.role_gate(self.btn_remove, "delete_sample")  # an Admin's (REQ-LOG-003), greyed for an Engineer
         self.samples_empty.link.setEnabled(idle)
         self.working.sync()  # Freeze Dataset… and Freeze, off while a job runs
         self.versions.sync()  # and Split and Lock Validation Set…, Lock and Verify Manifest
@@ -1124,7 +1144,7 @@ class TrainingPage(Page):
             self.counts.set_line(lambda _name: "", "")
             self.checks_line.hide()
             self.tip.hide()
-            self.samples_empty.show_state(*self.no_board_model())
+            self.show_empty(self.samples_empty, *self.no_board_model())
             self.models_empty.hide()
             self.agreement.show_board_model(None, [])
             self.working.show_board_model(None, [])

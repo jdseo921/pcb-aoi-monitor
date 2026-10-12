@@ -187,6 +187,6 @@ def test_req_insp_014_the_notice_on_compare_is_the_panels_alone(
     assert noticed()
     win.set_user("operator")
     qtbot.waitUntil(lambda: ctx.jobs.idle() and compare._bg is None, timeout=60000)
-    assert not compare.tryout.isVisible() and not noticed(), "an Operator has no panel"
+    assert not compare.tryout.isEnabled() and not noticed(), "an Operator's panel is greyed"
     win.set_user("engineer")
     assert noticed()

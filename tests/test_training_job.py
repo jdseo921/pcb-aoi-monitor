@@ -94,19 +94,23 @@ def test_req_trn_008_progress_every_10s(
     """A run reports after every image read, step of the Golden board's median, training step and map, so on a slow
     station no two reports are more than 10 s apart, from its start to its end, through every phase: aligning, building
     the Golden board, its second band, each epoch and calibrating. From its second report on, a step of each kind but
-    the read timed on the first image read, the time left is the time the run then takes, and the percent only grows;
-    its log notes the images, the epochs and the threshold."""
+    the read timed on the first image read, the time left is the time the run then takes until its version is
+    registered, and the percent only grows; its log notes the images, the epochs and the threshold. The board model's
+    first version then goes live, which reads its Golden board once more (ADR 0018) and the time left leaves out."""
     boards(ctx, synthetic_dataset, 20)
     clock = slow(ctx, monkeypatch)
+    registered: list[float] = []
+    first_live = ctx._first_live
+    monkeypatch.setattr(ctx, "_first_live", lambda *a: registered.append(clock.now) or first_live(*a))
     job, reports = run(ctx, trainable(ctx, BOARD), clock)
-    assert job.result is not None and job.error is None
+    assert job.result is not None and job.error is None and job.result["activated"]
     times = [0.0] + [t for t, _ in reports] + [clock.now]
     assert max(b - a for a, b in zip(times, times[1:], strict=False)) <= 10, times
     shown = [p for _, p in reports if isinstance(p, RunProgress)]
     assert all(any(p.phase.startswith(phase) for p in shown) for phase in PHASES), sorted({p.phase for p in shown})
     assert shown[0].left_s is None and shown[0].note.startswith("Aligning 23 images")
     for t, p in reports[1:]:
-        assert isinstance(p, RunProgress) and p.left_s == pytest.approx(clock.now - t, abs=0.01), (t, p)
+        assert isinstance(p, RunProgress) and p.left_s == pytest.approx(registered[0] - t, abs=0.01), (t, p)
     assert [p.percent for p in shown] == sorted(p.percent for p in shown) and shown[-1].percent == 99
     notes = [p.note for p in shown if p.note]
     assert [n.split(" ")[0] for n in notes] == ["Aligning", "Training", "Epoch", "Calibrated"], notes

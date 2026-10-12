@@ -19,13 +19,14 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
-from ..errors import AoiError, Phrase
+from ..errors import AoiError, Phrase, system_detail, system_reason
 from ..times import local_day_bounds_utc, now_utc
 from .errors import WorkspaceError
 from .migrate import migrate
 from .paths import resolve, to_stored
 
 IN_CHUNK = 500  # ids per IN (…) query, under SQLite's 999 bound variables on older builds
+NOT_REVIEWED = "NOT_REVIEWED"  # the history filter's review: an NG or WARN record no one has reviewed (REQ-LOG-009)
 WAIT_MS = 5000  # how long a write waits for another program's lock on the database before SQLite refuses it
 DbError = sqlite3.Error  # what a Database call raises when SQLite refuses it, for callers that do not import sqlite3
 SAMPLES = (  # a sample with its current label, the one label row no other has superseded (migration 0014), and the
@@ -66,7 +67,9 @@ class Database:
             self.path.parent.mkdir(parents=True, exist_ok=True)
             self._conn = sqlite3.connect(self.path, timeout=WAIT_MS / 1000, check_same_thread=False)
         except (OSError, sqlite3.Error) as e:  # a drive not connected, a folder that cannot be written (REQ-SET-019)
-            raise WorkspaceError("AOI-SET-011", path=str(self.workspace), error=str(e)) from e
+            raise WorkspaceError(
+                "AOI-SET-011", system_detail(e), path=str(self.workspace), error=system_reason(e)
+            ) from e
         self._conn.row_factory = sqlite3.Row
         try:
             # Write-ahead log with a full sync on every commit: a finished write survives a power cut (ADR 0004).
@@ -96,8 +99,8 @@ class Database:
         """The start-up refusal the folder picker follows (REQ-SET-016): AOI-SET-012 while another program holds the
         database's lock, else AOI-SET-011 with SQLite's reason (read-only, disk full, damaged)."""
         if is_busy(e):
-            return WorkspaceError("AOI-SET-012", path=str(self.path), error=str(e))
-        return WorkspaceError("AOI-SET-011", path=str(self.workspace), error=str(e))
+            return WorkspaceError("AOI-SET-012", system_detail(e), path=str(self.path), error=system_reason(e))
+        return WorkspaceError("AOI-SET-011", system_detail(e), path=str(self.workspace), error=system_reason(e))
 
     # --- primitives --------------------------------------------------------
     @contextmanager
@@ -684,9 +687,11 @@ class Database:
         operator: str | None = None,
         include_archived: bool = False,
         result: str | None = None,
+        review: str | None = None,
     ) -> list[dict[str, Any]]:
         """Each filter reads through its index of migration 0022 (REQ-LOG-001), the defect count through
-        `defects_inspection`."""
+        `defects_inspection`. `review` is DEFECT or FALSE_CALL, or NOT_REVIEWED for the NG and WARN records with no
+        review yet (REQ-LOG-009); the dates' or board model's index narrows the rows it is read on."""
         sql = (  # every column but result_json and the golden board's, which `inspection_result` and `inspection`
             # read for one record at a time
             "SELECT i.id, i.uuid, i.time, i.board_model, i.model_version, i.model_uuid, i.recipe_rev, i.recipe_uuid,"
@@ -708,6 +713,11 @@ class Database:
             if value:
                 sql += f" AND {column} = ?"  # a column name of this method's, never a user's
                 p.append(value)
+        if review == NOT_REVIEWED:
+            sql += " AND review IS NULL AND result IN ('NG', 'WARN')"  # an OK board is never reviewed
+        elif review:
+            sql += " AND review = ?"
+            p.append(review)
         rows = self.query(sql + " ORDER BY id DESC", p)
         return [self._resolved(r, "image_path", "overlay_path", "diff_map_path", "ai_map_path") for r in rows]
 
@@ -916,6 +926,26 @@ class Database:
         sql = "UPDATE inspections SET review=?, review_reason=?, review_by=?, review_time=? WHERE id=?"
         self.execute(sql, (review, reason, by, time, inspection_id))
 
+    def drift_rows(self, board_model: str, limit: int) -> list[dict[str, Any]]:
+        """A board model's newest `limit` records, newest first, archived ones included, with what drift is judged on
+        (REQ-INSP-019): the view, the AI model's and recipe's UUIDs, the verdict, the AI score and the alignment's
+        matched features; read through `inspections_board_model`."""
+        sql = (
+            "SELECT id, view, model_uuid, recipe_uuid, result, score,"
+            " json_extract(metrics, '$.alignment_inliers') AS alignment_inliers"
+            " FROM inspections WHERE board_model=? ORDER BY time DESC, id DESC LIMIT ?"
+        )
+        return self.query(sql, (board_model, int(limit)))
+
+    def drift_reviews(self, board_model: str, limit: int) -> list[dict[str, Any]]:
+        """A board model's newest `limit` reviews, newest first by when they were given, with the view, the AI model's
+        and recipe's UUIDs and the review (REQ-INSP-019); read through `inspections_review`."""
+        sql = (
+            "SELECT id, view, model_uuid, recipe_uuid, review FROM inspections"
+            " WHERE board_model=? AND review IS NOT NULL ORDER BY review_time DESC, id DESC LIMIT ?"
+        )
+        return self.query(sql, (board_model, int(limit)))
+
     def review_counts(self, board_model: str) -> tuple[int, int]:
         """(boards reviewed, of them false calls) of a board model, archived ones included, through
         `inspections_review`."""
@@ -951,6 +981,29 @@ class Database:
         check["rows"] = [self._resolved(x, "file") for x in json.loads(check["rows"])]
         return check
 
+    def add_validation_targets(self, board_model: str, targets: dict[str, float], agreed_with: str, user: str) -> str:
+        """Store the targets a customer agreed for a board model's validation (migration 0025): `targets` holds
+        missed_critical, false_call_rate (a fraction) and seconds_per_image. Returns the row's UUID; the caller audits
+        it in the same transaction."""
+        uid = new_uuid()
+        self._insert(
+            "INSERT INTO validation_targets(uuid, board_model, missed_critical, false_call_rate, seconds_per_image,"
+            " agreed_with, user, time) VALUES(?,?,?,?,?,?,?,?)",
+            (uid, board_model, int(targets["missed_critical"]), float(targets["false_call_rate"]),
+             float(targets["seconds_per_image"]), agreed_with, user, now_utc()),
+        )  # fmt: skip
+        return uid
+
+    def validation_targets(self, board_model: str) -> dict[str, Any] | None:
+        """The targets in force for a board model's validation, its newest row (migration 0025); None while none was
+        recorded."""
+        sql = (
+            "SELECT uuid, missed_critical, false_call_rate, seconds_per_image, agreed_with, user, time"
+            " FROM validation_targets WHERE board_model=? ORDER BY id DESC LIMIT 1"
+        )
+        r = self.query(sql, (board_model,))
+        return r[0] if r else None
+
     def inspection_counts(self, board_model: str) -> tuple[int, int]:
         """(inspections, NG inspections) of a board model, archived ones included."""
         sql = "SELECT COUNT(*) n, COALESCE(SUM(result='NG'), 0) ng FROM inspections WHERE board_model=?"
@@ -976,6 +1029,12 @@ class Database:
     def user_uuid(self, name: str) -> str | None:
         r = self.query("SELECT uuid FROM users WHERE name=?", (name,))
         return str(r[0]["uuid"]) if r else None
+
+    def last_sign_in(self) -> str | None:
+        """The UUID of the user who signed in last on this station, from the newest `user.sign_in` audit entry (found
+        by the index of migration 0026); None while no one has."""
+        r = self.query("SELECT object_uuid FROM audit WHERE action='user.sign_in' ORDER BY id DESC LIMIT 1")
+        return str(r[0]["object_uuid"]) if r and r[0]["object_uuid"] is not None else None
 
     # --- audit trail (REQ-LOG-004): append only, enforced by triggers in migration 0003 ----
     def add_audit(

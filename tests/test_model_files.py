@@ -88,7 +88,7 @@ def test_req_trn_014_non_model_file_is_refused(tmp_path: Path) -> None:
 
     wrong_shape = tmp_path / "wrong-shape.pt"
     torch.save({"weights": torch.zeros(1)}, wrong_shape)
-    with pytest.raises(anomaly.ModelFileError, match="state_dict"):
+    with pytest.raises(anomaly.ModelFileError, match="no AI model's weights and settings"):
         anomaly.AnomalyModel.load(wrong_shape)
 
 
@@ -152,8 +152,8 @@ def test_req_trn_014_damaged_model_files_are_refused_with_a_code(tmp_path: Path)
         changed = tmp_path / f"changed-{i}.pt"
         changed.write_bytes(bytes(flipped))
         assert "damaged" in _refused(changed)
-    assert "No such file" in _refused(tmp_path / "gone.pt")
-    _refused(tmp_path)  # a folder
+    assert "it is not there" in _refused(tmp_path / "gone.pt")
+    assert "it is a folder, not a file" in _refused(tmp_path)  # Windows refuses a folder as access denied
 
     def saved(name: str, state_dict: Any = None, **meta: Any) -> Path:
         path = tmp_path / f"{name}.pt"
@@ -162,7 +162,7 @@ def test_req_trn_014_damaged_model_files_are_refused_with_a_code(tmp_path: Path)
         return path
 
     assert "do not fit" in _refused(saved("other-network", {"conv.weight": torch.zeros(3)}))
-    assert "no state_dict" in _refused(saved("weights-not-a-dict", [1, 2]))
+    assert "no AI model's weights and settings" in _refused(saved("weights-not-a-dict", [1, 2]))
     weights = model.net.state_dict()
     nan_weights = {k: torch.full_like(v, math.nan) if v.is_floating_point() else v for k, v in weights.items()}
     assert "not finite" in _refused(saved("nan-weights", nan_weights))
@@ -217,10 +217,10 @@ def test_req_trn_014_malformed_model_files_are_refused_with_a_code(
     bf16 = tmp_path / "bf16-map.pt"
     meta = {**anomaly._to_safe(model.meta), "err_mean": torch.zeros(64, 64, dtype=torch.bfloat16)}
     torch.save({"state_dict": model.net.state_dict(), "meta": meta}, bf16)
-    assert "metadata is malformed (TypeError)" in _refused(bf16)
+    assert "its metadata is malformed" in _refused(bf16) and "TypeError" not in _refused(bf16)
     for error in (IndexError("list index out of range"), struct.error("unpack"), TypeError("x"), AttributeError("y")):
         monkeypatch.setattr(torch, "load", _raises(error))
-        assert f"({type(error).__name__})" in _refused(good)
+        assert "it may be cut short or damaged" in _refused(good) and type(error).__name__ not in _refused(good)
     monkeypatch.undo()
     monkeypatch.setattr(anomaly.ConvAutoencoder, "load_state_dict", _raises(ValueError("not a tensor")))
     assert "do not fit" in _refused(good)

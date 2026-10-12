@@ -223,7 +223,8 @@ def test_req_trn_017_shred_store_on_screen(
     beta = ctx.create_store("Beta")
     ctx.move_in("SHB", beta["uuid"])
     page.on_show()
-    row = panel.btn_shred.parentWidget().layout()
+    rows = panel.steps.layout()  # the steps' two rows: Shred Store… last in the second, after the stretch
+    row = rows.itemAt(rows.count() - 1).layout()
     assert panel.btn_shred.objectName() == "danger" and row.indexOf(panel.btn_shred) == row.count() - 1
     panel.table.selectRow(1)
     panel.btn_shred.click()

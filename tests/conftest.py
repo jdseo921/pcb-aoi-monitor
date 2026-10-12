@@ -38,6 +38,7 @@ from aoi.core.services import AppContext  # noqa: E402
 from aoi.data import credentials  # noqa: E402
 from aoi.data.db import new_uuid  # noqa: E402
 from aoi.ui import theme, workers  # noqa: E402
+from aoi.ui.errors import AlreadyOpenBox, ErrorBox  # noqa: E402
 from aoi.ui.theme import QSS  # noqa: E402
 from tools.make_synthetic_dataset import ng_type, write_dataset  # noqa: E402
 from tools.trainable import trainable  # noqa: E402
@@ -156,7 +157,7 @@ def tiny_model(tmp_path_factory: pytest.TempPathFactory, synthetic_dataset: Path
     for p in list_images(synthetic_dataset / "train" / "ng"):  # one call each: an NG sample is imported with its type
         ctx.import_samples(board_model, [str(p)], "NG", ng_type(p))
     meta = ctx.train(trainable(ctx, board_model), epochs=TINY_EPOCHS, image_size=TINY_IMAGE_SIZE)
-    ctx.activate_model(int(ctx.models(board_model)[0]["id"]))  # a version installs inactive (REQ-TRN-010, S43)
+    assert meta["activated"], "a board model's first AI model goes live when trained (decision D3)"
     loaded = ctx.load_model(board_model)
     assert loaded is not None, "training registered no active model"
     reference = ctx.db.reference(board_model)
@@ -165,9 +166,11 @@ def tiny_model(tmp_path_factory: pytest.TempPathFactory, synthetic_dataset: Path
 
 
 def activated(ctx: AppContext, meta: dict[str, Any]) -> dict[str, Any]:
-    """`meta`, of a version training just installed inactive (REQ-TRN-010, S43), once the Engineer has activated it:
-    for a test of what follows an activation, as training did before."""
-    ctx.activate_model(next(int(m["id"]) for m in ctx.models(meta["board_model"]) if m["uuid"] == meta["uuid"]))
+    """`meta`, of a version training just installed, once it is active: a later version installs inactive
+    (REQ-TRN-010, S43), and the Engineer activates it here; a board model's first went live when trained (decision D3).
+    For a test of what follows an activation, as training did before."""
+    if not meta["activated"]:
+        ctx.activate_model(next(int(m["id"]) for m in ctx.models(meta["board_model"]) if m["uuid"] == meta["uuid"]))
     return meta
 
 
@@ -255,7 +258,12 @@ def dialogs(monkeypatch: pytest.MonkeyPatch) -> Iterator[list[tuple[str, str]]]:
         shown.append((title, text))
         return QMessageBox.StandardButton.Ok
 
+    def record_box(box: QMessageBox) -> int:
+        return record(box.parentWidget(), box.windowTitle(), box.text())
+
     monkeypatch.setattr(QMessageBox, "critical", staticmethod(record))
+    monkeypatch.setattr(ErrorBox, "exec", record_box)  # show_error's dialog, with its Details
+    monkeypatch.setattr(AlreadyOpenBox, "exec", record_box)  # a second start's one sentence (AOI-SET-019)
     yield shown
     assert all(title.startswith("AOI-") for title, _ in shown), f"an error dialog without a code: {shown}"
 

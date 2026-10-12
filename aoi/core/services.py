@@ -20,6 +20,7 @@ import os
 import random
 import secrets
 import shutil
+import sqlite3
 import threading
 from collections import Counter
 from collections.abc import Callable, Iterable, Iterator, Sequence
@@ -34,11 +35,12 @@ from .. import defects as taxonomy
 from .. import logging_setup
 from ..config import Settings, resolve_device
 from ..data import atomic, credentials
+from ..data.db import NOT_REVIEWED as NOT_REVIEWED  # screens name it through here (REQ-LOG-009)
 from ..data.db import Database, DbError, is_busy, new_uuid
 from ..data.errors import WorkspaceError
 from ..data.paths import inside, one_folder_name, resolve, to_stored
-from ..data.workspace_lock import WorkspaceLock
-from ..errors import QT_TRANSLATE_NOOP, AoiError, Phrase, joined
+from ..data.workspace_lock import WorkspaceLock, holder, in_use
+from ..errors import QT_TRANSLATE_NOOP, AoiError, Phrase, joined, system_detail, system_reason
 from ..hal import VIEWS
 from ..times import local_date, now_utc
 from . import (
@@ -46,6 +48,8 @@ from . import (
     anomaly,
     crypto,
     datasets,
+    demo,
+    drift,
     golden,
     imaging,
     labels,
@@ -77,6 +81,32 @@ from .recipe import Recipe, changes
 from .sample_import import LABELS, REFUSED, ImportFile, ImportReport
 
 ALARM_LIMIT = 1000  # REQ-INSP-006: the alarms a screen shows and that survive a restart
+# The alarm each drift measure raises as it crosses its control limit (REQ-INSP-019), AOI-INSP-018
+DRIFT_TEXT = {
+    drift.NG_RATE: QT_TRANSLATE_NOOP(
+        "Errors",
+        "Drift on {board} ({view}): {count} of the last {of} boards called NG; {before} % of the {baseline} before",
+    ),
+    drift.WARN_RATE: QT_TRANSLATE_NOOP(
+        "Errors",
+        "Drift on {board} ({view}): {count} of the last {of} boards called WARN; {before} % of the {baseline} before",
+    ),
+    drift.OK_SCORE: QT_TRANSLATE_NOOP(
+        "Errors",
+        "Drift on {board} ({view}): the AI score of the last {of} OK boards averages {recent}, up from {before} over"
+        " the {baseline} OK boards before",
+    ),
+    drift.ALIGNMENT: QT_TRANSLATE_NOOP(
+        "Errors",
+        "Drift on {board} ({view}): the last {of} OK boards matched {recent} features to the Golden board on average,"
+        " down from {before} over the {baseline} OK boards before",
+    ),
+    drift.FALSE_CALLS: QT_TRANSLATE_NOOP(
+        "Errors",
+        "Drift on {board} ({view}): {count} of the last {of} reviewed calls were False calls; {before} % of the"
+        " {baseline} reviews before",
+    ),
+}
 BUSY_ALARM_WAIT_MS = 200  # how long the alarm of a locked database's error, or an Inspection alarm, waits, not 5 s
 ALIGNING = QT_TRANSLATE_NOOP("Training", "Aligning {count} images to the reference board")  # a progress line (#199)
 # what a training run does now, as its progress names it (REQ-TRN-008)
@@ -90,6 +120,10 @@ SAVING = QT_TRANSLATE_NOOP("Training", "Saving AI model {version}")
 NO_EARLIER = QT_TRANSLATE_NOOP("Errors", "no earlier version of this board model was active")
 NO_GOLDEN = QT_TRANSLATE_NOOP("Errors", "its Golden board {file} cannot be read ({error})")
 SWITCHES = ("model.train", "model.activate", "model.rollback")
+# The audit reason of a training that made its version active: a board model's first AI model goes live when its
+# training ends, as no version is in use to keep (business-readiness decision D3); each later one installs inactive
+# (REQ-TRN-010, REQ-TRN-012)
+FIRST_LIVE = "the first AI model of its board model, which goes live when its training ends"
 TEST_RUNS = "test_runs"  # under results/: a validation run's overlays, one per row (REQ-TST-003)
 # Why a dataset version was not tested (AOI-TST-003, REQ-TST-001)
 NO_SUCH_VERSION = QT_TRANSLATE_NOOP("Errors", "the workspace holds no such dataset version")
@@ -98,6 +132,17 @@ NOT_A_VERSION_RUN = QT_TRANSLATE_NOOP(
     "Errors", "the run used a folder, not a frozen dataset version's locked validation set"
 )
 NO_AGREEMENT = QT_TRANSLATE_NOOP("Errors", "no labeller agreement check is stored for the board model")
+# Why a customer's targets were not saved (AOI-TST-008, REQ-TST-008)
+TARGET_REFUSALS = {
+    "board_model": QT_TRANSLATE_NOOP("Errors", "the workspace holds no such board model"),
+    "missed_critical": QT_TRANSLATE_NOOP(
+        "Errors", "missed Critical defects must be a whole number from {low} to {high}"
+    ),
+    "false_call_rate": QT_TRANSLATE_NOOP("Errors", "the false call rate must be from {low} % to {high} %"),
+    "seconds_per_image": QT_TRANSLATE_NOOP("Errors", "the time per image must be from {low} s to {high} s"),
+    "agreed_with": QT_TRANSLATE_NOOP("Errors", "who at the customer agreed them is not given"),
+    "too_long": QT_TRANSLATE_NOOP("Errors", "who agreed them is longer than {chars} characters"),
+}
 NOT_LOCKED = QT_TRANSLATE_NOOP(
     "Errors", "its validation set is not split and locked"
 )  # the audit actions that change the active version
@@ -129,22 +174,61 @@ SCALE_NUMBERS = QT_TRANSLATE_NOOP(
 MIN_SCALE, MAX_SCALE = 2, 100000
 
 
+UNHANDLED = QT_TRANSLATE_NOOP("Errors", "unhandled")  # the context of an error no handler caught: the log's alone
+
+
+@dataclass(frozen=True)
+class RunningCopy:
+    """The copy of the app that has a workspace open: its process and its main window (0 before one is shown)."""
+
+    pid: int
+    window: int
+
+
+def workspace_in_use(folder: str | Path) -> bool:
+    """True when a copy of the app has the workspace `folder` open now, this one included (its lock is held); asked
+    before a switch of workspace and while a second start waits for the copy that has it open."""
+    return in_use(folder)
+
+
+def running_copy(folder: str | Path) -> RunningCopy | None:
+    """The copy of the app that holds the lock of the workspace `folder`, as it noted itself there, or None; asked by a
+    second start the lock refused (AOI-SET-019), which brings that copy's window to the front."""
+    held = holder(folder)
+    return None if held is None else RunningCopy(*held)
+
+
 @dataclass(frozen=True)
 class ErrorReport:
-    """What a user sees of an error: the code, a title, what happened and what to do. Never a stack trace."""
+    """What a user sees of an error: the code, a title, what happened and what to do, in plain words, and behind the
+    dialog's Details the technical words the log holds too: the exception's class and text, or the system's own text a
+    coded error carries (A5 of the 2026-10 business-readiness brief). Never a stack trace."""
 
     code: str
     title: str
     what: str
     action: str
+    detail: str = ""
 
     @classmethod
     def of(cls, exc: BaseException, context: str = "") -> ErrorReport:
-        """The report for any exception: an AoiError's own code, else AOI-SET-007 naming the exception type."""
-        if not isinstance(exc, AoiError):  # the context, a page title or a phrase, is shown in the UI language (#198)
-            where = QT_TRANSLATE_NOOP("Errors", " ({context})").fill(context=context) if context else ""
-            exc = AoiError("AOI-SET-007", error_type=type(exc).__name__, context=where)
-        return cls(exc.code, exc.title, exc.what, exc.action)
+        """The report for any exception: an AoiError's own code, with its detail or else the error that caused it,
+        else AOI-SET-007, whose Details name the exception's class and text, and whose message says in plain words what
+        a refusal of the system or of the database means (`system_reason`: "the drive is full"). The context, a page
+        title or a phrase, is shown in the UI language (#198), but for UNHANDLED, which means nothing to a user."""
+        exc = exc if isinstance(exc, AoiError) else unexpected(exc, context)
+        detail = exc.detail or system_detail(exc.__cause__) or ""
+        return cls(exc.code, exc.title, exc.what, exc.action, detail)
+
+
+def unexpected(exc: BaseException, context: str = "") -> AoiError:
+    """AOI-SET-007 for an error without a code: where it stopped (`context`, but for UNHANDLED) and, for a refusal of
+    the system or the database, what that means in plain words; the class and its text are its detail."""
+    shown = context if context != UNHANDLED else ""
+    where = QT_TRANSLATE_NOOP("Errors", " ({context})").fill(context=shown) if shown else ""
+    refused = isinstance(exc, (OSError, sqlite3.Error))
+    why = QT_TRANSLATE_NOOP("Errors", ": {reason}").fill(reason=system_reason(exc)) if refused else ""
+    return AoiError("AOI-SET-007", system_detail(exc), context=where, reason=why)
 
 
 @dataclass(frozen=True)
@@ -160,9 +244,10 @@ class CsvFile:
 
 @dataclass(frozen=True)
 class HistoryFilter:
-    """Logs & Export's filter as Filter applied it: local dates YYYY-MM-DD, board model, operator and verdict (OK, NG or
-    WARN), None for All, and whether archived records are listed; the arguments of `AppContext.inspections`. An export
-    or a delete audits the one that listed its records, with their count (REQ-LOG-002, REQ-LOG-003)."""
+    """Logs & Export's filter as Filter applied it: local dates YYYY-MM-DD, board model, operator, verdict (OK, NG or
+    WARN) and review (DEFECT, FALSE_CALL or NOT_REVIEWED, REQ-LOG-009), None for All, and whether archived records are
+    listed; the arguments of `AppContext.inspections`. An export or a delete audits the one that listed its records,
+    with their count (REQ-LOG-002, REQ-LOG-003)."""
 
     date_from: str | None = None
     date_to: str | None = None
@@ -170,6 +255,7 @@ class HistoryFilter:
     operator: str | None = None
     result: str | None = None
     include_archived: bool = False
+    review: str | None = None
 
 
 @dataclass(frozen=True)
@@ -186,6 +272,7 @@ class BoardStatus:
     ng: int
     reviewed: int = 0  # NG and WARN boards reviewed on the line (REQ-INSP-013)
     false_calls: int = 0  # of them, reviewed as False call
+    drifted: tuple[str, ...] = ()  # the measures out of their control limits now, any view (REQ-INSP-019)
 
 
 @dataclass(frozen=True)
@@ -204,6 +291,7 @@ _ACTING: contextvars.ContextVar[tuple[AppContext, Actor] | None] = contextvars.C
 
 DEFECT, FALSE_CALL = "DEFECT", "FALSE_CALL"  # an NG or WARN board's review on the line (REQ-INSP-013)
 REVIEWS = (DEFECT, FALSE_CALL)
+REVIEW_FILTERS = (NOT_REVIEWED, DEFECT, FALSE_CALL)  # Logs & Export's Review filter after All (REQ-LOG-009)
 ROLES = ("Operator", "Engineer", "Admin")  # lowest to highest (GUI §8, docs/ARCHITECTURE.md §5)
 ROLES_FROM = {  # a role and the roles above it, as AOI-USR-001 names them: one phrase each, never joined (#198)
     "Operator": QT_TRANSLATE_NOOP("Errors", "Operator, Engineer or Admin"),
@@ -211,6 +299,7 @@ ROLES_FROM = {  # a role and the roles above it, as AOI-USR-001 names them: one 
     "Admin": QT_TRANSLATE_NOOP("Errors", "Admin"),
 }
 REQUIRED_ROLE: dict[str, str] = {}  # AppContext write, or Engineer-only call -> the lowest role allowed to call it
+REQUIRED_WHAT: dict[str, str] = {}  # the same call -> the action its refusal names ("Removing a sample")
 P = ParamSpec("P")
 R = TypeVar("R")
 # A stored result's golden board, as `judged_reference` finds it.
@@ -240,7 +329,7 @@ def requires(
     acts as that user to its end, whoever signs in meanwhile (#177)."""
 
     def wrap(fn: Callable[Concatenate[AppContext, P], R]) -> Callable[Concatenate[AppContext, P], R]:
-        REQUIRED_ROLE[fn.__name__] = role
+        REQUIRED_ROLE[fn.__name__], REQUIRED_WHAT[fn.__name__] = role, what
 
         @functools.wraps(fn)
         def checked(self: AppContext, *args: P.args, **kwargs: P.kwargs) -> R:
@@ -256,6 +345,13 @@ def requires(
         return cast("Callable[Concatenate[AppContext, P], R]", checked)
 
     return wrap
+
+
+def refusal(call: str) -> AoiError:
+    """The AOI-USR-001 refusal AppContext's `call` raises for a role below the one its @requires names: what a screen
+    says on a control the role may not use, before anyone presses it, in the words the refusal would use (REQ-USR-001).
+    KeyError for a call that checks no role."""
+    return AoiError("AOI-USR-001", what=REQUIRED_WHAT[call], roles=ROLES_FROM[REQUIRED_ROLE[call]])
 
 
 def transactional(fn: Callable[Concatenate[AppContext, P], R]) -> Callable[Concatenate[AppContext, P], R]:
@@ -295,11 +391,6 @@ def _units(text: str) -> int:
     return len(text.encode("utf-16-le", "surrogatepass")) // 2
 
 
-def _sha256(path: Path) -> str:
-    with open(path, "rb") as f:
-        return hashlib.file_digest(f, "sha256").hexdigest()
-
-
 def _remove(files: list[Path]) -> None:
     """Remove files a write made before it failed, so none is left that its records or audit entry do not name."""
     for f in files:
@@ -316,9 +407,10 @@ class AppContext:
         try:
             self.settings.ensure_dirs()
         except OSError as e:  # a drive not connected, a file where the folder must go (REQ-SET-019)
-            raise WorkspaceError("AOI-SET-011", path=str(self.settings.root), error=str(e)) from e
-        # One copy of the app per workspace: a second one is refused with AOI-SET-012 before it opens or deletes
-        # anything, so the sweep below only meets what a crash left (#204)
+            folder = str(self.settings.root)
+            raise WorkspaceError("AOI-SET-011", system_detail(e), path=folder, error=system_reason(e)) from e
+        # One copy of the app per workspace: a second one is refused with AOI-SET-019 before it opens or deletes
+        # anything, so the sweep below only meets what a crash left (#204); it finds this one's window (`running_copy`)
         self._lock = WorkspaceLock.acquire(self.settings.root)
         try:
             self.log = logging_setup.setup(self.settings.root)
@@ -376,6 +468,11 @@ class AppContext:
         logging_setup.close(self.log)
         self._lock.release()  # last: another copy may open the workspace now (#204)
 
+    def note_window(self, window: int) -> None:
+        """Note this copy's main window, the system's handle of it, beside the workspace's lock, so a second start on
+        the workspace brings it to the front (`running_copy`; A6 of the 2026-10 business-readiness brief, F12)."""
+        self._lock.note(window)
+
     def set_user(self, name: str) -> None:
         """Make `name` the current user, with the UUID and the role the users table holds for them: the table is the
         only source of a role, so the role check and every audit entry name the stored one (#197). A name the table
@@ -388,16 +485,46 @@ class AppContext:
         self._actor = Actor(name, str(row["role"]), str(row["uuid"]))
 
     def start_user(self, setting_up: bool = False) -> str:
-        """The name of the user a start signs in: while the station is set up (no board model yet), the first user
-        the table holds as Admin; otherwise 'operator'. Without either (a table edited outside the app), the first
-        user of the lowest stored role. Its role is the stored one, whatever the name (#197)."""
+        """The name of the user a start signs in. In the demo workspace (`main.py --demo`, the Demo shortcut) and while
+        the station is set up (no board model yet): the first user the table holds as Admin. Otherwise the user who
+        signed in last on this station (`last_signed_in`), else 'operator'. Without either (a table edited outside the
+        app), the first user of the lowest stored role. Its role is the stored one, whatever the name (#197)."""
         users = self.db.users()  # never empty: the database seeds operator, engineer and admin
-        if setting_up and (admin := next((u for u in users if u["role"] == "Admin"), None)):
-            return str(admin["name"])
+        if setting_up or demo.is_demo(self.settings.root):
+            if admin := next((u for u in users if u["role"] == "Admin"), None):
+                return str(admin["name"])
+        # once users can be disabled (REQ-USR-006), a disabled one is never signed in at a start
+        if (last := self.last_signed_in()) is not None:
+            return last
         if any(u["name"] == "operator" for u in users):
             return "operator"
         rank = {r: i for i, r in enumerate(ROLES)}
         return str(min(users, key=lambda u: rank.get(u["role"], len(ROLES)))["name"]) if users else "operator"
+
+    def sign_in(self, name: str, start: bool = False) -> None:
+        """Sign `name` in: `set_user`, then an audit entry naming them and their role. As a person does with Switch
+        User, `user.sign_in`, with the user signed in before, which the station's next start signs in again
+        (`last_signed_in`); as a start does, `start`, `user.start`, which no later start reads. Anyone may sign in;
+        AOI-USR-003 refuses a name the users table does not hold, and an entry that cannot be written leaves the user
+        before signed in."""
+        previous = self._actor
+        self.set_user(name)
+        try:
+            after = {"user": self.user, "role": self.role}
+            if start:
+                self.audit("user.start", "user", self.user_uuid, None, after)
+            else:
+                before = {"user": previous.name, "role": previous.role}
+                self.audit("user.sign_in", "user", self.user_uuid, before, after)
+        except BaseException:
+            self._actor = previous  # signed in only once audited
+            raise
+
+    def last_signed_in(self) -> str | None:
+        """The name of the user who signed in last on this station with Switch User (the newest `user.sign_in` entry),
+        as the users table holds it now; None while no one has, or when that user is no longer in the table."""
+        last = self.db.last_sign_in()
+        return next((str(u["name"]) for u in self.db.users() if u["uuid"] == last), None) if last else None
 
     @property
     def actor(self) -> Actor:
@@ -435,6 +562,7 @@ class AppContext:
         should_stop: Callable[[], bool] | None = None,
         already: list[dict[str, Any]] | None = None,
         added: list[str] | None = None,
+        origin: dict[str, str] | None = None,
     ) -> int:
         """Copy uploads into the workspace so training data survives the source folder moving; returns how many were
         added. Each file goes through `_copy_checked` (REQ-TRN-001): checked as Inspection checks an image, never
@@ -448,7 +576,8 @@ class AppContext:
         true the files not yet copied are left out, the ones copied are added and the audit entry says so
         (`cancelled`); `import_files` passes one file a call and stops between calls, so the entries it writes never
         say so. `already`, when given, gets the sample each skipped image is already (`import_files` names it), and
-        `added` the UUID of each sample added."""
+        `added` the UUID of each sample added. `origin` goes into the audit entry as it is: where the images came from,
+        such as the record of a false call (`add_false_call_sample`)."""
         self._refuse_unsafe_name(board_model)  # a new board model is created by its first import
         self._refuse_case_variant(board_model)
         first = paths[0] if paths else ""
@@ -493,7 +622,7 @@ class AppContext:
                 after |= {"skipped": len(kept), "cancelled": stopped}
                 after["samples"] = [{"uuid": uid, "sha256": digest} for _, uid, digest in copies]
                 after["already"] = [{"uuid": had["uuid"], "sha256": digest} for digest, had in kept]
-                self.audit("sample.import", "board_model", board_model, None, after)
+                self.audit("sample.import", "board_model", board_model, None, after | (origin or {}))
         except BaseException:
             _remove([target for target, _, _ in copies])
             raise
@@ -519,32 +648,39 @@ class AppContext:
         of `known`, copies nothing and comes back with that sample (decision Q31). The copy is a crash-safe write; then
         the source and the copy are read again, and a SHA-256 other than the one checked (a writer still at the source)
         refuses the file with AOI-TRN-014 and removes the copy. A board model in a customer's dataset store gets its
-        copy encrypted from the bytes checked, never written plain, and read back decrypted (REQ-TRN-017). A source
-        lost since its check (removed, unreadable) is refused with AOI-INSP-001, as Inspection's check would; a copy
-        that cannot be written raises AOI-TRN-008, or AOI-TRN-011 when the system refuses its path as too long
+        copy encrypted from the bytes checked, never written plain, and read back decrypted (REQ-TRN-017); a source
+        that is itself a file of a store, such as a board inspected from a stored sample (REQ-TRN-020), is read
+        decrypted in memory, and its copy outside a store written from the bytes checked, never copied encrypted. A
+        source lost since its check (removed, unreadable) is refused with AOI-INSP-001, as Inspection's check would; a
+        copy that cannot be written raises AOI-TRN-008, or AOI-TRN-011 when the system refuses its path as too long
         (#245)."""
-        data = imaging.checked_bytes(src, self.settings.max_image_megapixels, self.settings.max_image_megabytes)
+        limits = (self.settings.max_image_megapixels, self.settings.max_image_megabytes)
+        data = imaging.checked_bytes(src, *limits, read=self._plain_bytes)
         digest = hashlib.sha256(data).hexdigest()
         if (had := known.get(digest) or self.db.sample_with_sha256(board_model, digest)) is not None:
             return digest, had
         sealed = self._sealed(to_stored(target, self.settings.root), data)  # the bytes checked, in the store's form
+        plain = data if sealed is None and self._store_for(src) is not None else None  # a store's file, decrypted
         del data  # up to the size limit in memory: not kept through the copy
         try:
-            if sealed is None:
-                atomic.copy_file(src, target)
-            else:  # a board model in a customer's dataset store: its copy is encrypted from the start (REQ-TRN-017)
+            if sealed is not None:  # a board model in a customer's store: encrypted from the start (REQ-TRN-017)
                 atomic.write_bytes(target, sealed)
                 del sealed
+            elif plain is not None:
+                atomic.write_bytes(target, plain)
+                del plain
+            else:
+                atomic.copy_file(src, target)
         except OSError as e:  # gone, unreadable, the workspace drive full, or a path the system refuses
             if str(e.filename) == str(src):  # the source's own: that file's to fix, listed by import_files
                 raise AoiError("AOI-INSP-001", str(e), path=str(src)) from e
             if _too_long(e):  # the copy's path (#245)
                 where = {"workspace": str(self.settings.root), "count": count}
                 raise AoiError("AOI-TRN-011", str(e), path=str(src), **where) from e
-            why = e.strerror or str(e)
-            raise AoiError("AOI-TRN-008", str(e), path=str(src), reason=why, count=count) from e
+            why = system_reason(e, writing=True)
+            raise AoiError("AOI-TRN-008", system_detail(e), path=str(src), reason=why, count=count) from e
         try:
-            same = _sha256(src) == digest == self._file_sha256(target)
+            same = self._file_sha256(src) == digest == self._file_sha256(target)
         except (OSError, AoiError):  # the source gone right after its copy, or a copy that does not read back
             same = False
         if not same:
@@ -654,11 +790,14 @@ class AppContext:
         use: str = "own",
     ) -> dict[str, Any]:
         """Train an AI model of a frozen dataset version's board model on the version's training set, for `use` (its
-        customer's own AI models by default), then save, register (inactive, REQ-TRN-010) and audit it (REQ-TRN-007).
-        The OK images train it and make the Golden board; the NG images only calibrate its threshold; the locked
-        validation set is never read. Refused, before any image is read, as `_training_set` gives. A file whose SHA-256,
-        of the bytes read, is not the one frozen stops the run with AOI-TRN-045. The run reads the device once, before
-        it loads anything, and keeps it to the end (#201).
+        customer's own AI models by default), then save, register (inactive, REQ-TRN-010) and audit it (REQ-TRN-007),
+        and return its metadata with `activated` and `not_live`: a board model's first version, trained for its
+        customer's own AI models, is then made active with its own audit entry (`_first_live`, ADR 0018), and `not_live`
+        holds the error that kept it inactive, if one did; a later version, or one for another use, stays inactive. The
+        OK images train it and make the Golden board; the NG images only calibrate its threshold; the locked validation
+        set is never read. Refused, before any image is read, as `_training_set` gives. A file whose SHA-256, of the
+        bytes read, is not the one frozen stops the run with AOI-TRN-045. The run reads the device once, before it loads
+        anything, and keeps it to the end (#201).
 
         Memory (REQ-TRN-007): each image is read, registered onto the board model's reference board (else the first OK
         image) and warped, then kept only as its tensor at the network's input size and its band of the Golden board's
@@ -752,6 +891,8 @@ class AppContext:
         model = anomaly.train(ok_in, ng_in, cfg, engine, should_stop)
         check()
         previous = self.db.active_model(board_model)
+        # the board model's first AI model, for the line's own use, goes live once registered (D3, ADR 0018)
+        first = use == "own" and not self.db.models(board_model)
         out.mkdir(parents=True, exist_ok=True)
 
         def files(v: str) -> list[Path]:
@@ -786,8 +927,11 @@ class AppContext:
             summary = {k: v for k, v in model.meta.items() if k not in ("loss_history", "err_mean", "err_std")}
             # The version installs inactive, its Golden board with it: the Engineer activates it, with its card, on
             # Training (REQ-TRN-010, Engineering "Go-live gate"); boards stay judged by the active version until then.
+            # A board model's first version is then made active below, as there is no active version to keep (D3).
             with self.db.transaction():  # the version and its entry together
-                self.db.register_model(board_model, version, str(path), summary, activate=False, uid=model_uuid)
+                model_id = self.db.register_model(
+                    board_model, version, str(path), summary, activate=False, uid=model_uuid
+                )
                 old = {"active_version": previous["version"] if previous else None}
                 after = {"version": version, "activated": False, "metrics": summary}
                 self.audit("model.train", "model", model_uuid, old, after)
@@ -795,8 +939,10 @@ class AppContext:
             _remove(files(version))  # not registered: no file is left for a later run to take for its own
             raise
         self._model_cache.pop(board_model, None)
-        self.log.info("training.finished", extra={"board_model": board_model, "model_version": version})
-        return model.meta
+        not_live = self._first_live(board_model, model_id) if first else None
+        live = first and not_live is None
+        self.log.info("training.finished", extra={"board_model": board_model, "model_version": version, "live": live})
+        return {**model.meta, "activated": live, "not_live": not_live}
 
     def load_model(self, board_model: str) -> tuple[str, anomaly.AnomalyModel, str] | None:
         """The active model of a board model as (version, model, uuid), the three from one row so a record never names
@@ -1189,6 +1335,7 @@ class AppContext:
         # The row has committed: its files are named now and stay, whatever the log lines below meet.
         if alarm is not None:
             self.log.info("alarm", extra={"alarm_level": alarm[0], "code": alarm[2], "text": alarm[1]})
+        self._watch_drift(board_model, res.view)
         self.log.info(
             "inspection.saved",
             extra={
@@ -1215,6 +1362,52 @@ class AppContext:
         self.db.alarm(level, message, code, wait_ms)
         self.log.info("alarm", extra={"alarm_level": level, "code": code, "text": log_text or message})
 
+    def _watch_drift(self, board_model: str, view: str | None) -> None:
+        """After a board is saved: alarm (WARN, AOI-INSP-018) on each drift measure of its board model and view that
+        crossed its control limit with this board (`drift.board_drift`, REQ-INSP-019). Never raises: a check that fails
+        is logged, and the board stays saved."""
+        try:
+            rows = drift.same_engine(self.db.drift_rows(board_model, drift.SCAN), view)
+            self._drift_alarms(board_model, view, drift.crossed(drift.board_drift(rows), drift.board_drift(rows[1:])))
+        except Exception:
+            self.log.warning("drift.not_checked", exc_info=True, extra={"board_model": board_model})
+
+    def _watch_reviews(self, board_model: str, view: str | None) -> None:
+        """After a False call is reviewed: alarm on the false calls' share of the reviewed calls of its board model and
+        view crossing its control limit (`drift.review_drift`, REQ-INSP-019). Never raises, as `_watch_drift`."""
+        try:
+            rows = drift.same_engine(self.db.drift_reviews(board_model, drift.REVIEW_SCAN), view)
+            false = [r["review"] == FALSE_CALL for r in rows]
+            now, earlier = drift.review_drift(false), drift.review_drift(false[1:])
+            self._drift_alarms(board_model, view, drift.crossed([now] if now else [], [earlier] if earlier else []))
+        except Exception:
+            self.log.warning("drift.not_checked", exc_info=True, extra={"board_model": board_model})
+
+    def _drift_alarms(self, board_model: str, view: str | None, crossed: list[drift.Drift]) -> None:
+        for d in crossed:
+            digits = 0 if d.measure == drift.ALIGNMENT else 2
+            if d.measure in (drift.OK_SCORE, drift.ALIGNMENT):  # a mean, in the measure's own unit
+                recent, before = f"{d.recent:.{digits}f}", f"{d.before:.{digits}f}"
+            else:  # a rate: its count in the window, and the baseline's share in %
+                recent, before = "", f"{100 * d.before:.1f}"
+            text = DRIFT_TEXT[d.measure].fill(
+                board=board_model, view=view or VIEWS[0], count=d.count, of=d.of, recent=recent, before=before,
+                baseline=d.baseline,
+            )  # fmt: skip
+            self.alarm("WARN", text, "AOI-INSP-018")
+
+    def drifted(self, board_model: str) -> tuple[str, ...]:
+        """The drift measures of a board model out of their control limits now, in any view, each once in the order of
+        `drift.BOARD_MEASURES` then false calls (REQ-INSP-019): what Home's Inspect card names."""
+        rows = self.db.drift_rows(board_model, drift.SCAN)
+        reviews = self.db.drift_reviews(board_model, drift.REVIEW_SCAN)
+        out: set[str] = set()
+        for view in {r["view"] for r in rows} | {r["view"] for r in reviews}:
+            out |= {d.measure for d in drift.board_drift(drift.same_engine(rows, view))}
+            if drift.review_drift([r["review"] == FALSE_CALL for r in drift.same_engine(reviews, view)]):
+                out.add(drift.FALSE_CALLS)
+        return tuple(m for m in (*drift.BOARD_MEASURES, drift.FALSE_CALLS) if m in out)
+
     def alarms(self, limit: int = ALARM_LIMIT) -> list[dict[str, Any]]:
         """The newest alarms first: time (UTC), level, code and message."""
         return self.db.alarms(limit)
@@ -1227,7 +1420,7 @@ class AppContext:
         refused is logged)."""
         busy = is_busy(exc) or is_busy(exc.__cause__)
         if is_busy(exc):  # not unexpected: the user can close the other program and try again
-            held = AoiError("AOI-SET-013", detail=str(exc), path=str(self.db.path), error=str(exc))
+            held = AoiError("AOI-SET-013", detail=system_detail(exc), path=str(self.db.path))
             held.__cause__ = exc  # the log keeps SQLite's error and its trace
             exc = held.with_traceback(exc.__traceback__)
         report = ErrorReport.of(exc, context)  # the dialog and the alarm name a user; the log only by UUID (#195)
@@ -1337,12 +1530,15 @@ class AppContext:
         store and audit the run: `batch_test`'s rows, metrics and judged_by. The metrics hold `rates`, each rate with
         its count and one-sided 95 % bound, and recall per defect type where rows carry one (REQ-TST-002, -007)."""
         insp = self.inspector(board_model)
+        targets = self.db.validation_targets(board_model)  # as they stand when it starts, kept with it (REQ-TST-008)
         run_uuid = new_uuid()
         ids = {"run_uuid": run_uuid, "model_version": insp.model_version, "model_uuid": insp.model_uuid}
         out = self.settings.results_dir / TEST_RUNS / run_uuid  # each row's overlay, for a preview (REQ-TST-003)
         rows: list[dict[str, Any]] = []
         try:
-            return self._judge_rows(board_model, folder, entries, dataset_uuid, progress, on_row, insp, ids, out, rows)
+            return self._judge_rows(
+                board_model, folder, entries, dataset_uuid, progress, on_row, insp, ids, out, rows, targets
+            )
         except BaseException:
             shutil.rmtree(out, ignore_errors=True)  # not stored: no overlay is left for a run nobody can open
             raise
@@ -1359,9 +1555,12 @@ class AppContext:
         ids: dict[str, Any],
         out: Path,
         rows: list[dict[str, Any]],
+        targets: dict[str, Any] | None,
     ) -> tuple[dict[str, Any], list[dict[str, Any]], JudgedBy]:
         """`_run_test`'s run: each row judged, its overlay stored and the row handed to `on_row` as it is done (the
-        table grows board by board, REQ-TST-006); then the run, what judged it and its entry stored together."""
+        table grows board by board, REQ-TST-006); then the run, what judged it and its entry stored together. The
+        metrics keep `targets`, those in force as the run started (a `validation_targets` row; None for the proposed
+        defaults), so targets recorded later never change what the run is held to (REQ-TST-008)."""
         for i, (f, gt, defect_type, read) in enumerate(entries, 1):
             res = insp.inspect(read())
             pred = NG if res.verdict in (NG, WARN) else OK
@@ -1385,7 +1584,7 @@ class AppContext:
                 on_row({**rows[-1], **ids})
             if progress:
                 progress(i, len(entries))
-        metrics = classification_metrics(rows) | {"rates": stats.validation_rates(rows)}
+        metrics = classification_metrics(rows) | {"rates": stats.validation_rates(rows), "targets": targets}
         model_version = insp.model_version or "-"
         judged = dataclasses.asdict(insp.judged_by)  # what judged every row: recipe, Golden board, scale (REQ-TST-005)
         with self.db.transaction():  # the run and its entry, or neither (#178)
@@ -1426,8 +1625,17 @@ class AppContext:
         return self.db.model(model_id)
 
     def active_model(self, board_model: str) -> dict[str, Any] | None:
-        """The model version inspections use, or None when none is trained."""
+        """The model version inspections use, or None when none is active."""
         return self.db.active_model(board_model)
+
+    def inactive_model(self, board_model: str) -> dict[str, Any] | None:
+        """The newest trained version of a board model while none is active, which an Engineer activates (Inspection
+        offers it, as Activate Selected on Training does); None while one is active or none is trained. A board model's
+        first version for its own use goes live when trained (`train`), so this is one trained before that, one trained
+        for another use, or one whose activation was refused."""
+        if self.db.active_model(board_model) is not None:
+            return None
+        return next(iter(self.db.models(board_model)), None)  # newest first
 
     def calibrated_threshold(
         self, board_model: str, model_uuid: str | None = None, version: str | None = None
@@ -1477,9 +1685,11 @@ class AppContext:
         """What the customer validation report of a run states (REQ-TST-008; Customers & Launch, "Validation"): the
         run (`test_run`), its frozen dataset version (name, customer, revision, view, manifest SHA-256, frozen at), its
         locked split (seed, locked by, locked at), the labeller agreement check stored for the board model, the
-        validation set's images by label and defect type, the targets beside their results (`report.target_results`),
-        the overlays of its misses and false calls and the AI model card. AOI-TST-007 for a run on a folder, a run of a
-        version the workspace no longer holds, or a board model with no agreement check stored."""
+        validation set's images by label and defect type, the targets beside their results (`report.target_results`):
+        those agreed with the customer and in force when the run started (`agreed`, a `validation_targets` row), else
+        the proposed defaults (`agreed` None, as for a run stored before migration 0025), the overlays of its misses
+        and false calls and the AI model card. AOI-TST-007 for a run on a folder, a run of a version the workspace no
+        longer holds, or a board model with no agreement check stored."""
         run = self.test_run(run_uuid)
         if run is None or not run.get("dataset_uuid"):
             raise AoiError("AOI-TST-007", reason=NOT_A_VERSION_RUN)
@@ -1490,17 +1700,70 @@ class AppContext:
         if not checks:
             raise AoiError("AOI-TST-007", reason=NO_AGREEMENT)
         rows = run["results"]
+        agreed = run["metrics"].get("targets")
         return {
             "run": run,
             "dataset": found[0],
             "split": self.db.validation_split(run["dataset_uuid"]),
             "agreement": checks[0],
             "counts": report.label_counts(rows),
-            "targets": report.target_results(rows),
+            "agreed": agreed,
+            "targets": report.target_results(rows, report.target_values(agreed)),
             "rates": run["metrics"].get("rates") or stats.validation_rates(rows),
             "images": self.report_images(rows),
             "card": self.model_card_text(run["board_model"], run.get("model_uuid")),
         }
+
+    def validation_targets(self, board_model: str) -> dict[str, Any] | None:
+        """The targets a customer agreed for a board model's validation and in force now (REQ-TST-008; Customers &
+        Launch, "Validation", step 2): uuid, missed_critical, false_call_rate (a fraction), seconds_per_image,
+        agreed_with, user and time (UTC). None while none was recorded: a run is then held to the product's proposed
+        defaults (`report.DEFAULT_TARGETS`)."""
+        return self.db.validation_targets(board_model)
+
+    @requires("Engineer", QT_TRANSLATE_NOOP("Errors", "Recording a customer's targets"))
+    @transactional
+    def set_validation_targets(
+        self,
+        board_model: str,
+        missed_critical: int,
+        false_call_rate: float,
+        seconds_per_image: float,
+        agreed_with: str,
+    ) -> dict[str, Any]:
+        """Record the targets a customer agreed, before testing, for a board model's validation (REQ-TST-008; Customers
+        & Launch, "Validation", step 2): the most missed Critical defects, the highest false call rate (a fraction) and
+        the longest engine time per image at the 95th percentile, and with whom they were agreed. They are in force from
+        the next validation run, which keeps them; a run made before keeps the targets it started with. Audited as
+        `validation.targets` with the targets before (None: the proposed defaults). AOI-TST-008 refuses an unknown board
+        model, a value out of `report.TARGET_LIMITS` or no one named as agreeing, and changes nothing. Returns the row
+        now in force."""
+        values = {"missed_critical": missed_critical, "false_call_rate": false_call_rate,
+                  "seconds_per_image": seconds_per_image}  # fmt: skip
+        who = (agreed_with or "").strip()
+        if (why := self._targets_refusal(board_model, values, who)) is not None:
+            raise AoiError("AOI-TST-008", board_model=board_model, reason=why)
+        before = self.db.validation_targets(board_model)
+        uid = self.db.add_validation_targets(board_model, values, who, self.user)
+        after = {"uuid": uid, **values, "agreed_with": who}
+        self.audit("validation.targets", "board_model", board_model, before, after)
+        return cast("dict[str, Any]", self.db.validation_targets(board_model))
+
+    def _targets_refusal(self, board_model: str, values: dict[str, float], who: str) -> Phrase | None:
+        """Why AOI-TST-008 refuses targets, or None."""
+        if board_model not in self.db.board_models():
+            return TARGET_REFUSALS["board_model"]
+        for key, (low, high) in report.TARGET_LIMITS.items():
+            v = values[key]
+            whole = key != "missed_critical" or (not isinstance(v, bool) and float(v).is_integer())
+            if not (whole and low <= v <= high):
+                scale = 100 if key == "false_call_rate" else 1  # said in percent, as the sheet asks for it
+                return TARGET_REFUSALS[key].fill(low=f"{low * scale:g}", high=f"{high * scale:g}")
+        if not who:
+            return TARGET_REFUSALS["agreed_with"]
+        if len(who) > report.AGREED_WITH_CHARS:
+            return TARGET_REFUSALS["too_long"].fill(chars=report.AGREED_WITH_CHARS)
+        return None
 
     def test_runs(self, board_model: str) -> list[dict[str, Any]]:
         """Every validation run of a board model, newest first (REQ-TST-005): uuid, time, the AI model version, the
@@ -1542,11 +1805,13 @@ class AppContext:
         operator: str | None = None,
         include_archived: bool = False,
         result: str | None = None,
+        review: str | None = None,
     ) -> list[dict[str, Any]]:
-        """Inspection records, newest first, filtered by local calendar dates (YYYY-MM-DD), board model, operator and
-        verdict (`result`: OK, NG or WARN), each with its defect_count and absolute image and overlay paths; within 1 s
-        over 100,000 records (REQ-LOG-001)."""
-        return self.db.inspections(date_from, date_to, board_model, operator, include_archived, result)
+        """Inspection records, newest first, filtered by local calendar dates (YYYY-MM-DD), board model, operator,
+        verdict (`result`: OK, NG or WARN) and review (one of REVIEW_FILTERS: NOT_REVIEWED lists the NG and WARN
+        records no one has reviewed, REQ-LOG-009), each with its defect_count and absolute image and overlay paths;
+        within 1 s over 100,000 records (REQ-LOG-001)."""
+        return self.db.inspections(date_from, date_to, board_model, operator, include_archived, result, review)
 
     def history_span(self) -> dict[str, Any] | None:
         """`oldest` and `newest`, the stored times of the first and last record, archived ones included, and how many
@@ -1728,7 +1993,38 @@ class AppContext:
         self.log.info(
             "inspection.reviewed", extra={"inspection_id": inspection_id, "review": review, "verdict": record["result"]}
         )
+        if review == FALSE_CALL:  # only a false call can raise the false calls' share (REQ-INSP-019)
+            self._watch_reviews(record["board_model"], record["view"])
         return {**record, "review": review, "review_reason": reason, "review_by": self.user, "review_time": when}
+
+    @requires("Engineer", QT_TRANSLATE_NOOP("Errors", "Adding a board to Training"))
+    def add_false_call_sample(self, inspection_id: int) -> dict[str, Any]:
+        """Add a board reviewed as a false call (REQ-INSP-013) to its board model's Training samples as OK, in one step
+        (REQ-TRN-020, ADR 0013): the board is good by the review, so the next AI model trained learns its look as
+        normal. The record's stored image is imported as `import_samples` imports a file (checked, copied, its SHA-256
+        kept), in the record's view, and the import's audit entry names the record (`from_inspection`, its UUID). An
+        image the board model already holds is not added again. AOI-TRN-050 refuses an unknown record or one not
+        reviewed as a false call, and changes nothing. Returns `added` (1, or 0 when the image was already a sample),
+        `sample` (the UUID of the sample holding the image), its `label`, and the `board_model` and `view`."""
+        record = self.db.inspection(inspection_id)
+        if record is None:
+            raise AoiError("AOI-TRN-050", record=inspection_id, reason=QT_TRANSLATE_NOOP("Errors", "no such record"))
+        if record["review"] != FALSE_CALL:
+            why = QT_TRANSLATE_NOOP("Errors", "it is not reviewed as a false call")
+            raise AoiError("AOI-TRN-050", record=inspection_id, reason=why)
+        if not record["image_path"]:
+            why = QT_TRANSLATE_NOOP("Errors", "its board image was not stored")
+            raise AoiError("AOI-TRN-050", record=inspection_id, reason=why)
+        view = record["view"] or VIEWS[0]  # a record stored before views were (S35) was a top view
+        already: list[dict[str, Any]] = []
+        added: list[str] = []
+        self.import_samples(
+            record["board_model"], [record["image_path"]], "OK", side=view, already=already, added=added,
+            origin={"from_inspection": record["uuid"]},
+        )  # fmt: skip
+        sample = {"uuid": added[0], "label": "OK"} if added else already[0]
+        out = {"added": len(added), "sample": sample["uuid"], "label": sample["label"]}
+        return out | {"board_model": record["board_model"], "view": view}
 
     # --- the start-of-shift check (REQ-INSP-017, ADR 0014) -----------------------
     def master_samples(self, board_model: str) -> list[dict[str, Any]]:
@@ -1851,6 +2147,7 @@ class AppContext:
             ng=ng,
             reviewed=reviewed,
             false_calls=false_calls,
+            drifted=self.drifted(board_model),
         )
 
     # --- what the screens change: each checks the role and appends an audit entry (REQ-USR-001, REQ-LOG-004) ---
@@ -2449,7 +2746,7 @@ class AppContext:
         place."""
         image, sha = self._load_image_sha256(resolve(item["path"], self.settings.root))
         if sha != item["sha256"]:
-            why = QT_TRANSLATE_NOOP("Errors", "{file} is not the file frozen, by its SHA-256").fill(file=item["path"])
+            why = QT_TRANSLATE_NOOP("Errors", "{file} has changed since the version was frozen").fill(file=item["path"])
             raise AoiError("AOI-TRN-045", name=version["name"], reason=why)
         return image
 
@@ -2526,8 +2823,8 @@ class AppContext:
         try:
             heads = [(f, stores.header_of(f)) for f in files]
         except OSError as e:
-            why = QT_TRANSLATE_NOOP("Errors", "a file of it could not be read ({reason})").fill(reason=str(e))
-            raise AoiError("AOI-TRN-044", str(e), store=store["customer"], reason=why) from e
+            why = QT_TRANSLATE_NOOP("Errors", "a file of it could not be read: {reason}").fill(reason=system_reason(e))
+            raise AoiError("AOI-TRN-044", system_detail(e), store=store["customer"], reason=why) from e
         if foreign := [f for f, h in heads if h is not None and h.key_id.hex() != store["key_id"]]:
             why = crypto.OTHER_KEY.fill(file=to_stored(foreign[0], self.settings.root))
             raise AoiError("AOI-TRN-044", store=store["customer"], reason=why)
@@ -2566,8 +2863,8 @@ class AppContext:
             try:
                 self.credentials.delete(credentials.STORE_PREFIX + store_uuid)  # first: from here nothing of it opens
             except OSError as e:
-                why = QT_TRANSLATE_NOOP("Errors", "this station's key store did not delete the key ({reason})")
-                raise AoiError("AOI-TRN-044", str(e), store=store["customer"], reason=why.fill(reason=str(e))) from e
+                why = QT_TRANSLATE_NOOP("Errors", "this station's key store did not delete the key")
+                raise AoiError("AOI-TRN-044", system_detail(e), store=store["customer"], reason=why) from e
             self._keys.pop(store_uuid, None)
         with self.db.transaction():
             if not store["shredded_at"]:
@@ -2579,9 +2876,9 @@ class AppContext:
         folders = [root / stores.IMAGES / b for b, _ in boards] + [models / b for b, _ in boards]
         folders += [root / datasets.FOLDER / name for _, versions in boards for name in versions]
         if left := _deleted(files + derived, folders):
-            why = QT_TRANSLATE_NOOP("Errors", "{count} file(s) would not go, {file} first ({detail}); shred it again")
-            reason = why.fill(count=len(left), file=to_stored(left[0][0], root), detail=str(left[0][1]))
-            raise AoiError("AOI-TRN-044", store=store["customer"], reason=reason)
+            why = QT_TRANSLATE_NOOP("Errors", "{count} file(s) would not go, {file} first ({reason}); shred it again")
+            reason = why.fill(count=len(left), file=to_stored(left[0][0], root), reason=system_reason(left[0][1]))
+            raise AoiError("AOI-TRN-044", system_detail(left[0][1]), store=store["customer"], reason=reason)
         return {"files": len(files), "models": len(derived)}
 
     def store_contents(self, store_uuid: str) -> dict[str, Any]:
@@ -2631,8 +2928,8 @@ class AppContext:
         try:
             self.credentials.write(credentials.STORE_PREFIX + store["uuid"], key)
         except OSError as e:
-            why = QT_TRANSLATE_NOOP("Errors", "this station's key store refused the key ({reason})")
-            raise AoiError("AOI-TRN-044", str(e), store=store["customer"], reason=why.fill(reason=str(e))) from e
+            why = QT_TRANSLATE_NOOP("Errors", "this station's key store refused the key")
+            raise AoiError("AOI-TRN-044", system_detail(e), store=store["customer"], reason=why) from e
         self._keys.pop(store["uuid"], None)
 
     def _key(self, store: dict[str, Any]) -> bytes:
@@ -2643,8 +2940,8 @@ class AppContext:
         try:
             key = self.credentials.read(credentials.STORE_PREFIX + store["uuid"])
         except OSError as e:
-            why = QT_TRANSLATE_NOOP("Errors", "this station's key store could not be read ({reason})")
-            raise AoiError("AOI-TRN-025", str(e), store=store["customer"], reason=why.fill(reason=str(e))) from e
+            why = QT_TRANSLATE_NOOP("Errors", "this station's key store could not be read")
+            raise AoiError("AOI-TRN-025", system_detail(e), store=store["customer"], reason=why) from e
         if key is None:
             why = QT_TRANSLATE_NOOP("Errors", "this station holds no key for it")
         elif crypto.check_value(key) != store["check_value"]:
@@ -2661,8 +2958,9 @@ class AppContext:
         try:
             plain = path.read_bytes()
         except OSError as e:
-            why = QT_TRANSLATE_NOOP("Errors", "{file} could not be read ({detail})").fill(file=stored, detail=str(e))
-            raise AoiError("AOI-TRN-044", str(e), store=store["customer"], reason=why) from e
+            why = QT_TRANSLATE_NOOP("Errors", "{file} could not be read: {reason}")
+            why = why.fill(file=stored, reason=system_reason(e))
+            raise AoiError("AOI-TRN-044", system_detail(e), store=store["customer"], reason=why) from e
         error: Exception | None = None
         try:
             atomic.write_bytes(path, crypto.encrypt(key, key_id, store["uuid"], stored, plain))
@@ -2672,8 +2970,13 @@ class AppContext:
         if error is not None or hashlib.sha256(back).digest() != hashlib.sha256(plain).digest():
             with contextlib.suppress(OSError):
                 atomic.write_bytes(path, plain)
-            why = QT_TRANSLATE_NOOP("Errors", "{file} did not read back as written, and was left plain ({detail})")
-            raise AoiError("AOI-TRN-044", store=store["customer"], reason=why.fill(file=stored, detail=str(error)))
+            if isinstance(error, OSError):  # the disk refused the encrypted file
+                why = QT_TRANSLATE_NOOP("Errors", "{file} could not be written encrypted, and was left plain: {reason}")
+                why = why.fill(file=stored, reason=system_reason(error, writing=True))
+            else:
+                why = QT_TRANSLATE_NOOP("Errors", "{file} did not read back as written, and was left plain")
+                why = why.fill(file=stored)
+            raise AoiError("AOI-TRN-044", system_detail(error), store=store["customer"], reason=why)
 
     def _store_for(self, path: str | Path) -> tuple[dict[str, Any], str] | None:
         """The store a workspace file is in, with the path as the rows store it: a file under images/<board model>/,
@@ -2870,11 +3173,26 @@ class AppContext:
                 return by_version.get(previous) if previous and previous != made else None
         return None
 
-    def _switch_to(self, target: dict[str, Any], action: str) -> None:
+    def _first_live(self, board_model: str, model_id: int) -> Exception | None:
+        """Make a board model's first AI model version, just registered, the active one with its Golden board
+        (`_switch_to`), audited as `model.activate` by the Engineer who trained it with FIRST_LIVE as the reason
+        (business-readiness decision D3, ADR 0018; REQ-TRN-012). Its own transaction, after the version's: a refusal
+        (AOI-TRN-048, AOI-TRN-049) or a failure such as a full disk leaves the version registered and inactive, which is
+        logged and returned, for Training to show, and which Inspection then offers to activate (`inactive_model`).
+        None once it is live."""
+        try:
+            with self.db.transaction():
+                self._switch_to(self.db.model(model_id), "model.activate", FIRST_LIVE)
+        except Exception as e:
+            self.log.warning("training.first_not_live", exc_info=True, extra={"board_model": board_model})
+            return e
+        return None
+
+    def _switch_to(self, target: dict[str, Any], action: str, reason: str | None = None) -> None:
         """Make `target` its board model's active version and its Golden board the board model's, together, with an
-        audit entry naming both before and after (REQ-TRN-010). A version that records no Golden board (trained before
-        it was recorded) keeps the board model's. A recorded Golden board that cannot be read is refused with
-        AOI-TRN-048 before anything changes: inspections would otherwise judge with another version's board."""
+        audit entry naming both before and after, and `reason` (REQ-TRN-010). A version that records no Golden board
+        (trained before it was recorded) keeps the board model's. A recorded Golden board that cannot be read is refused
+        with AOI-TRN-048 before anything changes: inspections would otherwise judge with another version's board."""
         board_model = target["board_model"]
         if not self.card_files(int(target["id"]))[1].is_file():  # no AI model goes live without its card (REQ-TRN-011)
             raise AoiError("AOI-TRN-049", version=target["version"], board=board_model)
@@ -2897,7 +3215,8 @@ class AppContext:
             return to_stored(Path(p), self.settings.root) if p else None
 
         old = {"active_version": previous["version"] if previous else None, "reference": kept(before_ref)}
-        self.audit(action, "model", target["uuid"], old, {"active_version": target["version"], "reference": kept(ref)})
+        after = {"active_version": target["version"], "reference": kept(ref)}
+        self.audit(action, "model", target["uuid"], old, after, reason)
 
     @requires("Admin", QT_TRANSLATE_NOOP("Errors", "Changing users"))
     @transactional
@@ -2973,8 +3292,9 @@ class AppContext:
         for path, e in left:
             self.log.warning("records.evidence_left", extra={"path": to_stored(path, root), "reason": str(e)})
         if left:
-            first, why = to_stored(left[0][0], root), str(left[0][1])
-            raise AoiError("AOI-LOG-004", count=len(rows), left=len(left), file=first, reason=why)
+            first, why = to_stored(left[0][0], root), system_reason(left[0][1])
+            detail = system_detail(left[0][1])
+            raise AoiError("AOI-LOG-004", detail, count=len(rows), left=len(left), file=first, reason=why)
         return {"records": len(rows), "files": len(files)}
 
     def _sweep_ok_maps(self, days: int | None = None) -> int:
@@ -3093,8 +3413,8 @@ class AppContext:
         self._audit_files(copied, "export.overlays", "inspections", None, after, sources)
         if failed:
             params = {"copied": len(copied), "total": len(sources), "folder": str(folder), "file": failed[0].name}
-            why = failed[1].strerror or str(failed[1])
-            raise AoiError("AOI-LOG-001", str(failed[1]), reason=why, **params) from failed[1]
+            why = system_reason(failed[1], writing=True)
+            raise AoiError("AOI-LOG-001", system_detail(failed[1]), reason=why, **params) from failed[1]
         return len(copied)
 
     @requires("Admin", QT_TRANSLATE_NOOP("Errors", "Exporting overlay images"))  # Q58 (#151)
@@ -3144,8 +3464,8 @@ class AppContext:
         self._audit_files(copied, "export.test_overlays", "test_run", run_uuid, after, [p[2] for p in pairs])
         if failed:
             params = {"copied": len(copied), "total": len(pairs), "folder": str(folder), "file": failed[0].name}
-            why = failed[1].strerror or str(failed[1])
-            raise AoiError("AOI-LOG-001", str(failed[1]), reason=why, **params) from failed[1]
+            why = system_reason(failed[1], writing=True)
+            raise AoiError("AOI-LOG-001", system_detail(failed[1]), reason=why, **params) from failed[1]
         return len(copied)
 
     @requires("Admin", QT_TRANSLATE_NOOP("Errors", "Exporting CSV"))  # Q58 (#151)
@@ -3290,12 +3610,13 @@ def _manifest_write(name: str, path: str, root: Path) -> Iterator[None]:
     except OSError as e:
         if _too_long(e):
             raise AoiError("AOI-TRN-042", repr(e), name=name, workspace=str(root)) from e
-        raise AoiError("AOI-TRN-041", repr(e), name=name, path=path, reason=e.strerror or str(e)) from e
+        why = system_reason(e, writing=True)
+        raise AoiError("AOI-TRN-041", system_detail(e), name=name, path=path, reason=why) from e
 
 
 def _not_written(e: OSError, path: object) -> AoiError:
     """AOI-LOG-002 for a file the user named for an export or a save that cannot be written (#180, #195)."""
-    return AoiError("AOI-LOG-002", detail=repr(e), path=str(path), reason=e.strerror or str(e))
+    return AoiError("AOI-LOG-002", detail=system_detail(e), path=str(path), reason=system_reason(e, writing=True))
 
 
 def classification_metrics(rows: list[dict[str, Any]]) -> dict[str, Any]:

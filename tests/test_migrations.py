@@ -131,7 +131,9 @@ def test_req_set_016_backup_before_migrating(tmp_path: Path, monkeypatch: pytest
     monkeypatch.setattr(mg, "copy_database", disk_full)
     with pytest.raises(mg.MigrationError) as refused:
         Database(path)
-    assert refused.value.code == "AOI-SET-009" and "database or disk is full" in refused.value.what
+    assert refused.value.code == "AOI-SET-009" and "the drive is full" in refused.value.what
+    assert "database or disk is full" not in refused.value.what  # the system's words: the detail alone (A5)
+    assert refused.value.detail == "OperationalError: database or disk is full"
     with closing(sqlite3.connect(path)) as live:
         assert live.execute("SELECT MAX(number) FROM schema_version").fetchone() == (4,)
     assert [p.name for p in path.parent.iterdir()] == ["aoi.sqlite"]
@@ -181,7 +183,7 @@ def test_req_set_019_a_settings_file_that_cannot_be_read_is_refused_with_a_code(
     f = default_workspace() / "settings.json"
     f.parent.mkdir(parents=True, exist_ok=True)
     cases = (
-        (b'{"device": "cpu",}', "it is not valid JSON (line 1, column 18: "),
+        (b'{"device": cpu}', "it is not valid JSON (line 1, column 12)."),  # the same column on every Python
         (b"\xff\xfe{}", "it is not UTF-8 text"),
         (b'["cpu"]', "it does not hold a JSON object of settings"),
     )
@@ -190,6 +192,7 @@ def test_req_set_019_a_settings_file_that_cannot_be_read_is_refused_with_a_code(
         with pytest.raises(AoiError) as refused:
             Settings.load()
         assert refused.value.code == "AOI-SET-010" and str(f) in refused.value.what and reason in refused.value.what
+        assert "Expecting" not in refused.value.what  # the parser's own words are behind Show Details (A5)
         assert ui_errors.open_workspace() is None
         assert dialogs[-1] == (
             "AOI-SET-010 Settings file cannot be read",
@@ -229,8 +232,9 @@ def test_req_set_019_a_workspace_that_cannot_be_opened_offers_another(
 def test_req_set_019_an_unexpected_error_at_start_up_shows_a_code_and_logs_its_trace(
     monkeypatch: pytest.MonkeyPatch, dialogs: list[tuple[str, str]], capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """An error at start-up that no refusal names shows AOI-SET-007 with the exception's type and no trace; the trace
-    goes to the log in the default workspace (stack traces go only to the log), and the log file is closed again."""
+    """An error at start-up that no refusal names shows AOI-SET-007 in plain words, its class behind Show Details and
+    no trace; the trace goes to the log in the default workspace (stack traces go only to the log), and the log file is
+    closed again."""
 
     def broken(settings: Settings) -> AppContext:
         raise RuntimeError("the disk controller stopped answering")
@@ -238,7 +242,7 @@ def test_req_set_019_an_unexpected_error_at_start_up_shows_a_code_and_logs_its_t
     monkeypatch.setattr(ui_errors, "AppContext", broken)
     assert ui_errors.open_workspace() is None
     (title, text) = dialogs[-1]
-    assert title == "AOI-SET-007 Unexpected error" and "(RuntimeError)" in text and "(start-up)" in text
+    assert title == "AOI-SET-007 Unexpected error" and "RuntimeError" not in text and "(start-up)" in text
     assert "Traceback" not in text and "disk controller" not in text
     lines = [json.loads(line) for f in (default_workspace() / "logs").glob("aoi-*.jsonl") for line in f.open()]
     (failed,) = [line for line in lines if line["event"] == "app.start_failed"]
@@ -402,8 +406,8 @@ def test_req_trn_010_switching_the_active_model_is_one_transaction(tmp_path: Pat
 def test_req_set_019_a_database_in_use_at_start_up_offers_the_folder_again(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, dialogs: list[tuple[str, str]]
 ) -> None:
-    """#171: another program holding the workspace database's write lock at start-up (a second copy of the app, a
-    database tool) is refused with AOI-SET-012, the database and the log closed first, not shown as AOI-SET-007; the
+    """#171: another program holding the workspace database's write lock at start-up (a database tool, a backup or
+    sync app) is refused with AOI-SET-012, the database and the log closed first, not shown as AOI-SET-007; the
     folder picker follows, and the same folder opens once the other program lets go."""
     ws = tmp_path / "ws"
     AppContext(Settings(workspace=str(ws), device="cpu")).close()
@@ -426,7 +430,8 @@ def test_req_set_019_a_database_in_use_at_start_up_offers_the_folder_again(
     ctx.close()
     other.close()
     assert [title for title, _ in dialogs] == ["AOI-SET-012 Workspace in use"]
-    assert str(ws / "aoi.sqlite") in dialogs[0][1] and "database is locked" in dialogs[0][1]
+    assert str(ws / "aoi.sqlite") in dialogs[0][1] and "another app holds the database" in dialogs[0][1]
+    assert "database is locked" not in dialogs[0][1]  # SQLite's words: Show Details and the log alone (A5)
 
 
 def test_req_set_016_a_picked_folder_opens_when_settings_json_cannot_be_written(

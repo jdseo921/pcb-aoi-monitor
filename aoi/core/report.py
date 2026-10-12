@@ -41,6 +41,15 @@ def image_uri(image: np.ndarray, longest: int = REPORT_PX) -> str:
 # product questions": proposed; Customers & Launch, Validation step 2): no missed Critical defect, a false call rate of
 # 5 % or less, and 1 s or less per image (95th percentile) on the named PC.
 DEFAULT_TARGETS = {"missed_critical": 0, "false_call_rate": 0.05, "seconds_per_image": 1.0}
+# What a customer may agree to (REQ-TST-008): at most 100 missed Critical defects, a false call rate (a fraction) from 0
+# to 1, and from 0.01 s to 60 s per image; the AI Model Test sheet offers these ranges and the service refuses others.
+TARGET_LIMITS = {"missed_critical": (0, 100), "false_call_rate": (0.0, 1.0), "seconds_per_image": (0.01, 60.0)}
+AGREED_WITH_CHARS = 200  # who at the customer agreed the targets, as typed
+
+
+def target_values(agreed: dict[str, Any] | None) -> dict[str, float] | None:
+    """The three target values of a stored targets row (`AppContext.validation_targets`), or None for none."""
+    return {k: agreed[k] for k in DEFAULT_TARGETS} if agreed else None
 
 
 def critical(defect_type: str | None) -> bool:

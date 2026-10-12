@@ -29,22 +29,29 @@ def test_req_set_004_text_on_the_green_red_and_blue_fills_is_black() -> None:
     assert "QPushButton#danger { color: #000000;" in theme.stylesheet()
 
 
-def test_req_usr_001_only_an_admin_sees_the_exports(qtbot: QtBot, trained_ctx: AppContext) -> None:
+def test_req_usr_001_only_an_admin_uses_the_exports_which_every_role_sees(
+    qtbot: QtBot, trained_ctx: AppContext
+) -> None:
     """Q58: Export CSV and Export Image Overlays on Logs & Export, Export CSV, Export Image Overlays, Export Report and
-    Validation Report… on AI Model Test, and Export Manifest… on Training show for an Admin alone; the services refuse
-    the rest (see test_roles_and_audit)."""
+    Validation Report… on AI Model Test, and Export Manifest… on Training are an Admin's; the services refuse the rest
+    (see test_roles_and_audit). Every role sees them, greyed for the Engineer with the refusal as the tooltip, never
+    hidden (REQ-USR-001)."""
     win = _window(qtbot, trained_ctx)
     logs, test, training = (win.pages[p] for p in ("Logs & Export", "AI Model Test", "Training"))
 
-    def exports() -> list[bool]:
+    def exports() -> list[tuple[bool, bool, str]]:
         for name in ("Logs & Export", "AI Model Test", "Training"):
             win.navigate(name)
         buttons = (logs.btn_csv, logs.btn_img, test.btn_csv, test.btn_img, test.btn_report, test.btn_validation)
-        return [not b.isHidden() for b in (*buttons, training.versions.btn_export)]
+        return [(b.isHidden(), b.isEnabled(), b.toolTip()) for b in (*buttons, training.versions.btn_export)]
 
-    assert exports() == [False] * 7
+    csv, overlays, report = (f"Exporting {w} needs the Admin role." for w in ("CSV", "overlay images", "a report"))
+    tips = [csv, overlays, csv, overlays, report, report, csv]
+    assert win.ctx.role == "Engineer" and exports() == [(False, False, tip) for tip in tips]
     win.set_user("admin")
-    assert exports() == [True] * 7
+    shown = exports()
+    assert [(hidden, tip) for hidden, _, tip in shown] == [(False, "")] * 7
+    assert all(on for _, on, _ in shown[2:6])  # Logs & Export's wait for its list; Export Manifest… for a version
 
 
 def test_req_insp_002_a_box_label_carries_the_severity_word_and_shape(

@@ -24,6 +24,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from ..defects import names
+from ..errors import QT_TRANSLATE_NOOP, system_reason
 from .labels import DefectBox
 
 MAX_BYTES = 1_000_000  # an annotation file larger than this is not read: a page of boxes is a few kB
@@ -38,6 +39,7 @@ ALIASES = {  # bare-board names public datasets use (DeepPCB, PKU-Market-PCB), a
     "pinhole": "Pin-hole / Missing Hole",
 }
 NAME_FILES = ("classes.txt", "obj.names", "data.yaml")
+NOT_LABELS = QT_TRANSLATE_NOOP("Errors", "it is not a YOLO or Pascal VOC label file this app reads")
 
 
 @dataclass
@@ -121,8 +123,14 @@ def _parse(image: Path, size: tuple[int, int] | None, root: Path | None) -> Anno
         else:
             entries = _yolo(source.read_text(encoding="utf-8-sig"), _class_names(source, image, root))
             scale = (float(size[0]), float(size[1])) if size is not None else (1.0, 1.0)
-    except (OSError, UnicodeDecodeError, ET.ParseError, ValueError) as e:
-        found.why = str(e) or type(e).__name__
+    except OSError as e:
+        found.why = system_reason(e)
+        return found
+    except (UnicodeDecodeError, ET.ParseError):  # before ValueError, which a decode error is too
+        found.why = NOT_LABELS
+        return found
+    except ValueError as e:  # this module's own words: the file's size, or the image it was made for
+        found.why = str(e)
         return found
     for name, (x0, y0, x1, y1) in entries:
         if (kind := type_named(name)) is None:

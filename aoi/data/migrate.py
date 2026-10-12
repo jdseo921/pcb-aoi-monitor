@@ -19,7 +19,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 
-from ..errors import QT_TRANSLATE_NOOP
+from ..errors import QT_TRANSLATE_NOOP, system_detail, system_reason
 from .atomic import temp_path
 from .errors import WorkspaceError
 
@@ -107,7 +107,7 @@ def backup(conn: sqlite3.Connection, old: int, new: int) -> Path:
     except (sqlite3.Error, OSError) as e:
         for part in ("", "-journal", "-wal", "-shm"):  # the half copy and any side file SQLite left with it
             tmp.with_name(tmp.name + part).unlink(missing_ok=True)
-        raise MigrationError("AOI-SET-009", file=target.name, error=str(e)) from e
+        raise MigrationError("AOI-SET-009", system_detail(e), file=target.name, error=system_reason(e)) from e
     log.info("schema.backup", extra={"backup": target.name, "from_version": old, "to_version": new})
     return target
 
@@ -149,7 +149,7 @@ def migrate(conn: sqlite3.Connection, migrations: list[Migration] | None = None)
             conn.commit()
         except sqlite3.Error as e:
             conn.rollback()
-            raise MigrationError("AOI-SET-004", file=m.file, error=str(e)) from e
+            raise MigrationError("AOI-SET-004", system_detail(e), file=m.file, error=system_reason(e)) from e
         applied.append(m)
         log.info("schema.migrated", extra={"migration": m.file, "checksum": m.checksum[:12]})
     return applied

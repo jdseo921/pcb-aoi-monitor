@@ -177,7 +177,7 @@ def test_req_insp_015_no_board_is_judged_without_its_golden_board_or_with_no_che
     with pytest.raises(AoiError) as nothing:
         ctx.inspect_file("EMPTY", str(ng_board))
     assert nothing.value.code == "AOI-INSP-010"
-    assert "of board model EMPTY: no Golden board is set; no AI model is trained." in nothing.value.what
+    assert "of board model EMPTY: no Golden board is set; no AI model is active." in nothing.value.what
     with pytest.raises(AoiError) as turned_off:  # thresholds that turn every check off judge nothing either
         re_grade(judged, Recipe(board_model=BOARD, use_compare=False, use_ai=False), None)
     assert turned_off.value.code == "AOI-INSP-010"
@@ -198,7 +198,7 @@ def test_req_insp_016_six_step_cards_open_their_pages_and_show_status(
     home = win.pages["Home"]
     buttons = [b for b in home.findChildren(QPushButton) if b.text().startswith("Open ")]
     assert len(buttons) == 6 == len(home.STEPS)
-    for b, (_, name, _, target) in zip(buttons, home.STEPS, strict=True):
+    for b, (_, name, _, target, _) in zip(buttons, home.STEPS, strict=True):
         win.navigate("Home")
         qtbot.mouseClick(b, Qt.MouseButton.LeftButton)
         assert win.stack.currentWidget() is win.pages[target], name

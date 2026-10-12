@@ -56,18 +56,22 @@ BOARD_MODEL = "TINY"
 FIXED_TIME = "2026-01-01T09:00:00+00:00"  # every stored time, so a render does not change with the clock
 FIXED_MS = 480.0  # the inspection time Inspection and Compare show
 FIXED_SSIM, FIXED_INLIERS = 0.95, 400  # the similarity and alignment points Compare shows (module docstring)
+SETTLE_MS = 40  # past the 20 ms after which Qt resizes a list to its contents (`settle`)
+SETTLE_PASSES = 100  # event loop passes a page may take to lay itself out before a grab
 PAGE_VIEWS = {  # <page>-<view>-<role>
     "Training": ("datasets", "freeze", "split", "blind"),
     "Settings": ("restore", "move-in", "shred"),
     "Logs & Export": ("types",),
+    "AI Model Test": ("targets",),
 }
 STORED_STATES = (  # Compare
     "compare-stored-operator", "compare-golden-changed-operator", "compare-tried-engineer", "compare-save-engineer",
 )  # fmt: skip
 PRESENTER_SHOTS = {  # the presenter theme (REQ-SET-008): presenter-<page>-<role>, the pages a demo shows
-    "presenter-home-admin": ("Home", "admin"),  # Settings and 3D Profile hidden, Exit presenter theme in the header
-    "presenter-inspection-operator": ("Inspection", "operator"),  # the result, its verdict at 48 pt
+    "presenter-home-admin": ("Home", "admin"),  # 3D Profile hidden, Exit presenter theme in the header
+    "presenter-inspection-operator": ("Inspection", "operator"),  # the result, its verdict at 48 pt; no Settings
     "presenter-compare-engineer": ("Compare", "engineer"),
+    "presenter-settings-admin": ("Settings", "admin"),  # kept for the Admin's Reset Demo, without the hardware table
 }
 FIXED_WORKSPACE = "C:/AOI_Workspace"  # what the Settings page shows instead of the temporary folder
 TEST_FONT = '"DejaVu Sans"'  # the font the approved images are drawn with (Linux)
@@ -165,8 +169,9 @@ def build_workspace(root: Path) -> AppContext:
         ctx.import_samples(BOARD_MODEL, [str(p) for p in list_images(dataset / "train" / "ok")], "OK")
         for p in list_images(dataset / "train" / "ng"):  # one call each: an NG sample is imported with its type
             ctx.import_samples(BOARD_MODEL, [str(p)], "NG", ng_type(p))
-        ctx.train(trainable(ctx, BOARD_MODEL), epochs=TINY_EPOCHS, image_size=TINY_IMAGE_SIZE)
-        ctx.activate_model(int(ctx.models(BOARD_MODEL)[0]["id"]))  # a version installs inactive (REQ-TRN-010)
+        meta = ctx.train(trainable(ctx, BOARD_MODEL), epochs=TINY_EPOCHS, image_size=TINY_IMAGE_SIZE)
+        if not meta["activated"]:  # a board model's first version goes live when trained (ADR 0018), unless refused
+            ctx.activate_model(int(ctx.models(BOARD_MODEL)[0]["id"]))  # which this raises again, with its code
         recipe = ctx.recipe(BOARD_MODEL)[1]
         recipe.rois.append(ROI("R1", "Presence", 110, 110, 110, 110))  # around the IC the NG board lacks (LAYOUT[0])
         ctx.save_recipe(recipe)
@@ -282,6 +287,46 @@ def wait_until(condition: Callable[[], bool], timeout_ms: int = 60000) -> None:
         QApplication.processEvents()
 
 
+def settle() -> None:
+    """Let the window finish laying out, so a grab draws a page alike however busy the machine is. A list that adjusts
+    to its contents resizes itself to its size hint 20 ms after its items change, outside its layout, and each layout
+    above a widget whose size hint changed lays out on a LayoutRequest posted while the one below it was laid out: one
+    pass of the event loop each. A grab one pass after `prepare` caught Logs & Export's Operator list in the width it
+    had before its names were added or, on a busy machine, with Qt's resize done and the layout not: the list 7 px wider
+    than its place, its arrow cut off (#396's CI). So sleep past that resize without handling events, then handle
+    events until a pass moves, resizes and lays out nothing."""
+    from PySide6.QtCore import QCoreApplication, QEvent, QObject
+    from PySide6.QtTest import QTest
+
+    class Layouts(QObject):
+        """Counts the layout events the application delivers: a widget moved or resized, or a layout asked for."""
+
+        kinds = (QEvent.Type.LayoutRequest, QEvent.Type.Move, QEvent.Type.Resize)
+
+        def __init__(self) -> None:
+            super().__init__()
+            self.seen = 0
+
+        def eventFilter(self, watched: QObject, event: QEvent) -> bool:
+            self.seen += event.type() in self.kinds
+            return False
+
+    QTest.qSleep(SETTLE_MS)
+    app = QCoreApplication.instance()
+    assert app is not None
+    layouts = Layouts()
+    app.installEventFilter(layouts)
+    try:
+        for _ in range(SETTLE_PASSES):
+            layouts.seen = 0
+            QCoreApplication.processEvents()
+            if not layouts.seen:
+                return
+        raise TimeoutError("the page kept laying itself out")
+    finally:
+        app.removeEventFilter(layouts)
+
+
 def prepare(win: MainWindow, title: str, dataset: Path) -> None:
     """Put the page in the state the screenshot shows: content where the workspace has some, fixed values where
     the real ones would change from run to run."""
@@ -332,7 +377,8 @@ def show_view(win: MainWindow, title: str, view: str | None) -> None:
     fewer): Stop closes it, the status line saying so until the next page clears it, and with None the focus is
     cleared, as Training opens with none, so the pages after render alike.
     Settings' are Restore Key…, Move Board Model In… and Shred Store… on the store the screenshot workspace's version
-    is in. Logs & Export's is its Defect types tab, counted on the records the filter lists (REQ-LOG-008)."""
+    is in. Logs & Export's is its Defect types tab, counted on the records the filter lists (REQ-LOG-008). AI Model
+    Test's is Agreed Targets…' sheet with who agreed them typed, nothing saved (REQ-TST-008)."""
     from PySide6.QtWidgets import QApplication
 
     page: Any = win.pages[title]
@@ -357,6 +403,14 @@ def show_view(win: MainWindow, title: str, view: str | None) -> None:
     if title == "Logs & Export":
         page.tabs.setCurrentIndex(1 if view == "types" else 0)
         wait_until(lambda: page.counting is None)  # counted on a pool thread
+    if title == "AI Model Test":
+        page.targets_sheet.close_sheet()
+        if view == "targets":
+            page.open_targets()
+            page.targets_sheet.agreed_with.setText("Acme Electronics, J. Kim (quality lead), minutes of 2026-01-01")
+            page.targets_sheet.missed.clearFocus()  # no caret, which blinks, in the image
+        elif (focus := QApplication.focusWidget()) is not None:
+            focus.clearFocus()
     if title == "Settings":
         page.stores.close_sheet()
         steps = {"restore": page.stores.btn_restore, "move-in": page.stores.btn_move, "shred": page.stores.btn_shred}
@@ -371,7 +425,6 @@ def render_stored(win: Any, ctx: AppContext, out: Path) -> dict[str, Path]:
     it was judged against, then with that file changed, which the pane explains (REQ-CMP-003); the file is put back.
     Then as an Engineer judges it again with other thresholds: the would-be verdict beside Re-evaluate, and Save to
     Recipe's sheet with a reason typed, nothing saved (REQ-CMP-005)."""
-    from PySide6.QtWidgets import QApplication
 
     page, files = win.pages["Compare"], {}
     record = ctx.inspections(board_model=BOARD_MODEL)[0]["id"]
@@ -395,7 +448,7 @@ def render_stored(win: Any, ctx: AppContext, out: Path) -> dict[str, Path]:
             if name == STORED_STATES[3]:
                 page.act_save.trigger()
                 page.reason.setText("No pixel differs enough on this board")
-            QApplication.processEvents()
+            settle()
             files[name] = out / f"{name}.png"
             assert win.grab().save(str(files[name])), files[name]
     finally:
@@ -406,7 +459,6 @@ def render_stored(win: Any, ctx: AppContext, out: Path) -> dict[str, Path]:
 def render_presenter(win: Any, dataset: Path, out: Path) -> dict[str, Path]:
     """The presenter theme (REQ-SET-008), switched on as an Admin does it, with Settings' tick, and PRESENTER_SHOTS in
     it, each page as `prepare` leaves it; then switched off again with the header's Exit presenter theme."""
-    from PySide6.QtWidgets import QApplication
 
     files = {}
     win.set_user("admin")
@@ -418,7 +470,7 @@ def render_presenter(win: Any, dataset: Path, out: Path) -> dict[str, Path]:
             win.statusBar().clearMessage()
             assert win.navigate(title), title
             prepare(win, title, dataset)
-            QApplication.processEvents()
+            settle()
             files[name] = out / f"{name}.png"
             assert win.grab().save(str(files[name])), files[name]
     finally:
@@ -435,7 +487,6 @@ def render_pages(
     ``size`` is the screen in pixels: with ``scale`` (QT_SCALE_FACTOR, set before Qt starts) the window measures
     ``size / scale`` logical pixels, so the image still measures ``size``."""
     from PySide6.QtTest import QTest
-    from PySide6.QtWidgets import QApplication
 
     from aoi.ui.main_window import MainWindow
     from aoi.ui.pages.base import ROLES
@@ -454,13 +505,13 @@ def render_pages(
             win.statusBar().clearMessage()  # the page before's message is not this page's; what it says itself stays
             assert win.navigate(title), title
             prepare(win, title, dataset)
-            QApplication.processEvents()
+            settle()
             name = f"{slug(title)}-{role.lower()}"
             files[name] = out / f"{name}.png"
             assert win.grab().save(str(files[name])), files[name]
             for view in PAGE_VIEWS.get(title, ()):
                 show_view(win, title, view)
-                QApplication.processEvents()
+                settle()
                 name = f"{slug(title)}-{view}-{role.lower()}"
                 files[name] = out / f"{name}.png"
                 assert win.grab().save(str(files[name])), files[name]

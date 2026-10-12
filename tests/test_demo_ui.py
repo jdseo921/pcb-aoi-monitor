@@ -189,7 +189,7 @@ def test_req_set_007_main_demo_starts_in_the_demo_workspace(bundle: Path, tmp_pa
     assert ctx is not None
     try:
         assert ctx.settings.root == demo.demo_folder(station_folder) and demo.is_demo(ctx.settings.root)
-        assert ctx.settings.last_page == "Inspection"
+        assert ctx.settings.shift_check_hours == 0  # its scripted run plays at once (ADR 0014)
         assert not (station_folder / "settings.json").exists()  # the station's settings.json is not written
     finally:
         ctx.close()
@@ -228,7 +228,8 @@ def test_req_set_007_reset_asks_first_and_no_keeps_the_demo(
     assert reset.objectName() == "danger" and not reset.autoDefault()  # red, never the default
     qtbot.mouseClick(reset, Qt.MouseButton.LeftButton)
     assert shown_window() is win and len(records(win)) == 4
-    assert "Every result, record, alarm and log of the demo" in asked[0]
+    assert "every result, record, alarm and log of the demo" in asked[0]
+    assert "an export or an image import keeping the files copied so far" in asked[0]  # work running: what it keeps
     win.close()
 
 
