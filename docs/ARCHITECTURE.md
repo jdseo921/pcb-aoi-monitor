@@ -357,7 +357,7 @@ its decision table under the pair where the pair, at both boards' `theme.IMAGE_M
 decides, never the record shown, and side by side `_keep_table` gives the panel the table's own width from the pair,
 once the splitter has laid its panes out at a new width (`ReflowSplitter.widened`). With the table under the pair, the
 verdict, its note and the "why" box stand beside the pair (`_arrange`, which keeps a focus in the box as it moves), the
-"why" box (`WhyBox`, which asks for `theme.WHY_H`) taking the height under the note, the table as tall as its rows and
+"why" box (`WhyBox`, which asks for `theme.WHY_H`, 110 px at the presenter theme's 16 pt) taking the height under the note, the table as tall as its rows and
 the boards the rest (`_under_pair`), both boards the same width (`PairGrid`, as their linked zoom needs), and a cover of
 the busy indicator's colour covers the "why" box while "Re-evaluating…" covers the table (`_cover_why`). In the presenter theme a window shorter than `theme.SMALL_H` or narrower than `theme.SMALL_W`
 takes `theme.PRESENTER_SMALL`'s 16 pt text and 44 pt verdict (`MainWindow._small`, asked of the screen before the window

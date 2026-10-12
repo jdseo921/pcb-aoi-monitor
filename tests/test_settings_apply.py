@@ -17,7 +17,8 @@ from typing import Any, cast
 
 import pytest
 import torch
-from PySide6.QtCore import Qt
+from PySide6.QtCore import QPoint, QRect, QSize, Qt
+from PySide6.QtGui import QScreen
 from PySide6.QtWidgets import QApplication, QFormLayout, QGraphicsSimpleTextItem, QLabel, QMessageBox
 from pytestqt.qtbot import QtBot
 
@@ -404,3 +405,36 @@ def test_req_set_008_a_restart_keeps_the_presenter_theme_and_only_an_admin_leave
     with pytest.raises(AoiError) as e:
         Settings.load()
     assert e.value.code == "AOI-SET-008" and 'presenter_theme is "yes"; it must be true or false' in e.value.what
+
+
+@pytest.mark.parametrize(
+    ("screen", "small"), [(QSize(1366, 768), True), (QSize(1920, 1080), False)], ids=["1366x768", "1920x1080"]
+)
+def test_req_set_008_a_presenter_start_styles_the_app_once_at_its_screens_sizes(
+    qtbot: QtBot, trained_ctx: AppContext, monkeypatch: pytest.MonkeyPatch, screen: QSize, small: bool
+) -> None:
+    """The presenter theme saved on, a start styles the app once, before anything is drawn, at the sizes for the screen
+    it opens maximized on (ADR 0019): its 16 pt on a 1366 x 768 projector, its 18 pt on a 1920 x 1080 one. The window
+    shown at the screen's size is not styled again: styled at 18 pt first and at 16 pt as it was shown, the demo took
+    about 1.2 s longer to start on a small screen (A8 of the 2026-10 business-readiness brief). Offscreen, Qt's one
+    screen is 800 x 800 px, so the screen's room is given here and the window shown at it, as maximized there."""
+    ctx = trained_ctx
+    ctx.set_user("admin")
+    ctx.save_settings({"presenter_theme": True})
+    monkeypatch.setattr(QScreen, "availableGeometry", lambda _screen: QRect(QPoint(0, 0), screen))
+    styled: list[tuple[bool, bool]] = []
+    real = MainWindow._set_theme
+
+    def counted(win: MainWindow, presenter: bool, small: bool = False) -> None:
+        styled.append((presenter, small))
+        real(win, presenter, small)
+
+    monkeypatch.setattr(MainWindow, "_set_theme", counted)
+    win = MainWindow(ctx)
+    qtbot.addWidget(win)
+    win.resize(screen)
+    win.show()
+    qtbot.waitExposed(win)
+    QApplication.processEvents()
+    assert styled == [(True, small)] and (theme.presenter(), theme.small()) == (True, small)
+    assert theme.FONT_PT == (16 if small else 18)

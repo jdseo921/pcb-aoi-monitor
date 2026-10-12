@@ -571,7 +571,7 @@ def _walk(win: MainWindow, role: str, dataset: Path, seen: Counter) -> list[str]
         _show(win, title, dataset)
         for view in (None, *render_screens.PAGE_VIEWS.get(title, ())):  # each tab, as the screenshots show it
             render_screens.show_view(win, title, view)
-            QApplication.processEvents()
+            render_screens.settle()  # laid out before the grab: a pass later, Windows' fonts moved a button from it
             seen["pages"] += 1
             shot = _pixels(win.grab().toImage())
             where = f"{title}{f' {view}' if view else ''} ({role})"

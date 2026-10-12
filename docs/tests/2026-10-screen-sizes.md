@@ -65,7 +65,7 @@ depend on what a page shows, never on how well it judges; nothing here is a meas
 |---|---|---|---|---|
 | Home | 1163 | 197 | 787 | fits |
 | Inspection | 1157 | 750 | 860 | btn_start is not whole |
-| Compare | 1157 | 749 | 1083 | metrics is not whole |
+| Compare | 1157 | 718 | 1052 | metrics is not whole |
 | Training | 1189 | 197 | 1416 | fits |
 | Training, Datasets tab | 1189 | 197 | 1416 | fits |
 | AI Model Test | 1157 | 197 | 892 | fits |
@@ -105,7 +105,7 @@ could not be made narrower than 1527 px) and below 1679 to 1725 px in the produc
 
 - At 1366 × 768 every page and tab the scripts open fits, in the presenter theme (16 pt there) and in the production
   theme: none scrolls across in a window 1211 px wide or wider in the presenter theme, or 1276 px in the production
-  theme, and the verdict areas need a window 750 px tall (Inspection), 749 px (Compare) and 588 px (Logs & Export) in
+  theme, and the verdict areas need a window 750 px tall (Inspection), 718 px (Compare) and 588 px (Logs & Export) in
   the presenter theme, 755, 737 and 582 px in the production theme. `tests/test_demo_fit.py` checks both themes at
   1366 × 768, also after each page was shown at 1920 × 1080, and the verdict areas at 1500 × 1000 and 1920 × 1080.
 - The presenter theme takes 16 pt only in a window under 900 px tall or under 1400 px wide (ADR 0019, decision 2): at
@@ -116,12 +116,14 @@ could not be made narrower than 1527 px) and below 1679 to 1725 px in the produc
   18 pt, the width the pair needs beside the table at `theme.DECISION_W` (900, 980 and 1100 px; the demo's NG board
   fills the table 893, 975 and 1099 px wide). The verdict, its note and the "why" box then stand beside the pair.
 - In a window maximized on a 1366 × 768 Windows screen (about 1366 × 697, or 689 on Windows 11), Inspection's Start sits
-  under the bottom edge (53 px short at 16 pt, 58 px in the production theme, 8 px more on Windows 11) and so do the
-  last two of the six rows of Compare's table, the demo board's AI score among them (52 px short at 16 pt, 40 px in the
-  production theme). The verdict, the board with its defect boxes, the defect list, the review buttons and Compare with
-  Golden board › are in view; F5 starts the run with Start out of view. The demo kit says so
-  ([README](../demo/README.md), "Before every demo"). Closing that gap needs the window's own frame to give way, for
-  example a full-screen presenter window; that is not built (open in the Phase A report).
+  under the bottom edge (53 px short at 16 pt, 58 px in the production theme, 8 px more on Windows 11) and so does the
+  foot of Compare's table: its last row at 16 pt (21 px short), its last two, the demo board's AI score among them, in
+  the production theme (40 px). Windows' Segoe UI draws taller lines: with a stand-in for it (DejaVu Sans given Segoe
+  UI's line height and 0.85 of its widths), the last two rows are under the edge at 16 pt too (50 px short). The
+  verdict, the board with its defect boxes, the defect list, the review buttons and Compare with Golden board › are in
+  view; F5 starts the run with Start out of view. The demo kit says so ([README](../demo/README.md), "Before every
+  demo"). Closing that gap needs the window's own frame to give way, for example a full-screen presenter window; that
+  is not built (open in the Phase A report).
 - Pages other than these three may scroll below the fold, their lower panels secondary to what the scripts show first:
   at 1366 px wide and 16 pt, Training needs 1416 px of height with nothing scrolled, Settings 1277 px, AI Model Test
   892 px, Recipe Editor 789 px and Home 787 px.

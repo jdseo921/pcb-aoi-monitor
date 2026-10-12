@@ -81,10 +81,12 @@ not fit beside it (the page turns at 2048 px), and the 5-minute script points at
 Compare does the same in a window under 1848 px wide, as at 1600 × 900: there the table, beside the pair, scrolled its
 last columns out of view, and now the foot of Try other thresholds, a secondary panel, its buttons with it, may sit just
 below the fold instead, which Tab and the scroll wheel reach (decision 3); this amends ADR 0012's decision 2. Beside the
-pair, the "why" box takes the height under the note, `theme.WHY_H` at least: its reasons show whole at 1920 × 1080 and
-scroll within the box at 1366 × 768, where under the table it would sit below the fold; while "Re-evaluating…" covers
-the table, a cover of its own covers the box. With the table under the pair, Defect boxes only fits the test board to
-the pair's height, so it draws the board about as large as Side by side does, not larger as it does beside the table.
+pair, the "why" box takes the height under the note, `theme.WHY_H` at least (150 px, and 110 px, four lines, at the
+presenter theme's 16 pt, where asking for 150 px put the table's last row below a 1366 × 768 window in Windows' Segoe
+UI): its reasons show whole at 1920 × 1080 and scroll within the box at 1366 × 768, where under the table it would sit
+below the fold; while "Re-evaluating…" covers the table, a cover of its own covers the box. With the table under the
+pair, Defect boxes only fits the test board to the pair's height, so it draws the board about as large as Side by side
+does, not larger as it does beside the table.
 
 A window maximized on a 1366 × 768 Windows screen measures about 1366 × 697 (1366 × 689 on Windows 11), not
 1366 × 768, as the title bar and the taskbar take their part of the screen. What that window shows is measured in the

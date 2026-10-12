@@ -876,6 +876,9 @@ class ComparePage(Page):
 
     def restyle(self) -> None:
         self._hold_rows()  # its rows at the theme's text size
+        if self.decision.isAncestorOf(self.why):  # under the table: the theme's WHY_H at most
+            self.why.setMaximumHeight(theme.WHY_H)
+        self.why.updateGeometry()  # beside the pair: the theme's WHY_H asked for (`WhyBox`)
 
     def eventFilter(self, watched: QObject, event: QEvent) -> bool:  # noqa: N802 (Qt's name)
         if watched is self.try_busy and event.type() in (QEvent.Type.Show, QEvent.Type.Hide):

@@ -402,8 +402,9 @@ class MainWindow(QMainWindow):
         title = f"{APP_NAME} {APP_VERSION}"
         self.setWindowTitle(self.tr("{title} · Demo").format(title=title) if self.in_demo else title)
         self.resize(1920, 1080)
-        if ctx.settings.presenter_theme != theme.presenter():  # start in the theme saved, before anything is drawn
-            self._set_theme(ctx.settings.presenter_theme)
+        want = (ctx.settings.presenter_theme, ctx.settings.presenter_theme and self._small())
+        if want != (theme.presenter(), theme.small()):  # the theme saved, at the screen's sizes, before anything is
+            self._set_theme(*want)  # drawn: styled once, not again as the window is shown maximized on that screen
 
         central = QWidget()
         outer = QVBoxLayout(central)

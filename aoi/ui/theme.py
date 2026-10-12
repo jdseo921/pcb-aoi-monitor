@@ -126,6 +126,10 @@ PRESENTER_SMALL = {
     "FONT_PT": 16, "FONT_LARGE_PT": 18, "FONT_H1_PT": 22, "FONT_STEP_PT": 24, "FONT_TILE_PT": 26,
     "FONT_VERDICT_PT": 44,  # REQ-SET-004's verdict is 40 pt at least
     "DECISION_W": 980,  # 975 px at 16 pt
+    # Compare's "why" box beside the pair, four lines: asking for 150 px it made the pair taller than its boards need,
+    # and with Windows' Segoe UI, whose lines are 4 px taller than DejaVu Sans's, pushed the decision table's last row
+    # 14 px below a 1366 x 768 window; it takes the height its column has, and its reasons scroll within it
+    "WHY_H": 110,
 }  # fmt: skip
 
 _QSS = Template("""
