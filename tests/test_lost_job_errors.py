@@ -311,7 +311,7 @@ def test_req_set_021_a_folder_import_that_fails_part_way_shows_the_files_it_impo
     assert page.samples.rowCount() == len(ctx.samples("NEWB")) == 2
     [(title, text)] = dialogs
     assert title == "AOI-TRN-010 Import stopped by an error", title
-    named = "(OperationalError)" if cause == "sqlite" else "(AOI-SET-013 «busy»)"
+    named = "(the drive could not be read or written)" if cause == "sqlite" else "(AOI-SET-013 «busy»)"
     assert "c.png" in text and named in text and "image 3 of 4" in text, text
     assert "the 2 image(s) imported before it" in text, text
     assert "with NEWB picked in the header, press Import again: the 2 image(s) already imported are skipped" in text

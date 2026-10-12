@@ -19,6 +19,7 @@ in it marks it as a demo workspace, so a load or a reset never deletes or overwr
 
 from __future__ import annotations
 
+import contextlib
 import hashlib
 import json
 import os
@@ -116,14 +117,19 @@ def load(bundle: Path, folder: Path, settings: dict[str, Any], keys: credentials
     if not is_demo(folder):
         if folder.exists() and any(folder.iterdir()):
             raise AoiError("AOI-SET-016", path=str(folder))
-        _copy_in(bundle, folder)
-        atomic.write_text(folder / "settings.json", json.dumps(settings | {"workspace": str(folder)}, indent=2))
-        marker = {
-            "bundle_built_at": manifest["built_at"],
-            "loaded_at": now_utc(),
-            "board_model": manifest["board_model"],
-        }
-        atomic.write_text(folder / MARKER, json.dumps(marker, indent=2))  # last: a folder half copied is no demo yet
+        made = not folder.exists()
+        try:
+            _copy_in(bundle, folder)
+            atomic.write_text(folder / "settings.json", json.dumps(settings | {"workspace": str(folder)}, indent=2))
+            marker = {
+                "bundle_built_at": manifest["built_at"],
+                "loaded_at": now_utc(),
+                "board_model": manifest["board_model"],
+            }
+            atomic.write_text(folder / MARKER, json.dumps(marker, indent=2))  # last: a folder half copied is no demo
+        except OSError:  # the drive full or refusing part-way: what this load copied goes; the next load starts clean
+            _clear(folder, made)
+            raise
     _store_key(bundle, keys)
     return manifest
 
@@ -165,6 +171,20 @@ def reset(bundle: Path, folder: Path, keys: credentials.Credentials) -> float:
         raise AoiError("AOI-SET-017", system_detail(e), path=str(e.filename or folder), error=system_reason(e)) from e
     _store_key(bundle, keys)
     return time.monotonic() - started
+
+
+def _clear(folder: Path, made: bool) -> None:
+    """Delete what a load that stopped part-way copied into `folder`, which was empty or not there before it (`made`);
+    nothing that cannot be deleted stops the error that stopped the load."""
+    if made:
+        shutil.rmtree(folder, ignore_errors=True)
+        return
+    for child in folder.iterdir():
+        with contextlib.suppress(OSError):
+            if child.is_dir() and not child.is_symlink():
+                shutil.rmtree(child)
+            else:
+                child.unlink()
 
 
 def _copy_in(bundle: Path, folder: Path) -> None:

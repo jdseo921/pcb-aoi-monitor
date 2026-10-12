@@ -35,7 +35,9 @@ close that program and do the change again.
 **Settings the app cannot read.** A `settings.json` that is not valid JSON, not UTF-8 text or not a JSON object stops
 the start with AOI-SET-010, naming the file and, for JSON, the line and column; correct it, or rename it to start with
 the default settings. An error at start-up that has no code of its own shows AOI-SET-007; its details are written to
-the log in the default workspace folder (`logs/aoi-<date>.jsonl`, event `app.start_failed`) for support. One that
+the log in the default workspace folder (`logs/aoi-<date>.jsonl`, event `app.start_failed`) for support, and a coded
+refusal before the workspace opens goes there too, with its code and the technical words of its Show Details (event
+`app.start_refused`). One that
 comes once the workspace is open, while the main window is built (a damaged database, for example), shows
 AOI-SET-007 too, writes its details to that workspace's log (event `error.shown`, context `start-up`) and closes the
 app with the workspace closed; send that log file to support.

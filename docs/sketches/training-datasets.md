@@ -69,7 +69,7 @@ tab." with [Open Samples ›].
 | AOI-TRN-023 | The manifest does not match | n files changed or missing since the freeze | The version is marked; train from another version; Copy Details lists the files |
 | AOI-TRN-024 | The dataset cannot be frozen | No customer set | Pick the customer |
 | AOI-TRN-025 | The dataset store cannot be opened | Encrypted store key missing or wrong | Check the station's key in Settings (Admin); details in the log |
-| AOI-TRN-044 | The dataset store was not changed | The reason names it: no such store, a board model in another store, a key the key store refused, a file that would not go | Do what the reason says, then try again |
+| AOI-TRN-044 | The dataset store was not changed | The reason names it: no such store, a board model in another store, a key the key store refused, a file that would not go | A move-in or a shred stopped part-way keeps its steps: start it again to finish; anything else changed nothing: type the customer, board model or key again, or close the app holding a store file, and try again |
 
 ## Built (Datasets stage 4 of 4)
 

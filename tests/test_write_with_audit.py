@@ -219,7 +219,8 @@ def test_req_trn_001_a_folder_import_that_fails_part_way_says_what_was_imported(
     assert len(ctx.samples("NEWB")) == 2 and page.samples.rowCount() == 2  # the two before it, shown in the table
     [(title, text)] = dialogs
     assert title == "AOI-TRN-009 Import stopped part-way", title
-    assert "ok_2.png" in text and "Permission denied" in text and "image 3 of 5" in text, text
+    assert "ok_2.png" in text and "the system refused access to it" in text and "image 3 of 5" in text, text
+    assert "Permission denied" not in text, text  # the system's own words are behind Show Details (A5)
     assert "the 2 image(s) imported before it" in text, text
     assert "with NEWB picked in the header, press Import again: the 2 image(s) already imported are skipped" in text
     assert win.statusBar().currentMessage() == "Imported 2 OK and 0 NG images into NEWB"

@@ -11,6 +11,7 @@ from __future__ import annotations
 import ast
 import builtins
 import errno
+import json
 import re
 import sqlite3
 from collections.abc import Iterator
@@ -21,15 +22,16 @@ from PySide6.QtWidgets import QMessageBox
 from pytestqt.qtbot import QtBot
 
 from aoi import errors as catalogue
-from aoi.config import Settings
+from aoi.config import Settings, default_workspace
 from aoi.core import demo
 from aoi.core.anomaly import AnomalyModel, ModelFileError
 from aoi.core.maps import read_map
 from aoi.core.services import UNHANDLED, AppContext, ErrorReport, _not_written
+from aoi.data import atomic, credentials
 from aoi.errors import CODES, AoiError, Phrase, system_detail, system_reason
 from aoi.ui import demo_workspace
 from aoi.ui import errors as ui_errors
-from aoi.ui.errors import ErrorBox, dialog_text
+from aoi.ui.errors import ErrorBox, dialog_text, phrase_text
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -47,6 +49,7 @@ DEMO_PATH = {
     "AOI-SET-014": "Inspection without a board model",
     **dict.fromkeys(("AOI-SET-015", "AOI-SET-016"), "starting the demo, Load Demo Workspace and Reset Demo"),
     "AOI-SET-017": "Reset Demo",
+    "AOI-SET-018": "Inspection, Compare, Logs & Export and AI Model Test: a stored path read back",
     "AOI-USR-001": "a control the role signed in may not use",
     "AOI-USR-003": "Switch User",
     **dict.fromkeys(
@@ -168,40 +171,84 @@ def test_req_set_019_no_reason_names_a_class_system_text_or_tool() -> None:
 
 ERROR_CLASSES = {"AoiError", "WorkspaceError", "MigrationError", "ModelFileError"}
 RAW = {"str", "repr", "format"}  # calls that turn an exception into its own words
-RAW_ATTRS = {"strerror", "msg", "__name__", "args"}
+RAW_ATTRS = {"strerror", "msg", "args", "errno", "winerror", "__name__", "__qualname__"}
+PLAIN = {"system_reason"}  # the calls an exception goes into to come out as plain words
+
+
+def _name(node: ast.AST) -> str:
+    """The name a call is made by: `f` for f(...), `f` for a.b.f(...) too."""
+    return getattr(node, "id", getattr(node, "attr", ""))
+
+
+def _caught(fn: ast.FunctionDef | ast.AsyncFunctionDef) -> set[str]:
+    """The names an exception is bound to in `fn`: each `except ... as e`, and each argument annotated with an exception
+    class (`e: OSError`), as a helper that builds the error from one is given it."""
+    names = {h.name for h in ast.walk(fn) if isinstance(h, ast.ExceptHandler) and h.name}
+    for a in [*fn.args.posonlyargs, *fn.args.args, *fn.args.kwonlyargs]:
+        if a.annotation is not None and re.search(r"Error|Exception", ast.unparse(a.annotation)):
+            names.add(a.arg)
+    return names
 
 
 def _raw_value(node: ast.AST, caught: set[str], assigned: dict[str, list[ast.AST]], seen: set[str]) -> str | None:
     """How `node`, a value a code's {placeholder} is filled with, puts an exception's own words in the message, or None:
-    str(e) or repr(e), e.strerror or e.msg, type(e).__name__, e in an f-string, system_detail(e); a name is followed to
-    what is assigned to it in the same function."""
-    for sub in ast.walk(node):
-        if isinstance(sub, ast.Attribute) and sub.attr in RAW_ATTRS:
-            return ast.unparse(sub)
-        if isinstance(sub, ast.Call) and getattr(sub.func, "id", "") == "system_detail":
-            return ast.unparse(sub)
-        if isinstance(sub, ast.Call) and getattr(sub.func, "id", "") in RAW:
-            if any(isinstance(a, ast.Name) and a.id in caught for a in sub.args):  # str(e), not str(e.filename)
-                return ast.unparse(sub)
-        if isinstance(sub, ast.FormattedValue) and isinstance(sub.value, ast.Name) and sub.value.id in caught:
-            return ast.unparse(sub)
-        if isinstance(sub, ast.Name) and sub.id in caught and node is sub:
-            return sub.id
-        if isinstance(sub, ast.Name) and sub.id in assigned and sub.id not in seen:
-            for value in assigned[sub.id]:
-                found = _raw_value(value, caught, assigned, seen | {sub.id})
-                if found:
-                    return f"{sub.id} = {found}"
-    return None
+    an exception anywhere in it but inside system_reason() or as e.filename and the like (str(e), repr(e), f"{e}",
+    "%s" % e, .fill(x=e)); e.strerror, e.args, type(e).__name__ and the like; str() of an item picked by number
+    (str(failed[1])); system_detail(). A name is followed to what is assigned to it in the same function, an item of a
+    tuple to that item; a test (the condition of `a if test else b`, a comparison, isinstance) shows nothing."""
+
+    def visit(n: ast.AST, parent: ast.AST | None, seen: set[str]) -> str | None:
+        if isinstance(n, ast.Call) and _name(n.func) in {*PLAIN, "isinstance"} or isinstance(n, ast.Compare):
+            return None
+        if isinstance(n, ast.IfExp):
+            return visit(n.body, n, seen) or visit(n.orelse, n, seen)
+        if isinstance(n, ast.Attribute) and n.attr in RAW_ATTRS:
+            return ast.unparse(n)
+        if isinstance(n, ast.Call) and _name(n.func) == "system_detail":
+            return ast.unparse(n)
+        if isinstance(n, ast.Call) and _name(n.func) in RAW:
+            for a in n.args:
+                if isinstance(a, ast.Subscript) and not (
+                    isinstance(a.slice, ast.Constant) and isinstance(a.slice.value, str)
+                ):  # str(failed[1]): an exception kept in a list or a tuple
+                    return ast.unparse(n)
+        if isinstance(n, ast.Subscript) and isinstance(n.value, ast.Name) and isinstance(n.slice, ast.Constant):
+            index, values = n.slice.value, assigned.get(n.value.id, [])
+            if isinstance(index, int) and n.value.id not in caught and n.value.id not in seen:
+                for value in values:  # failed[0] of failed = (path, e): the path alone
+                    item = value.elts[index] if isinstance(value, ast.Tuple) and index < len(value.elts) else value
+                    found = visit(item, n, seen | {n.value.id})
+                    if found:
+                        return f"{n.value.id} = {found}"
+                return None
+        if isinstance(n, ast.Name):
+            if n.id in caught:
+                if isinstance(parent, ast.Attribute) and parent.value is n:  # e.filename; RAW_ATTRS above
+                    return None
+                return ast.unparse(parent) if parent is not None else n.id
+            if n.id in assigned and n.id not in seen:
+                for value in assigned[n.id]:
+                    found = visit(value, None, seen | {n.id})
+                    if found:
+                        return f"{n.id} = {found}"
+            return None
+        for child in ast.iter_child_nodes(n):
+            found = visit(child, n, seen)
+            if found:
+                return found
+        return None
+
+    return visit(node, None, seen)
 
 
 def _raw_fills(tree: ast.AST) -> Iterator[tuple[int, str, str, str]]:
-    """(line, code, placeholder, how) for each coded error built in `tree` with a demo-path code whose placeholder is
-    filled with an exception's own words; its detail, which the log and the dialog's Details hold, may be."""
+    """(line, code, placeholder, how) for each coded error built in `tree`, any code, by its class's name or as an
+    attribute (anomaly.ModelFileError), whose placeholder is filled with an exception's own words; its detail, which the
+    log and the dialog's Details hold, may be. A code passed in a variable is named by the variable."""
     for fn in ast.walk(tree):
         if not isinstance(fn, (ast.FunctionDef, ast.AsyncFunctionDef)):
             continue
-        caught = {h.name for h in ast.walk(fn) if isinstance(h, ast.ExceptHandler) and h.name}
+        caught = _caught(fn)
         assigned: dict[str, list[ast.AST]] = {}
         for n in ast.walk(fn):
             if isinstance(n, ast.Assign):
@@ -209,20 +256,27 @@ def _raw_fills(tree: ast.AST) -> Iterator[tuple[int, str, str, str]]:
                     if isinstance(t, ast.Name):
                         assigned.setdefault(t.id, []).append(n.value)
         for call in ast.walk(fn):
-            if not (isinstance(call, ast.Call) and getattr(call.func, "id", "") in ERROR_CLASSES and call.args):
+            if not (isinstance(call, ast.Call) and _name(call.func) in ERROR_CLASSES and call.args):
                 continue
             code = call.args[0]
-            if not (isinstance(code, ast.Constant) and code.value in DEMO_PATH):
-                continue
+            name = str(code.value) if isinstance(code, ast.Constant) else ast.unparse(code)
+            fills: list[tuple[str, ast.AST]] = []
             for kw in call.keywords:
-                how = None if kw.arg in (None, "detail") else _raw_value(kw.value, caught, assigned, set())
-                if how and kw.arg:
-                    yield call.lineno, str(code.value), kw.arg, how
+                if kw.arg is None and isinstance(kw.value, ast.Dict):  # **{"reason": ...}
+                    pairs = zip(kw.value.keys, kw.value.values, strict=True)
+                    fills += [(ast.unparse(k) if k else "**", v) for k, v in pairs]
+                elif kw.arg != "detail":
+                    fills.append((kw.arg or "**", kw.value))
+            for placeholder, value in fills:
+                how = _raw_value(value, caught, assigned, set())
+                if how:
+                    yield call.lineno, name, placeholder, how
 
 
-def test_req_set_019_no_demo_path_error_is_filled_with_the_exceptions_own_words() -> None:
-    """Where the code raises a demo-path code, its {placeholders} hold plain words: `system_reason(e)` for what the
-    system refused, never str(e), e.strerror or the exception's class, which go to its detail."""
+def test_req_set_019_no_error_is_filled_with_the_exceptions_own_words() -> None:
+    """Wherever the code raises a coded error, on the demo path or not, its {placeholders} hold plain words:
+    `system_reason(e)` for what the system refused, never str(e), e.strerror or the exception's class, which go to its
+    detail (ARCHITECTURE: "A message itself never names them")."""
     found = [
         (path.relative_to(ROOT).as_posix(), *hit)
         for path in sorted((ROOT / "aoi").rglob("*.py"))
@@ -232,9 +286,10 @@ def test_req_set_019_no_demo_path_error_is_filled_with_the_exceptions_own_words(
 
 
 def test_req_set_019_the_gate_finds_an_exceptions_words_in_a_placeholder() -> None:
-    """The AST scan finds each way an exception's words reached a message before A5."""
+    """The AST scan finds each way an exception's words reached a message before A5, and the ways a fresh-eyes review
+    found it missed at first; it passes the plain ways."""
     source = """
-def f(path):
+def f(path, failed, code):
     try:
         pass
     except OSError as e:
@@ -246,14 +301,40 @@ def f(path):
         raise AoiError("AOI-SET-007", error_type=type(e).__name__)
     except KeyError as e:
         raise AoiError("AOI-SET-013", detail=str(e), path=path, error=repr(e))
+    except LookupError as e:
+        raise AoiError("AOI-LOG-002", path=path, reason=WHY.fill(reason=e))
+    except IndexError as e:
+        raise anomaly.ModelFileError("AOI-TRN-001", path=path, reason="%s" % e)
+    except TypeError as e:
+        raise AoiError(code, **{"reason": type(e).__qualname__})
+    raise AoiError("AOI-LOG-001", reason=str(failed[1]))
+
+
+def g(e: OSError, path):
+    return AoiError("AOI-LOG-002", system_detail(e), path=str(path), reason=f"{e}")
+
+
+def plain(e: OSError, path, item):
+    try:
+        pass
+    except OSError as e:
+        raise AoiError("AOI-LOG-002", system_detail(e), path=str(e.filename), reason=system_reason(e, writing=True))
+    return AoiError("AOI-TRN-045", name=str(item["name"]), reason=WHY.fill(file=item["path"]))
 """
     hits = [(code, placeholder) for _line, code, placeholder, _how in _raw_fills(ast.parse(source))]
-    assert hits == [
-        ("AOI-LOG-002", "reason"),
-        ("AOI-SET-010", "reason"),
-        ("AOI-SET-007", "error_type"),
-        ("AOI-SET-013", "error"),
-    ], hits
+    assert sorted(hits) == sorted(
+        [
+            ("AOI-LOG-002", "reason"),
+            ("AOI-SET-010", "reason"),
+            ("AOI-SET-007", "error_type"),
+            ("AOI-SET-013", "error"),
+            ("AOI-LOG-002", "reason"),
+            ("AOI-TRN-001", "reason"),
+            ("code", "'reason'"),
+            ("AOI-LOG-001", "reason"),
+            ("AOI-LOG-002", "reason"),
+        ]
+    ), hits
 
 
 def _os_error(number: int, words: str, winerror: int | None = None) -> OSError:
@@ -271,6 +352,8 @@ SYSTEM_REFUSALS = [  # (the system's refusal, the plain reason a message gives f
     (_os_error(errno.EIO, "Input/output error"), catalogue.NOT_READ),
     (_os_error(errno.ENAMETOOLONG, "File name too long"), catalogue.TOO_LONG),
     (_os_error(errno.EEXIST, "File exists"), catalogue.TAKEN),
+    (_os_error(errno.ENOTEMPTY, "Directory not empty"), catalogue.NOT_EMPTY),
+    (_os_error(errno.ENOTEMPTY, "The directory is not empty", 145), catalogue.NOT_EMPTY),
     (_os_error(errno.EISDIR, "Is a directory"), catalogue.A_FOLDER),
     (_os_error(errno.ENOTDIR, "Not a directory"), catalogue.NOT_A_FOLDER),
     (_os_error(errno.EACCES, "The process cannot access the file because it is being used by another process", 32),
@@ -286,7 +369,7 @@ SYSTEM_REFUSALS = [  # (the system's refusal, the plain reason a message gives f
     (sqlite3.OperationalError("disk I/O error"), catalogue.NOT_READ),
     (sqlite3.OperationalError("database or disk is full"), catalogue.FULL),
     (sqlite3.OperationalError("unable to open database file"), catalogue.DB_NOT_OPENED),
-    (sqlite3.OperationalError("attempt to write a readonly database"), catalogue.WRITE_PROTECTED),
+    (sqlite3.OperationalError("attempt to write a readonly database"), catalogue.DB_READ_ONLY),
     (sqlite3.OperationalError("no such table: inspections"), catalogue.DB_REFUSED),
     (RuntimeError("anything else"), catalogue.REFUSED),
 ]  # fmt: skip
@@ -300,6 +383,34 @@ def test_req_set_019_a_system_refusal_reads_as_plain_words(refusal: BaseExceptio
     assert isinstance(plain, Phrase) and plain.context == "Errors" and plain == reason
     assert banned(plain) == [] and str(refusal) not in plain
     assert system_detail(refusal) == f"{type(refusal).__name__}: {refusal}"
+
+
+def test_req_set_019_a_file_being_written_whose_folder_is_gone_says_so(tmp_path: Path) -> None:
+    """Export CSV to a stick pulled out, or a folder deleted: "its folder or drive is not there", never "it is not
+    there" beside "a file of that name already there is left as it was"; a file read that is not there stays so."""
+    gone = _os_error(errno.ENOENT, "No such file or directory")
+    assert system_reason(gone, writing=True) == catalogue.GONE and system_reason(gone) == catalogue.MISSING
+    assert system_reason(_os_error(errno.ENOSPC, "No space left on device"), writing=True) == catalogue.FULL
+    text = phrase_text(_not_written(gone, tmp_path / "gone" / "report.csv").what)
+    assert "its folder or drive is not there" in text and "it is not there" not in text
+
+
+def test_req_set_019_windows_own_number_survives_a_crash_safe_write(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A file written crash-safe (`atomic.write_all`, which Export CSV goes through) re-raises the system's refusal
+    under the file's name; Windows' own number, which tells a file another app holds from a refused one, is read from
+    the refusal it was raised from (WinError 32 is "another app has it open", not access denied)."""
+    held = _os_error(errno.EACCES, "The process cannot access the file because it is being used", 32)
+
+    def refuse(_src: object, _dst: object) -> None:
+        raise held
+
+    monkeypatch.setattr(atomic.os, "replace", refuse)
+    with pytest.raises(OSError) as e:
+        atomic.write_all([(tmp_path / "report.csv", b"a,b\n")])
+    assert e.value.filename == str(tmp_path / "report.csv") and e.value.__cause__ is held
+    assert system_reason(e.value) == catalogue.IN_USE
 
 
 def _shown(report: ErrorReport) -> tuple[str, str, str]:
@@ -321,6 +432,18 @@ def test_req_set_019_an_unexpected_error_shows_its_class_only_behind_details(qtb
         assert text.startswith(f"An unexpected error stopped the last action{where}\n\n"), text
         assert banned(text) == [] and "secret detail" not in text
         assert details == "RuntimeError: secret detail"
+
+
+def test_req_set_019_an_unexpected_refusal_of_the_system_says_what_it_means(qtbot: QtBot) -> None:
+    """AOI-SET-007 for a refusal of the system or the database no code names (a drive full as Load Demo Workspace
+    copies the demo, Exit presenter theme saving settings.json, a training saving its AI model): what it means, in
+    plain words, after where it stopped; the system's words behind Show Details…"""
+    full = _os_error(errno.ENOSPC, "No space left on device")
+    _title, text, details = _shown(ErrorReport.of(full, "Training"))
+    assert text.startswith("An unexpected error stopped the last action (Training): the drive is full.\n\n"), text
+    assert banned(text) == [] and details == f"OSError: {full}"
+    _title, text, _details = _shown(ErrorReport.of(sqlite3.OperationalError("disk I/O error"), UNHANDLED))
+    assert text.startswith("An unexpected error stopped the last action: the drive could not be read or written."), text
 
 
 def test_req_set_019_a_full_drive_reads_as_a_full_drive(qtbot: QtBot, tmp_path: Path) -> None:
@@ -414,6 +537,51 @@ def test_req_set_019_an_uncoded_error_starting_the_demo_is_one_plain_dialog(
     _title, text = dialog_text(shown[0])
     assert banned(text) == [] and "(start-up)" in text
     assert shown[0].detail.startswith("PermissionError: [Errno 13] Permission denied")
+
+
+def test_req_set_019_a_refusal_at_start_up_goes_to_the_log_with_its_detail(
+    monkeypatch: pytest.MonkeyPatch, dialogs: list[tuple[str, str]]
+) -> None:
+    """A coded refusal before any workspace is open (settings.json that is not JSON, AOI-SET-010) shows its plain
+    message and writes its code and detail, the technical words behind Show Details…, to the default workspace's log:
+    the presenter keeps Details closed, and support reads the log."""
+    Settings._file().parent.mkdir(parents=True, exist_ok=True)
+    Settings._file().write_text('{"presenter_theme": tru}', encoding="utf-8")
+    assert ui_errors.open_workspace() is None
+    assert [title for title, _ in dialogs] == ["AOI-SET-010 Settings file cannot be read"]
+    lines = [json.loads(line) for f in (default_workspace() / "logs").glob("aoi-*.jsonl") for line in f.open()]
+    (refused,) = [line for line in lines if line["event"] == "app.start_refused"]
+    assert refused["code"] == "AOI-SET-010" and refused["detail"].startswith("JSONDecodeError: Expecting value")
+    assert "trace" not in refused
+
+
+def test_req_set_019_a_demo_load_stopped_part_way_leaves_no_half_demo(
+    demo_bundle: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Load Demo Workspace, or the demo's Start-menu entry, on a drive that fills as the demo is copied: the copy made
+    so far goes, so the next load starts clean, not refused as a folder that is not the demo (AOI-SET-016); the
+    refusal goes on to its dialog, AOI-SET-007 saying the drive is full. A folder there before, empty, stays."""
+    copy = atomic.copy_file
+    copied: list[object] = []
+
+    def fills(src: Path, dst: Path) -> None:
+        if copied:
+            raise OSError(errno.ENOSPC, "No space left on device", str(dst))
+        copied.append(dst)
+        copy(src, dst)
+
+    monkeypatch.setattr(demo.atomic, "copy_file", fills)
+    for folder in (tmp_path / "new", tmp_path / "empty"):
+        if folder.name == "empty":
+            folder.mkdir()
+        copied.clear()
+        with pytest.raises(OSError) as e:
+            demo.load(demo_bundle, folder, {}, credentials.MemoryCredentials())
+        assert copied and system_reason(e.value) == catalogue.FULL
+        assert not folder.exists() if folder.name == "new" else list(folder.iterdir()) == []
+    monkeypatch.undo()
+    demo.load(demo_bundle, tmp_path / "new", {}, credentials.MemoryCredentials())
+    assert demo.is_demo(tmp_path / "new")
 
 
 def test_req_set_019_the_dialog_shows_a_coded_errors_detail(qtbot: QtBot) -> None:

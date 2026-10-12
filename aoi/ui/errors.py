@@ -20,7 +20,7 @@ from PySide6.QtWidgets import QFileDialog, QMessageBox, QWidget
 from .. import logging_setup
 from ..config import Settings, default_workspace
 from ..core.services import UNHANDLED, AppContext, ErrorReport
-from ..errors import QT_TRANSLATE_NOOP, AoiError, Phrase
+from ..errors import QT_TRANSLATE_NOOP, AoiError, Phrase, system_detail
 
 # Refusals another workspace folder cures: a v0.1 or newer database, a changed migration, a folder without WAL, a
 # folder or database that cannot be opened, a database another program holds (the same folder, once it lets go).
@@ -107,12 +107,18 @@ def open_workspace() -> AppContext | None:
 
 
 def log_start_failure(exc: Exception) -> None:
-    """Write the trace of an error at start-up to the log in the default workspace folder, where settings.json is,
-    and close the file again; the console is the last resort when that folder cannot be written either."""
+    """Write an error at start-up to the log in the default workspace folder, where settings.json is, and close the
+    file again: a coded refusal as `app.start_refused` with its code and its detail, the technical words its dialog's
+    Show Details holds; any other error as `app.start_failed` with its trace. The console is the last resort when that
+    folder cannot be written either."""
     try:
         log = logging_setup.setup(default_workspace())
         try:
-            log.error("app.start_failed", exc_info=exc)
+            if isinstance(exc, AoiError):
+                detail = exc.detail or system_detail(exc.__cause__)
+                log.warning("app.start_refused", extra={"code": exc.code, "what": str(exc.what), "detail": detail})
+            else:
+                log.error("app.start_failed", exc_info=exc)
         finally:
             logging_setup.close(log)
     except Exception:
@@ -123,13 +129,15 @@ def _open_workspace() -> AppContext | None:
     try:
         settings = Settings.load()
     except AoiError as e:  # settings.json cannot be read (AOI-SET-010) or holds a wrong value (AOI-SET-008)
-        show_error(None, ErrorReport.of(e))  # no workspace yet, so no log: the dialog carries the code
+        log_start_failure(e)  # no workspace yet: the default workspace's log, as for an error without a code
+        show_error(None, ErrorReport.of(e))
         return None
     chosen = False
     while True:
         try:
             ctx = AppContext(settings)
         except AoiError as e:
+            log_start_failure(e)
             show_error(None, ErrorReport.of(e))
             if e.code not in ANOTHER_WORKSPACE:
                 return None

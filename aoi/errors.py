@@ -85,16 +85,19 @@ FULL = QT_TRANSLATE_NOOP("Errors", "the drive is full")
 DENIED = QT_TRANSLATE_NOOP("Errors", "the system refused access to it: it may be read-only, or open in another app")
 IN_USE = QT_TRANSLATE_NOOP("Errors", "another app has it open")
 MISSING = QT_TRANSLATE_NOOP("Errors", "it is not there")
+GONE = QT_TRANSLATE_NOOP("Errors", "its folder or drive is not there")  # MISSING, for a file being written
 WRITE_PROTECTED = QT_TRANSLATE_NOOP("Errors", "the drive is write-protected")
 NOT_READY = QT_TRANSLATE_NOOP("Errors", "the drive is not ready: it may have been removed")
 NOT_READ = QT_TRANSLATE_NOOP("Errors", "the drive could not be read or written")
 TOO_LONG = QT_TRANSLATE_NOOP("Errors", "its path is too long")
 TAKEN = QT_TRANSLATE_NOOP("Errors", "something of that name is already there")
+NOT_EMPTY = QT_TRANSLATE_NOOP("Errors", "the folder still holds files, which another app may have open")
 A_FOLDER = QT_TRANSLATE_NOOP("Errors", "it is a folder, not a file")
 NOT_A_FOLDER = QT_TRANSLATE_NOOP("Errors", "part of its path is a file, not a folder")
 DB_HELD = QT_TRANSLATE_NOOP("Errors", "another app holds the database")
 DB_DAMAGED = QT_TRANSLATE_NOOP("Errors", "the database file is damaged")
 DB_NOT_OPENED = QT_TRANSLATE_NOOP("Errors", "the database file could not be opened")
+DB_READ_ONLY = QT_TRANSLATE_NOOP("Errors", "the database file or its folder is set to read-only")
 DB_REFUSED = QT_TRANSLATE_NOOP("Errors", "the database refused it")
 REFUSED = QT_TRANSLATE_NOOP("Errors", "the system refused it")
 _BY_ERRNO = {  # by name: a system without one of these numbers leaves it out
@@ -102,22 +105,30 @@ _BY_ERRNO = {  # by name: a system without one of these numbers leaves it out
     for names, reason in (
         (("ENOSPC", "EDQUOT"), FULL), (("EACCES", "EPERM"), DENIED), (("EBUSY", "ETXTBSY"), IN_USE),
         (("ENOENT",), MISSING), (("EROFS",), WRITE_PROTECTED), (("ENODEV", "ENXIO"), NOT_READY), (("EIO",), NOT_READ),
-        (("ENAMETOOLONG",), TOO_LONG), (("EEXIST", "ENOTEMPTY"), TAKEN), (("EISDIR",), A_FOLDER),
-        (("ENOTDIR",), NOT_A_FOLDER),
+        (("ENAMETOOLONG",), TOO_LONG), (("EEXIST",), TAKEN), (("ENOTEMPTY",), NOT_EMPTY),
+        (("EISDIR",), A_FOLDER), (("ENOTDIR",), NOT_A_FOLDER),
     )
     for name in names
     if hasattr(errno, name)
 }  # fmt: skip
 _BY_WINERROR = {  # Windows' own numbers, which say more than the errno Python maps them to
     5: DENIED, 32: IN_USE, 33: IN_USE, 2: MISSING, 3: MISSING, 19: WRITE_PROTECTED, 21: NOT_READY, 15: NOT_READY,
-    112: FULL, 39: FULL, 23: NOT_READ, 1117: NOT_READ, 206: TOO_LONG, 80: TAKEN, 183: TAKEN, 267: NOT_A_FOLDER,
+    112: FULL, 39: FULL, 23: NOT_READ, 1117: NOT_READ, 206: TOO_LONG, 80: TAKEN, 183: TAKEN, 145: NOT_EMPTY,
+    267: NOT_A_FOLDER,
 }  # fmt: skip
 
 
-def system_reason(e: BaseException | None) -> Phrase:
+def system_reason(e: BaseException | None, writing: bool = False) -> Phrase:
     """What the system's refusal `e` means for the user, as a phrase that names no exception, errno or SQLite text: a
-    full, removed or write-protected drive, a file another app has open, one that is not there, a damaged database; "the
-    system refused it" for anything else. The words of `e` itself go in the error's detail (`system_detail`)."""
+    full, removed or write-protected drive, a file another app has open, one that is not there (its folder or drive,
+    when `writing` it), a damaged database; "the system refused it" for anything else. Windows' own number is read from
+    `e` or the error it was raised from, as a file written crash-safe re-raises one under the file's name. The words of
+    `e` itself go in the error's detail (`system_detail`)."""
+    reason = _system_reason(e)
+    return GONE if writing and reason == MISSING else reason
+
+
+def _system_reason(e: BaseException | None) -> Phrase:
     if isinstance(e, sqlite3.Error):
         text = str(e).lower()
         if "locked" in text or "busy" in text:
@@ -129,10 +140,10 @@ def system_reason(e: BaseException | None) -> Phrase:
         if "unable to open" in text:
             return DB_NOT_OPENED
         if "readonly" in text or "read-only" in text:
-            return WRITE_PROTECTED
+            return DB_READ_ONLY
         return DB_REFUSED
     if isinstance(e, OSError):
-        winerror = getattr(e, "winerror", None)
+        winerror = getattr(e, "winerror", None) or getattr(e.__cause__, "winerror", None)
         if winerror in _BY_WINERROR:
             return _BY_WINERROR[winerror]
         return _BY_ERRNO.get(e.errno or 0, REFUSED)
@@ -448,8 +459,7 @@ CODES: dict[str, ErrorCode] = {
             QT_TRANSLATE_NOOP("Errors", "AI model file refused"),
             QT_TRANSLATE_NOOP(
                 "Errors",
-                "AI model file refused: {path} could not be loaded as a weights-only AI model file this app wrote "
-                "({reason}).",
+                "AI model file refused: {path} could not be loaded as an AI model file this app wrote ({reason}).",
             ),
             QT_TRANSLATE_NOOP("Errors", "Train the board model again."),
         ),
@@ -722,8 +732,10 @@ CODES: dict[str, ErrorCode] = {
             QT_TRANSLATE_NOOP("Errors", "{name} was not frozen: {reason}."),
             QT_TRANSLATE_NOOP(
                 "Errors",
-                "Freeze it from board models of one customer's dataset store that is not shredded, with the uses own, "
-                "shared or demos; nothing was written.",
+                "Nothing was written. Type a board revision of 1 to 16 letters and digits, or the customer whose "
+                "dataset store holds the images, and tick at least one use; label images OK or NG and run an "
+                "agreement check that reaches its targets; an Admin moves the board model into a dataset store first. "
+                "A board model whose store was shredded is never frozen again.",
             ),
         ),
         ErrorCode(
@@ -884,8 +896,9 @@ CODES: dict[str, ErrorCode] = {
             QT_TRANSLATE_NOOP("Errors", "The dataset store of {store} was not changed: {reason}."),
             QT_TRANSLATE_NOOP(
                 "Errors",
-                "Nothing was changed. Correct the customer, the board model or the key typed, or close the app that "
-                "has the store's files open, then try again.",
+                "A move-in or a shred stopped part-way keeps the steps it made: start it again to finish. Anything "
+                "else changed nothing: type the customer, the board model or the store's key again, or close the app "
+                "that has a file of the store open, then try again.",
             ),
         ),
         ErrorCode(
@@ -894,8 +907,10 @@ CODES: dict[str, ErrorCode] = {
             QT_TRANSLATE_NOOP("Errors", "{name} was not trained: {reason}."),
             QT_TRANSLATE_NOOP(
                 "Errors",
-                "Freeze a new dataset version on Training's Datasets tab, with enough OK images, and lock its "
-                "validation set; then start again from it. Nothing was saved, and the active AI model is unchanged.",
+                "Nothing was saved, and the active AI model is unchanged. Freeze a dataset version with enough OK "
+                "images and lock its validation set on Training's Datasets tab, then start again from it; for a file "
+                "changed since the freeze, put the frozen file back or freeze a new version (in the demo workspace, "
+                "Reset Demo puts it back).",
             ),
         ),
         ErrorCode(
@@ -1293,7 +1308,7 @@ CODES: dict[str, ErrorCode] = {
         ErrorCode(
             "AOI-SET-007",
             QT_TRANSLATE_NOOP("Errors", "Unexpected error"),
-            QT_TRANSLATE_NOOP("Errors", "An unexpected error stopped the last action{context}."),
+            QT_TRANSLATE_NOOP("Errors", "An unexpected error stopped the last action{context}{reason}."),
             QT_TRANSLATE_NOOP(
                 "Errors",
                 "Try again; if it happens again, restart the app and send the log file (the workspace's logs folder) "

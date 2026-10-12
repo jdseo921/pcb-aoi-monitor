@@ -41,7 +41,7 @@ from ...core.run_progress import RunProgress
 from ...core.sample_import import ImportFile, ImportReport, annotate, folder_files
 from ...core.services import AppContext
 from ...defects import names
-from ...errors import AoiError
+from ...errors import AoiError, system_detail, system_reason
 from ...hal import VIEWS
 from ...times import to_local
 from .. import theme
@@ -532,13 +532,14 @@ class TrainingPage(Page):
             reason, code = e.params["reason"], "AOI-TRN-009"
         elif n["imported"]:  # files went in before it: the message must say how many (#206)
             title = QT_TRANSLATE_NOOP("Errors", "{code} {title}")  # the title in the UI language (#198)
-            reason = title.fill(code=e.code, title=e.title) if isinstance(e, AoiError) else type(e).__name__
+            reason = title.fill(code=e.code, title=e.title) if isinstance(e, AoiError) else system_reason(e)
             code = "AOI-TRN-010"
         elif isinstance(e, AoiError) and e.code == "AOI-TRN-011":  # none of the images went in, not 1
             return AoiError("AOI-TRN-011", e.detail, path=f.path, workspace=e.params["workspace"], count=total)
         else:  # nothing imported yet: the error is shown as it is
             return e
-        stopped = AoiError(code, e.detail if isinstance(e, AoiError) else str(e), path=f.path, reason=reason, **n)
+        detail = e.detail if isinstance(e, AoiError) else system_detail(e)
+        stopped = AoiError(code, detail, path=f.path, reason=reason, **n)
         stopped.__cause__ = e
         return stopped
 

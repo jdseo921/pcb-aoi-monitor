@@ -953,7 +953,8 @@ reported before any window opens, so `open_workspace` in
 `aoi/ui/errors.py` follows the message with a folder picker: the folder chosen is opened, then saved to `settings.json`
 as the Settings page saves it (logged as `settings.save_failed` if it cannot be), and Cancel closes the app
 (REQ-SET-016). An error at start-up without a code shows `AOI-SET-007`, and its trace goes to the log in the default
-workspace folder (event `app.start_failed`), since the excepthook logs to an open workspace's log (REQ-SET-019). Once
+workspace folder (event `app.start_failed`), since the excepthook logs to an open workspace's log (REQ-SET-019); a
+coded refusal shown before a workspace is open goes to that log too, with its code and detail (`app.start_refused`). Once
 the workspace is open, `build_window` in `aoi/ui/main_window.py` installs the excepthook before it builds the window,
 so a slot that raises while the pages are built is logged and shown too, and again with the window as the dialog's
 parent; an error raised out of building the window (a page that cannot read a damaged database) is shown as
@@ -1027,8 +1028,10 @@ logs the stack trace with the build version, stores an ERROR alarm and returns t
 `aoi/ui/errors.py` shows (code, title, what happened, what to do), with the error's detail behind the dialog's Show
 Details (`ErrorBox`): an exception's class and text, or the system's own words a coded error carries. A message itself
 never names them: a refusal of the system fills its `{reason}` or `{error}` with `system_reason(e)`, what the refusal
-means for the user (a full or removed drive, a file another app has open), and `system_detail(e)` goes to the detail
-(A5 of the 2026-10 business-readiness brief, F8; `tests/test_demo_path_messages.py`). This holds also for unhandled
+means for the user (a full or removed drive, a file another app has open), and `system_detail(e)` goes to the detail;
+AOI-SET-007 for a refusal of the system no code names says what it means the same way (A5 of the 2026-10
+business-readiness brief, F8). `tests/test_demo_path_messages.py` reads every coded error the app builds, on the demo
+path or not, and fails on a placeholder filled with an exception's own words. This holds also for unhandled
 errors through
 `sys.excepthook`; it never raises, so the dialog shows even when the database refuses the alarm (logged as
 `alarm.not_stored`, #171). SQLite's refusal while another program holds the database's lock during work becomes
