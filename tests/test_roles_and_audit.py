@@ -118,6 +118,13 @@ def ng_record(ctx: AppContext, data: Path | None = None) -> int:
     return int(ctx.inspections(board_model="TINY")[0]["id"])
 
 
+def false_call(ctx: AppContext, data: Path | None = None) -> int:
+    """The newest record of TINY reviewed as a false call; with none, `ng_record`, not reviewed, for a call refused by
+    its role before it reads the record."""
+    found = ctx.inspections(board_model="TINY", review="FALSE_CALL")
+    return int(found[0]["id"]) if found else ng_record(ctx, data)
+
+
 WRITES: dict[str, tuple[str, Callable[[AppContext, Path, Path], Any]]] = {
     "ensure_board_model": ("board_model.create", lambda ctx, data, tmp: ctx.ensure_board_model("NEW")),
     "import_samples": (
@@ -232,6 +239,8 @@ WRITES: dict[str, tuple[str, Callable[[AppContext, Path, Path], Any]]] = {
     ),
     # the master samples left after the writes above, judged at the start of a shift by any role (REQ-INSP-017)
     "run_shift_check": ("inspection.shift_check", lambda ctx, data, tmp: ctx.run_shift_check("TINY")),
+    # the board reviewed as a false call above, added to Training as OK in one step (REQ-TRN-020)
+    "add_false_call_sample": ("sample.import", lambda ctx, data, tmp: ctx.add_false_call_sample(false_call(ctx, data))),
 }
 # what only an Engineer does that writes no audit entry itself: re-evaluating a result (REQ-CMP-005, since S28a), and
 # starting a training run, whose job writes model.train once it ends (REQ-TRN-008, S40)

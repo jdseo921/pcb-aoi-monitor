@@ -299,11 +299,6 @@ def _units(text: str) -> int:
     return len(text.encode("utf-16-le", "surrogatepass")) // 2
 
 
-def _sha256(path: Path) -> str:
-    with open(path, "rb") as f:
-        return hashlib.file_digest(f, "sha256").hexdigest()
-
-
 def _remove(files: list[Path]) -> None:
     """Remove files a write made before it failed, so none is left that its records or audit entry do not name."""
     for f in files:
@@ -439,6 +434,7 @@ class AppContext:
         should_stop: Callable[[], bool] | None = None,
         already: list[dict[str, Any]] | None = None,
         added: list[str] | None = None,
+        origin: dict[str, str] | None = None,
     ) -> int:
         """Copy uploads into the workspace so training data survives the source folder moving; returns how many were
         added. Each file goes through `_copy_checked` (REQ-TRN-001): checked as Inspection checks an image, never
@@ -452,7 +448,8 @@ class AppContext:
         true the files not yet copied are left out, the ones copied are added and the audit entry says so
         (`cancelled`); `import_files` passes one file a call and stops between calls, so the entries it writes never
         say so. `already`, when given, gets the sample each skipped image is already (`import_files` names it), and
-        `added` the UUID of each sample added."""
+        `added` the UUID of each sample added. `origin` goes into the audit entry as it is: where the images came from,
+        such as the record of a false call (`add_false_call_sample`)."""
         self._refuse_unsafe_name(board_model)  # a new board model is created by its first import
         self._refuse_case_variant(board_model)
         first = paths[0] if paths else ""
@@ -497,7 +494,7 @@ class AppContext:
                 after |= {"skipped": len(kept), "cancelled": stopped}
                 after["samples"] = [{"uuid": uid, "sha256": digest} for _, uid, digest in copies]
                 after["already"] = [{"uuid": had["uuid"], "sha256": digest} for digest, had in kept]
-                self.audit("sample.import", "board_model", board_model, None, after)
+                self.audit("sample.import", "board_model", board_model, None, after | (origin or {}))
         except BaseException:
             _remove([target for target, _, _ in copies])
             raise
@@ -523,22 +520,29 @@ class AppContext:
         of `known`, copies nothing and comes back with that sample (decision Q31). The copy is a crash-safe write; then
         the source and the copy are read again, and a SHA-256 other than the one checked (a writer still at the source)
         refuses the file with AOI-TRN-014 and removes the copy. A board model in a customer's dataset store gets its
-        copy encrypted from the bytes checked, never written plain, and read back decrypted (REQ-TRN-017). A source
-        lost since its check (removed, unreadable) is refused with AOI-INSP-001, as Inspection's check would; a copy
-        that cannot be written raises AOI-TRN-008, or AOI-TRN-011 when the system refuses its path as too long
+        copy encrypted from the bytes checked, never written plain, and read back decrypted (REQ-TRN-017); a source
+        that is itself a file of a store, such as a board inspected from a stored sample (REQ-TRN-020), is read
+        decrypted in memory, and its copy outside a store written from the bytes checked, never copied encrypted. A
+        source lost since its check (removed, unreadable) is refused with AOI-INSP-001, as Inspection's check would; a
+        copy that cannot be written raises AOI-TRN-008, or AOI-TRN-011 when the system refuses its path as too long
         (#245)."""
-        data = imaging.checked_bytes(src, self.settings.max_image_megapixels, self.settings.max_image_megabytes)
+        limits = (self.settings.max_image_megapixels, self.settings.max_image_megabytes)
+        data = imaging.checked_bytes(src, *limits, read=self._plain_bytes)
         digest = hashlib.sha256(data).hexdigest()
         if (had := known.get(digest) or self.db.sample_with_sha256(board_model, digest)) is not None:
             return digest, had
         sealed = self._sealed(to_stored(target, self.settings.root), data)  # the bytes checked, in the store's form
+        plain = data if sealed is None and self._store_for(src) is not None else None  # a store's file, decrypted
         del data  # up to the size limit in memory: not kept through the copy
         try:
-            if sealed is None:
-                atomic.copy_file(src, target)
-            else:  # a board model in a customer's dataset store: its copy is encrypted from the start (REQ-TRN-017)
+            if sealed is not None:  # a board model in a customer's store: encrypted from the start (REQ-TRN-017)
                 atomic.write_bytes(target, sealed)
                 del sealed
+            elif plain is not None:
+                atomic.write_bytes(target, plain)
+                del plain
+            else:
+                atomic.copy_file(src, target)
         except OSError as e:  # gone, unreadable, the workspace drive full, or a path the system refuses
             if str(e.filename) == str(src):  # the source's own: that file's to fix, listed by import_files
                 raise AoiError("AOI-INSP-001", str(e), path=str(src)) from e
@@ -548,7 +552,7 @@ class AppContext:
             why = e.strerror or str(e)
             raise AoiError("AOI-TRN-008", str(e), path=str(src), reason=why, count=count) from e
         try:
-            same = _sha256(src) == digest == self._file_sha256(target)
+            same = self._file_sha256(src) == digest == self._file_sha256(target)
         except (OSError, AoiError):  # the source gone right after its copy, or a copy that does not read back
             same = False
         if not same:
@@ -1735,6 +1739,35 @@ class AppContext:
             "inspection.reviewed", extra={"inspection_id": inspection_id, "review": review, "verdict": record["result"]}
         )
         return {**record, "review": review, "review_reason": reason, "review_by": self.user, "review_time": when}
+
+    @requires("Engineer", QT_TRANSLATE_NOOP("Errors", "Adding a board to Training"))
+    def add_false_call_sample(self, inspection_id: int) -> dict[str, Any]:
+        """Add a board reviewed as a false call (REQ-INSP-013) to its board model's Training samples as OK, in one step
+        (REQ-TRN-020, ADR 0013): the board is good by the review, so the next AI model trained learns its look as
+        normal. The record's stored image is imported as `import_samples` imports a file (checked, copied, its SHA-256
+        kept), in the record's view, and the import's audit entry names the record (`from_inspection`, its UUID). An
+        image the board model already holds is not added again. AOI-TRN-050 refuses an unknown record or one not
+        reviewed as a false call, and changes nothing. Returns `added` (1, or 0 when the image was already a sample),
+        `sample` (the UUID of the sample holding the image), its `label`, and the `board_model` and `view`."""
+        record = self.db.inspection(inspection_id)
+        if record is None:
+            raise AoiError("AOI-TRN-050", record=inspection_id, reason=QT_TRANSLATE_NOOP("Errors", "no such record"))
+        if record["review"] != FALSE_CALL:
+            why = QT_TRANSLATE_NOOP("Errors", "it is not reviewed as a false call")
+            raise AoiError("AOI-TRN-050", record=inspection_id, reason=why)
+        if not record["image_path"]:
+            why = QT_TRANSLATE_NOOP("Errors", "its board image was not stored")
+            raise AoiError("AOI-TRN-050", record=inspection_id, reason=why)
+        view = record["view"] or VIEWS[0]  # a record stored before views were (S35) was a top view
+        already: list[dict[str, Any]] = []
+        added: list[str] = []
+        self.import_samples(
+            record["board_model"], [record["image_path"]], "OK", side=view, already=already, added=added,
+            origin={"from_inspection": record["uuid"]},
+        )  # fmt: skip
+        sample = {"uuid": added[0], "label": "OK"} if added else already[0]
+        out = {"added": len(added), "sample": sample["uuid"], "label": sample["label"]}
+        return out | {"board_model": record["board_model"], "view": view}
 
     # --- the start-of-shift check (REQ-INSP-017, ADR 0014) -----------------------
     def master_samples(self, board_model: str) -> list[dict[str, Any]]:

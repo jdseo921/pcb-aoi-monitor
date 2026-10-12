@@ -34,6 +34,8 @@ None. / 없음.
 
 - [REQ-LOG-009] Logs & Export has a Review filter after Result: Not reviewed (the NG and WARN boards no one has reviewed yet), Real defect or False call. An export's audit entry records it with the rest of the filter. Where the window is narrower than the filters, as at 1600 px, they wrap onto a second row instead of scrolling the page sideways. / 로그 및 내보내기의 결과 필터 뒤에 검토 필터가 생겼습니다: 미검토(아직 아무도 검토하지 않은 NG 및 WARN 보드), 실제 불량, 오검출. 내보내기의 감사 기록에 다른 필터와 함께 남습니다. 창이 필터보다 좁으면(예: 1600 px) 페이지를 옆으로 스크롤하는 대신 필터가 두 번째 줄로 넘어갑니다.
 
+- [REQ-TRN-020] Logs & Export › Add to Training as OK (Engineer and Admin) adds the selected board, reviewed as a False call, to its board model's Training samples as OK in its view, in one step; the audit entry names the record. It changes no verdict until an AI model trained with it is activated. / 로그 및 내보내기 › 학습에 OK로 추가(엔지니어 및 관리자)는 오검출로 검토된 선택 보드를 해당 보드 모델의 학습 샘플에 OK로, 같은 면으로 한 번에 추가합니다. 감사 기록에 해당 기록이 남습니다. 이 샘플로 학습한 AI 모델을 활성화하기 전에는 판정이 바뀌지 않습니다.
+
 ## Improved / 개선 (draft)
 
 - [REQ-SET-004] Text on the green, red and blue fills (verdict banner, Start, Stop, primary and danger buttons) is black, reading at 5.0:1 or more; it was white at 3.3 to 4.2:1 (#150). / 녹색, 빨간색, 파란색 배경 위 글자(판정 배너, 시작, 정지, 주요 및 위험 버튼)가 검은색이 되어 5.0:1 이상으로 읽힙니다. 이전에는 흰색으로 3.3~4.2:1이었습니다(#150).

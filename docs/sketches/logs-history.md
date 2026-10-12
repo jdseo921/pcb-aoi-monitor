@@ -67,6 +67,7 @@ are read, not acted on: no selection. Every role sees it.
 | Apply filter | Apply Filter | Enter | B | The page's one blue primary; busy indicator in the table over 1 s |
 | Tabs | Records, Defect types | Tab to the tab bar, then ← → | T | Records opens first; Defect types counts the listed records when shown (REQ-LOG-008) |
 | Table | Time, Board model, AI model, Result, Review (Real defect or False call, REQ-INSP-013), Defects, Operator, View, Recipe rev, Image | ↑ ↓, click header sorts | rows 48 px for Operators, 14 pt | Selecting a row shows its overlay within 300 ms |
+| Add to Training | Add to Training as OK | — | T | Engineer and Admin; on while the selected record is reviewed as a False call; copies its board image to Training as an OK sample in its view, no confirmation (the sample is deleted on Training), status bar names the board model; audit `sample.import` with the record's UUID (REQ-TRN-020) |
 | Open in Compare | Open in Compare › | Enter | T | Stored result with failing checks highlighted (REQ-INSP-009) |
 | Export CSV | Export CSV… | — | B | Confirmation: "Export 128 records as CSV?"; UTF-8 with BOM; carries verdict, regions, metrics, thresholds, AI model version, recipe revision and view (REQ-INSP-012, REQ-INSP-010); audit entry with user, time, filter and count (REQ-LOG-002) |
 | Export overlays | Export Overlays… | — | B | Confirmation names the count; same audit entry |
