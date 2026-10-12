@@ -163,8 +163,8 @@ def test_req_rcp_001_zoom_pan_and_fit_by_wheel_middle_drag_space_and_home(
     page = _page(qtbot, trained_ctx)
     view = page.view
     fitted = view.transform().m11()
-    _wheel(view.viewport(), -2)
-    assert view.transform().m11() == pytest.approx(fitted * 1.25**2)
+    _wheel(view.viewport(), -4)  # the pane's width follows the side panel's font: zoomed well past both sides of it
+    assert view.transform().m11() == pytest.approx(fitted * 1.25**4)
     port, h, v = view.viewport(), view.horizontalScrollBar(), view.verticalScrollBar()
     assert h.maximum() > 0 and v.maximum() > 0
     h.setValue(h.maximum() // 2)
