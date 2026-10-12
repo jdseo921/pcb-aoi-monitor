@@ -241,6 +241,11 @@ WRITES: dict[str, tuple[str, Callable[[AppContext, Path, Path], Any]]] = {
     "run_shift_check": ("inspection.shift_check", lambda ctx, data, tmp: ctx.run_shift_check("TINY")),
     # the board reviewed as a false call above, added to Training as OK in one step (REQ-TRN-020)
     "add_false_call_sample": ("sample.import", lambda ctx, data, tmp: ctx.add_false_call_sample(false_call(ctx, data))),
+    # the targets a customer agreed for TINY's validation, before testing (REQ-TST-008)
+    "set_validation_targets": (
+        "validation.targets",
+        lambda ctx, data, tmp: ctx.set_validation_targets("TINY", 0, 0.05, 1.0, "Acme Electronics, quality lead"),
+    ),
 }
 # what only an Engineer does that writes no audit entry itself: re-evaluating a result (REQ-CMP-005, since S28a), and
 # starting a training run, whose job writes model.train once it ends (REQ-TRN-008, S40)
@@ -261,7 +266,7 @@ UNCHECKED = {
     "validation_split", "stores", "store_of", "store_contents", "training_version", "freeze_gate",
     "dataset_counts", "previous_model", "model_card", "card_files", "card_text", "last_board", "test_runs", "test_run",
     "report_images", "model_card_text", "validation_report_data", "recipe_revisions", "history_span",
-    "master_samples", "shift_check", "require_shift_check", "defect_pareto", "drifted",
+    "master_samples", "shift_check", "require_shift_check", "defect_pareto", "drifted", "validation_targets",
 }  # fmt: skip
 CALLS = {**{name: call for name, (_, call) in WRITES.items()}, **CHECKED_READS}
 # The lowest role allowed each call, copied from the write table of docs/ARCHITECTURE.md §5 and REQ-CMP-005, never read

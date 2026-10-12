@@ -908,6 +908,16 @@ CODES: dict[str, ErrorCode] = {
             ),
         ),
         ErrorCode(
+            "AOI-TST-008",
+            QT_TRANSLATE_NOOP("Errors", "Targets not saved"),
+            QT_TRANSLATE_NOOP("Errors", "The targets of {board_model} were not saved: {reason}. Nothing was changed."),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Enter each target within its range and who at the customer agreed them, then save again; the next run"
+                " keeps the targets in force until then.",
+            ),
+        ),
+        ErrorCode(
             "AOI-RCP-001",
             QT_TRANSLATE_NOOP("Errors", "Recipe saved since it was opened"),
             QT_TRANSLATE_NOOP(

@@ -979,6 +979,29 @@ class Database:
         check["rows"] = [self._resolved(x, "file") for x in json.loads(check["rows"])]
         return check
 
+    def add_validation_targets(self, board_model: str, targets: dict[str, float], agreed_with: str, user: str) -> str:
+        """Store the targets a customer agreed for a board model's validation (migration 0025): `targets` holds
+        missed_critical, false_call_rate (a fraction) and seconds_per_image. Returns the row's UUID; the caller audits
+        it in the same transaction."""
+        uid = new_uuid()
+        self._insert(
+            "INSERT INTO validation_targets(uuid, board_model, missed_critical, false_call_rate, seconds_per_image,"
+            " agreed_with, user, time) VALUES(?,?,?,?,?,?,?,?)",
+            (uid, board_model, int(targets["missed_critical"]), float(targets["false_call_rate"]),
+             float(targets["seconds_per_image"]), agreed_with, user, now_utc()),
+        )  # fmt: skip
+        return uid
+
+    def validation_targets(self, board_model: str) -> dict[str, Any] | None:
+        """The targets in force for a board model's validation, its newest row (migration 0025); None while none was
+        recorded."""
+        sql = (
+            "SELECT uuid, missed_critical, false_call_rate, seconds_per_image, agreed_with, user, time"
+            " FROM validation_targets WHERE board_model=? ORDER BY id DESC LIMIT 1"
+        )
+        r = self.query(sql, (board_model,))
+        return r[0] if r else None
+
     def inspection_counts(self, board_model: str) -> tuple[int, int]:
         """(inspections, NG inspections) of a board model, archived ones included."""
         sql = "SELECT COUNT(*) n, COALESCE(SUM(result='NG'), 0) ng FROM inspections WHERE board_model=?"

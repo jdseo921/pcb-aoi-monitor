@@ -126,6 +126,17 @@ NOT_A_VERSION_RUN = QT_TRANSLATE_NOOP(
     "Errors", "the run used a folder, not a frozen dataset version's locked validation set"
 )
 NO_AGREEMENT = QT_TRANSLATE_NOOP("Errors", "no labeller agreement check is stored for the board model")
+# Why a customer's targets were not saved (AOI-TST-008, REQ-TST-008)
+TARGET_REFUSALS = {
+    "board_model": QT_TRANSLATE_NOOP("Errors", "the workspace holds no such board model"),
+    "missed_critical": QT_TRANSLATE_NOOP(
+        "Errors", "missed Critical defects must be a whole number from {low} to {high}"
+    ),
+    "false_call_rate": QT_TRANSLATE_NOOP("Errors", "the false call rate must be from {low} % to {high} %"),
+    "seconds_per_image": QT_TRANSLATE_NOOP("Errors", "the time per image must be from {low} s to {high} s"),
+    "agreed_with": QT_TRANSLATE_NOOP("Errors", "who at the customer agreed them is not given"),
+    "too_long": QT_TRANSLATE_NOOP("Errors", "who agreed them is longer than {chars} characters"),
+}
 NOT_LOCKED = QT_TRANSLATE_NOOP(
     "Errors", "its validation set is not split and locked"
 )  # the audit actions that change the active version
@@ -1420,12 +1431,15 @@ class AppContext:
         store and audit the run: `batch_test`'s rows, metrics and judged_by. The metrics hold `rates`, each rate with
         its count and one-sided 95 % bound, and recall per defect type where rows carry one (REQ-TST-002, -007)."""
         insp = self.inspector(board_model)
+        targets = self.db.validation_targets(board_model)  # as they stand when it starts, kept with it (REQ-TST-008)
         run_uuid = new_uuid()
         ids = {"run_uuid": run_uuid, "model_version": insp.model_version, "model_uuid": insp.model_uuid}
         out = self.settings.results_dir / TEST_RUNS / run_uuid  # each row's overlay, for a preview (REQ-TST-003)
         rows: list[dict[str, Any]] = []
         try:
-            return self._judge_rows(board_model, folder, entries, dataset_uuid, progress, on_row, insp, ids, out, rows)
+            return self._judge_rows(
+                board_model, folder, entries, dataset_uuid, progress, on_row, insp, ids, out, rows, targets
+            )
         except BaseException:
             shutil.rmtree(out, ignore_errors=True)  # not stored: no overlay is left for a run nobody can open
             raise
@@ -1442,9 +1456,12 @@ class AppContext:
         ids: dict[str, Any],
         out: Path,
         rows: list[dict[str, Any]],
+        targets: dict[str, Any] | None,
     ) -> tuple[dict[str, Any], list[dict[str, Any]], JudgedBy]:
         """`_run_test`'s run: each row judged, its overlay stored and the row handed to `on_row` as it is done (the
-        table grows board by board, REQ-TST-006); then the run, what judged it and its entry stored together."""
+        table grows board by board, REQ-TST-006); then the run, what judged it and its entry stored together. The
+        metrics keep `targets`, those in force as the run started (a `validation_targets` row; None for the proposed
+        defaults), so targets recorded later never change what the run is held to (REQ-TST-008)."""
         for i, (f, gt, defect_type, read) in enumerate(entries, 1):
             res = insp.inspect(read())
             pred = NG if res.verdict in (NG, WARN) else OK
@@ -1468,7 +1485,7 @@ class AppContext:
                 on_row({**rows[-1], **ids})
             if progress:
                 progress(i, len(entries))
-        metrics = classification_metrics(rows) | {"rates": stats.validation_rates(rows)}
+        metrics = classification_metrics(rows) | {"rates": stats.validation_rates(rows), "targets": targets}
         model_version = insp.model_version or "-"
         judged = dataclasses.asdict(insp.judged_by)  # what judged every row: recipe, Golden board, scale (REQ-TST-005)
         with self.db.transaction():  # the run and its entry, or neither (#178)
@@ -1560,9 +1577,11 @@ class AppContext:
         """What the customer validation report of a run states (REQ-TST-008; Customers & Launch, "Validation"): the
         run (`test_run`), its frozen dataset version (name, customer, revision, view, manifest SHA-256, frozen at), its
         locked split (seed, locked by, locked at), the labeller agreement check stored for the board model, the
-        validation set's images by label and defect type, the targets beside their results (`report.target_results`),
-        the overlays of its misses and false calls and the AI model card. AOI-TST-007 for a run on a folder, a run of a
-        version the workspace no longer holds, or a board model with no agreement check stored."""
+        validation set's images by label and defect type, the targets beside their results (`report.target_results`):
+        those agreed with the customer and in force when the run started (`agreed`, a `validation_targets` row), else
+        the proposed defaults (`agreed` None, as for a run stored before migration 0025), the overlays of its misses
+        and false calls and the AI model card. AOI-TST-007 for a run on a folder, a run of a version the workspace no
+        longer holds, or a board model with no agreement check stored."""
         run = self.test_run(run_uuid)
         if run is None or not run.get("dataset_uuid"):
             raise AoiError("AOI-TST-007", reason=NOT_A_VERSION_RUN)
@@ -1573,17 +1592,70 @@ class AppContext:
         if not checks:
             raise AoiError("AOI-TST-007", reason=NO_AGREEMENT)
         rows = run["results"]
+        agreed = run["metrics"].get("targets")
         return {
             "run": run,
             "dataset": found[0],
             "split": self.db.validation_split(run["dataset_uuid"]),
             "agreement": checks[0],
             "counts": report.label_counts(rows),
-            "targets": report.target_results(rows),
+            "agreed": agreed,
+            "targets": report.target_results(rows, report.target_values(agreed)),
             "rates": run["metrics"].get("rates") or stats.validation_rates(rows),
             "images": self.report_images(rows),
             "card": self.model_card_text(run["board_model"], run.get("model_uuid")),
         }
+
+    def validation_targets(self, board_model: str) -> dict[str, Any] | None:
+        """The targets a customer agreed for a board model's validation and in force now (REQ-TST-008; Customers &
+        Launch, "Validation", step 2): uuid, missed_critical, false_call_rate (a fraction), seconds_per_image,
+        agreed_with, user and time (UTC). None while none was recorded: a run is then held to the product's proposed
+        defaults (`report.DEFAULT_TARGETS`)."""
+        return self.db.validation_targets(board_model)
+
+    @requires("Engineer", QT_TRANSLATE_NOOP("Errors", "Recording a customer's targets"))
+    @transactional
+    def set_validation_targets(
+        self,
+        board_model: str,
+        missed_critical: int,
+        false_call_rate: float,
+        seconds_per_image: float,
+        agreed_with: str,
+    ) -> dict[str, Any]:
+        """Record the targets a customer agreed, before testing, for a board model's validation (REQ-TST-008; Customers
+        & Launch, "Validation", step 2): the most missed Critical defects, the highest false call rate (a fraction) and
+        the longest engine time per image at the 95th percentile, and with whom they were agreed. They are in force from
+        the next validation run, which keeps them; a run made before keeps the targets it started with. Audited as
+        `validation.targets` with the targets before (None: the proposed defaults). AOI-TST-008 refuses an unknown board
+        model, a value out of `report.TARGET_LIMITS` or no one named as agreeing, and changes nothing. Returns the row
+        now in force."""
+        values = {"missed_critical": missed_critical, "false_call_rate": false_call_rate,
+                  "seconds_per_image": seconds_per_image}  # fmt: skip
+        who = (agreed_with or "").strip()
+        if (why := self._targets_refusal(board_model, values, who)) is not None:
+            raise AoiError("AOI-TST-008", board_model=board_model, reason=why)
+        before = self.db.validation_targets(board_model)
+        uid = self.db.add_validation_targets(board_model, values, who, self.user)
+        after = {"uuid": uid, **values, "agreed_with": who}
+        self.audit("validation.targets", "board_model", board_model, before, after)
+        return cast("dict[str, Any]", self.db.validation_targets(board_model))
+
+    def _targets_refusal(self, board_model: str, values: dict[str, float], who: str) -> Phrase | None:
+        """Why AOI-TST-008 refuses targets, or None."""
+        if board_model not in self.db.board_models():
+            return TARGET_REFUSALS["board_model"]
+        for key, (low, high) in report.TARGET_LIMITS.items():
+            v = values[key]
+            whole = key != "missed_critical" or (not isinstance(v, bool) and float(v).is_integer())
+            if not (whole and low <= v <= high):
+                scale = 100 if key == "false_call_rate" else 1  # said in percent, as the sheet asks for it
+                return TARGET_REFUSALS[key].fill(low=f"{low * scale:g}", high=f"{high * scale:g}")
+        if not who:
+            return TARGET_REFUSALS["agreed_with"]
+        if len(who) > report.AGREED_WITH_CHARS:
+            return TARGET_REFUSALS["too_long"].fill(chars=report.AGREED_WITH_CHARS)
+        return None
 
     def test_runs(self, board_model: str) -> list[dict[str, Any]]:
         """Every validation run of a board model, newest first (REQ-TST-005): uuid, time, the AI model version, the
