@@ -792,7 +792,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-2"/>
+        <location line="+41"/>
+        <source>Reset the demo workspace? Work still running is stopped first: training without saving an AI model, an AI model test once its folder is done, an export or an image import keeping the files copied so far. Then every result, record, alarm and log of the demo, and every change made in it to its board model, AI model, recipe and samples, is deleted, and the demo is copied back from the installed bundle. The production workspace is not touched.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="-43"/>
         <location line="+9"/>
         <source>{seconds} s</source>
         <translation type="unfinished"></translation>
@@ -814,17 +819,12 @@
     </message>
     <message>
         <location line="+1"/>
-        <location line="+30"/>
+        <location line="+35"/>
         <source>Reset Demo</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-4"/>
-        <source>Reset the demo workspace? Every result, record, alarm and log of the demo, and every change made in it to its board model, AI model, recipe and samples, is deleted, and the demo is copied back from the installed bundle. The production workspace is not touched.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+8"/>
+        <location line="+4"/>
         <source>Scripted run pace: {seconds} s per board</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1561,7 +1561,7 @@
     </message>
     <message>
         <location line="+21"/>
-        <location filename="../ui/main_window.py" line="+849"/>
+        <location filename="../ui/main_window.py" line="+858"/>
         <source>start-up</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3928,7 +3928,7 @@
 <context>
     <name>HomePage</name>
     <message>
-        <location filename="../ui/main_window.py" line="-733"/>
+        <location filename="../ui/main_window.py" line="-742"/>
         <source>Upload samples</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5318,7 +5318,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+79"/>
+        <location line="+84"/>
         <source>Presenter theme off.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5364,12 +5364,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+15"/>
+        <location line="+16"/>
         <source>Work is still running: training, an AI model test, an inspection, an export or an image import. Stop it and {then}? Training stops without saving an AI model, so the active one stays; an AI model test finishes its folder first; an export or import keeps the files copied so far.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+16"/>
+        <location line="+19"/>
         <source>switch the workspace</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5379,17 +5379,17 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-46"/>
+        <location line="-49"/>
         <source>Stop the running work?</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-121"/>
+        <location line="-122"/>
         <source>Presenter theme on. An Admin turns it off with Exit presenter theme.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+123"/>
+        <location line="+124"/>
         <source>Stopping the running work…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5957,7 +5957,7 @@
 <context>
     <name>Page</name>
     <message>
-        <location filename="../ui/main_window.py" line="-700"/>
+        <location filename="../ui/main_window.py" line="-706"/>
         <source>Home</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6118,7 +6118,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/settings.py" line="+49"/>
+        <location filename="../ui/pages/settings.py" line="+50"/>
         <source>Settings</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7122,11 +7122,11 @@
     </message>
     <message>
         <location line="+4"/>
-        <source>Light, text 18 pt or more, verdict 48 pt; Settings and 3D Profile hidden. An Admin leaves it with Exit presenter theme in the header.</source>
+        <source>Light, text 18 pt or more, verdict 48 pt. 3D Profile and the hardware table are hidden; Settings is hidden too, except for an Admin, who keeps it for Reset Demo. An Admin leaves the theme with Exit presenter theme in the header.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+9"/>
+        <location line="+10"/>
         <source>Users &amp; roles</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7137,12 +7137,12 @@
     </message>
     <message>
         <location line="+0"/>
-        <location line="+58"/>
+        <location line="+67"/>
         <source>Role</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-56"/>
+        <location line="-65"/>
         <source>Add / Change User</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7167,7 +7167,7 @@
         <translation>상태</translation>
     </message>
     <message>
-        <location line="+7"/>
+        <location line="+16"/>
         <source>Workspace folder</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7277,12 +7277,12 @@
     </message>
     <message>
         <location line="+6"/>
-        <location line="+59"/>
+        <location line="+64"/>
         <source>Customer</source>
         <translation>고객</translation>
     </message>
     <message>
-        <location line="-59"/>
+        <location line="-64"/>
         <source>Key id</source>
         <translation>키 ID</translation>
     </message>
@@ -7307,7 +7307,7 @@
         <translation>아직 데이터셋 저장소가 없습니다. 새 저장소…로 고객의 저장소를 만들면, 그 저장소로 옮긴 보드 모델은 저장소의 키로 암호화됩니다.</translation>
     </message>
     <message>
-        <location line="+10"/>
+        <location line="+12"/>
         <source>New Store…</source>
         <translation>새 저장소…</translation>
     </message>
@@ -7327,7 +7327,7 @@
         <translation>저장소 파기…</translation>
     </message>
     <message>
-        <location line="+12"/>
+        <location line="+15"/>
         <source>Moving the files in…</source>
         <translation>파일을 옮기는 중…</translation>
     </message>

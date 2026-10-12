@@ -97,5 +97,5 @@ it and use the 2-minute rule above. Never show one customer's boards to another.
 
 ## After they leave
 
-**Exit presenter theme**, then **Settings**, **Reset Demo**, and confirm. Then switch the **Presenter theme** on again
-for the next demo: a reset brings the demo back as it was installed, with the theme off.
+**Settings**, **Reset Demo**, and confirm: the demo is back as it was installed, in the presenter theme still, for the
+next demo.

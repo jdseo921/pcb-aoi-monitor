@@ -228,7 +228,8 @@ def test_req_set_007_reset_asks_first_and_no_keeps_the_demo(
     assert reset.objectName() == "danger" and not reset.autoDefault()  # red, never the default
     qtbot.mouseClick(reset, Qt.MouseButton.LeftButton)
     assert shown_window() is win and len(records(win)) == 4
-    assert "Every result, record, alarm and log of the demo" in asked[0]
+    assert "every result, record, alarm and log of the demo" in asked[0]
+    assert "an export or an image import keeping the files copied so far" in asked[0]  # work running: what it keeps
     win.close()
 
 

@@ -68,4 +68,4 @@
 
 ## 고객이 떠난 뒤
 
-**Exit presenter theme**, **Settings**, **Reset Demo**를 차례로 누르고 확인합니다. 다음 데모를 위해 준비됩니다.
+**Settings**, **Reset Demo**를 차례로 누르고 확인합니다. 발표자 테마를 켠 채로 다음 데모를 위해 준비됩니다.

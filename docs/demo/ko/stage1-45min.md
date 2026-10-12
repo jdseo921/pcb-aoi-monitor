@@ -91,5 +91,5 @@
 
 ## 고객이 떠난 뒤
 
-**Exit presenter theme**, **Settings**, **Reset Demo**를 차례로 누르고 확인합니다. v1.1, AI Model Test의 실행
-기록, 검사 기록이 지워집니다. 다음 데모를 위해 **Presenter theme**를 다시 켭니다.
+**Settings**, **Reset Demo**를 차례로 누르고 확인합니다. v1.1, AI Model Test의 실행 기록, 검사 기록이 지워집니다.
+발표자 테마는 다음 데모를 위해 켜진 채로 남습니다.

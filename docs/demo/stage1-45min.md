@@ -91,5 +91,5 @@ Give them [for-clients.md](for-clients.md), and write down what they asked to se
 
 ## After they leave
 
-**Exit presenter theme**, then **Settings**, **Reset Demo**, and confirm: it removes v1.1, the runs on AI Model
-Test and the records. Switch the **Presenter theme** on again for the next demo.
+**Settings**, **Reset Demo**, and confirm: it removes v1.1, the runs on AI Model Test and the records. The presenter
+theme stays on for the next demo.
