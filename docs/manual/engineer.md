@@ -54,8 +54,11 @@ app writes only the settings it changes into `settings.json`, so a line you edit
 image limit, stays; it takes effect at the next start. Saving needs the Admin role (AOI-USR-001) and writes an audit
 entry, `settings.change`, with the values before and after. The last user with the Admin role cannot lose it
 (AOI-USR-002): give another user the Admin role first. A user's role is the one set under Users & roles, at every
-start too: the app starts with the Admin added first while the workspace has no board model, and with
-`operator` after that, so a role you change holds after a restart.
+start too: the app starts with the Admin added first while the workspace has no board model, and after that with
+the user who signed in last on this station with Switch User (`operator` until anyone has; the start's status line
+names them), so a role you change holds after a restart. Each sign-in is an audit entry: `user.sign_in` for Switch
+User, with the user before, and `user.start` for the user a start signs in. The demo workspace always starts with its
+first Admin.
 
 **Presenter theme (demos).** For a demo, an Admin ticks Presenter theme on the Settings page, in its own group. It
 applies at once, with no restart, and stays on after one: a light background, text of 18 pt or more, the verdict at 48
@@ -910,7 +913,8 @@ included: the demo has its own.
   `demo.reset`. If another program holds a file of the demo (AOI-SET-017), close it and press Reset Demo again.
 - **Leave Demo Workspace** opens the station's workspace again. The demo stays as it is for the next time.
 - To start straight in the demo, for example from a desktop shortcut kept for demos, start the app with `--demo`
-  (`AOI-PoC-Inspector.exe --demo`); if the app closes during a demo, the same shortcut brings it back in the demo.
+  (`AOI-PoC-Inspector.exe --demo`). It opens signed in as the demo's first Admin, at Home after a normal close; if
+the app closes during a demo, the same shortcut brings it back in the demo on the page it showed.
 
 A folder of the demo's name that holds other files is never written to (AOI-SET-016): move or rename it. If the
 installed demo is missing or was changed on disk, it is refused with AOI-SET-015: reinstall the app. Before a demo,

@@ -827,7 +827,7 @@
 <context>
     <name>Errors</name>
     <message>
-        <location filename="../core/services.py" line="+161"/>
+        <location filename="../core/services.py" line="+162"/>
         <source>a length of {length} px over {distance} mm gives no scale: both must be numbers above 0, and the scale from {least} to {most} px per mm</source>
         <translation type="unfinished"></translation>
     </message>
@@ -852,7 +852,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+210"/>
+        <location line="+240"/>
         <location line="+138"/>
         <source>Importing samples</source>
         <translation type="unfinished"></translation>
@@ -1132,14 +1132,14 @@
         <translation>검증 세트 잠금</translation>
     </message>
     <message>
-        <location line="-2410"/>
-        <location line="+2424"/>
+        <location line="-2440"/>
+        <location line="+2454"/>
         <location line="+39"/>
         <source>the workspace holds no such dataset version</source>
         <translation>작업 공간에 그런 데이터셋 버전이 없습니다</translation>
     </message>
     <message>
-        <location line="-2502"/>
+        <location line="-2532"/>
         <source>Drift on {board} ({view}): {count} of the last {of} boards called NG; {before} % of the {baseline} before</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1229,7 +1229,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+778"/>
+        <location line="+808"/>
         <source>Setting the comparison&apos;s thresholds from labelled boards</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1453,7 +1453,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-2973"/>
+        <location line="-3003"/>
         <source>no earlier version of this board model was active</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1478,7 +1478,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+702"/>
+        <location line="+732"/>
         <source>its UUID {found} is not {uuid}, as in the AI model registry</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1556,7 +1556,7 @@
     </message>
     <message>
         <location line="+21"/>
-        <location filename="../ui/main_window.py" line="+769"/>
+        <location filename="../ui/main_window.py" line="+794"/>
         <source>start-up</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3649,7 +3649,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="-37"/>
+        <location filename="../ui/main_window.py" line="-33"/>
         <source>demo reset</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3903,7 +3903,7 @@
 <context>
     <name>HomePage</name>
     <message>
-        <location filename="../ui/main_window.py" line="-651"/>
+        <location filename="../ui/main_window.py" line="-680"/>
         <source>Upload samples</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5163,12 +5163,17 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+70"/>
+        <location line="+72"/>
         <source>{title} · Demo</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location line="+92"/>
+        <source>Signed in as {user} ({role}), who signed in last on this station. Not you? Press Switch User.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+14"/>
         <source>Demo</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5228,7 +5233,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+8"/>
+        <location line="+14"/>
         <source>{user}  ·  {role}</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5274,12 +5279,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+38"/>
+        <location line="+42"/>
         <source>close the app</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+13"/>
+        <location line="+15"/>
         <source>Work is still running: training, an AI model test, an inspection, an export or an image import. Stop it and {then}? Training stops without saving an AI model, so the active one stays; an AI model test finishes its folder first; an export or import keeps the files copied so far.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5289,22 +5294,22 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+33"/>
+        <location line="+34"/>
         <source>Demo reset in {seconds:.1f} s.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-45"/>
+        <location line="-46"/>
         <source>Stop the running work?</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-115"/>
+        <location line="-121"/>
         <source>Presenter theme on. An Admin turns it off with Exit presenter theme.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+117"/>
+        <location line="+123"/>
         <source>Stopping the running work…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5847,7 +5852,7 @@
 <context>
     <name>Page</name>
     <message>
-        <location filename="../ui/main_window.py" line="-618"/>
+        <location filename="../ui/main_window.py" line="-646"/>
         <source>Home</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7472,7 +7477,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/services.py" line="-3277"/>
+        <location filename="../core/services.py" line="-3307"/>
         <source>Aligning {count} images to the reference board</source>
         <translation type="unfinished"></translation>
     </message>

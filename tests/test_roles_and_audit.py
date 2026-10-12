@@ -254,9 +254,11 @@ CHECKED_READS: dict[str, Callable[[AppContext, Path, Path], Any]] = {
     "start_training": lambda ctx, data, tmp: ctx.start_training(ctx.training_version("TINY")["uuid"], 5, 32).wait(60),
     "learn_comparison": lambda ctx, data, tmp: ctx.learn_comparison("TINY", seed=0),  # REQ-TRN-018: stores nothing
 }
-# every public AppContext call that is not role-checked: reads, what an Operator does, and the lifecycle
+# every public AppContext call that is not role-checked: reads, what an Operator does, and the lifecycle, signing in
+# among it (sign_in, audited as user.sign_in or user.start: anyone may sign in; last_signed_in reads who did last)
 UNCHECKED = {
-    "alarm", "alarms", "audit", "audit_entries", "report_error", "close", "set_user", "load_model", "recipe",
+    "alarm", "alarms", "audit", "audit_entries", "report_error", "close", "set_user", "sign_in", "last_signed_in",
+    "load_model", "recipe",
     "inspector", "inspect", "inspect_file", "load_image", "log_result", "board_models", "reference_image", "samples",
     "sample_path", "models", "model", "active_model", "recipe_history", "inspections", "defects_for", "checks_for",
     "checks_for_many", "inspection_result", "inspection", "judged_reference", "users", "board_status", "start_user",

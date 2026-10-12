@@ -813,6 +813,7 @@ The writes, their roles and entries:
 | `delete_inspections` | Admin | `inspection.delete` (before: the records' UUIDs; after: the `HistoryFilter` that listed them, `records` and `files`; the typed reason; a blank one is `AOI-LOG-003`, nothing deleted); no object UUID. The rows (defects and checks by cascade) and the entry commit together, then the overlay and map files under results/ are deleted; one that will not go is logged as `records.evidence_left` and reported as `AOI-LOG-004` (REQ-LOG-003) |
 | `_sweep_ok_maps` | system, at start-up; no page calls it | `maps.sweep` (days, swept, skipped): the map files of OK results past `map_retention_days_ok` are deleted and forgotten, NG and WARN maps stay; audited, unlike the start-up archive, because it deletes evidence. A file that cannot be deleted, or lies outside results/, is skipped with a warning and kept for the next start |
 | `add_user` | Admin | `user.change` (role); object = user UUID. The last Admin keeps the role: `AOI-USR-002`, nothing written |
+| `sign_in` | anyone | `user.sign_in` (the user signed in before → the user signed in now, each with the role); object = user UUID. Switch User; the newest entry names the user the next start signs in (`last_signed_in`, REQ-USR-003). With `start`, `user.start` (before: none; after: the user and role a window opens with: at a start, or at a workspace switch the first user of the role carried, the demo's Admin say), which no later start reads |
 | `save_settings` | Admin | `settings.change` (the Settings page's values: what settings.json held before → what it holds now); object type `settings`, no object UUID (#197). Two system writes to settings.json go past the check, unaudited, since no user asks for them: the page in use (`last_page`, `MainWindow._on_nav`) and the folder chosen after a refused workspace at start-up (`workspace`, `aoi/ui/errors.py`) |
 
 Reads, inspections (`inspect_file`, `log_result`), alarms and error reports need no role: an Operator inspects boards.
@@ -836,8 +837,16 @@ a user who did not start it.
 
 The role is always the one the users table holds for that user (`AppContext.set_user(name)`; a name it does not hold
 is refused with `AOI-USR-003`), so the check and the entries never name a role the table contradicts (#197). A start
-signs in the first stored Admin while the workspace has no board model, to set the station up, and `operator`
-otherwise, each with the stored role (`AppContext.start_user`).
+signs in the first stored Admin in the demo workspace (`main.py --demo`, the Demo shortcut; it opens at Home after a
+normal close, where the demo scripts begin) and while the workspace has no board model, to set the station up;
+otherwise the user who signed in last on the station, named on the status bar, else `operator`; each with the stored
+role (`AppContext.start_user`). A workspace switch opens the new window with the first user of the role carried
+(`build_window(ctx, carried)`). Switch User signs in through `AppContext.sign_in`, which anyone may call: `set_user`,
+then an audit entry `user.sign_in` (object = the user's UUID, the user before and after), and the newest such entry
+names the user the next start signs in (index `audit_action`, migration 0026). The user a window opens with is
+audited as `user.start`, which no later start reads, so neither a start nor a role carried, the demo's Admin say,
+becomes the station's next start user. An entry that cannot be written leaves the user before signed in; at a start,
+the window is not built and the coded dialog says why (`build_window`).
 
 User switching is a local picker for the PoC; Stage 4 replaces it with MES authentication (`MesClient.authenticate`).
 A switch leaves a page the new role may not open for Home, and shows any other page again (`on_show`), so its
@@ -891,7 +900,7 @@ any sign-in closes its Save to Recipe sheet, so a revision never carries the rea
 | `validation_targets` | uuid, board_model, missed_critical, false_call_rate (a fraction), seconds_per_image, agreed_with (as typed), user, time: the targets a customer agreed for a board model's validation, the newest row in force (migration 0025, REQ-TST-008); a validation run keeps a copy of the row in force when it started in its metrics (`targets`; null for the proposed defaults); append only |
 | `alarms` | uuid, time, level NG/WARN/ERROR, code AOI-<AREA>-<NNN>, message (English), phrase (the message's template, translation context and values as JSON, shown in the UI language; NULL for rows from before migration 0011 and for an alarm a page wrote in the UI language of its moment, #198); the newest 1,000 are shown and survive a restart |
 | `users` | — |
-| `audit` | uuid, at_utc, user_uuid, role, action, object_type, object_uuid, before_json, after_json, reason; append only (triggers refuse UPDATE, DELETE and, since migration 0010, an INSERT OR REPLACE or REPLACE INTO that reuses an entry's id or uuid; the connection sets `recursive_triggers`). `audit_entries` gives every entry the same fields, `before` and `after` decoded or None, without the raw JSON columns |
+| `audit` | uuid, at_utc, user_uuid, role, action, object_type, object_uuid, before_json, after_json, reason (indexed by object, by time and, since migration 0026, by action, which finds the newest `user.sign_in`); append only (triggers refuse UPDATE, DELETE and, since migration 0010, an INSERT OR REPLACE or REPLACE INTO that reuses an entry's id or uuid; the connection sets `recursive_triggers`). `audit_entries` gives every entry the same fields, `before` and `after` decoded or None, without the raw JSON columns |
 | `schema_version` | number, name, applied_at, checksum (migration runner) |
 
 The schema is created and changed only by the numbered migrations in `aoi/data/migrations/`, which
@@ -1019,7 +1028,8 @@ only the picture: the pane shows the golden board as judged, the dialog names th
 keeps its code. Any other error (a database another program holds: AOI-SET-013) leaves both panes empty, each with the
 dialog's code. Each is logged and alarmed on the pool thread, and nothing of a load shows once the page has moved on
 (#247). The page in use is kept in `settings.json` and reopened at start-up (REQ-INSP-006, REQ-LOG-005);
-a page change writes that key alone. A workspace saved on Settings goes to `settings.json` only: the running app keeps
+a page change writes that key alone. The demo workspace writes Home there when its window is closed or left, so it
+opens at Home, where its scripts begin, after a normal close and on the page it showed after a crash (REQ-SET-007). A workspace saved on Settings goes to `settings.json` only: the running app keeps
 its database, log and folders on the open workspace until the restart (REQ-SET-001, #170). The AI device, the
 default epochs and input size and the log retention apply at once: `save_settings` resolves the AI device again and,
 when it changes, logs `device.change` and drops the cached weights; the cache holds a model with the device it sits

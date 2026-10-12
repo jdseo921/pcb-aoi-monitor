@@ -189,7 +189,7 @@ def test_req_set_007_main_demo_starts_in_the_demo_workspace(bundle: Path, tmp_pa
     assert ctx is not None
     try:
         assert ctx.settings.root == demo.demo_folder(station_folder) and demo.is_demo(ctx.settings.root)
-        assert ctx.settings.last_page == "Inspection"
+        assert ctx.settings.shift_check_hours == 0  # its scripted run plays at once (ADR 0014)
         assert not (station_folder / "settings.json").exists()  # the station's settings.json is not written
     finally:
         ctx.close()
