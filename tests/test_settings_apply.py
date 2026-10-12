@@ -425,9 +425,9 @@ def test_req_set_008_a_presenter_start_styles_the_app_once_at_its_screens_sizes(
     styled: list[tuple[bool, bool]] = []
     real = MainWindow._set_theme
 
-    def counted(win: MainWindow, presenter: bool, small: bool = False) -> None:
-        styled.append((presenter, small))
-        real(win, presenter, small)
+    def counted(win: MainWindow, presenter: bool, is_small: bool = False) -> None:
+        styled.append((presenter, is_small))
+        real(win, presenter, is_small)
 
     monkeypatch.setattr(MainWindow, "_set_theme", counted)
     win = MainWindow(ctx)

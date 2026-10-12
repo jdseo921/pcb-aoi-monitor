@@ -802,7 +802,7 @@ def test_req_set_008_presenter_training_rows_whole_with_the_import_sheet_closed(
             for role in ("engineer", "admin"):
                 win.set_user(role)
                 assert win.navigate("Training")
-                QApplication.processEvents()
+                render_screens.settle()  # laid out before the grab, as in the walk
                 page = win.pages["Training"]
                 assert not page.sheet.isVisible() and win.width() == 1920, role  # type: ignore[attr-defined]
                 shot = _pixels(win.grab().toImage())

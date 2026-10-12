@@ -331,12 +331,12 @@
     <message>
         <location line="+3"/>
         <location line="+132"/>
-        <location line="+682"/>
+        <location line="+685"/>
         <source>Golden board</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-813"/>
+        <location line="-816"/>
         <source>AI model</source>
         <translation type="unfinished"></translation>
     </message>
@@ -402,12 +402,12 @@
     </message>
     <message>
         <location line="+12"/>
-        <location line="+1015"/>
+        <location line="+1018"/>
         <source>Test board</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1009"/>
+        <location line="-1012"/>
         <source>Inspecting…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -483,7 +483,7 @@
     </message>
     <message>
         <location line="+5"/>
-        <location line="+248"/>
+        <location line="+251"/>
         <source>The verdict and the decision table are the stored ones; press Re-evaluate › to inspect the board again from its image file.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -528,7 +528,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1095"/>
+        <location line="-1098"/>
         <source>AI score threshold</source>
         <translation type="unfinished"></translation>
     </message>
@@ -621,14 +621,14 @@
     </message>
     <message>
         <location line="+0"/>
-        <location line="+247"/>
+        <location line="+250"/>
         <location line="+236"/>
         <location line="+12"/>
         <source>Re-evaluate ›</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-481"/>
+        <location line="-484"/>
         <source>Train an AI model on Training.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -653,7 +653,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+782"/>
+        <location line="+785"/>
         <source>Test board: {file} (stored result)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1567,7 +1567,7 @@
     <message>
         <location filename="../ui/demo_workspace.py" line="+31"/>
         <location filename="../ui/errors.py" line="+141"/>
-        <location filename="../ui/main_window.py" line="+953"/>
+        <location filename="../ui/main_window.py" line="+954"/>
         <source>start-up</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4060,7 +4060,7 @@
 <context>
     <name>HomePage</name>
     <message>
-        <location filename="../ui/main_window.py" line="-816"/>
+        <location filename="../ui/main_window.py" line="-817"/>
         <source>Upload samples</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5380,7 +5380,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+94"/>
+        <location line="+95"/>
         <source>Signed in as {user} ({role}), who signed in last on this station. Not you? Press Switch User.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6094,7 +6094,7 @@
 <context>
     <name>Page</name>
     <message>
-        <location filename="../ui/main_window.py" line="-774"/>
+        <location filename="../ui/main_window.py" line="-775"/>
         <source>Home</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6209,7 +6209,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/compare.py" line="-919"/>
+        <location filename="../ui/pages/compare.py" line="-922"/>
         <source>Compare</source>
         <translation type="unfinished"></translation>
     </message>

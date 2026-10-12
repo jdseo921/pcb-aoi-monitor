@@ -156,9 +156,10 @@ def test_req_set_004_compares_why_box_stands_beside_the_pair_over_the_table(
     half of its reasons at 1920 x 1080 in the presenter theme and none above the fold at 1366 x 768; and the table, held
     to a least height read before the page had taken the turn, kept a blank band under its rows). At 1920 x 1080, then
     with the presenter theme switched on there, which turns the page, in a 1600 x 900 window with it on and off again,
-    and at 1366 x 768 with it on, then at 1920 x 1080 with it off again, as it began; each switched while another page
-    shows, as an Admin switches it on Settings. The two boards are the same width at each size, as their linked zoom
-    needs (REQ-CMP-001)."""
+    and at 1366 x 768 with it on; then at 2560 x 1080 and 2560 x 850 with it on, the table beside the pair at 18 and at
+    16 pt, the box under it held to that size's WHY_H (review of A7: from 18 to 16 pt it kept 18 pt's); then at 1920 x
+    1080 with it off again, as it began. Each is switched while another page shows, as an Admin switches it on
+    Settings. The two boards are the same width at each size, as their linked zoom needs (REQ-CMP-001)."""
     ctx = trained_ctx
     ctx.inspect_file(BOARD, str(ng_board))
     win = _window(qtbot, ctx, "Engineer")
@@ -170,6 +171,7 @@ def test_req_set_004_compares_why_box_stands_beside_the_pair_over_the_table(
     qtbot.waitUntil(lambda: compare.loaded and compare._bg is None, timeout=10000)
     seen, heights, pair = {}, {}, {}
     steps = ((1920, 1080, False), (1920, 1080, True), (1600, 900, True), (1600, 900, False), (1366, 768, True))
+    steps += ((2560, 1080, True), (2560, 850, True))
     for width, height, presenter in (*steps, (1920, 1080, False)):
         size = (width, height)
         assert win.navigate("Home")
@@ -184,7 +186,7 @@ def test_req_set_004_compares_why_box_stands_beside_the_pair_over_the_table(
         if under:
             tall = why.height() >= theme.WHY_H and why.geometry().bottom() == compare.beside.rect().bottom()
         else:
-            tall = why.height() <= theme.WHY_H
+            tall = why.height() <= theme.WHY_H == why.maximumHeight()
         rows = table.height() == table.minimumHeight() if under else None
         state = (under, beside, tall, compare.decision.isAncestorOf(why), rows, cut_off(win, "Compare"))
         if (size, presenter) in seen:  # the table beside the pair again, the box under it as tall as before (review)
@@ -199,6 +201,8 @@ def test_req_set_004_compares_why_box_stands_beside_the_pair_over_the_table(
         ((1600, 900), True): (True, True, True, False, True, []),
         ((1600, 900), False): (True, True, True, False, True, []),
         ((1366, 768), True): (True, True, True, False, True, []),
+        ((2560, 1080), True): (False, False, True, True, None, []),
+        ((2560, 850), True): (False, False, True, True, None, []),
     }, seen
     assert heights[(1920, 1080), True] > theme.WHY_H, heights  # the room under the note, more than under the table
     assert all(ref == test for ref, test in pair.values()), pair  # linked boards the same width (`PairGrid`)
