@@ -168,19 +168,20 @@ def test_req_cmp_005_save_creates_audited_revision(
 def test_req_cmp_005_save_to_recipe_is_for_an_engineer_or_admin(
     qtbot: QtBot, trained_ctx: AppContext, ng_board: Path, dialogs: list[tuple[str, str]]
 ) -> None:
-    """An Operator has no Save to Recipe: the panel and the sheet are hidden, Ctrl+S opens nothing, the action stays off
-    even with the hidden form changed, and the page's action called anyway refuses with AOI-USR-001 and opens nothing.
-    An Engineer's sheet closes at any sign-in, an Admin's included, its reason gone and nothing stored, so a revision
-    never carries another user's reason; the Admin then saves as an Engineer does, the audit entry naming the Admin.
-    Should the role be gone when Save Revision is pressed, the service refuses with AOI-USR-001, nothing is stored, and
-    the sheet keeps its reason."""
+    """An Operator has no Save to Recipe: the panel is greyed, saying which role may use it (REQ-USR-001), the sheet
+    hidden, Ctrl+S opens nothing, the action stays off even with the greyed form changed, and the page's action called
+    anyway refuses with AOI-USR-001 and opens nothing. An Engineer's sheet closes at any sign-in, an Admin's included,
+    its reason gone and nothing stored, so a revision never carries another user's reason; the Admin then saves as an
+    Engineer does, the audit entry naming the Admin. Should the role be gone when Save Revision is pressed, the service
+    refuses with AOI-USR-001, nothing is stored, and the sheet keeps its reason."""
     ctx = trained_ctx
     win, compare, _ = _stored_on_compare(qtbot, ctx, ng_board, "Operator")
     history = ctx.recipe_history(BOARD)
-    assert compare.tryout.isHidden() and compare.sheet.isHidden() and not compare.act_save.isEnabled()
+    assert not compare.tryout.isEnabled() and compare.sheet.isHidden() and not compare.act_save.isEnabled()
+    assert compare.btn_save.toolTip() == "Saving a recipe needs the Engineer or Admin role."
     _press_save(qtbot, win, compare)
     assert compare.sheet.isHidden() and dialogs == []
-    compare.diff_thr.setValue(255)  # the hidden form changed by code, not by the Operator: still off
+    compare.diff_thr.setValue(255)  # the greyed form changed by code, not by the Operator: still off
     assert not compare.act_save.isEnabled() and not compare.btn_save.isEnabled()
     compare.save_recipe()
     refused = "Changing recipes needs the Engineer or Admin role."

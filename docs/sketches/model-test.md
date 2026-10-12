@@ -58,7 +58,8 @@ run with its tiles, table and exports (REQ-TST-005).
 | Export report | Export Report (PDF)… | — | B | Metrics with counts and bounds, overlays of every miss and false call, the model card; the same PDF serves the demo |
 | Validation report | Validation Report… | — | B | The C&L validation steps: data, targets, locked set, results with counts and bounds, every miss and false call, signature lines for the customer and the AI lead (REQ-TST-008); needs a dataset-version run |
 
-The four exports write customer images and results, so only an Admin sees them (Q58 in logs-history.md).
+The four exports write customer images and results, so only an Admin uses them (Q58 in logs-history.md); an Engineer
+sees them greyed, each tooltip saying it needs the Admin role (REQ-USR-001).
 
 ## Empty state
 

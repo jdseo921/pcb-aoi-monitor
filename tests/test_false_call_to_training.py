@@ -120,7 +120,8 @@ def test_req_trn_020_logs_adds_the_selected_false_call_to_training(
     win.navigate("Logs & Export")
     page = cast(LogsPage, win.pages["Logs & Export"])
     listed(qtbot, page)
-    assert page.btn_train.isHidden()  # an Operator reviews the call; Training is not theirs
+    assert not page.btn_train.isHidden() and not page.btn_train.isEnabled()  # an Operator reviews; Training is not
+    assert page.btn_train.toolTip() == "Adding a board to Training needs the Engineer or Admin role."  # theirs
     win.set_user("engineer")
     win.navigate("Logs & Export")
     listed(qtbot, page)

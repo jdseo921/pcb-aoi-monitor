@@ -48,7 +48,7 @@ from ...core.explain import explain
 from ...core.imaging import IMAGE_EXTS
 from ...core.inspector import Check, InspectionResult, ai_check
 from ...core.recipe import Recipe, disc_width, scale_digits
-from ...core.services import REQUIRED_ROLE, ROLES, ROLES_FROM, AppContext, ErrorReport, Judged
+from ...core.services import REQUIRED_ROLE, ROLES_FROM, AppContext, ErrorReport, Judged
 from ...core.views import ai_view, difference_view
 from ...errors import AoiError
 from ...times import to_local
@@ -198,6 +198,12 @@ def _as_read(r: Recipe) -> Recipe:
 class ComparePage(Page):
     title = QT_TRANSLATE_NOOP("Page", "Compare")
     subtitle = QT_TRANSLATE_NOOP("Page", "Golden board vs. test board, with the metrics behind the verdict")
+    role_notes = (  # Try other thresholds is greyed for a role that may not use it, never hidden (REQ-USR-001)
+        (
+            QT_TRANSLATE_NOOP("ComparePage", "Trying other thresholds and Save to Recipe need the {roles} role."),
+            ("re_evaluate", "save_recipe"),
+        ),
+    )
 
     def __init__(self, ctx: AppContext, shell: MainWindow) -> None:
         super().__init__(ctx, shell)
@@ -503,10 +509,10 @@ class ComparePage(Page):
 
     def _show_why(self, explanation: str | None = None) -> None:
         """The "why" box: `explanation` (`_explain`; None keeps the one shown), under AOI-RCP-007 in amber in one line
-        while Try other thresholds shows the size it is about (REQ-INSP-014), so never to an Operator, who has no panel,
+        while Try other thresholds shows the size it is about (REQ-INSP-014), never to an Operator (greyed),
         nor over Save to Recipe's sheet (S29 review). It takes no row: at 1600 x 900 the panel has none to give, and at
         1920 x 1080 it would cost the decision table one (S29 review); the box's text scrolls instead."""
-        notice = self.min_size.notice.text() if self.tryout.isVisibleTo(self) else ""
+        notice = self.min_size.notice.text() if self.tryout.isVisibleTo(self) and self.tryout.isEnabled() else ""
         if explanation is None and notice == self._noticed:
             return  # nothing new: the text stays where it was scrolled to
         self._why, self._noticed = self._why if explanation is None else explanation, notice
@@ -1078,13 +1084,14 @@ class ComparePage(Page):
     def _sync_save(self) -> None:
         """Save to Recipe on for a role that may save a recipe while a threshold differs, no sheet is open and no
         re-evaluation runs (Ctrl+S opens no sheet over one), and Save Revision while the sheet has a reason."""
-        free = self._may_save() and not self._asking and self._trying is None
-        self.act_save.setEnabled(free and bool(self._changes()))
+        free = not self._asking and self._trying is None
+        self.role_gate(self.btn_save, "save_recipe", free and bool(self._changes()))  # greyed with why (REQ-USR-001)
+        self.act_save.setEnabled(self.btn_save.isEnabled())  # Ctrl+S with it
         self.btn_confirm.setEnabled(self._asking and bool(self.reason.text().strip()))
 
     def _may_save(self) -> bool:
         """The role signed in is at or above the one `AppContext.save_recipe`'s @requires names (#241)."""
-        return self.ctx.role in ROLES and ROLES.index(self.ctx.role) >= ROLES.index(REQUIRED_ROLE["save_recipe"])
+        return self.gates.may("save_recipe")
 
     def _clear_result(self) -> None:
         """No result on the page: the banner, the decision table, the explanation and the board's pictures go."""
@@ -1138,38 +1145,42 @@ class ComparePage(Page):
             self._start(quiet=True)
 
     def _sync_roles(self) -> None:
-        """The threshold panel for an Engineer or Admin only, hidden for an Operator, who never sees what other
-        thresholds would give (REQ-CMP-005; ADR 0006 decision 4, sketch Q17). Re-evaluate waits until the load of a
+        """The threshold panel for an Engineer or Admin only, greyed for an Operator, who never sees what other
+        thresholds would give (REQ-CMP-005; ADR 0006 decision 4, sketch Q17), and never hidden, its tooltip saying who
+        may (REQ-USR-001). Re-evaluate waits until the load of a
         stored result's pictures and maps has ended, so it never stops it, and is off while a re-evaluation runs. A
         focus on it as it goes off waits in the "why" box and goes back to it once it is on again, if still there,
         as when Inspection's "Compare with Golden board ›" showed Compare with the focus it had on Re-evaluate, then a
         stored result (third verification): Qt would pass it on to the header's board model, whose list a Space opens,
         or, while a threshold differs, to Save to Recipe, where one more Space would open its sheet. The focus
         read is the window's, which it keeps while another window is in front (review)."""
-        engineer = self.ctx.role != "Operator"
+        engineer = self.gates.may("re_evaluate")
         on = engineer and not self._asking and (self.stored is None or self.loaded) and self._trying is None
         focus = self.window().focusWidget()
         if not on and focus is self.btn_try:
             self.why.setFocus(Qt.FocusReason.OtherFocusReason)
             self._refocus = True
-        self.tryout.setVisible(engineer and not self._asking)
+        self.tryout.setVisible(not self._asking)
+        self.role_gate(self.tryout, "re_evaluate")  # its fields with it, which pass a press on to it
+        self.role_gate(self.btn_try, "re_evaluate", on)  # a button or a tick takes a press for itself, greyed or not
+        self.gates.explain(self.ai_thr.tick, "re_evaluate")  # on and off by its own state, greyed by the panel's
+        self.act_try.setEnabled(self.btn_try.isEnabled())  # Ctrl+R with it
         self._show_why()  # AOI-RCP-007 with the panel only
         self.sheet.setVisible(engineer and self._asking)
-        self.act_try.setEnabled(on)
         self._sync_save()
         if on and self._refocus and focus is self.why:
             self.btn_try.setFocus(Qt.FocusReason.OtherFocusReason)
         self._refocus = self._refocus and engineer and not on  # only while an Engineer's Re-evaluate is off
 
     def on_user_changed(self) -> None:
-        """An Operator signs in, on Compare or on any other page (review): the hidden form goes back to the recipe's
+        """An Operator signs in, on Compare or on any other page (review): the greyed form goes back to the recipe's
         thresholds, which the Difference heatmap follows, and what was tried with values an Engineer left unsaved goes,
         so the next Engineer finds the recipe's thresholds too; a board inspected with thresholds or other values the
         recipe does not hold now (an Engineer's not saved, or a revision saved since it was inspected, or a scale set
         since that changes the px of a size in mm, S29) is cleared, a run of it still going stopped, and judged by the
         recipe when Compare is shown (`on_show`, next if it is shown now).
         A run stopped by Cancel stays so, and a stored result as it was decided; a value that did not judge the board is
-        no change (`_judging`). A focus in the panel, which the sign-in hides, waits in the "why" box, which every role
+        no change (`_judging`). A focus in the panel, which the sign-in greys, waits in the "why" box, which every role
         sees, as one on the indicator's Cancel does (`_not_trying`), where Qt would pass it on to the header's board
         model, whose list a Space opens (review); it can be in the panel only while Compare is shown. Any sign-in closes
         Save to Recipe's sheet, its reason with it."""
@@ -1191,7 +1202,7 @@ class ComparePage(Page):
             self._clear_result()  # no verdict, table or "why" by the form's thresholds while the recipe judges it
             self.judge_on_show = True  # by the recipe, as soon as the page is shown
         if focus is not None and self.tryout.isAncestorOf(focus):
-            self.why.setFocus(Qt.FocusReason.OtherFocusReason)  # outside the panel, which hides now or in on_show
+            self.why.setFocus(Qt.FocusReason.OtherFocusReason)  # outside the panel, greyed now or in on_show
 
     def on_show(self) -> None:
         self._sync_roles()
@@ -1204,7 +1215,7 @@ class ComparePage(Page):
                 self._start(quiet=True)  # back, replaced or gone since: the pane, or a board it kept from judging
         if self.res is None and self.test_path is None:
             step = self.empty_step(self.tr("Inspect a board on Inspection, or pick a test image."), "Inspection")
-            self.test_empty.show_state(self.tr("No board to compare yet"), *step)
+            self.show_empty(self.test_empty, self.tr("No board to compare yet"), *step)
         moved = self._take_up_revision()  # a revision saved since, on Recipe Editor: Save to Recipe never reverts it
         self._show_calibration()  # an AI model trained or activated since: its value
         if moved is not None:  # nor does a sheet left open: it closed (sketch)

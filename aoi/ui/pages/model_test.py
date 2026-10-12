@@ -91,6 +91,12 @@ class ModelTestPage(Page):
     title = QT_TRANSLATE_NOOP("Page", "AI Model Test")
     subtitle = QT_TRANSLATE_NOOP("Page", "Labels come from the sub-folder names: ok/ and ng/")
     roles = ("Engineer", "Admin")
+    role_notes = (  # the exports are greyed for a role that may not use them, never hidden (REQ-USR-001)
+        (
+            QT_TRANSLATE_NOOP("ModelTestPage", "Exports and Validation Report… need the {roles} role."),
+            ("export_csv", "export_test_overlays", "export_report"),
+        ),
+    )
 
     def __init__(self, ctx: AppContext, shell: MainWindow) -> None:
         super().__init__(ctx, shell)
@@ -236,7 +242,9 @@ class ModelTestPage(Page):
         if self._runs:
             self.history_empty.hide()
         else:
-            self.history_empty.show_state(self.tr("No runs stored yet"), self.tr("Run Test stores each run here."))
+            self.show_empty(
+                self.history_empty, self.tr("No runs stored yet"), self.tr("Run Test stores each run here.")
+            )
 
     def open_run(self) -> None:
         """The run selected on History, shown on Run as it was stored: rows, tiles and previews (REQ-TST-005)."""
@@ -783,9 +791,15 @@ class ModelTestPage(Page):
         self._show_exports()
 
     def _show_exports(self) -> None:
-        admin = self.ctx.role == "Admin"  # customer results leave the station only by an Admin (Q58, #151)
-        for b in (self.btn_csv, self.btn_img, self.btn_report, self.btn_validation):
-            b.setVisible(admin)
+        """Customer results leave the station only by an Admin (Q58, #151): the exports greyed for another role, never
+        hidden, saying who may (REQ-USR-001)."""
+        for b, call in (
+            (self.btn_csv, "export_csv"),
+            (self.btn_img, "export_test_overlays"),
+            (self.btn_report, "export_report"),
+            (self.btn_validation, "export_report"),
+        ):
+            self.role_gate(b, call)
 
     def on_show(self) -> None:
         self._show_exports()
@@ -808,14 +822,14 @@ class ModelTestPage(Page):
         if self.rows:
             self.empty.hide()
         elif not bm:
-            self.empty.show_state(*self.no_board_model())
+            self.show_empty(self.empty, *self.no_board_model())
         elif not self.ctx.active_model(bm):
             heading = self.tr("No AI model for {board_model} yet").format(board_model=bm)
-            self.empty.show_state(heading, *self.empty_step(self.tr("Train one on Training."), "Training"))
+            self.show_empty(self.empty, heading, *self.empty_step(self.tr("Train one on Training."), "Training"))
         else:
             what = self.tr("Select a folder with ok/ and ng/ sub-folders, then press Run Test.")
             heading = self.tr("No validation run for {board_model} yet").format(board_model=bm)
-            self.empty.show_state(heading, what, self.tr("Select Test Folder…"), self.pick)
+            self.show_empty(self.empty, heading, what, self.tr("Select Test Folder…"), self.pick)
 
     def export_csv(self) -> None:
         """The run's rows, one per image, as UTF-8 CSV with a BOM, after a question naming their count, as the sketch

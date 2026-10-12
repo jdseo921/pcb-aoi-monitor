@@ -426,12 +426,14 @@ def test_req_log_003_only_an_admin_deletes_records_with_their_evidence_and_an_en
 def test_req_log_003_delete_records_is_the_admins_red_button_and_names_the_count(
     qtbot: QtBot, ctx: AppContext, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Delete Records… is shown to the Admin alone, red, last in its row and never the default button; it asks first,
-    naming the count, with No as the default, then for the reason, and deletes the records the filter lists."""
+    """Delete Records… is the Admin's, greyed for another role with its tooltip saying so, never hidden (REQ-USR-001),
+    red, last in its row and never the default button; it asks first, naming the count, with No as the default, then
+    for the reason, and deletes the records the filter lists."""
     ctx.ensure_board_model("B")
     ng, ok = _record(ctx, "NG", "kim", evidence=True), _record(ctx, "OK", "kim", evidence=True)
     page = _logs(qtbot, ctx, "engineer")
-    assert not page.btn_delete.isVisibleTo(page)
+    assert page.btn_delete.isVisibleTo(page) and not page.btn_delete.isEnabled()
+    assert page.btn_delete.toolTip() == "Deleting records needs the Admin role."
     page.shell.set_user("admin")  # the page shown follows the sign-in
     rows = [page.root.itemAt(i).layout() for i in range(page.root.count())]
     (row,) = [r for r in rows if r is not None and r.indexOf(page.btn_delete) >= 0]
@@ -458,8 +460,8 @@ def test_req_log_003_delete_records_is_the_admins_red_button_and_names_the_count
 
 def test_req_log_003_only_an_admin_removes_a_sample(qtbot: QtBot, ctx: AppContext, synthetic_dataset: Path) -> None:
     """Removing a training sample is the Admin's too: the service refuses an Engineer with AOI-USR-001, nothing removed
-    or audited, and Training's Remove is off for an Engineer, its tooltip saying who may; the Admin's removal is
-    audited as before."""
+    or audited, and Training's Remove is off for an Engineer, its tooltip saying who may in the refusal's words; the
+    Admin's removal is audited as before."""
     ctx.import_samples("B", [str(p) for p in sorted((synthetic_dataset / "train" / "ok").iterdir())[:2]], "OK")
     sample = ctx.samples("B")[1]  # not the reference, which the first import set
     with pytest.raises(AoiError) as refused:
@@ -469,7 +471,7 @@ def test_req_log_003_only_an_admin_removes_a_sample(qtbot: QtBot, ctx: AppContex
     win = MainWindow(ctx)
     qtbot.addWidget(win)
     page = cast(TrainingPage, win.pages["Training"])
-    for user, allowed, tip in (("engineer", False, "Removing samples needs the Admin role."), ("admin", True, "")):
+    for user, allowed, tip in (("engineer", False, "Removing a sample needs the Admin role."), ("admin", True, "")):
         win.set_user(user)
         win.navigate("Training")
         assert (page.btn_remove.isEnabled(), page.btn_remove.toolTip()) == (allowed, tip), user

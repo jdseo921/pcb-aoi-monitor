@@ -59,7 +59,6 @@ from .base import (
     cell_text,
     fill_table,
     make_table,
-    role_text,
     time_left_text,
     view_text,
 )
@@ -152,6 +151,12 @@ class TrainingPage(Page):
         "Page", "Upload good (OK) and defective (NG) boards; the AI model trains itself on them"
     )
     roles = ("Engineer", "Admin")
+    role_notes = (  # Remove and Export Manifest… greyed for a role that may not use them, never hidden (REQ-USR-001)
+        (
+            QT_TRANSLATE_NOOP("TrainingPage", "Remove and Export Manifest… need the {roles} role."),
+            ("delete_sample", "export_csv"),
+        ),
+    )
 
     def __init__(self, ctx: AppContext, shell: MainWindow) -> None:
         super().__init__(ctx, shell)
@@ -774,7 +779,7 @@ class TrainingPage(Page):
         elif not self.shown:
             what = self.tr("Add at least 20 OK boards with Add OK Images… or Import Folder…")
             heading = self.tr("No samples for {board_model} yet").format(board_model=self.board_model)
-            self.samples_empty.show_state(heading, what, self.tr("Import Folder…"), self.import_folder)
+            self.show_empty(self.samples_empty, heading, what, self.tr("Import Folder…"), self.import_folder)
         elif shown == "Unchecked" and self._statuses and all(st["ready"] for st in self._statuses):
             done = self.tr("A second user has checked every NG label and every OK label drawn.")
             self.samples_empty.show_state(self.tr("Nothing left to check"), done)
@@ -991,10 +996,7 @@ class TrainingPage(Page):
         for a in self.adds:
             a.setEnabled(idle)  # its button and its key
         self.btn_draw.setEnabled(idle)  # a draw would stop the import that runs: one job of the page's at a time
-        admin = self.ctx.role == "Admin"  # only an Admin removes a sample (REQ-LOG-003); the service checks too
-        self.btn_remove.setEnabled(admin)
-        why = self.tr("Removing samples needs the {role} role.").format(role=role_text("Admin"))
-        self.btn_remove.setToolTip("" if admin else why)
+        self.role_gate(self.btn_remove, "delete_sample")  # an Admin's (REQ-LOG-003), greyed for an Engineer
         self.samples_empty.link.setEnabled(idle)
         self.working.sync()  # Freeze Dataset… and Freeze, off while a job runs
         self.versions.sync()  # and Split and Lock Validation Set…, Lock and Verify Manifest
@@ -1124,7 +1126,7 @@ class TrainingPage(Page):
             self.counts.set_line(lambda _name: "", "")
             self.checks_line.hide()
             self.tip.hide()
-            self.samples_empty.show_state(*self.no_board_model())
+            self.show_empty(self.samples_empty, *self.no_board_model())
             self.models_empty.hide()
             self.agreement.show_board_model(None, [])
             self.working.show_board_model(None, [])

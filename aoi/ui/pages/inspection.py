@@ -27,7 +27,7 @@ from ... import defects as taxonomy
 from ...core.explain import notes
 from ...core.imaging import IMAGE_EXTS, list_images
 from ...core.inspector import NG, InspectionResult
-from ...core.services import BUSY_ALARM_WAIT_MS, REQUIRED_ROLE, ROLES, SHIFT_CHECK_REASONS, Actor, AppContext
+from ...core.services import BUSY_ALARM_WAIT_MS, SHIFT_CHECK_REASONS, Actor, AppContext
 from ...errors import AoiError
 from ...hal import VIEWS
 from ...times import to_local
@@ -70,6 +70,9 @@ def alarm_line(time_iso: str, level: str, code: str | None, msg: str) -> str:
 class InspectionPage(Page):
     title = QT_TRANSLATE_NOOP("Page", "Inspection")
     subtitle = QT_TRANSLATE_NOOP("Page", "Stage 1: uploaded images  ·  Stage 2: live camera feed")
+    role_notes = (  # Save Image… is greyed for a role that may not use it, never hidden (REQ-USR-001)
+        (QT_TRANSLATE_NOOP("InspectionPage", "Save Image… needs the {roles} role."), ("export_board_image",)),
+    )
 
     def __init__(self, ctx: AppContext, shell: MainWindow) -> None:
         super().__init__(ctx, shell)
@@ -188,10 +191,10 @@ class InspectionPage(Page):
         if self.last is not None:
             self.empty.hide()
         elif not self.board_model:
-            self.empty.show_state(*self.no_board_model())
+            self.show_empty(self.empty, *self.no_board_model())
         elif not self.queue:
             what = self.tr("Load Images… or Load Folder… to queue boards. In Stage 2 the camera fills this view.")
-            self.empty.show_state(self.tr("No images loaded"), what, self.tr("Load Images…"), self.load_files)
+            self.show_empty(self.empty, self.tr("No images loaded"), what, self.tr("Load Images…"), self.load_files)
         elif self.skipped is not None:  # until the next board starts: which board was not inspected, why, what next
             self.empty.show_state(*self.skipped)
         else:
@@ -636,10 +639,9 @@ class InspectionPage(Page):
         self.act_next.setEnabled(has and not self.running and not busy)
         idle = self.board_model is not None and not self.running and not busy and self._bg is None
         self.act_check.setEnabled(idle)  # never beside a board, a run or a Save Image… job
-        need = ROLES.index(REQUIRED_ROLE["export_board_image"])  # the service's @requires, never written out again here
-        may_save = self.ctx.role in ROLES and ROLES.index(self.ctx.role) >= need
-        self.act_save.setEnabled(self.last is not None and may_save and self._bg is None)
-        self.btn_save.setVisible(may_save)  # a board image leaves the station only by an Admin (#151)
+        # a board image leaves the station only by an Admin (#151): Save Image… greyed for another role, never hidden
+        self.role_gate(self.btn_save, "export_board_image", self.last is not None and self._bg is None)
+        self.act_save.setEnabled(self.btn_save.isEnabled())  # F9 with it (REQ-USR-001)
         self.btn_compare.setEnabled(self.last_id is not None or self.last_path is not None)
         shown = self.review.record["id"] if self.review.record is not None else None
         if shown != self.last_id or (self.last_id is None and self.review.record is not None):

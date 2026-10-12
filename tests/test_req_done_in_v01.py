@@ -198,7 +198,7 @@ def test_req_insp_016_six_step_cards_open_their_pages_and_show_status(
     home = win.pages["Home"]
     buttons = [b for b in home.findChildren(QPushButton) if b.text().startswith("Open ")]
     assert len(buttons) == 6 == len(home.STEPS)
-    for b, (_, name, _, target) in zip(buttons, home.STEPS, strict=True):
+    for b, (_, name, _, target, _) in zip(buttons, home.STEPS, strict=True):
         win.navigate("Home")
         qtbot.mouseClick(b, Qt.MouseButton.LeftButton)
         assert win.stack.currentWidget() is win.pages[target], name

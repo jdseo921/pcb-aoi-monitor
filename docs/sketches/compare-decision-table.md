@@ -6,8 +6,9 @@ Sketch for stage S02; used by stages S26, S27 and S28. Frame and patterns:
 ## Page and roles
 
 Compare (Production). All roles see the views, the verdict, the decision table and the explanation. The "Try other
-thresholds" panel and Save to Recipe exist for Engineer and Admin only; an Operator does not see the panel (role
-first: thresholds live on Engineer pages; #140, ADR 0006 decision 4). Opened in one click from an NG or WARN on
+thresholds" panel and Save to Recipe are for Engineer and Admin only; an Operator sees the panel greyed, its
+tooltip saying who may, and can try nothing in it (role first: thresholds live on Engineer pages; #140, ADR 0006
+decision 4; REQ-USR-001). Opened in one click from an NG or WARN on
 Inspection, from a row on Logs & Export, or from the sidebar.
 
 ## Wireframe (1920 × 1080; at 1366 × 768 the two images stack and the table scrolls)
@@ -94,7 +95,7 @@ recipe; no dialog over a dialog (the confirmation is an inline sheet); glossary 
 
 ## Decisions (2026-10-02)
 
-- Q17: Operators do not see the threshold panel. Reason: #140, ADR 0006 decision 4; S28b hides it (#134 had kept it visible until then).
+- Q17: Operators do not use the threshold panel. Reason: #140, ADR 0006 decision 4; S28b hid it (#134 had kept it visible until then); since REQ-USR-001's rule that a control a role may not use is greyed with the reason, never hidden (Jay, 2026-10-11), it shows greyed, so no Operator tries a threshold or sees a would-be verdict.
 - Q18: The table says "Similarity (SSIM)" and the source "Golden board". Reason: Built at 329f603 (`aoi/ui/pages/compare.py`, CHECK_NAMES and SOURCES): the glossary word first, SSIM for Engineers.
 - Q19: "Would be" beside the stored verdict; the banner keeps the stored verdict. Reason: ADR 0006 decision 3 (#140): nothing is stored, so the stored verdict stands.
 - Q20: Pick Board… lists stored results and also takes a file, inspected afresh and not stored. Reason: #130 puts the stored-result list with S51; a file is built as "Test Image…" (compare.py at 329f603) for boards never inspected here.

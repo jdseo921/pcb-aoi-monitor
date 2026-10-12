@@ -348,22 +348,24 @@ def test_req_cmp_005_reevaluate_on_what_compare_shows(
 def test_req_cmp_005_an_operator_does_not_see_the_threshold_panel(
     qtbot: QtBot, trained_ctx: AppContext, ng_board: Path
 ) -> None:
-    """An Operator sees a stored result's verdict, table and explanation but not the threshold panel; switching to an
-    Engineer on the page shows it, titled "Try other thresholds", and back to an Operator hides it again. The Operator's
-    Golden Board then inspects the board by the recipe, not by thresholds the Engineer left in the hidden panel. Ctrl+R
-    does nothing for the Operator, and Re-evaluate is on for the Engineer."""
+    """An Operator sees a stored result's verdict, table and explanation, and the threshold panel greyed, saying which
+    role may use it (REQ-USR-001), never what other thresholds would give; switching to an Engineer on the page turns
+    it on, titled "Try other thresholds", and back to an Operator greys it again. The Operator's Golden Board then
+    inspects the board by the recipe, not by thresholds the Engineer left in the greyed panel. Ctrl+R does nothing for
+    the Operator, and Re-evaluate is on for the Engineer."""
     win, compare, _ = _stored_on_compare(qtbot, trained_ctx, ng_board, "Operator")
     assert compare.metrics.rowCount() > 1 and compare.why.toPlainText().startswith("Why this board is NG:")
-    assert _panel(compare).isHidden(), "an Operator never sees what other thresholds would give"
+    assert _panel(compare).isVisible() and not _panel(compare).isEnabled(), "greyed, never hidden (REQ-USR-001)"
+    assert _panel(compare).toolTip() == "Re-evaluating a result needs the Engineer or Admin role."
     assert not compare.act_try.isEnabled()
     _press(qtbot, win, compare)
     assert trained_ctx.jobs.idle() and compare._bg is None and compare.would_be.isHidden()
     win.set_user("engineer")
-    assert _panel(compare).isVisible() and compare.tryout.title().startswith("Try other thresholds")
+    assert _panel(compare).isEnabled() and compare.tryout.title().startswith("Try other thresholds")
     assert compare.act_try.isEnabled()
     compare.diff_thr.setValue(255)  # tried by an Engineer, not saved: no pixel differs enough
     win.set_user("operator")
-    assert _panel(compare).isHidden() and not compare.act_try.isEnabled()
+    assert not _panel(compare).isEnabled() and not compare.act_try.isEnabled() and compare.would_be.isHidden()
     compare.use_golden()  # inspected again, against today's Golden board
     qtbot.waitUntil(lambda: compare._bg is None and compare.stored is None, timeout=20000)
     assert compare.res is not None and next(c.value for c in compare.res.checks if c.name == "Difference regions") > 0

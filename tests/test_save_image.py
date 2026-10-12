@@ -106,19 +106,24 @@ def test_req_usr_001_save_image_follows_the_role_its_service_requires(
 ) -> None:
     """Before #241, Save Image… came on for every role once there was a result, whatever the service allows. Now the
     action, its button and F9 follow the role `export_board_image`'s @requires names (REQUIRED_ROLE), also after a
-    Switch User on the page. The role shipped is Admin (Jay, #151): an Operator and an Engineer do not see the button
-    and F9 does nothing for them."""
+    Switch User on the page. The role shipped is Admin (Jay, #151): for an Operator and an Engineer the button is
+    greyed, never hidden, its tooltip saying who may (REQ-USR-001), and F9 does nothing."""
     page = _inspected(qtbot, trained_ctx, "Operator", ng_board)
     win = page.shell
-    assert (page.act_save.isEnabled(), page.btn_save.isHidden()) == (False, True), "an Operator under Admin"
+    off = (False, False, False, "Saving a board image needs the Admin role.")
+
+    def state() -> tuple[bool, bool, bool, str]:
+        return page.act_save.isEnabled(), page.btn_save.isEnabled(), page.btn_save.isHidden(), page.btn_save.toolTip()
+
+    assert state() == off, "an Operator under Admin"
     win.set_user("admin")
-    assert (page.act_save.isEnabled(), page.btn_save.isHidden()) == (True, False), "after Switch User to the Admin"
+    assert state() == (True, True, False, ""), "after Switch User to the Admin"
     win.set_user("engineer")
-    assert not page.act_save.isEnabled() and page.btn_save.isHidden()
+    assert state() == off
     monkeypatch.setitem(REQUIRED_ROLE, "export_board_image", "Operator")  # were the role lowered again
     for user in ("operator", "engineer", "admin"):
         win.set_user(user)
-        assert page.act_save.isEnabled() and not page.btn_save.isHidden(), user
+        assert state() == (True, True, False, ""), user
 
 
 def test_req_log_004_f9_during_a_run_names_the_record_whose_picture_it_saved(

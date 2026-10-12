@@ -6,7 +6,7 @@ from collections.abc import Callable, Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, TypeVar
 
-from PySide6.QtCore import QCoreApplication, QEvent, Qt
+from PySide6.QtCore import QCoreApplication, QEvent, QObject, Qt
 from PySide6.QtGui import QAction, QColor, QFont, QHelpEvent, QKeySequence
 from PySide6.QtWidgets import (
     QAbstractItemView,
@@ -25,13 +25,14 @@ from PySide6.QtWidgets import (
 )
 
 from ...core.explain import Sentence
-from ...core.services import AppContext, ErrorReport
+from ...core.services import REQUIRED_ROLE, ROLES_FROM, AppContext, ErrorReport, refusal
 from ...errors import QT_TRANSLATE_NOOP as QT_TRANSLATE_NOOP  # pages mark text with it: Qt's is typed as object
 from ...errors import AoiError
 from .. import theme
 from ..errors import phrase_text, show_error
 from ..widgets.ai_threshold import AiThresholdField
 from ..widgets.busy import BusyOverlay
+from ..widgets.empty_state import EmptyState
 from ..workers import Worker, start
 
 if TYPE_CHECKING:
@@ -92,6 +93,55 @@ def breakable(name: str) -> str:
     return re.sub(rf"[^\s{ZWSP}]{{{RUN_CHARS}}}(?=[^\s{ZWSP}])", lambda m: m.group(0) + ZWSP, broken)
 
 
+class RoleGates(QObject):
+    """The controls of a window or page that a role may not use (REQ-USR-001): each stays in its place for every role,
+    greyed for a role below the one its AppContext call requires, never hidden (the presenter theme aside, MainWindow
+    .hidden), with the refusal the call would raise as its tooltip ("Exporting CSV needs the Admin role."). A press on
+    one that is off says the same on the status bar, as a touch screen shows no tooltip."""
+
+    def __init__(self, parent: QObject, ctx: AppContext, status: Callable[[str], object]) -> None:
+        super().__init__(parent)
+        self.ctx = ctx
+        self.status = status
+        self.own: dict[QObject, str] = {}  # each control's tooltip of its own, its key say, shown while the role may
+        self.why: dict[QObject, str] = {}  # each control off for the role signed in, and why
+
+    def may(self, call: str) -> bool:
+        """Whether the role signed in may make AppContext's `call`: the role its @requires names, or one above it, read
+        from the service (REQUIRED_ROLE), never written out again on a screen."""
+        need, role = ROLES.index(REQUIRED_ROLE[call]), self.ctx.role
+        return role in ROLES and ROLES.index(role) >= need
+
+    def gate(self, control: QWidget, call: str, on: bool = True) -> bool:
+        """`control`, which makes AppContext's `call`: on when the role signed in may make it and `on` holds; for a role
+        that may not, off, with the refusal's sentence as its tooltip and the status bar's line on a press. Returns
+        whether the role may."""
+        allowed = self.explain(control, call)
+        control.setEnabled(allowed and on)
+        return allowed
+
+    def explain(self, control: QWidget, call: str) -> bool:
+        """`control`, inside a control `gate` greys, keeping its own on and off: for a role that may not make `call`,
+        the refusal's sentence as its tooltip and on a press, which a button or a tick, greyed or not, takes for itself
+        and never passes on to the control around it. Returns whether the role may."""
+        if control not in self.own:
+            self.own[control] = control.toolTip()
+            control.installEventFilter(self)
+        allowed = self.may(call)
+        if allowed:
+            self.why.pop(control, None)
+            control.setToolTip(self.own[control])
+        else:
+            self.why[control] = phrase_text(refusal(call).what)
+            control.setToolTip(self.why[control])
+        return allowed
+
+    def eventFilter(self, watched: QObject, e: QEvent) -> bool:
+        if e.type() == QEvent.Type.MouseButtonPress and watched in self.why:  # off, so the press does nothing else
+            self.status(self.why[watched])
+        return False
+
+
 class WrappedLine(QLabel):
     """A wrapped line that never sets the page's minimum width, however long a name in it (REQ-SET-004, #251): the
     layout gives it its width, and hovering shows its whole text, for a name the line has to cut. Inspection's summary
@@ -133,6 +183,9 @@ class Page(QWidget):
     badge: str = ""  # a badge after the page's sidebar entry, with its tooltip, both marked like the title
     badge_tip: str = ""
     in_presenter_theme: bool = True  # shown in the presenter theme unless Admin only (REQ-SET-008, MainWindow.hidden)
+    # What a role may not do on the page, as its empty state says it (`role_limits`): each sentence, marked under the
+    # page's class with {roles}, and the AppContext calls of the controls it names, which @requires gives one role
+    role_notes: tuple[tuple[str, tuple[str, ...]], ...] = ()
 
     def __init__(self, ctx: AppContext, shell: MainWindow) -> None:
         super().__init__()
@@ -141,6 +194,8 @@ class Page(QWidget):
         self.shell = shell  # MainWindow: navigation + shared state
         self._bg: Worker | None = None  # the page's background action, if one is running (REQ-SET-021)
         self._bg_busy: BusyOverlay | None = None  # the overlay that action covers, if any
+        self.gates = RoleGates(self, ctx, lambda said: self.shell.status(said))  # controls a role may not use
+        self._empties: dict[EmptyState, tuple[str, str, str, Callable[[], object] | None, str]] = {}  # show_empty
         self.root = QVBoxLayout(self)
         self.root.setContentsMargins(20, 14, 20, 14)
         head = QHBoxLayout()
@@ -169,10 +224,40 @@ class Page(QWidget):
         slot. The header list is empty whenever no board model is chosen, so the step is to create one: an Engineer or
         Admin gets the "+ New board model" link, an Operator, whom the service layer refuses, is told to ask (#200)."""
         heading = QCoreApplication.translate("Page", "No board model yet")
-        if self.ctx.role == "Operator":
+        if not self.gates.may("ensure_board_model"):
             return heading, QCoreApplication.translate("Page", "Ask an Engineer to create one."), "", None
         new = QCoreApplication.translate("Page", "+ New board model")
         return heading, QCoreApplication.translate("Page", "Create one to begin."), new, self.shell.new_board_model
+
+    def role_gate(self, control: QWidget, call: str, on: bool = True) -> bool:
+        """`control`, which makes AppContext's `call`, on or off for the role signed in, never hidden (`RoleGates`)."""
+        return self.gates.gate(control, call, on)
+
+    def role_limits(self) -> str:
+        """What the role signed in may not do on this page: each of `role_notes` whose calls the role may not make, with
+        the roles that may; "" for a role that may do all of it."""
+        said = []
+        for sentence, calls in self.role_notes:
+            if not all(self.gates.may(c) for c in calls):
+                said.append(self.tr(sentence).format(roles=phrase_text(ROLES_FROM[REQUIRED_ROLE[calls[0]]])))
+        return " ".join(said)
+
+    def show_empty(
+        self, empty: EmptyState, heading: str, sentence: str, link: str = "", go: Callable[[], object] | None = None
+    ) -> None:
+        """Show `empty`, an empty state of the page's main list or picture: what is missing, `sentence`, then what the
+        role signed in may not do on the page (`role_limits`), so a touch screen with no tooltip says it too; a sign-in
+        shows it again for the new role (`limits_changed`)."""
+        said = " ".join(s for s in (sentence, self.role_limits()) if s)
+        self._empties[empty] = (heading, sentence, link, go, said)
+        empty.show_state(heading, said, link, go)
+
+    def limits_changed(self) -> None:
+        """A sign-in: each empty state that still shows what `show_empty` put there says what the new role may not do
+        (MainWindow.set_user); one the page has shown another state in since keeps it."""
+        for empty, (heading, sentence, link, go, said) in list(self._empties.items()):
+            if not empty.isHidden() and empty.sentence.text() == said:
+                self.show_empty(empty, heading, sentence, link, go)
 
     def ai_threshold_field(self, override: str = "", own_row: bool = False) -> AiThresholdField:
         """The AI score threshold of a recipe (REQ-TRN-015): a tick, size class F, that names the AI model's calibrated
