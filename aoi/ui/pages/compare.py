@@ -90,10 +90,12 @@ UNBOUNDED = (1 << 24) - 1  # Qt's QWIDGETSIZE_MAX, no maximum, which PySide6 doe
 class PairGrid(QGridLayout):
     """The two boards' grid, which gives both views the same width: under the pair, the verdict's column beside them
     left one view 1 px wider than the other, and linked views of different widths showed the board 5 px apart once
-    zoomed in, more than REQ-CMP-001's 1 px (A7). The wider view is held to the other's width, the odd pixel left
-    beside them, until the grid is given another rectangle or Defect boxes only hides the Golden board: narrowed after
-    each layout instead, a view was resized twice a pass, each resize fitted its board again, and each fit asked for
-    another layout, without end (A7)."""
+    zoomed in, more than REQ-CMP-001's 1 px (A7). Once a layout leaves them unequal, both are held to half the width
+    the two take together, the odd pixel left beside them, until the grid is given another rectangle or Defect boxes
+    only hides the Golden board. A view's size hint follows its board's zoom, so a layout made while a board was zoomed
+    past its pane gave that view more; one that leaves the held views unequal lets go and halves again, so a hold
+    never keeps a pane narrower than its half. Narrowed after every layout instead, a view was resized twice a pass,
+    each resize fitted its board again, and each fit asked for another layout, without end (A7)."""
 
     def __init__(self, parent: QWidget) -> None:
         super().__init__(parent)
@@ -105,15 +107,23 @@ class PairGrid(QGridLayout):
         key = (QRect(rect), len(shown) == 2)
         if key != self._held:
             self._held = key
-            for view in views:
-                if view.maximumWidth() != UNBOUNDED:
-                    view.setMaximumWidth(UNBOUNDED)  # the hold let go: another width, or one view shown
+            self._let_go(views)  # another width, or one view shown
         super().setGeometry(rect)
         if len(shown) == 2 and shown[0].width() != shown[1].width():
-            width = min(view.width() for view in shown)
+            if self._let_go(shown):  # held, and still unequal: laid out afresh, never halved from a narrowed pair
+                super().setGeometry(rect)
+            width = sum(view.width() for view in shown) // 2
             for view in shown:
                 view.setMaximumWidth(width)
             super().setGeometry(rect)  # the columns laid out again, both views held to one width
+
+    @staticmethod
+    def _let_go(views: list[QWidget]) -> bool:
+        """Lift the hold on `views`; whether one was held."""
+        held = [view for view in views if view.maximumWidth() != UNBOUNDED]
+        for view in held:
+            view.setMaximumWidth(UNBOUNDED)
+        return bool(held)
 
     def _view(self, column: int) -> QWidget | None:
         item = self.itemAtPosition(1, column)

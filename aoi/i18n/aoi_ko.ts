@@ -279,7 +279,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+60"/>
+        <location line="+70"/>
         <source>This result was judged without a Golden board.</source>
         <translation type="unfinished"></translation>
     </message>
