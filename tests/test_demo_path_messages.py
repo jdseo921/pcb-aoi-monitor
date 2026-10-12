@@ -491,13 +491,14 @@ def test_req_set_019_an_ai_model_file_that_cannot_be_read_names_no_class(tmp_pat
 
 def test_req_set_019_a_stored_map_that_cannot_be_read_says_why(tmp_path: Path) -> None:
     """AOI-CMP-003 on Compare for a map the system refuses (a folder of its name): what the refusal means, "it is a
-    folder, not a file" on Linux, never "IsADirectoryError" or "Permission denied"."""
+    folder, not a file" on Linux and on Windows (which refuses a folder as access denied), never "IsADirectoryError"
+    or "Permission denied"."""
     folder = tmp_path / "board_diff.png"
     folder.mkdir()
     with pytest.raises(AoiError) as e:
         read_map(folder)
     assert e.value.code == "AOI-CMP-003" and banned(e.value.what) == [], e.value.what
-    assert system_reason(e.value.__cause__) in e.value.what and e.value.detail == system_detail(e.value.__cause__)
+    assert catalogue.A_FOLDER in e.value.what and e.value.detail == system_detail(e.value.__cause__)
 
 
 def test_req_set_019_a_demo_bundle_file_that_cannot_be_read_is_set_015(
