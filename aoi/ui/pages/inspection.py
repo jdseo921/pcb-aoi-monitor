@@ -27,12 +27,12 @@ from ... import defects as taxonomy
 from ...core.explain import notes
 from ...core.imaging import IMAGE_EXTS, list_images
 from ...core.inspector import NG, InspectionResult
-from ...core.services import BUSY_ALARM_WAIT_MS, SHIFT_CHECK_REASONS, Actor, AppContext
+from ...core.services import BUSY_ALARM_WAIT_MS, SHIFT_CHECK_REASONS, Actor, AppContext, refusal
 from ...errors import AoiError
 from ...hal import VIEWS
 from ...times import to_local
 from .. import theme
-from ..errors import alarm_text
+from ..errors import alarm_text, phrase_text
 from ..widgets.empty_state import EmptyState
 from ..widgets.image_view import ImageView
 from ..workers import Worker, start
@@ -138,6 +138,22 @@ class InspectionPage(Page):
         sl.setContentsMargins(8, 0, 0, 0)
         self.shift_line = WrappedLine()  # whether boards may be inspected: the shift check's state (REQ-INSP-017)
         sl.addWidget(self.shift_line)
+        # A trained AI model that is not active: the line names it and offers Activate, an Engineer's, greyed with why
+        # for an Operator (REQ-TRN-010, REQ-USR-001). Shown only then: a board model's first version goes live when
+        # trained (decision D3), so this is one trained before that, or one whose activation was refused.
+        self.waiting: dict[str, Any] | None = None  # that version's registry row, while the line shows
+        self.ai_row = QWidget()
+        ar = QHBoxLayout(self.ai_row)
+        ar.setContentsMargins(0, 0, 0, 0)
+        self.ai_line = WrappedLine()
+        ar.addWidget(self.ai_line, 1)
+        self.btn_activate = size_class(button("", slot=self.activate_waiting), "T")
+        self.btn_activate.setToolTip(
+            self.tr("Judge the board model's boards with this AI model and its Golden board, as Activate Selected does")
+        )
+        ar.addWidget(self.btn_activate)
+        self.ai_row.hide()
+        sl.addWidget(self.ai_row)
         self.verdict = QLabel(NO_VERDICT)
         self.verdict.setStyleSheet(theme.verdict_style("INFO"))
         self.verdict.setMinimumHeight(theme.BANNER_H)
@@ -323,11 +339,21 @@ class InspectionPage(Page):
                 moved = self.run_inputs is not None and engine.judging_inputs != self.run_inputs
                 self.run_inputs = engine.judging_inputs
             self._on_result(out)  # first: the result, and a failed save's error, never wait for the alarm below (#179)
-            if no_ai_model:
-                msg = self.tr("No AI model for {board_model} yet: only the Golden board comparison runs").format(
-                    board_model=bm
-                )
-                self._alarm("WARN", msg, "AOI-TRN-003")
+            if engine.model is None and bm == self.board_model:  # each board judged with no AI model: a version
+                self._show_waiting()  # trained meanwhile, on Training or by another station, is named at once
+            if no_ai_model:  # a version trained but not active is named, never taken for no AI model (decision D3)
+                waiting = self.waiting
+                if waiting is None:
+                    msg = self.tr("No AI model for {board_model} yet: only the Golden board comparison runs").format(
+                        board_model=bm
+                    )
+                    self._alarm("WARN", msg, "AOI-TRN-003")
+                else:
+                    msg = self.tr(
+                        "AI model {version} of {board_model} is not active: only the Golden board comparison runs. An"
+                        " Engineer activates it with Activate {version}."
+                    ).format(version=waiting["version"], board_model=bm)
+                    self._alarm("WARN", msg, "AOI-TRN-051")
             if bm != self.board_model:  # the header moved on meanwhile: saved under bm, not the current board (#172)
                 self._not_current(out, bm, in_run)
             if moved:  # after _not_current, whose line it is added to
@@ -642,6 +668,7 @@ class InspectionPage(Page):
         # a board image leaves the station only by an Admin (#151): Save Image… greyed for another role, never hidden
         self.role_gate(self.btn_save, "export_board_image", self.last is not None and self._bg is None)
         self.act_save.setEnabled(self.btn_save.isEnabled())  # F9 with it (REQ-USR-001)
+        self.role_gate(self.btn_activate, "activate_model", not self.running and not busy)  # never under a board
         self.btn_compare.setEnabled(self.last_id is not None or self.last_path is not None)
         shown = self.review.record["id"] if self.review.record is not None else None
         if shown != self.last_id or (self.last_id is None and self.review.record is not None):
@@ -719,6 +746,48 @@ class InspectionPage(Page):
         ).format(user=self.ctx.user, starter=self.run_actor.name)
         self.shell.status(msg, ms=0)  # until the next message, so the user now signed in sees why the run stopped
 
+    def _show_waiting(self) -> dict[str, Any] | None:
+        """The line that names the header's board model's trained AI model while none is active, with Activate; hidden
+        while one is active or none is trained (`AppContext.inactive_model`). For a role that may not activate it, the
+        line says which role may, as Activate's tooltip does (REQ-USR-001). A database that cannot be read hides it,
+        logged, and never stops the result or the run that asked (#179). Returns the version it names."""
+        bm = self.board_model
+        try:
+            self.waiting = self.ctx.inactive_model(bm) if bm else None
+        except Exception:
+            self.ctx.log.warning("models.not_read", exc_info=True)
+            self.waiting = None
+        self.ai_row.setVisible(self.waiting is not None)
+        if self.waiting is not None:
+            version = self.waiting["version"]
+            line = self.tr(
+                "AI model {version} of {board_model} is trained but not active: only the Golden board comparison"
+                " judges its boards."
+            ).format(version=version, board_model=bm)
+            if not self.gates.may("activate_model"):
+                line = " ".join([line, phrase_text(refusal("activate_model").what)])
+            self.ai_line.setText(line)
+            self.btn_activate.setText(self.tr("Activate {version}").format(version=version))
+        self._update_buttons()
+        return self.waiting
+
+    def activate_waiting(self) -> None:
+        """Activate the version the line names, with its Golden board, as Activate Selected on Training does
+        (REQ-TRN-010): audited, refused without a card (AOI-TRN-049) or a readable Golden board (AOI-TRN-048). The
+        next board is judged with it, and the shift check, where one is on, is needed again first."""
+        if self.waiting is None or self.board_model is None:
+            return
+        version = self.waiting["version"]
+        try:
+            self.ctx.activate_model(int(self.waiting["id"]))
+        except AoiError as e:
+            self.error(e)
+        else:
+            said = self.tr("AI model {version} is active: it judges the next boards of {board_model}.")
+            self.shell.status(said.format(version=version, board_model=self.board_model))
+        self._show_waiting()
+        self._show_shift_check()
+
     def on_board_model_changed(self, name: str | None) -> None:
         self._drop_engine()  # rebuilt lazily with the new model/recipe/reference
         self._no_ai_warned = None  # the board model picked again has its AOI-TRN-003 again
@@ -733,6 +802,7 @@ class InspectionPage(Page):
                 self.summary.clear()
         self._update_buttons()  # on every change: Start and Next Board follow the header's board model (#244)
         self._show_shift_check()
+        self._show_waiting()
         self._show_empty()
 
     def on_show(self) -> None:
@@ -740,5 +810,6 @@ class InspectionPage(Page):
         self._no_ai_warned = None  # each visit says once that a board model has no AI model yet
         self._update_buttons()  # Save Image… follows the role after a Switch User (#241)
         self._show_shift_check()  # a recipe saved or a version activated elsewhere asks for the check again
+        self._show_waiting()  # a version trained or activated elsewhere
         self._refresh_alarms()
         self._show_empty()

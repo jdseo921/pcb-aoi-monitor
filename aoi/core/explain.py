@@ -116,6 +116,11 @@ NOTES = {
         " with the AI model in use.",
     ),
 }
+INACTIVE_AI_NOTE = QT_TRANSLATE_NOOP(  # NO_AI_NOTE on a board just inspected while a version waits (ADR 0018)
+    "Explain",
+    "AI model {version} is trained for this board model but not active, so the AI check did not run: an Engineer"
+    " activates it on Inspection or Training.",
+)
 STORED_NOTES = {  # on a stored result, said of the day it was inspected rather than of today (S28b)
     NO_GOLDEN_NOTE: QT_TRANSLATE_NOOP(
         "Explain",
@@ -142,7 +147,7 @@ OTHER_NOTE = QT_TRANSLATE_NOOP("Explain", "Note: {note}")
 UNITS = {"Changed area %": "%", "Difference regions": "", "Alignment inliers": "", "ROI": "×"}  # "" = a count
 TEMPLATES = [  # every template a screen may translate, for the tests
     *CHECKS.values(), *ROI_CHECK.values(), OTHER_CHECK, ALL_INSIDE, SEVERE_DEFECT, SEVERE_DEFECTS, UNEXPLAINED,
-    *NOTES.values(), *STORED_NOTES.values(), OTHER_NOTE,
+    *NOTES.values(), INACTIVE_AI_NOTE, *STORED_NOTES.values(), OTHER_NOTE,
     TRIED_SEVERE_DEFECT, TRIED_SEVERE_DEFECTS, TRIED_AI_OFF,
 ]  # fmt: skip
 
@@ -173,12 +178,15 @@ def numbers(c: Check) -> tuple[str, str]:
     return (f"{value} {unit}", f"{threshold} {unit}") if unit else (value, threshold)
 
 
-def explain(res: InspectionResult, stored: bool = False, tried: bool = False) -> list[Sentence]:
+def explain(
+    res: InspectionResult, stored: bool = False, tried: bool = False, inactive: str | None = None
+) -> list[Sentence]:
     """The sentences for `res`: one per NG check, then one per WARN check, each in the order the engine ran them (or,
     with none, why the verdict is what it is), then one per check that did not run (`notes`; `stored` for a stored
     result). `tried`: `res` is what other thresholds give a stored result (REQ-CMP-005), whose board picture keeps the
     stored boxes, so defects that make it a WARN are ones the thresholds would mark, and whose AI-off note speaks of
-    those thresholds (`notes`, #246)."""
+    those thresholds (`notes`, #246). `inactive`: the version of the board model trained but not active, which the
+    note of a result not `stored` names (`notes`)."""
     out = []
     for c in [c for c in res.checks if c.verdict == NG] + [c for c in res.checks if c.verdict == WARN]:
         value, threshold = numbers(c)
@@ -193,14 +201,20 @@ def explain(res: InspectionResult, stored: bool = False, tried: bool = False) ->
         out.append(Sentence(one) if severe == 1 else Sentence(several, {"count": str(severe)}))
     elif not out:  # an OK with no check at all, stored before #169, had nothing inside a threshold
         out.append(Sentence(ALL_INSIDE if res.verdict == OK and res.checks else UNEXPLAINED))
-    return out + notes(res, stored, tried)
+    return out + notes(res, stored, tried, inactive)
 
 
-def notes(res: InspectionResult, stored: bool = False, tried: bool = False) -> list[Sentence]:
+def notes(
+    res: InspectionResult, stored: bool = False, tried: bool = False, inactive: str | None = None
+) -> list[Sentence]:
     """One sentence per check that did not run, from the notes the engine stored with `res`, in plain words with what
     to do (for a `stored` result, what was set when it was inspected); a note this build does not know shows as
-    written."""
+    written. On a result not `stored`, no AI model is named as the `inactive` version, trained but not active, when
+    one is given (decision D3): "No AI model is trained" would be untrue of it."""
     said = {**NOTES, **STORED_NOTES} if stored else NOTES
     if tried:  # `re_grade` notes an AI check the recipe tried turns off, whether or not it ran when inspected (#246)
         said = {**said, AI_OFF_NOTE: TRIED_AI_OFF}
-    return [Sentence(said[n]) if n in said else Sentence(OTHER_NOTE, {"note": n}) for n in res.notes]
+    waiting = {} if stored or not inactive else {NO_AI_NOTE: Sentence(INACTIVE_AI_NOTE, {"version": inactive})}
+    return [
+        waiting.get(n) or (Sentence(said[n]) if n in said else Sentence(OTHER_NOTE, {"note": n})) for n in res.notes
+    ]

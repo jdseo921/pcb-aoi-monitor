@@ -23,7 +23,7 @@ from tools.make_synthetic_dataset import ng_type
 from tools.trainable import AT, trainable
 
 BOARD = "TBOX-A1"
-ACTIVE = {"version": "v1.0", "train_seconds": 0}  # what a run the page started returns, as it reads it
+ACTIVE = {"version": "v1.0", "train_seconds": 0, "board_model": BOARD, "activated": False}  # what a run returns
 
 
 def oks(synthetic_dataset: Path) -> list[str]:

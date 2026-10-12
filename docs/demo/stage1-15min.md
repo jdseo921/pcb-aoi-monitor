@@ -47,7 +47,9 @@ earlier": AI model v1.0 is already there, and nothing is lost.
 3. When it ends, the status bar reads "AI model v1.1 trained: select it and press Activate Selected to judge boards
    with it". Under **AI model versions**, v1.1 is listed over v1.0, and v1.0 still has the dot in **Active**.
 
-> "A new AI model never takes over by itself. An engineer checks it on the locked boards and switches it on."
+> "A board model's first AI model goes live when its training ends, so the line has the AI check from day one, and
+> that is recorded. Every new version after it never takes over by itself: an engineer checks it on the locked boards
+> and switches it on."
 
 4. Select the v1.1 row and press **AI Model Card**: what it was trained on and its thresholds. Its first line reads
    "Not yet tested on a locked validation set: nothing on this card is a measure of accuracy."

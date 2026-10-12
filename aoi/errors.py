@@ -185,8 +185,8 @@ CODES: dict[str, ErrorCode] = {
             ),
             QT_TRANSLATE_NOOP(
                 "Errors",
-                "An Engineer sets a Golden board or trains an AI model on Training, or turns on the Golden board"
-                " comparison or the AI model in the Recipe Editor; then inspect the board again.",
+                "An Engineer sets a Golden board, or trains or activates an AI model, on Training, or turns on the"
+                " Golden board comparison or the AI model in the Recipe Editor; then inspect the board again.",
             ),
         ),
         ErrorCode(
@@ -870,6 +870,20 @@ CODES: dict[str, ErrorCode] = {
                 "Errors",
                 "Add a board that is still listed on Logs & Export with its board image and reviewed as a False call"
                 " (F11); review it first if the board is good.",
+            ),
+        ),
+        ErrorCode(
+            "AOI-TRN-051",
+            QT_TRANSLATE_NOOP("Errors", "AI model not active"),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Board model {board} has AI model {version}, trained but not active, so only the golden-board"
+                " comparison runs.",
+            ),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "An Engineer activates it with Activate {version} on Inspection, or with Activate Selected on"
+                " Training.",
             ),
         ),
         ErrorCode(

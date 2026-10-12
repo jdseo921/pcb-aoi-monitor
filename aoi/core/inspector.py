@@ -37,7 +37,7 @@ NOT_RUN = {  # why a check did not run, by its note, for AOI-INSP-010
     NOT_COMPARED_NOTE: QT_TRANSLATE_NOOP(
         "Errors", "the Golden board comparison did not run when the board was inspected"
     ),
-    NO_AI_NOTE: QT_TRANSLATE_NOOP("Errors", "no AI model is trained"),
+    NO_AI_NOTE: QT_TRANSLATE_NOOP("Errors", "no AI model is active"),  # none trained, or none activated (ADR 0018)
     NOT_AI_JUDGED_NOTE: QT_TRANSLATE_NOOP("Errors", "the AI check did not run when the board was inspected"),
 }
 

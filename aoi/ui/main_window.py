@@ -142,6 +142,7 @@ class HomePage(Page):
         grid.setSpacing(theme.SPACE)
         self.status_labels: dict[str, QLabel] = {}
         self.training_line = QLabel()  # on Train AI model's card while a training run goes on (REQ-TRN-008)
+        self._training = False  # whether the last show_training saw a run going on
         self.training_line.setWordWrap(True)
         self.training_line.hide()
         self.headings: list[tuple[QLabel, str, str]] = []  # each card's heading, its number and its name
@@ -198,12 +199,16 @@ class HomePage(Page):
             h.setText(self._heading(n, name))
 
     def show_training(self, progress: RunProgress | None, running: bool) -> None:
-        """Train AI model's line while a training run goes on, with its latest report; hidden once it ends."""
+        """Train AI model's line while a training run goes on, with its latest report; hidden once it ends, when the
+        cards shown say what the run left: its version active, or trained and not active (ADR 0018)."""
         if running:
             percent, left = (progress.percent, progress.left_s) if progress else (0, None)
             line = self.tr("Training running {percent} % · {left}")
             self.training_line.setText(line.format(percent=percent, left=time_left_text(left)))
         self.training_line.setVisible(running)
+        ended, self._training = self._training and not running, running
+        if ended and self.isVisible():
+            self.on_show()
 
     def _sync_links(self) -> None:
         """Each card's button opens its page, or, for a page the role may not open, is greyed and reads "For Engineer /
@@ -232,9 +237,14 @@ class HomePage(Page):
             if st.ok_samples or st.ng_samples
             else self.tr("No samples yet. Add at least {count} OK boards.").format(count=FIRST_OK)
         )
+        waiting = None if st.model_version else self.ctx.inactive_model(bm)  # trained, not active: named (D3)
         self.status_labels["Train AI model"].setText(
             self.tr("Active AI model {version}").format(version=st.model_version)
             if st.model_version
+            else self.tr("AI model {version} trained, not active. Activate it on Training.").format(
+                version=waiting["version"]
+            )
+            if waiting
             else self.tr("No AI model yet. Train one from your OK boards.")
         )
         self.status_labels["Tune recipe"].setText(

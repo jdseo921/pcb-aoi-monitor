@@ -90,8 +90,9 @@ started with and the boards after it use the new one; the line under the banner 
 AOI-INSP-013. Each record names the AI model version active when its board was judged, the recipe revision that
 judged it (which says whether the AI check ran) and the Golden board it was judged against. When the recipe turns the
 AI check off, no AI model judges the boards, so an AI model version activated during a run changes nothing that judges
-them and the run goes on with no AOI-INSP-013 (the boards after it name the version now active); a saved recipe or a
-Golden board set still moves the run, and a training run does too, as it sets a new Golden board, and the line then
+them while the Golden board stays, and the run goes on with no AOI-INSP-013 (the boards after it name the version now
+active); a saved recipe or a Golden board set still moves the run, and so does a board model's first training run, as
+its AI model goes live with a new Golden board (a later one installs inactive and moves nothing), and the line then
 says the AI check was off in place of naming an AI model.
 A scale set changes nothing that judges a board while the recipe holds its sizes in px, so the run then goes on with no
 AOI-INSP-013.
@@ -178,7 +179,9 @@ Each line gives the date and time, the level in brackets, the code and what happ
 `2026-10-10 14:03:22  [NG]  AOI-INSP-003  board_07.png: 2 defect(s)`. `[NG]` marks an NG board: every NG board that is
 recorded has one, while a WARN board has none, only its banner and its record. `[WARN]` says that a run stopped because
 the board model changed (AOI-INSP-012), that a run goes on with a new AI model, recipe, scale or Golden board
-(AOI-INSP-013), that the board model has no AI model yet (AOI-TRN-003), or that the line has drifted (AOI-INSP-018):
+(AOI-INSP-013), that the board model has no AI model yet (AOI-TRN-003) or one trained but not active (AOI-TRN-051, an
+Engineer activates it with the Activate button the line above the verdict shows), or that the line has drifted
+(AOI-INSP-018):
 the newest boards are called NG or WARN more often, good boards score or line up worse, or more calls are reviewed as
 False calls than before, beyond chance. A drift alarm changes no verdict; tell an Engineer, who checks the lighting,
 camera, boards and parts, and Home's Inspect card says "Drift:" until it passes. `[ERROR]` keeps the code and what happened

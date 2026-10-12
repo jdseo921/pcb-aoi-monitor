@@ -52,7 +52,8 @@
 3. 끝나면 상태 표시줄에 "AI model v1.1 trained: select it and press Activate Selected to judge boards with it"이
    나옵니다. **AI model versions** 아래에 v1.1이 v1.0 위에 있고, **Active**의 점은 아직 v1.0에 있습니다.
 
-> "새 AI 모델은 절대 저절로 바뀌지 않습니다. 엔지니어가 잠긴 보드로 확인하고 켭니다."
+> "보드 모델의 첫 AI 모델은 학습이 끝나면 바로 적용되어 라인은 첫날부터 AI 검사를 쓰고, 이것은 기록됩니다. 그 뒤의 새
+> 버전은 절대 저절로 바뀌지 않습니다. 엔지니어가 잠긴 보드로 확인하고 켭니다."
 
 4. v1.1 줄을 고르고 **AI Model Card**를 누릅니다: 무엇으로 학습했는지와 임계값이 나옵니다. 첫 줄은 "Not yet tested on a
    locked validation set: nothing on this card is a measure of accuracy."입니다.

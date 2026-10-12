@@ -119,6 +119,10 @@ SAVING = QT_TRANSLATE_NOOP("Training", "Saving AI model {version}")
 NO_EARLIER = QT_TRANSLATE_NOOP("Errors", "no earlier version of this board model was active")
 NO_GOLDEN = QT_TRANSLATE_NOOP("Errors", "its Golden board {file} cannot be read ({error})")
 SWITCHES = ("model.train", "model.activate", "model.rollback")
+# The audit reason of a training that made its version active: a board model's first AI model goes live when its
+# training ends, as no version is in use to keep (business-readiness decision D3); each later one installs inactive
+# (REQ-TRN-010, REQ-TRN-012)
+FIRST_LIVE = "the first AI model of its board model, which goes live when its training ends"
 TEST_RUNS = "test_runs"  # under results/: a validation run's overlays, one per row (REQ-TST-003)
 # Why a dataset version was not tested (AOI-TST-003, REQ-TST-001)
 NO_SUCH_VERSION = QT_TRANSLATE_NOOP("Errors", "the workspace holds no such dataset version")
@@ -740,11 +744,14 @@ class AppContext:
         use: str = "own",
     ) -> dict[str, Any]:
         """Train an AI model of a frozen dataset version's board model on the version's training set, for `use` (its
-        customer's own AI models by default), then save, register (inactive, REQ-TRN-010) and audit it (REQ-TRN-007).
-        The OK images train it and make the Golden board; the NG images only calibrate its threshold; the locked
-        validation set is never read. Refused, before any image is read, as `_training_set` gives. A file whose SHA-256,
-        of the bytes read, is not the one frozen stops the run with AOI-TRN-045. The run reads the device once, before
-        it loads anything, and keeps it to the end (#201).
+        customer's own AI models by default), then save, register (inactive, REQ-TRN-010) and audit it (REQ-TRN-007),
+        and return its metadata with `activated` and `not_live`: a board model's first version, trained for its
+        customer's own AI models, is then made active with its own audit entry (`_first_live`, ADR 0018), and `not_live`
+        holds the error that kept it inactive, if one did; a later version, or one for another use, stays inactive. The
+        OK images train it and make the Golden board; the NG images only calibrate its threshold; the locked validation
+        set is never read. Refused, before any image is read, as `_training_set` gives. A file whose SHA-256, of the
+        bytes read, is not the one frozen stops the run with AOI-TRN-045. The run reads the device once, before it loads
+        anything, and keeps it to the end (#201).
 
         Memory (REQ-TRN-007): each image is read, registered onto the board model's reference board (else the first OK
         image) and warped, then kept only as its tensor at the network's input size and its band of the Golden board's
@@ -838,6 +845,8 @@ class AppContext:
         model = anomaly.train(ok_in, ng_in, cfg, engine, should_stop)
         check()
         previous = self.db.active_model(board_model)
+        # the board model's first AI model, for the line's own use, goes live once registered (D3, ADR 0018)
+        first = use == "own" and not self.db.models(board_model)
         out.mkdir(parents=True, exist_ok=True)
 
         def files(v: str) -> list[Path]:
@@ -872,8 +881,11 @@ class AppContext:
             summary = {k: v for k, v in model.meta.items() if k not in ("loss_history", "err_mean", "err_std")}
             # The version installs inactive, its Golden board with it: the Engineer activates it, with its card, on
             # Training (REQ-TRN-010, Engineering "Go-live gate"); boards stay judged by the active version until then.
+            # A board model's first version is then made active below, as there is no active version to keep (D3).
             with self.db.transaction():  # the version and its entry together
-                self.db.register_model(board_model, version, str(path), summary, activate=False, uid=model_uuid)
+                model_id = self.db.register_model(
+                    board_model, version, str(path), summary, activate=False, uid=model_uuid
+                )
                 old = {"active_version": previous["version"] if previous else None}
                 after = {"version": version, "activated": False, "metrics": summary}
                 self.audit("model.train", "model", model_uuid, old, after)
@@ -881,8 +893,10 @@ class AppContext:
             _remove(files(version))  # not registered: no file is left for a later run to take for its own
             raise
         self._model_cache.pop(board_model, None)
-        self.log.info("training.finished", extra={"board_model": board_model, "model_version": version})
-        return model.meta
+        not_live = self._first_live(board_model, model_id) if first else None
+        live = first and not_live is None
+        self.log.info("training.finished", extra={"board_model": board_model, "model_version": version, "live": live})
+        return {**model.meta, "activated": live, "not_live": not_live}
 
     def load_model(self, board_model: str) -> tuple[str, anomaly.AnomalyModel, str] | None:
         """The active model of a board model as (version, model, uuid), the three from one row so a record never names
@@ -1565,8 +1579,17 @@ class AppContext:
         return self.db.model(model_id)
 
     def active_model(self, board_model: str) -> dict[str, Any] | None:
-        """The model version inspections use, or None when none is trained."""
+        """The model version inspections use, or None when none is active."""
         return self.db.active_model(board_model)
+
+    def inactive_model(self, board_model: str) -> dict[str, Any] | None:
+        """The newest trained version of a board model while none is active, which an Engineer activates (Inspection
+        offers it, as Activate Selected on Training does); None while one is active or none is trained. A board model's
+        first version for its own use goes live when trained (`train`), so this is one trained before that, one trained
+        for another use, or one whose activation was refused."""
+        if self.db.active_model(board_model) is not None:
+            return None
+        return next(iter(self.db.models(board_model)), None)  # newest first
 
     def calibrated_threshold(
         self, board_model: str, model_uuid: str | None = None, version: str | None = None
@@ -3098,11 +3121,26 @@ class AppContext:
                 return by_version.get(previous) if previous and previous != made else None
         return None
 
-    def _switch_to(self, target: dict[str, Any], action: str) -> None:
+    def _first_live(self, board_model: str, model_id: int) -> Exception | None:
+        """Make a board model's first AI model version, just registered, the active one with its Golden board
+        (`_switch_to`), audited as `model.activate` by the Engineer who trained it with FIRST_LIVE as the reason
+        (business-readiness decision D3, ADR 0018; REQ-TRN-012). Its own transaction, after the version's: a refusal
+        (AOI-TRN-048, AOI-TRN-049) or a failure such as a full disk leaves the version registered and inactive, which is
+        logged and returned, for Training to show, and which Inspection then offers to activate (`inactive_model`).
+        None once it is live."""
+        try:
+            with self.db.transaction():
+                self._switch_to(self.db.model(model_id), "model.activate", FIRST_LIVE)
+        except Exception as e:
+            self.log.warning("training.first_not_live", exc_info=True, extra={"board_model": board_model})
+            return e
+        return None
+
+    def _switch_to(self, target: dict[str, Any], action: str, reason: str | None = None) -> None:
         """Make `target` its board model's active version and its Golden board the board model's, together, with an
-        audit entry naming both before and after (REQ-TRN-010). A version that records no Golden board (trained before
-        it was recorded) keeps the board model's. A recorded Golden board that cannot be read is refused with
-        AOI-TRN-048 before anything changes: inspections would otherwise judge with another version's board."""
+        audit entry naming both before and after, and `reason` (REQ-TRN-010). A version that records no Golden board
+        (trained before it was recorded) keeps the board model's. A recorded Golden board that cannot be read is refused
+        with AOI-TRN-048 before anything changes: inspections would otherwise judge with another version's board."""
         board_model = target["board_model"]
         if not self.card_files(int(target["id"]))[1].is_file():  # no AI model goes live without its card (REQ-TRN-011)
             raise AoiError("AOI-TRN-049", version=target["version"], board=board_model)
@@ -3125,7 +3163,8 @@ class AppContext:
             return to_stored(Path(p), self.settings.root) if p else None
 
         old = {"active_version": previous["version"] if previous else None, "reference": kept(before_ref)}
-        self.audit(action, "model", target["uuid"], old, {"active_version": target["version"], "reference": kept(ref)})
+        after = {"active_version": target["version"], "reference": kept(ref)}
+        self.audit(action, "model", target["uuid"], old, after, reason)
 
     @requires("Admin", QT_TRANSLATE_NOOP("Errors", "Changing users"))
     @transactional

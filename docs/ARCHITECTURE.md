@@ -237,7 +237,11 @@ model judged them, and the line of such a run that moved says the AI check was o
 leave the scale out while the recipe holds no size in mm, which is all a scale sizes (S29). A new
 queue, a board model change or a revisit drops the engine (a generation counter, so an engine a board is building
 meanwhile is never kept), and one worker runs at a time per page (#120). A board model with no AI model gets its WARN
-alarm AOI-TRN-003 once per page visit and board model, not for each engine a new queue builds. AI Model Test asks
+alarm AOI-TRN-003 once per page visit and board model, not for each engine a new queue builds; one with a version
+trained but none active (`AppContext.inactive_model`) gets AOI-TRN-051 naming that version instead, and a line under
+the shift check's names it with Activate <version>, an Engineer's, greyed for an Operator (decision D3), read again
+after each board judged with no AI model, so a version trained meanwhile is named at once; a database that cannot be
+read hides the line, logged, and the alarm falls back to AOI-TRN-003 (#179). AI Model Test asks
 `engine_is_current` the same of the `JudgedBy` that `AppContext.batch_test` returns with a run (the recipe revision,
 Golden board and scale that judged it, the AI model version active then and, in `use_ai`, whether the recipe ran the AI
 check), so
@@ -433,6 +437,7 @@ Upload OK images (+ optional NG), label, freeze a version, lock its validation s
 5. Calibration      = threshold from held-out OK scores (mean+3σ, ≥1.05×max OK);
                       if labelled NG exist and separate cleanly → midpoint between OK and NG
 6. Register version vX.Y in the model registry, inactive, with its card     → *.pt, *.card.md, *.card.json
+   (a board model's first version is then made active: `_first_live`)
 ```
 
 Re-training after more uploads creates a new version; older versions stay selectable (model version control, GUI §6).
@@ -553,7 +558,16 @@ images ([measurement](tests/2026-10-09-training-memory.md)).
 An AI model the loader would refuse, such as one with an image threshold of 0 from OK images that are copies of one
 photo, is refused at step 5 with AOI-TRN-004: nothing is saved, registered or audited, and the active version stays.
 Step 6 writes the version's model card (`aoi/core/model_card.py`, REQ-TRN-011) and registers the version inactive with
-`model.train` in one transaction: if it fails, the run's four files are removed. The Engineer activates it
+`model.train` in one transaction: if it fails, the run's four files are removed. A board model's first version, trained
+for the customer's own AI models (`use` "own", which Training always passes), is then made active with its Golden board
+in a transaction of its own (`_first_live`; decision D3 of the 2026-10 business-readiness brief, ADR 0018: there is no
+version in use to keep), audited as `model.activate` by the Engineer who trained it with the reason `FIRST_LIVE`; an
+activation that fails leaves it registered and inactive, logged as `training.first_not_live`, and `train` returns
+`activated` and, in `not_live`, the error, which Training reports as any error (`report_error`: an alarm with its code
+and the dialog) and names in its status line. Home's Train AI model card is read again when a run ends while Home is
+shown. On Compare, a board just judged with no AI model while a version waits is explained by `INACTIVE_AI_NOTE`
+(`aoi/core/explain.py`), naming the version, not "No AI model is trained"; a stored result keeps the past tense of
+`STORED_NOTES`, and AOI-INSP-010 says "no AI model is active". The Engineer activates a later version
 (`activate_model`), or rolls back to the version active before (`rollback_model`): either switches the AI model and its
 Golden board together, audited, and refuses a version without a card (AOI-TRN-049) or whose Golden board cannot be read
 (AOI-TRN-048) (REQ-TRN-010). A version
@@ -811,7 +825,7 @@ The writes, their roles and entries:
 | `create_store`, `restore_store_key` | Admin | `store.create` (customer, key id), `store.restore` (key id); object = store UUID; never the key or its sheet. The key is saved after the row and the entry, in their transaction, so an entry that cannot be written leaves no key, and a key store that refuses the key is `AOI-TRN-044` with nothing written (REQ-TRN-017) |
 | `move_in` | Admin | `store.move_in` (board model, files to move, resumed); object = store UUID. The row and the entry are written before any file is encrypted, so a move that stops is finished by calling it again, audited again (REQ-TRN-017) |
 | `shred_store` | Admin | `store.shred` (customer, key id, board models, file and AI model counts, resumed); object = store UUID. The key is deleted before the row and the entry are written, and the files after them; a shred that stops is finished by calling it again, audited again (REQ-TRN-017) |
-| `train`, `activate_model` | Engineer | `model.train`, `model.activate` (active version; an older one is a rollback; `model.train` also the Golden board before, and its metrics name the dataset version, its UUID and the use, S39); object = model UUID. A run refused for its customer's store or its use writes `training.refused` (use, customer, code, and why as the entry's reason; object = dataset version UUID) in a transaction of its own, then raises AOI-TRN-046 (REQ-TRN-017) |
+| `train`, `activate_model` | Engineer | `model.train`, `model.activate` (active version; an older one is a rollback; a board model's first version's own, after its `model.train`, with the reason "the first AI model of its board model, which goes live when its training ends"; `model.train` also the Golden board before, and its metrics name the dataset version, its UUID and the use, S39); object = model UUID. A run refused for its customer's store or its use writes `training.refused` (use, customer, code, and why as the entry's reason; object = dataset version UUID) in a transaction of its own, then raises AOI-TRN-046 (REQ-TRN-017) |
 | `save_recipe` | Engineer | `recipe.save` (the latest revision's body before, the new one after, and the reason typed on Save Recipe's sheet, REQ-RCP-004 and REQ-RCP-005); object = recipe UUID. A revision that sets, changes or clears the AI score threshold's override is also audited as `recipe.ai_threshold` (revision, override, the threshold that judges, the active AI model's version and calibrated value); object = board model name (REQ-TRN-015). A size in mm the engine cannot apply is `AOI-RCP-011`, and any recipe while the board model's scale cannot be read `AOI-RCP-012`, nothing written (S29) |
 | `batch_test` | Engineer | `test.run` (folder, model version, metrics); object = board model name |
 | `set_validation_targets` | Engineer | `validation.targets` (the targets in force before, None for the proposed defaults → the new row: its UUID, missed Critical defects, false call rate, seconds per image and with whom they were agreed); object = board model name (REQ-TST-008). AOI-TST-008 refuses an unknown board model, a value outside `report.TARGET_LIMITS` or no one named, and writes nothing |

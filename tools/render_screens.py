@@ -168,8 +168,9 @@ def build_workspace(root: Path) -> AppContext:
         ctx.import_samples(BOARD_MODEL, [str(p) for p in list_images(dataset / "train" / "ok")], "OK")
         for p in list_images(dataset / "train" / "ng"):  # one call each: an NG sample is imported with its type
             ctx.import_samples(BOARD_MODEL, [str(p)], "NG", ng_type(p))
-        ctx.train(trainable(ctx, BOARD_MODEL), epochs=TINY_EPOCHS, image_size=TINY_IMAGE_SIZE)
-        ctx.activate_model(int(ctx.models(BOARD_MODEL)[0]["id"]))  # a version installs inactive (REQ-TRN-010)
+        meta = ctx.train(trainable(ctx, BOARD_MODEL), epochs=TINY_EPOCHS, image_size=TINY_IMAGE_SIZE)
+        if not meta["activated"]:  # a board model's first version goes live when trained (ADR 0018), unless refused
+            ctx.activate_model(int(ctx.models(BOARD_MODEL)[0]["id"]))  # which this raises again, with its code
         recipe = ctx.recipe(BOARD_MODEL)[1]
         recipe.rois.append(ROI("R1", "Presence", 110, 110, 110, 110))  # around the IC the NG board lacks (LAYOUT[0])
         ctx.save_recipe(recipe)
