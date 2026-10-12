@@ -279,7 +279,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+16"/>
+        <location line="+60"/>
         <source>This result was judged without a Golden board.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -331,12 +331,12 @@
     <message>
         <location line="+3"/>
         <location line="+132"/>
-        <location line="+676"/>
+        <location line="+682"/>
         <source>Golden board</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-807"/>
+        <location line="-813"/>
         <source>AI model</source>
         <translation type="unfinished"></translation>
     </message>
@@ -402,17 +402,17 @@
     </message>
     <message>
         <location line="+12"/>
-        <location line="+1009"/>
+        <location line="+1015"/>
         <source>Test board</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1003"/>
+        <location line="-1009"/>
         <source>Inspecting…</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+31"/>
+        <location line="+30"/>
         <source>Check</source>
         <translation type="unfinished"></translation>
     </message>
@@ -483,7 +483,7 @@
     </message>
     <message>
         <location line="+5"/>
-        <location line="+241"/>
+        <location line="+248"/>
         <source>The verdict and the decision table are the stored ones; press Re-evaluate › to inspect the board again from its image file.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -528,7 +528,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1089"/>
+        <location line="-1095"/>
         <source>AI score threshold</source>
         <translation type="unfinished"></translation>
     </message>
@@ -553,7 +553,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+214"/>
+        <location line="+213"/>
         <source>Re-evaluate</source>
         <translation type="unfinished"></translation>
     </message>
@@ -621,14 +621,14 @@
     </message>
     <message>
         <location line="+0"/>
-        <location line="+240"/>
+        <location line="+247"/>
         <location line="+236"/>
         <location line="+12"/>
         <source>Re-evaluate ›</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-474"/>
+        <location line="-481"/>
         <source>Train an AI model on Training.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -638,7 +638,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-625"/>
+        <location line="-624"/>
         <source>Inspection time (ms)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -653,7 +653,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+776"/>
+        <location line="+782"/>
         <source>Test board: {file} (stored result)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6209,7 +6209,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/compare.py" line="-913"/>
+        <location filename="../ui/pages/compare.py" line="-919"/>
         <source>Compare</source>
         <translation type="unfinished"></translation>
     </message>
