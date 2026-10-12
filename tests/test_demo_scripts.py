@@ -156,7 +156,9 @@ def test_req_set_008_in_the_presenter_theme_an_admin_resets_the_demo_or_leaves_t
         asked.append(title)
         while meanwhile:
             meanwhile.pop(0)()
-        return answers.pop(0)
+        # One the test did not plan, as on closing the window after a failed step with work still running: Yes stops
+        # the work, so the window closes and no job outlives the test (the steps check `asked` for extra questions).
+        return answers.pop(0) if answers else QMessageBox.StandardButton.Yes
 
     monkeypatch.setattr(QMessageBox, "question", question)
     win = click(qtbot, station(qtbot).pages["Settings"].demo.btn_load)  # type: ignore[attr-defined]
@@ -164,6 +166,7 @@ def test_req_set_008_in_the_presenter_theme_an_admin_resets_the_demo_or_leaves_t
     win.pages["Settings"].presenter.click()  # type: ignore[attr-defined]
 
     def smallest(win: MainWindow) -> None:
+        win.showNormal()  # it opens maximized, and maximized it went back to the test screen's 1461 x 796 mid-run
         win.resize(1888, 907)
         qtbot.waitUntil(lambda: win.size() == QSize(1888, 907))
 
