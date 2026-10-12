@@ -1,7 +1,8 @@
 """One catalogue of error codes (REQ-LOG-004, REQ-SET-019; stage S12).
 
 Every error a user can see is an ``AoiError`` with a code ``AOI-<AREA>-<NNN>``, a plain message that says
-what happened and what to do, and optional ``detail`` for the log, never for the dialog. The areas are the
+what happened and what to do, and optional ``detail``, the technical words for the log and the dialog's Show Details,
+never for the message (A5 of the 2026-10 business-readiness brief). The areas are the
 requirement register's (docs/requirements/README.md). ``docs/error-codes.md`` is generated from ``CODES``
 by ``python -m aoi.errors``; a test fails when the two differ.
 """
@@ -9,6 +10,8 @@ by ``python -m aoi.errors``; a test fails when the two differ.
 from __future__ import annotations
 
 import argparse
+import errno
+import sqlite3
 import sys
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
@@ -73,6 +76,72 @@ def QT_TRANSLATE_NOOP(context: str, text: str) -> Phrase:
     """Mark `text` for pyside6-lupdate, which finds the call by this name, under `context`, as a phrase a screen
     translates; no Qt here, since the engine raises errors too. Pages take it from aoi/ui/pages/base.py."""
     return Phrase(context, text)
+
+
+# What a refusal of the system means, in words a user acts on (A5 of the 2026-10 business-readiness brief, F8). The
+# system's own text, which can name an exception class, an errno or SQLite's words, goes to an error's detail, which the
+# log and the dialog's Details hold, and never into what a message says (`system_reason`, `system_detail`).
+FULL = QT_TRANSLATE_NOOP("Errors", "the drive is full")
+DENIED = QT_TRANSLATE_NOOP("Errors", "the system refused access to it: it may be read-only, or open in another app")
+IN_USE = QT_TRANSLATE_NOOP("Errors", "another app has it open")
+MISSING = QT_TRANSLATE_NOOP("Errors", "it is not there")
+WRITE_PROTECTED = QT_TRANSLATE_NOOP("Errors", "the drive is write-protected")
+NOT_READY = QT_TRANSLATE_NOOP("Errors", "the drive is not ready: it may have been removed")
+NOT_READ = QT_TRANSLATE_NOOP("Errors", "the drive could not be read or written")
+TOO_LONG = QT_TRANSLATE_NOOP("Errors", "its path is too long")
+TAKEN = QT_TRANSLATE_NOOP("Errors", "something of that name is already there")
+A_FOLDER = QT_TRANSLATE_NOOP("Errors", "it is a folder, not a file")
+NOT_A_FOLDER = QT_TRANSLATE_NOOP("Errors", "part of its path is a file, not a folder")
+DB_HELD = QT_TRANSLATE_NOOP("Errors", "another app holds the database")
+DB_DAMAGED = QT_TRANSLATE_NOOP("Errors", "the database file is damaged")
+DB_NOT_OPENED = QT_TRANSLATE_NOOP("Errors", "the database file could not be opened")
+DB_REFUSED = QT_TRANSLATE_NOOP("Errors", "the database refused it")
+REFUSED = QT_TRANSLATE_NOOP("Errors", "the system refused it")
+_BY_ERRNO = {  # by name: a system without one of these numbers leaves it out
+    getattr(errno, name): reason
+    for names, reason in (
+        (("ENOSPC", "EDQUOT"), FULL), (("EACCES", "EPERM"), DENIED), (("EBUSY", "ETXTBSY"), IN_USE),
+        (("ENOENT",), MISSING), (("EROFS",), WRITE_PROTECTED), (("ENODEV", "ENXIO"), NOT_READY), (("EIO",), NOT_READ),
+        (("ENAMETOOLONG",), TOO_LONG), (("EEXIST", "ENOTEMPTY"), TAKEN), (("EISDIR",), A_FOLDER),
+        (("ENOTDIR",), NOT_A_FOLDER),
+    )
+    for name in names
+    if hasattr(errno, name)
+}  # fmt: skip
+_BY_WINERROR = {  # Windows' own numbers, which say more than the errno Python maps them to
+    5: DENIED, 32: IN_USE, 33: IN_USE, 2: MISSING, 3: MISSING, 19: WRITE_PROTECTED, 21: NOT_READY, 15: NOT_READY,
+    112: FULL, 39: FULL, 23: NOT_READ, 1117: NOT_READ, 206: TOO_LONG, 80: TAKEN, 183: TAKEN, 267: NOT_A_FOLDER,
+}  # fmt: skip
+
+
+def system_reason(e: BaseException | None) -> Phrase:
+    """What the system's refusal `e` means for the user, as a phrase that names no exception, errno or SQLite text: a
+    full, removed or write-protected drive, a file another app has open, one that is not there, a damaged database; "the
+    system refused it" for anything else. The words of `e` itself go in the error's detail (`system_detail`)."""
+    if isinstance(e, sqlite3.Error):
+        text = str(e).lower()
+        if "locked" in text or "busy" in text:
+            return DB_HELD
+        if "not a database" in text or "malformed" in text or "corrupt" in text:
+            return DB_DAMAGED
+        if "disk i/o" in text or "disk is full" in text or "full" in text:
+            return NOT_READ if "i/o" in text else FULL
+        if "unable to open" in text:
+            return DB_NOT_OPENED
+        if "readonly" in text or "read-only" in text:
+            return WRITE_PROTECTED
+        return DB_REFUSED
+    if isinstance(e, OSError):
+        winerror = getattr(e, "winerror", None)
+        if winerror in _BY_WINERROR:
+            return _BY_WINERROR[winerror]
+        return _BY_ERRNO.get(e.errno or 0, REFUSED)
+    return REFUSED
+
+
+def system_detail(e: BaseException | None) -> str | None:
+    """The technical words of `e` for the log and the dialog's Details: its class and its own text."""
+    return None if e is None else f"{type(e).__name__}: {e}"
 
 
 @dataclass(frozen=True)
@@ -651,7 +720,11 @@ CODES: dict[str, ErrorCode] = {
             "AOI-TRN-027",
             QT_TRANSLATE_NOOP("Errors", "Dataset not frozen"),
             QT_TRANSLATE_NOOP("Errors", "{name} was not frozen: {reason}."),
-            QT_TRANSLATE_NOOP("Errors", "Do what the reason says, then freeze the dataset again; nothing was written."),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Freeze it from board models of one customer's dataset store that is not shredded, with the uses own, "
+                "shared or demos; nothing was written.",
+            ),
         ),
         ErrorCode(
             "AOI-TRN-028",
@@ -700,7 +773,9 @@ CODES: dict[str, ErrorCode] = {
             QT_TRANSLATE_NOOP("Errors", "Label cannot be checked"),
             QT_TRANSLATE_NOOP("Errors", "The label of {sample} was not checked: {reason}."),
             QT_TRANSLATE_NOOP(
-                "Errors", "Do what the reason says, then check the label again; a label checked already needs nothing."
+                "Errors",
+                "Draw an NG image's defect boxes, or label the image again, then check its label; an UNSURE image is "
+                "not checked, and a label checked already needs nothing.",
             ),
         ),
         ErrorCode(
@@ -807,7 +882,11 @@ CODES: dict[str, ErrorCode] = {
             "AOI-TRN-044",
             QT_TRANSLATE_NOOP("Errors", "Dataset store not changed"),
             QT_TRANSLATE_NOOP("Errors", "The dataset store of {store} was not changed: {reason}."),
-            QT_TRANSLATE_NOOP("Errors", "Do what the reason says, then try again."),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Nothing was changed. Correct the customer, the board model or the key typed, or close the app that "
+                "has the store's files open, then try again.",
+            ),
         ),
         ErrorCode(
             "AOI-TRN-045",
@@ -815,7 +894,8 @@ CODES: dict[str, ErrorCode] = {
             QT_TRANSLATE_NOOP("Errors", "{name} was not trained: {reason}."),
             QT_TRANSLATE_NOOP(
                 "Errors",
-                "Do what the reason says, then train again; nothing was saved, and the active AI model is unchanged.",
+                "Freeze a new dataset version on Training's Datasets tab, with enough OK images, and lock its "
+                "validation set; then start again from it. Nothing was saved, and the active AI model is unchanged.",
             ),
         ),
         ErrorCode(
@@ -1213,7 +1293,7 @@ CODES: dict[str, ErrorCode] = {
         ErrorCode(
             "AOI-SET-007",
             QT_TRANSLATE_NOOP("Errors", "Unexpected error"),
-            QT_TRANSLATE_NOOP("Errors", "An unexpected error ({error_type}) stopped the last action{context}."),
+            QT_TRANSLATE_NOOP("Errors", "An unexpected error stopped the last action{context}."),
             QT_TRANSLATE_NOOP(
                 "Errors",
                 "Try again; if it happens again, restart the app and send the log file (the workspace's logs folder) "
@@ -1282,7 +1362,7 @@ CODES: dict[str, ErrorCode] = {
             QT_TRANSLATE_NOOP("Errors", "Workspace database busy"),
             QT_TRANSLATE_NOOP(
                 "Errors",
-                "Another program holds the workspace database {path}, so the app could not write to it: {error}.",
+                "Another program holds the workspace database {path}, so the app could not write to it.",
             ),
             QT_TRANSLATE_NOOP(
                 "Errors",
@@ -1306,8 +1386,7 @@ CODES: dict[str, ErrorCode] = {
             QT_TRANSLATE_NOOP("Errors", "The demo bundle {path} cannot be used: {reason}."),
             QT_TRANSLATE_NOOP(
                 "Errors",
-                "Reinstall the app, or from the sources run python tools/make_demo_bundle.py. Nothing in the "
-                "production workspace was changed.",
+                "Reinstall the app, which puts the demo bundle back. Nothing in the production workspace was changed.",
             ),
         ),
         ErrorCode(

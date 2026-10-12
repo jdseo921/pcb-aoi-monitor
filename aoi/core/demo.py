@@ -31,7 +31,7 @@ from typing import Any
 
 from ..config import Settings
 from ..data import atomic, credentials
-from ..errors import QT_TRANSLATE_NOOP, AoiError
+from ..errors import QT_TRANSLATE_NOOP, AoiError, system_detail, system_reason
 from ..times import now_utc
 
 FORMAT = 1
@@ -80,10 +80,19 @@ def read_bundle(bundle: Path) -> dict[str, Any]:
     try:
         manifest: dict[str, Any] = json.loads((bundle / BUNDLE_FILE).read_text(encoding="utf-8"))
     except (OSError, ValueError) as e:
-        raise AoiError("AOI-SET-015", str(e), path=str(bundle), reason=NO_MANIFEST) from e
-    if not isinstance(manifest, dict) or manifest.get("format") != FORMAT:
+        raise AoiError("AOI-SET-015", system_detail(e), path=str(bundle), reason=NO_MANIFEST) from e
+    if (
+        not isinstance(manifest, dict)
+        or manifest.get("format") != FORMAT
+        or not isinstance(manifest.get("files"), dict)
+        or not all(isinstance(manifest.get(k), str) for k in ("built_at", "board_model"))
+    ):
         raise AoiError("AOI-SET-015", path=str(bundle), reason=OTHER_FORMAT)
-    files = {n: h for n, h in file_hashes(bundle).items() if n != BUNDLE_FILE}
+    try:
+        files = {n: h for n, h in file_hashes(bundle).items() if n != BUNDLE_FILE}
+    except OSError as e:  # a file of the installed bundle that cannot be read: refused with its code, never uncoded
+        why = NOT_READ.fill(reason=system_reason(e))
+        raise AoiError("AOI-SET-015", system_detail(e), path=str(bundle), reason=why) from e
     wrong = sorted(set(files) ^ set(manifest.get("files", {})))
     wrong += sorted(n for n, h in files.items() if manifest["files"].get(n, h) != h)
     if wrong:
@@ -93,6 +102,7 @@ def read_bundle(bundle: Path) -> dict[str, Any]:
 
 NO_MANIFEST = QT_TRANSLATE_NOOP("Errors", "it has no readable bundle.json")
 OTHER_FORMAT = QT_TRANSLATE_NOOP("Errors", "its bundle.json is not one this version of the app reads")
+NOT_READ = QT_TRANSLATE_NOOP("Errors", "a file of it could not be read: {reason}")
 CHANGED = QT_TRANSLATE_NOOP("Errors", "{count} file(s) do not match its bundle.json, the first {file}")
 
 
@@ -152,7 +162,7 @@ def reset(bundle: Path, folder: Path, keys: credentials.Credentials) -> float:
                 child.unlink()
         _copy_in(bundle, folder)
     except OSError as e:
-        raise AoiError("AOI-SET-017", str(e), path=str(e.filename or folder), error=e.strerror or str(e)) from e
+        raise AoiError("AOI-SET-017", system_detail(e), path=str(e.filename or folder), error=system_reason(e)) from e
     _store_key(bundle, keys)
     return time.monotonic() - started
 
@@ -171,7 +181,7 @@ def _store_key(bundle: Path, keys: credentials.Credentials) -> None:
         held = json.loads((bundle / KEY_FILE).read_text(encoding="utf-8"))
         keys.write(credentials.STORE_PREFIX + held["store_uuid"], bytes.fromhex(held["key"]))
     except (OSError, ValueError, KeyError, TypeError) as e:
-        raise AoiError("AOI-SET-015", str(e), path=str(bundle), reason=NO_KEY) from e
+        raise AoiError("AOI-SET-015", system_detail(e), path=str(bundle), reason=NO_KEY) from e
 
 
 NO_KEY = QT_TRANSLATE_NOOP("Errors", "its store-key.json cannot be read")

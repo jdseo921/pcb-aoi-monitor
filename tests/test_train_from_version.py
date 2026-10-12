@@ -107,7 +107,7 @@ def test_req_trn_007_trains_only_on_a_locked_versions_training_set(
     other = encode_image(item["path"], load_image(oks(synthetic_dataset)[25]))
     seal(ctx, item["path"], BOARD, other)  # another board in its place, encrypted as the store's own files are
     e = refused(ctx, version)
-    assert e.code == "AOI-TRN-045" and f"{item['path']} is not the file frozen, by its SHA-256" in e.what
+    assert e.code == "AOI-TRN-045" and f"{item['path']} has changed since the version was frozen" in e.what
     assert len(ctx.models(BOARD)) == 1
 
 

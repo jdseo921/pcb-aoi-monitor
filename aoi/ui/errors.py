@@ -19,7 +19,7 @@ from PySide6.QtWidgets import QFileDialog, QMessageBox, QWidget
 
 from .. import logging_setup
 from ..config import Settings, default_workspace
-from ..core.services import AppContext, ErrorReport
+from ..core.services import UNHANDLED, AppContext, ErrorReport
 from ..errors import QT_TRANSLATE_NOOP, AoiError, Phrase
 
 # Refusals another workspace folder cures: a v0.1 or newer database, a changed migration, a folder without WAL, a
@@ -58,17 +58,30 @@ def dialog_text(report: ErrorReport) -> tuple[str, str]:
     return f"{report.code} {phrase_text(report.title)}", f"{phrase_text(report.what)}\n\n{phrase_text(report.action)}"
 
 
+class ErrorBox(QMessageBox):
+    """The one error dialog: "<code> <title>", what happened and what to do in plain words, and one OK. The error's
+    technical words, the exception's class and text or the system's own text, are behind Show Details…, as the log
+    holds them, and never in the message (A5 of the 2026-10 business-readiness brief, F8); a stack trace only in the
+    log (REQ-SET-019)."""
+
+    def __init__(self, parent: QWidget | None, report: ErrorReport) -> None:
+        title, text = dialog_text(report)
+        super().__init__(QMessageBox.Icon.Critical, title, text, QMessageBox.StandardButton.Ok, parent)
+        if report.detail:
+            self.setDetailedText(report.detail)
+
+
 def show_error(parent: QWidget | None, report: ErrorReport) -> None:
-    title, text = dialog_text(report)
-    QMessageBox.critical(parent, title, text)
+    ErrorBox(parent, report).exec()
 
 
 def install_excepthook(ctx: AppContext, parent: QWidget | None) -> None:
-    """Route every unhandled error to the log (build version and stack trace) and to a plain dialog."""
+    """Route every unhandled error to the log (build version and stack trace) and to a plain dialog, which does not
+    say "unhandled": the log does (`UNHANDLED`)."""
 
     def hook(exc_type: type[BaseException], exc: BaseException, tb: TracebackType | None) -> None:
         try:
-            show_error(parent, ctx.report_error(exc.with_traceback(tb), QT_TRANSLATE_NOOP("Errors", "unhandled")))
+            show_error(parent, ctx.report_error(exc.with_traceback(tb), UNHANDLED))
         except Exception:  # the handler itself must never take the app down
             sys.__excepthook__(exc_type, exc, tb)
 
@@ -88,12 +101,12 @@ def open_workspace() -> AppContext | None:
     try:
         return _open_workspace()
     except Exception as e:
-        _log_start_failure(e)
+        log_start_failure(e)
         show_error(None, ErrorReport.of(e, QT_TRANSLATE_NOOP("Errors", "start-up")))
         return None
 
 
-def _log_start_failure(exc: Exception) -> None:
+def log_start_failure(exc: Exception) -> None:
     """Write the trace of an error at start-up to the log in the default workspace folder, where settings.json is,
     and close the file again; the console is the last resort when that folder cannot be written either."""
     try:

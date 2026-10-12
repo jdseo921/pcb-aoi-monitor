@@ -28,7 +28,7 @@ from PySide6.QtWidgets import (
 
 from ... import defects as taxonomy
 from ...core.sample_import import ImportFile, ImportReport
-from ...errors import AoiError
+from ...errors import AoiError, system_detail
 from ...hal import VIEWS
 from .. import theme
 from ..errors import phrase_text
@@ -331,7 +331,7 @@ class ImportSheet(QGroupBox):
         for f, e in problems:
             i = rows[id(f)]
             if not isinstance(e, AoiError):  # as the error dialog shows a plain exception (AppContext.report_error)
-                e = AoiError("AOI-SET-007", error_type=type(e).__name__, context="")
+                e = AoiError("AOI-SET-007", system_detail(e), context="")
             if e.code == "AOI-TRN-015":
                 self.done.add(i)
             self._show_row(i, phrase_text(CODE_TITLE.fill(code=e.code, title=e.title)))

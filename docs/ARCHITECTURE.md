@@ -1024,7 +1024,12 @@ through `AppContext.alarm` (an NG verdict's in its record's own transaction, `Da
 board always has its alarm and a refused alarm saves neither, #179), and `AppContext.report_error` is the one path for
 an error a dialog shows: it
 logs the stack trace with the build version, stores an ERROR alarm and returns the plain report that
-`aoi/ui/errors.py` shows (code, title, what happened, what to do), also for unhandled errors through
+`aoi/ui/errors.py` shows (code, title, what happened, what to do), with the error's detail behind the dialog's Show
+Details (`ErrorBox`): an exception's class and text, or the system's own words a coded error carries. A message itself
+never names them: a refusal of the system fills its `{reason}` or `{error}` with `system_reason(e)`, what the refusal
+means for the user (a full or removed drive, a file another app has open), and `system_detail(e)` goes to the detail
+(A5 of the 2026-10 business-readiness brief, F8; `tests/test_demo_path_messages.py`). This holds also for unhandled
+errors through
 `sys.excepthook`; it never raises, so the dialog shows even when the database refuses the alarm (logged as
 `alarm.not_stored`, #171). SQLite's refusal while another program holds the database's lock during work becomes
 `AOI-SET-013` there, and the alarm of an error caused by that lock waits 200 ms for it, not SQLite's 5 s (#195). The

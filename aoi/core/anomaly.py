@@ -17,6 +17,7 @@ inputs"; REQ-TRN-014).
 
 from __future__ import annotations
 
+import errno
 import math
 import random
 import time
@@ -32,7 +33,7 @@ import torch
 from torch import nn
 
 from ..data import atomic
-from ..errors import QT_TRANSLATE_NOOP, AoiError, Phrase
+from ..errors import QT_TRANSLATE_NOOP, AoiError, Phrase, system_detail, system_reason
 from . import lineage, run_progress
 from .jobs import JobCancelled
 
@@ -42,7 +43,8 @@ CRC_FAILS = QT_TRANSLATE_NOOP("Errors", "{entry} does not match its CRC-32")
 IS_FOLDER = QT_TRANSLATE_NOOP("Errors", "{entry} is marked as a folder")
 BAD_SIZE = QT_TRANSLATE_NOOP("Errors", "its input size {size} is not a multiple of {stride} pixels")
 BAD_MAP = QT_TRANSLATE_NOOP("Errors", "its {key} is not a {size} x {size} map of finite numbers")
-MALFORMED = QT_TRANSLATE_NOOP("Errors", "its metadata is malformed ({error})")
+MALFORMED = QT_TRANSLATE_NOOP("Errors", "its metadata is malformed")
+UNREADABLE = QT_TRANSLATE_NOOP("Errors", "it could not be read as an AI model file: it may be cut short or damaged")
 # A training run's progress lines and threshold rules: phrases the Training page shows in the UI language (#199).
 TRAINING_ON = QT_TRANSLATE_NOOP(
     "Training", "Training on {train} OK images ({held_out} held out, {ng} NG for calibration) on {device}"
@@ -295,9 +297,10 @@ class AnomalyModel:
             damaged = CRC_FAILS.fill(entry=crc) if crc else IS_FOLDER.fill(entry=folder) if folder else None
             ckpt = None if damaged else torch.load(path, map_location=device, weights_only=True)
         except OSError as e:  # gone, a folder, unreadable, or cut short (torch reports EINVAL)
-            raise ModelFileError("AOI-TRN-001", path=str(path), reason=e.strerror or type(e).__name__) from e
+            plain = system_reason(e) if e.errno in (errno.ENOENT, errno.EISDIR, errno.EACCES) else UNREADABLE
+            raise ModelFileError("AOI-TRN-001", system_detail(e), path=str(path), reason=plain) from e
         except Exception as e:  # any other way a malformed file trips the reader: refused, never an uncoded error
-            raise ModelFileError("AOI-TRN-001", path=str(path), reason=type(e).__name__) from e
+            raise ModelFileError("AOI-TRN-001", system_detail(e), path=str(path), reason=UNREADABLE) from e
         if damaged:
             raise ModelFileError("AOI-TRN-001", path=str(path), reason=DAMAGED.fill(damaged=damaged))
         if (
@@ -312,7 +315,7 @@ class AnomalyModel:
             meta = _from_safe(ckpt["meta"])
             why = _unusable(meta, ckpt["state_dict"])
         except Exception as e:  # metadata of a kind this app never writes, such as a bfloat16 map
-            raise ModelFileError("AOI-TRN-001", path=str(path), reason=MALFORMED.fill(error=type(e).__name__)) from e
+            raise ModelFileError("AOI-TRN-001", system_detail(e), path=str(path), reason=MALFORMED) from e
         if why is not None:
             raise ModelFileError("AOI-TRN-001", path=str(path), reason=why)
         net = ConvAutoencoder()

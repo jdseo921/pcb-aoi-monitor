@@ -14,14 +14,14 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
 
-from .errors import QT_TRANSLATE_NOOP, AoiError
+from .errors import QT_TRANSLATE_NOOP, AoiError, system_detail, system_reason
 
 APP_NAME = "AOI PoC Inspector"
 APP_VERSION = "0.3.0"
 
 
 # Why settings.json is refused (AOI-SET-010, AOI-SET-008), as phrases shown translated (#198)
-NOT_JSON = QT_TRANSLATE_NOOP("Errors", "it is not valid JSON (line {line}, column {column}: {problem})")
+NOT_JSON = QT_TRANSLATE_NOOP("Errors", "it is not valid JSON (line {line}, column {column})")
 NOT_UTF8 = QT_TRANSLATE_NOOP("Errors", "it is not UTF-8 text")
 NOT_OBJECT = QT_TRANSLATE_NOOP("Errors", "it does not hold a JSON object of settings")
 FULL_PATH = QT_TRANSLATE_NOOP("Errors", "the full path of a folder")
@@ -33,6 +33,7 @@ EXPECTED = {  # what a setting must be, by its type and _LEAST
     (bool, None): QT_TRANSLATE_NOOP("Errors", "true or false"),
 }
 RANGE = QT_TRANSLATE_NOOP("Errors", "a whole number from {least} to {most}")
+SAME_KIND = QT_TRANSLATE_NOOP("Errors", "a value of the kind its default has")  # a setting of a kind not listed above
 _LEAST = {  # the smallest whole number a count setting takes; a map retention of 0 deletes OK maps at the next start
     "max_image_megapixels": 1,
     "max_image_megabytes": 1,
@@ -147,13 +148,12 @@ class Settings:
         try:
             data = json.loads(f.read_text(encoding="utf-8"))
         except json.JSONDecodeError as e:
-            raise AoiError(
-                "AOI-SET-010", path=str(f), reason=NOT_JSON.fill(line=e.lineno, column=e.colno, problem=e.msg)
-            ) from e
+            why = NOT_JSON.fill(line=e.lineno, column=e.colno)  # the parser's own words go to the detail
+            raise AoiError("AOI-SET-010", system_detail(e), path=str(f), reason=why) from e
         except UnicodeDecodeError as e:
             raise AoiError("AOI-SET-010", path=str(f), reason=NOT_UTF8) from e
         except OSError as e:
-            raise AoiError("AOI-SET-010", path=str(f), reason=e.strerror or type(e).__name__) from e
+            raise AoiError("AOI-SET-010", system_detail(e), path=str(f), reason=system_reason(e)) from e
         if not isinstance(data, dict):
             raise AoiError("AOI-SET-010", path=str(f), reason=NOT_OBJECT)
         return data
@@ -177,7 +177,7 @@ class Settings:
                 "AOI-SET-008", name=name, value=json.dumps(value), expected=RANGE.fill(least=least, most=most)
             )
         if not typed or (least is not None and isinstance(value, int) and value < least):
-            expected = EXPECTED.get((want, least), want.__name__)
+            expected = EXPECTED.get((want, least), SAME_KIND)
             raise AoiError("AOI-SET-008", name=name, value=json.dumps(value), expected=expected)
 
     def save_keys(self, values: dict[str, object]) -> dict[str, object]:

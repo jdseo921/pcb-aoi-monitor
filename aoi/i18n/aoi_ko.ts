@@ -837,12 +837,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+23"/>
+        <location line="+32"/>
         <source> ({context})</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+68"/>
+        <location line="+71"/>
         <source>Operator, Engineer or Admin</source>
         <translation type="unfinished"></translation>
     </message>
@@ -857,7 +857,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+248"/>
+        <location line="+249"/>
         <location line="+138"/>
         <source>Importing samples</source>
         <translation type="unfinished"></translation>
@@ -1137,14 +1137,14 @@
         <translation>검증 세트 잠금</translation>
     </message>
     <message>
-        <location line="-2467"/>
-        <location line="+2481"/>
+        <location line="-2480"/>
+        <location line="+2494"/>
         <location line="+39"/>
         <source>the workspace holds no such dataset version</source>
         <translation>작업 공간에 그런 데이터셋 버전이 없습니다</translation>
     </message>
     <message>
-        <location line="-2563"/>
+        <location line="-2576"/>
         <source>Drift on {board} ({view}): {count} of the last {of} boards called NG; {before} % of the {baseline} before</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1234,7 +1234,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+826"/>
+        <location line="+839"/>
         <source>Setting the comparison&apos;s thresholds from labelled boards</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1284,12 +1284,7 @@
         <translation>검증 세트가 잠긴 고정 데이터셋 버전이 없습니다</translation>
     </message>
     <message>
-        <location line="+9"/>
-        <source>{file} is not the file frozen, by its SHA-256</source>
-        <translation>SHA-256으로 볼 때 {file}은(는) 고정된 파일이 아닙니다</translation>
-    </message>
-    <message>
-        <location line="+5"/>
+        <location line="+14"/>
         <source>Creating a customer&apos;s dataset store</source>
         <translation>고객의 데이터셋 저장소 만들기</translation>
     </message>
@@ -1370,12 +1365,7 @@
         <translation>이 스테이션의 키 저장소가 키를 거부했습니다({reason})</translation>
     </message>
     <message>
-        <location line="+12"/>
-        <source>this station&apos;s key store could not be read ({reason})</source>
-        <translation>이 스테이션의 키 저장소를 읽을 수 없습니다({reason})</translation>
-    </message>
-    <message>
-        <location line="+3"/>
+        <location line="+15"/>
         <source>this station holds no key for it</source>
         <translation>이 스테이션에 그 키가 없습니다</translation>
     </message>
@@ -1458,7 +1448,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-3050"/>
+        <location line="-3063"/>
         <source>no earlier version of this board model was active</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1483,7 +1473,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+750"/>
+        <location line="+763"/>
         <source>its UUID {found} is not {uuid}, as in the AI model registry</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1503,7 +1493,17 @@
         <translation>{label}(으)로 다시 라벨링</translation>
     </message>
     <message>
-        <location line="+748"/>
+        <location line="+410"/>
+        <source>{file} has changed since the version was frozen</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+194"/>
+        <source>this station&apos;s key store could not be read</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+144"/>
         <source>no agreement check of the board model holds images of this view</source>
         <translation>이 보드 모델의 일치도 검사 중 이 뷰의 이미지를 담은 것이 없습니다</translation>
     </message>
@@ -1555,12 +1555,13 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/errors.py" line="+71"/>
+        <location line="-3301"/>
         <source>unhandled</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+21"/>
+        <location filename="../ui/demo_workspace.py" line="+29"/>
+        <location filename="../ui/errors.py" line="+105"/>
         <location filename="../ui/main_window.py" line="+858"/>
         <source>start-up</source>
         <translation type="unfinished"></translation>
@@ -1716,7 +1717,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../errors.py" line="+92"/>
+        <location filename="../errors.py" line="+161"/>
         <source>Image cannot be read</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2117,7 +2118,87 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-32"/>
+        <location line="-203"/>
+        <source>the drive is full</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>the system refused access to it: it may be read-only, or open in another app</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>another app has it open</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>it is not there</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>the drive is write-protected</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>the drive is not ready: it may have been removed</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>the drive could not be read or written</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>its path is too long</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>something of that name is already there</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>it is a folder, not a file</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>part of its path is a file, not a folder</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>another app holds the database</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>the database file is damaged</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>the database file could not be opened</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>the database refused it</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>the system refused it</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+156"/>
         <source>An Engineer sets a Golden board, or trains or activates an AI model, on Training, or turns on the Golden board comparison or the AI model in the Recipe Editor; then inspect the board again.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2243,12 +2324,12 @@
     </message>
     <message>
         <location line="+8"/>
-        <location line="+166"/>
+        <location line="+172"/>
         <source>View not known</source>
         <translation>알 수 없는 뷰</translation>
     </message>
     <message>
-        <location line="-165"/>
+        <location line="-171"/>
         <source>{path} was not imported: its view &quot;{view}&quot; is not one of {views}.</source>
         <translation>{path}을(를) 가져오지 않았습니다. 뷰 &quot;{view}&quot;는 {views} 중 하나가 아닙니다.</translation>
     </message>
@@ -2373,12 +2454,7 @@
         <translation>{name}이(가) 동결되지 않았습니다: {reason}.</translation>
     </message>
     <message>
-        <location line="+1"/>
-        <source>Do what the reason says, then freeze the dataset again; nothing was written.</source>
-        <translation>이유에 적힌 대로 한 다음 데이터셋을 다시 동결하십시오. 아무것도 기록되지 않았습니다.</translation>
-    </message>
-    <message>
-        <location line="+4"/>
+        <location line="+9"/>
         <source>Dataset version not found</source>
         <translation>데이터셋 버전을 찾을 수 없음</translation>
     </message>
@@ -2458,12 +2534,7 @@
         <translation>{sample}의 라벨이 검토되지 않았습니다: {reason}.</translation>
     </message>
     <message>
-        <location line="+1"/>
-        <source>Do what the reason says, then check the label again; a label checked already needs nothing.</source>
-        <translation>사유에 따라 조치한 뒤 라벨을 다시 검토하십시오. 이미 검토된 라벨은 더 할 일이 없습니다.</translation>
-    </message>
-    <message>
-        <location line="+6"/>
+        <location line="+9"/>
         <source>Calibration set not made</source>
         <translation>보정 세트가 만들어지지 않음</translation>
     </message>
@@ -2588,12 +2659,7 @@
         <translation>{store}의 데이터셋 저장소를 변경하지 않았습니다: {reason}.</translation>
     </message>
     <message>
-        <location line="+1"/>
-        <source>Do what the reason says, then try again.</source>
-        <translation>이유에 적힌 대로 한 뒤 다시 시도하십시오.</translation>
-    </message>
-    <message>
-        <location line="+4"/>
+        <location line="+9"/>
         <source>Training not started</source>
         <translation>학습이 시작되지 않음</translation>
     </message>
@@ -2603,12 +2669,7 @@
         <translation>{name}이(가) 학습되지 않았습니다: {reason}.</translation>
     </message>
     <message>
-        <location line="+1"/>
-        <source>Do what the reason says, then train again; nothing was saved, and the active AI model is unchanged.</source>
-        <translation>사유에 따라 조치한 후 다시 학습하십시오. 아무것도 저장되지 않았으며, 활성 AI 모델은 바뀌지 않았습니다.</translation>
-    </message>
-    <message>
-        <location line="+7"/>
+        <location line="+9"/>
         <source>Training not started: customer or use not allowed</source>
         <translation>학습이 시작되지 않음: 허용되지 않은 고객 또는 용도</translation>
     </message>
@@ -3098,12 +3159,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1"/>
-        <source>An unexpected error ({error_type}) stopped the last action{context}.</source>
+        <location line="+92"/>
+        <source>Reinstall the app, which puts the demo bundle back. Nothing in the production workspace was changed.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1"/>
+        <location line="-90"/>
         <source>Try again; if it happens again, restart the app and send the log file (the workspace&apos;s logs folder) to support.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3168,12 +3229,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+23"/>
-        <source>Another program holds the workspace database {path}, so the app could not write to it: {error}.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+12"/>
+        <location line="+35"/>
         <source>No board model selected</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3195,11 +3251,6 @@
     <message>
         <location line="+1"/>
         <source>The demo bundle {path} cannot be used: {reason}.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+1"/>
-        <source>Reinstall the app, or from the sources run python tools/make_demo_bundle.py. Nothing in the production workspace was changed.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -3248,12 +3299,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-71"/>
+        <location line="-70"/>
         <source>Close the other program (another copy of this app, a database tool or a backup), then choose the same folder in the window that opens next; or choose another workspace folder there. Cancel there closes the app.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1169"/>
+        <location line="-1180"/>
         <source>Board judged NG</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3338,12 +3389,22 @@
         <translation>{name}이(가) 동결되지 않았습니다: 검토할 OK 라벨 {needed}개({ok}개의 10 %) 중 {checked}개만 검토되었습니다.</translation>
     </message>
     <message>
-        <location line="+60"/>
+        <location line="+48"/>
+        <source>Freeze it from board models of one customer&apos;s dataset store that is not shredded, with the uses own, shared or demos; nothing was written.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+16"/>
         <source>Label the image OK, NG or UNSURE, and give an NG image&apos;s defect boxes one of the 37 defect types each; then save the label again.</source>
         <translation>이미지를 OK, NG 또는 UNSURE로 라벨링하고 NG 이미지의 결함 박스마다 37가지 결함 유형 중 하나를 지정한 뒤 라벨을 다시 저장하십시오.</translation>
     </message>
     <message>
-        <location line="+53"/>
+        <location line="+36"/>
+        <source>Draw an NG image&apos;s defect boxes, or label the image again, then check its label; an UNSURE image is not checked, and a label checked already needs nothing.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+19"/>
         <source>Label each image of the set once, as yourself: OK, or NG with one of the 37 defect types.</source>
         <translation>세트의 각 이미지를 본인으로 한 번씩 라벨링하십시오. OK, 또는 37개 결함 유형 중 하나를 지정한 NG입니다.</translation>
     </message>
@@ -3358,7 +3419,17 @@
         <translation>새 버전을 고정하고 검증 세트를 잠그면 해당 이미지는 잠긴 채로 유지됩니다. 그 버전으로 학습하십시오. 아무것도 저장되지 않았으며, 활성 AI 모델은 바뀌지 않았습니다.</translation>
     </message>
     <message>
-        <location line="+150"/>
+        <location line="+10"/>
+        <source>Nothing was changed. Correct the customer, the board model or the key typed, or close the app that has the store&apos;s files open, then try again.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+10"/>
+        <source>Freeze a new dataset version on Training&apos;s Datasets tab, with enough OK images, and lock its validation set; then start again from it. Nothing was saved, and the active AI model is unchanged.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+135"/>
         <source>ROI thresholds refused</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3383,7 +3454,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+227"/>
+        <location line="+174"/>
+        <source>An unexpected error stopped the last action{context}.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+53"/>
         <source>Workspace in use</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3398,13 +3474,18 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+5"/>
+        <location line="+1"/>
+        <source>Another program holds the workspace database {path}, so the app could not write to it.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+4"/>
         <source>Close the other program (another copy of this app, a database tool or a backup), then do the last action again.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../config.py" line="+24"/>
-        <source>it is not valid JSON (line {line}, column {column}: {problem})</source>
+        <source>it is not valid JSON (line {line}, column {column})</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -3453,7 +3534,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/anomaly.py" line="+40"/>
+        <location line="+1"/>
+        <source>a value of the kind its default has</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../core/anomaly.py" line="+41"/>
         <source>the file is damaged ({damaged})</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3463,12 +3549,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+4"/>
-        <source>its metadata is malformed ({error})</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+13"/>
+        <location line="+18"/>
         <source>its image threshold {value} is not a number above 0</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3478,12 +3559,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-17"/>
+        <location line="-18"/>
         <source>{entry} is marked as a folder</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+267"/>
+        <location line="+269"/>
         <source>it holds no state_dict and metadata</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3493,13 +3574,23 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-279"/>
+        <location line="-281"/>
         <source>its input size {size} is not a multiple of {stride} pixels</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location line="+1"/>
         <source>its {key} is not a {size} x {size} map of finite numbers</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>its metadata is malformed</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>it could not be read as an AI model file: it may be cut short or damaged</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -3649,13 +3740,18 @@
         <translation>매니페스트가 없고, 파일 {changed}개가 변경되고 {missing}개가 없습니다</translation>
     </message>
     <message>
-        <location filename="../core/demo.py" line="+94"/>
+        <location filename="../core/demo.py" line="+103"/>
         <source>it has no readable bundle.json</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location line="+1"/>
         <source>its bundle.json is not one this version of the app reads</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>a file of it could not be read: {reason}</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -7552,7 +7648,7 @@
 <context>
     <name>Training</name>
     <message>
-        <location filename="../core/anomaly.py" line="-299"/>
+        <location filename="../core/anomaly.py" line="-300"/>
         <source>Training on {train} OK images ({held_out} held out, {ng} NG for calibration) on {device}</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7582,7 +7678,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/services.py" line="-3354"/>
+        <location filename="../core/services.py" line="-66"/>
         <source>Aligning {count} images to the reference board</source>
         <translation type="unfinished"></translation>
     </message>

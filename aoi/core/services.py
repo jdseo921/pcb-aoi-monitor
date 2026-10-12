@@ -39,7 +39,7 @@ from ..data.db import Database, DbError, is_busy, new_uuid
 from ..data.errors import WorkspaceError
 from ..data.paths import inside, one_folder_name, resolve, to_stored
 from ..data.workspace_lock import WorkspaceLock
-from ..errors import QT_TRANSLATE_NOOP, AoiError, Phrase, joined
+from ..errors import QT_TRANSLATE_NOOP, AoiError, Phrase, joined, system_detail, system_reason
 from ..hal import VIEWS
 from ..times import local_date, now_utc
 from . import (
@@ -173,22 +173,34 @@ SCALE_NUMBERS = QT_TRANSLATE_NOOP(
 MIN_SCALE, MAX_SCALE = 2, 100000
 
 
+UNHANDLED = QT_TRANSLATE_NOOP("Errors", "unhandled")  # the context of an error no handler caught: the log's alone
+
+
 @dataclass(frozen=True)
 class ErrorReport:
-    """What a user sees of an error: the code, a title, what happened and what to do. Never a stack trace."""
+    """What a user sees of an error: the code, a title, what happened and what to do, in plain words, and behind the
+    dialog's Details the technical words the log holds too: the exception's class and text, or the system's own text a
+    coded error carries (A5 of the 2026-10 business-readiness brief). Never a stack trace."""
 
     code: str
     title: str
     what: str
     action: str
+    detail: str = ""
 
     @classmethod
     def of(cls, exc: BaseException, context: str = "") -> ErrorReport:
-        """The report for any exception: an AoiError's own code, else AOI-SET-007 naming the exception type."""
-        if not isinstance(exc, AoiError):  # the context, a page title or a phrase, is shown in the UI language (#198)
-            where = QT_TRANSLATE_NOOP("Errors", " ({context})").fill(context=context) if context else ""
-            exc = AoiError("AOI-SET-007", error_type=type(exc).__name__, context=where)
-        return cls(exc.code, exc.title, exc.what, exc.action)
+        """The report for any exception: an AoiError's own code, with its detail or else the error that caused it,
+        else AOI-SET-007, whose Details name the exception's class and text. The context, a page title or a phrase, is
+        shown in the UI language (#198), but for UNHANDLED, which means nothing to a user."""
+        if not isinstance(exc, AoiError):
+            shown = context if context != UNHANDLED else ""
+            where = QT_TRANSLATE_NOOP("Errors", " ({context})").fill(context=shown) if shown else ""
+            detail = system_detail(exc) or ""
+            exc = AoiError("AOI-SET-007", detail, context=where)
+        else:
+            detail = exc.detail or system_detail(exc.__cause__) or ""
+        return cls(exc.code, exc.title, exc.what, exc.action, detail)
 
 
 @dataclass(frozen=True)
@@ -367,7 +379,8 @@ class AppContext:
         try:
             self.settings.ensure_dirs()
         except OSError as e:  # a drive not connected, a file where the folder must go (REQ-SET-019)
-            raise WorkspaceError("AOI-SET-011", path=str(self.settings.root), error=str(e)) from e
+            folder = str(self.settings.root)
+            raise WorkspaceError("AOI-SET-011", system_detail(e), path=folder, error=system_reason(e)) from e
         # One copy of the app per workspace: a second one is refused with AOI-SET-012 before it opens or deletes
         # anything, so the sweep below only meets what a crash left (#204)
         self._lock = WorkspaceLock.acquire(self.settings.root)
@@ -1374,7 +1387,7 @@ class AppContext:
         refused is logged)."""
         busy = is_busy(exc) or is_busy(exc.__cause__)
         if is_busy(exc):  # not unexpected: the user can close the other program and try again
-            held = AoiError("AOI-SET-013", detail=str(exc), path=str(self.db.path), error=str(exc))
+            held = AoiError("AOI-SET-013", detail=system_detail(exc), path=str(self.db.path))
             held.__cause__ = exc  # the log keeps SQLite's error and its trace
             exc = held.with_traceback(exc.__traceback__)
         report = ErrorReport.of(exc, context)  # the dialog and the alarm name a user; the log only by UUID (#195)
@@ -2700,7 +2713,7 @@ class AppContext:
         place."""
         image, sha = self._load_image_sha256(resolve(item["path"], self.settings.root))
         if sha != item["sha256"]:
-            why = QT_TRANSLATE_NOOP("Errors", "{file} is not the file frozen, by its SHA-256").fill(file=item["path"])
+            why = QT_TRANSLATE_NOOP("Errors", "{file} has changed since the version was frozen").fill(file=item["path"])
             raise AoiError("AOI-TRN-045", name=version["name"], reason=why)
         return image
 
@@ -2894,8 +2907,8 @@ class AppContext:
         try:
             key = self.credentials.read(credentials.STORE_PREFIX + store["uuid"])
         except OSError as e:
-            why = QT_TRANSLATE_NOOP("Errors", "this station's key store could not be read ({reason})")
-            raise AoiError("AOI-TRN-025", str(e), store=store["customer"], reason=why.fill(reason=str(e))) from e
+            why = QT_TRANSLATE_NOOP("Errors", "this station's key store could not be read")
+            raise AoiError("AOI-TRN-025", system_detail(e), store=store["customer"], reason=why) from e
         if key is None:
             why = QT_TRANSLATE_NOOP("Errors", "this station holds no key for it")
         elif crypto.check_value(key) != store["check_value"]:
@@ -3360,8 +3373,8 @@ class AppContext:
         self._audit_files(copied, "export.overlays", "inspections", None, after, sources)
         if failed:
             params = {"copied": len(copied), "total": len(sources), "folder": str(folder), "file": failed[0].name}
-            why = failed[1].strerror or str(failed[1])
-            raise AoiError("AOI-LOG-001", str(failed[1]), reason=why, **params) from failed[1]
+            why = system_reason(failed[1])
+            raise AoiError("AOI-LOG-001", system_detail(failed[1]), reason=why, **params) from failed[1]
         return len(copied)
 
     @requires("Admin", QT_TRANSLATE_NOOP("Errors", "Exporting overlay images"))  # Q58 (#151)
@@ -3411,8 +3424,8 @@ class AppContext:
         self._audit_files(copied, "export.test_overlays", "test_run", run_uuid, after, [p[2] for p in pairs])
         if failed:
             params = {"copied": len(copied), "total": len(pairs), "folder": str(folder), "file": failed[0].name}
-            why = failed[1].strerror or str(failed[1])
-            raise AoiError("AOI-LOG-001", str(failed[1]), reason=why, **params) from failed[1]
+            why = system_reason(failed[1])
+            raise AoiError("AOI-LOG-001", system_detail(failed[1]), reason=why, **params) from failed[1]
         return len(copied)
 
     @requires("Admin", QT_TRANSLATE_NOOP("Errors", "Exporting CSV"))  # Q58 (#151)
@@ -3562,7 +3575,7 @@ def _manifest_write(name: str, path: str, root: Path) -> Iterator[None]:
 
 def _not_written(e: OSError, path: object) -> AoiError:
     """AOI-LOG-002 for a file the user named for an export or a save that cannot be written (#180, #195)."""
-    return AoiError("AOI-LOG-002", detail=repr(e), path=str(path), reason=e.strerror or str(e))
+    return AoiError("AOI-LOG-002", detail=system_detail(e), path=str(path), reason=system_reason(e))
 
 
 def classification_metrics(rows: list[dict[str, Any]]) -> dict[str, Any]:

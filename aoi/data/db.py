@@ -19,7 +19,7 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
-from ..errors import AoiError, Phrase
+from ..errors import AoiError, Phrase, system_detail, system_reason
 from ..times import local_day_bounds_utc, now_utc
 from .errors import WorkspaceError
 from .migrate import migrate
@@ -67,7 +67,9 @@ class Database:
             self.path.parent.mkdir(parents=True, exist_ok=True)
             self._conn = sqlite3.connect(self.path, timeout=WAIT_MS / 1000, check_same_thread=False)
         except (OSError, sqlite3.Error) as e:  # a drive not connected, a folder that cannot be written (REQ-SET-019)
-            raise WorkspaceError("AOI-SET-011", path=str(self.workspace), error=str(e)) from e
+            raise WorkspaceError(
+                "AOI-SET-011", system_detail(e), path=str(self.workspace), error=system_reason(e)
+            ) from e
         self._conn.row_factory = sqlite3.Row
         try:
             # Write-ahead log with a full sync on every commit: a finished write survives a power cut (ADR 0004).
@@ -97,8 +99,8 @@ class Database:
         """The start-up refusal the folder picker follows (REQ-SET-016): AOI-SET-012 while another program holds the
         database's lock, else AOI-SET-011 with SQLite's reason (read-only, disk full, damaged)."""
         if is_busy(e):
-            return WorkspaceError("AOI-SET-012", path=str(self.path), error=str(e))
-        return WorkspaceError("AOI-SET-011", path=str(self.workspace), error=str(e))
+            return WorkspaceError("AOI-SET-012", system_detail(e), path=str(self.path), error=system_reason(e))
+        return WorkspaceError("AOI-SET-011", system_detail(e), path=str(self.workspace), error=system_reason(e))
 
     # --- primitives --------------------------------------------------------
     @contextmanager

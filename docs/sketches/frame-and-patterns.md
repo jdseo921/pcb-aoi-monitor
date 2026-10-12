@@ -95,6 +95,10 @@ version and the log line on the clipboard; the stack trace goes only to the log.
 to the alarm log instead of a dialog, so the line is never blocked. An unhandled error shows this dialog with
 code AOI-SET-0xx, is logged with the build version, and the app reopens on the same page (REQ-LOG-005).
 
+As built: a Qt message box with the code and title as its title, what happened and what to do, and OK. Where the error
+has technical words (an exception's class and text, the system's own words), Show Details holds them, as the log does;
+the message never names them (A5 of the 2026-10 business-readiness brief, F8).
+
 | Code | What happened | What to do |
 |---|---|---|
 | AOI-SET-0xx | Something went wrong and the app must restart | Copy Details for support; the app reopens on this page |

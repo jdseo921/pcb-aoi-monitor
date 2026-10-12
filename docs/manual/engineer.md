@@ -901,10 +901,12 @@ of that file, since a database tool that holds the station's file stops a change
 names the part of the app: INSP Inspection, CMP Compare, TRN Training and datasets, TST AI Model Test, RCP recipes and
 scale, LOG Logs & Export, USR users and roles, SET settings and the workspace. [The list of codes](../error-codes.md)
 gives each one's title, what happened and what to do; it is made from the app's own catalogue, so it matches the build.
-Each message shown is written to the app log, `logs/aoi-<date>.jsonl` in the workspace (one file per UTC day), as
-`error.shown` with its code, the page, the details and the stack trace, naming a user only by UUID; and to the alarm log
-on Inspection as `[ERROR]` (Operator manual, section 4). For AOI-SET-007, a fault the app did not expect, send that
-day's log file to support (section 1 says where the log of a start that stopped goes).
+A message says what happened in plain words; where there is more, **Show Details** in the message holds the technical
+words, the same the log holds, for support. Each message shown is written to the app log, `logs/aoi-<date>.jsonl` in the
+workspace (one file per UTC day), as `error.shown` with its code, the page, the details and the stack trace, naming a
+user only by UUID; and to the alarm log on Inspection as `[ERROR]` (Operator manual, section 4). For AOI-SET-007, a
+fault the app did not expect, send that day's log file to support (section 1 says where the log of a start that stopped
+goes).
 
 ## 9. Demo workspace
 

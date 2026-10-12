@@ -190,11 +190,11 @@ is still there after a restart.
 
 **Messages.** When the app cannot do what you asked, or has to stop, a message opens over the page. Its title is the
 code and a short name, such as `AOI-INSP-008 Result not saved`; under it comes what happened, then what to do. Do the
-step it gives, then press OK; when the step is for an Engineer or Admin, or the same message comes back, call one and
-give them the code. The code and what happened stay in the alarm log once the message is closed, and
-[the list of codes](../error-codes.md) gives each one with what happened and what to do. The status bar at the bottom
-says what the app is doing and what just happened, such as "End of queue" or why a run stopped; a line there goes after
-a few seconds or when the next one replaces it.
+step it gives, then press OK; **Show Details**, when there, holds technical words for support, which you need not read;
+when the step is for an Engineer or Admin, or the same message comes back, call one and give them the code. The code and
+what happened stay in the alarm log once the message is closed, and [the list of codes](../error-codes.md) gives each
+one with what happened and what to do. The status bar at the bottom says what the app is doing and what just happened,
+such as "End of queue" or why a run stopped; a line there goes after a few seconds or when the next one replaces it.
 
 ## 5. End of shift
 
