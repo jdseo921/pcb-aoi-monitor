@@ -168,7 +168,7 @@ def run() -> int:
     class Watched(QApplication):  # the application main.main() makes, its dialogs watched from the start
         def __init__(self, argv: list[str]) -> None:
             super().__init__(argv)
-            self.installEventFilter(watch)
+            watch.start()
 
     main.QApplication = Watched  # type: ignore[misc]
     code = main.main()

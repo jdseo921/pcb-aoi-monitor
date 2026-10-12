@@ -21,7 +21,8 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from PySide6.QtCore import QSize, Qt
+from PySide6.QtCore import QPoint, QRect, QSize, Qt
+from PySide6.QtGui import QScreen
 from PySide6.QtWidgets import (
     QApplication,
     QCheckBox,
@@ -130,14 +131,17 @@ def errors_recorded(monkeypatch: pytest.MonkeyPatch) -> list[str]:
 
 
 def projector(monkeypatch: pytest.MonkeyPatch, size: QSize) -> None:
-    """Each window the demo opens (Load Demo, Reset Demo) shown at `size`, as maximized on a projector of that size.
-    Offscreen, Qt's one screen is 800 x 800 px, where a maximized window is held at its least size."""
+    """Each window the demo opens (Load Demo, Reset Demo) shown at `size`, as maximized on a projector of that size,
+    whose room the screen gives too, so a window is built in the presenter theme's sizes for it (`MainWindow._small`)
+    and not styled again as it is shown. Offscreen, Qt's one screen is 800 x 800 px, where a maximized window is held
+    at its least size."""
 
     def show(win: MainWindow) -> None:
         win.resize(size)
         win.showNormal()
 
     monkeypatch.setattr(MainWindow, "showMaximized", show)
+    monkeypatch.setattr(QScreen, "availableGeometry", lambda _screen: QRect(QPoint(0, 0), size))
 
 
 def in_view(win: MainWindow, widget: QWidget) -> bool:
