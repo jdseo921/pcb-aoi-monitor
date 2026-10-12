@@ -96,26 +96,20 @@ class DemoPanel(QGroupBox):
         self.page.shell.switch_workspace(None)
 
     def _reset(self) -> None:
-        """Ask once, naming what goes and the work that stops, then put the demo back as the bundle holds it and open
-        it again: from any page, the sidebar's Settings, Reset Demo and Yes (A4 of the 2026-10 business-readiness
-        brief), with boards running too."""
+        """Ask once, naming what goes and what happens to work still running, then put the demo back as the bundle holds
+        it and open it again: from any page, the sidebar's Settings, Reset Demo and Yes (A4 of the 2026-10
+        business-readiness brief), with boards running too. The one question covers work that starts while it is open
+        (a scripted run's next board), so a Yes never meets the stop-work question after it."""
         yes, no = QMessageBox.StandardButton.Yes, QMessageBox.StandardButton.No
-        busy = not self.ctx.jobs.idle()
-        if busy:
-            question = self.tr(
-                "Reset the demo workspace? The work running now (an inspection, training, an AI model test, an export"
-                " or an image import) is stopped; then every result, record, alarm and log of the demo, and every"
-                " change made in it to its board model, AI model, recipe and samples, is deleted, and the demo is"
-                " copied back from the installed bundle. The production workspace is not touched."
-            )
-        else:
-            question = self.tr(
-                "Reset the demo workspace? Every result, record, alarm and log of the demo, and every change made in it"
-                " to its board model, AI model, recipe and samples, is deleted, and the demo is copied back from the"
-                " installed bundle. The production workspace is not touched."
-            )
+        question = self.tr(
+            "Reset the demo workspace? Work still running is stopped first: training without saving an AI model, an AI"
+            " model test once its folder is done, an export or an image import keeping the files copied so far. Then"
+            " every result, record, alarm and log of the demo, and every change made in it to its board model, AI"
+            " model, recipe and samples, is deleted, and the demo is copied back from the installed bundle. The"
+            " production workspace is not touched."
+        )
         if QMessageBox.question(self, self.tr("Reset Demo"), question, yes | no, no) == yes:
-            self.page.shell.switch_workspace(self.ctx.settings.root, reset=True, agreed=busy)
+            self.page.shell.switch_workspace(self.ctx.settings.root, reset=True, agreed=True)
 
     def _show_pace(self, seconds: int) -> None:
         self.pace_label.setText(self.tr("Scripted run pace: {seconds} s per board").format(seconds=seconds))

@@ -63,7 +63,8 @@ Talk to it with **Training** open on its **Datasets** tab, which lists the froze
   **Filter**.
 - Only an Admin deletes records, with a reason that the audit trail keeps.
 
-If they ask to see the settings: open **Settings** and show **Dataset stores**, in the presenter theme still.
+If they ask to see the settings: **Exit presenter theme**, open **Settings**, show **Dataset stores**, then switch the
+**Presenter theme** on again.
 
 ## 36:00 to 40:00, who may do what
 

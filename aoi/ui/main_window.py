@@ -611,8 +611,8 @@ class MainWindow(QMainWindow):
     def hidden(self, title: str) -> bool:
         """Whether page `title` is out of the sidebar, and cannot be opened: in the presenter theme, a page marked not
         `in_presenter_theme` (3D Profile), and a page for the Admin alone (Settings) for every other role (REQ-SET-008).
-        The Admin presenting keeps Settings, so Reset Demo is two clicks from any page and the theme stays on (A4 of the
-        2026-10 business-readiness brief); Settings then leaves out its hardware table (`SettingsPage.restyle`)."""
+        The Admin presenting keeps Settings, so Reset Demo is three clicks from any page and the theme stays on (A4 of
+        the 2026-10 business-readiness brief); Settings then leaves out its hardware table (`SettingsPage.restyle`)."""
         page = self.pages[title]
         if not theme.presenter():
             return False
@@ -820,7 +820,7 @@ class MainWindow(QMainWindow):
                 ctx.close()
             self.close()
             return None
-        win.navigate(page)
+        win.navigate("Home" if reset and theme.presenter() else page)  # the projector never left on Settings
         if failed is not None:
             show_error(win, win.ctx.report_error(failed, QT_TRANSLATE_NOOP("Errors", "demo reset")))
         elif took is not None:

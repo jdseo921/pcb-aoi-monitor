@@ -18,7 +18,7 @@ from typing import Any, cast
 import pytest
 import torch
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QApplication, QGraphicsSimpleTextItem, QLabel, QMessageBox
+from PySide6.QtWidgets import QApplication, QFormLayout, QGraphicsSimpleTextItem, QLabel, QMessageBox
 from pytestqt.qtbot import QtBot
 
 from aoi.config import Settings
@@ -306,8 +306,9 @@ def test_req_set_008_the_presenter_theme_applies_at_once_saved_and_audited(
     kept for the Admin with its hardware table left out (A4 of the 2026-10 business-readiness brief), and what the
     pages drew before in the presenter theme's colours and sizes: the verdict banner of the board inspected before
     (48 pt, black on its fill), the text on its image (18 pt), the Home card numbers and Training's NG rows (their own
-    tint, black, 18 pt). Exit presenter theme in the header, shown to an Admin, turns it off the same way, saved and
-    audited, and puts back the hardware table and what the production theme drew."""
+    tint, black, 18 pt). Settings' fields go under their labels there, and a long workspace folder widens no page in
+    either theme. Exit presenter theme in the header, shown to an Admin, turns it off the same way, saved and audited,
+    and puts back the hardware table and what the production theme drew."""
     ctx = trained_ctx
     win = _window(qtbot, ctx, "Admin")
     win.resize(1920, 1080)
@@ -345,8 +346,12 @@ def test_req_set_008_the_presenter_theme_applies_at_once_saved_and_audited(
     assert "QMainWindow, QWidget#page, QDialog { background: #fafafa;" in theme.stylesheet()
     assert win.stack.currentWidget() is settings and not win._items["Settings"].isHidden()
     assert win._items["3D Profile"].isHidden() and not settings.hardware.isVisible()
-    folder = settings.ws.fontMetrics().horizontalAdvance(settings.ws.text())  # at 18 pt, under its label, whole
-    qtbot.waitUntil(lambda: settings.ws.width() > folder)
+    wrap = QFormLayout.RowWrapPolicy
+    assert settings.form.rowWrapPolicy() == wrap.WrapAllRows  # at 18 pt each field under its label, not a few letters
+    folder = settings.ws.text()
+    settings.ws.setText("C:/" + "/".join(["a long customer folder name"] * 6))  # 168 characters: never widens a page
+    QApplication.processEvents()
+    assert win.minimumSizeHint().width() <= 1888, win.minimumSizeHint()  # the presenter theme's window (README)
     assert win.exit_presenter.isVisible()
     assert win.statusBar().currentMessage() == "Presenter theme on. An Admin turns it off with Exit presenter theme."
     shown = drawn()
@@ -362,16 +367,21 @@ def test_req_set_008_the_presenter_theme_applies_at_once_saved_and_audited(
     assert not theme.presenter() and cast(QApplication, QApplication.instance()).styleSheet() == theme.QSS
     assert not win.exit_presenter.isVisible() and not win._items["3D Profile"].isHidden()
     assert win.stack.currentWidget() is settings and settings.hardware.isVisible()
+    assert settings.form.rowWrapPolicy() == wrap.DontWrapRows
+    QApplication.processEvents()
+    assert win.minimumSizeHint().width() <= 1600, win.minimumSizeHint()  # the production screen's (S28b)
+    settings.ws.setText(folder)
     assert drawn() == before
 
 
 def test_req_set_008_a_restart_keeps_the_presenter_theme_and_only_an_admin_leaves_it(
     qtbot: QtBot, trained_ctx: AppContext
 ) -> None:
-    """The presenter theme saved on, the app starts in it: the light stylesheet, Settings and 3D Profile hidden. An
-    Operator or Engineer cannot leave it (Q49): the header has no Exit presenter theme for them, and the service layer
-    refuses the setting below the Admin role (AOI-USR-001), so nothing changes; for an Admin the header has it, and
-    Settings comes back to the sidebar without its hardware table (A4 of the 2026-10 business-readiness brief).
+    """The presenter theme saved on, the app starts in it: the light stylesheet, and for the Operator signed in,
+    Settings and 3D Profile hidden. An Operator or Engineer cannot leave it (Q49): the header has no Exit presenter
+    theme for them, and the service layer refuses the setting below the Admin role (AOI-USR-001), so nothing changes;
+    for an Admin the header has it, and the sidebar shows Settings, without its hardware table (A4 of the 2026-10
+    business-readiness brief), but not 3D Profile.
     settings.json with a value that is not true or false for it is refused at start-up with AOI-SET-008."""
     ctx = trained_ctx
     ctx.set_user("admin")

@@ -66,10 +66,10 @@ pt in the same colours and shapes, and black text on the green, red and blue fil
 every role, and Settings (the Admin page, with the SYSTEM heading) for every role but the Admin; a page the theme hides
 shows Home in its place, and every other page stays where it was. The Admin presenting keeps Settings, without its
 hardware table, for Reset Demo: three clicks from any page (Settings, Reset Demo, Yes), and the theme stays on after the
-reset. Only an Admin leaves the theme, with Exit presenter theme in the header, which the header shows to an Admin
-alone: an Operator or Engineer at the station switches the user to an Admin first (Switch User), then presses it. Each
-switch, on or off, is saved in `settings.json` as `presenter_theme` and written to the audit log as `settings.change`,
-like a save on Settings.
+reset, which opens the demo at Home. Only an Admin leaves the theme, with Exit presenter theme in the header, which the
+header shows to an Admin alone: an Operator or Engineer at the station switches the user to an Admin first (Switch
+User), then presses it. Each switch, on or off, is saved in `settings.json` as `presenter_theme` and written to the
+audit log as `settings.change`, like a save on Settings.
 
 **The workspace folder.** The station keeps everything in one folder, its workspace: `aoi.sqlite`, the database of
 records, recipes, AI model versions, users, alarms and the audit trail; `images`, the samples by board model and label;

@@ -792,7 +792,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-2"/>
+        <location line="+41"/>
+        <source>Reset the demo workspace? Work still running is stopped first: training without saving an AI model, an AI model test once its folder is done, an export or an image import keeping the files copied so far. Then every result, record, alarm and log of the demo, and every change made in it to its board model, AI model, recipe and samples, is deleted, and the demo is copied back from the installed bundle. The production workspace is not touched.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="-43"/>
         <location line="+9"/>
         <source>{seconds} s</source>
         <translation type="unfinished"></translation>
@@ -814,22 +819,12 @@
     </message>
     <message>
         <location line="+1"/>
-        <location line="+41"/>
+        <location line="+35"/>
         <source>Reset Demo</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-11"/>
-        <source>Reset the demo workspace? The work running now (an inspection, training, an AI model test, an export or an image import) is stopped; then every result, record, alarm and log of the demo, and every change made in it to its board model, AI model, recipe and samples, is deleted, and the demo is copied back from the installed bundle. The production workspace is not touched.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+7"/>
-        <source>Reset the demo workspace? Every result, record, alarm and log of the demo, and every change made in it to its board model, AI model, recipe and samples, is deleted, and the demo is copied back from the installed bundle. The production workspace is not touched.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+8"/>
+        <location line="+4"/>
         <source>Scripted run pace: {seconds} s per board</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7127,7 +7122,7 @@
     </message>
     <message>
         <location line="+4"/>
-        <source>Light, text 18 pt or more, verdict 48 pt; 3D Profile and the hardware table hidden, and Settings for every role but the Admin, who keeps Reset Demo here. An Admin leaves it with Exit presenter theme in the header.</source>
+        <source>Light, text 18 pt or more, verdict 48 pt. 3D Profile and the hardware table are hidden; Settings is hidden too, except for an Admin, who keeps it for Reset Demo. An Admin leaves the theme with Exit presenter theme in the header.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -7142,12 +7137,12 @@
     </message>
     <message>
         <location line="+0"/>
-        <location line="+64"/>
+        <location line="+67"/>
         <source>Role</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-62"/>
+        <location line="-65"/>
         <source>Add / Change User</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7172,7 +7167,7 @@
         <translation>상태</translation>
     </message>
     <message>
-        <location line="+13"/>
+        <location line="+16"/>
         <source>Workspace folder</source>
         <translation type="unfinished"></translation>
     </message>

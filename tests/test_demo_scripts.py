@@ -77,8 +77,8 @@ def test_req_set_007_the_five_minute_script_runs_in_the_presenter_theme(
 ) -> None:
     """docs/demo/stage1-5min.md as clicks: load the demo, switch the presenter theme on, Start, the pause at the NG
     board, Compare, Start again to the end, Logs & Export with both exports, then Reset Demo in the presenter theme,
-    which stays on, in under 10 s, three resets judged by tests/budgets.py; no message on the way, and the run inside
-    its five minutes at the default pace of 3 s."""
+    which stays on, at Home, in under 10 s, three resets judged by tests/budgets.py; no message on the way, and the run
+    inside its five minutes at the default pace of 3 s."""
     shown: list[str] = []
     monkeypatch.setattr(ui_errors, "show_error", lambda _parent, report: shown.append(str(report)))
     monkeypatch.setattr(main_window, "show_error", lambda _parent, report: shown.append(str(report)))
@@ -126,8 +126,8 @@ def test_req_set_007_the_five_minute_script_runs_in_the_presenter_theme(
         started = time.monotonic()
         win = click(qtbot, win.pages["Settings"].demo.btn_reset)  # type: ignore[attr-defined]
         resets.append(time.monotonic() - started)
-        assert win.in_demo and records(win) == [] and win.stack.currentWidget() is win.pages["Settings"]
-        assert theme.presenter() and win.exit_presenter.isVisible()
+        assert win.in_demo and records(win) == [] and win.stack.currentWidget() is win.pages["Home"]
+        assert theme.presenter() and win.exit_presenter.isVisible()  # at Home: the projector never left on Settings
     print("\nREQ-SET-007 Reset Demo, s:", [round(s, 2) for s in resets])
     assert judged(resets) < 10, resets
     assert shown == []
@@ -141,7 +141,8 @@ def test_req_set_008_in_the_presenter_theme_an_admin_resets_the_demo_or_leaves_t
     each where a presenter makes it with nothing scrolled: Settings in the sidebar, Reset Demo, then Yes to its
     question. From a run paused at its NG board, with work still running (a stand-in job that stops when asked, as a
     board's inspection or an export does), Yes to that one question stops the work and the demo comes back in the
-    presenter theme, on Settings, with no records. Exit presenter theme is one click, in the header of every page.
+    presenter theme, at Home, with no records; so does work that starts while the question is open (a scripted run's
+    next board), with no second question. Exit presenter theme is one click, in the header of every page.
     Settings shows no hardware table there (its Stage 2 to 4 rows read "Not connected"); an Operator has no Settings in
     the sidebar and cannot open it. No message on the way."""
     shown: list[str] = []
@@ -149,9 +150,12 @@ def test_req_set_008_in_the_presenter_theme_an_admin_resets_the_demo_or_leaves_t
     monkeypatch.setattr(main_window, "show_error", lambda _parent, report: shown.append(str(report)))
     answers: list[QMessageBox.StandardButton] = []  # the third click, on the question's button
     asked: list[str] = []
+    meanwhile: list[Callable[[], object]] = []  # what starts while the question is open
 
     def question(_parent: QWidget, title: str, *_args: object) -> QMessageBox.StandardButton:
         asked.append(title)
+        while meanwhile:
+            meanwhile.pop(0)()
         return answers.pop(0)
 
     monkeypatch.setattr(QMessageBox, "question", question)
@@ -204,11 +208,24 @@ def test_req_set_008_in_the_presenter_theme_an_admin_resets_the_demo_or_leaves_t
     answers.append(QMessageBox.StandardButton.Yes)
     win = click(qtbot, reset)  # 2, and Yes: 3, the one question
     assert asked == ["Reset Demo"] and answers == [] and work.done
-    assert win.in_demo and records(win) == [] and win.stack.currentWidget() is win.pages["Settings"]
+    assert win.in_demo and records(win) == [] and win.stack.currentWidget() is win.pages["Home"]
     assert theme.presenter() and win.ctx.settings.presenter_theme and not win._items["Settings"].isHidden()
     assert not win.pages["Settings"].hardware.isVisible()  # type: ignore[attr-defined]
     smallest(win)
-    assert whole(win.exit_presenter) and whole(win.pages["Settings"].demo.btn_reset)  # type: ignore[attr-defined]
+    assert whole(win.exit_presenter)
+
+    asked.clear()
+    assert win.ctx.jobs.idle()
+    jobs = win.ctx.jobs
+    later: list[Job[None]] = []
+    meanwhile.append(lambda: later.append(jobs.submit(Job("held", held, with_progress=True))))
+    sidebar(win, "Settings")  # 1
+    reset = win.pages["Settings"].demo.btn_reset  # type: ignore[attr-defined]
+    assert whole(reset)
+    answers.append(QMessageBox.StandardButton.Yes)
+    win = click(qtbot, reset)  # 2, and Yes: 3, though work started while it was asked
+    assert asked == ["Reset Demo"] and answers == [] and len(later) == 1 and later[0].done
+    assert win.in_demo and records(win) == [] and win.stack.currentWidget() is win.pages["Home"]
 
     win.set_user("operator")
     assert win.stack.currentWidget() is win.pages["Home"] and win._items["Settings"].isHidden()
@@ -304,7 +321,7 @@ def test_req_set_007_the_forty_five_minute_script_after_the_fifteen(
     Boards… on Thresholds and the revisions listed; v1.1's AI Model Card, Activate Selected, Run Test again and both
     runs on History, then Roll Back; the frozen versions on Training's Datasets tab; Switch User to the Operator, whose
     Training, AI Model Test and Recipe Editor are greyed and who sees no Exit presenter theme, and back to the Admin;
-    and after they leave, Exit presenter theme and Reset Demo remove v1.1, the runs and the records. No message on the
+    and after they leave, Reset Demo in the presenter theme removes v1.1, the runs and the records. No message on the
     way, and the recipe unchanged."""
     shown: list[str] = []
     monkeypatch.setattr(ui_errors, "show_error", lambda _parent, report: shown.append(str(report)))

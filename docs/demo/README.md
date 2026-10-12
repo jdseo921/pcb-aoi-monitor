@@ -19,7 +19,7 @@ Korean drafts of each file are in [ko/](ko/), marked for review by a native spea
   never for a customer's room ([install.md](../install/install.md)).
 - Lead with an NG board and open **Compare**. Show Settings only if asked.
 - Show only finished features. The presenter theme hides 3D Profile, and the Stage 2 to 4 hardware on **Settings**,
-  for this reason. Settings stays in the sidebar for `admin` alone, for **Reset Demo**.
+  for this reason. Settings stays in the sidebar for the Admin role alone, for **Reset Demo**.
 - Live training runs 2 minutes at most. AI model v1.0 is already trained, so nothing waits on training.
 - Use the customer's images whenever we have them. The 10 demo boards are drawn by the app's own tool: they show
   how the app works, never how well it finds defects. Never quote a number from them as accuracy, and never say
@@ -56,8 +56,8 @@ Rehearse once on the demo laptop, the day before or in the room, and tick each l
 | Training is slow | If the time left reads over 2 minutes, press **Cancel** and use AI model v1.0, which is already trained: "here is one trained on the same boards earlier". Nothing is lost |
 | A verdict looks wrong | Open **Compare**: the table shows each check, its value and its threshold, and the box under it says why in plain words. Explain it from there; never guess |
 | A message appears | Read it out: it says what happened and what to do, with a code. Do what it says, then carry on |
-| The demo goes off course: a wrong click, a board run twice | Start again from a clean demo without leaving the presenter theme, three clicks from any page: **Settings** in the sidebar, **Reset Demo**, then Yes. The demo comes back as installed in under 10 s, on **Settings**; click **Inspection** and press **Start** to run the boards again. Signed in as `operator`, press **Switch User** and sign in as `admin` first, as Settings is the Admin's |
-| The presenter theme is in the way, or you need a page it hides | Press **Exit presenter theme** in the header, on any page: one click. Turn it on again with **Presenter theme** on **Settings** |
+| The demo goes off course: a wrong click, a board run twice | Start again from a clean demo without leaving the presenter theme, three clicks from any page: **Settings** in the sidebar, **Reset Demo**, then Yes. The demo comes back as installed, at **Home**, in under 10 s once any work still running has stopped (an AI model test finishes its folder first); click **Inspection** and press **Start** to run the boards again. Signed in as `operator`, press **Switch User** and sign in as `admin` first, as Settings is the Admin's |
+| The presenter theme is in the way, or you need a page it hides | Signed in as `admin`, press **Exit presenter theme** in the header, on any page: one click. Turn it on again with **Presenter theme** on **Settings** |
 | No projector | Play the recording, and hand over the report as usual |
 
 ## After the demo
