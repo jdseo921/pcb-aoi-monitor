@@ -95,9 +95,10 @@ def test_req_insp_012_a_map_that_cannot_be_read_says_which_and_why(
         raise PermissionError(13, "Permission denied", str(self))
 
     monkeypatch.setattr(Path, "read_bytes", held)
-    with pytest.raises(AoiError, match="board_ai2.png could not be read: Permission denied") as locked:
+    with pytest.raises(AoiError, match="board_ai2.png could not be read: the system refused access to it") as locked:
         maps.load_maps(InspectionResult("OK", 0.0), None, str(path))
     assert bad.value.code == locked.value.code == "AOI-CMP-003" and path.name in str(locked.value.detail)
+    assert "Permission denied" not in locked.value.what and "Permission denied" in str(locked.value.detail)  # F8
 
 
 def _backdate(ctx: AppContext, days: int, *ids: int) -> None:

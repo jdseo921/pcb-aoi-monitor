@@ -88,7 +88,7 @@ def test_req_log_005_unhandled_error_is_logged_with_the_version_and_shown_with_i
     (shown,) = dialogs
     assert shown == (
         UNEXPECTED,
-        "An unexpected error (RuntimeError) stopped the last action (unhandled).\n\n"
+        "An unexpected error stopped the last action.\n\n"  # its class behind Show Details…, "unhandled" in the log
         "Try again; if it happens again, restart the app and send the log file (the workspace's logs folder) to "
         "support.",
     )
@@ -177,8 +177,8 @@ def test_req_set_019_page_errors_show_code_what_and_action_never_a_trace(
     )
     win.pages["Compare"].error(ValueError("secret detail"))
     title, text = dialogs[-1]
-    assert title == UNEXPECTED and text.startswith("An unexpected error (ValueError) stopped the last action (Compare)")
-    assert "secret detail" not in text and "Traceback" not in text
+    assert title == UNEXPECTED and text.startswith("An unexpected error stopped the last action (Compare).")
+    assert "secret detail" not in text and "Traceback" not in text and "ValueError" not in text
     page = win.pages["Inspection"]  # an error inside the worker thread reaches the operator the same way
     win.navigate("Inspection")
     page._set_queue([tmp_path / "missing.png"])

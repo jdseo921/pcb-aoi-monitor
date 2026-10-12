@@ -38,6 +38,7 @@ from aoi.core.services import AppContext  # noqa: E402
 from aoi.data import credentials  # noqa: E402
 from aoi.data.db import new_uuid  # noqa: E402
 from aoi.ui import theme, workers  # noqa: E402
+from aoi.ui.errors import ErrorBox  # noqa: E402
 from aoi.ui.theme import QSS  # noqa: E402
 from tools.make_synthetic_dataset import ng_type, write_dataset  # noqa: E402
 from tools.trainable import trainable  # noqa: E402
@@ -257,7 +258,11 @@ def dialogs(monkeypatch: pytest.MonkeyPatch) -> Iterator[list[tuple[str, str]]]:
         shown.append((title, text))
         return QMessageBox.StandardButton.Ok
 
+    def record_box(box: ErrorBox) -> int:
+        return record(box.parentWidget(), box.windowTitle(), box.text())
+
     monkeypatch.setattr(QMessageBox, "critical", staticmethod(record))
+    monkeypatch.setattr(ErrorBox, "exec", record_box)  # show_error's dialog, with its Details
     yield shown
     assert all(title.startswith("AOI-") for title, _ in shown), f"an error dialog without a code: {shown}"
 

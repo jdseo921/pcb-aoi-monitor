@@ -18,7 +18,7 @@ from pathlib import Path
 import cv2
 import numpy as np
 
-from ..errors import QT_TRANSLATE_NOOP, AoiError
+from ..errors import A_FOLDER, QT_TRANSLATE_NOOP, AoiError, system_detail, system_reason
 from .imaging import image_header, save_image
 from .inspector import InspectionResult
 
@@ -106,7 +106,8 @@ def read_map(path: str | Path) -> np.ndarray | None:
     except FileNotFoundError:
         return None
     except OSError as e:
-        raise AoiError("AOI-CMP-003", detail=str(e), file=Path(path).name, reason=e.strerror or type(e).__name__) from e
+        why = A_FOLDER if Path(path).is_dir() else system_reason(e)  # Windows refuses a folder as access denied
+        raise AoiError("AOI-CMP-003", system_detail(e), file=Path(path).name, reason=why) from e
     try:
         img = cv2.imdecode(np.frombuffer(data, dtype=np.uint8), cv2.IMREAD_UNCHANGED)
     except cv2.error:  # a header claiming more pixels than OpenCV decodes

@@ -18,6 +18,7 @@ import main
 from aoi.config import Settings
 from aoi.core.services import AppContext
 from aoi.ui import workers
+from aoi.ui.errors import ErrorBox
 from aoi.ui.main_window import MainWindow
 from aoi.ui.pages.training import TrainingPage
 from tests.test_alarms_and_errors import UNEXPECTED, _log_rows
@@ -109,7 +110,7 @@ def test_req_log_005_an_error_while_the_window_is_built_shows_a_coded_dialog_and
     assert dialogs == [
         (
             UNEXPECTED,
-            "An unexpected error (RuntimeError) stopped the last action («start-up»).\n\n"
+            "An unexpected error stopped the last action («start-up»).\n\n"
             "Try again; if it happens again, restart the app and send the log file (the workspace's logs folder) to "
             "support.",
         )
@@ -142,7 +143,8 @@ def test_req_log_005_an_error_in_a_slot_while_the_window_is_built_is_shown_with_
     monkeypatch.setattr(_App, "loop", staticmethod(loop))
     assert main.main() == 0
     (ctx,) = opened
-    assert [title for title, _ in dialogs] == [UNEXPECTED] and "(unhandled)" in dialogs[0][1]
+    assert [title for title, _ in dialogs] == [UNEXPECTED] and "unhandled" not in dialogs[0][1]  # the log says it
+    assert dialogs[0][1].startswith("An unexpected error stopped the last action.")
     (row,) = _log_rows(ctx, "error.shown")
     assert "RuntimeError: slot failed at start-up" in str(row["trace"])
     assert _closed(ctx)
@@ -161,7 +163,7 @@ def test_req_log_005_startup_installs_excepthook(
         shown.append((parent, title))
         return QMessageBox.StandardButton.Ok
 
-    monkeypatch.setattr(QMessageBox, "critical", staticmethod(record))
+    monkeypatch.setattr(ErrorBox, "exec", lambda box: record(box.parentWidget(), box.windowTitle(), box.text()))
     seen: dict[str, Any] = {}
 
     def boom() -> None:

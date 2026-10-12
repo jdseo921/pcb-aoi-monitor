@@ -16,7 +16,7 @@ import os
 import sys
 from pathlib import Path
 
-from ..errors import QT_TRANSLATE_NOOP
+from ..errors import QT_TRANSLATE_NOOP, system_detail, system_reason
 from .errors import WorkspaceError
 
 LOCK_NAME = ".aoi.lock"
@@ -42,14 +42,14 @@ class WorkspaceLock:
         try:
             fd = os.open(path, os.O_RDWR | os.O_CREAT, 0o644)
         except OSError as e:
-            raise WorkspaceError("AOI-SET-011", path=str(folder), error=str(e)) from e
+            raise WorkspaceError("AOI-SET-011", system_detail(e), path=str(folder), error=system_reason(e)) from e
         try:
             _lock(fd)
         except OSError as e:
             os.close(fd)
             if e.errno in _HELD:
                 raise WorkspaceError("AOI-SET-012", path=str(path), error=ANOTHER_COPY) from e
-            raise WorkspaceError("AOI-SET-011", path=str(folder), error=str(e)) from e
+            raise WorkspaceError("AOI-SET-011", system_detail(e), path=str(folder), error=system_reason(e)) from e
         return cls(fd, path)
 
     def release(self) -> None:

@@ -144,7 +144,7 @@ def test_req_trn_014_a_refused_ai_model_file_names_the_ai_model_and_no_import(tm
         AnomalyModel.load(bad)
     print(refused.value)
     assert not_words(str(refused.value)) == [] and "import" not in str(refused.value)
-    assert "weights-only AI model file this app wrote" in refused.value.what
+    assert "could not be loaded as an AI model file this app wrote" in refused.value.what
     assert refused.value.action == "Train the board model again."
 
 
