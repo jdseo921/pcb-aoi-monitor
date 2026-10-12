@@ -117,9 +117,9 @@ Training TBOX-A1 · Aligning images 12 of 50   [██████░░░░�
 
 ## Presenter theme (REQ-SET-008)
 
-Switched on in Settings (Admin) and left with "Exit presenter theme" in the header. Light background #FAFAFA,
-text ≥ 18 pt, verdict 48 pt, the same verdict colours and shapes, the Settings entry hidden, the sidebar collapsed
-to icons with labels. Colours come only from `aoi/ui/theme.py`; every string goes through `self.tr()`.
+Switched on in Settings (Admin) and left with "Exit presenter theme" in the header. Light background #FAFAFA, text ≥ 18
+pt, verdict 48 pt, the same verdict colours and shapes, the Settings entry hidden but for the Admin, the sidebar
+collapsed to icons with labels. Colours come only from `aoi/ui/theme.py`; every string goes through `self.tr()`.
 
 ## Requirements served
 

@@ -701,9 +701,11 @@ def test_req_set_008_presenter_text_and_hidden_admin(
     """The presenter theme, switched on as an Admin does it, with Settings' Presenter theme tick: for every role, every
     page the sidebar shows passes the walk above with the presenter theme's tokens, so every text is 18 pt or more,
     tables and text on images included, operator targets are 48 px or more, and every text colour reads at 4.5:1 or
-    more on its surface, large and bold text held to 4.5:1 too (LARGE_RATIO); the verdict banner is 48 pt. The Admin
-    page (Settings, with the SYSTEM heading over it alone) and 3D Profile are hidden from the sidebar for every role and
-    cannot be opened; the header's Exit presenter theme is shown to an Admin only, and turns the theme off."""
+    more on its surface, large and bold text held to 4.5:1 too (LARGE_RATIO); the verdict banner is 48 pt. 3D Profile
+    is hidden from the sidebar for every role and cannot be opened, and so is the Admin page (Settings, with the SYSTEM
+    heading over it alone) for every role but the Admin, who keeps it, with Reset Demo, and walks it without its
+    hardware table (A4 of the 2026-10 business-readiness brief); the header's Exit presenter theme is shown to an Admin
+    only, and turns the theme off."""
     ctx, dataset = screens
     findings: list[str] = []
     seen: Counter = Counter()
@@ -713,12 +715,15 @@ def test_req_set_008_presenter_text_and_hidden_admin(
         win.pages["Settings"].presenter.click()
         try:
             assert theme.presenter() and ctx.settings.presenter_theme and theme.FONT_PT == LARGE_PT
-            assert win.stack.currentWidget() is win.pages["Home"], "Settings is hidden, so Home shows"
+            assert win.stack.currentWidget() is win.pages["Settings"], "the Admin keeps Settings, so it stays"
+            assert not win.pages["Settings"].hardware.isVisible()
             (system,) = [it for it in map(win.nav.item, range(win.nav.count())) if it.text() == "SYSTEM"]
             for role in ROLES:
                 win.set_user(role.lower())
                 hidden = [title for title, it in win._items.items() if it.isHidden()]
-                assert hidden == ["3D Profile", "Settings"] and system.isHidden(), (role, hidden)
+                admin = role == "Admin"
+                assert hidden == ["3D Profile"] + ["Settings"] * (not admin), (role, hidden)
+                assert system.isHidden() != admin, role
                 for title in hidden:
                     assert not win.navigate(title) and win.stack.currentWidget() is not win.pages[title], title
                     assert win.statusBar().currentMessage() == f"{title} is hidden in the presenter theme"

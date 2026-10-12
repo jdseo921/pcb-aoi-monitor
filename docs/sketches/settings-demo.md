@@ -6,8 +6,9 @@ sketches (ADR 0002); the Users group is only placed here.
 
 ## Page and roles
 
-Settings (System). Admin only. The presenter theme, once on, hides this page; the header's "Exit presenter
-theme" brings it back for an Admin.
+Settings (System). Admin only. The presenter theme, once on, hides this page from every role but the Admin, who
+keeps it for Reset Demo, without the hardware table; the header's "Exit presenter theme" leaves the theme (A4 of the
+2026-10 business-readiness brief).
 
 ## Wireframe (1920 × 1080; two columns; at 1366 × 768 one column, groups stacked)
 
@@ -52,7 +53,7 @@ scripted run plays mixed OK and NG boards at the set pace from the demo workspac
 | Reset demo | Reset Demo | — | B | Red; deletes demo results and restores the bundle; confirmation names what is removed; finishes within 10 s |
 | Scripted run pace | Scripted run pace | ← → | slider, 48 px knob | 1 to 10 s per board, default 3 s |
 | Play scripted run | Play Scripted Run › | — | B | Opens Inspection with the demo queue and Start pressed |
-| Presenter theme | Presenter theme | — | T (check box) | Light theme, text ≥ 18 pt, verdict 48 pt, Admin pages hidden (REQ-SET-008) |
+| Presenter theme | Presenter theme | — | T (check box) | Light theme, text ≥ 18 pt, verdict 48 pt, Admin pages hidden from every role but the Admin, the hardware table hidden (REQ-SET-008) |
 | Exit presenter theme | Exit presenter theme | — | T (header) | Admin only |
 
 ## Empty state

@@ -302,11 +302,12 @@ def test_req_set_008_the_presenter_theme_applies_at_once_saved_and_audited(
     qtbot: QtBot, trained_ctx: AppContext, synthetic_dataset: Path
 ) -> None:
     """An Admin ticks Presenter theme on Settings: it is saved in settings.json, audited as `settings.change` with the
-    value before, and applies at once, with no restart: the light stylesheet, Settings and 3D Profile out of the
-    sidebar and Home shown, and what the pages drew before in the presenter theme's colours and sizes: the verdict
-    banner of the board inspected before (48 pt, black on its fill), the text on its image (18 pt), the Home card
-    numbers and Training's NG rows (their own tint, black, 18 pt). Exit presenter theme in the header, shown to an
-    Admin, turns it off the same way, saved and audited, and puts back what the production theme drew."""
+    value before, and applies at once, with no restart: the light stylesheet, 3D Profile out of the sidebar, Settings
+    kept for the Admin with its hardware table left out (A4 of the 2026-10 business-readiness brief), and what the
+    pages drew before in the presenter theme's colours and sizes: the verdict banner of the board inspected before
+    (48 pt, black on its fill), the text on its image (18 pt), the Home card numbers and Training's NG rows (their own
+    tint, black, 18 pt). Exit presenter theme in the header, shown to an Admin, turns it off the same way, saved and
+    audited, and puts back the hardware table and what the production theme drew."""
     ctx = trained_ctx
     win = _window(qtbot, ctx, "Admin")
     win.resize(1920, 1080)
@@ -316,7 +317,7 @@ def test_req_set_008_the_presenter_theme_applies_at_once_saved_and_audited(
     win.navigate("Training")  # its samples, NG rows tinted, drawn before the switch
     settings = cast(SettingsPage, win.pages["Settings"])
     win.navigate("Settings")
-    assert not settings.presenter.isChecked() and not win.exit_presenter.isVisible()
+    assert not settings.presenter.isChecked() and not win.exit_presenter.isVisible() and settings.hardware.isVisible()
 
     def drawn() -> dict[str, object]:
         """What the pages drew, read as a user sees it."""
@@ -342,9 +343,10 @@ def test_req_set_008_the_presenter_theme_applies_at_once_saved_and_audited(
     assert ctx.settings.presenter_theme and theme.presenter()
     assert cast(QApplication, QApplication.instance()).styleSheet() == theme.stylesheet()
     assert "QMainWindow, QWidget#page, QDialog { background: #fafafa;" in theme.stylesheet()
-    assert (
-        win.stack.currentWidget() is home and win._items["Settings"].isHidden() and win._items["3D Profile"].isHidden()
-    )
+    assert win.stack.currentWidget() is settings and not win._items["Settings"].isHidden()
+    assert win._items["3D Profile"].isHidden() and not settings.hardware.isVisible()
+    folder = settings.ws.fontMetrics().horizontalAdvance(settings.ws.text())  # at 18 pt, under its label, whole
+    qtbot.waitUntil(lambda: settings.ws.width() > folder)
     assert win.exit_presenter.isVisible()
     assert win.statusBar().currentMessage() == "Presenter theme on. An Admin turns it off with Exit presenter theme."
     shown = drawn()
@@ -358,7 +360,8 @@ def test_req_set_008_the_presenter_theme_applies_at_once_saved_and_audited(
     entry = ctx.audit_entries(action="settings.change")[0]
     assert (entry["before"], entry["after"]) == ({"presenter_theme": True}, {"presenter_theme": False})
     assert not theme.presenter() and cast(QApplication, QApplication.instance()).styleSheet() == theme.QSS
-    assert not win.exit_presenter.isVisible() and not win._items["Settings"].isHidden()
+    assert not win.exit_presenter.isVisible() and not win._items["3D Profile"].isHidden()
+    assert win.stack.currentWidget() is settings and settings.hardware.isVisible()
     assert drawn() == before
 
 
@@ -367,7 +370,8 @@ def test_req_set_008_a_restart_keeps_the_presenter_theme_and_only_an_admin_leave
 ) -> None:
     """The presenter theme saved on, the app starts in it: the light stylesheet, Settings and 3D Profile hidden. An
     Operator or Engineer cannot leave it (Q49): the header has no Exit presenter theme for them, and the service layer
-    refuses the setting below the Admin role (AOI-USR-001), so nothing changes; for an Admin the header has it.
+    refuses the setting below the Admin role (AOI-USR-001), so nothing changes; for an Admin the header has it, and
+    Settings comes back to the sidebar without its hardware table (A4 of the 2026-10 business-readiness brief).
     settings.json with a value that is not true or false for it is refused at start-up with AOI-SET-008."""
     ctx = trained_ctx
     ctx.set_user("admin")
@@ -384,7 +388,8 @@ def test_req_set_008_a_restart_keeps_the_presenter_theme_and_only_an_admin_leave
         assert e.value.code == "AOI-USR-001", role
     assert ctx.settings.presenter_theme and theme.presenter() and Settings.load().presenter_theme is True
     win.set_user("admin")
-    assert win.exit_presenter.isVisible()
+    assert win.exit_presenter.isVisible() and not win._items["Settings"].isHidden() and win.navigate("Settings")
+    assert win._items["3D Profile"].isHidden() and not cast(SettingsPage, win.pages["Settings"]).hardware.isVisible()
     Settings._file().write_text('{"presenter_theme": "yes"}', encoding="utf-8")
     with pytest.raises(AoiError) as e:
         Settings.load()

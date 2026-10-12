@@ -585,8 +585,9 @@ class MainWindow(QMainWindow):
 
     def _sync_nav(self) -> None:
         """The sidebar and the header for the role and the theme. An entry the role may not open is greyed, its tooltip
-        naming the roles that may, and its badge hidden. In the presenter theme the Admin pages and 3D Profile leave the
-        sidebar, with a heading left over none, and Exit presenter theme shows to an Admin only (REQ-SET-008, Q49)."""
+        naming the roles that may, and its badge hidden. In the presenter theme 3D Profile, and the Admin pages for
+        every role but the Admin, leave the sidebar, with a heading left over none, and Exit presenter theme shows to an
+        Admin only (REQ-SET-008, Q49)."""
         role = self.ctx.role
         for title, it in self._items.items():
             allowed = role in self.pages[title].roles
@@ -608,10 +609,14 @@ class MainWindow(QMainWindow):
         self.gates.gate(self.btn_new, "ensure_board_model")  # never hidden: greyed, saying who may (REQ-USR-001)
 
     def hidden(self, title: str) -> bool:
-        """Whether page `title` is out of the sidebar, and cannot be opened: in the presenter theme, a page for the
-        Admin alone (Settings) and a page marked not `in_presenter_theme` (3D Profile) (REQ-SET-008)."""
+        """Whether page `title` is out of the sidebar, and cannot be opened: in the presenter theme, a page marked not
+        `in_presenter_theme` (3D Profile), and a page for the Admin alone (Settings) for every other role (REQ-SET-008).
+        The Admin presenting keeps Settings, so Reset Demo is two clicks from any page and the theme stays on (A4 of the
+        2026-10 business-readiness brief); Settings then leaves out its hardware table (`SettingsPage.restyle`)."""
         page = self.pages[title]
-        return theme.presenter() and (page.roles == ("Admin",) or not page.in_presenter_theme)
+        if not theme.presenter():
+            return False
+        return not page.in_presenter_theme or (page.roles == ("Admin",) and self.ctx.role not in page.roles)
 
     def _set_theme(self, presenter: bool) -> None:
         theme.use(presenter)
@@ -760,8 +765,9 @@ class MainWindow(QMainWindow):
         drop_queued(self.ctx.jobs)  # slots the jobs queued before they stopped would meet the closed context
         event.accept()
 
-    def _may_stop_work(self, then: str) -> bool:
-        """True when no work runs, or the user agrees to stop it before `then`; the status bar says it is stopping."""
+    def _may_stop_work(self, then: str, agreed: bool = False) -> bool:
+        """True when no work runs, or the user agrees to stop it before `then`, or `agreed` to it already in the one
+        question before (Reset Demo's); the status bar says it is stopping."""
         if self.ctx.jobs.idle():
             return True
         yes, no = QMessageBox.StandardButton.Yes, QMessageBox.StandardButton.No
@@ -770,19 +776,22 @@ class MainWindow(QMainWindow):
             "it and {then}? Training stops without saving an AI model, so the active one stays; an AI model "
             "test finishes its folder first; an export or import keeps the files copied so far."
         ).format(then=then)
-        if QMessageBox.question(self, self.tr("Stop the running work?"), question, yes | no, no) != yes:
+        if not agreed and QMessageBox.question(self, self.tr("Stop the running work?"), question, yes | no, no) != yes:
             return False
         self.status(self.tr("Stopping the running work…"), ms=0)
         self.statusBar().repaint()  # the wait that follows holds the UI thread until each job has stopped
         return True
 
     # --- demo workspace (REQ-SET-007, REQ-SET-009) ----------------------------------
-    def switch_workspace(self, folder: Path | None, reset: bool = False, play: bool = False) -> MainWindow | None:
+    def switch_workspace(
+        self, folder: Path | None, reset: bool = False, play: bool = False, agreed: bool = False
+    ) -> MainWindow | None:
         """Close this workspace and open `folder`, the demo workspace (None: the station's own), in a new window on
         the same page, signed in as a user of the same role; the demo is put back as the bundle holds it first when
-        `reset`, and its scripted run started when `play`. Running work is stopped first, if the user agrees; a folder
+        `reset`, and its scripted run started when `play`. Running work is stopped first, if the user agrees, or
+        `agreed` already (Reset Demo's question names it, so a reset is three clicks while boards run too); a folder
         that does not open opens the one before again. Returns the new window, or None when nothing was switched."""
-        if not self._may_stop_work(self.tr("switch the workspace")):
+        if not self._may_stop_work(self.tr("switch the workspace"), agreed):
             return None
         role, page, keys = self.ctx.role, self._page_title(), self.ctx.credentials
         if self.in_demo:  # the demo, left, opens at Home next as after a close; saved before another settings.json

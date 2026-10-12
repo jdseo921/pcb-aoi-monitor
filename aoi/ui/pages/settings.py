@@ -23,6 +23,7 @@ from PySide6.QtWidgets import (
 from ...config import APP_VERSION
 from ...core.services import AppContext
 from ...errors import AoiError
+from .. import theme
 from .base import QT_TRANSLATE_NOOP, ROLES, Page, button, fill_table, make_table, role_text, size_class
 from .settings_demo import DemoPanel
 from .settings_stores import StoresPanel
@@ -58,8 +59,10 @@ class SettingsPage(Page):
         body = QHBoxLayout()
         g = QGroupBox(self.tr("System"))
         f = QFormLayout(g)
+        f.setRowWrapPolicy(QFormLayout.RowWrapPolicy.WrapLongRows)  # the folder under its label when it is too long
         s = ctx.settings
         self.ws = QLineEdit(s.workspace)
+        self.ws.textChanged.connect(self._fit_workspace)
         ws_row = QWidget()
         wl = QHBoxLayout(ws_row)
         wl.setContentsMargins(0, 0, 0, 0)
@@ -119,8 +122,9 @@ class SettingsPage(Page):
         self.presenter.clicked.connect(self._switch_presenter)
         about = QLabel(
             self.tr(
-                "Light, text 18 pt or more, verdict 48 pt; Settings and 3D Profile hidden. An Admin leaves it with Exit"
-                " presenter theme in the header."
+                "Light, text 18 pt or more, verdict 48 pt; 3D Profile and the hardware table hidden, and Settings for"
+                " every role but the Admin, who keeps Reset Demo here. An Admin leaves it with Exit presenter theme in"
+                " the header."
             )
         )
         about.setObjectName("muted")
@@ -134,13 +138,27 @@ class SettingsPage(Page):
         ul.addWidget(self.users)
         ul.addWidget(button(self.tr("Add / Change User"), slot=self.add_user))
         right.addWidget(ug, 1)
-        hg = QGroupBox(self.tr("Hardware interfaces"))
-        hl = QVBoxLayout(hg)
+        self.hardware = QGroupBox(self.tr("Hardware interfaces"))
+        hl = QVBoxLayout(self.hardware)
         self.hw = make_table([self.tr("Interface"), self.tr("Stage"), self.tr("Status")])
         hl.addWidget(self.hw)
-        right.addWidget(hg, 1)
+        right.addWidget(self.hardware, 1)
         body.addLayout(right, 1)
         self.root.addLayout(body, 1)
+        self.restyle()
+
+    def restyle(self) -> None:
+        """The presenter theme leaves out the hardware table, whose Stage 2 to 4 rows read "Not connected": a demo shows
+        only what is finished (Customers & Launch, "Demos"; A4 of the 2026-10 business-readiness brief). The workspace
+        folder is shown whole in either theme's text size."""
+        self.hardware.setVisible(not theme.presenter())
+        self._fit_workspace()
+
+    def _fit_workspace(self) -> None:
+        """The workspace field as wide as its folder, so the form puts it under its label rather than cut it (at the
+        presenter theme's 18 pt the label leaves it a few letters)."""
+        self.ws.ensurePolished()  # the theme's font: its padding and frame take less than a SPACE each side
+        self.ws.setMinimumWidth(self.ws.fontMetrics().horizontalAdvance(self.ws.text()) + 2 * theme.SPACE)
 
     def _browse(self) -> None:
         d = QFileDialog.getExistingDirectory(self, self.tr("Workspace folder"), self.ws.text())

@@ -8,15 +8,18 @@ from __future__ import annotations
 import csv
 import re
 import time
+from collections.abc import Callable
 from pathlib import Path
 
 import pytest
-from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QFileDialog, QInputDialog, QMessageBox, QPushButton
+from PySide6.QtCore import QSize, Qt
+from PySide6.QtWidgets import QFileDialog, QInputDialog, QMessageBox, QPushButton, QWidget
 from pytestqt.qtbot import QtBot
 
+from aoi.core.jobs import Job
 from aoi.ui import errors as ui_errors
-from aoi.ui import main_window
+from aoi.ui import main_window, theme
+from aoi.ui.main_window import MainWindow
 from aoi.ui.pages.base import Page
 from aoi.ui.pages.inspection import InspectionPage
 from tests.budgets import LONG_TRIES, judged
@@ -73,9 +76,9 @@ def test_req_set_007_the_five_minute_script_runs_in_the_presenter_theme(
     qtbot: QtBot, bundle: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """docs/demo/stage1-5min.md as clicks: load the demo, switch the presenter theme on, Start, the pause at the NG
-    board, Compare, Start again to the end, Logs & Export with both exports, then Exit presenter theme and Reset Demo
-    in under 10 s, three resets judged by tests/budgets.py; no message on the way, and the run inside its five
-    minutes at the default pace of 3 s."""
+    board, Compare, Start again to the end, Logs & Export with both exports, then Reset Demo in the presenter theme,
+    which stays on, in under 10 s, three resets judged by tests/budgets.py; no message on the way, and the run inside
+    its five minutes at the default pace of 3 s."""
     shown: list[str] = []
     monkeypatch.setattr(ui_errors, "show_error", lambda _parent, report: shown.append(str(report)))
     monkeypatch.setattr(main_window, "show_error", lambda _parent, report: shown.append(str(report)))
@@ -84,8 +87,8 @@ def test_req_set_007_the_five_minute_script_runs_in_the_presenter_theme(
     assert win.in_demo and win.ctx.settings.demo_pace_s == 3  # 10 boards at 3 s: about 30 s of the five minutes
     win.pages["Settings"].demo.pace.setValue(1)  # type: ignore[attr-defined]  # the test's own pace
     win.pages["Settings"].presenter.click()  # type: ignore[attr-defined]
-    assert win.stack.currentWidget() is win.pages["Home"] and not win.navigate("Settings")
-    assert win.exit_presenter.isVisible()
+    assert win.stack.currentWidget() is win.pages["Settings"] and not win._items["Settings"].isHidden()
+    assert win.exit_presenter.isVisible() and not win.pages["Settings"].hardware.isVisible()  # type: ignore[attr-defined]
 
     assert win.navigate("Inspection")
     page = win.pages["Inspection"]
@@ -116,7 +119,6 @@ def test_req_set_007_the_five_minute_script_runs_in_the_presenter_theme(
     qtbot.mouseClick(logs.btn_img, Qt.MouseButton.LeftButton)  # type: ignore[attr-defined]
     qtbot.waitUntil(lambda: len(list(usb.glob("*.png"))) == 10 and logs._bg is None, timeout=30000)
 
-    qtbot.mouseClick(win.exit_presenter, Qt.MouseButton.LeftButton)
     assert win.navigate("Settings")
     resets: list[float] = []
     for _ in range(LONG_TRIES):  # judged by tests/budgets.py; the first puts back the run just played, the next two
@@ -125,8 +127,96 @@ def test_req_set_007_the_five_minute_script_runs_in_the_presenter_theme(
         win = click(qtbot, win.pages["Settings"].demo.btn_reset)  # type: ignore[attr-defined]
         resets.append(time.monotonic() - started)
         assert win.in_demo and records(win) == [] and win.stack.currentWidget() is win.pages["Settings"]
+        assert theme.presenter() and win.exit_presenter.isVisible()
     print("\nREQ-SET-007 Reset Demo, s:", [round(s, 2) for s in resets])
     assert judged(resets) < 10, resets
+    assert shown == []
+
+
+def test_req_set_008_in_the_presenter_theme_an_admin_resets_the_demo_or_leaves_the_theme_in_three_clicks(
+    qtbot: QtBot, bundle: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A4 of the 2026-10 business-readiness brief (D7, F10). In the presenter theme, in the smallest window it fits
+    (1888 x 907, docs/demo/README.md), an Admin reaches Reset Demo from every page the sidebar shows in three clicks,
+    each where a presenter makes it with nothing scrolled: Settings in the sidebar, Reset Demo, then Yes to its
+    question. From a run paused at its NG board, with work still running (a stand-in job that stops when asked, as a
+    board's inspection or an export does), Yes to that one question stops the work and the demo comes back in the
+    presenter theme, on Settings, with no records. Exit presenter theme is one click, in the header of every page.
+    Settings shows no hardware table there (its Stage 2 to 4 rows read "Not connected"); an Operator has no Settings in
+    the sidebar and cannot open it. No message on the way."""
+    shown: list[str] = []
+    monkeypatch.setattr(ui_errors, "show_error", lambda _parent, report: shown.append(str(report)))
+    monkeypatch.setattr(main_window, "show_error", lambda _parent, report: shown.append(str(report)))
+    answers: list[QMessageBox.StandardButton] = []  # the third click, on the question's button
+    asked: list[str] = []
+
+    def question(_parent: QWidget, title: str, *_args: object) -> QMessageBox.StandardButton:
+        asked.append(title)
+        return answers.pop(0)
+
+    monkeypatch.setattr(QMessageBox, "question", question)
+    win = click(qtbot, station(qtbot).pages["Settings"].demo.btn_load)  # type: ignore[attr-defined]
+    win.pages["Settings"].demo.pace.setValue(1)  # type: ignore[attr-defined]  # the test's own pace
+    win.pages["Settings"].presenter.click()  # type: ignore[attr-defined]
+
+    def smallest(win: MainWindow) -> None:
+        win.resize(1888, 907)
+        qtbot.waitUntil(lambda: win.size() == QSize(1888, 907))
+
+    def whole(widget: QWidget) -> bool:
+        """Shown whole where it is, nothing scrolled away or cut off: a click lands on it."""
+        return widget.isVisible() and widget.visibleRegion().boundingRect() == widget.rect()
+
+    def sidebar(win: MainWindow, title: str) -> None:
+        """Click `title` in the sidebar, where it shows."""
+        rect = win.nav.visualItemRect(win._items[title])
+        assert not win._items[title].isHidden() and win.nav.viewport().rect().contains(rect), title
+        qtbot.mouseClick(win.nav.viewport(), Qt.MouseButton.LeftButton, pos=rect.center())
+
+    smallest(win)
+    settings = win.pages["Settings"]
+    reset = settings.demo.btn_reset  # type: ignore[attr-defined]
+    titles = [title for title, item in win._items.items() if not item.isHidden()]
+    assert "Settings" in titles and "3D Profile" not in titles and not win.navigate("3D Profile")
+    for title in titles:
+        assert win.navigate(title)
+        assert whole(win.exit_presenter), title
+        sidebar(win, "Settings")  # 1
+        assert win.stack.currentWidget() is settings and whole(reset) and reset.isEnabled(), title
+        assert not settings.hardware.isVisible(), title  # type: ignore[attr-defined]
+        answers.append(QMessageBox.StandardButton.No)
+        qtbot.mouseClick(reset, Qt.MouseButton.LeftButton)  # 2, and its question: 3
+        assert asked.pop() == "Reset Demo" and theme.presenter() and win.isVisible(), title
+
+    assert win.navigate("Inspection")
+    page = win.pages["Inspection"]
+    assert isinstance(page, InspectionPage)
+    qtbot.mouseClick(page.btn_start, Qt.MouseButton.LeftButton)
+    qtbot.waitUntil(lambda: not page.running and page.worker is None, timeout=60000)
+    assert page.last is not None and page.last.verdict == "NG" and records(win) == VERDICTS[:4]
+
+    def held(progress: Callable[..., None], should_stop: Callable[[], bool]) -> None:
+        while not should_stop():
+            time.sleep(0.01)
+
+    work = win.ctx.jobs.submit(Job("held", held, with_progress=True))
+    sidebar(win, "Settings")  # 1
+    answers.append(QMessageBox.StandardButton.Yes)
+    win = click(qtbot, reset)  # 2, and Yes: 3, the one question
+    assert asked == ["Reset Demo"] and answers == [] and work.done
+    assert win.in_demo and records(win) == [] and win.stack.currentWidget() is win.pages["Settings"]
+    assert theme.presenter() and win.ctx.settings.presenter_theme and not win._items["Settings"].isHidden()
+    assert not win.pages["Settings"].hardware.isVisible()  # type: ignore[attr-defined]
+    smallest(win)
+    assert whole(win.exit_presenter) and whole(win.pages["Settings"].demo.btn_reset)  # type: ignore[attr-defined]
+
+    win.set_user("operator")
+    assert win.stack.currentWidget() is win.pages["Home"] and win._items["Settings"].isHidden()
+    assert not win.navigate("Settings") and not win.exit_presenter.isVisible()
+    win.set_user("admin")
+    qtbot.mouseClick(win.exit_presenter, Qt.MouseButton.LeftButton)  # 1
+    assert not theme.presenter() and not win.ctx.settings.presenter_theme and win.navigate("Settings")
+    assert win.pages["Settings"].hardware.isVisible()  # type: ignore[attr-defined]
     assert shown == []
 
 
@@ -289,9 +379,9 @@ def test_req_set_007_the_forty_five_minute_script_after_the_fifteen(
         assert win.navigate("Inspection")
 
     # After they leave
-    qtbot.mouseClick(win.exit_presenter, Qt.MouseButton.LeftButton)
     assert win.navigate("Settings")
     win = click(qtbot, win.pages["Settings"].demo.btn_reset)  # type: ignore[attr-defined]
+    assert theme.presenter() and win.exit_presenter.isVisible()
     assert [m["version"] for m in win.ctx.models(bm)] == ["v1.0"]
     assert win.ctx.test_runs(bm) == [] and records(win) == []
     assert win.ctx.recipe(bm) == revision

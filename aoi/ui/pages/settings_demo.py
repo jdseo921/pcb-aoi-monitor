@@ -96,15 +96,26 @@ class DemoPanel(QGroupBox):
         self.page.shell.switch_workspace(None)
 
     def _reset(self) -> None:
-        """Ask first, naming what goes, then put the demo back as the bundle holds it and open it again."""
+        """Ask once, naming what goes and the work that stops, then put the demo back as the bundle holds it and open
+        it again: from any page, the sidebar's Settings, Reset Demo and Yes (A4 of the 2026-10 business-readiness
+        brief), with boards running too."""
         yes, no = QMessageBox.StandardButton.Yes, QMessageBox.StandardButton.No
-        question = self.tr(
-            "Reset the demo workspace? Every result, record, alarm and log of the demo, and every change made in it to"
-            " its board model, AI model, recipe and samples, is deleted, and the demo is copied back from the"
-            " installed bundle. The production workspace is not touched."
-        )
+        busy = not self.ctx.jobs.idle()
+        if busy:
+            question = self.tr(
+                "Reset the demo workspace? The work running now (an inspection, training, an AI model test, an export"
+                " or an image import) is stopped; then every result, record, alarm and log of the demo, and every"
+                " change made in it to its board model, AI model, recipe and samples, is deleted, and the demo is"
+                " copied back from the installed bundle. The production workspace is not touched."
+            )
+        else:
+            question = self.tr(
+                "Reset the demo workspace? Every result, record, alarm and log of the demo, and every change made in it"
+                " to its board model, AI model, recipe and samples, is deleted, and the demo is copied back from the"
+                " installed bundle. The production workspace is not touched."
+            )
         if QMessageBox.question(self, self.tr("Reset Demo"), question, yes | no, no) == yes:
-            self.page.shell.switch_workspace(self.ctx.settings.root, reset=True)
+            self.page.shell.switch_workspace(self.ctx.settings.root, reset=True, agreed=busy)
 
     def _show_pace(self, seconds: int) -> None:
         self.pace_label.setText(self.tr("Scripted run pace: {seconds} s per board").format(seconds=seconds))

@@ -63,8 +63,7 @@ Talk to it with **Training** open on its **Datasets** tab, which lists the froze
   **Filter**.
 - Only an Admin deletes records, with a reason that the audit trail keeps.
 
-If they ask to see the settings: **Exit presenter theme**, open **Settings**, show **Dataset stores**, then switch the
-**Presenter theme** on again.
+If they ask to see the settings: open **Settings** and show **Dataset stores**, in the presenter theme still.
 
 ## 36:00 to 40:00, who may do what
 
@@ -91,5 +90,5 @@ Give them [for-clients.md](for-clients.md), and write down what they asked to se
 
 ## After they leave
 
-**Exit presenter theme**, then **Settings**, **Reset Demo**, and confirm: it removes v1.1, the runs on AI Model
-Test and the records. Switch the **Presenter theme** on again for the next demo.
+**Settings**, **Reset Demo**, and confirm: it removes v1.1, the runs on AI Model Test and the records. The presenter
+theme stays on for the next demo.

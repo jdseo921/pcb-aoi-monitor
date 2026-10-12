@@ -313,7 +313,7 @@ rows (`restyle_table`: fill, text colour, bold font at the new size, columns res
 labels of every `ImageView` (`restyle`; the box editors draw their boxes again), and each page's own `Page.restyle`
 (Home's card headings, AI Model Test's tiles, Logs & Export's weekend days). The sidebar then hides the Admin pages and
 3D Profile (Roles, below). `tools/render_screens.py` pins the font by patching `theme.FONT_FAMILY`, so a theme switched
-on during a render keeps it, and renders three presenter shots (`PRESENTER_SHOTS`: `presenter-<page>-<role>.png`);
+on during a render keeps it, and renders four presenter shots (`PRESENTER_SHOTS`: `presenter-<page>-<role>.png`);
 `tests/screens/test_sizes_and_contrast.py` walks every page the presenter theme shows, for every role, with large text
 held to 4.5:1 too, and reads a widget's rounded corners as its fill.
 
@@ -770,10 +770,13 @@ and maps has ended, and "Would be" shows within 300 ms of the key at 5 MP (`test
   the page for each step; AI Model Test row preview feeds "Use Last Inspected" on Compare (only a preview judged by
   what judged its run, #250).
 * **Roles** (GUI §8). Disabled entries show a tooltip naming the required role. In the presenter theme
-  (REQ-SET-008) the pages for the Admin alone (`roles == ("Admin",)`: Settings) and those marked
-  `in_presenter_theme = False` (3D Profile) leave the sidebar for every role, with a section heading left over none
-  (`MainWindow.hidden`, `_sync_nav`); `navigate()` refuses them with a status line, and the page shown when the theme
-  is switched on goes to Home. Exit presenter theme shows in the header to an Admin only (Q49).
+  (REQ-SET-008) the pages marked `in_presenter_theme = False` (3D Profile) leave the sidebar for every role, and the
+  pages for the Admin alone (`roles == ("Admin",)`: Settings) for every role but the Admin, with a section heading left
+  over none (`MainWindow.hidden`, `_sync_nav`); `navigate()` refuses them with a status line, and a page shown when the
+  theme or the user hides it goes to Home. The Admin keeps Settings so that Reset Demo is three clicks from any page
+  without leaving the theme (Settings, Reset Demo, Yes), and Settings leaves out its hardware table there
+  (`SettingsPage.restyle`), whose Stage 2 to 4 rows read "Not connected" (A4 of the 2026-10 business-readiness brief).
+  Exit presenter theme shows in the header to an Admin only (Q49).
 
 | Page | Operator | Engineer | Admin |
 |---|:-:|:-:|:-:|

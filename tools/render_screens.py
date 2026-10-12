@@ -68,9 +68,10 @@ STORED_STATES = (  # Compare
     "compare-stored-operator", "compare-golden-changed-operator", "compare-tried-engineer", "compare-save-engineer",
 )  # fmt: skip
 PRESENTER_SHOTS = {  # the presenter theme (REQ-SET-008): presenter-<page>-<role>, the pages a demo shows
-    "presenter-home-admin": ("Home", "admin"),  # Settings and 3D Profile hidden, Exit presenter theme in the header
-    "presenter-inspection-operator": ("Inspection", "operator"),  # the result, its verdict at 48 pt
+    "presenter-home-admin": ("Home", "admin"),  # 3D Profile hidden, Exit presenter theme in the header
+    "presenter-inspection-operator": ("Inspection", "operator"),  # the result, its verdict at 48 pt; no Settings
     "presenter-compare-engineer": ("Compare", "engineer"),
+    "presenter-settings-admin": ("Settings", "admin"),  # kept for the Admin's Reset Demo, without the hardware table
 }
 FIXED_WORKSPACE = "C:/AOI_Workspace"  # what the Settings page shows instead of the temporary folder
 TEST_FONT = '"DejaVu Sans"'  # the font the approved images are drawn with (Linux)

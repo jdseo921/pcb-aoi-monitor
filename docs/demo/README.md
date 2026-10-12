@@ -18,7 +18,8 @@ Korean drafts of each file are in [ko/](ko/), marked for review by a native spea
   yet (the code-signing certificate, plan item J6): today's unsigned installer is for rehearsing on our own PCs,
   never for a customer's room ([install.md](../install/install.md)).
 - Lead with an NG board and open **Compare**. Show Settings only if asked.
-- Show only finished features. The presenter theme hides Settings and 3D Profile for this reason.
+- Show only finished features. The presenter theme hides 3D Profile, and the Stage 2 to 4 hardware on **Settings**,
+  for this reason. Settings stays in the sidebar for `admin` alone, for **Reset Demo**.
 - Live training runs 2 minutes at most. AI model v1.0 is already trained, so nothing waits on training.
 - Use the customer's images whenever we have them. The 10 demo boards are drawn by the app's own tool: they show
   how the app works, never how well it finds defects. Never quote a number from them as accuracy, and never say
@@ -33,9 +34,8 @@ Rehearse once on the demo laptop, the day before or in the room, and tick each l
 
 - [ ] The release build is installed. Note its version: the title bar and the line under **Settings** show it.
 - [ ] The demo workspace is reset: start `AOI PoC Inspector (Demo)` from the Start menu (it opens signed in as
-      `admin`, at **Home** after a normal close). If the presenter theme is on, press **Exit presenter theme** in the
-      header first, as Settings is hidden in it. Open **Settings**, press **Reset Demo** and confirm. Leave it at
-      **Home** with the **Presenter theme** on.
+      `admin`, at **Home** after a normal close). Open **Settings**, press **Reset Demo** and confirm; the presenter
+      theme, if it is on, stays on. Leave it at **Home** with the **Presenter theme** on.
 - [ ] Wi-Fi is off. The app needs no network ([ports.md](../install/ports.md)).
 - [ ] The projector is checked at 1920 × 1080 and at 1366 × 768: every page of the script reads from the back row.
       The pages need a screen 1920 × 1080 or larger (the app needs at least 1888 × 907 px in the presenter theme);
@@ -56,12 +56,14 @@ Rehearse once on the demo laptop, the day before or in the room, and tick each l
 | Training is slow | If the time left reads over 2 minutes, press **Cancel** and use AI model v1.0, which is already trained: "here is one trained on the same boards earlier". Nothing is lost |
 | A verdict looks wrong | Open **Compare**: the table shows each check, its value and its threshold, and the box under it says why in plain words. Explain it from there; never guess |
 | A message appears | Read it out: it says what happened and what to do, with a code. Do what it says, then carry on |
+| The demo goes off course: a wrong click, a board run twice | Start again from a clean demo without leaving the presenter theme, three clicks from any page: **Settings** in the sidebar, **Reset Demo**, then Yes. The demo comes back as installed in under 10 s, on **Settings**; click **Inspection** and press **Start** to run the boards again. Signed in as `operator`, press **Switch User** and sign in as `admin` first, as Settings is the Admin's |
+| The presenter theme is in the way, or you need a page it hides | Press **Exit presenter theme** in the header, on any page: one click. Turn it on again with **Presenter theme** on **Settings** |
 | No projector | Play the recording, and hand over the report as usual |
 
 ## After the demo
 
 1. Hand over the USB stick with the report (the 5-minute script ends with it).
-2. **Exit presenter theme**, open **Settings** and press **Reset Demo**, so the next demo starts clean.
+2. Open **Settings** and press **Reset Demo**, so the next demo starts clean. The presenter theme stays as it is.
 3. Delete the customer's images from the laptop unless they agreed in writing that we keep them, and note what we
    keep and for how long.
 4. Write down their questions and what they asked to see next: it goes into the Stage 1 trial plan.

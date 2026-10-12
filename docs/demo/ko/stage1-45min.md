@@ -64,8 +64,7 @@
   보관 처리되며 계속 검색됩니다: **Logs & Export**에서 **Include archived**를 체크하고 **Filter**를 누릅니다.
 - 기록은 Admin만 지울 수 있고, 그 이유가 감사 기록에 남습니다.
 
-설정을 보고 싶어 하면 **Exit presenter theme**를 누르고 **Settings**에서 **Dataset stores**를 보여 준 뒤,
-**Presenter theme**를 다시 켭니다.
+설정을 보고 싶어 하면 발표자 테마를 켠 채로 **Settings**를 열고 **Dataset stores**를 보여 줍니다.
 
 ## 36:00 ~ 40:00, 누가 무엇을 할 수 있는가
 
@@ -91,5 +90,5 @@
 
 ## 고객이 떠난 뒤
 
-**Exit presenter theme**, **Settings**, **Reset Demo**를 차례로 누르고 확인합니다. v1.1, AI Model Test의 실행
-기록, 검사 기록이 지워집니다. 다음 데모를 위해 **Presenter theme**를 다시 켭니다.
+**Settings**, **Reset Demo**를 차례로 누르고 확인합니다. v1.1, AI Model Test의 실행 기록, 검사 기록이 지워집니다.
+발표자 테마는 다음 데모를 위해 켜진 채로 남습니다.
