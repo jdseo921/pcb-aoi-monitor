@@ -519,7 +519,7 @@ def test_req_cmp_005_one_threshold_not_saved_is_enough_to_have_an_operator_s_boa
         (0, {"name": "U2"}, False),
         (0, stage_2, False),  # which nothing reads in this build, the AI check on or off
         (1, {"x": 9, "ai_score": 0.5}, False),  # a disabled ROI judges nothing
-        (0, {"type": "Height"}, True),  # its defects named Pin Height Error, Major, not Missing Component, Critical
+        (0, {"type": "Height"}, True),  # its defects named Anomaly, Major (REQ-RCP-002), not Missing Component
         (0, {"x": 3000}, True),  # moved off the defects it named: they are named Anomaly now
     ):
         win.set_user("engineer")
@@ -544,7 +544,7 @@ def test_req_cmp_005_one_threshold_not_saved_is_enough_to_have_an_operator_s_boa
         ctx.save_recipe(roi)
         operator_signs_in(f"ROI {i + 1}'s {', '.join(values)} saved since, the AI check on", again)
     win.set_user("engineer")
-    roi.rois.reverse()  # ROI 3 now first over the defects: they are named Polarity Error, not Pin Height Error
+    roi.rois.reverse()  # ROI 3 now first over the defects: they are named Polarity Error, not Anomaly
     ctx.save_recipe(roi)
     operator_signs_in("ROI 1 and ROI 3, both over the defects, swapped, the AI check on", again=True)
     win.set_user("engineer")

@@ -603,8 +603,8 @@ time left read at most 54 s over at 20 MP, while the images were aligned
 
 **Next AI step (not in this draft):** once enough labelled NG crops exist per type, add a small supervised
 classifier that names the defect (Solder Bridge, Tombstone, …) for each flagged region. Today a region is named by
-the ROI it falls in (Presence → Missing Component, Polarity → Polarity Error, Solder Bridge → Solder Bridge,
-Height → Pin Height Error) or reported as "Anomaly".
+the ROI it falls in (Presence → Missing Component, Polarity → Polarity Error, Solder Bridge → Solder Bridge) or
+reported as "Anomaly", as a Height ROI's region is until the Stage 2 3D camera measures height (REQ-RCP-002).
 
 ---
 
