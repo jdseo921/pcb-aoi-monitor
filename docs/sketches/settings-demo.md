@@ -53,7 +53,7 @@ scripted run plays mixed OK and NG boards at the set pace from the demo workspac
 | Reset demo | Reset Demo | — | B | Red; deletes demo results and restores the bundle; confirmation names what is removed; finishes within 10 s |
 | Scripted run pace | Scripted run pace | ← → | slider, 48 px knob | 1 to 10 s per board, default 3 s |
 | Play scripted run | Play Scripted Run › | — | B | Opens Inspection with the demo queue and Start pressed |
-| Presenter theme | Presenter theme | — | T (check box) | Light theme, text ≥ 18 pt, verdict 48 pt, Settings hidden from every role but the Admin (pending Jay's approval, A4), the hardware table hidden (REQ-SET-008) |
+| Presenter theme | Presenter theme | — | T (check box) | Light theme, text ≥ 18 pt, verdict 48 pt, Settings hidden from every role but the Admin (approved by Jay on 2026-10-12, A4), the hardware table hidden (REQ-SET-008) |
 | Exit presenter theme | Exit presenter theme | — | T (header) | Admin only |
 
 ## Empty state
