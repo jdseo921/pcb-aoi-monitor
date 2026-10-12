@@ -73,7 +73,7 @@ class _StartUpWord(QTranslator):
 
 
 def _closed(ctx: AppContext) -> bool:
-    """The workspace was let go: another copy opens it (a held lock refuses it with AOI-SET-012, #204)."""
+    """The workspace was let go: another copy opens it (a held lock refuses it with AOI-SET-019, #204)."""
     try:
         AppContext(Settings(workspace=ctx.settings.workspace, device="cpu")).close()
     except Exception:

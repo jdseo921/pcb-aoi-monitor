@@ -406,8 +406,8 @@ def test_req_trn_010_switching_the_active_model_is_one_transaction(tmp_path: Pat
 def test_req_set_019_a_database_in_use_at_start_up_offers_the_folder_again(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, dialogs: list[tuple[str, str]]
 ) -> None:
-    """#171: another program holding the workspace database's write lock at start-up (a second copy of the app, a
-    database tool) is refused with AOI-SET-012, the database and the log closed first, not shown as AOI-SET-007; the
+    """#171: another program holding the workspace database's write lock at start-up (a database tool, a backup or
+    sync app) is refused with AOI-SET-012, the database and the log closed first, not shown as AOI-SET-007; the
     folder picker follows, and the same folder opens once the other program lets go."""
     ws = tmp_path / "ws"
     AppContext(Settings(workspace=str(ws), device="cpu")).close()

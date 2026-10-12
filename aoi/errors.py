@@ -1367,9 +1367,8 @@ CODES: dict[str, ErrorCode] = {
             ),
             QT_TRANSLATE_NOOP(
                 "Errors",
-                "Close the other program (another copy of this app, a database tool or a backup), then choose the "
-                "same folder in the window that opens next; or choose another workspace folder there. Cancel there "
-                "closes the app.",
+                "Close the other program (a database tool or a backup), then choose the same folder in the window "
+                "that opens next; or choose another workspace folder there. Cancel there closes the app.",
             ),
         ),
         ErrorCode(
@@ -1381,8 +1380,7 @@ CODES: dict[str, ErrorCode] = {
             ),
             QT_TRANSLATE_NOOP(
                 "Errors",
-                "Close the other program (another copy of this app, a database tool or a backup), then do the last "
-                "action again.",
+                "Close the other program (a database tool or a backup), then do the last action again.",
             ),
         ),
         ErrorCode(
@@ -1438,6 +1436,20 @@ CODES: dict[str, ErrorCode] = {
             QT_TRANSLATE_NOOP(
                 "Errors",
                 "Ask an Admin to restore the workspace from its backup (installation guide, Backup and restore).",
+            ),
+        ),
+        ErrorCode(  # one sentence and one button when the copy open cannot be brought to the front (A6, F12)
+            "AOI-SET-019",
+            QT_TRANSLATE_NOOP("Errors", "App already open"),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "AOI PoC Inspector is already open on this workspace: switch to it on the taskbar, or, if it is not "
+                "there, ask whoever has it open on another account or PC to close it.",
+            ),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Switch to the copy that is open, on the taskbar; if it is open on another account or another PC, have "
+                "it closed there and start the app again. This start changed nothing in the workspace.",
             ),
         ),
     )

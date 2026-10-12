@@ -58,6 +58,7 @@ Rehearse once on the demo laptop, the day before or in the room, and tick each l
 | A message appears | Read it out: it says what happened and what to do, with a code. Do what it says, then carry on. Its Show Details button holds technical words for support: leave it closed in front of the customer |
 | The demo goes off course: a wrong click, a board run twice | Start again from a clean demo without leaving the presenter theme, three clicks from any page: **Settings** in the sidebar, **Reset Demo**, then Yes. The demo comes back as installed, at **Home**, in under 10 s once any work still running has stopped (an AI model test finishes its folder first); click **Inspection** and press **Start** to run the boards again. Signed in as `operator`, press **Switch User** and sign in as `admin` first, as Settings is the Admin's |
 | The presenter theme is in the way, or you need a page it hides | Signed in as `admin`, press **Exit presenter theme** in the header, on any page: one click. Turn it on again with **Presenter theme** on **Settings** |
+| The app is started again while it is open | The app already open comes to the front, as it was; nothing is lost and nothing restarts. If a message says the app is already open instead, press OK and switch to it on the taskbar |
 | No projector | Play the recording, and hand over the report as usual |
 
 ## After the demo

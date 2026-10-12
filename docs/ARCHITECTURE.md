@@ -948,13 +948,15 @@ them (they belong to the replaced file), then start the version upgraded from; r
 only in the replaced file. The app never deletes the copies (nothing is deleted without an Admin action); a one-click
 restore belongs to the installer. A refused workspace (`AOI-SET-001`, `-002`, `-003`, `-005`, `-011` for a folder
 that cannot be created or a database SQLite cannot open or write at start-up, `-012` for one another program holds
-locked, and for a workspace another copy of the app has open; the database and the log closed first, #171, #204) is
+locked; the database and the log closed first, #171, #204) is
 reported before any window opens, so `open_workspace` in
 `aoi/ui/errors.py` follows the message with a folder picker: the folder chosen is opened, then saved to `settings.json`
 as the Settings page saves it (logged as `settings.save_failed` if it cannot be), and Cancel closes the app
-(REQ-SET-016). An error at start-up without a code shows `AOI-SET-007`, and its trace goes to the log in the default
-workspace folder (event `app.start_failed`), since the excepthook logs to an open workspace's log (REQ-SET-019); a
-coded refusal shown before a workspace is open goes to that log too, with its code and detail (`app.start_refused`). Once
+(REQ-SET-016). A workspace another copy of the app has open (`AOI-SET-019`) is never followed by the picker: that
+copy comes to the front instead (below). An error at start-up without a code shows `AOI-SET-007`, and its trace goes to
+the log in the default workspace folder (event `app.start_failed`), since the excepthook logs to an open workspace's log
+(REQ-SET-019); a coded refusal shown before a workspace is open goes to that log too, with its code and detail
+(`app.start_refused`). Once
 the workspace is open, `build_window` in `aoi/ui/main_window.py` installs the excepthook before it builds the window,
 so a slot that raises while the pages are built is logged and shown too, and again with the window as the dialog's
 parent; an error raised out of building the window (a page that cannot read a damaged database) is shown as
@@ -994,9 +996,22 @@ commit and put back if the entry, the move or the commit fails (#241). A file th
 Save Image that cannot be written (another program holds it open, a folder of that name) is `AOI-LOG-002`,
 naming the file; a Save Image name with a suffix OpenCV cannot encode is `AOI-INSP-002`. One copy of the
 app opens a workspace at a time: `AppContext` takes an exclusive operating-system lock on `<workspace>/.aoi.lock`
-(`aoi/data/workspace_lock.py`: `fcntl.flock` on POSIX, `msvcrt.locking` on Windows, on a byte past the empty file's end
-so a backup still reads it) before it opens the log or the database, and lets go in `close()` and on every refusal; a
-second copy is refused with `AOI-SET-012` before it touches anything. The system drops the lock when the process ends,
+(`aoi/data/workspace_lock.py`: `fcntl.flock` on POSIX, `msvcrt.locking` on Windows, on a byte far past the note at the
+file's start, so a backup and a second start still read it) before it opens the log or the database, and lets go in `close()` and on every refusal; a
+second copy is refused with `AOI-SET-019` before it touches anything. The lock file names the copy that holds it, its
+process id at once and its main window's handle once shown (`AppContext.note_window`, from `MainWindow.showEvent`),
+as 64 bytes of JSON at the start of the file; a second start reads them (`running_copy`) while the lock is still held
+(`workspace_in_use`, which takes and lets go of the lock at once), waits up to 15 s for a copy still starting to note
+its window, and `aoi/ui/front.py` asks Windows' user32 to restore that window and make it, or the dialog it has open,
+the active one (`IsWindow`, `GetWindowThreadProcessId` to check the window is still that process's, `IsHungAppWindow`,
+`ShowWindowAsync`, which never waits on the other copy, `GetLastActivePopup`, `SetForegroundWindow`, then
+`GetForegroundWindow` to confirm it), then ends with no message. `MainWindow.switch_workspace` asks the same before it
+closes anything, so Load Demo Workspace onto a demo another copy has open brings that copy forward and leaves this
+window as it is. Where the system cannot (any but Windows, the copy on another account or PC, a window gone or not
+shown in time, a copy that does not answer, Windows refusing the foreground), `AlreadyOpenBox` shows AOI-SET-019's one
+sentence with one OK, never a folder picker; a copy that closed meanwhile is opened after all (A6 of the 2026-10
+business-readiness brief, F12; `tests/test_second_start.py`). No socket or local server: a second copy finds the first
+through the workspace folder alone (REQ-SET-003). The system drops the lock when the process ends,
 so a crash or a power cut never blocks the next start. Holding it, the start-up sweep removes every temporary file the
 writer names (`.<name>.<8 hex digits>.tmp`, `atomic.temp_path`, the migration backup's included) as a crash's leftover;
 a file with another program's name is left alone, and one that cannot be deleted (read-only, held open) is logged as

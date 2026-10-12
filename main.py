@@ -24,7 +24,7 @@ def main() -> int:
     # A refused workspace (ADR 0004): its coded message, then a picker for another (REQ-SET-016). --demo: the demo
     # workspace beside it, loaded first if it is not there, so a presenter is back in the demo in seconds (S53).
     ctx = open_demo() if "--demo" in sys.argv[1:] else open_workspace()
-    if ctx is None:  # cancelled, or a bad settings.json
+    if ctx is None:  # no workspace opened: cancelled, refused, or open in another copy, brought to the front (A6)
         return 2
     try:
         win = build_window(ctx)  # unhandled errors from here on: logged with the trace, one coded dialog (REQ-LOG-005)

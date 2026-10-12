@@ -39,7 +39,7 @@ from ..data.db import NOT_REVIEWED as NOT_REVIEWED  # screens name it through he
 from ..data.db import Database, DbError, is_busy, new_uuid
 from ..data.errors import WorkspaceError
 from ..data.paths import inside, one_folder_name, resolve, to_stored
-from ..data.workspace_lock import WorkspaceLock
+from ..data.workspace_lock import WorkspaceLock, holder, in_use
 from ..errors import QT_TRANSLATE_NOOP, AoiError, Phrase, joined, system_detail, system_reason
 from ..hal import VIEWS
 from ..times import local_date, now_utc
@@ -175,6 +175,27 @@ MIN_SCALE, MAX_SCALE = 2, 100000
 
 
 UNHANDLED = QT_TRANSLATE_NOOP("Errors", "unhandled")  # the context of an error no handler caught: the log's alone
+
+
+@dataclass(frozen=True)
+class RunningCopy:
+    """The copy of the app that has a workspace open: its process and its main window (0 before one is shown)."""
+
+    pid: int
+    window: int
+
+
+def workspace_in_use(folder: str | Path) -> bool:
+    """True when a copy of the app has the workspace `folder` open now, this one included (its lock is held); asked
+    before a switch of workspace and while a second start waits for the copy that has it open."""
+    return in_use(folder)
+
+
+def running_copy(folder: str | Path) -> RunningCopy | None:
+    """The copy of the app that holds the lock of the workspace `folder`, as it noted itself there, or None; asked by a
+    second start the lock refused (AOI-SET-019), which brings that copy's window to the front."""
+    held = holder(folder)
+    return None if held is None else RunningCopy(*held)
 
 
 @dataclass(frozen=True)
@@ -388,8 +409,8 @@ class AppContext:
         except OSError as e:  # a drive not connected, a file where the folder must go (REQ-SET-019)
             folder = str(self.settings.root)
             raise WorkspaceError("AOI-SET-011", system_detail(e), path=folder, error=system_reason(e)) from e
-        # One copy of the app per workspace: a second one is refused with AOI-SET-012 before it opens or deletes
-        # anything, so the sweep below only meets what a crash left (#204)
+        # One copy of the app per workspace: a second one is refused with AOI-SET-019 before it opens or deletes
+        # anything, so the sweep below only meets what a crash left (#204); it finds this one's window (`running_copy`)
         self._lock = WorkspaceLock.acquire(self.settings.root)
         try:
             self.log = logging_setup.setup(self.settings.root)
@@ -446,6 +467,11 @@ class AppContext:
         self.db.close()
         logging_setup.close(self.log)
         self._lock.release()  # last: another copy may open the workspace now (#204)
+
+    def note_window(self, window: int) -> None:
+        """Note this copy's main window, the system's handle of it, beside the workspace's lock, so a second start on
+        the workspace brings it to the front (`running_copy`; A6 of the 2026-10 business-readiness brief, F12)."""
+        self._lock.note(window)
 
     def set_user(self, name: str) -> None:
         """Make `name` the current user, with the UUID and the role the users table holds for them: the table is the
