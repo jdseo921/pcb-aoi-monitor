@@ -31,7 +31,7 @@ from PySide6.QtWidgets import (
 )
 
 from ..config import APP_NAME, APP_VERSION, use_workspace
-from ..core import datasets, demo
+from ..core import datasets, demo, drift
 from ..core.run_progress import RunProgress
 from ..core.services import AppContext
 from ..errors import AoiError
@@ -113,6 +113,15 @@ class HomePage(Page):
             "Logs & Export",
         ),
     ]
+
+    # each drift measure out of its control limits, as the Inspect card names it (REQ-INSP-019)
+    DRIFT_NAMES = {
+        drift.NG_RATE: QT_TRANSLATE_NOOP("HomePage", "NG rate up"),
+        drift.WARN_RATE: QT_TRANSLATE_NOOP("HomePage", "WARN rate up"),
+        drift.OK_SCORE: QT_TRANSLATE_NOOP("HomePage", "OK boards' AI score up"),
+        drift.ALIGNMENT: QT_TRANSLATE_NOOP("HomePage", "alignment to the Golden board down"),
+        drift.FALSE_CALLS: QT_TRANSLATE_NOOP("HomePage", "false calls up"),
+    }
 
     def __init__(self, ctx: AppContext, shell: MainWindow) -> None:
         super().__init__(ctx, shell)
@@ -220,6 +229,9 @@ class HomePage(Page):
         if st.reviewed:  # the calls reviewed on the line, and how many were false (REQ-INSP-013)
             reviewed = self.tr("False calls {false_calls} of {reviewed} reviewed")
             inspected += "\n" + reviewed.format(false_calls=st.false_calls, reviewed=st.reviewed)
+        if st.drifted:  # measures out of their control limits now: look at the line (REQ-INSP-019)
+            names = ", ".join(self.tr(self.DRIFT_NAMES[m]) for m in st.drifted)
+            inspected += "\n" + self.tr("Drift: {measures}. See the alarm log on Inspection.").format(measures=names)
         self.status_labels["Inspect"].setText(
             inspected if st.inspected else self.tr("No boards inspected yet. Load images on Inspection.")
         )

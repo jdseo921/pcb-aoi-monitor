@@ -47,6 +47,7 @@ from . import (
     anomaly,
     crypto,
     datasets,
+    drift,
     golden,
     imaging,
     labels,
@@ -78,6 +79,32 @@ from .recipe import Recipe, changes
 from .sample_import import LABELS, REFUSED, ImportFile, ImportReport
 
 ALARM_LIMIT = 1000  # REQ-INSP-006: the alarms a screen shows and that survive a restart
+# The alarm each drift measure raises as it crosses its control limit (REQ-INSP-019), AOI-INSP-018
+DRIFT_TEXT = {
+    drift.NG_RATE: QT_TRANSLATE_NOOP(
+        "Errors",
+        "Drift on {board} ({view}): {count} of the last {of} boards called NG; {before} % of the {baseline} before",
+    ),
+    drift.WARN_RATE: QT_TRANSLATE_NOOP(
+        "Errors",
+        "Drift on {board} ({view}): {count} of the last {of} boards called WARN; {before} % of the {baseline} before",
+    ),
+    drift.OK_SCORE: QT_TRANSLATE_NOOP(
+        "Errors",
+        "Drift on {board} ({view}): the AI score of the last {of} OK boards averages {recent}, up from {before} over"
+        " the {baseline} OK boards before",
+    ),
+    drift.ALIGNMENT: QT_TRANSLATE_NOOP(
+        "Errors",
+        "Drift on {board} ({view}): the last {of} OK boards matched {recent} features to the Golden board on average,"
+        " down from {before} over the {baseline} OK boards before",
+    ),
+    drift.FALSE_CALLS: QT_TRANSLATE_NOOP(
+        "Errors",
+        "Drift on {board} ({view}): {count} of the last {of} reviewed calls were False calls; {before} % of the"
+        " {baseline} reviews before",
+    ),
+}
 BUSY_ALARM_WAIT_MS = 200  # how long the alarm of a locked database's error, or an Inspection alarm, waits, not 5 s
 ALIGNING = QT_TRANSLATE_NOOP("Training", "Aligning {count} images to the reference board")  # a progress line (#199)
 # what a training run does now, as its progress names it (REQ-TRN-008)
@@ -189,6 +216,7 @@ class BoardStatus:
     ng: int
     reviewed: int = 0  # NG and WARN boards reviewed on the line (REQ-INSP-013)
     false_calls: int = 0  # of them, reviewed as False call
+    drifted: tuple[str, ...] = ()  # the measures out of their control limits now, any view (REQ-INSP-019)
 
 
 @dataclass(frozen=True)
@@ -1197,6 +1225,7 @@ class AppContext:
         # The row has committed: its files are named now and stay, whatever the log lines below meet.
         if alarm is not None:
             self.log.info("alarm", extra={"alarm_level": alarm[0], "code": alarm[2], "text": alarm[1]})
+        self._watch_drift(board_model, res.view)
         self.log.info(
             "inspection.saved",
             extra={
@@ -1222,6 +1251,52 @@ class AppContext:
         person (#195)."""
         self.db.alarm(level, message, code, wait_ms)
         self.log.info("alarm", extra={"alarm_level": level, "code": code, "text": log_text or message})
+
+    def _watch_drift(self, board_model: str, view: str | None) -> None:
+        """After a board is saved: alarm (WARN, AOI-INSP-018) on each drift measure of its board model and view that
+        crossed its control limit with this board (`drift.board_drift`, REQ-INSP-019). Never raises: a check that fails
+        is logged, and the board stays saved."""
+        try:
+            rows = drift.same_engine(self.db.drift_rows(board_model, drift.SCAN), view)
+            self._drift_alarms(board_model, view, drift.crossed(drift.board_drift(rows), drift.board_drift(rows[1:])))
+        except Exception:
+            self.log.warning("drift.not_checked", exc_info=True, extra={"board_model": board_model})
+
+    def _watch_reviews(self, board_model: str, view: str | None) -> None:
+        """After a False call is reviewed: alarm on the false calls' share of the reviewed calls of its board model and
+        view crossing its control limit (`drift.review_drift`, REQ-INSP-019). Never raises, as `_watch_drift`."""
+        try:
+            rows = drift.same_engine(self.db.drift_reviews(board_model, drift.REVIEW_SCAN), view)
+            false = [r["review"] == FALSE_CALL for r in rows]
+            now, earlier = drift.review_drift(false), drift.review_drift(false[1:])
+            self._drift_alarms(board_model, view, drift.crossed([now] if now else [], [earlier] if earlier else []))
+        except Exception:
+            self.log.warning("drift.not_checked", exc_info=True, extra={"board_model": board_model})
+
+    def _drift_alarms(self, board_model: str, view: str | None, crossed: list[drift.Drift]) -> None:
+        for d in crossed:
+            digits = 0 if d.measure == drift.ALIGNMENT else 2
+            if d.measure in (drift.OK_SCORE, drift.ALIGNMENT):  # a mean, in the measure's own unit
+                recent, before = f"{d.recent:.{digits}f}", f"{d.before:.{digits}f}"
+            else:  # a rate: its count in the window, and the baseline's share in %
+                recent, before = "", f"{100 * d.before:.1f}"
+            text = DRIFT_TEXT[d.measure].fill(
+                board=board_model, view=view or VIEWS[0], count=d.count, of=d.of, recent=recent, before=before,
+                baseline=d.baseline,
+            )  # fmt: skip
+            self.alarm("WARN", text, "AOI-INSP-018")
+
+    def drifted(self, board_model: str) -> tuple[str, ...]:
+        """The drift measures of a board model out of their control limits now, in any view, each once in the order of
+        `drift.BOARD_MEASURES` then false calls (REQ-INSP-019): what Home's Inspect card names."""
+        rows = self.db.drift_rows(board_model, drift.SCAN)
+        reviews = self.db.drift_reviews(board_model, drift.REVIEW_SCAN)
+        out: set[str] = set()
+        for view in {r["view"] for r in rows} | {r["view"] for r in reviews}:
+            out |= {d.measure for d in drift.board_drift(drift.same_engine(rows, view))}
+            if drift.review_drift([r["review"] == FALSE_CALL for r in drift.same_engine(reviews, view)]):
+                out.add(drift.FALSE_CALLS)
+        return tuple(m for m in (*drift.BOARD_MEASURES, drift.FALSE_CALLS) if m in out)
 
     def alarms(self, limit: int = ALARM_LIMIT) -> list[dict[str, Any]]:
         """The newest alarms first: time (UTC), level, code and message."""
@@ -1738,6 +1813,8 @@ class AppContext:
         self.log.info(
             "inspection.reviewed", extra={"inspection_id": inspection_id, "review": review, "verdict": record["result"]}
         )
+        if review == FALSE_CALL:  # only a false call can raise the false calls' share (REQ-INSP-019)
+            self._watch_reviews(record["board_model"], record["view"])
         return {**record, "review": review, "review_reason": reason, "review_by": self.user, "review_time": when}
 
     @requires("Engineer", QT_TRANSLATE_NOOP("Errors", "Adding a board to Training"))
@@ -1890,6 +1967,7 @@ class AppContext:
             ng=ng,
             reviewed=reviewed,
             false_calls=false_calls,
+            drifted=self.drifted(board_model),
         )
 
     # --- what the screens change: each checks the role and appends an audit entry (REQ-USR-001, REQ-LOG-004) ---

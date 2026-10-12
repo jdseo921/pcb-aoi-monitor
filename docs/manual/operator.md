@@ -172,7 +172,10 @@ Each line gives the date and time, the level in brackets, the code and what happ
 `2026-10-10 14:03:22  [NG]  AOI-INSP-003  board_07.png: 2 defect(s)`. `[NG]` marks an NG board: every NG board that is
 recorded has one, while a WARN board has none, only its banner and its record. `[WARN]` says that a run stopped because
 the board model changed (AOI-INSP-012), that a run goes on with a new AI model, recipe, scale or Golden board
-(AOI-INSP-013), or that the board model has no AI model yet (AOI-TRN-003). `[ERROR]` keeps the code and what happened
+(AOI-INSP-013), that the board model has no AI model yet (AOI-TRN-003), or that the line has drifted (AOI-INSP-018):
+the newest boards are called NG or WARN more often, good boards score or line up worse, or more calls are reviewed as
+False calls than before, beyond chance. A drift alarm changes no verdict; tell an Engineer, who checks the lighting,
+camera, boards and parts, and Home's Inspect card says "Drift:" until it passes. `[ERROR]` keeps the code and what happened
 of each message shown over a page (below). The log holds every board model and user, shows the newest 1000 lines and
 is still there after a restart.
 

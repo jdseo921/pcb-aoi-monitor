@@ -924,6 +924,26 @@ class Database:
         sql = "UPDATE inspections SET review=?, review_reason=?, review_by=?, review_time=? WHERE id=?"
         self.execute(sql, (review, reason, by, time, inspection_id))
 
+    def drift_rows(self, board_model: str, limit: int) -> list[dict[str, Any]]:
+        """A board model's newest `limit` records, newest first, archived ones included, with what drift is judged on
+        (REQ-INSP-019): the view, the AI model's and recipe's UUIDs, the verdict, the AI score and the alignment's
+        matched features; read through `inspections_board_model`."""
+        sql = (
+            "SELECT id, view, model_uuid, recipe_uuid, result, score,"
+            " json_extract(metrics, '$.alignment_inliers') AS alignment_inliers"
+            " FROM inspections WHERE board_model=? ORDER BY time DESC, id DESC LIMIT ?"
+        )
+        return self.query(sql, (board_model, int(limit)))
+
+    def drift_reviews(self, board_model: str, limit: int) -> list[dict[str, Any]]:
+        """A board model's newest `limit` reviews, newest first by when they were given, with the view, the AI model's
+        and recipe's UUIDs and the review (REQ-INSP-019); read through `inspections_review`."""
+        sql = (
+            "SELECT id, view, model_uuid, recipe_uuid, review FROM inspections"
+            " WHERE board_model=? AND review IS NOT NULL ORDER BY review_time DESC, id DESC LIMIT ?"
+        )
+        return self.query(sql, (board_model, int(limit)))
+
     def review_counts(self, board_model: str) -> tuple[int, int]:
         """(boards reviewed, of them false calls) of a board model, archived ones included, through
         `inspections_review`."""

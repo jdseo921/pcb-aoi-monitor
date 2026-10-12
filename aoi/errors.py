@@ -284,6 +284,21 @@ CODES: dict[str, ErrorCode] = {
             ),
         ),
         ErrorCode(
+            "AOI-INSP-018",
+            QT_TRANSLATE_NOOP("Errors", "The line has drifted"),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "On {board} ({view}), a measure of the newest boards judged by the active AI model and recipe moved"
+                " further than chance explains from the boards judged before them: {measure}. No verdict was changed.",
+            ),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Look at the boards and the station: the lighting, the camera and its focus, the board revision and the"
+                " parts supplier. Review the calls on Logs & Export; if one of these changed, retrain the AI model or"
+                " tune the recipe and validate it again.",
+            ),
+        ),
+        ErrorCode(
             "AOI-CMP-001",
             QT_TRANSLATE_NOOP("Errors", "Result has no stored heatmaps"),
             QT_TRANSLATE_NOOP(

@@ -36,6 +36,8 @@ None. / 없음.
 
 - [REQ-TRN-020] Logs & Export › Add to Training as OK (Engineer and Admin) adds the selected board, reviewed as a False call, to its board model's Training samples as OK in its view, in one step; the audit entry names the record. It changes no verdict until an AI model trained with it is activated. / 로그 및 내보내기 › 학습에 OK로 추가(엔지니어 및 관리자)는 오검출로 검토된 선택 보드를 해당 보드 모델의 학습 샘플에 OK로, 같은 면으로 한 번에 추가합니다. 감사 기록에 해당 기록이 남습니다. 이 샘플로 학습한 AI 모델을 활성화하기 전에는 판정이 바뀌지 않습니다.
 
+- [REQ-INSP-019] Drift alarm: after each saved board and each False call, the station compares the newest boards (50) and reviews (20) of a board model and view with those before them under the same AI model and recipe. When the NG rate, the WARN rate, the OK boards' AI score or alignment, or the False calls' share moves beyond a 3-sigma control limit, one [WARN] alarm AOI-INSP-018 gives the counts, and Home's Inspect card says "Drift:". It changes no verdict. / 드리프트 경보: 보드를 저장할 때마다, 그리고 오검출 검토마다 장비는 보드 모델과 면별로 최신 보드(50개)와 검토(20건)를 같은 AI 모델과 레시피로 판정한 이전 기록과 비교합니다. NG 비율, WARN 비율, OK 보드의 AI 점수나 정렬, 오검출 비율이 3시그마 관리 한계를 넘으면 [WARN] 경보 AOI-INSP-018이 건수와 함께 한 번 기록되고, 홈의 검사 카드에 "드리프트:"가 표시됩니다. 판정은 바뀌지 않습니다.
+
 ## Improved / 개선 (draft)
 
 - [REQ-SET-004] Text on the green, red and blue fills (verdict banner, Start, Stop, primary and danger buttons) is black, reading at 5.0:1 or more; it was white at 3.3 to 4.2:1 (#150). / 녹색, 빨간색, 파란색 배경 위 글자(판정 배너, 시작, 정지, 주요 및 위험 버튼)가 검은색이 되어 5.0:1 이상으로 읽힙니다. 이전에는 흰색으로 3.3~4.2:1이었습니다(#150).

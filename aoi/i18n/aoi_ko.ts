@@ -827,7 +827,7 @@
 <context>
     <name>Errors</name>
     <message>
-        <location filename="../core/services.py" line="+123"/>
+        <location filename="../core/services.py" line="+150"/>
         <source>a length of {length} px over {distance} mm gives no scale: both must be numbers above 0, and the scale from {least} to {most} px per mm</source>
         <translation type="unfinished"></translation>
     </message>
@@ -837,7 +837,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+67"/>
+        <location line="+68"/>
         <source>Operator, Engineer or Admin</source>
         <translation type="unfinished"></translation>
     </message>
@@ -880,12 +880,12 @@
     </message>
     <message>
         <location line="+170"/>
-        <location line="+2062"/>
+        <location line="+2112"/>
         <source>(none)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-2031"/>
+        <location line="-2081"/>
         <source>Saving a recipe</source>
         <translation type="unfinished"></translation>
     </message>
@@ -915,7 +915,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+118"/>
+        <location line="+165"/>
         <location line="+24"/>
         <source>Running an AI model test</source>
         <translation type="unfinished"></translation>
@@ -962,12 +962,12 @@
     </message>
     <message>
         <location line="+12"/>
-        <location line="+31"/>
+        <location line="+33"/>
         <source>no such record</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-29"/>
+        <location line="-31"/>
         <source>only an NG or WARN board is reviewed</source>
         <translation type="unfinished"></translation>
     </message>
@@ -982,7 +982,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+14"/>
+        <location line="+16"/>
         <source>Adding a board to Training</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1002,7 +1002,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+106"/>
+        <location line="+107"/>
         <source>Creating a board model</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1127,14 +1127,39 @@
         <translation>검증 세트 잠금</translation>
     </message>
     <message>
-        <location line="-2287"/>
-        <location line="+2301"/>
+        <location line="-2338"/>
+        <location line="+2352"/>
         <location line="+39"/>
         <source>the workspace holds no such dataset version</source>
         <translation>작업 공간에 그런 데이터셋 버전이 없습니다</translation>
     </message>
     <message>
-        <location line="-2338"/>
+        <location line="-2430"/>
+        <source>Drift on {board} ({view}): {count} of the last {of} boards called NG; {before} % of the {baseline} before</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+4"/>
+        <source>Drift on {board} ({view}): {count} of the last {of} boards called WARN; {before} % of the {baseline} before</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+4"/>
+        <source>Drift on {board} ({view}): the AI score of the last {of} OK boards averages {recent}, up from {before} over the {baseline} OK boards before</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>Drift on {board} ({view}): the last {of} OK boards matched {recent} features to the Golden board on average, down from {before} over the {baseline} OK boards before</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>Drift on {board} ({view}): {count} of the last {of} reviewed calls were False calls; {before} % of the {baseline} reviews before</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+23"/>
         <source>the run used a folder, not a frozen dataset version&apos;s locked validation set</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1169,7 +1194,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+777"/>
+        <location line="+778"/>
         <source>Setting the comparison&apos;s thresholds from labelled boards</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1179,12 +1204,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+893"/>
+        <location line="+942"/>
         <source>Shift check of {board_model}: {wrong} of {count} master samples judged wrongly</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+360"/>
+        <location line="+361"/>
         <source>a blind label is OK, or NG with one of the 37 defect types</source>
         <translation>블라인드 라벨은 OK이거나, 37개 결함 유형 중 하나를 지정한 NG입니다</translation>
     </message>
@@ -1393,7 +1418,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-2850"/>
+        <location line="-2901"/>
         <source>no earlier version of this board model was active</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1418,12 +1443,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+701"/>
+        <location line="+702"/>
         <source>its UUID {found} is not {uuid}, as in the AI model registry</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1190"/>
+        <location line="+1240"/>
         <source>Labelling an image</source>
         <translation>이미지 라벨링</translation>
     </message>
@@ -1496,7 +1521,7 @@
     </message>
     <message>
         <location line="+21"/>
-        <location filename="../ui/main_window.py" line="+757"/>
+        <location filename="../ui/main_window.py" line="+769"/>
         <source>start-up</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1841,7 +1866,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+27"/>
+        <location line="+42"/>
         <source>Result has no stored heatmaps</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2052,7 +2077,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-284"/>
+        <location line="-299"/>
         <source>AI model, recipe, scale or Golden board changed during a run</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2102,7 +2127,22 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+178"/>
+        <location line="+8"/>
+        <source>The line has drifted</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>On {board} ({view}), a measure of the newest boards judged by the active AI model and recipe moved further than chance explains from the boards judged before them: {measure}. No verdict was changed.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>Look at the boards and the station: the lighting, the camera and its focus, the board revision and the parts supplier. Review the calls on Logs &amp; Export; if one of these changed, retrain the AI model or tune the recipe and validate it again.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+179"/>
         <source>Check that the file is still there and can be opened and that the workspace drive has free space, then, with {name} picked in the header, press Import again: the {imported} image(s) already imported are skipped.</source>
         <translation>파일이 아직 그 자리에 있고 열 수 있는지, 작업 공간 드라이브에 여유 공간이 있는지 확인한 뒤 헤더에서 {name}을(를) 고른 상태로 가져오기를 다시 누르세요. 이미 가져온 이미지 {imported}개는 건너뜁니다.</translation>
     </message>
@@ -3143,7 +3183,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1130"/>
+        <location line="-1145"/>
         <source>Board judged NG</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3158,7 +3198,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+68"/>
+        <location line="+83"/>
         <source>The decision table is the stored one; use Side by side or Defect boxes only, or inspect the board again on Inspection to see its heatmaps.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3813,7 +3853,7 @@
 <context>
     <name>HomePage</name>
     <message>
-        <location filename="../ui/main_window.py" line="-639"/>
+        <location filename="../ui/main_window.py" line="-651"/>
         <source>Upload samples</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3848,7 +3888,32 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+83"/>
+        <location line="+19"/>
+        <source>NG rate up</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>WARN rate up</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>OK boards&apos; AI score up</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>alignment to the Golden board down</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>false calls up</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+69"/>
         <source>For {roles}</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3868,7 +3933,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-112"/>
+        <location line="-121"/>
         <source>Inspect</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3893,7 +3958,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+71"/>
+        <location line="+80"/>
         <source>Open {page} ›</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3938,7 +4003,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+3"/>
+        <location line="+4"/>
+        <source>Drift: {measures}. See the alarm log on Inspection.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+2"/>
         <source>No boards inspected yet. Load images on Inspection.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4125,13 +4195,13 @@
     <name>InspectionPage</name>
     <message>
         <location filename="../ui/pages/inspection.py" line="+105"/>
-        <location line="+88"/>
+        <location line="+89"/>
         <location line="+236"/>
         <source>Load Images…</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-323"/>
+        <location line="-324"/>
         <source>Load Folder…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4147,12 +4217,12 @@
     </message>
     <message>
         <location line="+6"/>
-        <location line="+71"/>
+        <location line="+72"/>
         <source>No images loaded</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-47"/>
+        <location line="-48"/>
         <source>No</source>
         <comment>defect number</comment>
         <translation type="unfinished"></translation>
@@ -4208,7 +4278,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+22"/>
+        <location line="+23"/>
         <source>Load Images… or Load Folder… to queue boards. In Stage 2 the camera fills this view.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4233,12 +4303,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-95"/>
+        <location line="-96"/>
         <source>Shift Check</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+95"/>
+        <location line="+96"/>
         <source>Images ({extensions})</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4378,7 +4448,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+25"/>
+        <location line="+24"/>
         <source>Paused at the NG board {file}: Compare with Golden board › shows why, and Start goes on with the run.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4398,12 +4468,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+67"/>
+        <location line="+79"/>
         <source>Review saved: {review} for record {record}.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+19"/>
+        <location line="+20"/>
         <source>Run stopped: the board model changed from {old} to {new}. Boards inspected before the change are saved under {old}; press Start to carry on with the queue under {new}.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5676,7 +5746,7 @@
 <context>
     <name>Page</name>
     <message>
-        <location filename="../ui/main_window.py" line="-606"/>
+        <location filename="../ui/main_window.py" line="-618"/>
         <source>Home</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5801,7 +5871,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/inspection.py" line="-631"/>
+        <location filename="../ui/pages/inspection.py" line="-644"/>
         <source>Inspection</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7258,7 +7328,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/services.py" line="-3154"/>
+        <location filename="../core/services.py" line="-3205"/>
         <source>Aligning {count} images to the reference board</source>
         <translation type="unfinished"></translation>
     </message>
