@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING, Any
 
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QAction, QKeySequence
-from PySide6.QtWidgets import QComboBox, QFormLayout, QGroupBox, QHBoxLayout, QLabel, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QComboBox, QFormLayout, QHBoxLayout, QLabel, QVBoxLayout, QWidget
 
 from ...core import labels
 from ...defects import names
@@ -21,7 +21,9 @@ from ...errors import AoiError
 from ...times import to_local
 from .. import theme
 from ..widgets.busy import BusyOverlay
+from ..widgets.flow import FlowLayout, labelled
 from ..widgets.image_view import ImageView
+from ..widgets.reflow import WrappedGroup
 from ..workers import Worker, start
 from .base import action_button, button
 
@@ -37,7 +39,7 @@ def _percent(n: int, of: int) -> int:
     return 100 * n // of if of else 0
 
 
-class AgreementPanel(QGroupBox):
+class AgreementPanel(WrappedGroup):  # its wrapped lines whole at 1366 px (A7)
     """The board model's calibration sets, the blind labels of the set picked and its newest agreement check."""
 
     def __init__(self, page: TrainingPage) -> None:
@@ -69,12 +71,11 @@ class AgreementPanel(QGroupBox):
             line.setWordWrap(True)
             form.addRow(line)
         self.by_line.setObjectName("muted")
-        run = QHBoxLayout()  # the sketch's [Label Blind…]  [Run Agreement Check]
+        run = FlowLayout(gap=theme.ROW_GAP)  # the sketch's [Label Blind…]  [Run Agreement Check], wrapping (#104)
         self.btn_blind = button(self.tr("Label Blind…"), slot=self._label_blind)
         run.addWidget(self.btn_blind)
         self.btn_run = button(self.tr("Run Agreement Check"), slot=self._run)
         run.addWidget(self.btn_run)
-        run.addStretch(1)
         form.addRow(run)
 
     # --- what is shown -------------------------------------------------------------
@@ -265,18 +266,17 @@ class BlindPanel(QWidget):
         self.view = ImageView(placeholder="")
         lay.addWidget(self.view, 1)
         self.busy = BusyOverlay(self.view, self.tr("Opening the image…"))
-        row = QHBoxLayout()
+        row = FlowLayout(gap=theme.ROW_GAP)  # on two lines where the tab is narrow (#104)
         self.act_ok = self._action(self.tr("Label OK"), "O", lambda: self._label("OK"))
         self.act_ng = self._action(self.tr("Label NG"), "N", lambda: self._label("NG"))
         row.addWidget(action_button(self.act_ok, show_key=False))
-        row.addWidget(QLabel(self.tr("Type")))
         self.type_box = QComboBox()  # the label editor's 37 types, by category; none picked for each new image
         self.type_box.setMinimumContentsLength(14)
         self.type_box.addItem(self.tr("Pick its defect type"), None)
         for name in names():
             self.type_box.addItem(name, name)
         self.type_box.currentIndexChanged.connect(self._sync)
-        row.addWidget(self.type_box, 1)
+        row.add_stretched(labelled(self.tr("Type"), self.type_box, stretch=1))
         self.btn_ng = action_button(self.act_ng, show_key=False)
         self._ng_key = self.btn_ng.toolTip()  # "N", as action_button gives it
         self.type_box.activated.connect(lambda _i: self.btn_ng.setFocus())  # then N, Enter or Space labels it NG

@@ -9,8 +9,10 @@ link, or into "Ask an Engineer …" for a role that cannot open that page.
 from __future__ import annotations
 
 from collections.abc import Callable
+from typing import cast
 
 from PySide6.QtCore import QEvent, QObject, QRect, QSize, Qt
+from PySide6.QtGui import QResizeEvent
 from PySide6.QtWidgets import QLabel, QPushButton, QVBoxLayout, QWidget
 
 from .busy import BusyOverlay
@@ -48,6 +50,7 @@ class EmptyState(QWidget):
     def __init__(self, over: QWidget | None = None, kind: str = "") -> None:
         super().__init__(over)
         self._over = over
+        self._own_height: int | None = None  # the host's own least height while it is grown for the text (`_make_room`)
         self._go: Callable[[], object] | None = None
         self.setObjectName("empty")
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
@@ -85,6 +88,27 @@ class EmptyState(QWidget):
                 if isinstance(busy, BusyOverlay) and not busy.isHidden():  # shown, also on a page not shown now
                     busy.raise_()
 
+    def setVisible(self, visible: bool) -> None:  # noqa: N802 (Qt's name)
+        super().setVisible(visible)
+        self._make_room()
+
+    def _make_room(self) -> None:
+        """A host shorter than the block's text grows to it while the block shows over it, and has its own least height
+        back once the block is hidden: in a short window a layout squeezed the Recipe Editor's ROI table, and the block
+        over it cut "Press Draw ROI and drag on the Golden board." to one line (#104)."""
+        over = self._over
+        if over is None:
+            return
+        if self._own_height is not None:  # its own least height, to measure against afresh
+            over.setMinimumHeight(self._own_height)
+            self._own_height = None
+        if self.isHidden():
+            return
+        need = self.heightForWidth(over.width())
+        if need > (over.minimumHeight() or over.minimumSizeHint().height()):
+            self._own_height = over.minimumHeight()
+            over.setMinimumHeight(need)
+
     def _follow(self) -> None:
         if self._go is not None:
             self._go()
@@ -92,4 +116,6 @@ class EmptyState(QWidget):
     def eventFilter(self, obj: QObject, event: QEvent) -> bool:
         if event.type() == QEvent.Type.Resize and obj is self._over:
             self.setGeometry(self._over.rect())
+            if cast(QResizeEvent, event).size().width() != cast(QResizeEvent, event).oldSize().width():
+                self._make_room()  # the text wraps to another height at another width
         return False

@@ -1,7 +1,10 @@
 # ADR 0012: The AI model's input size, and screens smaller than 1920 × 1080
 
 - Status: Proposed under Jay's instruction of 2026-10-11 ("Make decisions that are the best for industry norm
-  standards"). Jay's merge of this record accepts it.
+  standards"). Jay's merge of this record accepts it. Decision 2 is amended by ADR 0019 (proposed 2026-10-12): the
+  pages a demo opens are laid out again below 1920 px, and the production theme's Compare stands its decision table
+  under the pair in a window under 1848 px wide, so at 1600 × 900 the foot of Try other thresholds, its buttons
+  with it, may sit just below the fold.
 - Date: 2026-10-11
 - Decides: the product owner (Jay), until a tech lead joins
 - Related: REQ-TRN-007, REQ-INSP-014, REQ-SET-004, #104; report
@@ -47,7 +50,9 @@ screens needed the panel to fit without scrolling was open.
    2.4.11 (Focus Not Obscured) asks. At 1600 × 900 every field of Compare's Try other thresholds panel is in view as
    laid out; at 1366 × 768 Tab reaches each one whole (`tests/test_compare_reevaluate.py`, the REQ-SET-004 test of
    each Try panel field below the reference screen).
-   No page is laid out again for 1600 px.
+   No page is laid out again for 1600 px. *(Amended by ADR 0019: below 1920 px the pages a demo opens reflow, and at
+   1600 × 900 the foot of Compare's Try other thresholds panel, its buttons with it, may sit just below the fold, which
+   Tab and the scroll wheel reach.)*
 
 ## Alternatives
 

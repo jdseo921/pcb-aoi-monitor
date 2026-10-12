@@ -41,6 +41,8 @@ from tests.test_re_evaluate import _store_5mp
 from tests.test_req_done_in_v01 import BOARD, _window
 from tests.test_stored_result import _ai_off
 from tools import render_screens
+from tools.render_screens import settle
+from tools.screen_sizes import cut_off
 
 Dialogs = list[tuple[str, str]]  # the `dialogs` fixture: each error dialog shown, as (title, text)
 
@@ -709,7 +711,9 @@ def test_req_set_021_a_re_evaluation_over_a_second_shows_a_busy_indicator_over_t
     that takes over a second shows "Re-evaluating…" and the seconds so far over the decision table and the "why" box,
     where the checks tried will appear, and nothing in its first second; Re-evaluate is off meanwhile, so a second
     press starts no second job (the sketch's busy pattern, review); at the window's least size the indicator's text,
-    bar and Cancel, shown from 10 s, fit inside it (review). Pressed with Space, its focus waits in the "why" box, one
+    bar and Cancel, shown from 10 s, fit inside it (review). There the table stands under the pair and the "why" box
+    beside it, under a cover of its own while the indicator shows; at 1920 x 1080 the box is under the table, and the
+    indicator covers both (A7). Pressed with Space, its focus waits in the "why" box, one
     Tab before Cancel once that shows, so a second Space presses nothing, Save to Recipe next in the Tab order included,
     and comes back when the run ends, unless moved (review). It goes when "Would be" shows or a refusal's dialog does,
     not at the job's end, which a loaded pool thread may signal later, with Cancel still there to take the focus
@@ -756,6 +760,10 @@ def test_req_set_021_a_re_evaluation_over_a_second_shows_a_busy_indicator_over_t
 
     revisions = len(ctx.recipe_history(BOARD))
     for then in ("the answer", "a refusal", "a threshold changed", "Cancel"):
+        if then == "a threshold changed":  # the "why" box under the table again, beside the pair
+            assert not compare.splitter.wide()
+            win.resize(1920, 1080)
+            qtbot.waitUntil(compare.splitter.wide)
         gate.clear()
         compare.btn_try.setFocus(Qt.FocusReason.TabFocusReason)  # by keyboard (review)
         qtbot.keyClick(compare.btn_try, Qt.Key.Key_Space)
@@ -771,7 +779,10 @@ def test_req_set_021_a_re_evaluation_over_a_second_shows_a_busy_indicator_over_t
             fits = busy.rect().contains(part.geometry()) and part.height() >= part.sizeHint().height()
             assert fits, (type(part).__name__, part.geometry(), part.sizeHint(), busy.size())
         over = busy.parentWidget()
-        assert over is not None and over.isAncestorOf(compare.why) and busy.geometry() == over.rect(), "and the why"
+        assert over is not None and over.isAncestorOf(compare.metrics) and busy.geometry() == over.rect(), then
+        cover = compare.why_cover
+        by_itself = cover.isVisible() and cover.geometry() == compare.why.rect()
+        assert over.isAncestorOf(compare.why) is compare.splitter.wide() is not by_itself, ("and the why", then)
         assert busy.label.text().startswith("Re-evaluating…")
         assert compare.would_be.isHidden() and _table(compare) == stored
         assert not compare.act_try.isEnabled(), "Re-evaluate is off while it runs"
@@ -1118,12 +1129,17 @@ def test_req_set_004_tab_shows_each_try_panel_field_whole_below_the_reference_sc
     qtbot: QtBot, trained_ctx: AppContext, ng_board: Path, size: tuple[int, int]
 ) -> None:
     """Below the 1920 x 1080 screen the pages are laid out for (REQ-SET-004), the page area scrolls (#104) and hides no
-    control (ADR 0012, decision 2): at 1600 x 900 every field of Compare's Try other thresholds panel is in view as laid
-    out; at 1366 x 768, where the panel runs past the area's edge, Tab brings each field whole into view, as the mouse
-    can by scrolling."""
+    control (ADR 0012, decision 2): where Compare's Try other thresholds panel runs past the area's edge, as at
+    1366 x 768, Tab brings each field whole into view, as the mouse can by scrolling. Since A7 of the 2026-10
+    business-readiness brief (Charter principle 1, ADR 0019) the panel may run just past it at 1600 x 900 too, its
+    buttons below the fold, as a secondary panel's may: the decision table there sits under the pair with every column
+    whole, where beside it the table scrolled its last columns out of view, and the verdict area is whole with nothing
+    scrolled, at both sizes."""
     win, compare, _iid = _stored_on_compare(qtbot, trained_ctx, ng_board, "Engineer")
     win.resize(*size)
     QApplication.processEvents()
+    settle()
+    assert cut_off(win, "Compare") == [], size
     area = win.findChild(QScrollArea, "pages")
     assert area is not None and area.isAncestorOf(compare)
     view = area.viewport()
@@ -1137,9 +1153,7 @@ def test_req_set_004_tab_shows_each_try_panel_field_whole_below_the_reference_sc
         and not isinstance(w.parentWidget(), QAbstractSpinBox)
     ]
     beyond = [w for w in fields if not view.rect().contains(QRect(w.mapTo(view, QPoint(0, 0)), w.size()))]
-    if size == (1600, 900):  # the panel fits as laid out
-        assert not beyond, [type(w).__name__ for w in beyond]
-    else:  # some field starts past the area's edge, or this test would check nothing there
+    if size == (1366, 768):  # some field starts past the area's edge, or this test would check nothing there
         assert beyond, f"at {size[0]} x {size[1]} every field is in view without scrolling"
     fields[0].setFocus(Qt.FocusReason.TabFocusReason)
     shown = []  # each field Tab reaches in the panel, and where it shows in the page area

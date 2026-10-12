@@ -16,7 +16,6 @@ from PySide6.QtWidgets import (
     QComboBox,
     QDateEdit,
     QFileDialog,
-    QHBoxLayout,
     QInputDialog,
     QLabel,
     QMessageBox,
@@ -35,7 +34,7 @@ from ...times import to_local
 from .. import theme
 from ..widgets.busy import BusyOverlay
 from ..widgets.empty_state import EmptyState
-from ..widgets.flow import FlowLayout
+from ..widgets.flow import FlowLayout, labelled
 from ..widgets.image_view import ImageView
 from ..workers import Worker, start
 from .base import (
@@ -77,16 +76,6 @@ class NameFilter(QComboBox):
 
     def sizeHint(self) -> QSize:
         return super().sizeHint().expandedTo(self.minimumSizeHint())
-
-
-def _labelled(label: str, field: QWidget) -> QWidget:
-    """A filter with its label before it: one item of the filter row, which wraps between items, never inside one."""
-    pair = QWidget()
-    row = QHBoxLayout(pair)
-    row.setContentsMargins(0, 0, 0, 0)
-    row.addWidget(QLabel(label))
-    row.addWidget(field)
-    return pair
 
 
 class ShareBar(QStyledItemDelegate):
@@ -165,7 +154,7 @@ class LogsPage(Page):
             (self.tr("Review"), self.review_filter),
         )
         for label, w in fields:
-            f.addWidget(_labelled(label, w))
+            f.addWidget(labelled(label, w))
         f.addWidget(self.archived)
         f.addWidget(button(self.tr("Filter"), "primary", self.refresh))
         self.root.addLayout(f)
@@ -205,10 +194,12 @@ class LogsPage(Page):
         self.tabs.currentChanged.connect(lambda _index: self.count_types())
         self.root.addWidget(self.tabs, 1)
 
-        line = QHBoxLayout()  # the counts, and the selected record's way to Compare (the Logs sketch)
+        # the counts, and the selected record's way to Compare (the Logs sketch); the buttons on a line of their own,
+        # at its right, where the page is too narrow for both (#104)
+        line = FlowLayout(gap=theme.ROW_GAP, right=True)
         self.summary = QLabel("")
         self.summary.setObjectName("muted")
-        line.addWidget(self.summary, 1)
+        line.add_stretched(self.summary)
         # The selected NG or WARN record's review, F10 Real defect and F11 False call, as on Inspection (REQ-INSP-013)
         self.review = ReviewBar(self, self._reviewed, compact=True)
         line.addWidget(self.review)
@@ -218,8 +209,7 @@ class LogsPage(Page):
         self.btn_compare = size_class(button(self.tr("Open in Compare ›"), slot=self.open_in_compare), "T")
         line.addWidget(self.btn_compare)
         self.root.addLayout(line)
-        b = QHBoxLayout()
-        b.addStretch(1)
+        b = FlowLayout(gap=theme.ROW_GAP, right=True)  # at the page's right, on two lines where it is narrow (#104)
         self.btn_csv = button(self.tr("Export CSV"), slot=self.export_csv)
         self.btn_img = button(self.tr("Export Image Overlays"), slot=self.export_overlays)
         self._arch_days = ctx.settings.log_retention_days  # the day count the button shows and archives by (#201)

@@ -18,7 +18,6 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QListWidget,
-    QSplitter,
     QVBoxLayout,
     QWidget,
 )
@@ -35,6 +34,7 @@ from .. import theme
 from ..errors import alarm_text, phrase_text
 from ..widgets.empty_state import EmptyState
 from ..widgets.image_view import ImageView
+from ..widgets.reflow import SideSplit, WrappedPane, least_width
 from ..workers import Worker, start
 from .base import (
     QT_TRANSLATE_NOOP,
@@ -121,19 +121,19 @@ class InspectionPage(Page):
         for view in VIEWS:
             self.view_combo.addItem(view_text(view), view)  # the English name is the key the engine stores
         bar.addWidget(size_class(self.view_combo, "T"))
-        bar.addStretch(1)
-        self.queue_label = QLabel(self.tr("No images loaded"))
-        self.queue_label.setObjectName("muted")
-        bar.addWidget(self.queue_label)
+        # at the bar's right end, on a second line where the page is narrow, never widening it (#104)
+        self.queue_label = WrappedLine(self.tr("No images loaded"))
+        self.queue_label.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        bar.addWidget(self.queue_label, 1)
         self.root.addLayout(bar)
 
         # Center: image | results
-        split = QSplitter(Qt.Orientation.Horizontal)
+        split = SideSplit(lambda side: max(theme.SIDE_W, least_width(side)))  # the verdict panel kept (#104)
         self.view = ImageView(placeholder="")
         self.empty = EmptyState(self.view)
         split.addWidget(self.view)
 
-        side = QWidget()
+        side = WrappedPane()  # as tall as its wrapped lines need at its width, so the table keeps its least height
         sl = QVBoxLayout(side)
         sl.setContentsMargins(8, 0, 0, 0)
         self.shift_line = WrappedLine()  # whether boards may be inspected: the shift check's state (REQ-INSP-017)
@@ -179,7 +179,8 @@ class InspectionPage(Page):
         self.btn_compare = button(self.tr("Compare with Golden board ›"), slot=self.open_compare)
         sl.addWidget(self.btn_compare)
         split.addWidget(side)
-        split.setSizes([1100, 520])
+        split.setSizes([1100, theme.SIDE_W])
+        self.split = split
         self.root.addWidget(split, 1)
 
         # Run controls (sketch: inspection-run-controls.md): F5, F6, F8, F9 and the large buttons do the same
@@ -652,6 +653,9 @@ class InspectionPage(Page):
             return
         if (newest[0]["id"] if newest else None) != self.newest_alarm:
             self._refresh_alarms()
+
+    def restyle(self) -> None:
+        self.split.keep_side()  # at the width the theme in use gives it
 
     def _update_buttons(self) -> None:
         """Enable the actions, and with them the buttons and the keys, for the state: Start and Next Board need a queue

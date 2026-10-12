@@ -4,7 +4,7 @@
 <context>
     <name>AgreementPanel</name>
     <message>
-        <location filename="../ui/pages/training_agreement.py" line="+45"/>
+        <location filename="../ui/pages/training_agreement.py" line="+47"/>
         <source>Labeller agreement</source>
         <translation>라벨러 일치도</translation>
     </message>
@@ -34,7 +34,7 @@
         <translation>일치도 검사 실행</translation>
     </message>
     <message>
-        <location line="+18"/>
+        <location line="+17"/>
         <source>{when} · made by {user}</source>
         <translation>{when} · {user}이(가) 만듦</translation>
     </message>
@@ -147,12 +147,12 @@
         <translation>NG로 라벨링</translation>
     </message>
     <message>
-        <location line="+2"/>
+        <location line="+8"/>
         <source>Type</source>
         <translation>유형</translation>
     </message>
     <message>
-        <location line="+3"/>
+        <location line="-4"/>
         <source>Pick its defect type</source>
         <translation>결함 유형 선택</translation>
     </message>
@@ -180,7 +180,7 @@
 <context>
     <name>BoxEditor</name>
     <message>
-        <location filename="../ui/widgets/box_editor.py" line="+335"/>
+        <location filename="../ui/widgets/box_editor.py" line="+336"/>
         <source>{number} {type} ◆ {severity}</source>
         <translation>{number} {type} ◆ {severity}</translation>
     </message>
@@ -259,7 +259,7 @@
 <context>
     <name>ComparePage</name>
     <message>
-        <location filename="../ui/pages/compare.py" line="+79"/>
+        <location filename="../ui/pages/compare.py" line="+80"/>
         <source>Side by side</source>
         <translation type="unfinished"></translation>
     </message>
@@ -331,12 +331,12 @@
     <message>
         <location line="+3"/>
         <location line="+132"/>
-        <location line="+564"/>
+        <location line="+676"/>
         <source>Golden board</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-695"/>
+        <location line="-807"/>
         <source>AI model</source>
         <translation type="unfinished"></translation>
     </message>
@@ -396,23 +396,23 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1"/>
+        <location line="+4"/>
         <source>Show:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+15"/>
-        <location line="+897"/>
+        <location line="+12"/>
+        <location line="+1009"/>
         <source>Test board</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-891"/>
+        <location line="-1003"/>
         <source>Inspecting…</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+25"/>
+        <location line="+31"/>
         <source>Check</source>
         <translation type="unfinished"></translation>
     </message>
@@ -447,12 +447,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+17"/>
+        <location line="+25"/>
         <source>Try other thresholds (nothing is saved until you press Save to Recipe)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+14"/>
+        <location line="+12"/>
         <source>Override the AI model&apos;s value {value}</source>
         <translation type="unfinished"></translation>
     </message>
@@ -483,7 +483,7 @@
     </message>
     <message>
         <location line="+5"/>
-        <location line="+141"/>
+        <location line="+241"/>
         <source>The verdict and the decision table are the stored ones; press Re-evaluate › to inspect the board again from its image file.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -528,7 +528,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-977"/>
+        <location line="-1089"/>
         <source>AI score threshold</source>
         <translation type="unfinished"></translation>
     </message>
@@ -553,7 +553,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+202"/>
+        <location line="+214"/>
         <source>Re-evaluate</source>
         <translation type="unfinished"></translation>
     </message>
@@ -621,14 +621,14 @@
     </message>
     <message>
         <location line="+0"/>
-        <location line="+140"/>
+        <location line="+240"/>
         <location line="+236"/>
         <location line="+12"/>
         <source>Re-evaluate ›</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-374"/>
+        <location line="-474"/>
         <source>Train an AI model on Training.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -638,7 +638,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-613"/>
+        <location line="-625"/>
         <source>Inspection time (ms)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -653,7 +653,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+664"/>
+        <location line="+776"/>
         <source>Test board: {file} (stored result)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -762,7 +762,7 @@
 <context>
     <name>DemoPanel</name>
     <message>
-        <location filename="../ui/pages/settings_demo.py" line="+29"/>
+        <location filename="../ui/pages/settings_demo.py" line="+31"/>
         <source>Demo</source>
         <translation type="unfinished"></translation>
     </message>
@@ -782,7 +782,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+4"/>
+        <location line="+3"/>
         <source>Demo workspace: open, in the folder {folder}.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -792,23 +792,23 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+41"/>
+        <location line="+39"/>
         <source>Reset the demo workspace? Work still running is stopped first: training without saving an AI model, an AI model test once its folder is done, an export or an image import keeping the files copied so far. Then every result, record, alarm and log of the demo, and every change made in it to its board model, AI model, recipe and samples, is deleted, and the demo is copied back from the installed bundle. The production workspace is not touched.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-43"/>
+        <location line="-41"/>
         <location line="+9"/>
         <source>{seconds} s</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-25"/>
+        <location line="-24"/>
         <source>Opens a demo board model with its AI model, recipe and 10 drawn boards, one NG, in its own folder {folder}; production data is not touched. It shows how the app works, never how well it finds defects.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+28"/>
+        <location line="+27"/>
         <source>Play Scripted Run ›</source>
         <translation type="unfinished"></translation>
     </message>
@@ -819,7 +819,7 @@
     </message>
     <message>
         <location line="+1"/>
-        <location line="+35"/>
+        <location line="+33"/>
         <source>Reset Demo</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1567,7 +1567,7 @@
     <message>
         <location filename="../ui/demo_workspace.py" line="+31"/>
         <location filename="../ui/errors.py" line="+141"/>
-        <location filename="../ui/main_window.py" line="+885"/>
+        <location filename="../ui/main_window.py" line="+953"/>
         <source>start-up</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1582,7 +1582,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+479"/>
+        <location line="+488"/>
         <source>Height</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3654,13 +3654,13 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/training.py" line="+534"/>
+        <location filename="../ui/pages/training.py" line="+536"/>
         <location filename="../ui/pages/training_import.py" line="+39"/>
         <source>{code} {title}</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/model_test.py" line="+56"/>
+        <location filename="../ui/pages/model_test.py" line="+57"/>
         <source>AI model {version}</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3952,7 +3952,7 @@
 <context>
     <name>FreezeSheet</name>
     <message>
-        <location filename="../ui/pages/training_versions.py" line="+144"/>
+        <location filename="../ui/pages/training_versions.py" line="+146"/>
         <source>Freeze dataset</source>
         <translation>데이터셋 동결</translation>
     </message>
@@ -4060,7 +4060,7 @@
 <context>
     <name>HomePage</name>
     <message>
-        <location filename="../ui/main_window.py" line="-757"/>
+        <location filename="../ui/main_window.py" line="-816"/>
         <source>Upload samples</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4417,13 +4417,13 @@
     <name>InspectionPage</name>
     <message>
         <location filename="../ui/pages/inspection.py" line="+108"/>
-        <location line="+105"/>
+        <location line="+106"/>
         <location line="+246"/>
         <source>Load Images…</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-350"/>
+        <location line="-351"/>
         <source>Load Folder…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4439,12 +4439,12 @@
     </message>
     <message>
         <location line="+6"/>
-        <location line="+88"/>
+        <location line="+89"/>
         <source>No images loaded</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-48"/>
+        <location line="-49"/>
         <source>No</source>
         <comment>defect number</comment>
         <translation type="unfinished"></translation>
@@ -4480,7 +4480,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+7"/>
+        <location line="+8"/>
         <source>▶  Start</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4525,7 +4525,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-149"/>
+        <location line="-150"/>
         <source>Save Image… needs the {roles} role.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4540,7 +4540,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+71"/>
+        <location line="+72"/>
         <source>Images ({extensions})</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4705,7 +4705,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+79"/>
+        <location line="+82"/>
         <source>Review saved: {review} for record {record}.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4985,7 +4985,7 @@
 <context>
     <name>LogsPage</name>
     <message>
-        <location filename="../ui/pages/logs.py" line="+158"/>
+        <location filename="../ui/pages/logs.py" line="+147"/>
         <source>Include archived</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5050,12 +5050,12 @@
     </message>
     <message>
         <location line="+1"/>
-        <location line="+65"/>
+        <location line="+66"/>
         <source>Defects</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-63"/>
+        <location line="-64"/>
         <source>View</source>
         <translation>뷰</translation>
     </message>
@@ -5095,7 +5095,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+12"/>
+        <location line="+14"/>
         <source>Add to Training as OK</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5105,7 +5105,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+5"/>
+        <location line="+4"/>
         <location line="+308"/>
         <source>Export CSV</source>
         <translation type="unfinished"></translation>
@@ -5191,8 +5191,8 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-274"/>
-        <location line="+43"/>
+        <location line="-275"/>
+        <location line="+44"/>
         <source>Records</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5280,12 +5280,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-326"/>
+        <location line="-327"/>
         <source>AI model</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+192"/>
+        <location line="+193"/>
         <source>Reset Filters</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5345,9 +5345,9 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-496"/>
+        <location line="-497"/>
         <location line="+6"/>
-        <location line="+579"/>
+        <location line="+580"/>
         <source>All</source>
         <translation>전체</translation>
     </message>
@@ -5375,12 +5375,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+91"/>
+        <location line="+107"/>
         <source>{title} · Demo</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+93"/>
+        <location line="+94"/>
         <source>Signed in as {user} ({role}), who signed in last on this station. Not you? Press Switch User.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5395,7 +5395,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+5"/>
+        <location line="+3"/>
+        <source>Board model</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+4"/>
         <source>+ New</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5415,7 +5420,7 @@
         <translation>학습 {percent} % · {left}</translation>
     </message>
     <message>
-        <location line="+16"/>
+        <location line="+18"/>
         <source>New board model</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5450,7 +5455,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+84"/>
+        <location line="+122"/>
         <source>Presenter theme off.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5529,7 +5534,7 @@
 <context>
     <name>ModelTestPage</name>
     <message>
-        <location filename="../ui/pages/model_test.py" line="+53"/>
+        <location filename="../ui/pages/model_test.py" line="+54"/>
         <location line="+728"/>
         <source>Select Test Folder…</source>
         <translation type="unfinished"></translation>
@@ -5560,20 +5565,20 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-351"/>
-        <location line="+228"/>
+        <location line="-350"/>
+        <location line="+227"/>
         <source>Accuracy</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-229"/>
-        <location line="+228"/>
+        <location line="-228"/>
+        <location line="+227"/>
         <source>Precision</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-229"/>
-        <location line="+228"/>
+        <location line="-228"/>
+        <location line="+227"/>
         <source>Recall</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5603,7 +5608,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-689"/>
+        <location line="-690"/>
         <source>Matches label</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5623,13 +5628,13 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+23"/>
+        <location line="+24"/>
         <location line="+757"/>
         <source>Export Image Overlays</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-748"/>
+        <location line="-747"/>
         <source>Source</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5640,15 +5645,15 @@
     </message>
     <message>
         <location line="+10"/>
-        <location line="+63"/>
+        <location line="+62"/>
         <location line="+165"/>
         <location line="+628"/>
         <source>Missed defects</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-855"/>
-        <location line="+63"/>
+        <location line="-854"/>
+        <location line="+62"/>
         <location line="+165"/>
         <location line="+627"/>
         <source>False calls</source>
@@ -6089,7 +6094,7 @@
 <context>
     <name>Page</name>
     <message>
-        <location filename="../ui/main_window.py" line="-715"/>
+        <location filename="../ui/main_window.py" line="-774"/>
         <source>Home</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6114,7 +6119,7 @@
         <translation>약 {minutes}분 남음</translation>
     </message>
     <message>
-        <location line="+146"/>
+        <location line="+145"/>
         <source>No board model yet</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6194,17 +6199,17 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+110"/>
+        <location line="+123"/>
         <source>{action}  {key}</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/logs.py" line="-615"/>
+        <location filename="../ui/pages/logs.py" line="-616"/>
         <source>Logs &amp; Export</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/compare.py" line="-801"/>
+        <location filename="../ui/pages/compare.py" line="-913"/>
         <source>Compare</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6214,7 +6219,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/inspection.py" line="-715"/>
+        <location filename="../ui/pages/inspection.py" line="-719"/>
         <source>Inspection</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6224,7 +6229,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/model_test.py" line="-918"/>
+        <location filename="../ui/pages/model_test.py" line="-919"/>
         <source>AI Model Test</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6255,7 +6260,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/training.py" line="-385"/>
+        <location filename="../ui/pages/training.py" line="-386"/>
         <source>Training</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6265,7 +6270,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/recipe_editor.py" line="-466"/>
+        <location filename="../ui/pages/recipe_editor.py" line="-475"/>
         <source>Recipe Editor</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6359,7 +6364,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+38"/>
+        <location line="+39"/>
         <location line="+2"/>
         <source>Draw ROI</source>
         <translation type="unfinished"></translation>
@@ -6375,12 +6380,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+122"/>
+        <location line="+124"/>
         <source>The 10 mandatory AOI checks (defect classification table, section 4):</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+12"/>
+        <location line="+14"/>
         <source>AOI checks</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6390,23 +6395,23 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+34"/>
+        <location line="+38"/>
         <source>AI score</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-185"/>
+        <location line="-193"/>
         <source>Selected ROI</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+9"/>
+        <location line="+10"/>
         <source>Enabled</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location line="+1"/>
-        <location line="+175"/>
+        <location line="+182"/>
         <source>Name</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6436,12 +6441,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-172"/>
+        <location line="-179"/>
         <source>ROI type</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-69"/>
+        <location line="-70"/>
         <source>Leave Draw ROI</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6466,7 +6471,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+53"/>
+        <location line="+54"/>
         <source>AI score (× AI score threshold)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6496,7 +6501,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+8"/>
+        <location line="+9"/>
         <source>Learn From Labelled Boards…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6571,7 +6576,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+11"/>
+        <location line="+13"/>
         <source>• whole board: the AI model and the Golden board comparison find it without an ROI, as a difference from the Golden board, and name it Anomaly.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6656,7 +6661,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+15"/>
+        <location line="+19"/>
         <source>px</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6879,7 +6884,7 @@
 <context>
     <name>Role</name>
     <message>
-        <location filename="../ui/pages/base.py" line="-437"/>
+        <location filename="../ui/pages/base.py" line="-449"/>
         <source>Operator</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7254,11 +7259,11 @@
     </message>
     <message>
         <location line="+4"/>
-        <source>Light, text 18 pt or more, verdict 48 pt. 3D Profile and the hardware table are hidden; Settings is hidden too, except for an Admin, who keeps it for Reset Demo. An Admin leaves the theme with Exit presenter theme in the header.</source>
+        <source>Light, text 18 pt or more, verdict 48 pt; where the app has under 900 px of height or 1400 px of width, as on a 1366 × 768 projector, text 16 pt and verdict 44 pt. 3D Profile and the hardware table are hidden; Settings is hidden too, except for an Admin, who keeps it for Reset Demo. An Admin leaves the theme with Exit presenter theme in the header.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+10"/>
+        <location line="+11"/>
         <source>Users &amp; roles</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7332,7 +7337,7 @@
 <context>
     <name>SplitSheet</name>
     <message>
-        <location filename="../ui/pages/training_versions.py" line="+247"/>
+        <location filename="../ui/pages/training_versions.py" line="+246"/>
         <source>Seed</source>
         <translation>시드</translation>
     </message>
@@ -7403,7 +7408,7 @@
 <context>
     <name>StoresPanel</name>
     <message>
-        <location filename="../ui/pages/settings_stores.py" line="+50"/>
+        <location filename="../ui/pages/settings_stores.py" line="+52"/>
         <source>Dataset stores</source>
         <translation>데이터셋 저장소</translation>
     </message>
@@ -7763,23 +7768,23 @@
     </message>
     <message>
         <location line="+1"/>
-        <location line="+606"/>
+        <location line="+607"/>
         <source>Import Folder…</source>
         <translation>폴더 가져오기…</translation>
     </message>
     <message>
-        <location line="-594"/>
+        <location line="-595"/>
         <source>Training needs 20 OK images or more in a dataset version&apos;s training set</source>
         <translation>학습에는 데이터셋 버전의 학습 세트에 OK 이미지가 20장 이상 필요합니다</translation>
     </message>
     <message>
         <location line="+20"/>
-        <location line="+93"/>
+        <location line="+94"/>
         <source>ID</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-92"/>
+        <location line="-93"/>
         <source>Label</source>
         <translation>라벨</translation>
     </message>
@@ -7804,7 +7809,7 @@
         <translation>가져오는 중…</translation>
     </message>
     <message>
-        <location line="+3"/>
+        <location line="+4"/>
         <source>Mark OK</source>
         <translation>OK로 표시</translation>
     </message>
@@ -7905,7 +7910,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-220"/>
+        <location line="-221"/>
         <source>All</source>
         <translation>전체</translation>
     </message>
@@ -7950,7 +7955,7 @@
         <translation>검토</translation>
     </message>
     <message>
-        <location line="+13"/>
+        <location line="+14"/>
         <source>Check Label</source>
         <translation>라벨 검토</translation>
     </message>
@@ -7991,13 +7996,13 @@
     </message>
     <message>
         <location line="+1"/>
-        <location line="+823"/>
+        <location line="+821"/>
         <location line="+40"/>
         <source>Roll Back</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-859"/>
+        <location line="-857"/>
         <source>AI Model Card</source>
         <translation type="unfinished"></translation>
     </message>
@@ -8192,7 +8197,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+93"/>
+        <location line="+91"/>
         <source>No frozen dataset version of {board_model} yet; training reads only a frozen version&apos;s training set, once its validation set is locked.</source>
         <translation>{board_model}의 고정된 데이터셋 버전이 아직 없습니다. 학습은 검증 세트가 잠긴 고정 버전의 학습 세트만 읽습니다.</translation>
     </message>
@@ -8217,7 +8222,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-350"/>
+        <location line="-348"/>
         <source>Add at least 20 OK boards with Add OK Images… or Import Folder…</source>
         <translation>OK 이미지 추가… 또는 폴더 가져오기…로 OK 보드를 20개 이상 추가하세요</translation>
     </message>
@@ -8227,7 +8232,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+329"/>
+        <location line="+327"/>
         <source>Rolled back to AI model {version}</source>
         <translation type="unfinished"></translation>
     </message>
@@ -8265,7 +8270,7 @@
 <context>
     <name>VersionsPanel</name>
     <message>
-        <location filename="../ui/pages/training_versions.py" line="-309"/>
+        <location filename="../ui/pages/training_versions.py" line="-308"/>
         <source>own</source>
         <translation>자체</translation>
     </message>
@@ -8345,7 +8350,7 @@
         <translation>매니페스트 내보내기…</translation>
     </message>
     <message>
-        <location line="+5"/>
+        <location line="+4"/>
         <source>Checking each file against its manifest…</source>
         <translation>각 파일을 매니페스트와 대조하는 중…</translation>
     </message>
@@ -8461,7 +8466,7 @@
 <context>
     <name>WorkingSetPanel</name>
     <message>
-        <location filename="../ui/pages/training_versions.py" line="-476"/>
+        <location filename="../ui/pages/training_versions.py" line="-474"/>
         <source>Their own AI models</source>
         <translation>고객 자체 AI 모델</translation>
     </message>
@@ -8496,7 +8501,7 @@
         <translation>고객</translation>
     </message>
     <message>
-        <location line="+9"/>
+        <location line="+8"/>
         <source>Allowed uses</source>
         <translation>허용된 용도</translation>
     </message>

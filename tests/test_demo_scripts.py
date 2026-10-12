@@ -136,15 +136,15 @@ def test_req_set_007_the_five_minute_script_runs_in_the_presenter_theme(
 def test_req_set_008_in_the_presenter_theme_an_admin_resets_the_demo_or_leaves_the_theme_in_three_clicks(
     qtbot: QtBot, bundle: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """A4 of the 2026-10 business-readiness brief (D7, F10). In the presenter theme, in the smallest window it fits
-    (1888 x 907, docs/demo/README.md), an Admin reaches Reset Demo from every page the sidebar shows in three clicks,
-    each where a presenter makes it with nothing scrolled: Settings in the sidebar, Reset Demo, then Yes to its
-    question. From a run paused at its NG board, with work still running (a stand-in job that stops when asked, as a
-    board's inspection or an export does), Yes to that one question stops the work and the demo comes back in the
-    presenter theme, at Home, with no records; so does work that starts while the question is open (a scripted run's
-    next board), with no second question. Exit presenter theme is one click, in the header of every page.
-    Settings shows no hardware table there (its Stage 2 to 4 rows read "Not connected"); an Operator has no Settings in
-    the sidebar and cannot open it. No message on the way."""
+    """A4 of the 2026-10 business-readiness brief (D7, F10). In the presenter theme, in a 1366 x 768 window, the
+    smallest the demo kit names (docs/demo/README.md, #104), an Admin reaches Reset Demo from every page the sidebar
+    shows in three clicks, each where a presenter makes it with nothing scrolled: Settings in the sidebar, Reset Demo,
+    then Yes to its question. From a run paused at its NG board, with work still running (a stand-in job that stops
+    when asked, as a board's inspection or an export does), Yes to that one question stops the work and the demo comes
+    back in the presenter theme, at Home, with no records; so does work that starts while the question is open (a
+    scripted run's next board), with no second question. Exit presenter theme is one click, in the header of every
+    page. Settings shows no hardware table there (its Stage 2 to 4 rows read "Not connected"); an Operator has no
+    Settings in the sidebar and cannot open it. No message on the way."""
     shown: list[str] = []
     monkeypatch.setattr(ui_errors, "show_error", lambda _parent, report: shown.append(str(report)))
     monkeypatch.setattr(main_window, "show_error", lambda _parent, report: shown.append(str(report)))
@@ -167,8 +167,8 @@ def test_req_set_008_in_the_presenter_theme_an_admin_resets_the_demo_or_leaves_t
 
     def smallest(win: MainWindow) -> None:
         win.showNormal()  # it opens maximized, and maximized it went back to the test screen's 1461 x 796 mid-run
-        win.resize(1888, 907)
-        qtbot.waitUntil(lambda: win.size() == QSize(1888, 907))
+        win.resize(1366, 768)
+        qtbot.waitUntil(lambda: win.size() == QSize(1366, 768))
 
     def whole(widget: QWidget) -> bool:
         """Shown whole where it is, nothing scrolled away or cut off: a click lands on it."""

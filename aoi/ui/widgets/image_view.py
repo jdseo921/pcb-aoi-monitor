@@ -6,7 +6,7 @@ from typing import cast
 
 import cv2
 import numpy as np
-from PySide6.QtCore import QLineF, QPoint, QPointF, QRectF, QSize, Qt, Signal
+from PySide6.QtCore import QLineF, QPoint, QPointF, QRect, QRectF, QSize, Qt, Signal
 from PySide6.QtGui import (
     QBrush,
     QColor,
@@ -18,6 +18,7 @@ from PySide6.QtGui import (
     QPainter,
     QPen,
     QPixmap,
+    QResizeEvent,
     QTransform,
     QWheelEvent,
 )
@@ -84,10 +85,17 @@ class ImageView(QGraphicsView):
         self._pan_from: QPoint | None = None  # where a middle or Space drag was last, in viewport px
         self._peers: list[ImageView] = []
         self._syncing = False
+        # what a resize keeps in view (#104): the whole picture once fitted (`fitted`), the area round a box once
+        # centred on it (`_box`); after a zoom or a pan of the user's, neither, and a resize leaves that view as it is
+        self.fitted = False
+        self._box: QRectF | None = None
+        self._room = QSize()  # the viewport's size with no scroll bars, as the last resize left it
         self._placeholder = self.scene().addSimpleText(placeholder, label_font())
         self._placeholder.setBrush(QColor(theme.TEXT_MUTED))  # 8:1 on BG_IMAGE; it is a hint, not a disabled control
         self.horizontalScrollBar().valueChanged.connect(self._emit_changed)
         self.verticalScrollBar().valueChanged.connect(self._emit_changed)
+        for bar in (self.horizontalScrollBar(), self.verticalScrollBar()):  # a scroll bar dragged, clicked or keyed
+            bar.actionTriggered.connect(lambda _action: self.let_go())
 
     # --- content ---------------------------------------------------------------
     def set_image(self, img: np.ndarray | None, keep_view: bool = False) -> None:
@@ -114,7 +122,28 @@ class ImageView(QGraphicsView):
         ratio = min(room.width() / rect.width(), room.height() / rect.height())
         self.setTransform(QTransform.fromScale(ratio, ratio))
         self.centerOn(rect.center())
+        self.fitted, self._box = True, None
         self._emit_changed()
+
+    def let_go(self) -> None:
+        """The view is the user's, zoomed or panned: a resize keeps it as it is."""
+        self.fitted, self._box = False, None
+
+    def resizeEvent(self, event: QResizeEvent) -> None:
+        """A fitted picture fitted again to the view's new size, and a box centred on centred again: a pane a page
+        gives more or less room, or a window maximised on a projector, kept the scale the picture had and cut the board,
+        or the box, or left it small (#104). Asked only when the view itself changed size: the viewport also changes
+        size as a zoom's scroll bars come or go, and a fit then would undo the zoom."""
+        super().resizeEvent(event)
+        room = self.maximumViewportSize()
+        if room == self._room or self._syncing:
+            return
+        self._room = room
+        if self.fitted:
+            self.fit()
+        elif self._box is not None:
+            self.fitInView(self._box, Qt.AspectRatioMode.KeepAspectRatio)
+            self._emit_changed()
 
     def clear_overlays(self) -> None:
         for it in self._overlay_items:
@@ -149,6 +178,15 @@ class ImageView(QGraphicsView):
             self.scene().addItem(t)
             self._overlay_items.append(t)
 
+    def box_rects(self) -> list[QRect]:
+        """Each box `add_box` drew, where it is in the viewport's pixels: a rectangle outside `viewport().rect()` is a
+        defect box the user cannot see without zooming out or panning (#104)."""
+        return [
+            self.mapFromScene(item.sceneBoundingRect()).boundingRect()
+            for item in self._overlay_items
+            if isinstance(item, QGraphicsRectItem)
+        ]
+
     def restyle(self) -> None:
         """The theme was switched (REQ-SET-008): the background, the "No image" hint and every box's label again in the
         theme's colours and text size, each label where it was across."""
@@ -172,12 +210,14 @@ class ImageView(QGraphicsView):
             self._overlay_items.append(ring)
 
     def center_on_box(self, x: float, y: float, w: float, h: float) -> None:
-        self.fitInView(QRectF(x - w, y - h, w * 3, h * 3), Qt.AspectRatioMode.KeepAspectRatio)
+        self.fitted, self._box = False, QRectF(x - w, y - h, w * 3, h * 3)
+        self.fitInView(self._box, Qt.AspectRatioMode.KeepAspectRatio)
 
     # --- zoom / pan --------------------------------------------------------------
     def wheelEvent(self, e: QWheelEvent) -> None:
         f = 1.25 if e.angleDelta().y() > 0 else 0.8
         self.scale(f, f)
+        self.let_go()
         self._emit_changed()
 
     def mouseDoubleClickEvent(self, e: QMouseEvent) -> None:
@@ -229,16 +269,22 @@ class ImageView(QGraphicsView):
         super().mousePressEvent(e)
 
     def mouseMoveEvent(self, e: QMouseEvent) -> None:
+        """A pan, by the hand or the pan button, lets go of the fit only once it has moved the picture: a tap that
+        jitters a few pixels on a fitted board, which nothing scrolls, keeps the board fitted (review of A7)."""
+        h, v = self.horizontalScrollBar(), self.verticalScrollBar()
+        before = (h.value(), v.value())
         if self._pan_from is not None:
-            at, (h, v) = e.position().toPoint(), (self.horizontalScrollBar(), self.verticalScrollBar())
+            at = e.position().toPoint()
             h.setValue(h.value() - (at.x() - self._pan_from.x()))
             v.setValue(v.value() - (at.y() - self._pan_from.y()))
             self._pan_from = at
-            return
-        if self._rubber is not None and self._drag_start is not None:
+        elif self._rubber is not None and self._drag_start is not None:
             self._rubber.setRect(QRectF(self._drag_start, self.mapToScene(e.position().toPoint())).normalized())
             return
-        super().mouseMoveEvent(e)
+        else:
+            super().mouseMoveEvent(e)
+        if (h.value(), v.value()) != before:
+            self.let_go()  # the picture moved under the hand
 
     def mouseReleaseEvent(self, e: QMouseEvent) -> None:
         if self._pan_from is not None:
@@ -265,6 +311,7 @@ class ImageView(QGraphicsView):
             return  # no other: its fit, at the width it last had, shrank the board shown by half (#248)
         for p in self._peers:
             p._syncing = True
+            p.fitted, p._box = self.fitted, self._box
             p.setTransform(self.transform())
             p.horizontalScrollBar().setValue(self.horizontalScrollBar().value())
             p.verticalScrollBar().setValue(self.verticalScrollBar().value())

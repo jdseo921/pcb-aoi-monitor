@@ -351,7 +351,7 @@ def test_req_set_008_the_presenter_theme_applies_at_once_saved_and_audited(
     folder = settings.ws.text()
     settings.ws.setText("C:/" + "/".join(["a long customer folder name"] * 6))  # 168 characters: never widens a page
     QApplication.processEvents()
-    assert win.minimumSizeHint().width() <= 1888, win.minimumSizeHint()  # the presenter theme's window (README)
+    assert win.minimumSizeHint().width() <= 1366, win.minimumSizeHint()  # a 1366 x 768 projector (README, #104)
     assert win.exit_presenter.isVisible()
     assert win.statusBar().currentMessage() == "Presenter theme on. An Admin turns it off with Exit presenter theme."
     shown = drawn()

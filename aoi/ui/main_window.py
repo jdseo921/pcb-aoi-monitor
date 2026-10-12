@@ -6,7 +6,16 @@ from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
 from PySide6.QtCore import QEvent, QModelIndex, QObject, QPersistentModelIndex, QSize, Qt, QTimer
-from PySide6.QtGui import QAction, QCloseEvent, QColor, QKeySequence, QMouseEvent, QPainter, QShowEvent
+from PySide6.QtGui import (
+    QAction,
+    QCloseEvent,
+    QColor,
+    QKeySequence,
+    QMouseEvent,
+    QPainter,
+    QResizeEvent,
+    QShowEvent,
+)
 from PySide6.QtWidgets import (
     QApplication,
     QComboBox,
@@ -336,30 +345,46 @@ class _GreyedEntryPress(QObject):
         return False
 
 
+class _GivesWay(QLabel):
+    """A header label that never sets the window's minimum width: `MainWindow._fit_header` hides it where the header's
+    controls need its room, so a 1366 px window is never held wider by it (A7)."""
+
+    def minimumSizeHint(self) -> QSize:  # noqa: N802 (Qt's name)
+        return QSize(0, super().minimumSizeHint().height())
+
+
 class _PageStack(QStackedWidget):
-    """The pages in the scroll area round them (#104): as wide as the widest page needs, as a QStackedWidget is, so
-    every page keeps the width it was laid out for, but only as tall as the page shown needs. A QStackedWidget asks
-    for the tallest page's height, so every page would scroll as far down as the tallest one (Settings) needs, and
-    Compare's Try panel would sit below the fold of a 1600 x 900 window."""
+    """The pages in the scroll area round them (#104): as wide and as tall as the page shown needs. A QStackedWidget
+    asks for its widest and tallest page's size, so every page would scroll as far down as the tallest one (Settings)
+    needs, and Compare's Try panel would sit below the fold of a 1600 x 900 window; and every page scrolled sideways at
+    1366 x 768 as far as the widest one (Training) needs, though the page shown fitted (A7 of the 2026-10
+    business-readiness brief)."""
 
     def __init__(self) -> None:
         super().__init__()
         self.currentChanged.connect(lambda _i: self.updateGeometry())
 
     def minimumSizeHint(self) -> QSize:  # noqa: N802 (Qt's name)
-        page, hint = self.currentWidget(), super().minimumSizeHint()
+        page = self.currentWidget()
         if page is None:
-            return hint
-        return QSize(hint.width(), max(page.minimumSizeHint().height(), page.minimumHeight()))
+            return super().minimumSizeHint()
+        hint = page.minimumSizeHint()
+        return QSize(max(hint.width(), page.minimumWidth()), max(hint.height(), page.minimumHeight()))
 
     def sizeHint(self) -> QSize:  # noqa: N802 (Qt's name)
-        page, hint = self.currentWidget(), super().sizeHint()
-        return hint if page is None else QSize(hint.width(), page.sizeHint().height())
+        page = self.currentWidget()
+        return super().sizeHint() if page is None else page.sizeHint()
 
     def heightForWidth(self, width: int) -> int:  # noqa: N802 (Qt's name)
-        """None: the scroll area then gives the page the viewport's height, or its minimum where that is more, as the
-        window gave it before (a wrapped label's preferred height would make every page scroll)."""
-        return -1
+        """The least height the page shown needs at `width`, its wrapped lines at their height for that width: the
+        scroll area gives the page the viewport's height, or this where it is more. Its preferred height would make
+        every page scroll; its minimum height alone, measured at its widest, cut a wrapped line short at 1366 px, as
+        Home's cards were (A7)."""
+        page = self.currentWidget()
+        layout = page.layout() if page is not None else None
+        if page is None or layout is None or not layout.hasHeightForWidth():
+            return -1
+        return max(layout.totalMinimumHeightForWidth(width), page.minimumHeight())
 
 
 class MainWindow(QMainWindow):
@@ -384,7 +409,8 @@ class MainWindow(QMainWindow):
         outer = QVBoxLayout(central)
         outer.setContentsMargins(0, 0, 0, 0)
         outer.setSpacing(0)
-        outer.addWidget(self._header())
+        self.header = self._header()
+        outer.addWidget(self.header)
         body = QHBoxLayout()
         body.setSpacing(0)
         self.nav = QListWidget()
@@ -479,16 +505,18 @@ class MainWindow(QMainWindow):
         h.setFixedHeight(theme.HEADER_H)
         layout = QHBoxLayout(h)
         layout.setContentsMargins(18, 0, 18, 0)
-        logo = QLabel(f"<b>{APP_NAME}</b>")
-        logo.setObjectName("logo")
-        layout.addWidget(logo)
+        self.logo = _GivesWay(f"<b>{APP_NAME}</b>")  # gives way first where the header is too narrow (`_fit_header`)
+        self.logo.setObjectName("logo")
+        layout.addWidget(self.logo)
         self.demo_badge = QLabel(self.tr("Demo"))  # on every page while the demo workspace is open (settings sketch)
         self.demo_badge.setObjectName("badge")
         self.demo_badge.setVisible(self.in_demo)
         layout.addWidget(self.demo_badge)
         layout.addSpacing(30)
-        layout.addWidget(QLabel(self.tr("Board model:")))
+        self.bm_label = _GivesWay(self.tr("Board model:"))
+        layout.addWidget(self.bm_label)
         self.bm_combo = QComboBox()
+        self.bm_combo.setToolTip(self.tr("Board model"))
         self.bm_combo.setMinimumWidth(theme.FIELD_W)
         self.bm_combo.currentTextChanged.connect(self._on_board_model)
         layout.addWidget(self.bm_combo)
@@ -518,7 +546,9 @@ class MainWindow(QMainWindow):
             percent, left = (progress.percent, progress.left_s) if progress else (0, None)
             text = self.tr("Training {percent} % · {left}").format(percent=percent, left=time_left_text(left))
             self.training_link.setText(text)
-        self.training_link.setVisible(running)
+        if running == self.training_link.isHidden():
+            self.training_link.setVisible(running)
+            self._fit_header()
         cast(HomePage, self.pages["Home"]).show_training(progress, running)
 
     def _reload_board_models(self, select: str | None = None) -> None:
@@ -608,6 +638,31 @@ class MainWindow(QMainWindow):
             heading.setHidden(all(self.hidden(t) for t in titles))
         self.exit_presenter.setVisible(theme.presenter() and role in SettingsPage.roles)  # where it was switched on
         self.gates.gate(self.btn_new, "ensure_board_model")  # never hidden: greyed, saying who may (REQ-USR-001)
+        self._fit_header()
+
+    def _fit_header(self) -> None:
+        """The header's controls whole in a window as narrow as 1366 px in the presenter theme (A7): where they do not
+        all fit, the app's name gives way first, which the window's title bar still shows, then the words "Board
+        model:" before the list, whose tooltip still says it; at 1366 px only a training run's line in the header
+        needs that. Measured as if both were shown, and each shown or hidden only when that changes, so a resize lays
+        the window out once (review of A7)."""
+        layout = self.header.layout()
+        assert layout is not None
+        gives_way = (self.logo, self.bm_label)
+        need = layout.sizeHint().width()  # a box layout leaves its hidden widgets out
+        need += sum(label.sizeHint().width() + layout.spacing() for label in gives_way if label.isHidden())
+        for label in gives_way:
+            hide = need > self.width()
+            if hide:
+                need -= label.sizeHint().width() + layout.spacing()
+            if label.isHidden() != hide:
+                label.setHidden(hide)
+
+    def resizeEvent(self, event: QResizeEvent) -> None:  # noqa: N802 (Qt's name)
+        super().resizeEvent(event)
+        if theme.presenter() and self._small() != theme.small():
+            self.apply_theme()  # the presenter theme's sizes for the window's size
+        self._fit_header()
 
     def hidden(self, title: str) -> bool:
         """Whether page `title` is out of the sidebar, and cannot be opened: in the presenter theme, a page marked not
@@ -619,17 +674,30 @@ class MainWindow(QMainWindow):
             return False
         return not page.in_presenter_theme or (page.roles == ("Admin",) and self.ctx.role not in page.roles)
 
-    def _set_theme(self, presenter: bool) -> None:
-        theme.use(presenter)
+    def _small(self) -> bool:
+        """The window is shorter than theme.SMALL_H or narrower than theme.SMALL_W, where the presenter theme's 18 pt
+        pages do not fit: a 1366 x 768 or a 1280 x 1024 screen (ADR 0019). Before it is first shown, the screen's room
+        stands for it, as the app opens maximized: the theme is then styled once at a start, not at the window's first
+        size and again at the screen's (review of A7)."""
+        size = self.size()
+        if not self.isVisible() and (screen := self.screen()) is not None:
+            size = screen.availableGeometry().size()
+        return size.height() < theme.SMALL_H or size.width() < theme.SMALL_W
+
+    def _set_theme(self, presenter: bool, small: bool = False) -> None:
+        theme.use(presenter, small)
         cast(QApplication, QApplication.instance()).setStyleSheet(theme.stylesheet())
 
     def apply_theme(self) -> None:
         """The theme settings.json holds, at once (REQ-SET-008): the stylesheet, then what the pages drew with the
         tokens, each in the new theme (verdict labels, coloured table rows, the text on images, each page's own
-        `restyle`), the sidebar and the header. The page shown goes to Home when the theme hides it."""
-        if self.ctx.settings.presenter_theme != theme.presenter():
+        `restyle`), the sidebar and the header. The page shown goes to Home when the theme hides it. In a small window
+        (`_small`) the presenter theme takes its sizes for a small window, and its 18 pt again in a larger one (#104):
+        `resizeEvent` asks for it as the window crosses that size."""
+        want = (self.ctx.settings.presenter_theme, self.ctx.settings.presenter_theme and self._small())
+        if want != (theme.presenter(), theme.small()):
             styled = theme.verdict_styles()  # read with the tokens they were drawn with
-            self._set_theme(self.ctx.settings.presenter_theme)
+            self._set_theme(*want)
             for label in self.findChildren(QLabel):
                 if (style := styled.get(label.styleSheet())) is not None:
                     label.setStyleSheet(style())

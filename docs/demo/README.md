@@ -38,8 +38,13 @@ Rehearse once on the demo laptop, the day before or in the room, and tick each l
       theme, if it is on, stays on. Leave it at **Home** with the **Presenter theme** on.
 - [ ] Wi-Fi is off. The app needs no network ([ports.md](../install/ports.md)).
 - [ ] The projector is checked at 1920 × 1080 and at 1366 × 768: every page of the script reads from the back row.
-      The pages need a screen 1920 × 1080 or larger (the app needs at least 1888 × 907 px in the presenter theme);
-      at 1366 × 768 they do not fit yet (#104). On a projector that takes only 1366 × 768, play the recording.
+      Every page and tab the scripts open fits 1366 × 768, its verdict, defect boxes and the table on **Compare** in
+      view with nothing scrolled; where the app has under 900 px of height or 1400 px of width, the presenter theme's
+      text is 16 pt, not 18 ([screen sizes](../tests/2026-10-screen-sizes.md)). Maximized on a 1366 × 768 screen the
+      app has less, about 1366 × 690, as Windows keeps the title bar and the taskbar: there **Start** on
+      **Inspection** and the last two rows of the table on **Compare**, the demo board's AI score among them, sit just
+      under the edge, so press F5 to start and scroll down for those rows. On a projector that takes less than
+      1366 × 768, play the recording.
 - [ ] The **Presenter theme** is on (**Settings**, then **Presenter theme**).
 - [ ] Windows notifications are off (Focus or Do not disturb), and no other app is open.
 - [ ] Only this customer's data is on the laptop: no other customer's images, reports or names, in the app, on the
@@ -73,7 +78,10 @@ Rehearse once on the demo laptop, the day before or in the room, and tick each l
 
 `tests/test_demo_scripts.py` clicks through the 5-minute and the 15-minute scripts in the presenter theme on every pull
 request, from **Load Demo Workspace** to **Reset Demo**, and goes red on any message on the way, or on a page wider
-than a 1920 px screen. The 45-minute script is not clicked through. It also checks that every name in
-bold in these files is a real button or page, that the text uses the Charter's words, and that each file has its
-Korean draft. Customers & Launch also asks that someone in each reader's role follows the scripts on the release
-build before they go out; that has not been done yet, as the release build does not exist.
+than a 1920 px screen; the 45-minute script is not clicked through. It also checks that every name in bold in these
+files is a real button or page, that the text uses the Charter's words, and that each file has its Korean draft.
+`tests/test_demo_fit.py` opens every page and tab the scripts show at 1366 × 768, in the presenter theme and in the
+dark one, and goes red on a page or a panel of fields that scrolls sideways, a line of text cut off, or a verdict,
+defect box or table row on **Compare** that is not in view. Customers & Launch also asks that someone in each
+reader's role follows the scripts on the release build before they go out; that has not been done yet, as the release
+build does not exist.

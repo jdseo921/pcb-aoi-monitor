@@ -24,7 +24,8 @@ scores identical, and the two numbers that follow the alignment's last digits ar
 FIXED_INLIERS. What still moves is the aligned board picture, by a level or two (at most 42 levels, at 2 single pixels,
 with OpenCV and NumPy held to SSE3), which the comparison tolerates (tests/screens/test_screens.py). On Linux the pages
 are drawn with DejaVu Sans without hinting, so every Linux machine draws the same pixels; Windows draws Segoe UI, so
-there the tests check sizes and contrast only.
+there the tests check sizes and contrast only. The presenter theme is drawn twice: at the screen size, and at 1366 x 768
+(PRESENTER_SMALL_SHOTS), every page the demo scripts open as a 1366 x 768 projector shows it (#104).
 """
 
 from __future__ import annotations
@@ -72,6 +73,17 @@ PRESENTER_SHOTS = {  # the presenter theme (REQ-SET-008): presenter-<page>-<role
     "presenter-inspection-operator": ("Inspection", "operator"),  # the result, its verdict at 48 pt; no Settings
     "presenter-compare-engineer": ("Compare", "engineer"),
     "presenter-settings-admin": ("Settings", "admin"),  # kept for the Admin's Reset Demo, without the hardware table
+}
+SMALL_SIZE = (1366, 768)  # a projector that takes no more (#104): the presenter theme at its 16 pt size (theme.SMALL_H)
+PRESENTER_SMALL_SHOTS = {  # every page the demo scripts open (tools/screen_sizes.py), at SMALL_SIZE, as the Admin
+    "presenter-1366-home-admin": ("Home", "admin"),
+    "presenter-1366-inspection-admin": ("Inspection", "admin"),
+    "presenter-1366-compare-admin": ("Compare", "admin"),
+    "presenter-1366-training-admin": ("Training", "admin"),
+    "presenter-1366-ai-model-test-admin": ("AI Model Test", "admin"),
+    "presenter-1366-recipe-editor-admin": ("Recipe Editor", "admin"),
+    "presenter-1366-logs-export-admin": ("Logs & Export", "admin"),
+    "presenter-1366-settings-admin": ("Settings", "admin"),
 }
 FIXED_WORKSPACE = "C:/AOI_Workspace"  # what the Settings page shows instead of the temporary folder
 TEST_FONT = '"DejaVu Sans"'  # the font the approved images are drawn with (Linux)
@@ -458,14 +470,19 @@ def render_stored(win: Any, ctx: AppContext, out: Path) -> dict[str, Path]:
 
 def render_presenter(win: Any, dataset: Path, out: Path) -> dict[str, Path]:
     """The presenter theme (REQ-SET-008), switched on as an Admin does it, with Settings' tick, and PRESENTER_SHOTS in
-    it, each page as `prepare` leaves it; then switched off again with the header's Exit presenter theme."""
+    it, each page as `prepare` leaves it; then PRESENTER_SMALL_SHOTS in a window of SMALL_SIZE logical pixels, at any
+    scale, where the theme takes its 16 pt size; then the window back at its size and the theme switched off again with
+    the header's Exit presenter theme."""
 
     files = {}
+    size = win.size()
     win.set_user("admin")
     assert win.navigate("Settings")
     win.pages["Settings"].presenter.click()
     try:
-        for name, (title, role) in PRESENTER_SHOTS.items():
+        for name, (title, role) in [*PRESENTER_SHOTS.items(), *PRESENTER_SMALL_SHOTS.items()]:
+            if name == next(iter(PRESENTER_SMALL_SHOTS)):
+                win.resize(*SMALL_SIZE)
             win.set_user(role)
             win.statusBar().clearMessage()
             assert win.navigate(title), title
@@ -474,6 +491,7 @@ def render_presenter(win: Any, dataset: Path, out: Path) -> dict[str, Path]:
             files[name] = out / f"{name}.png"
             assert win.grab().save(str(files[name])), files[name]
     finally:
+        win.resize(size)
         win.set_user("admin")
         win.exit_presenter.click()
     return files

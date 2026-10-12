@@ -1,9 +1,10 @@
 """Offscreen screenshots of every page for every role, compared with the approved images (REQ-SET-004; S21a).
 
 `tools/render_screens.py` draws the pages on the synthetic workspace at 1920x1080 (Engineering standard, "Screen
-code"), with DejaVu Sans and no hinting, a pixel-based stand-in for the trained AI model (`PinnedModel`, whose verdict
-and boxes do not depend on the CPU) and pinned values for the two numbers the float alignment moves, so every Linux
-machine draws the same pixels; the comparison runs on Linux only, since Windows draws Segoe UI.
+code"), and the presenter theme's pages a demo opens at 1366x768 as well (#104), with DejaVu Sans and no hinting, a
+pixel-based stand-in for the trained AI model (`PinnedModel`, whose verdict and boxes do not depend on the CPU) and
+pinned values for the two numbers the float alignment moves, so every Linux machine draws the same pixels; the
+comparison runs on Linux only, since Windows draws Segoe UI.
 
 A pixel differs when one of its channels moves by more than LEVELS from the approved image, and a page fails when more
 than MAX_CLUSTER differing pixels touch (8-connected). One changed character makes such a cluster: at 14 pt with the
@@ -79,21 +80,23 @@ def test_req_set_004_the_render_workspace_inspects_with_the_pinned_model(screens
 @pytest.mark.skipif(not LINUX, reason="the approved images are drawn with DejaVu Sans on Linux; Windows draws Segoe UI")
 def test_req_set_004_every_page_matches_its_approved_image(screens: tuple[AppContext, Path], qapp: object) -> None:
     """Every page, for every role that may open it, the stored Compare states and the presenter theme's shots, at
-    1920x1080, match their approved images as the module docstring says: no more than MAX_CLUSTER touching pixels
-    differ."""
+    1920x1080, and the presenter theme's shots of the demo's pages at 1366x768 (#104), match their approved images as
+    the module docstring says: no more than MAX_CLUSTER touching pixels differ."""
     ctx, dataset = screens
     shutil.rmtree(ACTUAL_DIR, ignore_errors=True)
     with render_screens.pinned_rendering(qapp, render_screens.TEST_FONT):
         files = render_screens.render_pages(ctx, dataset, ACTUAL_DIR, SIZE)
     views = sum(len(cls.roles) * (1 + len(render_screens.PAGE_VIEWS.get(cls.title, ()))) for _, cls in NAV)
-    assert len(files) == views + len(render_screens.STORED_STATES) + len(render_screens.PRESENTER_SHOTS)
+    presenter = len(render_screens.PRESENTER_SHOTS) + len(render_screens.PRESENTER_SMALL_SHOTS)
+    assert len(files) == views + len(render_screens.STORED_STATES) + presenter
     approved = {p.stem for p in render_screens.APPROVED_DIR.glob("*.png")}
     assert set(files) == approved, f"pages and approved images differ: {sorted(set(files) ^ approved)}; run {APPROVE}"
     failures = []
     for name, path in sorted(files.items()):
         before, after = load_image(render_screens.APPROVED_DIR / f"{name}.png"), load_image(path)
-        if after.shape[:2] != SIZE[::-1]:
-            failures.append(f"{name}: rendered {after.shape[1]}x{after.shape[0]}, not {SIZE[0]}x{SIZE[1]}")
+        size = render_screens.SMALL_SIZE if name in render_screens.PRESENTER_SMALL_SHOTS else SIZE
+        if after.shape[:2] != size[::-1]:
+            failures.append(f"{name}: rendered {after.shape[1]}x{after.shape[0]}, not {size[0]}x{size[1]}")
         elif before.shape != after.shape:
             failures.append(f"{name}: the approved image is {before.shape[1]}x{before.shape[0]}")
         else:

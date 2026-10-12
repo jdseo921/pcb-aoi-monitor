@@ -33,9 +33,11 @@ Point at the line "Stage 1 workflow: upload → train → validate → inspect" 
 
 > "Here is the good board, and here is this one. The box shows where they differ: a part is missing."
 
-3. Point at the table on the right: each check, its value, its threshold and its rule. The rows in red decided the
-   verdict: **Difference regions** (2, where 0 are allowed) and **AI score** (about 8, where under 5 is OK).
-4. Point at the box under it, "Why this board is NG:", which says the same in plain words.
+3. Point at the table under the two boards: each check, its value, its threshold and its rule. The rows in red
+   decided the verdict: **Difference regions** (2, where 0 are allowed) and **AI score** (about 8, where under 5 is
+   OK).
+4. Point at the box beside the boards, under the verdict, "Why this board is NG:", which says the same in plain
+   words. On a 1366 × 768 projector the box is narrower: scroll it to the last line.
 
 > "Nothing is hidden: every verdict shows which checks decided it, with numbers, and says why in plain words. Your
 > engineers set every threshold, and every change is recorded."

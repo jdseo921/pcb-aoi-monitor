@@ -17,10 +17,12 @@ from aoi.core.recipe import ROI
 from aoi.core.services import AppContext
 from aoi.ui import theme
 from aoi.ui.main_window import MainWindow
-from aoi.ui.pages.compare import ComparePage
+from aoi.ui.pages.compare import MODE_BOXES, MODE_SIDE, ComparePage
 from aoi.ui.widgets.busy import BusyOverlay
 from tests.test_compare_reevaluate import _stored_on_compare
-from tests.test_req_done_in_v01 import BOARD
+from tests.test_req_done_in_v01 import BOARD, _window
+from tools.render_screens import settle
+from tools.screen_sizes import cut_off
 
 SIZES = ((1920, 1080), (1600, 900))
 
@@ -123,3 +125,99 @@ def test_req_cmp_005_every_decision_row_shows_with_the_panel_under_the_images(
     for ticked in (False, True):
         compare.ai_thr.tick.setChecked(ticked)
         check(f"no calibrated value, ticked {ticked}")
+
+
+def test_req_set_004_compare_needs_the_same_width_in_either_arrangement_and_view(
+    qtbot: QtBot, trained_ctx: AppContext, ng_board: Path
+) -> None:
+    """The width Compare's pair needs beside the panel (`_wide_need`) is the same with the table beside the pair or
+    under it, and with Defect boxes only, which hides the Golden board (review of A7): the panel's margin there side by
+    side and not under the pair turned the pair, at a width within those 8 px of its need, from one arrangement to the
+    other until Python's stack ran out; and a view that hid the Golden board moved the verdict and the table beside the
+    test board, which then had half the width Defect boxes only gives it."""
+    _win, compare, _iid = _stored_on_compare(qtbot, trained_ctx, ng_board, "Engineer")
+    needs = set()
+    for wide in (True, False):
+        compare.splitter._arrange(wide)
+        for mode in (MODE_SIDE, MODE_BOXES):
+            compare.mode.setCurrentIndex(mode)
+            QApplication.processEvents()
+            needs.add(compare._wide_need())
+    assert len(needs) == 1, needs
+
+
+def test_req_set_004_compares_why_box_stands_beside_the_pair_over_the_table(
+    qtbot: QtBot, trained_ctx: AppContext, ng_board: Path
+) -> None:
+    """With the decision table under the pair, the "why" box stands beside the pair under the verdict, whole and in
+    view, as tall as theme.WHY_H at least and down to the foot of the column, taller where the column has the room, and
+    the table is as tall as its rows, the boards taking the rest; with the table beside the pair, the box is under the
+    table again, theme.WHY_H at most (review of A7: under the table it gave way to the boards, and showed a line and a
+    half of its reasons at 1920 x 1080 in the presenter theme and none above the fold at 1366 x 768; and the table, held
+    to a least height read before the page had taken the turn, kept a blank band under its rows). At 1920 x 1080, then
+    with the presenter theme switched on there, which turns the page, in a 1600 x 900 window with it on and off again,
+    and at 1366 x 768 with it on; each switched while another page shows, as an Admin switches it on Settings."""
+    ctx = trained_ctx
+    ctx.inspect_file(BOARD, str(ng_board))
+    win = _window(qtbot, ctx, "Engineer")
+    compare = win.pages["Compare"]
+    assert isinstance(compare, ComparePage)
+    win.resize(1920, 1080)
+    assert win.navigate("Compare")
+    compare.show_stored(ctx.inspections(board_model=BOARD)[0]["id"])
+    qtbot.waitUntil(lambda: compare.loaded and compare._bg is None, timeout=10000)
+    seen, heights = {}, {}
+    steps = ((1920, 1080, False), (1920, 1080, True), (1600, 900, True), (1600, 900, False), (1366, 768, True))
+    for width, height, presenter in steps:
+        size = (width, height)
+        assert win.navigate("Home")
+        win.resize(*size)
+        ctx.settings.presenter_theme = presenter
+        win.apply_theme()
+        settle()
+        assert win.navigate("Compare")
+        settle()
+        why, table, under = compare.why, compare.metrics, not compare.splitter.wide()
+        beside = compare.beside.isAncestorOf(why) and why.visibleRegion().boundingRect() == why.rect()
+        if under:
+            tall = why.height() >= theme.WHY_H and why.geometry().bottom() == compare.beside.rect().bottom()
+        else:
+            tall = why.height() <= theme.WHY_H
+        rows = table.height() == table.minimumHeight() if under else None
+        seen[size, presenter] = (under, beside, tall, compare.decision.isAncestorOf(why), rows, cut_off(win, "Compare"))
+        heights[size, presenter] = why.height()
+    assert seen == {
+        ((1920, 1080), False): (False, False, True, True, None, []),
+        ((1920, 1080), True): (True, True, True, False, True, []),
+        ((1600, 900), True): (True, True, True, False, True, []),
+        ((1600, 900), False): (True, True, True, False, True, []),
+        ((1366, 768), True): (True, True, True, False, True, []),
+    }, seen
+    assert heights[(1920, 1080), True] > theme.WHY_H, heights  # the room under the note, more than under the table
+
+
+@pytest.mark.parametrize("size", [(1600, 900), (1920, 1080)])
+def test_req_set_004_compares_arrangement_follows_the_window_not_the_record(
+    qtbot: QtBot, trained_ctx: AppContext, ng_board: Path, size: tuple[int, int]
+) -> None:
+    """Compare empty, then with a stored NG record, keeps one arrangement in a window of a given size (review of A7):
+    read from the decision table's columns, the width the pair needs beside it rose as the first record filled them,
+    and an engineer's 1600 x 900 page turned the pair from beside the table to over it under their eyes. At 1600 x 900
+    the table is under the pair and at 1920 x 1080 beside it, in the 14 pt theme, and whole either way."""
+    ctx = trained_ctx
+    ctx.inspect_file(BOARD, str(ng_board))
+    win = _window(qtbot, ctx, "Engineer")
+    compare = win.pages["Compare"]
+    assert isinstance(compare, ComparePage)
+    win.resize(*size)
+    assert win.navigate("Compare")
+    settle()
+    turns: list[bool] = []
+    compare.splitter.arranged.connect(turns.append)
+    empty = compare.splitter.wide()
+    compare.show_stored(ctx.inspections(board_model=BOARD)[0]["id"])
+    qtbot.waitUntil(lambda: compare.loaded and compare._bg is None, timeout=10000)
+    settle()
+    assert compare.metrics.rowCount() >= 5 and turns == [], turns
+    assert compare.splitter.wide() is empty is (size == (1920, 1080))
+    assert cut_off(win, "Compare") == [], size

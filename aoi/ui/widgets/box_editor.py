@@ -113,6 +113,7 @@ class Boxes(ImageView, Generic[B]):
         self.setTransformationAnchor(QGraphicsView.ViewportAnchor.AnchorViewCenter)
         self.scale(factor, factor)
         self.setTransformationAnchor(QGraphicsView.ViewportAnchor.AnchorUnderMouse)
+        self.let_go()  # the scroll bars this zoom brings never fit the picture again
         self._emit_changed()
 
     def zoom_to_box(self) -> None:

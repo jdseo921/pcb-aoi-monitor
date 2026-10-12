@@ -26,7 +26,9 @@ from PySide6.QtWidgets import (
 
 from ...errors import AoiError
 from ...times import to_local
+from .. import theme
 from ..widgets.busy import BusyOverlay
+from ..widgets.flow import FlowLayout
 from .base import button, fill_table, make_table
 
 if TYPE_CHECKING:
@@ -76,10 +78,10 @@ class StoresPanel(QGroupBox):
         self.btn_move = button(self.tr("Move Board Model In…"), slot=self._move)
         self.btn_shred = button(self.tr("Shred Store…"), "danger", self._shred)  # red, last, never the default
         for row_buttons in ((self.btn_new, self.btn_restore), (self.btn_move,)):
-            row = QHBoxLayout()
+            row = FlowLayout(gap=theme.ROW_GAP, right=True)  # on two lines where the column is narrow (#104)
             for b in row_buttons:
                 row.addWidget(b)
-            row.addStretch(1)
+            row.add_stretch()
             rows.addLayout(row)
         row.addWidget(self.btn_shred)
         lay.addWidget(self.steps)
