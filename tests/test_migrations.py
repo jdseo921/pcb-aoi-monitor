@@ -183,7 +183,7 @@ def test_req_set_019_a_settings_file_that_cannot_be_read_is_refused_with_a_code(
     f = default_workspace() / "settings.json"
     f.parent.mkdir(parents=True, exist_ok=True)
     cases = (
-        (b'{"device": "cpu",}', "it is not valid JSON (line 1, column 18: "),
+        (b'{"device": cpu}', "it is not valid JSON (line 1, column 12)."),  # the same column on every Python
         (b"\xff\xfe{}", "it is not UTF-8 text"),
         (b'["cpu"]', "it does not hold a JSON object of settings"),
     )
@@ -192,6 +192,7 @@ def test_req_set_019_a_settings_file_that_cannot_be_read_is_refused_with_a_code(
         with pytest.raises(AoiError) as refused:
             Settings.load()
         assert refused.value.code == "AOI-SET-010" and str(f) in refused.value.what and reason in refused.value.what
+        assert "Expecting" not in refused.value.what  # the parser's own words are behind Show Details (A5)
         assert ui_errors.open_workspace() is None
         assert dialogs[-1] == (
             "AOI-SET-010 Settings file cannot be read",
