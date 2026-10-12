@@ -50,6 +50,8 @@ None. / 없음.
 
 - [REQ-TST-004] AI Model Test's Export CSV asks first, naming how many images, as Logs & Export and Export Image Overlays do, and writes the file without holding up the window. / AI 모델 테스트의 Export CSV는 로그 및 내보내기와 Export Image Overlays처럼 이미지 개수를 먼저 묻고, 창을 멈추지 않고 파일을 씁니다.
 
+- [REQ-TRN-006] The demo workspace's locked validation set holds 50 good boards and 11 defective ones, as the standard asks of a customer's (was 20 and 11). Run Test in the demo now reads 0 of 11 missed defects and 3 of 50 false calls on the drawn boards; the 15- and 45-minute demo scripts say so. / 데모 작업 공간의 잠긴 검증 세트가 표준이 고객 데이터에 요구하는 대로 양품 50장과 불량 11장을 갖습니다(이전 20장과 11장). 데모의 Run Test는 이제 그린 보드에서 놓친 불량 11장 중 0장, 오검출 50장 중 3장을 보여 주며, 15분과 45분 데모 스크립트에 반영했습니다.
+
 ## Fixed / 수정 (draft)
 
 - [REQ-SET-004] Every page scrolls where the screen is smaller than the page, so a 1366 × 768 station shows every control; before, the window could not shrink below about 1886 × 821 px and the right-hand controls sat off-screen (#104). / 화면이 페이지보다 작으면 모든 페이지가 스크롤되어 1366 × 768 스테이션에서도 모든 컨트롤이 보입니다. 이전에는 창이 약 1886 × 821 px 아래로 줄어들지 않아 오른쪽 컨트롤이 화면 밖에 있었습니다(#104).

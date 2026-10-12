@@ -41,7 +41,7 @@ board on **Compare**, the check on the locked boards, training live, and a thres
 2. Select v1.1 and press **AI Model Card**: what it was trained on, the dataset version and its thresholds. Its first
    line says it is not yet tested on a locked validation set, so the card claims no result.
 3. Press **Activate Selected** to make v1.1 active. Click **AI Model Test** and press **Run Test** again: the tiles show
-   v1.1's counts on the same 31 locked boards.
+   v1.1's counts on the same 61 locked boards.
 4. Open the **History** tab: both runs are there, newest first. Select a row to see it again.
 
 > "Before a new AI model judges your boards, it is tested on the same locked boards as the one before, and you compare

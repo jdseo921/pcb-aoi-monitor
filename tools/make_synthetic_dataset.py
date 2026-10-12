@@ -130,8 +130,10 @@ def ng_type(path: Path) -> str:
     return next(d for d in DEFECTS if path.stem.endswith("_" + d.replace(" ", "_").lower()))
 
 
-def write_dataset(out: Path, ok: int = 60, ng: int = 14, seed: int = 7) -> list[dict[str, str]]:
-    """Write the dataset under `out` and return the label rows. Same seed, same images, on every machine."""
+def write_dataset(out: Path, ok: int = 60, ng: int = 14, seed: int = 7, more_test_ok: int = 0) -> list[dict[str, str]]:
+    """Write the dataset under `out` and return the label rows. Same seed, same images, on every machine. A third of
+    the `ok` boards (4 at least) and half the NG boards are test/; `more_test_ok` OK boards are drawn after all of them
+    into test/ too, so the other boards stay those the same seed gives without them."""
     rng = random.Random(seed)
     rows: list[dict[str, str]] = []
 
@@ -150,6 +152,8 @@ def write_dataset(out: Path, ok: int = 60, ng: int = 14, seed: int = 7) -> list[
         d = DEFECTS[i % len(DEFECTS)]
         split = "train" if i < len(DEFECTS) // 2 else "test"
         write(split, "NG", f"ng_{i:03d}_{d.replace(' ', '_').lower()}.png", capture(draw_board(rng, d), rng), d)
+    for i in range(ok, ok + more_test_ok):
+        write("test", "OK", f"ok_{i:03d}.png", capture(draw_board(rng), rng))
     with open(out / "labels.csv", "w", newline="") as f:
         w = csv.DictWriter(f, fieldnames=["file", "label", "defect_type"])
         w.writeheader()
