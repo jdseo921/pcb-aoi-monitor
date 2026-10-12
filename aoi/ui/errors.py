@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 import sys
 import traceback
+from pathlib import Path
 from types import TracebackType
 from typing import Any
 
@@ -19,12 +20,15 @@ from PySide6.QtWidgets import QFileDialog, QMessageBox, QWidget
 
 from .. import logging_setup
 from ..config import Settings, default_workspace
-from ..core.services import UNHANDLED, AppContext, ErrorReport
+from ..core.services import UNHANDLED, AppContext, ErrorReport, RunningCopy, running_copy, workspace_in_use
 from ..errors import QT_TRANSLATE_NOOP, AoiError, Phrase, system_detail
+from . import front
 
 # Refusals another workspace folder cures: a v0.1 or newer database, a changed migration, a folder without WAL, a
 # folder or database that cannot be opened, a database another program holds (the same folder, once it lets go).
 ANOTHER_WORKSPACE = {"AOI-SET-001", "AOI-SET-002", "AOI-SET-003", "AOI-SET-005", "AOI-SET-011", "AOI-SET-012"}
+# The workspace is open in another copy of the app: that copy comes to the front, never a folder picker (F12)
+ALREADY_OPEN = "AOI-SET-019"
 
 
 def phrase_text(text: str) -> str:
@@ -75,6 +79,37 @@ def show_error(parent: QWidget | None, report: ErrorReport) -> None:
     ErrorBox(parent, report).exec()
 
 
+class AlreadyOpenBox(QMessageBox):
+    """AOI-SET-019 when the copy already open cannot be brought to the front: its code and title, one sentence that
+    says what to do, and one OK (A6 of the 2026-10 business-readiness brief, F12)."""
+
+    def __init__(self, report: ErrorReport, parent: QWidget | None = None) -> None:
+        title = f"{report.code} {phrase_text(report.title)}"
+        what, ok = phrase_text(report.what), QMessageBox.StandardButton.Ok
+        super().__init__(QMessageBox.Icon.Information, title, what, ok, parent)
+
+
+def show_already_open(
+    error: AoiError, folder: Path, parent: QWidget | None = None, retry: bool = False, wait: bool = True
+) -> bool:
+    """A start, or a switch of workspace (`parent` the window switching), on a workspace another copy of the app has
+    open: that copy's window comes to the front, once it has one when `wait` (a copy still starting), and nothing more
+    is said; where the system cannot do that (any but Windows, another user's session or PC, a copy that does not
+    answer, a refusal), one sentence and one OK say so. Never a folder picker: another folder would only open a second
+    copy elsewhere. True when that is done; False, when `retry`, if the other copy closed meanwhile, so the caller
+    opens the workspace after all."""
+
+    def held() -> RunningCopy | None:  # the copy that holds the workspace now, as it noted itself
+        return running_copy(folder) if workspace_in_use(folder) else None
+
+    if front.bring_to_front(held, wait=None if wait else 0.0):
+        return True
+    if retry and not workspace_in_use(folder):
+        return False
+    AlreadyOpenBox(ErrorReport.of(error), parent).exec()
+    return True
+
+
 def install_excepthook(ctx: AppContext, parent: QWidget | None) -> None:
     """Route every unhandled error to the log (build version and stack trace) and to a plain dialog, which does not
     say "unhandled": the log does (`UNHANDLED`)."""
@@ -92,12 +127,13 @@ def open_workspace() -> AppContext | None:
     """The AppContext the app starts with, on the workspace settings.json names, or None to close the app.
 
     A refused workspace is shown with its coded message before any window opens, so the Settings page cannot be reached;
-    for a refusal another folder cures, a folder picker follows. The folder chosen is opened in turn and, once open,
-    saved to settings.json as the Settings page saves it; a settings.json that cannot be written is logged, and the
-    folder still serves this session. Cancel closes the app. Any other coded error is shown and closes the
-    app. An error without a code is shown as AOI-SET-007 and its trace goes to the default workspace's log
-    (REQ-SET-019: stack traces go only to the log), since the excepthook logs to an open workspace's log: it is
-    installed once the workspace is open, before the window is built (``main_window.build_window``, #205)."""
+    for a refusal another folder cures, a folder picker follows. A workspace another copy of the app has open brings
+    that copy to the front instead, or says so in one sentence (`show_already_open`), and the app closes. The folder
+    chosen is opened in turn and, once open, saved to settings.json as the Settings page saves it; a settings.json that
+    cannot be written is logged, and the folder still serves this session. Cancel closes the app. Any other coded error
+    is shown and closes the app. An error without a code is shown as AOI-SET-007 and its trace goes to the default
+    workspace's log (REQ-SET-019: stack traces go only to the log), since the excepthook logs to an open workspace's
+    log: it is installed once the workspace is open, before the window is built (``main_window.build_window``, #205)."""
     try:
         return _open_workspace()
     except Exception as e:
@@ -132,11 +168,16 @@ def _open_workspace() -> AppContext | None:
         log_start_failure(e)  # no workspace yet: the default workspace's log, as for an error without a code
         show_error(None, ErrorReport.of(e))
         return None
-    chosen = False
+    chosen, retried = False, False
     while True:
         try:
             ctx = AppContext(settings)
         except AoiError as e:
+            if e.code == ALREADY_OPEN:
+                if show_already_open(e, settings.root, retry=not retried):
+                    return None
+                retried = True  # the other copy closed while this start asked: open the workspace now
+                continue
             log_start_failure(e)
             show_error(None, ErrorReport.of(e))
             if e.code not in ANOTHER_WORKSPACE:

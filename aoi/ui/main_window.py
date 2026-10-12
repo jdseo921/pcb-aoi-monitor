@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
 from PySide6.QtCore import QEvent, QModelIndex, QObject, QPersistentModelIndex, QSize, Qt, QTimer
-from PySide6.QtGui import QAction, QCloseEvent, QColor, QKeySequence, QMouseEvent, QPainter
+from PySide6.QtGui import QAction, QCloseEvent, QColor, QKeySequence, QMouseEvent, QPainter, QShowEvent
 from PySide6.QtWidgets import (
     QApplication,
     QComboBox,
@@ -30,14 +30,14 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from ..config import APP_NAME, APP_VERSION, use_workspace
+from ..config import APP_NAME, APP_VERSION, Settings, use_workspace
 from ..core import datasets, demo, drift
 from ..core.run_progress import RunProgress
-from ..core.services import REQUIRED_ROLE, ROLES_FROM, AppContext
+from ..core.services import REQUIRED_ROLE, ROLES_FROM, AppContext, workspace_in_use
 from ..errors import AoiError
 from . import theme
 from .demo_workspace import boards
-from .errors import install_excepthook, open_workspace, phrase_text, show_error
+from .errors import install_excepthook, open_workspace, phrase_text, show_already_open, show_error
 from .pages.base import (
     QT_TRANSLATE_NOOP,
     Page,
@@ -372,6 +372,7 @@ class MainWindow(QMainWindow):
         self.last_inspected: tuple[str, InspectionResult, int | None] | None = None  # path, result, record id
         self.in_demo = demo.is_demo(ctx.settings.root)  # the demo workspace is open (REQ-SET-007)
         self.switched = False  # closed by switch_workspace, which stopped the work and closed the context already
+        self._noted = False  # this window noted beside the workspace's lock, for a second start to find (F12)
         self.gates = RoleGates(self, ctx, self.status)  # the header's controls a role may not use (REQ-USR-001)
         title = f"{APP_NAME} {APP_VERSION}"
         self.setWindowTitle(self.tr("{title} · Demo").format(title=title) if self.in_demo else title)
@@ -752,6 +753,14 @@ class MainWindow(QMainWindow):
         """A message in the status bar, for 8 s by default; `ms=0` keeps it until the next message replaces it."""
         self.statusBar().showMessage(msg, ms)
 
+    def showEvent(self, event: QShowEvent) -> None:
+        """Once shown, the window has the system's handle: noted beside the workspace's lock, a second start of the app
+        on this workspace brings this window to the front (A6 of the 2026-10 business-readiness brief, F12)."""
+        super().showEvent(event)
+        if not self._noted:
+            self._noted = True
+            self.ctx.note_window(int(self.winId()))
+
     # --- closing (#171) -------------------------------------------------------------
     def closeEvent(self, event: QCloseEvent) -> None:
         """Closing the window stops the background work and closes the context; while work runs it asks first, and No
@@ -790,7 +799,13 @@ class MainWindow(QMainWindow):
         the same page, signed in as a user of the same role; the demo is put back as the bundle holds it first when
         `reset`, and its scripted run started when `play`. Running work is stopped first, if the user agrees, or
         `agreed` already (Reset Demo's question names it, so a reset is three clicks while boards run too); a folder
-        that does not open opens the one before again. Returns the new window, or None when nothing was switched."""
+        that does not open opens the one before again. A workspace another copy of the app has open is not switched to:
+        that copy comes to the front, or one sentence says it is open (AOI-SET-019; A6 of the 2026-10 business-readiness
+        brief, F12), and this window stays as it is. Returns the new window, or None when nothing was switched."""
+        target = folder if folder is not None else self._station_root()
+        if target is not None and target.resolve() != self.ctx.settings.root.resolve() and workspace_in_use(target):
+            show_already_open(AoiError("AOI-SET-019", path=str(target)), target, self, wait=False)
+            return None
         if not self._may_stop_work(self.tr("switch the workspace"), agreed):
             return None
         role, page, keys = self.ctx.role, self._page_title(), self.ctx.credentials
@@ -832,6 +847,18 @@ class MainWindow(QMainWindow):
         self.close()
         self.deleteLater()
         return win
+
+    @staticmethod
+    def _station_root() -> Path | None:
+        """The station's own workspace folder, as its settings.json names it; None when that file cannot be read, which
+        the switch then shows as it opens it."""
+        before = use_workspace(None)
+        try:
+            return Settings.load().root
+        except AoiError:
+            return None
+        finally:
+            use_workspace(before)
 
     def play_demo(self) -> None:
         """Inspection with the demo's boards queued as a scripted run at its pace, and Start pressed (REQ-SET-009)."""

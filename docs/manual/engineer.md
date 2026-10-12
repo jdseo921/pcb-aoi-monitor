@@ -25,12 +25,16 @@ After the message a window asks for another workspace folder: the folder you cho
 `settings.json`, in the default workspace folder, as the Settings page saves it (if that folder cannot be written, the
 next start asks again); Cancel closes the app. The refused folder is left as it is. The same window follows AOI-SET-011:
 the workspace folder cannot be created or opened (a USB or network drive that is not connected) or its `aoi.sqlite` is
-not a database the app can open or write (restore the backup, as above); and AOI-SET-012: another copy of the app has
-the workspace open (on this PC, or in another user's session), or another program holds `aoi.sqlite` (a database
-tool): close it, then choose the same folder. A copy of the app that crashed, or a power cut, never blocks the next
-start. The workspace folder holds an empty file `.aoi.lock` while the app runs; leave it where it is. If another program
-takes hold of `aoi.sqlite` while the app runs, a change that cannot be stored is refused after 5 s with AOI-SET-013:
-close that program and do the change again.
+not a database the app can open or write (restore the backup, as above); and AOI-SET-012: another program holds
+`aoi.sqlite` (a database tool): close it, then choose the same folder. Starting the app while it is already open on the
+same workspace brings the copy that is open to the front and changes nothing, once that copy shows its window if it is
+still starting; so does Load Demo Workspace or Leave Demo Workspace onto a workspace another copy has open, which leaves
+this window as it is. Where Windows cannot do that (the copy is open on another Windows account or PC, or does not
+answer), AOI-SET-019 says in one sentence that the app is already open and to switch to it on the taskbar or have it
+closed, with one OK, and no folder window follows. A copy of the app that crashed, or a power cut, never blocks the next
+start. The workspace folder holds a small file `.aoi.lock` while the app runs, which names the copy that has it open;
+leave it where it is. If another program takes hold of `aoi.sqlite` while the app runs, a change that cannot be stored
+is refused after 5 s with AOI-SET-013: close that program and do the change again.
 
 **Settings the app cannot read.** A `settings.json` that is not valid JSON, not UTF-8 text or not a JSON object stops
 the start with AOI-SET-010, naming the file and, for JSON, the line and column; correct it, or rename it to start with

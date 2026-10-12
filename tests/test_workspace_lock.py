@@ -1,8 +1,9 @@
 """One copy of the app per workspace, and a start-up sweep that never stops the start (#204, REQ-INSP-008,
 REQ-SET-016, REQ-SET-019).
 
-A second copy started on a workspace in use is refused with AOI-SET-012 before it deletes anything, a copy killed
-mid-run leaves no lock behind, and a temporary file the sweep cannot delete is logged and skipped.
+A second copy started on a workspace in use is refused with AOI-SET-019 before it deletes anything (and brings the
+first to the front, tests/test_second_start.py), a copy killed mid-run leaves no lock behind, and a temporary file the
+sweep cannot delete is logged and skipped.
 """
 
 from __future__ import annotations
@@ -23,15 +24,17 @@ from aoi.data import atomic
 from aoi.data.db import Database
 from aoi.errors import AoiError
 from aoi.ui import errors as ui_errors
+from aoi.ui import front
 from tests.conftest import log_rows
 
 ROOT = Path(__file__).resolve().parents[1]
 FIRST_COPY = """
+import os
 import sys
 from aoi.config import Settings
 from aoi.core.services import AppContext
 AppContext(Settings(workspace=sys.argv[1], device="cpu"))
-print("ready", flush=True)
+print("ready", os.getpid(), flush=True)  # its own process id: in a venv on Windows, Popen's is the launcher's
 sys.stdin.read()
 """
 
@@ -46,7 +49,7 @@ def _log_rows(root: Path, event: str) -> list[dict[str, object]]:
 
 def test_req_insp_008_a_second_copy_is_refused_and_deletes_no_file_the_first_is_writing(workspace: Settings) -> None:
     """The issue's reproduction: copy A writes a result file through the atomic writer; copy B, started on the same
-    workspace meanwhile, is refused with AOI-SET-012, and A's temporary file survives, so A's write finishes."""
+    workspace meanwhile, is refused with AOI-SET-019, and A's temporary file survives, so A's write finishes."""
     first = AppContext(workspace)
     target = first.settings.results_dir / "2026-10-03" / "ng_001_x_NG.png"
     started, go, failed = threading.Event(), threading.Event(), list[BaseException]()
@@ -73,7 +76,7 @@ def test_req_insp_008_a_second_copy_is_refused_and_deletes_no_file_the_first_is_
     finally:
         go.set()
         thread.join(30)
-    assert refused.value.code == "AOI-SET-012" and "another copy of this app" in refused.value.what
+    assert refused.value.code == "AOI-SET-019" and "already open on this workspace" in refused.value.what
     assert failed == [] and target.read_bytes() == b"x" * 100  # A's write finished
     first.close()
     _second_copy(workspace).close()  # the same folder opens once the first copy has closed
@@ -90,10 +93,10 @@ def test_req_set_016_a_copy_killed_mid_run_leaves_no_lock(workspace: Settings) -
         text=True,
     )
     try:
-        assert proc.stdout is not None and proc.stdout.readline().strip() == "ready"
+        assert proc.stdout is not None and proc.stdout.readline().split()[0] == "ready"
         with pytest.raises(AoiError) as refused:
             _second_copy(workspace)
-        assert refused.value.code == "AOI-SET-012"
+        assert refused.value.code == "AOI-SET-019"
     finally:
         proc.kill()
         proc.wait()
@@ -103,31 +106,28 @@ def test_req_set_016_a_copy_killed_mid_run_leaves_no_lock(workspace: Settings) -
             _second_copy(workspace).close()
             break
         except AoiError as e:
-            if e.code != "AOI-SET-012" or time.monotonic() > deadline:
+            if e.code != "AOI-SET-019" or time.monotonic() > deadline:
                 raise
             time.sleep(0.1)
 
 
-def test_req_set_016_a_workspace_in_use_shows_aoi_set_012_then_the_folder_picker(
+def test_req_set_016_a_workspace_in_use_ends_the_second_start_and_opens_once_the_other_copy_closed(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, dialogs: list[tuple[str, str]]
 ) -> None:
-    """At start-up (open_workspace), a workspace another copy has open shows AOI-SET-012, then the folder picker; the
-    same folder opens once the other copy has closed."""
+    """At start-up (open_workspace), a workspace another copy has open ends this start with AOI-SET-019, in one
+    sentence where the other copy cannot be brought to the front (here, no system to do it), never the folder picker
+    (A6 of the 2026-10 business-readiness brief, F12); the same folder opens once the other copy has closed."""
     ws = tmp_path / "ws"
     Settings(workspace=str(ws), device="cpu").save()
     first = AppContext(Settings.load())
     asked: list[object] = []
-
-    def pick(*args: object) -> str:  # the other copy closes while the picker is open
-        asked.append(args)
-        first.close()
-        return str(ws)
-
-    monkeypatch.setattr(QFileDialog, "getExistingDirectory", staticmethod(pick))
+    monkeypatch.setattr(QFileDialog, "getExistingDirectory", staticmethod(lambda *a: asked.append(a) or ""))
+    monkeypatch.setattr(front, "this_system", lambda: None)
+    assert ui_errors.open_workspace() is None
+    assert [title for title, _ in dialogs] == ["AOI-SET-019 App already open"] and asked == []
+    first.close()
     ctx = ui_errors.open_workspace()
-    assert [title for title, _ in dialogs] == ["AOI-SET-012 Workspace in use"] and len(asked) == 1
-    assert str(ws / ".aoi.lock") in dialogs[0][1] and "another copy of this app" in dialogs[0][1]
-    assert ctx is not None and ctx.settings.root == ws
+    assert ctx is not None and ctx.settings.root == ws and len(dialogs) == 1
     ctx.close()
 
 

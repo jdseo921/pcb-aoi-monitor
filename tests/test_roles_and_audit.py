@@ -259,6 +259,7 @@ CHECKED_READS: dict[str, Callable[[AppContext, Path, Path], Any]] = {
 UNCHECKED = {
     "alarm", "alarms", "audit", "audit_entries", "report_error", "close", "set_user", "sign_in", "last_signed_in",
     "load_model", "recipe",
+    "note_window",  # the window's handle beside the lock, for a second start (A6): any role's window, not the database
     "inspector", "inspect", "inspect_file", "load_image", "log_result", "board_models", "reference_image", "samples",
     "sample_path", "models", "model", "active_model", "recipe_history", "inspections", "defects_for", "checks_for",
     "checks_for_many", "inspection_result", "inspection", "judged_reference", "users", "board_status", "start_user",

@@ -837,7 +837,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+40"/>
+        <location line="+61"/>
         <source> ({context})</source>
         <translation type="unfinished"></translation>
     </message>
@@ -862,7 +862,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+249"/>
+        <location line="+254"/>
         <location line="+138"/>
         <source>Importing samples</source>
         <translation type="unfinished"></translation>
@@ -1142,14 +1142,14 @@
         <translation>검증 세트 잠금</translation>
     </message>
     <message>
-        <location line="-2486"/>
-        <location line="+2500"/>
+        <location line="-2512"/>
+        <location line="+2526"/>
         <location line="+39"/>
         <source>the workspace holds no such dataset version</source>
         <translation>작업 공간에 그런 데이터셋 버전이 없습니다</translation>
     </message>
     <message>
-        <location line="-2582"/>
+        <location line="-2608"/>
         <source>Drift on {board} ({view}): {count} of the last {of} boards called NG; {before} % of the {baseline} before</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1239,7 +1239,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+845"/>
+        <location line="+871"/>
         <source>Setting the comparison&apos;s thresholds from labelled boards</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1433,7 +1433,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-3075"/>
+        <location line="-3101"/>
         <source>no earlier version of this board model was active</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1458,7 +1458,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+769"/>
+        <location line="+795"/>
         <source>its UUID {found} is not {uuid}, as in the AI model registry</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1560,14 +1560,14 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-3314"/>
+        <location line="-3340"/>
         <source>unhandled</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../ui/demo_workspace.py" line="+31"/>
-        <location filename="../ui/errors.py" line="+105"/>
-        <location filename="../ui/main_window.py" line="+858"/>
+        <location filename="../ui/errors.py" line="+141"/>
+        <location filename="../ui/main_window.py" line="+885"/>
         <source>start-up</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3204,12 +3204,37 @@
         <translation>예기치 않은 오류로 마지막 작업이 중단되었습니다{context}{reason}.</translation>
     </message>
     <message>
-        <location line="+91"/>
+        <location line="+57"/>
+        <source>Close the other program (a database tool or a backup), then choose the same folder in the window that opens next; or choose another workspace folder there. Cancel there closes the app.</source>
+        <translation>다른 프로그램(데이터베이스 도구나 백업)을 닫은 뒤, 다음에 열리는 창에서 같은 폴더를 선택하십시오. 또는 그 창에서 다른 작업 공간 폴더를 선택하십시오. 그 창에서 취소를 누르면 앱이 닫힙니다.</translation>
+    </message>
+    <message>
+        <location line="+13"/>
+        <source>Close the other program (a database tool or a backup), then do the last action again.</source>
+        <translation>다른 프로그램(데이터베이스 도구나 백업)을 닫은 뒤 마지막 작업을 다시 하십시오.</translation>
+    </message>
+    <message>
+        <location line="+19"/>
         <source>Reinstall the app, which puts the demo bundle back. Nothing in the production workspace was changed.</source>
         <translation>앱을 다시 설치하면 데모 번들이 복원됩니다. 운영 작업 공간은 아무것도 바뀌지 않았습니다.</translation>
     </message>
     <message>
-        <location line="-90"/>
+        <location line="+43"/>
+        <source>App already open</source>
+        <translation>앱이 이미 열려 있음</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>AOI PoC Inspector is already open on this workspace: switch to it on the taskbar, or, if it is not there, ask whoever has it open on another account or PC to close it.</source>
+        <translation>AOI PoC Inspector가 이 작업 공간에서 이미 열려 있습니다. 작업 표시줄에서 그 창으로 전환하십시오. 작업 표시줄에 없으면 다른 계정이나 다른 PC에서 앱을 연 사람에게 닫아 달라고 하십시오.</translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>Switch to the copy that is open, on the taskbar; if it is open on another account or another PC, have it closed there and start the app again. This start changed nothing in the workspace.</source>
+        <translation>작업 표시줄에서 열려 있는 앱으로 전환하십시오. 다른 계정이나 다른 PC에서 열려 있으면 그곳에서 닫게 한 뒤 앱을 다시 시작하십시오. 이번 시작은 작업 공간에서 아무것도 바꾸지 않았습니다.</translation>
+    </message>
+    <message>
+        <location line="-137"/>
         <source>Try again; if it happens again, restart the app and send the log file (the workspace&apos;s logs folder) to support.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3274,7 +3299,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+35"/>
+        <location line="+33"/>
         <source>No board model selected</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3344,12 +3369,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-70"/>
-        <source>Close the other program (another copy of this app, a database tool or a backup), then choose the same folder in the window that opens next; or choose another workspace folder there. Cancel there closes the app.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="-1184"/>
+        <location line="-1252"/>
         <source>Board judged NG</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3489,7 +3509,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+12"/>
+        <location line="+11"/>
         <source>Workspace database busy</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3497,11 +3517,6 @@
         <location line="+1"/>
         <source>Another program holds the workspace database {path}, so the app could not write to it.</source>
         <translation>다른 프로그램이 작업 공간 데이터베이스 {path}을(를) 사용하고 있어 앱이 쓸 수 없었습니다.</translation>
-    </message>
-    <message>
-        <location line="+4"/>
-        <source>Close the other program (another copy of this app, a database tool or a backup), then do the last action again.</source>
-        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../config.py" line="+24"/>
@@ -3639,11 +3654,6 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../data/workspace_lock.py" line="+27"/>
-        <source>another copy of this app has this workspace open</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
         <location filename="../ui/pages/training.py" line="+534"/>
         <location filename="../ui/pages/training_import.py" line="+39"/>
         <source>{code} {title}</source>
@@ -3771,7 +3781,7 @@
     </message>
     <message>
         <location line="+1"/>
-        <location filename="../core/services.py" line="+2623"/>
+        <location filename="../core/services.py" line="+2649"/>
         <source>a file of it could not be read: {reason}</source>
         <translation>그 파일 하나를 읽을 수 없습니다: {reason}</translation>
     </message>
@@ -3786,7 +3796,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="-33"/>
+        <location filename="../ui/main_window.py" line="-45"/>
         <source>demo reset</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4050,7 +4060,7 @@
 <context>
     <name>HomePage</name>
     <message>
-        <location filename="../ui/main_window.py" line="-742"/>
+        <location filename="../ui/main_window.py" line="-757"/>
         <source>Upload samples</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5365,7 +5375,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+90"/>
+        <location line="+91"/>
         <source>{title} · Demo</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5481,7 +5491,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+42"/>
+        <location line="+50"/>
         <source>close the app</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5491,7 +5501,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+19"/>
+        <location line="+25"/>
         <source>switch the workspace</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5501,17 +5511,17 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-49"/>
+        <location line="-55"/>
         <source>Stop the running work?</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-122"/>
+        <location line="-130"/>
         <source>Presenter theme on. An Admin turns it off with Exit presenter theme.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+124"/>
+        <location line="+132"/>
         <source>Stopping the running work…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6079,7 +6089,7 @@
 <context>
     <name>Page</name>
     <message>
-        <location filename="../ui/main_window.py" line="-706"/>
+        <location filename="../ui/main_window.py" line="-715"/>
         <source>Home</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7385,7 +7395,7 @@
 <context>
     <name>Startup</name>
     <message>
-        <location filename="../ui/errors.py" line="+46"/>
+        <location filename="../ui/errors.py" line="+51"/>
         <source>Choose another workspace folder</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7704,7 +7714,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/services.py" line="-2689"/>
+        <location filename="../core/services.py" line="-2715"/>
         <source>Aligning {count} images to the reference board</source>
         <translation type="unfinished"></translation>
     </message>
