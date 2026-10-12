@@ -34,6 +34,7 @@ from .. import defects as taxonomy
 from .. import logging_setup
 from ..config import Settings, resolve_device
 from ..data import atomic, credentials
+from ..data.db import NOT_REVIEWED as NOT_REVIEWED  # screens name it through here (REQ-LOG-009)
 from ..data.db import Database, DbError, is_busy, new_uuid
 from ..data.errors import WorkspaceError
 from ..data.paths import inside, one_folder_name, resolve, to_stored
@@ -160,9 +161,10 @@ class CsvFile:
 
 @dataclass(frozen=True)
 class HistoryFilter:
-    """Logs & Export's filter as Filter applied it: local dates YYYY-MM-DD, board model, operator and verdict (OK, NG or
-    WARN), None for All, and whether archived records are listed; the arguments of `AppContext.inspections`. An export
-    or a delete audits the one that listed its records, with their count (REQ-LOG-002, REQ-LOG-003)."""
+    """Logs & Export's filter as Filter applied it: local dates YYYY-MM-DD, board model, operator, verdict (OK, NG or
+    WARN) and review (DEFECT, FALSE_CALL or NOT_REVIEWED, REQ-LOG-009), None for All, and whether archived records are
+    listed; the arguments of `AppContext.inspections`. An export or a delete audits the one that listed its records,
+    with their count (REQ-LOG-002, REQ-LOG-003)."""
 
     date_from: str | None = None
     date_to: str | None = None
@@ -170,6 +172,7 @@ class HistoryFilter:
     operator: str | None = None
     result: str | None = None
     include_archived: bool = False
+    review: str | None = None
 
 
 @dataclass(frozen=True)
@@ -204,6 +207,7 @@ _ACTING: contextvars.ContextVar[tuple[AppContext, Actor] | None] = contextvars.C
 
 DEFECT, FALSE_CALL = "DEFECT", "FALSE_CALL"  # an NG or WARN board's review on the line (REQ-INSP-013)
 REVIEWS = (DEFECT, FALSE_CALL)
+REVIEW_FILTERS = (NOT_REVIEWED, DEFECT, FALSE_CALL)  # Logs & Export's Review filter after All (REQ-LOG-009)
 ROLES = ("Operator", "Engineer", "Admin")  # lowest to highest (GUI §8, docs/ARCHITECTURE.md §5)
 ROLES_FROM = {  # a role and the roles above it, as AOI-USR-001 names them: one phrase each, never joined (#198)
     "Operator": QT_TRANSLATE_NOOP("Errors", "Operator, Engineer or Admin"),
@@ -1542,11 +1546,13 @@ class AppContext:
         operator: str | None = None,
         include_archived: bool = False,
         result: str | None = None,
+        review: str | None = None,
     ) -> list[dict[str, Any]]:
-        """Inspection records, newest first, filtered by local calendar dates (YYYY-MM-DD), board model, operator and
-        verdict (`result`: OK, NG or WARN), each with its defect_count and absolute image and overlay paths; within 1 s
-        over 100,000 records (REQ-LOG-001)."""
-        return self.db.inspections(date_from, date_to, board_model, operator, include_archived, result)
+        """Inspection records, newest first, filtered by local calendar dates (YYYY-MM-DD), board model, operator,
+        verdict (`result`: OK, NG or WARN) and review (one of REVIEW_FILTERS: NOT_REVIEWED lists the NG and WARN
+        records no one has reviewed, REQ-LOG-009), each with its defect_count and absolute image and overlay paths;
+        within 1 s over 100,000 records (REQ-LOG-001)."""
+        return self.db.inspections(date_from, date_to, board_model, operator, include_archived, result, review)
 
     def history_span(self) -> dict[str, Any] | None:
         """`oldest` and `newest`, the stored times of the first and last record, archived ones included, and how many

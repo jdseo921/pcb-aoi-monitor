@@ -32,6 +32,8 @@ None. / 없음.
 
 - [REQ-LOG-008] Logs & Export has two tabs, Records and Defect types. Defect types counts the listed records' defects by type, most first, as a Pareto chart: per type its defects, the records holding it, how many of those were reviewed and how many as a false call, the running total and the share, with a bar for each type. It follows the filter and every review saved, and is read in the background. Every role sees it. / 로그 및 내보내기에 Records와 Defect types 두 탭이 생겼습니다. Defect types는 목록에 있는 기록의 결함을 유형별로 많은 순서대로 세어 파레토 차트로 보여 줍니다. 유형마다 결함 수, 그 유형이 있는 기록 수, 그중 검토된 수와 오검출로 검토된 수, 누적 비율과 점유율을 막대와 함께 보여 줍니다. 필터와 저장된 검토를 따라가며 백그라운드에서 읽습니다. 모든 역할이 볼 수 있습니다.
 
+- [REQ-LOG-009] Logs & Export has a Review filter after Result: Not reviewed (the NG and WARN boards no one has reviewed yet), Real defect or False call. An export's audit entry records it with the rest of the filter. Where the window is narrower than the filters, as at 1600 px, they wrap onto a second row instead of scrolling the page sideways. / 로그 및 내보내기의 결과 필터 뒤에 검토 필터가 생겼습니다: 미검토(아직 아무도 검토하지 않은 NG 및 WARN 보드), 실제 불량, 오검출. 내보내기의 감사 기록에 다른 필터와 함께 남습니다. 창이 필터보다 좁으면(예: 1600 px) 페이지를 옆으로 스크롤하는 대신 필터가 두 번째 줄로 넘어갑니다.
+
 ## Improved / 개선 (draft)
 
 - [REQ-SET-004] Text on the green, red and blue fills (verdict banner, Start, Stop, primary and danger buttons) is black, reading at 5.0:1 or more; it was white at 3.3 to 4.2:1 (#150). / 녹색, 빨간색, 파란색 배경 위 글자(판정 배너, 시작, 정지, 주요 및 위험 버튼)가 검은색이 되어 5.0:1 이상으로 읽힙니다. 이전에는 흰색으로 3.3~4.2:1이었습니다(#150).

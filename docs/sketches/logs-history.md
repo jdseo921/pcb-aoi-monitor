@@ -12,7 +12,7 @@ also see Archive Now; the export and delete buttons are shown to Admins only.
 
 ```
 Logs & Export
-From [2026-09-24] To [2026-10-01] Board model [All▾] Operator [All▾] Result [All▾] [▢ Include archived] [■ Apply Filter]
+From [2026-09-24] To [2026-10-01] Board model [All▾] Operator [All▾] Result [All▾] Review [All▾] [▢ Include archived] [■ Filter]
 ┌──────────────────┬───────────┬────────┬────────┬─────────┬────────┬──────┬──────────┬──────────────┐ ┌──────────────┐
 │ Time             │Board model│AI model│ Result │ Defects │Operator│ View │Recipe rev│ Image        │ │ overlay of   │
 │ 2026-10-01 13:33 │ TBOX-A1   │ v1.2   │ ✗ NG   │ 1       │ park   │ Top  │ 4        │ ng_003.png   │ │ the selected │
@@ -25,6 +25,9 @@ From [2026-09-24] To [2026-10-01] Board model [All▾] Operator [All▾] Result 
 ```
 
 Above the table, two tabs: **Records** (the table and the overlay, as drawn) and **Defect types** (below).
+
+Where the page is narrower than the filters, at 1600 px, they wrap onto a second row, each label with its field, so
+the page never scrolls sideways (REQ-LOG-009).
 
 NG rows carry the red cross and WARN rows the amber triangle in the Result cell; whole rows are not coloured, so
 the table stays readable at 14 pt. Filters combine; 100,000 records filter within 1 s (REQ-LOG-001). Archived
@@ -59,6 +62,7 @@ are read, not acted on: no selection. Every role sees it.
 | Board model | Board model | — | F | All, or one |
 | Operator | Operator | — | F | All, or one name |
 | Result | Result | — | F | All, OK, NG, WARN |
+| Review | Review | — | F | All, Not reviewed (NG and WARN with no review), Real defect, False call (REQ-LOG-009) |
 | Include archived | Include archived | — | T (check box, 48 px row) | |
 | Apply filter | Apply Filter | Enter | B | The page's one blue primary; busy indicator in the table over 1 s |
 | Tabs | Records, Defect types | Tab to the tab bar, then ← → | T | Records opens first; Defect types counts the listed records when shown (REQ-LOG-008) |

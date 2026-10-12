@@ -23,11 +23,12 @@ from time import perf_counter
 from typing import Any, cast
 
 import pytest
-from PySide6.QtCore import QDate, Qt
-from PySide6.QtWidgets import QFileDialog, QInputDialog, QMessageBox
+from PySide6.QtCore import QDate, QPoint, QRect, Qt
+from PySide6.QtWidgets import QCheckBox, QFileDialog, QInputDialog, QLabel, QMessageBox, QWidget
 from pytestqt.qtbot import QtBot
 
-from aoi.core.services import AppContext, HistoryFilter
+from aoi.core.services import FALSE_CALL, AppContext, HistoryFilter
+from aoi.data.db import NOT_REVIEWED
 from aoi.errors import AoiError
 from aoi.times import local_day_bounds_utc
 from aoi.ui import theme
@@ -55,10 +56,11 @@ def seed(db_path: Path, now: datetime) -> list[dict[str, Any]]:
     for i in range(1, N + 1):
         t = (now - timedelta(seconds=rng.randrange(DAYS * 86400))).isoformat(timespec="seconds")
         result = rng.choices(("OK", "NG", "WARN"), (90, 7, 3))[0]
+        review = rng.choice((None, "DEFECT", "FALSE_CALL")) if result != "OK" else None  # REQ-INSP-013
         rows.append({"id": i, "uuid": str(uuid.UUID(int=i)), "time": t, "board_model": rng.choice(BOARD_MODELS),
                      "model_version": "v1.0", "recipe_rev": 1, "image_path": f"images/board_{i}.png",
                      "overlay_path": f"results/board_{i}.png", "view": "Top", "result": result, "score": rng.random(),
-                     "operator": rng.choice(OPERATORS), "archived": int(t < old),
+                     "operator": rng.choice(OPERATORS), "archived": int(t < old), "review": review,
                      "defect_count": rng.randint(1, 3) if result != "OK" else 0})  # fmt: skip
         defects += [(i, n, "Scratch", 0.9, "Top", 1, 1, 4, 4) for n in range(1, rows[-1]["defect_count"] + 1)]
     columns = [k for k in rows[0] if k != "defect_count"]
@@ -73,9 +75,13 @@ def seed(db_path: Path, now: datetime) -> list[dict[str, Any]]:
 
 
 def matching(rows: list[dict[str, Any]], date_from: str, date_to: str, archived: bool, **equal: str) -> set[int]:
-    """The ids of `rows` a filter lists, worked out here rather than by the code under test."""
+    """The ids of `rows` a filter lists, worked out here rather than by the code under test: review NOT_REVIEWED is an
+    NG or WARN record with no review."""
     start, end = local_day_bounds_utc(date_from, date_to)
     assert start and end
+    if equal.get("review") == NOT_REVIEWED:
+        rows = [r for r in rows if r["result"] != "OK" and r["review"] is None]
+        equal = {k: v for k, v in equal.items() if k != "review"}
     return {
         r["id"]
         for r in rows
@@ -92,7 +98,8 @@ def test_req_log_001_filters_over_100000_records_return_within_1_s(
 ) -> None:
     """A combined filter, dates plus board model plus operator plus result, over 100,000 records returns within 1 s,
     the newest 7 days and an archived month alike (archived records stay searchable, REQ-LOG-003), and so do the last 7
-    days of every board model; each reads its rows through an index of migration 0022, never the whole table, and each
+    days of every board model, and their false calls or the NG and WARN records not reviewed (REQ-LOG-009); each
+    reads its rows through an index of migration 0022, never the whole table, and each
     record's defects through `defects_inspection`. On the page, Filter with the combined filter, and with one that
     matches nothing (its empty state reads the history's span, not every record), shows within 1 s too."""
     for board_model in BOARD_MODELS:
@@ -110,6 +117,10 @@ def test_req_log_001_filters_over_100000_records_return_within_1_s(
         "archived month, BM-5, lee, WARN": ((*archived_month, "BM-5", "lee", True, "WARN"), matching(
             rows, *archived_month, True, board_model="BM-5", operator="lee", result="WARN")),
         "7 days, every board model": ((*week, None, None, False, None), matching(rows, *week, False)),
+        "7 days, false calls": ((*week, None, None, False, None, FALSE_CALL), matching(
+            rows, *week, False, review=FALSE_CALL)),
+        "7 days, BM-3, not reviewed": ((*week, "BM-3", None, False, None, NOT_REVIEWED), matching(
+            rows, *week, False, board_model="BM-3", review=NOT_REVIEWED)),
     }  # fmt: skip
     sql: list[tuple[str, list[Any]]] = []
     query = ctx.db.query
@@ -120,9 +131,9 @@ def test_req_log_001_filters_over_100000_records_return_within_1_s(
 
     monkeypatch.setattr(ctx.db, "query", recorded)
     times: dict[str, float] = {}
-    for name, ((date_from, date_to, board_model, operator, archived, result), expected) in cases.items():
+    for name, ((date_from, date_to, board_model, operator, archived, result, *review), expected) in cases.items():
         start = perf_counter()
-        found = ctx.inspections(date_from, date_to, board_model, operator, archived, result=result)
+        found = ctx.inspections(date_from, date_to, board_model, operator, archived, result, *review)
         times[name] = perf_counter() - start
         assert {r["id"] for r in found} == expected and expected, name
         assert all(r["defect_count"] == rows[r["id"] - 1]["defect_count"] for r in found), name
@@ -237,11 +248,17 @@ def test_req_log_001_every_column_sorts(qtbot: QtBot, ctx: AppContext) -> None:
             assert values == sorted(values, reverse=order == Qt.SortOrder.DescendingOrder), (column, values)
 
 
+def _top(page: QWidget, w: QWidget) -> int:
+    return w.mapTo(page, QPoint(0, 0)).y() + w.height() // 2  # its middle's height on the page
+
+
 def test_req_log_001_the_filters_fit_a_1600_px_window(qtbot: QtBot, ctx: AppContext) -> None:
     """With the Result filter the filter row asked for 1358 px, so the window could not be narrower than 1648 px, past
     the 1600 x 900 the pages are laid out for (Training's Freeze sheet keeps it). The Board model and Operator lists
     now give way down to 80 px in a narrow window, cutting a long name off, and are as wide as their names where there
-    is room, at 1920 px."""
+    is room, at 1920 px. With the Review filter (REQ-LOG-009) the row needed 1536 px and the page scrolled sideways at
+    1600 px: the filters are one row at 1920 px and wrap onto a second at 1600 px, each label on its field's line, and
+    the page is no wider than its room."""
     win = MainWindow(ctx)
     qtbot.addWidget(win)
     win.set_user("admin")  # the Admin sees every button of the page
@@ -252,7 +269,19 @@ def test_req_log_001_the_filters_fit_a_1600_px_window(qtbot: QtBot, ctx: AppCont
     win.show()
     qtbot.waitExposed(win)
     assert win.minimumSizeHint().width() <= 1600, win.minimumSizeHint().width()
-    assert [c.width() >= c.sizeHint().width() for c in (page.model, page.operator, page.result)] == [True] * 3
+    # a filter and its label are laid out in a row of their own first, then the filter row: one pass of events
+    qtbot.waitUntil(lambda: all(c.width() >= c.sizeHint().width() for c in (page.model, page.operator, page.result)))
+    filters = (page.d_from, page.d_to, page.model, page.operator, page.result, page.review_filter, page.archived)
+    assert len({_top(page, w) for w in filters}) == 1  # one row at 1920 px
+    win.resize(1600, 900)
+    qtbot.waitUntil(lambda: page.width() <= cast(QWidget, page.parentWidget()).width())  # no sideways scroll
+    assert _top(page, page.review_filter) < _top(page, page.archived) < page.tabs.y()  # two rows, over the tabs
+    for w in filters:
+        assert QRect(QPoint(0, 0), page.size()).contains(QRect(w.mapTo(page, QPoint(0, 0)), w.size())), w
+        if not isinstance(w, QCheckBox):  # its label beside it, on its line
+            label = cast(QWidget, w.parentWidget()).findChild(QLabel)
+            assert label is not None and abs(_top(page, label) - _top(page, w)) <= theme.SPACE_S, w
+    win.resize(1920, 1080)
     room = "PANEL-A1-REV2-TOP-SIDE-2"  # 24 characters: a whole name at 1920 px
     ctx.ensure_board_model(room)
     page.on_show()
@@ -344,7 +373,7 @@ def test_req_log_002_each_export_audits_the_filter_that_listed_its_records(
     assert [q.split("?")[0] for q in asked] == ["Export CSV for 2 record(s)", "Export overlay images for 2 record(s)"]
     dates = (page.d_from.date().toString("yyyy-MM-dd"), page.d_to.date().toString("yyyy-MM-dd"))
     listed = {"date_from": dates[0], "date_to": dates[1], "board_model": None, "operator": None, "result": "NG",
-              "include_archived": False}  # fmt: skip
+              "include_archived": False, "review": None}  # fmt: skip
     entries = [*ctx.audit_entries(action="export.overlays"), *ctx.audit_entries(action="export.csv")]
     assert [(e["object_type"], e["after"]["filter"], e["after"]["records"]) for e in entries] == [
         ("inspections", listed, 2), ("checks", listed, 2), ("inspections", listed, 2)

@@ -767,8 +767,8 @@ the board) or `NO_AI_MODEL` (none trained), and is empty for a record stored wit
 result cannot be read (damaged), which the log names (`export.result_not_read`) without stopping the export. Records
 from before the checks were stored have no rows in the second file.
 Each export is confirmed first, naming the number of records, and written whole or not at all, the two CSV files
-together. The audit trail records it with the filter that listed the records (From, To, board model, operator, result
-and Include archived, as **Filter** applied them, not a box changed since) and their count, and the destination: a file
+together. The audit trail records it with the filter that listed the records (From, To, board model, operator, result,
+review and Include archived, as **Filter** applied them, not a box changed since) and their count, and the destination: a file
 or folder inside the workspace, such as the suggested `exports` folder, relative to the workspace
 (`exports/inspections.csv`), so the entry still holds after the workspace folder moves; a folder outside it, such as a USB drive, with its full path. If
 that entry cannot be written, the exported file is removed (never the station's own file, when exported onto itself).
@@ -788,16 +788,18 @@ was pressed, even if the run moves on while the file is named. A picture goes in
 the entry cannot be written, the destination is left exactly as it was, a file of that name unchanged and no picture
 or new folder left.
 
-The **From** and **To** boxes take days from 2000-01-01 to 2100-12-31. **Board model**, **Operator** and **Result**
-(All, OK, NG or WARN) each narrow the list, and every filter combines with the others and with **Include archived**;
-a click on a column's header sorts the table by it, again to reverse. The columns are Time, Board model, AI model
+The **From** and **To** boxes take days from 2000-01-01 to 2100-12-31. **Board model**, **Operator**, **Result**
+(All, OK, NG or WARN) and **Review** (All; Not reviewed, the NG and WARN records no one has reviewed yet; Real defect;
+False call) each narrow the list, and every filter combines with the others and with **Include archived**. Review set
+to False call with a board model and a week lists that line's false calls to open in Compare, one by one. A click
+on a column's header sorts the table by it, again to reverse. The columns are Time, Board model, AI model
 (its version), Result (the verdict's colour on that cell alone), Defects, Operator, View, Recipe rev and Image; the
 record's ID and score are in the CSV export. **Open in Compare ›**, Enter or a double-click opens the selected record
 on Compare as it was decided. With 100,000 records stored, **Filter** shows
 its rows within 1 s (REQ-LOG-001); listing all of them at once takes much longer, so narrow the dates first. The
 picture beside the table is the selected record's overlay; it is empty when the record's overlay file is gone, when no
 row is selected and after **Filter**. When no record matches, the table offers **Reset Filters** (the last 7 days,
-every board model, operator and result, archived records hidden); when every record is older than that or archived,
+every board model, operator, result and review, archived records hidden); when every record is older than that or archived,
 it offers **Show All Records** instead, which sets **From** to the oldest record's date, **To** to today and ticks
 **Include archived** when any record is archived.
 
