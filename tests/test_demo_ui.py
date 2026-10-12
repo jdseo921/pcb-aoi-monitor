@@ -236,8 +236,14 @@ def test_req_set_007_reset_asks_first_and_no_keeps_the_demo(
 def test_req_set_007_the_demo_panel_keeps_its_buttons_whole_in_the_narrowest_window(qtbot: QtBot, bundle: Path) -> None:
     win = click(qtbot, station(qtbot).pages["Settings"].demo.btn_load)  # type: ignore[attr-defined]
     win.showNormal()
-    win.resize(win.minimumSizeHint().width(), 1080)  # as narrow as the window goes: a presenter's smaller screen
-    qtbot.waitUntil(lambda: win.width() == win.minimumSizeHint().width())
+
+    def narrowest() -> bool:
+        """As narrow as the window goes, a presenter's smaller screen: narrowed, the header's name gives way, and the
+        window may go narrower still (#104)."""
+        win.resize(win.minimumSizeHint().width(), 1080)
+        return win.width() == win.minimumSizeHint().width()
+
+    qtbot.waitUntil(narrowest)
     panel = win.pages["Settings"].demo  # type: ignore[attr-defined]
     cut = [(b.text(), b.width(), b.sizeHint().width()) for b in panel.findChildren(QPushButton)
            if b.width() < b.sizeHint().width()]  # fmt: skip

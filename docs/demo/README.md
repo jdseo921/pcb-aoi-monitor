@@ -41,7 +41,7 @@ Rehearse once on the demo laptop, the day before or in the room, and tick each l
       Every page and tab the scripts open fits 1366 × 768, its verdict, defect boxes and the table on **Compare** in
       view with nothing scrolled; where the app has under 900 px of height or 1400 px of width, the presenter theme's
       text is 16 pt, not 18 ([screen sizes](../tests/2026-10-screen-sizes.md)). Maximized on a 1366 × 768 screen the
-      app has less, about 1366 × 690, as Windows keeps the title bar and the taskbar: there **Start** on
+      app has less, about 1366 × 697 (689 on Windows 11), as Windows keeps the title bar and the taskbar: there **Start** on
       **Inspection** and the last two rows of the table on **Compare**, the demo board's AI score among them, sit just
       under the edge, so press F5 to start and scroll down for those rows. On a projector that takes less than
       1366 × 768, play the recording.

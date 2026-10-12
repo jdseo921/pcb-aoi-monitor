@@ -39,6 +39,7 @@ import sys
 import tempfile
 import time
 import uuid
+from collections import Counter
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from pathlib import Path
@@ -566,8 +567,8 @@ def main(argv: list[str] | None = None) -> int:
             files = render_pages(ctx, Path(tmp) / "dataset", out, (width, height), args.scale)
         finally:
             ctx.close()
-    drawn = QImage(str(next(iter(files.values())))).size()
-    print(f"{len(files)} images of {drawn.width()}x{drawn.height()} px in {out}")
+    sizes = Counter(f"{image.width()}x{image.height()}" for image in (QImage(str(f)).size() for f in files.values()))
+    print(", ".join(f"{n} images of {size} px" for size, n in sizes.items()), f"in {out}")  # 1366 x 768 too (#104)
     return 0
 
 

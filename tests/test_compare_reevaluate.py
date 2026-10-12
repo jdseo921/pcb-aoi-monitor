@@ -1162,3 +1162,57 @@ def test_req_set_004_tab_shows_each_try_panel_field_whole_below_the_reference_sc
         shown.append((type(field).__name__, QRect(field.mapTo(view, QPoint(0, 0)), field.size())))
         qtbot.keyClick(field, Qt.Key.Key_Tab)
     assert len(shown) >= len(beyond) and all(view.rect().contains(r) for _, r in shown), (size, shown)
+
+
+def test_req_set_021_the_focus_waiting_in_the_why_box_stays_as_compare_turns(
+    qtbot: QtBot, trained_ctx: AppContext, ng_board: Path, monkeypatch: pytest.MonkeyPatch, dialogs: Dialogs
+) -> None:
+    """Re-evaluate pressed with Space leaves the focus waiting in the "why" box while the run goes on (REQ-SET-021).
+    The window then resized across the width where Compare turns, the table going beside the pair and back under it,
+    before Cancel shows and after, the focus stays in the box, so a second Space presses nothing: the box, moved to its
+    new place, was hidden until the next event, and Qt passed its focus on to the AI score threshold's tick, where a
+    second Space set the tick and stopped the run, or to Cancel (review of A7). With the box beside the pair, Tab goes
+    from it to Cancel and Shift+Tab back; the run's answer gives the focus to Re-evaluate."""
+    ctx = trained_ctx
+    win, compare, _iid = _stored_on_compare(qtbot, ctx, ng_board, "Engineer")
+    win.resize(1600, 900)  # the table under the pair, the "why" box beside it
+    qtbot.waitUntil(lambda: not compare.splitter.wide())
+    _pass_every_check(compare)
+    gate, judge_again = threading.Event(), AppContext.re_evaluate
+
+    def held(self: AppContext, *args: Any) -> InspectionResult:
+        assert gate.wait(20)
+        return judge_again(self, *args)
+
+    monkeypatch.setattr(AppContext, "re_evaluate", held)
+    monkeypatch.setattr(BusyOverlay, "DETAIL_AFTER_S", 1.2)  # Cancel shows sooner
+    tick, ticked, revisions = compare.ai_thr.tick, compare.ai_thr.tick.isChecked(), len(ctx.recipe_history(BOARD))
+    compare.btn_try.setFocus(Qt.FocusReason.TabFocusReason)
+    qtbot.keyClick(compare.btn_try, Qt.Key.Key_Space)
+    trying = compare._trying
+    assert trying is not None and QApplication.focusWidget() is compare.why
+    kept = {}
+    for cancel in (False, True):
+        if cancel:
+            qtbot.waitUntil(lambda: compare.try_busy.cancel_button.isVisible(), timeout=10000)
+        for size in ((1920, 1080), (1600, 900)):
+            win.resize(*size)
+            qtbot.waitUntil(lambda: compare.splitter.wide() is (size[0] == 1920))  # noqa: B023 (waited on here)
+            settle()
+            focus = QApplication.focusWidget()
+            kept[cancel, size] = focus is compare.why
+            assert focus is not None, (cancel, size)
+            qtbot.keyClick(focus, Qt.Key.Key_Space)  # a second Space, where the focus is
+            assert compare._trying is trying and tick.isChecked() is ticked, (cancel, size, type(focus).__name__)
+    assert kept == dict.fromkeys(kept, True), kept
+    assert not compare.splitter.wide() and compare.beside.isAncestorOf(compare.why)
+    qtbot.keyClick(compare.why, Qt.Key.Key_Tab)
+    assert QApplication.focusWidget() is compare.try_busy.cancel_button, "one Tab from the box beside the pair"
+    qtbot.keyClick(compare.try_busy.cancel_button, Qt.Key.Key_Backtab, Qt.KeyboardModifier.ShiftModifier)
+    qtbot.keyRelease(compare.why, Qt.Key.Key_Backtab)  # and let go of Shift: QTest's click leaves it held (review)
+    assert QApplication.focusWidget() is compare.why, "and Shift+Tab back"
+    gate.set()
+    qtbot.waitUntil(lambda: compare.would_be.isVisible(), timeout=20000)
+    assert QApplication.focusWidget() is compare.btn_try and len(ctx.recipe_history(BOARD)) == revisions
+    qtbot.waitUntil(lambda: compare._bg is None, timeout=20000)
+    assert dialogs == []

@@ -33,9 +33,11 @@ class ReflowSplitter(QSplitter):
     arrangement it took, side by side (True) or not, at each change. Side by side, the panes take the widths the page
     gave (`set_wide_sizes`) or the user's, as the handle was last dragged, never the widths they had as they turned one
     over the other: those are of whatever width the splitter had then, as little as 300 px while a page not shown yet
-    is first laid out, and at 1920 px the panes kept that share, Compare's decision table squeezed into 190 px."""
+    is first laid out, and at 1920 px the panes kept that share, Compare's decision table squeezed into 190 px.
+    `widened` says the splitter has a new width, its panes laid out at it."""
 
     arranged = Signal(bool)
+    widened = Signal()
 
     def __init__(self, need: Callable[[], int] | None = None, parent: QWidget | None = None) -> None:
         super().__init__(Qt.Orientation.Horizontal, parent)
@@ -82,6 +84,8 @@ class ReflowSplitter(QSplitter):
     def resizeEvent(self, event: QResizeEvent) -> None:  # noqa: N802 (Qt's name)
         self._arrange(event.size().width() >= self.wide_need())
         super().resizeEvent(event)
+        if event.size().width() != event.oldSize().width():
+            self.widened.emit()  # after the panes' new widths: an event filter sees the old ones (review of A7)
 
     def event(self, event: QEvent) -> bool:
         """A pane whose need changed while the width stayed, as Training's import sheet opening in the Samples pane,

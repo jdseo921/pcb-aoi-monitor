@@ -156,7 +156,9 @@ def test_req_set_004_compares_why_box_stands_beside_the_pair_over_the_table(
     half of its reasons at 1920 x 1080 in the presenter theme and none above the fold at 1366 x 768; and the table, held
     to a least height read before the page had taken the turn, kept a blank band under its rows). At 1920 x 1080, then
     with the presenter theme switched on there, which turns the page, in a 1600 x 900 window with it on and off again,
-    and at 1366 x 768 with it on; each switched while another page shows, as an Admin switches it on Settings."""
+    and at 1366 x 768 with it on, then at 1920 x 1080 with it off again, as it began; each switched while another page
+    shows, as an Admin switches it on Settings. The two boards are the same width at each size, as their linked zoom
+    needs (REQ-CMP-001)."""
     ctx = trained_ctx
     ctx.inspect_file(BOARD, str(ng_board))
     win = _window(qtbot, ctx, "Engineer")
@@ -166,9 +168,9 @@ def test_req_set_004_compares_why_box_stands_beside_the_pair_over_the_table(
     assert win.navigate("Compare")
     compare.show_stored(ctx.inspections(board_model=BOARD)[0]["id"])
     qtbot.waitUntil(lambda: compare.loaded and compare._bg is None, timeout=10000)
-    seen, heights = {}, {}
+    seen, heights, pair = {}, {}, {}
     steps = ((1920, 1080, False), (1920, 1080, True), (1600, 900, True), (1600, 900, False), (1366, 768, True))
-    for width, height, presenter in steps:
+    for width, height, presenter in (*steps, (1920, 1080, False)):
         size = (width, height)
         assert win.navigate("Home")
         win.resize(*size)
@@ -184,8 +186,13 @@ def test_req_set_004_compares_why_box_stands_beside_the_pair_over_the_table(
         else:
             tall = why.height() <= theme.WHY_H
         rows = table.height() == table.minimumHeight() if under else None
-        seen[size, presenter] = (under, beside, tall, compare.decision.isAncestorOf(why), rows, cut_off(win, "Compare"))
+        state = (under, beside, tall, compare.decision.isAncestorOf(why), rows, cut_off(win, "Compare"))
+        if (size, presenter) in seen:  # the table beside the pair again, the box under it as tall as before (review)
+            assert state == seen[size, presenter] and why.height() == heights[size, presenter], (state, why.height())
+            continue
+        seen[size, presenter] = state
         heights[size, presenter] = why.height()
+        pair[size, presenter] = (compare.ref_view.width(), compare.test_view.width())
     assert seen == {
         ((1920, 1080), False): (False, False, True, True, None, []),
         ((1920, 1080), True): (True, True, True, False, True, []),
@@ -194,6 +201,7 @@ def test_req_set_004_compares_why_box_stands_beside_the_pair_over_the_table(
         ((1366, 768), True): (True, True, True, False, True, []),
     }, seen
     assert heights[(1920, 1080), True] > theme.WHY_H, heights  # the room under the note, more than under the table
+    assert all(ref == test for ref, test in pair.values()), pair  # linked boards the same width (`PairGrid`)
 
 
 @pytest.mark.parametrize("size", [(1600, 900), (1920, 1080)])
@@ -221,3 +229,28 @@ def test_req_set_004_compares_arrangement_follows_the_window_not_the_record(
     assert compare.metrics.rowCount() >= 5 and turns == [], turns
     assert compare.splitter.wide() is empty is (size == (1920, 1080))
     assert cut_off(win, "Compare") == [], size
+
+
+def test_req_set_004_compares_table_stays_whole_as_a_wide_window_shrinks(
+    qtbot: QtBot, trained_ctx: AppContext, ng_board: Path
+) -> None:
+    """Side by side, the decision table keeps every column whole as the window narrows down to the width where the
+    page turns: in the presenter theme at 18 pt from 2560 px down to 2048 px, and in the production theme from 2560 px
+    down to 1848 px. The panel's width was worked out from the splitter's panes before they had their new width, so a
+    shrink from 2560 to 2100 px left the presenter theme's table 1069 of the 1099 px it needs, its Result column
+    scrolled out of view (review of A7)."""
+    win, compare, _iid = _stored_on_compare(qtbot, trained_ctx, ng_board, "Engineer")
+    widths = {True: (2560, 2300, 2150, 2100, 2049, 2048), False: (2560, 2200, 1900, 1880, 1849, 1848)}
+    problems = {}
+    for presenter, steps in widths.items():
+        assert win.navigate("Home")
+        trained_ctx.settings.presenter_theme = presenter
+        win.apply_theme()
+        assert win.navigate("Compare")
+        for width in steps:
+            win.resize(width, 1080)
+            qtbot.waitUntil(lambda: win.width() == width)  # noqa: B023 (waited on here, in the loop)
+            settle()
+            assert compare.splitter.wide() and theme.FONT_PT == (18 if presenter else 14), (presenter, width)
+            problems[presenter, width] = cut_off(win, "Compare")
+    assert problems == dict.fromkeys(problems, []), problems

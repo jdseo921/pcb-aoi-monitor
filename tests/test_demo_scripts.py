@@ -13,7 +13,7 @@ from pathlib import Path
 
 import pytest
 from PySide6.QtCore import QSize, Qt
-from PySide6.QtWidgets import QFileDialog, QInputDialog, QMessageBox, QPushButton, QWidget
+from PySide6.QtWidgets import QApplication, QFileDialog, QInputDialog, QMessageBox, QPushButton, QWidget
 from pytestqt.qtbot import QtBot
 
 from aoi.core.jobs import Job
@@ -179,6 +179,8 @@ def test_req_set_008_in_the_presenter_theme_an_admin_resets_the_demo_or_leaves_t
         rect = win.nav.visualItemRect(win._items[title])
         assert not win._items[title].isHidden() and win.nav.viewport().rect().contains(rect), title
         qtbot.mouseClick(win.nav.viewport(), Qt.MouseButton.LeftButton, pos=rect.center())
+        QApplication.processEvents()  # the page laid out, as it is by the presenter's next click: Settings, opened in
+        # the window Reset Demo made, first took the height the page before had, Reset Demo then 4 px past the fold
 
     smallest(win)
     settings = win.pages["Settings"]

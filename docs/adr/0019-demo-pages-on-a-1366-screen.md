@@ -86,11 +86,12 @@ scroll within the box at 1366 × 768, where under the table it would sit below t
 the table, a cover of its own covers the box. With the table under the pair, Defect boxes only fits the test board to
 the pair's height, so it draws the board about as large as Side by side does, not larger as it does beside the table.
 
-A window maximized on a 1366 × 768 Windows screen measures about 1366 × 697, not 1366 × 768, as the title bar and the
-taskbar take their part of the screen. What that window shows is measured in the record above: Inspection's Start and
-the last two rows of Compare's decision table sit just below its edge, and the demo kit says to press F5 and scroll
-there. A full-screen presenter window, which would give the page the whole 768 px, is not built: it is put to Jay with
-the Phase A report (F11, the usual key for it, is False call on Inspection and Logs & Export).
+A window maximized on a 1366 × 768 Windows screen measures about 1366 × 697 (1366 × 689 on Windows 11), not
+1366 × 768, as the title bar and the taskbar take their part of the screen. What that window shows is measured in the
+record above: Inspection's Start and the last two rows of Compare's decision table sit just below its edge, and the
+demo kit says to press F5 and scroll there. A full-screen presenter window, which would give the page the whole
+768 px, is not built: it was put to Jay on 2026-10-12, and the Phase A report lists it (F11, the usual key for it, is
+False call on Inspection and Logs & Export).
 
 If Jay picks "Keep 18 pt", `PRESENTER_SMALL` and `SMALL_H` go, decision 1 stays, and the demo kit goes back to the
 recording for a 1366 × 768 projector. No verdict changes: this is layout and text size only.
