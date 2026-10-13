@@ -39,6 +39,7 @@ B4 on B3.
 | B1 (D1, F1, F2) | One person freezes, splits and locks a Trial version and trains from it, with no second-user label check and no agreement check; Trial is said wherever the version or its AI model is named; the go-live gate and the customer validation report refuse it, with Start the Checks | #406 | Open, for Jay's review |
 | B2 (D2, F2, F13) | A customer's first board model makes the customer's encrypted store in the same dialog; the recovery key is shown once, with Save to File…, Print… and a tick that cannot be skipped; key ids, Restore Key… and Shred Store… move under an Admin's Advanced tick | #407, stacked on #406 | Open, for Jay's review |
 | B3 (F6) | One sentence, computed from the constants in `aoi/core/datasets.py`, wherever the images a board model needs are stated; Home and Training list what the selected board model still needs, each line a count against its need with the one button that takes the step; a Trial list shows only what Trial needs, a Validated one adds the second-user checks and the agreement check | #408, stacked on #407 | Open, for Jay's review |
+| B4 (D4 part, F9) | A board model's name is checked where it is entered, with the rule freeze applies (AOI-TRN-039): a name with no Latin letter or digit, such as a Korean-only one, is refused at entry with AOI-TRN-054, whose message says what a valid name looks like | #409, stacked on #408 | Open, for Jay's review |
 
 Choices made in Phase B, each recorded in its ADR:
 
@@ -55,16 +56,25 @@ Choices made in Phase B, each recorded in its ADR:
   its own for the agreement check's 100 images; a Trial list ends at a trained AI model, since a Trial AI model
   never goes live. Each button waits only for what its own step checks, so images added after a freeze never grey
   the version frozen before (ADR 0022).
+- **A new code for a name refused at entry (B4).** AOI-TRN-054 says what to type now; AOI-TRN-039 stays for a
+  board model made before the rule, which keeps its name and is refused only at freeze, as before. "기판 2호" is
+  taken, because its digit names its versions (ADR 0023).
 - `tests/regression/expected.json` is byte-identical in every pull request of Phase B: no verdict changes.
 
 Still open after Phase B:
 
-1. **Jay decides** the "Never live" card, and reviews and merges #406, then #407, then #408 (CLAUDE.md rule
-   6).
-2. **Jay adds** the brief and the "Stage 1 for one person" ADR to the repository, under a free ADR number, and writes
+1. **Jay decides** the "Never live" card, and reviews and merges #406, then #407, then #408, then #409
+   (CLAUDE.md rule 6).
+2. **Jay decides** whether a name that gives another board model's version name (TBOX-A1 and "tbox a1",
+   AOI-TRN-040 at freeze) and a name that looks like another but is written differently are refused at entry too
+   (ADR 0023, Consequences).
+3. **Jay adds** the brief and the "Stage 1 for one person" ADR to the repository, under a free ADR number, and writes
    D1's exception into the Engineering standard's text about the label and agreement checks.
-3. **People:** the Korean strings the items add are drafts, many unfinished in `aoi_ko.ts`, for a native speaker who
+4. **People:** the Korean strings the items add are drafts, many unfinished in `aoi_ko.ts`, for a native speaker who
    knows SMT terms; Save to File… and Print… of a recovery key were not tried on the Windows station or a real printer.
+5. **Claude fixes, once Jay says so:** training a board model again, as AOI-TRN-012 asks for an AI model whose
+   registry row cannot be read, would stop at `trial_version` in `AppContext.train` (#406). Found while building B3,
+   inferred from the code and not run; B3's own list skips such a row.
 
 ## Phase A report, 2026-10-12
 
