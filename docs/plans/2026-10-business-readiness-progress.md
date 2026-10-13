@@ -32,7 +32,7 @@ B2's is ADR 0021; each says that Jay's record wins where it decides otherwise.
 | Item | What it asked | Pull request | State |
 |---|---|---|---|
 | B1 (D1, F1, F2) | One person freezes, splits and locks a Trial version and trains from it, with no second-user label check and no agreement check; Trial is said wherever the version or its AI model is named; the go-live gate and the customer validation report refuse it, with Start the Checks | #406 | Open, for Jay's review |
-| B2 (D2, F2, F13) | A customer's first board model makes the customer's encrypted store in the same dialog; the recovery key is shown once, with Save to File…, Print… and a tick that cannot be skipped; key ids, Restore Key… and Shred Store… move under an Admin's Advanced tick | #B2PR, stacked on #406 | Open, for Jay's review |
+| B2 (D2, F2, F13) | A customer's first board model makes the customer's encrypted store in the same dialog; the recovery key is shown once, with Save to File…, Print… and a tick that cannot be skipped; key ids, Restore Key… and Shred Store… move under an Admin's Advanced tick | #407, stacked on #406 | Open, for Jay's review |
 
 Choices made in Phase B, each recorded in its ADR:
 
@@ -48,7 +48,7 @@ Choices made in Phase B, each recorded in its ADR:
 
 Still open after Phase B:
 
-1. **Jay decides** the "Never live" card, and reviews and merges #406, then #B2PR (CLAUDE.md rule 6).
+1. **Jay decides** the "Never live" card, and reviews and merges #406, then #407 (CLAUDE.md rule 6).
 2. **Jay adds** the brief and the "Stage 1 for one person" ADR to the repository, under a free ADR number, and writes
    D1's exception into the Engineering standard's text about the label and agreement checks.
 3. **People:** the Korean strings both items add are drafts, many unfinished in `aoi_ko.ts`, for a native speaker who
