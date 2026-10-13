@@ -139,7 +139,12 @@ gathering samples, with Jay's approval. The demo workspace is loaded with 0.
 **Names.** A new board model's name must differ from every existing one in more than upper and lower case: `tbox-a1`
 next to `TBOX-A1` is refused with AOI-TRN-005, since Windows would store the AI model and golden board files of both as
 the same files. It is also the name of the board model's folders in the workspace, so a name with `/` or `\`, one of
-`: * ? " < > |`, a dot or space at its end, or a device name such as `CON` or `COM1` is refused with AOI-TRN-019.
+`: * ? " < > |`, a dot or space at its end, or a device name such as `CON` or `COM1` is refused with AOI-TRN-019. And it
+needs at least one Latin letter or digit, A to Z or 0 to 9 as an English keyboard types them, since its dataset versions
+are named with those (DS-TBOXA1-R3-TOP-v1 for `TBOX-A1`): a name in Korean only, such as `보드`, or in symbols, full-width
+letters or another alphabet only, is refused with AOI-TRN-054. Other letters may be added to it, as in `TBOX-A1 메인보드`.
+A board model made before this rule under such a name keeps it and works as before, but cannot be frozen (AOI-TRN-039,
+section 3); import its images under a name with a Latin letter or digit.
 
 Until a board model exists, Home, Inspection, Training, AI Model Test and Recipe Editor say so and offer
 **+ New board model**, which an Engineer or Admin uses; an Operator is told to ask an Engineer. Start and Next Board
@@ -195,7 +200,9 @@ its store with no key shown. A board model whose folder under `images` holds fil
 refused with a customer named: make it with none, then an Admin moves it in on Settings, which encrypts the files. The
 new board model is chosen in the header at once, on every page, and the status bar names the store that holds it. A
 name that exists, typed exactly, creates nothing and chooses that board model (the status bar says when it is already
-chosen); one that differs from an existing name only in case, or that cannot name a folder, is refused (Names, above).
+chosen). A name the rules refuse (Names, above: one that differs from an existing name only in case, that cannot name a
+folder, or that has no Latin letter or digit) is said on a line under the name as it is typed, with its code; Create
+stays off and Enter does nothing until the name is one a new board model may have.
 The app has no step to rename or delete a board model, so check the name before Create. Creating it writes
 `board_model.create` to the audit trail and stores the default recipe as revision 1, saved by the system
 (`recipe.default`), so its first boards already name the recipe revision that judged them. It has no Golden board, AI
@@ -372,8 +379,9 @@ datasets/<name>/manifest.json with each file's path, SHA-256, label, boxes, labe
 manifest's SHA-256. It waits for every NG label (AOI-TRN-020) and the drawn OK labels (AOI-TRN-021) to be checked, a
 customer (AOI-TRN-024) and an agreement check that reached its targets (AOI-TRN-027): the newest one of the board model
 whose set holds images of the view decides, so a newer check short of the targets stops freezing until a newer one
-reaches them. A board model whose name has no Latin letter or digit (AOI-TRN-039), or whose letters and digits name
-another board model's versions (AOI-TRN-040), cannot be frozen; import its images under another name. A manifest that
+reaches them. A board model whose name has no Latin letter or digit (AOI-TRN-039; only one made before such a name was
+refused at + New, AOI-TRN-054), or whose letters and digits name another board model's versions (AOI-TRN-040), cannot
+be frozen; import its images under another name. A manifest that
 cannot be written is AOI-TRN-041, or AOI-TRN-042 when its path is too long, and nothing of the version is kept. A
 freeze refused by its checks reads no image file first. A datasets/<name> folder whose manifest no version lists was
 left by a freeze that stopped before storing its version; the next freeze of that name replaces it. The version's record

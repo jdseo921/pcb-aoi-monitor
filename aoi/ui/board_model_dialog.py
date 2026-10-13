@@ -4,12 +4,16 @@ boards it is. A customer's first board model makes that customer's encrypted dat
 it, in this dialog (`AppContext.create_customer_board_model`), then shows the store's recovery key this once
 (`RecoveryKey`) with Save to File… and Print…: Done waits for its tick, and Esc and the window's close do nothing until
 then. A customer with a store gets the board model in it; no customer makes a board model in no store, as + New did
-before, for in-house and demo boards."""
+before, for in-house and demo boards. The name is checked as it is typed, by the rule every call that makes a board
+model applies (`AppContext.board_model_name_refusal`; B4 of the brief, D4 part, F9; ADR 0023): a line under it says
+why a name is refused, and Create and Enter do nothing until it is one a new board model may have."""
 
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QKeyEvent
 from PySide6.QtWidgets import (
     QComboBox,
     QCompleter,
@@ -24,7 +28,7 @@ from PySide6.QtWidgets import (
 
 from ..errors import AoiError
 from . import theme
-from .errors import show_error
+from .errors import phrase_text, show_error
 from .pages.base import RoleGates, button, size_class
 from .pages.recovery_key import RecoveryKey
 
@@ -62,6 +66,11 @@ class NewBoardModelDialog(QDialog):
         self.board.textChanged.connect(self._sync)
         self.board.returnPressed.connect(self.make)
         lay.addWidget(self.board)
+        self.name_refusal = QLabel()  # why the name typed is refused, in the refusal's words; hidden for a name allowed
+        self.name_refusal.setObjectName("muted")
+        self.name_refusal.setWordWrap(True)
+        self.name_refusal.hide()
+        lay.addWidget(self.name_refusal)
         lay.addWidget(QLabel(self.tr("Customer")))
         self.customer = size_class(QComboBox(), "T")  # a store's customer, or a new one typed; none by default
         self.customer.setEditable(True)
@@ -117,10 +126,15 @@ class NewBoardModelDialog(QDialog):
         show_error(self, self.ctx.report_error(e, "Board model"))
 
     def _sync(self) -> None:
-        """Create on while a name is typed; the line under the customer says what Create does; Done waits for the
-        tick."""
+        """Create on while a name is typed that a new board model may have; the line under the name says why one is
+        refused, with its code, what happened and what to do; the line under the customer says what Create does; Done
+        waits for the tick."""
         name, customer = self.board.text().strip(), self.customer.currentText().strip()
-        self.btn_create.setEnabled(bool(name))
+        refused = self.ctx.board_model_name_refusal(name) if name else None
+        self.btn_create.setEnabled(bool(name) and refused is None)
+        if refused is not None:
+            self.name_refusal.setText(" ".join([refused.code, phrase_text(refused.what), phrase_text(refused.action)]))
+        self.name_refusal.setVisible(refused is not None)
         found = next(
             (s for s in self.ctx.stores() if s["customer"].casefold() == customer.casefold() and not s["shredded_at"]),
             None,
@@ -147,9 +161,13 @@ class NewBoardModelDialog(QDialog):
 
     def make(self) -> None:
         """Make the board model, in the customer's store when one is named, the store first for a customer with none;
-        a refusal shows its dialog and keeps what was typed."""
+        a refusal shows its dialog and keeps what was typed. A name the line under it refuses makes nothing, Enter
+        included, and shows no dialog: the line says why."""
         name, customer = self.board.text().strip(), self.customer.currentText().strip()
         if not name or self.steps.currentWidget() is not self.form:
+            return
+        if self.ctx.board_model_name_refusal(name) is not None:
+            self._sync()
             return
         try:
             if customer and self.gates.may(STORE_CALL):
@@ -165,6 +183,16 @@ class NewBoardModelDialog(QDialog):
             self.accept()
         else:
             self.show_key({**made["store"], "sheet": made["sheet"]})
+
+    def keyPressEvent(self, e: QKeyEvent) -> None:
+        """Enter in the form is its fields' own, which Create takes through `make`: it makes nothing for a name the line
+        under it refuses, and no default button is pressed after it. Qt made Cancel the default as the dialog opened,
+        Create being off, so Enter on an empty or refused name closed the form, and after a refusal's dialog closed it
+        too. A focused button takes Enter itself, as do the key step's."""
+        if e.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter) and self.steps.currentWidget() is self.form:
+            e.accept()
+            return
+        super().keyPressEvent(e)
 
     def show_key(self, store: dict[str, Any]) -> None:
         """The new store's recovery key in the form's place, this once."""

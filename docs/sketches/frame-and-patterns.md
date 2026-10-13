@@ -56,7 +56,7 @@ background is the theme's dark blue-grey: #1F2A36 for pages, #15202B for header,
 | Control | Label | Key | Size | Notes |
 |---|---|---|---|---|
 | Board model picker | Board model | Alt+B | T | Chosen once; every page follows it |
-| New board model | + New | — | T | Opens an inline sheet, not a dialog; asks for the name and board revision |
+| New board model | + New | — | T | Opens the New board model dialog: the name, and an Admin's customer (ADR 0021); a name a new board model may not have is said on a muted line under it as it is typed, its code first, and Create is off (ADR 0023) |
 | Training indicator | Training 42 % · 3 min left | — | text | Shown on every page while training runs; click opens Training (S40) |
 | User and role | Kim · Engineer | — | text | Name and role, never an email |
 | Switch user | Switch User | Alt+U | T | Operator picks a name; Engineer and Admin sign in (ADR 0002, own sketch later) |

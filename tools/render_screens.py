@@ -474,6 +474,9 @@ def render_stored(win: Any, ctx: AppContext, out: Path) -> dict[str, Path]:
 
 NEW_BOARD_MODEL = "TBOX-A2"  # the board model the New board model dialog's screenshots type, made by none of them
 NEW_CUSTOMER = "Beta Boards"
+# A name the line under the name field refuses (no Latin letter or digit, AOI-TRN-054; ADR 0023): the size walk's, in
+# no screenshot, as the pinned DejaVu Sans draws no Korean and another font would draw it on each machine its own way
+REFUSED_BOARD_MODEL = "보드"
 
 
 def pinned_store() -> dict[str, str]:
@@ -486,11 +489,12 @@ def pinned_store() -> dict[str, str]:
 
 def new_board_model_dialog(win: Any, step: str) -> Any:
     """The New board model dialog as an Admin fills it for a new customer's first board model (ADR 0021): the form, or
-    the recovery key step that Create would show, for `pinned_store`."""
+    the recovery key step that Create would show, for `pinned_store`; or, for `refused`, the form with
+    REFUSED_BOARD_MODEL typed, the line under it saying why (ADR 0023)."""
     from aoi.ui.board_model_dialog import NewBoardModelDialog
 
     dialog = NewBoardModelDialog(win)
-    dialog.board.setText(NEW_BOARD_MODEL)
+    dialog.board.setText(REFUSED_BOARD_MODEL if step == "refused" else NEW_BOARD_MODEL)
     dialog.customer.setCurrentText(NEW_CUSTOMER)
     if step == "key":
         dialog.made = NEW_BOARD_MODEL
