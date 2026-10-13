@@ -120,10 +120,10 @@ class SettingsPage(Page):
         self.presenter.clicked.connect(self._switch_presenter)
         about = QLabel(
             self.tr(
-                "Light, text 18 pt or more, verdict 48 pt; where the app has under 900 px of height or 1400 px of"
-                " width, as on a 1366 × 768 projector, text 16 pt and verdict 44 pt. 3D Profile and the hardware table"
-                " are hidden; Settings is hidden too, except for an Admin, who keeps it for Reset Demo. An Admin leaves"
-                " the theme with Exit presenter theme in the header."
+                "Full screen and light, text 18 pt or more, verdict 48 pt; where the app has under 900 px of height or"
+                " 1400 px of width, as on a 1366 × 768 projector, text 16 pt and verdict 44 pt. 3D Profile and the"
+                " hardware table are hidden; Settings is hidden too, except for an Admin, who keeps it for Reset Demo."
+                " An Admin leaves the theme with Exit presenter theme in the header."
             )
         )
         about.setObjectName("muted")
@@ -149,7 +149,9 @@ class SettingsPage(Page):
     def restyle(self) -> None:
         """The presenter theme leaves out the hardware table, whose Stage 2 to 4 rows read "Not connected": a demo shows
         only what is finished (Customers & Launch, "Demos"; A4 of the 2026-10 business-readiness brief). Its 16 and
-        18 pt labels leave a field beside them a few letters, so there each field goes under its label."""
+        18 pt labels leave a field beside them a few letters, so there each field goes under its label. The tick shows
+        the theme now in use, also after Exit presenter theme in the header."""
+        self.presenter.setChecked(self.ctx.settings.presenter_theme)
         self.hardware.setVisible(not theme.presenter())
         wrap = QFormLayout.RowWrapPolicy
         self.form.setRowWrapPolicy(wrap.WrapAllRows if theme.presenter() else wrap.DontWrapRows)

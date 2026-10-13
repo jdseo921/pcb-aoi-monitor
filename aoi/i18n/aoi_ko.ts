@@ -1567,7 +1567,7 @@
     <message>
         <location filename="../ui/demo_workspace.py" line="+31"/>
         <location filename="../ui/errors.py" line="+141"/>
-        <location filename="../ui/main_window.py" line="+954"/>
+        <location filename="../ui/main_window.py" line="+975"/>
         <source>start-up</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4060,7 +4060,7 @@
 <context>
     <name>HomePage</name>
     <message>
-        <location filename="../ui/main_window.py" line="-817"/>
+        <location filename="../ui/main_window.py" line="-838"/>
         <source>Upload samples</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5455,7 +5455,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+122"/>
+        <location line="+141"/>
+        <source>Presenter theme on, full screen. An Admin turns it off with Exit presenter theme.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+2"/>
         <source>Presenter theme off.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5521,12 +5526,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-130"/>
-        <source>Presenter theme on. An Admin turns it off with Exit presenter theme.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+132"/>
+        <location line="+2"/>
         <source>Stopping the running work…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6094,7 +6094,7 @@
 <context>
     <name>Page</name>
     <message>
-        <location filename="../ui/main_window.py" line="-775"/>
+        <location filename="../ui/main_window.py" line="-796"/>
         <source>Home</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7259,7 +7259,7 @@
     </message>
     <message>
         <location line="+4"/>
-        <source>Light, text 18 pt or more, verdict 48 pt; where the app has under 900 px of height or 1400 px of width, as on a 1366 × 768 projector, text 16 pt and verdict 44 pt. 3D Profile and the hardware table are hidden; Settings is hidden too, except for an Admin, who keeps it for Reset Demo. An Admin leaves the theme with Exit presenter theme in the header.</source>
+        <source>Full screen and light, text 18 pt or more, verdict 48 pt; where the app has under 900 px of height or 1400 px of width, as on a 1366 × 768 projector, text 16 pt and verdict 44 pt. 3D Profile and the hardware table are hidden; Settings is hidden too, except for an Admin, who keeps it for Reset Demo. An Admin leaves the theme with Exit presenter theme in the header.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -7274,12 +7274,12 @@
     </message>
     <message>
         <location line="+0"/>
-        <location line="+67"/>
+        <location line="+69"/>
         <source>Role</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-65"/>
+        <location line="-67"/>
         <source>Add / Change User</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7304,7 +7304,7 @@
         <translation>상태</translation>
     </message>
     <message>
-        <location line="+16"/>
+        <location line="+18"/>
         <source>Workspace folder</source>
         <translation type="unfinished"></translation>
     </message>

@@ -5,11 +5,13 @@
   scrolling in the verdict area (verdict, defect boxes, the Compare pair and its table, the Logs summary line);
   scrolling is allowed only in secondary panels below the fold". The 16 pt size of decision 2 was put to Jay as a
   choice on 2026-10-12 and is not yet answered; Jay's merge of this record accepts it, and "Keep 18 pt" instead
-  reverts decision 2 (Consequences).
+  reverts decision 2 (Consequences). Decision 4 is Jay's choice of 2026-10-13 00:51 UTC: "Full screen", on the
+  question "Make the presenter theme fill the whole screen, so a maximized 1366 × 768 projector shows every verdict
+  area?".
 - Date: 2026-10-12
 - Decides: the product owner (Jay), until a tech lead joins
 - Related: REQ-SET-004, REQ-SET-008, ADR 0012 (decision 2 and its alternatives), #104, `theme.SMALL_H`,
-  `theme.PRESENTER_SMALL`, `theme.DECISION_W`, `FlowLayout`, `ReflowSplitter`, `SideSplit`, `WrappedPane`,
+  `theme.PRESENTER_SMALL`, `theme.DECISION_W`, `MainWindow.show_for_theme`, `FlowLayout`, `ReflowSplitter`, `SideSplit`, `WrappedPane`,
   `WrappedGroup`, `tools/screen_sizes.py`,
   `tests/test_demo_fit.py`, [the measurements](../tests/2026-10-screen-sizes.md)
 
@@ -56,6 +58,15 @@ tall, 45 px more than 768 (docs/tests/2026-10-screen-sizes.md).
    table; on Logs & Export the summary line. Everything else may sit below the fold and scroll, as ADR 0012 allows.
    `tests/test_demo_fit.py` checks it on every page the scripts open, in a 1366 × 768 window, in both themes, and the
    approved screenshots `presenter-1366-*.png` show those pages at that size.
+4. **The presenter theme fills the whole screen** (`MainWindow.show_for_theme`). A window maximized on a 1366 × 768
+   Windows screen has about 1366 × 697 (689 on Windows 11), as the title bar and the taskbar keep their share, and
+   there Inspection's Start and the last two rows of Compare's table, the demo board's AI score among them, sat
+   below the edge; full screen gives the pages all 768 px, which decisions 1 to 3 fit. The app opens full screen with
+   the theme saved on (a start, Load Demo, Reset Demo), goes full screen when an Admin ticks Presenter theme in the
+   window the app opened, and gives back the maximized window with Exit presenter theme; a window someone sized by
+   hand keeps its size either way. The production theme opens maximized, with its title bar, as before. The switch
+   styles the pages once, at the size of the screen the window goes full screen on. No key switches it: F11, the
+   usual one, is False call on Inspection and Logs & Export; Alt+Tab and Alt+F4 work as in any window.
 
 This narrows ADR 0012's third alternative ("lay every page out to fit 1366 × 768 without scrolling"): only the
 verdict area is laid out to fit, and the rest of each page still scrolls.
@@ -69,11 +80,15 @@ verdict area is laid out to fit, and the rest of each page still scrolls.
 - Switch on the screen's size, not the window's: a window the presenter sizes by hand, or one on a second screen,
   would get the wrong size; the window's size is what the layout has.
 - A table that scrolls across on Compare: the verdict's reasons would hide in the scrolled part, which A7 forbids.
+- Stay maximized in the presenter theme, with the demo kit telling the presenter to press F5 to start and to scroll
+  Compare for its last rows (as A7 was first built): the demo board's AI score would be out of view as the customer
+  reads the verdict.
 
 ## Consequences
 
 A window that crosses 900 px of height or 1400 px of width restyles every page once, as switching the theme on does;
-before the window is first shown, the screen's room decides, so a start styles it once. The presenter theme's
+before the window is first shown, and while it is full screen, the screen's room decides, so a start, or a switch
+to full screen, styles it once. The presenter theme's
 screenshots at 1920 × 1080 keep 18 pt; `presenter-1366-*.png` show 16 pt.
 
 In the presenter theme Compare puts its decision table under the pair at 1920 × 1080 too, where at 18 pt the table does
@@ -90,11 +105,11 @@ board to the pair's height, so it draws the board about as large as Side by side
 table.
 
 A window maximized on a 1366 × 768 Windows screen measures about 1366 × 697 (1366 × 689 on Windows 11), not
-1366 × 768, as the title bar and the taskbar take their part of the screen. What that window shows is measured in the
-record above: Inspection's Start and the last two rows of Compare's decision table sit just below its edge, and the
-demo kit says to press F5 and scroll there. A full-screen presenter window, which would give the page the whole
-768 px, is not built: it was put to Jay on 2026-10-12, and the Phase A report lists it (F11, the usual key for it, is
-False call on Inspection and Logs & Export).
+1366 × 768, as the title bar and the taskbar take their part of the screen; what that window shows is measured in the
+record above. The presenter theme opens full screen there (decision 4), so a demo has the whole 1366 × 768. The
+production theme, maximized, keeps the gap: on a 1366 × 768 station Inspection's Start and the foot of Compare's
+table sit just below the edge, which F5 and the scroll wheel reach; ADR 0012's reference screen, 1920 × 1080, does
+not have it.
 
 If Jay picks "Keep 18 pt", `PRESENTER_SMALL` and `SMALL_H` go, decision 1 stays, and the demo kit goes back to the
 recording for a 1366 × 768 projector. No verdict changes: this is layout and text size only.

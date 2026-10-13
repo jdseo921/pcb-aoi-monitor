@@ -10,7 +10,8 @@ so the interpreter's own start counts; "in_process", the seconds from the top of
 seconds: "imports" (main and what it imports: Qt, the engine, PyTorch), "open_workspace" (settings.json, the database,
 the start-up archive and sweeps; with --demo, the demo workspace loaded beside the station's first when it is not there)
 and "build_window" (every page, and the first one's data). It names what the start opened, too: "user" and "role" signed
-in, "page", "presenter" (the presenter theme on) and "demo" (the demo workspace, with --demo), and "dialogs": every
+in, "page", "presenter" (the presenter theme on), "full_screen" (the window shown full screen, as the presenter theme
+shows it) and "demo" (the demo workspace, with --demo), and "dialogs": every
 dialog the start showed, its kind and title (tests/dialog_watch.py), each closed again as Esc closes it so none waits
 for a click. When main.main() returns it prints the last line again, with "exit", its return code, and "dialogs" as they
 stand then, those shown while closing included, so the last line of a run that ends is always that one. An error in what
@@ -168,7 +169,8 @@ def run() -> int:
         QApplication.processEvents()  # the first paint, and whatever else the start queued
         usable_s = time.time() - float(os.environ["AOI_STARTUP_LAUNCHED"])
         opened = {"user": win.ctx.user, "role": win.ctx.role, "page": page_title(win)}
-        opened |= {"presenter": theme.presenter(), "demo": win.in_demo, "exposed": exposed, "dialogs": watch.shown}
+        opened |= {"presenter": theme.presenter(), "full_screen": win.isFullScreen(), "demo": win.in_demo}
+        opened |= {"exposed": exposed, "dialogs": watch.shown}
         emit({"usable": usable_s, "in_process": perf_counter() - T0, **marks, **opened})
         if then := os.environ.get("AOI_STARTUP_THEN"):
             go_on(win, then, watch)

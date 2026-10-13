@@ -362,8 +362,9 @@ under the note, the table as tall as its rows and the boards the rest (`_under_p
 (`PairGrid`, as their linked zoom needs), and a cover of the busy indicator's colour covers the "why" box while
 "Re-evaluating…" covers the table (`_cover_why`). In the presenter theme a window shorter than `theme.SMALL_H` or
 narrower than `theme.SMALL_W` takes `theme.PRESENTER_SMALL`'s 16 pt text and 44 pt verdict (`MainWindow._small`, asked
-of the screen before the window
-is first shown and again in `resizeEvent`). `tests/test_demo_fit.py` checks every page the demo scripts open, and each
+of the screen before the window is first shown and while it is full screen, as the presenter theme shows it
+(`MainWindow.show_for_theme`), and of the window in `resizeEvent`).
+`tests/test_demo_fit.py` checks every page the demo scripts open, and each
 tab the 45-minute script opens (`tools/screen_sizes.py`'s `DEMO_TABS`), in a 1366 × 768 window in both themes, with
 `cut_off` (the verdict area, `VERDICT_AREA`, whole with nothing scrolled, and no text cut off across or down), then the
 verdict areas again at 1500 × 1000 and 1920 × 1080; `python tools/screen_sizes.py` measures each page's least window

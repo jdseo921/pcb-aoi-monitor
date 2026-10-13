@@ -221,6 +221,7 @@ def test_req_set_007_main_demo_starts_as_the_first_admin_at_home_in_its_theme_wi
 
     first = start()
     assert (first["user"], first["role"], first["page"], first["presenter"]) == ("admin", "Admin", "Home", False)
+    assert first["full_screen"] is False, first
     print("\nmain.py --demo, first start (the demo loaded), s:", round(first["usable"], 2))
     assert first["usable"] <= LOAD_BUDGET_S, f"the first start, loading the demo, took {first['usable']:.2f} s: {first}"
     folder = demo.demo_folder(station)
@@ -234,5 +235,6 @@ def test_req_set_007_main_demo_starts_as_the_first_admin_at_home_in_its_theme_wi
     print("\nmain.py --demo, seconds to usable:", [round(s["usable"], 2) for s in starts])
     for s in starts:
         assert (s["user"], s["role"], s["page"], s["presenter"]) == ("admin", "Admin", "Home", True), s
+        assert s["full_screen"], s
     usable = judged([s["usable"] for s in starts])
     assert usable <= START_BUDGET_S, f"usable after {usable:.2f} s of the {START_BUDGET_S} s budget: {starts}"

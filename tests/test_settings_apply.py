@@ -354,7 +354,8 @@ def test_req_set_008_the_presenter_theme_applies_at_once_saved_and_audited(
     QApplication.processEvents()
     assert win.minimumSizeHint().width() <= 1366, win.minimumSizeHint()  # a 1366 x 768 projector (README, #104)
     assert win.exit_presenter.isVisible()
-    assert win.statusBar().currentMessage() == "Presenter theme on. An Admin turns it off with Exit presenter theme."
+    message = "Presenter theme on, full screen. An Admin turns it off with Exit presenter theme."
+    assert win.statusBar().currentMessage() == message
     shown = drawn()
     assert shown["banner"] == theme.verdict_style(verdict) and "font-size:48pt" in str(shown["banner"])
     assert shown["image"] == theme.BG_IMAGE and shown["labels"] == {(18, theme.TEXT)}, shown
@@ -414,14 +415,14 @@ def test_req_set_008_a_presenter_start_styles_the_app_once_at_its_screens_sizes(
     qtbot: QtBot, trained_ctx: AppContext, monkeypatch: pytest.MonkeyPatch, screen: QSize, small: bool
 ) -> None:
     """The presenter theme saved on, a start styles the app once, before anything is drawn, at the sizes for the screen
-    it opens maximized on (ADR 0019): its 16 pt on a 1366 x 768 projector, its 18 pt on a 1920 x 1080 one. The window
+    it opens full screen on (ADR 0019): its 16 pt on a 1366 x 768 projector, its 18 pt on a 1920 x 1080 one. The window
     shown at the screen's size is not styled again: styled at 18 pt first and at 16 pt as it was shown, the demo took
     about 1.2 s longer to start on a small screen (A8 of the 2026-10 business-readiness brief). Offscreen, Qt's one
     screen is 800 x 800 px, so the screen's room is given here and the window shown at it, as maximized there."""
     ctx = trained_ctx
     ctx.set_user("admin")
     ctx.save_settings({"presenter_theme": True})
-    monkeypatch.setattr(QScreen, "availableGeometry", lambda _screen: QRect(QPoint(0, 0), screen))
+    monkeypatch.setattr(QScreen, "geometry", lambda _screen: QRect(QPoint(0, 0), screen))
     styled: list[tuple[bool, bool]] = []
     real = MainWindow._set_theme
 
@@ -438,3 +439,84 @@ def test_req_set_008_a_presenter_start_styles_the_app_once_at_its_screens_sizes(
     QApplication.processEvents()
     assert styled == [(True, small)] and (theme.presenter(), theme.small()) == (True, small)
     assert theme.FONT_PT == (16 if small else 18)
+
+
+def test_req_set_008_the_presenter_theme_fills_the_screen_and_its_exit_gives_the_window_back(
+    qtbot: QtBot, trained_ctx: AppContext
+) -> None:
+    """#104, Jay's choice of 2026-10-13: the app opens maximized in the production theme (main.py), and an Admin who
+    switches the presenter theme on gets the whole screen, with no title bar or taskbar, so a 1366 x 768 projector
+    gives the pages all 768 px; Exit presenter theme gives the maximized window back. A start, or a Reset Demo, with
+    the theme saved on opens full screen. A window someone sized by hand keeps its size either way."""
+    ctx = trained_ctx
+    win = MainWindow(ctx)
+    qtbot.addWidget(win)
+    win.show_for_theme()  # as main.py shows it
+    qtbot.waitExposed(win)
+    qtbot.waitUntil(lambda: win.width() < 1920)  # maximized on the test screen, as a presenter finds it, not mid-way
+    win.set_user("admin")
+    settings = cast(SettingsPage, win.pages["Settings"])
+    assert win.navigate("Settings") and win.isMaximized() and not win.isFullScreen()
+    settings.presenter.click()
+    assert theme.presenter() and win.isFullScreen() and not win.isMaximized()
+    win.exit_presenter.click()
+    assert not theme.presenter() and win.isMaximized() and not win.isFullScreen()
+
+    win.showNormal()
+    win.resize(1500, 1000)
+    settings.presenter.click()
+    assert theme.presenter() and not win.isFullScreen() and not win.isMaximized() and win.size() == QSize(1500, 1000)
+    win.exit_presenter.click()
+    assert not theme.presenter() and not win.isFullScreen() and win.size() == QSize(1500, 1000)
+
+    settings.presenter.click()
+    again = MainWindow(ctx)  # the theme saved on: the next start, or Reset Demo's window (MainWindow.switch_workspace)
+    qtbot.addWidget(again)
+    again.show_for_theme()
+    qtbot.waitExposed(again)
+    assert again.isFullScreen() and not again.isMaximized()
+
+
+def test_req_set_008_a_switch_to_full_screen_styles_the_app_once_at_the_screens_size(
+    qtbot: QtBot, trained_ctx: AppContext, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """On a 1600 x 900 screen a maximized window, about 1600 x 829, is under 900 px tall, where the presenter theme
+    takes 16 pt, and full screen it is not: an Admin who switches the theme on gets the app styled once, at the 18 pt
+    of the full screen, not at 16 pt first and at 18 pt again as the window goes full screen, which held the window
+    about 1.3 s more. Offscreen, Qt's one screen is 800 x 800 px, narrower than the presenter theme's header, so the
+    screen and the two ways the app shows its window are stood in for."""
+    sizes = {"maximized": QSize(1600, 829), "full screen": QSize(1600, 900)}
+
+    def shown(way: str) -> Callable[[MainWindow], None]:
+        def show(win: MainWindow) -> None:
+            win.setProperty("shownAs", way)
+            win.resize(sizes[way])
+            win.showNormal()
+
+        return show
+
+    monkeypatch.setattr(MainWindow, "showMaximized", shown("maximized"))
+    monkeypatch.setattr(MainWindow, "showFullScreen", shown("full screen"))
+    monkeypatch.setattr(MainWindow, "isMaximized", lambda win: win.property("shownAs") == "maximized")
+    monkeypatch.setattr(MainWindow, "isFullScreen", lambda win: win.property("shownAs") == "full screen")
+    monkeypatch.setattr(QScreen, "geometry", lambda _screen: QRect(QPoint(0, 0), sizes["full screen"]))
+    ctx = trained_ctx
+    win = MainWindow(ctx)
+    qtbot.addWidget(win)
+    win.show_for_theme()
+    qtbot.waitExposed(win)
+    QApplication.processEvents()
+    win.set_user("admin")
+    assert win.navigate("Settings") and win.isMaximized() and win.size() == sizes["maximized"]
+    styled: list[tuple[bool, bool]] = []
+    real = MainWindow._set_theme
+
+    def counted(win: MainWindow, presenter: bool, is_small: bool = False) -> None:
+        styled.append((presenter, is_small))
+        real(win, presenter, is_small)
+
+    monkeypatch.setattr(MainWindow, "_set_theme", counted)
+    cast(SettingsPage, win.pages["Settings"]).presenter.click()
+    QApplication.processEvents()
+    assert win.isFullScreen() and win.size() == sizes["full screen"], win.size()
+    assert styled == [(True, False)] and theme.FONT_PT == 18, styled
