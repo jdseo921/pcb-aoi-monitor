@@ -49,7 +49,11 @@ AI model of the customer's own boards (F1, F2).
 4. **The go-live gate refuses a Trial AI model,** first or later (AOI-TRN-052, in `_switch_to`). A board model's
    first AI model, which goes live when trained (ADR 0018), stays inactive when it is a Trial one, and Training says
    so. Inspection names a Trial AI model that waits as a Trial, with Start the Checks in place of Activate, and offers
-   a Validated version that waits before a Trial one. This is the recommended option of the card put to Jay on
+   a Validated version that waits before a Trial one. Home, AI Model Test, Compare and Training say a Trial AI model
+   does not go live and point to the checks, never to Activate. Since no AI model was live before it, the first AI
+   model trained from a Validated version after Trial ones goes live as a board model's first does (ADR 0018). Both
+   refusals are a step taken as approved, so they show as information with Start the Checks, logged as information
+   and stored as no ERROR alarm. This is the recommended option of the card put to Jay on
    2026-10-13 06:15 UTC ("Never live"), not yet answered when this was written: Jay's message says the gate refuses a
    Trial version, and allowing a Trial AI model live later is one check removed, while taking back verdicts a Trial AI
    model already made is not possible. The other options were "Live, marked Trial" (only the report refuses) and "Live

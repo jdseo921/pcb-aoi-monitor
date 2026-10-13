@@ -605,12 +605,15 @@ An AI model the loader would refuse, such as one with an image threshold of 0 fr
 photo, is refused at step 5 with AOI-TRN-004: nothing is saved, registered or audited, and the active version stays.
 Step 6 writes the version's model card (`aoi/core/model_card.py`, REQ-TRN-011) and registers the version inactive with
 `model.train` in one transaction: if it fails, the run's four files are removed. A board model's first version, trained
-for the customer's own AI models (`use` "own", which Training always passes), is then made active with its Golden board
+for the customer's own AI models (`use` "own", which Training always passes), the first after Trial ones too, which never
+go live (ADR 0020), is then made active with its Golden board
 in a transaction of its own (`_first_live`; decision D3 of the 2026-10 business-readiness brief, ADR 0018: there is no
 version in use to keep), audited as `model.activate` by the Engineer who trained it with the reason `FIRST_LIVE`; an
 activation that fails leaves it registered and inactive, logged as `training.first_not_live`, and `train` returns
 `activated` and, in `not_live`, the error, which Training reports as any error (`report_error`: an alarm with its code
-and the dialog) and names in its status line. Home's Train AI model card is read again when a run ends while Home is
+and the dialog) and names in its status line; but the go-live gate's AOI-TRN-052 for a Trial AI model, a step taken as
+approved, is logged as information (`training.trial_not_live`) and shown with Start the Checks and no alarm
+(`Page.error_report`, which does the same for AOI-TST-009). Home's Train AI model card is read again when a run ends while Home is
 shown. On Compare, a board just judged with no AI model while a version waits is explained by `INACTIVE_AI_NOTE`
 (`aoi/core/explain.py`), naming the version, not "No AI model is trained"; a stored result keeps the past tense of
 `STORED_NOTES`, and AOI-INSP-010 says "no AI model is active". The Engineer activates a later version

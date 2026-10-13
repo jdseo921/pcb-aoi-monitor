@@ -902,8 +902,9 @@ class AppContext:
         model = anomaly.train(ok_in, ng_in, cfg, engine, should_stop)
         check()
         previous = self.db.active_model(board_model)
-        # the board model's first AI model, for the line's own use, goes live once registered (D3, ADR 0018)
-        first = use == "own" and not self.db.models(board_model)
+        # the board model's first AI model, for the line's own use, goes live once registered (D3, ADR 0018): the
+        # first with no AI model live before it, so the first Validated one after Trial ones, which never go live, too
+        first = use == "own" and all(self.trial_version(m) is not None for m in self.db.models(board_model))
         out.mkdir(parents=True, exist_ok=True)
 
         def files(v: str) -> list[Path]:
@@ -915,7 +916,12 @@ class AppContext:
         # AI model of a Trial version is named so wherever its name goes: v1.0 (Trial) (B1, decision D1; ADR 0020)
         trial = frozen["assurance"] == datasets.TRIAL
         suffix = datasets.TRIAL_MODEL if trial else ""
-        version = self.db.next_model_version(board_model, lambda v: any(f.exists() for f in files(v)), suffix)
+
+        def taken(v: str) -> bool:  # either name of its number, so a Trial and a Validated AI model never share one
+            number = v.removesuffix(datasets.TRIAL_MODEL)
+            return any(f.exists() for n in (number, number + datasets.TRIAL_MODEL) for f in files(n))
+
+        version = self.db.next_model_version(board_model, taken, suffix)
         path, golden_path, card_md, card_json = files(version)
         say(eta.report(SAVING.fill(version=version)))
         model_uuid = new_uuid()  # in the file's metadata and in the registry row, so an exported .pt names its record
@@ -2621,7 +2627,8 @@ class AppContext:
         for trial in (False, True):
             try:
                 self._refuse_input(board_model, view, revision, customer, ["own"])
-                self._refuse_freeze(datasets.name(board_model, revision, view, n), board_model, view, customer, trial)
+                name_n = datasets.name(board_model, revision, view, n)
+                self._refuse_freeze(name_n, board_model, view, customer, trial, labels)
             except AoiError as e:
                 refused[trial] = e
             else:
@@ -3100,7 +3107,13 @@ class AppContext:
         return 1 + max((d["version"] for d in self.db.datasets(board_model) if d["view"] == view), default=0)
 
     def _refuse_freeze(
-        self, name: str, board_model: str, view: str, customer: str, trial: bool = False
+        self,
+        name: str,
+        board_model: str,
+        view: str,
+        customer: str,
+        trial: bool = False,
+        status: dict[str, Any] | None = None,
     ) -> dict[str, Any] | None:
         """The agreement check a version is frozen with, None for a Trial version; else, read in the freeze's
         transaction, the first reason not to freeze: another board model whose name gives the same letters and digits
@@ -3108,13 +3121,15 @@ class AppContext:
         (AOI-TRN-027), an NG label not checked (AOI-TRN-020), too few drawn OK labels checked (AOI-TRN-021), the newest
         agreement check missing or short of its targets, and the board model in no customer's dataset store, in a
         shredded one or in another customer's than `customer` (AOI-TRN-027; REQ-TRN-017). A Trial version needs no
-        label check and no agreement check (`trial`; ADR 0020); every other refusal holds for it."""
+        label check and no agreement check (`trial`; ADR 0020); every other refusal holds for it. `status`, the view's
+        `label_check_status` when the caller read it already (`freeze_gate`), else read here."""
         frozen = self.db.dataset_names()
         token = datasets.token(board_model)
         other = next((d for d in frozen if d != board_model and datasets.token(d) == token), None)
         if other is not None:
             raise AoiError("AOI-TRN-040", board=board_model, name=name, other=other)
-        status = self.label_check_status(board_model, view)  # its `ready` is labels_ready_to_freeze (REQ-TRN-004)
+        if status is None:  # its `ready` is labels_ready_to_freeze (REQ-TRN-004)
+            status = self.label_check_status(board_model, view)
         newest = None if trial else self._newest_check(board_model, view)
         why = None
         if name in frozen.get(board_model, []):
@@ -3221,7 +3236,10 @@ class AppContext:
             with self.db.transaction():
                 self._switch_to(self.db.model(model_id), "model.activate", FIRST_LIVE)
         except Exception as e:
-            self.log.warning("training.first_not_live", exc_info=True, extra={"board_model": board_model})
+            if isinstance(e, AoiError) and e.code == "AOI-TRN-052":  # a Trial AI model, as approved (ADR 0020)
+                self.log.info("training.trial_not_live", extra={"board_model": board_model})
+            else:
+                self.log.warning("training.first_not_live", exc_info=True, extra={"board_model": board_model})
             return e
         return None
 

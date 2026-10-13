@@ -70,18 +70,21 @@ class ErrorBox(QMessageBox):
     """The one error dialog: "<code> <title>", what happened and what to do in plain words, and one OK. The error's
     technical words, the exception's class and text or the system's own text, are behind Show Details…, as the log
     holds them, and never in the message (A5 of the 2026-10 business-readiness brief, F8); a stack trace only in the
-    log (REQ-SET-019). With `act`, a button named by its text beside OK, which stays the default: the step the action
-    names, such as Start the Checks (ADR 0020); `acted` says whether it closed the dialog."""
+    log (REQ-SET-019). With `act`, a button named by its text beside OK, which stays the default and Esc's: the step
+    the action names, such as Start the Checks (ADR 0020); `acted` says whether it closed the dialog. A Trial version
+    refused (START_CHECKS), a step taken as approved, shows the information icon rather than the error's."""
 
     def __init__(self, parent: QWidget | None, report: ErrorReport, act: str | None = None) -> None:
         title, text = dialog_text(report)
-        super().__init__(QMessageBox.Icon.Critical, title, text, QMessageBox.StandardButton.Ok, parent)
+        icon = QMessageBox.Icon.Information if report.code in START_CHECKS else QMessageBox.Icon.Critical
+        super().__init__(icon, title, text, QMessageBox.StandardButton.Ok, parent)
         if report.detail:
             self.setDetailedText(report.detail)
         self.act = self.addButton(act, QMessageBox.ButtonRole.ActionRole) if act else None
         if self.act is not None:
             self.act.setProperty("sizeClass", "T")  # the 48 px operator target, as pages.base.size_class marks one
         self.setDefaultButton(QMessageBox.StandardButton.Ok)
+        self.setEscapeButton(QMessageBox.StandardButton.Ok)  # Qt picks none beside a second button: Esc is OK
 
     def acted(self) -> bool:
         return self.act is not None and self.clickedButton() is self.act

@@ -180,7 +180,8 @@ Each line gives the date and time, the level in brackets, the code and what happ
 recorded has one, while a WARN board has none, only its banner and its record. `[WARN]` says that a run stopped because
 the board model changed (AOI-INSP-012), that a run goes on with a new AI model, recipe, scale or Golden board
 (AOI-INSP-013), that the board model has no AI model yet (AOI-TRN-003) or one trained but not active (AOI-TRN-051, an
-Engineer activates it with the Activate button the line above the verdict shows), or that the line has drifted
+Engineer activates it with the Activate button the line above the verdict shows), that its AI model is a Trial one,
+which does not go live (AOI-TRN-052, an Engineer presses Start the Checks on that line), or that the line has drifted
 (AOI-INSP-018):
 the newest boards are called NG or WARN more often, good boards score or line up worse, or more calls are reviewed as
 False calls than before, beyond chance. A drift alarm changes no verdict; tell an Engineer, who checks the lighting,

@@ -79,7 +79,11 @@ the page's one blue primary. The Split sheet counts the version's NG by defect t
 validation set takes; the draw per type depends on the seed and earlier splits, which only the lock works out.
 AOI-TRN-023 names the files changed or missing under the table, the first five and a count of the rest, in place of Copy
 Details, and its mark, the Manifest cell, lasts the session, as Verify Manifest stores nothing. Open Version is not
-built yet.
+built yet. Since B1 of the 2026-10 business-readiness brief (ADR 0020), the Freeze sheet has a Checks row under the
+name, **Validated** (the default each time it opens) or **Trial: one person, no checks**; with Trial, the label-check
+and agreement lines read "Not needed for a Trial version", a line says what Trial means, and Freeze reads Freeze as
+Trial. The Versions table has a Checks column after Version, Validated or Trial, and the Split sheet's title and Export
+Manifest… name a Trial version "… (Trial)".
 
 ## Dataset stores (S38 builds the calls; the Datasets stage, 3 of 4, builds the screens)
 

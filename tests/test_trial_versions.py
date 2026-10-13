@@ -13,10 +13,11 @@ from typing import Any, cast
 
 import numpy as np
 import pytest
-from PySide6.QtWidgets import QMessageBox
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QFileDialog, QMessageBox
 from pytestqt.qtbot import QtBot
 
-from aoi.core import datasets
+from aoi.core import datasets, explain
 from aoi.core.imaging import save_image
 from aoi.core.labels import DefectBox
 from aoi.core.services import AppContext, ErrorReport
@@ -25,7 +26,9 @@ from aoi.ui import errors as ui_errors
 from aoi.ui.main_window import MainWindow
 from aoi.ui.pages import base
 from aoi.ui.pages.inspection import InspectionPage
+from aoi.ui.pages.model_test import ModelTestPage
 from aoi.ui.pages.training import TrainingPage
+from tests.conftest import log_rows
 from tests.test_customer_validation_report import with_agreement
 from tests.test_datasets import agree, ready
 from tests.test_freeze_screen import _datasets, _idle
@@ -176,12 +179,13 @@ def test_req_tst_008_the_customer_validation_report_refuses_a_trial_version(trai
 
 
 def test_req_trn_005_freeze_sheet_offers_trial_and_the_versions_table_names_it(
-    qtbot: QtBot, ctx: AppContext, tmp_path: Path
+    qtbot: QtBot, ctx: AppContext, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """The Freeze sheet opens on Validated, its lines ✗ and Freeze off while nobody else has checked a label; Trial
     says the checks are not needed and what Trial means, and Freeze as Trial freezes a Trial version, which the
-    Versions table's Checks column and Training's Dataset version list name Trial. The sheet opens on Validated
-    again."""
+    Versions table's Checks column and Training's Dataset version list name Trial; Enter on Trial freezes, as Enter
+    in the revision field does. The Split sheet's title and Export Manifest's question and file name name it Trial too.
+    The sheet opens on Validated again."""
     one_person(ctx, tmp_path / "boards")
     ctx.set_user("engineer")  # the window signs in the engineer; the admin works alone below
     page = _datasets(qtbot, ctx)
@@ -200,7 +204,8 @@ def test_req_trn_005_freeze_sheet_offers_trial_and_the_versions_table_names_it(
         "– Not needed for a Trial version: Agreement check reached its targets",
     ]
     assert sheet.trial_line.isVisible() and sheet.btn_now.text() == "Freeze as Trial" and sheet.btn_now.isEnabled()
-    sheet.btn_now.click()
+    sheet.trial.setFocus()
+    qtbot.keyClick(sheet.trial, Qt.Key.Key_Return)  # Enter freezes from the choice too, as from the revision field
     _idle(qtbot, page)
     [version] = ctx.datasets(ONE)
     assert version["assurance"] == "Trial" and version["frozen_by"] == ctx.db.user_uuid("admin")
@@ -208,6 +213,20 @@ def test_req_trn_005_freeze_sheet_offers_trial_and_the_versions_table_names_it(
     t = page.versions.table
     assert t.horizontalHeaderItem(1).text() == "Checks" and base.cell_text(t, 0, 1) == "Trial"
     assert page.dataset_version.currentText() == "DS-ONE1-R1-TOP-v1 (Trial)"
+    page.versions.split.open_for(version, page.versions.counts[version["uuid"]])
+    assert page.versions.split.title() == "Split and lock the validation set of DS-ONE1-R1-TOP-v1 (Trial)"
+    page.versions.split.close_sheet()
+    asked: list[str] = []
+    named: list[str] = []
+    monkeypatch.setattr(QMessageBox, "question", lambda _p, _t, text, *a: asked.append(text) or QMessageBox.Yes)
+    monkeypatch.setattr(QFileDialog, "getSaveFileName", lambda _p, _t, start, *a: named.append(start) or ("", ""))
+    page.versions.table.selectRow(0)
+    page.versions.export_manifest()
+    assert asked == [
+        f"Export the manifest of DS-ONE1-R1-TOP-v1 (Trial): {len(ctx.dataset_items(version['uuid']))}"
+        " files, one row each?"
+    ]
+    assert Path(named[0]).name == "DS-ONE1-R1-TOP-v1-trial.csv"
     page.working.btn_freeze.click()
     assert sheet.validated.isChecked() and sheet.btn_now.text() == "Freeze"
 
@@ -235,6 +254,10 @@ def test_req_trn_012_start_the_checks_from_the_refusal_and_inspection(
     page.activate()
     [(report, act)] = shown
     assert report.code == "AOI-TRN-052" and act is not None and act[0] == "Start the Checks"
+    assert "AOI-TRN-052" not in [a["code"] for a in ctx.alarms()], "approved: said, never an ERROR alarm"
+    with monkeypatch.context() as m:  # a theme that hides Training offers no button the window would refuse
+        m.setattr(win, "hidden", lambda title: title == "Training")
+        assert page.error_act(AoiError("AOI-TRN-052", version="v1.0 (Trial)", board=ONE, dataset="D")) is None
     act[1]()
     assert win.stack.currentWidget() is page and page.tabs.currentIndex() == 0
     assert page.filter.currentData() == "Unchecked" and page.samples.rowCount() == 20  # the NG labels to check
@@ -247,11 +270,17 @@ def test_req_trn_012_start_the_checks_from_the_refusal_and_inspection(
     insp.btn_activate.click()
     assert win.stack.currentWidget() is page and page.tabs.currentIndex() == 0
     assert ctx.active_model(ONE) is None
+    win.set_user("operator")  # the checks are an Engineer's: the line says so, not who may activate
+    assert win.navigate("Inspection")
+    insp._show_waiting()
+    assert insp.ai_line.text().endswith("Freezing a dataset version needs the Engineer or Admin role.")
+    assert not insp.btn_activate.isEnabled()
 
 
 def test_req_trn_012_the_error_dialog_carries_the_step_it_names(qtbot: QtBot) -> None:
-    """The error dialog with a step: its button beside OK, OK still the default; closed with the button, the step is
-    taken once, closed with OK it is not."""
+    """The error dialog with a step: its button beside OK, OK still the default and Esc's; closed with the button, the
+    step is taken once, closed with OK or Esc it is not. A Trial refusal shows the information icon, another error the
+    critical one."""
     report = ErrorReport.of(AoiError("AOI-TRN-052", version="v1.0 (Trial)", board=ONE, dataset="DS-ONE1-R1-TOP-v1"))
     box = ui_errors.ErrorBox(None, report, "Start the Checks")
     qtbot.addWidget(box)
@@ -260,7 +289,75 @@ def test_req_trn_012_the_error_dialog_carries_the_step_it_names(qtbot: QtBot) ->
     box.show()
     box.act.click()
     assert box.acted()
+    assert box.icon() == QMessageBox.Icon.Information  # a step taken as approved, not a failure
+    escaped = ui_errors.ErrorBox(None, report, "Start the Checks")
+    qtbot.addWidget(escaped)
+    escaped.show()
+    qtbot.keyClick(escaped, Qt.Key.Key_Escape)  # Esc closes it with OK, the second button beside it or not
+    assert not escaped.isVisible() and not escaped.acted()
     plain = ui_errors.ErrorBox(None, report)
     qtbot.addWidget(plain)
     assert plain.act is None and not plain.acted()
+    other = ui_errors.ErrorBox(None, ErrorReport.of(AoiError("AOI-TRN-044", store="Acme", reason="r")))
+    qtbot.addWidget(other)
+    assert other.icon() == QMessageBox.Icon.Critical
     assert json.loads(json.dumps(sorted(ui_errors.START_CHECKS))) == ["AOI-TRN-052", "AOI-TST-009"]
+
+
+def test_req_trn_012_the_first_validated_ai_model_after_trial_ones_goes_live(ctx: AppContext, tmp_path: Path) -> None:
+    """Trial AI models never go live, so the board model's first Validated one is still its first live one (ADR
+    0018, ADR 0020): trained from a Validated version after two Trial ones, it is active at once, with its entry. A
+    Trial AI model kept inactive is logged as information, never as a failure with a stack trace. A model number a
+    run left a file of is never taken, under either name: v1.1's file makes the next Trial AI model v1.2 (Trial)."""
+    version, _ = trial_trained(ctx, tmp_path / "boards")
+    events = [r["event"] for r in log_rows(ctx.settings.root / "logs")]
+    assert "training.trial_not_live" in events and "training.first_not_live" not in events
+    folder = Path(ctx.models(ONE)[0]["path"]).parent
+    (folder / f"{ONE}_v1.1.pt").write_bytes(b"left by a run that stopped (#178)")
+    again = ctx.train(version["uuid"], epochs=1, image_size=32)
+    assert (again["version"], again["activated"]) == ("v1.2 (Trial)", False)
+    split = cast(dict[str, Any], ctx.validation_split(version["uuid"]))
+    locked = {i["sample_uuid"] for i in ctx.dataset_items(version["uuid"]) if i["uuid"] in split["validation"]}
+    validated = ctx.train(trainable(ctx, ONE, customer="Acme", held=locked), epochs=1, image_size=32)
+    assert (validated["version"], validated["assurance"], validated["activated"]) == ("v1.3", "Validated", True)
+    assert cast(dict[str, Any], ctx.active_model(ONE))["version"] == "v1.3"
+    [entry] = ctx.audit_entries(action="model.activate")
+    assert entry["after"]["active_version"] == "v1.3"
+
+
+def test_req_trn_012_no_screen_offers_activate_for_a_trial_ai_model(
+    qtbot: QtBot, ctx: AppContext, tmp_path: Path
+) -> None:
+    """Where a screen names a Trial AI model that waits, it says it does not go live and points to the checks, never to
+    Activate, which the go-live gate refuses: Home's step card, AI Model Test's empty state, Compare's note on a board
+    judged without it, and Training's line for a later Trial AI model. AI Model Test's source list and history name a
+    Trial version so, which its report and CSV then carry."""
+    version, _ = trial_trained(ctx, tmp_path / "boards")
+    win = MainWindow(ctx)
+    qtbot.addWidget(win)
+    win.show()
+    qtbot.waitExposed(win)
+    win.set_user("admin")
+    win._reload_board_models(ONE)
+    assert win.navigate("Home")
+    home = cast(Any, win.pages["Home"])
+    assert home.status_labels["Train AI model"].text() == (
+        "AI model v1.0 (Trial) is a Trial and does not go live. Start the Checks on Training for a Validated version."
+    )
+    assert win.navigate("AI Model Test")
+    test = cast(ModelTestPage, win.pages["AI Model Test"])
+    assert test.empty.sentence.text().startswith("It is a Trial and does not go live. Start the Checks on Training.")
+    assert test.source.itemText(0).startswith(f"{version['name']} (Trial): its locked validation set, ")
+    judged = cast(explain.InspectionResult, type("Judged", (), {"notes": [explain.NO_AI_NOTE]})())
+    [note] = explain.notes(judged, inactive="v1.0 (Trial)")
+    assert note.template == explain.TRIAL_AI_NOTE and "Activate" not in note.template
+    [plain] = explain.notes(judged, inactive="v1.0")
+    assert plain.template == explain.INACTIVE_AI_NOTE
+    assert win.navigate("Training")
+    page = cast(TrainingPage, win.pages["Training"])
+    later = {"version": "v1.1 (Trial)", "train_seconds": 1, "board_model": ONE, "assurance": "Trial"}
+    page._on_done({**later, "activated": False, "not_live": None})
+    assert win.statusBar().currentMessage() == (
+        "AI model v1.1 (Trial) trained from a Trial version: it does not go live, so ONE-1 is judged as before. Start"
+        " the Checks to freeze a Validated version and train from it."
+    )

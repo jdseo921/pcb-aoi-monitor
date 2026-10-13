@@ -991,9 +991,9 @@ CODES: dict[str, ErrorCode] = {
             ),
             QT_TRANSLATE_NOOP(
                 "Errors",
-                "Press Start the Checks: a second person checks the labels and two people run an agreement check;"
-                " then freeze a Validated version and train from it. The active AI model and Golden board stay as"
-                " they are.",
+                "Start the Checks on Training: a second person checks the labels and two people run an agreement"
+                " check; then freeze a Validated version and train from it. The active AI model and Golden board stay"
+                " as they are.",
             ),
         ),
         ErrorCode(
@@ -1047,8 +1047,8 @@ CODES: dict[str, ErrorCode] = {
             QT_TRANSLATE_NOOP("Errors", "No customer validation report was made: {reason}."),
             QT_TRANSLATE_NOOP(
                 "Errors",
-                "Press Start the Checks: a second person checks the labels and two people run an agreement check, then"
-                " freeze a Validated version, train from it and test again. The run and its CSV are kept.",
+                "Start the Checks on Training: a second person checks the labels and two people run an agreement"
+                " check, then freeze a Validated version, train from it and test again. The run and its CSV are kept.",
             ),
         ),
         ErrorCode(

@@ -24,6 +24,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from ...core.datasets import TRIAL
 from ...core.explain import Sentence
 from ...core.services import REQUIRED_ROLE, ROLES_FROM, AppContext, ErrorReport, refusal
 from ...errors import QT_TRANSLATE_NOOP as QT_TRANSLATE_NOOP  # pages mark text with it: Qt's is typed as object
@@ -48,6 +49,14 @@ def sentence_text(s: Sentence) -> str:
 def page_text(text: str) -> str:
     """A page title or subtitle, marked in its class with QT_TRANSLATE_NOOP("Page", …), in the UI language."""
     return QCoreApplication.translate("Page", text)
+
+
+def version_name(version: dict[str, Any]) -> str:
+    """A frozen dataset version's name as a screen names it: a Trial version's ends "(Trial)" wherever it is named (B1
+    of the 2026-10 business-readiness brief, decision D1; ADR 0020)."""
+    if version.get("assurance") != TRIAL:
+        return str(version["name"])
+    return QCoreApplication.translate("Page", "{name} (Trial)").format(name=version["name"])
 
 
 def role_text(role: str) -> str:
@@ -135,6 +144,15 @@ class RoleGates(QObject):
             self.why[control] = phrase_text(refusal(call).what)
             control.setToolTip(self.why[control])
         return allowed
+
+    def own_tip(self, control: QWidget, tip: str) -> None:
+        """`control`'s own tooltip from now on, shown while the role may use it; the refusal stays in its place for a
+        role that may not. For a control whose tooltip changes with what it does, as `gate` keeps the first one."""
+        if control not in self.own:
+            control.installEventFilter(self)
+        self.own[control] = tip
+        if control not in self.why:
+            control.setToolTip(tip)
 
     def eventFilter(self, watched: QObject, e: QEvent) -> bool:
         if e.type() == QEvent.Type.MouseButtonPress and watched in self.why:  # off, so the press does nothing else
@@ -371,16 +389,26 @@ class Page(QWidget):
     def error(self, exc: BaseException) -> None:
         """Show an error the way the standard asks: its code, what happened and what to do (REQ-SET-019), with the
         button that takes the step it names when it has one (`error_act`)."""
-        show_error(self, self.ctx.report_error(exc, self.title), self.error_act(exc))
+        show_error(self, self.error_report(exc), self.error_act(exc))
+
+    def error_report(self, exc: BaseException) -> ErrorReport:
+        """`exc` as its dialog shows it, logged and stored as an alarm (`AppContext.report_error`); but a Trial version
+        refused by the go-live gate or the customer validation report, a step taken as approved, is said and logged as
+        information only, with no ERROR alarm and no stack trace (ADR 0020)."""
+        if isinstance(exc, AoiError) and exc.code in START_CHECKS:
+            self.ctx.log.info("trial.refused", extra={"code": exc.code, "context": self.title})
+            return ErrorReport.of(exc, self.title)
+        return self.ctx.report_error(exc, self.title)
 
     def error_act(self, exc: BaseException) -> tuple[str, Callable[[], object]] | None:
         """The button of an error's dialog that takes the step it names: Start the Checks, for a Trial version that the
         go-live gate or the customer validation report refused (B1 of the 2026-10 business-readiness brief, decision
         D1; ADR 0020), opening them on Training for the board model and view the error names; None for any other
-        error, and for a role that cannot open Training, which the dialog's words then serve alone."""
+        error, and for a role that cannot open Training or a theme that hides it, which the dialog's words then serve
+        alone."""
         if not isinstance(exc, AoiError) or exc.code not in START_CHECKS or "Training" not in self.shell.pages:
             return None
-        if self.ctx.role not in self.shell.pages["Training"].roles:
+        if self.ctx.role not in self.shell.pages["Training"].roles or self.shell.hidden("Training"):
             return None
         board, view = str(exc.params.get("board") or ""), exc.params.get("view")
         text = QCoreApplication.translate("Page", "Start the Checks")

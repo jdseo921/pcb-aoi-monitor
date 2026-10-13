@@ -144,6 +144,7 @@ class InspectionPage(Page):
         self.waiting: dict[str, Any] | None = None  # that version's registry row, while the line shows
         # the Trial dataset version it was trained from, if so: it does not go live, and the button is Start the Checks
         self.waiting_trial: dict[str, Any] | None = None
+        self.waiting_call = "activate_model"  # the call the button makes: freeze_dataset's role for Start the Checks
         self.ai_row = QWidget()
         ar = QHBoxLayout(self.ai_row)
         ar.setContentsMargins(0, 0, 0, 0)
@@ -153,7 +154,7 @@ class InspectionPage(Page):
         self.activate_tip = self.tr(
             "Judge the board model's boards with this AI model and its Golden board, as Activate Selected does"
         )
-        self.btn_activate.setToolTip(self.activate_tip)
+        self.gates.own_tip(self.btn_activate, self.activate_tip)
         ar.addWidget(self.btn_activate)
         self.ai_row.hide()
         sl.addWidget(self.ai_row)
@@ -681,7 +682,8 @@ class InspectionPage(Page):
         # a board image leaves the station only by an Admin (#151): Save Image… greyed for another role, never hidden
         self.role_gate(self.btn_save, "export_board_image", self.last is not None and self._bg is None)
         self.act_save.setEnabled(self.btn_save.isEnabled())  # F9 with it (REQ-USR-001)
-        self.role_gate(self.btn_activate, "activate_model", not self.running and not busy)  # never under a board
+        on = not self.running and not busy and (self.waiting_trial is None or not self.shell.hidden("Training"))
+        self.role_gate(self.btn_activate, self.waiting_call, on)  # never under a board
         self.btn_compare.setEnabled(self.last_id is not None or self.last_path is not None)
         shown = self.review.record["id"] if self.review.record is not None else None
         if shown != self.last_id or (self.last_id is None and self.review.record is not None):
@@ -783,6 +785,7 @@ class InspectionPage(Page):
                 ).format(version=version, board_model=bm)
                 self.btn_activate.setText(self.tr("Start the Checks"))
                 tip = self.tr("Open the label checks and the agreement check on Training, for a Validated version")
+                self.waiting_call = "freeze_dataset"  # the checks, then a Validated version: an Engineer's
             else:
                 line = self.tr(
                     "AI model {version} of {board_model} is trained but not active: only the Golden board comparison"
@@ -790,9 +793,10 @@ class InspectionPage(Page):
                 ).format(version=version, board_model=bm)
                 self.btn_activate.setText(self.tr("Activate {version}").format(version=version))
                 tip = self.activate_tip
-            self.btn_activate.setToolTip(tip)
-            if not self.gates.may("activate_model"):
-                line = " ".join([line, phrase_text(refusal("activate_model").what)])
+                self.waiting_call = "activate_model"
+            self.gates.own_tip(self.btn_activate, tip)
+            if not self.gates.may(self.waiting_call):
+                line = " ".join([line, phrase_text(refusal(self.waiting_call).what)])
             self.ai_line.setText(line)
         self._update_buttons()
         return self.waiting

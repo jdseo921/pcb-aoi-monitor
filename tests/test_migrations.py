@@ -287,6 +287,30 @@ def test_req_insp_010_rows_from_before_the_view_column_keep_no_view(tmp_path: Pa
         db.add_inspection({"result": "OK", "view": "Left"}, [])
 
 
+def test_req_trn_004_versions_frozen_before_0027_are_validated(tmp_path: Path) -> None:
+    """Migration 0027 adds `datasets.assurance`: a version frozen before it, with the checks every freeze needed then,
+    is Validated; a new one is Validated or Trial, and the column takes nothing else (ADR 0020)."""
+    path = tmp_path / "aoi.sqlite"
+    files = mg.load_migrations()
+    old = sqlite3.connect(path)
+    assert [m.number for m in mg.migrate(old, files[:26])][-1] == 26
+    old.execute(
+        "INSERT INTO datasets(uuid, name, board_model, revision, view, version, customer, allowed_uses,"
+        " agreement_check_uuid, manifest_path, manifest_sha256, frozen_by, frozen_at)"
+        " VALUES('old', 'DS-A-R1-TOP-v1', 'A', 'R1', 'Top', 1, 'Acme', '[\"own\"]', 'check', 'm.json', ?, 'u', ?)",
+        ("0" * 64, "2026-09-30T01:00:00+00:00"),
+    )
+    old.commit()
+    old.close()
+    db = Database(path)
+    assert [d["assurance"] for d in db.datasets("A")] == ["Validated"]
+    with pytest.raises(sqlite3.IntegrityError, match="CHECK constraint failed"):
+        db.execute(
+            "INSERT INTO datasets SELECT NULL, 'new', name || '2', board_model, revision, view, 2, customer,"
+            " allowed_uses, '', manifest_path, manifest_sha256, frozen_by, frozen_at, 'Draft' FROM datasets"
+        )
+
+
 def test_req_insp_012_rows_from_before_the_evidence_columns_keep_none(tmp_path: Path) -> None:
     """Migration 0006 adds `model_uuid`, `recipe_uuid` and `result_json` to inspections and the `checks` table: a record
     from before it has no checks and no stored result rather than invented ones; a new record's checks come back in

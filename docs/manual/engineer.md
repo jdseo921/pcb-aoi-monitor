@@ -354,11 +354,15 @@ again and lists each file that changed or is missing since the freeze; train fro
 no second user's label check and no agreement check, and the same person can split and lock it and train from it. Its
 validation set takes the same 50 OK images and 30 % of the NG ones as any version's, and every other refusal above
 still holds. A Trial version is named so wherever it is listed (the Versions table's Checks column, the Dataset version
-list on Training), and so is every AI model trained from it: v1.0 (Trial), in the AI models list, on Inspection, in the
-audit trail and in the files' names (v1.0-trial). Its AI model card starts with a plain sentence that says what Trial
-means. A Trial AI model does not go live, its board model's first included: Activate Selected, and Inspection's
-Activate, are refused with AOI-TRN-052, and the boards stay judged as before. A run on a Trial version's validation
-set, or of a Trial AI model, makes no customer validation report (AOI-TST-009). Both messages have **Start the Checks**,
+list on Training, the Split sheet's title, AI Model Test's sources and history, Export Manifest…'s question and file
+name), and so is every AI model trained from it: v1.0 (Trial), in the AI models list, on Inspection, in the audit trail
+and in the files' names (v1.0-trial). Its AI model card starts with a plain sentence that says what Trial means. A Trial
+AI model does not go live, its board model's first included: Activate Selected is refused with AOI-TRN-052, Inspection
+offers **Start the Checks** in its place, Home, AI Model Test and Compare say it does not go live, and the boards stay
+judged as before. The first AI model you train from a Validated version afterwards goes live as a board model's first
+does (section 6), as no AI model was live before it. A run on a Trial version's validation set, or of a Trial AI
+model, makes no customer validation report (AOI-TST-009). Both messages are information, not errors (no ERROR alarm),
+and have **Start the Checks**,
 which opens Training on the board model's Samples tab with Show › Unchecked, or the Datasets tab's labeller agreement
 once every label is checked; freeze a Validated version when the checks are done, and train from it. A version frozen
 with the checks is **Validated**, as every version frozen before this release is (B1 of the 2026-10 business-readiness
@@ -482,7 +486,8 @@ before this release, or whose activation failed) is named on Home, on AI Model T
 Activate <version> and whose alarm log says AOI-TRN-051, where they said there was no AI model yet. An AI model of a
 Trial version (section 3) never goes live, its board model's first included: its name ends in (Trial), Activate
 Selected is refused with AOI-TRN-052 and Start the Checks, and Inspection's line calls it a Trial, its button Start the
-Checks, its alarm AOI-TRN-052; a Validated version waiting beside it is the one Inspection offers. Activating a version
+Checks, its alarm AOI-TRN-052; a Validated version waiting beside it is the one Inspection offers, and the first
+Validated version trained after Trial ones goes live as a board model's first. Activating a version
 makes its own Golden board the one boards are compared with, in the same step. Roll Back goes back, in one click, to the
 version that was active before the active one, with its Golden board; its label names that version ("Roll Back to v1.0")
 and it is off while there is none, as after a board model's first version went live. To stop that first version judging

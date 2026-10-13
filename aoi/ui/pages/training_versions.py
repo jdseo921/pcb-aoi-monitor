@@ -17,7 +17,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QAction, QIntValidator, QKeySequence
+from PySide6.QtGui import QAction, QIntValidator, QKeyEvent, QKeySequence
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QButtonGroup,
@@ -43,7 +43,7 @@ from ..widgets.busy import BusyOverlay
 from ..widgets.empty_state import EmptyState
 from ..widgets.flow import FlowLayout
 from ..widgets.reflow import WrappedGroup
-from .base import QT_TRANSLATE_NOOP, action_button, button, fill_table, make_table, size_class
+from .base import QT_TRANSLATE_NOOP, action_button, button, fill_table, make_table, size_class, version_name
 
 if TYPE_CHECKING:
     from .training import TrainingPage
@@ -225,7 +225,9 @@ class FreezeSheet(QGroupBox):
         """The sheet in place of the panels under the working set, for the view picked before while it has images,
         the board revision the board model's newest version names, if any."""
         self.board_model = board_model
+        self.kinds.blockSignals(True)  # read once below, for the view and revision set here
         self.validated.setChecked(True)  # Validated each time the sheet opens: Trial is chosen, never kept
+        self.kinds.blockSignals(False)
         kept = self.view_box.currentText()
         self.view_box.blockSignals(True)
         self.view_box.clear()
@@ -240,6 +242,14 @@ class FreezeSheet(QGroupBox):
         self.read_gate()
         self.revision.setFocus()
         self.panel.sync()
+
+    def keyPressEvent(self, e: QKeyEvent) -> None:
+        """Enter freezes from Validated or Trial as from the board revision (the sketch: Freeze is Enter); a field's
+        own Enter is its own, so a freeze never starts twice."""
+        if e.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter) and self.focusWidget() in (self.validated, self.trial):
+            self.freeze()
+            return
+        super().keyPressEvent(e)
 
     def read_gate(self) -> None:
         """What a freeze of the view and revision needs now, as AppContext.freeze_gate reads it, line by line; for a
@@ -547,10 +557,11 @@ class VersionsPanel(QGroupBox):
         items = self.ctx.dataset_items(uuid)
         question = self.tr("Export the manifest of {name}: {files} files, one row each?")
         yes, no = QMessageBox.StandardButton.Yes, QMessageBox.StandardButton.No
-        asked = question.format(name=version["name"], files=len(items))
+        asked = question.format(name=version_name(version), files=len(items))  # a Trial version named so (ADR 0020)
         if QMessageBox.question(self, self.tr("Confirm export"), asked, yes | no, yes) != yes:
             return
-        start = str(self.ctx.settings.exports_dir / f"{version['name']}.csv")
+        trial = "-trial" if version["assurance"] == TRIAL else ""  # as a Trial AI model's files are named
+        start = str(self.ctx.settings.exports_dir / f"{version['name']}{trial}.csv")
         f, _ = QFileDialog.getSaveFileName(self, self.tr("Export Manifest"), start, self.tr("CSV (*.csv)"))
         if not f:
             return
@@ -626,7 +637,7 @@ class SplitSheet(QGroupBox):
     def open_for(self, version: dict[str, Any], counts: dict[str, int]) -> None:
         """The sheet for `version` in the labeller agreement's place, with a new random seed, the focus on it."""
         self.version = version
-        self.setTitle(self.tr("Split and lock the validation set of {name}").format(name=version["name"]))
+        self.setTitle(self.tr("Split and lock the validation set of {name}").format(name=version_name(version)))
         n = {"ok": counts["ok"], "ng_all": counts["ng"], "least": VALIDATION_OK, "share": round(VALIDATION_NG * 100)}
         self.enough = counts["ok"] >= VALIDATION_OK
         if self.enough:

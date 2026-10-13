@@ -248,9 +248,15 @@ class HomePage(Page):
             else self.tr("No samples yet. Add at least {count} OK boards.").format(count=FIRST_OK)
         )
         waiting = None if st.model_version else self.ctx.inactive_model(bm)  # trained, not active: named (D3)
+        trial = waiting is not None and self.ctx.trial_version(waiting) is not None  # never goes live (ADR 0020)
         self.status_labels["Train AI model"].setText(
             self.tr("Active AI model {version}").format(version=st.model_version)
             if st.model_version
+            else self.tr(
+                "AI model {version} is a Trial and does not go live. Start the Checks on Training for a Validated"
+                " version."
+            ).format(version=waiting["version"])
+            if waiting and trial
             else self.tr("AI model {version} trained, not active. Activate it on Training.").format(
                 version=waiting["version"]
             )

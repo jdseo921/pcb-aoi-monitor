@@ -45,7 +45,7 @@ from ...errors import AoiError, system_detail, system_reason
 from ...hal import VIEWS
 from ...times import to_local
 from .. import theme
-from ..errors import START_CHECKS, phrase_text, show_error
+from ..errors import phrase_text, show_error
 from ..widgets.box_editor import ENTER
 from ..widgets.busy import BusyOverlay
 from ..widgets.empty_state import EmptyState
@@ -62,6 +62,7 @@ from .base import (
     fill_table,
     make_table,
     time_left_text,
+    version_name,
     view_text,
 )
 from .training_agreement import AgreementPanel, BlindPanel
@@ -982,17 +983,16 @@ class TrainingPage(Page):
         saved = self.tr("Saved AI model {version} ({seconds} s) with its Golden board and AI model card.")
         self.log.appendPlainText(saved.format(version=meta["version"], seconds=meta["train_seconds"]))
         not_live = meta.get("not_live")  # the error that kept a board model's first AI model inactive (ADR 0018)
-        report = self.ctx.report_error(not_live, self.title) if isinstance(not_live, BaseException) else None
+        report = self.error_report(not_live) if isinstance(not_live, BaseException) else None
         if meta.get("activated"):  # a board model's first AI model goes live when trained (decision D3), audited
             done = self.tr(
                 "AI model {version} trained and active: the first AI model of {board_model} judges its boards from now"
                 " on. Each later version installs inactive until you activate it."
             )
-        elif isinstance(not_live, AoiError) and not_live.code in START_CHECKS:  # a Trial AI model (ADR 0020)
+        elif meta.get("assurance") == TRIAL:  # a Trial AI model, first or later, never goes live (ADR 0020)
             done = self.tr(
-                "AI model {version} trained from a Trial version: it does not go live, so {board_model} is still judged"
-                " by the Golden board comparison alone. Start the Checks to freeze a Validated version and train from"
-                " it."
+                "AI model {version} trained from a Trial version: it does not go live, so {board_model} is judged as"
+                " before. Start the Checks to freeze a Validated version and train from it."
             )
         elif report is not None:  # logged, and stored as an alarm with its code
             done = self.tr(
@@ -1043,8 +1043,7 @@ class TrainingPage(Page):
         versions = self.ctx.datasets(self.board_model) if self.board_model else []
         self._trial = {v["uuid"] for v in versions if v["assurance"] == TRIAL}  # named so (ADR 0020)
         for v in versions:
-            name = self.tr("{name} (Trial)").format(name=v["name"]) if v["uuid"] in self._trial else v["name"]
-            self.dataset_version.addItem(name, v["uuid"])
+            self.dataset_version.addItem(version_name(v), v["uuid"])
         pick = self.dataset_version.findData(kept) if kept is not None else -1
         self.dataset_version.setCurrentIndex(pick if pick >= 0 else max(self.dataset_version.findData(newest), 0))
         self.dataset_version.blockSignals(False)
