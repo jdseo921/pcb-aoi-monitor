@@ -17,7 +17,7 @@ and the pull request that delivered it, and where a PR names a D or F item it is
 | A5 (F8) | Demo-path messages in plain words, details behind Show Details | #401 | Merged 2026-10-12 |
 | A6 (F12) | A second start brings the open copy to the front, else one sentence and one button | #402 | Merged 2026-10-12 |
 | A7 (#104, Charter principle 1) | Every page the demo scripts visit fits the presenter theme at 1366 × 768, its verdict area unscrolled | #403 | Open: the 16 pt size waits for Jay |
-| A8 (F14) | Click the 45-minute script; the 5-minute one at 1366 × 768; a crash-recovery test | #A8PR, stacked on A7 | Open |
+| A8 (F14) | Click the 45-minute script; the 5-minute one at 1366 × 768; a crash-recovery test | #404, stacked on A7 | Open |
 
 The Phase A report follows A8, at the end of this file.
 
@@ -39,7 +39,7 @@ accuracy.
 | A5 (F8) Demo-path messages in plain words, details behind Show Details | #401, merged | `tests/test_demo_path_messages.py` (24 tests): 64 codes the demo can raise, scanned for an exception's class, system text or a tool's path | No approved screenshot moved; the messages' text changed |
 | A6 (F12) A second start brings the open copy to the front, else one sentence and one button | #402, merged | `tests/test_second_start.py` (14 tests, 2 of them on Windows CI only) | No approved screenshot moved; AOI-SET-019's box is new |
 | A7 (#104) Every page the demo scripts open fits 1366 × 768 in the presenter theme, its verdict area unscrolled | #403, open | `tests/test_demo_fit.py` (every page and tab the scripts open, both themes, at 1366 × 768, then at 1500 × 1000 and 1920 × 1080, then at 1366 × 768 again) | `presenter-1366-*.png` (8 new, 1366 × 768); 23 approved screenshots moved at 1920 × 1080 (listed in #403) |
-| A8 (F14) The 45-minute script clicked through; the 5-minute one at 1366 × 768; a crash-recovery test | #A8PR, open | `test_req_set_007_the_forty_five_minute_script_clicked_through`, `test_req_set_007_the_five_minute_script_runs_in_the_presenter_theme[1366x768]`, `test_req_set_007_a_demo_closed_mid_run_opens_again_as_the_demo_kit_says[crash]` and `[close]`; each asserts no dialog | No screen changed (tests and the demo kit only) |
+| A8 (F14) The 45-minute script clicked through; the 5-minute one at 1366 × 768; a crash-recovery test | #404, open | `test_req_set_007_the_forty_five_minute_script_clicked_through`, `test_req_set_007_the_five_minute_script_runs_in_the_presenter_theme[1366x768]`, `test_req_set_007_a_demo_closed_mid_run_opens_again_as_the_demo_kit_says[crash]` and `[close]`; each asserts no dialog | No screen changed (tests and the demo kit only) |
 
 The least window each demo page needs, in both themes, is in [docs/tests/2026-10-screen-sizes.md](../tests/2026-10-screen-sizes.md).
 
@@ -55,7 +55,7 @@ The least window each demo page needs, in both themes, is in [docs/tests/2026-10
 3. **A full-screen presenter view** (A7). Maximized on a 1366 × 768 Windows screen the app has about 1366 × 697, where
    Inspection's Start and the last two rows of Compare's table sit just below the edge. Recommended: build it as its own
    pull request after Phase A.
-4. **Review and merge #403, then #A8PR** (CLAUDE.md rule 6).
+4. **Review and merge #403, then #404** (CLAUDE.md rule 6).
 5. **The brief and this file.** `docs/plans/2026-10-business-readiness-brief.md` is not in the repository, so this report
    follows Jay's messages, not the brief's acceptance lines. Adding the brief lets the report be checked against it.
 
@@ -75,7 +75,8 @@ The least window each demo page needs, in both themes, is in [docs/tests/2026-10
 **People, on the demo laptop or the release build:**
 
 - REQ-SET-004's human review of the pages on a 1366 × 768 projector and at 4K with 150 to 200 % scaling, from the back
-  row (A7): not done. The sizes here were measured on Linux with DejaVu Sans; Windows draws Segoe UI.
+  row (A7): not done. The sizes here were measured on Linux with DejaVu Sans; Windows draws Segoe UI, which CI's
+  Windows run checks and a stand-in font for it checked here (#403).
 - Customers & Launch asks that someone in each reader's role follows the scripts on the release build before they go
   out; the release build does not exist yet.
 - The Korean drafts (the release note, the demo kit) need a native speaker who knows SMT terms (REQ-SET-006).
