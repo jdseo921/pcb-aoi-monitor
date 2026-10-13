@@ -1,8 +1,8 @@
 """REQ-TRN-017 on screen (Datasets stage, 3 of 4): Settings › Dataset stores, Admin only as the page is, lists the
 customers' encrypted dataset stores and takes the steps on them in inline sheets in the table's place (ADR 0010): New
-Store… shows the new store's recovery key this once, Restore Key… takes the key back from it on a new PC, Move
-Board Model In… encrypts a board model's files on the pool and finishes a move that stopped, and Shred Store… names what
-it deletes before it does."""
+Store… shows the new store's recovery key this once, in a dialog it cannot be left before the tick (ADR 0021),
+Restore Key… takes the key back from it on a new PC, Move Board Model In… encrypts a board model's files on the pool
+and finishes a move that stopped, and Shred Store… names what it deletes before it does."""
 
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ import pytest
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QTextDocument
 from PySide6.QtPrintSupport import QPrintDialog
-from PySide6.QtWidgets import QApplication, QDialog, QTableWidget
+from PySide6.QtWidgets import QApplication, QDialog, QLabel, QTableWidget
 from pytestqt.qtbot import QtBot
 
 from aoi.core import crypto, stores
@@ -21,6 +21,7 @@ from aoi.core.services import AppContext
 from aoi.data import credentials
 from aoi.times import to_local
 from aoi.ui.pages.base import cell_text
+from aoi.ui.pages.recovery_key import RecoveryKeyDialog
 from aoi.ui.pages.settings import SettingsPage
 from tests.test_dataset_stores import board
 from tests.test_req_done_in_v01 import _window
@@ -53,16 +54,26 @@ def test_req_trn_017_new_store_shows_its_recovery_sheet_once(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """The table lists the store TINY's frozen version is in. New Store… opens a sheet in the step buttons' place, its
-    Create off until a customer is typed; Enter makes the store, selects it and shows its recovery sheet in the sheet's
-    place: the store, its key id and the key the key store holds, 13 groups on two lines. Neither Esc nor Close (until
-    the tick, which waits for Save to File… or Print…) leaves it, and Print… prints the customer, the store, the day
-    and the key. Close clears it; a customer with a store already is refused (AOI-TRN-044), nothing made; a sign-in
-    closes the sheet, its key gone."""
+    Create off until a customer is typed; Enter makes the store, selects it and shows its recovery key in a modal
+    dialog over the page (ADR 0021): the key the key store holds, 13 groups on two lines, and no key id, which the
+    sheet saved or printed carries. Neither Esc, the window's close nor Done (until the tick, which waits for Save to
+    File… or Print…) leaves it, and Print… prints the customer, the store, its key id, the day and the key. Done clears
+    it; a customer with a store already is refused (AOI-TRN-044), nothing made."""
     page = _settings(qtbot, trained_ctx)
     panel = page.stores
     [acme] = trained_ctx.stores()
+    shown: list[RecoveryKeyDialog] = []
+
+    def exec_(dialog: RecoveryKeyDialog) -> int:  # shown without its event loop, so the test presses its buttons
+        shown.append(dialog)
+        dialog.show()
+        qtbot.waitExposed(dialog)
+        return 0
+
+    monkeypatch.setattr(RecoveryKeyDialog, "exec", exec_)
+    panel.advanced.click()  # the key id column
     assert _rows(panel.table) == [["Acme Electronics", acme["key_id"][:8], to_local(acme["created_at"]), "TINY", ""]]
-    assert not panel.none.isVisible() and panel.btn_new.isEnabled() and not panel.recovery_sheet.isVisible()
+    assert not panel.none.isVisible() and panel.btn_new.isEnabled()
     panel.btn_new.click()
     assert panel.new_sheet.isVisible() and not panel.steps.isVisible() and QApplication.focusWidget() is panel.customer
     assert not panel.btn_create.isEnabled()
@@ -71,17 +82,19 @@ def test_req_trn_017_new_store_shows_its_recovery_sheet_once(
     beta = next(s for s in trained_ctx.stores() if s["customer"] == "Beta Boards")
     assert (panel.picked() or {})["uuid"] == beta["uuid"]
     assert _rows(panel.table)[1][:2] == ["Beta Boards", beta["key_id"][:8]]
-    assert panel.recovery_sheet.isVisible() and not panel.new_sheet.isVisible() and not panel.steps.isVisible()
-    assert not panel.table.isVisible()
+    assert panel.steps.isVisible() and not panel.new_sheet.isVisible() and panel.customer.text() == ""
     _fits(page)
-    recovery = panel.recovery
-    assert panel.recovery_sheet.title() == "Recovery key for Beta Boards"
-    assert recovery.ids.text() == f"Store {beta['uuid']} · key id {beta['key_id']}"
+    [dialog] = shown
+    recovery = dialog.recovery
+    assert dialog.isModal() and dialog.windowTitle() == "Recovery key for Beta Boards"
+    on_screen = " ".join(w.text() for w in dialog.findChildren(QLabel))
+    assert beta["key_id"] not in on_screen and beta["uuid"] not in on_screen  # an Admin's advanced detail
     lines = recovery.key.text().split("\n")
     key = keys.read(credentials.STORE_PREFIX + beta["uuid"])
     assert [len(line.split()) for line in lines] == [7, 6] and crypto.key_from_sheet(" ".join(lines)) == key
     qtbot.keyClick(recovery.btn_save, Qt.Key.Key_Escape)
-    assert panel.recovery_sheet.isVisible() and not panel.btn_done.isEnabled()
+    dialog.close()
+    assert dialog.isVisible() and not dialog.btn_done.isEnabled()
     printed: list[str] = []
     monkeypatch.setattr(QPrintDialog, "exec", lambda self: QDialog.DialogCode.Accepted)
     monkeypatch.setattr(QTextDocument, "print_", lambda self, printer: printed.append(self.toPlainText()))
@@ -90,20 +103,17 @@ def test_req_trn_017_new_store_shows_its_recovery_sheet_once(
     [sheet] = printed
     for said in ("Recovery key for Beta Boards", beta["uuid"], beta["key_id"], to_local(beta["created_at"]), *lines):
         assert said in sheet, said
+    [entry] = trained_ctx.audit_entries(action="store.sheet_printed")
+    assert entry["object_uuid"] == beta["uuid"] and "printer" in entry["after"] and lines[0] not in str(entry)
     recovery.kept.click()
-    panel.btn_done.click()
-    assert panel.steps.isVisible() and not panel.recovery_sheet.isVisible()
+    dialog.btn_done.click()
+    assert not dialog.isVisible() and dialog.result() == QDialog.DialogCode.Accepted
     assert recovery.key.text() == "" and recovery.made is None
     panel.btn_new.click()
     qtbot.keyClicks(panel.customer, " beta boards ")
     panel.btn_create.click()
-    assert dialogs[-1][0].startswith("AOI-TRN-044") and len(trained_ctx.stores()) == 2
+    assert dialogs[-1][0].startswith("AOI-TRN-044") and len(trained_ctx.stores()) == 2 and len(shown) == 1
     assert panel.new_sheet.isVisible() and panel.customer.text() == " beta boards "
-    panel.customer.setText("Gamma")
-    panel.btn_create.click()
-    assert panel.recovery_sheet.isVisible() and recovery.key.text()
-    page.shell.set_user("engineer")
-    assert recovery.key.text() == "" and not panel.recovery_sheet.isVisible() and recovery.made is None
 
 
 def test_req_trn_017_restore_key_from_the_sheet(

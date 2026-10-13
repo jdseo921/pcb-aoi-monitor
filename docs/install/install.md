@@ -98,8 +98,8 @@ There is no one-click backup yet. To back up a station:
 
 To restore, close the app, put the folder back where it was (or anywhere, and point Settings at it), and start the
 app. On a new PC or another Windows account, an Admin types each store's recovery key into Settings › Dataset
-stores › Restore Key… (under the Advanced tick). A restore onto a newer build upgrades the database, keeping a copy of it first ("Going back to
-an earlier build", below). Neither step has been tried on the reference PC yet.
+stores › Restore Key… (under the Advanced tick). A restore onto a newer build upgrades the database, keeping a copy of
+it first ("Going back to an earlier build", below). Neither step has been tried on the reference PC yet.
 
 ## Uninstall
 

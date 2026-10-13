@@ -10,7 +10,17 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from PySide6.QtWidgets import QComboBox, QDialog, QHBoxLayout, QLabel, QLineEdit, QStackedWidget, QVBoxLayout, QWidget
+from PySide6.QtWidgets import (
+    QComboBox,
+    QCompleter,
+    QDialog,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QStackedWidget,
+    QVBoxLayout,
+    QWidget,
+)
 
 from ..errors import AoiError
 from . import theme
@@ -32,6 +42,7 @@ class NewBoardModelDialog(QDialog):
         super().__init__(shell)
         self.shell, self.ctx = shell, shell.ctx
         self.setWindowTitle(self.tr("New board model"))
+        self.setModal(True)  # the window behind it, its pages, sign-in and close, waits for the key's tick
         self.setMinimumWidth(theme.CARD_W)
         self.made: str | None = None
         self.store: dict[str, Any] | None = None
@@ -55,6 +66,10 @@ class NewBoardModelDialog(QDialog):
         lay.addWidget(QLabel(self.tr("Customer")))
         self.customer = size_class(QComboBox(), "T")  # a store's customer, or a new one typed; none by default
         self.customer.setEditable(True)
+        completer = self.customer.completer()  # a list to pick from, never filled in: "Acme" typed stays "Acme"
+        assert completer is not None
+        completer.setCompletionMode(QCompleter.CompletionMode.PopupCompletion)
+        self.customer.setInsertPolicy(QComboBox.InsertPolicy.NoInsert)
         for s in self.ctx.stores():
             if not s["shredded_at"]:
                 self.customer.addItem(s["customer"])
@@ -168,14 +183,14 @@ class NewBoardModelDialog(QDialog):
     def reject(self) -> None:
         """Cancel, Esc or the window's close: refused while the recovery key waits for its tick, which it must not leave
         unread."""
-        if self.steps.currentWidget() is self.key_step and not self.recovery.kept.isChecked():
+        if self.recovery.holding():
             self.recovery.kept.setFocus()
             return
         super().reject()
 
     def done(self, result: int) -> None:
         """The key is forgotten as the dialog closes, whichever way."""
-        if self.steps.currentWidget() is self.key_step and not self.recovery.kept.isChecked():
+        if self.recovery.holding():
             return
         self.recovery.clear()
         super().done(result)

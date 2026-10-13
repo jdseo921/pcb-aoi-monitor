@@ -6,6 +6,7 @@ Store… for an Admin under its Advanced tick."""
 
 from __future__ import annotations
 
+import sqlite3
 from pathlib import Path
 from typing import Any, cast
 
@@ -13,7 +14,7 @@ import pytest
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QTextDocument
 from PySide6.QtPrintSupport import QPrintDialog
-from PySide6.QtWidgets import QDialog, QFileDialog
+from PySide6.QtWidgets import QCompleter, QDialog, QFileDialog, QLabel
 from pytestqt.qtbot import QtBot
 
 from aoi.config import Settings
@@ -23,7 +24,9 @@ from aoi.data import credentials
 from aoi.errors import AoiError
 from aoi.ui.board_model_dialog import NewBoardModelDialog
 from aoi.ui.main_window import MainWindow
+from aoi.ui.pages.recovery_key import RecoveryKeyDialog
 from aoi.ui.pages.settings import SettingsPage
+from tests.conftest import log_rows
 from tests.test_dataset_stores import as_admin, refusal
 
 BETA = "Beta Boards"
@@ -72,23 +75,56 @@ def test_req_trn_017_a_customers_first_board_model_makes_its_store(
 def test_req_trn_017_a_board_model_store_refusal_writes_nothing(
     ctx: AppContext, keys: credentials.MemoryCredentials, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Refused, nothing written: no customer; a board model that exists in no store (an Admin moves it in on Settings);
-    one in another customer's store; an Engineer (Admin only). A move that fails leaves no store and no key behind."""
+    """Refused, nothing written, no key made: no customer; a board model that exists in no store (an Admin moves it in
+    on Settings); one in another customer's store; a new one whose folder under images/ holds files already, which
+    Move Board Model In… encrypts with its progress; an Engineer (Admin only). A move that fails, and a commit that
+    fails after the key was stored, leave no store, no board model and no key behind."""
     ctx.ensure_board_model("PLAIN")
+    as_admin(ctx, ctx.create_customer_board_model, "ACME-1", "Acme")
+    loose = ctx.settings.root / "images" / "LOOSE" / "OK" / "a.png"
+    loose.parent.mkdir(parents=True)
+    loose.write_bytes(b"a plain image copied in by hand")
+
+    def stored() -> tuple[Any, ...]:
+        secrets = sorted(n for n in keys._secrets if n.startswith(credentials.STORE_PREFIX))
+        return ctx.stores(), ctx.board_models(), ctx.audit_entries(), secrets
+
+    before = stored()
     assert refusal(as_admin, ctx, ctx.create_customer_board_model, "NEW", " ")[0] == "AOI-TRN-044"
     code, why = refusal(as_admin, ctx, ctx.create_customer_board_model, "PLAIN", BETA)
     assert (code, why) == ("AOI-TRN-044", "board model PLAIN exists already; an Admin moves it in on Settings")
-    as_admin(ctx, ctx.create_customer_board_model, "ACME-1", "Acme")
     code, why = refusal(as_admin, ctx, ctx.create_customer_board_model, "ACME-1", BETA)
     assert (code, why) == ("AOI-TRN-044", "ACME-1 is in the store of Acme, and a board model never leaves it")
+    code, why = refusal(as_admin, ctx, ctx.create_customer_board_model, "LOOSE", BETA)
+    assert (code, why) == (
+        "AOI-TRN-044",
+        "images/LOOSE holds files already; make the board model with no customer, then an Admin moves it in on"
+        " Settings, which encrypts them",
+    )
+    assert loose.read_bytes() == b"a plain image copied in by hand"
     assert refusal(ctx.create_customer_board_model, "BETA-1", BETA)[0] == "AOI-USR-001"
-    monkeypatch.setattr(AppContext, "move_in", lambda *a, **k: (_ for _ in ()).throw(OSError("disk full")))
-    with pytest.raises(OSError):
-        as_admin(ctx, ctx.create_customer_board_model, "BETA-1", BETA)
-    assert [s["customer"] for s in ctx.stores()] == ["Acme"] and "BETA-1" not in ctx.board_models()
-    assert [n for n in keys._secrets if n.startswith(credentials.STORE_PREFIX)] == [
-        credentials.STORE_PREFIX + ctx.stores()[0]["uuid"]
-    ]
+    assert stored() == before
+    with monkeypatch.context() as m:
+        m.setattr(AppContext, "move_in", lambda *a, **k: (_ for _ in ()).throw(OSError("disk full")))
+        with pytest.raises(OSError):
+            as_admin(ctx, ctx.create_customer_board_model, "BETA-1", BETA)
+    assert stored() == before and ctx._keys.keys() <= {s["uuid"] for s in ctx.stores()}
+
+    class FailingCommit:  # the database's connection, whose commit fails as a full disk fails it
+        def __init__(self, conn: sqlite3.Connection) -> None:
+            self.conn = conn
+
+        def commit(self) -> None:
+            raise sqlite3.OperationalError("database or disk is full")
+
+        def __getattr__(self, name: str) -> Any:
+            return getattr(self.conn, name)
+
+    with monkeypatch.context() as m:
+        m.setattr(ctx.db, "_conn", FailingCommit(ctx.db._conn))
+        with pytest.raises(sqlite3.OperationalError):
+            as_admin(ctx, ctx.create_customer_board_model, "BETA-1", BETA)
+    assert stored() == before and ctx._keys.keys() <= {s["uuid"] for s in ctx.stores()}
 
 
 def test_req_trn_017_no_store_where_keys_live_in_memory_only(workspace: Settings) -> None:
@@ -103,15 +139,20 @@ def test_req_trn_017_no_store_where_keys_live_in_memory_only(workspace: Settings
     with pytest.raises(AoiError) as refused:
         as_admin(ctx, ctx.create_customer_board_model, "BETA-1", BETA)
     assert refused.value.code == "AOI-TRN-053"
-    assert ctx.stores() == [] and ctx.board_models() == [] and ctx.audit_entries(action="store.create") == []
+    assert ctx.stores() == [] and ctx.board_models() == [] and ctx.audit_entries() == []
+    assert "recipe.default" not in [r["event"] for r in log_rows(ctx.settings.root / "logs")]  # refused first
     ctx.ensure_board_model("IN-HOUSE")
     assert ctx.board_models() == ["IN-HOUSE"]
     ctx.close()
 
 
-def test_req_trn_017_the_recovery_key_is_saved_whole_and_audited(ctx: AppContext, tmp_path: Path) -> None:
+def test_req_trn_017_the_recovery_key_is_saved_whole_and_audited(
+    ctx: AppContext, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """Save to File… writes the sheet whole and audits where it went, never the key; a file that cannot be written is
-    AOI-LOG-002, the old file as it was, and so is a file in the workspace, whose backups hold the files it opens."""
+    AOI-LOG-002, the old file as it was, and so is a file in the workspace, whose backups hold the files it opens, and
+    one in a folder OneDrive copies off the station. Print… is audited before it prints, with the printer and the file
+    it prints to, which is refused in the same places."""
     store = as_admin(ctx, ctx.create_store, BETA)
     dest = tmp_path / "usb" / "beta.txt"
     as_admin(ctx, ctx.save_recovery_sheet, store["uuid"], f"key {store['sheet']}\n", dest)
@@ -127,7 +168,19 @@ def test_req_trn_017_the_recovery_key_is_saved_whole_and_audited(ctx: AppContext
         as_admin(ctx, ctx.save_recovery_sheet, store["uuid"], "x", ctx.settings.root / "exports" / "beta.txt")
     assert refused.value.code == "AOI-LOG-002" and "never saved in the workspace" in str(refused.value.what)
     assert not (ctx.settings.root / "exports" / "beta.txt").exists()
+    cloud = tmp_path / "OneDrive - Acme"
+    monkeypatch.setenv("OneDriveCommercial", str(cloud))
+    with pytest.raises(AoiError) as refused:
+        as_admin(ctx, ctx.save_recovery_sheet, store["uuid"], "x", cloud / "Documents" / "beta.txt")
+    assert refused.value.code == "AOI-LOG-002" and "OneDrive" in str(refused.value.what)
+    assert not (cloud / "Documents" / "beta.txt").exists()
     assert len(ctx.audit_entries(action="store.sheet_saved")) == 1
+    as_admin(ctx, ctx.print_recovery_sheet, store["uuid"], "Office printer")
+    as_admin(ctx, ctx.print_recovery_sheet, store["uuid"], "PDF", tmp_path / "usb" / "beta.pdf")
+    for to in (ctx.settings.root / "beta.pdf", cloud / "beta.pdf"):
+        assert refusal(as_admin, ctx, ctx.print_recovery_sheet, store["uuid"], "PDF", to)[0] == "AOI-LOG-002"
+    printed = [e["after"] for e in reversed(ctx.audit_entries(action="store.sheet_printed"))]
+    assert printed == [{"printer": "Office printer"}, {"printer": "PDF", "path": str(tmp_path / "usb" / "beta.pdf")}]
 
 
 def test_req_trn_017_the_dialog_makes_the_store_and_shows_its_key_once(
@@ -146,6 +199,8 @@ def test_req_trn_017_the_dialog_makes_the_store_and_shows_its_key_once(
     dialog = opened(qtbot, win)
     assert dialog.windowTitle() == "New board model" and not dialog.btn_create.isEnabled()
     assert dialog.customer.isEnabled() and dialog.customer.currentText() == ""
+    completer = dialog.customer.completer()  # a list of customers to pick from, never a name filled in
+    assert completer is not None and completer.completionMode() == QCompleter.CompletionMode.PopupCompletion
     assert dialog.what.text().startswith("No customer: its images stay unencrypted in the workspace")
     qtbot.keyClicks(dialog.board, "BETA-1")
     dialog.customer.setCurrentText(BETA)
@@ -158,8 +213,14 @@ def test_req_trn_017_the_dialog_makes_the_store_and_shows_its_key_once(
     assert crypto.key_from_sheet(" ".join(lines)) == keys.read(credentials.STORE_PREFIX + store["uuid"])
     assert not dialog.recovery.kept.isEnabled() and not dialog.btn_done.isEnabled()
     qtbot.keyClick(dialog, Qt.Key.Key_Escape)
-    dialog.reject()
-    assert dialog.isVisible() and dialog.steps.currentWidget() is dialog.key_step
+    dialog.reject()  # Cancel's slot
+    dialog.close()  # the window's close, Alt+F4
+    assert dialog.isVisible() and dialog.steps.currentWidget() is dialog.key_step and dialog.isModal()
+    on_screen = " ".join(w.text() for w in dialog.findChildren(QLabel))
+    assert store["key_id"] not in on_screen and store["uuid"] not in on_screen  # an Admin's advanced detail
+    qtbot.mouseClick(dialog.recovery.kept, Qt.MouseButton.LeftButton)  # off: a touch says why, with no tooltip
+    assert win.statusBar().currentMessage() == "Save the key to a file or print it first"
+    assert not dialog.recovery.kept.isChecked()
     dest = tmp_path / "usb" / "beta.txt"
     monkeypatch.setattr(QFileDialog, "getSaveFileName", staticmethod(lambda *a: (str(dest), "")))
     dialog.recovery.btn_save.click()
@@ -231,7 +292,8 @@ def test_req_trn_017_settings_keeps_the_advanced_steps_under_a_tick(
 ) -> None:
     """Settings › Dataset stores shows the customer, created, board models and shredded columns and New Store… and
     Move Board Model In…; the Advanced tick shows the key id column, Restore Key… and Shred Store…, an Admin's still.
-    A sign-in turns it off. New Store…'s recovery key has Save to File… and Print… as the dialog's has."""
+    A sign-in turns it off. New Store…'s recovery key shows in a modal dialog, with Save to File…, Print… and the tick
+    Done waits for, as the New board model dialog's has."""
     as_admin(ctx, ctx.create_customer_board_model, "BETA-1", BETA)
     win = shell(qtbot, ctx)
     assert win.navigate("Settings")
@@ -244,16 +306,25 @@ def test_req_trn_017_settings_keeps_the_advanced_steps_under_a_tick(
     win.set_user("admin")
     assert win.navigate("Settings")
     assert not panel.advanced.isChecked() and panel.table.isColumnHidden(1) and not panel.btn_shred.isVisible()
+    shown: list[RecoveryKeyDialog] = []
+
+    def exec_(dialog: RecoveryKeyDialog) -> int:  # shown without its event loop, so the test presses its buttons
+        shown.append(dialog)
+        dialog.show()
+        return 0
+
+    monkeypatch.setattr(RecoveryKeyDialog, "exec", exec_)
     panel.btn_new.click()
     panel.customer.setText("Gamma")
     panel.btn_create.click()
-    recovery = panel.recovery
-    assert panel.recovery_sheet.title() == "Recovery key for Gamma" and recovery.btn_save.isVisible()
-    assert recovery.btn_print.isVisible() and not recovery.kept.isEnabled() and not panel.btn_done.isEnabled()
+    [dialog] = shown
+    recovery = dialog.recovery
+    assert dialog.windowTitle() == "Recovery key for Gamma" and recovery.btn_save.isVisible() and dialog.isModal()
+    assert recovery.btn_print.isVisible() and not recovery.kept.isEnabled() and not dialog.btn_done.isEnabled()
     printed: list[Any] = []
     monkeypatch.setattr(QPrintDialog, "exec", lambda self: QDialog.DialogCode.Accepted)
     monkeypatch.setattr(QTextDocument, "print_", lambda self, printer: printed.append(1))
     recovery.btn_print.click()
     recovery.kept.click()
-    panel.btn_done.click()
-    assert printed == [1] and not panel.recovery_sheet.isVisible() and recovery.key.text() == ""
+    dialog.btn_done.click()
+    assert printed == [1] and not dialog.isVisible() and recovery.key.text() == ""

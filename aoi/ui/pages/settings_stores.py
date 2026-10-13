@@ -1,11 +1,12 @@
 """Settings › Dataset stores (REQ-TRN-017, ADR 0010; Datasets stage 3 of 4): the customers' encrypted dataset stores,
 Admin only as the page is, and the steps on them, each an inline sheet in the table's place, never a dialog over the
-page. New Store… shows the new store's recovery key this once (`RecoveryKey`: Save to File…, Print… and a tick it waits
-for); Move Board Model In… encrypts a board model's files in a store, on the pool, and finishes a move that stopped. A
-customer's first board model makes its store in the New board model dialog (ADR 0021), so these are the plain flow's
-spare steps; the key ids, Restore Key…, which takes a key back on a new PC or Windows account, and Shred Store…, red,
-which names what it deletes and waits for the customer's name typed, show under the Advanced tick (B2 of the 2026-10
-business-readiness brief)."""
+page but one: New Store… shows the new store's recovery key this once in a dialog (`RecoveryKeyDialog`: Save to
+File…, Print… and a tick it waits for), which, modal, cannot be left by a page, a sign-in or the app's close until
+the tick, as the New board model dialog's key step cannot (ADR 0021); Move Board Model In… encrypts a board model's
+files in a store, on the pool, and finishes a move that stopped. A customer's first board model makes its store in
+the New board model dialog (ADR 0021), so these are the plain flow's spare steps; the key ids, Restore Key…, which
+takes a key back on a new PC or Windows account, and Shred Store…, red, which names what it deletes and waits for the
+customer's name typed, show under the Advanced tick (B2 of the 2026-10 business-readiness brief)."""
 
 from __future__ import annotations
 
@@ -30,7 +31,7 @@ from .. import theme
 from ..widgets.busy import BusyOverlay
 from ..widgets.flow import FlowLayout
 from .base import button, fill_table, make_table, size_class
-from .recovery_key import RecoveryKey
+from .recovery_key import RecoveryKeyDialog
 
 if TYPE_CHECKING:
     from .settings import SettingsPage
@@ -47,7 +48,7 @@ def typed_letters(text: str) -> int:
 class StoresPanel(QGroupBox):
     """The stores, oldest first, and their steps. One sheet shows at a time, in the place of the table and the step
     buttons, its title naming the store, so the page fits a 1600 x 900 screen with any of them open; a sign-in closes
-    it, so the recovery key never stays on screen for the next user, and turns Advanced off."""
+    it, so a key half typed never stays on screen for the next user, and turns Advanced off."""
 
     def __init__(self, page: SettingsPage) -> None:
         super().__init__()
@@ -96,7 +97,7 @@ class StoresPanel(QGroupBox):
         lay.addWidget(self.steps)
         self.sheets: list[QGroupBox] = []
         self._new_sheet(lay)
-        self._recovery_sheet(lay)
+        self.key_dialog: RecoveryKeyDialog | None = None  # New Store…'s last, kept for its tests
         self._restore_sheet(lay)
         self._move_sheet(lay)
         self._shred_sheet(lay)
@@ -110,14 +111,13 @@ class StoresPanel(QGroupBox):
         self.table.setColumnHidden(KEY_ID, not on)
         self.advanced_steps.setVisible(on)
 
-    def _sheet(self, lay: QVBoxLayout, title: str, esc: bool = True) -> tuple[QGroupBox, QVBoxLayout]:
-        """An inline sheet in the table's place; Esc closes it unless `esc` is off."""
+    def _sheet(self, lay: QVBoxLayout, title: str) -> tuple[QGroupBox, QVBoxLayout]:
+        """An inline sheet in the table's place; Esc closes it."""
         g = QGroupBox(title)
-        if esc:
-            a = QAction(self, shortcut=QKeySequence(Qt.Key.Key_Escape))
-            a.setShortcutContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
-            a.triggered.connect(self.close_sheet)
-            g.addAction(a)
+        a = QAction(self, shortcut=QKeySequence(Qt.Key.Key_Escape))
+        a.setShortcutContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
+        a.triggered.connect(self.close_sheet)
+        g.addAction(a)
         lay.addWidget(g)
         self.sheets.append(g)
         return g, QVBoxLayout(g)
@@ -142,16 +142,6 @@ class StoresPanel(QGroupBox):
         sl.addLayout(fields)
         self.btn_create = button(self.tr("Create"), slot=self._create)
         self._buttons(sl, self.btn_create, button(self.tr("Cancel"), slot=self.close_sheet))
-
-    def _recovery_sheet(self, lay: QVBoxLayout) -> None:
-        """The new store's key, shown this once: Close waits for the tick, which waits for Save to File… or Print…, and
-        Esc does nothing."""
-        self.recovery_sheet, sl = self._sheet(lay, "", esc=False)
-        self.recovery = RecoveryKey(self.ctx, self.page.error, lambda said: self.page.shell.status(said))
-        self.recovery.changed.connect(self._sync)
-        sl.addWidget(self.recovery)
-        self.btn_done = button(self.tr("Close"), slot=self.close_sheet)
-        self._buttons(sl, self.btn_done)
 
     def _restore_sheet(self, lay: QVBoxLayout) -> None:
         self.restore_sheet, sl = self._sheet(lay, "")
@@ -255,7 +245,6 @@ class StoresPanel(QGroupBox):
         typed = self.confirm.text().strip()
         self.btn_shred_now.setEnabled(store is not None and typed == store["customer"] and idle)
         self.btn_create.setEnabled(bool(self.customer.text().strip()))
-        self.btn_done.setEnabled(self.recovery.kept.isChecked())
         n = typed_letters(self.typed.text())
         self.typed_count.setText(self.tr("{n} of {all} characters").format(n=n, all=KEY_LETTERS))
         self.btn_restore_key.setEnabled(n == KEY_LETTERS)
@@ -268,8 +257,7 @@ class StoresPanel(QGroupBox):
         focus.setFocus()
 
     def close_sheet(self) -> None:
-        """Back to the step buttons, the recovery key and anything typed cleared."""
-        self.recovery.clear()
+        """Back to the step buttons, anything typed cleared."""
         self.customer.clear()
         self.typed.clear()
         self.confirm.clear()
@@ -284,7 +272,7 @@ class StoresPanel(QGroupBox):
         self._open(self.new_sheet, self.customer)
 
     def _create(self) -> None:
-        """Make the store, then show its recovery sheet in the sheet's place."""
+        """Make the store, select it, then show its recovery key in `RecoveryKeyDialog`, which waits for its tick."""
         if not self.btn_create.isEnabled():
             return
         try:
@@ -292,11 +280,13 @@ class StoresPanel(QGroupBox):
         except AoiError as e:
             self.page.error(e)
             return
+        self.close_sheet()
         self.refresh()
         self.table.selectRow([s["uuid"] for s in self.rows].index(store["uuid"]))
-        self.recovery.show_key(store)
-        self.recovery_sheet.setTitle(self.recovery.title())
-        self._open(self.recovery_sheet, self.recovery.btn_save)
+        if self.key_dialog is not None:
+            self.key_dialog.deleteLater()
+        self.key_dialog = RecoveryKeyDialog(self, self.ctx, store, self.page.error, self.page.shell.status)
+        self.key_dialog.exec()
 
     def _restore(self) -> None:
         store = self.picked()

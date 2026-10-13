@@ -722,8 +722,9 @@ CODES: dict[str, ErrorCode] = {
             QT_TRANSLATE_NOOP("Errors", "The dataset store of {store} was not opened: {reason}."),
             QT_TRANSLATE_NOOP(
                 "Errors",
-                "An Admin types the store's recovery sheet into this station when its key is missing or wrong; a file"
-                " changed outside the app comes back only from a backup. Nothing was changed.",
+                "An Admin types the store's recovery key into Settings › Dataset stores › Advanced › Restore Key… on"
+                " this station when its key is missing or wrong; a file changed outside the app comes back only from a"
+                " backup. Nothing was changed.",
             ),
         ),
         ErrorCode(

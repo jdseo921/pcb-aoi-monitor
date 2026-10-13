@@ -476,10 +476,17 @@ NEW_BOARD_MODEL = "TBOX-A2"  # the board model the New board model dialog's scre
 NEW_CUSTOMER = "Beta Boards"
 
 
+def pinned_store() -> dict[str, str]:
+    """A new store of NEW_CUSTOMER as `create_store` returns it, its key, UUID, key id and day pinned; none is made."""
+    from aoi.core import crypto
+
+    store = {"uuid": "00000000-0000-4000-8000-0000000000b2", "customer": NEW_CUSTOMER, "key_id": "5ca1ab1e" + "0" * 24}
+    return store | {"sheet": crypto.sheet(bytes(range(32))), "created_at": FIXED_TIME}
+
+
 def new_board_model_dialog(win: Any, step: str) -> Any:
     """The New board model dialog as an Admin fills it for a new customer's first board model (ADR 0021): the form, or
-    the recovery key step that Create would show, with a key, store and key id pinned, so nothing is made."""
-    from aoi.core import crypto
+    the recovery key step that Create would show, for `pinned_store`."""
     from aoi.ui.board_model_dialog import NewBoardModelDialog
 
     dialog = NewBoardModelDialog(win)
@@ -487,10 +494,15 @@ def new_board_model_dialog(win: Any, step: str) -> Any:
     dialog.customer.setCurrentText(NEW_CUSTOMER)
     if step == "key":
         dialog.made = NEW_BOARD_MODEL
-        store = {"uuid": "00000000-0000-4000-8000-0000000000b2", "customer": NEW_CUSTOMER}
-        store |= {"key_id": "5ca1ab1e" + "0" * 24}
-        dialog.show_key(store | {"sheet": crypto.sheet(bytes(range(32))), "created_at": FIXED_TIME})
+        dialog.show_key(pinned_store())
     return dialog
+
+
+def store_key_dialog(win: Any) -> Any:
+    """Settings' New Store… recovery key dialog for `pinned_store` (ADR 0021)."""
+    from aoi.ui.pages.recovery_key import RecoveryKeyDialog
+
+    return RecoveryKeyDialog(win, win.ctx, pinned_store(), lambda e: None, win.status)
 
 
 def render_dialogs(win: Any, out: Path) -> dict[str, Path]:

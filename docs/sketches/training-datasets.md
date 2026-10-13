@@ -93,10 +93,11 @@ business-readiness brief (ADR 0021) a customer's first board model makes its sto
 which shows the recovery key as New Store… does; the key id column, Restore Key… and Shred Store… show under an
 **Advanced: key ids, Restore Key… and Shred Store…** tick, off at each sign-in.
 
-- **New Store…**: the customer (F). On Create the sheet shows the recovery key (52 characters in 13 groups of
-  four, the store UUID and key id) with Save to File… and Print…; the tick "I have saved or printed the key and will
-  keep it apart from the station" turns on once it is saved or printed, and Close once it is ticked, since the key is
-  never shown again.
+- **New Store…**: the customer (F). On Create a modal dialog shows the recovery key (52 characters in 13 groups of
+  four; the store UUID and key id are on the sheet saved or printed, not on screen) with Save to File… and Print…; the
+  tick "I have saved or printed the key and will keep it apart from the station" turns on once it is saved or printed,
+  and Done once it is ticked, since the key is never shown again; Esc and the window's close do nothing until then.
+  The one step that is a dialog: an inline sheet could be left by a page or a sign-in with the key unsaved.
 - **Restore Key…**: the 13 groups typed (any case, spaces or hyphens); a wrong sheet says to check each group.
 - **Move Board Model In…**: a board model in no store; progress over 10 s with the file count; a move that stopped is
   finished by the same button, which then reads Finish Moving In. As built, the store's own board models are listed
