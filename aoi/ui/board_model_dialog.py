@@ -42,7 +42,6 @@ class NewBoardModelDialog(QDialog):
         super().__init__(shell)
         self.shell, self.ctx = shell, shell.ctx
         self.setWindowTitle(self.tr("New board model"))
-        self.setModal(True)  # the window behind it, its pages, sign-in and close, waits for the key's tick
         self.setMinimumWidth(theme.CARD_W)
         self.made: str | None = None
         self.store: dict[str, Any] | None = None

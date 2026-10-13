@@ -2,9 +2,9 @@
 Save to File… and Print…, and a tick that says it is kept, which the step showing it waits for. The tick is off until
 the key was saved or printed. The New board model dialog shows it for a customer's first board model, and
 `RecoveryKeyDialog` for Settings' New Store…: neither can be left until the tick, by Esc, Cancel, the window's close or
-a sign-in, which a modal dialog keeps from the window behind it. The key is in a label that cannot be selected, so never
-on the clipboard, and `clear` forgets it. The store's UUID and key id, an Admin's advanced detail, are on the sheet
-saved or printed, not on screen (B2 of the 2026-10 business-readiness brief)."""
+a sign-in, which exec(), showing it modal, keeps from the window behind it. The key is in a label that cannot be
+selected, so never on the clipboard, and `clear` forgets it. The store's UUID and key id, an Admin's advanced detail,
+are on the sheet saved or printed, not on screen (B2 of the 2026-10 business-readiness brief)."""
 
 from __future__ import annotations
 
@@ -171,7 +171,7 @@ class RecoveryKey(QWidget):
 class RecoveryKeyDialog(QDialog):
     """A new store's recovery key over the page, this once (Settings › Dataset stores, New Store…; ADR 0021), as the
     New board model dialog shows it for a customer's first board model: Done waits for the tick, and Esc, the window's
-    close and a sign-in, which the modal dialog keeps from the window behind it, do nothing until then."""
+    close and a sign-in, which exec(), showing it modal, keeps from the window behind it, do nothing until then."""
 
     def __init__(
         self,
@@ -182,7 +182,6 @@ class RecoveryKeyDialog(QDialog):
         status: Callable[[str], object],
     ) -> None:
         super().__init__(parent)
-        self.setModal(True)  # the window behind it, its pages, sign-in and close, waits for the tick
         self.setMinimumWidth(theme.CARD_W)
         self.recovery = RecoveryKey(ctx, error, status)
         self.recovery.show_key(store)

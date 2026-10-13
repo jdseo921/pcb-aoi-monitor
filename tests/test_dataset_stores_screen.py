@@ -86,7 +86,7 @@ def test_req_trn_017_new_store_shows_its_recovery_sheet_once(
     _fits(page)
     [dialog] = shown
     recovery = dialog.recovery
-    assert dialog.isModal() and dialog.windowTitle() == "Recovery key for Beta Boards"
+    assert dialog.windowTitle() == "Recovery key for Beta Boards"
     on_screen = " ".join(w.text() for w in dialog.findChildren(QLabel))
     assert beta["key_id"] not in on_screen and beta["uuid"] not in on_screen  # an Admin's advanced detail
     lines = recovery.key.text().split("\n")

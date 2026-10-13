@@ -11,10 +11,10 @@ from pathlib import Path
 from typing import Any, cast
 
 import pytest
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QTextDocument
 from PySide6.QtPrintSupport import QPrintDialog
-from PySide6.QtWidgets import QCompleter, QDialog, QFileDialog, QLabel
+from PySide6.QtWidgets import QApplication, QCompleter, QDialog, QFileDialog, QLabel, QWidget
 from pytestqt.qtbot import QtBot
 
 from aoi.config import Settings
@@ -215,7 +215,7 @@ def test_req_trn_017_the_dialog_makes_the_store_and_shows_its_key_once(
     qtbot.keyClick(dialog, Qt.Key.Key_Escape)
     dialog.reject()  # Cancel's slot
     dialog.close()  # the window's close, Alt+F4
-    assert dialog.isVisible() and dialog.steps.currentWidget() is dialog.key_step and dialog.isModal()
+    assert dialog.isVisible() and dialog.steps.currentWidget() is dialog.key_step
     on_screen = " ".join(w.text() for w in dialog.findChildren(QLabel))
     assert store["key_id"] not in on_screen and store["uuid"] not in on_screen  # an Admin's advanced detail
     qtbot.mouseClick(dialog.recovery.kept, Qt.MouseButton.LeftButton)  # off: a touch says why, with no tooltip
@@ -319,7 +319,7 @@ def test_req_trn_017_settings_keeps_the_advanced_steps_under_a_tick(
     panel.btn_create.click()
     [dialog] = shown
     recovery = dialog.recovery
-    assert dialog.windowTitle() == "Recovery key for Gamma" and recovery.btn_save.isVisible() and dialog.isModal()
+    assert dialog.windowTitle() == "Recovery key for Gamma" and recovery.btn_save.isVisible()
     assert recovery.btn_print.isVisible() and not recovery.kept.isEnabled() and not dialog.btn_done.isEnabled()
     printed: list[Any] = []
     monkeypatch.setattr(QPrintDialog, "exec", lambda self: QDialog.DialogCode.Accepted)
@@ -328,3 +328,33 @@ def test_req_trn_017_settings_keeps_the_advanced_steps_under_a_tick(
     recovery.kept.click()
     dialog.btn_done.click()
     assert printed == [1] and not dialog.isVisible() and recovery.key.text() == ""
+
+
+def test_req_trn_017_the_key_dialog_shown_by_exec_holds_the_window_behind_it(qtbot: QtBot, ctx: AppContext) -> None:
+    """RecoveryKeyDialog run by its own exec(), as New Store… runs it, not shown by a test: it is the window that takes
+    input while it is up, so no page, sign-in or close behind it can leave the key, and it refuses Esc until the tick;
+    after the tick, Done ends exec() as accepted (review of B2: the dialog watch allows a dialog only by exec())."""
+    store = as_admin(ctx, ctx.create_store, "Theta")
+    parent = QWidget()
+    qtbot.addWidget(parent)
+    dialog = RecoveryKeyDialog(parent, ctx, store, lambda e: None, lambda text: None)
+    seen: list[object] = []
+
+    def answer() -> None:
+        seen.extend([QApplication.activeModalWidget() is dialog, dialog.isModal()])
+        dialog.reject()  # Esc: refused, the tick not ticked
+        seen.append(dialog.isVisible())
+        dialog.recovery._kept_away()  # as Save to File… or Print… leaves it
+        dialog.recovery.kept.setChecked(True)
+        dialog.btn_done.click()
+
+    QTimer.singleShot(0, answer)
+    guard = QTimer()  # never a hung run, should answer fail
+    guard.setSingleShot(True)
+    guard.timeout.connect(lambda: QDialog.done(dialog, 0))
+    guard.start(10000)
+    try:
+        assert dialog.exec() == QDialog.DialogCode.Accepted
+    finally:
+        guard.stop()
+    assert seen == [True, True, True] and dialog.recovery.key.text() == ""
