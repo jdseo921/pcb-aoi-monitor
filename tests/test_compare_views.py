@@ -164,10 +164,14 @@ def test_req_cmp_002_defect_boxes_only_shows_the_test_board_alone(
     defect, takes the width of both, fitted to it; a fresh result (Re-evaluate) keeps the view chosen and the board's
     scale; after a zoom, every other view brings the Golden board pane back, with the board fitted to its half as
     before (#248 review: Re-evaluate gave the board the hidden pane's fit, and a fit after a zoom measured the pane with
-    the zoom's scroll bars in it, 5 % short)."""
+    the zoom's scroll bars in it, 5 % short). At 1920 x 1080, where the pair sits beside the decision table: in a
+    narrower window the table goes under the pair (ADR 0019), the boards' panes are as short as that leaves them, and
+    a board fills their height in either view."""
     ctx = trained_ctx
     ctx.inspect_file(BOARD, str(ng_board))
     page, _ = _compare(qtbot, ctx, monkeypatch)
+    page.shell.resize(1920, 1080)
+    qtbot.waitUntil(lambda: page.splitter.wide())
     res = _open(qtbot, page, ctx.inspections(board_model=BOARD)[0]["id"])
     assert res.verdict == "NG" and res.defects
     _switch(page, MODE_SIDE)
@@ -193,6 +197,29 @@ def test_req_cmp_002_defect_boxes_only_shows_the_test_board_alone(
         assert page.ref_view.isVisible() and page.ref_label.isVisible(), MODES[mode]
         assert _boxes(page.ref_view) == len(page.res.defects), MODES[mode]
     assert page.test_view.width() == side and page.test_view.transform().m11() == pytest.approx(scale)
+
+
+def test_req_cmp_002_defect_boxes_only_with_the_table_under_the_pair(
+    qtbot: QtBot, trained_ctx: AppContext, ng_board: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """At 1600 x 900, where the decision table sits under the pair (ADR 0019), Defect boxes only still hides the
+    Golden board's pane and its label and shows the test board alone with one box per defect, fitted to its pane. The
+    pane is as tall as the page leaves it, so the board fills its height and is as large as Side by side shows it:
+    the view does not enlarge it there, as it does at 1920 x 1080 (review of A7)."""
+    ctx = trained_ctx
+    ctx.inspect_file(BOARD, str(ng_board))
+    page, _ = _compare(qtbot, ctx, monkeypatch)
+    res = _open(qtbot, page, ctx.inspections(board_model=BOARD)[0]["id"])
+    assert not page.splitter.wide()
+    _switch(page, MODE_SIDE)
+    scale = page.test_view.transform().m11()
+    _switch(page, MODE_BOXES)
+    assert page.ref_view.isHidden() and page.ref_label.isHidden()
+    assert _boxes(page.test_view) == len(res.defects) and page.test_view.fitted
+    port = page.test_view.viewport().rect()
+    board = page.test_view.mapFromScene(page.test_view.sceneRect()).boundingRect()
+    assert port.contains(board) and port.height() - board.height() <= 6, (board, port)  # fitInView's margins
+    assert page.test_view.transform().m11() >= scale * 0.97
 
 
 def test_req_cmp_002_asking_for_a_golden_board_shows_its_pane(

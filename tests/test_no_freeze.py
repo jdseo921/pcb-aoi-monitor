@@ -262,19 +262,30 @@ def test_req_set_021_single_board_job_shows_elapsed_time_and_cancel_but_no_time_
 ) -> None:
     """#194: past the busy overlay's detail stage, Compare (like the AI Model Test preview and Recipe Test Run, which
     also inspect one board) shows the seconds so far, a bar with no range and Cancel, and no time left: one inspection
-    reports no steps, so there is no count to show (docs/ARCHITECTURE.md, the REQ-SET-021 row)."""
-    real = trained_ctx.inspect
-    monkeypatch.setattr(trained_ctx, "inspect", lambda *a, **k: sleep(2) or real(*a, **k))  # a slow 5 MP board
+    reports no steps, so there is no count to show (docs/ARCHITECTURE.md, the REQ-SET-021 row).
+
+    The board's inspection waits until the test lets it go, so the job still runs at each assert: one that slept 2 s
+    ended inside the test's wait on a Windows runner that held the UI thread up, and the overlay was gone (#403)."""
+    real, release = trained_ctx.inspect, threading.Event()
+
+    def slow(*a: object, **k: object) -> object:  # a slow 5 MP board, inspected once the test is done with the overlay
+        release.wait(30)
+        return real(*a, **k)
+
+    monkeypatch.setattr(trained_ctx, "inspect", slow)
     win = _window(qtbot, trained_ctx)
     page = win.pages["Compare"]
     win.navigate("Compare")
     page.busy.SHOW_AFTER_S, page.busy.DETAIL_AFTER_S = 0.1, 0.5  # the 1 s and 10 s of the product, shortened
-    page.set_test(str(ng_board))
-    qtbot.waitUntil(page.busy.cancel_button.isVisible, timeout=10000)
-    qtbot.wait(800)  # four more ticks of the overlay past the detail stage
-    assert re.fullmatch(r"Inspecting…  \d+ s", page.busy.label.text()), page.busy.label.text()
-    assert page.busy.bar.isVisible() and (page.busy.bar.minimum(), page.busy.bar.maximum()) == (0, 0)
-    qtbot.mouseClick(page.busy.cancel_button, Qt.MouseButton.LeftButton)
+    try:
+        page.set_test(str(ng_board))
+        qtbot.waitUntil(page.busy.cancel_button.isVisible, timeout=10000)
+        qtbot.wait(800)  # four more ticks of the overlay past the detail stage
+        assert re.fullmatch(r"Inspecting…  \d+ s", page.busy.label.text()), page.busy.label.text()
+        assert page.busy.bar.isVisible() and (page.busy.bar.minimum(), page.busy.bar.maximum()) == (0, 0)
+        qtbot.mouseClick(page.busy.cancel_button, Qt.MouseButton.LeftButton)
+    finally:
+        release.set()
     qtbot.waitUntil(lambda: page._bg is None, timeout=30000)
 
 

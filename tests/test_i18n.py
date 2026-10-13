@@ -48,11 +48,11 @@ OWNED_SETTERS = {  # static methods that show text when called on these classes 
 TEXT_CONSTRUCTORS = {
     "QLabel", "QPushButton", "QCheckBox", "QRadioButton", "QGroupBox", "QAction", "QMenu", "QListWidgetItem",
     "QTableWidgetItem", "QMessageBox", "button", "make_table", "BusyOverlay", "ImageView", "MetricTile", "EmptyState",
-    "AoiError",
+    "AoiError", "labelled", "WrappedLine", "_GivesWay",
 }  # fmt: skip
 # button(text, kind, slot), action(text, key, slot): text first; AoiError(code, detail, **values): the values (#198);
 # QComboBox.addItem(text, data): the item's data is no text (#199)
-TEXT_POSITIONS = {"button": 1, "action": 1, "AoiError": 0, "addItem": 1}
+TEXT_POSITIONS = {"button": 1, "action": 1, "AoiError": 0, "addItem": 1, "labelled": 1}  # labelled(text, field)
 SKIP_KEYWORDS = {"kind", "slot", "parent", "over", "detail"}  # an error's detail goes to the log only
 ALLOWED_LITERALS = {  # (file, literal): why it is not translated; a stale entry fails the test
     ("aoi/ui/pages/base.py", "Page"): "placeholder title of the base class; every page overrides it",

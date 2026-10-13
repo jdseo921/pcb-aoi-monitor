@@ -203,8 +203,7 @@ class Page(QWidget):
         t.setObjectName("h1")
         head.addWidget(t)
         if self.subtitle:
-            s = QLabel(self.subtitle_text())
-            s.setObjectName("muted")
+            s = WrappedLine(self.subtitle_text())  # a second line in a narrow window, never a wider page (A7)
             head.addWidget(s, 1, Qt.AlignmentFlag.AlignBottom)
         else:
             head.addStretch(1)
@@ -475,10 +474,23 @@ def size_class(w: W, cls: str) -> W:
     return w
 
 
+class _Button(QPushButton):
+    """A button no layout makes narrower than its text (#104). The stylesheet's `min-width` (BUTTON_W) is set on a
+    button as its minimum width, which a layout takes over the button's size hint: a narrow page then cut "Real
+    defect  F10" to "al defect  F". Dropped after each polish, the minimum is the size hint again, which keeps the
+    stylesheet's `min-width` and holds the text whole, so a page too narrow for its buttons scrolls instead."""
+
+    def event(self, e: QEvent) -> bool:
+        done = super().event(e)
+        if e.type() in (QEvent.Type.Polish, QEvent.Type.StyleChange):  # sent after the stylesheet set the minimum
+            self.setMinimumWidth(0)
+        return done
+
+
 def button(text: str, kind: str = "", slot: Callable[..., object] | None = None) -> QPushButton:
     """A theme button. `kind` is "primary" (the one blue button on a page), "start", or the red "stop" and
     "danger" (removes data): red buttons sit last in their row and are never the default (REQ-SET-018)."""
-    b = QPushButton(text.replace("&", "&&"))
+    b = _Button(text.replace("&", "&&"))
     if kind:
         b.setObjectName(kind)
     if kind in ("stop", "danger"):

@@ -37,6 +37,7 @@ from .. import theme
 from ..errors import phrase_text
 from ..widgets.busy import BusyOverlay
 from ..widgets.empty_state import EmptyState
+from ..widgets.flow import FlowLayout
 from ..widgets.image_view import ImageView
 from ..workers import Worker, start
 from .base import QT_TRANSLATE_NOOP, Page, WrappedLine, breakable, button, cell_item, fill_table, make_table
@@ -112,16 +113,18 @@ class ModelTestPage(Page):
         run_layout = QVBoxLayout(run_tab)
         run_layout.setContentsMargins(0, 0, 0, 0)
         bar = QHBoxLayout()
-        bar.addWidget(button(self.tr("Select Test Folder…"), slot=self.pick))
+        buttons = FlowLayout(gap=theme.ROW_GAP)  # on two lines where the page is narrow (#104)
+        buttons.addWidget(button(self.tr("Select Test Folder…"), slot=self.pick))
         self.btn_run = button(self.tr("Run Test"), "primary", self.run)
-        bar.addWidget(self.btn_run)
+        buttons.addWidget(self.btn_run)
         self.btn_csv = button(self.tr("Export CSV"), slot=self.export_csv)
         self.btn_img = button(self.tr("Export Image Overlays"), slot=self.export_overlays)  # annotated images (GUI §5)
         self.btn_report = button(self.tr("Export Report"), slot=self.export_report)
-        bar.addWidget(self.btn_csv)
-        bar.addWidget(self.btn_img)
-        bar.addWidget(self.btn_report)
+        for b in (self.btn_csv, self.btn_img, self.btn_report):
+            buttons.addWidget(b)
+        bar.addLayout(buttons)
         self.folder_label = WrappedLine(self.tr("No folder selected"))  # a long folder never widens the window
+        self.folder_label.setMinimumWidth(theme.FIELD_W)  # the buttons wrap first: at 1366 px it cut "folder" (#104)
         bar.addWidget(self.folder_label, 1)
         run_layout.addLayout(bar)
         src = QHBoxLayout()  # a frozen dataset version's locked validation set, or a labelled folder (REQ-TST-001)
@@ -155,8 +158,7 @@ class ModelTestPage(Page):
         for i, t in enumerate(self.tiles.values()):
             tiles.addWidget(t, 0, i)
         run_layout.addLayout(tiles)
-        self.confusion = QLabel("")
-        self.confusion.setObjectName("muted")
+        self.confusion = WrappedLine()  # on two lines where the page is narrow (#104)
         run_layout.addWidget(self.confusion)
         self.run_note = WrappedLine()  # what judged the run and what is in use now, once they differ (#250, #251)
         self.run_note.hide()

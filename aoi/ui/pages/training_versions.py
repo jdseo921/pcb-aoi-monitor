@@ -35,8 +35,11 @@ from ...core.datasets import ALLOWED_USES, VALIDATION_NG, VALIDATION_OK, mismatc
 from ...errors import AoiError
 from ...hal import VIEWS
 from ...times import to_local
+from .. import theme
 from ..widgets.busy import BusyOverlay
 from ..widgets.empty_state import EmptyState
+from ..widgets.flow import FlowLayout
+from ..widgets.reflow import WrappedGroup
 from .base import QT_TRANSLATE_NOOP, action_button, button, fill_table, make_table
 
 if TYPE_CHECKING:
@@ -50,7 +53,7 @@ USES = {  # the sketch's three, own ticked: placeholders until Jay names the use
 REVISION_LENGTH = 16  # a board revision is 1 to 16 letters and digits (aoi.core.datasets.REVISION)
 
 
-class WorkingSetPanel(QGroupBox):
+class WorkingSetPanel(WrappedGroup):  # its wrapped lines whole at 1366 px (A7)
     """The board model's labels view by view, its customer and the uses a freeze allows, and Freeze Dataset…."""
 
     def __init__(self, page: TrainingPage) -> None:
@@ -65,21 +68,20 @@ class WorkingSetPanel(QGroupBox):
         form.addRow(self.counts)
         self.btn_samples = button(self.tr("Open Samples ›"), slot=lambda: self.page.tabs.setCurrentIndex(0))
         form.addRow(self.btn_samples)
-        top = QHBoxLayout()
+        top = FlowLayout(gap=theme.ROW_GAP)  # each row on two lines where the tab is narrow (#104)
         self.customer = QLabel()  # the customer whose dataset store holds the board model: the freeze names it
-        top.addWidget(self.customer, 1)
+        top.add_stretched(self.customer)
         self.act_freeze = page.dataset_action(self.tr("Freeze Dataset…"), "Ctrl+F", self.open_sheet)
         self.btn_freeze = action_button(self.act_freeze, show_key=False)  # plain: Start Training is the blue one
         top.addWidget(self.btn_freeze)
         form.addRow(self.tr("Customer"), top)
-        uses = QHBoxLayout()
+        uses = FlowLayout(gap=theme.ROW_GAP)
         self.uses: dict[str, QCheckBox] = {}
         for use in ALLOWED_USES:
             box = self.uses[use] = QCheckBox(self.tr(USES[use]))
             box.setChecked(use == "own")
             box.toggled.connect(self._sync)
             uses.addWidget(box)
-        uses.addStretch(1)
         form.addRow(self.tr("Allowed uses"), uses)
         self.sheet = FreezeSheet(self)
         self.busy = BusyOverlay(self.sheet, self.tr("Freezing the dataset version…"))
@@ -351,13 +353,12 @@ class VersionsPanel(QGroupBox):
         self.found.setWordWrap(True)
         self.found.hide()
         lay.addWidget(self.found)
-        row = QHBoxLayout()
+        row = FlowLayout(gap=theme.ROW_GAP)  # on two lines where the tab is narrow (#104)
         self.btn_split = button(self.tr("Split and Lock Validation Set…"), slot=self.open_split)
         self.btn_verify = button(self.tr("Verify Manifest"), slot=self.verify)
         self.btn_export = button(self.tr("Export Manifest…"), slot=self.export_manifest)
         for b in (self.btn_split, self.btn_verify, self.btn_export):
             row.addWidget(b)
-        row.addStretch(1)
         lay.addLayout(row)
         self.busy = BusyOverlay(self.table, self.tr("Checking each file against its manifest…"))
         self.split = SplitSheet(self)  # the page lays it out in the labeller agreement's place

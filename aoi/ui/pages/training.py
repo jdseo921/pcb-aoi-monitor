@@ -17,7 +17,6 @@ from PySide6.QtWidgets import (
     QComboBox,
     QFileDialog,
     QFormLayout,
-    QGroupBox,
     QHBoxLayout,
     QLabel,
     QLineEdit,
@@ -49,6 +48,8 @@ from ..errors import phrase_text, show_error
 from ..widgets.box_editor import ENTER
 from ..widgets.busy import BusyOverlay
 from ..widgets.empty_state import EmptyState
+from ..widgets.flow import FlowLayout
+from ..widgets.reflow import ReflowSplitter, WrappedGroup, WrappedPane, least_width
 from ..workers import Worker, keep
 from .base import (
     QT_TRANSLATE_NOOP,
@@ -163,13 +164,13 @@ class TrainingPage(Page):
         self.worker: Worker | None = None
         # the Samples tab: the page's keys are its actions (`action`), so none acts over the Datasets tab
         self.keys = QWidget()
-        split = QSplitter(Qt.Orientation.Horizontal)
+        split = ReflowSplitter()  # the label editor under the samples where the tab is too narrow for both (#104)
 
         # Left: dataset ------------------------------------------------------------
-        left = QWidget()
+        left = WrappedPane()  # its wrapped lines whole however short the window (#104)
         ll = QVBoxLayout(left)
         ll.setContentsMargins(0, 0, 8, 0)
-        up = QHBoxLayout()
+        up = FlowLayout(gap=theme.ROW_GAP)  # each row of buttons on two lines where the pane is narrow (#104)
         # the sketch's keys, each in its button's tooltip; verdict colours mean verdicts, not add buttons
         self.adds = [
             self.action(self.tr("Add OK Images…"), "Ctrl+O", self.add_ok),
@@ -219,7 +220,8 @@ class TrainingPage(Page):
         self.samples_empty = EmptyState(self.samples)
         self.busy = BusyOverlay(self.samples, self.tr("Importing…"))
         ll.addWidget(self.samples, 1)
-        marks = QHBoxLayout()  # the labels sketch's row, a key each, a list, a field or the import sheet gets first
+        # the labels sketch's row, a key each, a list, a field or the import sheet gets first
+        marks = FlowLayout(gap=theme.ROW_GAP)
         self.act_ok = self.action(self.tr("Mark OK"), "O", lambda: self._relabel("OK"))
         self.act_ng = self.action(self.tr("Mark NG"), "N", lambda: self._relabel("NG"))
         self.act_unsure = self.action(self.tr("Mark UNSURE"), "U", lambda: self._relabel("UNSURE"))
@@ -233,7 +235,7 @@ class TrainingPage(Page):
         self.act_previous = self.action(self.tr("Previous image"), "PgUp", lambda: self._step(-1))
         ll.addLayout(marks)
         shell.installEventFilter(self)  # the keys typed in a drop-down list or the import sheet reach the window last
-        act = QHBoxLayout()
+        act = FlowLayout(gap=theme.ROW_GAP)
         act.addWidget(button(self.tr("Set Reference"), slot=self._set_reference))
         self.btn_draw = button(self.tr("Draw OK Labels to Check"), slot=self._draw)
         act.addWidget(self.btn_draw)
@@ -257,7 +259,7 @@ class TrainingPage(Page):
         right = QWidget()
         rl = QVBoxLayout(right)
         rl.setContentsMargins(8, 0, 0, 0)
-        g = QGroupBox(self.tr("Self-training"))
+        g = WrappedGroup(self.tr("Self-training"))  # its version line whole after a wide window (A7)
         f = QFormLayout(g)
         self.dataset_version = QComboBox()  # the board model's frozen versions, newest first (REQ-TRN-007)
         self._cap_version_list()
@@ -331,7 +333,7 @@ class TrainingPage(Page):
         rl.addWidget(self.card_view, 1)
         # the table as wide as its reference line needs at 1920 px, the editor next; with S31's import sheet open the
         # table takes 742 px and the editor 407 px, its buttons whole, the training panel keeping its 457 px (outer)
-        split.setSizes([650, 500])
+        split.set_wide_sizes([650, 500])
         self.samples_split = split
         kl = QVBoxLayout(self.keys)
         kl.setContentsMargins(0, 0, 0, 0)
@@ -1054,21 +1056,19 @@ class TrainingPage(Page):
         """The Samples pane as wide as its widest button row needs in the theme's font, the label editor giving the
         room (REQ-SET-008): the splitter's weights, set for the 14 pt font, gave the pane 626 px of the tab's 1108 at
         1920 px in the presenter theme's 18 pt font, where the rows need 714, and cut every label to "dd OK Images."
-        until the import sheet opened. The rows are read button by button, since a row caches its own hint until the
-        page's next show, and the theme is switched on Settings. Asked of the splitter at each show rather than set as
-        the pane's least width: a least width that follows the font put the 14 pt theme over the 1600 px the pages are
-        laid out for, in DejaVu Sans, where the rows need 639 px; there the editor keeps its own least width and the
-        pane gets what the window has, as before."""
-        sizes = self.samples_split.sizes()
+        until the import sheet opened. Asked of the splitter at each show rather than set as the pane's least width: a
+        least width that follows the font put the 14 pt theme over the 1600 px the pages are laid out for, in DejaVu
+        Sans, where the rows need 639 px; there the editor keeps its own least width and the pane gets what the window
+        has, as before. Where that leaves the editor less than its least width, each row wraps instead, and in a tab
+        too narrow for both panes the editor is under the samples, every row the tab's width (#104)."""
+        split = self.samples_split
+        if split.orientation() != Qt.Orientation.Horizontal:  # the editor under the samples: each row has the width
+            return
+        sizes = split.sizes()
         margins = self.samples_layout.contentsMargins()
-        widest = 0
-        for row in self.rows:
-            items = [row.itemAt(i) for i in range(row.count())]
-            width = sum(item.sizeHint().width() for item in items if item is not None)
-            widest = max(widest, width + row.spacing() * (len(items) - 1))
-        need = widest + margins.left() + margins.right()
-        if 0 < sizes[0] < need:  # 0: not laid out yet, or the pane dragged shut
-            self.samples_split.setSizes([need, sum(sizes) - need])
+        need = max(row.sizeHint().width() for row in self.rows) + margins.left() + margins.right()  # each on one line
+        if 0 < sizes[0] < need and sum(sizes) - need >= least_width(self.editor):  # 0: not laid out, or dragged shut
+            split.set_wide_sizes([need, sum(sizes) - need])
 
     def _show_version(self) -> None:
         """The line under the dataset version: its locked validation set and its training set, as the sketch counts

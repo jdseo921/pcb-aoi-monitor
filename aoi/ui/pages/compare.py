@@ -19,10 +19,10 @@ import html
 import itertools
 from collections.abc import Mapping
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, TypeAlias
+from typing import TYPE_CHECKING, Any, TypeAlias, cast
 
 import numpy as np
-from PySide6.QtCore import QCoreApplication, Qt
+from PySide6.QtCore import QCoreApplication, QEvent, QObject, QRect, QSize, Qt, QTimer
 from PySide6.QtGui import QAction, QKeySequence
 from PySide6.QtWidgets import (
     QComboBox,
@@ -37,7 +37,6 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QSizePolicy,
     QSpinBox,
-    QSplitter,
     QTextEdit,
     QVBoxLayout,
     QWidget,
@@ -56,7 +55,9 @@ from .. import theme
 from ..errors import phrase_text, show_error
 from ..widgets.busy import BusyOverlay
 from ..widgets.empty_state import EmptyState
+from ..widgets.flow import FlowLayout, labelled
 from ..widgets.image_view import ImageView
+from ..widgets.reflow import ReflowSplitter, WrappedPane
 from ..widgets.scale import DefectSizeField
 from .base import (
     QT_TRANSLATE_NOOP,
@@ -83,6 +84,60 @@ MODES = [  # the Show combo, in this order; shown through tr()
 ]
 MODE_SIDE, MODE_DIFF, MODE_AI, MODE_BOXES = range(4)
 NO_VERDICT = "—"  # the banner with no result shown
+UNBOUNDED = (1 << 24) - 1  # Qt's QWIDGETSIZE_MAX, no maximum, which PySide6 does not export
+
+
+class PairGrid(QGridLayout):
+    """The two boards' grid, which gives both views the same width: under the pair, the verdict's column beside them
+    left one view 1 px wider than the other, and linked views of different widths showed the board 5 px apart once
+    zoomed in, more than REQ-CMP-001's 1 px (A7). Once a layout leaves them unequal, both are held to half the width
+    the two take together, the odd pixel left beside them, until the grid is given another rectangle or Defect boxes
+    only hides the Golden board. A view's size hint follows its board's zoom, so a layout made while a board was zoomed
+    past its pane gave that view more; one that leaves the held views unequal lets go and halves again, so a hold
+    never keeps a pane narrower than its half. Narrowed after every layout instead, a view was resized twice a pass,
+    each resize fitted its board again, and each fit asked for another layout, without end (A7)."""
+
+    def __init__(self, parent: QWidget) -> None:
+        super().__init__(parent)
+        self._held: tuple[QRect, bool] | None = None  # the rectangle, and both views shown, the hold was set for
+
+    def setGeometry(self, rect: QRect) -> None:  # noqa: N802 (Qt's name)
+        views = [w for w in (self._view(column) for column in (0, 1)) if w is not None]
+        shown = [w for w in views if not w.isHidden()]
+        key = (QRect(rect), len(shown) == 2)
+        if key != self._held:
+            self._held = key
+            self._let_go(views)  # another width, or one view shown
+        super().setGeometry(rect)
+        if len(shown) == 2 and shown[0].width() != shown[1].width():
+            if self._let_go(shown):  # held, and still unequal: laid out afresh, never halved from a narrowed pair
+                super().setGeometry(rect)
+            width = sum(view.width() for view in shown) // 2
+            for view in shown:
+                view.setMaximumWidth(width)
+            super().setGeometry(rect)  # the columns laid out again, both views held to one width
+
+    @staticmethod
+    def _let_go(views: list[QWidget]) -> bool:
+        """Lift the hold on `views`; whether one was held."""
+        held = [view for view in views if view.maximumWidth() != UNBOUNDED]
+        for view in held:
+            view.setMaximumWidth(UNBOUNDED)
+        return bool(held)
+
+    def _view(self, column: int) -> QWidget | None:
+        item = self.itemAtPosition(1, column)
+        return item.widget() if item is not None else None
+
+
+class WhyBox(QTextEdit):
+    """The "why" box, which asks for theme.WHY_H of height, not a text box's usual 192 px: beside the pair, where it
+    may grow into the room under the note, the height it asks for is what the pair's least height counts (A7)."""
+
+    def sizeHint(self) -> QSize:  # noqa: N802 (Qt's name)
+        return QSize(super().sizeHint().width(), theme.WHY_H)
+
+
 Stored: TypeAlias = (
     "tuple[np.ndarray | None, Judged, InspectionResult | None, list[tuple[ErrorReport, AoiError]]] | ErrorReport"
 )
@@ -230,22 +285,22 @@ class ComparePage(Page):
         self._why = self._noticed = ""  # the explanation the "why" box shows, and AOI-RCP-007 above it (_show_why)
         self._fitted = False
 
-        bar = QHBoxLayout()
+        bar = FlowLayout(gap=theme.ROW_GAP)  # on two lines where the page is narrow (#104)
         bar.addWidget(button(self.tr("Test Image…"), slot=self.pick_test))
         bar.addWidget(button(self.tr("Use Last Inspected"), slot=self.use_last))
         bar.addWidget(button(self.tr("Reference…"), slot=self.pick_ref))
         bar.addWidget(button(self.tr("Golden Board"), slot=self.use_golden))
-        bar.addWidget(QLabel(self.tr("Show:")))
         self.mode = QComboBox()
         self.mode.addItems([self.tr(m) for m in MODES])
         self.mode.currentIndexChanged.connect(self.redraw)
-        bar.addWidget(self.mode)
-        bar.addStretch(1)
+        bar.addWidget(labelled(self.tr("Show:"), self.mode))
         self.root.addLayout(bar)
 
-        split = QSplitter(Qt.Orientation.Horizontal)
-        views = QWidget()
-        grid = QGridLayout(views)  # the labels share a row, so one wrapped to two lines never shifts its view down
+        # the pair beside the panel; where the page is narrower than both need, the verdict beside the pair and the
+        # decision table under them, as wide as the page (#104, `_arrange`)
+        split = ReflowSplitter(self._wide_need)
+        views = WrappedPane()  # as tall as its labels need, wrapped at its width, over the boards' least height
+        grid = PairGrid(views)  # the labels share a row, so one wrapped to two lines never shifts its view down
         grid.setContentsMargins(0, 0, 0, 0)
         self.panes, self.splitter = grid, split  # Defect boxes only gives the Golden board's column away (#248)
         self.ref_label = QLabel(self.tr("Golden board"))
@@ -265,11 +320,16 @@ class ComparePage(Page):
             grid.addWidget(view, 1, column)
             grid.setColumnStretch(column, 1)
         grid.setRowStretch(1, 1)
+        self.beside = QWidget()  # the verdict, its note and the "why" box beside the pair over the table (`_arrange`)
+        self.beside_layout = QVBoxLayout(self.beside)
+        self.beside_layout.setContentsMargins(theme.SPACE_S, 0, 0, 0)
+        self.beside.hide()
+        grid.addWidget(self.beside, 0, 2, 2, 1)
         split.addWidget(views)
 
         panel = QWidget()
-        pl = QVBoxLayout(panel)
-        pl.setContentsMargins(8, 0, 0, 0)
+        self.panel = pl = QVBoxLayout(panel)
+        pl.setContentsMargins(theme.SPACE_S, 0, 0, 0)
         self.verdict = QLabel(NO_VERDICT)
         self.verdict.setStyleSheet(theme.verdict_style("INFO"))
         self.verdict.setMinimumHeight(theme.BANNER_H)
@@ -298,7 +358,7 @@ class ComparePage(Page):
         dl = QVBoxLayout(self.decision)
         dl.setContentsMargins(0, 0, 0, 0)
         dl.addWidget(self.metrics, 1)
-        self.why = QTextEdit()
+        self.why = WhyBox()
         self.why.setReadOnly(True)
         self.why.setMaximumHeight(theme.WHY_H)
         self.why.setMinimumHeight(theme.WHY_MIN_H)  # at 1600 x 900 the panel is too short for all of it at full height
@@ -306,9 +366,17 @@ class ComparePage(Page):
         pl.addWidget(self.decision, 2)
         self.try_busy = BusyOverlay(self.decision, self.tr("Re-evaluating…"))  # over both: Cancel fits at least size
         self.try_busy.cancel_button.clicked.connect(self._cancel_tried)  # the stored checks again (REQ-SET-021, review)
+        self.why_cover = QWidget(self.why)  # the "why" box covered with the table, also where it is beside the pair
+        self.why_cover.setObjectName("busy")
+        self.why_cover.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+        self.why_cover.hide()
+        for watched in (self.try_busy, self.why):
+            watched.installEventFilter(self)  # the cover shown with the indicator, as large as the box (`_cover_why`)
 
         split.addWidget(panel)
-        split.setSizes([700, 1020])  # the decision table shows all six columns, cells padded, at 1920 x 1080
+        split.set_wide_sizes([700, 1020])  # the decision table shows all six columns, cells padded, at 1920 x 1080
+        split.arranged.connect(self._arrange)
+        split.widened.connect(self._hold_rows)  # the table's width and height again at each new width
         self.root.addWidget(split, 1)
         self.root.addWidget(self._tryout())  # under the images, the panel's full height left to the decision (sketch)
         self.root.addWidget(self._save_sheet())
@@ -323,8 +391,7 @@ class ComparePage(Page):
         is named fills the rest of that row, and Tab keeps the order the fields had in one form."""
         self.tryout = QGroupBox(self.tr("Try other thresholds (nothing is saved until you press Save to Recipe)"))
         tl = QVBoxLayout(self.tryout)
-        cols = QHBoxLayout()
-        cols.setSpacing(theme.SPACE * 2)
+        cols = FlowLayout(gap=theme.SPACE * 2)  # a column under the others where the page is narrow (#104)
         forms: list[QFormLayout] = []
         for _ in range(3):
             column = QWidget()
@@ -333,7 +400,6 @@ class ComparePage(Page):
             form.setRowWrapPolicy(QFormLayout.RowWrapPolicy.WrapLongRows)  # a label over its field, not a wider window
             forms.append(form)
             cols.addWidget(column)
-        cols.addStretch(1)
         ai, pixels, areas = forms
         self.ai_thr = self.ai_threshold_field(self.tr("Override the AI model's value {value}"), own_row=True)
         self.diff_thr = QSpinBox()
@@ -774,11 +840,121 @@ class ComparePage(Page):
     def _hold_rows(self) -> None:
         """The decision table never shorter than its rows, up to theme.DECISION_ROWS of them, so the "why" box gives
         way first: with the panel's full height, at 1600 x 900 it still left the table four of seven rows. It is run
-        on each fill, not on a change of style or font, which the light theme due by 1.0 must run it on."""
+        on each fill, at each new width of the splitter, which decides whether the columns scroll, and at each change
+        of the theme, whose text size the window's size now changes too (`restyle`, #104)."""
+        self._keep_table()
         t = self.metrics
         rows = sum(t.rowHeight(r) for r in range(min(t.rowCount(), theme.DECISION_ROWS)))
         bar = t.horizontalScrollBar().sizeHint().height()  # a narrow panel scrolls the columns under the rows
+        if not self.splitter.wide() and self._table_width() <= self.splitter.width():
+            bar = 0  # under the pair, as wide as the page, the table shows every column
         t.setMinimumHeight(t.horizontalHeader().sizeHint().height() + rows + bar + 2 * t.frameWidth())
+        self.splitter.reflow()  # a theme's text size changes the width the pair needs beside the table
+
+    def _under_pair(self) -> None:
+        """Under the pair, the table as tall as its rows and the boards the rest, the panel's least height read once
+        its layout has taken the turn: on a page turned while hidden, read before, it still held the "why" box and
+        left the table a blank band as tall under its rows (review of A7)."""
+        layout = self.decision.layout()
+        if layout is not None:
+            layout.activate()
+        self.splitter.setSizes([1 << 16, 1])  # weights: the table at its least height
+
+    def _keep_table(self) -> None:
+        """Side by side, the panel at least as wide as the decision table with every column whole, the pair giving
+        the room while each board keeps theme.IMAGE_MIN_W: the splitter's shares left the 14 pt table 1 px short of
+        that at 1920 x 1080 in DejaVu Sans, and it scrolled its Result column out of view (A7). Read once the splitter
+        has laid its panes out at a new width (`ReflowSplitter.widened`): read before, as a window shrank from 2560 to
+        2100 px, the presenter theme's table took the old width's share, 1069 of the 1099 px it needs (review of A7)."""
+        split = self.splitter
+        if not split.wide() or split.count() != 2:
+            return
+        sizes = split.sizes()
+        want = self._table_width() + theme.SPACE_S
+        if sizes[1] < want <= sum(sizes) - theme.IMAGE_MIN_W * 2 - self.panes.horizontalSpacing():
+            split.setSizes([sum(sizes) - want, want])
+
+    def restyle(self) -> None:
+        self._hold_rows()  # its rows at the theme's text size
+        if self.decision.isAncestorOf(self.why):  # under the table: the theme's WHY_H at most
+            self.why.setMaximumHeight(theme.WHY_H)
+        self.why.updateGeometry()  # beside the pair: the theme's WHY_H asked for (`WhyBox`)
+
+    def eventFilter(self, watched: QObject, event: QEvent) -> bool:  # noqa: N802 (Qt's name)
+        if watched is self.try_busy and event.type() in (QEvent.Type.Show, QEvent.Type.Hide):
+            self._cover_why()
+        elif watched is self.why and event.type() == QEvent.Type.Resize:
+            self.why_cover.setGeometry(self.why.rect())
+        return super().eventFilter(watched, event)
+
+    def _cover_why(self) -> None:
+        """While "Re-evaluating…" covers the decision table, the "why" box under a cover too where it stands beside
+        the pair, outside the indicator's reach: the reasons it shows are the ones being judged again (REQ-SET-021)."""
+        shown = not self.try_busy.isHidden() and not self.decision.isAncestorOf(self.why)
+        if shown:
+            self.why_cover.setGeometry(self.why.rect())
+            self.why_cover.raise_()
+        self.why_cover.setVisible(shown)
+
+    def _table_width(self) -> int:
+        """The decision table's width with every column whole, as its columns are sized to their contents."""
+        t = self.metrics
+        return t.horizontalHeader().length() + 2 * t.frameWidth()
+
+    def _wide_need(self) -> int:
+        """The width the pair needs beside the panel: both boards at the image's least width, and the decision table
+        at theme.DECISION_W, its columns whole as the demo's NG board fills them. At 1920 x 1080 the 14 pt theme has
+        it; the presenter theme's table, at 18 pt, was cut at its Rule column there, and at 1366 x 768 neither theme
+        has it (#104). A width of the theme's, not the table's own: read from the table, the page turned the pair from
+        beside the panel to over it as the first record opened, and back from record to record (review of A7). Both
+        boards, the Golden board's hidden by Defect boxes only too, and the panel's margin side by side, also while it
+        is under the pair with none: a need that changed with the view or the arrangement moved the verdict and the
+        table, or turned the pair from one arrangement to the other without end."""
+        pair = theme.IMAGE_MIN_W * 2 + self.panes.horizontalSpacing()
+        return pair + self.splitter.handleWidth() + theme.SPACE_S + theme.DECISION_W
+
+    def _arrange(self, wide: bool) -> None:
+        """The verdict and its note over the decision table and the "why" box under it, beside the pair (`wide`), or
+        the three beside the pair over the table, which then takes the page's width and the boards the height it leaves
+        (#104): under the table, the "why" box gave way to the boards and showed a line and a half of its reasons at
+        1920 x 1080 in the presenter theme, and none above the fold at 1366 x 768, where beside the pair it has the room
+        under the note (review of A7). The boards are fitted to their new panes once the layout has placed them. A
+        focus in the "why" box, where a re-evaluation run by Space waits, stays there: moved to its new place, the box
+        was hidden until the next event and Qt passed its focus on, to the AI score threshold's tick, where a second
+        Space stopped the run by setting it, or to Cancel (review of A7)."""
+        held = self.window().focusWidget() is self.why  # read before the move hides the box
+        src, to = (self.beside_layout, self.panel) if wide else (self.panel, self.beside_layout)
+        for i, w in enumerate((self.verdict, self.note)):
+            src.removeWidget(w)
+            to.insertWidget(i, w)
+        decision = cast(QVBoxLayout, self.decision.layout())
+        (self.beside_layout if wide else decision).removeWidget(self.why)
+        if wide:
+            decision.addWidget(self.why)
+            self.why.setMaximumHeight(theme.WHY_H)  # under the table, giving way to its rows first
+        else:
+            self.beside_layout.insertWidget(2, self.why, 1)
+            self.why.setMaximumHeight(UNBOUNDED)  # under the note, the column's height that nothing else takes
+        QWidget.setTabOrder(self.metrics, self.why)  # one Tab after the table wherever it shows, as before Cancel
+        self._cover_why()  # a re-evaluation's indicator showing as the page turns
+        self.beside.setVisible(not wide)
+        if held:
+            self.why.show()  # now, not at the next event, to take its focus back
+            self.why.setFocus(Qt.FocusReason.OtherFocusReason)
+        self.panes.setColumnStretch(2, 0 if wide else 1)
+        self.panel.setContentsMargins(theme.SPACE_S if wide else 0, 0, 0, 0)
+        for i in range(2):  # under the pair, the table keeps its rows' height and the boards take what is left
+            self.splitter.setStretchFactor(i, 0 if wide else 1 - i)
+        self.splitter.setChildrenCollapsible(wide)
+        self._hold_rows()
+        if not wide:
+            self._under_pair()
+        self._fitted = False
+        QTimer.singleShot(0, self, self._refit)
+
+    def _refit(self) -> None:
+        self.ref_view.fit()
+        self.redraw()
 
     def _show_checks(self, r: InspectionResult, tried: bool = False) -> None:
         """The decision table and "why" box of `r`: the result shown, or (`tried`) what the thresholds tried give it."""

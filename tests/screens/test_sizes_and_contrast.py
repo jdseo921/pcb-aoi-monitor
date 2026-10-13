@@ -197,6 +197,15 @@ def _text(w: QWidget) -> str:
     return ""
 
 
+def _least_pt() -> float:
+    """The least size text may be drawn at: theme.FONT_PT, as Qt draws it. Qt draws a font at a whole number of pixels,
+    so the presenter theme's 16 pt for a small window is 21 px at 96 dpi, 15.75 pt; 14 pt is 19 px there and 18 pt is
+    24, at or over their sizes (A7)."""
+    font = QFont(QApplication.font())
+    font.setPointSizeF(theme.FONT_PT)
+    return min(theme.FONT_PT, QFontInfo(font).pointSizeF())
+
+
 def _large(font: QFont) -> bool:
     info = QFontInfo(font)
     return info.pointSizeF() >= LARGE_PT or (info.bold() and info.pointSizeF() >= theme.FONT_PT)
@@ -243,7 +252,7 @@ def _check_widget(where: str, win: QWidget, shot: np.ndarray, w: QWidget, seen: 
     if isinstance(w, TEXT_WIDGETS):
         seen["text"] += 1
         pt = QFontInfo(w.font()).pointSizeF()
-        if pt < theme.FONT_PT:
+        if pt < _least_pt():
             out.append(f"{name}: {pt:.1f} pt text")
     if isinstance(w, QPushButton):
         seen["buttons"] += 1
@@ -281,7 +290,7 @@ def _check_widget(where: str, win: QWidget, shot: np.ndarray, w: QWidget, seen: 
         for it in (it for it in items if it is not None and it.text()):
             region = _region(shot, win, w.viewport(), w.visualItemRect(it) & w.viewport().rect())
             font = it.font() if it.data(Qt.ItemDataRole.FontRole) is not None else w.font()
-            if QFontInfo(font).pointSizeF() < theme.FONT_PT:  # a font of its own, such as a coloured row's bold
+            if QFontInfo(font).pointSizeF() < _least_pt():  # a font of its own, such as a coloured row's bold
                 out.append(f"{name} item '{it.text()}': {QFontInfo(font).pointSizeF():.1f} pt text")
             if not _locked_page(w, it):
                 out += _check_contrast(region, font, f"{name} item '{it.text()}'", seen)
@@ -562,7 +571,7 @@ def _walk(win: MainWindow, role: str, dataset: Path, seen: Counter) -> list[str]
         _show(win, title, dataset)
         for view in (None, *render_screens.PAGE_VIEWS.get(title, ())):  # each tab, as the screenshots show it
             render_screens.show_view(win, title, view)
-            QApplication.processEvents()
+            render_screens.settle()  # laid out before the grab: a pass later, Windows' fonts moved a button from it
             seen["pages"] += 1
             shot = _pixels(win.grab().toImage())
             where = f"{title}{f' {view}' if view else ''} ({role})"
@@ -741,6 +750,39 @@ def test_req_set_008_presenter_text_and_hidden_admin(
     assert not findings, f"{len(findings)} findings:\n" + "\n".join(sorted(set(findings)))
 
 
+def test_req_set_008_the_presenter_themes_16_pt_size_passes_the_walk(
+    screens: tuple[AppContext, Path], qtbot: QtBot, qapp: QApplication
+) -> None:
+    """The presenter theme at the size it takes where the app has under 900 px of height or 1400 px of width (ADR
+    0019, a 1366 x 768 projector), walked as the Admin, who sees every page the theme shows: every text 16 pt or more,
+    as Qt draws 16 pt (21 px at 96 dpi, `_least_pt`), tables and text on images included, operator targets 48 px or
+    more, every text colour at 4.5:1 or more on its surface, and the verdict at 44 pt, over REQ-SET-004's 40 pt (review
+    of A7). The size is held at 1920 x 1080, as
+    tools/screen_sizes.py holds it, so the walk reads every page whole; tests/test_demo_fit.py checks the same pages
+    laid out at 1366 x 768."""
+    ctx, dataset = screens
+    findings: list[str] = []
+    seen: Counter = Counter()
+    held = (mock.patch.object(theme, "SMALL_H", 1 << 20), mock.patch.object(theme, "SMALL_W", 1 << 20))
+    with _shell(ctx, qtbot, qapp) as win, mock.patch.object(sys.modules[__name__], "LARGE_RATIO", MIN_RATIO):
+        with held[0], held[1]:
+            win.set_user("admin")
+            assert win.navigate("Settings")
+            win.pages["Settings"].presenter.click()
+            try:
+                assert theme.presenter() and theme.small() and theme.FONT_PT == 16, theme.FONT_PT
+                findings += _walk(win, "Admin", dataset, seen)
+                verdict = win.pages["Inspection"].verdict
+                drawn = QFontInfo(verdict.font()).pointSizeF()  # 59 px at 96 dpi, 44.25 pt
+                assert verdict.font().pointSizeF() == theme.FONT_VERDICT_PT == 44 and drawn >= 44, drawn
+            finally:
+                win.set_user("admin")
+                win.exit_presenter.click()
+    assert not theme.presenter() and not theme.small()
+    assert seen["pages"] >= 12 and seen["text"] >= 150 and seen["targets"] >= 50, seen
+    assert not findings, f"{len(findings)} findings:\n" + "\n".join(sorted(set(findings)))
+
+
 def test_req_set_008_presenter_training_rows_whole_with_the_import_sheet_closed(
     screens: tuple[AppContext, Path], qtbot: QtBot, qapp: QApplication
 ) -> None:
@@ -760,7 +802,7 @@ def test_req_set_008_presenter_training_rows_whole_with_the_import_sheet_closed(
             for role in ("engineer", "admin"):
                 win.set_user(role)
                 assert win.navigate("Training")
-                QApplication.processEvents()
+                render_screens.settle()  # laid out before the grab, as in the walk
                 page = win.pages["Training"]
                 assert not page.sheet.isVisible() and win.width() == 1920, role  # type: ignore[attr-defined]
                 shot = _pixels(win.grab().toImage())

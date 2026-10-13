@@ -11,6 +11,8 @@ from PySide6.QtWidgets import QGroupBox, QHBoxLayout, QLabel, QMessageBox, QSlid
 
 from ...core import demo
 from ...errors import AoiError
+from .. import theme
+from ..widgets.flow import FlowLayout
 from .base import button, size_class
 
 if TYPE_CHECKING:
@@ -34,7 +36,7 @@ class DemoPanel(QGroupBox):
         self.state = QLabel()
         self.state.setWordWrap(True)
         lay.addWidget(self.state)
-        row = QHBoxLayout()
+        row = FlowLayout(gap=theme.ROW_GAP)  # on two lines where the column is narrow (#104)
         if not self.in_demo:
             folder = demo.demo_folder(root)
             loaded = demo.is_demo(folder)
@@ -53,7 +55,6 @@ class DemoPanel(QGroupBox):
             lay.addWidget(what)
             self.btn_load = button(self.tr("Load Demo Workspace"), slot=self._load)
             row.addWidget(self.btn_load)
-            row.addStretch(1)
         else:
             self.state.setText(self.tr("Demo workspace: open, in the folder {folder}.").format(folder=root.name))
             self.pace_label = QLabel()  # the pace on a line of its own over the slider, so the panel stays narrow
@@ -76,10 +77,8 @@ class DemoPanel(QGroupBox):
             self.btn_reset = button(self.tr("Reset Demo"), "danger", self._reset)  # red, last, never the default
             row.addWidget(self.btn_play)
             row.addWidget(self.btn_leave)
-            row.addStretch(1)
             lay.addLayout(row)
-            row = QHBoxLayout()  # the red button on a row of its own, last
-            row.addStretch(1)
+            row = FlowLayout(gap=theme.ROW_GAP, right=True)  # the red button on a row of its own, last
             row.addWidget(self.btn_reset)
         lay.addLayout(row)
 

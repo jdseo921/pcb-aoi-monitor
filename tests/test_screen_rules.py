@@ -34,6 +34,7 @@ from PySide6.QtWidgets import (
     QGraphicsView,
     QInputDialog,
     QLabel,
+    QLayout,
     QLineEdit,
     QListWidget,
     QListWidgetItem,
@@ -53,6 +54,7 @@ from aoi.ui.pages.base import button
 from aoi.ui.pages.compare import MODE_DIFF
 from aoi.ui.pages.profile3d import Stage2Card
 from aoi.ui.widgets.empty_state import EmptyState
+from aoi.ui.widgets.flow import FlowLayout
 from tests.conftest import engineer, listed
 from tests.screens.test_sizes_and_contrast import (
     MIN_RATIO,
@@ -82,8 +84,8 @@ CSS_COLOUR = re.compile(  # Qt takes "Background: Green" as it takes "background
 CSS_NAMES = {n.lower() for n in QColor.colorNames()}  # green, white, darkred, transparent, …
 DESTRUCTIVE = re.compile(r"^(Delete|Remove|Reset Demo|Clear)\b")  # Reset Filters only changes a view
 QT_OVERRIDES = re.compile(
-    r"Event$|^event$|^eventFilter$|[sS]izeHint$|^heightForWidth$|^paintEngine$"
-)  # Qt virtuals defined on purpose
+    r"Event$|^event$|^eventFilter$|[sS]izeHint$|^heightForWidth$|^paintEngine$|^setVisible$"
+)  # Qt virtuals defined on purpose (setVisible: an empty state gives its host room as it shows, #104)
 QT_INSTALLED = (Signal, SignalInstance, QMetaObject)
 NO_BOARD_MODEL_PAGES = ("Inspection", "Training", "AI Model Test", "Recipe Editor")  # Page.no_board_model()
 
@@ -266,11 +268,11 @@ def test_req_set_018_one_primary_button(qtbot: QtBot, trained_ctx: AppContext) -
 
 
 def _row_of(page: QWidget, b: QPushButton) -> list[QWidget]:
-    """The widgets of the box layout that holds `b`, in order."""
-    for lay in page.findChildren(QBoxLayout):
-        if lay.indexOf(b) >= 0:
+    """The widgets of the row that holds `b`, in order: a box layout, or a flow layout that wraps it (#104)."""
+    for lay in page.findChildren(QLayout):
+        if isinstance(lay, (QBoxLayout, FlowLayout)) and lay.indexOf(b) >= 0:
             return [w for w in (lay.itemAt(i).widget() for i in range(lay.count())) if w is not None]
-    raise AssertionError(f"{b.text()} is not in a box layout")
+    raise AssertionError(f"{b.text()} is not in a row")
 
 
 def test_req_set_018_destructive_buttons_red_not_default(qtbot: QtBot, trained_ctx: AppContext) -> None:

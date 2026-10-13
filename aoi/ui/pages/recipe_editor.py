@@ -22,7 +22,6 @@ from PySide6.QtWidgets import (
     QListWidget,
     QMessageBox,
     QSpinBox,
-    QSplitter,
     QTabWidget,
     QVBoxLayout,
     QWidget,
@@ -40,6 +39,7 @@ from ..errors import phrase_text
 from ..widgets.box_editor import RoiEditor
 from ..widgets.busy import BusyOverlay
 from ..widgets.empty_state import EmptyState
+from ..widgets.reflow import SideSplit
 from ..widgets.scale import CalibrationSheet, DefectSizeField
 from .base import QT_TRANSLATE_NOOP, Page, action_button, button, fill_table, make_table, scrolled
 from .compare import check_rows
@@ -87,7 +87,8 @@ class RecipeEditorPage(Page):
         self._revisions: list[dict[str, Any]] = []  # the Revisions tab's rows (`AppContext.recipe_revisions`)
         self._learned: tuple[tuple[bool, int, int], str] | None = None  # the setting Use Learned Values set, and why
 
-        split = QSplitter(Qt.Orientation.Horizontal)
+        # the panel as wide as its ROI table and form need, unwrapped, wherever the board keeps its least width (#104)
+        split = SideSplit(lambda side: side.sizeHint().width())
         left = QWidget()
         ll = QVBoxLayout(left)
         ll.setContentsMargins(0, 0, 0, 0)
@@ -155,6 +156,7 @@ class RecipeEditorPage(Page):
         rl.addWidget(self.roi_table, 1)
         g = QGroupBox(self.tr("Selected ROI"))
         f = QFormLayout(g)
+        f.setRowWrapPolicy(QFormLayout.RowWrapPolicy.WrapLongRows)  # a field under its label in a narrow tab (#104)
         self.r_name = QLineEdit()
         self.r_type = QComboBox()
         self._fill_types(self.r_type)
@@ -183,6 +185,7 @@ class RecipeEditorPage(Page):
         thr_tab = QWidget()
         thr_tab.setObjectName("page")
         tf = QFormLayout(thr_tab)
+        tf.setRowWrapPolicy(QFormLayout.RowWrapPolicy.WrapLongRows)  # a field under its label, never scrolled across
         # Learn From Labelled Boards… (REQ-TRN-018): the comparison's values chosen from the board model's labelled
         # boards and counted on boards held out, shown in the sheet under the tabs; it changes nothing stored
         self.act_learn = self.action(self.tr("Learn From Labelled Boards…"), "Ctrl+L", self.learn)
@@ -262,7 +265,9 @@ class RecipeEditorPage(Page):
         mand = QWidget()
         mand.setObjectName("page")
         ml = QVBoxLayout(mand)
-        ml.addWidget(QLabel(self.tr("The 10 mandatory AOI checks (defect classification table, section 4):")))
+        heading = QLabel(self.tr("The 10 mandatory AOI checks (defect classification table, section 4):"))
+        heading.setWordWrap(True)  # on two lines in a narrow tab (#104)
+        ml.addWidget(heading)
         self.mand_list = QListWidget()
         ml.addWidget(self.mand_list, 1)
         whole = QLabel(
@@ -325,7 +330,11 @@ class RecipeEditorPage(Page):
         rv.addLayout(b)
         split.addWidget(right)
         split.setSizes([1000, 640])
+        self.split = split
         self.root.addWidget(split, 1)
+
+    def restyle(self) -> None:
+        self.split.keep_side()  # at the width the theme's text size gives the panel
 
     def _fill_types(self, combo: QComboBox) -> None:
         for roi_type in ROI_TYPES:

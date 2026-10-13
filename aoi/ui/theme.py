@@ -20,8 +20,10 @@ since a rule for disabled items would also grey its headings.
 
 The light presenter theme (REQ-SET-008, frame sketch) is PRESENTER, a set of overrides of these tokens that `use()` puts
 in place while it is on: a #FAFAFA background, text 18 pt or more and the verdict at 48 pt, with the same verdict
-colours and shapes. There every text colour reads at 4.5:1 or more on its surface, bold and large text included, with
-black on the green, red and blue fills (Q53). The screens read the tokens when they draw, so `stylesheet()` and
+colours and shapes; where the app has under SMALL_H px of height or SMALL_W px of width, PRESENTER_SMALL's 16 pt text
+and 44 pt verdict over those (ADR 0019, put to Jay as a departure from REQ-SET-008's 18 pt). There every text colour
+reads at 4.5:1 or more on its surface, bold and large text included, with black on the green, red and blue fills
+(Q53). The screens read the tokens when they draw, so `stylesheet()` and
 anything drawn after the switch follow it; what a screen drew before is drawn again by MainWindow.apply_theme.
 """
 
@@ -82,11 +84,16 @@ NAV_W, HEADER_H, FIELD_W, CARD_W = 250, 64, 240, 720
 CELL_PAD = 6  # px of space each side of a table cell's and its heading's text, so no two cells' text runs together
 NAV_TEXT_X = 18  # a sidebar entry's text from its left edge, as QListWidget#nav::item's padding sets it
 IMAGE_MIN_W, IMAGE_MIN_H, PROGRESS_W = 320, 240, 360
+SIDE_W = 520  # Inspection's verdict panel beside the board; the board gives way in a narrower window (#104)
+# Compare's decision table with every column whole, as the demo's NG board fills it (893 px at 14 pt): the pair goes
+# beside it only where both fit, a width the window decides, not the record shown (#104, review of A7)
+DECISION_W = 900
 FILTER_MIN_W = 80  # a name filter's drop-down gives way to this in a narrow window ("All" stays whole; S51)
 MARK_D = 12  # a point picked on an image (Calibrate Scale…): a ring this many px across at every zoom
 WHY_H = 150  # Compare's "why" box at most, AOI-RCP-007's line in it included (S29)
 HANDLE_PX = 16  # a corner handle of the selected defect box on Training's label editor (labels sketch)
 SPACE, SPACE_S = 14, 8  # between blocks; inside a block
+ROW_GAP = 6  # between a row's controls: Qt's own spacing in a box layout, kept by the rows that wrap (#104)
 RADIUS, RADIUS_L = 6, 10
 MARK_W = 6  # the verdict-colour bar beside a verdict said next to a control, such as Compare's "Would be"
 SHARE_BAR_W = 320  # the longest bar of Logs & Export's Defect types tab, the type with the most defects (REQ-LOG-008)
@@ -103,6 +110,27 @@ PRESENTER = {
     "ACCENT_TEXT": "#1565c0",  # 4.9:1 on BG_RAISED, where ACCENT reads at 3.1:1
     "FONT_PT": 18, "FONT_LARGE_PT": 20, "FONT_H1_PT": 24, "FONT_STEP_PT": 26, "FONT_TILE_PT": 30,
     "FONT_VERDICT_PT": 48,  # Q2
+    # Inspection's verdict panel: its defect list's six columns whole with a type as long as "Missing Component" at
+    # 18 pt, where 520 px scrolled the list sideways and cut off X and Y; at 16 pt its summary takes four lines, not
+    # five, so its list, review and Compare fit over Start in a 768 px window
+    "SIDE_W": 640,
+    "DECISION_W": 1100,  # 1099 px at 18 pt
+}  # fmt: skip
+# The presenter theme in a window shorter than SMALL_H px or narrower than SMALL_W, as on a 1366 x 768 projector (#104,
+# ADR 0019): its text as large on the wall as the presenter theme's on a 1920 x 1080 one, or larger (16 pt is 2.8 % of
+# 768 lines, 18 pt 2.2 % of 1080, and 2.1 % of a 1280 x 1024 screen's 1024), and Compare's pair, verdict and decision
+# table, and Inspection's verdict panel, whole in the window. 1920 x 1080 gives a window of about 1000 px; at 18 pt
+# Compare's decision table needs a window 1389 px wide (docs/tests/2026-10-screen-sizes.md).
+SMALL_H, SMALL_W = 900, 1400
+PRESENTER_SMALL = {
+    "FONT_PT": 16, "FONT_LARGE_PT": 18, "FONT_H1_PT": 22, "FONT_STEP_PT": 24, "FONT_TILE_PT": 26,
+    "FONT_VERDICT_PT": 44,  # REQ-SET-004's verdict is 40 pt at least
+    "DECISION_W": 980,  # 975 px at 16 pt
+    # Compare's "why" box: beside the pair it asks for this and takes the height its column has, its reasons scrolling
+    # within it; under the table it is this at most. 110 px is four lines of DejaVu Sans at 16 pt, and three and a part
+    # of Windows' Segoe UI, whose lines are 4 px taller: asking for 150 px made the pair taller than its boards need,
+    # and in Segoe UI put the decision table's last row 14 px below a 1366 x 768 window
+    "WHY_H": 110,
 }  # fmt: skip
 
 _QSS = Template("""
@@ -208,15 +236,22 @@ def stylesheet(**overrides: object) -> str:
 QSS = stylesheet()
 
 
-def use(presenter: bool) -> None:
-    """Put the presenter theme's tokens in place (REQ-SET-008), or the production theme's back. The caller applies
-    `stylesheet()` and draws again what it drew with the tokens before (MainWindow.apply_theme)."""
-    globals().update({k: (PRESENTER if presenter else TOKENS)[k] for k in PRESENTER})
+def use(presenter: bool, small: bool = False) -> None:
+    """Put the presenter theme's tokens in place (REQ-SET-008), its sizes for a small window with `small` (#104), or
+    the production theme's back. The caller applies `stylesheet()` and draws again what it drew with the tokens before
+    (MainWindow.apply_theme)."""
+    tokens = {**TOKENS, **(PRESENTER if presenter else {}), **(PRESENTER_SMALL if presenter and small else {})}
+    globals().update({k: tokens[k] for k in PRESENTER.keys() | PRESENTER_SMALL.keys()})
 
 
 def presenter() -> bool:
     """Whether the presenter theme's tokens are in use."""
     return BG == PRESENTER["BG"]
+
+
+def small() -> bool:
+    """Whether the presenter theme's sizes for a small window are in use."""
+    return presenter() and FONT_PT == PRESENTER_SMALL["FONT_PT"]
 
 
 def verdict_styles() -> dict[str, Callable[[], str]]:
