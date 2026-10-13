@@ -2799,7 +2799,9 @@ class AppContext:
         UUID (Windows Credential Manager on a station) and never in the workspace, with its key id and check value in
         `dataset_stores`; audited as `store.create` (no key). Returns the store with `sheet`, the key as the recovery
         sheet prints it: the caller shows or prints it once, for the person who holds the data under the contract.
-        AOI-TRN-044, writing nothing, for no customer and for a customer whose store is not shredded."""
+        AOI-TRN-044, writing nothing, for no customer and for a customer whose store is not shredded; AOI-TRN-053 on a
+        station whose key store keeps keys in memory only (`credentials.forgets`: any system but Windows), whose key
+        would be gone when the app closes (B2 of the 2026-10 business-readiness brief; ADR 0021)."""
         name, why = customer.strip(), None
         if not name:
             why = QT_TRANSLATE_NOOP("Errors", "no customer is given")
@@ -2807,6 +2809,8 @@ class AppContext:
             why = QT_TRANSLATE_NOOP("Errors", "the customer has a store already, and has one at a time")
         if why is not None:
             raise AoiError("AOI-TRN-044", store=name or QT_TRANSLATE_NOOP("Errors", "a new customer"), reason=why)
+        if credentials.forgets(self.credentials):
+            raise AoiError("AOI-TRN-053", customer=name)
         key, key_id = crypto.new_key()
         store: dict[str, Any] = {"uuid": new_uuid(), "customer": name, "key_id": key_id.hex()}
         store |= {"check_value": crypto.check_value(key), "created_by": self.user_uuid, "created_at": now_utc()}
@@ -2814,6 +2818,71 @@ class AppContext:
         self.audit("store.create", "dataset_store", store["uuid"], None, {k: store[k] for k in ("customer", "key_id")})
         self._save_key(store, key)  # last before the commit: a key whose store is not stored would open nothing
         return {k: v for k, v in store.items() if k != "check_value"} | {"sheet": crypto.sheet(key)}
+
+    @requires("Admin", QT_TRANSLATE_NOOP("Errors", "Creating a board model in a customer's dataset store"))
+    @transactional
+    def create_customer_board_model(self, name: str, customer: str) -> dict[str, Any]:
+        """Create board model `name` in `customer`'s encrypted dataset store, in one transaction (B2 of the 2026-10
+        business-readiness brief, decision D2; ADR 0021): a customer with no store yet gets one first, as
+        `create_store` makes it, and the result's `sheet` is its recovery key, which the caller shows this once; a
+        customer with a store, the same name in any case, gets the board model in it, and `sheet` is None. The board
+        model is made as `ensure_board_model` makes it and put in the store as `move_in` puts one, with no file to
+        move; audited as `board_model.create`, `store.create` for a new store and `store.move_in`, all or none, and a
+        new store's key leaves the key store again if the rest is not stored. Returns `board_model`, `store` (as
+        `stores` lists it) and `sheet`. A board model of that name in that customer's store already is returned as it
+        is, as `ensure_board_model` leaves one that exists. Refused, writing nothing: no customer, and a board model of
+        that name in no store or in another customer's (AOI-TRN-044), a name the rule for a new board model refuses
+        (AOI-TRN-019, AOI-TRN-005), and a new store on a station that keeps keys in memory only (AOI-TRN-053)."""
+        board_model, name = name.strip(), customer.strip()
+        found = next(
+            (s for s in self.db.stores() if s["customer"].casefold() == name.casefold() and not s["shredded_at"]), None
+        )
+        held, why = self.db.board_model_store(board_model), None
+        if not name:
+            why = QT_TRANSLATE_NOOP("Errors", "no customer is given")
+        elif board_model in self.db.board_models() and held is None:
+            why = QT_TRANSLATE_NOOP("Errors", "board model {board} exists already; an Admin moves it in on Settings")
+            why = why.fill(board=board_model)
+        elif held is not None and (found is None or held["uuid"] != found["uuid"]):
+            why = QT_TRANSLATE_NOOP("Errors", "{board} is in the store of {other}, and a board model never leaves it")
+            why = why.fill(board=board_model, other=held["customer"])
+        if why is not None:
+            raise AoiError("AOI-TRN-044", store=name or QT_TRANSLATE_NOOP("Errors", "a new customer"), reason=why)
+        if held is not None:  # in this customer's store already: nothing to make
+            store = next(s for s in self.stores() if s["uuid"] == held["uuid"])
+            return {"board_model": board_model, "store": store, "sheet": None}
+        self.ensure_board_model(board_model)  # AOI-TRN-019, AOI-TRN-005 before a key is made
+        made = self.create_store(name) if found is None else None  # AOI-TRN-053 before a key is made
+        store_uuid = made["uuid"] if made is not None else found["uuid"] if found is not None else ""
+        try:
+            self.move_in(board_model, store_uuid)  # a new board model: its row and entry, no file
+        except BaseException:
+            if made is not None:  # the transaction is rolled back: no key is left for a store that is not stored
+                self.credentials.delete(credentials.STORE_PREFIX + made["uuid"])
+            raise
+        store = next(s for s in self.stores() if s["uuid"] == store_uuid)
+        return {"board_model": board_model, "store": store, "sheet": made["sheet"] if made is not None else None}
+
+    @requires("Admin", QT_TRANSLATE_NOOP("Errors", "Saving a dataset store's recovery key"))
+    def save_recovery_sheet(self, store_uuid: str, text: str, dest: str | Path) -> Path:
+        """Save to File… of a store's recovery key while it is shown, once (B2 of the 2026-10 business-readiness brief;
+        ADR 0021): `text`, the recovery sheet as the screen words it, key included, written to `dest` as UTF-8, whole
+        or not at all, and audited as `store.sheet_saved` with where it went, never the key. A file that cannot be
+        written is AOI-LOG-002 naming it, with `dest` left as it was, and so is one in the workspace, whose copies and
+        backups hold the files the key opens; AOI-TRN-044 for a store the workspace does not hold or that is
+        shredded."""
+        self._store(store_uuid)
+        if inside(Path(dest).resolve(), self.settings.root.resolve()):
+            why = QT_TRANSLATE_NOOP(
+                "Errors", "a recovery key is never saved in the workspace, whose copies hold the files it opens"
+            )
+            raise AoiError("AOI-LOG-002", path=str(dest), reason=why)
+        after = {"path": to_stored(Path(dest).absolute(), self.settings.root)}
+        with _export_write(dest), atomic.staged(dest, text.encode("utf-8")) as move_in:
+            with self.db.transaction():  # a refused entry never leaves the key in a file it does not name
+                self.audit("store.sheet_saved", "dataset_store", store_uuid, None, after)
+                move_in()
+        return Path(dest)
 
     @requires("Admin", QT_TRANSLATE_NOOP("Errors", "Restoring a dataset store's key"))
     @transactional

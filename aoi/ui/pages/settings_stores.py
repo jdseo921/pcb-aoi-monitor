@@ -1,21 +1,21 @@
 """Settings › Dataset stores (REQ-TRN-017, ADR 0010; Datasets stage 3 of 4): the customers' encrypted dataset stores,
 Admin only as the page is, and the steps on them, each an inline sheet in the table's place, never a dialog over the
-page. New Store… shows the new store's recovery sheet this once, with Print Sheet…; Restore Key… takes it back on a
-new PC or Windows account; Move Board Model In… encrypts a board model's files in a store, on the pool, and finishes a
-move that stopped; Shred Store…, red, names what it deletes and waits for the customer's name typed."""
+page. New Store… shows the new store's recovery key this once (`RecoveryKey`: Save to File…, Print… and a tick it waits
+for); Move Board Model In… encrypts a board model's files in a store, on the pool, and finishes a move that stopped. A
+customer's first board model makes its store in the New board model dialog (ADR 0021), so these are the plain flow's
+spare steps; the key ids, Restore Key…, which takes a key back on a new PC or Windows account, and Shred Store…, red,
+which names what it deletes and waits for the customer's name typed, show under the Advanced tick (B2 of the 2026-10
+business-readiness brief)."""
 
 from __future__ import annotations
 
-import html
 from typing import TYPE_CHECKING, Any
 
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QAction, QKeySequence, QTextDocument
-from PySide6.QtPrintSupport import QPrintDialog, QPrinter
+from PySide6.QtGui import QAction, QKeySequence
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
-    QDialog,
     QGroupBox,
     QHBoxLayout,
     QLabel,
@@ -29,12 +29,14 @@ from ...times import to_local
 from .. import theme
 from ..widgets.busy import BusyOverlay
 from ..widgets.flow import FlowLayout
-from .base import button, fill_table, make_table
+from .base import button, fill_table, make_table, size_class
+from .recovery_key import RecoveryKey
 
 if TYPE_CHECKING:
     from .settings import SettingsPage
 
 KEY_LETTERS = 52  # a recovery sheet's base32 letters and digits, in 13 groups of four (aoi/core/crypto.py, sheet)
+KEY_ID = 1  # the table's Key id column, shown under the Advanced tick
 
 
 def typed_letters(text: str) -> int:
@@ -45,14 +47,13 @@ def typed_letters(text: str) -> int:
 class StoresPanel(QGroupBox):
     """The stores, oldest first, and their steps. One sheet shows at a time, in the place of the table and the step
     buttons, its title naming the store, so the page fits a 1600 x 900 screen with any of them open; a sign-in closes
-    it, so the recovery sheet never stays on screen for the next user."""
+    it, so the recovery key never stays on screen for the next user, and turns Advanced off."""
 
     def __init__(self, page: SettingsPage) -> None:
         super().__init__()
         self.setTitle(self.tr("Dataset stores"))
         self.page, self.ctx = page, page.ctx
         self.rows: list[dict[str, Any]] = []
-        self.made: dict[str, str] | None = None  # the store New Store… made, with its sheet, until Close
         self.left: dict[str, int] = {}  # by store UUID: the files a shred stopped part-way left (store_contents)
         lay = QVBoxLayout(self)
         heads = [self.tr("Customer"), self.tr("Key id"), self.tr("Created"), self.tr("Board models")]
@@ -61,29 +62,37 @@ class StoresPanel(QGroupBox):
         lay.addWidget(self.table, 1)
         self.none = QLabel(
             self.tr(
-                "No dataset store yet. New Store… makes one for a customer; a board model moved into it is encrypted"
-                " under its key."
+                "No dataset store yet. A customer's first board model makes one: + New in the header, with the"
+                " customer named. New Store… makes one here; a board model moved into it is encrypted under its key."
             )
         )
         self.none.setObjectName("muted")
         self.none.setWordWrap(True)
         lay.addWidget(self.none)
-        # Two rows, a store's own steps under the ones that make or restore one: four in a row are wider than the
-        # column at the presenter theme's 18 pt (A4 of the 2026-10 business-readiness brief).
+        # The plain steps, then the Advanced tick and the steps it shows: the key ids, Restore Key… and Shred Store…,
+        # an Admin's still, out of the plain flow (B2 of the 2026-10 business-readiness brief). Two buttons a row: four
+        # are wider than the column at the presenter theme's 18 pt (A4 of the brief).
         self.steps = QWidget()
         rows = QVBoxLayout(self.steps)
         rows.setContentsMargins(0, 0, 0, 0)
         self.btn_new = button(self.tr("New Store…"), slot=self._new)
-        self.btn_restore = button(self.tr("Restore Key…"), slot=self._restore)
         self.btn_move = button(self.tr("Move Board Model In…"), slot=self._move)
+        self.advanced = size_class(QCheckBox(self.tr("Advanced: key ids, Restore Key… and Shred Store…")), "T")
+        self.advanced.toggled.connect(self._show_advanced)
+        self.btn_restore = button(self.tr("Restore Key…"), slot=self._restore)
         self.btn_shred = button(self.tr("Shred Store…"), "danger", self._shred)  # red, last, never the default
-        for row_buttons in ((self.btn_new, self.btn_restore), (self.btn_move,)):
-            row = FlowLayout(gap=theme.ROW_GAP, right=True)  # on two lines where the column is narrow (#104)
+        self.advanced_steps = QWidget()
+        plain, advanced = (FlowLayout(gap=theme.ROW_GAP, right=True) for _ in range(2))  # two lines if narrow (#104)
+        for row, row_buttons in (plain, (self.btn_new, self.btn_move)), (advanced, (self.btn_restore,)):
             for b in row_buttons:
                 row.addWidget(b)
             row.add_stretch()
-            rows.addLayout(row)
-        row.addWidget(self.btn_shred)
+        advanced.addWidget(self.btn_shred)  # last, apart from the others
+        advanced.setContentsMargins(0, 0, 0, 0)
+        self.advanced_steps.setLayout(advanced)
+        rows.addLayout(plain)
+        rows.addWidget(self.advanced)
+        rows.addWidget(self.advanced_steps)
         lay.addWidget(self.steps)
         self.sheets: list[QGroupBox] = []
         self._new_sheet(lay)
@@ -93,7 +102,13 @@ class StoresPanel(QGroupBox):
         self._shred_sheet(lay)
         self.busy_move = BusyOverlay(self, self.tr("Moving the files in…"))
         self.busy_shred = BusyOverlay(self, self.tr("Shredding the store…"))
+        self._show_advanced(False)
         self.close_sheet()
+
+    def _show_advanced(self, on: bool) -> None:
+        """The key ids, Restore Key… and Shred Store… shown or not."""
+        self.table.setColumnHidden(KEY_ID, not on)
+        self.advanced_steps.setVisible(on)
 
     def _sheet(self, lay: QVBoxLayout, title: str, esc: bool = True) -> tuple[QGroupBox, QVBoxLayout]:
         """An inline sheet in the table's place; Esc closes it unless `esc` is off."""
@@ -129,25 +144,14 @@ class StoresPanel(QGroupBox):
         self._buttons(sl, self.btn_create, button(self.tr("Cancel"), slot=self.close_sheet))
 
     def _recovery_sheet(self, lay: QVBoxLayout) -> None:
-        """The key as the recovery sheet prints it, shown this once: Close waits for the tick, and Esc does nothing."""
+        """The new store's key, shown this once: Close waits for the tick, which waits for Save to File… or Print…, and
+        Esc does nothing."""
         self.recovery_sheet, sl = self._sheet(lay, "", esc=False)
-        note = QLabel(
-            self.tr(
-                "Shown this once. Print it and keep it apart from the station: with it, Restore Key… opens the store on"
-                " another PC, and anyone who holds it and a copy of the files can read them."
-            )
-        )
-        note.setWordWrap(True)
-        self.recovery_ids = QLabel()
-        self.recovery_ids.setObjectName("muted")
-        self.recovery_key = QLabel()  # 13 groups of four on two lines; not selectable, so never on the clipboard
-        self.recovery_key.setObjectName("recoveryKey")
-        self.kept = QCheckBox(self.tr("I have printed it and will keep it apart from the station"))
-        self.kept.toggled.connect(self._sync)
-        for w in (note, self.recovery_ids, self.recovery_key, self.kept):
-            sl.addWidget(w)
+        self.recovery = RecoveryKey(self.ctx, self.page.error, lambda said: self.page.shell.status(said))
+        self.recovery.changed.connect(self._sync)
+        sl.addWidget(self.recovery)
         self.btn_done = button(self.tr("Close"), slot=self.close_sheet)
-        self._buttons(sl, button(self.tr("Print Sheet…"), slot=self._print), self.btn_done)
+        self._buttons(sl, self.btn_done)
 
     def _restore_sheet(self, lay: QVBoxLayout) -> None:
         self.restore_sheet, sl = self._sheet(lay, "")
@@ -251,7 +255,7 @@ class StoresPanel(QGroupBox):
         typed = self.confirm.text().strip()
         self.btn_shred_now.setEnabled(store is not None and typed == store["customer"] and idle)
         self.btn_create.setEnabled(bool(self.customer.text().strip()))
-        self.btn_done.setEnabled(self.kept.isChecked())
+        self.btn_done.setEnabled(self.recovery.kept.isChecked())
         n = typed_letters(self.typed.text())
         self.typed_count.setText(self.tr("{n} of {all} characters").format(n=n, all=KEY_LETTERS))
         self.btn_restore_key.setEnabled(n == KEY_LETTERS)
@@ -264,11 +268,8 @@ class StoresPanel(QGroupBox):
         focus.setFocus()
 
     def close_sheet(self) -> None:
-        """Back to the step buttons, the recovery sheet and anything typed cleared."""
-        self.made = None
-        self.recovery_key.clear()
-        self.recovery_ids.clear()
-        self.kept.setChecked(False)
+        """Back to the step buttons, the recovery key and anything typed cleared."""
+        self.recovery.clear()
         self.customer.clear()
         self.typed.clear()
         self.confirm.clear()
@@ -293,39 +294,9 @@ class StoresPanel(QGroupBox):
             return
         self.refresh()
         self.table.selectRow([s["uuid"] for s in self.rows].index(store["uuid"]))
-        self.made = {k: str(store[k]) for k in ("uuid", "customer", "key_id", "sheet", "created_at")}
-        title = self.tr("Recovery sheet for {customer}").format(customer=store["customer"])
-        self.recovery_sheet.setTitle(title)
-        self.recovery_ids.setText(self.tr("Store {uuid} · key id {key_id}").format(**self.made))
-        groups = store["sheet"].split()
-        self.recovery_key.setText(" ".join(groups[:7]) + "\n" + " ".join(groups[7:]))
-        self._open(self.recovery_sheet, self.kept)
-
-    def recovery_document(self, made: dict[str, str]) -> QTextDocument:
-        """The recovery sheet as Print Sheet… prints it: the customer, the store, the key id, the day and the key."""
-        groups = made["sheet"].split()
-        lines = [
-            f"<h2>{html.escape(self.recovery_sheet.title())}</h2>",
-            f"<p>{html.escape(self.recovery_ids.text())} · {html.escape(to_local(made['created_at']))}</p>",
-            f'<p style="font-family: monospace; font-size: 20pt">{" ".join(groups[:7])}<br>{" ".join(groups[7:])}</p>',
-            "<p>{}</p>".format(
-                html.escape(
-                    self.tr(
-                        "Keep this sheet locked away, apart from the station. With it, an Admin types the key into"
-                        " Restore Key… on another PC or Windows account. Anyone who holds it and a copy of the store's"
-                        " files can read them. Destroy it when the store is shredded."
-                    )
-                )
-            ),
-        ]
-        doc = QTextDocument()
-        doc.setHtml("".join(lines))
-        return doc
-
-    def _print(self) -> None:
-        printer = QPrinter(QPrinter.PrinterMode.HighResolution)
-        if self.made is not None and QPrintDialog(printer, self).exec() == QDialog.DialogCode.Accepted:
-            self.recovery_document(self.made).print_(printer)
+        self.recovery.show_key(store)
+        self.recovery_sheet.setTitle(self.recovery.title())
+        self._open(self.recovery_sheet, self.recovery.btn_save)
 
     def _restore(self) -> None:
         store = self.picked()

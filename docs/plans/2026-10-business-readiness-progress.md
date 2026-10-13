@@ -16,11 +16,43 @@ and the pull request that delivered it, and where a PR names a D or F item it is
 | A4 (D7 part, F10) | Reset Demo inside the presenter theme in three clicks; the Admin keeps Settings | #400 | Merged 2026-10-12 |
 | A5 (F8) | Demo-path messages in plain words, details behind Show Details | #401 | Merged 2026-10-12 |
 | A6 (F12) | A second start brings the open copy to the front, else one sentence and one button | #402 | Merged 2026-10-12 |
-| A7 (#104, Charter principle 1) | Every page the demo scripts visit fits the presenter theme at 1366 × 768, its verdict area unscrolled | #403 | Open: the 16 pt size waits for Jay |
-| A8 (F14) | Click the 45-minute script; the 5-minute one at 1366 × 768; a crash-recovery test | #404, stacked on A7 | Open |
-| A7 follow-up (#104) | The presenter theme fills the whole screen (Jay's choice of 2026-10-13) | #405, stacked on A8 | Open |
+| A7 (#104, Charter principle 1) | Every page the demo scripts visit fits the presenter theme at 1366 × 768, its verdict area unscrolled | #403 | Merged 2026-10-13 |
+| A8 (F14) | Click the 45-minute script; the 5-minute one at 1366 × 768; a crash-recovery test | #404 | Merged 2026-10-13 |
+| A7 follow-up (#104) | The presenter theme fills the whole screen (Jay's choice of 2026-10-13) | #405 | Merged 2026-10-13 |
 
-The Phase A report follows A8, at the end of this file.
+The Phase A report, written before #403 to #405 were merged, is at the end of this file, after Phase B.
+
+## Phase B
+
+Jay's message of 2026-10-13 06:06 UTC asked for B1 and B2 of the brief, one stacked pull request each, and named
+`docs/adr/0014-stage1-for-one-person.md` and the brief as the approval for the MUST requirements they change. Neither
+file is in the repository, and the repository's ADR 0014 is the master samples record, so B1's record is ADR 0020 and
+B2's is ADR 0021; each says that Jay's record wins where it decides otherwise.
+
+| Item | What it asked | Pull request | State |
+|---|---|---|---|
+| B1 (D1, F1, F2) | One person freezes, splits and locks a Trial version and trains from it, with no second-user label check and no agreement check; Trial is said wherever the version or its AI model is named; the go-live gate and the customer validation report refuse it, with Start the Checks | #B1PR | Open, for Jay's review |
+| B2 (D2, F2, F13) | A customer's first board model makes the customer's encrypted store in the same dialog; the recovery key is shown once, with Save to File…, Print… and a tick that cannot be skipped; key ids, Restore Key… and Shred Store… move under an Admin's Advanced tick | #B2PR, stacked on #B1PR | Open, for Jay's review |
+
+Choices made in Phase B, each recorded in its ADR:
+
+- **Memory-only keys (B2): refused.** On a system whose key store keeps keys in memory only (any but Windows), a
+  customer's store is not made (AOI-TRN-053, which says why and that nothing was made), and the install guide says so
+  too. The refusal reads a flag that only the station's own memory key store sets, so the tests on Linux CI, which keep
+  their keys, are unaffected (ADR 0021, decision 4).
+- **A Trial AI model never goes live (B1).** Jay's message says the go-live gate refuses a Trial version. This is the
+  recommended option ("Never live") of the card put to Jay on 2026-10-13 06:15 UTC, not yet answered; the others were
+  "Live, marked Trial" and "Live until Validated" (ADR 0020, decision 4). The first AI model trained from a Validated
+  version after Trial ones goes live, as a board model's first does (ADR 0018).
+- `tests/regression/expected.json` is byte-identical in both pull requests: no verdict changes.
+
+Still open after Phase B:
+
+1. **Jay decides** the "Never live" card, and reviews and merges #B1PR, then #B2PR (CLAUDE.md rule 6).
+2. **Jay adds** the brief and the "Stage 1 for one person" ADR to the repository, under a free ADR number, and writes
+   D1's exception into the Engineering standard's text about the label and agreement checks.
+3. **People:** the Korean strings both items add are drafts, many unfinished in `aoi_ko.ts`, for a native speaker who
+   knows SMT terms; Save to File… and Print… of a recovery key were not tried on the Windows station or a real printer.
 
 ## Phase A report, 2026-10-12
 

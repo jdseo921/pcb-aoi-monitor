@@ -262,7 +262,7 @@ def _check_widget(where: str, win: QWidget, shot: np.ndarray, w: QWidget, seen: 
         if w.width() < needed:
             out.append(f"{name}: {w.width()} px wide; its text needs {needed} px")
     if isinstance(w, QLabel) and w.text() and not w.wordWrap() and "<" not in w.text():  # plain text clips
-        needed = w.fontMetrics().horizontalAdvance(w.text()) + 2 * w.margin()
+        needed = max(map(w.fontMetrics().horizontalAdvance, w.text().split("\n"))) + 2 * w.margin()  # widest line
         if w.width() < needed:
             out.append(f"{name}: {w.width()} px wide; its text needs {needed} px")
     if _covered(win, w):
@@ -605,6 +605,46 @@ def test_req_set_004_sizes_and_contrast_on_every_page(
     enough |= {"calendar_arrows": 24, "field_menus": 10, "menu_entries": 72 + 10 * 7}  # 12 months; 7 entries a field
     # (a field's menu per page and role with a field: Compare's are in Try other thresholds, hidden for an Operator)
     assert all(seen[k] >= n for k, n in enough.items()), seen
+    assert not findings, f"{len(findings)} findings:\n" + "\n".join(sorted(set(findings)))
+
+
+def test_req_trn_017_new_board_model_dialog_sizes_and_contrast(
+    screens: tuple[AppContext, Path], qtbot: QtBot, qapp: QApplication
+) -> None:
+    """The New board model dialog (ADR 0021), which no page walk reaches: its form as the Admin and the Engineer see it,
+    the Customer list greyed for the Engineer, and its recovery key step as the Admin sees it, in the screenshots'
+    state. Every visible widget passes the font, size and contrast rules above, the Customer list's entries too, and
+    every control marked T, T+ or F is held to its size class."""
+    ctx, _ = screens
+    findings: list[str] = []
+    seen: Counter = Counter()
+    need = {"T": theme.TARGET_H, "T+": theme.RUN_CONTROL_H, "F": theme.FIELD_H}  # size_class() in pages/base.py
+    with _shell(ctx, qtbot, qapp) as win:
+        for role, step in [("admin", "form"), ("engineer", "form"), ("admin", "key")]:
+            win.set_user(role)
+            dialog = render_screens.new_board_model_dialog(win, step)
+            qtbot.addWidget(dialog)
+            dialog.show()
+            qtbot.waitExposed(dialog)
+            render_screens.settle()
+            where = f"New board model {step} ({role})"
+            assert (dialog.steps.currentWidget() is dialog.key_step) == (step == "key"), where
+            assert dialog.customer.isEnabled() == (role == "admin"), where
+            shot = _pixels(dialog.grab().toImage())
+            for w in dialog.findChildren(QWidget):
+                if w.isVisible() and w.width() > 0:
+                    findings += _check_widget(where, dialog, shot, w, seen)
+                    if (cls := w.property("sizeClass")) in need:
+                        seen["targets"] += 1
+                        if w.height() < need[cls]:
+                            findings.append(f"{where}: {type(w).__name__} '{_text(w)}' is {w.height()} px tall")
+            if dialog.customer.isVisible() and dialog.customer.isEnabled():
+                findings += check_popup(where, dialog.customer, seen)
+            dialog.recovery.clear()
+            dialog.steps.setCurrentWidget(dialog.form)
+            dialog.close()
+        win.set_user("admin")
+    assert seen["text"] >= 15 and seen["buttons"] >= 6 and seen["targets"] >= 8 and seen["popup_rows"] >= 1, seen
     assert not findings, f"{len(findings)} findings:\n" + "\n".join(sorted(set(findings)))
 
 

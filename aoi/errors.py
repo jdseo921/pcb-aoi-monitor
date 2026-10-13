@@ -997,6 +997,21 @@ CODES: dict[str, ErrorCode] = {
             ),
         ),
         ErrorCode(
+            "AOI-TRN-053",
+            QT_TRANSLATE_NOOP("Errors", "No dataset store on this system"),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "No dataset store was made for {customer}: this system keeps a store's key in memory only, so the key"
+                " would be gone when the app closes and the store's files would open again only from its recovery"
+                " sheet.",
+            ),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Make customers' dataset stores on the Windows station, whose Credential Manager keeps each key on the"
+                " PC. This system serves development and testing only. Nothing was made.",
+            ),
+        ),
+        ErrorCode(
             "AOI-TST-001",
             QT_TRANSLATE_NOOP("Errors", "AI model, recipe, scale or Golden board changed since the run"),
             QT_TRANSLATE_NOOP(

@@ -890,12 +890,12 @@
     </message>
     <message>
         <location line="+190"/>
-        <location line="+2219"/>
+        <location line="+2288"/>
         <source>(none)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-2188"/>
+        <location line="-2257"/>
         <source>Saving a recipe</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1304,22 +1304,44 @@
         <translation>고객의 데이터셋 저장소 만들기</translation>
     </message>
     <message>
-        <location line="+10"/>
+        <location line="+12"/>
+        <location line="+35"/>
         <source>no customer is given</source>
         <translation>고객이 지정되지 않았습니다</translation>
     </message>
     <message>
-        <location line="+2"/>
+        <location line="-33"/>
         <source>the customer has a store already, and has one at a time</source>
         <translation>고객에게 이미 저장소가 있으며, 고객당 한 번에 하나만 둘 수 있습니다</translation>
     </message>
     <message>
         <location line="+2"/>
+        <location line="+39"/>
         <source>a new customer</source>
         <translation>새 고객</translation>
     </message>
     <message>
-        <location line="+9"/>
+        <location line="-28"/>
+        <source>Creating a board model in a customer&apos;s dataset store</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+22"/>
+        <source>board model {board} exists already; an Admin moves it in on Settings</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+22"/>
+        <source>Saving a dataset store&apos;s recovery key</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+10"/>
+        <source>a recovery key is never saved in the workspace, whose copies hold the files it opens</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+11"/>
         <source>Restoring a dataset store&apos;s key</source>
         <translation>데이터셋 저장소의 키 복원</translation>
     </message>
@@ -1339,7 +1361,8 @@
         <translation>작업 공간에 보드 모델 {board}이(가) 없습니다</translation>
     </message>
     <message>
-        <location line="+2"/>
+        <location line="-77"/>
+        <location line="+79"/>
         <source>{board} is in the store of {other}, and a board model never leaves it</source>
         <translation>{board}은(는) {other}의 저장소에 있으며, 보드 모델은 저장소를 떠나지 않습니다</translation>
     </message>
@@ -1405,20 +1428,20 @@
         <translation>이 뷰에 OK 또는 NG로 라벨링된 이미지가 없습니다</translation>
     </message>
     <message>
-        <location line="-394"/>
-        <location line="+405"/>
+        <location line="-463"/>
+        <location line="+474"/>
         <source>its images are in no customer&apos;s dataset store; an Admin moves them in</source>
         <translation>이미지가 어느 고객의 데이터셋 저장소에도 없습니다. 관리자가 옮겨 넣습니다</translation>
     </message>
     <message>
-        <location line="-403"/>
-        <location line="+405"/>
+        <location line="-472"/>
+        <location line="+474"/>
         <source>its dataset store was shredded on {date}</source>
         <translation>이 데이터셋 저장소는 {date}에 파기되었습니다</translation>
     </message>
     <message>
-        <location line="-402"/>
-        <location line="+405"/>
+        <location line="-471"/>
+        <location line="+474"/>
         <source>its images are in the dataset store of {store}, not of {customer}</source>
         <translation>이미지가 {customer}이(가) 아니라 {store}의 데이터셋 저장소에 있습니다</translation>
     </message>
@@ -1443,7 +1466,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-3171"/>
+        <location line="-3240"/>
         <source>no earlier version of this board model was active</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1493,7 +1516,7 @@
         <translation>{file}이(가) 버전이 동결된 뒤에 바뀌었습니다</translation>
     </message>
     <message>
-        <location line="+130"/>
+        <location line="+199"/>
         <source>{count} file(s) would not go, {file} first ({reason}); shred it again</source>
         <translation>파일 {count}개가 삭제되지 않았습니다. 첫 파일: {file} ({reason}). 다시 파기하십시오</translation>
     </message>
@@ -1570,14 +1593,14 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-3399"/>
+        <location line="-3468"/>
         <source>unhandled</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../ui/demo_workspace.py" line="+31"/>
         <location filename="../ui/errors.py" line="+163"/>
-        <location filename="../ui/main_window.py" line="+998"/>
+        <location filename="../ui/main_window.py" line="+1002"/>
         <source>start-up</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2820,6 +2843,21 @@
     </message>
     <message>
         <location line="+14"/>
+        <source>No dataset store on this system</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>No dataset store was made for {customer}: this system keeps a store&apos;s key in memory only, so the key would be gone when the app closes and the store&apos;s files would open again only from its recovery sheet.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+6"/>
+        <source>Make customers&apos; dataset stores on the Windows station, whose Credential Manager keeps each key on the PC. This system serves development and testing only. Nothing was made.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+8"/>
         <source>AI model, recipe, scale or Golden board changed since the run</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3395,7 +3433,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1277"/>
+        <location line="-1292"/>
         <source>Board judged NG</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3505,7 +3543,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+56"/>
+        <location line="+71"/>
         <source>Start the Checks on Training: a second person checks the labels and two people run an agreement check, then freeze a Validated version, train from it and test again. The run and its CSV are kept.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3817,7 +3855,7 @@
     </message>
     <message>
         <location line="+1"/>
-        <location filename="../core/services.py" line="+2679"/>
+        <location filename="../core/services.py" line="+2748"/>
         <source>a file of it could not be read: {reason}</source>
         <translation>그 파일 하나를 읽을 수 없습니다: {reason}</translation>
     </message>
@@ -4142,7 +4180,7 @@
 <context>
     <name>HomePage</name>
     <message>
-        <location filename="../ui/main_window.py" line="-859"/>
+        <location filename="../ui/main_window.py" line="-861"/>
         <source>Upload samples</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5527,22 +5565,17 @@
         <translation>학습 {percent} % · {left}</translation>
     </message>
     <message>
-        <location line="+18"/>
-        <source>New board model</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+0"/>
-        <source>Board model name (e.g. TBOX-A1 Rev2)</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+9"/>
+        <location line="+26"/>
         <source>Board model {name} is already selected.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+17"/>
+        <location line="+4"/>
+        <source>Board model {name} is in the encrypted dataset store of {customer}.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+16"/>
         <source>{user} ({role})</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6214,9 +6247,72 @@
     </message>
 </context>
 <context>
+    <name>NewBoardModelDialog</name>
+    <message>
+        <location filename="../ui/board_model_dialog.py" line="+34"/>
+        <source>New board model</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+16"/>
+        <source>Board model name (e.g. TBOX-A1 Rev2)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>Customer</source>
+        <translation type="unfinished">고객</translation>
+    </message>
+    <message>
+        <location line="+9"/>
+        <source>None: an in-house or demo board model</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+10"/>
+        <source>Create</source>
+        <translation type="unfinished">만들기</translation>
+    </message>
+    <message>
+        <location line="+4"/>
+        <source>Cancel</source>
+        <translation type="unfinished">취소</translation>
+    </message>
+    <message>
+        <location line="+16"/>
+        <source>Done</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+22"/>
+        <source>Its images stay unencrypted in the workspace, as for in-house and demo boards. {refusal} An Admin makes a customer&apos;s board model, in the customer&apos;s encrypted dataset store.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>No customer: its images stay unencrypted in the workspace, as for in-house and demo boards. Name the customer for a customer&apos;s boards, which go in the customer&apos;s encrypted dataset store.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+4"/>
+        <source>It goes in the encrypted dataset store of {customer}.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>{customer} has no dataset store yet: Create makes one, puts the board model in it and shows its recovery key once, to save or print and keep apart from the station.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+32"/>
+        <source>Board model {board} is made, in the new encrypted dataset store of {customer}. Its recovery key opens the store on another PC: this station keeps the key, but a new PC or a reinstalled Windows needs this copy.</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
     <name>Page</name>
     <message>
-        <location filename="../ui/main_window.py" line="-816"/>
+        <location filename="../ui/main_window.py" line="-818"/>
         <source>Home</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6926,6 +7022,64 @@
     </message>
 </context>
 <context>
+    <name>RecoveryKey</name>
+    <message>
+        <location filename="../ui/pages/recovery_key.py" line="+41"/>
+        <source>Shown this once. Save it to a USB drive or print it, and keep it apart from the station: with it, an Admin opens the store on another PC, and anyone who holds it and a copy of the files can read them.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+10"/>
+        <source>Save to File…</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Print…</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+6"/>
+        <source>I have saved or printed the key and will keep it apart from the station</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+10"/>
+        <source>Recovery key for {customer}</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>Store {uuid} · key id {key_id}</source>
+        <translation type="unfinished">저장소 {uuid} · 키 ID {key_id}</translation>
+    </message>
+    <message>
+        <location line="+15"/>
+        <source>Save the key to a file or print it first</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+9"/>
+        <source>Keep this sheet locked away, apart from the station. With it, an Admin types the key into Restore Key… on another PC or Windows account. Anyone who holds it and a copy of the store&apos;s files can read them. Destroy it when the store is shredded.</source>
+        <translation type="unfinished">이 시트는 스테이션과 떨어진 곳에 잠가 보관하십시오. 관리자는 이 시트로 다른 PC나 Windows 계정의 키 복원…에 키를 입력합니다. 이 시트와 저장소 파일의 사본을 가진 사람은 누구나 파일을 읽을 수 있습니다. 저장소를 파기하면 이 시트도 폐기하십시오.</translation>
+    </message>
+    <message>
+        <location line="+34"/>
+        <source>Save Recovery Key</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+0"/>
+        <source>Text (*.txt)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+9"/>
+        <source>Saved the recovery key to {file}</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
     <name>Review</name>
     <message>
         <location filename="../ui/pages/review.py" line="+24"/>
@@ -7540,18 +7694,18 @@
 <context>
     <name>StoresPanel</name>
     <message>
-        <location filename="../ui/pages/settings_stores.py" line="+52"/>
+        <location filename="../ui/pages/settings_stores.py" line="+54"/>
         <source>Dataset stores</source>
         <translation>데이터셋 저장소</translation>
     </message>
     <message>
-        <location line="+6"/>
-        <location line="+64"/>
+        <location line="+5"/>
+        <location line="+78"/>
         <source>Customer</source>
         <translation>고객</translation>
     </message>
     <message>
-        <location line="-64"/>
+        <location line="-78"/>
         <source>Key id</source>
         <translation>키 ID</translation>
     </message>
@@ -7571,32 +7725,37 @@
         <translation>파기됨</translation>
     </message>
     <message>
-        <location line="+5"/>
-        <source>No dataset store yet. New Store… makes one for a customer; a board model moved into it is encrypted under its key.</source>
-        <translation>아직 데이터셋 저장소가 없습니다. 새 저장소…로 고객의 저장소를 만들면, 그 저장소로 옮긴 보드 모델은 저장소의 키로 암호화됩니다.</translation>
-    </message>
-    <message>
-        <location line="+12"/>
+        <location line="+18"/>
         <source>New Store…</source>
         <translation>새 저장소…</translation>
     </message>
     <message>
-        <location line="+1"/>
+        <location line="+4"/>
         <source>Restore Key…</source>
         <translation>키 복원…</translation>
     </message>
     <message>
-        <location line="+1"/>
+        <location line="-3"/>
         <source>Move Board Model In…</source>
         <translation>보드 모델 옮기기…</translation>
     </message>
     <message>
-        <location line="+1"/>
+        <location line="-14"/>
+        <source>No dataset store yet. A customer&apos;s first board model makes one: + New in the header, with the customer named. New Store… makes one here; a board model moved into it is encrypted under its key.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+15"/>
+        <source>Advanced: key ids, Restore Key… and Shred Store…</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+3"/>
         <source>Shred Store…</source>
         <translation>저장소 파기…</translation>
     </message>
     <message>
-        <location line="+15"/>
+        <location line="+20"/>
         <source>Moving the files in…</source>
         <translation>파일을 옮기는 중…</translation>
     </message>
@@ -7606,7 +7765,7 @@
         <translation>저장소를 파기하는 중…</translation>
     </message>
     <message>
-        <location line="+25"/>
+        <location line="+31"/>
         <source>New dataset store</source>
         <translation>새 데이터셋 저장소</translation>
     </message>
@@ -7617,34 +7776,19 @@
     </message>
     <message>
         <location line="+1"/>
-        <location line="+40"/>
+        <location line="+29"/>
         <location line="+19"/>
         <location line="+14"/>
         <source>Cancel</source>
         <translation type="unfinished">취소</translation>
     </message>
     <message>
-        <location line="-66"/>
-        <source>Shown this once. Print it and keep it apart from the station: with it, Restore Key… opens the store on another PC, and anyone who holds it and a copy of the files can read them.</source>
-        <translation>이번 한 번만 표시됩니다. 인쇄하여 스테이션과 떨어진 곳에 보관하십시오. 이 시트로 키 복원…을 하면 다른 PC에서 저장소를 열 수 있으며, 이 시트와 파일의 사본을 가진 사람은 누구나 파일을 읽을 수 있습니다.</translation>
-    </message>
-    <message>
-        <location line="+9"/>
-        <source>I have printed it and will keep it apart from the station</source>
-        <translation>인쇄했으며 스테이션과 떨어진 곳에 보관하겠습니다</translation>
-    </message>
-    <message>
-        <location line="+4"/>
+        <location line="-53"/>
         <source>Close</source>
         <translation>닫기</translation>
     </message>
     <message>
-        <location line="+1"/>
-        <source>Print Sheet…</source>
-        <translation>시트 인쇄…</translation>
-    </message>
-    <message>
-        <location line="+6"/>
+        <location line="+7"/>
         <source>Type the 13 groups of four from its recovery sheet, in any case, with or without spaces or hyphens.</source>
         <translation>복구 시트의 네 글자씩 13개 그룹을 입력하십시오. 대소문자, 공백, 하이픈은 상관없습니다.</translation>
     </message>
@@ -7705,22 +7849,7 @@
         <translation>{all}자 중 {n}자</translation>
     </message>
     <message>
-        <location line="+41"/>
-        <source>Recovery sheet for {customer}</source>
-        <translation>{customer}의 복구 시트</translation>
-    </message>
-    <message>
-        <location line="+2"/>
-        <source>Store {uuid} · key id {key_id}</source>
-        <translation>저장소 {uuid} · 키 ID {key_id}</translation>
-    </message>
-    <message>
-        <location line="+15"/>
-        <source>Keep this sheet locked away, apart from the station. With it, an Admin types the key into Restore Key… on another PC or Windows account. Anyone who holds it and a copy of the store&apos;s files can read them. Destroy it when the store is shredded.</source>
-        <translation>이 시트는 스테이션과 떨어진 곳에 잠가 보관하십시오. 관리자는 이 시트로 다른 PC나 Windows 계정의 키 복원…에 키를 입력합니다. 이 시트와 저장소 파일의 사본을 가진 사람은 누구나 파일을 읽을 수 있습니다. 저장소를 파기하면 이 시트도 폐기하십시오.</translation>
-    </message>
-    <message>
-        <location line="+20"/>
+        <location line="+45"/>
         <source>Restore the key for {customer}</source>
         <translation>{customer}의 키 복원</translation>
     </message>
@@ -7851,7 +7980,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/services.py" line="-2756"/>
+        <location filename="../core/services.py" line="-2825"/>
         <source>Aligning {count} images to the reference board</source>
         <translation type="unfinished"></translation>
     </message>

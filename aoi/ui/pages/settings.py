@@ -222,7 +222,8 @@ class SettingsPage(Page):
         self.stores.sync()
 
     def on_user_changed(self) -> None:
-        self.stores.close_sheet()  # the recovery sheet, or a key half typed, never stays for the next user
+        self.stores.close_sheet()  # the recovery key, or a key half typed, never stays for the next user
+        self.stores.advanced.setChecked(False)  # nor the advanced steps shown for the last
 
     def on_show(self) -> None:
         self.presenter.setChecked(self.ctx.settings.presenter_theme)

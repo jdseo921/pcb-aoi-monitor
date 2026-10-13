@@ -62,7 +62,7 @@ SETTLE_MS = 40  # past the 20 ms after which Qt resizes a list to its contents (
 SETTLE_PASSES = 100  # event loop passes a page may take to lay itself out before a grab
 PAGE_VIEWS = {  # <page>-<view>-<role>
     "Training": ("datasets", "freeze", "split", "blind"),
-    "Settings": ("restore", "move-in", "shred"),
+    "Settings": ("advanced", "restore", "move-in", "shred"),
     "Logs & Export": ("types",),
     "AI Model Test": ("targets",),
 }
@@ -86,6 +86,7 @@ PRESENTER_SMALL_SHOTS = {  # every page the demo scripts open (tools/screen_size
     "presenter-1366-logs-export-admin": ("Logs & Export", "admin"),
     "presenter-1366-settings-admin": ("Settings", "admin"),
 }
+NEW_BOARD_MODEL_SHOTS = {"new-board-model-admin": "form", "new-board-model-key-admin": "key"}  # dialogs (ADR 0021)
 FIXED_WORKSPACE = "C:/AOI_Workspace"  # what the Settings page shows instead of the temporary folder
 TEST_FONT = '"DejaVu Sans"'  # the font the approved images are drawn with (Linux)
 DATASET_OK, DATASET_NG, DATASET_SEED = 30, 14, 7  # as tests/conftest.py
@@ -389,8 +390,9 @@ def show_view(win: MainWindow, title: str, view: str | None) -> None:
     panel on its first image, the board model's images standing in for a calibration set of 100 (the workspace holds
     fewer): Stop closes it, the status line saying so until the next page clears it, and with None the focus is
     cleared, as Training opens with none, so the pages after render alike.
-    Settings' are Restore Key…, Move Board Model In… and Shred Store… on the store the screenshot workspace's version
-    is in. Logs & Export's is its Defect types tab, counted on the records the filter lists (REQ-LOG-008). AI Model
+    Settings' are its Advanced tick ticked, then Restore Key…, Move Board Model In… and Shred Store… on the store the
+    screenshot workspace's version is in, the first and last under that tick (ADR 0021). Logs & Export's is its Defect
+    types tab, counted on the records the filter lists (REQ-LOG-008). AI Model
     Test's is Agreed Targets…' sheet with who agreed them typed, nothing saved (REQ-TST-008)."""
     from PySide6.QtWidgets import QApplication
 
@@ -427,7 +429,8 @@ def show_view(win: MainWindow, title: str, view: str | None) -> None:
     if title == "Settings":
         page.stores.close_sheet()
         steps = {"restore": page.stores.btn_restore, "move-in": page.stores.btn_move, "shred": page.stores.btn_shred}
-        if view is not None:
+        page.stores.advanced.setChecked(view in ("advanced", "restore", "shred"))
+        if view in steps:
             steps[view].click()
         elif (focus := QApplication.focusWidget()) is not None:
             focus.clearFocus()
@@ -466,6 +469,47 @@ def render_stored(win: Any, ctx: AppContext, out: Path) -> dict[str, Path]:
             assert win.grab().save(str(files[name])), files[name]
     finally:
         golden.write_bytes(kept)
+    return files
+
+
+NEW_BOARD_MODEL = "TBOX-A2"  # the board model the New board model dialog's screenshots type, made by none of them
+NEW_CUSTOMER = "Beta Boards"
+
+
+def new_board_model_dialog(win: Any, step: str) -> Any:
+    """The New board model dialog as an Admin fills it for a new customer's first board model (ADR 0021): the form, or
+    the recovery key step that Create would show, with a key, store and key id pinned, so nothing is made."""
+    from aoi.core import crypto
+    from aoi.ui.board_model_dialog import NewBoardModelDialog
+
+    dialog = NewBoardModelDialog(win)
+    dialog.board.setText(NEW_BOARD_MODEL)
+    dialog.customer.setCurrentText(NEW_CUSTOMER)
+    if step == "key":
+        dialog.made = NEW_BOARD_MODEL
+        store = {"uuid": "00000000-0000-4000-8000-0000000000b2", "customer": NEW_CUSTOMER}
+        store |= {"key_id": "5ca1ab1e" + "0" * 24}
+        dialog.show_key(store | {"sheet": crypto.sheet(bytes(range(32))), "created_at": FIXED_TIME})
+    return dialog
+
+
+def render_dialogs(win: Any, out: Path) -> dict[str, Path]:
+    """The New board model dialog's form and its recovery key step (NEW_BOARD_MODEL_SHOTS), as the Admin opens it."""
+    files = {}
+    win.set_user("admin")
+    for name, step in NEW_BOARD_MODEL_SHOTS.items():
+        dialog = new_board_model_dialog(win, step)
+        dialog.show()
+        settle()
+        if (focus := dialog.focusWidget()) is not None:
+            focus.clearFocus()  # no caret, which blinks, in the image
+        settle()
+        files[name] = out / f"{name}.png"
+        assert dialog.grab().save(str(files[name])), files[name]
+        dialog.recovery.clear()
+        dialog.steps.setCurrentWidget(dialog.form)
+        dialog.close()
+        dialog.deleteLater()
     return files
 
 
@@ -537,6 +581,7 @@ def render_pages(
             show_view(win, title, None)
     files.update(render_stored(win, ctx, out))
     files.update(render_presenter(win, dataset, out))
+    files.update(render_dialogs(win, out))
     win.close()
     return files
 

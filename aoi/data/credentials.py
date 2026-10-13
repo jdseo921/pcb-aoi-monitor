@@ -2,8 +2,9 @@
 REQ-SET-010's license key and Stage 4's MES token later. On Windows each is a generic credential in Windows Credential
 Manager, saved for this computer only (CRED_PERSIST_LOCAL_MACHINE, so it never roams with a profile) and protected by
 DPAPI under the Windows account the app runs as; on any other system, which runs only CI and development, a store in
-memory stands behind the same three calls and forgets everything when the process ends. No secret is ever written to
-the workspace, settings.json or a log."""
+memory stands behind the same three calls and forgets everything when the process ends, so no dataset store is made
+there (`forgets`; B2 of the 2026-10 business-readiness brief). No secret is ever written to the workspace,
+settings.json or a log."""
 
 from __future__ import annotations
 
@@ -22,11 +23,15 @@ class Credentials(Protocol):
 
 
 class MemoryCredentials:
-    """Secrets in this process's memory: for tests, CI and development on a system without Credential Manager."""
+    """Secrets in this process's memory: for tests, CI and development on a system without Credential Manager. With
+    `forgets`, it is a station's own key store (MEMORY, on any system but Windows), whose keys are gone when the app
+    closes; a test's or a tool's, which keeps or writes out its keys itself (the demo bundle's store-key.json), is
+    not."""
 
-    def __init__(self) -> None:
+    def __init__(self, forgets: bool = False) -> None:
         self._secrets: dict[str, bytes] = {}
         self._lock = threading.Lock()
+        self.forgets = forgets
 
     def write(self, name: str, secret: bytes) -> None:
         with self._lock:
@@ -110,7 +115,13 @@ if sys.platform == "win32":  # the types and the DLL exist only there
             raise ctypes.WinError(code)
 
 
-MEMORY = MemoryCredentials()  # one per process, so two AppContexts of one workspace in a test see the same keys
+MEMORY = MemoryCredentials(forgets=True)  # one per process, so two AppContexts of one workspace see the same keys
+
+
+def forgets(keys: Credentials) -> bool:
+    """Whether `keys` is a station's key store that holds its keys in memory only (MEMORY): a key written there is gone
+    when the app closes, so a store made with it would open again only from its recovery sheet."""
+    return bool(getattr(keys, "forgets", False))
 
 
 def default() -> Credentials:

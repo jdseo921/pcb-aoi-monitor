@@ -543,7 +543,10 @@ rest, with one key per store kept in Windows Credential Manager, is [ADR 0010](a
 **Customer dataset stores** (REQ-TRN-017, S38). An Admin makes one store per customer at a time (`create_store`, a
 customer's name in any case and spacing being one customer): a random 256-bit key, saved in this station's key store
 (`aoi/data/credentials.py`: Windows Credential Manager as `AOI/dataset-store/<store UUID>`, memory on Linux) and never
-in the workspace, and a `dataset_stores` row with its key id and check value. The call returns the recovery sheet once,
+in the workspace, and a `dataset_stores` row with its key id and check value. A station's memory key store
+(`credentials.MEMORY`, any system but Windows) loses its keys when the app closes, so `create_store` is refused there
+with AOI-TRN-053 (`credentials.forgets`; the tests', screenshots' and demo bundle's own key stores keep their keys and
+are not refused; ADR 0021). The call returns the recovery sheet once,
 the key as 52 base32 characters, and `restore_store_key` takes it back on a new PC or Windows account once the check
 value agrees. `move_in(board_model, store)` puts a board model in a store for good and encrypts each file under
 images/<board model>/ and each of its manifests where it is, in file format 1 (`aoi/core/crypto.py`: a 34-byte header,
@@ -563,8 +566,15 @@ AOI-TRN-025 "it was shredded on <day>" from then on, and calling it again finish
 model counts, 0 once deleted), for Shred Store… to say before it does. Settings › Dataset stores
 (`aoi/ui/pages/settings_stores.py`, Datasets stage 3 of 4) takes these steps on screen, Admin only, each an inline sheet
 in the table's place: New Store… with the recovery sheet once and Print Sheet…, Restore Key…, Move Board Model In… on
-the pool (Cancel stops it through `should_stop`) and Shred Store…. The rest of models/, results/ and `aoi.sqlite` stay
-plain (ADR 0010, Consequences).
+the pool (Cancel stops it through `should_stop`) and Shred Store…; the key id column, Restore Key… and Shred Store…
+show under its Advanced tick, off at each sign-in. A customer's first board model makes its store where it is created
+(B2 of the 2026-10 business-readiness brief, ADR 0021): the New board model dialog (`aoi/ui/board_model_dialog.py`)
+calls `create_customer_board_model(name, customer)`, which makes the board model, the customer's store when it has
+none and the move-in of a board model with no file, in one transaction, the new key deleted again if it does not
+commit, and returns the sheet, or None for a customer with a store. The dialog and New Store… show the key through
+`RecoveryKey` (`aoi/ui/pages/recovery_key.py`): Save to File… (`save_recovery_sheet`, written whole, never in the
+workspace) and Print…, and a tick, on once it is saved or printed, that Done or Close waits for. The rest of models/,
+results/ and `aoi.sqlite` stay plain (ADR 0010, Consequences).
 
 `lock_validation_set(dataset_uuid, seed)` (REQ-TRN-006, S36) splits a frozen version once into its training set and
 its locked validation set, with the seed drawn and recorded when none is given (`datasets.split`): at least 50 OK files
@@ -877,7 +887,8 @@ The writes, their roles and entries:
 | `make_calibration_set`, `label_blind`, `run_agreement_check` | Engineer | `calibration.make` (board model, samples), `label.blind` (sample, label, defect type), `agreement.check` (the stored check); object = calibration set UUID (REQ-TRN-016) |
 | `freeze_dataset` | Engineer | `dataset.freeze` (name, assurance Validated or Trial, customer, allowed uses, agreement check, empty for a Trial version, file count, manifest SHA-256); object = dataset UUID (REQ-TRN-005, ADR 0020) |
 | `lock_validation_set` | Engineer | `dataset.lock` (split UUID, seed, OK and NG counts of each part, the validation set's NG count by defect type); object = dataset UUID (REQ-TRN-006) |
-| `create_store`, `restore_store_key` | Admin | `store.create` (customer, key id), `store.restore` (key id); object = store UUID; never the key or its sheet. The key is saved after the row and the entry, in their transaction, so an entry that cannot be written leaves no key, and a key store that refuses the key is `AOI-TRN-044` with nothing written (REQ-TRN-017) |
+| `create_store`, `restore_store_key` | Admin | `store.create` (customer, key id), `store.restore` (key id); object = store UUID; never the key or its sheet. The key is saved after the row and the entry, in their transaction, so an entry that cannot be written leaves no key, and a key store that refuses the key is `AOI-TRN-044` with nothing written (REQ-TRN-017); a key store that keeps keys in memory only is `AOI-TRN-053` before anything (ADR 0021) |
+| `create_customer_board_model`, `save_recovery_sheet` | Admin | `board_model.create`, `recipe.default` (the system's), `store.create` for a customer with no store and `store.move_in`, all or none, the new key deleted if they do not commit; `store.sheet_saved` (where the file went, stored as exports are; never the key); object = board model name or store UUID (ADR 0021) |
 | `move_in` | Admin | `store.move_in` (board model, files to move, resumed); object = store UUID. The row and the entry are written before any file is encrypted, so a move that stops is finished by calling it again, audited again (REQ-TRN-017) |
 | `shred_store` | Admin | `store.shred` (customer, key id, board models, file and AI model counts, resumed); object = store UUID. The key is deleted before the row and the entry are written, and the files after them; a shred that stops is finished by calling it again, audited again (REQ-TRN-017) |
 | `train`, `activate_model` | Engineer | `model.train`, `model.activate` (active version; an older one is a rollback; a board model's first version's own, after its `model.train`, with the reason "the first AI model of its board model, which goes live when its training ends"; `model.train` also the Golden board before, and its metrics name the dataset version, its UUID and the use, S39, and its after the version's assurance, ADR 0020); object = model UUID. A run refused for its customer's store or its use writes `training.refused` (use, customer, code, and why as the entry's reason; object = dataset version UUID) in a transaction of its own, then raises AOI-TRN-046 (REQ-TRN-017) |

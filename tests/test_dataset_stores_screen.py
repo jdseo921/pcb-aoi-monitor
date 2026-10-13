@@ -1,6 +1,6 @@
 """REQ-TRN-017 on screen (Datasets stage, 3 of 4): Settings › Dataset stores, Admin only as the page is, lists the
 customers' encrypted dataset stores and takes the steps on them in inline sheets in the table's place (ADR 0010): New
-Store… shows the new store's recovery sheet this once, Restore Key… takes the key back from it on a new PC, Move
+Store… shows the new store's recovery key this once, Restore Key… takes the key back from it on a new PC, Move
 Board Model In… encrypts a board model's files on the pool and finishes a move that stopped, and Shred Store… names what
 it deletes before it does."""
 
@@ -55,13 +55,14 @@ def test_req_trn_017_new_store_shows_its_recovery_sheet_once(
     """The table lists the store TINY's frozen version is in. New Store… opens a sheet in the step buttons' place, its
     Create off until a customer is typed; Enter makes the store, selects it and shows its recovery sheet in the sheet's
     place: the store, its key id and the key the key store holds, 13 groups on two lines. Neither Esc nor Close (until
-    the tick) leaves it, and Print Sheet… prints the customer, the store, the day and the key. Close clears it; a
-    customer with a store already is refused (AOI-TRN-044), nothing made; a sign-in closes the sheet, its key gone."""
+    the tick, which waits for Save to File… or Print…) leaves it, and Print… prints the customer, the store, the day
+    and the key. Close clears it; a customer with a store already is refused (AOI-TRN-044), nothing made; a sign-in
+    closes the sheet, its key gone."""
     page = _settings(qtbot, trained_ctx)
     panel = page.stores
     [acme] = trained_ctx.stores()
     assert _rows(panel.table) == [["Acme Electronics", acme["key_id"][:8], to_local(acme["created_at"]), "TINY", ""]]
-    assert not panel.none.isVisible() and panel.btn_restore.isEnabled() and not panel.recovery_sheet.isVisible()
+    assert not panel.none.isVisible() and panel.btn_new.isEnabled() and not panel.recovery_sheet.isVisible()
     panel.btn_new.click()
     assert panel.new_sheet.isVisible() and not panel.steps.isVisible() and QApplication.focusWidget() is panel.customer
     assert not panel.btn_create.isEnabled()
@@ -73,24 +74,26 @@ def test_req_trn_017_new_store_shows_its_recovery_sheet_once(
     assert panel.recovery_sheet.isVisible() and not panel.new_sheet.isVisible() and not panel.steps.isVisible()
     assert not panel.table.isVisible()
     _fits(page)
-    assert panel.recovery_sheet.title() == "Recovery sheet for Beta Boards"
-    assert panel.recovery_ids.text() == f"Store {beta['uuid']} · key id {beta['key_id']}"
-    lines = panel.recovery_key.text().split("\n")
+    recovery = panel.recovery
+    assert panel.recovery_sheet.title() == "Recovery key for Beta Boards"
+    assert recovery.ids.text() == f"Store {beta['uuid']} · key id {beta['key_id']}"
+    lines = recovery.key.text().split("\n")
     key = keys.read(credentials.STORE_PREFIX + beta["uuid"])
     assert [len(line.split()) for line in lines] == [7, 6] and crypto.key_from_sheet(" ".join(lines)) == key
-    qtbot.keyClick(panel.kept, Qt.Key.Key_Escape)
+    qtbot.keyClick(recovery.btn_save, Qt.Key.Key_Escape)
     assert panel.recovery_sheet.isVisible() and not panel.btn_done.isEnabled()
     printed: list[str] = []
     monkeypatch.setattr(QPrintDialog, "exec", lambda self: QDialog.DialogCode.Accepted)
     monkeypatch.setattr(QTextDocument, "print_", lambda self, printer: printed.append(self.toPlainText()))
-    next(b for b in panel.recovery_sheet.findChildren(type(panel.btn_done)) if b.text() == "Print Sheet…").click()
+    assert not recovery.kept.isEnabled()  # saved or printed first
+    recovery.btn_print.click()
     [sheet] = printed
-    for said in ("Recovery sheet for Beta Boards", beta["uuid"], beta["key_id"], to_local(beta["created_at"]), *lines):
+    for said in ("Recovery key for Beta Boards", beta["uuid"], beta["key_id"], to_local(beta["created_at"]), *lines):
         assert said in sheet, said
-    panel.kept.click()
+    recovery.kept.click()
     panel.btn_done.click()
     assert panel.steps.isVisible() and not panel.recovery_sheet.isVisible()
-    assert panel.recovery_key.text() == "" and panel.made is None
+    assert recovery.key.text() == "" and recovery.made is None
     panel.btn_new.click()
     qtbot.keyClicks(panel.customer, " beta boards ")
     panel.btn_create.click()
@@ -98,9 +101,9 @@ def test_req_trn_017_new_store_shows_its_recovery_sheet_once(
     assert panel.new_sheet.isVisible() and panel.customer.text() == " beta boards "
     panel.customer.setText("Gamma")
     panel.btn_create.click()
-    assert panel.recovery_sheet.isVisible() and panel.recovery_key.text()
+    assert panel.recovery_sheet.isVisible() and recovery.key.text()
     page.shell.set_user("engineer")
-    assert panel.recovery_key.text() == "" and not panel.recovery_sheet.isVisible() and panel.made is None
+    assert recovery.key.text() == "" and not panel.recovery_sheet.isVisible() and recovery.made is None
 
 
 def test_req_trn_017_restore_key_from_the_sheet(
@@ -116,6 +119,7 @@ def test_req_trn_017_restore_key_from_the_sheet(
     name = credentials.STORE_PREFIX + acme["uuid"]
     key = keys.read(name) or b""
     keys.delete(name)
+    panel.advanced.click()  # Restore Key… is an advanced step (B2 of the 2026-10 business-readiness brief)
     panel.btn_restore.click()
     assert panel.restore_sheet.title() == "Restore the key for Acme Electronics"
     assert QApplication.focusWidget() is panel.typed and panel.typed_count.text() == "0 of 52 characters"
@@ -223,8 +227,8 @@ def test_req_trn_017_shred_store_on_screen(
     beta = ctx.create_store("Beta")
     ctx.move_in("SHB", beta["uuid"])
     page.on_show()
-    rows = panel.steps.layout()  # the steps' two rows: Shred Store… last in the second, after the stretch
-    row = rows.itemAt(rows.count() - 1).layout()
+    panel.advanced.click()  # Shred Store… is an advanced step (B2 of the 2026-10 business-readiness brief)
+    row = panel.advanced_steps.layout()  # Restore Key…, then Shred Store… last, after the stretch
     assert panel.btn_shred.objectName() == "danger" and row.indexOf(panel.btn_shred) == row.count() - 1
     panel.table.selectRow(1)
     panel.btn_shred.click()

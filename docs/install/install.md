@@ -22,6 +22,9 @@ The station PC, as Customers & Launch publishes it ("One published PC spec"):
 - An administrator account: the app installs once per PC, into `C:\Program Files\AOI PoC Inspector`, and then runs
   as a standard user. Python is not needed.
 - About 700 MB of free disk for the program, plus the workspace.
+- Customers' dataset stores are made on the Windows station only. Windows Credential Manager keeps each store's key on
+  the PC; on any other system, which runs only development and tests from source, the app keeps keys in memory, loses
+  them when it closes, and so refuses to make a store (AOI-TRN-053, ADR 0021).
 
 ## Get the installer from CI
 
@@ -89,13 +92,13 @@ There is no one-click backup yet. To back up a station:
 2. Copy the whole workspace folder (`%USERPROFILE%\AOI_Workspace`, or the folder Settings names) to the backup drive:
    it holds the database, images, AI models, recipes, results, exports and logs. When Settings names another folder,
    copy `settings.json` from `%USERPROFILE%\AOI_Workspace` too.
-3. Keep each dataset store's recovery sheet apart from the backup. The stores' keys are not in the folder: a copy
-   opens as it is on the same PC and Windows account, and elsewhere only with the sheet printed when the store was
-   made (Settings › Dataset stores, New Store…).
+3. Keep each dataset store's recovery key apart from the backup. The stores' keys are not in the folder: a copy
+   opens as it is on the same PC and Windows account, and elsewhere only with the key saved or printed when the store
+   was made (a customer's first board model in + New, or Settings › Dataset stores, New Store…).
 
 To restore, close the app, put the folder back where it was (or anywhere, and point Settings at it), and start the
-app. On a new PC or another Windows account, an Admin types each store's recovery sheet into Settings › Dataset
-stores › Restore Key…. A restore onto a newer build upgrades the database, keeping a copy of it first ("Going back to
+app. On a new PC or another Windows account, an Admin types each store's recovery key into Settings › Dataset
+stores › Restore Key… (under the Advanced tick). A restore onto a newer build upgrades the database, keeping a copy of it first ("Going back to
 an earlier build", below). Neither step has been tried on the reference PC yet.
 
 ## Uninstall

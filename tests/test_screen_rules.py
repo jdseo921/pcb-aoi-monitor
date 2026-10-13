@@ -55,7 +55,7 @@ from aoi.ui.pages.compare import MODE_DIFF
 from aoi.ui.pages.profile3d import Stage2Card
 from aoi.ui.widgets.empty_state import EmptyState
 from aoi.ui.widgets.flow import FlowLayout
-from tests.conftest import engineer, listed
+from tests.conftest import answer_new_board_model, engineer, listed
 from tests.screens.test_sizes_and_contrast import (
     MIN_RATIO,
     _check_widget,
@@ -513,13 +513,7 @@ def test_req_set_019_empty_states_link_next_step(
     assert seen["Home"].link.isVisibleTo(win.pages["Home"]) and seen["Home"].link.text() == "+ New board model"
     # With no board model the header list is empty, so there is nothing to pick: an Engineer or Admin is offered
     # "+ New board model" as on Home, and an Operator is told to ask an Engineer (#200).
-    asked: list[str] = []
-
-    def get_text(parent: QWidget, title: str, *args: object, **kwargs: object) -> tuple[str, bool]:
-        asked.append(title)
-        return "", False
-
-    monkeypatch.setattr(QInputDialog, "getText", staticmethod(get_text))
+    asked = answer_new_board_model(monkeypatch, "")  # the dialog's title, then Cancel
     for role in ("Admin", "Engineer"):
         win.set_user(role.lower())
         for title in NO_BOARD_MODEL_PAGES:
