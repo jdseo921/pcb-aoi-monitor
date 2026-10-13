@@ -160,8 +160,11 @@ from `ensure_board_model` (and so `create_customer_board_model`), a first import
 rule, `AppContext.board_model_name_refusal`, which each of them raises before anything is written and the New board
 model dialog shows as the name is typed, Create off: it is one folder name on Windows as on Linux (`aoi/data/paths.py`
 `one_folder_name`, AOI-TRN-019), it has a Latin letter or digit, which its dataset versions are named with
-(`datasets.token`, AOI-TRN-054, the rule freeze applies with AOI-TRN-039; ADR 0023), and it differs from every existing
-name in more than case (AOI-TRN-005). A name the workspace already holds is kept, and `train` writes only inside
+(`datasets.token`, AOI-TRN-054, the rule freeze applies with AOI-TRN-039; ADR 0023), it differs from every existing
+name in more than case (AOI-TRN-005), it does not look the same as one on a screen (`looks`: NFKC, case folded, the
+characters that show nothing dropped and spaces of any kind as one, AOI-TRN-055), and its Latin letters and digits are
+no existing name's, which would give its versions that board model's names (AOI-TRN-056, the rule freeze applies with
+AOI-TRN-040; ADR 0023, decisions 6 to 8). A name the workspace already holds is kept, and `train` writes only inside
 models/. A source lost between its check and its copy is that file's AOI-INSP-001.
 `import_files` imports a batch one `import_samples` call per file, each `ImportFile` with its own label, defect type
 and view (`aoi/core/sample_import.py`), and returns an `ImportReport`: the files added, each file refused or skipped
@@ -519,7 +522,8 @@ sheet also states), reaches `TRAIN_OK`. An AI model whose registry row cannot be
 `freeze_dataset` (REQ-TRN-005, S35) is refused while `labels_ready_to_freeze` is False (AOI-TRN-020, -021), with no
 customer (AOI-TRN-024), a view outside `aoi.hal.VIEWS` (AOI-TRN-038), a board model whose name has no Latin letter or
 digit (AOI-TRN-039: one made before such a name was refused where it is entered, AOI-TRN-054) or gives the letters and
-digits another board model's versions are named with (AOI-TRN-040), and
+digits another board model's versions are named with (AOI-TRN-040: one made before such a name was refused where it
+is entered, AOI-TRN-056), and
 while the newest agreement check of the board model whose set holds images of the view is missing or short of its
 targets (AOI-TRN-027); else it names the version `DS-<BOARDMODEL>-<REV>-<VIEW>-v<N>` (`aoi/core/datasets.py`). The
 refusals that need no file come first, so a freeze they refuse reads no image file first; then it hashes the files and

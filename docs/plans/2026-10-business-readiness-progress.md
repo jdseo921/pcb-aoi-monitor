@@ -40,6 +40,7 @@ B4 on B3.
 | B2 (D2, F2, F13) | A customer's first board model makes the customer's encrypted store in the same dialog; the recovery key is shown once, with Save to File…, Print… and a tick that cannot be skipped; key ids, Restore Key… and Shred Store… move under an Admin's Advanced tick | #407, stacked on #406 | Open, for Jay's review |
 | B3 (F6) | One sentence, computed from the constants in `aoi/core/datasets.py`, wherever the images a board model needs are stated; Home and Training list what the selected board model still needs, each line a count against its need with the one button that takes the step; a Trial list shows only what Trial needs, a Validated one adds the second-user checks and the agreement check | #408, stacked on #407 | Open, for Jay's review |
 | B4 (D4 part, F9) | A board model's name is checked where it is entered, with the rule freeze applies (AOI-TRN-039): a name with no Latin letter or digit, such as a Korean-only one, is refused at entry with AOI-TRN-054, whose message says what a valid name looks like | #409, stacked on #408 | Open, for Jay's review |
+| B4 follow-up (Jay's decision, 2026-10-13 19:58 UTC) | A new name that looks the same as an existing one on a screen (full-width letters or digits, a no-break or zero-width space, a decomposed Hangul syllable) is refused at entry with AOI-TRN-055, and one whose Latin letters and digits are an existing name's, which freeze refused only once the other had a version (AOI-TRN-040), with AOI-TRN-056 | PR_FOLLOWUP, stacked on #409 | Open, for Jay's review |
 
 Choices made in Phase B, each recorded in its ADR:
 
@@ -59,15 +60,17 @@ Choices made in Phase B, each recorded in its ADR:
 - **A new code for a name refused at entry (B4).** AOI-TRN-054 says what to type now; AOI-TRN-039 stays for a
   board model made before the rule, which keeps its name and is refused only at freeze, as before. "기판 2호" is
   taken, because its digit names its versions (ADR 0023).
+- **Look-alikes are compared, not stored normalised (B4 follow-up).** A name is kept as typed; two names are alike
+  when they look the same in NFKC, case folded, with the characters that show nothing dropped and spaces of any kind
+  as one. Cyrillic or Greek letters that look like Latin ones are not compared as alike (ADR 0023, decisions 6 to 8).
 - `tests/regression/expected.json` is byte-identical in every pull request of Phase B: no verdict changes.
 
 Still open after Phase B:
 
-1. **Jay decides** the "Never live" card, and reviews and merges #406, then #407, then #408, then #409
-   (CLAUDE.md rule 6).
-2. **Jay decides** whether a name that gives another board model's version name (TBOX-A1 and "tbox a1",
-   AOI-TRN-040 at freeze) and a name that looks like another but is written differently are refused at entry too
-   (ADR 0023, Consequences).
+1. **Jay decides** the "Never live" card, and reviews and merges #406, then #407, then #408, then #409, then
+   PR_FOLLOWUP (CLAUDE.md rule 6).
+2. **Decided by Jay** on 2026-10-13 19:58 UTC: a name whose versions would take another board model's names, and a
+   name that looks like another, are refused at entry (PR_FOLLOWUP; ADR 0023, decisions 6 to 8).
 3. **Jay adds** the brief and the "Stage 1 for one person" ADR to the repository, under a free ADR number, and writes
    D1's exception into the Engineering standard's text about the label and agreement checks.
 4. **People:** the Korean strings the items add are drafts, many unfinished in `aoi_ko.ts`, for a native speaker who
