@@ -21,7 +21,7 @@ store's) stay in the process, never in the station's key store (Windows Credenti
 With AOI_STARTUP_THEN set, the presenter goes on after the first line, as the 5-minute demo script starts (A8 of the
 2026-10 business-readiness brief, F14): the presenter theme switched on on Settings, at a pace of 1 s a board,
 Inspection, and Start; then "crash" ends the process mid-run as a crash ends it, with no close and nothing saved on the
-way out (os._exit, code 3), while a board after the first is inspected; and "close" closes the window as a presenter
+way out (`end`, code 3), while a board after the first is inspected; and "close" closes the window as a presenter
 closes it, while the run waits at its NG board. Before either it prints a line of JSON: "then", the "page" shown, the
 "records" saved, "inspecting" (a board's inspection under way) and the "dialogs" shown since the start."""
 
@@ -73,6 +73,21 @@ def emit(line: dict[str, Any]) -> None:
     print(json.dumps(line), flush=True)
 
 
+def end(code: int) -> None:
+    """End the process at once with `code`, as a crash ends it: no close event, nothing saved, nothing cleaned up. On
+    Windows os._exit leaves through ExitProcess, which unloads each library while the inspection's threads may still run
+    in PyTorch's, and the process could end in an access violation, 0xC0000005, in place of `code` (Windows CI on #404);
+    TerminateProcess ends it as Task Manager or a crash does, with no library unloaded."""
+    sys.stdout.flush()
+    sys.stderr.flush()
+    if sys.platform == "win32":
+        import ctypes
+
+        kernel32 = ctypes.windll.kernel32
+        kernel32.TerminateProcess(kernel32.GetCurrentProcess(), code)  # returns only if it failed
+    os._exit(code)
+
+
 def guarded(step: Callable[[], None]) -> None:
     """Run `step` from the event loop; an error in it ends the process at once, its trace on stderr. Left to the app,
     its handler would show the error in a box the watch closes, the loop would go on, and the caller would wait out its
@@ -81,8 +96,7 @@ def guarded(step: Callable[[], None]) -> None:
         step()
     except BaseException:
         traceback.print_exc()
-        sys.stderr.flush()
-        os._exit(1)
+        end(1)
 
 
 def close(win: MainWindow) -> None:
@@ -91,7 +105,7 @@ def close(win: MainWindow) -> None:
     win.close()
     if win.isVisible():
         print("the window did not close", file=sys.stderr, flush=True)
-        os._exit(4)
+        end(4)
 
 
 def page_title(win: MainWindow) -> str | None:
@@ -120,7 +134,7 @@ def go_on(win: MainWindow, then: str, watch: DialogWatch) -> None:
     done = {"then": then, "page": page_title(win), "records": records(), "inspecting": page.worker is not None}
     emit(done | {"dialogs": watch.shown})
     if then == "crash":
-        os._exit(3)  # no close event, no settings saved, no workspace closed: as a crash ends the app
+        end(3)  # no close event, no settings saved, no workspace closed: as a crash ends the app
     close(win)
 
 

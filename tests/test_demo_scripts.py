@@ -679,7 +679,7 @@ def run_demo(env: dict[str, str], then: str = "") -> list[dict[str, Any]]:
     launched = {"AOI_STARTUP_LAUNCHED": repr(time.time())} | ({"AOI_STARTUP_THEN": then} if then else {})
     cmd = [sys.executable, "-m", "tests.startup_worker", "--demo"]
     done = subprocess.run(cmd, cwd=ROOT, env=env | launched, capture_output=True, text=True, timeout=RUN_TIMEOUT_S)
-    assert done.returncode == (3 if then == "crash" else 0), done.stderr  # os._exit(3): the crash
+    assert done.returncode == (3 if then == "crash" else 0), done.stderr  # startup_worker.end(3): the crash
     lines = [json.loads(line) for line in done.stdout.splitlines() if line.startswith("{")]
     assert lines and all(line["dialogs"] == [] for line in lines), (lines, done.stderr)
     assert then == "crash" or lines[-1].get("exit") == 0, lines  # main.main() returned, the window closed
