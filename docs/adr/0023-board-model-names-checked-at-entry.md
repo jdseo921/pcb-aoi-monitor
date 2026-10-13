@@ -50,8 +50,11 @@ cannot be renamed, so the images had to be imported again under another name.
 4. **Enter in the form is the fields' own.** Qt made Cancel the dialog's default button as it opened, Create being off
    with no name typed, so Enter in an empty or refused name field pressed Cancel and closed the form, and Enter on a
    name that Create's dialog then refused closed the form behind that dialog. The dialog now takes Enter in the form
-   itself: the name and customer fields give it to Create (`make`), which does nothing for a refused name, and no
-   default button is pressed after it. A focused button takes Enter as before.
+   itself, deciding with the form shown: the name and customer fields pass it on, and the dialog gives it to Create
+   (`make`), which does nothing for a refused name, and no default button is pressed after it. The fields no longer
+   call Create on their own Enter, which in Customer made a customer's store and then pressed the key step's default
+   button, Save to File… (review of B4). A focused button takes Enter as before, and the Customer list's popup the
+   Enter that picks from it.
 5. **A name the workspace already holds is kept.** A board model made before this rule under a name it refuses keeps
    its name, imports, takes a reference and inspects as before, and + New with its name, typed exactly, chooses it; only
    freeze refuses it, with AOI-TRN-039, as it did, saying to import its images under a name with a Latin letter or
@@ -72,4 +75,8 @@ cannot be renamed, so the images had to be imported again under another name.
 - A name whose letters and digits give the same <BOARDMODEL> as another board model's (`TBOX-A1` and `tbox a1`, or
   `CAL-1` and `CAL_1`) is still taken at entry and refused at freeze once the other has a version (AOI-TRN-040). The
   brief's item names the AOI-TRN-039 rule only; checking that one at entry too is left for Jay to decide.
+- Names that look the same but are written differently (a decomposed Hangul syllable, a no-break or zero-width space,
+  spaces at the ends where a call does not strip them) are different names to the workspace, as before; those that
+  would freeze to another's <BOARDMODEL> are refused at freeze (AOI-TRN-040), as above. Normalising names at entry
+  changes what is stored, beyond the AOI-TRN-039 rule the item names, and is left for Jay with that case.
 - The Korean text of AOI-TRN-054 is a draft, marked unfinished in `aoi/i18n/aoi_ko.ts`, for a native speaker's review.

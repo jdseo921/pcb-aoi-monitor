@@ -63,8 +63,7 @@ class NewBoardModelDialog(QDialog):
         lay.setContentsMargins(0, 0, 0, 0)
         lay.addWidget(QLabel(self.tr("Board model name (e.g. TBOX-A1 Rev2)")))
         self.board = QLineEdit()
-        self.board.textChanged.connect(self._sync)
-        self.board.returnPressed.connect(self.make)
+        self.board.textChanged.connect(self._sync)  # Enter in it, as in Customer, is `keyPressEvent`'s
         lay.addWidget(self.board)
         self.name_refusal = QLabel()  # why the name typed is refused, in the refusal's words; hidden for a name allowed
         self.name_refusal.setObjectName("muted")
@@ -86,7 +85,6 @@ class NewBoardModelDialog(QDialog):
         assert line is not None
         line.setPlaceholderText(self.tr("None: an in-house or demo board model"))
         line.setClearButtonEnabled(True)  # back to none by touch, once a customer was picked
-        line.returnPressed.connect(self.make)
         self.customer.currentTextChanged.connect(self._sync)
         lay.addWidget(self.customer)
         self.gates.gate(self.customer, STORE_CALL)  # greyed for an Engineer, saying an Admin may
@@ -185,12 +183,15 @@ class NewBoardModelDialog(QDialog):
             self.show_key({**made["store"], "sheet": made["sheet"]})
 
     def keyPressEvent(self, e: QKeyEvent) -> None:
-        """Enter in the form is its fields' own, which Create takes through `make`: it makes nothing for a name the line
-        under it refuses, and no default button is pressed after it. Qt made Cancel the default as the dialog opened,
-        Create being off, so Enter on an empty or refused name closed the form, and after a refusal's dialog closed it
-        too. A focused button takes Enter itself, as do the key step's."""
+        """Enter in the form's fields, which pass it on, is Create's (`make`), decided here with the form shown, and no
+        default button is pressed after it: it makes nothing for a name the line under it refuses. The fields' own
+        returnPressed ran `make` first, so Enter in Customer that made a store went on to the key step's default button,
+        Save to File… (review of B4); and Qt made Cancel the default as the dialog opened, Create being off, so Enter
+        on an empty or refused name closed the form. A focused button takes Enter itself, as do the key step's, and the
+        Customer list's popup takes the Enter that picks from it."""
         if e.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter) and self.steps.currentWidget() is self.form:
             e.accept()
+            self.make()
             return
         super().keyPressEvent(e)
 

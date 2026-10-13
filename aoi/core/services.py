@@ -3015,11 +3015,13 @@ class AppContext:
         all or none. A new store's key leaves the key store again whenever the transaction is not committed, its
         commit included. Returns `board_model`, `store` (as `stores` lists it) and `sheet`. A board model of that name
         in that customer's store already is returned as it is, as `ensure_board_model` leaves one that exists. Refused,
-        writing nothing: no customer, a board model of that name in no store or in another customer's, and a new one
-        whose folder under images/ holds files already, which Move Board Model In… on Settings encrypts with its
-        progress (AOI-TRN-044); a name the rule for a new board model refuses (`board_model_name_refusal`: AOI-TRN-019,
-        AOI-TRN-054, AOI-TRN-005); and a new store on a station that keeps keys in memory only (AOI-TRN-053)."""
+        writing nothing: first a name the rule for a new board model refuses (`board_model_name_refusal`: AOI-TRN-019,
+        AOI-TRN-054, AOI-TRN-005), as the dialog says it; then no customer, a board model of that name in no store or in
+        another customer's, and a new one whose folder under images/ holds files already, which Move Board Model In… on
+        Settings encrypts with its progress (AOI-TRN-044); and a new store on a station that keeps keys in memory only
+        (AOI-TRN-053)."""
         board_model, customer = board_model.strip(), customer.strip()
+        self._refuse_new_name(board_model)  # first, as the dialog says it while the name is typed (ADR 0023)
         found = next(
             (s for s in self.db.stores() if s["customer"].casefold() == customer.casefold() and not s["shredded_at"]),
             None,

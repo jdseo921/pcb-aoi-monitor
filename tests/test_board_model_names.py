@@ -13,7 +13,7 @@ from typing import Any
 import pytest
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QInputMethodEvent
-from PySide6.QtWidgets import QApplication, QDialog, QLineEdit
+from PySide6.QtWidgets import QApplication, QDialog, QFileDialog, QLineEdit
 from pytestqt.qtbot import QtBot
 
 from aoi.core import datasets
@@ -97,7 +97,7 @@ def test_req_trn_005_a_name_freeze_refuses_is_refused_where_it_is_entered(
             make(name)
         assert (refused.value.code, refused.value.params) == ("AOI-TRN-054", {"name": name}), call
         assert written(ctx, keys) == before, call
-    assert ctx.board_model_name_refusal(name) is not None  # asking wrote nothing either
+    assert ctx.board_model_name_refusal(name) is not None and written(ctx, keys) == before  # asking writes nothing
 
 
 def test_req_trn_005_a_name_with_a_latin_letter_or_digit_is_taken(ctx: AppContext, synthetic_dataset: Path) -> None:
@@ -114,7 +114,7 @@ def test_req_trn_005_a_name_with_a_latin_letter_or_digit_is_taken(ctx: AppContex
     for name in [*TAKEN, "TBOX-B2 하부"]:
         with pytest.raises(AoiError) as refused:
             ctx.freeze_dataset(name, "Top", "R3", "Acme")
-        assert refused.value.code != "AOI-TRN-039", (name, refused.value)
+        assert refused.value.code not in ("AOI-TRN-039", "AOI-TRN-040"), (name, refused.value)  # never its name
 
 
 def test_req_trn_005_the_rules_for_a_new_name_keep_their_order(ctx: AppContext) -> None:
@@ -182,8 +182,7 @@ def test_req_trn_005_the_dialog_checks_the_name_as_it_is_typed(
     )
     assert "such as TBOX-A1" in dialog.name_refusal.text()
     qtbot.keyClick(dialog.board, Qt.Key.Key_Return)
-    dialog.btn_create.click()
-    dialog.make()
+    dialog.make()  # as Create would, were it on
     assert (ctx.board_models(), ctx.audit_entries()) == before and dialogs == []
     assert dialog.isVisible() and dialog.made is None and dialog.board.text() == "보드"
     dialog.board.setText(" tbox-a1 ")  # spaces at its ends are dropped, as Create drops them
@@ -211,3 +210,42 @@ def test_req_trn_005_the_dialog_checks_the_name_as_it_is_typed(
     assert kept.btn_create.isEnabled() and not kept.name_refusal.isVisible()
     kept.btn_create.click()
     assert kept.result() == QDialog.DialogCode.Accepted and kept.made == "옛보드" and ctx.audit_entries() == entries
+
+
+def test_req_trn_005_enter_in_customer_makes_the_store_and_stops_at_its_key(
+    qtbot: QtBot, ctx: AppContext, monkeypatch: pytest.MonkeyPatch, dialogs: list[tuple[str, str]]
+) -> None:
+    """Enter in the Customer field creates as Create does, once, and goes no further: the key step is shown with its key
+    and no file dialog opens, as one would were Save to File…, the key step's default button, pressed after it."""
+    saves: list[object] = []
+    monkeypatch.setattr(QFileDialog, "getSaveFileName", staticmethod(lambda *a: saves.append(a) or ("", "")))
+    dialog = opened(qtbot, shell(qtbot, ctx))
+    dialog.board.setText("TBOX-A9")
+    dialog.customer.setCurrentText("Acme")
+    line = dialog.customer.lineEdit()
+    assert line is not None
+    line.setFocus()
+    qtbot.keyClick(line, Qt.Key.Key_Return)
+    assert dialog.steps.currentWidget() is dialog.key_step and dialog.recovery.key.text() != ""
+    assert saves == [] and dialogs == [] and dialog.isVisible() and dialog.made == "TBOX-A9"
+    assert [s["customer"] for s in ctx.stores()] == ["Acme"]
+
+
+@pytest.mark.parametrize("name", [" 보드", "보드 ", "\u00a0보드", "보드\t"])
+def test_req_trn_005_a_padded_name_is_refused_by_every_entry_point(
+    ctx: AppContext, keys: credentials.MemoryCredentials, synthetic_dataset: Path, name: str
+) -> None:
+    """A Korean-only name with spaces at its ends, as a call that does not strip it gets it, is refused by every entry
+    point too, writing nothing: for its letters (AOI-TRN-054) or, where its last character names no folder on Windows,
+    for that (AOI-TRN-019); the customer's path strips it, as the dialog does, and says AOI-TRN-054."""
+    ok_image = str(list_images(synthetic_dataset / "train" / "ok")[0])
+    ctx.import_samples("HELD-1", [ok_image], "OK")
+    held = ctx.samples("HELD-1", "OK")[0]["id"]
+    as_admin(ctx, ctx.create_store, BETA)
+    before = written(ctx, keys)
+    for call, make in _entry_points(ctx, ok_image, held).items():
+        with pytest.raises(AoiError) as refused:
+            make(name)
+        expected = {"AOI-TRN-054"} if call.startswith("create_customer") else {"AOI-TRN-054", "AOI-TRN-019"}
+        assert refused.value.code in expected, (call, refused.value)
+        assert written(ctx, keys) == before, call
