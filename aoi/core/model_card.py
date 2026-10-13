@@ -13,6 +13,12 @@ from typing import Any
 
 CARD_VERSION = 1
 NOT_TESTED = "not yet tested"
+TRIAL = "Trial"  # a version's assurance when one person froze it without the checks (aoi.core.datasets.TRIAL)
+# The plain words a Trial AI model's card starts with (B1 of the 2026-10 business-readiness brief, D1; ADR 0020)
+TRIAL_LINE = (
+    "Trial: one person froze {dataset} without a second person checking its labels or an agreement check, so this AI"
+    " model cannot go live or back a customer validation report."
+)
 # What every card says it was not made for; a card adds its own lines from what it knows (`limits`)
 LIMITS = (
     "Judges boards of its own board model and view only, captured with the set-up below; a new board revision, camera,"
@@ -48,7 +54,11 @@ def build(
         if tested
         else "Not yet tested on a locked validation set: nothing on this card is a measure of accuracy."
     )
+    if meta.get("assurance") == TRIAL:  # said first, in plain words, before anything the card states
+        first = f"{TRIAL_LINE.format(dataset=meta.get('dataset'))} {first}"
     limits = list(LIMITS)
+    if meta.get("assurance") == TRIAL:
+        limits.append("Its labels were not checked by a second person: a wrong label may have taught it.")
     if not tested:
         limits.append("Missed-defect and false call rates are unknown until it is tested on its locked validation set.")
     if px_per_mm is None:
@@ -64,6 +74,7 @@ def build(
             "trained_by": trained_by,
             "dataset": meta.get("dataset"),
             "dataset_uuid": meta.get("dataset_uuid"),
+            "assurance": meta.get("assurance"),
             "customer": customer,
             "use": meta.get("use"),
             "seed": meta.get("seed"),
@@ -101,8 +112,8 @@ def markdown(card: dict[str, Any]) -> str:
     ident, setup = card["identity"], card["setup"]
     lines = [f"# Model card: {ident['board_model']} {ident['version']}", "", f"**{card['first_line']}**", ""]
     lines += ["## Identity", "", "| Field | Value |", "|---|---|"]
-    for key in ("board_model", "version", "uuid", "created_at", "trained_by", "dataset", "dataset_uuid", "customer",
-                "use", "seed", "code"):  # fmt: skip
+    for key in ("board_model", "version", "uuid", "created_at", "trained_by", "dataset", "dataset_uuid", "assurance",
+                "customer", "use", "seed", "code"):  # fmt: skip
         lines.append(f"| {key} | {_value(ident.get(key))} |")
     settings = ident.get("settings") or {}
     lines.append("| settings | " + ", ".join(f"{k} {_value(v)}" for k, v in sorted(settings.items())) + " |")

@@ -838,6 +838,14 @@ class MainWindow(QMainWindow):
         self.navigate("Compare")
         compare.set_test(path)
 
+    def start_checks(self, board_model: str, view: str | None = None) -> None:
+        """Start the Checks, from the dialog of a Trial version refused (ADR 0020): Training on `board_model`, its
+        Samples tab showing the labels a second user still checks, `view` named when the error gave one."""
+        if board_model and board_model != self.board_model and board_model in self.ctx.board_models():
+            self._reload_board_models(board_model)
+        if self.navigate("Training"):
+            cast(TrainingPage, self.pages["Training"]).start_checks(view)
+
     def open_stored(self, inspection_id: int) -> None:
         """Compare on a stored result in one click, as it was decided (REQ-INSP-009)."""
         compare = cast(ComparePage, self.pages["Compare"])

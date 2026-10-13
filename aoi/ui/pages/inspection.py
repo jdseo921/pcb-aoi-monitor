@@ -142,15 +142,18 @@ class InspectionPage(Page):
         # for an Operator (REQ-TRN-010, REQ-USR-001). Shown only then: a board model's first version goes live when
         # trained (decision D3), so this is one trained before that, or one whose activation was refused.
         self.waiting: dict[str, Any] | None = None  # that version's registry row, while the line shows
+        # the Trial dataset version it was trained from, if so: it does not go live, and the button is Start the Checks
+        self.waiting_trial: dict[str, Any] | None = None
         self.ai_row = QWidget()
         ar = QHBoxLayout(self.ai_row)
         ar.setContentsMargins(0, 0, 0, 0)
         self.ai_line = WrappedLine()
         ar.addWidget(self.ai_line, 1)
         self.btn_activate = size_class(button("", slot=self.activate_waiting), "T")
-        self.btn_activate.setToolTip(
-            self.tr("Judge the board model's boards with this AI model and its Golden board, as Activate Selected does")
+        self.activate_tip = self.tr(
+            "Judge the board model's boards with this AI model and its Golden board, as Activate Selected does"
         )
+        self.btn_activate.setToolTip(self.activate_tip)
         ar.addWidget(self.btn_activate)
         self.ai_row.hide()
         sl.addWidget(self.ai_row)
@@ -349,6 +352,12 @@ class InspectionPage(Page):
                         board_model=bm
                     )
                     self._alarm("WARN", msg, "AOI-TRN-003")
+                elif self.waiting_trial is not None:  # it does not go live (ADR 0020)
+                    msg = self.tr(
+                        "AI model {version} of {board_model} is a Trial and does not go live: only the Golden board"
+                        " comparison runs. An Engineer presses Start the Checks for a Validated version."
+                    ).format(version=waiting["version"], board_model=bm)
+                    self._alarm("WARN", msg, "AOI-TRN-052")
                 else:
                     msg = self.tr(
                         "AI model {version} of {board_model} is not active: only the Golden board comparison runs. An"
@@ -754,32 +763,50 @@ class InspectionPage(Page):
         """The line that names the header's board model's trained AI model while none is active, with Activate; hidden
         while one is active or none is trained (`AppContext.inactive_model`). For a role that may not activate it, the
         line says which role may, as Activate's tooltip does (REQ-USR-001). A database that cannot be read hides it,
-        logged, and never stops the result or the run that asked (#179). Returns the version it names."""
+        logged, and never stops the result or the run that asked (#179). An AI model of a Trial dataset version, which
+        does not go live, is named a Trial, and the button is Start the Checks (ADR 0020). Returns the version it
+        names."""
         bm = self.board_model
         try:
             self.waiting = self.ctx.inactive_model(bm) if bm else None
+            self.waiting_trial = self.ctx.trial_version(self.waiting) if self.waiting else None
         except Exception:
             self.ctx.log.warning("models.not_read", exc_info=True)
-            self.waiting = None
+            self.waiting, self.waiting_trial = None, None
         self.ai_row.setVisible(self.waiting is not None)
         if self.waiting is not None:
             version = self.waiting["version"]
-            line = self.tr(
-                "AI model {version} of {board_model} is trained but not active: only the Golden board comparison"
-                " judges its boards."
-            ).format(version=version, board_model=bm)
+            if self.waiting_trial is not None:
+                line = self.tr(
+                    "AI model {version} of {board_model} is a Trial: no second person checked the labels it learned"
+                    " from, so it does not go live and only the Golden board comparison judges its boards."
+                ).format(version=version, board_model=bm)
+                self.btn_activate.setText(self.tr("Start the Checks"))
+                tip = self.tr("Open the label checks and the agreement check on Training, for a Validated version")
+            else:
+                line = self.tr(
+                    "AI model {version} of {board_model} is trained but not active: only the Golden board comparison"
+                    " judges its boards."
+                ).format(version=version, board_model=bm)
+                self.btn_activate.setText(self.tr("Activate {version}").format(version=version))
+                tip = self.activate_tip
+            self.btn_activate.setToolTip(tip)
             if not self.gates.may("activate_model"):
                 line = " ".join([line, phrase_text(refusal("activate_model").what)])
             self.ai_line.setText(line)
-            self.btn_activate.setText(self.tr("Activate {version}").format(version=version))
         self._update_buttons()
         return self.waiting
 
     def activate_waiting(self) -> None:
         """Activate the version the line names, with its Golden board, as Activate Selected on Training does
         (REQ-TRN-010): audited, refused without a card (AOI-TRN-049) or a readable Golden board (AOI-TRN-048). The
-        next board is judged with it, and the shift check, where one is on, is needed again first."""
+        next board is judged with it, and the shift check, where one is on, is needed again first. For a Trial AI
+        model, the button is Start the Checks, which opens them on Training (ADR 0020)."""
         if self.waiting is None or self.board_model is None:
+            return
+        if self.waiting_trial is not None:  # Start the Checks: a Trial AI model does not go live (ADR 0020)
+            view = self.waiting_trial.get("view")
+            self.shell.start_checks(self.board_model, str(view) if view else None)
             return
         version = self.waiting["version"]
         try:

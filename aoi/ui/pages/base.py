@@ -29,7 +29,7 @@ from ...core.services import REQUIRED_ROLE, ROLES_FROM, AppContext, ErrorReport,
 from ...errors import QT_TRANSLATE_NOOP as QT_TRANSLATE_NOOP  # pages mark text with it: Qt's is typed as object
 from ...errors import AoiError
 from .. import theme
-from ..errors import phrase_text, show_error
+from ..errors import START_CHECKS, phrase_text, show_error
 from ..widgets.ai_threshold import AiThresholdField
 from ..widgets.busy import BusyOverlay
 from ..widgets.empty_state import EmptyState
@@ -369,8 +369,22 @@ class Page(QWidget):
         return said.format(code=e.code, what=phrase_text(e.what), action=phrase_text(e.action))
 
     def error(self, exc: BaseException) -> None:
-        """Show an error the way the standard asks: its code, what happened and what to do (REQ-SET-019)."""
-        show_error(self, self.ctx.report_error(exc, self.title))
+        """Show an error the way the standard asks: its code, what happened and what to do (REQ-SET-019), with the
+        button that takes the step it names when it has one (`error_act`)."""
+        show_error(self, self.ctx.report_error(exc, self.title), self.error_act(exc))
+
+    def error_act(self, exc: BaseException) -> tuple[str, Callable[[], object]] | None:
+        """The button of an error's dialog that takes the step it names: Start the Checks, for a Trial version that the
+        go-live gate or the customer validation report refused (B1 of the 2026-10 business-readiness brief, decision
+        D1; ADR 0020), opening them on Training for the board model and view the error names; None for any other
+        error, and for a role that cannot open Training, which the dialog's words then serve alone."""
+        if not isinstance(exc, AoiError) or exc.code not in START_CHECKS or "Training" not in self.shell.pages:
+            return None
+        if self.ctx.role not in self.shell.pages["Training"].roles:
+            return None
+        board, view = str(exc.params.get("board") or ""), exc.params.get("view")
+        text = QCoreApplication.translate("Page", "Start the Checks")
+        return text, lambda: self.shell.start_checks(board, str(view) if view else None)
 
     def not_inspected(self, banner: QLabel, file: str, exc: BaseException, big: bool = True) -> tuple[str, str]:
         """A board that could not be judged (its file cannot be read, the engine failed): `banner` shows a shape and

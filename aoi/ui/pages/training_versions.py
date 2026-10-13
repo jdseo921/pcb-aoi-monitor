@@ -1,10 +1,11 @@
 """Training › Datasets' Working set panel, its Freeze sheet and the Versions table (REQ-TRN-005, the screen half;
 Datasets stage 4 of 4): the datasets sketch's working set, view by view with its labels checked, the customer whose
 dataset store holds the board model and the allowed uses; Freeze Dataset… shows the Freeze sheet in place of the
-labeller agreement, the version it would make and a line for each thing a freeze needs, ✓ or ✗ with the fix, and
-Freeze freezes the version on the pool, with progress and Cancel. The Versions table lists the board model's frozen
-versions; Split and Lock Validation Set… shows its sheet in the same place, Verify Manifest re-hashes the version
-picked on the pool, and Export Manifest… writes its files as CSV. Nothing here reads or writes the database itself."""
+labeller agreement, the version it would make, Validated or Trial (B1 of the 2026-10 business-readiness brief, decision
+D1; ADR 0020), and a line for each thing a freeze needs, ✓ or ✗ with the fix, and Freeze freezes the version on the
+pool, with progress and Cancel. The Versions table lists the board model's frozen versions, each Validated or Trial;
+Split and Lock Validation Set… shows its sheet in the same place, Verify Manifest re-hashes the version picked on the
+pool, and Export Manifest… writes its files as CSV. Nothing here reads or writes the database itself."""
 
 from __future__ import annotations
 
@@ -19,6 +20,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QAction, QIntValidator, QKeySequence
 from PySide6.QtWidgets import (
     QAbstractItemView,
+    QButtonGroup,
     QCheckBox,
     QComboBox,
     QFileDialog,
@@ -28,10 +30,11 @@ from PySide6.QtWidgets import (
     QLabel,
     QLineEdit,
     QMessageBox,
+    QRadioButton,
     QVBoxLayout,
 )
 
-from ...core.datasets import ALLOWED_USES, VALIDATION_NG, VALIDATION_OK, mismatch, stratum
+from ...core.datasets import ALLOWED_USES, TRIAL, VALIDATION_NG, VALIDATION_OK, mismatch, stratum
 from ...errors import AoiError
 from ...hal import VIEWS
 from ...times import to_local
@@ -40,7 +43,7 @@ from ..widgets.busy import BusyOverlay
 from ..widgets.empty_state import EmptyState
 from ..widgets.flow import FlowLayout
 from ..widgets.reflow import WrappedGroup
-from .base import QT_TRANSLATE_NOOP, action_button, button, fill_table, make_table
+from .base import QT_TRANSLATE_NOOP, action_button, button, fill_table, make_table, size_class
 
 if TYPE_CHECKING:
     from .training import TrainingPage
@@ -51,6 +54,10 @@ USES = {  # the sketch's three, own ticked: placeholders until Jay names the use
     "demos": QT_TRANSLATE_NOOP("WorkingSetPanel", "Demos"),
 }
 REVISION_LENGTH = 16  # a board revision is 1 to 16 letters and digits (aoi.core.datasets.REVISION)
+ASSURANCE = {  # a version's assurance as the Versions table's Checks cell and the Freeze sheet name it (ADR 0020)
+    "Validated": QT_TRANSLATE_NOOP("VersionsPanel", "Validated"),
+    "Trial": QT_TRANSLATE_NOOP("VersionsPanel", "Trial"),
+}
 
 
 class WorkingSetPanel(WrappedGroup):  # its wrapped lines whole at 1366 px (A7)
@@ -139,7 +146,10 @@ class WorkingSetPanel(WrappedGroup):  # its wrapped lines whole at 1366 px (A7)
 
 
 class FreezeSheet(QGroupBox):
-    """The Freeze sheet: the view and board revision, the version a freeze makes, what it needs, Cancel and Freeze."""
+    """The Freeze sheet: the view and board revision, Validated or Trial, the version a freeze makes, what it needs,
+    Cancel and Freeze. A Validated version, the default, needs every label check and the agreement check; a Trial
+    version, frozen by one person, needs neither, and it and every AI model trained from it are marked Trial (ADR
+    0020)."""
 
     def __init__(self, panel: WorkingSetPanel) -> None:
         super().__init__()
@@ -166,6 +176,18 @@ class FreezeSheet(QGroupBox):
         self.revision.returnPressed.connect(self.freeze)
         fields.addWidget(self.revision, 1)
         lay.addLayout(fields)
+        kinds = QHBoxLayout()  # Validated, with the second-user checks, or Trial, by one person without them
+        kinds.addWidget(QLabel(self.tr("Checks")))
+        self.kinds = QButtonGroup(self)
+        self.validated = size_class(QRadioButton(self.tr("Validated")), "T")
+        self.trial = size_class(QRadioButton(self.tr("Trial: one person, no checks")), "T")
+        for i, b in enumerate((self.validated, self.trial)):
+            self.kinds.addButton(b, i)
+            kinds.addWidget(b)
+        kinds.addStretch(1)
+        self.validated.setChecked(True)
+        self.kinds.idToggled.connect(lambda _i, on: self.read_gate() if on else None)
+        lay.addLayout(kinds)
         self.name_line = QLabel()
         self.name_line.setWordWrap(True)
         lay.addWidget(self.name_line)
@@ -177,6 +199,15 @@ class FreezeSheet(QGroupBox):
         self.files_line.setObjectName("muted")
         self.files_line.setWordWrap(True)
         lay.addWidget(self.files_line)
+        self.trial_line = QLabel(
+            self.tr(
+                "A Trial version and every AI model trained from it are marked Trial: such an AI model does not go live"
+                " or back a customer validation report until a Validated version is frozen and trained."
+            )
+        )
+        self.trial_line.setWordWrap(True)
+        self.trial_line.hide()
+        lay.addWidget(self.trial_line)
         self.refused = QLabel()  # the coded refusal no line above names: a version of that name exists, say
         self.refused.setWordWrap(True)
         lay.addWidget(self.refused)
@@ -194,6 +225,7 @@ class FreezeSheet(QGroupBox):
         """The sheet in place of the panels under the working set, for the view picked before while it has images,
         the board revision the board model's newest version names, if any."""
         self.board_model = board_model
+        self.validated.setChecked(True)  # Validated each time the sheet opens: Trial is chosen, never kept
         kept = self.view_box.currentText()
         self.view_box.blockSignals(True)
         self.view_box.clear()
@@ -210,9 +242,11 @@ class FreezeSheet(QGroupBox):
         self.panel.sync()
 
     def read_gate(self) -> None:
-        """What a freeze of the view and revision needs now, as AppContext.freeze_gate reads it, line by line."""
+        """What a freeze of the view and revision needs now, as AppContext.freeze_gate reads it, line by line; for a
+        Trial version, the label checks and the agreement check say they are not needed."""
         if self.board_model is None or not self.view_box.count():
             return
+        trial = self.trial.isChecked()
         view, revision = self.view_box.currentText(), self.revision.text().strip()
         g = self.gate = self.ctx.freeze_gate(self.board_model, view, revision)
         if g["name"] is None:
@@ -235,23 +269,35 @@ class FreezeSheet(QGroupBox):
             (check is not None and check["agreed"], self.tr("Agreement check reached its targets"),
              self.tr("No agreement check of this view reached its targets: run one under Labeller agreement")),
         ]  # fmt: skip
-        for line, (ok, yes, no) in zip(self.lines, said, strict=True):
-            line.setText(self.tr("✓ {line}").format(line=yes) if ok else self.tr("✗ {line}").format(line=no))
+        skipped = self.tr("Not needed for a Trial version: {line}")
+        for i, (line, (ok, yes, no)) in enumerate(zip(self.lines, said, strict=True)):
+            if trial and i != 2:  # every line but the customer's: a check a Trial version is frozen without
+                line.setText(self.tr("– {line}").format(line=skipped.format(line=yes)))
+            else:
+                line.setText(self.tr("✓ {line}").format(line=yes) if ok else self.tr("✗ {line}").format(line=no))
         files = self.tr("{files} files · a SHA-256 manifest is written · the version never changes afterwards")
         self.files_line.setText(files.format(files=g["files"]))
-        other = g["refused"] is not None and g["name"] is not None and all(ok for ok, _, _ in said)
-        self.refused.setText(self.page.coded_text(g["refused"]) if other else "")
+        self.trial_line.setVisible(trial)
+        refused = g["refused_trial"] if trial else g["refused"]
+        needed = [said[2]] if trial else said
+        other = refused is not None and g["name"] is not None and all(ok for ok, _, _ in needed)
+        self.refused.setText(self.page.coded_text(refused) if other else "")
         self.refused.setVisible(other)
+        self.btn_now.setText(self.tr("Freeze as Trial") if trial else self.tr("Freeze"))
         self.sync()
 
     def sync(self) -> None:
-        """Freeze needs every line ✓, no refusal, an allowed use ticked and no job of the page's running."""
+        """Freeze needs every line ✓ that the version's checks need, no refusal, an allowed use ticked and no job of
+        the page's running."""
         uses = self.panel.picked_uses()
-        ready = self.gate is not None and self.gate["refused"] is None and bool(uses)
+        refused = "refused_trial" if self.trial.isChecked() else "refused"
+        ready = self.gate is not None and self.gate[refused] is None and bool(uses)
         self.btn_now.setEnabled(ready and self.page.idle())
         self.btn_now.setToolTip("" if uses else self.tr("Tick at least one allowed use"))
         self.revision.setEnabled(self.page.idle())
         self.view_box.setEnabled(self.page.idle())
+        for b in (self.validated, self.trial):
+            b.setEnabled(self.page.idle())
 
     def cancel(self) -> None:
         """Cancel or Esc: the panels back; a freeze that runs is stopped instead, nothing written, the sheet kept."""
@@ -277,11 +323,13 @@ class FreezeSheet(QGroupBox):
         self.panel.sync()
 
     def freeze(self) -> None:
-        """Freeze the view as the gate named it, for the store's customer and the uses ticked, on the pool."""
+        """Freeze the view as the gate named it, Validated or Trial, for the store's customer and the uses ticked, on
+        the pool."""
         g, bm = self.gate, self.board_model
         if g is None or bm is None or g["store"] is None or not self.btn_now.isEnabled():
             return
         view, revision, name = self.view_box.currentText(), self.revision.text().strip(), g["name"]
+        trial = self.trial.isChecked()
 
         def done(version: dict[str, Any] | None) -> None:
             self.running = False
@@ -289,7 +337,10 @@ class FreezeSheet(QGroupBox):
             self.page.refresh()
             if version is not None:
                 self.page.versions.show_board_model(bm, version["uuid"])  # picked, as the newest
-                said = self.tr("Froze {name}: {files} files and their manifest")
+                if version.get("assurance") == TRIAL:
+                    said = self.tr("Froze {name} as a Trial version: {files} files and their manifest")
+                else:
+                    said = self.tr("Froze {name}: {files} files and their manifest")
                 self.page.shell.status(said.format(name=version["name"], files=g["files"]))
 
         def stopped(version: dict[str, Any] | None) -> None:  # a Cancel after the last file hashed comes too late
@@ -312,7 +363,7 @@ class FreezeSheet(QGroupBox):
         self.running = True
         self.page.run_in_background(
             self.ctx.freeze_dataset, bm, view, revision, g["store"]["customer"], self.panel.picked_uses(),
-            with_progress=True, on_result=done, on_cancel=stopped, on_error=failed, busy=self.panel.busy,
+            with_progress=True, on_result=done, on_cancel=stopped, on_error=failed, busy=self.panel.busy, trial=trial,
         )  # fmt: skip
         self.sync()
 
@@ -340,7 +391,7 @@ class VersionsPanel(QGroupBox):
         self.counts: dict[str, dict[str, int]] = {}  # dataset_counts, by version UUID
         self.verified: dict[str, dict[str, Any]] = {}  # what Verify Manifest found, by version UUID, this session
         lay = QVBoxLayout(self)
-        heads = [self.tr("Version"), self.tr("Frozen"), self.tr("By"), self.tr("OK"), self.tr("NG")]
+        heads = [self.tr("Version"), self.tr("Checks"), self.tr("Frozen"), self.tr("By"), self.tr("OK"), self.tr("NG")]
         heads += [self.tr("Validation OK / NG"), self.tr("Customer"), self.tr("Uses"), self.tr("Manifest")]
         self.table = make_table(heads, sortable=False)  # newest first, as Self-training's Dataset version list
         self.table.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
@@ -380,7 +431,8 @@ class VersionsPanel(QGroupBox):
             )
             uses = ", ".join(self.tr(USES_SHORT[u]) for u in v["allowed_uses"] if u in USES_SHORT)
             by = names.get(v["frozen_by"], v["frozen_by"])
-            table.append([v["name"], to_local(v["frozen_at"]), by, n["ok"], n["ng"], val, v["customer"], uses,
+            checks = self.tr(ASSURANCE.get(v["assurance"], v["assurance"]))  # Validated or Trial (ADR 0020)
+            table.append([v["name"], checks, to_local(v["frozen_at"]), by, n["ok"], n["ng"], val, v["customer"], uses,
                           self._manifest(v["uuid"])])  # fmt: skip
         self.table.blockSignals(True)  # the pick shown once the table is whole, by show_found below
         fill_table(self.table, table)

@@ -555,14 +555,18 @@ class Database:
             (model_id, model_id),
         )
 
-    def next_model_version(self, board_model: str, taken: Callable[[str], bool] = lambda version: False) -> str:
-        """The first of v1.0, v1.1, ... from the count of registered versions that no version has and `taken` does not
-        report in use, such as by files a run left unregistered: a file a result names is never written over (#178)."""
+    def next_model_version(
+        self, board_model: str, taken: Callable[[str], bool] = lambda version: False, suffix: str = ""
+    ) -> str:
+        """The first of v1.0, v1.1, ... from the count of registered versions whose number no version has, with or
+        without a suffix, and that `taken` does not report in use, such as by files a run left unregistered: a file a
+        result names is never written over (#178). `suffix` ends the name, " (Trial)" for a Trial version's AI model."""
         names = {m["version"] for m in self.models(board_model)}
+        numbers = {v.split(" ", 1)[0] for v in names}  # v1.0 (Trial) holds v1.0's number
         n = len(names)
-        while (version := f"v1.{n}") in names or taken(version):
+        while (number := f"v1.{n}") in numbers or taken(number + suffix):
             n += 1
-        return version
+        return number + suffix
 
     # --- recipes -----------------------------------------------------------
     def save_recipe(self, board_model: str, body: dict[str, Any], user: str) -> tuple[int, str]:
