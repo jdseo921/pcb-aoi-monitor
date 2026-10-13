@@ -78,14 +78,21 @@ def end(code: int) -> None:
     """End the process at once with `code`, as a crash ends it: no close event, nothing saved, nothing cleaned up. On
     Windows os._exit leaves through ExitProcess, which unloads each library while the inspection's threads may still run
     in PyTorch's, and the process could end in an access violation, 0xC0000005, in place of `code` (Windows CI on #404);
-    TerminateProcess ends it as Task Manager or a crash does, with no library unloaded."""
+    TerminateProcess ends it as Task Manager or a crash does, with no library unloaded. Its handle is declared a HANDLE:
+    passed as ctypes' default int, only its low 32 bits are set on 64-bit Windows, the call can fail on a handle that
+    is not the process's, and the end fell through to os._exit and its access violation (Windows CI on #405)."""
     sys.stdout.flush()
     sys.stderr.flush()
     if sys.platform == "win32":
         import ctypes
+        from ctypes import wintypes
 
-        kernel32 = ctypes.windll.kernel32
+        kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+        kernel32.GetCurrentProcess.restype = wintypes.HANDLE
+        kernel32.TerminateProcess.argtypes = (wintypes.HANDLE, wintypes.UINT)
+        kernel32.TerminateProcess.restype = wintypes.BOOL
         kernel32.TerminateProcess(kernel32.GetCurrentProcess(), code)  # returns only if it failed
+        print(f"TerminateProcess failed, Windows error {ctypes.get_last_error()}", file=sys.stderr, flush=True)
     os._exit(code)
 
 
