@@ -76,12 +76,15 @@ Rehearse once on the demo laptop, the day before or in the room, and tick each l
 
 ## Why the scripts are trusted
 
-`tests/test_demo_scripts.py` clicks through the 5-minute and the 15-minute scripts in the presenter theme on every pull
-request, from **Load Demo Workspace** to **Reset Demo**, and goes red on any message on the way, or on a page wider
-than a 1920 px screen; the 45-minute script is not clicked through. It also checks that every name in bold in these
-files is a real button or page, that the text uses the Charter's words, and that each file has its Korean draft.
-`tests/test_demo_fit.py` opens every page and tab the scripts show at 1366 × 768, in the presenter theme and in the
-dark one, and goes red on a page or a panel of fields that scrolls sideways, a line of text cut off, or a verdict,
-defect box or table row on **Compare** that is not in view. Customers & Launch also asks that someone in each
-reader's role follows the scripts on the release build before they go out; that has not been done yet, as the release
-build does not exist.
+`tests/test_demo_scripts.py` clicks through the 5-, 15- and 45-minute scripts in the presenter theme on every pull
+request from **Load Demo Workspace** on, the 5- and 45-minute ones to **Reset Demo**, the 5-minute one on a 1920 × 1080
+and on a 1366 × 768 screen, and goes red on any dialog or message on the way that the script does not answer itself, or
+on a page wider than a 1920 px screen. It also starts the demo as the Start menu's Demo entry does, ends it mid-run by a
+crash and again by closing it, starts it again, and checks that it opens as "When something goes wrong" says: the demo
+workspace, signed in as `admin`, in the theme it had, in under 30 s, with no dialog. It also checks that every name in
+bold in these files is a real button or page, that the text uses the Charter's words, and that each file has its Korean
+draft. `tests/test_demo_fit.py` opens every page and tab the scripts show at 1366 × 768, in the presenter theme and in
+the dark one, and goes red on a page or a panel of fields that scrolls sideways, a line of text cut off, or a verdict,
+defect box or table row on **Compare** that is not in view. Customers & Launch also asks that someone in each reader's
+role follows the scripts on the release build before they go out; that has not been done yet, as the release build does
+not exist.
