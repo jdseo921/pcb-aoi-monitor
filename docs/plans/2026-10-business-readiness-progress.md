@@ -18,7 +18,7 @@ and the pull request that delivered it, and where a PR names a D or F item it is
 | A6 (F12) | A second start brings the open copy to the front, else one sentence and one button | #402 | Merged 2026-10-12 |
 | A7 (#104, Charter principle 1) | Every page the demo scripts visit fits the presenter theme at 1366 × 768, its verdict area unscrolled | #403 | Open: the 16 pt size waits for Jay |
 | A8 (F14) | Click the 45-minute script; the 5-minute one at 1366 × 768; a crash-recovery test | #404, stacked on A7 | Open |
-| A7 follow-up (#104) | The presenter theme fills the whole screen (Jay's choice of 2026-10-13) | #FSPR, stacked on A8 | Open |
+| A7 follow-up (#104) | The presenter theme fills the whole screen (Jay's choice of 2026-10-13) | #405, stacked on A8 | Open |
 
 The Phase A report follows A8, at the end of this file.
 
@@ -41,7 +41,7 @@ The demo's boards are drawn, so nothing here is a measure of accuracy.
 | A6 (F12) A second start brings the open copy to the front, else one sentence and one button | #402, merged | `tests/test_second_start.py` (14 tests, 2 of them on Windows CI only) | No approved screenshot moved; AOI-SET-019's box is new |
 | A7 (#104) Every page the demo scripts open fits 1366 × 768 in the presenter theme, its verdict area unscrolled | #403, open | `tests/test_demo_fit.py` (every page and tab the scripts open, both themes, at 1366 × 768, then at 1500 × 1000 and 1920 × 1080, then at 1366 × 768 again) | `presenter-1366-*.png` (8 new, 1366 × 768); 23 approved screenshots moved at 1920 × 1080 (listed in #403) |
 | A8 (F14) The 45-minute script clicked through; the 5-minute one at 1366 × 768; a crash-recovery test | #404, open | `test_req_set_007_the_forty_five_minute_script_clicked_through`, `test_req_set_007_the_five_minute_script_runs_in_the_presenter_theme[1366x768]`, `test_req_set_007_a_demo_closed_mid_run_opens_again_as_the_demo_kit_says[crash]` and `[close]`; each asserts no dialog | No screen changed (tests and the demo kit only) |
-| A7 follow-up (#104) The presenter theme fills the whole screen; Exit presenter theme gives the window back | #FSPR, open | `test_req_set_008_the_presenter_theme_fills_the_screen_and_its_exit_gives_the_window_back`, `test_req_set_008_a_switch_to_full_screen_styles_the_app_once_at_the_screens_size`; the 5-minute script and the crash-recovery test check how each window is shown | The six Settings screenshots, for the Presenter theme's description ("Full screen and light, …") |
+| A7 follow-up (#104) The presenter theme fills the whole screen; Exit presenter theme gives the window back | #405, open | `test_req_set_008_the_presenter_theme_fills_the_screen_and_its_exit_gives_the_window_back`, `test_req_set_008_a_switch_to_full_screen_styles_the_app_once_at_the_screens_size`, `test_req_set_008_the_presenter_theme_fills_the_projector_and_a_workspace_switch_stays_on_it` (a laptop and a projector beside it); the 5-minute script and the crash-recovery test check how each window is shown | The six Settings screenshots, for the Presenter theme's description ("Full screen and light, …") |
 
 The least window each demo page needs, in both themes, is in [docs/tests/2026-10-screen-sizes.md](../tests/2026-10-screen-sizes.md).
 
@@ -57,8 +57,8 @@ The least window each demo page needs, in both themes, is in [docs/tests/2026-10
 3. **A full-screen presenter view** (A7): answered. Jay chose "Full screen" on 2026-10-13 00:51 UTC. The presenter
    theme now fills the screen, so Inspection's Start and the last two rows of Compare's table, which sat just below
    the edge of a window maximized on a 1366 × 768 screen, are in view; Exit presenter theme gives the window back.
-   Built in #FSPR, stacked on #404 (ADR 0019, decision 4).
-4. **Review and merge #403, then #404, then #FSPR** (CLAUDE.md rule 6).
+   Built in #405, stacked on #404 (ADR 0019, decision 4).
+4. **Review and merge #403, then #404, then #405** (CLAUDE.md rule 6).
 5. **The brief and this file.** `docs/plans/2026-10-business-readiness-brief.md` is not in the repository, so this report
    follows Jay's messages, not the brief's acceptance lines. Adding the brief lets the report be checked against it.
 

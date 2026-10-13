@@ -354,7 +354,8 @@ def test_req_set_008_the_presenter_theme_applies_at_once_saved_and_audited(
     QApplication.processEvents()
     assert win.minimumSizeHint().width() <= 1366, win.minimumSizeHint()  # a 1366 x 768 projector (README, #104)
     assert win.exit_presenter.isVisible()
-    message = "Presenter theme on, full screen. An Admin turns it off with Exit presenter theme."
+    # `_window` shows the window at a size of its own, not as the app shows it: it keeps that size, not full screen
+    message = "Presenter theme on. An Admin turns it off with Exit presenter theme."
     assert win.statusBar().currentMessage() == message
     shown = drawn()
     assert shown["banner"] == theme.verdict_style(verdict) and "font-size:48pt" in str(shown["banner"])
@@ -418,7 +419,8 @@ def test_req_set_008_a_presenter_start_styles_the_app_once_at_its_screens_sizes(
     it opens full screen on (ADR 0019): its 16 pt on a 1366 x 768 projector, its 18 pt on a 1920 x 1080 one. The window
     shown at the screen's size is not styled again: styled at 18 pt first and at 16 pt as it was shown, the demo took
     about 1.2 s longer to start on a small screen (A8 of the 2026-10 business-readiness brief). Offscreen, Qt's one
-    screen is 800 x 800 px, so the screen's room is given here and the window shown at it, as maximized there."""
+    screen is 800 x 800 px, so the screen's room is given here and the window shown at that size, as full screen
+    fills it."""
     ctx = trained_ctx
     ctx.set_user("admin")
     ctx.save_settings({"presenter_theme": True})
@@ -446,8 +448,10 @@ def test_req_set_008_the_presenter_theme_fills_the_screen_and_its_exit_gives_the
 ) -> None:
     """#104, Jay's choice of 2026-10-13: the app opens maximized in the production theme (main.py), and an Admin who
     switches the presenter theme on gets the whole screen, with no title bar or taskbar, so a 1366 x 768 projector
-    gives the pages all 768 px; Exit presenter theme gives the maximized window back. A start, or a Reset Demo, with
-    the theme saved on opens full screen. A window someone sized by hand keeps its size either way."""
+    gives the pages all 768 px; Exit presenter theme gives the maximized window back, and the status bar says which.
+    A window someone sized by hand keeps its size through the switch and the exit. A start with the theme saved on
+    opens full screen (tests/test_start_user.py, through main()), and so does Reset Demo's window
+    (tests/test_demo_scripts.py, `projector`, and tests/test_presenter_screens.py on a projector beside a laptop)."""
     ctx = trained_ctx
     win = MainWindow(ctx)
     qtbot.addWidget(win)
@@ -459,6 +463,8 @@ def test_req_set_008_the_presenter_theme_fills_the_screen_and_its_exit_gives_the
     assert win.navigate("Settings") and win.isMaximized() and not win.isFullScreen()
     settings.presenter.click()
     assert theme.presenter() and win.isFullScreen() and not win.isMaximized()
+    full = "Presenter theme on, full screen. An Admin turns it off with Exit presenter theme."
+    assert win.statusBar().currentMessage() == full
     win.exit_presenter.click()
     assert not theme.presenter() and win.isMaximized() and not win.isFullScreen()
 
@@ -466,15 +472,11 @@ def test_req_set_008_the_presenter_theme_fills_the_screen_and_its_exit_gives_the
     win.resize(1500, 1000)
     settings.presenter.click()
     assert theme.presenter() and not win.isFullScreen() and not win.isMaximized() and win.size() == QSize(1500, 1000)
+    assert win.statusBar().currentMessage() == "Presenter theme on. An Admin turns it off with Exit presenter theme."
     win.exit_presenter.click()
     assert not theme.presenter() and not win.isFullScreen() and win.size() == QSize(1500, 1000)
-
-    settings.presenter.click()
-    again = MainWindow(ctx)  # the theme saved on: the next start, or Reset Demo's window (MainWindow.switch_workspace)
-    qtbot.addWidget(again)
-    again.show_for_theme()
-    qtbot.waitExposed(again)
-    assert again.isFullScreen() and not again.isMaximized()
+    settings.presenter.click()  # the tick cleared at the exit (SettingsPage.restyle): one click switches it on again
+    assert theme.presenter()
 
 
 def test_req_set_008_a_switch_to_full_screen_styles_the_app_once_at_the_screens_size(

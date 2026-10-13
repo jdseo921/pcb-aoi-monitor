@@ -64,9 +64,14 @@ tall, 45 px more than 768 (docs/tests/2026-10-screen-sizes.md).
    below the edge; full screen gives the pages all 768 px, which decisions 1 to 3 fit. The app opens full screen with
    the theme saved on (a start, Load Demo, Reset Demo), goes full screen when an Admin ticks Presenter theme in the
    window the app opened, and gives back the maximized window with Exit presenter theme; a window someone sized by
-   hand keeps its size either way. The production theme opens maximized, with its title bar, as before. The switch
-   styles the pages once, at the size of the screen the window goes full screen on. No key switches it: F11, the
-   usual one, is False call on Inspection and Logs & Export; Alt+Tab and Alt+F4 work as in any window.
+   hand keeps its size through the tick and the exit. The window a workspace switch builds opens on the screen the
+   window before was on, so Reset Demo keeps the demo on a projector beside the laptop (Windows' Extend). The
+   production theme opens maximized, with its title bar, as before. The switch styles the pages once, at the size
+   of the screen the window goes full screen on. No key switches it: F11, the usual one, is False call on
+   Inspection and Logs & Export; Alt+Tab and Alt+F4 are left to Windows. A full-screen window has no title bar to
+   drag it to another screen, so the demo kit has the projector connected before the app starts, showing the
+   laptop's picture or its own alone. None of this was tried on a Windows projector yet (REQ-SET-004's human
+   review).
 
 This narrows ADR 0012's third alternative ("lay every page out to fit 1366 × 768 without scrolling"): only the
 verdict area is laid out to fit, and the rest of each page still scrolls.

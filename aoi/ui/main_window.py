@@ -14,6 +14,7 @@ from PySide6.QtGui import (
     QMouseEvent,
     QPainter,
     QResizeEvent,
+    QScreen,
     QShowEvent,
 )
 from PySide6.QtWidgets import (
@@ -388,9 +389,10 @@ class _PageStack(QStackedWidget):
 
 
 class MainWindow(QMainWindow):
-    def __init__(self, ctx: AppContext, carried: str | None = None) -> None:
+    def __init__(self, ctx: AppContext, carried: str | None = None, screen: QScreen | None = None) -> None:
         """The window on `ctx`'s workspace. `carried`: the role of the user signed in in the window before, when a
-        workspace switch builds this one (`switch_workspace`)."""
+        workspace switch builds this one (`switch_workspace`); `screen`: the screen it opens on, the one the window
+        before was on then, a projector beside the laptop among them."""
         super().__init__()
         self.ctx = ctx
         self.board_model: str | None = None
@@ -402,6 +404,9 @@ class MainWindow(QMainWindow):
         title = f"{APP_NAME} {APP_VERSION}"
         self.setWindowTitle(self.tr("{title} · Demo").format(title=title) if self.in_demo else title)
         self.resize(1920, 1080)
+        if screen is not None:  # a window not yet shown goes where its middle is, and full screen has no title bar
+            self.setScreen(screen)  # to drag it by: before, Reset Demo moved the projector's window to the laptop
+            self.move(screen.geometry().topLeft())
         want = (ctx.settings.presenter_theme, ctx.settings.presenter_theme and self._small())
         if want != (theme.presenter(), theme.small()):  # the theme saved, at the screen's sizes, before anything is
             self._set_theme(*want)  # drawn: styled once, not again as the window is shown on that screen
@@ -643,10 +648,10 @@ class MainWindow(QMainWindow):
 
     def _fit_header(self) -> None:
         """The header's controls whole in a window as narrow as 1366 px in the presenter theme (A7): where they do not
-        all fit, the app's name gives way first, which the window's title bar still shows, then the words "Board
-        model:" before the list, whose tooltip still says it; at 1366 px only a training run's line in the header
-        needs that. Measured as if both were shown, and each shown or hidden only when that changes, so a resize lays
-        the window out once (review of A7)."""
+        all fit, the app's name gives way first, which the title bar shows outside the presenter theme, then the words
+        "Board model:" before the list, whose tooltip still says it; at 1366 px only a training run's line in the
+        header needs that. Measured as if both were shown, and each shown or hidden only when that changes, so a
+        resize lays the window out once (review of A7)."""
         layout = self.header.layout()
         assert layout is not None
         gives_way = (self.logo, self.bm_label)
@@ -744,8 +749,10 @@ class MainWindow(QMainWindow):
         self.apply_theme(screen.geometry().size() if screen is not None else None)
         if fit:
             self.show_for_theme()  # full screen in it, and the maximized window with its title bar back out of it
-        if on:
+        if on and fit:
             self.status(self.tr("Presenter theme on, full screen. An Admin turns it off with Exit presenter theme."))
+        elif on:  # a window sized by hand keeps its size
+            self.status(self.tr("Presenter theme on. An Admin turns it off with Exit presenter theme."))
         else:
             self.status(self.tr("Presenter theme off."))
         return True
@@ -917,7 +924,8 @@ class MainWindow(QMainWindow):
             if ctx is None:
                 use_workspace(before)
                 ctx = open_workspace()
-            win = build_window(ctx, role) if ctx is not None else None  # signed in as the role carried
+            # signed in as the role carried, on this window's screen
+            win = build_window(ctx, role, self.screen()) if ctx is not None else None
         finally:
             QApplication.restoreOverrideCursor()
         if win is None:  # nothing opens: the app closes, as at a start that opens nothing
@@ -961,16 +969,17 @@ class MainWindow(QMainWindow):
         return cur.title if isinstance(cur, Page) else "Home"
 
 
-def build_window(ctx: AppContext, carried: str | None = None) -> MainWindow | None:
-    """The main window at start-up, or at a workspace switch with the role `carried` from the window before, with the
-    unhandled-error hook in place (REQ-LOG-005, REQ-SET-019), or None when it could not be built. The hook goes in
-    before the window exists, so a slot that raises while the pages are built is logged and shown too, and again with
-    the window as the dialog's parent once it is built. An error raised out of building it (a page that cannot read the
-    database, #205; a start's sign-in whose audit entry cannot be written, so no one is signed in unaudited) is shown
-    as one coded dialog with its trace in the log; the caller closes the workspace and ends the app."""
+def build_window(ctx: AppContext, carried: str | None = None, screen: QScreen | None = None) -> MainWindow | None:
+    """The main window at start-up, or at a workspace switch with the role `carried` from the window before and on its
+    `screen` (`MainWindow.__init__`), with the unhandled-error hook in place (REQ-LOG-005, REQ-SET-019), or None when
+    it could not be built. The hook goes in before the window exists, so a slot that raises while the pages are built
+    is logged and shown too, and again with the window as the dialog's parent once it is built. An error raised out of
+    building it (a page that cannot read the database, #205; a start's sign-in whose audit entry cannot be written, so
+    no one is signed in unaudited) is shown as one coded dialog with its trace in the log; the caller closes the
+    workspace and ends the app."""
     install_excepthook(ctx, None)
     try:
-        win = MainWindow(ctx, carried)
+        win = MainWindow(ctx, carried, screen)
     except Exception as e:
         show_error(None, ctx.report_error(e, QT_TRANSLATE_NOOP("Errors", "start-up")))
         return None

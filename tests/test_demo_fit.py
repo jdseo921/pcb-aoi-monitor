@@ -62,7 +62,7 @@ def test_req_set_008_every_demo_page_fits_1366_by_768_with_its_verdict_area_whol
     settings.demo.pace.setValue(1)  # the test's own pace
     if presenter:
         settings.presenter.click()
-    win.showNormal()  # it opens maximized
+    win.showNormal()  # it opens maximized, and full screen once the presenter theme is on
     win.resize(1366, 768)
     qtbot.waitUntil(lambda: win.size() == QSize(1366, 768))
     assert theme.presenter() is presenter and theme.small() is presenter

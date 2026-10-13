@@ -368,7 +368,7 @@ def test_req_set_008_in_the_presenter_theme_an_admin_resets_the_demo_or_leaves_t
     win.pages["Settings"].presenter.click()  # type: ignore[attr-defined]
 
     def smallest(win: MainWindow) -> None:
-        win.showNormal()  # it opens maximized, and maximized it went back to the test screen's 1461 x 796 mid-run
+        win.showNormal()  # shown as the app shows it (show_for_theme), it went back to the test screen's size mid-run
         win.resize(1366, 768)
         qtbot.waitUntil(lambda: win.size() == QSize(1366, 768))
 

@@ -32,7 +32,8 @@ Korean drafts of each file are in [ko/](ko/), marked for review by a native spea
 
 Rehearse once on the demo laptop, the day before or in the room, and tick each line:
 
-- [ ] The release build is installed. Note its version: the title bar and the line under **Settings** show it.
+- [ ] The release build is installed. Note its version: the line under **Settings** shows it, and so does the title
+      bar outside the presenter theme.
 - [ ] The demo workspace is reset: start `AOI PoC Inspector (Demo)` from the Start menu (it opens signed in as
       `admin`, at **Home** after a normal close). Open **Settings**, press **Reset Demo** and confirm; the presenter
       theme, if it is on, stays on. Leave it at **Home** with the **Presenter theme** on.
@@ -41,8 +42,15 @@ Rehearse once on the demo laptop, the day before or in the room, and tick each l
       Every page and tab the scripts open fits 1366 × 768, its verdict, defect boxes and the table on **Compare** in
       view with nothing scrolled; where the app has under 900 px of height or 1400 px of width, the presenter theme's
       text is 16 pt, not 18 ([screen sizes](../tests/2026-10-screen-sizes.md)). The presenter theme fills the whole
-      screen, with no title bar or taskbar, so the app has all of it; **Exit presenter theme** gives the window back,
-      and Alt+Tab reaches another app. On a projector that takes less than 1366 × 768, play the recording.
+      screen, with no title bar or taskbar; **Exit presenter theme** brings them back. Those sizes were measured on
+      Linux at 1366 × 768, not on a Windows projector, so check on the projector that **Start** on **Inspection** and
+      the last row of the table on **Compare** are in view. On a projector that takes less than 1366 × 768, play the
+      recording.
+- [ ] The projector is connected, at the resolution it will run at, before the app starts, and Windows shows the
+      same picture on both screens (Win+P, "Duplicate") or on the projector alone ("Second screen only"). Full screen
+      has no title bar to drag the app from the laptop's screen to the projector's.
+- [ ] You have tried the way out: Alt+F4 closes the app, as it closes any app. Signed in below the Admin, you leave the
+      presenter theme by signing in as `admin` with **Switch User**, then pressing **Exit presenter theme**.
 - [ ] The **Presenter theme** is on (**Settings**, then **Presenter theme**).
 - [ ] Windows notifications are off (Focus or Do not disturb), and no other app is open.
 - [ ] Only this customer's data is on the laptop: no other customer's images, reports or names, in the app, on the

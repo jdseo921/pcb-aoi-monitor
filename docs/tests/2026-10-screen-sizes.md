@@ -122,8 +122,8 @@ could not be made narrower than 1527 px) and below 1679 to 1725 px in the produc
   UI's line height and 0.85 of its widths), the last two rows are under the edge at 16 pt too (50 px short). The
   verdict, the board with its defect boxes, the defect list, the review buttons and Compare with Golden board › are in
   view; F5 starts the run with Start out of view. Since Jay's choice of 2026-10-13 the presenter theme opens full
-  screen (ADR 0019, decision 4), so a demo has the whole 1366 × 768 and this column applies to the production theme,
-  and to a presenter window someone has taken out of full screen by hand.
+  screen (ADR 0019, decision 4), so a demo has the whole 1366 × 768 and this column applies to the production
+  theme's maximized window, and to a presenter window someone sized by hand to it before switching the theme on.
 - Pages other than these three may scroll below the fold, their lower panels secondary to what the scripts show first:
   at 1366 px wide and 16 pt, Training needs 1416 px of height with nothing scrolled, Settings 1277 px, AI Model Test
   892 px, Recipe Editor 789 px and Home 787 px.
