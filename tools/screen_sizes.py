@@ -46,7 +46,7 @@ DEMO_PAGES = (  # every page the 5-, 15- and 45-minute scripts open, in sidebar 
     "Home", "Inspection", "Compare", "Training", "AI Model Test", "Recipe Editor", "Logs & Export", "Settings",
 )  # fmt: skip
 DEMO_TABS: dict[str, tuple[str, ...]] = {  # the tabs the scripts open beyond the one a page opens on (stage1-45min.md)
-    "Training": ("Datasets",),
+    "Training": ("Datasets", "What is missing"),
     "AI Model Test": ("History",),
     "Recipe Editor": ("Thresholds", "AOI checks", "Revisions"),
 }

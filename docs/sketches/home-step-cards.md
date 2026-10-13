@@ -30,6 +30,10 @@ Home   Stage 1: upload → train → tune recipe → validate → inspect → ex
 └──────────────────────────────┘ └────────────────────────────────┘ └─────────────────────────────────┘
 ```
 
+Under the cards, What is missing: what the board model still needs, each line counted against what it needs with the
+button that fixes it ([what-is-missing.md](what-is-missing.md), REQ-TRN-021); below the fold, where the page scrolls
+down: at 1366 × 768, and its last lines at 1920 × 1080.
+
 Each card: number and name 16 pt, one sentence 14 pt, status lines 14 pt, one link button. Status is read from
 the database within 300 ms of Home opening and refreshed every 5 s while the page is shown (REQ-INSP-016).
 
@@ -51,7 +55,7 @@ and the button still opens the page.
 
 | Card | Status when done | Status when not done (next step) |
 |---|---|---|
-| 1 | 40 OK · 3 NG · 1 UNSURE; "2 NG labels unchecked" when a check is pending | "No samples yet. Add at least 70 OK boards." (S58: 50 for the locked validation set and 20 to train, aoi/core/datasets.py; it read 20) |
+| 1 | 40 OK · 3 NG · 1 UNSURE; "2 NG labels unchecked" when a check is pending | "No samples yet." and the one sentence on how many images a board model needs, `datasets.needs()` (REQ-TRN-021, [what-is-missing.md](what-is-missing.md); it read "Add at least 70 OK boards." here and 20 on Training) |
 | 2 | Active AI model v1.2; progress while training (a board model's first goes live when trained, ADR 0018) | "No AI model yet. Freeze a dataset, then train."; while a version waits, "AI model v1.0 trained, not active. Activate it on Training."; while only a Trial one waits, "AI model v1.0 (Trial) is a Trial and does not go live. Start the Checks on Training for a Validated version." (ADR 0020) |
 | 3 | Recipe revision 4 · 6 of 10 AOI checks (4 need Stage 2) | "Recipe uses defaults. Draw ROIs on the Golden board." |
 | 4 | Missed defects 0 of 30 · False calls 1 of 50 (counts, never a bare percent) | "Not validated yet. Run the locked validation set." |

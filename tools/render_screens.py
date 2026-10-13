@@ -61,7 +61,7 @@ FIXED_SSIM, FIXED_INLIERS = 0.95, 400  # the similarity and alignment points Com
 SETTLE_MS = 40  # past the 20 ms after which Qt resizes a list to its contents (`settle`)
 SETTLE_PASSES = 100  # event loop passes a page may take to lay itself out before a grab
 PAGE_VIEWS = {  # <page>-<view>-<role>
-    "Training": ("datasets", "freeze", "split", "blind"),
+    "Training": ("datasets", "freeze", "split", "blind", "missing"),
     "Settings": ("advanced", "restore", "move-in", "shred"),
     "Logs & Export": ("types",),
     "AI Model Test": ("targets",),
@@ -388,8 +388,8 @@ def show_view(win: MainWindow, title: str, view: str | None) -> None:
     workspace's version, opened as Split and Lock Validation Set… opens it on a version not split (that one is, with no
     validation file, so the sheet is opened for it directly) with seed 7, and the blind labelling
     panel on its first image, the board model's images standing in for a calibration set of 100 (the workspace holds
-    fewer): Stop closes it, the status line saying so until the next page clears it, and with None the focus is
-    cleared, as Training opens with none, so the pages after render alike.
+    fewer): Stop closes it, the status line saying so until the next page clears it, and its What is missing tab
+    (REQ-TRN-021); with None the focus is cleared, as Training opens with none, so the pages after render alike.
     Settings' are its Advanced tick ticked, then Restore Key…, Move Board Model In… and Shred Store… on the store the
     screenshot workspace's version is in, the first and last under that tick (ADR 0021). Logs & Export's is its Defect
     types tab, counted on the records the filter lists (REQ-LOG-008). AI Model
@@ -406,7 +406,7 @@ def show_view(win: MainWindow, title: str, view: str | None) -> None:
             page._stop_blind()
         page.working.sheet.close_sheet()
         page.versions.split.close_sheet()
-        page.tabs.setCurrentIndex(0 if view is None else 1)
+        page.tabs.setCurrentIndex(0 if view is None else 2 if view == "missing" else 1)
         if view == "freeze":
             page.working.open_sheet()
         if view == "split":

@@ -34,7 +34,16 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
-from ...core.datasets import ALLOWED_USES, TRIAL, VALIDATION_NG, VALIDATION_OK, mismatch, stratum
+from ...core.datasets import (
+    ALLOWED_USES,
+    OK_NEEDED,
+    TRAIN_OK,
+    TRIAL,
+    VALIDATION_NG,
+    VALIDATION_OK,
+    mismatch,
+    stratum,
+)
 from ...errors import AoiError
 from ...hal import VIEWS
 from ...times import to_local
@@ -140,9 +149,14 @@ class WorkingSetPanel(WrappedGroup):  # its wrapped lines whole at 1366 px (A7)
         self._sync()
 
     def open_sheet(self) -> None:
+        self.open_sheet_for(False)
+
+    def open_sheet_for(self, trial: bool, view: str | None = None) -> None:
+        """The Freeze sheet, for a Trial version with `trial`, on `view` while it has images (What is missing,
+        REQ-TRN-021); Freeze Dataset… opens it for a Validated version on the view picked before."""
         if self.board_model is None or not self.views or not self.page.idle():
             return
-        self.sheet.open_for(self.board_model, self.views)
+        self.sheet.open_for(self.board_model, self.views, trial, view)
 
 
 class FreezeSheet(QGroupBox):
@@ -221,14 +235,14 @@ class FreezeSheet(QGroupBox):
         lay.addStretch(1)
         self.hide()
 
-    def open_for(self, board_model: str, views: list[str]) -> None:
-        """The sheet in place of the panels under the working set, for the view picked before while it has images,
-        the board revision the board model's newest version names, if any."""
+    def open_for(self, board_model: str, views: list[str], trial: bool = False, view: str | None = None) -> None:
+        """The sheet in place of the panels under the working set, for `view`, else the view picked before, while it
+        has images, the board revision the board model's newest version names, if any; Validated unless `trial`."""
         self.board_model = board_model
         self.kinds.blockSignals(True)  # read once below, for the view and revision set here
-        self.validated.setChecked(True)  # Validated each time the sheet opens: Trial is chosen, never kept
+        (self.trial if trial else self.validated).setChecked(True)  # Validated by default: Trial is chosen, never kept
         self.kinds.blockSignals(False)
-        kept = self.view_box.currentText()
+        kept = view or self.view_box.currentText()
         self.view_box.blockSignals(True)
         self.view_box.clear()
         self.view_box.addItems(views)
@@ -640,16 +654,24 @@ class SplitSheet(QGroupBox):
         self.setTitle(self.tr("Split and lock the validation set of {name}").format(name=version_name(version)))
         n = {"ok": counts["ok"], "ng_all": counts["ng"], "least": VALIDATION_OK, "share": round(VALIDATION_NG * 100)}
         self.enough = counts["ok"] >= VALIDATION_OK
-        if self.enough:
+        train = self.ctx.train_ok_after_split(version["uuid"]) if self.enough else 0
+        if self.enough and train >= TRAIN_OK:
             what = self.tr(
                 "✓ {ok} OK and {ng_all} NG files. The validation set takes {least} OK and {ng} NG ({share} % of the NG,"
                 " rounded up), by defect type where it can, and the training set the rest."
+            )
+        elif self.enough:  # it may be locked, but not trained from: as What is missing counts it (REQ-TRN-021)
+            what = self.tr(
+                "{ok} OK and {ng_all} NG files. The validation set takes {least} OK and {ng} NG, and the training set"
+                " the rest: {train} OK, fewer than the {least_train} training needs. Freeze a version with {needed} OK"
+                " images or more to train from it."
             )
         else:
             what = self.tr(
                 "✗ {ok} OK and {ng_all} NG files: a validation set takes {least} OK files. Freeze a version with more"
                 " OK images, then split that."
             )
+        n |= {"train": train, "least_train": TRAIN_OK, "needed": OK_NEEDED}
         self.what.setText(what.format(ng=math.ceil(VALIDATION_NG * counts["ng"]), **n))
         types = Counter(stratum(i) for i in self.ctx.dataset_items(version["uuid"]) if i["label"] == "NG")
         untyped = self.tr("no type")

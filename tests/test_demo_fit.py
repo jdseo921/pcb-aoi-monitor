@@ -89,7 +89,7 @@ def test_req_set_008_every_demo_page_fits_1366_by_768_with_its_verdict_area_whol
         problems[view_name(title, tab)] = cut_off(win, title)
         show_tab(win, title, None)
     assert problems == dict.fromkeys(problems, []), problems
-    assert set(VERDICT_AREA) <= {title for title, _tab in demo_views()} and len(problems) == 13
+    assert set(VERDICT_AREA) <= {title for title, _tab in demo_views()} and len(problems) == 14
 
     for width, height in ((1500, 1000), (1920, 1080)):
         win.resize(width, height)

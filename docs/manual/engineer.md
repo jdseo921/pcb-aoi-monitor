@@ -214,6 +214,27 @@ model or scale yet; Home shows how far it has come on six cards, each with a lin
 
 ## 3. Samples, labels and datasets
 
+**How many images, and what is missing (REQ-TRN-021).** A board model needs at least 70 OK images of one view (20 to
+train, 50 held out to test) and 1 or more NG images with every defect boxed; a Validated version also needs 100 images
+labelled OK or NG for the agreement check. Home, under its cards, and Training's **What is missing** tab list what the
+board model in the header still needs, a line each: its count against what it needs, ✓ once met, else the one button
+that takes the step on Training (**Add OK Images…**, **Add NG Images…**, **Draw Boxes ›**, **Show Unchecked ›**, **Draw
+OK Labels to Check**, **Open Labeller Agreement ›**, **Freeze Dataset…**, **Split and Lock Validation Set…**, **Start
+Training**, **Activate AI Model**). A button is greyed while a line its step needs is not met, which the line names under
+it: **Freeze Dataset…** waits for the images and the boxes and, for a Validated version, the checks and the agreement
+check; **Split and Lock Validation Set…** waits for nothing, as its version is frozen already; **Start Training** waits
+for the locked validation set and **Activate AI Model** for the trained AI model, so images added after a freeze never
+grey the steps of the version frozen before. **Validated** lists every step to an active AI model: the images and boxes,
+every NG label and 10 % of the OK labels checked by a second user, the images for a calibration set and an agreement
+check that reached its targets, a locked validation set whose training set holds the 20 OK images training needs (and
+whose store and allowed uses let it train), an AI model trained from a Validated version and an active AI model.
+**Trial: one person, no checks** lists only the images, the boxes, the locked validation set and a trained AI model,
+since a Trial AI model never goes live (below). Each list keeps the kind picked while the board model stays in the
+header; at first it is of the newest version's kind, Validated before the first freeze. Its counts are of one view: that
+of the newest version of the list's kind with a locked validation set it can train from, else of the newest version of
+its kind, else the view with the most images labelled OK or NG. Once the AI model is there, the line above the list says
+so and counts what a next version still needs.
+
 **Set Reference** makes the selected OK sample the reference image: inspections compare against it at once, and the
 next training run aligns the boards to it before it learns a new golden board. An NG sample is refused (AOI-TRN-006),
 and the sample that is the reference cannot be relabelled NG or UNSURE or removed until another OK sample is set
@@ -408,8 +429,10 @@ or Enter in the revision, freezes it in the background with progress and Cancel;
 and keeps the sheet. The **Versions** table lists the board model's versions, newest first: its checks (Validated or
 Trial), when each was frozen and by whom, its OK and NG images, its locked validation set
 ("50 / 6") or "not locked", the customer, the uses and what Verify Manifest found. **Split and Lock Validation Set…**
-shows a sheet for the version picked: its images against the 50 OK and 30 % of the NG that its validation set takes, its
-NG images by defect type, and a random seed you may change. **Lock**, or Enter in the seed, splits the version once, for
+shows a sheet for the version picked: its images against the 50 OK and 30 % of the NG that its validation set takes
+(and, when the training set left would hold fewer than the 20 OK images training needs, how many it would hold and that
+a version of 70 OK images or more is one to train from), its NG images by defect type, and a random seed you may
+change. **Lock**, or Enter in the seed, splits the version once, for
 good, and the status line counts both sets; the button is then off for that version, since a new split needs a new
 version, and a version with fewer than 50 OK images cannot be locked. **Verify Manifest** hashes the version picked and
 each of its files again, with progress and Cancel: ✓ when every file matches, else ✗ and, under the table, AOI-TRN-023
@@ -428,25 +451,24 @@ stays in use. Import photos of several different good boards, then train again.
 left and Cancel after ten. While any import runs, Add OK Images…, Add NG Images…, Import Folder… (also the link in an
 empty sample table) and Start Training are off, "Importing…" stays over the table when the page is shown again, and a
 Switch User does not stop it: the samples are recorded as added by the user who started the import. The line over the
-sample table counts the OK and NG samples and names the reference image (under it, while fewer than 20 OK samples are
-imported, a tip says that training needs 20 OK images or more in a dataset version's training set); a name too long for
-the line is cut at its end (…), and pointing at the line shows it whole. If the system refuses the path of a sample's
-copy in the workspace as too long (a workspace folder with a long path, on Windows with long paths off), the import
-keeps the images it imported before that file and names AOI-TRN-011 in AOI-TRN-010; when that file was the first, it
-shows AOI-TRN-011 itself, which counts every image it was to import. The steps are those of AOI-INSP-014 (section 8,
-Evidence files).
+sample table counts the OK and NG samples and names the reference image (under it, while no view of the board model
+has the OK images it needs, a tip says how many images it needs, as section 3 does); a name too long for the line is cut at
+its end (…), and pointing at the line shows it whole. If the system refuses the path of a sample's copy in the workspace
+as too long (a workspace folder with a long path, on Windows with long paths off), the import keeps the images it
+imported before that file and names AOI-TRN-011 in AOI-TRN-010; when that file was the first, it shows AOI-TRN-011
+itself, which counts every image it was to import. The steps are those of AOI-INSP-014 (section 8, Evidence files).
 
-**What a run trains on.** Start Training trains from a frozen dataset version, never from the sample table: pick it
-in Dataset version, which lists the board model's frozen versions, newest first, and starts on the newest whose
-validation set is locked; the line under it counts that version's validation set and training set. The run reads only
-the training set: its OK images make the Golden board, three quarters of them train the AI model and the rest set the
-threshold, which its NG images only help to set; the locked validation set is never read. The run does not start, and
-saves nothing, when the version's validation set is not locked or its training set holds fewer than 20 OK images
+**What a run trains on.** Start Training trains from a frozen dataset version, never from the sample table: pick it in
+Dataset version, which lists the board model's frozen versions, newest first, and starts on the newest whose validation
+set is locked; the line under it counts that version's validation set and training set. The run reads only the training
+set: its OK images make the Golden board, three quarters of them train the AI model and the rest set the threshold,
+which its NG images only help to set; the locked validation set is never read. The run does not start, and saves
+nothing, when the version's validation set is not locked or its training set holds fewer than 20 OK images
 (AOI-TRN-045), when an image of its training set is locked in any validation set (AOI-TRN-043), or when its images are
 not in the dataset store of the customer it names or it does not allow the use (AOI-TRN-046, written to the audit log).
-Locking keeps at least 50 OK images for validation, so a board model and view needs 70 or more. An image changed since
-the freeze stops the run with AOI-TRN-045 naming the file. The new AI model names the version it was trained from.
-Freeze a version and lock its validation set on the Datasets tab (section 3).
+Locking keeps at least 50 OK images for validation, so a board model and view needs the OK images section 3 gives. An
+image changed since the freeze stops the run with AOI-TRN-045 naming the file. The new AI model names the version it was
+trained from. Freeze a version and lock its validation set on the Datasets tab (section 3).
 
 **While a run goes on**, the line under the bar names what it does now, with its percent and the time left: "Aligning
 image 12 of 53", "Building the Golden board: step 3 of 16", "Training epoch 23 of 60", "Calibrating: map 4 of 16", then

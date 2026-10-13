@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any
 
 from ..errors import QT_TRANSLATE_NOOP, AoiError, Phrase
+from .labels import CALIBRATION_IMAGES
 
 REVISION = re.compile(r"[A-Za-z0-9]{1,16}")  # a board revision as entered with the board model, such as R3 (Q37)
 ALLOWED_USES = ("own", "shared", "demos")  # their own AI models, shared improvement, demos: placeholders until Q38
@@ -24,6 +25,25 @@ VALIDATION_NG = Fraction(3, 10)  # and at least 30 % of the version's NG files, 
 # check that reached its targets; or Trial, frozen by one person without them
 VALIDATED, TRIAL = "Validated", "Trial"
 TRIAL_MODEL = " (Trial)"  # the end of the name of every AI model version trained from a Trial version: v1.0 (Trial)
+# How many images a board model needs (REQ-TRN-021): the one source Home, Training's What is missing, the manuals and
+# the customer documents count from, through `needs`. OK images of one view: a locked validation set's and then a
+# training set's.
+OK_NEEDED = VALIDATION_OK + TRAIN_OK
+# NG images of that view, each defect boxed: its validation set then holds one (VALIDATION_NG, rounded up), so a test
+# counts missed defects, and a calibration set holds one for both labellers to call NG (labels.agreement)
+NG_NEEDED = 1
+NEEDS = QT_TRANSLATE_NOOP(
+    "Datasets",
+    "A board model needs at least {ok} OK images of one view ({train} to train, {held} held out to test) and {ng} or"
+    " more NG images with every defect boxed; a Validated version also needs {calibration} images labelled OK or NG"
+    " for the agreement check.",
+)
+
+
+def needs() -> Phrase:
+    """The one sentence that says how many images a board model needs (REQ-TRN-021), filled from the constants above
+    and labels.CALIBRATION_IMAGES, so no screen or document states a count of its own."""
+    return NEEDS.fill(ok=OK_NEEDED, train=TRAIN_OK, held=VALIDATION_OK, ng=NG_NEEDED, calibration=CALIBRATION_IMAGES)
 
 
 def model_file_stem(version: str) -> str:
@@ -134,3 +154,12 @@ def split(
     for k in order:
         draw(types[k], take[k])
     return {"train": free(files), "validation": [i for i in files if i["uuid"] in held]}
+
+
+def train_ok(items: list[dict[str, Any]], locked: set[str]) -> int:
+    """The OK files `split` puts in the training set of a version of `items`, whatever the seed: its OK files less the
+    validation set's, which takes every one whose SHA-256 an earlier split locked (`locked`) and is drawn up to
+    VALIDATION_OK. A version with 70 OK files whose earlier versions' validation files it holds again trains from fewer
+    than TRAIN_OK, which What is missing and the Split sheet say before the lock (REQ-TRN-021)."""
+    ok = [i for i in items if i["label"] == "OK"]
+    return max(len(ok) - max(VALIDATION_OK, sum(i["sha256"] in locked for i in ok)), 0)

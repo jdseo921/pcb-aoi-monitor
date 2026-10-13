@@ -33,13 +33,14 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from ...core import datasets
 from ...core.datasets import TRIAL
 from ...core.imaging import IMAGE_EXTS
 from ...core.jobs import Job
 from ...core.labels import DefectBox
 from ...core.run_progress import RunProgress
 from ...core.sample_import import ImportFile, ImportReport, annotate, folder_files
-from ...core.services import AppContext
+from ...core.services import AppContext, Missing, Need
 from ...defects import names
 from ...errors import AoiError, system_detail, system_reason
 from ...hal import VIEWS
@@ -61,10 +62,12 @@ from .base import (
     cell_text,
     fill_table,
     make_table,
+    scrolled,
     time_left_text,
     version_name,
     view_text,
 )
+from .missing_list import MissingList
 from .training_agreement import AgreementPanel, BlindPanel
 from .training_import import ImportSheet
 from .training_labels import LabelEditor, State
@@ -189,7 +192,7 @@ class TrainingPage(Page):
         self.checks_line.setObjectName("muted")
         self.checks_line.setWordWrap(True)
         ll.addWidget(self.checks_line)
-        self.tip = QLabel(self.tr("Training needs 20 OK images or more in a dataset version's training set"))
+        self.tip = QLabel(phrase_text(datasets.needs()))  # how many images, as Home and the manuals say (REQ-TRN-021)
         self.tip.setObjectName("muted")
         self.tip.setWordWrap(True)
         ll.addWidget(self.tip)
@@ -355,15 +358,25 @@ class TrainingPage(Page):
         self.tabs = QTabBar()
         self.tabs.addTab(self.tr("Samples"))
         self.tabs.addTab(self.tr("Datasets"))
+        self.tabs.addTab(self.tr("What is missing"))  # REQ-TRN-021: each need counted, with the button that fixes it
         self.head.addWidget(self.tabs, 0, Qt.AlignmentFlag.AlignBottom)
+        self.missing_list = MissingList(self, self.fix)
+        missing_tab = QWidget()
+        missing_tab.setObjectName("page")  # on the page's background, not the scroll area's own grey
+        ml = QVBoxLayout(missing_tab)
+        ml.setContentsMargins(0, 0, 0, 0)
+        ml.addWidget(self.missing_list)
+        ml.addStretch(1)
         # Label Blind… shows the blind panel in the tabs' place, the tab bar hidden: none of their keys acts meanwhile
         self.blind = BlindPanel(self)
         self.blind.closed.connect(self._blind_closed)
         self.stack = QStackedWidget()  # the tab shown, or the blind panel
         self.stack.addWidget(self.keys)
         self.stack.addWidget(self.datasets_tab)
+        self.stack.addWidget(scrolled(missing_tab))  # scrolls where the page is too short, never makes it taller
         self.stack.addWidget(self.blind)
         self.tabs.currentChanged.connect(self.stack.setCurrentIndex)
+        self.tabs.currentChanged.connect(lambda i: self.missing_list.show_for(self.board_model) if i == 2 else None)
         outer = QSplitter(Qt.Orientation.Horizontal)
         outer.addWidget(self.stack)
         outer.addWidget(right)
@@ -783,7 +796,9 @@ class TrainingPage(Page):
         if s:
             self.samples_empty.hide()
         elif not self.shown:
-            what = self.tr("Add at least 20 OK boards with Add OK Images… or Import Folder…")
+            what = self.tr("{needs} Add them with Add OK Images… or Import Folder…").format(
+                needs=phrase_text(datasets.needs())
+            )
             heading = self.tr("No samples for {board_model} yet").format(board_model=self.board_model)
             self.show_empty(self.samples_empty, heading, what, self.tr("Import Folder…"), self.import_folder)
         elif shown == "Unchecked" and self._statuses and all(st["ready"] for st in self._statuses):
@@ -1167,6 +1182,7 @@ class TrainingPage(Page):
             self.agreement.show_board_model(None, [])
             self.working.show_board_model(None, [])
             self.versions.show_board_model(None)
+            self.missing_list.show_for(None)
             return
         s = self.ctx.samples(self.board_model)
         self.agreement.show_board_model(self.board_model, s)
@@ -1182,7 +1198,8 @@ class TrainingPage(Page):
         counts = self.tr("{ok} OK · {ng} NG · reference: {reference}")
         self.counts.set_line(lambda name: counts.format(ok=n_ok, ng=n_ng, reference=name), reference)
         self._show_checks()
-        self.tip.setVisible(n_ok < 20)
+        per_view = Counter(r["side"] for r in s if r["label"] == "OK")  # a version, and what it needs, is of one view
+        self.tip.setVisible(max(per_view.values(), default=0) < datasets.OK_NEEDED)
         ms = self.ctx.models(self.board_model)
         rows, tips = [], []
         for m in ms:
@@ -1210,6 +1227,62 @@ class TrainingPage(Page):
             self.models_empty.show_state(
                 self.tr("No AI model yet"), self.tr("Start Training from a frozen dataset version.")
             )
+        if self.stack.currentIndex() == 2 and self.isVisible():  # else read when its tab or the page is shown
+            self.missing_list.show_for(self.board_model)
+
+    def fix(self, missing: Missing, need: Need) -> None:
+        """A What is missing button (REQ-TRN-021): the one step that fixes its line, taken where Training takes it, for
+        the board model and view the list counted; nothing for a list of a board model no longer in the header."""
+        if missing.board_model != self.board_model:
+            return
+        if self.stack.currentWidget() is self.blind:  # Home's button opened Training on it: say why nothing moved
+            self.shell.status(self.tr("Blind labelling is open: Stop it, then press the button again"))
+            return
+        if not self.idle() and need.fix in ("add_ok", "add_ng", "draw_ok_checks", "freeze", "split", "train"):  # #194
+            self.shell.status(self.tr("An import, draw or freeze of this page runs: press it again once it ends"))
+            return
+        if need.fix == "train" and self.worker is not None:
+            self.shell.status(self.tr("A training run is under way: press Start Training again once it ends"))
+            return
+        if need.fix in ("add_ok", "add_ng", "draw_boxes", "draw_ok_checks"):
+            self.tabs.setCurrentIndex(0)
+        if need.fix in ("agreement", "freeze", "split"):
+            self.tabs.setCurrentIndex(1)
+        if need.fix == "add_ok":
+            self.add_ok()
+        elif need.fix == "add_ng":
+            self.add_ng()
+        elif need.fix == "draw_boxes":  # the first NG image of the view with no box, in the label editor
+            self.filter.setCurrentIndex(self.filter.findData("NG"))
+            unboxed = [s for s in self.shown.values() if s["label"] == "NG" and s["side"] == missing.view]
+            first = next((s["id"] for s in unboxed if not self._boxes.get(s["id"])), None)
+            self._select(lambda s: s["id"] == first, scroll=True)
+            self.editor.view.setFocus()
+        elif need.fix == "show_unchecked":
+            self.start_checks(missing.view)
+        elif need.fix == "draw_ok_checks":
+            self._draw()
+        elif need.fix == "agreement":  # its next step: Run Agreement Check, else Label Blind…, else New Set
+            panel = self.agreement
+            next((b for b in (panel.btn_run, panel.btn_blind, panel.btn_new) if b.isEnabled()), panel.sets).setFocus()
+            step = self.tr("Two people label a calibration set blind (New Set, Label Blind…), then Run Agreement Check")
+            self.shell.status(step, 0)
+        elif need.fix == "freeze":
+            self.versions.split.close_sheet()  # one sheet in the agreement's place
+            self.working.open_sheet_for(missing.trial, missing.view)
+        elif need.fix == "split":
+            self.working.sheet.close_sheet()
+            self.versions.show_board_model(missing.board_model, missing.version_uuid)
+            self.versions.open_split()
+        elif need.fix == "train":
+            self.dataset_version.setCurrentIndex(max(self.dataset_version.findData(missing.version_uuid), 0))
+            self.train()
+        elif need.fix == "activate" and missing.model_id is not None:
+            try:
+                self.ctx.activate_model(missing.model_id)
+            except AoiError as e:
+                self.error(e)
+            self.refresh()
 
     def start_checks(self, view: str | None = None) -> None:
         """Start the Checks (ADR 0020): the first check a Validated version still needs, shown. While a label of `view`,

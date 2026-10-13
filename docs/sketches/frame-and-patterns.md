@@ -70,7 +70,7 @@ background is the theme's dark blue-grey: #1F2A36 for pages, #15202B for header,
 ```
 ┌───────────────────────────────────────────────┐
 │   No AI model for TBOX-A1 yet                 │  heading 16 pt
-│   Train one from at least 20 OK boards.       │  one sentence, 14 pt
+│   Start Training from a frozen version.       │  one sentence, 14 pt
 │   [Open Training ›]                           │  one link button (B) to the page that fixes it
 └───────────────────────────────────────────────┘
 ```

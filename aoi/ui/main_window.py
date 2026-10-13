@@ -44,7 +44,7 @@ from PySide6.QtWidgets import (
 from ..config import APP_NAME, APP_VERSION, Settings, use_workspace
 from ..core import datasets, demo, drift
 from ..core.run_progress import RunProgress
-from ..core.services import REQUIRED_ROLE, ROLES_FROM, AppContext, workspace_in_use
+from ..core.services import REQUIRED_ROLE, ROLES_FROM, AppContext, Missing, Need, workspace_in_use
 from ..errors import AoiError
 from . import theme
 from .board_model_dialog import NewBoardModelDialog
@@ -65,6 +65,7 @@ from .pages.base import (
 from .pages.compare import ComparePage
 from .pages.inspection import InspectionPage
 from .pages.logs import LogsPage
+from .pages.missing_list import MissingList
 from .pages.model_test import ModelTestPage
 from .pages.profile3d import Profile3DPage
 from .pages.recipe_editor import RecipeEditorPage
@@ -73,9 +74,6 @@ from .pages.training import TrainingPage
 from .widgets.empty_state import EmptyState
 from .widgets.image_view import ImageView
 from .workers import drop_queued
-
-# The OK boards a board model needs before it trains: a locked validation set's and a training set's (REQ-TRN-007).
-FIRST_OK = datasets.VALIDATION_OK + datasets.TRAIN_OK
 
 if TYPE_CHECKING:
     from ..core.inspector import InspectionResult
@@ -188,9 +186,17 @@ class HomePage(Page):
             cl.addWidget(go)
             grid.addWidget(card, i // 3, i % 3)
         self.root.addWidget(self.cards)
+        # under the cards, what the board model still needs, each with the button that fixes it (REQ-TRN-021)
+        self.missing_list = MissingList(self, self._fix)
+        self.root.addWidget(self.missing_list)
         self.empty = EmptyState()  # no board model yet: one block in place of the cards (REQ-SET-019)
         self.root.addWidget(self.empty)
         self.root.addStretch(1)
+
+    def _fix(self, missing: Missing, need: Need) -> None:
+        """A What is missing button: Training, where the step is taken, opened first (REQ-TRN-021)."""
+        if self.shell.navigate("Training"):
+            cast(TrainingPage, self.shell.pages["Training"]).fix(missing, need)
 
     def _who(self, call: str | None) -> str:
         """The role a step needs, as its card says it to every role: the role AppContext's `call` requires and those
@@ -238,6 +244,7 @@ class HomePage(Page):
         self._sync_links()
         bm = self.board_model
         self.cards.setVisible(bool(bm))
+        self.missing_list.show_for(bm or None)
         if not bm:
             self.show_empty(self.empty, *self.no_board_model())
             return
@@ -247,7 +254,7 @@ class HomePage(Page):
         self.status_labels["Upload samples"].setText(
             self.tr("{ok} OK · {ng} NG uploaded").format(ok=st.ok_samples, ng=st.ng_samples)
             if st.ok_samples or st.ng_samples
-            else self.tr("No samples yet. Add at least {count} OK boards.").format(count=FIRST_OK)
+            else self.tr("No samples yet. {needs}").format(needs=phrase_text(datasets.needs()))  # REQ-TRN-021
         )
         waiting = None if st.model_version else self.ctx.inactive_model(bm)  # trained, not active: named (D3)
         trial = waiting is not None and self.ctx.trial_version(waiting) is not None  # never goes live (ADR 0020)
