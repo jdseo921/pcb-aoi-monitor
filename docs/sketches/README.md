@@ -44,6 +44,8 @@ standard's 400 changed lines, in the order of this table; a link below works onc
 | [settings-demo.md](settings-demo.md) | Workspace, AI device, input limits, log and map retention, demo load and reset, scripted run pace, presenter theme | S53, S54 |
 | [profile3d-card.md](profile3d-card.md) | The "Coming in Stage 2" card | S54 |
 | [what-is-missing.md](what-is-missing.md) | What is missing on Home and Training: the one sentence on how many images, each need counted, the button that fixes it | B3 (REQ-TRN-021) |
+| [first-run-guide.md](first-run-guide.md) | The guide on Home for one person: board model, customer and recovery key; images and boxes; Train, which keeps images apart, trains, makes the AI model active, validates and runs the shift check; then Inspection | B5 (D4, REQ-TRN-021) |
 
 Sketches still to write before their stages start: the sign-in dialog, user management in Settings and the
-first-run wizard (ADR 0002), and the verdict override (REQ-INSP-013).
+first-run wizard's first Admin (ADR 0002; the guide after it is first-run-guide.md), and the verdict override
+(REQ-INSP-013).

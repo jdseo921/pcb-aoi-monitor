@@ -41,6 +41,7 @@ B4 on B3.
 | B3 (F6) | One sentence, computed from the constants in `aoi/core/datasets.py`, wherever the images a board model needs are stated; Home and Training list what the selected board model still needs, each line a count against its need with the one button that takes the step; a Trial list shows only what Trial needs, a Validated one adds the second-user checks and the agreement check | #408, stacked on #407 | Open, for Jay's review |
 | B4 (D4 part, F9) | A board model's name is checked where it is entered, with the rule freeze applies (AOI-TRN-039): a name with no Latin letter or digit, such as a Korean-only one, is refused at entry with AOI-TRN-054, whose message says what a valid name looks like | #409, stacked on #408 | Open, for Jay's review |
 | B4 follow-up (Jay's decision, 2026-10-13 19:58 UTC) | A new name that reads the same as an existing one on a screen (case, full-width letters or digits, a no-break or zero-width space, a decomposed Hangul syllable set aside) is refused at entry with AOI-TRN-055, and one whose letters A to Z and digits are an existing name's, which freeze refused only once the other had a version (AOI-TRN-040), with AOI-TRN-056 | #410, stacked on #409 | Open, for Jay's review |
+| B5 (D4) | The sketch of the first-run guide on Home for one person, with the click count of both acceptance cases and the decisions it needs from Jay (Q63 to Q80); no code until Jay decides | #411, stacked on #410 (docs only) | Open, for Jay's decisions |
 
 Choices made in Phase B, each recorded in its ADR:
 
@@ -69,7 +70,7 @@ Choices made in Phase B, each recorded in its ADR:
 Still open after Phase B:
 
 1. **Jay decides** the "Never live" card, and reviews and merges #406, then #407, then #408, then #409, then
-   #410 (CLAUDE.md rule 6).
+   #410 (CLAUDE.md rule 6), and answers the first-run guide's questions in #411 (Q63, the card, among them).
 2. **Decided by Jay** on 2026-10-13 19:58 UTC: a name whose versions would take another board model's names, and a
    name that looks like another, are refused at entry (#410; ADR 0023, decisions 6 to 8).
 3. **Jay adds** the brief and the "Stage 1 for one person" ADR to the repository, under a free ADR number, and writes
