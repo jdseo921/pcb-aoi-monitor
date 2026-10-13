@@ -83,7 +83,8 @@ def test_req_trn_021_the_sentence_is_the_one_every_document_gives() -> None:
 def test_req_trn_021_validated_stages(ctx: AppContext, tmp_path: Path) -> None:
     """A board model walked from nothing to an active AI model by a Validated version: at each stage each line counts
     what it holds against what it needs, its fix is the one action that gets it there, and a line whose action needs
-    an earlier one waits for it; a line not reached yet counts against the requirement (10 % of 70 is 7 checks)."""
+    an earlier one waits for it; a line not reached yet counts against the requirement (10 % of 70 is 7 checks). An AI
+    model whose registry row cannot be read, which Training says to train again (AOI-TRN-012), is not counted."""
     empty = ctx.missing(CAL)
     assert (empty.board_model, empty.view, empty.trial, empty.left) == (CAL, "Top", False, len(NEEDS_ORDER))
     assert tuple(n.key for n in empty.needs) == NEEDS_ORDER and set(FIXES) == set(FIX_TEXT) == set(CALLS)
@@ -163,6 +164,12 @@ def test_req_trn_021_validated_stages(ctx: AppContext, tmp_path: Path) -> None:
     done = ctx.missing(CAL, trial=False)
     assert lines(done)["active"][:2] == (1, 1) and done.model_id is None
     assert [n.key for n in done.needs if not n.done] == ["ok_checked"]  # for a next version
+
+    for damage in ("{not json", "[]"):  # the active AI model's registry row, changed by hand
+        ctx.db.execute("UPDATE models SET metrics=? WHERE uuid=?", (damage, model["uuid"]))
+        damaged = ctx.missing(CAL, trial=False)
+        assert lines(damaged)["trained"][:2] == lines(damaged)["active"][:2] == (0, 1) and damaged.model_id is None
+        assert lines(ctx.missing(CAL, trial=True))["trained"][:2] == (1, 1)  # the Trial AI model
 
 
 def test_req_trn_021_trial_stages(ctx: AppContext, tmp_path: Path) -> None:

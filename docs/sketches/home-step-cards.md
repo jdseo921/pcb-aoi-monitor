@@ -31,8 +31,8 @@ Home   Stage 1: upload → train → tune recipe → validate → inspect → ex
 ```
 
 Under the cards, What is missing: what the board model still needs, each line counted against what it needs with the
-button that fixes it ([what-is-missing.md](what-is-missing.md), REQ-TRN-021); below the fold, where the page scrolls
-down: at 1366 × 768, and its last lines at 1920 × 1080.
+button that fixes it ([what-is-missing.md](what-is-missing.md), REQ-TRN-021). The cards and the list scroll under
+Home's title, which stays: the list is below the fold at 1366 × 768, and its last lines at 1920 × 1080.
 
 Each card: number and name 16 pt, one sentence 14 pt, status lines 14 pt, one link button. Status is read from
 the database within 300 ms of Home opening and refreshed every 5 s while the page is shown (REQ-INSP-016).

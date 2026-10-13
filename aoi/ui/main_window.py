@@ -185,13 +185,21 @@ class HomePage(Page):
             self.links.append((go, target))
             cl.addWidget(go)
             grid.addWidget(card, i // 3, i % 3)
-        self.root.addWidget(self.cards)
+        # the cards, and under them what the board model still needs (REQ-TRN-021), scroll in the page: taller than a
+        # 1920 x 1080 window, they would make the area round the pages as tall, and the page opened next would be laid
+        # out at that height before its own
+        body = QWidget()
+        body.setObjectName("page")  # on the page's background, not Qt's grey
+        lay = QVBoxLayout(body)
+        lay.setContentsMargins(0, 0, 0, 0)
+        lay.addWidget(self.cards)
         # under the cards, what the board model still needs, each with the button that fixes it (REQ-TRN-021)
         self.missing_list = MissingList(self, self._fix)
-        self.root.addWidget(self.missing_list)
+        lay.addWidget(self.missing_list)
         self.empty = EmptyState()  # no board model yet: one block in place of the cards (REQ-SET-019)
-        self.root.addWidget(self.empty)
-        self.root.addStretch(1)
+        lay.addWidget(self.empty)
+        lay.addStretch(1)
+        self.root.addWidget(scrolled(body), 1)
 
     def _fix(self, missing: Missing, need: Need) -> None:
         """A What is missing button: Training, where the step is taken, opened first (REQ-TRN-021)."""

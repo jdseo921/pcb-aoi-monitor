@@ -120,12 +120,16 @@ class MissingList(WrappedGroup):
             text.setSpacing(0)
             text.addWidget(name)
             text.addWidget(first)
-            cell = QHBoxLayout()  # the mark on the name's first line, the whole centred on the row's button
+            cell = QHBoxLayout()  # the mark on the name's first line
             cell.setSpacing(theme.SPACE_S)
             cell.addWidget(mark, 0, Qt.AlignmentFlag.AlignTop)
             cell.addLayout(text, 1)
+            centred = QVBoxLayout()  # centred on the row's button by stretches: an alignment cut a wrapped name short
+            centred.addStretch(1)
+            centred.addLayout(cell)
+            centred.addStretch(1)
             fix_button = button("", slot=lambda _=False, k=key: self._take(k))
-            grid.addLayout(cell, row, 0, Qt.AlignmentFlag.AlignVCenter)
+            grid.addLayout(centred, row, 0)
             grid.addWidget(fix_button, row, 1)
             self.lines[key] = _Line(mark, name, first, fix_button)
         lay.addLayout(grid)

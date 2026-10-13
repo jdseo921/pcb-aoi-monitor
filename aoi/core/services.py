@@ -2243,7 +2243,8 @@ class AppContext:
         the OK labels checked by a second user, enough images labelled OK or NG for a calibration set and an agreement
         check that reached its targets; then a locked validation set Training trains from, an AI model trained from a
         Validated version and an active one. A Trial version (`trial` True) needs only the first three, the locked set
-        and an AI model trained from either kind (TRIAL_NEEDS). With None, the newest version's kind, Validated before
+        and an AI model trained from either kind (TRIAL_NEEDS). An AI model whose registry row cannot be read is not
+        counted: Training says to train again (AOI-TRN-012). With None, the newest version's kind, Validated before
         the first. The view is that of the newest version of the kind whose validation set is locked and that Training
         trains from (`_train_refusal`), else of the newest version of the kind, else the one with the most images
         labelled OK or NG, Top first when equal. The counts of a line not reached yet are those the requirement names:
@@ -2302,10 +2303,20 @@ class AppContext:
         found["agreement"] = (int(bool(check and check["agreed"])), 1, "agreement")
         split = None if locked else next((v for v in ours if v["view"] == view and splits(v)), None)
         found["locked"] = (int(locked is not None), 1, "split" if split else "freeze")
-        models = [m for m in self.db.models(board_model) if trial or self.trial_version(m) is None]  # newest first
+
+        def validated(
+            m: dict[str, Any],
+        ) -> bool | None:  # None: its registry row cannot be read, AOI-TRN-012 on Training
+            try:
+                return self.trial_version(m) is None
+            except (ValueError, AttributeError):  # metrics not JSON, or not an object
+                return None
+
+        kinds = [(m, validated(m)) for m in self.db.models(board_model)]  # newest first
+        models = [m for m, v in kinds if v is not None and (trial or v)]  # one to train again is not counted
         found["trained"] = (len(models), 1, "train")
         active = self.db.active_model(board_model)
-        live = active is not None and self.trial_version(active) is None  # a Trial AI model never goes live
+        live = active is not None and validated(active) is True  # a Trial AI model never goes live
         found["active"] = (int(live), 1, "activate")
         first: dict[str, tuple[str, ...]] = {"ng_boxed": ("ng",), "ng_checked": ("ng_boxed",), "ok_checked": ("ok",)}
         first["agreement"] = ("ng", "calibration")

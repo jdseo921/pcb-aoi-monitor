@@ -80,8 +80,10 @@ refuses.
    its tooltip repeats, and for a role that may not make the call, with the refusal as its tooltip and on the status bar
    on a press (REQ-USR-001), as every greyed control is. A press that cannot take its step now says why on the status
    bar: blind labelling open, an import, draw or freeze of the page running, or a training run under way.
-8. **Where it shows.** Home: under the six cards, for every role, below the fold where the page scrolls down (A7), at
-   1366 x 768 and for its last lines at 1920 x 1080 too. Training: a third tab, What is missing, after Samples and
+8. **Where it shows.** Home: under the six cards, for every role. The cards and the list scroll inside Home, under its
+   title, so the list is below the fold at 1366 x 768 and its last lines at 1920 x 1080 too. Home is no taller than the
+   window: were it taller, the area round the pages would be as tall, and the page opened after Home would be laid out
+   at that height before its own (a press on Compare's Try panel at that moment missed it). Training: a third tab, What is missing, after Samples and
    Datasets, in an area that scrolls rather than make the page taller; the list is read again whenever the tab is shown
    and on every refresh of the page while it is. Once the list's AI model is there (an active one, or for a Trial list a
    trained one), the line above the list says so and counts what a next version still needs.
@@ -91,10 +93,8 @@ refuses.
 - No change to what is stored, refused or judged: no migration, no audit entry of its own (the steps its buttons take
   audit themselves), no verdict changed, the synthetic regression set unchanged.
 - The Training tab bar has three tabs; the blind panel is the stack's fourth page.
-- Home is taller than a 1920 x 1080 window and scrolls down. A page shown after it is first laid out at Home's size and
-  then at its own, so Inspection's zoom on the selected defect, which Qt's `fitInView` measures with the zoom's scroll
-  bars, frames the box a few pixels differently: the approved Inspection screenshots changed with this record, and with
-  Home's list hidden they are those approved before it, pixel for pixel. Nothing on Inspection changed.
+- Home's cards and list scroll inside the page, under its title, with a scroll bar of their own; no other page moved:
+  the approved screenshots of every other page are those approved before this record, but Training's.
 - Left out, and named here: a board model in no customer's dataset store is not a line of its own. The Freeze sheet,
   which Freeze Dataset… opens, already says "its images are in no customer's dataset store; an Admin moves them in"
   (AOI-TRN-027), and since ADR 0021 a customer's board model is made in its store.

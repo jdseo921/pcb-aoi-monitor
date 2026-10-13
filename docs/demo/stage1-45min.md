@@ -62,9 +62,9 @@ Talk to it with **Training** open on its **Datasets** tab, which lists the froze
   30 days are archived, not deleted, and stay searchable: on **Logs & Export**, tick **Include archived** and press
   **Filter**.
 - Only an Admin deletes records, with a reason that the audit trail keeps.
-- How many photos they send: open Training's **What is missing** tab. Its first line says how many images a board
-  model needs, and each line under it counts the demo board model's against it, with the button that takes the next
-  step. The same list is on **Home**, under the cards.
+- How many photos they send: open Training's **What is missing** tab. Its first line says how many images a
+  board model needs, and each line under it counts the demo board model's against it, with the button that takes the
+  next step. The same list is on **Home**, under the cards.
 
 If they ask to see the settings: **Exit presenter theme**, open **Settings**, show **Dataset stores**, then switch the
 **Presenter theme** on again.
