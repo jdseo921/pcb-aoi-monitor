@@ -14,6 +14,7 @@ from PySide6.QtGui import (
     QMouseEvent,
     QPainter,
     QResizeEvent,
+    QScreen,
     QShowEvent,
 )
 from PySide6.QtWidgets import (
@@ -388,9 +389,10 @@ class _PageStack(QStackedWidget):
 
 
 class MainWindow(QMainWindow):
-    def __init__(self, ctx: AppContext, carried: str | None = None) -> None:
+    def __init__(self, ctx: AppContext, carried: str | None = None, screen: QScreen | None = None) -> None:
         """The window on `ctx`'s workspace. `carried`: the role of the user signed in in the window before, when a
-        workspace switch builds this one (`switch_workspace`)."""
+        workspace switch builds this one (`switch_workspace`); `screen`: the screen it opens on, the one the window
+        before was on then, a projector beside the laptop among them."""
         super().__init__()
         self.ctx = ctx
         self.board_model: str | None = None
@@ -402,9 +404,12 @@ class MainWindow(QMainWindow):
         title = f"{APP_NAME} {APP_VERSION}"
         self.setWindowTitle(self.tr("{title} · Demo").format(title=title) if self.in_demo else title)
         self.resize(1920, 1080)
+        if screen is not None:  # a window not yet shown goes where its middle is, and full screen has no title bar
+            self.setScreen(screen)  # to drag it by: before, Reset Demo moved the projector's window to the laptop
+            self.move(screen.geometry().topLeft())
         want = (ctx.settings.presenter_theme, ctx.settings.presenter_theme and self._small())
         if want != (theme.presenter(), theme.small()):  # the theme saved, at the screen's sizes, before anything is
-            self._set_theme(*want)  # drawn: styled once, not again as the window is shown maximized on that screen
+            self._set_theme(*want)  # drawn: styled once, not again as the window is shown on that screen
 
         central = QWidget()
         outer = QVBoxLayout(central)
@@ -643,10 +648,10 @@ class MainWindow(QMainWindow):
 
     def _fit_header(self) -> None:
         """The header's controls whole in a window as narrow as 1366 px in the presenter theme (A7): where they do not
-        all fit, the app's name gives way first, which the window's title bar still shows, then the words "Board
-        model:" before the list, whose tooltip still says it; at 1366 px only a training run's line in the header
-        needs that. Measured as if both were shown, and each shown or hidden only when that changes, so a resize lays
-        the window out once (review of A7)."""
+        all fit, the app's name gives way first, which the title bar shows outside the presenter theme, then the words
+        "Board model:" before the list, whose tooltip still says it; at 1366 px only a training run's line in the
+        header needs that. Measured as if both were shown, and each shown or hidden only when that changes, so a
+        resize lays the window out once (review of A7)."""
         layout = self.header.layout()
         assert layout is not None
         gives_way = (self.logo, self.bm_label)
@@ -675,27 +680,41 @@ class MainWindow(QMainWindow):
             return False
         return not page.in_presenter_theme or (page.roles == ("Admin",) and self.ctx.role not in page.roles)
 
-    def _small(self) -> bool:
+    def _small(self, size: QSize | None = None) -> bool:
         """The window is shorter than theme.SMALL_H or narrower than theme.SMALL_W, where the presenter theme's 18 pt
-        pages do not fit: a 1366 x 768 or a 1280 x 1024 screen (ADR 0019). Before it is first shown, the screen's room
-        stands for it, as the app opens maximized: the theme is then styled once at a start, not at the window's first
-        size and again at the screen's (review of A7)."""
-        size = self.size()
-        if not self.isVisible() and (screen := self.screen()) is not None:
-            size = screen.availableGeometry().size()
+        pages do not fit: a 1366 x 768 or a 1280 x 1024 screen (ADR 0019). `size` is the size the window is about to
+        take; full screen, and before the window is first shown (the presenter theme opens it full screen,
+        `show_for_theme`), the whole screen stands for its size, which the window takes only once the system has moved
+        it. So the theme is styled once at a start or a switch, not at the window's old size and again at the screen's
+        (review of A7)."""
+        if size is None:
+            size = self.size()
+            if (self.isFullScreen() or not self.isVisible()) and (screen := self.screen()) is not None:
+                size = screen.geometry().size()
         return size.height() < theme.SMALL_H or size.width() < theme.SMALL_W
+
+    def show_for_theme(self) -> None:
+        """Show the window full screen in the presenter theme, and maximized, with its title bar and the taskbar, in
+        the production theme (REQ-SET-008, #104). Maximized on a 1366 x 768 Windows screen a window has about 1366 x
+        697, as Windows keeps the title bar and the taskbar, and the verdict areas the pages are sized for need all
+        768 px: full screen gives the projector the whole screen (ADR 0019)."""
+        if theme.presenter():
+            self.showFullScreen()
+        else:
+            self.showMaximized()
 
     def _set_theme(self, presenter: bool, small: bool = False) -> None:
         theme.use(presenter, small)
         cast(QApplication, QApplication.instance()).setStyleSheet(theme.stylesheet())
 
-    def apply_theme(self) -> None:
+    def apply_theme(self, size: QSize | None = None) -> None:
         """The theme settings.json holds, at once (REQ-SET-008): the stylesheet, then what the pages drew with the
         tokens, each in the new theme (verdict labels, coloured table rows, the text on images, each page's own
         `restyle`), the sidebar and the header. The page shown goes to Home when the theme hides it. In a small window
-        (`_small`) the presenter theme takes its sizes for a small window, and its 18 pt again in a larger one (#104):
-        `resizeEvent` asks for it as the window crosses that size."""
-        want = (self.ctx.settings.presenter_theme, self.ctx.settings.presenter_theme and self._small())
+        (`_small`, at `size` when the window is about to take it) the presenter theme takes its sizes for a small
+        window, and its 18 pt again in a larger one (#104): `resizeEvent` asks for it as the window crosses that
+        size."""
+        want = (self.ctx.settings.presenter_theme, self.ctx.settings.presenter_theme and self._small(size))
         if want != (theme.presenter(), theme.small()):
             styled = theme.verdict_styles()  # read with the tokens they were drawn with
             self._set_theme(*want)
@@ -715,15 +734,24 @@ class MainWindow(QMainWindow):
 
     def save_presenter_theme(self, on: bool) -> bool:
         """Switch the presenter theme on or off, as an Admin does on Settings or with the header's Exit presenter
-        theme: saved through the service layer (Admin only, audited as settings.change, Q49), then applied at once. A
-        refusal is shown with its code and changes nothing. Returns whether it was saved."""
+        theme: saved through the service layer (Admin only, audited as settings.change, Q49), then applied at once, the
+        window full screen in the presenter theme and maximized again out of it (`show_for_theme`), styled once, at
+        the screen's size it goes full screen at (`_small`); a window someone has sized by hand, neither maximized nor
+        full screen, keeps its size. A refusal is shown with its code and changes nothing. Returns whether it was
+        saved."""
         try:
             self.ctx.save_settings({"presenter_theme": on})
         except (AoiError, OSError) as e:  # AOI-USR-001 below the Admin role, AOI-SET-010, a disk error
             show_error(self, self.ctx.report_error(e, "Settings"))
             return False
-        self.apply_theme()
-        if on:
+        fit = self.isMaximized() or self.isFullScreen()  # as the app shows its window; one sized by hand keeps it
+        screen = self.screen() if fit and on else None
+        self.apply_theme(screen.geometry().size() if screen is not None else None)
+        if fit:
+            self.show_for_theme()  # full screen in it, and the maximized window with its title bar back out of it
+        if on and fit:
+            self.status(self.tr("Presenter theme on, full screen. An Admin turns it off with Exit presenter theme."))
+        elif on:  # a window sized by hand keeps its size
             self.status(self.tr("Presenter theme on. An Admin turns it off with Exit presenter theme."))
         else:
             self.status(self.tr("Presenter theme off."))
@@ -896,7 +924,8 @@ class MainWindow(QMainWindow):
             if ctx is None:
                 use_workspace(before)
                 ctx = open_workspace()
-            win = build_window(ctx, role) if ctx is not None else None  # signed in as the role carried
+            # signed in as the role carried, on this window's screen
+            win = build_window(ctx, role, self.screen()) if ctx is not None else None
         finally:
             QApplication.restoreOverrideCursor()
         if win is None:  # nothing opens: the app closes, as at a start that opens nothing
@@ -912,7 +941,7 @@ class MainWindow(QMainWindow):
             win.status(self.tr("Demo reset in {seconds:.1f} s.").format(seconds=took))
         if play and win.in_demo:
             win.play_demo()
-        win.showMaximized()
+        win.show_for_theme()
         self.close()
         self.deleteLater()
         return win
@@ -940,16 +969,17 @@ class MainWindow(QMainWindow):
         return cur.title if isinstance(cur, Page) else "Home"
 
 
-def build_window(ctx: AppContext, carried: str | None = None) -> MainWindow | None:
-    """The main window at start-up, or at a workspace switch with the role `carried` from the window before, with the
-    unhandled-error hook in place (REQ-LOG-005, REQ-SET-019), or None when it could not be built. The hook goes in
-    before the window exists, so a slot that raises while the pages are built is logged and shown too, and again with
-    the window as the dialog's parent once it is built. An error raised out of building it (a page that cannot read the
-    database, #205; a start's sign-in whose audit entry cannot be written, so no one is signed in unaudited) is shown
-    as one coded dialog with its trace in the log; the caller closes the workspace and ends the app."""
+def build_window(ctx: AppContext, carried: str | None = None, screen: QScreen | None = None) -> MainWindow | None:
+    """The main window at start-up, or at a workspace switch with the role `carried` from the window before and on its
+    `screen` (`MainWindow.__init__`), with the unhandled-error hook in place (REQ-LOG-005, REQ-SET-019), or None when
+    it could not be built. The hook goes in before the window exists, so a slot that raises while the pages are built
+    is logged and shown too, and again with the window as the dialog's parent once it is built. An error raised out of
+    building it (a page that cannot read the database, #205; a start's sign-in whose audit entry cannot be written, so
+    no one is signed in unaudited) is shown as one coded dialog with its trace in the log; the caller closes the
+    workspace and ends the app."""
     install_excepthook(ctx, None)
     try:
-        win = MainWindow(ctx, carried)
+        win = MainWindow(ctx, carried, screen)
     except Exception as e:
         show_error(None, ctx.report_error(e, QT_TRANSLATE_NOOP("Errors", "start-up")))
         return None

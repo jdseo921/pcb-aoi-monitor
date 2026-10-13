@@ -10,7 +10,8 @@ so the interpreter's own start counts; "in_process", the seconds from the top of
 seconds: "imports" (main and what it imports: Qt, the engine, PyTorch), "open_workspace" (settings.json, the database,
 the start-up archive and sweeps; with --demo, the demo workspace loaded beside the station's first when it is not there)
 and "build_window" (every page, and the first one's data). It names what the start opened, too: "user" and "role" signed
-in, "page", "presenter" (the presenter theme on) and "demo" (the demo workspace, with --demo), and "dialogs": every
+in, "page", "presenter" (the presenter theme on), "full_screen" (the window shown full screen, as the presenter theme
+shows it) and "demo" (the demo workspace, with --demo), and "dialogs": every
 dialog the start showed, its kind and title (tests/dialog_watch.py), each closed again as Esc closes it so none waits
 for a click. When main.main() returns it prints the last line again, with "exit", its return code, and "dialogs" as they
 stand then, those shown while closing included, so the last line of a run that ends is always that one. An error in what
@@ -77,14 +78,21 @@ def end(code: int) -> None:
     """End the process at once with `code`, as a crash ends it: no close event, nothing saved, nothing cleaned up. On
     Windows os._exit leaves through ExitProcess, which unloads each library while the inspection's threads may still run
     in PyTorch's, and the process could end in an access violation, 0xC0000005, in place of `code` (Windows CI on #404);
-    TerminateProcess ends it as Task Manager or a crash does, with no library unloaded."""
+    TerminateProcess ends it as Task Manager or a crash does, with no library unloaded. Its handle is declared a HANDLE:
+    passed as ctypes' default int, only its low 32 bits are set on 64-bit Windows, the call can fail on a handle that
+    is not the process's, and the end fell through to os._exit and its access violation (Windows CI on #405)."""
     sys.stdout.flush()
     sys.stderr.flush()
     if sys.platform == "win32":
         import ctypes
+        from ctypes import wintypes
 
-        kernel32 = ctypes.windll.kernel32
+        kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+        kernel32.GetCurrentProcess.restype = wintypes.HANDLE
+        kernel32.TerminateProcess.argtypes = (wintypes.HANDLE, wintypes.UINT)
+        kernel32.TerminateProcess.restype = wintypes.BOOL
         kernel32.TerminateProcess(kernel32.GetCurrentProcess(), code)  # returns only if it failed
+        print(f"TerminateProcess failed, Windows error {ctypes.get_last_error()}", file=sys.stderr, flush=True)
     os._exit(code)
 
 
@@ -168,7 +176,8 @@ def run() -> int:
         QApplication.processEvents()  # the first paint, and whatever else the start queued
         usable_s = time.time() - float(os.environ["AOI_STARTUP_LAUNCHED"])
         opened = {"user": win.ctx.user, "role": win.ctx.role, "page": page_title(win)}
-        opened |= {"presenter": theme.presenter(), "demo": win.in_demo, "exposed": exposed, "dialogs": watch.shown}
+        opened |= {"presenter": theme.presenter(), "full_screen": win.isFullScreen(), "demo": win.in_demo}
+        opened |= {"exposed": exposed, "dialogs": watch.shown}
         emit({"usable": usable_s, "in_process": perf_counter() - T0, **marks, **opened})
         if then := os.environ.get("AOI_STARTUP_THEN"):
             go_on(win, then, watch)

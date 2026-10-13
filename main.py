@@ -30,7 +30,7 @@ def main() -> int:
         win = build_window(ctx)  # unhandled errors from here on: logged with the trace, one coded dialog (REQ-LOG-005)
         if win is None:  # an error while the window was built: shown and logged, the workspace closed below (#205)
             return 2
-        win.showMaximized()
+        win.show_for_theme()  # full screen in the presenter theme, maximized in the production theme (#104)
         return app.exec()
     finally:  # closing the window closed it already; this covers every other way out (#171, #205)
         ctx.close()

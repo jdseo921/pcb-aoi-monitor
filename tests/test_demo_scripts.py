@@ -130,18 +130,29 @@ def errors_recorded(monkeypatch: pytest.MonkeyPatch) -> list[str]:
     return shown
 
 
-def projector(monkeypatch: pytest.MonkeyPatch, size: QSize) -> None:
-    """Each window the demo opens (Load Demo, Reset Demo) shown at `size`, as maximized on a projector of that size,
-    whose room the screen gives too, so a window is built in the presenter theme's sizes for it (`MainWindow._small`)
-    and not styled again as it is shown. Offscreen, Qt's one screen is 800 x 800 px, where a maximized window is held
-    at its least size."""
+def projector(monkeypatch: pytest.MonkeyPatch, size: QSize) -> list[str]:
+    """Each window the demo opens (Load Demo, Reset Demo) shown at `size`, as full screen, or maximized, on a projector
+    of that size, and read as shown that way; the screen gives that size too, so a window is built in the presenter
+    theme's sizes for it (`MainWindow._small`) and not styled again as it is shown. Offscreen, Qt's one screen is 800 x
+    800 px, where a maximized window is held at its least size. Returns how each window was shown, in order: "full
+    screen" in the presenter theme, "maximized" in the production theme (`MainWindow.show_for_theme`, #104)."""
+    ways: list[str] = []
 
-    def show(win: MainWindow) -> None:
-        win.resize(size)
-        win.showNormal()
+    def shown(way: str) -> Callable[[MainWindow], None]:
+        def show(win: MainWindow) -> None:
+            ways.append(way)
+            win.setProperty("shownAs", way)
+            win.resize(size)
+            win.showNormal()
 
-    monkeypatch.setattr(MainWindow, "showMaximized", show)
-    monkeypatch.setattr(QScreen, "availableGeometry", lambda _screen: QRect(QPoint(0, 0), size))
+        return show
+
+    monkeypatch.setattr(MainWindow, "showMaximized", shown("maximized"))
+    monkeypatch.setattr(MainWindow, "showFullScreen", shown("full screen"))
+    monkeypatch.setattr(MainWindow, "isMaximized", lambda win: win.property("shownAs") == "maximized")
+    monkeypatch.setattr(MainWindow, "isFullScreen", lambda win: win.property("shownAs") == "full screen")
+    monkeypatch.setattr(QScreen, "geometry", lambda _screen: QRect(QPoint(0, 0), size))
+    return ways
 
 
 def in_view(win: MainWindow, widget: QWidget) -> bool:
@@ -260,7 +271,7 @@ def test_req_set_007_the_five_minute_script_runs_in_the_presenter_theme(
     usb = tmp_path / "usb"
     usb.mkdir()
     picks = picked(monkeypatch, usb)
-    projector(monkeypatch, size)
+    ways = projector(monkeypatch, size)
     with watched() as other:
         first = station(qtbot)
         win = opened(qtbot, first, first.pages["Settings"].demo.btn_load)  # type: ignore[attr-defined]
@@ -321,6 +332,7 @@ def test_req_set_007_the_five_minute_script_runs_in_the_presenter_theme(
     assert (shown, dialogs, other) == ([], [], [])
     assert asked == ["Confirm export", "Confirm export", *["Reset Demo"] * LONG_TRIES], asked
     assert picks == ["Export CSV", "Export overlays to"], picks
+    assert ways == ["maximized", "full screen", *["full screen"] * LONG_TRIES], ways  # Load Demo, the theme, resets
 
 
 def test_req_set_008_in_the_presenter_theme_an_admin_resets_the_demo_or_leaves_the_theme_in_three_clicks(
@@ -356,7 +368,7 @@ def test_req_set_008_in_the_presenter_theme_an_admin_resets_the_demo_or_leaves_t
     win.pages["Settings"].presenter.click()  # type: ignore[attr-defined]
 
     def smallest(win: MainWindow) -> None:
-        win.showNormal()  # it opens maximized, and maximized it went back to the test screen's 1461 x 796 mid-run
+        win.showNormal()  # shown as the app shows it (show_for_theme), it went back to the test screen's size mid-run
         win.resize(1366, 768)
         qtbot.waitUntil(lambda: win.size() == QSize(1366, 768))
 
@@ -704,11 +716,12 @@ def test_req_set_007_a_demo_closed_mid_run_opens_again_as_the_demo_kit_says(
     env = {**os.environ, "AOI_WORKSPACE": str(folder), "AOI_DEMO_BUNDLE": str(demo_bundle), "AOI_MEMORY_KEYS": "1"}
     started, ended, *_ = run_demo(env, then)
     assert started["demo"] and started["presenter"] is False, started  # the theme the presenter then switches on
+    assert started["full_screen"] is False, started  # maximized, with its title bar
     assert ended["then"] == then and ended["page"] == "Inspection" and ended["records"] >= 1, ended
     assert ended["inspecting"] if then == "crash" else ended["records"] == 4, ended  # mid-board; or at the NG board
     again = run_demo(env)[-1]
     print(f"\nREQ-SET-007 the demo started again after a {then}, s:", round(again["usable"], 2))
     assert again["exposed"] and again["demo"], again
-    assert (again["user"], again["role"], again["presenter"]) == ("admin", "Admin", True), again
+    assert (again["user"], again["role"], again["presenter"], again["full_screen"]) == ("admin", "Admin", True, True)
     assert again["page"] == ("Inspection" if then == "crash" else "Home"), again
     assert again["usable"] < RESTART_BUDGET_S, again
