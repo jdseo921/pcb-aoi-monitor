@@ -434,16 +434,18 @@ def _one_drive_roots() -> list[str]:
 
 
 SHOWS_NOTHING = {"\u034f", "\u115f", "\u1160", "\u3164", "\uffa0"}  # a grapheme joiner and the Hangul fillers
+SHOWS_NOTHING |= {"\u17b4", "\u17b5", "\u2800"}  # two Khmer vowels written as nothing, the Braille blank
 SHOWS_NOTHING |= {chr(c) for c in (*range(0xFE00, 0xFE10), *range(0xE0100, 0xE01F0))}  # variation selectors
 
 
 def looks(name: str) -> str:
-    """`name` as it looks on a screen, the same for two names a person cannot tell apart there (ADR 0023, decision 6):
-    in NFKC, case folded (full-width letters and digits as A to Z and 0 to 9, a decomposed Hangul syllable as one, a
-    ligature as its letters), the characters that show nothing dropped (a zero-width space or joiner, a soft hyphen, a
-    direction mark, a byte order mark, a Hangul filler, a variation selector), and every run of spaces of any kind, a
-    no-break or ideographic space or a tab, one space, none at the ends. Letters of another alphabet that look like
-    Latin ones (Cyrillic А for A) are not mapped: Unicode's list of them runs to thousands."""
+    """`name` as it reads on a screen, the same for two names that read alike there (ADR 0023, decision 6): in NFKC,
+    case folded (full-width letters and digits as A to Z and 0 to 9, a decomposed Hangul syllable as one, a ligature or
+    a superscript digit as its letters or digit, ß as ss), the characters that show nothing dropped (a zero-width space
+    or joiner, a soft hyphen, a direction mark or override, a byte order mark, a Hangul filler, a variation selector,
+    the Braille blank), and every run of spaces of any kind, a no-break or ideographic space, one space, none at the
+    ends. Letters of another alphabet that look like Latin ones (Cyrillic А for A) and look-alike Latin letters and
+    digits (O and 0, l and 1) are not mapped: Unicode's list of them runs to thousands."""
     folded = unicodedata.normalize("NFKC", unicodedata.normalize("NFKC", name).casefold())
     shown = "".join(c for c in folded if c not in SHOWS_NOTHING and unicodedata.category(c) != "Cf")
     return " ".join(shown.split())
@@ -2373,8 +2375,8 @@ class AppContext:
         AOI-TRN-039, which before met such a name only after the work of labelling it (B4 of the 2026-10
         business-readiness brief, D4 part, F9; ADR 0023); AOI-TRN-005 for one that differs from an existing name only
         in case: on Windows, where file names ignore case, both would write the same AI model and golden board files;
-        AOI-TRN-055 for one that looks the same as an existing name on a screen (`looks`: full-width letters, a no-break
-        or zero-width space, a decomposed Hangul syllable); AOI-TRN-056 for one whose Latin letters and digits are an
+        AOI-TRN-055 for one that reads the same as an existing name on a screen (`looks`: full-width letters, a no-break
+        or zero-width space, a decomposed Hangul syllable); AOI-TRN-056 for one whose letters A to Z and digits are an
         existing name's, so its dataset versions would take that board model's names (DS-TBOXA1-… for TBOX-A1 and
         `tbox a1`, or for CAL-1 and CAL_1), the rule freeze applies with AOI-TRN-040, which before met such a name only
         once the other board model had a version (Jay's decision of 2026-10-13, ADR 0023, decisions 6 and 7). Every
@@ -2389,7 +2391,8 @@ class AppContext:
             return AoiError("AOI-TRN-054", name=name)
         if (same := next((n for n in names if n.casefold() == name.casefold()), None)) is not None:
             return AoiError("AOI-TRN-005", name=name, existing=same)
-        if (alike := next((n for n in names if looks(n) == looks(name)), None)) is not None:
+        seen = looks(name)  # once, not per name: the dialog asks on every key
+        if (alike := next((n for n in names if looks(n) == seen), None)) is not None:
             return AoiError("AOI-TRN-055", name=name, existing=alike)
         mixed = next((n for n in names if datasets.token(n) == token), None)
         return None if mixed is None else AoiError("AOI-TRN-056", name=name, existing=mixed, token=token)

@@ -870,7 +870,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+277"/>
+        <location line="+279"/>
         <location line="+137"/>
         <source>Importing samples</source>
         <translation type="unfinished"></translation>
@@ -898,12 +898,12 @@
     </message>
     <message>
         <location line="+190"/>
-        <location line="+2469"/>
+        <location line="+2470"/>
         <source>(none)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-2438"/>
+        <location line="-2439"/>
         <source>Saving a recipe</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1030,7 +1030,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+53"/>
+        <location line="+54"/>
         <source>Setting a board model&apos;s scale</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1150,14 +1150,14 @@
         <translation>검증 세트 잠금</translation>
     </message>
     <message>
-        <location line="-2742"/>
-        <location line="+2756"/>
+        <location line="-2745"/>
+        <location line="+2759"/>
         <location line="+39"/>
         <source>the workspace holds no such dataset version</source>
         <translation>작업 공간에 그런 데이터셋 버전이 없습니다</translation>
     </message>
     <message>
-        <location line="-2838"/>
+        <location line="-2841"/>
         <source>Drift on {board} ({view}): {count} of the last {of} boards called NG; {before} % of the {baseline} before</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1257,7 +1257,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+951"/>
+        <location line="+953"/>
         <source>Setting the comparison&apos;s thresholds from labelled boards</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1272,7 +1272,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+480"/>
+        <location line="+481"/>
         <source>a blind label is OK, or NG with one of the 37 defect types</source>
         <translation>블라인드 라벨은 OK이거나, 37개 결함 유형 중 하나를 지정한 NG입니다</translation>
     </message>
@@ -1484,7 +1484,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-3491"/>
+        <location line="-3494"/>
         <source>no earlier version of this board model was active</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1509,12 +1509,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+875"/>
+        <location line="+877"/>
         <source>its UUID {found} is not {uuid}, as in the AI model registry</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1439"/>
+        <location line="+1440"/>
         <source>Labelling an image</source>
         <translation>이미지 라벨링</translation>
     </message>
@@ -1616,7 +1616,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-3719"/>
+        <location line="-3722"/>
         <source>unhandled</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2890,37 +2890,12 @@
         <translation type="unfinished">라틴 문자나 숫자가 하나 이상 든 이름을 보드 모델에 지정하십시오(예: TBOX-A1). 한글 같은 다른 문자는 함께 쓸 수 있습니다(예: &quot;TBOX-A1 메인보드&quot;). 아무것도 만들어지지 않았습니다.</translation>
     </message>
     <message>
-        <location line="+8"/>
-        <source>Board model name not allowed: looks like another</source>
-        <translation type="unfinished">보드 모델 이름 사용 불가: 다른 이름과 똑같아 보임</translation>
-    </message>
-    <message>
-        <location line="+1"/>
-        <source>The board model name &quot;{name}&quot; looks the same as board model &quot;{existing}&quot;, which exists already: they differ only in characters that look alike, such as full-width letters or digits, a space of another kind, or a character that shows nothing.</source>
-        <translation type="unfinished">보드 모델 이름 &quot;{name}&quot;은(는) 이미 있는 보드 모델 &quot;{existing}&quot;과(와) 똑같아 보입니다. 두 이름은 전각 문자나 숫자, 다른 종류의 공백, 보이지 않는 문자처럼 비슷해 보이는 문자만 다릅니다.</translation>
-    </message>
-    <message>
-        <location line="+6"/>
-        <source>Select &quot;{existing}&quot; in the top bar to work on that board model, or type a name that differs from it in its letters or digits, using an English keyboard for A to Z and 0 to 9. Nothing was made.</source>
-        <translation type="unfinished">그 보드 모델로 작업하려면 상단 바에서 &quot;{existing}&quot;을(를) 선택하고, 아니면 영문 키보드로 A~Z, 0~9를 입력해 문자나 숫자가 다른 이름을 입력하십시오. 아무것도 만들지 않았습니다.</translation>
-    </message>
-    <message>
-        <location line="+8"/>
+        <location line="+23"/>
         <source>Board model name not allowed: version names would mix</source>
         <translation type="unfinished">보드 모델 이름 사용 불가: 버전 이름이 섞임</translation>
     </message>
     <message>
-        <location line="+1"/>
-        <source>The board model name &quot;{name}&quot; has the same Latin letters and digits as board model &quot;{existing}&quot;, so the dataset versions of both would be named DS-{token}-…, and their names would mix.</source>
-        <translation type="unfinished">보드 모델 이름 &quot;{name}&quot;의 라틴 문자와 숫자가 보드 모델 &quot;{existing}&quot;과(와) 같아, 두 보드 모델의 데이터셋 버전 이름이 모두 DS-{token}-…이 되어 섞이게 됩니다.</translation>
-    </message>
-    <message>
-        <location line="+5"/>
-        <source>Select &quot;{existing}&quot; in the top bar if it is the same board, or give the new board model a name whose Latin letters or digits differ from those of &quot;{existing}&quot;, such as one with another digit added. Nothing was made.</source>
-        <translation type="unfinished">같은 보드라면 상단 바에서 &quot;{existing}&quot;을(를) 선택하고, 아니라면 새 보드 모델에 라틴 문자나 숫자가 &quot;{existing}&quot;과(와) 다른 이름(예: 숫자를 하나 더 붙인 이름)을 지정하십시오. 아무것도 만들지 않았습니다.</translation>
-    </message>
-    <message>
-        <location line="+9"/>
+        <location line="+16"/>
         <source>AI model, recipe, scale or Golden board changed since the run</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3496,7 +3471,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1337"/>
+        <location line="-1338"/>
         <source>Board judged NG</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3611,7 +3586,32 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+115"/>
+        <location line="+38"/>
+        <source>Board model name not allowed: reads as another</source>
+        <translation type="unfinished">보드 모델 이름 사용 불가: 다른 이름과 똑같이 읽힘</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>The board model name &quot;{name}&quot; reads the same as board model &quot;{existing}&quot;, which exists already, once upper and lower case, full-width and other forms of the same letter or digit, the kind of space and characters that show nothing are set aside.</source>
+        <translation type="unfinished">대소문자, 같은 문자나 숫자의 전각 및 기타 형태, 공백의 종류, 보이지 않는 문자를 빼고 보면 보드 모델 이름 &quot;{name}&quot;은(는) 이미 있는 보드 모델 &quot;{existing}&quot;과(와) 똑같이 읽힙니다.</translation>
+    </message>
+    <message>
+        <location line="+6"/>
+        <source>Select &quot;{existing}&quot; in the top bar to work on that board model, or type a name that differs from it in a letter A to Z or a digit 0 to 9, typed on an English keyboard. Nothing was made.</source>
+        <translation type="unfinished">그 보드 모델로 작업하려면 상단 바에서 &quot;{existing}&quot;을(를) 선택하고, 아니면 영문 키보드로 입력한 A~Z 문자나 0~9 숫자가 다른 이름을 입력하십시오. 아무것도 만들지 않았습니다.</translation>
+    </message>
+    <message>
+        <location line="+9"/>
+        <source>The board model name &quot;{name}&quot; has the same letters A to Z and digits 0 to 9 as board model &quot;{existing}&quot;, case aside, so the dataset versions of both would be named DS-{token}-…, and their names would mix.</source>
+        <translation type="unfinished">보드 모델 이름 &quot;{name}&quot;의 A~Z 문자와 0~9 숫자가 대소문자를 빼면 보드 모델 &quot;{existing}&quot;과(와) 같아, 두 보드 모델의 데이터셋 버전 이름이 모두 DS-{token}-…이 되어 섞이게 됩니다.</translation>
+    </message>
+    <message>
+        <location line="+6"/>
+        <source>Select &quot;{existing}&quot; in the top bar if it is the same board, or give the new board model a name whose letters A to Z or digits 0 to 9 differ from those of &quot;{existing}&quot;, such as one with another digit added. Nothing was made.</source>
+        <translation type="unfinished">같은 보드라면 상단 바에서 &quot;{existing}&quot;을(를) 선택하고, 아니라면 새 보드 모델에 A~Z 문자나 0~9 숫자가 &quot;{existing}&quot;과(와) 다른 이름(예: 숫자를 하나 더 붙인 이름)을 지정하십시오. 아무것도 만들지 않았습니다.</translation>
+    </message>
+    <message>
+        <location line="+56"/>
         <source>Start the Checks on Training: a second person checks the labels and two people run an agreement check, then freeze a Validated version, train from it and test again. The run and its CSV are kept.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3923,7 +3923,7 @@
     </message>
     <message>
         <location line="+1"/>
-        <location filename="../core/services.py" line="+2998"/>
+        <location filename="../core/services.py" line="+3001"/>
         <source>a file of it could not be read: {reason}</source>
         <translation>그 파일 하나를 읽을 수 없습니다: {reason}</translation>
     </message>
@@ -8219,7 +8219,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/services.py" line="-3075"/>
+        <location filename="../core/services.py" line="-3078"/>
         <source>Aligning {count} images to the reference board</source>
         <translation type="unfinished"></translation>
     </message>

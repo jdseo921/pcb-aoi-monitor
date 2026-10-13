@@ -161,8 +161,8 @@ rule, `AppContext.board_model_name_refusal`, which each of them raises before an
 model dialog shows as the name is typed, Create off: it is one folder name on Windows as on Linux (`aoi/data/paths.py`
 `one_folder_name`, AOI-TRN-019), it has a Latin letter or digit, which its dataset versions are named with
 (`datasets.token`, AOI-TRN-054, the rule freeze applies with AOI-TRN-039; ADR 0023), it differs from every existing
-name in more than case (AOI-TRN-005), it does not look the same as one on a screen (`looks`: NFKC, case folded, the
-characters that show nothing dropped and spaces of any kind as one, AOI-TRN-055), and its Latin letters and digits are
+name in more than case (AOI-TRN-005), it does not read the same as one on a screen (`looks`: NFKC, case folded, the
+characters that show nothing dropped and spaces of any kind as one, AOI-TRN-055), and its letters A to Z and digits are
 no existing name's, which would give its versions that board model's names (AOI-TRN-056, the rule freeze applies with
 AOI-TRN-040; ADR 0023, decisions 6 to 8). A name the workspace already holds is kept, and `train` writes only inside
 models/. A source lost between its check and its copy is that file's AOI-INSP-001.

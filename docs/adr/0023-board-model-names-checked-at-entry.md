@@ -65,27 +65,31 @@ cannot be renamed, so the images had to be imported again under another name.
    freeze refuses it, with AOI-TRN-039, as it did, saying to import its images under a name with a Latin letter or
    digit. AOI-TRN-039 stays for that case. Refusing such workspaces at start-up, or renaming their board models, was
    not chosen: a rename touches folders, AI model files and records, and Jay asked for a check at entry.
-6. **A name that looks the same as an existing one is refused (AOI-TRN-055).** Two names are compared as they look on
-   a screen (`looks` in `aoi/core/services.py`): in NFKC, case folded, so that full-width letters and digits read as A
-   to Z and 0 to 9, a decomposed Hangul syllable (as a macOS file name gives it) as the composed one, and a ligature as
-   its letters; with the characters that show nothing dropped (a zero-width space or joiner, a soft hyphen, a direction
-   mark, a byte order mark, a Hangul filler, a variation selector); and with every run of spaces of any kind (a
-   no-break or ideographic space, a tab, two spaces) as one space, none at the ends. A new name that looks the same as
-   an existing one is refused, naming the one it looks like and saying to select it in the top bar, or to type a name
-   that differs in its letters or digits on an English keyboard. "Normalises" is read as comparing the normal forms,
-   not storing one: the name is kept as typed when it is taken, so the folders, files and records of a board model
-   never carry a name other than the one its Engineer typed, and nothing made before is renamed.
+6. **A name that reads the same as an existing one is refused (AOI-TRN-055).** Two names are compared as they read
+   on a screen (`looks` in `aoi/core/services.py`): in NFKC, case folded, so that full-width letters and digits read as
+   A to Z and 0 to 9, a decomposed Hangul syllable (as a macOS file name gives it) as the composed one, a ligature or a
+   superscript digit as its letters or digit, and ß as ss; with the characters that show nothing dropped (a zero-width
+   space or joiner, a soft hyphen, a direction mark or override, a byte order mark, a Hangul filler, a variation
+   selector, the Braille blank); and with every run of spaces of any kind (a no-break or ideographic space, two spaces)
+   as one space, none at the ends. A new name that reads the same as an existing one is refused, naming that board
+   model, saying what was set aside to compare them, and saying to select it in the top bar or to type a name that
+   differs in a letter A to Z or a digit 0 to 9. Some names it refuses differ in more than looks (`Boß-1` and
+   `BOSS-1`, `TBOX-A¹` and `TBOX-A1`); the message says so, and refusing too much is the safe side for a name that
+   names folders and dataset versions. "Normalises" is read as comparing the normal forms, not storing one: the name is
+   kept as typed when it is taken, so the folders, files and records of a board model never carry a name other than
+   the one its Engineer typed, and nothing made before is renamed. Jay's review of this record confirms that reading.
 7. **A name whose versions would take another board model's names is refused (AOI-TRN-056).** A new name whose
    `datasets.token` equals an existing board model's (`TBOX-A1` and `tbox a1`, `CAL-1` and `CAL_1`, `TBOX-A1` and
    `TBOX-A1 메인보드`, `보드 1` and `기판 1`) is refused, naming that board model and the DS-<BOARDMODEL>-… both would
-   share, and saying to select it if it is the same board, or to give a name whose Latin letters or digits differ.
+   share, and saying to select it if it is the same board, or to give a name whose letters A to Z or digits 0 to 9
+   differ (`Café-1` and `Caf-1` share DS-CAF1: é is not one of A to Z).
    This is freeze's AOI-TRN-040 test, made against every existing board model, with versions or none: at entry no one
    knows which of the two will be frozen first, and before, the second found out at freeze, after labelling. Freeze
    keeps AOI-TRN-040 for board models made before this rule.
 8. **The most specific refusal is given.** Case first (AOI-TRN-005, which says why case matters on Windows), then how
    it looks (AOI-TRN-055), then the letters and digits (AOI-TRN-056). AOI-TRN-056 would refuse many of the names the
    first two refuse (every case variant, and a look-alike that differs in a character that shows nothing, a space or a
-   decomposed syllable), but its message sends the Engineer to look for a Latin letter or digit that differs, which
+   decomposed syllable), but its message sends the Engineer to look for a letter A to Z or a digit that differs, which
    there they cannot see.
 
 ## Consequences
@@ -110,6 +114,11 @@ cannot be renamed, so the images had to be imported again under another name.
 - Letters of another alphabet that look like Latin ones (a Cyrillic А for A) are not compared as alike: Unicode's list
   of such letters runs to thousands, NFKC maps none of them, and a name in such letters only is refused already
   (AOI-TRN-054). A name mixing them with Latin ones (`TBOX-А1` with a Cyrillic А) is taken beside `TBOX-A1`, and its
-  versions are named DS-TBOX1-….
+  versions are named DS-TBOX1-…. Latin letters and digits that look alike in some fonts (O and 0, l and 1:
+  `TB0X-A1`) are different letters, and such a name is taken. A name holding a right-to-left override, which shows
+  its letters in reverse order, is taken too: the override shows nothing and is dropped, and what is left reads
+  differently. Refusing these at entry is for Jay to ask for; none is a name a station's keyboard types by mistake.
+- AOI-TRN-054's example, "TBOX-A1 메인보드", is refused with AOI-TRN-056 where TBOX-A1 exists. It stays: the example
+  shows how Korean letters sit beside Latin ones, and AOI-TRN-056 says what to change if it is typed there.
 - The Korean text of AOI-TRN-054, AOI-TRN-055 and AOI-TRN-056 is a draft, marked unfinished in `aoi/i18n/aoi_ko.ts`,
   for a native speaker's review.
