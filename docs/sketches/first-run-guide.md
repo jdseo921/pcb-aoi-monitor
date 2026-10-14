@@ -333,14 +333,16 @@ sizes: fields F, buttons B or T, the screens' blue buttons T and Train T+, text 
 with bounds, never a bare percent, and the synthetic marker; every string through `self.tr()`. Nothing here changes a
 verdict: the guide calls today's checks in a new order.
 
-Departures, each needing Jay's answer before code: a Trial AI model goes live (Q63; REQ-TRN-012, a MUST; ADR 0020
+Departures, each approved by Jay on 2026-10-14 (Questions, below): a Trial AI model goes live (Q63; REQ-TRN-012, a MUST; ADR 0020
 decision 4); the key shown on screen 1, not in #407's modal dialog, with one button for the tick and Done (Q67; ADR
 0021 decision 3); Train picks Trial with no choice offered (Q80; ADR 0020 decision 2); the guide's own line beside each
 refusal, which is text outside `aoi/errors.py` until Q78 puts it there. SHOULD skipped, with this reason: Home shows
 the guide in place of the six cards (REQ-INSP-016) because one person needs one next step, and the cards are one
 press away under Show All Steps ›.
 
-## Questions for Jay
+## Questions for Jay, decided 2026-10-14
+
+Jay answered on 2026-10-14 at 00:03 UTC: "Yes to every questions." Each recommended answer below is the decision.
 
 From Q63. Q63, Q67 and Q80 depart from a decision or a MUST; Q73 and Q77 are a contract and a Charter decision; the
 rest are design choices, each with the answer I recommend. The count of 24 holds with Q64 and Q67 to Q72 as
