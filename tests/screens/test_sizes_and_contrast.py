@@ -626,15 +626,17 @@ def test_req_trn_017_new_board_model_dialog_sizes_and_contrast(
     screens: tuple[AppContext, Path], qtbot: QtBot, qapp: QApplication
 ) -> None:
     """The New board model dialog (ADR 0021), which no page walk reaches: its form as the Admin and the Engineer see it,
-    the Customer list greyed for the Engineer, and its recovery key step as the Admin sees it, in the screenshots'
-    state; then Settings' New Store… key dialog. Every visible widget passes the font, size and contrast rules above,
-    the Customer list's entries too, and every control marked T, T+ or F is held to its size class."""
+    the Customer list greyed for the Engineer, its form with a name the rule refuses, the line under the name saying
+    why (ADR 0023), and its recovery key step as the Admin sees it, in the screenshots' state; then Settings' New
+    Store… key dialog. Every visible widget passes the font, size and contrast rules above, the Customer list's entries
+    too, and every control marked T, T+ or F is held to its size class."""
     ctx, _ = screens
     findings: list[str] = []
     seen: Counter = Counter()
     need = {"T": theme.TARGET_H, "T+": theme.RUN_CONTROL_H, "F": theme.FIELD_H}  # size_class() in pages/base.py
     with _shell(ctx, qtbot, qapp) as win:
-        for role, step in [("admin", "form"), ("engineer", "form"), ("admin", "key"), ("admin", "store")]:
+        steps = [("admin", "form"), ("engineer", "form"), ("admin", "refused"), ("admin", "key"), ("admin", "store")]
+        for role, step in steps:
             win.set_user(role)
             if step == "store":
                 dialog = render_screens.store_key_dialog(win)
@@ -642,6 +644,7 @@ def test_req_trn_017_new_board_model_dialog_sizes_and_contrast(
                 dialog = render_screens.new_board_model_dialog(win, step)
                 assert (dialog.steps.currentWidget() is dialog.key_step) == (step == "key"), step
                 assert dialog.customer.isEnabled() == (role == "admin"), role
+                assert (dialog.name_refusal.text() != "") == (step == "refused"), step
             qtbot.addWidget(dialog)
             dialog.show()
             qtbot.waitExposed(dialog)
@@ -663,7 +666,7 @@ def test_req_trn_017_new_board_model_dialog_sizes_and_contrast(
                 dialog.steps.setCurrentWidget(dialog.form)
             dialog.close()
         win.set_user("admin")
-    enough = {"dialogs": 4, "text": 20, "buttons": 8, "targets": 11, "popup_rows": 1}
+    enough = {"dialogs": 5, "text": 20, "buttons": 8, "targets": 11, "popup_rows": 1}
     assert all(seen[k] >= n for k, n in enough.items()), seen
     assert not findings, f"{len(findings)} findings:\n" + "\n".join(sorted(set(findings)))
 

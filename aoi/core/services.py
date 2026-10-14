@@ -644,8 +644,7 @@ class AppContext:
         say so. `already`, when given, gets the sample each skipped image is already (`import_files` names it), and
         `added` the UUID of each sample added. `origin` goes into the audit entry as it is: where the images came from,
         such as the record of a false call (`add_false_call_sample`)."""
-        self._refuse_unsafe_name(board_model)  # a new board model is created by its first import
-        self._refuse_case_variant(board_model)
+        self._refuse_new_name(board_model)  # a new board model is created by its first import
         first = paths[0] if paths else ""
         if label not in LABELS:  # the copy's folder is named after it, and the samples table holds no other
             raise AoiError("AOI-TRN-018", path=first, label=label, labels=", ".join(LABELS))
@@ -2338,28 +2337,41 @@ class AppContext:
     @requires("Engineer", QT_TRANSLATE_NOOP("Errors", "Creating a board model"))
     @transactional
     def ensure_board_model(self, name: str) -> None:
-        """Create a board model unless it exists."""
+        """Create a board model unless it exists; a new one's name meets `board_model_name_refusal`, refused before
+        anything is written."""
         if name in self.db.board_models():
             return
-        self._refuse_unsafe_name(name)
-        self._refuse_case_variant(name)
+        self._refuse_new_name(name)
         self.db.ensure_board_model(name)
         self.audit("board_model.create", "board_model", name, None, {"name": name})
         self._ensure_recipe(name)
 
-    def _refuse_unsafe_name(self, name: str) -> None:
-        """Refuse a new board model whose name cannot name its folders under images/ and models/ on Windows as on Linux
-        (AOI-TRN-019, `one_folder_name`): a name with / or .., a device name such as CON, one ending with a dot."""
-        if not one_folder_name(name) and name not in self.db.board_models():
-            raise AoiError("AOI-TRN-019", name=name)
-
-    def _refuse_case_variant(self, name: str) -> None:
-        """Refuse a new board model whose name differs from an existing one's only in case (AOI-TRN-005): on Windows,
-        where file names ignore case, both would write the same AI model and golden board files."""
+    def board_model_name_refusal(self, name: str) -> AoiError | None:
+        """The refusal a new board model named `name` meets where it is entered, writing nothing; None for a name it may
+        have, and for a name the workspace holds already, which is kept as it is, as one made before these rules were.
+        In order: AOI-TRN-019 for a name that cannot name its folders under images/ and models/ on Windows as on Linux
+        (`one_folder_name`: a name with / or .., a device name such as CON, one ending with a dot); AOI-TRN-054 for one
+        with no Latin letter or digit, which its dataset versions are named with (`datasets.token`: a name in Korean
+        only, such as 보드, or in symbols, full-width letters or another alphabet only), the rule freeze applies with
+        AOI-TRN-039, which before met such a name only after the work of labelling it (B4 of the 2026-10
+        business-readiness brief, D4 part, F9; ADR 0023); AOI-TRN-005 for one that differs from an existing name only
+        in case: on Windows, where file names ignore case, both would write the same AI model and golden board files.
+        Every call that makes a board model raises it (`_refuse_new_name`), and the New board model dialog shows it
+        while the name is typed."""
         names = self.db.board_models()
-        same = next((n for n in names if n.casefold() == name.casefold()), None) if name not in names else None
-        if same is not None:
-            raise AoiError("AOI-TRN-005", name=name, existing=same)
+        if name in names:
+            return None
+        if not one_folder_name(name):
+            return AoiError("AOI-TRN-019", name=name)
+        if not datasets.token(name):
+            return AoiError("AOI-TRN-054", name=name)
+        same = next((n for n in names if n.casefold() == name.casefold()), None)
+        return None if same is None else AoiError("AOI-TRN-005", name=name, existing=same)
+
+    def _refuse_new_name(self, name: str) -> None:
+        """Raise the refusal `board_model_name_refusal` gives `name`, if any, before anything is written."""
+        if (refused := self.board_model_name_refusal(name)) is not None:
+            raise refused
 
     def scale(self, board_model: str) -> float | None:
         """The board model's scale in px per mm (REQ-RCP-006), or None until one is set: its recipe's sizes in px;
@@ -2399,10 +2411,9 @@ class AppContext:
     def set_reference(self, board_model: str, sample_id: int) -> None:
         """Make a stored OK sample the reference image: inspections compare against it from now on, and the next
         training run aligns its boards to it before it learns the golden template. An NG sample is refused
-        (AOI-TRN-006), and a board model it would create meets the rule a first import's does (AOI-TRN-019,
-        AOI-TRN-005)."""
-        self._refuse_unsafe_name(board_model)
-        self._refuse_case_variant(board_model)
+        (AOI-TRN-006), and a board model it would create meets the rule a first import's does
+        (`board_model_name_refusal`: AOI-TRN-019, AOI-TRN-054, AOI-TRN-005)."""
+        self._refuse_new_name(board_model)
         sample = self.db.sample(sample_id)
         if sample["label"] != "OK":
             raise AoiError("AOI-TRN-006", sample=Path(sample["path"]).name, label=sample["label"])
@@ -2878,7 +2889,7 @@ class AppContext:
     ) -> tuple[dict[str, Any], list[dict[str, Any]], list[dict[str, Any]]]:
         """A frozen version and the OK and NG files of its training set, in the manifest's order; else, from the rows
         alone, the first reason not to train: no such version (AOI-TRN-045); a board model name the rule for a new one
-        refuses (AOI-TRN-019, AOI-TRN-005), as its folder under models/ does; its board model in no customer's dataset
+        refuses (`board_model_name_refusal`), as its folder under models/ does; its board model in no customer's dataset
         store, in a shredded one or in another customer's than the version names, or `use` not among the uses the
         version allows (AOI-TRN-046, audited as `training.refused`, REQ-TRN-017); no locked validation set, or fewer
         than datasets.TRAIN_OK OK files in its training set (AOI-TRN-045); a file of the training set whose SHA-256
@@ -2889,8 +2900,7 @@ class AppContext:
             raise AoiError("AOI-TRN-045", name=dataset_uuid, reason=none)
         version = found[0]
         customer, board_model = version["customer"], version["board_model"]
-        self._refuse_unsafe_name(board_model)  # the run writes the board model's row and its folder
-        self._refuse_case_variant(board_model)
+        self._refuse_new_name(board_model)  # the run writes the board model's row and its folder
         if not inside(self.settings.models_dir / board_model, self.settings.models_dir):  # named before the rule (#112)
             raise AoiError("AOI-TRN-019", name=board_model)
         if (refused := self._train_refusal(version, use)) is not None:
@@ -3005,11 +3015,13 @@ class AppContext:
         all or none. A new store's key leaves the key store again whenever the transaction is not committed, its
         commit included. Returns `board_model`, `store` (as `stores` lists it) and `sheet`. A board model of that name
         in that customer's store already is returned as it is, as `ensure_board_model` leaves one that exists. Refused,
-        writing nothing: no customer, a board model of that name in no store or in another customer's, and a new one
-        whose folder under images/ holds files already, which Move Board Model In… on Settings encrypts with its
-        progress (AOI-TRN-044); a name the rule for a new board model refuses (AOI-TRN-019, AOI-TRN-005); and a new
-        store on a station that keeps keys in memory only (AOI-TRN-053)."""
+        writing nothing: first a name the rule for a new board model refuses (`board_model_name_refusal`: AOI-TRN-019,
+        AOI-TRN-054, AOI-TRN-005), as the dialog says it; then no customer, a board model of that name in no store or in
+        another customer's, and a new one whose folder under images/ holds files already, which Move Board Model In… on
+        Settings encrypts with its progress (AOI-TRN-044); and a new store on a station that keeps keys in memory only
+        (AOI-TRN-053)."""
         board_model, customer = board_model.strip(), customer.strip()
+        self._refuse_new_name(board_model)  # first, as the dialog says it while the name is typed (ADR 0023)
         found = next(
             (s for s in self.db.stores() if s["customer"].casefold() == customer.casefold() and not s["shredded_at"]),
             None,
@@ -3039,7 +3051,7 @@ class AppContext:
         made: dict[str, Any] | None = None
         try:
             with self.db.transaction():
-                self.ensure_board_model(board_model)  # AOI-TRN-019, AOI-TRN-005 before a key is made
+                self.ensure_board_model(board_model)  # its name's refusal before a key is made
                 made = self.create_store(customer) if found is None else None
                 store_uuid = made["uuid"] if made is not None else cast(dict[str, Any], found)["uuid"]
                 self.move_in(board_model, store_uuid)  # a new board model with no file: its row and entry

@@ -1012,6 +1012,20 @@ CODES: dict[str, ErrorCode] = {
                 " PC. This system serves development and testing only. Nothing was made.",
             ),
         ),
+        ErrorCode(  # a new board model's name, where it is entered (B4 of the 2026-10 business-readiness brief, F9)
+            "AOI-TRN-054",
+            QT_TRANSLATE_NOOP("Errors", "Board model name not allowed: no Latin letter or digit"),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                'The board model name "{name}" has no Latin letter or digit (A to Z, 0 to 9, as an English keyboard'
+                " types them), and a board model's dataset versions are named with those in its name.",
+            ),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Give the board model a name with at least one Latin letter or digit, such as TBOX-A1; other letters,"
+                ' such as Korean ones, may be added to it, as in "TBOX-A1 메인보드". Nothing was made.',
+            ),
+        ),
         ErrorCode(
             "AOI-TST-001",
             QT_TRANSLATE_NOOP("Errors", "AI model, recipe, scale or Golden board changed since the run"),

@@ -53,7 +53,8 @@ def model_file_stem(version: str) -> str:
 
 def token(board_model: str) -> str:
     """The board model as a version's name gives it: its ASCII letters and digits in upper case (TBOX-A1: TBOXA1); empty
-    for a name with none, such as one in Korean only, which no version can be named after (open for Jay, ADR 0009)."""
+    for a name with none, such as one in Korean only, which no version can be named after: a new board model of such a
+    name is refused where it is entered (AOI-TRN-054, ADR 0023), and freeze refuses one made before (AOI-TRN-039)."""
     return re.sub(r"[^A-Za-z0-9]", "", board_model).upper()
 
 

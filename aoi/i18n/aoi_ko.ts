@@ -871,7 +871,7 @@
     </message>
     <message>
         <location line="+261"/>
-        <location line="+138"/>
+        <location line="+137"/>
         <source>Importing samples</source>
         <translation type="unfinished"></translation>
     </message>
@@ -898,12 +898,12 @@
     </message>
     <message>
         <location line="+190"/>
-        <location line="+2435"/>
+        <location line="+2446"/>
         <source>(none)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-2404"/>
+        <location line="-2415"/>
         <source>Saving a recipe</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1030,7 +1030,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+31"/>
+        <location line="+44"/>
         <source>Setting a board model&apos;s scale</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1040,7 +1040,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+18"/>
+        <location line="+17"/>
         <source>Relabelling a sample</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1150,14 +1150,14 @@
         <translation>검증 세트 잠금</translation>
     </message>
     <message>
-        <location line="-2695"/>
-        <location line="+2709"/>
+        <location line="-2706"/>
+        <location line="+2720"/>
         <location line="+39"/>
         <source>the workspace holds no such dataset version</source>
         <translation>작업 공간에 그런 데이터셋 버전이 없습니다</translation>
     </message>
     <message>
-        <location line="-2791"/>
+        <location line="-2802"/>
         <source>Drift on {board} ({view}): {count} of the last {of} boards called NG; {before} % of the {baseline} before</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1257,7 +1257,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+936"/>
+        <location line="+935"/>
         <source>Setting the comparison&apos;s thresholds from labelled boards</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1272,7 +1272,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+448"/>
+        <location line="+460"/>
         <source>a blind label is OK, or NG with one of the 37 defect types</source>
         <translation>블라인드 라벨은 OK이거나, 37개 결함 유형 중 하나를 지정한 NG입니다</translation>
     </message>
@@ -1287,7 +1287,7 @@
         <translation>OK 이미지가 {ok}개이며, 검증 세트에는 {least}개가 들어갑니다</translation>
     </message>
     <message>
-        <location line="+72"/>
+        <location line="+71"/>
         <source>{customer} allowed only {uses}</source>
         <translation>{customer}이(가) {uses}만 허용했습니다</translation>
     </message>
@@ -1484,7 +1484,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-3442"/>
+        <location line="-3452"/>
         <source>no earlier version of this board model was active</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1509,12 +1509,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+860"/>
+        <location line="+859"/>
         <source>its UUID {found} is not {uuid}, as in the AI model registry</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1407"/>
+        <location line="+1419"/>
         <source>Labelling an image</source>
         <translation>이미지 라벨링</translation>
     </message>
@@ -1529,7 +1529,7 @@
         <translation>{label}(으)로 다시 라벨링</translation>
     </message>
     <message>
-        <location line="+442"/>
+        <location line="+441"/>
         <source>{file} has changed since the version was frozen</source>
         <translation>{file}이(가) 버전이 동결된 뒤에 바뀌었습니다</translation>
     </message>
@@ -1616,7 +1616,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-3670"/>
+        <location line="-3680"/>
         <source>unhandled</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2876,6 +2876,21 @@
     </message>
     <message>
         <location line="+8"/>
+        <source>Board model name not allowed: no Latin letter or digit</source>
+        <translation type="unfinished">보드 모델 이름 사용 불가: 라틴 문자나 숫자 없음</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>The board model name &quot;{name}&quot; has no Latin letter or digit (A to Z, 0 to 9, as an English keyboard types them), and a board model&apos;s dataset versions are named with those in its name.</source>
+        <translation type="unfinished">보드 모델 이름 &quot;{name}&quot;에 라틴 문자나 숫자(영문 키보드로 입력하는 A~Z, 0~9)가 없습니다. 보드 모델의 데이터셋 버전은 이름에 든 라틴 문자와 숫자로 이름이 붙습니다.</translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>Give the board model a name with at least one Latin letter or digit, such as TBOX-A1; other letters, such as Korean ones, may be added to it, as in &quot;TBOX-A1 메인보드&quot;. Nothing was made.</source>
+        <translation type="unfinished">라틴 문자나 숫자가 하나 이상 든 이름을 보드 모델에 지정하십시오(예: TBOX-A1). 한글 같은 다른 문자는 함께 쓸 수 있습니다(예: &quot;TBOX-A1 메인보드&quot;). 아무것도 만들어지지 않았습니다.</translation>
+    </message>
+    <message>
+        <location line="+8"/>
         <source>AI model, recipe, scale or Golden board changed since the run</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3451,7 +3466,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1293"/>
+        <location line="-1307"/>
         <source>Board judged NG</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3566,7 +3581,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+71"/>
+        <location line="+85"/>
         <source>Start the Checks on Training: a second person checks the labels and two people run an agreement check, then freeze a Validated version, train from it and test again. The run and its CSV are kept.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3852,7 +3867,7 @@
         <translation>{file}이(가) 기록된 뒤 변경, 이동 또는 손상되었습니다</translation>
     </message>
     <message>
-        <location filename="../core/datasets.py" line="+46"/>
+        <location filename="../core/datasets.py" line="+47"/>
         <source>{changed} file(s) changed and {missing} missing since the freeze</source>
         <translation>동결 이후 파일 {changed}개가 변경되고 {missing}개가 없습니다</translation>
     </message>
@@ -3878,7 +3893,7 @@
     </message>
     <message>
         <location line="+1"/>
-        <location filename="../core/services.py" line="+2950"/>
+        <location filename="../core/services.py" line="+2960"/>
         <source>a file of it could not be read: {reason}</source>
         <translation>그 파일 하나를 읽을 수 없습니다: {reason}</translation>
     </message>
@@ -5822,7 +5837,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+48"/>
+        <location line="+49"/>
         <source>{board_model}, {view} view: {left} of {lines} still missing</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6435,7 +6450,7 @@
 <context>
     <name>NewBoardModelDialog</name>
     <message>
-        <location filename="../ui/board_model_dialog.py" line="+44"/>
+        <location filename="../ui/board_model_dialog.py" line="+48"/>
         <source>New board model</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6445,7 +6460,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+5"/>
+        <location line="+10"/>
         <source>Customer</source>
         <translation type="unfinished">고객</translation>
     </message>
@@ -6470,7 +6485,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+22"/>
+        <location line="+27"/>
         <source>Its images stay unencrypted in the workspace, as for in-house and demo boards. {refusal} An Admin makes a customer&apos;s board model, in the customer&apos;s encrypted dataset store.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6490,7 +6505,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+32"/>
+        <location line="+46"/>
         <source>Board model {board} is made, in the new encrypted dataset store of {customer}. Its recovery key opens the store on another PC: this station keeps the key, but a new PC or a reinstalled Windows needs this copy.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -8174,7 +8189,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/services.py" line="-3027"/>
+        <location filename="../core/services.py" line="-3037"/>
         <source>Aligning {count} images to the reference board</source>
         <translation type="unfinished"></translation>
     </message>
