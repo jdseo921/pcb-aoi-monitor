@@ -580,13 +580,16 @@ class AppContext:
 
     def start_user(self, setting_up: bool = False) -> str:
         """The name of the user a start signs in. In the demo workspace (`main.py --demo`, the Demo shortcut) and while
-        the station is set up (no board model yet): the first user the table holds as Admin. Otherwise the user who
-        signed in last on this station (`last_signed_in`), else 'operator'. Without either (a table edited outside the
-        app), the first user of the lowest stored role. Its role is the stored one, whatever the name (#197)."""
+        the station is set up (no board model yet): the first user the table holds as Admin. While the first-run guide
+        sets up the first AI model, the user who started it (`guide_starter`, B5, Q75). Otherwise the user who signed in
+        last on this station (`last_signed_in`), else 'operator'. Without either (a table edited outside the app), the
+        first user of the lowest stored role. Its role is the stored one, whatever the name (#197)."""
         users = self.db.users()  # never empty: the database seeds operator, engineer and admin
         if setting_up or demo.is_demo(self.settings.root):
             if admin := next((u for u in users if u["role"] == "Admin"), None):
                 return str(admin["name"])
+        if (started := self.guide_starter()) is not None:
+            return started[0]
         # once users can be disabled (REQ-USR-006), a disabled one is never signed in at a start
         if (last := self.last_signed_in()) is not None:
             return last
@@ -594,6 +597,24 @@ class AppContext:
             return "operator"
         rank = {r: i for i, r in enumerate(ROLES)}
         return str(min(users, key=lambda u: rank.get(u["role"], len(ROLES)))["name"]) if users else "operator"
+
+    def guide_starter(self) -> tuple[str, str] | None:
+        """Until an AI model is active on any board model, while the first-run guide shows for one (`guide_step`): the
+        user who made it, the newest made of them, as (user, board model), so a restart goes on as the user who started
+        the guide, not one who cannot (B5, Q75; until ADR 0002's sign-in). The user as the users table holds them now,
+        else its first Admin when they are gone or now an Operator. None otherwise. Writes nothing."""
+        names = self.db.board_models()
+        if any(self.db.active_model(board_model) is not None for board_model in names):
+            return None
+        users = self.db.users()
+        for entry in self.db.audit_entries("board_model", action="board_model.create"):  # newest first
+            board_model = str(entry["object_uuid"])
+            if board_model not in names or self.guide_step(board_model) is None:
+                continue
+            maker = next((u for u in users if u["uuid"] == entry["user_uuid"] and u["role"] != "Operator"), None)
+            user = maker or next((u for u in users if u["role"] == "Admin"), None)
+            return None if user is None else (str(user["name"]), board_model)
+        return None
 
     def sign_in(self, name: str, start: bool = False) -> None:
         """Sign `name` in: `set_user`, then an audit entry naming them and their role. As a person does with Switch

@@ -875,7 +875,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+280"/>
+        <location line="+301"/>
         <location line="+137"/>
         <source>Importing samples</source>
         <translation type="unfinished"></translation>
@@ -1157,14 +1157,14 @@
         <translation>검증 세트 잠금</translation>
     </message>
     <message>
-        <location line="-3001"/>
-        <location line="+3015"/>
+        <location line="-3022"/>
+        <location line="+3036"/>
         <location line="+39"/>
         <source>the workspace holds no such dataset version</source>
         <translation>작업 공간에 그런 데이터셋 버전이 없습니다</translation>
     </message>
     <message>
-        <location line="-3104"/>
+        <location line="-3125"/>
         <source>Drift on {board} ({view}): {count} of the last {of} boards called NG; {before} % of the {baseline} before</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1264,7 +1264,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1208"/>
+        <location line="+1229"/>
         <source>Setting the comparison&apos;s thresholds from labelled boards</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1491,7 +1491,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-3766"/>
+        <location line="-3787"/>
         <source>no earlier version of this board model was active</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1516,7 +1516,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1132"/>
+        <location line="+1153"/>
         <source>its UUID {found} is not {uuid}, as in the AI model registry</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1623,14 +1623,14 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-3994"/>
+        <location line="-4015"/>
         <source>unhandled</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../ui/demo_workspace.py" line="+31"/>
         <location filename="../ui/errors.py" line="+163"/>
-        <location filename="../ui/main_window.py" line="+1131"/>
+        <location filename="../ui/main_window.py" line="+1140"/>
         <source>start-up</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4104,7 +4104,7 @@
     </message>
     <message>
         <location line="+1"/>
-        <location filename="../core/services.py" line="+3257"/>
+        <location filename="../core/services.py" line="+3278"/>
         <source>a file of it could not be read: {reason}</source>
         <translation>그 파일 하나를 읽을 수 없습니다: {reason}</translation>
     </message>
@@ -4576,13 +4576,13 @@
     <message>
         <location line="+12"/>
         <location line="+93"/>
-        <location line="+206"/>
+        <location line="+209"/>
         <location line="+27"/>
         <source>Show Why</source>
         <translation type="unfinished">이유 보기</translation>
     </message>
     <message>
-        <location line="-300"/>
+        <location line="-303"/>
         <source>NG image: drag across the defect</source>
         <translation type="unfinished">NG 이미지: 불량 위로 드래그하십시오</translation>
     </message>
@@ -4642,12 +4642,12 @@
         <translation type="unfinished">이 화면에서 그린 박스가 없어 실행 취소할 것이 없습니다.</translation>
     </message>
     <message>
-        <location line="+228"/>
+        <location line="+231"/>
         <source>Skipped, as they cannot be read:</source>
         <translation type="unfinished">읽을 수 없어 건너뛴 이미지:</translation>
     </message>
     <message>
-        <location line="-287"/>
+        <location line="-290"/>
         <source>No images of {board_model} yet</source>
         <translation type="unfinished">아직 {board_model}의 이미지가 없습니다</translation>
     </message>
@@ -4667,12 +4667,12 @@
         <translation type="unfinished">복사가 진행 중입니다. 취소(Esc)로 멈출 수 있습니다.</translation>
     </message>
     <message>
-        <location line="+25"/>
+        <location line="+27"/>
         <source>Pick the folder with ok and ng in it</source>
         <translation type="unfinished">ok와 ng가 든 폴더 선택</translation>
     </message>
     <message>
-        <location line="+11"/>
+        <location line="+12"/>
         <source>No images in ok or ng folders in {folder}. Put the good boards&apos; images in ok and the defective ones in ng, in a folder named after the defect, then pick the folder again.</source>
         <translation type="unfinished">{folder}의 ok 또는 ng 폴더에 이미지가 없습니다. 양품 보드 이미지는 ok에, 불량 보드 이미지는 ng 안의 불량 이름 폴더에 넣은 뒤 폴더를 다시 선택하십시오.</translation>
     </message>
@@ -4740,7 +4740,7 @@
 <context>
     <name>GuideTrain</name>
     <message>
-        <location filename="../ui/pages/guide_train.py" line="+89"/>
+        <location filename="../ui/pages/guide_train.py" line="+90"/>
         <source>Board revision</source>
         <translation type="unfinished">보드 리비전</translation>
     </message>
@@ -4914,7 +4914,7 @@
 <context>
     <name>HomePage</name>
     <message>
-        <location filename="../ui/main_window.py" line="-991"/>
+        <location filename="../ui/main_window.py" line="-999"/>
         <source>Upload samples</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6249,7 +6249,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+102"/>
+        <location line="+105"/>
+        <source>Signed in as {user} ({role}), who started setting up {board_model}. Not you? Press Switch User.</source>
+        <translation type="unfinished">{board_model} 설정을 시작한 {user}({role})(으)로 로그인했습니다. 본인이 아니면 사용자 전환을 누르십시오.</translation>
+    </message>
+    <message>
+        <location line="+5"/>
         <source>Signed in as {user} ({role}), who signed in last on this station. Not you? Press Switch User.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7189,7 +7194,7 @@
 <context>
     <name>Page</name>
     <message>
-        <location filename="../ui/main_window.py" line="-948"/>
+        <location filename="../ui/main_window.py" line="-956"/>
         <source>Home</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7901,7 +7906,7 @@
 <context>
     <name>RecoveryKey</name>
     <message>
-        <location filename="../ui/pages/recovery_key.py" line="+53"/>
+        <location filename="../ui/pages/recovery_key.py" line="+55"/>
         <source>Shown this once. Save it to a USB drive or print it, and keep it apart from the station: with it, an Admin opens the store on another PC, and anyone who holds it and a copy of the files can read them.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7936,7 +7941,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+45"/>
+        <location line="+46"/>
         <source>✓ Saved to {file}</source>
         <translation type="unfinished">✓ {file}에 저장됨</translation>
     </message>
@@ -7946,12 +7951,12 @@
         <translation type="unfinished">✓ {printer}(으)로 보냄</translation>
     </message>
     <message>
-        <location line="-82"/>
+        <location line="-83"/>
         <source>Save the key to a file or print it first</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+57"/>
+        <location line="+58"/>
         <source>Save Recovery Key</source>
         <translation type="unfinished"></translation>
     </message>
@@ -8894,7 +8899,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/services.py" line="-3341"/>
+        <location filename="../core/services.py" line="-3362"/>
         <source>Aligning {count} images to the reference board</source>
         <translation type="unfinished"></translation>
     </message>

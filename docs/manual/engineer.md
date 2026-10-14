@@ -60,11 +60,11 @@ app writes only the settings it changes into `settings.json`, so a line you edit
 image limit, stays; it takes effect at the next start. Saving needs the Admin role (AOI-USR-001) and writes an audit
 entry, `settings.change`, with the values before and after. The last user with the Admin role cannot lose it
 (AOI-USR-002): give another user the Admin role first. A user's role is the one set under Users & roles, at every
-start too: the app starts with the Admin added first while the workspace has no board model, and after that with
-the user who signed in last on this station with Switch User (`operator` until anyone has; the start's status line
-names them), so a role you change holds after a restart. Each sign-in is an audit entry: `user.sign_in` for Switch
-User, with the user before, and `user.start` for the user a start signs in. The demo workspace always starts with its
-first Admin.
+start too: the app starts with the Admin added first while the workspace has no board model; while the first-run guide
+sets up the first AI model, with the user who started it, as the status line says; and after that with the user who
+signed in last on this station with Switch User (`operator` until anyone has; the start's status line names them), so a
+role you change holds after a restart. Each sign-in is an audit entry: `user.sign_in` for Switch User, with the user
+before, and `user.start` for the user a start signs in. The demo workspace always starts with its first Admin.
 
 **Presenter theme (demos).** For a demo, an Admin ticks Presenter theme on the Settings page, in its own group. It
 applies at once, with no restart, and stays on after one: a light background, text of 18 pt or more, the verdict at 48
@@ -170,31 +170,31 @@ customer field offers the customers with a dataset store, and Enter in its list 
 field) needs the Admin role: an Engineer sees the step greyed, saying so. While Create is off, a press on it or Enter
 says on the status bar what is still to type. For a customer's first board model, Create makes the customer's encrypted
 dataset store and shows its recovery key on the same screen, this once: **Save to File…** (Ctrl+S; on a USB drive kept
-away from the station, not the one that brings the images) or **Print…** (Ctrl+P), and the line beside them says where
-it went; then **I Have Saved the Key** (Enter), which until then says to save or print the key first. While the key
-shows, the sidebar, the top bar, the page keys and the window's close do nothing, and a press on them says why on the
-status bar. F1 lists the step's keys. A refusal, such as a folder under `images` that holds files already (AOI-TRN-044)
-or a key saved into the workspace (AOI-LOG-002), is said under the button that met it, with its code, and opens no
-dialog. The board model made is then chosen in the top bar, and the guide goes on to its images. **Show All Steps ›**
-leaves the guide for Home without it, which with no board model yet is the empty state with **+ New board model**, and
-**Show the Guide ›** brings it back, until the next sign-in.
+away from the station, not the one that brings the images: the dialog opens on the USB drive plugged in last) or
+**Print…** (Ctrl+P), and the line beside them says where it went; then **I Have Saved the Key** (Enter), which until
+then says to save or print the key first. While the key shows, the sidebar, the top bar, the page keys and the window's
+close do nothing, and a press on them says why on the status bar. F1 lists the step's keys. A refusal, such as a folder
+under `images` that holds files already (AOI-TRN-044) or a key saved into the workspace (AOI-LOG-002), is said under the
+button that met it, with its code, and opens no dialog. The board model made is then chosen in the top bar, and the
+guide goes on to its images. **Show All Steps ›** leaves the guide for Home without it, which with no board model yet is
+the empty state with **+ New board model**, and **Show the Guide ›** brings it back, until the next sign-in.
 
 **The guide's images.** Screen 2 takes the board model's images, for a board model in a customer's store that has
 not inspected a board yet. Put them in one folder with two folders in it: `ok`, with the good boards' images, and
-`ng`, with a folder for each defect named after it, such as `ng\Missing Component`. Pick the view, then **Pick
-Folder…** (Ctrl+O): the images are copied as soon as the folder is picked, with a line saying how far the copy is and
-**Cancel** (Esc), which keeps the images copied before it. The view stays as you picked it until another board model is
-chosen or another user signs in. Images straight in `ng` wait for you to pick their defect type from the list that
-shows, with a click, or with Enter to open the list and Enter again to pick; then the copy starts. The line under the
-button names the folder and counts the images not taken and those already in, which are skipped, not copied twice;
-**Show Why** lists each with its code. Three lines count the OK images, the NG images and the NG images with every defect
-boxed against what the board model needs; with too few OK images, add more to the `ok` folder and pick it again. Then
-the box area shows each NG image in turn: drag across the defect, and the box is kept with the type of the image's
-folder, and the next NG image with no box opens. Drag a box to move it. An image that cannot be read is skipped and
-named under the box area with its code. **← Back** (PgUp) opens the one before, **Undo** (Ctrl+Z) takes the last box
-away again, and **Zoom In**, **Zoom Out** and **Fit** (+, -, 0) help with small parts. A press on a greyed button, or its
-key, says why, and F1 lists the keys. Once every NG image has a box, the guide goes on to Train. An Operator's Home
-says the board model is still being set up until an AI model judges its boards.
+`ng`, with a folder for each defect named after it, such as `ng\Missing Component`. Pick the view, then **Pick Folder…**
+(Ctrl+O), whose dialog opens on the USB drive plugged in last: the images are copied as soon as the folder is picked,
+with a line saying how far the copy is and **Cancel** (Esc), which keeps the images copied before it. The view stays as
+you picked it until another board model is chosen or another user signs in. Images straight in `ng` wait for you to pick
+their defect type from the list that shows, with a click, or with Enter to open the list and Enter again to pick; then
+the copy starts. The line under the button names the folder and counts the images not taken and those already in, which
+are skipped, not copied twice; **Show Why** lists each with its code. Three lines count the OK images, the NG images and
+the NG images with every defect boxed against what the board model needs; with too few OK images, add more to the `ok`
+folder and pick it again. Then the box area shows each NG image in turn: drag across the defect, and the box is kept
+with the type of the image's folder, and the next NG image with no box opens. Drag a box to move it. An image that
+cannot be read is skipped and named under the box area with its code. **← Back** (PgUp) opens the one before, **Undo**
+(Ctrl+Z) takes the last box away again, and **Zoom In**, **Zoom Out** and **Fit** (+, -, 0) help with small parts. A
+press on a greyed button, or its key, says why, and F1 lists the keys. Once every NG image has a box, the guide goes on
+to Train. An Operator's Home says the board model is still being set up until an AI model judges its boards.
 
 **The guide's Train.** Screen 3 says how many images are ready and what Train does with them: it keeps some apart to
 test the AI model on, trains it on the others as a Trial, since one person labelled them, makes it the AI model that
@@ -205,11 +205,11 @@ was done, and the next Train goes on from there. Other pages can be used meanwhi
 with its Cancel. Then the screen says which AI model judges the board model's boards, the images it was trained on and
 kept apart, and its missed defects and false calls on those, counts first; it says the same after a restart. These are a
 first look on the images of one person, not a validation. **Inspect a Board…** (Enter) opens Inspection's Load Images…
-on the folder above the one the images came from (after a restart, where the dialog opens by itself), and inspects the
-boards picked; **Open Logs & Export ›** shows the board model's history, and **Start the Checks ›** opens Training's
-What is missing with Validated picked, for the checks a Validated AI model needs. A refusal is said at the foot of the
-screen, with its code. Once a board is inspected, or once an AI model made active on Training judges the board model's
-boards, Home shows its cards.
+on the folder above the one the images came from (after a restart, on the USB drive plugged in last, if any), and
+inspects the boards picked; **Open Logs & Export ›** shows the board model's history, and **Start the Checks ›** opens
+Training's What is missing with Validated picked, for the checks a Validated AI model needs. A refusal is said at the
+foot of the screen, with its code. Once a board is inspected, or once an AI model made active on Training judges the
+board model's boards, Home shows its cards.
 
 **The guide's refusals.** On each screen of the guide a refusal is said in the guide's words, under the control that met
 it or at the foot of screen 3: the refusal's title, what to do, and its code, such as "Training already running: Wait

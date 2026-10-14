@@ -723,17 +723,17 @@ model dialog's line), and its customer, offered from the stores by a completer w
 field, calls `create_customer_board_model` (an Admin's; for an Engineer the screen is greyed, `RoleGates.gate` taking
 the guide's own role line, "Setting up a board model for a customer needs the Admin role."). While Create is off, a
 press on it or Enter says why on the status bar, and Enter moves to the field still to fill. For a customer's first
-board model it shows the store's recovery key on the screen itself, in `RecoveryKey(tick=False)`: the line beside Save
-to File… and Print… says where the key went, and I Have Saved the Key waits for `saved`. Until then
-`MainWindow.hold_frame` greys the sidebar and the header, a press on them, or on any of the header's controls, which
-take a press for themselves, says why (`_HeldPress`), `navigate` refuses every page but Home and `closeEvent` is
-ignored, as the New board model dialog's modal key step holds the window behind it (ADR 0021, decision 3). A refusal, of
-Create or of the key's save or print, is said under the control that raised it, with its code, and opens no dialog; a
-save or print that works, and a sign-in, take it away. F1 lists the key step's keys (`Page.key_actions`). Show All Steps
-› and Show the Guide › switch Home between the guide and what Home shows without it, its empty state with + New board
-model while there is no board model, for the board model shown, kept in `cards_for` until the next sign-in. The name
-field takes the focus at a start too, before the window is shown. `tests/test_first_run_guide.py` drives screen 1 for
-each role.
+board model it shows the store's recovery key on the screen itself, in `RecoveryKey(tick=False, usb=True)`, whose save
+dialog opens on the USB drive plugged in last (Q68): the line beside Save to File… and Print… says where the key went,
+and I Have Saved the Key waits for `saved`. Until then `MainWindow.hold_frame` greys the sidebar and the header, a press
+on them, or on any of the header's controls, which take a press for themselves, says why (`_HeldPress`), `navigate`
+refuses every page but Home and `closeEvent` is ignored, as the New board model dialog's modal key step holds the window
+behind it (ADR 0021, decision 3). A refusal, of Create or of the key's save or print, is said under the control that
+raised it, with its code, and opens no dialog; a save or print that works, and a sign-in, take it away. F1 lists the key
+step's keys (`Page.key_actions`). Show All Steps › and Show the Guide › switch Home between the guide and what Home
+shows without it, its empty state with + New board model while there is no board model, for the board model shown, kept
+in `cards_for` until the next sign-in. The name field takes the focus at a start too, before the window is shown.
+`tests/test_first_run_guide.py` drives screen 1 for each role.
 
 **The guide's screen 2, the images** (REQ-TRN-021, B5; Q69 to Q71). `AppContext.guide_step(board_model)` gives the
 guide's screen: 1 for no board model; 2 while a board model in a customer's store, not shredded, with no board inspected
@@ -783,16 +783,17 @@ and kept apart, the missed defects and false calls on those with their counts fi
 not run, the Trial line, and the shift check: passed, failed with the master samples judged right, or not counting now,
 as Inspection asks for it before the first board. Step 3 is then marked done, and Inspect a Board… (Enter) has the
 focus: it opens Inspection's Load Images… on the folder above screen 2's, when one was picked since the app started
-(else where the dialog opens by itself), and inspects the boards picked at once, in the view Train trained on
-(`InspectionPage.inspect_from`). Open Logs & Export › shows the board model's history (`LogsPage.show_board_model`), and
-Start the Checks › Training's What is missing with Validated picked (`TrainingPage.show_validated_needs`). A refusal, as
-Train is pressed or in any part of its run, is said at the foot of the screen with its code, and opens no dialog; it is
-said on the screen of the board model Train was for, and a Train that ends while another board model is in the header
-says so on the status bar. A press on Train, or Enter, while it is off says why on the status bar. Enter is Train's,
-then Inspect a Board…'s, only with the focus on the screen; a sign-in puts the board revision back to R1. Once a board
-is inspected `guide_step` is None and Home shows its cards. `tests/test_guide_train_screen.py` drives screen 3. Its two
-screenshots are drawn with its reads pinned (`render_screens.guide_made`), as a training in the render would take
-minutes and give rates that differ from machine to machine.
+(else on the USB drive plugged in last, Q68, or where the dialog opens by itself), and inspects the boards picked at
+once, in the view Train trained on (`InspectionPage.inspect_from`). Open Logs & Export › shows the board model's history
+(`LogsPage.show_board_model`), and Start the Checks › Training's What is missing with Validated picked
+(`TrainingPage.show_validated_needs`). A refusal, as Train is pressed or in any part of its run, is said at the foot of
+the screen with its code, and opens no dialog; it is said on the screen of the board model Train was for, and a Train
+that ends while another board model is in the header says so on the status bar. A press on Train, or Enter, while it is
+off says why on the status bar. Enter is Train's, then Inspect a Board…'s, only with the focus on the screen; a sign-in
+puts the board revision back to R1. Once a board is inspected `guide_step` is None and Home shows its cards.
+`tests/test_guide_train_screen.py` drives screen 3. Its two screenshots are drawn with its reads pinned
+(`render_screens.guide_made`), as a training in the render would take minutes and give rates that differ from machine to
+machine.
 
 **The guide's refusals** (REQ-TRN-021, B5, Q78). A refusal on any screen of the guide is said under the control that
 raised it, or at the foot of screen 3, in a `Said` (`aoi/ui/pages/guide_said.py`): the catalogue's title, the guide's
@@ -806,6 +807,22 @@ the catalogue says it, with no Show Details; screen 2's lists of images not take
 same way. A copy stopped by an error is said as Training's import says it, AOI-TRN-009 or AOI-TRN-010 with the image it
 stopped at (`training_import.stop_error`). `tests/test_guide_said.py` checks each line against its code and the words
 the guide leaves out, and drives a refusal and its details on screen 1.
+
+**The guide's dialogs, a restart and the count** (REQ-TRN-021, B5; Q64, Q68, Q75). The guide's three dialogs open on the
+USB drive plugged in last (`aoi.hal.drives.last_plugged`): the key's save dialog (with none, on the home folder, as #407
+has it), Pick Folder…'s (with none, where the system opens it) and Inspect a Board…'s when screen 2 picked no folder
+since the app started. A drive counts when the system says it can be removed: on Windows a drive letter of the removable
+type that holds a volume (`GetDriveTypeW`), so a USB hard drive Windows calls fixed is not one; on Linux a partition
+mounted whole, of a disk marked removable or on a USB bus (`/proc/self/mountinfo`, `/sys/dev/block`). The one plugged in
+last is the last the app saw: those there at its first look, which the window takes as it opens, in the system's order
+(the mount order, or the drive letter), then each found at a later look. Until an AI model is active on any board model,
+a start signs in the user who made the newest board model the guide shows for, read from its `board_model.create` entry,
+or the first Admin when that user is gone or now an Operator (`AppContext.guide_starter`), with that board model in the
+header and the status bar saying who and why; once one is, a start signs in as before. `tests/test_guide_click_count.py`
+goes from an empty workspace to the first verdict as the sketch counts it, 24 actions on 4 screens, with 90 or 70 OK
+images and 10 NG ones and the shift check on: each dialog is answered as a person would, one action more where it does
+not open on the right USB drive. `tests/test_usb_drives.py` and `tests/test_guide_restart.py` test the drives and the
+start.
 
 **Next AI step (not in this draft):** once enough labelled NG crops exist per type, add a small supervised
 classifier that names the defect (Solder Bridge, Tombstone, …) for each flagged region. Today a region is named by
@@ -1077,15 +1094,17 @@ a user who did not start it.
 The role is always the one the users table holds for that user (`AppContext.set_user(name)`; a name it does not hold
 is refused with `AOI-USR-003`), so the check and the entries never name a role the table contradicts (#197). A start
 signs in the first stored Admin in the demo workspace (`main.py --demo`, the Demo shortcut; it opens at Home after a
-normal close, where the demo scripts begin) and while the workspace has no board model, to set the station up;
-otherwise the user who signed in last on the station, named on the status bar, else `operator`; each with the stored
-role (`AppContext.start_user`). A workspace switch opens the new window with the first user of the role carried
-(`build_window(ctx, carried)`). Switch User signs in through `AppContext.sign_in`, which anyone may call: `set_user`,
-then an audit entry `user.sign_in` (object = the user's UUID, the user before and after), and the newest such entry
-names the user the next start signs in (index `audit_action`, migration 0026). The user a window opens with is
-audited as `user.start`, which no later start reads, so neither a start nor a role carried, the demo's Admin say,
-becomes the station's next start user. An entry that cannot be written leaves the user before signed in; at a start,
-the window is not built and the coded dialog says why (`build_window`).
+normal close, where the demo scripts begin) and while the workspace has no board model, to set the station up; while the
+first-run guide sets up the workspace's first AI model, the user who started it, with its board model in the header
+(`guide_starter`; "The guide's dialogs, a restart and the count" in section 3); otherwise the user who signed in last on
+the station, named on the status bar, else `operator`; each with the stored role (`AppContext.start_user`). A workspace
+switch opens the new window with the first user of the role carried (`build_window(ctx, carried)`). Switch User signs in
+through `AppContext.sign_in`, which anyone may call: `set_user`, then an audit entry `user.sign_in` (object = the user's
+UUID, the user before and after), and the newest such entry names the user the next start signs in (index
+`audit_action`, migration 0026). The user a window opens with is audited as `user.start`, which no later start reads, so
+neither a start nor a role carried, the demo's Admin say, becomes the station's next start user. An entry that cannot be
+written leaves the user before signed in; at a start, the window is not built and the coded dialog says why
+(`build_window`).
 
 User switching is a local picker for the PoC; Stage 4 replaces it with MES authentication (`MesClient.authenticate`).
 A switch leaves a page the new role may not open for Home, and shows any other page again (`on_show`), so its

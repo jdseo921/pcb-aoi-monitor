@@ -8,14 +8,14 @@ Words: verdicts are OK, NG and WARN (양품, 불량, 확인 필요); see the Cha
 
 ## 1. Starting a shift
 
-**Your name.** Once the station is set up, the app starts signed in as the user who signed in last on this station with
-Switch User, and the status bar at the bottom says so (`operator` until anyone has); the header names the user signed in
-and their role, at its right. If that is not you, press **Switch User** there, pick your name in the list (each name
-shows its role) and press OK: every board you start from then on is recorded under your name, which the Operator column
-of Logs & Export shows. There is nothing to type, so pick only your own name; if it is not in the list, ask an Admin to
-add it (Settings › Users & roles). The sidebar greys the pages your role cannot open, and pointing at one names the role
-it needs: an Operator opens Home, Inspection, Compare and Logs & Export. The app opens on the page shown when it was
-last closed, or on Home when your role cannot open that page.
+**Your name.** Once the station is set up and its first AI model judges boards, the app starts signed in as the user who
+signed in last on this station with Switch User, and the status bar at the bottom says so (`operator` until anyone has);
+the header names the user signed in and their role, at its right. If that is not you, press **Switch User** there, pick
+your name in the list (each name shows its role) and press OK: every board you start from then on is recorded under your
+name, which the Operator column of Logs & Export shows. There is nothing to type, so pick only your own name; if it is
+not in the list, ask an Admin to add it (Settings › Users & roles). The sidebar greys the pages your role cannot open,
+and pointing at one names the role it needs: an Operator opens Home, Inspection, Compare and Logs & Export. The app
+opens on the page shown when it was last closed, or on Home when your role cannot open that page.
 
 **Keys to move around.** Ctrl+1 to Ctrl+9 open the sidebar's pages in its order from any page: Ctrl+1 Home, Ctrl+2
 Inspection, Ctrl+3 Compare, Ctrl+8 Logs & Export (pointing at a sidebar entry shows its key). Press **F1** on any page

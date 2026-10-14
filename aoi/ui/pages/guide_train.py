@@ -28,6 +28,7 @@ from PySide6.QtWidgets import QHBoxLayout, QLabel, QLineEdit, QVBoxLayout, QWidg
 from ...core import datasets, stats
 from ...core.services import ErrorReport
 from ...errors import AoiError
+from ...hal import drives
 from ...times import to_local
 from .. import theme
 from ..errors import phrase_text
@@ -412,15 +413,17 @@ class GuideTrain(QWidget):
 
     # --- the handover --------------------------------------------------------------------------------------------
     def inspect(self) -> None:
-        """Inspect a Board… (Enter): Inspection, its Load Images… dialog on the folder above screen 2's, and the boards
-        picked inspected at once, in the view Train trained on (Q69)."""
+        """Inspect a Board… (Enter): Inspection, its Load Images… dialog on the folder above screen 2's, else, after a
+        restart or a sign-in, on the USB drive plugged in last (Q68), and the boards picked inspected at once, in the
+        view Train trained on (Q69)."""
         if self.result.isHidden():
             return
         folder = self.folder()
+        start = Path(folder).parent if folder else drives.last_plugged()
         shell = self.page.shell
         if shell.navigate("Inspection"):
             page = cast("InspectionPage", shell.pages["Inspection"])
-            page.inspect_from(str(Path(folder).parent) if folder else "", self.view)
+            page.inspect_from(str(start) if start else "", self.view)
 
     def open_logs(self) -> None:
         """Open Logs & Export ›: the history of this board model."""

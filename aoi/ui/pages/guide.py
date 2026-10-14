@@ -182,7 +182,7 @@ class FirstRunGuide(QFrame):
         self.key_title.setObjectName("guideSteps")
         self.key_note = QLabel()
         self.key_note.setWordWrap(True)
-        self.recovery = RecoveryKey(self.ctx, self._key_refused, self.status, tick=False)
+        self.recovery = RecoveryKey(self.ctx, self._key_refused, self.status, tick=False, usb=True)
         self.recovery.note.hide()  # the guide's own sentence, which names the customer, stands above it
         self.recovery.changed.connect(self._key_kept_away)
         for b, key, slot in (

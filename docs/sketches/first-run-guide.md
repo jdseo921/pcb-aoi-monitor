@@ -143,9 +143,10 @@ The counts carry AI Model Test's marker "Synthetic boards: not accuracy" wheneve
 
 ## Controls
 
-Every label is a `self.tr()` string with named `{placeholders}`, in the Charter's words; the words the glossary does
-not hold yet are Q77. The guide's own words never include dataset, version, freeze, split, lock, manifest, store,
-epoch or seed.
+Every label is a `self.tr()` string with named `{placeholders}`, in the Charter's words; the guide's words the glossary
+did not hold, it holds since Q77 (Customer, Recovery key, Trial, Validated, Shift check, Board revision and View, with
+Korean drafts). The guide's own words never include dataset, version, freeze, split, lock, manifest, store, epoch or
+seed.
 
 | Control | Label | Key | Size | Notes |
 |---|---|---|---|---|

@@ -46,6 +46,7 @@ from ..core import datasets, demo, drift
 from ..core.run_progress import RunProgress
 from ..core.services import REQUIRED_ROLE, ROLES_FROM, AppContext, Missing, Need, workspace_in_use
 from ..errors import AoiError
+from ..hal import drives
 from . import theme
 from .board_model_dialog import NewBoardModelDialog
 from .demo_workspace import boards
@@ -589,11 +590,14 @@ class MainWindow(QMainWindow):
         self._training_timer = QTimer(self)  # the header and Home follow a training run on every page (REQ-TRN-008)
         self._training_timer.timeout.connect(self.show_training)
         self._training_timer.start(1000)
-        self._reload_board_models()
-        # the demo, and a station with no board model yet to set up, start with an Admin; any other start with the user
-        # who signed in last on the station; a workspace switch with the first user of the role carried, if the folder
-        # holds one; the role is the stored one either way (#197). Audited as user.start, which no later start reads,
-        # so a role carried, the demo's Admin say, is never the station's next start user (REQ-USR-003)
+        drives.last_plugged()  # the USB drives there as the window opens: one plugged in after is the last (Q68)
+        started = None if carried is not None or self.in_demo else ctx.guide_starter()
+        self._reload_board_models(started[1] if started else None)
+        # the demo, and a station with no board model yet to set up, start with an Admin; while the first-run guide sets
+        # up the first AI model, with the user who started it and its board model in the header (Q75); any other start
+        # with the user who signed in last on the station; a workspace switch with the first user of the role carried,
+        # if the folder holds one; the role is the stored one either way (#197). Audited as user.start, which no later
+        # start reads, so a role carried, the demo's Admin say, is never the station's next start user (REQ-USR-003)
         start = ctx.start_user(setting_up=not ctx.board_models())
         if carried is not None:
             start = next((str(u["name"]) for u in ctx.users() if u["role"] == carried), start)
@@ -607,7 +611,12 @@ class MainWindow(QMainWindow):
         if not self.navigate(ctx.settings.last_page):
             self.navigate("Home")
         resumed = carried is None and not self.in_demo and bool(ctx.board_models()) and start == ctx.last_signed_in()
-        if resumed:  # someone else may be at the station now
+        if started is not None and start == started[0]:  # someone else may be at the station now
+            said = self.tr(
+                "Signed in as {user} ({role}), who started setting up {board_model}. Not you? Press Switch User."
+            )
+            self.status(said.format(user=start, role=role_text(ctx.role), board_model=started[1]), ms=0)
+        elif resumed:
             said = self.tr(
                 "Signed in as {user} ({role}), who signed in last on this station. Not you? Press Switch User."
             )

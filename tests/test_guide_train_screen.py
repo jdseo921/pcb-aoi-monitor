@@ -28,6 +28,7 @@ from aoi.ui.pages.training import TrainingPage
 from tests.test_dataset_stores import as_admin
 from tests.test_first_board_model_store import shell
 from tests.test_trial_versions import ONE, kept_inactive, one_person, trial_trained
+from tests.test_usb_drives import plugged
 
 TRAINED = "✓ 1 Board model  ───  ✓ 2 Images  ───  ✓ 3 Train"
 CANCELLED = "Train was cancelled. What it had done is kept, and the next Train goes on from there."
@@ -110,9 +111,10 @@ def test_req_trn_021_what_train_made_after_a_restart_and_the_handover(
     """Train's result is read again from the workspace, as after a restart. An Operator's Home says the board model is
     still being set up until Train's AI model judges its boards, then shows the cards. Open Logs & Export › shows the
     board model's history and Start the Checks › Training's What is missing with Validated picked. Inspect a Board…
-    opens Load Images… on the folder above screen 2's, in the view Train trained on, and inspects the board picked at
-    once, or nothing when none is picked; then Home shows its cards. A test or a shift check that did not run, or a
-    shift check failed, is said. A board model judged by an AI model Train did not make leaves the guide."""
+    opens Load Images… on the folder above screen 2's, else on the USB drive plugged in last (Q68), in the view Train
+    trained on, and inspects the board picked at once, or nothing when none is picked; then Home shows its cards. A test
+    or a shift check that did not run, or a shift check failed, is said. A board model judged by an AI model Train did
+    not make leaves the guide."""
     ready(ctx, tmp_path / "boards")
     win, guide, screen = home(qtbot, ctx, "operator")
     home_page = cast(HomePage, win.pages["Home"])
@@ -153,7 +155,8 @@ def test_req_trn_021_what_train_made_after_a_restart_and_the_handover(
         "No shift check counts now: Inspection asks for Shift Check (F7) before the first board."
     )
     ctx.settings.shift_check_hours = 0  # off: the first board needs none
-    guide.images.folder = str(tmp_path / "boards" / "TBOX")  # screen 2's folder in this session
+    usb = tmp_path / "usb"
+    plugged(monkeypatch, usb)  # with no folder of screen 2's, as after a restart: the USB drive plugged in last (Q68)
     asked: list[str] = []
     board = sorted((tmp_path / "boards").glob("*.png"))[0]
     picks = [[], [str(board)]]  # the dialog cancelled, then a board picked
@@ -172,8 +175,9 @@ def test_req_trn_021_what_train_made_after_a_restart_and_the_handover(
     assert win.stack.currentWidget() is inspection and not inspection.queue and ctx.db.inspection_counts(ONE)[0] == 0
     win.navigate("Home")
     assert screen.result.isVisible()
+    guide.images.folder = str(tmp_path / "boards" / "TBOX")  # screen 2's folder in this session
     screen.btn_inspect.click()
-    assert win.stack.currentWidget() is inspection and asked == [str(tmp_path / "boards")] * 2
+    assert win.stack.currentWidget() is inspection and asked == [str(usb), str(tmp_path / "boards")]
     assert inspection.view_combo.currentData() == "Top"
     qtbot.waitUntil(lambda: ctx.db.inspection_counts(ONE)[0] == 1, timeout=60000)
     win.navigate("Home")
