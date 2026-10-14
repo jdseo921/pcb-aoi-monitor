@@ -875,7 +875,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+312"/>
+        <location line="+314"/>
         <location line="+137"/>
         <source>Importing samples</source>
         <translation type="unfinished"></translation>
@@ -1157,14 +1157,14 @@
         <translation>검증 세트 잠금</translation>
     </message>
     <message>
-        <location line="-3044"/>
-        <location line="+3058"/>
+        <location line="-3046"/>
+        <location line="+3060"/>
         <location line="+39"/>
         <source>the workspace holds no such dataset version</source>
         <translation>작업 공간에 그런 데이터셋 버전이 없습니다</translation>
     </message>
     <message>
-        <location line="-3147"/>
+        <location line="-3149"/>
         <source>Drift on {board} ({view}): {count} of the last {of} boards called NG; {before} % of the {baseline} before</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1264,7 +1264,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1251"/>
+        <location line="+1253"/>
         <source>Setting the comparison&apos;s thresholds from labelled boards</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1491,7 +1491,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-3809"/>
+        <location line="-3811"/>
         <source>no earlier version of this board model was active</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1516,7 +1516,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1175"/>
+        <location line="+1177"/>
         <source>its UUID {found} is not {uuid}, as in the AI model registry</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1623,7 +1623,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-4037"/>
+        <location line="-4039"/>
         <source>unhandled</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4104,7 +4104,7 @@
     </message>
     <message>
         <location line="+1"/>
-        <location filename="../core/services.py" line="+3300"/>
+        <location filename="../core/services.py" line="+3302"/>
         <source>a file of it could not be read: {reason}</source>
         <translation>그 파일 하나를 읽을 수 없습니다: {reason}</translation>
     </message>
@@ -8904,7 +8904,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/services.py" line="-3384"/>
+        <location filename="../core/services.py" line="-3386"/>
         <source>Aligning {count} images to the reference board</source>
         <translation type="unfinished"></translation>
     </message>

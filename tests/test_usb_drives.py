@@ -47,16 +47,17 @@ def block(sys_root: Path, number: str, place: str, removable: str | None = None)
 
 @pytest.mark.skipif(sys.platform == "win32", reason="Linux's /sys: symbolic links, and names with a colon")
 def test_req_trn_021_linux_lists_removable_drives_in_the_order_they_were_mounted(tmp_path: Path) -> None:
-    """A partition mounted whole, of a disk on a USB bus or marked removable, is a drive, by its mount point, spaces and
-    all; a fixed disk, a folder of a drive mounted again elsewhere, a filesystem with no block device and the USB drive
-    the system started from, its other partitions included, are not. The order is mountinfo's, the order of the
-    mounts."""
+    """A partition mounted whole under /media, /run/media or /mnt, of a disk on a USB bus or marked removable, is a
+    drive, by its mount point, spaces and all; a fixed disk, a folder of a drive mounted again elsewhere, a filesystem
+    with no block device, a USB drive mounted elsewhere and the USB drive the system started from, its other partitions
+    included, are not. The order is mountinfo's, the order of the mounts."""
     sys_root = tmp_path / "sys"
     block(sys_root, "8:1", "pci0000:00/0000:00:17.0/ata1/host0/block/sda/sda1", "0")
     block(sys_root, "8:17", "pci0000:00/0000:00:14.0/usb2/2-1/2-1:1.0/host6/block/sdb/sdb1")
     block(sys_root, "8:49", "pci0000:00/0000:00:17.0/ata2/host1/block/sdd/sdd1", "1")  # a removable disk, not on USB
     block(sys_root, "8:33", "pci0000:00/0000:00:14.0/usb2/2-2/2-2:1.0/host7/block/sdc/sdc1")
     block(sys_root, "8:34", "pci0000:00/0000:00:14.0/usb2/2-2/2-2:1.0/host7/block/sdc/sdc2")
+    block(sys_root, "8:65", "pci0000:00/0000:00:14.0/usb2/2-3/2-3:1.0/host8/block/sde/sde1")
     mountinfo = tmp_path / "mountinfo"
     mountinfo.write_text(
         "\n".join(
@@ -68,6 +69,7 @@ def test_req_trn_021_linux_lists_removable_drives_in_the_order_they_were_mounted
                 "40 24 8:17 / /media/jay/KEY\\040DRIVE rw,nosuid shared:9 - vfat /dev/sdb1 rw",
                 "41 22 8:17 /backup /mnt/backup rw shared:9 - vfat /dev/sdb1 rw",  # a folder of the same drive
                 "38 24 8:49 / /media/jay/IMAGES rw,nosuid shared:10 - exfat /dev/sdd1 rw",  # an id reused
+                "42 22 8:65 / /srv/stick rw shared:11 - vfat /dev/sde1 rw",  # not where a drive plugged in is mounted
             )
         )
         + "\n",
@@ -103,12 +105,12 @@ class Kernel32:
 
 def test_req_trn_021_windows_lists_removable_letters_holding_a_volume() -> None:
     """Windows lists each drive letter of the removable type holding a volume, A to Z, by its root: not a fixed drive,
-    a CD drive or a card reader with no card. No box asks for a disk meanwhile, and this thread's error mode is put
-    back after, a failed call included."""
+    a CD drive or a card reader with no card. No box asks for a disk meanwhile, this thread's other error flags kept,
+    and its error mode is put back after, a failed call included."""
     types = {"C:\\": 3, "D:\\": 5, "E:\\": drives.DRIVE_REMOVABLE, "F:\\": drives.DRIVE_REMOVABLE, "G:\\": 2}
     kernel32 = Kernel32(types, {"C:\\", "D:\\", "E:\\", "G:\\"})
     assert drives._windows(kernel32) == [Path("E:\\"), Path("G:\\")]
-    assert kernel32.modes == [drives.SEM_FAILCRITICALERRORS, 0x8000]
+    assert kernel32.modes == [drives.SEM_FAILCRITICALERRORS, 0x8000 | drives.SEM_FAILCRITICALERRORS, 0x8000]
     kernel32.gone = {"E:\\"}
     with pytest.raises(OSError):
         drives._windows(kernel32)
@@ -129,10 +131,12 @@ def test_req_trn_021_a_listing_that_fails_lists_no_drive(monkeypatch: pytest.Mon
 
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows' kernel32 is the only system with drive letters")
 def test_req_trn_021_windows_lists_no_fixed_drive() -> None:
-    """On the Windows running the test, the listing names each drive by its letter's root, and never the system's own
-    fixed drive."""
-    found = REMOVABLE()
-    assert all(str(d) == f"{d.drive}\\" for d in found) and Path(os.environ["SystemDrive"] + "\\") not in found
+    """On the Windows running the test, kernel32's own calls, their types declared, read the system's drive as a fixed
+    one in use, and the listing names each drive by its letter's root, never the system's own."""
+    kernel32, system = drives._Kernel32(), os.environ["SystemDrive"] + "\\"
+    assert kernel32.drive_type(system) == 3 and kernel32.mounted() >> (ord(system[0].upper()) - ord("A")) & 1
+    found = drives._windows(kernel32)
+    assert all(str(d) == f"{d.drive}\\" for d in found) and Path(system) not in found
 
 
 def test_req_trn_021_the_drive_plugged_in_last_is_the_one_the_app_saw_last(monkeypatch: pytest.MonkeyPatch) -> None:

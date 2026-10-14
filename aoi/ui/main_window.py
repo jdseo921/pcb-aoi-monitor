@@ -591,12 +591,12 @@ class MainWindow(QMainWindow):
         self._training_timer.start(1000)
         ctx.usb_drive()  # the USB drives there as the window opens: one plugged in after is the last (Q68)
         # the demo, and a station with no board model yet to set up, start with an Admin; while the first-run guide sets
-        # up the first AI model, with the user who started it, its board model in the header and Home shown (Q75); any
-        # other start with the user who signed in last on the station; a workspace switch with the first user of the
-        # role carried, if the folder holds one; the role is the stored one either way (#197). Audited as user.start,
-        # which no later start reads, so a role carried, the demo's Admin say, is never the station's next start user
-        # (REQ-USR-003)
-        started = None if self.in_demo else ctx.guide_starter()
+        # the station up, with the user who started it, its board model in the header and Home shown (Q75); any other
+        # start with the user who signed in last on the station; a workspace switch with the first user of the role
+        # carried, if the folder holds one, on the page it had (`switch_workspace`), the guide's start aside; the role
+        # is the stored one either way (#197). Audited as user.start, which no later start reads, so a role carried, the
+        # demo's Admin say, is never the station's next start user (REQ-USR-003)
+        started = None if carried is not None or self.in_demo else ctx.guide_starter()
         start = ctx.start_user(setting_up=not ctx.board_models())
         if carried is not None:
             start = next((str(u["name"]) for u in ctx.users() if u["role"] == carried), start)

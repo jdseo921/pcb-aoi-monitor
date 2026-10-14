@@ -815,23 +815,25 @@ folder, as #407 has it), Pick Folder…'s (with none, where the system opens it)
 folder is not known, after a restart, a sign-in or a board model switch (`GuideImages.forget`). A drive counts when the
 system says it can be removed: on Windows a drive letter of the removable type that holds a volume (`GetDriveTypeW`,
 `GetVolumeInformationW`, through kernel32 calls of its own with their types declared, as `aoi/ui/front.py` has user32's,
-and critical-error boxes off on that thread meanwhile), so a USB hard drive Windows calls fixed is not one; on Linux a
-partition mounted whole, of a disk marked removable or on a USB bus, and not of the disk mounted at the root
-(`/proc/self/mountinfo`, `/sys/dev/block`). A listing that fails lists none, logged, so each dialog opens where it did.
-The one plugged in last is the last the app saw: those there at its first look, which the window takes as it opens, in
-the system's order (the mount order, or the drive letter), then each found at a later look. While the station is set up,
-with no AI model active and no board inspected on any board model, a start signs in the user who made the newest board
-model the guide shows for, read from its `board_model.create` entry, or the first Admin when that user is gone or now an
-Operator (`AppContext.guide_starter`), with that board model in the header, Home shown in place of the last page, and
-the status bar saying who and why; once a board model has an AI model or an inspected board, a start signs in as before.
-A board model whose guide step cannot be read is skipped, logged, so a start never fails on it.
-`tests/test_guide_click_count.py` goes from an empty workspace to the first verdict as the sketch counts it, 24 actions
-on 4 screens, with 90 or 70 OK images and 10 NG ones and the shift check on: each dialog is answered as a person would,
-one action more where it does not open on the right USB drive. The test names each action as it takes it; what it
-measures is that this path ends in a verdict, on those 4 screens, with each dialog on the right drive and no message
-shown. `tests/test_usb_drives.py`, with a stand-in for kernel32 so the Windows branch runs on every system, and
-`tests/test_guide_restart.py` test the drives and the start; `tests/conftest.py` lists no USB drive in every other test,
-so the drives of the machine running them change nothing.
+and critical-error boxes off on that thread meanwhile, its other flags kept), so a USB hard drive Windows calls fixed is
+not one; on Linux a partition mounted whole under /media, /run/media or /mnt, where the system mounts a drive plugged
+in, of a disk marked removable or on a USB bus, and not of the disk mounted at the root (`/proc/self/mountinfo`,
+`/sys/dev/block`). A listing that fails lists none, logged, so each dialog opens where it did. The one plugged in last
+is the last the app saw: those there at its first look, which the window takes as it opens, in the system's order (the
+mount order, or the drive letter), then each found at a later look. While the station is set up, with no AI model active
+and no board inspected on any board model, a start signs in the user who made the newest board model the guide shows
+for, read from its `board_model.create` entry, or the first Admin when that user is gone or now an Operator
+(`AppContext.guide_starter`), with that board model in the header, Home shown in place of the last page, and the status
+bar saying who and why; once a board model has an AI model or an inspected board, a start signs in as before. A
+workspace switch, which carries the role signed in and its page, never takes the guide's start. A board model whose
+guide step cannot be read is passed over, logged, so choosing the user never refuses the workspace; Home still reads
+that board model when the header selects it, as before. `tests/test_guide_click_count.py` goes from an empty workspace
+to the first verdict as the sketch counts it, 24 actions on 4 screens, with 90 or 70 OK images and 10 NG ones and the
+shift check on: each dialog is answered as a person would, one action more where it does not open on the right USB
+drive. The test names each action as it takes it; what it measures is that this path ends in a verdict, on those 4
+screens, with each dialog on the right drive and no message shown. `tests/test_usb_drives.py`, with a stand-in for
+kernel32 so the Windows branch runs on every system, and `tests/test_guide_restart.py` test the drives and the start;
+`tests/conftest.py` lists no USB drive in every other test, so the drives of the machine running them change nothing.
 
 **Next AI step (not in this draft):** once enough labelled NG crops exist per type, add a small supervised
 classifier that names the defect (Solder Bridge, Tombstone, …) for each flagged region. Today a region is named by

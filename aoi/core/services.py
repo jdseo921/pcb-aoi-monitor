@@ -592,9 +592,10 @@ class AppContext:
     def start_user(self, setting_up: bool = False) -> str:
         """The name of the user a start signs in. In the demo workspace (`main.py --demo`, the Demo shortcut) and while
         the station is set up (no board model yet): the first user the table holds as Admin. While the first-run guide
-        sets up the first AI model, the user who started it (`guide_starter`, B5, Q75). Otherwise the user who signed in
-        last on this station (`last_signed_in`), else 'operator'. Without either (a table edited outside the app), the
-        first user of the lowest stored role. Its role is the stored one, whatever the name (#197)."""
+        sets the station up, with no AI model active and no board inspected, the user who started it (`guide_starter`,
+        B5, Q75). Otherwise the user who signed in last on this station (`last_signed_in`), else 'operator'. Without
+        either (a table edited outside the app), the first user of the lowest stored role. Its role is the stored one,
+        whatever the name (#197)."""
         users = self.db.users()  # never empty: the database seeds operator, engineer and admin
         if setting_up or demo.is_demo(self.settings.root):
             if admin := next((u for u in users if u["role"] == "Admin"), None):
@@ -613,8 +614,9 @@ class AppContext:
         """While the station is set up, with no AI model active and no board inspected on any board model, and the
         first-run guide shows for one (`guide_step`): the user who made it, the newest made of them, so a restart goes
         on as the user who started the guide, not one who cannot (B5, Q75; until ADR 0002's sign-in). The user as the
-        users table holds them now, else its first Admin when they are gone or now an Operator. None otherwise, and for
-        a board model whose guide step cannot be read (logged), so a start never fails on it. Writes nothing."""
+        users table holds them now, else its first Admin when they are gone or now an Operator. None otherwise. A board
+        model whose guide step cannot be read is passed over, logged, so choosing the user never refuses the workspace;
+        Home still reads that board model when the header selects it, as before. Writes nothing."""
         names = self.db.board_models()
         if any(self.db.active_model(b) is not None or self.db.inspection_counts(b)[0] for b in names):
             return None  # a station in use: Golden board comparison inspects with no AI model

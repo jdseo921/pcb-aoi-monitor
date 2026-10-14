@@ -169,7 +169,7 @@ seed.
 | Revision | Board revision | — | F | On screen 3, prefilled R1 (Q74); 1 to 16 letters and digits, said under it as typed; kept in the version Train freezes |
 | Train | Train | Enter | T+, blue | Off while another training runs (AOI-TRN-047); greyed while it runs |
 | Cancel | Cancel | Esc | B | Stops within 10 s, as training's Cancel does; what it keeps is in "What Train does" |
-| Inspect | Inspect a Board… | Enter | T, blue | Opens Inspection and its Load Images… file dialog on the folder above screen 2's folder, else, after a restart or a sign-in, on the USB drive plugged in last (Q68); the board is inspected on Open (Q69) |
+| Inspect | Inspect a Board… | Enter | T, blue | Opens Inspection and its Load Images… file dialog on the folder above screen 2's folder, else, after a restart, a sign-in or a board model switch, on the USB drive plugged in last (Q68); the board is inspected on Open (Q69) |
 | Export | Open Logs & Export › | — | B | Logs & Export with the history of this board model |
 | Validated | Start the Checks › | — | B | Inspection's label for this step (ADR 0020); here it opens Training › What is missing with Validated picked (B3, #408) |
 

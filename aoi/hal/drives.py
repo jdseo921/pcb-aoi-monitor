@@ -1,11 +1,11 @@
 """The USB drives plugged into the station (B5 of the 2026-10 business-readiness brief,
 docs/sketches/first-run-guide.md, Q68): the first-run guide's dialogs open on the one plugged in last. A drive counts
 when the system says it can be removed: on Windows a drive letter of the removable type that holds a volume, so a USB
-hard drive Windows calls fixed is not one; on Linux a partition mounted whole, of a disk marked removable or on a USB
-bus, and not of the disk the system runs from. The order is the one the app saw them in: those there at its first look
-in the system's order (the order they were mounted in on Linux, the drive letter on Windows), then each one found at a
-later look, so a drive plugged in while the app runs is the last. The window looks once as it opens; pages ask
-`AppContext.usb_drive`."""
+hard drive Windows calls fixed is not one; on Linux a partition mounted whole under /media, /run/media or /mnt, of a
+disk marked removable or on a USB bus, and not of the disk the system runs from. The order is the one the app saw them
+in: those there at its first look in the system's order (the order they were mounted in on Linux, the drive letter on
+Windows), then each one found at a later look, so a drive plugged in while the app runs is the last. The window looks
+once as it opens; pages ask `AppContext.usb_drive`."""
 
 from __future__ import annotations
 
@@ -18,6 +18,7 @@ from typing import Protocol
 
 SEM_FAILCRITICALERRORS = 0x0001  # an empty card reader asks for no disk
 DRIVE_REMOVABLE = 2  # GetDriveTypeW's type of a USB stick or a card reader
+MOUNTED_AT = ("/media/", "/run/media/", "/mnt/")  # where Linux mounts a drive plugged in: udisks2, or by hand
 log = logging.getLogger("aoi")
 _seen: list[Path] = []  # the drives mounted at the last look, in the order the app saw them, the one plugged last last
 _lock = threading.Lock()
@@ -65,17 +66,21 @@ def last_plugged() -> Path | None:
 
 
 def _linux(mountinfo: Path, block: Path) -> list[Path]:
-    """Each mount point in `mountinfo` (proc(5): one line a mount, in the order they were mounted) of a whole
-    filesystem whose device, under `block` by its major:minor, is removable and not on the disk mounted at the root: a
-    system started from a USB drive lists none of its own partitions, /boot/efi say."""
+    """Each mount point in `mountinfo` (proc(5): one line a mount, in the order they were mounted) under /media,
+    /run/media or /mnt, where the system mounts a drive plugged in, of a whole filesystem whose device, under `block` by
+    its major:minor, is removable and not on the disk mounted at the root: a system started from a USB drive lists none
+    of its own partitions, /boot/efi say."""
     mounts = [line.split(" - ", 1)[0].split() for line in mountinfo.read_text("utf-8", errors="replace").splitlines()]
-    mounts = [m for m in mounts if len(m) >= 5 and m[3] == "/"]  # a folder of a drive mounted again is not one
+    mounts = [m for m in mounts if len(m) >= 5]
     system = {_disk(block / m[2]) for m in mounts if m[4] == "/"} - {None}
     drives: list[Path] = []
     for m in mounts:
+        place = re.sub(r"\\([0-7]{3})", lambda o: chr(int(o.group(1), 8)), m[4])
+        if m[3] != "/" or not place.startswith(MOUNTED_AT):  # a folder of a drive mounted again is not one
+            continue
         disk = _disk(block / m[2])
         if disk is not None and disk not in system and _removable(disk):
-            drives.append(Path(re.sub(r"\\([0-7]{3})", lambda o: chr(int(o.group(1), 8)), m[4])))
+            drives.append(Path(place))
     return drives
 
 
@@ -99,9 +104,10 @@ def _removable(disk: Path) -> bool:
 
 def _windows(kernel32: Letters) -> list[Path]:
     """Each drive letter of the removable type holding a volume, A to Z, by its root; with critical-error boxes off on
-    this thread meanwhile, so an empty card reader asks for no disk."""
+    this thread meanwhile, its other flags kept, so an empty card reader asks for no disk."""
     before = kernel32.error_mode(SEM_FAILCRITICALERRORS)
     try:
+        kernel32.error_mode(before | SEM_FAILCRITICALERRORS)
         letters = kernel32.mounted()
         roots = [f"{chr(ord('A') + i)}:\\" for i in range(26) if letters >> i & 1]
         return [Path(r) for r in roots if kernel32.drive_type(r) == DRIVE_REMOVABLE and kernel32.holds_volume(r)]
