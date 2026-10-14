@@ -98,6 +98,5 @@ def test_req_tst_002_home_shows_the_last_test_as_counts(qtbot: QtBot, trained_ct
     assert "%" not in shown and ng and ok
     trained_ctx.ensure_board_model("EMPTY-A1")
     win._on_board_model("EMPTY-A1")
-    least = datasets.VALIDATION_OK + datasets.TRAIN_OK
-    assert home.status_labels["Upload samples"].text() == f"No samples yet. Add at least {least} OK boards."
+    assert home.status_labels["Upload samples"].text() == f"No samples yet. {datasets.needs()}"  # REQ-TRN-021
     assert home.status_labels["Validate"].text() == "Not validated yet. Run the locked validation set."

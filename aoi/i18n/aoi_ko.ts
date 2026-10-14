@@ -727,6 +727,14 @@
     </message>
 </context>
 <context>
+    <name>Datasets</name>
+    <message>
+        <location filename="../core/datasets.py" line="+35"/>
+        <source>A board model needs at least {ok} OK images of one view ({train} to train, {held} held out to test) and {ng} or more NG images with every defect boxed; a Validated version also needs {calibration} images labelled OK or NG for the agreement check.</source>
+        <translation>보드 모델 하나에는 한 뷰의 OK 이미지 최소 {ok}장({train}장은 학습용, {held}장은 테스트용으로 따로 보관)과 모든 불량에 박스를 그린 NG 이미지 {ng}장 이상이 필요하며, Validated 버전에는 일치도 검사용으로 OK 또는 NG로 라벨링한 이미지 {calibration}장도 필요합니다.</translation>
+    </message>
+</context>
+<context>
     <name>DefectSizeField</name>
     <message>
         <location filename="../ui/widgets/scale.py" line="-100"/>
@@ -847,7 +855,7 @@
         <translation>: {reason}</translation>
     </message>
     <message>
-        <location line="+67"/>
+        <location line="+115"/>
         <source>Operator, Engineer or Admin</source>
         <translation type="unfinished"></translation>
     </message>
@@ -890,12 +898,12 @@
     </message>
     <message>
         <location line="+190"/>
-        <location line="+2326"/>
+        <location line="+2435"/>
         <source>(none)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-2295"/>
+        <location line="-2404"/>
         <source>Saving a recipe</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1017,7 +1025,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+107"/>
+        <location line="+194"/>
         <source>Creating a board model</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1142,14 +1150,14 @@
         <translation>검증 세트 잠금</translation>
     </message>
     <message>
-        <location line="-2560"/>
-        <location line="+2574"/>
+        <location line="-2695"/>
+        <location line="+2709"/>
         <location line="+39"/>
         <source>the workspace holds no such dataset version</source>
         <translation>작업 공간에 그런 데이터셋 버전이 없습니다</translation>
     </message>
     <message>
-        <location line="-2656"/>
+        <location line="-2791"/>
         <source>Drift on {board} ({view}): {count} of the last {of} boards called NG; {before} % of the {baseline} before</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1249,7 +1257,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+888"/>
+        <location line="+936"/>
         <source>Setting the comparison&apos;s thresholds from labelled boards</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1264,7 +1272,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+361"/>
+        <location line="+448"/>
         <source>a blind label is OK, or NG with one of the 37 defect types</source>
         <translation>블라인드 라벨은 OK이거나, 37개 결함 유형 중 하나를 지정한 NG입니다</translation>
     </message>
@@ -1279,12 +1287,12 @@
         <translation>OK 이미지가 {ok}개이며, 검증 세트에는 {least}개가 들어갑니다</translation>
     </message>
     <message>
-        <location line="+52"/>
+        <location line="+72"/>
         <source>{customer} allowed only {uses}</source>
         <translation>{customer}이(가) {uses}만 허용했습니다</translation>
     </message>
     <message>
-        <location line="+12"/>
+        <location line="+9"/>
         <source>its validation set is not locked; training reads only a training set</source>
         <translation>검증 세트가 잠겨 있지 않습니다. 학습은 학습 세트만 읽습니다</translation>
     </message>
@@ -1294,7 +1302,7 @@
         <translation>학습 세트에 OK 이미지가 {ok}개 있으며, 학습에는 {least}개가 필요합니다</translation>
     </message>
     <message>
-        <location line="+15"/>
+        <location line="+20"/>
         <source>no frozen dataset version of it has a locked validation set</source>
         <translation>검증 세트가 잠긴 고정 데이터셋 버전이 없습니다</translation>
     </message>
@@ -1438,20 +1446,20 @@
         <translation>이 뷰에 OK 또는 NG로 라벨링된 이미지가 없습니다</translation>
     </message>
     <message>
-        <location line="-501"/>
-        <location line="+512"/>
+        <location line="-503"/>
+        <location line="+514"/>
         <source>its images are in no customer&apos;s dataset store; an Admin moves them in</source>
         <translation>이미지가 어느 고객의 데이터셋 저장소에도 없습니다. 관리자가 옮겨 넣습니다</translation>
     </message>
     <message>
-        <location line="-510"/>
-        <location line="+512"/>
+        <location line="-512"/>
+        <location line="+514"/>
         <source>its dataset store was shredded on {date}</source>
         <translation>이 데이터셋 저장소는 {date}에 파기되었습니다</translation>
     </message>
     <message>
-        <location line="-509"/>
-        <location line="+512"/>
+        <location line="-511"/>
+        <location line="+514"/>
         <source>its images are in the dataset store of {store}, not of {customer}</source>
         <translation>이미지가 {customer}이(가) 아니라 {store}의 데이터셋 저장소에 있습니다</translation>
     </message>
@@ -1476,7 +1484,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-3285"/>
+        <location line="-3442"/>
         <source>no earlier version of this board model was active</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1501,12 +1509,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+812"/>
+        <location line="+860"/>
         <source>its UUID {found} is not {uuid}, as in the AI model registry</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1320"/>
+        <location line="+1407"/>
         <source>Labelling an image</source>
         <translation>이미지 라벨링</translation>
     </message>
@@ -1521,7 +1529,7 @@
         <translation>{label}(으)로 다시 라벨링</translation>
     </message>
     <message>
-        <location line="+420"/>
+        <location line="+442"/>
         <source>{file} has changed since the version was frozen</source>
         <translation>{file}이(가) 버전이 동결된 뒤에 바뀌었습니다</translation>
     </message>
@@ -1608,14 +1616,14 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-3513"/>
+        <location line="-3670"/>
         <source>unhandled</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../ui/demo_workspace.py" line="+31"/>
         <location filename="../ui/errors.py" line="+163"/>
-        <location filename="../ui/main_window.py" line="+1002"/>
+        <location filename="../ui/main_window.py" line="+1009"/>
         <source>start-up</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3743,7 +3751,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/training.py" line="+539"/>
+        <location filename="../ui/pages/training.py" line="+552"/>
         <location filename="../ui/pages/training_import.py" line="+39"/>
         <source>{code} {title}</source>
         <translation type="unfinished"></translation>
@@ -3844,7 +3852,7 @@
         <translation>{file}이(가) 기록된 뒤 변경, 이동 또는 손상되었습니다</translation>
     </message>
     <message>
-        <location filename="../core/datasets.py" line="+61"/>
+        <location filename="../core/datasets.py" line="+46"/>
         <source>{changed} file(s) changed and {missing} missing since the freeze</source>
         <translation>동결 이후 파일 {changed}개가 변경되고 {missing}개가 없습니다</translation>
     </message>
@@ -3870,7 +3878,7 @@
     </message>
     <message>
         <location line="+1"/>
-        <location filename="../core/services.py" line="+2793"/>
+        <location filename="../core/services.py" line="+2950"/>
         <source>a file of it could not be read: {reason}</source>
         <translation>그 파일 하나를 읽을 수 없습니다: {reason}</translation>
     </message>
@@ -4046,7 +4054,7 @@
 <context>
     <name>FreezeSheet</name>
     <message>
-        <location filename="../ui/pages/training_versions.py" line="+156"/>
+        <location filename="../ui/pages/training_versions.py" line="+170"/>
         <source>Freeze dataset</source>
         <translation>데이터셋 동결</translation>
     </message>
@@ -4195,7 +4203,7 @@
 <context>
     <name>HomePage</name>
     <message>
-        <location filename="../ui/main_window.py" line="-861"/>
+        <location filename="../ui/main_window.py" line="-870"/>
         <source>Upload samples</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4260,7 +4268,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+52"/>
+        <location line="+60"/>
         <source>Open to every role.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4275,12 +4283,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+17"/>
-        <source>No samples yet. Add at least {count} OK boards.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+8"/>
+        <location line="+26"/>
         <source>AI model {version} is a Trial and does not go live. Start the Checks on Training for a Validated version.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4300,7 +4303,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-155"/>
+        <location line="-164"/>
         <source>Inspect</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4320,7 +4323,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+103"/>
+        <location line="+111"/>
         <source>Open {page} ›</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4330,12 +4333,17 @@
         <translation>학습 중 {percent} % · {left}</translation>
     </message>
     <message>
-        <location line="+30"/>
+        <location line="+31"/>
         <source>{ok} OK · {ng} NG uploaded</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+7"/>
+        <location line="+2"/>
+        <source>No samples yet. {needs}</source>
+        <translation>아직 샘플이 없습니다. {needs}</translation>
+    </message>
+    <message>
+        <location line="+5"/>
         <source>Active AI model {version}</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5692,6 +5700,169 @@
     </message>
 </context>
 <context>
+    <name>MissingList</name>
+    <message>
+        <location filename="../ui/pages/missing_list.py" line="+35"/>
+        <source>OK images</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>NG images</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>NG images with every defect boxed</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>NG labels checked by a second user</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>OK labels checked by a second user (10 %)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Images labelled OK or NG for a calibration set</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Agreement check that reached its targets</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Locked validation set</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Trained AI model</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Active AI model</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>Add OK Images…</source>
+        <translation>OK 이미지 추가…</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Add NG Images…</source>
+        <translation>NG 이미지 추가…</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Draw Boxes ›</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Show Unchecked ›</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Draw OK Labels to Check</source>
+        <translation>검토할 OK 라벨 추출</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Open Labeller Agreement ›</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Freeze Dataset…</source>
+        <translation>데이터셋 동결…</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Split and Lock Validation Set…</source>
+        <translation>검증 세트 분할 및 잠금…</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Start Training</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Activate AI Model</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+31"/>
+        <source>What is missing</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+11"/>
+        <source>Checks</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>Validated</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Trial: one person, no checks</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+48"/>
+        <source>{board_model}, {view} view: {left} of {lines} still missing</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>{board_model}, {view} view: a Trial AI model is trained; {left} of {lines} still missing for a next version</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>{board_model}, {view} view: an AI model is active; {left} of {lines} still missing for a next version</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+15"/>
+        <source>{have} of {need}</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>{name}: {count}</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>First: {line}</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+10"/>
+        <source>Nothing a Trial version needs is missing. A Trial AI model does not go live: pick Validated to see what going live needs.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+4"/>
+        <source>Nothing is missing: {board_model} has an active AI model.</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
     <name>ModelTestPage</name>
     <message>
         <location filename="../ui/pages/model_test.py" line="+54"/>
@@ -6269,7 +6440,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+17"/>
+        <location line="+16"/>
         <source>Board model name (e.g. TBOX-A1 Rev2)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6327,7 +6498,7 @@
 <context>
     <name>Page</name>
     <message>
-        <location filename="../ui/main_window.py" line="-818"/>
+        <location filename="../ui/main_window.py" line="-827"/>
         <source>Home</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6503,7 +6674,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/training.py" line="-387"/>
+        <location filename="../ui/pages/training.py" line="-397"/>
         <source>Training</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7097,7 +7268,7 @@
 <context>
     <name>RecoveryKeyDialog</name>
     <message>
-        <location line="+39"/>
+        <location line="+38"/>
         <source>Done</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7676,17 +7847,22 @@
         <translation>{name}의 검증 세트 분할 및 잠금</translation>
     </message>
     <message>
-        <location line="+5"/>
+        <location line="+6"/>
         <source>✓ {ok} OK and {ng_all} NG files. The validation set takes {least} OK and {ng} NG ({share} % of the NG, rounded up), by defect type where it can, and the training set the rest.</source>
         <translation>✓ OK 파일 {ok}개, NG 파일 {ng_all}개. 검증 세트는 OK {least}개와 NG {ng}개(NG의 {share} %, 올림)를 가능한 한 결함 유형별로 가져가고, 나머지는 학습 세트가 됩니다.</translation>
     </message>
     <message>
         <location line="+5"/>
+        <source>{ok} OK and {ng_all} NG files. The validation set takes {least} OK and {ng} NG, and the training set the rest: {train} OK, fewer than the {least_train} training needs. Freeze a version with {needed} OK images or more to train from it.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+6"/>
         <source>✗ {ok} OK and {ng_all} NG files: a validation set takes {least} OK files. Freeze a version with more OK images, then split that.</source>
         <translation>✗ OK 파일 {ok}개, NG 파일 {ng_all}개: 검증 세트에는 OK 파일 {least}개가 필요합니다. OK 이미지가 더 많은 버전을 동결한 뒤 그 버전을 분할하십시오.</translation>
     </message>
     <message>
-        <location line="+5"/>
+        <location line="+6"/>
         <source>no type</source>
         <translation>유형 없음</translation>
     </message>
@@ -7998,7 +8174,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/services.py" line="-2870"/>
+        <location filename="../core/services.py" line="-3027"/>
         <source>Aligning {count} images to the reference board</source>
         <translation type="unfinished"></translation>
     </message>
@@ -8047,17 +8223,12 @@
     </message>
     <message>
         <location line="+1"/>
-        <location line="+608"/>
+        <location line="+620"/>
         <source>Import Folder…</source>
         <translation>폴더 가져오기…</translation>
     </message>
     <message>
-        <location line="-596"/>
-        <source>Training needs 20 OK images or more in a dataset version&apos;s training set</source>
-        <translation>학습에는 데이터셋 버전의 학습 세트에 OK 이미지가 20장 이상 필요합니다</translation>
-    </message>
-    <message>
-        <location line="+20"/>
+        <location line="-588"/>
         <location line="+95"/>
         <source>ID</source>
         <translation type="unfinished"></translation>
@@ -8119,12 +8290,12 @@
     </message>
     <message>
         <location line="+3"/>
-        <location line="+467"/>
+        <location line="+477"/>
         <source>Remove</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-456"/>
+        <location line="-466"/>
         <source>Select a sample to preview</source>
         <translation type="unfinished"></translation>
     </message>
@@ -8164,7 +8335,7 @@
         <translation type="unfinished">취소</translation>
     </message>
     <message>
-        <location line="+687"/>
+        <location line="+699"/>
         <source>{phase} · {percent} % · {left}</source>
         <translation>{phase} · {percent} % · {left}</translation>
     </message>
@@ -8189,7 +8360,7 @@
         <translation>취소됨: AI 모델을 저장하지 않았으며 활성 AI 모델은 바뀌지 않았습니다.</translation>
     </message>
     <message>
-        <location line="-709"/>
+        <location line="-721"/>
         <source>AI model versions</source>
         <translation type="unfinished"></translation>
     </message>
@@ -8280,13 +8451,13 @@
     </message>
     <message>
         <location line="+1"/>
-        <location line="+836"/>
-        <location line="+40"/>
+        <location line="+848"/>
+        <location line="+42"/>
         <source>Roll Back</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-872"/>
+        <location line="-886"/>
         <source>AI Model Card</source>
         <translation type="unfinished"></translation>
     </message>
@@ -8306,7 +8477,12 @@
         <translation>데이터셋</translation>
     </message>
     <message>
-        <location line="+75"/>
+        <location line="+1"/>
+        <source>What is missing</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+84"/>
         <source>Select PCB images</source>
         <translation type="unfinished"></translation>
     </message>
@@ -8361,7 +8537,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+81"/>
+        <location line="+77"/>
+        <source>{needs} Add them with Add OK Images… or Import Folder…</source>
+        <translation>{needs} OK 이미지 추가… 또는 폴더 가져오기…로 추가하십시오.</translation>
+    </message>
+    <message>
+        <location line="+6"/>
         <source>A second user has checked every NG label and every OK label drawn.</source>
         <translation>다른 사용자가 모든 NG 라벨과 추출된 모든 OK 라벨을 검토했습니다.</translation>
     </message>
@@ -8511,7 +8692,27 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+79"/>
+        <location line="+75"/>
+        <source>Blind labelling is open: Stop it, then press the button again</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>An import, draw or freeze of this page runs: press it again once it ends</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>A training run is under way: press Start Training again once it ends</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+23"/>
+        <source>Two people label a calibration set blind (New Set, Label Blind…), then Run Agreement Check</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+33"/>
         <source>The labels are checked: two people label a set blind and Run Agreement Check here.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -8521,12 +8722,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-447"/>
-        <source>Add at least 20 OK boards with Add OK Images… or Import Folder…</source>
-        <translation>OK 이미지 추가… 또는 폴더 가져오기…로 OK 보드를 20개 이상 추가하세요</translation>
-    </message>
-    <message>
-        <location line="+1"/>
+        <location line="-504"/>
         <source>No samples for {board_model} yet</source>
         <translation type="unfinished"></translation>
     </message>
@@ -8541,7 +8737,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+42"/>
+        <location line="+43"/>
         <source>none</source>
         <translation type="unfinished"></translation>
     </message>
@@ -8551,7 +8747,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+18"/>
+        <location line="+19"/>
         <source>Roll Back to {version}</source>
         <translation type="unfinished"></translation>
     </message>
@@ -8569,7 +8765,7 @@
 <context>
     <name>VersionsPanel</name>
     <message>
-        <location filename="../ui/pages/training_versions.py" line="-634"/>
+        <location filename="../ui/pages/training_versions.py" line="-647"/>
         <source>Validated</source>
         <translation type="unfinished"></translation>
     </message>
@@ -8579,7 +8775,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+323"/>
+        <location line="+328"/>
         <source>own</source>
         <translation>자체</translation>
     </message>
@@ -8780,7 +8976,7 @@
 <context>
     <name>WorkingSetPanel</name>
     <message>
-        <location filename="../ui/pages/training_versions.py" line="-534"/>
+        <location filename="../ui/pages/training_versions.py" line="-539"/>
         <source>Their own AI models</source>
         <translation>고객 자체 AI 모델</translation>
     </message>

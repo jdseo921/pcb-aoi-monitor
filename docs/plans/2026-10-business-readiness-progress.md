@@ -29,10 +29,16 @@ Jay's message of 2026-10-13 06:06 UTC asked for B1 and B2 of the brief, one stac
 file is in the repository, and the repository's ADR 0014 is the master samples record, so B1's record is ADR 0020 and
 B2's is ADR 0021; each says that Jay's record wins where it decides otherwise.
 
+Jay's message of 2026-10-13 14:22 UTC asked for B3 and B4, one stacked pull request each. The brief is still not in
+the repository, so each follows the words of that message: B3's record is ADR 0022 and B4's is ADR 0023, and each
+says that Jay's record wins where it decides otherwise. #406 and #407 were not merged, so B3 is stacked on #407 and
+B4 on B3.
+
 | Item | What it asked | Pull request | State |
 |---|---|---|---|
 | B1 (D1, F1, F2) | One person freezes, splits and locks a Trial version and trains from it, with no second-user label check and no agreement check; Trial is said wherever the version or its AI model is named; the go-live gate and the customer validation report refuse it, with Start the Checks | #406 | Open, for Jay's review |
 | B2 (D2, F2, F13) | A customer's first board model makes the customer's encrypted store in the same dialog; the recovery key is shown once, with Save to File…, Print… and a tick that cannot be skipped; key ids, Restore Key… and Shred Store… move under an Admin's Advanced tick | #407, stacked on #406 | Open, for Jay's review |
+| B3 (F6) | One sentence, computed from the constants in `aoi/core/datasets.py`, wherever the images a board model needs are stated; Home and Training list what the selected board model still needs, each line a count against its need with the one button that takes the step; a Trial list shows only what Trial needs, a Validated one adds the second-user checks and the agreement check | #408, stacked on #407 | Open, for Jay's review |
 
 Choices made in Phase B, each recorded in its ADR:
 
@@ -44,14 +50,20 @@ Choices made in Phase B, each recorded in its ADR:
   recommended option ("Never live") of the card put to Jay on 2026-10-13 06:15 UTC, not yet answered; the others were
   "Live, marked Trial" and "Live until Validated" (ADR 0020, decision 4). The first AI model trained from a Validated
   version after Trial ones goes live, as a board model's first does (ADR 0018).
-- `tests/regression/expected.json` is byte-identical in both pull requests: no verdict changes.
+- **What is missing counts per view (B3).** A dataset version is of one view, so 40 Top and 40 Side images do not
+  meet the 70. A board model needs 1 NG image or more, which nothing required before, and a Validated one a line of
+  its own for the agreement check's 100 images; a Trial list ends at a trained AI model, since a Trial AI model
+  never goes live. Each button waits only for what its own step checks, so images added after a freeze never grey
+  the version frozen before (ADR 0022).
+- `tests/regression/expected.json` is byte-identical in every pull request of Phase B: no verdict changes.
 
 Still open after Phase B:
 
-1. **Jay decides** the "Never live" card, and reviews and merges #406, then #407 (CLAUDE.md rule 6).
+1. **Jay decides** the "Never live" card, and reviews and merges #406, then #407, then #408 (CLAUDE.md rule
+   6).
 2. **Jay adds** the brief and the "Stage 1 for one person" ADR to the repository, under a free ADR number, and writes
    D1's exception into the Engineering standard's text about the label and agreement checks.
-3. **People:** the Korean strings both items add are drafts, many unfinished in `aoi_ko.ts`, for a native speaker who
+3. **People:** the Korean strings the items add are drafts, many unfinished in `aoi_ko.ts`, for a native speaker who
    knows SMT terms; Save to File… and Print… of a recovery key were not tried on the Windows station or a real printer.
 
 ## Phase A report, 2026-10-12

@@ -288,10 +288,13 @@ def _check_widget(where: str, win: QWidget, shot: np.ndarray, w: QWidget, seen: 
             w.item(r, c) for r in range(w.rowCount()) for c in range(w.columnCount())
         ]  # fmt: skip
         for it in (it for it in items if it is not None and it.text()):
-            region = _region(shot, win, w.viewport(), w.visualItemRect(it) & w.viewport().rect())
+            cell = w.visualItemRect(it)
+            region = _region(shot, win, w.viewport(), cell & w.viewport().rect())
             font = it.font() if it.data(Qt.ItemDataRole.FontRole) is not None else w.font()
             if QFontInfo(font).pointSizeF() < _least_pt():  # a font of its own, such as a coloured row's bold
                 out.append(f"{name} item '{it.text()}': {QFontInfo(font).pointSizeF():.1f} pt text")
+            if _line_cut(cell, w.viewport().rect(), font):
+                continue  # the edge cuts its glyphs: what shows of them is their anti-aliased edge, no text colour
             if not _locked_page(w, it):
                 out += _check_contrast(region, font, f"{name} item '{it.text()}'", seen)
             elif (measured := _contrast(region) if region is not None else None) and measured[2] != theme.TEXT_DISABLED:
@@ -401,6 +404,17 @@ def _lines(region: np.ndarray, shortest: int) -> list[np.ndarray]:
         a, b = min(i, j), max(i, j)
         runs[a : b + 1] = [[runs[a][0], runs[b][1]]]
     return [region[a : b + 1] for a, b in runs]
+
+
+def _line_cut(cell: QRect, port: QRect, font: QFont) -> bool:
+    """Whether the edge of a list's or table's viewport cuts through the line of text of a cell, centred in it, as it
+    does the last row in view: the glyphs show in part, and an em dash cut through, its top row of anti-aliased grey
+    alone in view, read 3.1:1 (B3, Training's import sheet in the presenter theme with Windows' fonts). The rows in view
+    whole show the same colours, and are read."""
+    line = QFontMetrics(font).height()
+    top = cell.top() + (cell.height() - line) // 2
+    seen = cell & port
+    return not seen.isEmpty() and (seen.top() > top or seen.bottom() < top + line - 1)
 
 
 def _locked_page(w: QWidget, it: QListWidgetItem | QTableWidgetItem) -> bool:

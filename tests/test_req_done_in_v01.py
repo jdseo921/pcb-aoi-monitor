@@ -196,7 +196,8 @@ def test_req_insp_016_six_step_cards_open_their_pages_and_show_status(
     of Home opening in every one of 11 openings after a warm-up."""
     win = _window(qtbot, trained_ctx)
     home = win.pages["Home"]
-    buttons = [b for b in home.findChildren(QPushButton) if b.text().startswith("Open ")]
+    cards = [b for b in home.findChildren(QPushButton) if not home.missing_list.isAncestorOf(b)]  # not What is missing
+    buttons = [b for b in cards if b.text().startswith("Open ")]
     assert len(buttons) == 6 == len(home.STEPS)
     for b, (_, name, _, target, _) in zip(buttons, home.STEPS, strict=True):
         win.navigate("Home")

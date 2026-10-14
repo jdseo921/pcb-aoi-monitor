@@ -18,6 +18,7 @@ from PySide6.QtCore import QRect, Qt
 from PySide6.QtWidgets import QLabel, QMessageBox
 from pytestqt.qtbot import QtBot
 
+from aoi.core import datasets
 from aoi.core.imaging import list_images
 from aoi.core.services import AppContext
 from aoi.ui.pages.compare import ComparePage
@@ -61,8 +62,9 @@ def test_req_set_004_a_long_reference_name_never_widens_the_window(
     file name of about 12 to 14 characters before its extension while fewer than 20 OK samples were imported (the line
     then also carried the 20-image tip), and of about 50 with 20 or more; from about 20 with 20 samples once a sample's
     file name carries its 36-character UUID (#245). The name is now cut at its end to the line's width, so the source
-    file's name shows first, and the tooltip shows the whole line. The tip has a line of its own, under 20 OK samples:
-    beside the counts it left the name no room at 1920 px, and the line read "reference: …"."""
+    file's name shows first, and the tooltip shows the whole line. The tip has a line of its own, shown while no view
+    has the OK images a board model needs (REQ-TRN-021): beside the counts it left the name no room at 1920 px, and the
+    line read "reference: …"."""
     stem = (LINE_NAME + "_PANEL" * 40)[:chars]
     _import(ctx, synthetic_dataset, tmp_path, stem, n)
     win = _window(qtbot, ctx, "Engineer")
@@ -83,7 +85,7 @@ def test_req_set_004_a_long_reference_name_never_widens_the_window(
     assert shown.startswith(head)
     cut = shown[len(head) :]
     assert cut.startswith(LINE_NAME), "the source file's name shows"
-    assert page.tip.isVisible() == (n < 20), "the 20-image tip has a line of its own"
+    assert page.tip.isVisible() == (n < datasets.OK_NEEDED), "the tip has a line of its own"
     if chars > len(LINE_NAME):  # too long for the line at any width a 1920 px window gives it
         assert cut != name
     if cut == name:

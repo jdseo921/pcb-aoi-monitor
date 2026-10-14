@@ -90,9 +90,12 @@ close, as the scripts begin; use **Switch User** to see the Operator view.
 
 ## With your own boards
 
-* Put at least **70 good boards** (more is better; 50 are locked for validation and never trained on) of one board
-  model, photographed with the same camera, distance and lighting, into `ok\`. Defective examples go into `ng\`
-  (optionally `ng\solder_bridge\` etc. to label the type).
+* How many boards. A board model needs at least 70 OK images of one view (20 to train, 50 held out to test) and 1 or
+  more NG images with every defect boxed; a Validated version also needs 100 images labelled OK or NG for the agreement
+  check. More is better; the 50 held out are locked for validation and never trained on. Home and Training's **What is
+  missing** count each against it.
+* Photograph them with the same camera, distance and lighting; good boards go into `ok\`, defective examples into
+  `ng\` (optionally `ng\solder_bridge\` etc. to label the type).
 * Train, then tune thresholds on **Compare** (Try other thresholds, Engineer and Admin) or in **Recipe Editor**, and
   validate on a separate test folder.
 

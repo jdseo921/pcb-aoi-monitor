@@ -57,8 +57,10 @@ progress, time left and Cancel once it passes 10 s.
 
 ## Empty state
 
-Samples table: "No samples for TBOX-A1 yet. Add at least 20 OK boards per view, then NG boards with their defect
-types." with [Add OK Images…]. Import sheet with no accepted file: "Nothing to import: every file was refused
+Samples table: "No samples for TBOX-A1 yet", then the one sentence on how many images a board model needs
+([what-is-missing.md](what-is-missing.md), REQ-TRN-021) and "Add them with Add OK Images… or Import Folder…", with
+[Import Folder…]. While no view of the board model has the OK images the sentence asks for, the same sentence is the
+tip under the sample counts. Import sheet with no accepted file: "Nothing to import: every file was refused
 (see the list)."
 
 ## Errors

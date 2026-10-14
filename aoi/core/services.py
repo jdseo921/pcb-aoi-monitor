@@ -286,6 +286,54 @@ class BoardStatus:
     drifted: tuple[str, ...] = ()  # the measures out of their control limits now, any view (REQ-INSP-019)
 
 
+# What is missing (REQ-TRN-021): each line's key in the order the list shows them. A Trial version needs no second-user
+# check and no agreement check, and its AI model never goes live (ADR 0020), so a Trial list holds only TRIAL_NEEDS.
+NEEDS_ORDER = (
+    "ok", "ng", "ng_boxed", "ng_checked", "ok_checked", "calibration", "agreement", "locked", "trained", "active",
+)  # fmt: skip
+TRIAL_NEEDS = ("ok", "ng", "ng_boxed", "locked", "trained")
+FIXES = (  # the one action each line's button takes, `Need.fix`
+    "add_ok", "add_ng", "draw_boxes", "show_unchecked", "draw_ok_checks", "agreement", "freeze", "split", "train",
+    "activate",
+)  # fmt: skip
+
+
+@dataclass(frozen=True)
+class Need:
+    """One line of What is missing: `have` of the `need` a board model needs (`key`, one of NEEDS_ORDER), the action
+    that fixes it (`fix`, one of FIXES), and `after`, for a line not done, the key of the first line not done that the
+    action needs done first, None when it can be taken now (`AppContext.missing`)."""
+
+    key: str
+    have: int
+    need: int
+    fix: str
+    after: str | None = None
+
+    @property
+    def done(self) -> bool:
+        return self.have >= self.need
+
+
+@dataclass(frozen=True)
+class Missing:
+    """What a board model still needs for an AI model of its own (`AppContext.missing`): the `needs` of a Trial or a
+    Validated version (`trial`) of one `view`; `version_uuid`, the frozen version Split and Lock or Start Training
+    takes, and `model_id`, the AI model version Activate makes active, where a line's fix needs one."""
+
+    board_model: str
+    view: str
+    trial: bool
+    needs: tuple[Need, ...]
+    version_uuid: str | None = None
+    model_id: int | None = None
+
+    @property
+    def left(self) -> int:
+        """How many lines are not done."""
+        return sum(not n.done for n in self.needs)
+
+
 @dataclass(frozen=True)
 class Actor:
     """A user as one value: name, role and UUID (None for a picked name with no users row). `set_user` replaces it as
@@ -2188,6 +2236,104 @@ class AppContext:
             drifted=self.drifted(board_model),
         )
 
+    def missing(self, board_model: str, trial: bool | None = None) -> Missing:
+        """What is missing (REQ-TRN-021): each thing a board model needs for an AI model, counted against the
+        requirement `datasets.needs` states, with the action that fixes it; writes nothing. A Validated version
+        (`trial` False) needs, in one view: OK images, NG images, every NG image with a box, every NG label and 10 % of
+        the OK labels checked by a second user, enough images labelled OK or NG for a calibration set and an agreement
+        check that reached its targets; then a locked validation set Training trains from, an AI model trained from a
+        Validated version and an active one. A Trial version (`trial` True) needs only the first three, the locked set
+        and an AI model trained from either kind (TRIAL_NEEDS). An AI model whose registry row cannot be read is not
+        counted: Training says to train again (AOI-TRN-012). With None, the newest version's kind, Validated before
+        the first. The view is that of the newest version of the kind whose validation set is locked and that Training
+        trains from (`_train_refusal`), else of the newest version of the kind, else the one with the most images
+        labelled OK or NG, Top first when equal. The counts of a line not reached yet are those the requirement names:
+        10 % of 70 OK labels is 7 checks to come.
+
+        Each line's `after` is the first line not met that its step waits for, as the step's own refusal does: Freeze
+        Dataset… waits for the images and, for a Validated version, the checks and the agreement check, and for 70 OK
+        images and every defect boxed, without which the version frozen is not one to split and train from; Split and
+        Lock Validation Set… waits for nothing, its version frozen already; Start Training for the locked set; Activate
+        AI Model for a trained one. So images added after a freeze do not grey the steps of a version frozen before."""
+        versions = self.db.datasets(board_model)  # newest first
+        if trial is None:
+            trial = bool(versions) and versions[0]["assurance"] == datasets.TRIAL
+        counts = self.db.dataset_counts(board_model)
+        locked_sha = self.db.split_sha256("validation")
+
+        def kind(v: dict[str, Any]) -> bool:  # a version this list counts: any for a Trial, else a Validated one
+            return trial or v["assurance"] != datasets.TRIAL
+
+        def trains(v: dict[str, Any]) -> bool:  # locked, and Training trains from it
+            return bool(counts.get(v["uuid"], {}).get("locked")) and self._train_refusal(v, "own") is None
+
+        def splits(v: dict[str, Any]) -> bool:  # not locked yet, and once split, Training trains from it
+            if counts.get(v["uuid"], {}).get("locked"):
+                return False
+            refused = self._train_refusal(v, "own")  # AOI-TRN-045 for a version not split whose store and uses fit
+            items = self.db.dataset_items(v["uuid"])
+            ok = sum(i["label"] == "OK" for i in items)  # a validation set takes VALIDATION_OK (AOI-TRN-022)
+            enough = ok >= datasets.VALIDATION_OK and datasets.train_ok(items, locked_sha) >= datasets.TRAIN_OK
+            return enough and refused is not None and refused.code == "AOI-TRN-045"
+
+        ours = [v for v in versions if kind(v)]
+        locked = next((v for v in ours if trains(v)), None)
+        samples = [s for s in self.db.samples(board_model) if s["label"] in ("OK", "NG")]
+        labelled = Counter(s["side"] for s in samples)
+        newest = locked or next(iter(ours), None)
+        view = newest["view"] if newest else max(VIEWS, key=lambda v: labelled[v])  # Top first among equals
+        status = self.label_check_status(board_model, view)
+        ng = [s for s in samples if s["side"] == view and s["label"] == "NG"]
+        boxed = self.db.current_boxes(board_model)
+        ok_need = max(status["ok"], datasets.OK_NEEDED)
+        found: dict[str, tuple[int, int, str]] = {
+            "ok": (status["ok"], datasets.OK_NEEDED, "add_ok"),
+            "ng": (status["ng"], datasets.NG_NEEDED, "add_ng"),
+            "ng_boxed": (sum(bool(boxed.get(s["uuid"])) for s in ng), max(len(ng), datasets.NG_NEEDED), "draw_boxes"),
+        }
+        drawn = 0 < status["ok_needed"] <= len(status["ok_drawn"])  # OK labels enough for the checks are drawn
+        found["ng_checked"] = (status["ng"] - len(status["ng_unchecked"]), found["ng_boxed"][1], "show_unchecked")
+        found["ok_checked"] = (
+            min(len(status["ok_checked"]), status["ok_needed"]),
+            -(-ok_need // 10),  # 10 % rounded up, as label_check_status counts it
+            "show_unchecked" if drawn else "draw_ok_checks",
+        )
+        check = self._newest_check(board_model, view)
+        found["calibration"] = (len(samples), labels.CALIBRATION_IMAGES, "add_ok")
+        found["agreement"] = (int(bool(check and check["agreed"])), 1, "agreement")
+        split = None if locked else next((v for v in ours if v["view"] == view and splits(v)), None)
+        found["locked"] = (int(locked is not None), 1, "split" if split else "freeze")
+
+        def validated(
+            m: dict[str, Any],
+        ) -> bool | None:  # None: its registry row cannot be read, AOI-TRN-012 on Training
+            try:
+                return self.trial_version(m) is None
+            except (ValueError, AttributeError):  # metrics not JSON, or not an object
+                return None
+
+        kinds = [(m, validated(m)) for m in self.db.models(board_model)]  # newest first
+        models = [m for m, v in kinds if v is not None and (trial or v)]  # one to train again is not counted
+        found["trained"] = (len(models), 1, "train")
+        active = self.db.active_model(board_model)
+        live = active is not None and validated(active) is True  # a Trial AI model never goes live
+        found["active"] = (int(live), 1, "activate")
+        first: dict[str, tuple[str, ...]] = {"ng_boxed": ("ng",), "ng_checked": ("ng_boxed",), "ok_checked": ("ok",)}
+        first["agreement"] = ("ng", "calibration")
+        frozen = ("ok", "ng", "ng_boxed") + (() if trial else ("ng_checked", "ok_checked", "agreement"))
+        first["locked"] = () if split else frozen
+        first["trained"], first["active"] = ("locked",), ("trained",)
+        keys = TRIAL_NEEDS if trial else NEEDS_ORDER
+        needs: list[Need] = []
+        for key in keys:
+            have, need, fix = found[key]
+            waits = () if have >= need else first.get(key, ())  # a line met waits for nothing
+            after = next((n.key for n in needs if n.key in waits and not n.done), None)
+            needs.append(Need(key, have, need, fix, after))
+        target = locked or split
+        model = None if live or not models else models[0]["id"]
+        return Missing(board_model, view, trial, tuple(needs), target["uuid"] if target else None, model)
+
     # --- what the screens change: each checks the role and appends an audit entry (REQ-USR-001, REQ-LOG-004) ---
     @requires("Engineer", QT_TRANSLATE_NOOP("Errors", "Creating a board model"))
     @transactional
@@ -2741,13 +2887,33 @@ class AppContext:
         if not found:
             none = QT_TRANSLATE_NOOP("Errors", "the workspace holds no such dataset version")
             raise AoiError("AOI-TRN-045", name=dataset_uuid, reason=none)
-        version, why = found[0], cast(Phrase | None, None)
+        version = found[0]
         customer, board_model = version["customer"], version["board_model"]
         self._refuse_unsafe_name(board_model)  # the run writes the board model's row and its folder
         self._refuse_case_variant(board_model)
         if not inside(self.settings.models_dir / board_model, self.settings.models_dir):  # named before the rule (#112)
             raise AoiError("AOI-TRN-019", name=board_model)
-        if (store := self.db.board_model_store(board_model)) is None:
+        if (refused := self._train_refusal(version, use)) is not None:
+            if refused.code == "AOI-TRN-046":
+                with self.db.transaction():
+                    after = {"use": use, "customer": customer, "code": "AOI-TRN-046"}
+                    reason = str(refused.params["reason"])
+                    self.audit("training.refused", "dataset", dataset_uuid, None, after, reason=reason)
+            raise refused
+        train = set(cast(dict[str, Any], self.db.validation_split(dataset_uuid))["train"])
+        items = [i for i in self.db.dataset_items(dataset_uuid) if i["uuid"] in train]
+        ok, ng = ([i for i in items if i["label"] == label] for label in ("OK", "NG"))
+        return version, ok, ng
+
+    def _train_refusal(self, version: dict[str, Any], use: str) -> AoiError | None:
+        """From the rows alone, writing nothing, the first reason after its name not to train from the frozen `version`
+        for `use`, in `_training_set`'s order: its board model in no customer's dataset store, in a shredded one or in
+        another customer's than the version names, or `use` not among the uses it allows (AOI-TRN-046); no locked
+        validation set, or fewer than datasets.TRAIN_OK OK files in its training set (AOI-TRN-045); a file of the
+        training set whose SHA-256 any split locked for validation (AOI-TRN-043). None when it may train: What is
+        missing asks it of each version (REQ-TRN-021)."""
+        customer, why = version["customer"], cast(Phrase | None, None)
+        if (store := self.db.board_model_store(version["board_model"])) is None:
             why = QT_TRANSLATE_NOOP("Errors", "its images are in no customer's dataset store; an Admin moves them in")
         elif store["shredded_at"]:
             why = QT_TRANSLATE_NOOP("Errors", "its dataset store was shredded on {date}")
@@ -2759,25 +2925,27 @@ class AppContext:
             why = QT_TRANSLATE_NOOP("Errors", "{customer} allowed only {uses}")
             why = why.fill(customer=customer, uses=", ".join(version["allowed_uses"]))
         if why is not None:
-            with self.db.transaction():
-                after = {"use": use, "customer": customer, "code": "AOI-TRN-046"}
-                self.audit("training.refused", "dataset", dataset_uuid, None, after, reason=str(why))
-            raise AoiError("AOI-TRN-046", name=version["name"], use=use, reason=why)
-        split = self.db.validation_split(dataset_uuid)
+            return AoiError("AOI-TRN-046", name=version["name"], use=use, reason=why)
+        split = self.db.validation_split(version["uuid"])
         train = set(split["train"]) if split else set()
-        items = [i for i in self.db.dataset_items(dataset_uuid) if i["uuid"] in train]
-        ok, ng = ([i for i in items if i["label"] == label] for label in ("OK", "NG"))
+        items = [i for i in self.db.dataset_items(version["uuid"]) if i["uuid"] in train]
+        ok = sum(i["label"] == "OK" for i in items)
         if split is None:
             why = QT_TRANSLATE_NOOP("Errors", "its validation set is not locked; training reads only a training set")
-        elif len(ok) < datasets.TRAIN_OK:
+        elif ok < datasets.TRAIN_OK:
             why = QT_TRANSLATE_NOOP("Errors", "its training set holds {ok} OK image(s), and training needs {least}")
-            why = why.fill(ok=len(ok), least=datasets.TRAIN_OK)
+            why = why.fill(ok=ok, least=datasets.TRAIN_OK)
         if why is not None:
-            raise AoiError("AOI-TRN-045", name=version["name"], reason=why)
+            return AoiError("AOI-TRN-045", name=version["name"], reason=why)
         locked = self.db.split_sha256("validation")  # by content, whatever its path or version (REQ-TRN-006)
         if held := [i for i in items if i["sha256"] in locked]:
-            raise AoiError("AOI-TRN-043", name=version["name"], count=len(held))
-        return version, ok, ng
+            return AoiError("AOI-TRN-043", name=version["name"], count=len(held))
+        return None
+
+    def train_ok_after_split(self, dataset_uuid: str) -> int:
+        """The OK files a frozen version's training set holds once split (`datasets.train_ok`): the Split sheet says
+        when they are fewer than the datasets.TRAIN_OK training needs (REQ-TRN-021)."""
+        return datasets.train_ok(self.db.dataset_items(dataset_uuid), self.db.split_sha256("validation"))
 
     def training_version(self, board_model: str) -> dict[str, Any]:
         """The newest frozen version of `board_model` whose validation set is locked: the one Training trains from

@@ -31,8 +31,10 @@ case.
 
 ## What Stage 1 needs from you
 
-1. Photos of good boards: at least 70 of one board model, from the same camera position. 50 of them are kept apart
-   to check the AI model and never used to train it; more is better.
+1. Photos of good (OK) and defective (NG) boards, from the same camera position. A board model needs at least 70 OK
+   images of one view (20 to train, 50 held out to test) and 1 or more NG images with every defect boxed; a Validated
+   version also needs 100 images labelled OK or NG for the agreement check. The 50 held out are kept apart to check the
+   AI model and never used to train it; more is better. The station lists what is still missing as the photos come in.
 2. Photos of boards with known defects: as many as you have, each with its defect type and, where you can, a box
    around each defect. Some are locked apart and only ever used to check the station; the rest help set its
    thresholds, so that it calls such defects NG.
