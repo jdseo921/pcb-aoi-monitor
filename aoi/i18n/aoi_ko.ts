@@ -1625,7 +1625,7 @@
     <message>
         <location filename="../ui/demo_workspace.py" line="+31"/>
         <location filename="../ui/errors.py" line="+163"/>
-        <location filename="../ui/main_window.py" line="+1102"/>
+        <location filename="../ui/main_window.py" line="+1109"/>
         <source>start-up</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4111,7 +4111,7 @@
 <context>
     <name>FirstRunGuide</name>
     <message>
-        <location filename="../ui/pages/guide.py" line="+43"/>
+        <location filename="../ui/pages/guide.py" line="+45"/>
         <source>Board model</source>
         <translation type="unfinished">보드 모델</translation>
     </message>
@@ -4126,12 +4126,12 @@
         <translation type="unfinished">학습</translation>
     </message>
     <message>
-        <location line="+62"/>
+        <location line="+61"/>
         <source>Show All Steps ›</source>
         <translation type="unfinished">모든 단계 보기 ›</translation>
     </message>
     <message>
-        <location line="+37"/>
+        <location line="+38"/>
         <source>as on the board or its drawing, such as TBOX-A1</source>
         <translation type="unfinished">보드나 도면에 적힌 그대로, 예: TBOX-A1</translation>
     </message>
@@ -4161,22 +4161,27 @@
         <translation type="unfinished">만들기  Enter</translation>
     </message>
     <message>
-        <location line="+23"/>
+        <location line="+25"/>
         <source>{action}  {key}</source>
         <translation type="unfinished">{action}  {key}</translation>
     </message>
     <message>
-        <location line="+7"/>
+        <location line="+6"/>
         <source>Save it on a USB drive that stays away from this station, not the one that brings the images, or print it.</source>
         <translation type="unfinished">이 스테이션과 떨어져 보관하는 USB 드라이브(이미지를 가져오는 드라이브 말고)에 저장하거나 인쇄하십시오.</translation>
     </message>
     <message>
-        <location line="+12"/>
+        <location line="+8"/>
+        <source>I Have Saved the Key</source>
+        <translation type="unfinished">키를 저장했습니다</translation>
+    </message>
+    <message>
+        <location line="+4"/>
         <source>I Have Saved the Key  Enter</source>
         <translation type="unfinished">키를 저장했습니다  Enter</translation>
     </message>
     <message>
-        <location line="+19"/>
+        <location line="+23"/>
         <source>Set up your first board model</source>
         <translation type="unfinished">첫 보드 모델 설정</translation>
     </message>
@@ -4191,12 +4196,18 @@
         <translation type="unfinished">✓ {name}을(를) 쓸 수 있습니다.</translation>
     </message>
     <message>
+        <location line="+2"/>
+        <source>Setting up a board model for a customer needs the {role} role.</source>
+        <translation type="unfinished">고객용 보드 모델을 설정하려면 {role} 역할이 필요합니다.</translation>
+    </message>
+    <message>
         <location line="+7"/>
+        <location line="+13"/>
         <source>Type a board model name and its customer</source>
         <translation type="unfinished">보드 모델 이름과 고객을 입력하십시오</translation>
     </message>
     <message>
-        <location line="+20"/>
+        <location line="+21"/>
         <location line="+38"/>
         <source>Board model {name} is set up for {customer}.</source>
         <translation type="unfinished">보드 모델 {name}이(가) {customer}용으로 설정되었습니다.</translation>
@@ -4364,7 +4375,7 @@
 <context>
     <name>HomePage</name>
     <message>
-        <location filename="../ui/main_window.py" line="-962"/>
+        <location filename="../ui/main_window.py" line="-969"/>
         <source>Upload samples</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4434,7 +4445,7 @@
         <translation type="unfinished">안내 보기 ›</translation>
     </message>
     <message>
-        <location line="+38"/>
+        <location line="+43"/>
         <source>Open to every role.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4449,7 +4460,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+25"/>
+        <location line="+26"/>
         <source>Ask an Admin to set up the first one.</source>
         <translation type="unfinished">관리자에게 첫 보드 모델 설정을 요청하십시오.</translation>
     </message>
@@ -4469,7 +4480,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-210"/>
+        <location line="-216"/>
         <source>Inspect</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4489,7 +4500,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+147"/>
+        <location line="+152"/>
         <source>Open {page} ›</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4499,7 +4510,7 @@
         <translation>학습 중 {percent} % · {left}</translation>
     </message>
     <message>
-        <location line="+47"/>
+        <location line="+48"/>
         <source>{ok} OK · {ng} NG uploaded</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5694,7 +5705,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+101"/>
+        <location line="+102"/>
         <source>Signed in as {user} ({role}), who signed in last on this station. Not you? Press Switch User.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6634,7 +6645,7 @@
 <context>
     <name>Page</name>
     <message>
-        <location filename="../ui/main_window.py" line="-919"/>
+        <location filename="../ui/main_window.py" line="-926"/>
         <source>Home</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6664,7 +6675,7 @@
         <translation>약 {minutes}분 남음</translation>
     </message>
     <message>
-        <location line="+154"/>
+        <location line="+155"/>
         <source>No board model yet</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6704,7 +6715,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+36"/>
+        <location line="+41"/>
         <source>Open {page} ›</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7386,12 +7397,12 @@
         <translation type="unfinished">✓ {file}에 저장됨</translation>
     </message>
     <message>
-        <location line="+14"/>
+        <location line="+15"/>
         <source>✓ Sent to {printer}</source>
         <translation type="unfinished">✓ {printer}(으)로 보냄</translation>
     </message>
     <message>
-        <location line="-81"/>
+        <location line="-82"/>
         <source>Save the key to a file or print it first</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7414,7 +7425,7 @@
 <context>
     <name>RecoveryKeyDialog</name>
     <message>
-        <location line="+38"/>
+        <location line="+40"/>
         <source>Done</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7510,7 +7521,7 @@
 <context>
     <name>Role</name>
     <message>
-        <location filename="../ui/pages/base.py" line="-482"/>
+        <location filename="../ui/pages/base.py" line="-488"/>
         <source>Operator</source>
         <translation type="unfinished"></translation>
     </message>

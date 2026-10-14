@@ -190,7 +190,9 @@ class RecoveryKey(QWidget):
             self.error(e)
             return
         self.document().print_(printer)
-        self._kept_away(self.tr("✓ Sent to {printer}").format(printer=printer.printerName()))
+        self._kept_away(
+            self.tr("✓ Sent to {printer}").format(printer=printer.printerName() or printer.outputFileName())
+        )
 
 
 class RecoveryKeyDialog(QDialog):

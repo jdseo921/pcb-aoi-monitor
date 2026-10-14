@@ -713,21 +713,27 @@ an image aligned and a map for each of them, and after it the time an image judg
 press never falls and stays under 100 until the press ends. `tests/test_guide_train.py` runs the press on 80 OK and 20
 NG synthetic images, which proves the code path only.
 
-**The first-run guide on Home** (REQ-TRN-021, B5; docs/sketches/first-run-guide.md, Q66, Q67, Q76). With no board
-model in the header, `HomePage` shows `FirstRunGuide` (`aoi/ui/pages/guide.py`) in place of its cards, its empty state
-and What is missing, for a role that may `ensure_board_model`; an Operator gets Home's empty state, which says to ask
-an Admin. Its steps line reads "● 1 Board model ─── ○ 2 Images ─── ○ 3 Train"; screen 1 is built, and screens 2 and 3
-follow. Screen 1 takes the board model's name, checked as it is typed by `board_model_name_refusal` (the New board
-model dialog's line), and its customer, offered from the stores by a completer whose Enter picks and makes nothing
-(`_PickOnly`). Create, by Enter in either field, calls `create_customer_board_model` (an Admin's; for an Engineer the
-screen is greyed with `RoleGates.why`). For a customer's first board model it shows the store's recovery key on the
-screen itself, in `RecoveryKey(tick=False)`: the line beside Save to File… and Print… says where the key went, and
-I Have Saved the Key waits for `saved`. Until then `MainWindow.hold_frame` greys the sidebar and the header, a press on
-them says why (`_HeldPress`), `navigate` refuses every page but Home and `closeEvent` is ignored, as the New board
-model dialog's modal key step holds the window behind it (ADR 0021, decision 3). A refusal, of Create or of the key's
-save or print, is said under the control that raised it, with its code, and opens no dialog. Show All Steps › and
-Show the Guide › switch Home between the guide and the cards for the board model shown, kept in `cards_for` while the
-app runs. `tests/test_first_run_guide.py` drives screen 1 for each role.
+**The first-run guide on Home** (REQ-TRN-021, B5; docs/sketches/first-run-guide.md, Q66, Q67, Q76). With no board model
+in the header, `HomePage` shows `FirstRunGuide` (`aoi/ui/pages/guide.py`) in place of its cards, its empty state and
+What is missing, for a role that may `ensure_board_model`; an Operator gets Home's empty state, which says to ask an
+Admin. Its steps line reads "● 1 Board model ─── ○ 2 Images ─── ○ 3 Train"; screen 1 is built, and screens 2 and 3
+follow. Screen 1 takes the board model's name, checked as it is typed by `board_model_name_refusal` (the New board model
+dialog's line), and its customer, offered from the stores by a completer whose Enter picks and makes nothing
+(`_PickOnly`; with no row picked, as when the whole name was typed, Enter is Create's). Create, by Enter in either
+field, calls `create_customer_board_model` (an Admin's; for an Engineer the screen is greyed, `RoleGates.gate` taking
+the guide's own role line, "Setting up a board model for a customer needs the Admin role."). While Create is off, a
+press on it or Enter says why on the status bar, and Enter moves to the field still to fill. For a customer's first
+board model it shows the store's recovery key on the screen itself, in `RecoveryKey(tick=False)`: the line beside Save
+to File… and Print… says where the key went, and I Have Saved the Key waits for `saved`. Until then
+`MainWindow.hold_frame` greys the sidebar and the header, a press on them, or on any of the header's controls, which
+take a press for themselves, says why (`_HeldPress`), `navigate` refuses every page but Home and `closeEvent` is
+ignored, as the New board model dialog's modal key step holds the window behind it (ADR 0021, decision 3). A refusal, of
+Create or of the key's save or print, is said under the control that raised it, with its code, and opens no dialog; a
+save or print that works, and a sign-in, take it away. F1 lists the key step's keys (`Page.key_actions`). Show All Steps
+› and Show the Guide › switch Home between the guide and what Home shows without it, its empty state with + New board
+model while there is no board model, for the board model shown, kept in `cards_for` until the next sign-in. The name
+field takes the focus at a start too, before the window is shown. `tests/test_first_run_guide.py` drives screen 1 for
+each role.
 
 **Next AI step (not in this draft):** once enough labelled NG crops exist per type, add a small supervised
 classifier that names the defect (Solder Bridge, Tombstone, …) for each flagged region. Today a region is named by

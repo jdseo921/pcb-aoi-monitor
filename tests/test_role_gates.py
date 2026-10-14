@@ -242,6 +242,7 @@ def test_req_usr_001_no_screen_hides_a_control_for_a_role() -> None:
         "self._badges[title].setVisible(allowed)": "a badge, not a control: a greyed sidebar entry names its roles",
         "self.exit_presenter.setVisible(theme.presenter() and role in SettingsPage.roles)": "the presenter theme",
         "self.sheet.setVisible(engineer and self._asking)": "Save to Recipe's sheet, open once an Engineer pressed it",
+        "self.role_line.setVisible(not allowed)": "a sentence, not a control: the role the guide's screen 1 needs",
     }
     found = []
     for path in sorted((ROOT / "aoi" / "ui").rglob("*.py")):

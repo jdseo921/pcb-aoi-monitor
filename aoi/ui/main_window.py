@@ -199,7 +199,7 @@ class HomePage(Page):
         self.guide.holding_changed.connect(shell.hold_frame)
         self.guide.made.connect(shell.select_board_model)
         self.guide.cards_wanted.connect(lambda: self._show_cards(True))
-        self.cards_for: set[str | None] = set()  # the board models Show All Steps › was pressed for, while the app runs
+        self.cards_for: set[str | None] = set()  # the board models Show All Steps › was pressed for, until a sign-in
         lay.addWidget(self.guide)
         self.btn_guide = button(self.tr("Show the Guide ›"), slot=lambda: self._show_cards(False))
         lay.addWidget(self.btn_guide, 0, Qt.AlignmentFlag.AlignRight)
@@ -218,12 +218,17 @@ class HomePage(Page):
         return (board_model is None and self.gates.may("ensure_board_model")) or self.guide.holding()
 
     def on_user_changed(self) -> None:
-        """A sign-in: what the user before typed on the guide goes, unless its recovery key shows."""
+        """A sign-in: what the user before typed on the guide goes, unless its recovery key shows, and the guide is back
+        where the user before pressed Show All Steps ›."""
+        self.cards_for.clear()
         if not self.guide.holding():
             self.guide.reset()
 
+    def key_actions(self) -> list[QAction]:
+        return [*super().key_actions(), *(self.guide.keys() if self.guide.isVisibleTo(self) else [])]
+
     def _show_cards(self, cards: bool) -> None:
-        """Show All Steps › (`cards`) or Show the Guide ›, for the board model shown, kept while the app runs."""
+        """Show All Steps › (`cards`) or Show the Guide ›, for the board model shown, kept until a sign-in."""
         if cards:
             self.cards_for.add(self.board_model)
         else:
@@ -290,8 +295,9 @@ class HomePage(Page):
             self.missing_list.show_for(None)
             self.guide.show_for(bm)
             focus = QApplication.focusWidget()
-            if self.guide.form.isVisible() and (focus is None or not self.guide.isAncestorOf(focus)):
-                self.guide.name.setFocus()  # screen 1 opens on the name, typed at once (sketch)
+            if not self.guide.form.isHidden() and (focus is None or not self.guide.isAncestorOf(focus)):
+                self.guide.name.setFocus()  # screen 1 opens on the name, typed at once (sketch), at a start too, when
+                # the window is not shown yet: Qt gives the focus to the name as the window opens
             return
         self.cards.setVisible(bool(bm))
         self.missing_list.show_for(bm or None)
@@ -538,9 +544,10 @@ class MainWindow(QMainWindow):
                 self._badges[cls.title] = self._badge(it, cls.badge, cls.badge_tip)
         self.nav.currentItemChanged.connect(self._on_nav)
         self.nav.viewport().installEventFilter(_GreyedEntryPress(self))
-        held = _HeldPress(self)  # a press on the sidebar or the header while the guide holds the frame says why
-        self.nav.viewport().installEventFilter(held)
-        self.header.installEventFilter(held)
+        held = _HeldPress(self)  # a press on the sidebar or the header while the guide holds the frame says why: on
+        # each of the header's controls too, as a greyed button takes a press for itself and never passes it on
+        for w in (self.nav.viewport(), self.header, *self.header.findChildren(QWidget)):
+            w.installEventFilter(held)
         # Ctrl+1 to Ctrl+9 open the sidebar's pages in its order, from any page, and F1 lists the keys of the page
         # shown (Engineering standard, "Short paths": one key to any page; "Input": every action by keyboard)
         self.page_keys: dict[str, str] = {}
@@ -903,7 +910,7 @@ class MainWindow(QMainWindow):
         lines: list[str] = []
         if isinstance(cur, Page):
             lines.append(self.tr("On {page}:").format(page=page_text(cur.title)))
-            for a in cur.actions():
+            for a in cur.key_actions():
                 key = a.shortcut().toString(QKeySequence.SequenceFormat.NativeText)
                 if key and a.text():
                     name = a.text().replace("▶", "").replace("■", "").strip()

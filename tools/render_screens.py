@@ -555,13 +555,14 @@ def render_dialogs(win: Any, out: Path) -> dict[str, Path]:
     return files
 
 
-def render_guide(win: Any, out: Path) -> dict[str, Path]:
-    """Home's first-run guide (B5) with no board model in the header, as a workspace with none shows it (GUIDE_SHOTS):
-    screen 1 with NEW_BOARD_MODEL and NEW_CUSTOMER typed by the Admin, the recovery key Create would show for
-    `pinned_store`, and screen 1 greyed for the Engineer; then the header's board model back."""
+def guide_steps(win: Any) -> Iterator[str]:
+    """Home's first-run guide (B5) with no board model in the header, as a workspace with none shows it, in each state
+    of GUIDE_SHOTS in turn, its name yielded with the window laid out: screen 1 with NEW_BOARD_MODEL and NEW_CUSTOMER
+    typed by the Admin, the recovery key Create would show for `pinned_store`, and screen 1 greyed for the Engineer;
+    then the header's board model back. For the screenshots and the size walk alike."""
     from PySide6.QtWidgets import QApplication
 
-    guide, files = win.pages["Home"].guide, {}
+    guide = win.pages["Home"].guide
     win.bm_combo.setCurrentIndex(-1)
     try:
         for name, (role, step) in GUIDE_SHOTS.items():
@@ -577,14 +578,21 @@ def render_guide(win: Any, out: Path) -> dict[str, Path]:
             if (focus := QApplication.focusWidget()) is not None:
                 focus.clearFocus()  # no caret, which blinks, in the image
             settle()
-            files[name] = out / f"{name}.png"
-            assert win.grab().save(str(files[name])), files[name]
+            yield name
             if step == "key":  # forgotten unsaved, as no Admin may: a screenshot's key is pinned, of no store
                 guide.recovery.clear()
                 guide.reset()
                 guide.holding_changed.emit(False)
     finally:
         win.bm_combo.setCurrentText(BOARD_MODEL)
+
+
+def render_guide(win: Any, out: Path) -> dict[str, Path]:
+    """The first-run guide's screenshots (GUIDE_SHOTS), in the states `guide_steps` leaves it in."""
+    files = {}
+    for name in guide_steps(win):
+        files[name] = out / f"{name}.png"
+        assert win.grab().save(str(files[name])), files[name]
     return files
 
 

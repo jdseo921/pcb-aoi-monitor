@@ -1,7 +1,7 @@
 """The first-run guide on Home (REQ-TRN-021; B5 of the 2026-10 business-readiness brief, D4;
 docs/sketches/first-run-guide.md): one person sets a board model up in three screens, Board model, Images and Train,
 then inspects on Inspection. The guide is a part of Home, not a window of its own: the header and the sidebar stay, and
-Show All Steps › puts Home's six cards back.
+Show All Steps › shows Home without it: its six cards, or with no board model yet its empty state.
 
 Screen 1 takes the board model's name, checked as it is typed by the rule every new board model meets (ADR 0023), and
 its customer, whose encrypted dataset store the board model goes in (`AppContext.create_customer_board_model`, ADR
@@ -14,6 +14,7 @@ needs, as a customer's store is an Admin's; an Operator, who sets nothing up, ge
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
 from PySide6.QtCore import QEvent, QObject, QStringListModel, Qt, Signal
@@ -30,10 +31,11 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from ...core.services import REQUIRED_ROLE
 from ...errors import AoiError
 from .. import theme
 from ..errors import phrase_text
-from .base import QT_TRANSLATE_NOOP, button, size_class
+from .base import QT_TRANSLATE_NOOP, button, role_text, size_class
 from .recovery_key import RecoveryKey
 
 if TYPE_CHECKING:
@@ -49,8 +51,9 @@ ENTER = (Qt.Key.Key_Return, Qt.Key.Key_Enter)
 
 
 class _PickOnly(QObject):
-    """Enter on the customers' list picks the name and does nothing else: Qt's completer passes the key on to the field,
-    whose Enter is Create's, so picking a customer made the board model at once."""
+    """Enter on a row picked in the customers' list picks the name and does nothing else: Qt's completer passes the key
+    on to the field, whose Enter is Create's, so picking a customer made the board model at once. With no row picked,
+    as when the whole name was typed, Enter is the field's: Create."""
 
     def __init__(self, field: QLineEdit, popup: QAbstractItemView) -> None:
         super().__init__(field)
@@ -59,19 +62,17 @@ class _PickOnly(QObject):
 
     def eventFilter(self, watched: QObject, e: QEvent) -> bool:  # noqa: N802 (Qt's name)
         if isinstance(e, QKeyEvent) and e.type() == QEvent.Type.KeyPress and e.key() in ENTER:
-            popup = watched if isinstance(watched, QAbstractItemView) else None
-            if popup is not None and popup.currentIndex().isValid():
-                self.field.setText(str(popup.currentIndex().data()))
-            if isinstance(watched, QWidget):
+            if isinstance(watched, QAbstractItemView) and watched.currentIndex().isValid():
+                self.field.setText(str(watched.currentIndex().data()))
                 watched.hide()
-            return True
+                return True
         return False
 
 
 class _PressSays(QObject):
     """A press on `control` while it is off says `why()` on the status bar: a touch screen shows no tooltip."""
 
-    def __init__(self, control: QWidget, why: Any, status: Any) -> None:
+    def __init__(self, control: QWidget, why: Callable[[], str], status: Callable[[str], object]) -> None:
         super().__init__(control)
         self.control, self.why, self.status = control, why, status
         control.installEventFilter(self)
@@ -105,6 +106,7 @@ class FirstRunGuide(QFrame):
         self.heading.setWordWrap(True)
         top.addWidget(self.heading, 1)
         self.btn_cards = button(self.tr("Show All Steps ›"), slot=self.cards_wanted.emit)
+        _PressSays(self.btn_cards, page.shell.held_text, self.status)  # off only while the frame is held
         top.addWidget(self.btn_cards, 0, Qt.AlignmentFlag.AlignTop)
         lay.addLayout(top)
         self.steps = QLabel()  # ● the screen shown, ✓ a screen done, ○ one to come
@@ -168,6 +170,7 @@ class FirstRunGuide(QFrame):
         self.refused.hide()
         lay.addWidget(self.refused)
         self.btn_create = size_class(button(self.tr("Create  Enter"), "primary", self.make_board_model), "T")
+        _PressSays(self.btn_create, self._not_ready, self.status)  # a role's refusal is RoleGates' to say
         row = QHBoxLayout()
         row.addStretch(1)
         row.addWidget(self.btn_create)
@@ -185,13 +188,13 @@ class FirstRunGuide(QFrame):
         self.key_note.setWordWrap(True)
         self.recovery = RecoveryKey(self.ctx, self._key_refused, self.status, tick=False)
         self.recovery.note.hide()  # the guide's own sentence, which names the customer, stands above it
-        self.recovery.changed.connect(self._sync)
+        self.recovery.changed.connect(self._key_kept_away)
         for b, key, slot in (
             (self.recovery.btn_save, "Ctrl+S", self.recovery.save_file),
             (self.recovery.btn_print, "Ctrl+P", self.recovery.print_sheet),
         ):
+            shortcut = QAction(b.text(), self.key_step)  # its text for F1's list (`keys`)
             b.setText(self.tr("{action}  {key}").format(action=b.text(), key=key))
-            shortcut = QAction(self.key_step)
             shortcut.setShortcut(QKeySequence(key))
             shortcut.triggered.connect(slot)
             self.key_step.addAction(shortcut)  # while the key step shows
@@ -205,8 +208,8 @@ class FirstRunGuide(QFrame):
         self.key_refused = QLabel()  # a save or print refused (AOI-LOG-002): its code, what happened and what to do
         self.key_refused.setWordWrap(True)
         self.key_refused.hide()
-        kept = QAction(self.key_step)
-        kept.setShortcuts([QKeySequence("Return"), QKeySequence("Enter")])  # the main keys' and the number pad's
+        kept = QAction(self.tr("I Have Saved the Key"), self.key_step)
+        kept.setShortcuts([QKeySequence("Enter"), QKeySequence("Return")])  # F1 names the first, "Enter", as the button
         kept.triggered.connect(self.key_kept)
         self.key_step.addAction(kept)
         self.btn_kept = size_class(button(self.tr("I Have Saved the Key  Enter"), "primary", self.key_kept), "T")
@@ -218,6 +221,10 @@ class FirstRunGuide(QFrame):
         row.addWidget(self.btn_kept)
         lay.addLayout(row)
         self.key_step.hide()
+
+    def keys(self) -> list[QAction]:
+        """The keys of the screen shown, for F1's list of Home's keys."""
+        return self.key_step.actions() if not self.key_step.isHidden() else []
 
     def holding(self) -> bool:
         """The recovery key shows and I Have Saved the Key was not pressed: the frame holds still."""
@@ -261,21 +268,37 @@ class FirstRunGuide(QFrame):
             self.name_line.setText(" ".join([refused.code, phrase_text(refused.what), phrase_text(refused.action)]))
         else:
             self.name_line.setText(self.tr("✓ {name} can be used.").format(name=name) if name else "")
-        self.name_line.setVisible(bool(name) and allowed)
+        self.name_line.setVisible(bool(name))  # empty for a role that may not type one: a sign-in clears the fields
+        role = self.tr("Setting up a board model for a customer needs the {role} role.")  # the guide's words (sketch)
+        role = role.format(role=role_text(REQUIRED_ROLE[STORE_CALL]))
         for field in (self.name, self.customer):
-            self.page.gates.gate(field, STORE_CALL)
-        self.role_line.setText(self.page.gates.why.get(self.name, ""))
+            self.page.gates.gate(field, STORE_CALL, why=role)
+        self.role_line.setText(role)
         self.role_line.setVisible(not allowed)
         ready = bool(name) and bool(customer) and refused is None
         self.page.gates.own_tip(self.btn_create, "" if ready else self.tr("Type a board model name and its customer"))
-        self.page.gates.gate(self.btn_create, STORE_CALL, ready)
+        self.page.gates.gate(self.btn_create, STORE_CALL, ready, why=role)
         self.btn_kept.setEnabled(self.recovery.saved)
+
+    def _not_ready(self) -> str:
+        """Why Create is off, said on a press on it or on Enter: the role it needs, the name's refusal with its code, or
+        what is still to type."""
+        if self.btn_create in self.page.gates.why:
+            return self.page.gates.why[self.btn_create]
+        name = self.name.text().strip()
+        refused = self.ctx.board_model_name_refusal(name) if name else None
+        if refused is not None:
+            return " ".join([refused.code, phrase_text(refused.what), phrase_text(refused.action)])
+        return self.tr("Type a board model name and its customer")
 
     def make_board_model(self) -> None:
         """Make the board model in the customer's store, the store first for a customer with none; then the new store's
         recovery key, or, for a customer with a store, the board model at once. A refusal is said under Create."""
         name, customer = self.name.text().strip(), self.customer.text().strip()
-        if not self.btn_create.isEnabled() or not name or not customer:
+        if not self.btn_create.isEnabled() or not name or not customer:  # Enter in a field: why, and the field to fix
+            self.status(self._not_ready())
+            refused = bool(name) and self.ctx.board_model_name_refusal(name) is not None
+            (self.customer if name and not refused else self.name).setFocus()
             return
         try:
             made = self.ctx.create_customer_board_model(name, customer)
@@ -329,6 +352,13 @@ class FirstRunGuide(QFrame):
         self.status(said.format(name=board_model, customer=customer))
         self.made.emit(board_model)
 
+    def _key_kept_away(self) -> None:
+        """The key saved or printed: a refusal of a save or print before it is past."""
+        if self.recovery.saved:
+            self.key_refused.clear()
+            self.key_refused.hide()
+        self._sync()
+
     def _key_refused(self, e: AoiError) -> None:
         """A save or print of the key refused (AOI-LOG-002), said under its buttons, logged and alarmed."""
         report = self.ctx.report_error(e, "Home")
@@ -336,10 +366,14 @@ class FirstRunGuide(QFrame):
         self.key_refused.show()
 
     def reset(self) -> None:
-        """Screen 1's fields empty again, for the next board model or the next user signed in."""
+        """Screen 1's fields empty again, for the next board model or the next user signed in, with no refusal left from
+        what was typed or saved before."""
         for field in (self.name, self.customer):
             field.blockSignals(True)
             field.clear()
             field.blockSignals(False)
+        for line in (self.refused, self.key_refused):
+            line.clear()
+            line.hide()
         self.made_board_model = self.made_customer = ""
         self._sync()
