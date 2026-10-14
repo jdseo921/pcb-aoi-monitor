@@ -489,12 +489,12 @@ image changed since the freeze stops the run with AOI-TRN-045 naming the file. T
 trained from. Freeze a version and lock its validation set on the Datasets tab (section 3).
 
 **While a run goes on**, the line under the bar names what it does now, with its percent and the time left: "Aligning
-image 12 of 53", "Building the Golden board: step 3 of 16", "Training epoch 23 of 60", "Calibrating: map 4 of 16", then
-"Saving AI model v1.3". The time left reads "estimating…" for the run's first image only, then "about 6 min left", or
-"less than a minute left"; the line and the bar change at least every 10 s. The run goes on whichever page you open: the
-header shows "Training 38 % · about 6 min left" on every page, and Home's Train AI model card "Training running 38 % · about
-6 min left"; press the header's button to come back to Training. Start Training stays off while a run goes on, one run
-at a time (AOI-TRN-047).
+image 12 of 53", "Building the Golden board: step 3 of 16", "Training the AI model: round 23 of 60", "Setting the
+threshold: image 4 of 16", then "Saving AI model v1.3". The time left reads "estimating…" for the run's first image
+only, then "about 6 min left", or "less than a minute left"; the line and the bar change at least every 10 s. The run
+goes on whichever page you open: the header shows "Training 38 % · about 6 min left" on every page, and Home's Train AI
+model card "Training running 38 % · about 6 min left"; press the header's button to come back to Training. Start
+Training stays off while a run goes on, one run at a time (AOI-TRN-047).
 
 **Cancel** ends a training run without saving anything: no AI model version, golden board or audit entry; the active AI
 model stays. The run stops after the image, step or map in hand, within seconds, or as it saves, before the new AI model

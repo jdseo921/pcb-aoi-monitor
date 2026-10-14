@@ -40,7 +40,7 @@
 1. **Training**을 누릅니다. **Self-training** 아래에 **Dataset version** DS-DEMOTBOXA1-R1-TOP-v1과
    "Validation set locked ✓ 50 OK / 11 NG · training set 40 OK, 3 NG" 줄이 있습니다. **Epochs**는 60,
    **Network input size**는 256 그대로 둡니다.
-2. **Start Training**을 누릅니다. 진행 막대가 움직이고 아래 줄에 예를 들어 "Training epoch 7 of 60 · 15 % · about
+2. **Start Training**을 누릅니다. 진행 막대가 움직이고 아래 줄에 예를 들어 "Training the AI model: round 7 of 60 · 15 % · about
    1 min left"가 나옵니다. 우리 4코어 시험 PC에서 98초 걸렸습니다.
 
 > "양품 보드 사진 40장으로 양품이 어떻게 생겼는지 배웁니다. NG 사진 3장은 임계값 위치를 정하는 데만 씁니다.

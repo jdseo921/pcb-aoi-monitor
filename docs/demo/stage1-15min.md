@@ -35,8 +35,8 @@ Speak about missed defects and false calls; do not lead with **Accuracy**.
 1. Click **Training**. Under **Self-training**: **Dataset version** DS-DEMOTBOXA1-R1-TOP-v1, and the line
    "Validation set locked ✓ 50 OK / 11 NG · training set 40 OK, 3 NG". Leave **Epochs** at 60 and **Network input
    size** at 256.
-2. Press **Start Training**. The bar moves and the line under it reads, for example, "Training epoch 7 of 60 · 15 % ·
-   about 1 min left". On our 4-core test PC it took 98 s.
+2. Press **Start Training**. The bar moves and the line under it reads, for example, "Training the AI model: round 7
+   of 60 · 15 % · about 1 min left". On our 4-core test PC it took 98 s.
 
 > "It learns what a good board looks like from 40 photos of good boards. The 3 NG photos only set where the threshold
 > sits. Training runs in the background: the line keeps inspecting meanwhile."

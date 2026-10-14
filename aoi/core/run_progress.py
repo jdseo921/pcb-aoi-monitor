@@ -76,3 +76,64 @@ class Eta:
         if left is not None and gone + left > 0:
             self.shown = max(self.shown, min(99, int(100 * gone / (gone + left))))
         return RunProgress(self.shown, left, phase, note)
+
+
+class Press:
+    """The one progress line of a press that runs several parts in a row as one run: the first-run guide's Train (B5,
+    docs/sketches/first-run-guide.md), whose percent and time left are those of the whole press. Its short parts, such
+    as keeping the validation images apart, are not timed; training reports its own time left (`Eta`), which a report
+    of it carries on (`training`); each of the `judged` images judged after it, to validate the AI model and in the
+    shift check, takes as long as an image aligned (`align`, the source of training's phase) and a map made to set the
+    threshold (`threshold`) took in training, each the mean between two of its reports of that phase, until an image
+    judged is timed (`judged_one`). An image aligned stands in for a map until training has made two."""
+
+    def __init__(self, judged: int, align: str, threshold: str) -> None:
+        self.judged, self.done = judged, 0
+        self.align, self.threshold = align, threshold
+        self.gaps: dict[str, list[float]] = {align: [], threshold: []}  # seconds between two reports of each phase
+        self.seen: dict[str, float] = {}  # when training last reported each phase
+        self.timed: list[float] = []  # seconds per image judged
+        self.shown = 0  # the percent last reported
+        self.started = self.last = clock()
+
+    def per_image(self) -> float | None:
+        """The seconds an image judged takes, as timed, else as estimated from training; None before either."""
+        if self.timed:
+            return sum(self.timed) / len(self.timed)
+        align, threshold = self.gaps[self.align], self.gaps[self.threshold] or self.gaps[self.align]
+        return sum(align) / len(align) + sum(threshold) / len(threshold) if align else None
+
+    def _judging_left(self) -> float | None:
+        each = self.per_image()
+        return None if each is None else each * max(0, self.judged - self.done)
+
+    def step(self, phase: Phrase) -> RunProgress:
+        """A short part begins: reported with what follows it, the images to judge, as the time left."""
+        self.last = clock()
+        return self._report(phase, self._judging_left())
+
+    def training(self, p: RunProgress) -> RunProgress:
+        """Training's own report, carried on with its time left and the images to judge after it."""
+        source, now = getattr(p.phase, "source", str(p.phase)), clock()
+        if source in self.gaps and source in self.seen:
+            self.gaps[source].append(now - self.seen[source])
+        self.seen[source] = self.last = now
+        after = self._judging_left()
+        left = None if p.left_s is None or after is None else p.left_s + after
+        return self._report(p.phase, left, p.note)
+
+    def judged_one(self, phase: Phrase) -> RunProgress:
+        """An image judged: timed since the report before, and reported with those left."""
+        now = clock()
+        self.timed.append(now - self.last)
+        self.done += 1
+        self.last = now
+        return self._report(phase, self._judging_left())
+
+    def _report(self, phase: Phrase, left: float | None, note: str = "") -> RunProgress:
+        """The press's report now, as `Eta.report` gives a run's: below 100 until it ends, never below the percent
+        reported before."""
+        gone = clock() - self.started
+        if left is not None and gone + left > 0:
+            self.shown = max(self.shown, min(99, int(100 * gone / (gone + left))))
+        return RunProgress(self.shown, left, phase, note)

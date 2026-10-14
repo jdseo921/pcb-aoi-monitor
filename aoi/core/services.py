@@ -114,9 +114,15 @@ ALIGNING = QT_TRANSLATE_NOOP("Training", "Aligning {count} images to the referen
 READING = QT_TRANSLATE_NOOP("Training", "Aligning image {n} of {count}")
 BAND = QT_TRANSLATE_NOOP("Training", "Golden board, part {band} of {bands}: image {n} of {count}")
 MEDIAN = QT_TRANSLATE_NOOP("Training", "Building the Golden board: step {n} of {count}")
-EPOCH = QT_TRANSLATE_NOOP("Training", "Training epoch {epoch} of {epochs}")
-CALIBRATING = QT_TRANSLATE_NOOP("Training", "Calibrating: map {n} of {count}")
+EPOCH = QT_TRANSLATE_NOOP("Training", "Training the AI model: round {epoch} of {epochs}")  # first-run guide, Q79
+CALIBRATING = QT_TRANSLATE_NOOP("Training", "Setting the threshold: image {n} of {count}")
 SAVING = QT_TRANSLATE_NOOP("Training", "Saving AI model {version}")
+# what the first-run guide's Train does beside training, as its one progress line names it (B5, REQ-TRN-021)
+KEEPING = QT_TRANSLATE_NOOP("Training", "Keeping {ok} OK and {ng} NG images apart for validation")
+ACTIVATING = QT_TRANSLATE_NOOP("Training", "Making AI model {version} active")
+VALIDATING = QT_TRANSLATE_NOOP("Training", "Validating AI model {version}: image {n} of {count}")
+SHIFT_CHECKING = QT_TRANSLATE_NOOP("Training", "Shift check: master sample {n} of {count}")
+GUIDE_PARTS = ("keep", "train", "activate", "validate", "shift_check")  # Train's parts, in order
 # Why an AI model version was not made active (AOI-TRN-048, REQ-TRN-010), as phrases shown translated (#198)
 NO_EARLIER = QT_TRANSLATE_NOOP("Errors", "no earlier version of this board model was active")
 NO_GOLDEN = QT_TRANSLATE_NOOP("Errors", "its Golden board {file} cannot be read ({error})")
@@ -848,11 +854,18 @@ class AppContext:
         (REQ-TRN-008): `train` on the pool, its latest report kept as `training_progress` for the header and Home,
         Cancel through the job's `cancel()`. One run at a time: a second while one goes on is refused with AOI-TRN-047.
         `listen(job)` registers listeners before the job is submitted, so none misses a report."""
-        if self.training is not None and not self.training.done:
-            raise AoiError("AOI-TRN-047")
         job: Job[dict[str, Any]] = Job(
             "train", self.train, dataset_uuid, epochs, image_size, use=use, with_progress=True
         )
+        return self._start_run(job, listen)
+
+    def _start_run(
+        self, job: Job[dict[str, Any]], listen: Callable[[Job[dict[str, Any]]], None] | None
+    ) -> Job[dict[str, Any]]:
+        """Submit a training run, Training's or the first-run guide's, as the context's one run (AOI-TRN-047 while one
+        goes on), its latest report kept as `training_progress`."""
+        if self.training is not None and not self.training.done:
+            raise AoiError("AOI-TRN-047")
 
         def keep(values: tuple[Any, ...]) -> None:  # on the pool thread; the header reads it on the UI thread
             self.training_progress = values[0]
@@ -862,6 +875,180 @@ class AppContext:
             listen(job)
         self.training, self.training_progress = job, None
         return self.jobs.submit(job)
+
+    @requires("Engineer", QT_TRANSLATE_NOOP("Errors", "Training an AI model"))
+    def start_guide_train(
+        self, board_model: str, view: str, revision: str, listen: Callable[[Job[dict[str, Any]]], None] | None = None
+    ) -> Job[dict[str, Any]]:
+        """The first-run guide's Train in the background (`guide_train`), as the context's one run, as
+        `start_training` runs Training's (REQ-TRN-008)."""
+        job: Job[dict[str, Any]] = Job("guide_train", self.guide_train, board_model, view, revision, with_progress=True)
+        return self._start_run(job, listen)
+
+    @requires("Engineer", QT_TRANSLATE_NOOP("Errors", "Training an AI model"))
+    def guide_train(
+        self,
+        board_model: str,
+        view: str,
+        revision: str,
+        epochs: int | None = None,
+        image_size: int | None = None,
+        progress: Callable[[run_progress.RunProgress], None] | None = None,
+        should_stop: Callable[[], bool] | None = None,
+    ) -> dict[str, Any]:
+        """The first-run guide's Train (REQ-TRN-021; B5, docs/sketches/first-run-guide.md, Q72): in one press, the
+        five parts the Engineering pages take one by one, each by the same call, so each refuses and audits as there:
+        1 (`keep`) freeze the board model's images of `view` as a Trial version (ADR 0020; Q80) with `revision`, its
+        store's customer and the use "own" only (Q73), and lock its validation set with a new seed; 2 (`train`) train
+        from it; 3 (`activate`) make that AI model active, as a board model's first already is (ADR 0018; ADR 0020,
+        decision 4); 4 (`validate`) test it on the locked validation set (`test_dataset`); 5 (`shift_check`) run the
+        shift check, unless the setting is off. While a Validated AI model of the board model is active, a Trial one
+        never replaces it, so the press is refused before anything is written (AOI-TRN-057).
+
+        A part done before is not done again, so a press after a Cancel, a refusal or a restart goes on from the first
+        part not done: a Trial version of the view frozen as part 1 freezes one, if it holds the images as they are now
+        (`_guide_version`), the newest AI model trained from it for the use "own", a test of that AI model on it judged
+        with what judges boards now (`engine_is_current`), and a shift check that counts now (state "passed") or that
+        failed with what judges boards now. `progress` gets one report of the whole press (`run_progress.Press`). Cancel
+        stops the first three parts at the step in hand with JobCancelled, each part done kept and training keeping no
+        AI model, as Training's Cancel; in the last two the AI model stays active, and the result names the parts not
+        run. Returns the version (`dataset`), the images kept apart (`held`) and trained on (`trained`), each {"ok",
+        "ng"}, the AI model's registry row (`model`), the test run (`run`, None when not run), the shift check as
+        `shift_check` gives it (`shift`, None after a Cancel) and `not_run`."""
+        say = progress or (lambda p: None)
+        stop = should_stop or (lambda: False)
+        press = run_progress.Press(0, READING.source, CALIBRATING.source)
+
+        def check() -> None:
+            if stop():
+                raise JobCancelled(f"first-run guide {board_model}")
+
+        if (live := self.validated_live(board_model)) is not None:
+            raise AoiError("AOI-TRN-057", board=board_model, version=live["version"])
+        version = self._guide_version(board_model, view, revision)
+        if version is None or self.db.validation_split(version["uuid"]) is None:
+            held = math.ceil(len(self._in_view(board_model, view, NG)) * datasets.VALIDATION_NG)
+            say(press.step(KEEPING.fill(ok=datasets.VALIDATION_OK, ng=held)))
+            if version is None:
+                version = self.freeze_dataset(
+                    board_model, view, revision, self._guide_customer(board_model), ("own",), should_stop=stop,
+                    trial=True,
+                )  # fmt: skip
+                if version is None:  # stopped while the files were hashed: nothing written
+                    raise JobCancelled(f"first-run guide {board_model}")
+                check()
+            self.lock_validation_set(version["uuid"])
+        split = cast(dict[str, Any], self.db.validation_split(version["uuid"]))
+        labels = {i["uuid"]: i["label"] for i in self.db.dataset_items(version["uuid"])}
+        counts = {part: Counter(labels[u] for u in split[part]) for part in ("validation", "train")}
+        out: dict[str, Any] = {"dataset": version, "run": None, "shift": None, "not_run": []}
+        out["held"], out["trained"] = ({"ok": c[OK], "ng": c[NG]} for c in (counts["validation"], counts["train"]))
+
+        def masters() -> int:  # the master samples the shift check judges, unless it is off or counts already
+            shift = self.shift_check(board_model)
+            done = shift["state"] in ("off", "passed") or (
+                shift["state"] == "failed" and self._judged_now(shift["check"], board_model)
+            )
+            return 0 if done else len(self.master_samples(board_model))
+
+        press.judged = len(split["validation"]) + masters()  # what is judged after training, as far as known now
+        check()
+        model = self._guide_model(board_model, version["uuid"])
+        if model is None:
+            self.train(version["uuid"], epochs, image_size, lambda p: say(press.training(p)), stop)
+            model = cast(dict[str, Any], self._guide_model(board_model, version["uuid"]))
+        out["model"] = model
+        if not model["active"]:
+            check()
+            say(press.step(ACTIVATING.fill(version=model["version"])))
+            self.activate_model(int(model["id"]))
+            out["model"] = self.db.model(int(model["id"]))
+        name = model["version"]
+
+        def judged(phase: Phrase) -> Callable[[int, int], None]:  # an image judged; Cancel stops the part there
+            def done(n: int, count: int) -> None:
+                say(press.judged_one(phase.fill(version=name, n=min(n + 1, count), count=count)))
+                check()
+
+            return done
+
+        runs = [r for r in self.db.test_runs(board_model) if r.get("dataset_uuid") == version["uuid"]]
+        out["run"] = next(  # a test of this AI model judged with what judges boards now (`engine_is_current`)
+            (
+                r
+                for r in runs
+                if r.get("model_uuid") == model["uuid"]
+                and r.get("judged_by")
+                and self.engine_is_current(board_model, JudgedBy(**r["judged_by"]))
+            ),
+            None,
+        )
+        to_judge = masters()  # read again: the AI model active now, and a run kept, change what counts
+        press.judged = (0 if out["run"] else len(split["validation"])) + to_judge
+        try:
+            if out["run"] is None:
+                check()
+                count = len(split["validation"])
+                say(press.step(VALIDATING.fill(version=name, n=1, count=count)))
+                run_uuid = self.test_dataset(version["uuid"], judged(VALIDATING))[1][0]["run_uuid"]
+                out["run"] = self.db.test_run(run_uuid)
+            if to_judge:
+                check()
+                say(press.step(SHIFT_CHECKING.fill(n=1, count=to_judge)))
+                self.run_shift_check(board_model, judged(SHIFT_CHECKING))
+            out["shift"] = self.shift_check(board_model)
+        except JobCancelled:  # the AI model stays active: the result says what did not run
+            out["not_run"] = (["validate"] if out["run"] is None else []) + (["shift_check"] if to_judge else [])
+        return out
+
+    def _guide_customer(self, board_model: str) -> str:
+        """The customer of the board model's store, "" for none, which freezing then refuses (AOI-TRN-027)."""
+        store = self.store_of(board_model)
+        return str(store["customer"]) if store else ""
+
+    def _guide_version(self, board_model: str, view: str, revision: str) -> dict[str, Any] | None:
+        """The newest Trial version of `view` that the first-run guide's Train would freeze now: of `revision`, its
+        store's customer and the use "own" only, holding each sample of the view not labelled UNSURE, with its label
+        row and boxes (`_frozen_file`); else None. A version frozen on Training with other uses, another revision or
+        other images is never taken, so a press after a Cancel never freezes the same images twice and never trains
+        from a version that refuses the use "own" or allows another."""
+        boxes = self.db.current_boxes(board_model)
+        keys = ("x", "y", "w", "h", "dct_type", "severity")
+
+        def drawn(found: list[dict[str, Any]]) -> str:
+            return json.dumps([{k: b[k] for k in keys} for b in found], sort_keys=True)
+
+        now = {
+            (s["uuid"], s["label_uuid"], drawn(boxes.get(s["uuid"], [])))
+            for s in self.db.samples(board_model)
+            if s["side"] == view and s["label"] != "UNSURE"
+        }
+        customer = self._guide_customer(board_model)
+        for v in self.db.datasets(board_model):  # newest first
+            if (v["view"], v["assurance"], v["revision"]) != (view, datasets.TRIAL, revision):
+                continue
+            if list(v["allowed_uses"]) != ["own"] or v["customer"] != customer:
+                continue
+            items = self.db.dataset_items(v["uuid"])
+            if {(i["sample_uuid"], i["label_uuid"], drawn(i["boxes"])) for i in items} == now:
+                return v
+        return None
+
+    def _judged_now(self, check: dict[str, Any] | None, board_model: str) -> bool:
+        """Whether a shift check, passed or not, was judged by the AI model, recipe revision, Golden board and scale in
+        use now (`_engine_inputs`), so judging the master samples again gives the same verdicts."""
+        if check is None:
+            return False
+        i = check["inputs"]
+        return (i["model_uuid"], i["recipe_uuid"], i["reference_path"], i["scale"]) == self._engine_inputs(board_model)
+
+    def _guide_model(self, board_model: str, dataset_uuid: str) -> dict[str, Any] | None:
+        """The newest AI model trained from `dataset_uuid` for the use "own", or None."""
+        for m in self.db.models(board_model):  # newest first
+            meta = json.loads(m.get("metrics") or "{}")
+            if meta.get("dataset_uuid") == dataset_uuid and meta.get("use", "own") == "own":
+                return m
+        return None
 
     @requires("Engineer", QT_TRANSLATE_NOOP("Errors", "Training an AI model"))
     def train(
