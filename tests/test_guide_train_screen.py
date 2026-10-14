@@ -76,6 +76,10 @@ def test_req_trn_021_screen_3_trains_and_shows_what_it_made(qtbot: QtBot, ctx: A
     lines: list[str] = []
     win.activateWindow()
     qtbot.waitUntil(lambda: QApplication.activeWindow() is win)
+    win.bm_combo.setFocus()
+    qtbot.keyClick(win.bm_combo, Qt.Key.Key_Return)  # Enter is Train's only with the focus on the screen
+    assert screen.worker is None and not ctx.guide_running(ONE)
+    screen.btn_train.setFocus()
     qtbot.keyClick(screen.btn_train, Qt.Key.Key_Return)
     assert screen.worker is not None and screen.run_row.isVisible() and not screen.btn_train.isEnabled()
     screen.worker.signals.progress.connect(lambda _v: lines.append(screen.run_line.text()))
