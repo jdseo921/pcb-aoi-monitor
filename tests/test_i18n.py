@@ -56,6 +56,8 @@ TEXT_POSITIONS = {"button": 1, "action": 1, "AoiError": 0, "addItem": 1, "labell
 SKIP_KEYWORDS = {"kind", "slot", "parent", "over", "detail"}  # an error's detail goes to the log only
 ALLOWED_LITERALS = {  # (file, literal): why it is not translated; a stale entry fails the test
     ("aoi/ui/pages/base.py", "Page"): "placeholder title of the base class; every page overrides it",
+    ("aoi/ui/pages/guide_train.py", "R1"): "a board revision as printed on boards, the value Train takes unless another"
+    " is typed (Q74), the same in every language",
     ("aoi/ui/pages/settings.py", "auto"): "a torch device name, shown as the value the engine takes",
     ("aoi/ui/pages/settings.py", "cpu"): "a torch device name",
     ("aoi/ui/pages/settings.py", "cuda"): "a torch device name",

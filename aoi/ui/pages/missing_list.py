@@ -137,10 +137,13 @@ class MissingList(WrappedGroup):
         self.done_line.setWordWrap(True)
         lay.addWidget(self.done_line)
 
-    def show_for(self, board_model: str | None) -> None:
-        """Read What is missing for `board_model` again, for the kind picked while it stays the same board model."""
+    def show_for(self, board_model: str | None, trial: bool | None = None) -> None:
+        """Read What is missing for `board_model` again, for the kind picked while it stays the same board model, or
+        for Trial (`trial` True) or Validated (False), as a press on its button picks it."""
         if board_model != self._board_model:
             self.picked = None  # another board model: the list of its newest version's kind
+        if trial is not None:
+            self.picked = trial
         self._board_model = board_model
         if board_model is None:
             self.missing = None

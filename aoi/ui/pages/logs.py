@@ -710,6 +710,11 @@ class LogsPage(Page):
 
         self.run_in_background(self.ctx.add_false_call_sample, record, on_result=added)
 
+    def show_board_model(self, name: str) -> None:
+        """The history of board model `name` alone, as the first-run guide's Open Logs & Export › opens it (B5)."""
+        self.model.setCurrentIndex(max(0, self.model.findData(name)))
+        self.list_records()
+
     def on_show(self) -> None:
         self.update_actions()
         self._arch_days = self.ctx.settings.log_retention_days  # a retention saved on Settings applies at once (#201)

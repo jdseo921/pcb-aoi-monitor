@@ -260,7 +260,8 @@ def test_req_insp_002_verdict_has_shape_and_word(qtbot: QtBot, trained_ctx: AppC
 
 def test_req_set_018_one_primary_button(qtbot: QtBot, trained_ctx: AppContext) -> None:
     """Exactly one blue primary button per page, the action the page is for; none of them is checkable. Home's first-run
-    guide, shown in place of its cards, has one for each step, of which one shows at a time."""
+    guide, shown in place of its cards, has one for each step, of which one shows at a time, and screen 3 one before
+    Train and one once Train has made the AI model."""
     win = _window(qtbot, trained_ctx, "Admin")
     guide = cast(HomePage, win.pages["Home"]).guide
     for title, page in win.pages.items():
@@ -272,6 +273,8 @@ def test_req_set_018_one_primary_button(qtbot: QtBot, trained_ctx: AppContext) -
         (guide.form, guide.btn_create),
         (guide.key_step, guide.btn_kept),
         (guide.images, guide.images.btn_pick),
+        (guide.train_step.before, guide.train_step.btn_train),
+        (guide.train_step.result, guide.train_step.btn_inspect),
     ):
         assert [b for b in step.findChildren(QPushButton) if b.objectName() == "primary"] == [press]
     assert f"QPushButton#primary {{ background: {theme.ACCENT};" in theme.QSS

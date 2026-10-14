@@ -41,7 +41,7 @@ import time
 import uuid
 from collections import Counter
 from collections.abc import Callable, Iterator
-from contextlib import contextmanager
+from contextlib import ExitStack, contextmanager
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 from unittest import mock
@@ -89,12 +89,15 @@ PRESENTER_SMALL_SHOTS = {  # every page the demo scripts open (tools/screen_size
 }
 NEW_BOARD_MODEL_SHOTS = {"new-board-model-admin": "form", "new-board-model-key-admin": "key"}  # dialogs (ADR 0021)
 GUIDE_SHOTS = {  # Home's first-run guide (B5): screen 1 as the Admin types, the key Create shows, and the Engineer's;
-    # screen 2 for a board model with no image yet, then with GUIDE_OK and GUIDE_NG images in and the box area open
+    # screen 2 for a board model with no image yet, then with GUIDE_OK and GUIDE_NG images in and the box area open;
+    # screen 3 before Train and with what Train made, its reads pinned (`guide_steps`)
     "home-guide-admin": ("admin", "form"),
     "home-guide-key-admin": ("admin", "key"),
     "home-guide-engineer": ("engineer", "form"),
     "home-guide-images-admin": ("admin", "images"),
     "home-guide-boxes-admin": ("admin", "boxes"),
+    "home-guide-train-admin": ("admin", "train"),
+    "home-guide-trained-admin": ("admin", "trained"),
 }
 FIXED_WORKSPACE = "C:/AOI_Workspace"  # what the Settings page shows instead of the temporary folder
 TEST_FONT = '"DejaVu Sans"'  # the font the approved images are drawn with (Linux)
@@ -492,6 +495,8 @@ NEW_CUSTOMER = "Beta Boards"
 GUIDE_BOARD_MODEL, GUIDE_CUSTOMER = "TBOX-C1", "Cedar Circuits"  # screen 2's, made last, after every other screenshot
 GUIDE_OK, GUIDE_NG = 10, 3  # the images screen 2's box area shows copied in: too few OK images, the NG ones enough
 GUIDE_UUIDS = 1_000_000  # where screen 2's ids count from, past every one the workspace was built with
+GUIDE_READY = {"ok": 90, "ng": 10, "ng_boxed": 10}  # screen 3's images of the Top view, as the sketch draws them
+GUIDE_SHIFT_UNTIL = "2026-10-14T07:40:00+00:00"  # the shift check Train ran counts until then (shown in UTC)
 # A name the line under the name field refuses (no Latin letter or digit, AOI-TRN-054; ADR 0023): the size walk's, in
 # no screenshot, as the pinned DejaVu Sans draws no Korean and another font would draw it on each machine its own way
 REFUSED_BOARD_MODEL = "보드"
@@ -567,13 +572,59 @@ def render_dialogs(win: Any, out: Path) -> dict[str, Path]:
     return files
 
 
+def guide_at_3(ctx: Any) -> Callable[[str | None], int | None]:
+    """`ctx.guide_step` with GUIDE_BOARD_MODEL at screen 3, Train."""
+    real = ctx.guide_step
+
+    def step(board_model: str | None) -> int | None:
+        return 3 if board_model == GUIDE_BOARD_MODEL else real(board_model)
+
+    return step
+
+
+def guide_ready(ctx: Any) -> Callable[..., Any]:
+    """`ctx.missing` with GUIDE_BOARD_MODEL's first three lines met, as GUIDE_READY counts them, for screen 3."""
+    import dataclasses
+
+    real = ctx.missing
+
+    def missing(board_model: str, trial: bool | None = None) -> Any:
+        found = real(board_model, trial)
+        if board_model != GUIDE_BOARD_MODEL:
+            return found
+        needs = tuple(dataclasses.replace(n, have=GUIDE_READY.get(n.key, n.have)) for n in found.needs)
+        return dataclasses.replace(found, view="Top", needs=needs)
+
+    return missing
+
+
+def guide_made() -> dict[str, Any]:
+    """What Train made for GUIDE_BOARD_MODEL, as `AppContext.guide_result` gives it, pinned to the sketch's figures:
+    v1.0 (Trial) trained on 40 OK and 7 NG images, 0 of 3 defects missed and 1 of 50 false calls on those kept apart,
+    and a shift check passed."""
+    from aoi.core import stats
+
+    rates = {"missed_defects": stats.rate(0, 3), "false_calls": stats.rate(1, 50)}
+    return {
+        "dataset": {"view": "Top"},
+        "model": {"version": "v1.0 (Trial)"},
+        "held": {"ok": 50, "ng": 3},
+        "trained": {"ok": 40, "ng": 7},
+        "run": {"metrics": {"rates": rates}},
+        "shift": {"state": "passed", "until": GUIDE_SHIFT_UNTIL, "check": None, "hours": 8},
+    }
+
+
 def guide_steps(win: Any, dataset: Path) -> Iterator[str]:
     """Home's first-run guide (B5) in each state of GUIDE_SHOTS in turn, its name yielded with the window laid out:
     with no board model in the header, as a workspace with none shows it, screen 1 with NEW_BOARD_MODEL and NEW_CUSTOMER
     typed by the Admin, the recovery key Create would show for `pinned_store` and screen 1 greyed for the Engineer;
     then screen 2 for GUIDE_BOARD_MODEL, made in GUIDE_CUSTOMER's store, with no image, and with GUIDE_OK OK and
-    GUIDE_NG NG images of `dataset` in, the box area on the first NG image. Then the header's board model back. For the
-    screenshots and the size walk alike; screen 2's board model stays, so it comes after every other screenshot."""
+    GUIDE_NG NG images of `dataset` in, the box area on the first NG image; then screen 3 for it, before Train and with
+    what Train made. Screen 3's reads are pinned (`guide_step` 3, `guide_ready`, `guide_made`), as a training in the
+    render would take minutes and give rates that differ from machine to machine. Then the header's board model back.
+    For the screenshots and the size walk alike; screen 2's board model stays, so it comes after every other
+    screenshot."""
     from PySide6.QtTest import QTest
     from PySide6.QtWidgets import QApplication
 
@@ -587,6 +638,12 @@ def guide_steps(win: Any, dataset: Path) -> Iterator[str]:
         for name, (role, step) in GUIDE_SHOTS.items():
             win.set_user(role)
             win.statusBar().clearMessage()
+            pins = ExitStack()  # screen 3's reads, pinned while its state is shown
+            if step in ("train", "trained"):
+                pins.enter_context(mock.patch.object(ctx, "guide_step", guide_at_3(ctx)))
+                pins.enter_context(mock.patch.object(ctx, "missing", guide_ready(ctx)))
+            if step == "trained":
+                pins.enter_context(mock.patch.object(ctx, "guide_result", lambda bm: guide_made()))
             with mock.patch("uuid.uuid4", side_effect=ids), mock.patch("aoi.core.crypto.new_key", guide_key):
                 if step == "images":
                     ctx.create_customer_board_model(GUIDE_BOARD_MODEL, GUIDE_CUSTOMER)
@@ -610,6 +667,7 @@ def guide_steps(win: Any, dataset: Path) -> Iterator[str]:
                 focus.clearFocus()  # no caret, which blinks, in the image
             settle()
             yield name
+            pins.close()
             if step == "key":  # forgotten unsaved, as no Admin may: a screenshot's key is pinned, of no store
                 guide.recovery.clear()
                 guide.reset()

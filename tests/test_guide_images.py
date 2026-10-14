@@ -114,7 +114,7 @@ def test_req_trn_021_one_box_on_each_ng_image_ends_screen_2(
 ) -> None:
     """Each box is stored as drawn, with its folder's type, and the next NG image with no box opens; Undo takes the
     last box away again and shows its image; ← Back opens the one before. With a box on every NG image, screen 2 is
-    done and Home goes on."""
+    done and screen 3 shows, with Train focused."""
     win, guide, images = home(qtbot, ctx)
     picked(qtbot, monkeypatch, images, boards(tmp_path / "TBOX-A1", 70, {"Solder Bridge": 2, "Missing Component": 1}))
     ng = images.ng
@@ -131,7 +131,9 @@ def test_req_trn_021_one_box_on_each_ng_image_ends_screen_2(
     images.open_image(2)
     drawn(qtbot, images)
     assert all(ctx.boxes(s["uuid"]) for s in ng) and ctx.guide_step(BM) == 3
-    assert not guide.isVisible() and cast(HomePage, win.pages["Home"]).cards.isVisible()
+    assert guide.isVisible() and not images.isVisible() and guide.train_step.isVisible()
+    assert guide.steps.text() == "✓ 1 Board model  ───  ✓ 2 Images  ───  ● 3 Train"
+    assert win.focusWidget() is guide.train_step.btn_train
 
 
 def test_req_trn_021_images_straight_in_ng_wait_for_their_type(
