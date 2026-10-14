@@ -60,6 +60,7 @@ FIXED_MS = 480.0  # the inspection time Inspection and Compare show
 FIXED_SSIM, FIXED_INLIERS = 0.95, 400  # the similarity and alignment points Compare shows (module docstring)
 SETTLE_MS = 40  # past the 20 ms after which Qt resizes a list to its contents (`settle`)
 SETTLE_PASSES = 100  # event loop passes a page may take to lay itself out before a grab
+CLEAR_BUTTON_MS = 300  # past the 160 ms over which a field's clear button fades in once it holds text (Qt's QLineEdit)
 PAGE_VIEWS = {  # <page>-<view>-<role>
     "Training": ("datasets", "freeze", "split", "blind", "missing"),
     "Settings": ("advanced", "restore", "move-in", "shred"),
@@ -511,6 +512,8 @@ def store_key_dialog(win: Any) -> Any:
 
 def render_dialogs(win: Any, out: Path) -> dict[str, Path]:
     """The New board model dialog's form and its recovery key step (NEW_BOARD_MODEL_SHOTS), as the Admin opens it."""
+    from PySide6.QtTest import QTest
+
     files = {}
     win.set_user("admin")
     for name, step in NEW_BOARD_MODEL_SHOTS.items():
@@ -519,6 +522,7 @@ def render_dialogs(win: Any, out: Path) -> dict[str, Path]:
         settle()
         if (focus := dialog.focusWidget()) is not None:
             focus.clearFocus()  # no caret, which blinks, in the image
+        QTest.qWait(CLEAR_BUTTON_MS)  # the customer's clear button whole, as it fades in after the text is set
         settle()
         files[name] = out / f"{name}.png"
         assert dialog.grab().save(str(files[name])), files[name]
