@@ -798,13 +798,14 @@ minutes and give rates that differ from machine to machine.
 raised it, or at the foot of screen 3, in a `Said` (`aoi/ui/pages/guide_said.py`): the catalogue's title, the guide's
 line for the code and the code, "Training already running: Wait for the training under way to end, then press Train
 again. (AOI-TRN-047)", with Show Details opening the catalogue's own what happened and what to do under it, which names
-the Engineering pages and their words. The lines are `GUIDE` in `aoi/errors.py`, one for each code of the sketch's
-table, in the guide's words: each takes its code's own placeholders, `AoiError.guide` and `ErrorReport.guide` carry it
-filled, and `docs/error-codes.md` lists them in a table of their own. A code with no line, such as a role's refusal, is
-said as the catalogue says it, with no Show Details; screen 2's lists of images not taken or skipped give each image's
-line the same way. A copy stopped by an error is said as Training's import says it, AOI-TRN-009 or AOI-TRN-010 with the
-image it stopped at (`training_import.stop_error`). `tests/test_guide_said.py` checks each line against its code and the
-words the guide leaves out, and drives a refusal and its details on screen 1.
+the Engineering pages and their words. The lines are `GUIDE` in `aoi/errors.py`, one for each code its three screens
+raise but a role's refusal (the sketch's table, a row split where its codes take other values, and AOI-TRN-057 added),
+in the guide's words: each takes its code's own placeholders, `AoiError.guide` and `ErrorReport.guide` carry it filled,
+and `docs/error-codes.md` lists them in a table of their own. A code with no line, such as a role's refusal, is said as
+the catalogue says it, with no Show Details; screen 2's lists of images not taken or skipped give each image's line the
+same way. A copy stopped by an error is said as Training's import says it, AOI-TRN-009 or AOI-TRN-010 with the image it
+stopped at (`training_import.stop_error`). `tests/test_guide_said.py` checks each line against its code and the words
+the guide leaves out, and drives a refusal and its details on screen 1.
 
 **Next AI step (not in this draft):** once enough labelled NG crops exist per type, add a small supervised
 classifier that names the defect (Solder Bridge, Tombstone, …) for each flagged region. Today a region is named by

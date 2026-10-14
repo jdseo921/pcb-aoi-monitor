@@ -313,8 +313,9 @@ def test_req_trn_021_a_copy_keeps_its_board_model_and_cancel_keeps_what_went_in(
 def test_req_trn_021_a_copy_stopped_by_an_error_and_images_already_in(
     qtbot: QtBot, ctx: AppContext, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, dialogs: list[Any]
 ) -> None:
-    """An error the copy cannot pass stops it at that image: the line says where, names the image and gives the code,
-    with no dialog. The folder picked again counts the images already in apart from those not taken."""
+    """An error the copy cannot pass stops it at that image: the line says where and what stopped it, names the image
+    and gives the code, with no dialog, and Show Details the catalogue's text. The folder picked again counts the
+    images already in apart from those not taken."""
     win, guide, images = home(qtbot, ctx)
     real, seen = ctx.import_samples, []
 
@@ -329,9 +330,11 @@ def test_req_trn_021_a_copy_stopped_by_an_error_and_images_already_in(
     picked(qtbot, monkeypatch, images, folder)
     assert len(ctx.samples(BM)) == 2 and dialogs == []
     assert images.picked.text() == (
-        "ok_02.png: Import stopped by an error: Copying stopped at image 3 of 4; the ones before it are kept. Check the"
-        " USB drive and the free space, then pick the folder again. (AOI-TRN-010)"
-    )  # the guide's line (Q78)
+        "ok_02.png: Import stopped by an error: Copying stopped at image 3 of 4 (the system refused it); the ones"
+        " before it are kept. Fix that, then pick the folder again. (AOI-TRN-010)"
+    )  # the guide's line (Q78), with what stopped it
+    images.picked.btn_details.click()
+    assert images.picked.details.isVisible() and images.picked.details.text().startswith("Importing ")
     monkeypatch.setattr(ctx, "import_samples", real)
     picked(qtbot, monkeypatch, images, folder)
     assert images.from_line.text() == f"From {folder}, Top view. Not taken: 0. Already in: 2."

@@ -145,16 +145,16 @@ The first-run guide on Home says these in place of what happened and what to do,
 | AOI-TRN-005 | Board model name already taken | {existing} is already here. Pick it in the top bar, or type another name. |
 | AOI-TRN-008 | Images not imported | Not copied ({reason}). Check the USB drive and the free space, then pick the folder again. |
 | AOI-TRN-009 | Import stopped part-way | Copying stopped at image {at} of {total}; the ones before it are kept. Check the USB drive and the free space, then pick the folder again. |
-| AOI-TRN-010 | Import stopped by an error | Copying stopped at image {at} of {total}; the ones before it are kept. Check the USB drive and the free space, then pick the folder again. |
+| AOI-TRN-010 | Import stopped by an error | Copying stopped at image {at} of {total} ({reason}); the ones before it are kept. Fix that, then pick the folder again. |
 | AOI-TRN-011 | Images not imported: path too long | The workspace folder's path is too long. Pick a shorter one on Settings, then the folder again. |
 | AOI-TRN-013 | NG image needs a defect type | Put it in a folder of ng named after its defect, then pick the folder again. |
 | AOI-TRN-014 | Image changed while it was copied | Wait until copying from the camera has ended, then pick the folder again. |
 | AOI-TRN-015 | Image already imported | Taken once already; nothing to do. Not counted twice. |
 | AOI-TRN-016 | Image has no label | Not in ok or ng. Move it into one and pick the folder again. |
 | AOI-TRN-019 | Board model name not allowed | Leave out / : * ? " < > \ \| and control characters, end with no dot or space, and use no device name such as CON or NUL. |
-| AOI-TRN-022 | Validation set not locked | Train stopped: {reason}. Nothing was kept; fix that, then press Train again. |
+| AOI-TRN-022 | Validation set not locked | Train stopped: {reason}. Fix that, then press Train again. |
 | AOI-TRN-025 | Dataset store not opened | {store}'s images cannot be opened on this station: {reason}. An Admin types the saved recovery key on Settings (Restore Key…). |
-| AOI-TRN-027 | Dataset not frozen | Train stopped: {reason}. Nothing was kept; fix that, then press Train again. |
+| AOI-TRN-027 | Dataset not frozen | Train stopped: {reason}. Fix that, then press Train again. |
 | AOI-TRN-030 | Label not changed | The box was not kept: {reason}. Draw it again. |
 | AOI-TRN-031 | Defect box outside the image | The box was not kept: it lies outside the image. Draw it again. |
 | AOI-TRN-032 | Sample not found | The box was not kept: the image is no longer in the workspace. Pick the folder again. |

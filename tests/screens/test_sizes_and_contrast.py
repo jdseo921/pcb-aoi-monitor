@@ -1074,8 +1074,16 @@ def test_req_trn_021_first_run_guide_sizes_and_contrast(
                 images = guide.images
                 for line, said in (
                     (images.copy_line, "Copying image 12 of 78 · 15 % · about 1 min left"),
-                    (images.why, "stray.png: AOI-TRN-016 Image has no label. Put it in ok or ng, then pick it again."),
-                    (images.skipped, "Skipped, as they cannot be read:\nn02.png: AOI-INSP-001 Cannot be read."),
+                    (
+                        images.why,
+                        "stray.png: Image has no label: Not in ok or ng. Move it into one and pick the folder again."
+                        " (AOI-TRN-016)",
+                    ),
+                    (
+                        images.skipped,
+                        "Skipped, as they cannot be read:\nn02.png: Image cannot be read: Not an image this app reads."
+                        " Save it as PNG or JPG and pick the folder again. (AOI-INSP-001)",
+                    ),
                 ):
                     line.setText(said)
                 stopped = {"at": 3, "total": 78, "imported": 2, "name": "TBOX-C1", "reason": "the drive is full"}

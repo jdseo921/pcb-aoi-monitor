@@ -899,7 +899,7 @@
         <location line="+8"/>
         <location line="+55"/>
         <location line="+26"/>
-        <location line="+198"/>
+        <location line="+200"/>
         <source>Training an AI model</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1157,14 +1157,14 @@
         <translation>검증 세트 잠금</translation>
     </message>
     <message>
-        <location line="-2999"/>
-        <location line="+3013"/>
+        <location line="-3001"/>
+        <location line="+3015"/>
         <location line="+39"/>
         <source>the workspace holds no such dataset version</source>
         <translation>작업 공간에 그런 데이터셋 버전이 없습니다</translation>
     </message>
     <message>
-        <location line="-3102"/>
+        <location line="-3104"/>
         <source>Drift on {board} ({view}): {count} of the last {of} boards called NG; {before} % of the {baseline} before</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1264,7 +1264,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1206"/>
+        <location line="+1208"/>
         <source>Setting the comparison&apos;s thresholds from labelled boards</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1491,7 +1491,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-3764"/>
+        <location line="-3766"/>
         <source>no earlier version of this board model was active</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1516,7 +1516,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1130"/>
+        <location line="+1132"/>
         <source>its UUID {found} is not {uuid}, as in the AI model registry</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1623,7 +1623,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-3992"/>
+        <location line="-3994"/>
         <source>unhandled</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3423,12 +3423,17 @@
         <translation type="unfinished">복사하지 못했습니다({reason}). USB 드라이브와 여유 공간을 확인한 다음 폴더를 다시 선택하십시오.</translation>
     </message>
     <message>
-        <location line="+4"/>
+        <location line="+3"/>
         <source>Copying stopped at image {at} of {total}; the ones before it are kept. Check the USB drive and the free space, then pick the folder again.</source>
         <translation type="unfinished">이미지 {total}장 중 {at}번째에서 복사가 멈췄습니다. 그 앞의 이미지는 유지됩니다. USB 드라이브와 여유 공간을 확인한 다음 폴더를 다시 선택하십시오.</translation>
     </message>
     <message>
-        <location line="+8"/>
+        <location line="+5"/>
+        <source>Copying stopped at image {at} of {total} ({reason}); the ones before it are kept. Fix that, then pick the folder again.</source>
+        <translation type="unfinished">이미지 {total}장 중 {at}번째에서 복사가 멈췄습니다({reason}). 그 앞의 이미지는 유지됩니다. 그 문제를 고친 다음 폴더를 다시 선택하십시오.</translation>
+    </message>
+    <message>
+        <location line="+5"/>
         <source>The workspace folder&apos;s path is too long. Pick a shorter one on Settings, then the folder again.</source>
         <translation type="unfinished">작업 공간 폴더의 경로가 너무 깁니다. 설정에서 더 짧은 경로를 고른 다음 폴더를 다시 선택하십시오.</translation>
     </message>
@@ -3454,8 +3459,8 @@
     </message>
     <message>
         <location line="+5"/>
-        <source>Train stopped: {reason}. Nothing was kept; fix that, then press Train again.</source>
-        <translation type="unfinished">학습이 멈췄습니다: {reason}. 아무것도 남지 않았습니다. 그 문제를 고친 다음 학습을 다시 누르십시오.</translation>
+        <source>Train stopped: {reason}. Fix that, then press Train again.</source>
+        <translation type="unfinished">학습이 멈췄습니다: {reason}. 그 문제를 고친 다음 학습을 다시 누르십시오.</translation>
     </message>
     <message>
         <location line="+4"/>
@@ -3508,7 +3513,7 @@
         <translation type="unfinished">테스트하지 않았습니다: {reason}. AI 모델은 보드를 판정하며, AI 모델 테스트에서 다시 테스트합니다.</translation>
     </message>
     <message>
-        <location line="-267"/>
+        <location line="-268"/>
         <source>Try again; if it happens again, restart the app and send the log file (the workspace&apos;s logs folder) to support.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4099,7 +4104,7 @@
     </message>
     <message>
         <location line="+1"/>
-        <location filename="../core/services.py" line="+3255"/>
+        <location filename="../core/services.py" line="+3257"/>
         <source>a file of it could not be read: {reason}</source>
         <translation>그 파일 하나를 읽을 수 없습니다: {reason}</translation>
     </message>
@@ -8889,7 +8894,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/services.py" line="-3339"/>
+        <location filename="../core/services.py" line="-3341"/>
         <source>Aligning {count} images to the reference board</source>
         <translation type="unfinished"></translation>
     </message>

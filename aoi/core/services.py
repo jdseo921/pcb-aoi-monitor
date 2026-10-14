@@ -1116,11 +1116,13 @@ class AppContext:
         return (i["model_uuid"], i["recipe_uuid"], i["reference_path"], i["scale"]) == self._engine_inputs(board_model)
 
     def _guide_model(self, board_model: str, dataset_uuid: str) -> dict[str, Any] | None:
-        """The newest AI model trained from `dataset_uuid` for the use "own", or None."""
+        """The newest AI model trained from `dataset_uuid` for the use "own" that has its AI model card, or None: one
+        with no card never goes live (AOI-TRN-049), so Train trains another in its place."""
         for m in self.db.models(board_model):  # newest first
             meta = json.loads(m.get("metrics") or "{}")
             if meta.get("dataset_uuid") == dataset_uuid and meta.get("use", "own") == "own":
-                return m
+                if model_card.paths(Path(m["path"]))[1].is_file():
+                    return m
         return None
 
     @requires("Engineer", QT_TRANSLATE_NOOP("Errors", "Training an AI model"))

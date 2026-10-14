@@ -1611,14 +1611,15 @@ GUIDE: dict[str, Phrase] = {
     "AOI-TRN-008": QT_TRANSLATE_NOOP(
         "Errors", "Not copied ({reason}). Check the USB drive and the free space, then pick the folder again."
     ),
-    **_same(
-        QT_TRANSLATE_NOOP(
-            "Errors",
-            "Copying stopped at image {at} of {total}; the ones before it are kept. Check the USB drive and the free"
-            " space, then pick the folder again.",
-        ),
-        "AOI-TRN-009",
-        "AOI-TRN-010",
+    "AOI-TRN-009": QT_TRANSLATE_NOOP(
+        "Errors",
+        "Copying stopped at image {at} of {total}; the ones before it are kept. Check the USB drive and the free space,"
+        " then pick the folder again.",
+    ),
+    "AOI-TRN-010": QT_TRANSLATE_NOOP(
+        "Errors",
+        "Copying stopped at image {at} of {total} ({reason}); the ones before it are kept. Fix that, then pick the"
+        " folder again.",
     ),
     "AOI-TRN-011": QT_TRANSLATE_NOOP(
         "Errors", "The workspace folder's path is too long. Pick a shorter one on Settings, then the folder again."
@@ -1635,7 +1636,7 @@ GUIDE: dict[str, Phrase] = {
     ),
     # screen 3, Train
     **_same(
-        QT_TRANSLATE_NOOP("Errors", "Train stopped: {reason}. Nothing was kept; fix that, then press Train again."),
+        QT_TRANSLATE_NOOP("Errors", "Train stopped: {reason}. Fix that, then press Train again."),
         "AOI-TRN-027",
         "AOI-TRN-022",
     ),
