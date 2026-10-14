@@ -228,6 +228,7 @@ class ErrorReport:
     what: str
     action: str
     detail: str = ""
+    guide: str = ""  # the first-run guide's line for the code, said there in place of what and action (Q78), or ""
 
     @classmethod
     def of(cls, exc: BaseException, context: str = "") -> ErrorReport:
@@ -237,7 +238,7 @@ class ErrorReport:
         title or a phrase, is shown in the UI language (#198), but for UNHANDLED, which means nothing to a user."""
         exc = exc if isinstance(exc, AoiError) else unexpected(exc, context)
         detail = exc.detail or system_detail(exc.__cause__) or ""
-        return cls(exc.code, exc.title, exc.what, exc.action, detail)
+        return cls(exc.code, exc.title, exc.what, exc.action, detail, exc.guide or "")
 
 
 def unexpected(exc: BaseException, context: str = "") -> AoiError:
@@ -1115,11 +1116,13 @@ class AppContext:
         return (i["model_uuid"], i["recipe_uuid"], i["reference_path"], i["scale"]) == self._engine_inputs(board_model)
 
     def _guide_model(self, board_model: str, dataset_uuid: str) -> dict[str, Any] | None:
-        """The newest AI model trained from `dataset_uuid` for the use "own", or None."""
+        """The newest AI model trained from `dataset_uuid` for the use "own" that has its AI model card, or None: one
+        with no card never goes live (AOI-TRN-049), so Train trains another in its place."""
         for m in self.db.models(board_model):  # newest first
             meta = json.loads(m.get("metrics") or "{}")
             if meta.get("dataset_uuid") == dataset_uuid and meta.get("use", "own") == "own":
-                return m
+                if model_card.paths(Path(m["path"]))[1].is_file():
+                    return m
         return None
 
     @requires("Engineer", QT_TRANSLATE_NOOP("Errors", "Training an AI model"))

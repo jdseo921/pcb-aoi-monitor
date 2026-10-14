@@ -38,7 +38,7 @@ from PySide6.QtWidgets import (
 from ...core import datasets
 from ...core.labels import DefectBox
 from ...core.sample_import import NG_FOLDERS, ImportFile, ImportReport, folder_files
-from ...core.services import GUIDE_IMAGES
+from ...core.services import GUIDE_IMAGES, ErrorReport
 from ...defects import names
 from ...errors import AoiError
 from ...hal import VIEWS
@@ -47,7 +47,9 @@ from ..errors import phrase_text
 from ..widgets.box_editor import BoxEditor
 from ..workers import Worker, start
 from .base import PressSays, button, size_class, time_left_text, view_text
+from .guide_said import Said, said_text
 from .missing_list import NAMES
+from .training_import import stop_error
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -192,9 +194,7 @@ class GuideImages(QWidget):
         self.copy_row.addAction(esc)  # while the copy runs
         self.copy_row.hide()
         lay.addWidget(self.copy_row)
-        self.picked = QLabel()  # a pick refused: no image in ok or ng, or the error the copy stopped at
-        self.picked.setWordWrap(True)
-        self.picked.hide()
+        self.picked = Said()  # a pick refused: no image in ok or ng, a Cancel, or the error the copy stopped at
         lay.addWidget(self.picked)
         taken = QHBoxLayout()
         self.from_line = QLabel()  # "From E:\TBOX-A1, Top view. Not taken: 0."
@@ -241,9 +241,7 @@ class GuideImages(QWidget):
         nxt = QLabel(self.tr("The next image opens after each box."))
         nxt.setWordWrap(True)
         nxt.setObjectName("muted")
-        self.box_refused = QLabel()  # a box not kept, or the image shown that cannot be read: its code
-        self.box_refused.setWordWrap(True)
-        self.box_refused.hide()
+        self.box_refused = Said()  # a box not kept, in the guide's words with its code (Q78)
         self.skipped = QLabel()  # the NG images skipped, as they cannot be read: each with its code
         self.skipped.setWordWrap(True)
         self.skipped.hide()
@@ -291,8 +289,10 @@ class GuideImages(QWidget):
         self.folder, self.view_picked, self.waiting, self.undo = "", False, [], []
         self.at, self.open_uuid, self.loaded, self.reading = -1, None, None, None
         self.unreadable.clear()
-        for w in (self.from_line, self.btn_why, self.why, self.picked, self.typing, self.box_refused, self.skipped):
+        for w in (self.from_line, self.btn_why, self.why, self.typing, self.skipped):
             w.hide()
+        self.picked.clear()
+        self.box_refused.clear()
         self.btn_why.setText(self.tr("Show Why"))
         self.editor.set_image(None)
         self.editor.show_boxes([])
@@ -391,10 +391,10 @@ class GuideImages(QWidget):
         self.waiting = []
         self.typing.hide()
         self.folder = folder
-        self.picked.hide()
+        self.picked.clear()
         files = folder_files(folder)
         if not any(f.label for f in files):
-            self._refuse(
+            self.picked.say_text(
                 self.tr(
                     "No images in ok or ng folders in {folder}. Put the good boards' images in ok and the defective"
                     " ones in ng, in a folder named after the defect, then pick the folder again."
@@ -469,11 +469,9 @@ class GuideImages(QWidget):
         and those already in, which Show Why lists with their codes, with the boxes an annotation file gave; an error
         that stopped it is said there too, logged and alarmed. With another board model shown, the status bar says the
         copy ended."""
-        stopped = ""
-        if report.stopped is not None:  # an error stopped it at that image
-            f, e = report.stopped
-            at = self.tr("Copying stopped at image {at} of {total}; the ones before it are kept.")
-            stopped = f"{at.format(at=total - len(report.left), total=total)} {Path(f.path).name}: {self._coded(e)}"
+        stopped: ErrorReport | str | None = None  # an error that stopped it at an image, or the line of a Cancel
+        if (e := stop_error(report, total, board_model)) is not None and report.stopped is not None:
+            stopped = self._report(e)  # logged and alarmed whichever board model is shown
         elif report.left:  # Cancel
             at = self.tr("Copying stopped at image {at} of {total}; the ones before it are kept.")
             stopped = at.format(at=total - len(report.left) + 1, total=total)
@@ -495,20 +493,22 @@ class GuideImages(QWidget):
             line = f"{line} {from_files.format(count=boxed)}"
         self.from_line.setText(line)
         self.from_line.show()
-        why = [f"{Path(f.path).name}: {self.page.coded_text(e)}" for f, e in [*not_taken, *already]]
+        why = [f"{Path(f.path).name}: {said_text(ErrorReport.of(e))}" for f, e in [*not_taken, *already]]
         partly = self.tr("copied, but not every box of its annotation file was stored: {why}.")
         why += [f"{Path(f.path).name}: {partly.format(why=phrase_text(w))}" for f, _n, w in report.boxes if w]
         self.why.setText("\n".join(why))
         self.why.hide()
         self.btn_why.setVisible(bool(why))
         self.btn_why.setText(self.tr("Show Why"))
-        if stopped:
-            self._refuse(stopped)
+        if isinstance(stopped, str):
+            self.picked.say_text(stopped)
+        elif stopped is not None and report.stopped is not None:
+            self.picked.say(stopped, f"{Path(report.stopped[0].path).name}:")
 
     def _copy_failed(self, e: BaseException, board_model: str) -> None:
-        said = self._coded(e)  # logged and alarmed whichever board model is shown
+        said = self._report(e)  # logged and alarmed whichever board model is shown
         if board_model == self.board_model:
-            self._refuse(said)
+            self.picked.say(said)
 
     def _copy_ended(self, w: Worker) -> None:
         if w is not self.copying:
@@ -519,14 +519,9 @@ class GuideImages(QWidget):
         self.refresh()
         self.changed.emit()
 
-    def _coded(self, e: BaseException) -> str:
-        """An error as the guide says it: logged and alarmed, then its code, what happened and what to do."""
-        report = self.ctx.report_error(e, "Home")
-        return " ".join([report.code, phrase_text(report.what), phrase_text(report.action)])
-
-    def _refuse(self, said: str) -> None:
-        self.picked.setText(said)
-        self.picked.show()
+    def _report(self, e: BaseException) -> ErrorReport:
+        """An error the guide says: logged and alarmed (`AppContext.report_error`)."""
+        return self.ctx.report_error(e, "Home")
 
     def _toggle_why(self) -> None:
         shown = not self.why.isVisible()
@@ -566,7 +561,7 @@ class GuideImages(QWidget):
         self.at = at
         sample = self.ng[at]
         self.open_uuid, self.loaded = sample["uuid"], None
-        self.box_refused.hide()
+        self.box_refused.clear()
         self.editor.set_image(None)
         self.editor.show_boxes([])
         self.editor.new_type = sample["defect_type"] or names()[0]
@@ -584,7 +579,7 @@ class GuideImages(QWidget):
             return  # another image was asked for since
         self.reading = None
         if isinstance(image, BaseException):
-            self.unreadable[sample["uuid"]] = f"{Path(sample['path']).name}: {self._coded(image)}"
+            self.unreadable[sample["uuid"]] = f"{Path(sample['path']).name}: {said_text(self._report(image))}"
             self._show_skipped()
             self._gate()
             nxt = self._next_unboxed(self.at)
@@ -614,11 +609,10 @@ class GuideImages(QWidget):
         try:
             self.ctx.set_boxes(sample["uuid"], boxes)
         except AoiError as e:
-            self.box_refused.setText(self._coded(e))
-            self.box_refused.show()
+            self.box_refused.say(self._report(e))
             self.editor.show_boxes(before)
             return
-        self.box_refused.hide()
+        self.box_refused.clear()
         if len(boxes) > len(before):
             self.undo.append((sample["uuid"], before))
             self._after_box()
@@ -648,8 +642,7 @@ class GuideImages(QWidget):
         try:
             self.ctx.set_boxes(uuid, before)
         except AoiError as e:
-            self.box_refused.setText(self._coded(e))
-            self.box_refused.show()
+            self.box_refused.say(self._report(e))
             return
         self.refresh()
         self.changed.emit()

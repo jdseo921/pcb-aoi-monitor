@@ -42,7 +42,7 @@ from ...core.run_progress import RunProgress
 from ...core.sample_import import ImportFile, ImportReport, annotate, folder_files
 from ...core.services import AppContext, Missing, Need
 from ...defects import names
-from ...errors import AoiError, system_detail, system_reason
+from ...errors import AoiError
 from ...hal import VIEWS
 from ...times import to_local
 from .. import theme
@@ -69,7 +69,7 @@ from .base import (
 )
 from .missing_list import MissingList
 from .training_agreement import AgreementPanel, BlindPanel
-from .training_import import ImportSheet
+from .training_import import ImportSheet, stop_error
 from .training_labels import LabelEditor, State
 from .training_versions import VersionsPanel, WorkingSetPanel
 
@@ -538,28 +538,8 @@ class TrainingPage(Page):
         )  # fmt: skip
 
     def _stop_error(self, report: ImportReport, total: int) -> BaseException | None:
-        """The error an import stopped at, as its dialog says it: a file that cannot be copied is AOI-TRN-009 (#178);
-        any other error after a file went in AOI-TRN-010 with the count (#206); a copy refused as too long before any
-        went in AOI-TRN-011 for all the files (#245); any other, as it is."""
-        if report.stopped is None:
-            return None
-        f, e = report.stopped
-        n: dict[str, object] = {"at": total - len(report.left), "total": total, "imported": len(report.added)}
-        n["name"] = self.sheet.board_model  # the board model to pick in the header before Import again
-        if isinstance(e, AoiError) and e.code == "AOI-TRN-008":  # this one file not copied
-            reason, code = e.params["reason"], "AOI-TRN-009"
-        elif n["imported"]:  # files went in before it: the message must say how many (#206)
-            title = QT_TRANSLATE_NOOP("Errors", "{code} {title}")  # the title in the UI language (#198)
-            reason = title.fill(code=e.code, title=e.title) if isinstance(e, AoiError) else system_reason(e)
-            code = "AOI-TRN-010"
-        elif isinstance(e, AoiError) and e.code == "AOI-TRN-011":  # none of the images went in, not 1
-            return AoiError("AOI-TRN-011", e.detail, path=f.path, workspace=e.params["workspace"], count=total)
-        else:  # nothing imported yet: the error is shown as it is
-            return e
-        detail = e.detail if isinstance(e, AoiError) else system_detail(e)
-        stopped = AoiError(code, detail, path=f.path, reason=reason, **n)
-        stopped.__cause__ = e
-        return stopped
+        """The error an import stopped at, as its dialog says it (`training_import.stop_error`)."""
+        return stop_error(report, total, self.sheet.board_model)
 
     def _counts(self, report: ImportReport) -> dict[str, int]:
         ok = sum(f.label == "OK" for f in report.added)

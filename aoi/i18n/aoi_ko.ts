@@ -850,7 +850,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+61"/>
+        <location line="+62"/>
         <source> ({context})</source>
         <translation type="unfinished"></translation>
     </message>
@@ -899,7 +899,7 @@
         <location line="+8"/>
         <location line="+55"/>
         <location line="+26"/>
-        <location line="+198"/>
+        <location line="+200"/>
         <source>Training an AI model</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1157,14 +1157,14 @@
         <translation>검증 세트 잠금</translation>
     </message>
     <message>
-        <location line="-2998"/>
-        <location line="+3012"/>
+        <location line="-3001"/>
+        <location line="+3015"/>
         <location line="+39"/>
         <source>the workspace holds no such dataset version</source>
         <translation>작업 공간에 그런 데이터셋 버전이 없습니다</translation>
     </message>
     <message>
-        <location line="-3101"/>
+        <location line="-3104"/>
         <source>Drift on {board} ({view}): {count} of the last {of} boards called NG; {before} % of the {baseline} before</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1264,7 +1264,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1205"/>
+        <location line="+1208"/>
         <source>Setting the comparison&apos;s thresholds from labelled boards</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1491,7 +1491,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-3763"/>
+        <location line="-3766"/>
         <source>no earlier version of this board model was active</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1516,7 +1516,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1129"/>
+        <location line="+1132"/>
         <source>its UUID {found} is not {uuid}, as in the AI model registry</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1623,7 +1623,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-3991"/>
+        <location line="-3994"/>
         <source>unhandled</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3353,7 +3353,167 @@
         <translation>작업 표시줄에서 열려 있는 앱으로 전환하십시오. 다른 계정이나 다른 PC에서 열려 있으면 그곳에서 닫게 한 뒤 앱을 다시 시작하십시오. 이번 시작은 작업 공간에서 아무것도 바꾸지 않았습니다.</translation>
     </message>
     <message>
-        <location line="-137"/>
+        <location line="+19"/>
+        <source>Leave out / : * ? &quot; &lt; &gt; \ | and control characters, end with no dot or space, and use no device name such as CON or NUL.</source>
+        <translation type="unfinished">/ : * ? &quot; &lt; &gt; \ | 와 제어 문자를 빼고, 점이나 공백으로 끝내지 말고, CON이나 NUL 같은 장치 이름은 쓰지 마십시오.</translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>Add a letter A to Z or a digit, such as TBOX-A1 or 기판 2호.</source>
+        <translation type="unfinished">TBOX-A1이나 기판 2호처럼 A부터 Z까지의 문자나 숫자를 하나 넣으십시오.</translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>{existing} is already here. Pick it in the top bar, or type another name.</source>
+        <translation type="unfinished">{existing}이 이미 있습니다. 상단 막대에서 선택하거나 다른 이름을 입력하십시오.</translation>
+    </message>
+    <message>
+        <location line="+4"/>
+        <source>This has the letters and digits of {existing}. Change or add a letter or digit.</source>
+        <translation type="unfinished">{existing}과 문자와 숫자가 같습니다. 문자나 숫자를 바꾸거나 더하십시오.</translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>Nothing was made: {reason}.</source>
+        <translation type="unfinished">아무것도 만들지 않았습니다: {reason}.</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>This computer cannot keep the key, so nothing was made. Set up on the station itself.</source>
+        <translation type="unfinished">이 컴퓨터는 키를 보관할 수 없어 아무것도 만들지 않았습니다. 스테이션에서 직접 설정하십시오.</translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>The key was not saved there ({reason}). Save it on a USB drive, or print it.</source>
+        <translation type="unfinished">키를 그곳에 저장하지 못했습니다({reason}). USB 드라이브에 저장하거나 인쇄하십시오.</translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>Not an image this app reads. Save it as PNG or JPG and pick the folder again.</source>
+        <translation type="unfinished">이 앱이 읽을 수 있는 이미지가 아닙니다. PNG나 JPG로 저장한 다음 폴더를 다시 선택하십시오.</translation>
+    </message>
+    <message>
+        <location line="+6"/>
+        <source>Not the camera&apos;s usual size. Use the image as the camera takes it.</source>
+        <translation type="unfinished">카메라의 보통 크기가 아닙니다. 카메라가 찍은 그대로의 이미지를 쓰십시오.</translation>
+    </message>
+    <message>
+        <location line="+4"/>
+        <source>Put it in a folder of ng named after its defect, then pick the folder again.</source>
+        <translation type="unfinished">ng 안에 결함 이름의 폴더를 만들어 넣은 다음 폴더를 다시 선택하십시오.</translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>Wait until copying from the camera has ended, then pick the folder again.</source>
+        <translation type="unfinished">카메라에서 복사가 끝날 때까지 기다린 다음 폴더를 다시 선택하십시오.</translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>Taken once already; nothing to do. Not counted twice.</source>
+        <translation type="unfinished">이미 한 번 들어왔으므로 할 일이 없습니다. 두 번 세지 않습니다.</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Not in ok or ng. Move it into one and pick the folder again.</source>
+        <translation type="unfinished">ok나 ng 폴더에 없습니다. 둘 중 하나로 옮긴 다음 폴더를 다시 선택하십시오.</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Not copied ({reason}). Check the USB drive and the free space, then pick the folder again.</source>
+        <translation type="unfinished">복사하지 못했습니다({reason}). USB 드라이브와 여유 공간을 확인한 다음 폴더를 다시 선택하십시오.</translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>Copying stopped at image {at} of {total}; the ones before it are kept. Check the USB drive and the free space, then pick the folder again.</source>
+        <translation type="unfinished">이미지 {total}장 중 {at}번째에서 복사가 멈췄습니다. 그 앞의 이미지는 유지됩니다. USB 드라이브와 여유 공간을 확인한 다음 폴더를 다시 선택하십시오.</translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>Copying stopped at image {at} of {total} ({reason}); the ones before it are kept. Fix that, then pick the folder again.</source>
+        <translation type="unfinished">이미지 {total}장 중 {at}번째에서 복사가 멈췄습니다({reason}). 그 앞의 이미지는 유지됩니다. 그 문제를 고친 다음 폴더를 다시 선택하십시오.</translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>The workspace folder&apos;s path is too long. Pick a shorter one on Settings, then the folder again.</source>
+        <translation type="unfinished">작업 공간 폴더의 경로가 너무 깁니다. 설정에서 더 짧은 경로를 고른 다음 폴더를 다시 선택하십시오.</translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>{store}&apos;s images cannot be opened on this station: {reason}. An Admin types the saved recovery key on Settings (Restore Key…).</source>
+        <translation type="unfinished">이 스테이션에서 {store}의 이미지를 열 수 없습니다: {reason}. 관리자가 설정에서 저장해 둔 복구 키를 입력합니다(키 복원…).</translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>The box was not kept: {reason}. Draw it again.</source>
+        <translation type="unfinished">박스를 저장하지 않았습니다: {reason}. 다시 그리십시오.</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>The box was not kept: it lies outside the image. Draw it again.</source>
+        <translation type="unfinished">박스를 저장하지 않았습니다. 이미지 밖에 있습니다. 다시 그리십시오.</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>The box was not kept: the image is no longer in the workspace. Pick the folder again.</source>
+        <translation type="unfinished">박스를 저장하지 않았습니다. 이미지가 더 이상 작업 공간에 없습니다. 폴더를 다시 선택하십시오.</translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>Train stopped: {reason}. Fix that, then press Train again.</source>
+        <translation type="unfinished">학습이 멈췄습니다: {reason}. 그 문제를 고친 다음 학습을 다시 누르십시오.</translation>
+    </message>
+    <message>
+        <location line="+4"/>
+        <source>Another board model&apos;s names would mix with this one&apos;s. Set the boards up under a new name.</source>
+        <translation type="unfinished">다른 보드 모델의 이름과 이 보드 모델의 이름이 섞입니다. 새 이름으로 보드를 설정하십시오.</translation>
+    </message>
+    <message>
+        <location line="+4"/>
+        <source>Nothing was kept. Free space on the workspace drive, or pick a shorter workspace folder on Settings.</source>
+        <translation type="unfinished">아무것도 남지 않았습니다. 작업 공간 드라이브의 공간을 비우거나, 설정에서 더 짧은 작업 공간 폴더를 고르십시오.</translation>
+    </message>
+    <message>
+        <location line="+7"/>
+        <source>Wait for the training under way to end, then press Train again.</source>
+        <translation type="unfinished">진행 중인 학습이 끝난 뒤 학습을 다시 누르십시오.</translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>No AI model was made: {reason}. Add images of more good boards on Training, then press Train again.</source>
+        <translation type="unfinished">AI 모델을 만들지 않았습니다: {reason}. 학습 페이지에서 양품 보드 이미지를 더 추가한 다음 학습을 다시 누르십시오.</translation>
+    </message>
+    <message>
+        <location line="+7"/>
+        <source>No AI model was made: {count} of the images it would train on are kept apart already. Add images of more good boards on Training, then press Train again.</source>
+        <translation type="unfinished">AI 모델을 만들지 않았습니다. 학습할 이미지 중 {count}장이 이미 따로 두어져 있습니다. 학습 페이지에서 양품 보드 이미지를 더 추가한 다음 학습을 다시 누르십시오.</translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>The AI model was made but does not judge boards yet: {reason}.</source>
+        <translation type="unfinished">AI 모델을 만들었지만 아직 보드를 판정하지 않습니다: {reason}.</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>The AI model was made but does not judge boards yet: it has no AI model card. Press Train again.</source>
+        <translation type="unfinished">AI 모델을 만들었지만 아직 보드를 판정하지 않습니다. AI 모델 카드가 없습니다. 학습을 다시 누르십시오.</translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>The AI model was made but does not judge boards yet: a Validated AI model judges {board}&apos;s boards, and a Trial one never replaces it.</source>
+        <translation type="unfinished">AI 모델을 만들었지만 아직 보드를 판정하지 않습니다. Validated AI 모델이 {board}의 보드를 판정하며, Trial 모델은 그 모델을 대신하지 않습니다.</translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>Nothing was made: Validated AI model {version} judges {board}&apos;s boards, and Train makes a Trial one, which never replaces it.</source>
+        <translation type="unfinished">아무것도 만들지 않았습니다. Validated AI 모델 {version}이 {board}의 보드를 판정하며, 학습은 Trial AI 모델을 만드는데 Trial 모델은 Validated 모델을 대신하지 않습니다.</translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>Not tested: {reason}. The AI model judges boards; AI Model Test tests it again.</source>
+        <translation type="unfinished">테스트하지 않았습니다: {reason}. AI 모델은 보드를 판정하며, AI 모델 테스트에서 다시 테스트합니다.</translation>
+    </message>
+    <message>
+        <location line="-268"/>
         <source>Try again; if it happens again, restart the app and send the log file (the workspace&apos;s logs folder) to support.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3818,7 +3978,6 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/training.py" line="+552"/>
         <location filename="../ui/pages/training_import.py" line="+39"/>
         <source>{code} {title}</source>
         <translation type="unfinished"></translation>
@@ -3945,7 +4104,7 @@
     </message>
     <message>
         <location line="+1"/>
-        <location filename="../core/services.py" line="+3254"/>
+        <location filename="../core/services.py" line="+3257"/>
         <source>a file of it could not be read: {reason}</source>
         <translation>그 파일 하나를 읽을 수 없습니다: {reason}</translation>
     </message>
@@ -4116,7 +4275,7 @@
 <context>
     <name>FirstRunGuide</name>
     <message>
-        <location filename="../ui/pages/guide.py" line="+51"/>
+        <location filename="../ui/pages/guide.py" line="+52"/>
         <source>Board model</source>
         <translation type="unfinished">보드 모델</translation>
     </message>
@@ -4136,7 +4295,7 @@
         <translation type="unfinished">모든 단계 보기 ›</translation>
     </message>
     <message>
-        <location line="+44"/>
+        <location line="+43"/>
         <source>as on the board or its drawing, such as TBOX-A1</source>
         <translation type="unfinished">보드나 도면에 적힌 그대로, 예: TBOX-A1</translation>
     </message>
@@ -4161,7 +4320,7 @@
         <translation type="unfinished">고객마다 이미지는 이 스테이션에 암호화되어, 다른 모든 고객의 이미지와 따로 보관됩니다.</translation>
     </message>
     <message>
-        <location line="+11"/>
+        <location line="+9"/>
         <source>Create  Enter</source>
         <translation type="unfinished">만들기  Enter</translation>
     </message>
@@ -4176,7 +4335,7 @@
         <translation type="unfinished">이 스테이션과 떨어져 보관하는 USB 드라이브(이미지를 가져오는 드라이브 말고)에 저장하거나 인쇄하십시오.</translation>
     </message>
     <message>
-        <location line="+8"/>
+        <location line="+6"/>
         <source>I Have Saved the Key</source>
         <translation type="unfinished">키를 저장했습니다</translation>
     </message>
@@ -4196,12 +4355,12 @@
         <translation type="unfinished">{board_model} 설정</translation>
     </message>
     <message>
-        <location line="+42"/>
+        <location line="+41"/>
         <source>✓ {name} can be used.</source>
         <translation type="unfinished">✓ {name}을(를) 쓸 수 있습니다.</translation>
     </message>
     <message>
-        <location line="+2"/>
+        <location line="+3"/>
         <source>Setting up a board model for a customer needs the {role} role.</source>
         <translation type="unfinished">고객용 보드 모델을 설정하려면 {role} 역할이 필요합니다.</translation>
     </message>
@@ -4212,7 +4371,7 @@
         <translation type="unfinished">보드 모델 이름과 고객을 입력하십시오</translation>
     </message>
     <message>
-        <location line="+21"/>
+        <location line="+18"/>
         <location line="+38"/>
         <source>Board model {name} is set up for {customer}.</source>
         <translation type="unfinished">보드 모델 {name}이(가) {customer}용으로 설정되었습니다.</translation>
@@ -4380,7 +4539,7 @@
 <context>
     <name>GuideImages</name>
     <message>
-        <location filename="../ui/pages/guide_images.py" line="+135"/>
+        <location filename="../ui/pages/guide_images.py" line="+137"/>
         <source>Pick one folder with two folders in it: ok, with the good boards&apos; images, and ng, with a folder for each defect named after it, such as {example}.</source>
         <translation type="unfinished">두 폴더가 든 폴더 하나를 고르십시오. ok에는 양품 보드 이미지를, ng에는 불량마다 그 이름을 붙인 폴더(예: {example})를 둡니다.</translation>
     </message>
@@ -4415,15 +4574,15 @@
         <translation type="unfinished">취소</translation>
     </message>
     <message>
-        <location line="+14"/>
+        <location line="+12"/>
         <location line="+93"/>
-        <location line="+208"/>
-        <location line="+30"/>
+        <location line="+206"/>
+        <location line="+27"/>
         <source>Show Why</source>
         <translation type="unfinished">이유 보기</translation>
     </message>
     <message>
-        <location line="-305"/>
+        <location line="-300"/>
         <source>NG image: drag across the defect</source>
         <translation type="unfinished">NG 이미지: 불량 위로 드래그하십시오</translation>
     </message>
@@ -4438,7 +4597,7 @@
         <translation type="unfinished">박스를 그릴 때마다 다음 이미지가 열립니다.</translation>
     </message>
     <message>
-        <location line="+14"/>
+        <location line="+12"/>
         <source>← Back</source>
         <translation type="unfinished">← 이전</translation>
     </message>
@@ -4468,7 +4627,7 @@
         <translation type="unfinished">{action}  {key}</translation>
     </message>
     <message>
-        <location line="+97"/>
+        <location line="+99"/>
         <source>A copy into {board_model} is running: Cancel (Esc) stops it.</source>
         <translation type="unfinished">{board_model}(으)로 복사하는 중입니다. 취소(Esc)로 멈출 수 있습니다.</translation>
     </message>
@@ -4483,12 +4642,12 @@
         <translation type="unfinished">이 화면에서 그린 박스가 없어 실행 취소할 것이 없습니다.</translation>
     </message>
     <message>
-        <location line="+233"/>
+        <location line="+228"/>
         <source>Skipped, as they cannot be read:</source>
         <translation type="unfinished">읽을 수 없어 건너뛴 이미지:</translation>
     </message>
     <message>
-        <location line="-292"/>
+        <location line="-287"/>
         <source>No images of {board_model} yet</source>
         <translation type="unfinished">아직 {board_model}의 이미지가 없습니다</translation>
     </message>
@@ -4533,7 +4692,7 @@
         <translation type="unfinished">{board_model}: {line}</translation>
     </message>
     <message>
-        <location line="+24"/>
+        <location line="+22"/>
         <source>The copy into {board_model} ended: {added} copied, {count} not taken.</source>
         <translation type="unfinished">{board_model}(으)로 복사를 마쳤습니다: {added}개 복사, {count}개 가져오지 않음.</translation>
     </message>
@@ -4543,8 +4702,7 @@
         <translation type="unfinished">{folder}에서, {view} 뷰. 가져오지 않음: {count}장.</translation>
     </message>
     <message>
-        <location line="-11"/>
-        <location line="+3"/>
+        <location line="-8"/>
         <source>Copying stopped at image {at} of {total}; the ones before it are kept.</source>
         <translation type="unfinished">이미지 {total}장 중 {at}번째에서 복사가 멈췄습니다. 그 전 이미지는 유지됩니다.</translation>
     </message>
@@ -4564,7 +4722,7 @@
         <translation type="unfinished">복사했지만 주석 파일의 박스 중 일부는 저장되지 않았습니다: {why}.</translation>
     </message>
     <message>
-        <location line="+35"/>
+        <location line="+32"/>
         <source>Hide Why</source>
         <translation type="unfinished">이유 숨기기</translation>
     </message>
@@ -4582,7 +4740,7 @@
 <context>
     <name>GuideTrain</name>
     <message>
-        <location filename="../ui/pages/guide_train.py" line="+88"/>
+        <location filename="../ui/pages/guide_train.py" line="+89"/>
         <source>Board revision</source>
         <translation type="unfinished">보드 리비전</translation>
     </message>
@@ -4959,7 +5117,7 @@
 <context>
     <name>ImportSheet</name>
     <message>
-        <location filename="../ui/pages/training_import.py" line="+64"/>
+        <location filename="../ui/pages/training_import.py" line="+91"/>
         <location line="+22"/>
         <source>View</source>
         <translation>뷰</translation>
@@ -7207,7 +7365,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/training.py" line="-397"/>
+        <location filename="../ui/pages/training.py" line="+155"/>
         <source>Training</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7920,6 +8078,25 @@
         <location line="+1"/>
         <source>Admin</source>
         <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>Said</name>
+    <message>
+        <location filename="../ui/pages/guide_said.py" line="+20"/>
+        <source>{title}: {line} ({code})</source>
+        <translation type="unfinished">{title}: {line} ({code})</translation>
+    </message>
+    <message>
+        <location line="+16"/>
+        <location line="+48"/>
+        <source>Show Details</source>
+        <translation type="unfinished">자세히 보기</translation>
+    </message>
+    <message>
+        <location line="+0"/>
+        <source>Hide Details</source>
+        <translation type="unfinished">자세히 숨기기</translation>
     </message>
 </context>
 <context>
@@ -8717,7 +8894,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/services.py" line="-3338"/>
+        <location filename="../core/services.py" line="-3341"/>
         <source>Aligning {count} images to the reference board</source>
         <translation type="unfinished"></translation>
     </message>
@@ -8786,12 +8963,12 @@
     </message>
     <message>
         <location line="+1"/>
-        <location line="+620"/>
+        <location line="+600"/>
         <source>Import Folder…</source>
         <translation>폴더 가져오기…</translation>
     </message>
     <message>
-        <location line="-588"/>
+        <location line="-568"/>
         <location line="+95"/>
         <source>ID</source>
         <translation type="unfinished"></translation>
@@ -8853,12 +9030,12 @@
     </message>
     <message>
         <location line="+3"/>
-        <location line="+477"/>
+        <location line="+457"/>
         <source>Remove</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-466"/>
+        <location line="-446"/>
         <source>Select a sample to preview</source>
         <translation type="unfinished"></translation>
     </message>
@@ -8898,7 +9075,7 @@
         <translation type="unfinished">취소</translation>
     </message>
     <message>
-        <location line="+714"/>
+        <location line="+694"/>
         <source>{phase} · {percent} % · {left}</source>
         <translation>{phase} · {percent} % · {left}</translation>
     </message>
@@ -8923,7 +9100,7 @@
         <translation>취소됨: AI 모델을 저장하지 않았으며 활성 AI 모델은 바뀌지 않았습니다.</translation>
     </message>
     <message>
-        <location line="-745"/>
+        <location line="-725"/>
         <source>AI model versions</source>
         <translation type="unfinished"></translation>
     </message>
@@ -9014,13 +9191,13 @@
     </message>
     <message>
         <location line="+1"/>
-        <location line="+875"/>
+        <location line="+855"/>
         <location line="+42"/>
         <source>Roll Back</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-913"/>
+        <location line="-893"/>
         <source>AI Model Card</source>
         <translation type="unfinished"></translation>
     </message>
@@ -9065,7 +9242,7 @@
         <translation>{folder}와(과) 그 하위 폴더에 이미지가 없어 가져올 것이 없습니다</translation>
     </message>
     <message>
-        <location line="+121"/>
+        <location line="+101"/>
         <source>Imported {ok} OK and {ng} NG images into {board_model}</source>
         <translation>OK 이미지 {ok}개와 NG 이미지 {ng}개를 {board_model}(으)로 가져왔습니다</translation>
     </message>

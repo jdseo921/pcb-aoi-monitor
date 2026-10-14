@@ -87,7 +87,8 @@ from pytestqt.qtbot import QtBot
 
 from aoi.config import Settings
 from aoi.core import stats
-from aoi.core.services import AppContext
+from aoi.core.services import AppContext, ErrorReport
+from aoi.errors import AoiError
 from aoi.ui import theme
 from aoi.ui.main_window import HomePage, MainWindow
 from aoi.ui.pages.base import ROLES, size_class
@@ -1037,10 +1038,10 @@ def test_req_trn_021_first_run_guide_sizes_and_contrast(
     """Home's first-run guide (B5), which the page walk never reaches, as its workspace has board models: screen 1 as
     the Admin types in it, its recovery key step and screen 1 greyed for the Engineer, then screen 2 before any image
     and with its box area open, and screen 3 before Train and with what it made, in the screenshots' states
-    (`render_screens.guide_steps`); with the parts of screens 2 and 3 no screenshot shows, each with a line of its own:
-    the type list for images straight in ng, the copy's line with Cancel, Show Why's list, the lines of a refusal and
-    Train's line with Cancel. Every visible widget of the guide passes the font, size and
-    contrast rules above, and every control marked T is held to its size class. Last in the module, as screen 2's
+    (`render_screens.guide_steps`); with the parts of screens 1 to 3 no screenshot shows, each with a line of its own:
+    the type list for images straight in ng, the copy's line with Cancel, Show Why's list, a refusal on each screen
+    with its details open (Q78) and Train's line with Cancel. Every visible widget of the guide passes the font, size
+    and contrast rules above, and every control marked T is held to its size class. Last in the module, as screen 2's
     board model stays in its workspace."""
     ctx, dataset = screens
     findings: list[str] = []
@@ -1063,35 +1064,56 @@ def test_req_trn_021_first_run_guide_sizes_and_contrast(
         guide = cast(HomePage, win.pages["Home"]).guide
         for name in render_screens.guide_steps(win, dataset):
             walk(name, win, guide)
+            if name == "home-guide-admin":  # Create refused, its details open (Q78), then taken away again
+                guide.refused.say(ErrorReport.of(AoiError("AOI-TRN-044", store="Acme", reason="the key was refused")))
+                guide.refused.btn_details.click()
+                QApplication.processEvents()
+                walk("home-guide-form-parts", win, guide)
+                guide.refused.clear()
             if name == "home-guide-boxes-admin":  # screen 2's parts no screenshot shows, then hidden again
                 images = guide.images
                 for line, said in (
                     (images.copy_line, "Copying image 12 of 78 · 15 % · about 1 min left"),
-                    (images.picked, "Copying stopped at image 3 of 78; the ones before it are kept."),
-                    (images.why, "stray.png: AOI-TRN-016 Image has no label. Put it in ok or ng, then pick it again."),
-                    (images.box_refused, "AOI-TRN-032 The workspace holds no sample n02, so nothing was changed."),
-                    (images.skipped, "Skipped, as they cannot be read:\nn02.png: AOI-INSP-001 Cannot be read."),
+                    (
+                        images.why,
+                        "stray.png: Image has no label: Not in ok or ng. Move it into one and pick the folder again."
+                        " (AOI-TRN-016)",
+                    ),
+                    (
+                        images.skipped,
+                        "Skipped, as they cannot be read:\nn02.png: Image cannot be read: Not an image this app reads."
+                        " Save it as PNG or JPG and pick the folder again. (AOI-INSP-001)",
+                    ),
                 ):
                     line.setText(said)
-                parts = (images.typing, images.copy_row, images.picked, images.btn_why, images.why)
-                for part in (*parts, images.box_refused, images.skipped):
+                stopped = {"at": 3, "total": 78, "imported": 2, "name": "TBOX-C1", "reason": "the drive is full"}
+                images.picked.say(ErrorReport.of(AoiError("AOI-TRN-009", path="ok_03.png", **stopped)), "ok_03.png:")
+                images.box_refused.say(ErrorReport.of(AoiError("AOI-TRN-032", sample="n02")))
+                for said in (images.picked, images.box_refused):
+                    said.btn_details.click()
+                parts = (images.typing, images.copy_row, images.btn_why, images.why)
+                for part in (*parts, images.skipped):
                     part.show()
                 QApplication.processEvents()
                 walk("home-guide-images-parts", win, guide)
-                for part in (*parts, images.box_refused, images.skipped):
+                for part in (*parts, images.skipped):
                     part.hide()
+                images.picked.clear()
+                images.box_refused.clear()
             if name == "home-guide-train-admin":  # screen 3's lines no screenshot shows, then hidden again
                 screen = guide.train_step
                 screen.revision_line.setText("Type the board revision: 1 to 16 letters and digits, such as R1.")
-                screen.said.setText("AOI-TRN-047 An AI model is already training on this station.")
+                screen.said.say(ErrorReport.of(AoiError("AOI-TRN-047")))
+                screen.said.btn_details.click()
                 screen.run_line.setText("Training the AI model: round 12 of 60 · 46 % · about 4 min left")
-                for part in (screen.revision_line, screen.said, screen.run_row):
+                for part in (screen.revision_line, screen.run_row):
                     part.show()
                 QApplication.processEvents()
                 walk("home-guide-train-parts", win, guide)
-                for part in (screen.revision_line, screen.said, screen.run_row):
+                for part in (screen.revision_line, screen.run_row):
                     part.hide()
+                screen.said.clear()
         win.set_user("admin")
-    enough = {"steps": 9, "text": 80, "buttons": 28, "targets": 16}  # 7 screenshots' states and 2 of parts
+    enough = {"steps": 10, "text": 80, "buttons": 28, "targets": 16}  # 7 screenshots' states and 3 of parts
     assert all(seen[k] >= n for k, n in enough.items()), seen
     assert not findings, f"{len(findings)} findings:\n" + "\n".join(sorted(set(findings)))

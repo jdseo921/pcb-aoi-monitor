@@ -9,7 +9,8 @@ its customer, whose encrypted dataset store the board model goes in (`AppContext
 with Save to File… and Print…; until I Have Saved the Key, which waits for the key to be saved or printed, the frame
 holds still: the sidebar, the header's controls, Switch User and the window's close do nothing (`holding`; Q67, in
 place of the New board model dialog's modal key step, its tick and Done). A refusal is said under the control that
-raised it, with its code; the guide shows no dialog of its own. An Engineer sees the screen greyed with the role it
+raised it, in the guide's words with its title and code, the catalogue's own text behind Show Details (`Said`, Q78);
+the guide shows no dialog of its own. An Engineer sees the screen greyed with the role it
 needs, as a customer's store is an Admin's; an Operator, who sets nothing up, gets Home's empty state instead.
 
 Screen 2, the board model's images, is `GuideImages` (guide_images.py): it shows for a board model in a customer's store
@@ -35,12 +36,12 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from ...core.services import REQUIRED_ROLE
+from ...core.services import REQUIRED_ROLE, ErrorReport
 from ...errors import AoiError
 from .. import theme
-from ..errors import phrase_text
 from .base import QT_TRANSLATE_NOOP, PressSays, button, role_text, size_class
 from .guide_images import GuideImages
+from .guide_said import Said, said_text
 from .guide_train import GuideTrain
 from .recovery_key import RecoveryKey
 
@@ -126,9 +127,8 @@ class FirstRunGuide(QFrame):
         self.name.setMinimumWidth(theme.FIELD_W)
         self.name.textChanged.connect(self._typed)
         self.name.returnPressed.connect(self.make_board_model)
-        self.name_line = QLabel()  # the name's live check (ADR 0023): its code first when refused
-        self.name_line.setObjectName("muted")
-        self.name_line.setWordWrap(True)
+        self.name_line = Said()  # the name's live check (ADR 0023): a refusal in the guide's words, with its code
+        self.name_line.line.setObjectName("muted")
         self.customer = QLineEdit()
         self.customer.setMinimumWidth(theme.FIELD_W)
         self.customer.textChanged.connect(self._typed)
@@ -163,9 +163,7 @@ class FirstRunGuide(QFrame):
         self.role_line = QLabel()  # for a role that may not make a customer's board model, the role it needs
         self.role_line.setWordWrap(True)
         lay.addWidget(self.role_line)
-        self.refused = QLabel()  # Create's refusal, under it: its code, what happened and what to do
-        self.refused.setWordWrap(True)
-        self.refused.hide()
+        self.refused = Said()  # Create's refusal, under it, in the guide's words with its code (Q78)
         lay.addWidget(self.refused)
         self.btn_create = size_class(button(self.tr("Create  Enter"), "primary", self.make_board_model), "T")
         PressSays(self.btn_create, self._not_ready, self.status)  # a role's refusal is RoleGates' to say
@@ -203,9 +201,7 @@ class FirstRunGuide(QFrame):
             )
         )
         away.setWordWrap(True)
-        self.key_refused = QLabel()  # a save or print refused (AOI-LOG-002): its code, what happened and what to do
-        self.key_refused.setWordWrap(True)
-        self.key_refused.hide()
+        self.key_refused = Said()  # a save or print refused (AOI-LOG-002), in the guide's words with its code (Q78)
         kept = QAction(self.tr("I Have Saved the Key"), self.key_step)
         kept.setShortcuts([QKeySequence("Enter"), QKeySequence("Return")])  # F1 names the first, "Enter", as the button
         kept.triggered.connect(self.key_kept)
@@ -270,7 +266,6 @@ class FirstRunGuide(QFrame):
     def _typed(self) -> None:
         """A name or a customer typed: a refusal of Create said before goes, as it was of what was typed then."""
         self.refused.clear()
-        self.refused.hide()
         self._sync()
 
     def _sync(self) -> None:
@@ -281,10 +276,11 @@ class FirstRunGuide(QFrame):
         allowed = self.page.gates.may(STORE_CALL)
         refused = self.ctx.board_model_name_refusal(name) if name else None
         if refused is not None:
-            self.name_line.setText(" ".join([refused.code, phrase_text(refused.what), phrase_text(refused.action)]))
-        else:
-            self.name_line.setText(self.tr("✓ {name} can be used.").format(name=name) if name else "")
-        self.name_line.setVisible(bool(name))  # empty for a role that may not type one: a sign-in clears the fields
+            self.name_line.say(ErrorReport.of(refused))
+        elif name:
+            self.name_line.say_text(self.tr("✓ {name} can be used.").format(name=name))
+        else:  # empty for a role that may not type one: a sign-in clears the fields
+            self.name_line.clear()
         role = self.tr("Setting up a board model for a customer needs the {role} role.")  # the guide's words (sketch)
         role = role.format(role=role_text(REQUIRED_ROLE[STORE_CALL]))
         for field in (self.name, self.customer):
@@ -304,7 +300,7 @@ class FirstRunGuide(QFrame):
         name = self.name.text().strip()
         refused = self.ctx.board_model_name_refusal(name) if name else None
         if refused is not None:
-            return " ".join([refused.code, phrase_text(refused.what), phrase_text(refused.action)])
+            return said_text(ErrorReport.of(refused))
         return self.tr("Type a board model name and its customer")
 
     def make_board_model(self) -> None:
@@ -319,12 +315,9 @@ class FirstRunGuide(QFrame):
         try:
             made = self.ctx.create_customer_board_model(name, customer)
         except AoiError as e:
-            report = self.ctx.report_error(e, "Home")
-            self.refused.setText(" ".join([report.code, phrase_text(report.what), phrase_text(report.action)]))
-            self.refused.show()
+            self.refused.say(self.ctx.report_error(e, "Home"))
             return
         self.refused.clear()
-        self.refused.hide()
         if made["sheet"] is None:
             said = self.tr("Board model {name} is set up for {customer}.")  # the guide's words: no "store" (sketch)
             self.status(said.format(name=made["board_model"], customer=made["store"]["customer"]))
@@ -347,7 +340,7 @@ class FirstRunGuide(QFrame):
                 " only now."
             ).format(customer=customer)
         )
-        self.key_refused.hide()
+        self.key_refused.clear()
         self.show_for(None)
         self.recovery.btn_save.setFocus()
         self.holding_changed.emit(True)
@@ -372,14 +365,11 @@ class FirstRunGuide(QFrame):
         """The key saved or printed: a refusal of a save or print before it is past."""
         if self.recovery.saved:
             self.key_refused.clear()
-            self.key_refused.hide()
         self._sync()
 
     def _key_refused(self, e: AoiError) -> None:
         """A save or print of the key refused (AOI-LOG-002), said under its buttons, logged and alarmed."""
-        report = self.ctx.report_error(e, "Home")
-        self.key_refused.setText(" ".join([report.code, phrase_text(report.what), phrase_text(report.action)]))
-        self.key_refused.show()
+        self.key_refused.say(self.ctx.report_error(e, "Home"))
 
     def focus_first(self) -> None:
         """The control the screen shown opens on: the name on screen 1, Train on screen 3 (sketch), or Inspect a Board…
@@ -400,6 +390,5 @@ class FirstRunGuide(QFrame):
             field.blockSignals(False)
         for line in (self.refused, self.key_refused):
             line.clear()
-            line.hide()
         self.made_board_model = self.made_customer = ""
         self._sync()

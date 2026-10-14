@@ -219,7 +219,9 @@ def test_req_trn_021_train_says_why_it_is_off_and_what_stopped_it(
 
     monkeypatch.setattr(ctx, "start_guide_train", refused)
     screen.btn_train.click()
-    assert screen.said.isVisible() and screen.said.text().startswith("AOI-TRN-047 ")
+    assert screen.said.isVisible() and screen.said.text() == (
+        "Training already running: Wait for the training under way to end, then press Train again. (AOI-TRN-047)"
+    )  # the guide's line (Q78)
     monkeypatch.undo()
 
     def not_trained(*args: Any, **kw: Any) -> Any:
@@ -227,7 +229,11 @@ def test_req_trn_021_train_says_why_it_is_off_and_what_stopped_it(
 
     monkeypatch.setattr(ctx, "guide_train", not_trained)
     trained(qtbot, screen)
-    assert screen.said.text().startswith("AOI-TRN-045 ") and screen.before.isVisible() and dialogs == []
+    assert screen.said.text() == (
+        "Training not started: No AI model was made: too few OK images. Add images of more good boards on Training,"
+        " then press Train again. (AOI-TRN-045)"
+    )
+    assert screen.before.isVisible() and dialogs == []
     monkeypatch.undo()
     screen.btn_train.click()
     screen.cancel()
@@ -284,7 +290,7 @@ def test_req_trn_021_train_runs_on_while_other_pages_are_used_and_esc_stops_it(
     trained(qtbot, screen)
     assert [v["revision"] for v in ctx.db.datasets(ONE)] == ["R2"]  # the version kept, not frozen again
     assert screen.result.isVisible() and guide.steps.text() == TRAINED and screen.untested.isVisible()
-    assert screen.said.isVisible() and screen.said.text().startswith("AOI-TST-003 ") and dialogs == []
+    assert screen.said.isVisible() and screen.said.code == "AOI-TST-003" and dialogs == []
 
 
 def test_req_trn_021_train_ends_while_another_board_model_is_shown(
@@ -312,7 +318,7 @@ def test_req_trn_021_train_ends_while_another_board_model_is_shown(
     screen.show_for("TWO-1")  # as screen 3 of another board model: the refusal is ONE-1's
     assert screen.said.isHidden()
     win.select_board_model(ONE)
-    assert screen.isVisible() and screen.said.isVisible() and screen.said.text().startswith("AOI-TRN-045 ")
+    assert screen.isVisible() and screen.said.isVisible() and screen.said.code == "AOI-TRN-045"
     assert screen.before.isVisible() and dialogs == []
 
 

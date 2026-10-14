@@ -211,6 +211,12 @@ What is missing with Validated picked, for the checks a Validated AI model needs
 screen, with its code. Once a board is inspected, or once an AI model made active on Training judges the board model's
 boards, Home shows its cards.
 
+**The guide's refusals.** On each screen of the guide a refusal is said in the guide's words, under the control that met
+it or at the foot of screen 3: the refusal's title, what to do, and its code, such as "Training already running: Wait
+for the training under way to end, then press Train again. (AOI-TRN-047)". **Show Details** opens the catalogue's full
+text under it, the one docs/error-codes.md gives, which names the Engineering pages; **Hide Details** closes it.
+docs/error-codes.md lists the guide's line for each code in a table of its own.
+
 **Scale.** A board model's scale, in px per mm of the board, lets its recipe give sizes in mm, so that a recipe can
 survive a camera change (REQ-RCP-006). The scale does not follow the images by itself: after a camera change, or any
 other change of image size, set it again on the new Golden board before boards are judged; until then sizes in mm keep

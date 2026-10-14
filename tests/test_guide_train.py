@@ -20,7 +20,7 @@ from aoi.core.recipe import Recipe
 from aoi.core.run_progress import Press, RunProgress
 from aoi.core.services import FIRST_LIVE, GUIDE_PARTS, AppContext
 from aoi.errors import AoiError, Phrase
-from tests.test_trial_versions import ONE, one_person, validated_live
+from tests.test_trial_versions import ONE, kept_inactive, one_person, validated_live
 
 ACTIONS = ("dataset.freeze", "dataset.lock", "model.train", "model.activate", "test.run", "inspection.shift_check")
 
@@ -173,6 +173,25 @@ def test_req_trn_021_an_ai_model_made_active_on_training_leaves_the_guide(ctx: A
     ctx.activate_model(int(next(m for m in ctx.models(ONE) if m["version"] == meta["version"])["id"]))
     assert ctx.active_model(ONE)["version"] == meta["version"] != out["model"]["version"]  # type: ignore[index]
     assert ctx.guide_result(ONE) is None and ctx.guide_step(ONE) is None
+
+
+def test_req_trn_021_an_ai_model_with_no_card_is_trained_again(ctx: AppContext, tmp_path: Path) -> None:
+    """An AI model Train made that no longer has its card cannot go live (AOI-TRN-049), so Train takes it as not made:
+    the plan names no AI model trained before, and the next press trains another from the same images and makes it
+    the one that judges the board model's boards, as the guide's line for the code tells the user to do (Q78)."""
+    ready(ctx, tmp_path / "boards")
+    first, _ = press(ctx)
+    kept_inactive(ctx)
+    assert ctx.guide_trained(ONE, "Top", "R1") == first["model"]["version"]
+    for card in ctx.card_files(int(first["model"]["id"])):
+        card.unlink()
+    with pytest.raises(AoiError) as refused:
+        ctx.activate_model(int(first["model"]["id"]))
+    assert refused.value.code == "AOI-TRN-049" and refused.value.guide is not None
+    assert refused.value.guide.endswith("Press Train again.") and ctx.guide_trained(ONE, "Top", "R1") is None
+    again, _ = press(ctx)
+    assert again["dataset"]["uuid"] == first["dataset"]["uuid"] and again["model"]["id"] != first["model"]["id"]
+    assert again["model"]["active"] and ctx.active_model(ONE)["uuid"] == again["model"]["uuid"]  # type: ignore[index]
 
 
 def test_req_trn_021_a_validated_ai_model_live_refuses_the_press(ctx: AppContext, tmp_path: Path) -> None:
