@@ -55,7 +55,8 @@ def test_req_trn_021_an_empty_workspace_opens_on_the_guide(
     assert (guide.heading.text(), guide.steps.text()) == ("Set up your first board model", STEPS)
     assert QWidget.focusWidget(win) is guide.name and not guide.btn_create.isEnabled()
     typed(qtbot, guide, "CON", "Hanil Electronics")
-    assert guide.name_line.text().startswith("AOI-TRN-019 ") and not guide.btn_create.isEnabled()
+    assert guide.name_line.text().startswith("Board model name not allowed: Leave out / : * ? ")  # the guide's (Q78)
+    assert guide.name_line.code == "AOI-TRN-019" and not guide.btn_create.isEnabled()
     typed(qtbot, guide, "TBOX-A1", "Hanil Electronics")
     assert guide.name_line.text() == "✓ TBOX-A1 can be used." and guide.btn_create.isEnabled()
     qtbot.keyClick(guide.customer, Qt.Key.Key_Return)
@@ -109,7 +110,7 @@ def test_req_trn_021_a_customer_with_a_store_and_a_refusal_under_create(
     qtbot.keyClick(popup, Qt.Key.Key_Return)
     assert guide.customer.text() == "Acme" and ctx.board_models() == []  # picked; nothing made
     guide.btn_create.click()
-    assert guide.refused.isVisible() and guide.refused.text().startswith("AOI-TRN-044 ") and dialogs == []
+    assert guide.refused.isVisible() and guide.refused.code == "AOI-TRN-044" and dialogs == []
     assert ctx.board_models() == [] and not guide.holding()
     qtbot.keyClicks(guide.name, "2")
     assert not guide.refused.isVisible()
@@ -140,7 +141,7 @@ def test_req_trn_021_a_key_save_refused_is_said_under_its_buttons(
     inside = ctx.settings.root / "recovery-key.txt"
     monkeypatch.setattr(QFileDialog, "getSaveFileName", staticmethod(lambda *a: (str(inside), "")))
     guide.recovery.btn_save.click()
-    assert guide.key_refused.text().startswith("AOI-LOG-002 ") and guide.key_refused.isVisible() and dialogs == []
+    assert guide.key_refused.code == "AOI-LOG-002" and guide.key_refused.isVisible() and dialogs == []
     assert not inside.exists() and not guide.btn_kept.isEnabled() and guide.holding()
 
 
@@ -201,7 +202,8 @@ def test_req_trn_021_create_says_why_it_is_off(qtbot: QtBot, ctx: AppContext) ->
     assert win.statusBar().currentMessage() == "Type a board model name and its customer"
     typed(qtbot, guide, "CON", "")
     qtbot.mouseClick(guide.btn_create, Qt.MouseButton.LeftButton)
-    assert win.statusBar().currentMessage().startswith("AOI-TRN-019 ")
+    said = win.statusBar().currentMessage()  # the guide's line for the code (Q78)
+    assert said.startswith("Board model name not allowed: Leave out / : * ") and said.endswith(" (AOI-TRN-019)")
     typed(qtbot, guide, "ACME-1", "")
     win.statusBar().clearMessage()
     qtbot.keyClick(guide.name, Qt.Key.Key_Return)
@@ -243,7 +245,7 @@ def test_req_trn_021_the_held_frame_says_why_and_takes_its_keys(
     picks = iter([str(inside), str(usb / "key.txt")])
     monkeypatch.setattr(QFileDialog, "getSaveFileName", staticmethod(lambda *a: (next(picks), "")))
     qtbot.keyClick(guide.key_step, Qt.Key.Key_S, Qt.KeyboardModifier.ControlModifier)
-    assert guide.key_refused.isVisible() and guide.key_refused.text().startswith("AOI-LOG-002 ")
+    assert guide.key_refused.isVisible() and guide.key_refused.code == "AOI-LOG-002"
     qtbot.keyClick(guide.key_step, Qt.Key.Key_S, Qt.KeyboardModifier.ControlModifier)
     assert (usb / "key.txt").exists() and not guide.key_refused.isVisible() and guide.btn_kept.isEnabled()
 

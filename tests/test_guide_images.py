@@ -102,7 +102,9 @@ def test_req_trn_021_a_board_model_in_a_store_opens_on_screen_2(
     assert {s["defect_type"] for s in ctx.samples(BM, "NG")} == {"Missing Component"}
     assert images.from_line.text() == f"From {folder}, Side view. Not taken: 1."
     images.btn_why.click()
-    assert images.why.isVisible() and images.why.text().startswith("stray.png: AOI-TRN-016 ")
+    assert images.why.isVisible() and images.why.text().startswith(
+        "stray.png: Image has no label: Not in ok or ng. Move it into one and pick the folder again. (AOI-TRN-016)"
+    )  # the guide's line for the code (Q78)
     assert not images.first.isVisible() and images.boxes.isVisible() and dialogs == []
     qtbot.waitUntil(lambda: images.editor._pix is not None)
     assert images.where.text().startswith("Image 1 of 3 · Missing_Component_00")  # the copy's name, as Training's
@@ -326,8 +328,10 @@ def test_req_trn_021_a_copy_stopped_by_an_error_and_images_already_in(
     folder = boards(tmp_path / "TBOX-A1", 4, {})
     picked(qtbot, monkeypatch, images, folder)
     assert len(ctx.samples(BM)) == 2 and dialogs == []
-    said = images.picked.text()
-    assert said.startswith("Copying stopped at image 3 of 4; the ones before it are kept. ok_02.png: AOI-"), said
+    assert images.picked.text() == (
+        "ok_02.png: Import stopped by an error: Copying stopped at image 3 of 4; the ones before it are kept. Check the"
+        " USB drive and the free space, then pick the folder again. (AOI-TRN-010)"
+    )  # the guide's line (Q78)
     monkeypatch.setattr(ctx, "import_samples", real)
     picked(qtbot, monkeypatch, images, folder)
     assert images.from_line.text() == f"From {folder}, Top view. Not taken: 0. Already in: 2."
@@ -401,7 +405,7 @@ def test_req_trn_021_an_image_that_cannot_be_read_and_a_box_refused(
     drawn(qtbot, images)
     qtbot.waitUntil(lambda: images.at == 2 and images.reading is None)
     assert images.skipped.isVisible() and images.skipped.text().startswith("Skipped, as they cannot be read:\n")
-    assert f"{Path(ng[1]['path']).name}: AOI-" in images.skipped.text()
+    assert f"{Path(ng[1]['path']).name}: Image cannot be read: Not an image this app reads." in images.skipped.text()
     images.back()
     qtbot.waitUntil(lambda: images.at == 0 and images.reading is None)
 
@@ -412,7 +416,7 @@ def test_req_trn_021_an_image_that_cannot_be_read_and_a_box_refused(
     qtbot.waitUntil(lambda: images.loaded is not None and images.at == 2)
     monkeypatch.setattr(ctx, "set_boxes", refused)
     drawn(qtbot, images)
-    assert images.box_refused.isVisible() and images.box_refused.text().startswith("AOI-TRN-032 ")
+    assert images.box_refused.isVisible() and images.box_refused.code == "AOI-TRN-032"
     assert images.editor.boxes == [] and images.at == 2 and dialogs == []
 
 

@@ -12,7 +12,8 @@ that judges the board model's boards, the images it was trained on and kept apar
 on those, counts first (`stats.text`), the Trial line and the shift check. Inspect a Board… (Enter) opens Inspection's
 Load Images… on the folder above screen 2's and inspects the boards picked, in the view Train trained on (Q69); Open
 Logs & Export › opens the board model's history, and Start the Checks › Training's What is missing with Validated
-picked. A refusal is said under Train, with its code; the screen shows no dialog of its own."""
+picked. A refusal is said at the foot of the screen in the guide's words, with its title and code and the catalogue's
+own text behind Show Details (`Said`, Q78); the screen shows no dialog of its own."""
 
 from __future__ import annotations
 
@@ -25,12 +26,14 @@ from PySide6.QtGui import QAction, QKeySequence
 from PySide6.QtWidgets import QHBoxLayout, QLabel, QLineEdit, QVBoxLayout, QWidget
 
 from ...core import datasets, stats
+from ...core.services import ErrorReport
 from ...errors import AoiError
 from ...times import to_local
 from .. import theme
 from ..errors import phrase_text
 from ..workers import Worker, keep
 from .base import PressSays, button, size_class, time_left_text, view_text
+from .guide_said import Said
 from .training_versions import REVISION_LENGTH
 
 if TYPE_CHECKING:
@@ -66,9 +69,7 @@ class GuideTrain(QWidget):
         lay.setContentsMargins(0, 0, 0, 0)
         self._before(lay)
         self._result(lay)
-        self.said = QLabel()  # a refusal with its code, as Train is pressed or in any part of its run, or a Cancel
-        self.said.setWordWrap(True)
-        self.said.hide()
+        self.said = Said()  # a refusal in the guide's words, as Train is pressed or in any part of its run, or a Cancel
         self.said_for: str | None = None  # the board model it speaks of: said on that board model's screen only
         lay.addWidget(self.said)
 
@@ -188,7 +189,7 @@ class GuideTrain(QWidget):
     def forget(self) -> None:
         """For the next user signed in: the board revision back to R1, and no line said of a Train before."""
         self.revision.setText(FIRST_REVISION)
-        self.said.hide()
+        self.said.clear()
         self.said_for = None
 
     def refresh(self) -> None:
@@ -342,13 +343,13 @@ class GuideTrain(QWidget):
         if not self.btn_train.isEnabled():
             self.status(self._train_off())
             return
-        self.said.hide()
+        self.said.clear()
         self.said_for, self.run_for, self.stopping = None, bm, False
         try:
             self.ctx.start_guide_train(bm, self.view, self.revision.text().strip(), listen=self._follow)
         except AoiError as e:  # a training run started meanwhile (AOI-TRN-047), or the role
             self.run_for = None
-            self._say(self._coded(e), bm)
+            self._say(self._report(e), bm)
             return
         self.run_line.setText(self.tr("Starting Train…"))
         self.refresh()
@@ -359,7 +360,7 @@ class GuideTrain(QWidget):
         bm = self.run_for
         self.worker = Worker.of(job)
         self.worker.signals.progress.connect(self._progress)
-        self.worker.signals.error.connect(lambda e: self._say(self._coded(e), bm))
+        self.worker.signals.error.connect(lambda e: self._say(self._report(e), bm))
         self.worker.signals.finished.connect(self._ended)
         keep(self.worker, self.ctx.jobs)
         if (training := self.page.shell.pages.get("Training")) is not None:
@@ -395,14 +396,17 @@ class GuideTrain(QWidget):
         if self.isVisible() and self.done():
             self.btn_inspect.setFocus()  # Enter inspects the first board (Q69)
 
-    def _coded(self, e: BaseException) -> str:
-        """An error as the guide says it: logged and alarmed, then its code, what happened and what to do."""
-        report = self.ctx.report_error(e, "Home")
-        return " ".join([report.code, phrase_text(report.what), phrase_text(report.action)])
+    def _report(self, e: BaseException) -> ErrorReport:
+        """An error the guide says: logged and alarmed (`AppContext.report_error`)."""
+        return self.ctx.report_error(e, "Home")
 
-    def _say(self, said: str, board_model: str | None) -> None:
-        """`said` under the screen of `board_model`, kept until another Train or a sign-in."""
-        self.said.setText(said)
+    def _say(self, said: ErrorReport | str, board_model: str | None) -> None:
+        """`said`, a refusal or a line of the guide's own, at the foot of the screen of `board_model`, kept until
+        another Train or a sign-in."""
+        if isinstance(said, str):
+            self.said.say_text(said)
+        else:
+            self.said.say(said)
         self.said_for = board_model
         self.said.setVisible(board_model == self.board_model)
 

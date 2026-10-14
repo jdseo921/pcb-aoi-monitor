@@ -127,3 +127,50 @@ register; `{braces}` are filled in when the error is raised.
 | AOI-USR-001 | Not allowed for this role | {what} needs the {roles} role. | Sign in as a user with that role, or ask one to do it. |
 | AOI-USR-002 | Last Admin | {name} is the only user with the Admin role, so it cannot change to {role}: no one could then manage users or settings. | Give another user the Admin role first, then change this one. |
 | AOI-USR-003 | Unknown user | There is no user named {name} in this workspace, so no role to sign in with. | Pick a user from the list under Switch User; an Admin adds users on the Settings page. |
+
+## The first-run guide's lines
+
+The first-run guide on Home says these in place of what happened and what to do, which its Show Details holds
+(REQ-TRN-021, Q78). Any other code is said there as the table above gives it.
+
+| Code | Title | The guide's line |
+|---|---|---|
+| AOI-INSP-001 | Image cannot be read | Not an image this app reads. Save it as PNG or JPG and pick the folder again. |
+| AOI-INSP-004 | File format not supported | Not an image this app reads. Save it as PNG or JPG and pick the folder again. |
+| AOI-INSP-005 | Image over the size limit | Not the camera's usual size. Use the image as the camera takes it. |
+| AOI-INSP-006 | Image file cannot be decoded | Not an image this app reads. Save it as PNG or JPG and pick the folder again. |
+| AOI-INSP-007 | Image side too long | Not the camera's usual size. Use the image as the camera takes it. |
+| AOI-LOG-002 | Export not written | The key was not saved there ({reason}). Save it on a USB drive, or print it. |
+| AOI-TRN-004 | Training gave an AI model that cannot judge boards | No AI model was made: {reason}. Add images of more good boards on Training, then press Train again. |
+| AOI-TRN-005 | Board model name already taken | {existing} is already here. Pick it in the top bar, or type another name. |
+| AOI-TRN-008 | Images not imported | Not copied ({reason}). Check the USB drive and the free space, then pick the folder again. |
+| AOI-TRN-009 | Import stopped part-way | Copying stopped at image {at} of {total}; the ones before it are kept. Check the USB drive and the free space, then pick the folder again. |
+| AOI-TRN-010 | Import stopped by an error | Copying stopped at image {at} of {total}; the ones before it are kept. Check the USB drive and the free space, then pick the folder again. |
+| AOI-TRN-011 | Images not imported: path too long | The workspace folder's path is too long. Pick a shorter one on Settings, then the folder again. |
+| AOI-TRN-013 | NG image needs a defect type | Put it in a folder of ng named after its defect, then pick the folder again. |
+| AOI-TRN-014 | Image changed while it was copied | Wait until copying from the camera has ended, then pick the folder again. |
+| AOI-TRN-015 | Image already imported | Taken once already; nothing to do. Not counted twice. |
+| AOI-TRN-016 | Image has no label | Not in ok or ng. Move it into one and pick the folder again. |
+| AOI-TRN-019 | Board model name not allowed | Leave out / : * ? " < > \ \| and control characters, end with no dot or space, and use no device name such as CON or NUL. |
+| AOI-TRN-022 | Validation set not locked | Train stopped: {reason}. Nothing was kept; fix that, then press Train again. |
+| AOI-TRN-025 | Dataset store not opened | {store}'s images cannot be opened on this station: {reason}. An Admin types the saved recovery key on Settings (Restore Key…). |
+| AOI-TRN-027 | Dataset not frozen | Train stopped: {reason}. Nothing was kept; fix that, then press Train again. |
+| AOI-TRN-030 | Label not changed | The box was not kept: {reason}. Draw it again. |
+| AOI-TRN-031 | Defect box outside the image | The box was not kept: it lies outside the image. Draw it again. |
+| AOI-TRN-032 | Sample not found | The box was not kept: the image is no longer in the workspace. Pick the folder again. |
+| AOI-TRN-040 | Dataset not frozen: version name taken | Another board model's names would mix with this one's. Set the boards up under a new name. |
+| AOI-TRN-041 | Dataset not frozen: manifest not written | Nothing was kept. Free space on the workspace drive, or pick a shorter workspace folder on Settings. |
+| AOI-TRN-042 | Dataset not frozen: path too long | Nothing was kept. Free space on the workspace drive, or pick a shorter workspace folder on Settings. |
+| AOI-TRN-043 | Training not started: locked validation images | No AI model was made: {count} of the images it would train on are kept apart already. Add images of more good boards on Training, then press Train again. |
+| AOI-TRN-044 | Dataset store not changed | Nothing was made: {reason}. |
+| AOI-TRN-045 | Training not started | No AI model was made: {reason}. Add images of more good boards on Training, then press Train again. |
+| AOI-TRN-047 | Training already running | Wait for the training under way to end, then press Train again. |
+| AOI-TRN-048 | AI model not made active | The AI model was made but does not judge boards yet: {reason}. |
+| AOI-TRN-049 | Activation refused: no AI model card | The AI model was made but does not judge boards yet: it has no AI model card. Press Train again. |
+| AOI-TRN-052 | A Trial AI model does not replace a Validated one | The AI model was made but does not judge boards yet: a Validated AI model judges {board}'s boards, and a Trial one never replaces it. |
+| AOI-TRN-053 | No dataset store on this system | This computer cannot keep the key, so nothing was made. Set up on the station itself. |
+| AOI-TRN-054 | Board model name not allowed: no Latin letter or digit | Add a letter A to Z or a digit, such as TBOX-A1 or 기판 2호. |
+| AOI-TRN-055 | Board model name not allowed: reads as another | {existing} is already here. Pick it in the top bar, or type another name. |
+| AOI-TRN-056 | Board model name not allowed: version names would mix | This has the letters and digits of {existing}. Change or add a letter or digit. |
+| AOI-TRN-057 | Train makes a Trial AI model, which does not replace a Validated one | Nothing was made: Validated AI model {version} judges {board}'s boards, and Train makes a Trial one, which never replaces it. |
+| AOI-TST-003 | The validation did not start | Not tested: {reason}. The AI model judges boards; AI Model Test tests it again. |

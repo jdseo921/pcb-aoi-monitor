@@ -228,6 +228,7 @@ class ErrorReport:
     what: str
     action: str
     detail: str = ""
+    guide: str = ""  # the first-run guide's line for the code, said there in place of what and action (Q78), or ""
 
     @classmethod
     def of(cls, exc: BaseException, context: str = "") -> ErrorReport:
@@ -237,7 +238,7 @@ class ErrorReport:
         title or a phrase, is shown in the UI language (#198), but for UNHANDLED, which means nothing to a user."""
         exc = exc if isinstance(exc, AoiError) else unexpected(exc, context)
         detail = exc.detail or system_detail(exc.__cause__) or ""
-        return cls(exc.code, exc.title, exc.what, exc.action, detail)
+        return cls(exc.code, exc.title, exc.what, exc.action, detail, exc.guide or "")
 
 
 def unexpected(exc: BaseException, context: str = "") -> AoiError:

@@ -29,7 +29,7 @@ from PySide6.QtWidgets import (
 from ... import defects as taxonomy
 from ...core.sample_import import ImportFile, ImportReport
 from ...core.services import unexpected
-from ...errors import AoiError
+from ...errors import AoiError, system_detail, system_reason
 from ...hal import VIEWS
 from .. import theme
 from ..errors import phrase_text
@@ -37,6 +37,33 @@ from .base import QT_TRANSLATE_NOOP, button, cell_item, cell_text, make_table, s
 
 FILE, LABEL, TYPE, VIEW, STATUS = range(5)
 CODE_TITLE = QT_TRANSLATE_NOOP("Errors", "{code} {title}")  # the status of a file not imported, in the UI language
+
+
+def stop_error(report: ImportReport, total: int, board_model: str | None) -> BaseException | None:
+    """The error an import of `total` files into `board_model` stopped at, as it is said: a file that cannot be copied
+    is AOI-TRN-009 (#178); any other error after a file went in AOI-TRN-010 with the count (#206); a copy refused as too
+    long before any went in AOI-TRN-011 for all the files (#245); any other, as it is. Training's import sheet and the
+    first-run guide's copy say it so."""
+    if report.stopped is None:
+        return None
+    f, e = report.stopped
+    n: dict[str, object] = {"at": total - len(report.left), "total": total, "imported": len(report.added)}
+    n["name"] = board_model  # the board model to pick in the header before Import again
+    if isinstance(e, AoiError) and e.code == "AOI-TRN-008":  # this one file not copied
+        reason, code = e.params["reason"], "AOI-TRN-009"
+    elif n["imported"]:  # files went in before it: the message must say how many (#206)
+        reason = CODE_TITLE.fill(code=e.code, title=e.title) if isinstance(e, AoiError) else system_reason(e)
+        code = "AOI-TRN-010"
+    elif isinstance(e, AoiError) and e.code == "AOI-TRN-011":  # none of the images went in, not 1
+        return AoiError("AOI-TRN-011", e.detail, path=f.path, workspace=e.params["workspace"], count=total)
+    else:  # nothing imported yet: the error is shown as it is
+        return e
+    detail = e.detail if isinstance(e, AoiError) else system_detail(e)
+    stopped = AoiError(code, detail, path=f.path, reason=reason, **n)
+    stopped.__cause__ = e
+    return stopped
+
+
 Choices = list[tuple[str, str]]
 
 

@@ -1558,9 +1558,136 @@ CODES: dict[str, ErrorCode] = {
 }
 
 
+def _same(line: Phrase, *codes: str) -> dict[str, Phrase]:
+    return dict.fromkeys(codes, line)
+
+
+# What the first-run guide on Home says of a code it raises, in the guide's words, in place of what happened and what
+# to do, which its Show Details holds (REQ-TRN-021; B5, docs/sketches/first-run-guide.md, "Errors", Q78). Each line's
+# {placeholders} are its code's own; `AoiError.guide` fills them, and docs/error-codes.md lists the lines.
+GUIDE: dict[str, Phrase] = {
+    # screen 1, the board model
+    "AOI-TRN-019": QT_TRANSLATE_NOOP(
+        "Errors",
+        'Leave out / : * ? " < > \\ | and control characters, end with no dot or space, and use no device name such as'
+        " CON or NUL.",
+    ),
+    "AOI-TRN-054": QT_TRANSLATE_NOOP("Errors", "Add a letter A to Z or a digit, such as TBOX-A1 or 기판 2호."),
+    **_same(
+        QT_TRANSLATE_NOOP("Errors", "{existing} is already here. Pick it in the top bar, or type another name."),
+        "AOI-TRN-005",
+        "AOI-TRN-055",
+    ),
+    "AOI-TRN-056": QT_TRANSLATE_NOOP(
+        "Errors", "This has the letters and digits of {existing}. Change or add a letter or digit."
+    ),
+    "AOI-TRN-044": QT_TRANSLATE_NOOP("Errors", "Nothing was made: {reason}."),
+    "AOI-TRN-053": QT_TRANSLATE_NOOP(
+        "Errors", "This computer cannot keep the key, so nothing was made. Set up on the station itself."
+    ),
+    "AOI-LOG-002": QT_TRANSLATE_NOOP(
+        "Errors", "The key was not saved there ({reason}). Save it on a USB drive, or print it."
+    ),
+    # screen 2, the images
+    **_same(
+        QT_TRANSLATE_NOOP("Errors", "Not an image this app reads. Save it as PNG or JPG and pick the folder again."),
+        "AOI-INSP-001",
+        "AOI-INSP-004",
+        "AOI-INSP-006",
+    ),
+    **_same(
+        QT_TRANSLATE_NOOP("Errors", "Not the camera's usual size. Use the image as the camera takes it."),
+        "AOI-INSP-005",
+        "AOI-INSP-007",
+    ),
+    "AOI-TRN-013": QT_TRANSLATE_NOOP(
+        "Errors", "Put it in a folder of ng named after its defect, then pick the folder again."
+    ),
+    "AOI-TRN-014": QT_TRANSLATE_NOOP(
+        "Errors", "Wait until copying from the camera has ended, then pick the folder again."
+    ),
+    "AOI-TRN-015": QT_TRANSLATE_NOOP("Errors", "Taken once already; nothing to do. Not counted twice."),
+    "AOI-TRN-016": QT_TRANSLATE_NOOP("Errors", "Not in ok or ng. Move it into one and pick the folder again."),
+    "AOI-TRN-008": QT_TRANSLATE_NOOP(
+        "Errors", "Not copied ({reason}). Check the USB drive and the free space, then pick the folder again."
+    ),
+    **_same(
+        QT_TRANSLATE_NOOP(
+            "Errors",
+            "Copying stopped at image {at} of {total}; the ones before it are kept. Check the USB drive and the free"
+            " space, then pick the folder again.",
+        ),
+        "AOI-TRN-009",
+        "AOI-TRN-010",
+    ),
+    "AOI-TRN-011": QT_TRANSLATE_NOOP(
+        "Errors", "The workspace folder's path is too long. Pick a shorter one on Settings, then the folder again."
+    ),
+    "AOI-TRN-025": QT_TRANSLATE_NOOP(
+        "Errors",
+        "{store}'s images cannot be opened on this station: {reason}. An Admin types the saved recovery key on Settings"
+        " (Restore Key…).",
+    ),
+    "AOI-TRN-030": QT_TRANSLATE_NOOP("Errors", "The box was not kept: {reason}. Draw it again."),
+    "AOI-TRN-031": QT_TRANSLATE_NOOP("Errors", "The box was not kept: it lies outside the image. Draw it again."),
+    "AOI-TRN-032": QT_TRANSLATE_NOOP(
+        "Errors", "The box was not kept: the image is no longer in the workspace. Pick the folder again."
+    ),
+    # screen 3, Train
+    **_same(
+        QT_TRANSLATE_NOOP("Errors", "Train stopped: {reason}. Nothing was kept; fix that, then press Train again."),
+        "AOI-TRN-027",
+        "AOI-TRN-022",
+    ),
+    "AOI-TRN-040": QT_TRANSLATE_NOOP(
+        "Errors", "Another board model's names would mix with this one's. Set the boards up under a new name."
+    ),
+    **_same(
+        QT_TRANSLATE_NOOP(
+            "Errors",
+            "Nothing was kept. Free space on the workspace drive, or pick a shorter workspace folder on Settings.",
+        ),
+        "AOI-TRN-041",
+        "AOI-TRN-042",
+    ),
+    "AOI-TRN-047": QT_TRANSLATE_NOOP("Errors", "Wait for the training under way to end, then press Train again."),
+    **_same(
+        QT_TRANSLATE_NOOP(
+            "Errors",
+            "No AI model was made: {reason}. Add images of more good boards on Training, then press Train again.",
+        ),
+        "AOI-TRN-045",
+        "AOI-TRN-004",
+    ),
+    "AOI-TRN-043": QT_TRANSLATE_NOOP(
+        "Errors",
+        "No AI model was made: {count} of the images it would train on are kept apart already. Add images of more good"
+        " boards on Training, then press Train again.",
+    ),
+    "AOI-TRN-048": QT_TRANSLATE_NOOP("Errors", "The AI model was made but does not judge boards yet: {reason}."),
+    "AOI-TRN-049": QT_TRANSLATE_NOOP(
+        "Errors", "The AI model was made but does not judge boards yet: it has no AI model card. Press Train again."
+    ),
+    "AOI-TRN-052": QT_TRANSLATE_NOOP(
+        "Errors",
+        "The AI model was made but does not judge boards yet: a Validated AI model judges {board}'s boards, and a Trial"
+        " one never replaces it.",
+    ),
+    "AOI-TRN-057": QT_TRANSLATE_NOOP(
+        "Errors",
+        "Nothing was made: Validated AI model {version} judges {board}'s boards, and Train makes a Trial one, which"
+        " never replaces it.",
+    ),
+    "AOI-TST-003": QT_TRANSLATE_NOOP(
+        "Errors", "Not tested: {reason}. The AI model judges boards; AI Model Test tests it again."
+    ),
+}
+
+
 class AoiError(Exception):
     """An error with a code and a plain message. ``str(e)`` is "<code> <what> <action>" in English, for the log; its
-    title, what and action are phrases a screen shows in the UI language."""
+    title, what and action are phrases a screen shows in the UI language, and `guide` the first-run guide's line for
+    its code (`GUIDE`), or None."""
 
     def __init__(self, code: str, detail: str | None = None, **params: object) -> None:
         self.entry = CODES[code]
@@ -1570,6 +1697,8 @@ class AoiError(Exception):
         self.title = Phrase("Errors", self.entry.title)
         self.what = Phrase("Errors", self.entry.what, params)
         self.action = Phrase("Errors", self.entry.action, params)
+        line = GUIDE.get(code)  # the first-run guide's line (Q78), said in place of what and action there
+        self.guide = None if line is None else line.fill(**params)
         super().__init__(f"{code} {self.what} {self.action}")
 
     @property
@@ -1601,6 +1730,18 @@ def render() -> str:
         "|---|---|---|---|",
     ]
     lines += [f"| {c.code} | {c.title} | {c.what} | {c.action} |" for c in sorted(CODES.values(), key=lambda c: c.code)]
+    lines += [
+        "",
+        "## The first-run guide's lines",
+        "",
+        "The first-run guide on Home says these in place of what happened and what to do, which its Show Details holds",
+        "(REQ-TRN-021, Q78). Any other code is said there as the table above gives it.",
+        "",
+        "| Code | Title | The guide's line |",
+        "|---|---|---|",
+    ]
+    bar = "\\|"  # a vertical bar in a cell, as Markdown keeps it
+    lines += [f"| {code} | {CODES[code].title} | {GUIDE[code].replace('|', bar)} |" for code in sorted(GUIDE)]
     return "\n".join(lines) + "\n"
 
 
