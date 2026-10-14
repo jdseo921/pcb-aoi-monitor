@@ -193,8 +193,21 @@ the box area shows each NG image in turn: drag across the defect, and the box is
 folder, and the next NG image with no box opens. Drag a box to move it. An image that cannot be read is skipped and
 named under the box area with its code. **← Back** (PgUp) opens the one before, **Undo** (Ctrl+Z) takes the last box
 away again, and **Zoom In**, **Zoom Out** and **Fit** (+, -, 0) help with small parts. A press on a greyed button, or its
-key, says why, and F1 lists the keys. Once every NG image has a box, Home shows its cards until the guide's Train
-arrives. An Operator's Home says the board model is still being set up until an AI model judges its boards.
+key, says why, and F1 lists the keys. Once every NG image has a box, the guide goes on to Train. An Operator's Home
+says the board model is still being set up until an AI model judges its boards.
+
+**The guide's Train.** Screen 3 says how many images are ready and what Train does with them: it keeps some apart to
+test the AI model on, trains it on the others as a Trial, since one person labelled them, makes it the AI model that
+judges the board model's boards, tests it on the images kept apart and, where Shift Check is on, runs the first shift
+check. Type the board revision as printed on the board, or leave R1 if it shows none, and press **Train** (Enter).
+One line says the part in hand, the percent and the time left; **Cancel** (Esc) stops after the step in hand and keeps
+what was done, and the next Train goes on from there. Other pages can be used meanwhile, and Training shows the same
+run. Then the screen says which AI model judges the board model's boards, the images it was trained on and kept apart,
+and its missed defects and false calls on those, counts first; it says the same after a restart. These are a first
+look on the images of one person, not a validation. **Inspect a Board…** (Enter) opens Inspection's Load Images… on
+the folder above the one the images came from, and inspects the boards picked; **Open Logs & Export ›** shows the board
+model's history, and **Start the Checks ›** opens Training's What is missing with Validated picked, for the checks a
+Validated AI model needs. A refusal is said under Train, with its code. Once a board is inspected, Home shows its cards.
 
 **Scale.** A board model's scale, in px per mm of the board, lets its recipe give sizes in mm, so that a recipe can
 survive a camera change (REQ-RCP-006). The scale does not follow the images by itself: after a camera change, or any

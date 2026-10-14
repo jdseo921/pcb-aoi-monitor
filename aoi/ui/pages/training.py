@@ -1241,6 +1241,16 @@ class TrainingPage(Page):
         if self.stack.currentIndex() == 2 and self.isVisible():  # else read when its tab or the page is shown
             self.missing_list.show_for(self.board_model)
 
+    def show_validated_needs(self) -> None:
+        """The first-run guide's Start the Checks › (B5): What is missing with Validated picked, its second-user label
+        checks, calibration set and agreement check each with its button (B3), where `start_checks` opens the first
+        check; while blind labelling is open, the status bar says why nothing moved, as What is missing's buttons do."""
+        if self.stack.currentWidget() is self.blind:
+            self.shell.status(self.tr("Blind labelling is open: Stop it, then press the button again"))
+            return
+        self.tabs.setCurrentIndex(2)  # its tab reads the list for the kind picked before: read again for Validated
+        self.missing_list.show_for(self.board_model, trial=False)
+
     def fix(self, missing: Missing, need: Need) -> None:
         """A What is missing button (REQ-TRN-021): the one step that fixes its line, taken where Training takes it, for
         the board model and view the list counted; nothing for a list of a board model no longer in the header."""

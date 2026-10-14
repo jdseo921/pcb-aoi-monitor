@@ -716,8 +716,8 @@ NG synthetic images, which proves the code path only.
 **The first-run guide on Home** (REQ-TRN-021, B5; docs/sketches/first-run-guide.md, Q66, Q67, Q76). With no board model
 in the header, `HomePage` shows `FirstRunGuide` (`aoi/ui/pages/guide.py`) in place of its cards, its empty state and
 What is missing, for a role that may `ensure_board_model`; an Operator gets Home's empty state, which says to ask an
-Admin. Its steps line reads "● 1 Board model ─── ○ 2 Images ─── ○ 3 Train"; screens 1 and 2 are built, and screen 3
-follows. Screen 1 takes the board model's name, checked as it is typed by `board_model_name_refusal` (the New board
+Admin. Its steps line reads "● 1 Board model ─── ○ 2 Images ─── ○ 3 Train"; screen 1 is told here, screens 2 and 3
+below. Screen 1 takes the board model's name, checked as it is typed by `board_model_name_refusal` (the New board
 model dialog's line), and its customer, offered from the stores by a completer whose Enter picks and makes nothing
 (`_PickOnly`; with no row picked, as when the whole name was typed, Enter is Create's). Create, by Enter in either
 field, calls `create_customer_board_model` (an Admin's; for an Engineer the screen is greyed, `RoleGates.gate` taking
@@ -758,9 +758,35 @@ it. A press on an off control, or its key, says why on the status bar (`PressSay
 shown. What the screen holds is of the board model shown: another board model, or a sign-in, starts it afresh
 (`forget`), the view picked is kept until then, and the image shown is found again by its sample when the list is read
 again. A copy keeps its board model, folder and view: its line names its board model while another is shown, and what it
-did is said on that board model's screen. With every NG image boxed `guide_step` is 3, and until screen 3 is built Home
-shows its cards.
+did is said on that board model's screen. With every NG image boxed `guide_step` is 3, and screen 3 shows itself with
+Train focused.
 `tests/test_guide_images.py` drives screen 2.
+
+**The guide's screen 3, Train** (REQ-TRN-021, B5; Q72 to Q74). While `guide_step` is 3, until the board model's first
+board is inspected, `HomePage.guided` takes screen 3, `GuideTrain` (`aoi/ui/pages/guide_train.py`), for a role that may
+`start_guide_train`; an Operator gets Home's empty state until an AI model judges the board model's boards. Before Train
+it says what is ready (What is missing's Trial counts and view) and what Train does, with the images it keeps apart,
+counted as the validation set takes them from a first set of images (`datasets.VALIDATION_OK`, `VALIDATION_NG`), and
+those it trains on, and asks the board revision, R1 at first (Q74), checked as it is typed. Train (Enter) calls
+`start_guide_train`, which runs `guide_train`'s five parts as the context's one training run (`ctx.training`): other
+pages can be used meanwhile, Training's panel follows the same run, and another training is refused (AOI-TRN-047).
+`guide_running` says whether that run is the guide's Train for the board model, so screen 3 shows its line again when
+Home is shown again: the training panel's "<part> · <percent> % · <time left>", with Cancel (Esc), which stops at the
+step in hand and keeps the parts done, so the next Train goes on from there. What Train made is read from the database
+(`guide_result`: the active AI model trained from the guide's Trial version of the use "own" only, its test on the
+images kept apart judged with what judges boards now, and the shift check), so it shows after a restart too: "✓ AI model
+<version> judges <board model>'s boards.", the images trained on and kept apart, the missed defects and false calls on
+those with their counts first (`stats.text`), or that the test did not run, the Trial line, and the shift check: passed,
+failed with the master samples judged right, or not counting now, as Inspection asks for it before the first board.
+Step 3 is then marked done, and Inspect a Board… (Enter) has the focus: it opens Inspection's Load Images… on the
+folder above screen 2's and inspects the boards picked at once, in the view Train trained on
+(`InspectionPage.inspect_from`). Open Logs & Export › shows the board model's history (`LogsPage.show_board_model`), and
+Start the Checks › Training's What is missing with Validated picked (`TrainingPage.show_validated_needs`). A refusal, as
+Train is pressed or in its run, is said under Train with its code and opens no dialog; a press on Train, or Enter,
+while it is off says why on the status bar. Once a board is inspected `guide_step` is None and Home shows its cards.
+`tests/test_guide_train_screen.py` drives screen 3. Its two screenshots are drawn with its reads pinned
+(`render_screens.guide_made`), as a training in the render would take minutes and give rates that differ from machine
+to machine.
 
 **Next AI step (not in this draft):** once enough labelled NG crops exist per type, add a small supervised
 classifier that names the defect (Solder Bridge, Tombstone, …) for each flagged region. Today a region is named by

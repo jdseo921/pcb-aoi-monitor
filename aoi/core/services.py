@@ -543,6 +543,7 @@ class AppContext:
         self.jobs = Jobs(context=self._acting_context)
         self.training: Job[dict[str, Any]] | None = None  # the run start_training began last, running or ended
         self.training_progress: run_progress.RunProgress | None = None  # its latest report, for the header and Home
+        self.guide_training: str | None = None  # the board model the first-run guide's Train was started for last
         self._golden_alarmed: set[tuple[str, str | None, str]] = set()  # each (board model, file, code) alarmed (#195)
         self._golden_lock = threading.Lock()  # the Recipe Editor reads on the UI thread, Compare on the pool's
         self._closed = False
@@ -901,7 +902,15 @@ class AppContext:
         """The first-run guide's Train in the background (`guide_train`), as the context's one run, as
         `start_training` runs Training's (REQ-TRN-008)."""
         job: Job[dict[str, Any]] = Job("guide_train", self.guide_train, board_model, view, revision, with_progress=True)
-        return self._start_run(job, listen)
+        self._start_run(job, listen)
+        self.guide_training = board_model
+        return job
+
+    def guide_running(self, board_model: str) -> bool:
+        """Whether the context's run is the first-run guide's Train for `board_model`, still going on (B5): its screen 3
+        shows the run's line and Cancel, on Home again too after another page."""
+        job = self.training
+        return job is not None and not job.done and job.name == "guide_train" and self.guide_training == board_model
 
     @requires("Engineer", QT_TRANSLATE_NOOP("Errors", "Training an AI model"))
     def guide_train(
@@ -945,8 +954,8 @@ class AppContext:
             raise AoiError("AOI-TRN-057", board=board_model, version=live["version"])
         version = self._guide_version(board_model, view, revision)
         if version is None or self.db.validation_split(version["uuid"]) is None:
-            held = math.ceil(len(self._in_view(board_model, view, NG)) * datasets.VALIDATION_NG)
-            say(press.step(KEEPING.fill(ok=datasets.VALIDATION_OK, ng=held)))
+            ng_held = math.ceil(len(self._in_view(board_model, view, NG)) * datasets.VALIDATION_NG)
+            say(press.step(KEEPING.fill(ok=datasets.VALIDATION_OK, ng=ng_held)))
             if version is None:
                 version = self.freeze_dataset(
                     board_model, view, revision, self._guide_customer(board_model), ("own",), should_stop=stop,
@@ -956,11 +965,9 @@ class AppContext:
                     raise JobCancelled(f"first-run guide {board_model}")
                 check()
             self.lock_validation_set(version["uuid"])
-        split = cast(dict[str, Any], self.db.validation_split(version["uuid"]))
-        labels = {i["uuid"]: i["label"] for i in self.db.dataset_items(version["uuid"])}
-        counts = {part: Counter(labels[u] for u in split[part]) for part in ("validation", "train")}
-        out: dict[str, Any] = {"dataset": version, "run": None, "shift": None, "not_run": []}
-        out["held"], out["trained"] = ({"ok": c[OK], "ng": c[NG]} for c in (counts["validation"], counts["train"]))
+        split, held, trained = self._guide_split(version["uuid"])
+        out: dict[str, Any] = {"dataset": version, "run": None, "shift": None, "not_run": [], "held": held}
+        out["trained"] = trained
 
         def masters() -> int:  # the master samples the shift check judges, unless it is off or counts already
             shift = self.shift_check(board_model)
@@ -990,17 +997,7 @@ class AppContext:
 
             return done
 
-        runs = [r for r in self.db.test_runs(board_model) if r.get("dataset_uuid") == version["uuid"]]
-        out["run"] = next(  # a test of this AI model judged with what judges boards now (`engine_is_current`)
-            (
-                r
-                for r in runs
-                if r.get("model_uuid") == model["uuid"]
-                and r.get("judged_by")
-                and self.engine_is_current(board_model, JudgedBy(**r["judged_by"]))
-            ),
-            None,
-        )
+        out["run"] = self._guide_run(board_model, version["uuid"], model)
         to_judge = masters()  # read again: the AI model active now, and a run kept, change what counts
         press.judged = (0 if out["run"] else len(split["validation"])) + to_judge
         try:
@@ -1018,6 +1015,51 @@ class AppContext:
         except JobCancelled:  # the AI model stays active: the result says what did not run
             out["not_run"] = (["validate"] if out["run"] is None else []) + (["shift_check"] if to_judge else [])
         return out
+
+    def guide_result(self, board_model: str) -> dict[str, Any] | None:
+        """What the first-run guide's Train left for `board_model`, read, so its screen 3 shows the result after a
+        restart too (REQ-TRN-021; B5): for the active AI model, when it was trained for the use "own" from a locked
+        Trial version of the use "own" only, as Train freezes one, what `guide_train` returns but `not_run`: the
+        version (`dataset`), the images kept apart (`held`) and trained on (`trained`), each {"ok", "ng"}, the AI model
+        (`model`), its test on the images kept apart judged with what judges boards now (`run`, None when none, as
+        after a Cancel in part 4) and the shift check as `shift_check` gives it (`shift`). None while no such AI model
+        is active. Writes nothing."""
+        model = self.db.active_model(board_model)
+        meta = json.loads(model.get("metrics") or "{}") if model else {}
+        uid = meta.get("dataset_uuid")
+        if model is None or not uid or meta.get("use", "own") != "own":
+            return None
+        found = self.db.datasets(board_model, uid)
+        if not found or found[0]["assurance"] != datasets.TRIAL or list(found[0]["allowed_uses"]) != ["own"]:
+            return None
+        if self.db.validation_split(uid) is None:
+            return None
+        _, held, trained = self._guide_split(uid)
+        run = self._guide_run(board_model, uid, model)
+        out = {"dataset": found[0], "model": model, "held": held, "trained": trained, "run": run}
+        return out | {"shift": self.shift_check(board_model)}
+
+    def _guide_split(self, dataset_uuid: str) -> tuple[dict[str, Any], dict[str, int], dict[str, int]]:
+        """A locked version's split, and the images it keeps apart and trains on, each {"ok", "ng"}."""
+        split = cast(dict[str, Any], self.db.validation_split(dataset_uuid))
+        labels = {i["uuid"]: i["label"] for i in self.db.dataset_items(dataset_uuid)}
+        held, trained = (Counter(labels[u] for u in split[part]) for part in ("validation", "train"))
+        return split, {"ok": held[OK], "ng": held[NG]}, {"ok": trained[OK], "ng": trained[NG]}
+
+    def _guide_run(self, board_model: str, dataset_uuid: str, model: dict[str, Any]) -> dict[str, Any] | None:
+        """The newest test of `model` on the images `dataset_uuid` keeps apart, judged with what judges boards now
+        (`engine_is_current`), or None."""
+        runs = [r for r in self.db.test_runs(board_model) if r.get("dataset_uuid") == dataset_uuid]
+        return next(
+            (
+                r
+                for r in runs
+                if r.get("model_uuid") == model["uuid"]
+                and r.get("judged_by")
+                and self.engine_is_current(board_model, JudgedBy(**r["judged_by"]))
+            ),
+            None,
+        )
 
     def _guide_customer(self, board_model: str) -> str:
         """The customer of the board model's store, "" for none, which freezing then refuses (AOI-TRN-027)."""

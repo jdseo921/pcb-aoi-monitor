@@ -13,7 +13,9 @@ raised it, with its code; the guide shows no dialog of its own. An Engineer sees
 needs, as a customer's store is an Admin's; an Operator, who sets nothing up, gets Home's empty state instead.
 
 Screen 2, the board model's images, is `GuideImages` (guide_images.py): it shows for a board model in a customer's store
-until its images are in and every NG image has a box (`AppContext.guide_step`)."""
+until its images are in and every NG image has a box (`AppContext.guide_step`). Screen 3 is `GuideTrain`
+(guide_train.py): Train, what it made and the handover to Inspection, until the board model's first board is inspected;
+its step is marked done once Train has made the AI model that judges the board model's boards."""
 
 from __future__ import annotations
 
@@ -39,6 +41,7 @@ from .. import theme
 from ..errors import phrase_text
 from .base import QT_TRANSLATE_NOOP, PressSays, button, role_text, size_class
 from .guide_images import GuideImages
+from .guide_train import GuideTrain
 from .recovery_key import RecoveryKey
 
 if TYPE_CHECKING:
@@ -108,6 +111,9 @@ class FirstRunGuide(QFrame):
         self.images = GuideImages(page, self.status)  # screen 2
         self.images.hide()
         lay.addWidget(self.images)
+        self.train_step = GuideTrain(page, self.status, lambda: self.images.folder)  # screen 3
+        self.train_step.hide()
+        lay.addWidget(self.train_step)
 
     # --- screen 1: the board model and its customer --------------------------------------------------------------
     def _form_step(self) -> None:
@@ -218,6 +224,8 @@ class FirstRunGuide(QFrame):
         """The keys of the screen shown, for F1's list of Home's keys."""
         if not self.images.isHidden():
             return self.images.keys()
+        if not self.train_step.isHidden():
+            return self.train_step.keys()
         return self.key_step.actions() if not self.key_step.isHidden() else []
 
     def holding(self) -> bool:
@@ -226,30 +234,38 @@ class FirstRunGuide(QFrame):
 
     def show_for(self, board_model: str | None) -> None:
         """Screen 1 for a workspace with no board model, or with the recovery key of the one just made; screen 2 for
-        a board model in a customer's store whose images are not all in and boxed (`AppContext.guide_step`)."""
-        holding = self.holding()
+        a board model in a customer's store whose images are not all in and boxed, then screen 3 until its first board
+        is inspected (`AppContext.guide_step`)."""
+        holding, before = self.holding(), self.shown
         self.shown = 1 if board_model is None or holding else self.ctx.guide_step(board_model) or 1
         if board_model is None or holding:
             self.heading.setText(self.tr("Set up your first board model"))
         else:
             self.heading.setText(self.tr("Set up {board_model}").format(board_model=board_model))
+        self.form.setVisible(self.shown == 1 and not holding)
+        self.key_step.setVisible(holding)
+        self.images.setVisible(self.shown == 2)
+        self.train_step.setVisible(self.shown == 3)
+        if self.shown == 2 and board_model is not None:
+            self.images.show_for(board_model)
+        if self.shown == 3 and board_model is not None:
+            self.train_step.show_for(board_model)
         marks = ["✓" if holding else "●", "○", "○"]
         if self.shown > 1:
             marks = ["✓"] * (self.shown - 1) + ["●"] + ["○"] * (3 - self.shown)
+        if self.shown == 3 and self.train_step.done():
+            marks[2] = "✓"
         self.steps.setText(
             "  ───  ".join(
                 f"{mark} {n} {self.tr(name)}" for n, (mark, name) in enumerate(zip(marks, STEP_NAMES, strict=True), 1)
             )
         )
         self.btn_cards.setEnabled(not holding)
-        self.form.setVisible(self.shown == 1 and not holding)
-        self.key_step.setVisible(holding)
-        self.images.setVisible(self.shown == 2)
-        if self.shown == 2 and board_model is not None:
-            self.images.show_for(board_model)
         if not holding:
             self.customer_names.setStringList([s["customer"] for s in self.ctx.stores() if not s["shredded_at"]])
         self._sync()
+        if self.shown == 3 and before == 2:
+            self.focus_first()  # screen 3 shows itself with Train focused (Q69)
 
     def _typed(self) -> None:
         """A name or a customer typed: a refusal of Create said before goes, as it was of what was typed then."""
@@ -364,6 +380,14 @@ class FirstRunGuide(QFrame):
         report = self.ctx.report_error(e, "Home")
         self.key_refused.setText(" ".join([report.code, phrase_text(report.what), phrase_text(report.action)]))
         self.key_refused.show()
+
+    def focus_first(self) -> None:
+        """The control the screen shown opens on: the name on screen 1, Train on screen 3 (sketch), or Inspect a Board…
+        once Train has made the AI model."""
+        if not self.form.isHidden():
+            self.name.setFocus()
+        elif not self.train_step.isHidden():
+            self.train_step.focus_first()
 
     def reset(self) -> None:
         """Screen 1's fields empty again, for the next board model or the next user signed in, with no refusal left from

@@ -200,6 +200,7 @@ class HomePage(Page):
         self.guide.made.connect(shell.select_board_model)
         self.guide.cards_wanted.connect(lambda: self._show_cards(True))
         self.guide.images.changed.connect(self._guide_moved)
+        self.guide.train_step.changed.connect(self._guide_moved)
         self.cards_for: set[str | None] = set()  # the board models Show All Steps › was pressed for, until a sign-in
         lay.addWidget(self.guide)
         self.btn_guide = button(self.tr("Show the Guide ›"), slot=lambda: self._show_cards(False))
@@ -215,17 +216,20 @@ class HomePage(Page):
 
     def guided(self, board_model: str | None) -> bool:
         """Whether the first-run guide is for `board_model`: a workspace with no board model, for a role that sets one
-        up; the one whose store's recovery key the guide shows; or a board model whose images the guide's screen 2
-        still takes (`AppContext.guide_step`), for a role that copies images."""
+        up; the one whose store's recovery key the guide shows; a board model whose images the guide's screen 2 still
+        takes, for a role that copies images; or one at screen 3, Train, until its first board is inspected
+        (`AppContext.guide_step`), for a role that trains."""
         if self.guide.holding():
             return True
         if board_model is None:
             return self.gates.may("ensure_board_model")
-        return self.gates.may("import_samples") and self.ctx.guide_step(board_model) == 2
+        step = self.ctx.guide_step(board_model)
+        return (step == 2 and self.gates.may("import_samples")) or (step == 3 and self.gates.may("start_guide_train"))
 
     def _guide_moved(self) -> None:
-        """A copy or a box on the guide's screen 2: once its images are in and boxed, Home shows what comes next."""
-        if self.isVisible() and not self.guided(self.board_model):
+        """A copy or a box on the guide's screen 2, or the end of Train on screen 3: Home shows what comes next, the
+        next screen or Train's result."""
+        if self.isVisible():
             self.on_show()
 
     def on_user_changed(self) -> None:
@@ -306,9 +310,9 @@ class HomePage(Page):
             self.missing_list.show_for(None)
             self.guide.show_for(bm)
             focus = QApplication.focusWidget()
-            if not self.guide.form.isHidden() and (focus is None or not self.guide.isAncestorOf(focus)):
-                self.guide.name.setFocus()  # screen 1 opens on the name, typed at once (sketch), at a start too, when
-                # the window is not shown yet: Qt gives the focus to the name as the window opens
+            if focus is None or not self.guide.isAncestorOf(focus):
+                self.guide.focus_first()  # screen 1 opens on the name, typed at once, and screen 3 on Train (sketch),
+                # at a start too, when the window is not shown yet: Qt gives the focus to it as the window opens
             return
         setting_up = bm and self.ctx.guide_step(bm) in (2, 3) and self.ctx.board_status(bm).model_version is None
         if setting_up and not self.gates.may("import_samples"):

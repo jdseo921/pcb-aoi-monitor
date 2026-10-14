@@ -220,12 +220,25 @@ class InspectionPage(Page):
 
     # --- sources ---------------------------------------------------------------
     def load_files(self) -> None:
+        if files := self._pick_files(""):
+            self._set_queue(files)
+
+    def _pick_files(self, folder: str) -> list[Path]:
         exts = " ".join(f"*{e}" for e in sorted(IMAGE_EXTS))
         files, _ = QFileDialog.getOpenFileNames(
-            self, self.tr("Select PCB images"), "", self.tr("Images ({extensions})").format(extensions=exts)
+            self, self.tr("Select PCB images"), folder, self.tr("Images ({extensions})").format(extensions=exts)
         )
-        if files:
-            self._set_queue([Path(f) for f in files])
+        return [Path(f) for f in files]
+
+    def inspect_from(self, folder: str, view: str) -> None:
+        """The first-run guide's Inspect a Board… (B5, Q69): Load Images… opening on `folder`, and the boards picked
+        inspected at once in `view`, the view the guide's AI model was trained on, with no Start to press; nothing
+        when none is picked."""
+        if (i := self.view_combo.findData(view)) >= 0:
+            self.view_combo.setCurrentIndex(i)
+        if files := self._pick_files(folder):
+            self._set_queue(files)
+            self.start_run()
 
     def load_folder(self) -> None:
         d = QFileDialog.getExistingDirectory(self, self.tr("Select folder with PCB images"))
