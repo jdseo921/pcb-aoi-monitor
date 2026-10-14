@@ -88,6 +88,11 @@ PRESENTER_SMALL_SHOTS = {  # every page the demo scripts open (tools/screen_size
     "presenter-1366-settings-admin": ("Settings", "admin"),
 }
 NEW_BOARD_MODEL_SHOTS = {"new-board-model-admin": "form", "new-board-model-key-admin": "key"}  # dialogs (ADR 0021)
+GUIDE_SHOTS = {  # Home's first-run guide (B5): screen 1 as the Admin types, the key Create shows, and the Engineer's
+    "home-guide-admin": ("admin", "form"),
+    "home-guide-key-admin": ("admin", "key"),
+    "home-guide-engineer": ("engineer", "form"),
+}
 FIXED_WORKSPACE = "C:/AOI_Workspace"  # what the Settings page shows instead of the temporary folder
 TEST_FONT = '"DejaVu Sans"'  # the font the approved images are drawn with (Linux)
 DATASET_OK, DATASET_NG, DATASET_SEED = 30, 14, 7  # as tests/conftest.py
@@ -550,6 +555,47 @@ def render_dialogs(win: Any, out: Path) -> dict[str, Path]:
     return files
 
 
+def guide_steps(win: Any) -> Iterator[str]:
+    """Home's first-run guide (B5) with no board model in the header, as a workspace with none shows it, in each state
+    of GUIDE_SHOTS in turn, its name yielded with the window laid out: screen 1 with NEW_BOARD_MODEL and NEW_CUSTOMER
+    typed by the Admin, the recovery key Create would show for `pinned_store`, and screen 1 greyed for the Engineer;
+    then the header's board model back. For the screenshots and the size walk alike."""
+    from PySide6.QtWidgets import QApplication
+
+    guide = win.pages["Home"].guide
+    win.bm_combo.setCurrentIndex(-1)
+    try:
+        for name, (role, step) in GUIDE_SHOTS.items():
+            win.set_user(role)
+            win.statusBar().clearMessage()
+            assert win.navigate("Home")
+            if role == "admin" and step == "form":
+                guide.name.setText(NEW_BOARD_MODEL)
+                guide.customer.setText(NEW_CUSTOMER)
+            if step == "key":
+                guide.show_key(NEW_BOARD_MODEL, pinned_store())
+            settle()
+            if (focus := QApplication.focusWidget()) is not None:
+                focus.clearFocus()  # no caret, which blinks, in the image
+            settle()
+            yield name
+            if step == "key":  # forgotten unsaved, as no Admin may: a screenshot's key is pinned, of no store
+                guide.recovery.clear()
+                guide.reset()
+                guide.holding_changed.emit(False)
+    finally:
+        win.bm_combo.setCurrentText(BOARD_MODEL)
+
+
+def render_guide(win: Any, out: Path) -> dict[str, Path]:
+    """The first-run guide's screenshots (GUIDE_SHOTS), in the states `guide_steps` leaves it in."""
+    files = {}
+    for name in guide_steps(win):
+        files[name] = out / f"{name}.png"
+        assert win.grab().save(str(files[name])), files[name]
+    return files
+
+
 def render_presenter(win: Any, dataset: Path, out: Path) -> dict[str, Path]:
     """The presenter theme (REQ-SET-008), switched on as an Admin does it, with Settings' tick, and PRESENTER_SHOTS in
     it, each page as `prepare` leaves it; then PRESENTER_SMALL_SHOTS in a window of SMALL_SIZE logical pixels, at any
@@ -619,6 +665,7 @@ def render_pages(
     files.update(render_stored(win, ctx, out))
     files.update(render_presenter(win, dataset, out))
     files.update(render_dialogs(win, out))
+    files.update(render_guide(win, out))  # last: a board model selected again leaves every page as it opens
     win.close()
     return files
 

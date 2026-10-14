@@ -344,7 +344,7 @@ def test_req_trn_017_the_key_dialog_shown_by_exec_holds_the_window_behind_it(qtb
         seen.extend([QApplication.activeModalWidget() is dialog, dialog.isModal()])
         dialog.reject()  # Esc: refused, the tick not ticked
         seen.append(dialog.isVisible())
-        dialog.recovery._kept_away()  # as Save to File… or Print… leaves it
+        dialog.recovery._kept_away("✓ Saved to F:\\recovery-key.txt")  # as Save to File… or Print… leaves it
         dialog.recovery.kept.setChecked(True)
         dialog.btn_done.click()
 

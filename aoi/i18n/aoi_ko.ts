@@ -1625,7 +1625,7 @@
     <message>
         <location filename="../ui/demo_workspace.py" line="+31"/>
         <location filename="../ui/errors.py" line="+163"/>
-        <location filename="../ui/main_window.py" line="+1011"/>
+        <location filename="../ui/main_window.py" line="+1109"/>
         <source>start-up</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4109,6 +4109,121 @@
     </message>
 </context>
 <context>
+    <name>FirstRunGuide</name>
+    <message>
+        <location filename="../ui/pages/guide.py" line="+45"/>
+        <source>Board model</source>
+        <translation type="unfinished">보드 모델</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Images</source>
+        <translation type="unfinished">이미지</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Train</source>
+        <translation type="unfinished">학습</translation>
+    </message>
+    <message>
+        <location line="+61"/>
+        <source>Show All Steps ›</source>
+        <translation type="unfinished">모든 단계 보기 ›</translation>
+    </message>
+    <message>
+        <location line="+38"/>
+        <source>as on the board or its drawing, such as TBOX-A1</source>
+        <translation type="unfinished">보드나 도면에 적힌 그대로, 예: TBOX-A1</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>whose boards these are; your company&apos;s name for your own</source>
+        <translation type="unfinished">이 보드의 주인; 자사 보드면 자사 이름</translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>Board model name</source>
+        <translation type="unfinished">보드 모델 이름</translation>
+    </message>
+    <message>
+        <location line="+0"/>
+        <source>Customer</source>
+        <translation type="unfinished">고객</translation>
+    </message>
+    <message>
+        <location line="+11"/>
+        <source>Each customer&apos;s images are kept encrypted on this station, apart from every other customer&apos;s.</source>
+        <translation type="unfinished">고객마다 이미지는 이 스테이션에 암호화되어, 다른 모든 고객의 이미지와 따로 보관됩니다.</translation>
+    </message>
+    <message>
+        <location line="+11"/>
+        <source>Create  Enter</source>
+        <translation type="unfinished">만들기  Enter</translation>
+    </message>
+    <message>
+        <location line="+25"/>
+        <source>{action}  {key}</source>
+        <translation type="unfinished">{action}  {key}</translation>
+    </message>
+    <message>
+        <location line="+6"/>
+        <source>Save it on a USB drive that stays away from this station, not the one that brings the images, or print it.</source>
+        <translation type="unfinished">이 스테이션과 떨어져 보관하는 USB 드라이브(이미지를 가져오는 드라이브 말고)에 저장하거나 인쇄하십시오.</translation>
+    </message>
+    <message>
+        <location line="+8"/>
+        <source>I Have Saved the Key</source>
+        <translation type="unfinished">키를 저장했습니다</translation>
+    </message>
+    <message>
+        <location line="+4"/>
+        <source>I Have Saved the Key  Enter</source>
+        <translation type="unfinished">키를 저장했습니다  Enter</translation>
+    </message>
+    <message>
+        <location line="+23"/>
+        <source>Set up your first board model</source>
+        <translation type="unfinished">첫 보드 모델 설정</translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>Set up {board_model}</source>
+        <translation type="unfinished">{board_model} 설정</translation>
+    </message>
+    <message>
+        <location line="+30"/>
+        <source>✓ {name} can be used.</source>
+        <translation type="unfinished">✓ {name}을(를) 쓸 수 있습니다.</translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>Setting up a board model for a customer needs the {role} role.</source>
+        <translation type="unfinished">고객용 보드 모델을 설정하려면 {role} 역할이 필요합니다.</translation>
+    </message>
+    <message>
+        <location line="+7"/>
+        <location line="+13"/>
+        <source>Type a board model name and its customer</source>
+        <translation type="unfinished">보드 모델 이름과 고객을 입력하십시오</translation>
+    </message>
+    <message>
+        <location line="+21"/>
+        <location line="+38"/>
+        <source>Board model {name} is set up for {customer}.</source>
+        <translation type="unfinished">보드 모델 {name}이(가) {customer}용으로 설정되었습니다.</translation>
+    </message>
+    <message>
+        <location line="-25"/>
+        <source>✓ {name} · for {customer}</source>
+        <translation type="unfinished">✓ {name} · {customer}용</translation>
+    </message>
+    <message>
+        <location line="+4"/>
+        <source>If this station&apos;s own key is ever lost, this key opens the images of {customer} again. It is shown only now.</source>
+        <translation type="unfinished">이 스테이션의 키를 잃어버리면 이 키로 {customer}의 이미지를 다시 열 수 있습니다. 지금 한 번만 표시됩니다.</translation>
+    </message>
+</context>
+<context>
     <name>FreezeSheet</name>
     <message>
         <location filename="../ui/pages/training_versions.py" line="+170"/>
@@ -4260,7 +4375,7 @@
 <context>
     <name>HomePage</name>
     <message>
-        <location filename="../ui/main_window.py" line="-872"/>
+        <location filename="../ui/main_window.py" line="-969"/>
         <source>Upload samples</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4325,7 +4440,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+68"/>
+        <location line="+58"/>
+        <source>Show the Guide ›</source>
+        <translation type="unfinished">안내 보기 ›</translation>
+    </message>
+    <message>
+        <location line="+43"/>
         <source>Open to every role.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4340,7 +4460,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+24"/>
+        <location line="+26"/>
+        <source>Ask an Admin to set up the first one.</source>
+        <translation type="unfinished">관리자에게 첫 보드 모델 설정을 요청하십시오.</translation>
+    </message>
+    <message>
+        <location line="+15"/>
         <source>AI model {version} trained, not active. Activate it on Training.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4355,7 +4480,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-166"/>
+        <location line="-216"/>
         <source>Inspect</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4375,7 +4500,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+119"/>
+        <location line="+152"/>
         <source>Open {page} ›</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4385,7 +4510,7 @@
         <translation>학습 중 {percent} % · {left}</translation>
     </message>
     <message>
-        <location line="+31"/>
+        <location line="+48"/>
         <source>{ok} OK · {ng} NG uploaded</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5203,7 +5328,7 @@
         <location line="+1"/>
         <location line="+15"/>
         <source>Board model</source>
-        <translation type="unfinished"></translation>
+        <translation type="unfinished">보드 모델</translation>
     </message>
     <message>
         <location line="-14"/>
@@ -5575,12 +5700,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+108"/>
+        <location line="+123"/>
         <source>{title} · Demo</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+98"/>
+        <location line="+102"/>
         <source>Signed in as {user} ({role}), who signed in last on this station. Not you? Press Switch User.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5597,7 +5722,7 @@
     <message>
         <location line="+3"/>
         <source>Board model</source>
-        <translation type="unfinished"></translation>
+        <translation type="unfinished">보드 모델</translation>
     </message>
     <message>
         <location line="+4"/>
@@ -5627,10 +5752,15 @@
     <message>
         <location line="+4"/>
         <source>Board model {name} is in the encrypted dataset store of {customer}.</source>
-        <translation type="unfinished"></translation>
+        <translation type="unfinished">보드 모델 {name}이(가) {customer}의 암호화된 데이터셋 저장소에 있습니다.</translation>
     </message>
     <message>
-        <location line="+16"/>
+        <location line="+22"/>
+        <source>Save the recovery key to a file or print it, then press I Have Saved the Key.</source>
+        <translation type="unfinished">복구 키를 파일로 저장하거나 인쇄한 다음 키를 저장했습니다를 누르십시오.</translation>
+    </message>
+    <message>
+        <location line="+15"/>
         <source>{user} ({role})</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5670,7 +5800,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+6"/>
+        <location line="+9"/>
         <source>{page} is hidden in the presenter theme</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5701,7 +5831,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+58"/>
+        <location line="+62"/>
         <source>close the app</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6515,7 +6645,7 @@
 <context>
     <name>Page</name>
     <message>
-        <location filename="../ui/main_window.py" line="-829"/>
+        <location filename="../ui/main_window.py" line="-926"/>
         <source>Home</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6545,7 +6675,7 @@
         <translation>약 {minutes}분 남음</translation>
     </message>
     <message>
-        <location line="+154"/>
+        <location line="+155"/>
         <source>No board model yet</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6585,7 +6715,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+36"/>
+        <location line="+41"/>
         <source>Open {page} ›</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6632,7 +6762,7 @@
     <message>
         <location line="+123"/>
         <source>{action}  {key}</source>
-        <translation type="unfinished"></translation>
+        <translation type="unfinished">{action}  {key}</translation>
     </message>
     <message>
         <location filename="../ui/pages/logs.py" line="-616"/>
@@ -7227,7 +7357,7 @@
 <context>
     <name>RecoveryKey</name>
     <message>
-        <location filename="../ui/pages/recovery_key.py" line="+44"/>
+        <location filename="../ui/pages/recovery_key.py" line="+53"/>
         <source>Shown this once. Save it to a USB drive or print it, and keep it apart from the station: with it, an Admin opens the store on another PC, and anyone who holds it and a copy of the files can read them.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7242,17 +7372,17 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+6"/>
+        <location line="+8"/>
         <source>I have saved or printed the key and will keep it apart from the station</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+11"/>
+        <location line="+13"/>
         <source>Recovery key for {customer}</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+36"/>
+        <location line="+48"/>
         <source>Store {uuid} · key id {key_id}</source>
         <translation type="unfinished">저장소 {uuid} · 키 ID {key_id}</translation>
     </message>
@@ -7262,12 +7392,22 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-18"/>
+        <location line="+45"/>
+        <source>✓ Saved to {file}</source>
+        <translation type="unfinished">✓ {file}에 저장됨</translation>
+    </message>
+    <message>
+        <location line="+15"/>
+        <source>✓ Sent to {printer}</source>
+        <translation type="unfinished">✓ {printer}(으)로 보냄</translation>
+    </message>
+    <message>
+        <location line="-82"/>
         <source>Save the key to a file or print it first</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+53"/>
+        <location line="+57"/>
         <source>Save Recovery Key</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7285,7 +7425,7 @@
 <context>
     <name>RecoveryKeyDialog</name>
     <message>
-        <location line="+38"/>
+        <location line="+40"/>
         <source>Done</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7381,7 +7521,7 @@
 <context>
     <name>Role</name>
     <message>
-        <location filename="../ui/pages/base.py" line="-482"/>
+        <location filename="../ui/pages/base.py" line="-488"/>
         <source>Operator</source>
         <translation type="unfinished"></translation>
     </message>
@@ -8016,7 +8156,7 @@
     <message>
         <location line="+7"/>
         <source>Board model</source>
-        <translation type="unfinished"></translation>
+        <translation type="unfinished">보드 모델</translation>
     </message>
     <message>
         <location line="+5"/>

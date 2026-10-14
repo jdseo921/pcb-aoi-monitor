@@ -63,6 +63,7 @@ from .pages.base import (
     time_left_text,
 )
 from .pages.compare import ComparePage
+from .pages.guide import FirstRunGuide
 from .pages.inspection import InspectionPage
 from .pages.logs import LogsPage
 from .pages.missing_list import MissingList
@@ -192,6 +193,16 @@ class HomePage(Page):
         body.setObjectName("page")  # on the page's background, not Qt's grey
         lay = QVBoxLayout(body)
         lay.setContentsMargins(0, 0, 0, 0)
+        # the first-run guide in the cards' place (B5, docs/sketches/first-run-guide.md), and on the cards the button
+        # that brings it back, once Show All Steps › put them there for the board model shown (`cards_for`)
+        self.guide = FirstRunGuide(self)
+        self.guide.holding_changed.connect(shell.hold_frame)
+        self.guide.made.connect(shell.select_board_model)
+        self.guide.cards_wanted.connect(lambda: self._show_cards(True))
+        self.cards_for: set[str | None] = set()  # the board models Show All Steps › was pressed for, until a sign-in
+        lay.addWidget(self.guide)
+        self.btn_guide = button(self.tr("Show the Guide ›"), slot=lambda: self._show_cards(False))
+        lay.addWidget(self.btn_guide, 0, Qt.AlignmentFlag.AlignRight)
         lay.addWidget(self.cards)
         # under the cards, what the board model still needs, each with the button that fixes it (REQ-TRN-021)
         self.missing_list = MissingList(self, self._fix)
@@ -200,6 +211,29 @@ class HomePage(Page):
         lay.addWidget(self.empty)
         lay.addStretch(1)
         self.root.addWidget(scrolled(body), 1)
+
+    def guided(self, board_model: str | None) -> bool:
+        """Whether the first-run guide is for `board_model`: a workspace with no board model, for a role that sets one
+        up, or the one whose store's recovery key the guide shows."""
+        return (board_model is None and self.gates.may("ensure_board_model")) or self.guide.holding()
+
+    def on_user_changed(self) -> None:
+        """A sign-in: what the user before typed on the guide goes, unless its recovery key shows, and the guide is back
+        where the user before pressed Show All Steps ›."""
+        self.cards_for.clear()
+        if not self.guide.holding():
+            self.guide.reset()
+
+    def key_actions(self) -> list[QAction]:
+        return [*super().key_actions(), *(self.guide.keys() if self.guide.isVisibleTo(self) else [])]
+
+    def _show_cards(self, cards: bool) -> None:
+        """Show All Steps › (`cards`) or Show the Guide ›, for the board model shown, kept until a sign-in."""
+        if cards:
+            self.cards_for.add(self.board_model)
+        else:
+            self.cards_for.discard(self.board_model)
+        self.on_show()
 
     def _fix(self, missing: Missing, need: Need) -> None:
         """A What is missing button: Training, where the step is taken, opened first (REQ-TRN-021)."""
@@ -251,10 +285,27 @@ class HomePage(Page):
     def on_show(self) -> None:
         self._sync_links()
         bm = self.board_model
+        guided = self.guided(bm)
+        shown = guided and (self.guide.holding() or bm not in self.cards_for)
+        self.guide.setVisible(shown)
+        self.btn_guide.setVisible(guided and not shown)
+        if shown:
+            for w in (self.cards, self.empty):
+                w.hide()
+            self.missing_list.show_for(None)
+            self.guide.show_for(bm)
+            focus = QApplication.focusWidget()
+            if not self.guide.form.isHidden() and (focus is None or not self.guide.isAncestorOf(focus)):
+                self.guide.name.setFocus()  # screen 1 opens on the name, typed at once (sketch), at a start too, when
+                # the window is not shown yet: Qt gives the focus to the name as the window opens
+            return
         self.cards.setVisible(bool(bm))
         self.missing_list.show_for(bm or None)
         if not bm:
-            self.show_empty(self.empty, *self.no_board_model())
+            heading, sentence, link, go = self.no_board_model()
+            if not self.gates.may("ensure_board_model"):  # the guide's first screen is an Admin's (B5)
+                sentence = self.tr("Ask an Admin to set up the first one.")
+            self.show_empty(self.empty, heading, sentence, link, go)
             return
         self.empty.hide()
         st = self.ctx.board_status(bm)
@@ -363,6 +414,20 @@ class _GreyedEntryPress(QObject):
         return False
 
 
+class _HeldPress(QObject):
+    """A press on the sidebar or the header while the first-run guide holds the frame says why on the status bar
+    (`MainWindow.hold_frame`), as both are greyed and take no click."""
+
+    def __init__(self, win: MainWindow) -> None:
+        super().__init__(win)
+        self.win = win
+
+    def eventFilter(self, watched: QObject, e: QEvent) -> bool:  # noqa: N802 (Qt's name)
+        if e.type() == QEvent.Type.MouseButtonPress and self.win.held:
+            self.win.status(self.win.held_text())
+        return False
+
+
 class _GivesWay(QLabel):
     """A header label that never sets the window's minimum width: `MainWindow._fit_header` hides it where the header's
     controls need its room, so a 1366 px window is never held wider by it (A7)."""
@@ -416,6 +481,7 @@ class MainWindow(QMainWindow):
         self.last_inspected: tuple[str, InspectionResult, int | None] | None = None  # path, result, record id
         self.in_demo = demo.is_demo(ctx.settings.root)  # the demo workspace is open (REQ-SET-007)
         self.switched = False  # closed by switch_workspace, which stopped the work and closed the context already
+        self.held = False  # the first-run guide shows a recovery key: the frame does nothing else until it is kept
         self._noted = False  # this window noted beside the workspace's lock, for a second start to find (F12)
         self.gates = RoleGates(self, ctx, self.status)  # the header's controls a role may not use (REQ-USR-001)
         title = f"{APP_NAME} {APP_VERSION}"
@@ -478,6 +544,10 @@ class MainWindow(QMainWindow):
                 self._badges[cls.title] = self._badge(it, cls.badge, cls.badge_tip)
         self.nav.currentItemChanged.connect(self._on_nav)
         self.nav.viewport().installEventFilter(_GreyedEntryPress(self))
+        held = _HeldPress(self)  # a press on the sidebar or the header while the guide holds the frame says why: on
+        # each of the header's controls too, as a greyed button takes a press for itself and never passes it on
+        for w in (self.nav.viewport(), self.header, *self.header.findChildren(QWidget)):
+            w.installEventFilter(held)
         # Ctrl+1 to Ctrl+9 open the sidebar's pages in its order, from any page, and F1 lists the keys of the page
         # shown (Engineering standard, "Short paths": one key to any page; "Input": every action by keyboard)
         self.page_keys: dict[str, str] = {}
@@ -599,6 +669,27 @@ class MainWindow(QMainWindow):
         if store is not None:
             said = self.tr("Board model {name} is in the encrypted dataset store of {customer}.")
             self.status(said.format(name=name, customer=store["customer"]))
+
+    def select_board_model(self, name: str) -> None:
+        """The header lists the board models again and selects `name`, one the first-run guide made or found."""
+        if name == self.board_model:
+            cur = self.stack.currentWidget()
+            if isinstance(cur, Page):
+                cur.on_show()
+            return
+        self._reload_board_models(name)
+
+    def hold_frame(self, on: bool) -> None:
+        """While the first-run guide shows a new store's recovery key (`on`; Q67, ADR 0021 decision 3), the sidebar,
+        the header's controls, Switch User, the page keys and the window's close do nothing, as the New board model
+        dialog's modal key step keeps them: the key is shown only then. Greyed, and a press says why."""
+        self.held = on
+        self.nav.setEnabled(not on)
+        self.header.setEnabled(not on)
+
+    def held_text(self) -> str:
+        """What the frame says while the guide holds it."""
+        return self.tr("Save the recovery key to a file or print it, then press I Have Saved the Key.")
 
     def _on_board_model(self, name: str) -> None:
         if (name or None) != self.board_model:  # the board inspected last was another board model's: Use Last
@@ -799,6 +890,9 @@ class MainWindow(QMainWindow):
 
     # --- navigation -----------------------------------------------------------------
     def navigate(self, title: str) -> bool:
+        if self.held and title != "Home":  # the guide shows a recovery key on Home (`hold_frame`)
+            self.status(self.held_text())
+            return False
         it = self._items.get(title)
         if it and self.hidden(title):
             self.status(self.tr("{page} is hidden in the presenter theme").format(page=page_text(title)))
@@ -816,7 +910,7 @@ class MainWindow(QMainWindow):
         lines: list[str] = []
         if isinstance(cur, Page):
             lines.append(self.tr("On {page}:").format(page=page_text(cur.title)))
-            for a in cur.actions():
+            for a in cur.key_actions():
                 key = a.shortcut().toString(QKeySequence.SequenceFormat.NativeText)
                 if key and a.text():
                     name = a.text().replace("▶", "").replace("■", "").strip()
@@ -889,6 +983,10 @@ class MainWindow(QMainWindow):
     def closeEvent(self, event: QCloseEvent) -> None:
         """Closing the window stops the background work and closes the context; while work runs it asks first, and No
         keeps the window open. A stopped training run saves nothing (REQ-TRN-008)."""
+        if self.held and not self.switched:  # the key would be lost unsaved (`hold_frame`)
+            self.status(self.held_text())
+            event.ignore()
+            return
         if not self.switched and not self._may_stop_work(self.tr("close the app")):
             event.ignore()
             return

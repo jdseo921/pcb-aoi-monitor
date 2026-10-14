@@ -155,11 +155,29 @@ model in the top bar; if not, add or change a letter A to Z or a digit, as in `T
 this rule under such names keep them and work as before; freeze refuses the second once the first has a version
 (AOI-TRN-040).
 
-Until a board model exists, Home, Inspection, Training, AI Model Test and Recipe Editor say so and offer
-**+ New board model**, which an Engineer or Admin uses; an Operator is told to ask an Engineer. Start and Next Board
+Until a board model exists, Inspection, Training, AI Model Test and Recipe Editor say so and offer
+**+ New board model**, which an Engineer or Admin uses; an Operator is told to ask an Engineer. Home opens on the
+first-run guide instead (below), and an Operator's Home says to ask an Admin. Start and Next Board
 on Inspection stay grey until a board model is chosen in the top bar, and so does Compare's Save to Recipe, since there
 is no recipe for a threshold to differ from; another action that needs one shows AOI-SET-014 (select a board model; an
 Engineer or Admin creates the first with **+ New**).
+
+**The first-run guide.** With no board model yet, Home opens on the first-run guide in place of its cards, its steps 1
+Board model, 2 Images and 3 Train along the top; this build has the first. Type the board model's name, as on the board
+or its drawing, and its customer, whose boards these are (your company's name for your own boards). The line under the
+name says as you type whether a new board model may have it, with the code of the rule it breaks (Names, above); the
+customer field offers the customers with a dataset store, and Enter in its list picks one. **Create** (Enter in either
+field) needs the Admin role: an Engineer sees the step greyed, saying so. While Create is off, a press on it or Enter
+says on the status bar what is still to type. For a customer's first board model, Create makes the customer's encrypted
+dataset store and shows its recovery key on the same screen, this once: **Save to File…** (Ctrl+S; on a USB drive kept
+away from the station, not the one that brings the images) or **Print…** (Ctrl+P), and the line beside them says where
+it went; then **I Have Saved the Key** (Enter), which until then says to save or print the key first. While the key
+shows, the sidebar, the top bar, the page keys and the window's close do nothing, and a press on them says why on the
+status bar. F1 lists the step's keys. A refusal, such as a folder under `images` that holds files already (AOI-TRN-044)
+or a key saved into the workspace (AOI-LOG-002), is said under the button that met it, with its code, and opens no
+dialog. The board model made is then chosen in the top bar, and Home shows its cards. **Show All Steps ›** leaves the
+guide for Home without it, which with no board model yet is the empty state with **+ New board model**, and **Show the
+Guide ›** brings it back, until the next sign-in.
 
 **Scale.** A board model's scale, in px per mm of the board, lets its recipe give sizes in mm, so that a recipe can
 survive a camera change (REQ-RCP-006). The scale does not follow the images by itself: after a camera change, or any

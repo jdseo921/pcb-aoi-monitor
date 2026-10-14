@@ -36,7 +36,7 @@ from collections import Counter
 from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 from unittest import mock
 
 import numpy as np
@@ -89,7 +89,7 @@ from aoi.config import Settings
 from aoi.core import stats
 from aoi.core.services import AppContext
 from aoi.ui import theme
-from aoi.ui.main_window import MainWindow
+from aoi.ui.main_window import HomePage, MainWindow
 from aoi.ui.pages.base import ROLES, size_class
 from aoi.ui.pages.model_test import MetricTile
 from aoi.ui.widgets.image_view import ImageView
@@ -667,6 +667,36 @@ def test_req_trn_017_new_board_model_dialog_sizes_and_contrast(
             dialog.close()
         win.set_user("admin")
     enough = {"dialogs": 5, "text": 20, "buttons": 8, "targets": 11, "popup_rows": 1}
+    assert all(seen[k] >= n for k, n in enough.items()), seen
+    assert not findings, f"{len(findings)} findings:\n" + "\n".join(sorted(set(findings)))
+
+
+def test_req_trn_021_first_run_guide_sizes_and_contrast(
+    screens: tuple[AppContext, Path], qtbot: QtBot, qapp: QApplication
+) -> None:
+    """Home's first-run guide (B5), which the page walk never reaches, as its workspace has board models: screen 1 as
+    the Admin types in it, its recovery key step and screen 1 greyed for the Engineer, in the screenshots' states
+    (`render_screens.guide_steps`). Every visible widget of the guide passes the font, size and contrast rules above,
+    and every control marked T is held to its size class."""
+    ctx, _ = screens
+    findings: list[str] = []
+    seen: Counter = Counter()
+    need = {"T": theme.TARGET_H, "T+": theme.RUN_CONTROL_H, "F": theme.FIELD_H}  # size_class() in pages/base.py
+    with _shell(ctx, qtbot, qapp) as win:
+        guide = cast(HomePage, win.pages["Home"]).guide
+        for name in render_screens.guide_steps(win):
+            assert guide.isVisible(), name
+            seen["steps"] += 1
+            shot = _pixels(win.grab().toImage())
+            for w in guide.findChildren(QWidget):
+                if w.isVisible() and w.width() > 0:
+                    findings += _check_widget(name, win, shot, w, seen)
+                    if (cls := w.property("sizeClass")) in need:
+                        seen["targets"] += 1
+                        if w.height() < need[cls]:
+                            findings.append(f"{name}: {type(w).__name__} '{_text(w)}' is {w.height()} px tall")
+        win.set_user("admin")
+    enough = {"steps": 3, "text": 25, "buttons": 8, "targets": 5}
     assert all(seen[k] >= n for k, n in enough.items()), seen
     assert not findings, f"{len(findings)} findings:\n" + "\n".join(sorted(set(findings)))
 

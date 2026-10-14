@@ -121,18 +121,19 @@ class RoleGates(QObject):
         need, role = ROLES.index(REQUIRED_ROLE[call]), self.ctx.role
         return role in ROLES and ROLES.index(role) >= need
 
-    def gate(self, control: QWidget, call: str, on: bool = True) -> bool:
+    def gate(self, control: QWidget, call: str, on: bool = True, why: str = "") -> bool:
         """`control`, which makes AppContext's `call`: on when the role signed in may make it and `on` holds; for a role
-        that may not, off, with the refusal's sentence as its tooltip and the status bar's line on a press. Returns
-        whether the role may."""
-        allowed = self.explain(control, call)
+        that may not, off, with the refusal's sentence, or `why` for a screen with words of its own (the first-run
+        guide), as its tooltip and the status bar's line on a press. Returns whether the role may."""
+        allowed = self.explain(control, call, why)
         control.setEnabled(allowed and on)
         return allowed
 
-    def explain(self, control: QWidget, call: str) -> bool:
+    def explain(self, control: QWidget, call: str, why: str = "") -> bool:
         """`control`, inside a control `gate` greys, keeping its own on and off: for a role that may not make `call`,
         the refusal's sentence as its tooltip and on a press, which a button or a tick, greyed or not, takes for itself
-        and never passes on to the control around it. Returns whether the role may."""
+        and never passes on to the control around it; `why` in the sentence's place, as `gate` takes it. Returns whether
+        the role may."""
         if control not in self.own:
             self.own[control] = control.toolTip()
             control.installEventFilter(self)
@@ -141,7 +142,7 @@ class RoleGates(QObject):
             self.why.pop(control, None)
             control.setToolTip(self.own[control])
         else:
-            self.why[control] = phrase_text(refusal(call).what)
+            self.why[control] = why or phrase_text(refusal(call).what)
             control.setToolTip(self.why[control])
         return allowed
 
@@ -318,6 +319,11 @@ class Page(QWidget):
     def on_user_changed(self) -> None:
         """A sign-in, whichever page is shown: `MainWindow.set_user` calls it on every page before the page shown gets
         `on_show`, so a page the new user opens later never finds what the user before left for that role."""
+
+    def key_actions(self) -> list[QAction]:
+        """The actions whose keys F1 lists for the page: its own, and a page with keys on a part of it adds that part's
+        (Home's first-run guide)."""
+        return list(self.actions())
 
     def update_actions(self) -> None:
         """Enable the page's buttons for the role and for whether a background job runs (`self._bg`)."""

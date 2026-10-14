@@ -4,7 +4,9 @@ the key was saved or printed. The New board model dialog shows it for a customer
 `RecoveryKeyDialog` for Settings' New Store…: neither can be left until the tick, by Esc, Cancel, the window's close or
 a sign-in, which exec(), showing it modal, keeps from the window behind it. The key is in a label that cannot be
 selected, so never on the clipboard, and `clear` forgets it. The store's UUID and key id, an Admin's advanced detail,
-are on the sheet saved or printed, not on screen (B2 of the 2026-10 business-readiness brief)."""
+are on the sheet saved or printed, not on screen (B2 of the 2026-10 business-readiness brief). The first-run guide shows
+it with no tick (`tick=False`, B5, Q67): a line beside the buttons says where the key went, and the guide's own button,
+I Have Saved the Key, waits for `saved`."""
 
 from __future__ import annotations
 
@@ -29,17 +31,24 @@ if TYPE_CHECKING:
 
 
 class RecoveryKey(QWidget):
-    """The key of the store `show_key` was given, until `clear`; `changed` follows the tick."""
+    """The key of the store `show_key` was given, until `clear`; `changed` follows the tick, and `saved`."""
 
     changed = Signal()
 
-    def __init__(self, ctx: AppContext, error: Callable[[AoiError], object], status: Callable[[str], object]) -> None:
+    def __init__(
+        self,
+        ctx: AppContext,
+        error: Callable[[AoiError], object],
+        status: Callable[[str], object],
+        tick: bool = True,
+    ) -> None:
         super().__init__()
         self.ctx, self.error, self.status = ctx, error, status
         self.made: dict[str, str] | None = None  # uuid, customer, key_id, sheet and created_at of the store shown
+        self.saved = False  # the key shown was saved to a file or printed
         lay = QVBoxLayout(self)
         lay.setContentsMargins(0, 0, 0, 0)
-        note = QLabel(
+        self.note = note = QLabel(
             self.tr(
                 "Shown this once. Save it to a USB drive or print it, and keep it apart from the station: with it, an"
                 " Admin opens the store on another PC, and anyone who holds it and a copy of the files can read them."
@@ -53,12 +62,16 @@ class RecoveryKey(QWidget):
         row = QHBoxLayout()
         for b in (self.btn_save, self.btn_print):
             row.addWidget(b)
-        row.addStretch(1)
+        self.saved_line = QLabel()  # without a tick, where the key went: "✓ Saved to F:\\recovery-key-Acme.txt"
+        self.saved_line.setWordWrap(True)
+        row.addWidget(self.saved_line, 1)
         self.kept = size_class(
             QCheckBox(self.tr("I have saved or printed the key and will keep it apart from the station")), "T"
         )
         self.kept.toggled.connect(self.changed)
         self.kept.installEventFilter(self)  # a press while it is off says why on the status bar: touch has no tooltip
+        self.kept.setVisible(tick)
+        self.tick = tick
         for w in (note, self.key):
             lay.addWidget(w)
         lay.addLayout(row)
@@ -82,18 +95,30 @@ class RecoveryKey(QWidget):
         self._keepable(False)
 
     def holding(self) -> bool:
-        """A key is shown and its tick is not ticked: the step showing it may not be left."""
-        return self.made is not None and not self.kept.isChecked()
+        """A key is shown and its tick is not ticked, or, with no tick, it is not cleared yet: the step showing it may
+        not be left."""
+        return self.made is not None and (not self.tick or not self.kept.isChecked())
 
     def _keepable(self, on: bool) -> None:
+        self.saved = on
+        if not on:
+            self.saved_line.clear()
         self.kept.setChecked(False)
         self.kept.setEnabled(on)
-        self.kept.setToolTip("" if on else self.tr("Save the key to a file or print it first"))
+        self.kept.setToolTip("" if on else self.unsaved())
 
-    def _kept_away(self) -> None:
-        """Saved or printed: the tick may be ticked now."""
+    def unsaved(self) -> str:
+        """What a step waiting for the key says while the key was neither saved nor printed."""
+        return self.tr("Save the key to a file or print it first")
+
+    def _kept_away(self, said: str) -> None:
+        """Saved or printed, `said` beside the buttons with no tick: the tick may be ticked now, and `saved` holds."""
+        if not self.tick:
+            self.saved_line.setText(said)
         if not self.kept.isEnabled():
             self._keepable(True)
+        if not self.tick:  # a tick says so through its own toggled
+            self.changed.emit()
 
     def eventFilter(self, watched: QObject, e: QEvent) -> bool:
         if watched is self.kept and e.type() == QEvent.Type.MouseButtonPress and not self.kept.isEnabled():
@@ -151,7 +176,7 @@ class RecoveryKey(QWidget):
             self.error(e)
             return
         self.status(self.tr("Saved the recovery key to {file}").format(file=f))
-        self._kept_away()
+        self._kept_away(self.tr("✓ Saved to {file}").format(file=f))
 
     def print_sheet(self) -> None:
         """The sheet on the printer picked, audited first by `AppContext.print_recovery_sheet` with the printer and any
@@ -165,7 +190,9 @@ class RecoveryKey(QWidget):
             self.error(e)
             return
         self.document().print_(printer)
-        self._kept_away()
+        self._kept_away(
+            self.tr("✓ Sent to {printer}").format(printer=printer.printerName() or printer.outputFileName())
+        )
 
 
 class RecoveryKeyDialog(QDialog):

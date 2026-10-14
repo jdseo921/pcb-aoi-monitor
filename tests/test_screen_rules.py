@@ -16,6 +16,7 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from typing import cast
 
 import numpy as np
 import pytest
@@ -49,7 +50,7 @@ from pytestqt.qtbot import QtBot
 
 from aoi.core.services import AppContext
 from aoi.ui import theme
-from aoi.ui.main_window import MainWindow
+from aoi.ui.main_window import HomePage, MainWindow
 from aoi.ui.pages.base import button
 from aoi.ui.pages.compare import MODE_DIFF
 from aoi.ui.pages.profile3d import Stage2Card
@@ -258,12 +259,17 @@ def test_req_insp_002_verdict_has_shape_and_word(qtbot: QtBot, trained_ctx: AppC
 
 
 def test_req_set_018_one_primary_button(qtbot: QtBot, trained_ctx: AppContext) -> None:
-    """Exactly one blue primary button per page, the action the page is for; none of them is checkable."""
+    """Exactly one blue primary button per page, the action the page is for; none of them is checkable. Home's first-run
+    guide, shown in place of its cards, has one for each step, of which one shows at a time."""
     win = _window(qtbot, trained_ctx, "Admin")
+    guide = cast(HomePage, win.pages["Home"]).guide
     for title, page in win.pages.items():
         primaries = [b for b in page.findChildren(QPushButton) if b.objectName() == "primary"]
-        assert len(primaries) == 1, (title, [b.text() for b in primaries])
         assert not any(b.isCheckable() for b in primaries), title
+        primaries = [b for b in primaries if not guide.isAncestorOf(b)]
+        assert len(primaries) == 1, (title, [b.text() for b in primaries])
+    for step, press in ((guide.form, guide.btn_create), (guide.key_step, guide.btn_kept)):
+        assert [b for b in step.findChildren(QPushButton) if b.objectName() == "primary"] == [press]
     assert f"QPushButton#primary {{ background: {theme.ACCENT};" in theme.QSS
 
 
@@ -486,12 +492,17 @@ def test_req_set_019_empty_states_link_next_step(
 ) -> None:
     """Every empty page, list and image area says what is missing, what to do and links there; a role that cannot
     open the linked page is told to ask an Engineer; with no board model the step is "+ New board model", or for an
-    Operator to ask an Engineer; a filtered-out history offers Reset Filters."""
+    Operator to ask an Engineer, on Home an Admin (the first-run guide's first screen is an Admin's, B5); a
+    filtered-out history offers Reset Filters. Home opens an empty workspace on the first-run guide, and shows its
+    empty state once Show All Steps › is pressed."""
     win = MainWindow(ctx)  # an empty workspace, opened as Admin
     qtbot.addWidget(win)
     win.resize(1600, 900)
     win.show()
     qtbot.waitExposed(win)
+    home = cast(HomePage, win.pages["Home"])
+    assert home.guide.isVisible() and not _empties(home)
+    home.guide.btn_cards.click()
     seen: dict[str, EmptyState | Stage2Card] = {}
     for title in (
         "Home",
@@ -539,12 +550,12 @@ def test_req_set_019_empty_states_link_next_step(
     )
     seen["Logs & Export"].link.click()
     assert win.stack.currentWidget() is win.pages["Inspection"]
-    # An Operator is told to ask an Engineer, with no link, when the next step is on a page that is not theirs.
+    # An Operator is told to ask, with no link, when the next step is on a page that is not theirs: on Home an Admin.
     win.set_user("operator")
     win.navigate("Home")
-    assert seen["Home"].sentence.text() == "Ask an Engineer to create one." and not seen["Home"].link.isVisibleTo(
-        win.pages["Home"]
-    )
+    assert seen["Home"].sentence.text() == "Ask an Admin to set up the first one." and not seen[
+        "Home"
+    ].link.isVisibleTo(win.pages["Home"])
     win.set_user("admin")  # creating a board model is Engineer or Admin work (REQ-USR-001)
     ctx.ensure_board_model("TBOX-X")
     win._reload_board_models("TBOX-X")
