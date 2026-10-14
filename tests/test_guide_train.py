@@ -14,10 +14,11 @@ import pytest
 from aoi.core import run_progress
 from aoi.core.jobs import JobCancelled
 from aoi.core.labels import DefectBox
+from aoi.core.recipe import Recipe
 from aoi.core.run_progress import Press, RunProgress
 from aoi.core.services import FIRST_LIVE, GUIDE_PARTS, AppContext
 from aoi.errors import AoiError, Phrase
-from tests.test_trial_versions import ONE, one_person
+from tests.test_trial_versions import ONE, one_person, validated_live
 
 ACTIONS = ("dataset.freeze", "dataset.lock", "model.train", "model.activate", "test.run", "inspection.shift_check")
 
@@ -124,6 +125,89 @@ def test_req_trn_021_cancel_keeps_the_parts_done(ctx: AppContext, tmp_path: Path
     assert ctx.audit_entries(action="test.run") == []
     done, _ = press(ctx)
     assert done["not_run"] == [] and done["run"] is not None and done["model"]["id"] == out["model"]["id"]
+
+
+def test_req_trn_021_only_what_the_guide_would_make_now_is_used_again(ctx: AppContext, tmp_path: Path) -> None:
+    """A Trial version frozen on Training with the uses "own" and "shared" is not the guide's: the press freezes one
+    with "own" only. A press for R2 freezes again; one for R1 after it takes R1's version back, freezing nothing. A
+    recipe revision saved since makes a test of the same AI model and a shift check again, as does a passed shift check
+    past its 12 hours; a failed one judged with what judges boards now is not run again."""
+    ready(ctx, tmp_path / "boards")
+    shared = ctx.freeze_dataset(ONE, "Top", "R1", "Acme", ("own", "shared"), trial=True)
+    first, _ = press(ctx)
+    assert first["dataset"]["uuid"] != shared["uuid"] and first["dataset"]["allowed_uses"] == ["own"]  # type: ignore[index]
+    r2 = ctx.guide_train(ONE, "Top", "R2", epochs=1, image_size=32)
+    before = entries(ctx)
+    r1, said = press(ctx)
+    assert r1["dataset"]["uuid"] == first["dataset"]["uuid"] != r2["dataset"]["uuid"]
+    assert entries(ctx)["dataset.freeze"] == before["dataset.freeze"] and r1["model"]["id"] == first["model"]["id"]
+    ctx.save_recipe(Recipe(board_model=ONE), "a revision saved since")
+    before = entries(ctx)
+    again, _ = press(ctx)
+    assert again["run"]["uuid"] != r1["run"]["uuid"] and again["run"]["model_uuid"] == r1["run"]["model_uuid"]
+    grown = {a: entries(ctx)[a] - before[a] for a in ACTIONS}
+    assert grown == {a: int(a in ("test.run", "inspection.shift_check")) for a in ACTIONS}
+    old = "2026-01-01T00:00:00+00:00"  # passed, and past its 12 hours: expired
+    ctx.db.execute("UPDATE shift_checks SET passed=1, time=? WHERE board_model=?", (old, ONE))
+    assert ctx.shift_check(ONE)["state"] == "expired"
+    press(ctx)
+    assert entries(ctx)["inspection.shift_check"] == before["inspection.shift_check"] + 2
+    ctx.db.execute("UPDATE shift_checks SET passed=0 WHERE board_model=?", (ONE,))  # failed, judged as boards are now
+    _, said = press(ctx)
+    assert entries(ctx)["inspection.shift_check"] == before["inspection.shift_check"] + 2 and said == []
+
+
+def test_req_trn_021_a_validated_ai_model_live_refuses_the_press(ctx: AppContext, tmp_path: Path) -> None:
+    """While a Validated AI model of the board model is active, a Trial one never replaces it (ADR 0020, decision 4):
+    the press is refused with AOI-TRN-057 before anything is frozen or trained."""
+    ready(ctx, tmp_path / "boards")
+    out, _ = press(ctx)
+    meta = validated_live(ctx, out["dataset"])
+    ng = ctx.samples(ONE, "NG")[0]
+    ctx.set_boxes(ng["uuid"], [DefectBox(3, 3, 6, 6, "Scratch")])
+    before = (ctx.audit_entries(), ctx.datasets(ONE), ctx.models(ONE))
+    with pytest.raises(AoiError) as refused:
+        press(ctx)
+    assert refused.value.code == "AOI-TRN-057" and refused.value.params == {"board": ONE, "version": meta["version"]}
+    assert (ctx.audit_entries(), ctx.datasets(ONE), ctx.models(ONE)) == before
+
+
+def test_req_trn_021_cancel_before_the_lock_and_in_the_shift_check(ctx: AppContext, tmp_path: Path) -> None:
+    """Cancel while the files are hashed: JobCancelled, nothing written. Cancel once the version is frozen: the next
+    press locks that version, freezing nothing again. Cancel in the shift check: the test is stored and the result says
+    only the shift check did not run."""
+    ready(ctx, tmp_path / "boards")
+    before = ctx.audit_entries()
+    with pytest.raises(JobCancelled):
+        ctx.guide_train(ONE, "Top", "R1", 1, 32, should_stop=lambda: True)
+    assert ctx.audit_entries() == before and ctx.datasets(ONE) == []
+    with pytest.raises(JobCancelled):
+        ctx.guide_train(ONE, "Top", "R1", 1, 32, should_stop=lambda: bool(ctx.db.datasets(ONE)))
+    [frozen] = ctx.datasets(ONE)
+    assert ctx.validation_split(frozen["uuid"]) is None
+    seen: list[str] = []
+    out = ctx.guide_train(
+        ONE, "Top", "R1", 1, 32, lambda p: seen.append(str(p.phase)), lambda: any("Shift check" in p for p in seen)
+    )
+    assert out["dataset"]["uuid"] == frozen["uuid"] and entries(ctx)["dataset.freeze"] == 1
+    assert out["run"] is not None and out["shift"] is None and out["not_run"] == ["shift_check"]
+    assert entries(ctx)["inspection.shift_check"] == 0
+
+
+def test_req_trn_021_with_the_shift_check_off_train_runs_four_parts(ctx: AppContext, tmp_path: Path) -> None:
+    """With the shift check off on Settings (0 hours), the press runs no shift check and counts none in its line; a
+    Cancel while it validates names only the test as not run."""
+    ready(ctx, tmp_path / "boards")
+    ctx.settings.shift_check_hours = 0
+    seen: list[str] = []
+    out = ctx.guide_train(
+        ONE, "Top", "R1", 1, 32, lambda p: seen.append(str(p.phase)), lambda: any("Validating" in p for p in seen)
+    )
+    assert out["run"] is None and out["not_run"] == ["validate"]
+    done, said = press(ctx)
+    assert done["shift"]["state"] == "off" and done["not_run"] == [] and done["run"] is not None
+    assert not any(str(p.phase).startswith("Shift check") for p in said)
+    assert entries(ctx)["inspection.shift_check"] == 0
 
 
 def test_req_trn_021_train_is_an_engineers_and_one_run_at_a_time(ctx: AppContext, tmp_path: Path) -> None:

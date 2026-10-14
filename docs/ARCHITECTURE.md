@@ -697,16 +697,19 @@ by the same call, so each refuses and audits as there: it freezes the view's ima
 model's store's customer with the use "own" only and locks its validation set (`freeze_dataset`, `lock_validation_set`),
 trains from it (`train`), makes that AI model active (`activate_model`, unless `train` made it live as the board model's
 first), tests it on the images kept apart (`test_dataset`) and runs the shift check (`run_shift_check`, unless the
-setting is off). A part done before is not done again: the newest Trial version of the view is used again while it holds
-the images, labels and boxes as they are now, its newest AI model, a test of that AI model on it, and a shift check
-judged by the AI model, recipe revision, Golden board and scale in use now (`_judged_now`), so a press after a Cancel, a
-refusal or a restart goes on from the first part not done. Cancel stops the first three parts with `JobCancelled`, the
-parts done kept; in the last two the AI model stays active and the result's `not_run` names what did not run.
-`start_guide_train` runs it as the context's one training run, as `start_training` runs `train` (AOI-TRN-047 for a
-second). Its one progress line is `run_progress.Press`: training's own report, then each image judged by the test and
-the shift check, the time left adding, while training, an image aligned and a map for each of them, and after it the
-time an image judged has taken; the percent of the whole press never falls and stays under 100 until the press ends.
-`tests/test_guide_train.py` runs the press on 80 OK and 20 NG synthetic images, which proves the code path only.
+setting is off). While a Validated AI model is active the press is refused before anything is written (AOI-TRN-057),
+as a Trial AI model never replaces one. A part done before is not done again: a Trial version of the view, the revision,
+the customer and the use "own" only is used again while it holds the images, labels and boxes as they are now
+(`_guide_version`, never one frozen on Training with other uses), its newest AI model, a test of that AI model on it
+judged with what judges boards now (`engine_is_current`), and a shift check that counts now or that failed with what
+judges boards now (`_judged_now`), so a press after a Cancel, a refusal or a restart goes on from the first part not
+done. Cancel stops the first three parts with `JobCancelled`, the parts done kept; in the last two the AI model stays
+active and the result's `not_run` names what did not run. `start_guide_train` runs it as the context's one training
+run, as `start_training` runs `train` (AOI-TRN-047 for a second). Its one progress line is `run_progress.Press`:
+training's own report, then each image judged by the test and the shift check, the time left adding, while training,
+an image aligned and a map for each of them, and after it the time an image judged has taken; the percent of the whole
+press never falls and stays under 100 until the press ends. `tests/test_guide_train.py` runs the press on 80 OK and 20
+NG synthetic images, which proves the code path only.
 
 **Next AI step (not in this draft):** once enough labelled NG crops exist per type, add a small supervised
 classifier that names the defect (Solder Bridge, Tombstone, …) for each flagged region. Today a region is named by

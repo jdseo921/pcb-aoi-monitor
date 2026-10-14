@@ -894,7 +894,7 @@
         <location line="+8"/>
         <location line="+35"/>
         <location line="+9"/>
-        <location line="+135"/>
+        <location line="+165"/>
         <source>Training an AI model</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1152,14 +1152,14 @@
         <translation>검증 세트 잠금</translation>
     </message>
     <message>
-        <location line="-2897"/>
-        <location line="+2911"/>
+        <location line="-2927"/>
+        <location line="+2941"/>
         <location line="+39"/>
         <source>the workspace holds no such dataset version</source>
         <translation>작업 공간에 그런 데이터셋 버전이 없습니다</translation>
     </message>
     <message>
-        <location line="-2999"/>
+        <location line="-3029"/>
         <source>Drift on {board} ({view}): {count} of the last {of} boards called NG; {before} % of the {baseline} before</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1259,7 +1259,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1104"/>
+        <location line="+1134"/>
         <source>Setting the comparison&apos;s thresholds from labelled boards</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1486,7 +1486,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-3662"/>
+        <location line="-3692"/>
         <source>no earlier version of this board model was active</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1511,7 +1511,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1028"/>
+        <location line="+1058"/>
         <source>its UUID {found} is not {uuid}, as in the AI model registry</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1618,7 +1618,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-3890"/>
+        <location line="-3920"/>
         <source>unhandled</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2893,6 +2893,21 @@
     </message>
     <message>
         <location line="+16"/>
+        <source>Train makes a Trial AI model, which does not replace a Validated one</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Nothing was trained for board model {board}: Validated AI model {version} judges its boards, and the first-run guide&apos;s Train makes a Trial AI model, which never replaces a Validated one.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>Train a next AI model on Training from a Validated version. The active AI model and Golden board stay as they are. Nothing was written.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+8"/>
         <source>AI model, recipe, scale or Golden board changed since the run</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3468,7 +3483,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1340"/>
+        <location line="-1354"/>
         <source>Board judged NG</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3613,7 +3628,7 @@
         <translation type="unfinished">같은 보드라면 상단 바에서 &quot;{existing}&quot;을(를) 선택하고, 아니라면 새 보드 모델에 A~Z 문자나 0~9 숫자가 &quot;{existing}&quot;과(와) 다른 이름(예: 숫자를 하나 더 붙인 이름)을 지정하십시오. 아무것도 만들지 않았습니다.</translation>
     </message>
     <message>
-        <location line="+56"/>
+        <location line="+70"/>
         <source>Start the Checks on Training: a second person checks the labels and two people run an agreement check, then freeze a Validated version, train from it and test again. The run and its CSV are kept.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3925,7 +3940,7 @@
     </message>
     <message>
         <location line="+1"/>
-        <location filename="../core/services.py" line="+3153"/>
+        <location filename="../core/services.py" line="+3183"/>
         <source>a file of it could not be read: {reason}</source>
         <translation>그 파일 하나를 읽을 수 없습니다: {reason}</translation>
     </message>
@@ -8176,7 +8191,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/services.py" line="-3236"/>
+        <location filename="../core/services.py" line="-3266"/>
         <source>Aligning {count} images to the reference board</source>
         <translation type="unfinished"></translation>
     </message>
@@ -8198,32 +8213,32 @@
     <message>
         <location line="+1"/>
         <source>Training the AI model: round {epoch} of {epochs}</source>
-        <translation type="unfinished"></translation>
+        <translation>AI 모델 학습 중: {epochs}회 중 {epoch}회차</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Setting the threshold: image {n} of {count}</source>
-        <translation type="unfinished"></translation>
+        <translation>임계값 설정 중: 이미지 {n}/{count}</translation>
     </message>
     <message>
         <location line="+3"/>
         <source>Keeping {ok} OK and {ng} NG images apart for validation</source>
-        <translation type="unfinished"></translation>
+        <translation>검증용으로 OK 이미지 {ok}장과 NG 이미지 {ng}장을 따로 두는 중</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Making AI model {version} active</source>
-        <translation type="unfinished"></translation>
+        <translation>AI 모델 {version} 활성화 중</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Validating AI model {version}: image {n} of {count}</source>
-        <translation type="unfinished"></translation>
+        <translation>AI 모델 {version} 검증 중: 이미지 {n}/{count}</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Shift check: master sample {n} of {count}</source>
-        <translation type="unfinished"></translation>
+        <translation>교대 점검: 마스터 샘플 {n}/{count}</translation>
     </message>
     <message>
         <location line="-5"/>

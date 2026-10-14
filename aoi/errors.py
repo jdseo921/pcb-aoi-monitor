@@ -1059,6 +1059,20 @@ CODES: dict[str, ErrorCode] = {
                 " added. Nothing was made.",
             ),
         ),
+        ErrorCode(  # the first-run guide's Train while a Validated AI model is active (B5; ADR 0020, decision 4)
+            "AOI-TRN-057",
+            QT_TRANSLATE_NOOP("Errors", "Train makes a Trial AI model, which does not replace a Validated one"),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Nothing was trained for board model {board}: Validated AI model {version} judges its boards, and the"
+                " first-run guide's Train makes a Trial AI model, which never replaces a Validated one.",
+            ),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Train a next AI model on Training from a Validated version. The active AI model and Golden board stay"
+                " as they are. Nothing was written.",
+            ),
+        ),
         ErrorCode(
             "AOI-TST-001",
             QT_TRANSLATE_NOOP("Errors", "AI model, recipe, scale or Golden board changed since the run"),
