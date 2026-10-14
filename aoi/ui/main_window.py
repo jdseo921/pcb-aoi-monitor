@@ -20,6 +20,7 @@ from PySide6.QtGui import (
 from PySide6.QtWidgets import (
     QApplication,
     QComboBox,
+    QDialog,
     QFrame,
     QGridLayout,
     QHBoxLayout,
@@ -46,6 +47,7 @@ from ..core.run_progress import RunProgress
 from ..core.services import REQUIRED_ROLE, ROLES_FROM, AppContext, workspace_in_use
 from ..errors import AoiError
 from . import theme
+from .board_model_dialog import NewBoardModelDialog
 from .demo_workspace import boards
 from .errors import install_excepthook, open_workspace, phrase_text, show_already_open, show_error
 from .pages.base import (
@@ -573,19 +575,21 @@ class MainWindow(QMainWindow):
         self._on_board_model(self.bm_combo.currentText())
 
     def new_board_model(self) -> None:
-        name, ok = QInputDialog.getText(
-            self, self.tr("New board model"), self.tr("Board model name (e.g. TBOX-A1 Rev2)")
-        )
-        if ok and name.strip():
-            try:
-                self.ctx.ensure_board_model(name.strip())
-            except AoiError as e:  # the service layer refuses an Operator; the dialog names the role it needs
-                show_error(self, self.ctx.report_error(e, "Board model"))
-                return
-            if name.strip() == self.board_model:  # nothing changes: no page drops what it shows or judges again (#247)
-                self.status(self.tr("Board model {name} is already selected.").format(name=name.strip()))
-                return
-            self._reload_board_models(name.strip())
+        """+ New: the New board model dialog makes the board model, and a customer's first one's encrypted dataset
+        store with it (ADR 0021); the header then selects it, unless it is selected already."""
+        dialog = NewBoardModelDialog(self)
+        accepted = dialog.exec() == QDialog.DialogCode.Accepted
+        name, store = dialog.made, dialog.store
+        dialog.deleteLater()
+        if not accepted or name is None:
+            return
+        if name == self.board_model:  # nothing changes: no page drops what it shows or judges again (#247)
+            self.status(self.tr("Board model {name} is already selected.").format(name=name))
+            return
+        self._reload_board_models(name)
+        if store is not None:
+            said = self.tr("Board model {name} is in the encrypted dataset store of {customer}.")
+            self.status(said.format(name=name, customer=store["customer"]))
 
     def _on_board_model(self, name: str) -> None:
         if (name or None) != self.board_model:  # the board inspected last was another board model's: Use Last

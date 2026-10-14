@@ -38,6 +38,7 @@ from aoi.core.services import AppContext  # noqa: E402
 from aoi.data import credentials  # noqa: E402
 from aoi.data.db import new_uuid  # noqa: E402
 from aoi.ui import theme, workers  # noqa: E402
+from aoi.ui.board_model_dialog import NewBoardModelDialog  # noqa: E402
 from aoi.ui.errors import AlreadyOpenBox, ErrorBox  # noqa: E402
 from aoi.ui.theme import QSS  # noqa: E402
 from tools.make_synthetic_dataset import ng_type, write_dataset  # noqa: E402
@@ -193,6 +194,22 @@ def listed(qtbot: QtBot, page: QWidget) -> None:
     """Wait until `page` shows the records it lists when shown: Logs & Export reads them on the pool (`listing`, S55);
     any other page shows its rows at once. A test reads the rows, the empty state or the exports after this."""
     qtbot.waitUntil(lambda: getattr(page, "listing", None) is None, timeout=30000)
+
+
+def answer_new_board_model(monkeypatch: pytest.MonkeyPatch, name: str) -> list[str]:
+    """+ New answered with `name`, no customer, and Create, in place of the dialog's own event loop, which would block
+    offscreen; "" cancels it. Returns the titles of the dialogs opened, as they open."""
+    titles: list[str] = []
+
+    def exec_(dialog: NewBoardModelDialog) -> int:
+        titles.append(dialog.windowTitle())
+        if name:
+            dialog.board.setText(name)
+            dialog.make()
+        return dialog.result()
+
+    monkeypatch.setattr(NewBoardModelDialog, "exec", exec_)
+    return titles
 
 
 def log_rows(folder: Path) -> list[dict[str, Any]]:

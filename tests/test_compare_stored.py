@@ -16,7 +16,6 @@ import cv2
 import numpy as np
 import pytest
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QInputDialog
 from pytestqt.qtbot import QtBot
 
 from aoi.core import anomaly
@@ -31,7 +30,7 @@ from aoi.ui.pages.base import cell_item
 from aoi.ui.pages.compare import JUDGED, ComparePage, check_text
 from aoi.ui.pages.inspection import InspectionPage
 from tests.budgets import TRIES, judged
-from tests.conftest import wrapped
+from tests.conftest import answer_new_board_model, wrapped
 from tests.regression import make_regression_set as rs
 from tests.test_alarms_and_errors import _log_rows
 from tests.test_no_freeze import board_5mp  # noqa: F401  # the 5 MP fixture
@@ -659,7 +658,7 @@ def test_req_cmp_003_new_with_the_board_models_own_name_keeps_the_stored_result(
         return real(c, *args, **kwargs)
 
     monkeypatch.setattr(AppContext, "inspect", spy)
-    monkeypatch.setattr(QInputDialog, "getText", staticmethod(lambda *a, **k: (BOARD, True)))
+    answer_new_board_model(monkeypatch, BOARD)
     win.new_board_model()
     said = win.statusBar().currentMessage()
     win._on_board_model(BOARD)  # any other notice of the same board model changes nothing on Compare either

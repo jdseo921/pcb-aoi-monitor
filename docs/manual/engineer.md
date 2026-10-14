@@ -179,19 +179,31 @@ can at a smaller scale. When the window is too short for every field of the Thre
 with this notice and the note under the AI score threshold shown, the tab scrolls: use the scroll bar at its right,
 the mouse wheel, or Tab, which brings each field into view.
 
-**Creating a board model.** Press **+ New** in the header (Engineer or Admin; greyed for an Operator, naming the role it needs)
-and type the name under "Board model name (e.g. TBOX-A1 Rev2)"; spaces at its ends are dropped, and an empty name
-creates nothing. The new board model is chosen in the header at once, on every page. A name that exists, typed exactly,
-creates nothing and chooses that board model (the status bar says when it is already chosen); one that differs from an
-existing name only in case, or that cannot name a folder, is refused (Names, above). The app has no step to rename or
-delete a board model, so check the name before OK. Creating it writes `board_model.create` to the audit trail and
-stores the default recipe as revision 1, saved by the system (`recipe.default`), so its first boards already name the
-recipe revision that judged them. It has no Golden board, AI model or scale yet; Home shows how far it has come on six
-cards, each with a link to its page. The steps, in order:
+**Creating a board model.** Press **+ New** in the header (Engineer or Admin; greyed for an Operator, naming the role it
+needs) and type the name under "Board model name (e.g. TBOX-A1 Rev2)"; spaces at its ends are dropped, and Create is
+off while no name is typed. Under **Customer**, an Admin names the customer whose boards it is, picked from the list of
+customers with a dataset store or typed new (the list offers the names that match, and never fills one in); left empty,
+the board model is an in-house or demo one, its images unencrypted, and for an Engineer the list is greyed, saying an
+Admin names it. The line under it says what Create does. For a customer's first board model, Create makes the
+customer's encrypted dataset store and puts the board model in it, then shows the store's **recovery key** once, in the
+dialog: Save to File… (on a USB drive; the app refuses the workspace and a folder OneDrive copies to the cloud) or
+Print…, then tick "I have saved or printed the key and will keep it apart from the station", then Done. Until the tick
+is ticked, Done is off and Esc, Cancel and closing the window do nothing, and the window behind waits: the key opens
+the store on a new PC or after Windows is reinstalled, and is never shown again. The sheet saved or printed also names
+the store and its key id, which Restore Key… needs and the screen leaves out. A customer's next board model goes into
+its store with no key shown. A board model whose folder under `images` holds files already, copied in by hand, is
+refused with a customer named: make it with none, then an Admin moves it in on Settings, which encrypts the files. The
+new board model is chosen in the header at once, on every page, and the status bar names the store that holds it. A
+name that exists, typed exactly, creates nothing and chooses that board model (the status bar says when it is already
+chosen); one that differs from an existing name only in case, or that cannot name a folder, is refused (Names, above).
+The app has no step to rename or delete a board model, so check the name before Create. Creating it writes
+`board_model.create` to the audit trail and stores the default recipe as revision 1, saved by the system
+(`recipe.default`), so its first boards already name the recipe revision that judged them. It has no Golden board, AI
+model or scale yet; Home shows how far it has come on six cards, each with a link to its page. The steps, in order:
 
-1. For a customer's images, an Admin moves the new board model into that customer's dataset store (Settings › Dataset
-   stores, Move Board Model In…, section 3) before the first import: each image is then encrypted as it is copied, and
-   never written plain.
+1. For a customer's images, name the customer in + New, as above (an Admin): each image is then encrypted as it is
+   copied, and never written plain. A board model made with no customer goes into a store later only with Move Board
+   Model In… (Settings › Dataset stores, section 3), and is frozen only once it is in one.
 2. On Training, import OK and NG images and make an OK one the reference with Set Reference (section 3). From then on
    Inspection compares boards with that Golden board, with AOI-TRN-003 in its alarm log while no AI model judges them.
 3. Label, check and freeze a dataset version and lock its validation set (section 3), then train an AI model version
@@ -370,13 +382,17 @@ brief, decision D1; ADR 0020).
 
 **Each customer's images are in a store of their own.** A version is frozen only from a board model in the dataset
 store of the customer it names (AOI-TRN-027). An Admin keeps the stores under Settings › Dataset stores, one per
-customer; each step there opens a sheet in the table's place. New Store… makes a store and shows its recovery sheet
-once, with Print Sheet…: keep it apart from the station, since it is the only way to open the store on a new PC or
-Windows account, where Restore Key… takes its 13 groups of four back. Close waits for the tick that says it is printed.
+customer; each step there opens a sheet in the table's place. A customer's first board model makes its store in the
+New board model dialog (section 2); New Store… makes one here, and shows its recovery key once in the same way, in a
+dialog with Save to File… and Print…: keep it apart from the station, since it is the only way to open the store on a
+new PC or Windows account, where Restore Key… takes its 13 groups of four back. Done waits for the tick, which waits
+for the key to be saved or printed. The key ids, Restore Key… and Shred Store… are under the **Advanced** tick, which a
+sign-in turns off. A store is made only on the Windows station: on any other system, which keeps a store's key in memory only
+and loses it when the app closes, making one is refused with AOI-TRN-053 (ADR 0021).
 Move Board Model In… encrypts a board model's images and manifests where they are; they keep their .png and .json names
 but open only in this app, on a station that holds the key. Cancel on its busy indicator leaves the rest plain, and the
 same step, its button then reading Finish Moving In, moves them. A file the app cannot open is AOI-TRN-025, which says
-why. When an engagement ends, an Admin shreds the store with Shred Store…, which names the board models and the files it
+why. When an engagement ends, an Admin ticks Advanced and shreds the store with Shred Store…, which names the board models and the files it
 deletes and waits for the customer's name typed: its key goes first, then its images, versions, AI models and Golden
 boards; nothing of it opens afterwards, a backup included, once the sheet is destroyed. A file that would not go is
 AOI-TRN-044, and Shred Store… again deletes what is left (ADR 0010).

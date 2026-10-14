@@ -183,6 +183,19 @@ WRITES: dict[str, tuple[str, Callable[[AppContext, Path, Path], Any]]] = {
     ),
     "move_in": ("store.move_in", lambda ctx, data, tmp: ctx.move_in("TINY", a_store(ctx, "Acme Electronics"))),
     "shred_store": ("store.shred", lambda ctx, data, tmp: ctx.shred_store(a_store(ctx, "Delta"))),
+    # a customer's first board model and its store in one step, the move-in its last entry (B2, ADR 0021)
+    "create_customer_board_model": (
+        "store.move_in",
+        lambda ctx, data, tmp: ctx.create_customer_board_model("EPS-1", "Epsilon"),
+    ),
+    "save_recovery_sheet": (  # Save to File… of a store's recovery key, while it is shown (B2, ADR 0021)
+        "store.sheet_saved",
+        lambda ctx, data, tmp: ctx.save_recovery_sheet(a_store(ctx, "Zeta"), "the sheet", tmp / "key.txt"),
+    ),
+    "print_recovery_sheet": (  # Print… of it, audited before it prints (B2, ADR 0021)
+        "store.sheet_printed",
+        lambda ctx, data, tmp: ctx.print_recovery_sheet(a_store(ctx, "Eta"), "Office printer"),
+    ),
     # the version TINY was trained from (tests/conftest.py), so the call under test writes the only rows
     "train": ("model.train", lambda ctx, data, tmp: ctx.train(ctx.training_version("TINY")["uuid"], 1, 32)),
     # the version trained above, which installed inactive (REQ-TRN-010, S43)
@@ -277,6 +290,8 @@ CALLS = {**{name: call for name, (_, call) in WRITES.items()}, **CHECKED_READS}
 # from the decorators under test (#181): built from REQUIRED_ROLE, a lowered @requires refused fewer roles and passed.
 EXPECTED_ROLE = {name: "Engineer" for name in CALLS} | {"add_user": "Admin", "save_settings": "Admin"}
 EXPECTED_ROLE |= {"create_store": "Admin", "restore_store_key": "Admin", "move_in": "Admin", "shred_store": "Admin"}
+# B2 (ADR 0021): a customer's board model and its store, and the copies of its recovery key
+EXPECTED_ROLE |= {f: "Admin" for f in ("create_customer_board_model", "save_recovery_sheet", "print_recovery_sheet")}
 EXPECTED_ROLE |= {"delete_sample": "Admin", "delete_inspections": "Admin"}  # only an Admin deletes (REQ-LOG-003)
 # Q58 (#151): customer images and results leave the station only by an Admin
 EXPECTED_ROLE |= {f"export_{what}": "Admin" for what in ("overlays", "test_overlays", "csv", "csv_files", "report")}

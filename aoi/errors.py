@@ -722,8 +722,9 @@ CODES: dict[str, ErrorCode] = {
             QT_TRANSLATE_NOOP("Errors", "The dataset store of {store} was not opened: {reason}."),
             QT_TRANSLATE_NOOP(
                 "Errors",
-                "An Admin types the store's recovery sheet into this station when its key is missing or wrong; a file"
-                " changed outside the app comes back only from a backup. Nothing was changed.",
+                "An Admin types the store's recovery key into Settings › Dataset stores › Advanced › Restore Key… on"
+                " this station when its key is missing or wrong; a file changed outside the app comes back only from a"
+                " backup. Nothing was changed.",
             ),
         ),
         ErrorCode(
@@ -994,6 +995,21 @@ CODES: dict[str, ErrorCode] = {
                 "Start the Checks on Training: a second person checks the labels and two people run an agreement"
                 " check; then freeze a Validated version and train from it. The active AI model and Golden board stay"
                 " as they are.",
+            ),
+        ),
+        ErrorCode(
+            "AOI-TRN-053",
+            QT_TRANSLATE_NOOP("Errors", "No dataset store on this system"),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "No dataset store was made for {customer}: this system keeps a store's key in memory only, so the key"
+                " would be gone when the app closes and the store's files would open again only from its recovery"
+                " sheet.",
+            ),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Make customers' dataset stores on the Windows station, whose Credential Manager keeps each key on the"
+                " PC. This system serves development and testing only. Nothing was made.",
             ),
         ),
         ErrorCode(

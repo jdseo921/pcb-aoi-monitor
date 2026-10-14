@@ -27,7 +27,7 @@ from aoi.ui.main_window import MainWindow
 from aoi.ui.pages.compare import NO_VERDICT
 from aoi.ui.pages.inspection import InspectionPage
 from aoi.ui.pages.settings import SettingsPage
-from tests.conftest import log_rows, plain, seal, wrapped
+from tests.conftest import answer_new_board_model, log_rows, plain, seal, wrapped
 from tests.test_req_done_in_v01 import BOARD, _inspect_one, _window
 
 # ISO date, 24-hour time, level, code and message, two spaces apart (REQ-INSP-006)
@@ -670,7 +670,7 @@ def test_req_insp_006_a_header_change_away_from_compare_opens_no_dialog_over_the
         Path(str(ctx.reference_image(board_model))).unlink()
     win.navigate("Inspection")
     before = len(_error_codes(ctx))
-    monkeypatch.setattr(QInputDialog, "getText", staticmethod(lambda *a, **k: (board_model, True)))
+    answer_new_board_model(monkeypatch, board_model)
     win.new_board_model()
     qtbot.waitUntil(lambda: ctx.jobs.idle() and compare._bg is None, timeout=20000)
     golden = ["AOI-INSP-001"] if gone else []  # the Golden board pane's own alarm, once per board model and file
