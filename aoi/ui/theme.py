@@ -150,6 +150,7 @@ QFrame#header { background: $BG_DEEP; border-bottom: 1px solid $LINE; }
 QFrame#card { background: $BG_RAISED; border-radius: ${RADIUS_L}px; }
 QWidget#empty { background: $BG_DEEP; border: 1px dashed $LINE_STRONG; border-radius: ${RADIUS_L}px; }
 QLabel#emptyHeading { font-size: ${FONT_LARGE_PT}pt; font-weight: 600; }
+QLabel#guideSteps { font-size: ${FONT_LARGE_PT}pt; }  /* the first-run guide's steps and its key's title */
 QListWidget#nav { background: $BG_DEEP; border: none; padding-top: ${SPACE_S}px; }
 QListWidget#nav::item { padding: ${SPACE}px ${NAV_TEXT_X}px; margin: 2px ${SPACE_S}px; border-radius: ${RADIUS}px; }
 QListWidget#nav::item:selected { background: $BG_SELECTED; color: $ON_DARK; }

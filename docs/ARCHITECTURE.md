@@ -297,7 +297,9 @@ image area shows an `EmptyState` (`aoi/ui/widgets/empty_state.py`): what is miss
 button to the page where it is done; `Page.empty_step` turns "do this on <page>" into that link, or into "Ask an
 Engineer …" for a role that cannot open the page (REQ-SET-019, since S18c). With no board model the header list is
 empty, so `Page.no_board_model()` gives Home, Inspection, Training, AI Model Test and Recipe Editor one next step by
-role: "+ New board model" for an Engineer or Admin, "Ask an Engineer to create one." for an Operator (#200).
+role: "+ New board model" for an Engineer or Admin, "Ask an Engineer to create one." for an Operator (#200). Home
+shows the first-run guide in its place (section 3, "The first-run guide on Home"), and says "Ask an Admin to set up the
+first one." to an Operator, as the guide's Create is an Admin's.
 Inspection's Start and Next Board (F5, F8) stay grey with no board model, even with images queued, and
 `on_board_model_changed` sets them again on every change, so they come on once the first board model is created; an
 action that needs a board model and finds none (`Page.need_board_model()`: Training, AI Model Test, Recipe Editor, and
@@ -710,6 +712,22 @@ training's own report, then each image judged by the test and the shift check, t
 an image aligned and a map for each of them, and after it the time an image judged has taken; the percent of the whole
 press never falls and stays under 100 until the press ends. `tests/test_guide_train.py` runs the press on 80 OK and 20
 NG synthetic images, which proves the code path only.
+
+**The first-run guide on Home** (REQ-TRN-021, B5; docs/sketches/first-run-guide.md, Q66, Q67, Q76). With no board
+model in the header, `HomePage` shows `FirstRunGuide` (`aoi/ui/pages/guide.py`) in place of its cards, its empty state
+and What is missing, for a role that may `ensure_board_model`; an Operator gets Home's empty state, which says to ask
+an Admin. Its steps line reads "● 1 Board model ─── ○ 2 Images ─── ○ 3 Train"; screen 1 is built, and screens 2 and 3
+follow. Screen 1 takes the board model's name, checked as it is typed by `board_model_name_refusal` (the New board
+model dialog's line), and its customer, offered from the stores by a completer whose Enter picks and makes nothing
+(`_PickOnly`). Create, by Enter in either field, calls `create_customer_board_model` (an Admin's; for an Engineer the
+screen is greyed with `RoleGates.why`). For a customer's first board model it shows the store's recovery key on the
+screen itself, in `RecoveryKey(tick=False)`: the line beside Save to File… and Print… says where the key went, and
+I Have Saved the Key waits for `saved`. Until then `MainWindow.hold_frame` greys the sidebar and the header, a press on
+them says why (`_HeldPress`), `navigate` refuses every page but Home and `closeEvent` is ignored, as the New board
+model dialog's modal key step holds the window behind it (ADR 0021, decision 3). A refusal, of Create or of the key's
+save or print, is said under the control that raised it, with its code, and opens no dialog. Show All Steps › and
+Show the Guide › switch Home between the guide and the cards for the board model shown, kept in `cards_for` while the
+app runs. `tests/test_first_run_guide.py` drives screen 1 for each role.
 
 **Next AI step (not in this draft):** once enough labelled NG crops exist per type, add a small supervised
 classifier that names the defect (Solder Bridge, Tombstone, …) for each flagged region. Today a region is named by

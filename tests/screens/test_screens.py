@@ -79,10 +79,10 @@ def test_req_set_004_the_render_workspace_inspects_with_the_pinned_model(screens
 
 @pytest.mark.skipif(not LINUX, reason="the approved images are drawn with DejaVu Sans on Linux; Windows draws Segoe UI")
 def test_req_set_004_every_page_matches_its_approved_image(screens: tuple[AppContext, Path], qapp: object) -> None:
-    """Every page, for every role that may open it, the stored Compare states and the presenter theme's shots, at
-    1920x1080, the New board model dialog's two steps at the dialog's own size, and the presenter theme's shots of the
-    demo's pages at 1366x768 (#104), match their approved images as the module docstring says: no more than
-    MAX_CLUSTER touching pixels differ."""
+    """Every page, for every role that may open it, the stored Compare states, Home's first-run guide and the presenter
+    theme's shots, at 1920x1080, the New board model dialog's two steps at the dialog's own size, and the presenter
+    theme's shots of the demo's pages at 1366x768 (#104), match their approved images as the module docstring says: no
+    more than MAX_CLUSTER touching pixels differ."""
     ctx, dataset = screens
     shutil.rmtree(ACTUAL_DIR, ignore_errors=True)
     with render_screens.pinned_rendering(qapp, render_screens.TEST_FONT):
@@ -90,7 +90,8 @@ def test_req_set_004_every_page_matches_its_approved_image(screens: tuple[AppCon
     views = sum(len(cls.roles) * (1 + len(render_screens.PAGE_VIEWS.get(cls.title, ()))) for _, cls in NAV)
     presenter = len(render_screens.PRESENTER_SHOTS) + len(render_screens.PRESENTER_SMALL_SHOTS)
     dialogs = len(render_screens.NEW_BOARD_MODEL_SHOTS)
-    assert len(files) == views + len(render_screens.STORED_STATES) + presenter + dialogs
+    guide = len(render_screens.GUIDE_SHOTS)
+    assert len(files) == views + len(render_screens.STORED_STATES) + guide + presenter + dialogs
     approved = {p.stem for p in render_screens.APPROVED_DIR.glob("*.png")}
     assert set(files) == approved, f"pages and approved images differ: {sorted(set(files) ^ approved)}; run {APPROVE}"
     failures = []
