@@ -898,7 +898,7 @@
     <message>
         <location line="+8"/>
         <location line="+55"/>
-        <location line="+17"/>
+        <location line="+26"/>
         <location line="+198"/>
         <source>Training an AI model</source>
         <translation type="unfinished"></translation>
@@ -1157,14 +1157,14 @@
         <translation>검증 세트 잠금</translation>
     </message>
     <message>
-        <location line="-2989"/>
-        <location line="+3003"/>
+        <location line="-2998"/>
+        <location line="+3012"/>
         <location line="+39"/>
         <source>the workspace holds no such dataset version</source>
         <translation>작업 공간에 그런 데이터셋 버전이 없습니다</translation>
     </message>
     <message>
-        <location line="-3092"/>
+        <location line="-3101"/>
         <source>Drift on {board} ({view}): {count} of the last {of} boards called NG; {before} % of the {baseline} before</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1264,7 +1264,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1196"/>
+        <location line="+1205"/>
         <source>Setting the comparison&apos;s thresholds from labelled boards</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1491,7 +1491,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-3754"/>
+        <location line="-3763"/>
         <source>no earlier version of this board model was active</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1516,7 +1516,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1120"/>
+        <location line="+1129"/>
         <source>its UUID {found} is not {uuid}, as in the AI model registry</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1623,7 +1623,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-3982"/>
+        <location line="-3991"/>
         <source>unhandled</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3945,7 +3945,7 @@
     </message>
     <message>
         <location line="+1"/>
-        <location filename="../core/services.py" line="+3245"/>
+        <location filename="../core/services.py" line="+3254"/>
         <source>a file of it could not be read: {reason}</source>
         <translation>그 파일 하나를 읽을 수 없습니다: {reason}</translation>
     </message>
@@ -4647,7 +4647,17 @@
         <translation type="unfinished">{view} 뷰의 OK 이미지 {ok}장과 NG 이미지 {ng}장이 준비되었고, 모든 불량에 박스가 있습니다.</translation>
     </message>
     <message>
-        <location line="+4"/>
+        <location line="+6"/>
+        <source>AI model {version} was trained before on {ok} OK and {ng} NG of these images as a Trial. Train makes it the AI model that judges {board_model}&apos;s boards and tests it on the {held_ok} OK and {held_ng} NG images kept apart. Other pages can be used while it runs.</source>
+        <translation type="unfinished">AI 모델 {version}은 이 이미지 중 OK {ok}장과 NG {ng}장으로 이미 Trial로 학습되었습니다. 학습은 그 모델이 {board_model}의 보드를 판정하게 하고, 따로 둔 OK {held_ok}장과 NG {held_ng}장으로 테스트합니다. 실행 중에도 다른 페이지를 쓸 수 있습니다.</translation>
+    </message>
+    <message>
+        <location line="+6"/>
+        <source>AI model {version} was trained before on {ok} OK and {ng} NG of these images as a Trial. Train makes it the AI model that judges {board_model}&apos;s boards, tests it on the {held_ok} OK and {held_ng} NG images kept apart and runs the first shift check. Other pages can be used while it runs.</source>
+        <translation type="unfinished">AI 모델 {version}은 이 이미지 중 OK {ok}장과 NG {ng}장으로 이미 Trial로 학습되었습니다. 학습은 그 모델이 {board_model}의 보드를 판정하게 하고, 따로 둔 OK {held_ok}장과 NG {held_ng}장으로 테스트한 뒤 첫 교대 점검을 실행합니다. 실행 중에도 다른 페이지를 쓸 수 있습니다.</translation>
+    </message>
+    <message>
+        <location line="+7"/>
         <source>Train keeps {held_ok} OK and {held_ng} NG images apart, trains the AI model on the other {ok} OK and {ng} NG as a Trial, since one person labelled them, makes it the AI model that judges {board_model}&apos;s boards and tests it on the images kept apart. Other pages can be used while it runs.</source>
         <translation type="unfinished">학습은 OK 이미지 {held_ok}장과 NG 이미지 {held_ng}장을 따로 두고, 한 사람이 라벨링했으므로 나머지 OK {ok}장과 NG {ng}장으로 AI 모델을 Trial로 학습한 뒤, 그 모델이 {board_model}의 보드를 판정하게 하고 따로 둔 이미지로 테스트합니다. 실행 중에도 다른 페이지를 쓸 수 있습니다.</translation>
     </message>
@@ -4657,7 +4667,7 @@
         <translation type="unfinished">학습은 OK 이미지 {held_ok}장과 NG 이미지 {held_ng}장을 따로 두고, 한 사람이 라벨링했으므로 나머지 OK {ok}장과 NG {ng}장으로 AI 모델을 Trial로 학습한 뒤, 그 모델이 {board_model}의 보드를 판정하게 하고, 따로 둔 이미지로 테스트하고 첫 교대 점검을 실행합니다. 실행 중에도 다른 페이지를 쓸 수 있습니다.</translation>
     </message>
     <message>
-        <location line="+14"/>
+        <location line="+16"/>
         <source>✓ AI model {version} judges {board_model}&apos;s boards.</source>
         <translation type="unfinished">✓ AI 모델 {version}이(가) {board_model}의 보드를 판정합니다.</translation>
     </message>
@@ -4702,7 +4712,7 @@
         <translation type="unfinished">지금 유효한 교대 점검이 없습니다. 검사 페이지가 첫 보드 전에 교대 점검(F7)을 요청합니다.</translation>
     </message>
     <message>
-        <location line="+10"/>
+        <location line="+16"/>
         <location line="+15"/>
         <source>Type the board revision: 1 to 16 letters and digits, such as R1.</source>
         <translation type="unfinished">보드 리비전을 입력하십시오. R1처럼 1~16자의 영문자와 숫자입니다.</translation>
@@ -8707,7 +8717,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/services.py" line="-3329"/>
+        <location filename="../core/services.py" line="-3338"/>
         <source>Aligning {count} images to the reference board</source>
         <translation type="unfinished"></translation>
     </message>

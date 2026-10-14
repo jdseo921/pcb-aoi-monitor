@@ -89,7 +89,7 @@ class GuideTrain(QWidget):
         self.revision = QLineEdit(FIRST_REVISION)
         self.revision.setMaxLength(REVISION_LENGTH)
         self.revision.setMinimumWidth(theme.FIELD_W)
-        self.revision.textChanged.connect(self._sync)
+        self.revision.textChanged.connect(self._typed)
         row.addWidget(self.revision)
         hint = QLabel(self.tr("as printed on the board; leave R1 if it shows none"))
         hint.setObjectName("muted")
@@ -231,7 +231,22 @@ class GuideTrain(QWidget):
         held_ok, held_ng = min(datasets.VALIDATION_OK, ok), math.ceil(ng * datasets.VALIDATION_NG)
         ready = self.tr("{ok} OK and {ng} NG images of the {view} view are ready, every defect boxed.")
         self.ready.setText(ready.format(ok=ok, ng=ng, view=view_text(missing.view)))
-        if self.ctx.shift_check(bm)["state"] == "off":
+        shift = self.ctx.shift_check(bm)["state"] != "off"
+        trained = self.ctx.guide_trained(bm, missing.view, self.revision.text().strip())
+        if trained is not None:  # trained before a Cancel, or left waiting: Train makes it active, training nothing
+            plan = self.tr(
+                "AI model {version} was trained before on {ok} OK and {ng} NG of these images as a Trial. Train makes"
+                " it the AI model that judges {board_model}'s boards and tests it on the {held_ok} OK and {held_ng} NG"
+                " images kept apart. Other pages can be used while it runs."
+            )
+            if shift:
+                plan = self.tr(
+                    "AI model {version} was trained before on {ok} OK and {ng} NG of these images as a Trial. Train"
+                    " makes it the AI model that judges {board_model}'s boards, tests it on the {held_ok} OK and"
+                    " {held_ng} NG images kept apart and runs the first shift check. Other pages can be used while it"
+                    " runs."
+                )
+        elif not shift:
             plan = self.tr(
                 "Train keeps {held_ok} OK and {held_ng} NG images apart, trains the AI model on the other {ok} OK and"
                 " {ng} NG as a Trial, since one person labelled them, makes it the AI model that judges"
@@ -245,7 +260,9 @@ class GuideTrain(QWidget):
                 " pages can be used while it runs."
             )
         self.plan.setText(
-            plan.format(held_ok=held_ok, held_ng=held_ng, ok=ok - held_ok, ng=ng - held_ng, board_model=bm)
+            plan.format(
+                held_ok=held_ok, held_ng=held_ng, ok=ok - held_ok, ng=ng - held_ng, board_model=bm, version=trained
+            )
         )
 
     def _show_made(self, bm: str, made: dict[str, Any]) -> None:
@@ -286,6 +303,12 @@ class GuideTrain(QWidget):
         self.shift_line.setText(line)
         self.shift_line.setVisible(bool(line))
         self.shift_next.setVisible(state == "failed")
+
+    def _typed(self) -> None:
+        """A board revision typed: what Train does with it said again, as another revision freezes anew."""
+        if self.board_model is not None and not self.before.isHidden():
+            self._show_plan(self.board_model)
+        self._sync()
 
     def _sync(self) -> None:
         """Train on for a role that may train, while no training runs and the board revision is one Train can take;

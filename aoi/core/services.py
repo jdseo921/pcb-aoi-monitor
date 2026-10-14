@@ -915,6 +915,15 @@ class AppContext:
         job = self.training
         return job is not None and not job.done and job.name == "guide_train" and self.guide_training == board_model
 
+    def guide_trained(self, board_model: str, view: str, revision: str) -> str | None:
+        """The AI model the first-run guide's Train would make active with no training, by its version name: the newest
+        trained for the use "own" from the Trial version Train would take now (`_guide_version`), as one trained before
+        a Cancel in part 3 or before Live until Validated left it waiting; else None. Screen 3's plan says Train makes
+        that one active in place of training (B5). Writes nothing."""
+        version = self._guide_version(board_model, view, revision)
+        model = None if version is None else self._guide_model(board_model, version["uuid"])
+        return None if model is None else str(model["version"])
+
     @requires("Engineer", QT_TRANSLATE_NOOP("Errors", "Training an AI model"))
     def guide_train(
         self,

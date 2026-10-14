@@ -27,7 +27,7 @@ from aoi.ui.pages.logs import LogsPage
 from aoi.ui.pages.training import TrainingPage
 from tests.test_dataset_stores import as_admin
 from tests.test_first_board_model_store import shell
-from tests.test_trial_versions import ONE, one_person
+from tests.test_trial_versions import ONE, kept_inactive, one_person, trial_trained
 
 TRAINED = "✓ 1 Board model  ───  ✓ 2 Images  ───  ✓ 3 Train"
 CANCELLED = "Train was cancelled. What it had done is kept, and the next Train goes on from there."
@@ -314,3 +314,29 @@ def test_req_trn_021_train_ends_while_another_board_model_is_shown(
     win.select_board_model(ONE)
     assert screen.isVisible() and screen.said.isVisible() and screen.said.text().startswith("AOI-TRN-045 ")
     assert screen.before.isVisible() and dialogs == []
+
+
+def test_req_trn_021_train_makes_an_ai_model_trained_before_active(
+    qtbot: QtBot, ctx: AppContext, tmp_path: Path
+) -> None:
+    """An AI model trained before from the images as Train would take them and left waiting, as before Live until
+    Validated or after a Cancel in part 3, is named in the plan: Train makes it active and trains nothing. Another board
+    revision typed would freeze the images anew, and the plan says Train trains."""
+    trial_trained(ctx, tmp_path / "boards")  # ONE-1's R1 frozen as a Trial version, locked and trained from
+    kept_inactive(ctx)
+    ctx.set_user("engineer")
+    ctx.settings.default_epochs, ctx.settings.image_size, ctx.settings.shift_check_hours = 1, 32, 12
+    win, guide, screen = home(qtbot, ctx)
+    assert screen.before.isVisible() and screen.plan.text().startswith(
+        "AI model v1.0 (Trial) was trained before on 30 OK and 14 NG of these images as a Trial. Train makes it the AI"
+        " model that judges ONE-1's boards, tests it on the 50 OK and 6 NG images kept apart and runs the first shift"
+        " check."
+    )
+    screen.revision.setText("R2")
+    assert screen.plan.text().startswith("Train keeps 50 OK and 6 NG images apart, trains the AI model on the other")
+    screen.revision.setText("R1")
+    assert screen.plan.text().startswith("AI model v1.0 (Trial) was trained before")
+    models = [m["version"] for m in ctx.models(ONE)]
+    trained(qtbot, screen)
+    assert [m["version"] for m in ctx.models(ONE)] == models and guide.steps.text() == TRAINED
+    assert screen.done_line.text() == "✓ AI model v1.0 (Trial) judges ONE-1's boards."

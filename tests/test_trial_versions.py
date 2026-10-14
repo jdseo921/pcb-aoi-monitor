@@ -273,6 +273,7 @@ def test_req_trn_012_start_the_checks_from_the_refusal_and_activate_on_inspectio
     insp.btn_activate.click()
     assert cast(dict[str, Any], ctx.active_model(ONE))["version"] == "v1.0 (Trial)" and insp.ai_row.isHidden()
     assert win.navigate("Home")
+    cast(Any, win.pages["Home"]).guide.btn_cards.click()  # Show All Steps ›: the first-run guide shows what it made
     done = cast(Any, win.pages["Home"]).missing_list
     assert done.trial.isChecked() and done.done_line.text() == (
         "Nothing a Trial version needs is missing: ONE-1 has an active AI model. Pick Validated to see what a Validated"
@@ -412,6 +413,7 @@ def test_req_trn_012_screens_offer_activate_for_a_trial_ai_model_that_waits(
     win._reload_board_models(ONE)
     assert win.navigate("Home")
     home = cast(Any, win.pages["Home"])
+    home.guide.btn_cards.click()  # Show All Steps ›: the first-run guide's Train would make it active
     step = "AI model v1.0 (Trial) trained, not active. Activate it on Training."
     assert home.status_labels["Train AI model"].text() == step
     assert win.navigate("AI Model Test")

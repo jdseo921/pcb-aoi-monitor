@@ -309,6 +309,7 @@ def test_req_trn_021_home_and_training_show_what_is_missing(
     one_person(ctx, tmp_path / "boards")  # 80 OK and 20 NG, each NG one boxed, in Acme's store; nothing checked
     win = _window(qtbot, ctx, ONE)
     home = cast(HomePage, win.pages["Home"])
+    home.guide.btn_cards.click()  # Show All Steps ›: the first-run guide's Train is on Home until a board is inspected
     listed = home.missing_list
     assert listed.isVisible() and listed.sentence.text() == str(datasets.needs())
     assert listed.validated.isChecked() and listed.view_line.text() == "ONE-1, Top view: 6 of 10 still missing"
