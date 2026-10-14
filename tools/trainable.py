@@ -57,12 +57,15 @@ def trainable(
     split: bool = True,
     stored: bool = True,
     manifest: bool = False,
+    assurance: str = datasets.VALIDATED,
 ) -> str:
     """The UUID of a new frozen version of `board_model`'s OK and NG samples of the first sample's view, split with
     every file in its training set but those of the sample UUIDs `held`, locked for validation (not split at all
     unless `split`); the board model is in `customer`'s store first (`in_store`), unless not `stored`, and the version
     names that customer and allows `uses`. With `manifest` its manifest file is written as the freeze writes it,
-    sealed in the store, so Verify Manifest finds the version unchanged (the demo workspace); otherwise none is."""
+    sealed in the store, so Verify Manifest finds the version unchanged (the demo workspace); otherwise none is. The
+    version is Validated, as the app's checked freeze makes it, unless `assurance` is Trial, which names no agreement
+    check (ADR 0020)."""
     if stored:
         in_store(ctx, board_model, customer)
     samples = [s for s in ctx.db.samples(board_model) if s["label"] in ("OK", "NG")]
@@ -70,7 +73,9 @@ def trainable(
     n = 1 + sum(d["view"] == view for d in ctx.db.datasets(board_model))
     who, uid, name = str(ctx.db.user_uuid("engineer")), new_uuid(), datasets.name(board_model, "R1", view, n)
     version = {"uuid": uid, "name": name, "board_model": board_model, "revision": "R1", "view": view, "version": n}
-    version |= {"customer": customer, "allowed_uses": list(uses), "agreement_check_uuid": new_uuid()}
+    check = new_uuid() if assurance == datasets.VALIDATED else ""  # a Trial version names no agreement check
+    version |= {"customer": customer, "allowed_uses": list(uses), "agreement_check_uuid": check}
+    version |= {"assurance": assurance}
     version |= {"manifest_path": f"{datasets.FOLDER}/{name}/manifest.json", "manifest_sha256": "0" * 64}
     keys = ("sample_uuid", "label_uuid", "label", "defect_type", "labelled_by", "checked_by")
     files = [

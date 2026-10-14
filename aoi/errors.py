@@ -982,6 +982,21 @@ CODES: dict[str, ErrorCode] = {
             ),
         ),
         ErrorCode(
+            "AOI-TRN-052",
+            QT_TRANSLATE_NOOP("Errors", "A Trial AI model does not go live"),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "AI model {version} of board model {board} was not made active: it was trained from {dataset}, a Trial"
+                " version that one person froze without a second person checking its labels or an agreement check.",
+            ),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Start the Checks on Training: a second person checks the labels and two people run an agreement"
+                " check; then freeze a Validated version and train from it. The active AI model and Golden board stay"
+                " as they are.",
+            ),
+        ),
+        ErrorCode(
             "AOI-TST-001",
             QT_TRANSLATE_NOOP("Errors", "AI model, recipe, scale or Golden board changed since the run"),
             QT_TRANSLATE_NOOP(
@@ -1024,6 +1039,16 @@ CODES: dict[str, ErrorCode] = {
                 "Errors",
                 "Enter each target within its range and who at the customer agreed them, then save again; the next run"
                 " keeps the targets in force until then.",
+            ),
+        ),
+        ErrorCode(
+            "AOI-TST-009",
+            QT_TRANSLATE_NOOP("Errors", "No validation report from a Trial version"),
+            QT_TRANSLATE_NOOP("Errors", "No customer validation report was made: {reason}."),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Start the Checks on Training: a second person checks the labels and two people run an agreement"
+                " check, then freeze a Validated version, train from it and test again. The run and its CSV are kept.",
             ),
         ),
         ErrorCode(

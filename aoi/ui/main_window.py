@@ -248,9 +248,15 @@ class HomePage(Page):
             else self.tr("No samples yet. Add at least {count} OK boards.").format(count=FIRST_OK)
         )
         waiting = None if st.model_version else self.ctx.inactive_model(bm)  # trained, not active: named (D3)
+        trial = waiting is not None and self.ctx.trial_version(waiting) is not None  # never goes live (ADR 0020)
         self.status_labels["Train AI model"].setText(
             self.tr("Active AI model {version}").format(version=st.model_version)
             if st.model_version
+            else self.tr(
+                "AI model {version} is a Trial and does not go live. Start the Checks on Training for a Validated"
+                " version."
+            ).format(version=waiting["version"])
+            if waiting and trial
             else self.tr("AI model {version} trained, not active. Activate it on Training.").format(
                 version=waiting["version"]
             )
@@ -837,6 +843,14 @@ class MainWindow(QMainWindow):
         compare.show_golden_pane()  # "Compare with Golden board ›": shown beside the board (#248)
         self.navigate("Compare")
         compare.set_test(path)
+
+    def start_checks(self, board_model: str, view: str | None = None) -> None:
+        """Start the Checks, from the dialog of a Trial version refused (ADR 0020): Training on `board_model`, its
+        Samples tab showing the labels a second user still checks, `view` named when the error gave one."""
+        if board_model and board_model != self.board_model and board_model in self.ctx.board_models():
+            self._reload_board_models(board_model)
+        if self.navigate("Training"):
+            cast(TrainingPage, self.pages["Training"]).start_checks(view)
 
     def open_stored(self, inspection_id: int) -> None:
         """Compare on a stored result in one click, as it was decided (REQ-INSP-009)."""

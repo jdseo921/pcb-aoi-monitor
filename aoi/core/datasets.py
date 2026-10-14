@@ -20,6 +20,15 @@ FOLDER = "datasets"  # under the workspace: <name>/manifest.json
 VALIDATION_OK = 50  # OK files a validation set holds at least: the 50 held out (Customers & Launch, Validation)
 TRAIN_OK = 20  # OK files a training set holds at least, per board model and view (REQ-TRN-007)
 VALIDATION_NG = Fraction(3, 10)  # and at least 30 % of the version's NG files, rounded up
+# A version's assurance (migration 0027; ADR 0020): Validated, frozen with the second-user label checks and an agreement
+# check that reached its targets; or Trial, frozen by one person without them
+VALIDATED, TRIAL = "Validated", "Trial"
+TRIAL_MODEL = " (Trial)"  # the end of the name of every AI model version trained from a Trial version: v1.0 (Trial)
+
+
+def model_file_stem(version: str) -> str:
+    """An AI model version's name as its file names give it: v1.0 (Trial) as v1.0-trial, with no space or bracket."""
+    return version.removesuffix(TRIAL_MODEL) + ("-trial" if version.endswith(TRIAL_MODEL) else "")
 
 
 def token(board_model: str) -> str:

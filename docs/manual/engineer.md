@@ -350,6 +350,24 @@ when that store is shredded, but a file changed or removed outside the app canno
 back the workspace up. Verifying a version hashes its manifest and every file
 again and lists each file that changed or is missing since the freeze; train from another version when one did.
 
+**A Trial version, by one person.** Where nobody else can check your labels yet, freeze a **Trial** version: it needs
+no second user's label check and no agreement check, and the same person can split and lock it and train from it. Its
+validation set takes the same 50 OK images and 30 % of the NG ones as any version's, and every other refusal above
+still holds. A Trial version is named so wherever it is listed (the Versions table's Checks column, the Dataset version
+list on Training, the Split sheet's title, AI Model Test's sources and history, Export Manifest…'s question and file
+name), and so is every AI model trained from it: v1.0 (Trial), in the AI models list, on Inspection, in the audit trail
+and in the files' names (v1.0-trial). Its AI model card starts with a plain sentence that says what Trial means. A Trial
+AI model does not go live, its board model's first included: Activate Selected is refused with AOI-TRN-052, Inspection
+offers **Start the Checks** in its place, Home, AI Model Test and Compare say it does not go live, and the boards stay
+judged as before. The first AI model you train from a Validated version afterwards goes live as a board model's first
+does (section 6), as no AI model was live before it. A run on a Trial version's validation set, or of a Trial AI
+model, makes no customer validation report (AOI-TST-009). Both messages are information, not errors (no ERROR alarm),
+and have **Start the Checks**,
+which opens Training on the board model's Samples tab with Show › Unchecked, or the Datasets tab's labeller agreement
+once every label is checked; freeze a Validated version when the checks are done, and train from it. A version frozen
+with the checks is **Validated**, as every version frozen before this release is (B1 of the 2026-10 business-readiness
+brief, decision D1; ADR 0020).
+
 **Each customer's images are in a store of their own.** A version is frozen only from a board model in the dataset
 store of the customer it names (AOI-TRN-027). An Admin keeps the stores under Settings › Dataset stores, one per
 customer; each step there opens a sheet in the table's place. New Store… makes a store and shows its recovery sheet
@@ -367,9 +385,12 @@ AOI-TRN-044, and Shred Store… again deletes what is left (ADR 0010).
 images and the checks a freeze needs, with ✓ once the view can be frozen, and names the customer whose dataset store
 holds the board model; tick the allowed uses under it. **Freeze Dataset…** (Ctrl+F) shows the Freeze sheet in place of
 the labeller agreement: pick the view and type the board revision, and the sheet names the version and shows a line for
-each thing a freeze needs, ✓ or ✗ with the fix. **Freeze**, or Enter in the revision, freezes it in the background with
-progress and Cancel; Cancel or Esc stops it, writes nothing and keeps the sheet. The **Versions** table lists the board
-model's versions, newest first: when each was frozen and by whom, its OK and NG images, its locked validation set
+each thing a freeze needs, ✓ or ✗ with the fix. Under Checks, **Validated** is picked each time the sheet opens; pick
+**Trial: one person, no checks** to freeze a Trial version, and the lines for the label checks and the agreement check
+say they are not needed, a line under them says what Trial means, and the button reads **Freeze as Trial**. **Freeze**,
+or Enter in the revision, freezes it in the background with progress and Cancel; Cancel or Esc stops it, writes nothing
+and keeps the sheet. The **Versions** table lists the board model's versions, newest first: its checks (Validated or
+Trial), when each was frozen and by whom, its OK and NG images, its locked validation set
 ("50 / 6") or "not locked", the customer, the uses and what Verify Manifest found. **Split and Lock Validation Set…**
 shows a sheet for the version picked: its images against the 50 OK and 30 % of the NG that its validation set takes, its
 NG images by defect type, and a random seed you may change. **Lock**, or Enter in the seed, splits the version once, for
@@ -462,7 +483,11 @@ version in use to keep: the status bar and the run's log say so, and the audit t
 Engineer who trained it, with the reason. Each later version installs inactive: boards stay judged by the active version
 until you select the new one and press Activate Selected. A version trained but not active while none is (one trained
 before this release, or whose activation failed) is named on Home, on AI Model Test and on Inspection, whose line offers
-Activate <version> and whose alarm log says AOI-TRN-051, where they said there was no AI model yet. Activating a version
+Activate <version> and whose alarm log says AOI-TRN-051, where they said there was no AI model yet. An AI model of a
+Trial version (section 3) never goes live, its board model's first included: its name ends in (Trial), Activate
+Selected is refused with AOI-TRN-052 and Start the Checks, and Inspection's line calls it a Trial, its button Start the
+Checks, its alarm AOI-TRN-052; a Validated version waiting beside it is the one Inspection offers, and the first
+Validated version trained after Trial ones goes live as a board model's first. Activating a version
 makes its own Golden board the one boards are compared with, in the same step. Roll Back goes back, in one click, to the
 version that was active before the active one, with its Golden board; its label names that version ("Roll Back to v1.0")
 and it is off while there is none, as after a board model's first version went live. To stop that first version judging
@@ -632,7 +657,7 @@ validation on a dataset version also stores recall per defect type, by the type 
 
 **Agreed Targets.** Before a customer's validation, agree the targets in writing (Customers & Launch, "Validation", step 2) and record them: on Run, the line under Source names the targets the next run is held to, and Agreed Targets… opens a sheet with the most missed Critical defects, the highest false call rate (%) and the longest engine time per image at the 95th percentile (s), the proposed defaults filled in while none were agreed (no missed Critical defect, 5 %, 1 s). Type who at the customer agreed them, and where it is written, then press Save Targets (Esc or Cancel closes the sheet unsaved). They are in force from the next run, which keeps a copy; a run made before keeps the targets it started with, so targets recorded after a run never change its report. Each save is recorded in the audit trail with the targets before it; a value out of its range or no one named is refused with AOI-TST-008.
 
-**Validation Report.** On History, select a run made on a frozen dataset version's locked validation set and press Validation Report…: the PDF follows the validation steps a customer signs: the data and the labeller agreement check, the targets beside the results (those agreed with the customer and in force when the run started, with whom they were agreed, who recorded them and when; else the product's proposed defaults, said to be), the engine's time per image (reading the file, saving and display are not counted), the locked set's manifest SHA-256, the results with counts and bounds, a page for each missed defect and false call, the AI model card, known limits and signature lines for the customer and the AI lead. A run on a folder, or a board model with no agreement check, has none (AOI-TST-007). The Korean headings are drafts for native review.
+**Validation Report.** On History, select a run made on a frozen dataset version's locked validation set and press Validation Report…: the PDF follows the validation steps a customer signs: the data and the labeller agreement check, the targets beside the results (those agreed with the customer and in force when the run started, with whom they were agreed, who recorded them and when; else the product's proposed defaults, said to be), the engine's time per image (reading the file, saving and display are not counted), the locked set's manifest SHA-256, the results with counts and bounds, a page for each missed defect and false call, the AI model card, known limits and signature lines for the customer and the AI lead. A run on a folder, or a board model with no agreement check, has none (AOI-TST-007), and neither has a run on a Trial version's validation set or of a Trial AI model (AOI-TST-009, with Start the Checks; section 3). The Korean headings are drafts for native review.
 
 **Export Image Overlays.** Each run keeps the overlay of each of its rows in the workspace, under
 `results/test_runs/<run UUID>`, for its previews, and Export Report and Validation Report… print the overlay of each

@@ -40,7 +40,17 @@ from ..widgets.empty_state import EmptyState
 from ..widgets.flow import FlowLayout
 from ..widgets.image_view import ImageView
 from ..workers import Worker, start
-from .base import QT_TRANSLATE_NOOP, Page, WrappedLine, breakable, button, cell_item, fill_table, make_table
+from .base import (
+    QT_TRANSLATE_NOOP,
+    Page,
+    WrappedLine,
+    breakable,
+    button,
+    cell_item,
+    fill_table,
+    make_table,
+    version_name,
+)
 from .model_test_targets import TargetsSheet
 
 if TYPE_CHECKING:
@@ -229,7 +239,7 @@ class ModelTestPage(Page):
     def _fill_history(self) -> None:
         bm = self.board_model
         self._runs = self.ctx.test_runs(bm) if bm else []
-        names = {d["uuid"]: d["name"] for d in self.ctx.datasets(bm)} if bm else {}
+        names = {d["uuid"]: version_name(d) for d in self.ctx.datasets(bm)} if bm else {}  # a Trial one so named
         rows = []
         for run in self._runs:
             source = names.get(run["dataset_uuid"], run["dataset_uuid"]) if run.get("dataset_uuid") else run["folder"]
@@ -493,7 +503,7 @@ class ModelTestPage(Page):
             split = self.ctx.validation_split(d["uuid"])
             if split is not None and split["validation"]:  # a version split with nothing held out has no validation
                 line = self.tr("{name}: its locked validation set, {count} images")
-                self.source.addItem(line.format(name=d["name"], count=len(split["validation"])), d["uuid"])
+                self.source.addItem(line.format(name=version_name(d), count=len(split["validation"])), d["uuid"])
         self.source.addItem(self.tr("Labelled folder (ok/ and ng/ sub-folders)"), None)
         self.source.setCurrentIndex(0)
         self.source.blockSignals(False)
@@ -527,10 +537,16 @@ class ModelTestPage(Page):
         folder = picked
         if not self.ctx.active_model(bm):
             waiting = self.ctx.inactive_model(bm)  # trained but not active: named, never "no AI model yet" (D3)
+            trial = waiting is not None and self.ctx.trial_version(waiting) is not None  # never live (ADR 0020)
             QMessageBox.information(
                 self,
                 self.tr("AI model not active") if waiting else self.tr("No AI model"),
                 self.tr(
+                    "AI model {version} is a Trial and does not go live, so it cannot be tested here: the results use"
+                    " the Golden board comparison only. Start the Checks on Training for a Validated version."
+                ).format(version=waiting["version"])
+                if waiting and trial
+                else self.tr(
                     "AI model {version} is not active: the results use the Golden board comparison only. Activate it"
                     " on Training to test it."
                 ).format(version=waiting["version"])
@@ -835,7 +851,11 @@ class ModelTestPage(Page):
             heading = self.tr("AI model {version} of {board_model} is not active").format(
                 version=waiting["version"], board_model=bm
             )
-            self.show_empty(self.empty, heading, *self.empty_step(self.tr("Activate it on Training."), "Training"))
+            if self.ctx.trial_version(waiting) is not None:  # a Trial: never live, so checks, not Activate (ADR 0020)
+                step = self.tr("It is a Trial and does not go live. Start the Checks on Training.")
+            else:
+                step = self.tr("Activate it on Training.")
+            self.show_empty(self.empty, heading, *self.empty_step(step, "Training"))
         elif not self.ctx.active_model(bm):
             heading = self.tr("No AI model for {board_model} yet").format(board_model=bm)
             self.show_empty(self.empty, heading, *self.empty_step(self.tr("Train one on Training."), "Training"))

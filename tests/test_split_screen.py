@@ -56,7 +56,7 @@ def test_req_trn_006_split_and_lock_on_screen(qtbot: QtBot, ctx: AppContext, tmp
     qtbot.keyClick(split.seed, Qt.Key.Key_Return)
     assert not split.btn_lock.isEnabled() and not versions.btn_verify.isEnabled()  # while the lock runs
     _idle(qtbot, page)
-    assert not split.isVisible() and page.agreement.isVisible() and _row(page, 0)[5] == "50 / 6"
+    assert not split.isVisible() and page.agreement.isVisible() and _row(page, 0)[6] == "50 / 6"
     said = page.shell.statusBar().currentMessage()
     assert said == f"Locked the validation set of {v1['name']}: 50 OK / 6 NG, the training set 30 OK / 14 NG, seed 1"
     [entry] = ctx.audit_entries(action="dataset.lock")
@@ -136,12 +136,12 @@ def test_req_trn_006_lock_cancelled_too_late_or_refused(
     _idle(qtbot, page)
     said = page.shell.statusBar().currentMessage()
     assert said.startswith(f"Locked the validation set of {v2['name']}: 50 OK / 6 NG") and said.endswith("seed 2")
-    assert not split.isVisible() and _row(page, 0)[5] == "50 / 6"
+    assert not split.isVisible() and _row(page, 0)[6] == "50 / 6"
     versions.table.selectRow(1)
     versions.btn_split.click()
     lock(v1["uuid"], 3)  # behind the sheet
     split.btn_lock.click()
     _idle(qtbot, page)
     assert [title.split()[0] for title, _ in dialogs] == ["AOI-TRN-022"]
-    assert not split.isVisible() and versions.picked() == v1["uuid"] and _row(page, 1)[5] == "50 / 6"
+    assert not split.isVisible() and versions.picked() == v1["uuid"] and _row(page, 1)[6] == "50 / 6"
     assert not versions.btn_split.isEnabled() and versions.btn_split.toolTip() == LOCKED_TIP

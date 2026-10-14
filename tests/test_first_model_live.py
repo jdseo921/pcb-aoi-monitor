@@ -145,7 +145,7 @@ def test_req_trn_012_training_shows_why_a_first_version_did_not_go_live(
     say it is not active, with the code; the error shows as any error (what happened, what to do) and is stored as an
     alarm with its code (REQ-SET-019)."""
     shown: list[ErrorReport] = []
-    monkeypatch.setattr(training, "show_error", lambda parent, report: shown.append(report))
+    monkeypatch.setattr(training, "show_error", lambda parent, report, act=None: shown.append(report))
     win = _window(qtbot, trained_ctx, "engineer")
     page = cast(TrainingPage, win.pages["Training"])
     assert win.navigate("Training")

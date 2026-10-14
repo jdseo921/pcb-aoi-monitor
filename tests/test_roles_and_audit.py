@@ -266,7 +266,7 @@ UNCHECKED = {
     "golden_board_unreadable", "engine_is_current", "calibrated_threshold", "calibration_of", "scale", "label_history",
     "boxes", "box_history", "unsure_samples", "label_check_status", "labels_ready_to_freeze", "calibration_sets",
     "agreement_checks", "propose_calibration_set", "blind_labelled", "datasets", "dataset_items", "verify_dataset",
-    "validation_split", "stores", "store_of", "store_contents", "training_version", "freeze_gate",
+    "validation_split", "stores", "store_of", "store_contents", "training_version", "trial_version", "freeze_gate",
     "dataset_counts", "previous_model", "inactive_model", "model_card", "card_files", "card_text", "last_board",
     "test_runs", "test_run",
     "report_images", "model_card_text", "validation_report_data", "recipe_revisions", "history_span",

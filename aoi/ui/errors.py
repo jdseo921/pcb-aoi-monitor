@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 import sys
 import traceback
+from collections.abc import Callable
 from pathlib import Path
 from types import TracebackType
 from typing import Any
@@ -29,6 +30,9 @@ from . import front
 ANOTHER_WORKSPACE = {"AOI-SET-001", "AOI-SET-002", "AOI-SET-003", "AOI-SET-005", "AOI-SET-011", "AOI-SET-012"}
 # The workspace is open in another copy of the app: that copy comes to the front, never a folder picker (F12)
 ALREADY_OPEN = "AOI-SET-019"
+# A Trial version refused by the go-live gate or the customer validation report: the dialog's Start the Checks button
+# opens them (B1 of the 2026-10 business-readiness brief, decision D1; ADR 0020)
+START_CHECKS = {"AOI-TRN-052", "AOI-TST-009"}
 
 
 def phrase_text(text: str) -> str:
@@ -66,17 +70,35 @@ class ErrorBox(QMessageBox):
     """The one error dialog: "<code> <title>", what happened and what to do in plain words, and one OK. The error's
     technical words, the exception's class and text or the system's own text, are behind Show Details…, as the log
     holds them, and never in the message (A5 of the 2026-10 business-readiness brief, F8); a stack trace only in the
-    log (REQ-SET-019)."""
+    log (REQ-SET-019). With `act`, a button named by its text beside OK, which stays the default and Esc's: the step
+    the action names, such as Start the Checks (ADR 0020); `acted` says whether it closed the dialog. A Trial version
+    refused (START_CHECKS), a step taken as approved, shows the information icon rather than the error's."""
 
-    def __init__(self, parent: QWidget | None, report: ErrorReport) -> None:
+    def __init__(self, parent: QWidget | None, report: ErrorReport, act: str | None = None) -> None:
         title, text = dialog_text(report)
-        super().__init__(QMessageBox.Icon.Critical, title, text, QMessageBox.StandardButton.Ok, parent)
+        icon = QMessageBox.Icon.Information if report.code in START_CHECKS else QMessageBox.Icon.Critical
+        super().__init__(icon, title, text, QMessageBox.StandardButton.Ok, parent)
         if report.detail:
             self.setDetailedText(report.detail)
+        self.act = self.addButton(act, QMessageBox.ButtonRole.ActionRole) if act else None
+        if self.act is not None:
+            self.act.setProperty("sizeClass", "T")  # the 48 px operator target, as pages.base.size_class marks one
+        self.setDefaultButton(QMessageBox.StandardButton.Ok)
+        self.setEscapeButton(QMessageBox.StandardButton.Ok)  # Qt picks none beside a second button: Esc is OK
+
+    def acted(self) -> bool:
+        return self.act is not None and self.clickedButton() is self.act
 
 
-def show_error(parent: QWidget | None, report: ErrorReport) -> None:
-    ErrorBox(parent, report).exec()
+def show_error(
+    parent: QWidget | None, report: ErrorReport, act: tuple[str, Callable[[], object]] | None = None
+) -> None:
+    """The error's dialog, and with `act` (its button's text, what the button does) the button that takes the step the
+    dialog names, done once the dialog is closed with it."""
+    box = ErrorBox(parent, report, act[0] if act else None)
+    box.exec()
+    if act is not None and box.acted():
+        act[1]()
 
 
 class AlreadyOpenBox(QMessageBox):

@@ -33,6 +33,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from ...core.datasets import TRIAL
 from ...core.imaging import IMAGE_EXTS
 from ...core.jobs import Job
 from ...core.labels import DefectBox
@@ -61,6 +62,7 @@ from .base import (
     fill_table,
     make_table,
     time_left_text,
+    version_name,
     view_text,
 )
 from .training_agreement import AgreementPanel, BlindPanel
@@ -262,6 +264,7 @@ class TrainingPage(Page):
         g = WrappedGroup(self.tr("Self-training"))  # its version line whole after a wide window (A7)
         f = QFormLayout(g)
         self.dataset_version = QComboBox()  # the board model's frozen versions, newest first (REQ-TRN-007)
+        self._trial: set[str] = set()  # the UUIDs of those that are Trial versions (ADR 0020)
         self._cap_version_list()
         self.dataset_version.currentIndexChanged.connect(self._show_version)
         f.addRow(self.tr("Dataset version"), self.dataset_version)
@@ -980,11 +983,16 @@ class TrainingPage(Page):
         saved = self.tr("Saved AI model {version} ({seconds} s) with its Golden board and AI model card.")
         self.log.appendPlainText(saved.format(version=meta["version"], seconds=meta["train_seconds"]))
         not_live = meta.get("not_live")  # the error that kept a board model's first AI model inactive (ADR 0018)
-        report = self.ctx.report_error(not_live, self.title) if isinstance(not_live, BaseException) else None
+        report = self.error_report(not_live) if isinstance(not_live, BaseException) else None
         if meta.get("activated"):  # a board model's first AI model goes live when trained (decision D3), audited
             done = self.tr(
                 "AI model {version} trained and active: the first AI model of {board_model} judges its boards from now"
                 " on. Each later version installs inactive until you activate it."
+            )
+        elif meta.get("assurance") == TRIAL:  # a Trial AI model, first or later, never goes live (ADR 0020)
+            done = self.tr(
+                "AI model {version} trained from a Trial version: it does not go live, so {board_model} is judged as"
+                " before. Start the Checks to freeze a Validated version and train from it."
             )
         elif report is not None:  # logged, and stored as an alarm with its code
             done = self.tr(
@@ -998,7 +1006,7 @@ class TrainingPage(Page):
         self.shell.status(said)
         self.refresh()
         if report is not None:  # what happened and what to do, as any error a user sees (REQ-SET-019)
-            show_error(self, report)
+            show_error(self, report, self.error_act(not_live) if isinstance(not_live, BaseException) else None)
 
     def _finished(self) -> None:
         if self.worker is not None and self.worker.job.cancelled and self.worker.job.result is None:  # Cancel (#171)
@@ -1032,8 +1040,10 @@ class TrainingPage(Page):
             newest = None
         self.dataset_version.blockSignals(True)  # one line shown, once the list is whole
         self.dataset_version.clear()
-        for v in self.ctx.datasets(self.board_model) if self.board_model else []:
-            self.dataset_version.addItem(v["name"], v["uuid"])
+        versions = self.ctx.datasets(self.board_model) if self.board_model else []
+        self._trial = {v["uuid"] for v in versions if v["assurance"] == TRIAL}  # named so (ADR 0020)
+        for v in versions:
+            self.dataset_version.addItem(version_name(v), v["uuid"])
         pick = self.dataset_version.findData(kept) if kept is not None else -1
         self.dataset_version.setCurrentIndex(pick if pick >= 0 else max(self.dataset_version.findData(newest), 0))
         self.dataset_version.blockSignals(False)
@@ -1094,14 +1104,22 @@ class TrainingPage(Page):
             text = line.format(
                 val_ok=n["validation", "OK"], val_ng=n["validation", "NG"], ok=n["train", "OK"], ng=n["train", "NG"]
             )
+        if uuid in self._trial:
+            trial = self.tr("Trial version: an AI model trained from it is marked Trial and does not go live. {line}")
+            text = trial.format(line=text)
         self.version_line.setText(text)
         self.update_actions()
 
     # --- model registry ---------------------------------------------------------
     def activate(self) -> None:
+        """Activate Selected: the version picked goes live with its Golden board (REQ-TRN-010); a refusal, such as the
+        go-live gate's for a Trial AI model with its Start the Checks (ADR 0020), shows its dialog."""
         rows = self.models.selectionModel().selectedRows()
         if rows:
-            self.ctx.activate_model(int(cell_text(self.models, rows[0].row(), 0)))
+            try:
+                self.ctx.activate_model(int(cell_text(self.models, rows[0].row(), 0)))
+            except AoiError as e:
+                self.error(e)
             self.refresh()
 
     def rollback(self) -> None:
@@ -1192,6 +1210,28 @@ class TrainingPage(Page):
             self.models_empty.show_state(
                 self.tr("No AI model yet"), self.tr("Start Training from a frozen dataset version.")
             )
+
+    def start_checks(self, view: str | None = None) -> None:
+        """Start the Checks (ADR 0020): the first check a Validated version still needs, shown. While a label of `view`,
+        else of any view, waits for a second user's check, the Samples tab with Show Unchecked; once every label is
+        checked, the Datasets tab, whose labeller agreement runs the agreement check. Blind labelling, under way, is
+        left as it is."""
+        if self.stack.currentWidget() is self.blind:
+            return
+        self.refresh()
+        statuses = self._statuses
+        if view in VIEWS and self.board_model:
+            statuses = [self.ctx.label_check_status(self.board_model, view)]
+        if statuses and all(st["ready"] for st in statuses):
+            self.tabs.setCurrentIndex(1)
+            self.shell.status(
+                self.tr("The labels are checked: two people label a set blind and Run Agreement Check here."), 0
+            )
+            return
+        self.tabs.setCurrentIndex(0)
+        self.filter.setCurrentIndex(self.filter.findData("Unchecked"))
+        line = self.tr("A second user checks each label Show Unchecked lists; Draw OK Labels to Check draws OK labels.")
+        self.shell.status(line, 0)
 
     def on_board_model_changed(self, name: str | None) -> None:
         self._stop_blind()

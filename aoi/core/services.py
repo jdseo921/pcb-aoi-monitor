@@ -132,6 +132,17 @@ NOT_A_VERSION_RUN = QT_TRANSLATE_NOOP(
     "Errors", "the run used a folder, not a frozen dataset version's locked validation set"
 )
 NO_AGREEMENT = QT_TRANSLATE_NOOP("Errors", "no labeller agreement check is stored for the board model")
+# Why a customer validation report was not made from a Trial version (AOI-TST-009; B1, decision D1; ADR 0020)
+TRIAL_VERSION_RUN = QT_TRANSLATE_NOOP(
+    "Errors",
+    "the run tested the locked validation set of {dataset}, a Trial version that one person froze without a second"
+    " person checking its labels or an agreement check",
+)
+TRIAL_MODEL_RUN = QT_TRANSLATE_NOOP(
+    "Errors",
+    "the run tested AI model {version}, trained from {dataset}, a Trial version that one person froze without a second"
+    " person checking its labels or an agreement check",
+)
 # Why a customer's targets were not saved (AOI-TST-008, REQ-TST-008)
 TARGET_REFUSALS = {
     "board_model": QT_TRANSLATE_NOOP("Errors", "the workspace holds no such board model"),
@@ -891,21 +902,31 @@ class AppContext:
         model = anomaly.train(ok_in, ng_in, cfg, engine, should_stop)
         check()
         previous = self.db.active_model(board_model)
-        # the board model's first AI model, for the line's own use, goes live once registered (D3, ADR 0018)
-        first = use == "own" and not self.db.models(board_model)
+        # the board model's first AI model, for the line's own use, goes live once registered (D3, ADR 0018): the
+        # first with no AI model live before it, so the first Validated one after Trial ones, which never go live, too
+        first = use == "own" and all(self.trial_version(m) is not None for m in self.db.models(board_model))
         out.mkdir(parents=True, exist_ok=True)
 
         def files(v: str) -> list[Path]:
-            pt = out / f"{board_model}_{v}.pt"  # the AI model, its Golden board and its model card (REQ-TRN-011)
-            return [pt, out / f"{board_model}_{v}_golden.png", *model_card.paths(pt)]
+            stem = datasets.model_file_stem(v)  # v1.0 (Trial) as v1.0-trial
+            pt = out / f"{board_model}_{stem}.pt"  # the AI model, its Golden board and its model card (REQ-TRN-011)
+            return [pt, out / f"{board_model}_{stem}_golden.png", *model_card.paths(pt)]
 
-        # never a name whose file is on disk: a result may name a Golden board that a run left unregistered (#178)
-        version = self.db.next_model_version(board_model, lambda v: any(f.exists() for f in files(v)))
+        # never a name whose file is on disk: a result may name a Golden board that a run left unregistered (#178); an
+        # AI model of a Trial version is named so wherever its name goes: v1.0 (Trial) (B1, decision D1; ADR 0020)
+        trial = frozen["assurance"] == datasets.TRIAL
+        suffix = datasets.TRIAL_MODEL if trial else ""
+
+        def taken(v: str) -> bool:  # either name of its number, so a Trial and a Validated AI model never share one
+            number = v.removesuffix(datasets.TRIAL_MODEL)
+            return any(f.exists() for n in (number, number + datasets.TRIAL_MODEL) for f in files(n))
+
+        version = self.db.next_model_version(board_model, taken, suffix)
         path, golden_path, card_md, card_json = files(version)
         say(eta.report(SAVING.fill(version=version)))
         model_uuid = new_uuid()  # in the file's metadata and in the registry row, so an exported .pt names its record
         model.meta.update(board_model=board_model, version=version, uuid=model_uuid, created_at=now_utc())
-        model.meta.update(dataset=frozen["name"], dataset_uuid=dataset_uuid, use=use)
+        model.meta.update(dataset=frozen["name"], dataset_uuid=dataset_uuid, use=use, assurance=frozen["assurance"])
         # lineage (REQ-TRN-009): the code that trained it, and the Golden board's settings beside the network's
         model.meta.update(code=lineage.code_version(), trained_by=self.user)
         model.meta["settings"].update(golden_band_bytes=band, golden_step_bytes=golden.STEP_BYTES)
@@ -933,7 +954,7 @@ class AppContext:
                     board_model, version, str(path), summary, activate=False, uid=model_uuid
                 )
                 old = {"active_version": previous["version"] if previous else None}
-                after = {"version": version, "activated": False, "metrics": summary}
+                after = {"version": version, "assurance": frozen["assurance"], "activated": False, "metrics": summary}
                 self.audit("model.train", "model", model_uuid, old, after)
         except BaseException:
             _remove(files(version))  # not registered: no file is left for a later run to take for its own
@@ -1632,10 +1653,12 @@ class AppContext:
         """The newest trained version of a board model while none is active, which an Engineer activates (Inspection
         offers it, as Activate Selected on Training does); None while one is active or none is trained. A board model's
         first version for its own use goes live when trained (`train`), so this is one trained before that, one trained
-        for another use, or one whose activation was refused."""
+        for another use, or one whose activation was refused. A version of a Trial dataset version, which the go-live
+        gate refuses (ADR 0020), only when no other is trained: Inspection then offers Start the Checks for it."""
         if self.db.active_model(board_model) is not None:
             return None
-        return next(iter(self.db.models(board_model)), None)  # newest first
+        models = self.db.models(board_model)  # newest first
+        return next((m for m in models if self.trial_version(m) is None), next(iter(models), None))
 
     def calibrated_threshold(
         self, board_model: str, model_uuid: str | None = None, version: str | None = None
@@ -1689,7 +1712,8 @@ class AppContext:
         those agreed with the customer and in force when the run started (`agreed`, a `validation_targets` row), else
         the proposed defaults (`agreed` None, as for a run stored before migration 0025), the overlays of its misses
         and false calls and the AI model card. AOI-TST-007 for a run on a folder, a run of a version the workspace no
-        longer holds, or a board model with no agreement check stored."""
+        longer holds, or a board model with no agreement check stored; AOI-TST-009, naming the Trial version's board
+        model and view, for a run on a Trial version's validation set or of an AI model trained from one (ADR 0020)."""
         run = self.test_run(run_uuid)
         if run is None or not run.get("dataset_uuid"):
             raise AoiError("AOI-TST-007", reason=NOT_A_VERSION_RUN)
@@ -1697,6 +1721,13 @@ class AppContext:
         checks = self.db.agreement_checks(run["board_model"])
         if not found:
             raise AoiError("AOI-TST-007", reason=NO_SUCH_VERSION)
+        model = next((m for m in self.db.models(run["board_model"]) if m["uuid"] == run.get("model_uuid")), None)
+        if found[0]["assurance"] == datasets.TRIAL:  # a customer's report rests on checked labels (ADR 0020)
+            why = TRIAL_VERSION_RUN.fill(dataset=found[0]["name"])
+            raise AoiError("AOI-TST-009", reason=why, board=found[0]["board_model"], view=found[0]["view"])
+        if model is not None and (trained := self.trial_version(model)) is not None:
+            why = TRIAL_MODEL_RUN.fill(version=model["version"], dataset=trained["name"])
+            raise AoiError("AOI-TST-009", reason=why, board=trained["board_model"], view=trained["view"])
         if not checks:
             raise AoiError("AOI-TST-007", reason=NO_AGREEMENT)
         rows = run["results"]
@@ -2518,11 +2549,15 @@ class AppContext:
         allowed_uses: Sequence[str] = ("own",),
         progress: Callable[[int, int], None] | None = None,
         should_stop: Callable[[], bool] | None = None,
+        trial: bool = False,
     ) -> dict[str, Any] | None:
         """Freeze the OK and NG images of a board model and view as version N, one more than the view's last, named by
         `datasets.name`: writes datasets/<name>/manifest.json (each file's relative path, SHA-256, label row and label,
         boxes, labeller, checker); stores the version with its SHA-256, the customer, the uses (own by default, each
-        once) and the agreement check that decides (`_newest_check`); audited as `dataset.freeze`. Refused, writing
+        once), its assurance and the agreement check that decides (`_newest_check`); audited as `dataset.freeze`. A
+        version is Validated, frozen with the second-user label checks and the agreement check; with `trial`, it is a
+        Trial version, frozen by one person without them, which names no agreement check, and which it and every AI
+        model trained from it say (B1, decision D1; ADR 0020): the other refusals hold for it too. Refused, writing
         nothing, in this order: a view not in aoi.hal.VIEWS (AOI-TRN-038), a board model name with no Latin letter or
         digit (AOI-TRN-039), then as `_refuse_input` and `_refuse_freeze` give; `_refuse_freeze` runs once before any
         file is read, so a freeze it refuses reads no image file first. The files are hashed next, with no lock held
@@ -2539,7 +2574,7 @@ class AppContext:
         paths = [s["path"] for label in ("OK", "NG") for s in self._in_view(board_model, view, label)]  # AOI-TRN-038
         self._refuse_input(board_model, view, revision, customer, uses)
         name = datasets.name(board_model, revision, view, self._next_version(board_model, view))
-        self._refuse_freeze(name, board_model, view, customer)  # before any file is read, and again in the transaction
+        self._refuse_freeze(name, board_model, view, customer, trial)  # before a file is read, and in the transaction
         known: dict[str, tuple[str, str]] = {}  # file work, before the lock
         for i, p in enumerate(paths):
             if should_stop is not None and should_stop():
@@ -2551,14 +2586,15 @@ class AppContext:
         with self.db.locked(), contextlib.ExitStack() as manifest, self.db.transaction():
             n = self._next_version(board_model, view)  # again, in the transaction that stores it
             name = datasets.name(board_model, revision, view, n)
-            agreed = self._refuse_freeze(name, board_model, view, customer)
+            agreed = self._refuse_freeze(name, board_model, view, customer, trial)  # None for a Trial version
             version: dict[str, Any] = {"uuid": new_uuid(), "name": name, "board_model": board_model}
             version |= {"revision": revision, "view": view, "version": n, "customer": customer.strip()}
-            version |= {"allowed_uses": uses, "agreement_check_uuid": agreed["uuid"], "frozen_by": self.user_uuid}
-            version |= {"frozen_at": now_utc()}
+            version |= {"allowed_uses": uses, "agreement_check_uuid": agreed["uuid"] if agreed else ""}
+            version |= {"assurance": datasets.TRIAL if trial else datasets.VALIDATED}
+            version |= {"frozen_by": self.user_uuid, "frozen_at": now_utc()}
             draws = [{k: v for k, v in d.items() if k != "id"} for d in self.db.ok_check_draws(board_model, view)]
             head = version | {
-                "agreement_check": {k: v for k, v in agreed.items() if k != "id"},
+                "agreement_check": {k: v for k, v in agreed.items() if k != "id"} if agreed else None,
                 "ok_check_draws": draws,
             }
             in_view = [s for s in self.db.samples(board_model) if s["side"] == view and s["label"] != "UNSURE"]
@@ -2570,7 +2606,7 @@ class AppContext:
             manifest.enter_context(_manifest_write(name, rel, self.settings.root))
             # sealed once the row names the version's board model, so its store is found (REQ-TRN-017)
             move_in = manifest.enter_context(atomic.staged(self.settings.root / rel, self._sealed(rel, data) or data))
-            keep = ("name", "customer", "allowed_uses", "agreement_check_uuid")
+            keep = ("name", "assurance", "customer", "allowed_uses", "agreement_check_uuid")
             after = {k: version[k] for k in keep} | {"files": len(files), "manifest_sha256": sha}
             self.audit("dataset.freeze", "dataset", version["uuid"], None, after)
             move_in()
@@ -2581,20 +2617,25 @@ class AppContext:
         the version a freeze would make now (None while `revision` is not 1 to 16 letters and digits); `files`, the
         view's images labelled OK or NG; `labels`, as `label_check_status` gives them; `check`, the newest agreement
         check of the view, which decides, or None; `store`, as `store_of` gives it, whose customer the freeze names;
-        and `refused`, the error `freeze_dataset` would raise now before reading a file, or None. AOI-TRN-038 for a
-        view other than Top, Side or Bottom."""
+        `refused`, the error `freeze_dataset` would raise now before reading a file, or None; and `refused_trial`, the
+        same for a Trial version (ADR 0020). AOI-TRN-038 for a view other than Top, Side or Bottom."""
         labels = self.label_check_status(board_model, view)  # AOI-TRN-038
         store, n = self.store_of(board_model), self._next_version(board_model, view)
         customer = store["customer"] if store else "-"  # none: `_refuse_freeze` names the missing store
         name = datasets.name(board_model, revision, view, n) if datasets.REVISION.fullmatch(revision) else None
-        refused = None
-        try:
-            self._refuse_input(board_model, view, revision, customer, ["own"])
-            self._refuse_freeze(datasets.name(board_model, revision, view, n), board_model, view, customer)
-        except AoiError as e:
-            refused = e
+        refused: dict[bool, AoiError | None] = {}
+        for trial in (False, True):
+            try:
+                self._refuse_input(board_model, view, revision, customer, ["own"])
+                name_n = datasets.name(board_model, revision, view, n)
+                self._refuse_freeze(name_n, board_model, view, customer, trial, labels)
+            except AoiError as e:
+                refused[trial] = e
+            else:
+                refused[trial] = None
         gate = {"name": name, "files": labels["ok"] + labels["ng"], "labels": labels, "store": store}
-        return gate | {"check": self._newest_check(board_model, view), "refused": refused}
+        gate |= {"check": self._newest_check(board_model, view)}
+        return gate | {"refused": refused[False], "refused_trial": refused[True]}
 
     def datasets(self, board_model: str) -> list[dict[str, Any]]:
         """A board model's frozen versions, newest first, as the datasets table holds them (docs/ARCHITECTURE.md)."""
@@ -3065,33 +3106,44 @@ class AppContext:
     def _next_version(self, board_model: str, view: str) -> int:
         return 1 + max((d["version"] for d in self.db.datasets(board_model) if d["view"] == view), default=0)
 
-    def _refuse_freeze(self, name: str, board_model: str, view: str, customer: str) -> dict[str, Any]:
-        """The agreement check a version is frozen with; else, read in the freeze's transaction, the first reason not to
-        freeze: another board model whose name gives the same letters and digits has frozen versions (AOI-TRN-040), a
-        version of that name exists or the view holds no OK or NG image (AOI-TRN-027), an NG label not checked
-        (AOI-TRN-020), too few drawn OK labels checked (AOI-TRN-021), the newest agreement check missing or short of
-        its targets, and the board model in no customer's dataset store, in a shredded one or in another customer's
-        than `customer` (AOI-TRN-027; REQ-TRN-017)."""
+    def _refuse_freeze(
+        self,
+        name: str,
+        board_model: str,
+        view: str,
+        customer: str,
+        trial: bool = False,
+        status: dict[str, Any] | None = None,
+    ) -> dict[str, Any] | None:
+        """The agreement check a version is frozen with, None for a Trial version; else, read in the freeze's
+        transaction, the first reason not to freeze: another board model whose name gives the same letters and digits
+        has frozen versions (AOI-TRN-040), a version of that name exists or the view holds no OK or NG image
+        (AOI-TRN-027), an NG label not checked (AOI-TRN-020), too few drawn OK labels checked (AOI-TRN-021), the newest
+        agreement check missing or short of its targets, and the board model in no customer's dataset store, in a
+        shredded one or in another customer's than `customer` (AOI-TRN-027; REQ-TRN-017). A Trial version needs no
+        label check and no agreement check (`trial`; ADR 0020); every other refusal holds for it. `status`, the view's
+        `label_check_status` when the caller read it already (`freeze_gate`), else read here."""
         frozen = self.db.dataset_names()
         token = datasets.token(board_model)
         other = next((d for d in frozen if d != board_model and datasets.token(d) == token), None)
         if other is not None:
             raise AoiError("AOI-TRN-040", board=board_model, name=name, other=other)
-        status = self.label_check_status(board_model, view)  # its `ready` is labels_ready_to_freeze (REQ-TRN-004)
-        newest = self._newest_check(board_model, view)
+        if status is None:  # its `ready` is labels_ready_to_freeze (REQ-TRN-004)
+            status = self.label_check_status(board_model, view)
+        newest = None if trial else self._newest_check(board_model, view)
         why = None
         if name in frozen.get(board_model, []):
             why = QT_TRANSLATE_NOOP("Errors", "a dataset version of that name is in the workspace already")
         elif not status["ok"] + status["ng"]:
             why = QT_TRANSLATE_NOOP("Errors", "the view holds no image labelled OK or NG")
-        elif status["ng_unchecked"]:
+        elif not trial and status["ng_unchecked"]:
             raise AoiError("AOI-TRN-020", name=name, count=len(status["ng_unchecked"]))
-        elif len(status["ok_checked"]) < status["ok_needed"]:
+        elif not trial and len(status["ok_checked"]) < status["ok_needed"]:
             checked, needed = len(status["ok_checked"]), status["ok_needed"]
             raise AoiError("AOI-TRN-021", name=name, checked=checked, needed=needed, ok=status["ok"])
-        elif newest is None:
+        elif not trial and newest is None:
             why = QT_TRANSLATE_NOOP("Errors", "no agreement check of the board model holds images of this view")
-        elif not newest["agreed"]:
+        elif newest is not None and not newest["agreed"]:
             why = QT_TRANSLATE_NOOP("Errors", "the newest agreement check of the view did not reach the targets")
         elif (store := self.db.board_model_store(board_model)) is None:
             why = QT_TRANSLATE_NOOP("Errors", "its images are in no customer's dataset store; an Admin moves them in")
@@ -3101,7 +3153,7 @@ class AppContext:
         elif store["customer"] != customer.strip():
             why = QT_TRANSLATE_NOOP("Errors", "its images are in the dataset store of {store}, not of {customer}")
             why = why.fill(store=store["customer"], customer=customer.strip())
-        if why is not None or newest is None:
+        if why is not None or (newest is None and not trial):
             raise AoiError("AOI-TRN-027", name=name, reason=why)
         return newest
 
@@ -3184,16 +3236,34 @@ class AppContext:
             with self.db.transaction():
                 self._switch_to(self.db.model(model_id), "model.activate", FIRST_LIVE)
         except Exception as e:
-            self.log.warning("training.first_not_live", exc_info=True, extra={"board_model": board_model})
+            if isinstance(e, AoiError) and e.code == "AOI-TRN-052":  # a Trial AI model, as approved (ADR 0020)
+                self.log.info("training.trial_not_live", extra={"board_model": board_model})
+            else:
+                self.log.warning("training.first_not_live", exc_info=True, extra={"board_model": board_model})
             return e
         return None
 
+    def trial_version(self, model: dict[str, Any]) -> dict[str, Any] | None:
+        """The Trial dataset version an AI model version (a registry row) was trained from, as `datasets` gives it, or,
+        when the workspace no longer names it, its name, board model and view as the model recorded them (view None);
+        None for a version trained from a Validated one, or before a version had an assurance (ADR 0020)."""
+        meta = json.loads(model.get("metrics") or "{}")
+        if meta.get("assurance") != datasets.TRIAL:
+            return None
+        found = self.db.datasets("", str(meta.get("dataset_uuid") or ""))
+        return found[0] if found else {"name": meta.get("dataset"), "board_model": model["board_model"], "view": None}
+
     def _switch_to(self, target: dict[str, Any], action: str, reason: str | None = None) -> None:
         """Make `target` its board model's active version and its Golden board the board model's, together, with an
-        audit entry naming both before and after, and `reason` (REQ-TRN-010). A version that records no Golden board
-        (trained before it was recorded) keeps the board model's. A recorded Golden board that cannot be read is refused
-        with AOI-TRN-048 before anything changes: inspections would otherwise judge with another version's board."""
+        audit entry naming both before and after, and `reason` (REQ-TRN-010). The go-live gate refuses an AI model of a
+        Trial version with AOI-TRN-052, naming that version's board model and view for Start the Checks (B1, decision
+        D1; ADR 0020). A version that records no Golden board (trained before it was recorded) keeps the board model's.
+        A recorded Golden board that cannot be read is refused with AOI-TRN-048 before anything changes: inspections
+        would otherwise judge with another version's board."""
         board_model = target["board_model"]
+        if (trial := self.trial_version(target)) is not None:  # the go-live gate refuses a Trial AI model (ADR 0020)
+            name, view = trial["name"], trial["view"]
+            raise AoiError("AOI-TRN-052", version=target["version"], board=board_model, dataset=name, view=view)
         if not self.card_files(int(target["id"]))[1].is_file():  # no AI model goes live without its card (REQ-TRN-011)
             raise AoiError("AOI-TRN-049", version=target["version"], board=board_model)
         previous = self.db.active_model(board_model)

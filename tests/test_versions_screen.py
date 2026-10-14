@@ -29,9 +29,10 @@ def _row(page: TrainingPage, row: int) -> list[str]:
 
 
 def test_req_trn_005_versions_table(qtbot: QtBot, ctx: AppContext, tmp_path: Path) -> None:
-    """The Versions table lists the board model's frozen versions newest first, the newest picked: name, when frozen
-    in local time, by whom, its OK and NG files, its locked validation set or "not locked", customer, uses, and a
-    Manifest cell blank until Verify Manifest has checked it. A version Freeze makes is picked once it is listed."""
+    """The Versions table lists the board model's frozen versions newest first, the newest picked: name, its checks
+    (Validated, ADR 0020), when frozen in local time, by whom, its OK and NG files, its locked validation set or "not
+    locked", customer, uses, and a Manifest cell blank until Verify Manifest has checked it. A version Freeze makes is
+    picked once it is listed."""
     samples, cal = ready(ctx, tmp_path / "boards")
     agree(ctx, cal, samples)
     v1 = ctx.freeze_dataset(CAL, "Top", "R3", "Acme", ["own", "shared"])
@@ -41,6 +42,7 @@ def test_req_trn_005_versions_table(qtbot: QtBot, ctx: AppContext, tmp_path: Pat
     assert page.versions.isVisible() and page.versions.table.rowCount() == 2
     assert _row(page, 0) == [
         v2["name"],
+        "Validated",
         to_local(v2["frozen_at"]),
         "engineer",
         "80",
@@ -50,7 +52,7 @@ def test_req_trn_005_versions_table(qtbot: QtBot, ctx: AppContext, tmp_path: Pat
         "own",
         "",
     ]
-    assert _row(page, 1)[3:8] == ["80", "20", "50 / 6", "Acme", "own, shared"]
+    assert _row(page, 1)[4:9] == ["80", "20", "50 / 6", "Acme", "own, shared"]
     assert page.versions.picked() == v2["uuid"] and page.versions.btn_verify.isEnabled()
     page.versions.table.selectRow(1)
     page.refresh()
@@ -95,7 +97,7 @@ def test_req_trn_005_verify_manifest(
     versions.btn_verify.click()
     assert not versions.btn_verify.isEnabled()
     _idle(qtbot, page)
-    assert _row(page, 0)[8] == "✓ 100/100" and not versions.found.isVisible()
+    assert _row(page, 0)[9] == "✓ 100/100" and not versions.found.isVisible()
     assert page.shell.statusBar().currentMessage() == f"{v1['name']}: all 100 files match its manifest"
     files = ctx.dataset_items(v1["uuid"])
     changed, gone = (ctx.settings.root / files[i]["path"] for i in (0, 1))
@@ -103,7 +105,7 @@ def test_req_trn_005_verify_manifest(
     gone.unlink()
     versions.btn_verify.click()
     _idle(qtbot, page)
-    assert versions.picked() == v1["uuid"] and _row(page, 0)[8] == "✗ 1 changed, 1 missing"
+    assert versions.picked() == v1["uuid"] and _row(page, 0)[9] == "✗ 1 changed, 1 missing"
     said = versions.found.text()
     assert versions.found.isVisible() and said.startswith(f"AOI-TRN-023 {v1['name']} does not match what was frozen")
     assert said.endswith(f"Changed or missing: {changed.name}, {gone.name}")
@@ -123,7 +125,7 @@ def test_req_trn_005_verify_manifest(
     _idle(qtbot, page)
     said = page.shell.statusBar().currentMessage()
     assert said == f"Verify Manifest of {v1['name']} stopped after 2 of 100 files; nothing was marked"
-    assert _row(page, 0)[8] == "✗ 1 changed, 1 missing" and versions.found.isVisible()
+    assert _row(page, 0)[9] == "✗ 1 changed, 1 missing" and versions.found.isVisible()
 
 
 def test_req_trn_005_export_manifest(
