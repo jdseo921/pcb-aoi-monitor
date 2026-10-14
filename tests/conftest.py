@@ -37,6 +37,7 @@ from aoi.core.imaging import list_images, load_image  # noqa: E402
 from aoi.core.services import AppContext  # noqa: E402
 from aoi.data import credentials  # noqa: E402
 from aoi.data.db import new_uuid  # noqa: E402
+from aoi.hal import drives  # noqa: E402
 from aoi.ui import theme, workers  # noqa: E402
 from aoi.ui.board_model_dialog import NewBoardModelDialog  # noqa: E402
 from aoi.ui.errors import AlreadyOpenBox, ErrorBox  # noqa: E402
@@ -246,6 +247,14 @@ def keys(monkeypatch: pytest.MonkeyPatch) -> credentials.MemoryCredentials:
     held = credentials.MemoryCredentials()
     monkeypatch.setattr(credentials, "default", lambda: held)
     return held
+
+
+@pytest.fixture(autouse=True)
+def _no_usb_drive(monkeypatch: pytest.MonkeyPatch) -> None:
+    """No test sees a USB drive of the machine running it, where the first-run guide's dialogs would open (B5, Q68):
+    tests/test_usb_drives.py `plugged` lists the ones a test plugs in."""
+    monkeypatch.setattr(drives, "removable", lambda: [])
+    monkeypatch.setattr(drives, "_seen", [])
 
 
 @pytest.fixture(autouse=True)

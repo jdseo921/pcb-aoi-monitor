@@ -90,7 +90,7 @@ Follow "3:45 to 4:45, the report they keep" in [stage1-5min.md](stage1-5min.md):
 > an hour with an engineer of yours to check the labels. We then come back with this demo on your own boards, and the
 > counts."
 
-Give them [for-clients.md](for-clients.md), and write down what they asked to see next.
+Give them [for-customers.md](for-customers.md), and write down what they asked to see next.
 
 ## After they leave
 

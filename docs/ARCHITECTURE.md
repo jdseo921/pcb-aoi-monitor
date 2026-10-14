@@ -78,16 +78,17 @@ interfaces that Stages 2–4 (cameras, robot, MES/ERP) plug into without changin
 ├──────────────────────────────────────────────────────────────────────────────┤
 │ HAL  (aoi/hal)  Camera · LightingController · RobotController · MesClient    │
 │   Stage 1: FolderCamera (images)   Stage 2–4: GigE/USB3, serial, RS-485, OPC │
+│   drives.py  the USB drives plugged in, the one plugged in last (Q68)        │
 └──────────────────────────────────────────────────────────────────────────────┘
 ```
 
 Rules: pages call **only** `AppContext`; the engine has **no Qt imports**, so the same code runs headless
 (tests, a future CLI, the Stage 3 robot cycle, or a Stage 4 MES service). `tests/test_layers.py` enforces both:
-no Qt import under `aoi/core` or `aoi/data`, and under `aoi/ui` no `sqlite3` or `aoi.data` import, no `.db`, no SQL,
-no `Inspector` built by a page (REQ-USR-001, since S15) and no image read outside `AppContext.load_image` (since S23c),
-whatever module a name comes through, `Database` and the readers that services imports included, and a second test
-fails a screen module that holds one of them once imported (#202). `aoi/times.py`, `aoi/errors.py`, `aoi/config.py` and
-`aoi/defects.py` are shared by every layer.
+no Qt import under `aoi/core` or `aoi/data`, and under `aoi/ui` no `sqlite3`, `aoi.data` or `aoi.hal.drives` import, no
+`.db`, no SQL, no `Inspector` built by a page (REQ-USR-001, since S15) and no image read outside `AppContext.load_image`
+(since S23c), whatever module a name comes through, `Database` and the readers that services imports included, and a
+second test fails a screen module that holds one of them once imported (#202). `aoi/times.py`, `aoi/errors.py`,
+`aoi/config.py` and `aoi/defects.py` are shared by every layer.
 
 Types (Code style, since S22): mypy runs strict on `aoi/core`, `aoi/data` and `aoi/times.py`, and since S22a on `aoi/ui`
 and `aoi/hal` too, and since S56 on `aoi/selftest.py`, with no flag relaxed (`pyproject.toml`). PySide6 enums are
@@ -809,20 +810,28 @@ stopped at (`training_import.stop_error`). `tests/test_guide_said.py` checks eac
 the guide leaves out, and drives a refusal and its details on screen 1.
 
 **The guide's dialogs, a restart and the count** (REQ-TRN-021, B5; Q64, Q68, Q75). The guide's three dialogs open on the
-USB drive plugged in last (`aoi.hal.drives.last_plugged`): the key's save dialog (with none, on the home folder, as #407
-has it), Pick Folder…'s (with none, where the system opens it) and Inspect a Board…'s when screen 2 picked no folder
-since the app started. A drive counts when the system says it can be removed: on Windows a drive letter of the removable
-type that holds a volume (`GetDriveTypeW`), so a USB hard drive Windows calls fixed is not one; on Linux a partition
-mounted whole, of a disk marked removable or on a USB bus (`/proc/self/mountinfo`, `/sys/dev/block`). The one plugged in
-last is the last the app saw: those there at its first look, which the window takes as it opens, in the system's order
-(the mount order, or the drive letter), then each found at a later look. Until an AI model is active on any board model,
-a start signs in the user who made the newest board model the guide shows for, read from its `board_model.create` entry,
-or the first Admin when that user is gone or now an Operator (`AppContext.guide_starter`), with that board model in the
-header and the status bar saying who and why; once one is, a start signs in as before. `tests/test_guide_click_count.py`
-goes from an empty workspace to the first verdict as the sketch counts it, 24 actions on 4 screens, with 90 or 70 OK
-images and 10 NG ones and the shift check on: each dialog is answered as a person would, one action more where it does
-not open on the right USB drive. `tests/test_usb_drives.py` and `tests/test_guide_restart.py` test the drives and the
-start.
+USB drive plugged in last (`AppContext.usb_drive`, from `aoi.hal.drives`): the key's save dialog (with none, on the home
+folder, as #407 has it), Pick Folder…'s (with none, where the system opens it) and Inspect a Board…'s when screen 2's
+folder is not known, after a restart, a sign-in or a board model switch (`GuideImages.forget`). A drive counts when the
+system says it can be removed: on Windows a drive letter of the removable type that holds a volume (`GetDriveTypeW`,
+`GetVolumeInformationW`, through kernel32 calls of its own with their types declared, as `aoi/ui/front.py` has user32's,
+and critical-error boxes off on that thread meanwhile), so a USB hard drive Windows calls fixed is not one; on Linux a
+partition mounted whole, of a disk marked removable or on a USB bus, and not of the disk mounted at the root
+(`/proc/self/mountinfo`, `/sys/dev/block`). A listing that fails lists none, logged, so each dialog opens where it did.
+The one plugged in last is the last the app saw: those there at its first look, which the window takes as it opens, in
+the system's order (the mount order, or the drive letter), then each found at a later look. While the station is set up,
+with no AI model active and no board inspected on any board model, a start signs in the user who made the newest board
+model the guide shows for, read from its `board_model.create` entry, or the first Admin when that user is gone or now an
+Operator (`AppContext.guide_starter`), with that board model in the header, Home shown in place of the last page, and
+the status bar saying who and why; once a board model has an AI model or an inspected board, a start signs in as before.
+A board model whose guide step cannot be read is skipped, logged, so a start never fails on it.
+`tests/test_guide_click_count.py` goes from an empty workspace to the first verdict as the sketch counts it, 24 actions
+on 4 screens, with 90 or 70 OK images and 10 NG ones and the shift check on: each dialog is answered as a person would,
+one action more where it does not open on the right USB drive. The test names each action as it takes it; what it
+measures is that this path ends in a verdict, on those 4 screens, with each dialog on the right drive and no message
+shown. `tests/test_usb_drives.py`, with a stand-in for kernel32 so the Windows branch runs on every system, and
+`tests/test_guide_restart.py` test the drives and the start; `tests/conftest.py` lists no USB drive in every other test,
+so the drives of the machine running them change nothing.
 
 **Next AI step (not in this draft):** once enough labelled NG crops exist per type, add a small supervised
 classifier that names the defect (Solder Bridge, Tombstone, …) for each flagged region. Today a region is named by
@@ -1095,15 +1104,15 @@ The role is always the one the users table holds for that user (`AppContext.set_
 is refused with `AOI-USR-003`), so the check and the entries never name a role the table contradicts (#197). A start
 signs in the first stored Admin in the demo workspace (`main.py --demo`, the Demo shortcut; it opens at Home after a
 normal close, where the demo scripts begin) and while the workspace has no board model, to set the station up; while the
-first-run guide sets up the workspace's first AI model, the user who started it, with its board model in the header
-(`guide_starter`; "The guide's dialogs, a restart and the count" in section 3); otherwise the user who signed in last on
-the station, named on the status bar, else `operator`; each with the stored role (`AppContext.start_user`). A workspace
-switch opens the new window with the first user of the role carried (`build_window(ctx, carried)`). Switch User signs in
-through `AppContext.sign_in`, which anyone may call: `set_user`, then an audit entry `user.sign_in` (object = the user's
-UUID, the user before and after), and the newest such entry names the user the next start signs in (index
-`audit_action`, migration 0026). The user a window opens with is audited as `user.start`, which no later start reads, so
-neither a start nor a role carried, the demo's Admin say, becomes the station's next start user. An entry that cannot be
-written leaves the user before signed in; at a start, the window is not built and the coded dialog says why
+first-run guide sets up the workspace's first AI model, the user who started it, with its board model in the header and
+Home shown (`guide_starter`; "The guide's dialogs, a restart and the count" in section 3); otherwise the user who signed
+in last on the station, named on the status bar, else `operator`; each with the stored role (`AppContext.start_user`). A
+workspace switch opens the new window with the first user of the role carried (`build_window(ctx, carried)`). Switch
+User signs in through `AppContext.sign_in`, which anyone may call: `set_user`, then an audit entry `user.sign_in`
+(object = the user's UUID, the user before and after), and the newest such entry names the user the next start signs in
+(index `audit_action`, migration 0026). The user a window opens with is audited as `user.start`, which no later start
+reads, so neither a start nor a role carried, the demo's Admin say, becomes the station's next start user. An entry that
+cannot be written leaves the user before signed in; at a start, the window is not built and the coded dialog says why
 (`build_window`).
 
 User switching is a local picker for the PoC; Stage 4 replaces it with MES authentication (`MesClient.authenticate`).

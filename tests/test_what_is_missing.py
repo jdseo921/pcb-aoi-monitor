@@ -72,12 +72,12 @@ def test_req_trn_021_the_sentence_is_the_one_every_document_gives() -> None:
     the screens show, so no document states counts of its own (F6); the Korean customer document in the sentence the
     Korean screens show."""
     sentence = str(datasets.needs())
-    for doc in ("README.md", "docs/manual/engineer.md", "docs/demo/for-clients.md"):
+    for doc in ("README.md", "docs/manual/engineer.md", "docs/demo/for-customers.md"):
         text = " ".join((ROOT / doc).read_text(encoding="utf-8").split())  # its line breaks as spaces
         assert sentence in text, doc
     needs = datasets.needs()
     korean = _messages(TS_FILE)[needs.context, needs.source].format(**needs.values)  # as the Korean screens say it
-    assert korean and korean in " ".join((ROOT / "docs/demo/ko/for-clients.md").read_text(encoding="utf-8").split())
+    assert korean and korean in " ".join((ROOT / "docs/demo/ko/for-customers.md").read_text(encoding="utf-8").split())
 
 
 def test_req_trn_021_validated_stages(ctx: AppContext, tmp_path: Path) -> None:

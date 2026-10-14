@@ -28,7 +28,6 @@ from PySide6.QtWidgets import QHBoxLayout, QLabel, QLineEdit, QVBoxLayout, QWidg
 from ...core import datasets, stats
 from ...core.services import ErrorReport
 from ...errors import AoiError
-from ...hal import drives
 from ...times import to_local
 from .. import theme
 from ..errors import phrase_text
@@ -419,7 +418,7 @@ class GuideTrain(QWidget):
         if self.result.isHidden():
             return
         folder = self.folder()
-        start = Path(folder).parent if folder else drives.last_plugged()
+        start = Path(folder).parent if folder else self.ctx.usb_drive()
         shell = self.page.shell
         if shell.navigate("Inspection"):
             page = cast("InspectionPage", shell.pages["Inspection"])

@@ -4,7 +4,9 @@ click or tap, a drag, a key press that is not typing, or one field typed; a scre
 replaces the one before, and a system dialog is not one (Q64). As the sketch assumes: the key's USB drive is plugged in
 for screen 1 and the images' for screen 2, holding TBOX-A1/ok, TBOX-A1/ng/<defect type> and, beside that folder, the
 image of the board to inspect; each NG image shows one defect, and no image is refused. A dialog that does not open on
-the right USB drive costs one action more (Q68). The boards are synthetic: the test counts actions, never accuracy."""
+the right USB drive costs one action more (Q68). The test names each action as it takes it, so the count is the sketch's
+by construction; what it measures is that this path reaches a verdict on those 4 screens, with each dialog on the right
+drive and no message shown. The boards are synthetic: the test counts actions, never accuracy."""
 
 from __future__ import annotations
 

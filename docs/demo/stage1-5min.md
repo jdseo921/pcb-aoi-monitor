@@ -65,7 +65,7 @@ Click **Inspection** and press **Start**. The six boards left come out ✓ OK, a
 > "Next, we do the same with your boards. Send us photos of good boards and a few with known defects, and we show you,
 > on your own boards, how many defects it found and how many good boards it stopped, with the counts."
 
-Give them [for-clients.md](for-clients.md).
+Give them [for-customers.md](for-customers.md).
 
 ## After they leave
 

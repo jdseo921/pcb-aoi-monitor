@@ -860,7 +860,7 @@
         <translation>: {reason}</translation>
     </message>
     <message>
-        <location line="+115"/>
+        <location line="+126"/>
         <source>Operator, Engineer or Admin</source>
         <translation type="unfinished"></translation>
     </message>
@@ -875,7 +875,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+301"/>
+        <location line="+312"/>
         <location line="+137"/>
         <source>Importing samples</source>
         <translation type="unfinished"></translation>
@@ -1157,14 +1157,14 @@
         <translation>검증 세트 잠금</translation>
     </message>
     <message>
-        <location line="-3022"/>
-        <location line="+3036"/>
+        <location line="-3044"/>
+        <location line="+3058"/>
         <location line="+39"/>
         <source>the workspace holds no such dataset version</source>
         <translation>작업 공간에 그런 데이터셋 버전이 없습니다</translation>
     </message>
     <message>
-        <location line="-3125"/>
+        <location line="-3147"/>
         <source>Drift on {board} ({view}): {count} of the last {of} boards called NG; {before} % of the {baseline} before</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1264,7 +1264,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1229"/>
+        <location line="+1251"/>
         <source>Setting the comparison&apos;s thresholds from labelled boards</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1491,7 +1491,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-3787"/>
+        <location line="-3809"/>
         <source>no earlier version of this board model was active</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1516,7 +1516,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1153"/>
+        <location line="+1175"/>
         <source>its UUID {found} is not {uuid}, as in the AI model registry</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1623,14 +1623,14 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-4015"/>
+        <location line="-4037"/>
         <source>unhandled</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../ui/demo_workspace.py" line="+31"/>
         <location filename="../ui/errors.py" line="+163"/>
-        <location filename="../ui/main_window.py" line="+1140"/>
+        <location filename="../ui/main_window.py" line="+1148"/>
         <source>start-up</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4104,7 +4104,7 @@
     </message>
     <message>
         <location line="+1"/>
-        <location filename="../core/services.py" line="+3278"/>
+        <location filename="../core/services.py" line="+3300"/>
         <source>a file of it could not be read: {reason}</source>
         <translation>그 파일 하나를 읽을 수 없습니다: {reason}</translation>
     </message>
@@ -4740,7 +4740,7 @@
 <context>
     <name>GuideTrain</name>
     <message>
-        <location filename="../ui/pages/guide_train.py" line="+90"/>
+        <location filename="../ui/pages/guide_train.py" line="+89"/>
         <source>Board revision</source>
         <translation type="unfinished">보드 리비전</translation>
     </message>
@@ -4914,7 +4914,7 @@
 <context>
     <name>HomePage</name>
     <message>
-        <location filename="../ui/main_window.py" line="-999"/>
+        <location filename="../ui/main_window.py" line="-1008"/>
         <source>Upload samples</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6249,12 +6249,17 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+105"/>
+        <location line="+109"/>
         <source>Signed in as {user} ({role}), who started setting up {board_model}. Not you? Press Switch User.</source>
         <translation type="unfinished">{board_model} 설정을 시작한 {user}({role})(으)로 로그인했습니다. 본인이 아니면 사용자 전환을 누르십시오.</translation>
     </message>
     <message>
-        <location line="+5"/>
+        <location line="+4"/>
+        <source>Signed in as {user} ({role}) to go on setting up {board_model}, as the user who started it is no longer an Engineer or Admin here. Not you? Press Switch User.</source>
+        <translation type="unfinished">설정을 시작한 사용자가 더 이상 이곳의 엔지니어나 관리자가 아니므로, {board_model} 설정을 이어 가도록 {user}({role})(으)로 로그인했습니다. 본인이 아니면 사용자 전환을 누르십시오.</translation>
+    </message>
+    <message>
+        <location line="+6"/>
         <source>Signed in as {user} ({role}), who signed in last on this station. Not you? Press Switch User.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7194,7 +7199,7 @@
 <context>
     <name>Page</name>
     <message>
-        <location filename="../ui/main_window.py" line="-956"/>
+        <location filename="../ui/main_window.py" line="-965"/>
         <source>Home</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7906,7 +7911,7 @@
 <context>
     <name>RecoveryKey</name>
     <message>
-        <location filename="../ui/pages/recovery_key.py" line="+55"/>
+        <location filename="../ui/pages/recovery_key.py" line="+54"/>
         <source>Shown this once. Save it to a USB drive or print it, and keep it apart from the station: with it, an Admin opens the store on another PC, and anyone who holds it and a copy of the files can read them.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -8899,7 +8904,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/services.py" line="-3362"/>
+        <location filename="../core/services.py" line="-3384"/>
         <source>Aligning {count} images to the reference board</source>
         <translation type="unfinished"></translation>
     </message>

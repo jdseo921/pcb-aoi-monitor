@@ -111,10 +111,10 @@ def test_req_trn_021_what_train_made_after_a_restart_and_the_handover(
     """Train's result is read again from the workspace, as after a restart. An Operator's Home says the board model is
     still being set up until Train's AI model judges its boards, then shows the cards. Open Logs & Export › shows the
     board model's history and Start the Checks › Training's What is missing with Validated picked. Inspect a Board…
-    opens Load Images… on the folder above screen 2's, else on the USB drive plugged in last (Q68), in the view Train
-    trained on, and inspects the board picked at once, or nothing when none is picked; then Home shows its cards. A test
-    or a shift check that did not run, or a shift check failed, is said. A board model judged by an AI model Train did
-    not make leaves the guide."""
+    opens Load Images… on the folder above screen 2's, else on the USB drive plugged in last (Q68), else where the
+    dialog opens by itself, in the view Train trained on, and inspects the board picked at once, or nothing when none
+    is picked; then Home shows its cards. A test or a shift check that did not run, or a shift check failed, is said. A
+    board model judged by an AI model Train did not make leaves the guide."""
     ready(ctx, tmp_path / "boards")
     win, guide, screen = home(qtbot, ctx, "operator")
     home_page = cast(HomePage, win.pages["Home"])
@@ -156,10 +156,10 @@ def test_req_trn_021_what_train_made_after_a_restart_and_the_handover(
     )
     ctx.settings.shift_check_hours = 0  # off: the first board needs none
     usb = tmp_path / "usb"
-    plugged(monkeypatch, usb)  # with no folder of screen 2's, as after a restart: the USB drive plugged in last (Q68)
+    now = plugged(monkeypatch)  # with no folder of screen 2's, as after a restart: the USB drive plugged in last (Q68)
     asked: list[str] = []
     board = sorted((tmp_path / "boards").glob("*.png"))[0]
-    picks = [[], [str(board)]]  # the dialog cancelled, then a board picked
+    picks = [[], [], [str(board)]]  # the dialog cancelled twice, then a board picked
 
     def picked(parent: Any, title: str, folder: str, kinds: str) -> tuple[list[str], str]:
         asked.append(folder)
@@ -174,10 +174,13 @@ def test_req_trn_021_what_train_made_after_a_restart_and_the_handover(
     inspection = cast(InspectionPage, win.pages["Inspection"])
     assert win.stack.currentWidget() is inspection and not inspection.queue and ctx.db.inspection_counts(ONE)[0] == 0
     win.navigate("Home")
+    now.append(usb)
+    screen.btn_inspect.click()
+    win.navigate("Home")
     assert screen.result.isVisible()
     guide.images.folder = str(tmp_path / "boards" / "TBOX")  # screen 2's folder in this session
     screen.btn_inspect.click()
-    assert win.stack.currentWidget() is inspection and asked == [str(usb), str(tmp_path / "boards")]
+    assert win.stack.currentWidget() is inspection and asked == ["", str(usb), str(tmp_path / "boards")]
     assert inspection.view_combo.currentData() == "Top"
     qtbot.waitUntil(lambda: ctx.db.inspection_counts(ONE)[0] == 1, timeout=60000)
     win.navigate("Home")

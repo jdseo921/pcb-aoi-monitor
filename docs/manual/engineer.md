@@ -61,7 +61,8 @@ image limit, stays; it takes effect at the next start. Saving needs the Admin ro
 entry, `settings.change`, with the values before and after. The last user with the Admin role cannot lose it
 (AOI-USR-002): give another user the Admin role first. A user's role is the one set under Users & roles, at every
 start too: the app starts with the Admin added first while the workspace has no board model; while the first-run guide
-sets up the first AI model, with the user who started it, as the status line says; and after that with the user who
+sets up the station, before any AI model judges boards or any board is inspected, with the user who started it, on Home,
+as the status line says (the first Admin when that user is now an Operator or gone); and after that with the user who
 signed in last on this station with Switch User (`operator` until anyone has; the start's status line names them), so a
 role you change holds after a restart. Each sign-in is an audit entry: `user.sign_in` for Switch User, with the user
 before, and `user.start` for the user a start signs in. The demo workspace always starts with its first Admin.
@@ -170,14 +171,15 @@ customer field offers the customers with a dataset store, and Enter in its list 
 field) needs the Admin role: an Engineer sees the step greyed, saying so. While Create is off, a press on it or Enter
 says on the status bar what is still to type. For a customer's first board model, Create makes the customer's encrypted
 dataset store and shows its recovery key on the same screen, this once: **Save to File…** (Ctrl+S; on a USB drive kept
-away from the station, not the one that brings the images: the dialog opens on the USB drive plugged in last) or
-**Print…** (Ctrl+P), and the line beside them says where it went; then **I Have Saved the Key** (Enter), which until
-then says to save or print the key first. While the key shows, the sidebar, the top bar, the page keys and the window's
-close do nothing, and a press on them says why on the status bar. F1 lists the step's keys. A refusal, such as a folder
-under `images` that holds files already (AOI-TRN-044) or a key saved into the workspace (AOI-LOG-002), is said under the
-button that met it, with its code, and opens no dialog. The board model made is then chosen in the top bar, and the
-guide goes on to its images. **Show All Steps ›** leaves the guide for Home without it, which with no board model yet is
-the empty state with **+ New board model**, and **Show the Guide ›** brings it back, until the next sign-in.
+away from the station, not the one that brings the images: the dialog opens on the USB drive plugged in last; a USB disk
+Windows lists as a fixed disk, as many USB SSDs are, does not count) or **Print…** (Ctrl+P), and the line beside them
+says where it went; then **I Have Saved the Key** (Enter), which until then says to save or print the key first. While
+the key shows, the sidebar, the top bar, the page keys and the window's close do nothing, and a press on them says why
+on the status bar. F1 lists the step's keys. A refusal, such as a folder under `images` that holds files already
+(AOI-TRN-044) or a key saved into the workspace (AOI-LOG-002), is said under the button that met it, with its code, and
+opens no dialog. The board model made is then chosen in the top bar, and the guide goes on to its images. **Show All
+Steps ›** leaves the guide for Home without it, which with no board model yet is the empty state with **+ New board
+model**, and **Show the Guide ›** brings it back, until the next sign-in.
 
 **The guide's images.** Screen 2 takes the board model's images, for a board model in a customer's store that has
 not inspected a board yet. Put them in one folder with two folders in it: `ok`, with the good boards' images, and

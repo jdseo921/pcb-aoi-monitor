@@ -41,7 +41,7 @@ from ...core.sample_import import NG_FOLDERS, ImportFile, ImportReport, folder_f
 from ...core.services import GUIDE_IMAGES, ErrorReport
 from ...defects import names
 from ...errors import AoiError
-from ...hal import VIEWS, drives
+from ...hal import VIEWS
 from .. import theme
 from ..errors import phrase_text
 from ..widgets.box_editor import BoxEditor
@@ -385,7 +385,7 @@ class GuideImages(QWidget):
         if self.copying is not None or not self.btn_pick.isEnabled():
             self.status(self._pick_off())
             return
-        drive = drives.last_plugged()  # Q68: the images come on a USB drive
+        drive = self.ctx.usb_drive()  # Q68: the images come on a USB drive
         folder = QFileDialog.getExistingDirectory(
             self, self.tr("Pick the folder with ok and ng in it"), str(drive) if drive else ""
         )

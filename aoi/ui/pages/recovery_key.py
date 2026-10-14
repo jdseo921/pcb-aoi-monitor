@@ -22,7 +22,6 @@ from PySide6.QtPrintSupport import QPrintDialog, QPrinter
 from PySide6.QtWidgets import QCheckBox, QDialog, QFileDialog, QHBoxLayout, QLabel, QVBoxLayout, QWidget
 
 from ...errors import AoiError
-from ...hal import drives
 from ...times import to_local
 from .. import theme
 from .base import button, size_class
@@ -166,7 +165,7 @@ class RecoveryKey(QWidget):
         if self.made is None:
             return
         stem = re.sub(r"[^A-Za-z0-9]+", "-", self.made["customer"]).strip("-") or "store"
-        drive = drives.last_plugged() if self.usb else None
+        drive = self.ctx.usb_drive() if self.usb else None
         start = drive or Path(QStandardPaths.writableLocation(QStandardPaths.StandardLocation.HomeLocation))
         f, _ = QFileDialog.getSaveFileName(
             self, self.tr("Save Recovery Key"), str(start / f"recovery-key-{stem}.txt"), self.tr("Text (*.txt)")

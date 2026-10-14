@@ -22,8 +22,9 @@ ROOT = Path(__file__).resolve().parents[1]
 ENGINE_DIRS = (ROOT / "aoi" / "core", ROOT / "aoi" / "data")
 UI_DIR = ROOT / "aoi" / "ui"
 # The data layer is reached only through AppContext (REQ-USR-001), and so is an image file: `AppContext.load_image`
-# applies the size limits from Settings, which a page reading the file itself would skip (REQ-INSP-001).
-FORBIDDEN_IN_UI = ("sqlite3", "aoi.data", "cv2.imread", "cv2.imdecode")
+# applies the size limits from Settings, which a page reading the file itself would skip (REQ-INSP-001). So are the
+# system's drives: `AppContext.usb_drive` (B5, Q68).
+FORBIDDEN_IN_UI = ("sqlite3", "aoi.data", "cv2.imread", "cv2.imdecode", "aoi.hal.drives")
 # Forbidden whatever module they are imported through: services imports both readers and Database for its own use, so
 # they resolve there too (#202).
 FORBIDDEN_NAMES = (".load_image", ".load_image_sha256", ".Database", ".save_image", ".QImageWriter")
