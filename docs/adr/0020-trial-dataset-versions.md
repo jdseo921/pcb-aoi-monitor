@@ -57,7 +57,9 @@ AI model of the customer's own boards (F1, F2).
    2026-10-13 06:15 UTC ("Never live"), not yet answered when this was written: Jay's message says the gate refuses a
    Trial version, and allowing a Trial AI model live later is one check removed, while taking back verdicts a Trial AI
    model already made is not possible. The other options were "Live, marked Trial" (only the report refuses) and "Live
-   until Validated".
+   until Validated". **Decided by Jay on 2026-10-14 00:03 UTC: "Live until Validated"**, as Q63 of the first-run guide
+   sketch recommends (docs/sketches/first-run-guide.md): a Trial AI model goes live only while no Validated one has, and
+   never replaces one. Until that is built with the guide (B5), the code keeps this decision's refusal.
 5. **The customer validation report refuses Trial,** for a run on a Trial version's locked validation set or of an AI
    model trained from one (AOI-TST-009). The run, its CSV and AI Model Test's own report stay.
 6. **Start the Checks.** Both refusals' dialogs have a Start the Checks button beside OK, for a role that can open
