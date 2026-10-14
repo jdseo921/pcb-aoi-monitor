@@ -6,7 +6,7 @@ a sign-in, which exec(), showing it modal, keeps from the window behind it. The 
 selected, so never on the clipboard, and `clear` forgets it. The store's UUID and key id, an Admin's advanced detail,
 are on the sheet saved or printed, not on screen (B2 of the 2026-10 business-readiness brief). The first-run guide shows
 it with no tick (`tick=False`, B5, Q67): a line beside the buttons says where the key went, and the guide's own button,
-I Have Saved the Key, waits for `saved`."""
+I Have Saved the Key, waits for `saved`. Its save dialog opens on the USB drive plugged in last (`usb=True`, Q68)."""
 
 from __future__ import annotations
 
@@ -41,9 +41,10 @@ class RecoveryKey(QWidget):
         error: Callable[[AoiError], object],
         status: Callable[[str], object],
         tick: bool = True,
+        usb: bool = False,
     ) -> None:
         super().__init__()
-        self.ctx, self.error, self.status = ctx, error, status
+        self.ctx, self.error, self.status, self.usb = ctx, error, status, usb
         self.made: dict[str, str] | None = None  # uuid, customer, key_id, sheet and created_at of the store shown
         self.saved = False  # the key shown was saved to a file or printed
         lay = QVBoxLayout(self)
@@ -158,13 +159,14 @@ class RecoveryKey(QWidget):
         return doc
 
     def save_file(self) -> None:
-        """The sheet as UTF-8 text in a file the user names, offered in the home folder under the customer's name (not
-        Documents, which OneDrive may copy off the station); written and audited by `AppContext.save_recovery_sheet`,
-        whose refusal (AOI-LOG-002) is shown."""
+        """The sheet as UTF-8 text in a file the user names, offered under the customer's name in the home folder (not
+        Documents, which OneDrive may copy off the station), or with `usb` on the USB drive plugged in last, if any;
+        written and audited by `AppContext.save_recovery_sheet`, whose refusal (AOI-LOG-002) is shown."""
         if self.made is None:
             return
         stem = re.sub(r"[^A-Za-z0-9]+", "-", self.made["customer"]).strip("-") or "store"
-        start = Path(QStandardPaths.writableLocation(QStandardPaths.StandardLocation.HomeLocation))
+        drive = self.ctx.usb_drive() if self.usb else None
+        start = drive or Path(QStandardPaths.writableLocation(QStandardPaths.StandardLocation.HomeLocation))
         f, _ = QFileDialog.getSaveFileName(
             self, self.tr("Save Recovery Key"), str(start / f"recovery-key-{stem}.txt"), self.tr("Text (*.txt)")
         )

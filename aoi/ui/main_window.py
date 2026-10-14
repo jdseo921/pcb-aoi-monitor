@@ -589,25 +589,42 @@ class MainWindow(QMainWindow):
         self._training_timer = QTimer(self)  # the header and Home follow a training run on every page (REQ-TRN-008)
         self._training_timer.timeout.connect(self.show_training)
         self._training_timer.start(1000)
-        self._reload_board_models()
-        # the demo, and a station with no board model yet to set up, start with an Admin; any other start with the user
-        # who signed in last on the station; a workspace switch with the first user of the role carried, if the folder
-        # holds one; the role is the stored one either way (#197). Audited as user.start, which no later start reads,
-        # so a role carried, the demo's Admin say, is never the station's next start user (REQ-USR-003)
+        ctx.usb_drive()  # the USB drives there as the window opens: one plugged in after is the last (Q68)
+        # the demo, and a station with no board model yet to set up, start with an Admin; while the first-run guide sets
+        # the station up, with the user who started it, its board model in the header and Home shown (Q75); any other
+        # start with the user who signed in last on the station; a workspace switch with the first user of the role
+        # carried, if the folder holds one, on the page it had (`switch_workspace`), the guide's start aside; the role
+        # is the stored one either way (#197). Audited as user.start, which no later start reads, so a role carried, the
+        # demo's Admin say, is never the station's next start user (REQ-USR-003)
+        started = None if carried is not None or self.in_demo else ctx.guide_starter()
         start = ctx.start_user(setting_up=not ctx.board_models())
         if carried is not None:
             start = next((str(u["name"]) for u in ctx.users() if u["role"] == carried), start)
+        guided = started if started is not None and start == started.user else None
+        self._reload_board_models(guided.board_model if guided else None)
         ctx.sign_in(start, start=True)
         self.set_user(start)
         if self.in_demo:  # its boards wait on Inspection as a scripted run at the demo's pace (REQ-SET-009)
             cast(InspectionPage, self.pages["Inspection"]).play(
                 boards(ctx.settings.root), ctx.settings.demo_pace_s, False
             )
-        # where the last session was (REQ-LOG-005); the demo after a normal close at Home, where its scripts begin
-        if not self.navigate(ctx.settings.last_page):
+        # where the last session was (REQ-LOG-005), or Home, where the guide is; the demo after a normal close at Home,
+        # where its scripts begin
+        if guided or not self.navigate(ctx.settings.last_page):
             self.navigate("Home")
         resumed = carried is None and not self.in_demo and bool(ctx.board_models()) and start == ctx.last_signed_in()
-        if resumed:  # someone else may be at the station now
+        if guided:  # someone else may be at the station now
+            if guided.made_it:
+                said = self.tr(
+                    "Signed in as {user} ({role}), who started setting up {board_model}. Not you? Press Switch User."
+                )
+            else:
+                said = self.tr(
+                    "Signed in as {user} ({role}) to go on setting up {board_model}, as the user who started it is no "
+                    "longer an Engineer or Admin here. Not you? Press Switch User."
+                )
+            self.status(said.format(user=start, role=role_text(ctx.role), board_model=guided.board_model), ms=0)
+        elif resumed:
             said = self.tr(
                 "Signed in as {user} ({role}), who signed in last on this station. Not you? Press Switch User."
             )

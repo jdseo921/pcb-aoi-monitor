@@ -85,7 +85,7 @@ Follow "3:45 to 4:45, the report they keep" in [stage1-5min.md](stage1-5min.md):
 > "Next, we do this with your boards: you send photos of good boards and of boards with known defects. We train on your
 > good boards, check on your defective ones, and show you the counts. Nothing leaves your site unless you agree."
 
-Give them [for-clients.md](for-clients.md).
+Give them [for-customers.md](for-customers.md).
 
 ## With the customer's images
 

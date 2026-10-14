@@ -90,7 +90,7 @@
 > 학습하고 불량 보드로 확인해서 건수를 보여 드립니다. 고객님이 동의하지 않으면 어떤 것도 고객사 밖으로 나가지
 > 않습니다."
 
-[for-clients.md](for-clients.md)를 드립니다.
+[for-customers.md](for-customers.md)를 드립니다.
 
 ## 고객 이미지가 있을 때
 

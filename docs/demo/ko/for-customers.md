@@ -1,6 +1,6 @@
 # AOI PoC Inspector: 보신 것, 그리고 고객님 보드로 하는 Stage 1
 
-> **초안: 원어민 검토 전.** 영어 원문 [../for-clients.md](../for-clients.md)의 한국어 초안입니다. 원어민 검토
+> **초안: 원어민 검토 전.** 영어 원문 [../for-customers.md](../for-customers.md)의 한국어 초안입니다. 원어민 검토
 > 전에는 고객에게 주지 않습니다.
 
 모든 데모 끝에 고객께 드리는 한 쪽짜리 안내문입니다.

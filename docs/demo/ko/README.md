@@ -12,7 +12,7 @@
 | [stage1-5min.md](stage1-5min.md) | 5분 | 모든 첫 미팅. 절대 실패하면 안 되므로 데모 전마다 리허설합니다 |
 | [stage1-15min.md](stage1-15min.md) | 15분 | 5분 스크립트에 이어, 고객의 OK 이미지로 학습, NG 샘플로 확인, 임계값을 현장에서 조정 |
 | [stage1-45min.md](stage1-45min.md) | 45분 | 15분 스크립트에 이어, 레시피, AI 모델 버전, 고객 데이터 처리 |
-| [for-clients.md](for-clients.md) | 1쪽 | 고객 배포용: 본 것, Stage 1에 고객이 준비할 것, 고객이 가져가는 것 |
+| [for-customers.md](for-customers.md) | 1쪽 | 고객 배포용: 본 것, Stage 1에 고객이 준비할 것, 고객이 가져가는 것 |
 
 ## 기본 원칙
 

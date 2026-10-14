@@ -25,8 +25,8 @@ UI_DIR = ROOT / "aoi" / "ui"
 # applies the size limits from Settings, which a page reading the file itself would skip (REQ-INSP-001).
 FORBIDDEN_IN_UI = ("sqlite3", "aoi.data", "cv2.imread", "cv2.imdecode")
 # Forbidden whatever module they are imported through: services imports both readers and Database for its own use, so
-# they resolve there too (#202).
-FORBIDDEN_NAMES = (".load_image", ".load_image_sha256", ".Database", ".save_image", ".QImageWriter")
+# they resolve there too (#202); so is the system's drives module, which a page reaches as `AppContext.usb_drive` (B5).
+FORBIDDEN_NAMES = (".load_image", ".load_image_sha256", ".Database", ".save_image", ".QImageWriter", ".drives")
 IMAGE_READERS = ("load_image", "load_image_sha256", "imread", "imdecode")
 # A picture leaves the station only through `AppContext.export_board_image`, which checks the role and audits it (#241);
 # a `.save(` with an argument, as a QImage's or a QPixmap's, writes one too (QPainter.save() takes none).
@@ -159,9 +159,9 @@ def test_req_usr_001_the_scan_catches_a_built_inspector(tmp_path: Path) -> None:
     """The scan itself: a runtime import of Inspector, an Inspector built by its bare or dotted name, `.db`,
     `.execute(` and `load_image` imported or called on a module are flagged, and so are (#202) `Database` and both
     readers imported through services, a bare `load_image(p)`, `cv2.imread`, `cv2.imdecode`, `.executemany(` and
-    `.executescript(`, and (#241) `save_image` and `QImageWriter` imported or called, `cv2.imwrite` and a `.save(` with
-    an argument; the import under `if TYPE_CHECKING:`, `load_image` on the context, other cv2 calls and
-    `QPainter.save()` are not."""
+    `.executescript(`, (#241) `save_image` and `QImageWriter` imported or called, `cv2.imwrite` and a `.save(` with an
+    argument, and (B5) the drives module, from aoi.hal or through services; the import under `if TYPE_CHECKING:`,
+    `load_image` on the context, other cv2 calls, `QPainter.save()` and `VIEWS` are not."""
     sample = tmp_path / "sample.py"
     sample.write_text(
         "from typing import TYPE_CHECKING\n"
@@ -186,7 +186,9 @@ def test_req_usr_001_the_scan_catches_a_built_inspector(tmp_path: Path) -> None:
         "    save_image(path, img), imaging.save_image(path, img), cv2.imwrite(path, img)\n"
         "from PySide6.QtGui import QImageWriter\n"
         "def k(path, img, pix, painter):\n"
-        "    img.save(path), pix.save(path, 'PNG'), QImageWriter(path).write(img), painter.save()\n",
+        "    img.save(path), pix.save(path, 'PNG'), QImageWriter(path).write(img), painter.save()\n"
+        "from ...hal import VIEWS, drives\n"
+        "from ...core.services import drives as usb\n",
         encoding="utf-8",
     )
     assert sorted(appcontext_violations(sample, "aoi.ui.pages")) == [
@@ -211,6 +213,8 @@ def test_req_usr_001_the_scan_catches_a_built_inspector(tmp_path: Path) -> None:
         "sample.py:23 writes an image outside AppContext",
         "sample.py:23 writes an image outside AppContext",
         "sample.py:23 writes an image outside AppContext",
+        "sample.py:24 imports aoi.hal.drives",
+        "sample.py:25 imports aoi.core.services.drives",
         "sample.py:4 imports aoi.core.imaging.load_image",
         "sample.py:8 builds an Inspector",
         "sample.py:9 builds an Inspector",

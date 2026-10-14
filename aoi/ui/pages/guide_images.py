@@ -385,7 +385,10 @@ class GuideImages(QWidget):
         if self.copying is not None or not self.btn_pick.isEnabled():
             self.status(self._pick_off())
             return
-        folder = QFileDialog.getExistingDirectory(self, self.tr("Pick the folder with ok and ng in it"))
+        drive = self.ctx.usb_drive()  # Q68: the images come on a USB drive
+        folder = QFileDialog.getExistingDirectory(
+            self, self.tr("Pick the folder with ok and ng in it"), str(drive) if drive else ""
+        )
         if not folder:
             return
         self.waiting = []

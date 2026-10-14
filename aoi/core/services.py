@@ -42,7 +42,7 @@ from ..data.errors import WorkspaceError
 from ..data.paths import inside, one_folder_name, resolve, to_stored
 from ..data.workspace_lock import WorkspaceLock, holder, in_use
 from ..errors import QT_TRANSLATE_NOOP, AoiError, Phrase, joined, system_detail, system_reason
-from ..hal import VIEWS
+from ..hal import VIEWS, drives
 from ..times import local_date, now_utc
 from . import (
     annotation_files,
@@ -353,6 +353,17 @@ class Actor:
     uuid: str | None
 
 
+@dataclass(frozen=True)
+class GuideStarter:
+    """Who a start signs in while the first-run guide sets up the station's first AI model, and for which board model
+    (`AppContext.guide_starter`, B5, Q75). `made_it`: the user made the board model; False for the first Admin, signed
+    in because its maker is gone or now an Operator."""
+
+    user: str
+    board_model: str
+    made_it: bool
+
+
 # Who acts in this thread or job: set by `requires` for the call it checks, and by `AppContext.jobs` for each job from
 # the moment it is submitted, so a job acts as the user who started it whoever signs in meanwhile (#177).
 _ACTING: contextvars.ContextVar[tuple[AppContext, Actor] | None] = contextvars.ContextVar("aoi_acting", default=None)
@@ -580,13 +591,17 @@ class AppContext:
 
     def start_user(self, setting_up: bool = False) -> str:
         """The name of the user a start signs in. In the demo workspace (`main.py --demo`, the Demo shortcut) and while
-        the station is set up (no board model yet): the first user the table holds as Admin. Otherwise the user who
-        signed in last on this station (`last_signed_in`), else 'operator'. Without either (a table edited outside the
-        app), the first user of the lowest stored role. Its role is the stored one, whatever the name (#197)."""
+        the station is set up (no board model yet): the first user the table holds as Admin. While the first-run guide
+        sets the station up, with no AI model active and no board inspected, the user who started it (`guide_starter`,
+        B5, Q75). Otherwise the user who signed in last on this station (`last_signed_in`), else 'operator'. Without
+        either (a table edited outside the app), the first user of the lowest stored role. Its role is the stored one,
+        whatever the name (#197)."""
         users = self.db.users()  # never empty: the database seeds operator, engineer and admin
         if setting_up or demo.is_demo(self.settings.root):
             if admin := next((u for u in users if u["role"] == "Admin"), None):
                 return str(admin["name"])
+        if (started := self.guide_starter()) is not None:
+            return started.user
         # once users can be disabled (REQ-USR-006), a disabled one is never signed in at a start
         if (last := self.last_signed_in()) is not None:
             return last
@@ -594,6 +609,36 @@ class AppContext:
             return "operator"
         rank = {r: i for i, r in enumerate(ROLES)}
         return str(min(users, key=lambda u: rank.get(u["role"], len(ROLES)))["name"]) if users else "operator"
+
+    def guide_starter(self) -> GuideStarter | None:
+        """While the station is set up, with no AI model active and no board inspected on any board model, and the
+        first-run guide shows for one (`guide_step`): the user who made it, the newest made of them, so a restart goes
+        on as the user who started the guide, not one who cannot (B5, Q75; until ADR 0002's sign-in). The user as the
+        users table holds them now, else its first Admin when they are gone or now an Operator. None otherwise. A board
+        model whose guide step cannot be read is passed over, logged, so choosing the user never refuses the workspace;
+        Home still reads that board model when the header selects it, as before. Writes nothing."""
+        names = self.db.board_models()
+        if any(self.db.active_model(b) is not None or self.db.inspection_counts(b)[0] for b in names):
+            return None  # a station in use: Golden board comparison inspects with no AI model
+        users = self.db.users()
+        for entry in self.db.audit_entries("board_model", action="board_model.create"):  # newest first
+            board_model = str(entry["object_uuid"])
+            try:
+                step = self.guide_step(board_model) if board_model in names else None
+            except Exception:
+                self.log.warning("guide_starter.skipped", exc_info=True, extra={"board_model": board_model})
+                continue
+            if step is None:
+                continue
+            maker = next((u for u in users if u["uuid"] == entry["user_uuid"] and u["role"] != "Operator"), None)
+            user = maker or next((u for u in users if u["role"] == "Admin"), None)
+            return None if user is None else GuideStarter(str(user["name"]), board_model, maker is not None)
+        return None
+
+    def usb_drive(self) -> Path | None:
+        """The USB drive plugged in last of those mounted now, in the order the app saw them (`aoi.hal.drives`), where
+        the first-run guide's dialogs open (B5, Q68); None with none. Writes nothing."""
+        return drives.last_plugged()
 
     def sign_in(self, name: str, start: bool = False) -> None:
         """Sign `name` in: `set_user`, then an audit entry naming them and their role. As a person does with Switch

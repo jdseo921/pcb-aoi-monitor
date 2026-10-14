@@ -41,11 +41,14 @@ from tests.conftest import TrainedModel
 from tests.regression import make_regression_set as rs
 from tools.update_translations import TS_FILE, qt_tool
 
-# The Charter's "Words we use": the "Not" column of each term, and the words its plain-words rule bans.
+# The Charter's "Words we use": the "Not" column of each term, and the words its plain-words rule bans; the last line
+# is the Not column of the terms the first-run guide added on 2026-10-14 (B5, Q77)
 BANNED = [
     "product type", "part number", "master image", "test image", "program", "job", "zone", "window", "pass", "fail",
     "warning", "priority", "error", "false alarm", "overkill", "escape", "false OK", "limit", "cut-off", "cutoff",
     "learning", "test run", "machine", "cell", "project", "z-score", "fatal", "illegal", "invalid",
+    "board version", "angle", "face", "pilot", "beta", "approved", "certified", "start-up check", "client",
+    "backup key",
 ]  # fmt: skip
 JARGON = ["SSIM", "inlier"]  # engineering words an Operator's sentence never uses (Charter, "Plain words")
 LONE_MODEL = re.compile(r"(?<!AI )(?<!board )\bmodels?\b", re.IGNORECASE)  # "model" alone: AI model or board model

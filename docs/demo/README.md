@@ -8,7 +8,7 @@ script says what to click and what to say, minute by minute. Names in bold are t
 | [stage1-5min.md](stage1-5min.md) | 5 minutes | Every first meeting. It must never go wrong, so rehearse it before every demo |
 | [stage1-15min.md](stage1-15min.md) | 15 minutes | The 5-minute script, then training on the customer's OK images, checking on their NG samples, and a threshold tuned live |
 | [stage1-45min.md](stage1-45min.md) | 45 minutes | The 15-minute script, then recipes, AI model versions and how their data is handled |
-| [for-clients.md](for-clients.md) | 1 page | The customer's handout: what they saw, what Stage 1 needs from them, and what they keep |
+| [for-customers.md](for-customers.md) | 1 page | The customer's handout: what they saw, what Stage 1 needs from them, and what they keep |
 
 Korean drafts of each file are in [ko/](ko/), marked for review by a native speaker before they go to a customer.
 
