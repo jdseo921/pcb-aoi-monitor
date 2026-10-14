@@ -1,9 +1,10 @@
 """REQ-TRN-004, REQ-TRN-005, REQ-TRN-012 and REQ-TST-008 for B1 of the 2026-10 business-readiness brief (decision D1;
 ADR 0020): one person freezes, splits and locks a Trial dataset version and trains from it, with no second user's label
 check and no agreement check. The version and every AI model trained from it are marked Trial wherever they are named;
-the go-live gate and the customer validation report refuse them, with a plain message and Start the Checks; the
-Validated path keeps today's checks and is marked Validated. Results on synthetic boards prove a code path; they are
-never quoted as accuracy."""
+a Trial AI model goes live while no Validated one has, and never replaces one (ADR 0020, decision 4, as Jay decided on
+2026-10-14); the go-live gate then, and the customer validation report always, refuse it with a plain message and
+Start the Checks; the Validated path keeps today's checks and is marked Validated. Results on synthetic boards prove a
+code path; they are never quoted as accuracy."""
 
 from __future__ import annotations
 
@@ -20,7 +21,7 @@ from pytestqt.qtbot import QtBot
 from aoi.core import datasets, explain
 from aoi.core.imaging import save_image
 from aoi.core.labels import DefectBox
-from aoi.core.services import AppContext, ErrorReport
+from aoi.core.services import FIRST_LIVE, AppContext, ErrorReport
 from aoi.errors import AoiError
 from aoi.ui import errors as ui_errors
 from aoi.ui.main_window import MainWindow
@@ -41,7 +42,8 @@ from tools.trainable import trainable
 ONE = "ONE-1"  # a board model one person works alone
 TRIAL_LINE = (
     "Trial: one person froze DS-ONE1-R1-TOP-v1 without a second person checking its labels or an agreement check, so"
-    " this AI model cannot go live or back a customer validation report."
+    " this AI model can judge boards only while no Validated AI model of its board model has gone live, and cannot"
+    " back a customer validation report."
 )
 
 
@@ -69,6 +71,22 @@ def trial_trained(ctx: AppContext, folder: Path) -> tuple[dict[str, Any], dict[s
     version = ctx.freeze_dataset(ONE, "Top", "R1", "Acme", trial=True)
     ctx.lock_validation_set(version["uuid"], seed=1)
     return version, ctx.train(version["uuid"], epochs=1, image_size=32)
+
+
+def kept_inactive(ctx: AppContext) -> None:
+    """ONE-1's AI models all inactive, as a Trial AI model trained before Live until Validated was left by the go-live
+    gate of the time (ADR 0020, decision 4 as first written)."""
+    ctx.db.execute("UPDATE models SET active=0 WHERE board_model=?", (ONE,))
+
+
+def validated_live(ctx: AppContext, version: dict[str, Any]) -> dict[str, Any]:
+    """A Validated version of ONE-1 that holds `version`'s locked validation images back too, trained and made active
+    by hand: the metadata of its training."""
+    split = cast(dict[str, Any], ctx.validation_split(version["uuid"]))
+    locked = {i["sample_uuid"] for i in ctx.dataset_items(version["uuid"]) if i["uuid"] in split["validation"]}
+    meta = ctx.train(trainable(ctx, ONE, customer="Acme", held=locked), epochs=1, image_size=32)
+    ctx.activate_model(int(next(m for m in ctx.models(ONE) if m["version"] == meta["version"])["id"]))
+    return meta
 
 
 def refusal(call: Any, *args: Any, **kwargs: Any) -> AoiError:
@@ -104,33 +122,33 @@ def test_req_trn_004_one_person_freezes_splits_and_locks_a_trial_version(ctx: Ap
     assert ctx.datasets(ONE)[0]["assurance"] == "Trial"
 
 
-def test_req_trn_012_a_trial_ai_model_is_marked_trial_and_the_go_live_gate_refuses_it(
+def test_req_trn_012_a_trial_ai_model_is_marked_trial_and_goes_live_while_no_validated_one_has(
     ctx: AppContext, tmp_path: Path
 ) -> None:
     """The same person trains from the Trial version: its AI model is v1.0 (Trial), in its files' names as v1.0-trial,
     its card's first line says in plain words what Trial means, and its model.train entry names it Trial. As a board
-    model's first AI model it is not made live: the go-live gate refuses it with AOI-TRN-052, naming the board model
-    and view Start the Checks opens, with no activation entry, here and when activated by hand. A second AI model of
-    the version is v1.1 (Trial)."""
+    model's first AI model it goes live when trained, audited as an activation with the first AI model's reason (ADR
+    0018; ADR 0020, decision 4, "Live until Validated"). A second AI model of the version is v1.1 (Trial) and installs
+    inactive, as every later one does; with no Validated one live, it is activated by hand and rolled back like any."""
     version, meta = trial_trained(ctx, tmp_path / "boards")
-    assert (meta["version"], meta["assurance"], meta["activated"]) == ("v1.0 (Trial)", "Trial", False)
-    not_live = cast(AoiError, meta["not_live"])
-    assert not_live.code == "AOI-TRN-052" and not_live.params["board"] == ONE and not_live.params["view"] == "Top"
-    assert not_live.params["dataset"] == version["name"]
+    assert (meta["version"], meta["assurance"], meta["activated"]) == ("v1.0 (Trial)", "Trial", True)
+    assert meta["not_live"] is None
     [model] = ctx.models(ONE)
-    assert Path(model["path"]).name == "ONE-1_v1.0-trial.pt" and ctx.active_model(ONE) is None
+    assert Path(model["path"]).name == "ONE-1_v1.0-trial.pt"
+    assert cast(dict[str, Any], ctx.active_model(ONE))["version"] == "v1.0 (Trial)" and ctx.inactive_model(ONE) is None
+    assert ctx.validated_live(ONE) is None
     card = ctx.model_card(int(model["id"])) or {}
     assert card["first_line"].startswith(TRIAL_LINE) and card["identity"]["assurance"] == "Trial"
     assert (ctx.card_text(int(model["id"])) or "").startswith(f"# Model card: ONE-1 v1.0 (Trial)\n\n**{TRIAL_LINE}")
     [trained] = ctx.audit_entries(action="model.train")
     assert (trained["after"]["version"], trained["after"]["assurance"]) == ("v1.0 (Trial)", "Trial")
-    assert ctx.audit_entries(action="model.activate") == []
-    assert cast(dict[str, Any], ctx.inactive_model(ONE))["version"] == "v1.0 (Trial)"
-    by_hand = refusal(ctx.activate_model, int(model["id"]))
-    assert by_hand.code == "AOI-TRN-052" and str(by_hand.what) == str(not_live.what)
-    assert ctx.active_model(ONE) is None and ctx.audit_entries(action="model.activate") == []
+    [live] = ctx.audit_entries(action="model.activate")
+    assert (live["after"]["active_version"], live["reason"]) == ("v1.0 (Trial)", FIRST_LIVE)
     again = ctx.train(version["uuid"], epochs=1, image_size=32)
-    assert again["version"] == "v1.1 (Trial)" and not again["activated"]
+    assert (again["version"], again["activated"], again["not_live"]) == ("v1.1 (Trial)", False, None)
+    ctx.activate_model(int(ctx.models(ONE)[0]["id"]))
+    assert cast(dict[str, Any], ctx.active_model(ONE))["version"] == "v1.1 (Trial)"
+    assert ctx.rollback_model(ONE)["version"] == "v1.0 (Trial)"
 
 
 def test_req_trn_004_the_validated_path_keeps_its_checks_and_is_marked_validated(
@@ -231,25 +249,44 @@ def test_req_trn_005_freeze_sheet_offers_trial_and_the_versions_table_names_it(
     assert sheet.validated.isChecked() and sheet.btn_now.text() == "Freeze"
 
 
-def test_req_trn_012_start_the_checks_from_the_refusal_and_inspection(
+def test_req_trn_012_start_the_checks_from_the_refusal_and_activate_on_inspection(
     qtbot: QtBot, ctx: AppContext, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Activate Selected on a Trial AI model shows AOI-TRN-052 with Start the Checks beside OK; Start the Checks opens
-    Training on the board model's Samples tab with Show Unchecked. Inspection's model line names the Trial AI model and
-    its button is Start the Checks, which opens the same."""
-    trial_trained(ctx, tmp_path / "boards")
+    """A Trial AI model that waits with none active, as one trained before Live until Validated was left, is named on
+    Inspection's model line with Activate, which makes it live, and What is missing's Trial list is done. With a
+    Validated one live, Activate Selected on the Trial AI model shows AOI-TRN-052 with Start the Checks beside OK, which
+    opens Training on the board model's Samples tab with Show Unchecked; Roll Back to it is greyed, saying why; and a
+    Trial AI model trained then is said not to replace the Validated one."""
+    version, _ = trial_trained(ctx, tmp_path / "boards")
+    kept_inactive(ctx)
     win = MainWindow(ctx)
     qtbot.addWidget(win)
     win.show()
     qtbot.waitExposed(win)
     win.set_user("admin")
     win._reload_board_models(ONE)
+    assert win.navigate("Inspection")
+    insp = cast(InspectionPage, win.pages["Inspection"])
+    insp._show_waiting()
+    assert insp.ai_line.text().startswith("AI model v1.0 (Trial) of ONE-1 is trained but not active:")
+    assert insp.btn_activate.text() == "Activate v1.0 (Trial)" and insp.btn_activate.isEnabled()
+    insp.btn_activate.click()
+    assert cast(dict[str, Any], ctx.active_model(ONE))["version"] == "v1.0 (Trial)" and insp.ai_row.isHidden()
+    assert win.navigate("Home")
+    done = cast(Any, win.pages["Home"]).missing_list
+    assert done.trial.isChecked() and done.done_line.text() == (
+        "Nothing a Trial version needs is missing: ONE-1 has an active AI model. Pick Validated to see what a Validated"
+        " version needs."
+    )
+
+    validated_live(ctx, version)
     shown: list[tuple[ErrorReport, tuple[str, Any] | None]] = []
     monkeypatch.setattr(base, "show_error", lambda parent, report, act=None: shown.append((report, act)))
     assert win.navigate("Training")
     page = cast(TrainingPage, win.pages["Training"])
-    assert base.cell_text(page.models, 0, 1) == "v1.0 (Trial)"
-    page.models.selectRow(0)
+    page.refresh()
+    row = next(r for r in range(page.models.rowCount()) if base.cell_text(page.models, r, 1) == "v1.0 (Trial)")
+    page.models.selectRow(row)
     page.tabs.setCurrentIndex(1)
     page.activate()
     [(report, act)] = shown
@@ -261,20 +298,16 @@ def test_req_trn_012_start_the_checks_from_the_refusal_and_inspection(
     act[1]()
     assert win.stack.currentWidget() is page and page.tabs.currentIndex() == 0
     assert page.filter.currentData() == "Unchecked" and page.samples.rowCount() == 20  # the NG labels to check
-    assert win.navigate("Inspection")
-    insp = cast(InspectionPage, win.pages["Inspection"])
-    insp._show_waiting()
-    assert insp.ai_line.text().startswith("AI model v1.0 (Trial) of ONE-1 is a Trial:")
-    assert insp.btn_activate.text() == "Start the Checks"
-    page.tabs.setCurrentIndex(1)
-    insp.btn_activate.click()
-    assert win.stack.currentWidget() is page and page.tabs.currentIndex() == 0
-    assert ctx.active_model(ONE) is None
-    win.set_user("operator")  # the checks are an Engineer's: the line says so, not who may activate
-    assert win.navigate("Inspection")
-    insp._show_waiting()
-    assert insp.ai_line.text().endswith("Freezing a dataset version needs the Engineer or Admin role.")
-    assert not insp.btn_activate.isEnabled()
+    assert cast(dict[str, Any], ctx.active_model(ONE))["version"] == "v1.1"
+    assert page.btn_rollback.text() == "Roll Back to v1.0 (Trial)" and not page.btn_rollback.isEnabled()
+    assert page.btn_rollback.toolTip().startswith("A Trial AI model never replaces a Validated one")
+    later = {"version": "v1.2 (Trial)", "train_seconds": 1, "board_model": ONE, "assurance": "Trial"}
+    page._on_done({**later, "activated": False, "not_live": None})
+    assert win.statusBar().currentMessage() == (
+        "AI model v1.2 (Trial) trained from a Trial version: Validated AI model v1.1 still judges the boards of ONE-1,"
+        " because a Trial AI model never replaces a Validated one. Start the Checks to freeze a Validated version and"
+        " train from it."
+    )
 
 
 def test_req_trn_012_the_error_dialog_carries_the_step_it_names(qtbot: QtBot) -> None:
@@ -304,14 +337,29 @@ def test_req_trn_012_the_error_dialog_carries_the_step_it_names(qtbot: QtBot) ->
     assert json.loads(json.dumps(sorted(ui_errors.START_CHECKS))) == ["AOI-TRN-052", "AOI-TST-009"]
 
 
-def test_req_trn_012_the_first_validated_ai_model_after_trial_ones_goes_live(ctx: AppContext, tmp_path: Path) -> None:
-    """Trial AI models never go live, so the board model's first Validated one is still its first live one (ADR
-    0018, ADR 0020): trained from a Validated version after two Trial ones, it is active at once, with its entry. A
-    Trial AI model kept inactive is logged as information, never as a failure with a stack trace. A model number a
-    run left a file of is never taken, under either name: v1.1's file makes the next Trial AI model v1.2 (Trial)."""
+def test_req_trn_012_a_validated_ai_model_after_trial_ones_that_did_not_go_live_is_the_first(
+    ctx: AppContext, tmp_path: Path
+) -> None:
+    """With none active, as when the Trial AI models trained before Live until Validated were left inactive, the first
+    Validated AI model trained goes live when its training ends, as a board model's first does (ADR 0018)."""
+    version, _ = trial_trained(ctx, tmp_path / "boards")
+    kept_inactive(ctx)
+    split = cast(dict[str, Any], ctx.validation_split(version["uuid"]))
+    locked = {i["sample_uuid"] for i in ctx.dataset_items(version["uuid"]) if i["uuid"] in split["validation"]}
+    meta = ctx.train(trainable(ctx, ONE, customer="Acme", held=locked), epochs=1, image_size=32)
+    assert (meta["version"], meta["assurance"], meta["activated"]) == ("v1.1", "Validated", True)
+    assert cast(dict[str, Any], ctx.validated_live(ONE))["version"] == "v1.1"
+    assert ctx.audit_entries(action="model.activate")[0]["reason"] == FIRST_LIVE
+
+
+def test_req_trn_012_a_trial_ai_model_never_replaces_a_validated_one(ctx: AppContext, tmp_path: Path) -> None:
+    """With a Trial AI model live, a Validated one installs inactive, as any later version, and What is missing's
+    Validated list offers to activate it; once it is live, the go-live gate refuses a Trial AI model with AOI-TRN-052,
+    activated or rolled back to, naming the board model and view Start the Checks opens, and nothing changes. A model
+    number a run left a file of is never taken, under either name: v1.1's file makes the next AI model v1.2 (Trial)."""
     version, _ = trial_trained(ctx, tmp_path / "boards")
     events = [r["event"] for r in log_rows(ctx.settings.root / "logs")]
-    assert "training.trial_not_live" in events and "training.first_not_live" not in events
+    assert "training.first_not_live" not in events
     folder = Path(ctx.models(ONE)[0]["path"]).parent
     (folder / f"{ONE}_v1.1.pt").write_bytes(b"left by a run that stopped (#178)")
     again = ctx.train(version["uuid"], epochs=1, image_size=32)
@@ -319,20 +367,43 @@ def test_req_trn_012_the_first_validated_ai_model_after_trial_ones_goes_live(ctx
     split = cast(dict[str, Any], ctx.validation_split(version["uuid"]))
     locked = {i["sample_uuid"] for i in ctx.dataset_items(version["uuid"]) if i["uuid"] in split["validation"]}
     validated = ctx.train(trainable(ctx, ONE, customer="Acme", held=locked), epochs=1, image_size=32)
-    assert (validated["version"], validated["assurance"], validated["activated"]) == ("v1.3", "Validated", True)
+    assert (validated["version"], validated["assurance"], validated["activated"]) == ("v1.3", "Validated", False)
+    assert cast(dict[str, Any], ctx.active_model(ONE))["version"] == "v1.0 (Trial)"
+    waits = ctx.missing(ONE, trial=False)
+    assert [n.key for n in waits.needs if not n.done][-1] == "active" and waits.model_id == ctx.models(ONE)[0]["id"]
+    ctx.activate_model(int(ctx.models(ONE)[0]["id"]))
+    assert cast(dict[str, Any], ctx.validated_live(ONE))["version"] == "v1.3"
+    entries = len(ctx.audit_entries(action="model.activate"))
+    trial = next(m for m in ctx.models(ONE) if m["version"] == "v1.2 (Trial)")
+    for call, arg in ((ctx.activate_model, int(trial["id"])), (ctx.rollback_model, ONE)):
+        e = refusal(call, arg)
+        assert (e.code, e.params["board"], e.params["view"]) == ("AOI-TRN-052", ONE, "Top")
+        assert e.params["dataset"] == version["name"]
+        said = "of board model ONE-1 was not made active: a Validated AI model already judges the boards of ONE-1,"
+        assert str(e.what).startswith(f"AI model {e.params['version']} {said} and a Trial AI model never replaces one.")
     assert cast(dict[str, Any], ctx.active_model(ONE))["version"] == "v1.3"
-    [entry] = ctx.audit_entries(action="model.activate")
-    assert entry["after"]["active_version"] == "v1.3"
+    assert len(ctx.audit_entries(action="model.activate")) == entries and not ctx.audit_entries(action="model.rollback")
+    live = cast(dict[str, Any], ctx.active_model(ONE))
+    meta = json.loads(live["metrics"])
+    for metrics in (json.dumps({k: v for k, v in meta.items() if k != "assurance"}), "{not json"):
+        ctx.db.execute("UPDATE models SET metrics=? WHERE uuid=?", (metrics, live["uuid"]))  # before 0027, or damaged
+        assert ctx.validated_live(ONE) is not None and not ctx.is_trial(live)
+        assert refusal(ctx.activate_model, int(trial["id"])).code == "AOI-TRN-052"
+    ctx.db.execute("UPDATE models SET metrics=? WHERE uuid=?", (live["metrics"], live["uuid"]))
+    later = ctx.train(version["uuid"], epochs=1, image_size=32)
+    assert (later["version"], later["activated"], later["not_live"]) == ("v1.4 (Trial)", False, None)
 
 
-def test_req_trn_012_no_screen_offers_activate_for_a_trial_ai_model(
+def test_req_trn_012_screens_offer_activate_for_a_trial_ai_model_that_waits(
     qtbot: QtBot, ctx: AppContext, tmp_path: Path
 ) -> None:
-    """Where a screen names a Trial AI model that waits, it says it does not go live and points to the checks, never to
-    Activate, which the go-live gate refuses: Home's step card, AI Model Test's empty state, Compare's note on a board
-    judged without it, and Training's line for a later Trial AI model. AI Model Test's source list and history name a
-    Trial version so, which its report and CSV then carry."""
+    """Where a screen names a Trial AI model that waits with none active, it offers Activate, as for any version, since
+    no Validated one has gone live: Home's step card, AI Model Test's empty state and Compare's note on a board judged
+    without it. AI Model Test's source list and history name a Trial version so, which its report and CSV then carry.
+    Training's version line and the Freeze sheet say a Trial AI model can judge boards only while no Validated one has
+    gone live."""
     version, _ = trial_trained(ctx, tmp_path / "boards")
+    kept_inactive(ctx)
     win = MainWindow(ctx)
     qtbot.addWidget(win)
     win.show()
@@ -341,23 +412,23 @@ def test_req_trn_012_no_screen_offers_activate_for_a_trial_ai_model(
     win._reload_board_models(ONE)
     assert win.navigate("Home")
     home = cast(Any, win.pages["Home"])
-    assert home.status_labels["Train AI model"].text() == (
-        "AI model v1.0 (Trial) is a Trial and does not go live. Start the Checks on Training for a Validated version."
-    )
+    step = "AI model v1.0 (Trial) trained, not active. Activate it on Training."
+    assert home.status_labels["Train AI model"].text() == step
     assert win.navigate("AI Model Test")
     test = cast(ModelTestPage, win.pages["AI Model Test"])
-    assert test.empty.sentence.text().startswith("It is a Trial and does not go live. Start the Checks on Training.")
+    assert test.empty.sentence.text().startswith("Activate it on Training.")
     assert test.source.itemText(0).startswith(f"{version['name']} (Trial): its locked validation set, ")
     judged = cast(explain.InspectionResult, type("Judged", (), {"notes": [explain.NO_AI_NOTE]})())
     [note] = explain.notes(judged, inactive="v1.0 (Trial)")
-    assert note.template == explain.TRIAL_AI_NOTE and "Activate" not in note.template
-    [plain] = explain.notes(judged, inactive="v1.0")
-    assert plain.template == explain.INACTIVE_AI_NOTE
+    assert note.template == explain.INACTIVE_AI_NOTE and note.values == {"version": "v1.0 (Trial)"}
     assert win.navigate("Training")
     page = cast(TrainingPage, win.pages["Training"])
-    later = {"version": "v1.1 (Trial)", "train_seconds": 1, "board_model": ONE, "assurance": "Trial"}
-    page._on_done({**later, "activated": False, "not_live": None})
-    assert win.statusBar().currentMessage() == (
-        "AI model v1.1 (Trial) trained from a Trial version: it does not go live, so ONE-1 is judged as before. Start"
-        " the Checks to freeze a Validated version and train from it."
+    page.dataset_version.setCurrentIndex(page.dataset_version.findData(version["uuid"]))
+    assert page.version_line.text().startswith(
+        "Trial version: an AI model trained from it is marked Trial and can judge boards only while no Validated AI"
+        " model has gone live."
+    )
+    assert page.working.sheet.trial_line.text() == (
+        "A Trial version and every AI model trained from it are marked Trial: such an AI model can judge boards only"
+        " while no Validated AI model has gone live, and never backs a customer validation report."
     )

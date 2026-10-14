@@ -53,9 +53,10 @@ refuses.
    70 OK and 1 NG are 71 images, and a calibration set draws 100, so without the line a Validated board model would show
    every image line met and an agreement check it cannot run; it holds back the agreement check alone, so once a check
    reached its targets, fewer images later do not grey Freeze Dataset….
-4. **Trial lists what Trial needs.** A Trial version needs no second-user check and no agreement check (ADR 0020), and
-   its AI model never goes live, so its list ends at a trained AI model, of either kind. The Validated list counts only
-   Validated versions, AI models trained from them and an active one that is not a Trial AI model. With no kind picked,
+4. **Trial lists what Trial needs.** A Trial version needs no second-user check and no agreement check (ADR 0020), so
+   its list ends at a trained AI model and an active one, each of either kind, as a Trial AI model goes live while no
+   Validated one has (ADR 0020, decision 4, as Jay decided on 2026-10-14). The Validated list counts only Validated
+   versions, AI models trained from them and an active one that is not a Trial AI model. With no kind picked,
    the list is of the newest version's kind, Validated before the first freeze; Validated or Trial on a list picks the
    other for that list, Home's and Training's each, kept while the board model stays in the header.
 5. **One view.** The counts are of the view of the newest version of the list's kind whose validation set is locked and
@@ -85,8 +86,8 @@ refuses.
    window: were it taller, the area round the pages would be as tall, and the page opened after Home would be laid out
    at that height before its own (a press on Compare's Try panel at that moment missed it). Training: a third tab, What is missing, after Samples and
    Datasets, in an area that scrolls rather than make the page taller; the list is read again whenever the tab is shown
-   and on every refresh of the page while it is. Once the list's AI model is there (an active one, or for a Trial list a
-   trained one), the line above the list says so and counts what a next version still needs.
+   and on every refresh of the page while it is. Once the list's AI model is there (an active one, of either kind for a
+   Trial list), the line above the list says so and counts what a next version still needs.
 
 ## Consequences
 

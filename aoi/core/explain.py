@@ -8,7 +8,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from . import datasets
 from .inspector import (
     AI_OFF_NOTE,
     NG,
@@ -122,11 +121,6 @@ INACTIVE_AI_NOTE = QT_TRANSLATE_NOOP(  # NO_AI_NOTE on a board just inspected wh
     "AI model {version} is trained for this board model but not active, so the AI check did not run: an Engineer"
     " activates it on Inspection or Training.",
 )
-TRIAL_AI_NOTE = QT_TRANSLATE_NOOP(  # the same of a Trial AI model, which never goes live (ADR 0020)
-    "Explain",
-    "AI model {version} is a Trial, trained from labels no second person checked, so it does not go live and the AI"
-    " check did not run: an Engineer starts the checks on Training for a Validated version.",
-)
 STORED_NOTES = {  # on a stored result, said of the day it was inspected rather than of today (S28b)
     NO_GOLDEN_NOTE: QT_TRANSLATE_NOOP(
         "Explain",
@@ -153,7 +147,7 @@ OTHER_NOTE = QT_TRANSLATE_NOOP("Explain", "Note: {note}")
 UNITS = {"Changed area %": "%", "Difference regions": "", "Alignment inliers": "", "ROI": "×"}  # "" = a count
 TEMPLATES = [  # every template a screen may translate, for the tests
     *CHECKS.values(), *ROI_CHECK.values(), OTHER_CHECK, ALL_INSIDE, SEVERE_DEFECT, SEVERE_DEFECTS, UNEXPLAINED,
-    *NOTES.values(), INACTIVE_AI_NOTE, TRIAL_AI_NOTE, *STORED_NOTES.values(), OTHER_NOTE,
+    *NOTES.values(), INACTIVE_AI_NOTE, *STORED_NOTES.values(), OTHER_NOTE,
     TRIED_SEVERE_DEFECT, TRIED_SEVERE_DEFECTS, TRIED_AI_OFF,
 ]  # fmt: skip
 
@@ -216,13 +210,11 @@ def notes(
     """One sentence per check that did not run, from the notes the engine stored with `res`, in plain words with what
     to do (for a `stored` result, what was set when it was inspected); a note this build does not know shows as
     written. On a result not `stored`, no AI model is named as the `inactive` version, trained but not active, when
-    one is given (decision D3): "No AI model is trained" would be untrue of it; a Trial one, named so, as never going
-    live (ADR 0020)."""
+    one is given (decision D3): "No AI model is trained" would be untrue of it."""
     said = {**NOTES, **STORED_NOTES} if stored else NOTES
     if tried:  # `re_grade` notes an AI check the recipe tried turns off, whether or not it ran when inspected (#246)
         said = {**said, AI_OFF_NOTE: TRIED_AI_OFF}
-    note = TRIAL_AI_NOTE if inactive and inactive.endswith(datasets.TRIAL_MODEL) else INACTIVE_AI_NOTE
-    waiting = {} if stored or not inactive else {NO_AI_NOTE: Sentence(note, {"version": inactive})}
+    waiting = {} if stored or not inactive else {NO_AI_NOTE: Sentence(INACTIVE_AI_NOTE, {"version": inactive})}
     return [
         waiting.get(n) or (Sentence(said[n]) if n in said else Sentence(OTHER_NOTE, {"note": n})) for n in res.notes
     ]

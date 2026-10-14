@@ -54,8 +54,9 @@ so its words are taken from Jay's message.
   recipe's "Use the self-trained AI model" tick, off and saved as a recipe revision, and Set Reference for the Golden
   board; both are audited.
 - **Accepted risk.** A poisoned first dataset reaches the line without an Engineer's second look at the version. What
-  stands against it: the label checks, the agreement check and the freeze the version had to pass, the AI check adding
-  calls rather than removing them, the audit entry, and the shift check where it is on (threat model, page 2).
+  stands against it: the label checks, the agreement check and the freeze a Validated version had to pass, the AI check
+  adding calls rather than removing them, the audit entry, and the shift check where it is on (threat model, page 2).
+  A Trial first version passed neither check; ADR 0020 (decision 4) accepts that risk apart.
 - **Upgrade.** Nothing changes at the upgrade: a version trained before stays inactive and is named with Activate. No
   schema change. The synthetic regression set runs with no AI model, so its `expected.json` is unchanged.
 - **Tools.** `tools/render_screens.py`, `tools/soak.py` and `tools/make_demo_bundle.py` activate a version only when

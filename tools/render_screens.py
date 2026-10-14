@@ -60,6 +60,7 @@ FIXED_MS = 480.0  # the inspection time Inspection and Compare show
 FIXED_SSIM, FIXED_INLIERS = 0.95, 400  # the similarity and alignment points Compare shows (module docstring)
 SETTLE_MS = 40  # past the 20 ms after which Qt resizes a list to its contents (`settle`)
 SETTLE_PASSES = 100  # event loop passes a page may take to lay itself out before a grab
+CLEAR_BUTTON_WAIT_S = 10  # at most: a field's clear button fades in over about 300 ms (Qt's QLineEdit), more under load
 PAGE_VIEWS = {  # <page>-<view>-<role>
     "Training": ("datasets", "freeze", "split", "blind", "missing"),
     "Settings": ("advanced", "restore", "move-in", "shred"),
@@ -502,6 +503,25 @@ def new_board_model_dialog(win: Any, step: str) -> Any:
     return dialog
 
 
+def clear_buttons_still(root: Any) -> None:
+    """Wait until the clear button of each field under `root` has ended its fade: whole in a field that holds text,
+    gone in an empty one. Qt fades it over about 300 ms, longer on a loaded machine, where a fixed wait fell short."""
+    from PySide6.QtTest import QTest
+    from PySide6.QtWidgets import QLineEdit, QToolButton
+
+    buttons = [b for b in root.findChildren(QToolButton) if b.metaObject().className() == "QLineEditIconButton"]
+
+    def still() -> bool:
+        return all(
+            float(b.property("opacity")) == (1.0 if isinstance(f := b.parent(), QLineEdit) and f.text() else 0.0)
+            for b in buttons
+        )
+
+    deadline = time.monotonic() + CLEAR_BUTTON_WAIT_S
+    while not still() and time.monotonic() < deadline:
+        QTest.qWait(20)
+
+
 def store_key_dialog(win: Any) -> Any:
     """Settings' New Store… recovery key dialog for `pinned_store` (ADR 0021)."""
     from aoi.ui.pages.recovery_key import RecoveryKeyDialog
@@ -519,6 +539,7 @@ def render_dialogs(win: Any, out: Path) -> dict[str, Path]:
         settle()
         if (focus := dialog.focusWidget()) is not None:
             focus.clearFocus()  # no caret, which blinks, in the image
+        clear_buttons_still(dialog)  # the customer's clear button whole, as it fades in after the text is set
         settle()
         files[name] = out / f"{name}.png"
         assert dialog.grab().save(str(files[name])), files[name]

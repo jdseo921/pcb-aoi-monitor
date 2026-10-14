@@ -42,6 +42,7 @@ B4 on B3.
 | B4 (D4 part, F9) | A board model's name is checked where it is entered, with the rule freeze applies (AOI-TRN-039): a name with no Latin letter or digit, such as a Korean-only one, is refused at entry with AOI-TRN-054, whose message says what a valid name looks like | #409, stacked on #408 | Merged 2026-10-14 |
 | B4 follow-up (Jay's decision, 2026-10-13 19:58 UTC) | A new name that reads the same as an existing one on a screen (case, full-width letters or digits, a no-break or zero-width space, a decomposed Hangul syllable set aside) is refused at entry with AOI-TRN-055, and one whose letters A to Z and digits are an existing name's, which freeze refused only once the other had a version (AOI-TRN-040), with AOI-TRN-056 | #410, stacked on #409 | Merged 2026-10-14 |
 | B5 (D4) | The sketch of the first-run guide on Home for one person, with the click count of both acceptance cases and the decisions it needs from Jay (Q63 to Q80); no code until Jay decides | #411, stacked on #410 (docs only) | Decided by Jay and merged 2026-10-14; the guide is built next |
+| B5 build, part 1 (Q63) | "Live until Validated": a Trial AI model goes live while no Validated one has, a board model's first included, and never replaces one; every screen that said a Trial AI model does not go live now offers Activate, and What is missing's Trial list ends at an active AI model | #412 | Open, for Jay's review |
 
 Choices made in Phase B, each recorded in its ADR:
 
@@ -49,14 +50,13 @@ Choices made in Phase B, each recorded in its ADR:
   customer's store is not made (AOI-TRN-053, which says why and that nothing was made), and the install guide says so
   too. The refusal reads a flag that only the station's own memory key store sets, so the tests on Linux CI, which keep
   their keys, are unaffected (ADR 0021, decision 4).
-- **A Trial AI model never goes live (B1), as built.** Jay's message says the go-live gate refuses a Trial version.
-  Jay decided the card of 2026-10-13 06:15 UTC on 2026-10-14 through Q63 of the first-run guide: "Live until
-  Validated", to be built with the guide (ADR 0020, decision 4). The first AI model trained from a Validated
-  version after Trial ones goes live, as a board model's first does (ADR 0018).
+- **A Trial AI model goes live until a Validated one has (B1, then B5).** B1 built "Never live", as Jay's message said
+  the go-live gate refuses a Trial version. Jay decided the card of 2026-10-13 06:15 UTC on 2026-10-14 through Q63 of
+  the first-run guide: "Live until Validated", built in #412 (ADR 0020, decision 4). A Validated AI model trained
+  while a Trial one is live installs inactive, as any later version; Jay may decide it goes live by itself instead.
 - **What is missing counts per view (B3).** A dataset version is of one view, so 40 Top and 40 Side images do not
   meet the 70. A board model needs 1 NG image or more, which nothing required before, and a Validated one a line of
-  its own for the agreement check's 100 images; a Trial list ends at a trained AI model, since a Trial AI model
-  never goes live. Each button waits only for what its own step checks, so images added after a freeze never grey
+  its own for the agreement check's 100 images; a Trial list ends at an active AI model, of either kind, since #412. Each button waits only for what its own step checks, so images added after a freeze never grey
   the version frozen before (ADR 0022).
 - **A new code for a name refused at entry (B4).** AOI-TRN-054 says what to type now; AOI-TRN-039 stays for a
   board model made before the rule, which keeps its name and is refused only at freeze, as before. "기판 2호" is

@@ -215,8 +215,8 @@ class FreezeSheet(QGroupBox):
         lay.addWidget(self.files_line)
         self.trial_line = QLabel(
             self.tr(
-                "A Trial version and every AI model trained from it are marked Trial: such an AI model does not go live"
-                " or back a customer validation report until a Validated version is frozen and trained."
+                "A Trial version and every AI model trained from it are marked Trial: such an AI model can judge boards"
+                " only while no Validated AI model has gone live, and never backs a customer validation report."
             )
         )
         self.trial_line.setWordWrap(True)
