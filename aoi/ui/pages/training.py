@@ -979,6 +979,21 @@ class TrainingPage(Page):
         self.worker.signals.finished.connect(self._finished)
         keep(self.worker, self.ctx.jobs)
 
+    def follow_guide(self, job: Job[dict[str, Any]]) -> None:
+        """Show the first-run guide's Train here as this page's own run is shown (REQ-TRN-008; B5): its line, bar and
+        notes, and Cancel, which stops it as the guide's Cancel does; what it made, or a refusal, is the guide's to say,
+        and the page is read again at its end."""
+        self.worker = Worker.of(job)
+        self.worker.signals.progress.connect(self._on_progress)
+        self.worker.signals.result.connect(lambda _made: self.refresh())
+        self.worker.signals.finished.connect(self._finished)
+        keep(self.worker, self.ctx.jobs)
+        self.log.clear()
+        self.bar.setValue(0)
+        self.phase_line.setText("")
+        self.btn_train.setEnabled(False)
+        self.btn_stop.setEnabled(True)
+
     def stop(self) -> None:
         """Cancel: the run stops after the image, training step or map in hand, and saves nothing (REQ-TRN-008)."""
         if self.worker:
@@ -1028,7 +1043,12 @@ class TrainingPage(Page):
             show_error(self, report, self.error_act(not_live) if isinstance(not_live, BaseException) else None)
 
     def _finished(self) -> None:
-        if self.worker is not None and self.worker.job.cancelled and self.worker.job.result is None:  # Cancel (#171)
+        job = self.worker.job if self.worker is not None else None
+        if job is not None and job.cancelled and job.result is None and job.name == "guide_train":  # its parts kept
+            self.log.appendPlainText(
+                self.tr("Train was cancelled. What it had done is kept, and the next Train goes on from there.")
+            )
+        elif job is not None and job.cancelled and job.result is None:  # Cancel (#171)
             self.log.appendPlainText(self.tr("Cancelled: no AI model was saved; the active AI model is unchanged."))
         self.phase_line.setText("")
         self.btn_stop.setEnabled(False)

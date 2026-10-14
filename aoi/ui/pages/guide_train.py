@@ -20,7 +20,7 @@ import math
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 
-from PySide6.QtCore import Signal
+from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QAction, QKeySequence
 from PySide6.QtWidgets import QHBoxLayout, QLabel, QLineEdit, QVBoxLayout, QWidget
 
@@ -60,10 +60,17 @@ class GuideTrain(QWidget):
         self.board_model: str | None = None
         self.view = "Top"  # the view of the images Train trains on, and Inspection's after it
         self.worker: Worker | None = None  # the Train this screen started, followed to its end
+        self.run_for: str | None = None  # the board model that Train is for
+        self.stopping = False  # Cancel pressed: the line says so until the run ends
         lay = QVBoxLayout(self)
         lay.setContentsMargins(0, 0, 0, 0)
         self._before(lay)
         self._result(lay)
+        self.said = QLabel()  # a refusal with its code, as Train is pressed or in any part of its run, or a Cancel
+        self.said.setWordWrap(True)
+        self.said.hide()
+        self.said_for: str | None = None  # the board model it speaks of: said on that board model's screen only
+        lay.addWidget(self.said)
 
     # --- the layout ---------------------------------------------------------------------------------------------
     def _before(self, lay: QVBoxLayout) -> None:
@@ -93,15 +100,12 @@ class GuideTrain(QWidget):
         self.revision_line.setWordWrap(True)
         self.revision_line.hide()
         before.addWidget(self.revision_line)
-        self.said = QLabel()  # a refusal of Train with its code, or what a Cancel kept
-        self.said.setWordWrap(True)
-        self.said.hide()
-        before.addWidget(self.said)
         self.btn_train = size_class(button(self.tr("Train  Enter"), "primary", self.train), "T+")
         PressSays(self.btn_train, self._train_off, self.status)
         train = QAction(self.tr("Train"), self.before)  # its text for F1's list (`keys`)
         train.setShortcuts([QKeySequence(k) for k in ENTER])
         train.triggered.connect(self.train)
+        train.setShortcutContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)  # with the focus on this part only
         self.before.addAction(train)  # while the screen before Train's end shows
         row = QHBoxLayout()
         row.addStretch(1)
@@ -157,8 +161,9 @@ class GuideTrain(QWidget):
         inspect = QAction(self.tr("Inspect a Board…"), self.result)  # its text for F1's list (`keys`)
         inspect.setShortcuts([QKeySequence(k) for k in ENTER])
         inspect.triggered.connect(self.inspect)
+        inspect.setShortcutContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)  # with the focus on this part only
         self.result.addAction(inspect)  # while what Train made shows
-        self.btn_logs = button(self.tr("Open Logs & Export ›").replace("&", "&&"), slot=self.open_logs)
+        self.btn_logs = button(self.tr("Open Logs & Export ›"), slot=self.open_logs)  # button() keeps the & as written
         self.btn_checks = button(self.tr("Start the Checks ›"), slot=self.start_checks)
         row = QHBoxLayout()
         for b in (self.btn_inspect, self.btn_logs, self.btn_checks):
@@ -173,12 +178,18 @@ class GuideTrain(QWidget):
         """Screen 3 for `board_model`: before Train, with its line while it runs, or what it made; afresh for another
         board model."""
         if board_model != self.board_model:
-            self.said.hide()
             self.revision.blockSignals(True)
             self.revision.setText(FIRST_REVISION)
             self.revision.blockSignals(False)
         self.board_model = board_model
+        self.said.setVisible(self.said_for == board_model)
         self.refresh()
+
+    def forget(self) -> None:
+        """For the next user signed in: the board revision back to R1, and no line said of a Train before."""
+        self.revision.setText(FIRST_REVISION)
+        self.said.hide()
+        self.said_for = None
 
     def refresh(self) -> None:
         bm = self.board_model
@@ -189,7 +200,7 @@ class GuideTrain(QWidget):
         self.before.setVisible(made is None)
         self.result.setVisible(made is not None)
         self.run_row.setVisible(running)
-        if running and self.ctx.training_progress is not None:
+        if running and self.ctx.training_progress is not None and not self.stopping:
             self._progress((self.ctx.training_progress,))
         if made is None:
             self._show_plan(bm)
@@ -309,23 +320,31 @@ class GuideTrain(QWidget):
             self.status(self._train_off())
             return
         self.said.hide()
+        self.said_for, self.run_for, self.stopping = None, bm, False
         try:
             self.ctx.start_guide_train(bm, self.view, self.revision.text().strip(), listen=self._follow)
         except AoiError as e:  # a training run started meanwhile (AOI-TRN-047), or the role
-            self._say(self._coded(e))
+            self.run_for = None
+            self._say(self._coded(e), bm)
             return
         self.run_line.setText(self.tr("Starting Train…"))
         self.refresh()
 
     def _follow(self, job: Job[dict[str, Any]]) -> None:
-        """Follow Train's run: its reports, an error and its end reach this screen on the window's thread."""
+        """Follow Train's run: its reports, an error and its end reach this screen on the window's thread, and
+        Training shows the same run (`TrainingPage.follow_guide`)."""
+        bm = self.run_for
         self.worker = Worker.of(job)
         self.worker.signals.progress.connect(self._progress)
-        self.worker.signals.error.connect(lambda e: self._say(self._coded(e)))
+        self.worker.signals.error.connect(lambda e: self._say(self._coded(e), bm))
         self.worker.signals.finished.connect(self._ended)
         keep(self.worker, self.ctx.jobs)
+        if (training := self.page.shell.pages.get("Training")) is not None:
+            cast("TrainingPage", training).follow_guide(job)
 
     def _progress(self, values: tuple[RunProgress]) -> None:
+        if self.stopping:  # "Stopping Train…" stays until the run ends
+            return
         p = values[0]
         line = self.tr("{phase} · {percent} % · {left}")  # the training panel's line (sketch)
         self.run_line.setText(line.format(phase=phrase_text(p.phase), percent=p.percent, left=time_left_text(p.left_s)))
@@ -335,23 +354,34 @@ class GuideTrain(QWidget):
         there."""
         if self.worker is not None:
             self.worker.stop()
+            self.stopping = True
             self.run_line.setText(self.tr("Stopping Train after the step in hand…"))
 
     def _ended(self) -> None:
-        w, self.worker = self.worker, None
+        """Train's end: what it made, or the line of its Cancel, on its board model's screen; when another board model
+        is shown, the status bar says where to see it."""
+        w, bm, self.worker, self.run_for, self.stopping = self.worker, self.run_for, None, None, False
         if w is not None and w.job.cancelled and w.job.result is None and w.job.error is None:
-            self._say(self.tr("Train was cancelled. What it had done is kept, and the next Train goes on from there."))
+            kept = self.tr("Train was cancelled. What it had done is kept, and the next Train goes on from there.")
+            self._say(kept, bm)
+        if bm is not None and bm != self.page.board_model:  # the header's: screen 3 may be another's, or hidden
+            ended = self.tr("Train for {board_model} has ended: pick it in the header to see what it made.")
+            self.status(ended.format(board_model=bm))
         self.refresh()
         self.changed.emit()
+        if self.isVisible() and self.done():
+            self.btn_inspect.setFocus()  # Enter inspects the first board (Q69)
 
     def _coded(self, e: BaseException) -> str:
         """An error as the guide says it: logged and alarmed, then its code, what happened and what to do."""
         report = self.ctx.report_error(e, "Home")
         return " ".join([report.code, phrase_text(report.what), phrase_text(report.action)])
 
-    def _say(self, said: str) -> None:
+    def _say(self, said: str, board_model: str | None) -> None:
+        """`said` under the screen of `board_model`, kept until another Train or a sign-in."""
         self.said.setText(said)
-        self.said.show()
+        self.said_for = board_model
+        self.said.setVisible(board_model == self.board_model)
 
     # --- the handover --------------------------------------------------------------------------------------------
     def inspect(self) -> None:

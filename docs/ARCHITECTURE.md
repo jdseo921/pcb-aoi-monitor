@@ -764,29 +764,34 @@ Train focused.
 
 **The guide's screen 3, Train** (REQ-TRN-021, B5; Q72 to Q74). While `guide_step` is 3, until the board model's first
 board is inspected, `HomePage.guided` takes screen 3, `GuideTrain` (`aoi/ui/pages/guide_train.py`), for a role that may
-`start_guide_train`; an Operator gets Home's empty state until an AI model judges the board model's boards. Before Train
-it says what is ready (What is missing's Trial counts and view) and what Train does, with the images it keeps apart,
-counted as the validation set takes them from a first set of images (`datasets.VALIDATION_OK`, `VALIDATION_NG`), and
-those it trains on, and asks the board revision, R1 at first (Q74), checked as it is typed. Train (Enter) calls
-`start_guide_train`, which runs `guide_train`'s five parts as the context's one training run (`ctx.training`): other
-pages can be used meanwhile, Training's panel follows the same run, and another training is refused (AOI-TRN-047).
-`guide_running` says whether that run is the guide's Train for the board model, so screen 3 shows its line again when
-Home is shown again: the training panel's "<part> · <percent> % · <time left>", with Cancel (Esc), which stops at the
-step in hand and keeps the parts done, so the next Train goes on from there. What Train made is read from the database
-(`guide_result`: the active AI model trained from the guide's Trial version of the use "own" only, its test on the
-images kept apart judged with what judges boards now, and the shift check), so it shows after a restart too: "✓ AI model
-<version> judges <board model>'s boards.", the images trained on and kept apart, the missed defects and false calls on
-those with their counts first (`stats.text`), or that the test did not run, the Trial line, and the shift check: passed,
-failed with the master samples judged right, or not counting now, as Inspection asks for it before the first board.
-Step 3 is then marked done, and Inspect a Board… (Enter) has the focus: it opens Inspection's Load Images… on the
-folder above screen 2's and inspects the boards picked at once, in the view Train trained on
-(`InspectionPage.inspect_from`). Open Logs & Export › shows the board model's history (`LogsPage.show_board_model`), and
-Start the Checks › Training's What is missing with Validated picked (`TrainingPage.show_validated_needs`). A refusal, as
-Train is pressed or in its run, is said under Train with its code and opens no dialog; a press on Train, or Enter,
-while it is off says why on the status bar. Once a board is inspected `guide_step` is None and Home shows its cards.
-`tests/test_guide_train_screen.py` drives screen 3. Its two screenshots are drawn with its reads pinned
-(`render_screens.guide_made`), as a training in the render would take minutes and give rates that differ from machine
-to machine.
+`start_guide_train`; an Operator gets Home's empty state until an AI model judges the board model's boards. A board
+model judged by an AI model Train did not make, as one made active on Training, leaves the guide for the cards
+(`guide_step` None), so Train never puts that AI model aside. Before Train it says what is ready (What is missing's
+Trial counts and view) and what Train does, with the images it keeps apart, counted as the validation set takes them
+from a first set of images (`datasets.VALIDATION_OK`, `VALIDATION_NG`), and those it trains on, and asks the board
+revision, R1 at first (Q74), checked as it is typed. Train (Enter) calls `start_guide_train`, which runs `guide_train`'s
+five parts as the context's one training run (`ctx.training`): other pages can be used meanwhile, Training shows the
+same run with its Cancel (`TrainingPage.follow_guide`), and another training is refused (AOI-TRN-047). `guide_running`
+says whether that run is the guide's Train for the board model, so screen 3 shows its line again when Home is shown
+again: the training panel's "<part> · <percent> % · <time left>", with Cancel (Esc), which stops at the step in hand and
+keeps the parts done, so the next Train goes on from there. What Train made is read from the database (`guide_result`:
+the active AI model, when it was trained from a Trial version of the use "own" only, as Train freezes one, its test on
+the images kept apart judged with what judges boards now, and the shift check), so it shows after a restart too: "✓ AI
+model <version> judges <board model>'s boards.", the images trained on and kept apart, the missed defects and false
+calls on those with their counts first (`stats.text`), or that the test did not run, the Trial line, and the shift
+check: passed, failed with the master samples judged right, or not counting now, as Inspection asks for it before the
+first board. Step 3 is then marked done, and Inspect a Board… (Enter) has the focus: it opens Inspection's Load Images…
+on the folder above screen 2's, when one was picked since the app started (else where the dialog opens by itself), and
+inspects the boards picked at once, in the view Train trained on (`InspectionPage.inspect_from`). Open Logs & Export ›
+shows the board model's history (`LogsPage.show_board_model`), and Start the Checks › Training's What is missing with
+Validated picked (`TrainingPage.show_validated_needs`). A refusal, as Train is pressed or in any part of its run, is
+said at the foot of the screen with its code, and opens no dialog; it is said on the screen of the board model Train was
+for, and a Train that ends while another board model is in the header says so on the status bar. A press on Train, or
+Enter, while it is off says why on the status bar. Enter is Train's, then Inspect a Board…'s, only with the focus on the
+screen; a sign-in puts the board revision back to R1. Once a board is inspected `guide_step` is None and Home shows its
+cards. `tests/test_guide_train_screen.py` drives screen 3. Its two screenshots are drawn with its reads pinned
+(`render_screens.guide_made`), as a training in the render would take minutes and give rates that differ from machine to
+machine.
 
 **Next AI step (not in this draft):** once enough labelled NG crops exist per type, add a small supervised
 classifier that names the defect (Solder Bridge, Tombstone, …) for each flagged region. Today a region is named by

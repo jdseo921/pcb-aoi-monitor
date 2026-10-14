@@ -159,6 +159,22 @@ def test_req_trn_021_only_what_the_guide_would_make_now_is_used_again(ctx: AppCo
     assert entries(ctx)["inspection.shift_check"] == before["inspection.shift_check"] + 2 and said == []
 
 
+def test_req_trn_021_an_ai_model_made_active_on_training_leaves_the_guide(ctx: AppContext, tmp_path: Path) -> None:
+    """Once an AI model trained on Training, from a Trial version with the uses "own" and "shared", judges the board
+    model's boards, `guide_result` reads nothing and the guide shows no screen for the board model: its Train would
+    put that AI model aside for its own."""
+    ready(ctx, tmp_path / "boards")
+    out, _ = press(ctx)
+    made = ctx.guide_result(ONE)
+    assert ctx.guide_step(ONE) == 3 and made is not None and made["model"]["id"] == out["model"]["id"]
+    shared = ctx.freeze_dataset(ONE, "Top", "R1", "Acme", ("own", "shared"), trial=True)
+    ctx.lock_validation_set(shared["uuid"], seed=1)
+    meta = ctx.train(shared["uuid"], epochs=1, image_size=32)
+    ctx.activate_model(int(next(m for m in ctx.models(ONE) if m["version"] == meta["version"])["id"]))
+    assert ctx.active_model(ONE)["version"] == meta["version"] != out["model"]["version"]  # type: ignore[index]
+    assert ctx.guide_result(ONE) is None and ctx.guide_step(ONE) is None
+
+
 def test_req_trn_021_a_validated_ai_model_live_refuses_the_press(ctx: AppContext, tmp_path: Path) -> None:
     """While a Validated AI model of the board model is active, a Trial one never replaces it (ADR 0020, decision 4):
     the press is refused with AOI-TRN-057 before anything is frozen or trained."""

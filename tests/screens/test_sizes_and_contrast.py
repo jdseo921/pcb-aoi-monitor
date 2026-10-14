@@ -1092,6 +1092,6 @@ def test_req_trn_021_first_run_guide_sizes_and_contrast(
                 for part in (screen.revision_line, screen.said, screen.run_row):
                     part.hide()
         win.set_user("admin")
-    enough = {"steps": 10, "text": 80, "buttons": 28, "targets": 16}
+    enough = {"steps": 9, "text": 80, "buttons": 28, "targets": 16}  # 7 screenshots' states and 2 of parts
     assert all(seen[k] >= n for k, n in enough.items()), seen
     assert not findings, f"{len(findings)} findings:\n" + "\n".join(sorted(set(findings)))

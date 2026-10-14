@@ -7,6 +7,7 @@ quoted as accuracy."""
 
 from __future__ import annotations
 
+import threading
 from pathlib import Path
 from typing import Any, cast
 
@@ -24,10 +25,12 @@ from aoi.ui.pages.guide_train import GuideTrain
 from aoi.ui.pages.inspection import InspectionPage
 from aoi.ui.pages.logs import LogsPage
 from aoi.ui.pages.training import TrainingPage
+from tests.test_dataset_stores import as_admin
 from tests.test_first_board_model_store import shell
 from tests.test_trial_versions import ONE, one_person
 
 TRAINED = "✓ 1 Board model  ───  ✓ 2 Images  ───  ✓ 3 Train"
+CANCELLED = "Train was cancelled. What it had done is kept, and the next Train goes on from there."
 
 
 def ready(ctx: AppContext, folder: Path) -> None:
@@ -100,14 +103,35 @@ def test_req_trn_021_screen_3_trains_and_shows_what_it_made(qtbot: QtBot, ctx: A
 def test_req_trn_021_what_train_made_after_a_restart_and_the_handover(
     qtbot: QtBot, ctx: AppContext, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Train's result is read again from the workspace, as after a restart. Open Logs & Export › shows the board model's
-    history and Start the Checks › Training's What is missing with Validated picked. Inspect a Board… opens Load
-    Images… on the folder above screen 2's, in the view Train trained on, and inspects the board picked at once; then
-    Home shows its cards. A test or a shift check that did not run is said."""
+    """Train's result is read again from the workspace, as after a restart. An Operator's Home says the board model is
+    still being set up until Train's AI model judges its boards, then shows the cards. Open Logs & Export › shows the
+    board model's history and Start the Checks › Training's What is missing with Validated picked. Inspect a Board…
+    opens Load Images… on the folder above screen 2's, in the view Train trained on, and inspects the board picked at
+    once, or nothing when none is picked; then Home shows its cards. A test or a shift check that did not run, or a
+    shift check failed, is said. A board model judged by an AI model Train did not make leaves the guide."""
     ready(ctx, tmp_path / "boards")
-    ctx.guide_train(ONE, "Top", "R1")
-    win, guide, screen = home(qtbot, ctx)
+    win, guide, screen = home(qtbot, ctx, "operator")
+    home_page = cast(HomePage, win.pages["Home"])
+    assert not guide.isVisible() and home_page.empty.heading.text() == "ONE-1 is still being set up"
+    as_admin(ctx, ctx.guide_train, ONE, "Top", "R1")
+    win.set_user("operator")
+    assert not guide.isVisible() and home_page.cards.isVisible()
+    win.set_user("engineer")
     assert screen.result.isVisible() and guide.steps.text() == TRAINED and win.focusWidget() is screen.btn_inspect
+    real = ctx.guide_result
+    with pytest.MonkeyPatch.context() as mp:
+        rows = [{"right": True}, {"right": False}]
+        mp.setattr(ctx, "guide_result", lambda bm: real(bm) | {"shift": {"state": "failed", "check": {"rows": rows}}})
+        home_page.on_show()
+        assert screen.shift_line.text() == "Shift check of ONE-1: 1 of 2 master samples judged right."
+        assert screen.shift_next.isVisible()
+        mp.setattr(ctx, "guide_result", lambda bm: None)  # as for an AI model trained and made active on Training
+        assert ctx.guide_step(ONE) is None
+        home_page.on_show()
+        assert not guide.isVisible() and home_page.cards.isVisible()
+    home_page.on_show()
+    assert screen.result.isVisible() and screen.shift_next.isVisible() == (real(ONE)["shift"]["state"] == "failed")
+    assert screen.btn_logs.text() == "Open Logs && Export ›"  # shown "Open Logs & Export ›": && is one &, no mnemonic
     screen.btn_logs.click()
     logs = cast(LogsPage, win.pages["Logs & Export"])
     assert win.stack.currentWidget() is logs and logs.model.currentData() == ONE
@@ -128,33 +152,46 @@ def test_req_trn_021_what_train_made_after_a_restart_and_the_handover(
     guide.images.folder = str(tmp_path / "boards" / "TBOX")  # screen 2's folder in this session
     asked: list[str] = []
     board = sorted((tmp_path / "boards").glob("*.png"))[0]
+    picks = [[], [str(board)]]  # the dialog cancelled, then a board picked
 
     def picked(parent: Any, title: str, folder: str, kinds: str) -> tuple[list[str], str]:
         asked.append(folder)
-        return [str(board)], kinds
+        return picks.pop(0), kinds
 
     monkeypatch.setattr(QFileDialog, "getOpenFileNames", staticmethod(picked))
-    cast(HomePage, win.pages["Home"]).on_show()  # Home read again, as a page shown again reads it
+    home_page.on_show()  # Home read again, as a page shown again reads it
     assert screen.shift_line.isHidden()
     win.activateWindow()
     qtbot.waitUntil(lambda: QApplication.activeWindow() is win)
     qtbot.keyClick(screen.btn_inspect, Qt.Key.Key_Return)
     inspection = cast(InspectionPage, win.pages["Inspection"])
-    assert win.stack.currentWidget() is inspection and asked == [str(tmp_path / "boards")]
+    assert win.stack.currentWidget() is inspection and not inspection.queue and ctx.db.inspection_counts(ONE)[0] == 0
+    win.navigate("Home")
+    assert screen.result.isVisible()
+    screen.btn_inspect.click()
+    assert win.stack.currentWidget() is inspection and asked == [str(tmp_path / "boards")] * 2
     assert inspection.view_combo.currentData() == "Top"
     qtbot.waitUntil(lambda: ctx.db.inspection_counts(ONE)[0] == 1, timeout=60000)
     win.navigate("Home")
-    assert not guide.isVisible() and cast(HomePage, win.pages["Home"]).cards.isVisible()
+    assert not guide.isVisible() and home_page.cards.isVisible()
 
 
 def test_req_trn_021_train_says_why_it_is_off_and_what_stopped_it(
     qtbot: QtBot, ctx: AppContext, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, dialogs: list[Any]
 ) -> None:
     """Train is off, and a press or Enter says why, for a board revision it cannot take and while another training
-    runs. A refusal, as the press is made or in the run, is said under Train with its code, with no dialog. Cancel
-    stops Train and says the parts done are kept."""
+    runs. With the shift check off, Train says it runs none. A refusal, as the press is made or in the run, is said
+    under Train with its code, with no dialog. Cancel stops Train and says the parts done are kept; a sign-in puts the
+    board revision back to R1 and says nothing of the Train before."""
     ready(ctx, tmp_path / "boards")
     win, guide, screen = home(qtbot, ctx)
+    ctx.settings.shift_check_hours = 0
+    screen.refresh()
+    assert screen.plan.text().endswith(
+        "makes it the AI model that judges ONE-1's boards and tests it on the images kept apart. Other pages can be"
+        " used while it runs."
+    )
+    ctx.settings.shift_check_hours = 12
     screen.revision.setText("R-1")
     assert screen.revision_line.isVisible() and not screen.btn_train.isEnabled()
     for press in (lambda: qtbot.mouseClick(screen.btn_train, Qt.MouseButton.LeftButton), screen.train):
@@ -163,7 +200,8 @@ def test_req_trn_021_train_says_why_it_is_off_and_what_stopped_it(
         assert win.statusBar().currentMessage() == "Type the board revision: 1 to 16 letters and digits, such as R1."
     screen.revision.setText("R1")
     other: Job[Any] = Job("training", lambda: None)
-    ctx.training = other  # another training run, not yet ended
+    ctx.training, ctx.guide_training = other, ONE  # another training run, not yet ended: not Train's, by its name
+    assert not ctx.guide_running(ONE)
     screen.refresh()
     assert not screen.btn_train.isEnabled() and not screen.revision.isEnabled()
     win.statusBar().clearMessage()
@@ -190,7 +228,85 @@ def test_req_trn_021_train_says_why_it_is_off_and_what_stopped_it(
     screen.btn_train.click()
     screen.cancel()
     qtbot.waitUntil(lambda: screen.worker is None, timeout=180000)
-    assert screen.said.text() == (
-        "Train was cancelled. What it had done is kept, and the next Train goes on from there."
-    )
+    assert screen.said.text() == CANCELLED
     assert screen.before.isVisible() and screen.btn_train.isEnabled() and ctx.active_model(ONE) is None
+    screen.revision.setText("R2")
+    win.set_user("engineer")  # a sign-in
+    assert screen.revision.text() == "R1" and not screen.said.isVisible()
+
+
+def test_req_trn_021_train_runs_on_while_other_pages_are_used_and_esc_stops_it(
+    qtbot: QtBot, ctx: AppContext, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, dialogs: list[Any]
+) -> None:
+    """Train runs on while other pages are used: Training shows the same run with its Cancel, and Home Train's line
+    again. Esc stops it after the step in hand, and Training's notes say so too; the next Train goes on from the
+    version kept. A refusal after the AI model was made active leaves what Train made shown, says the test did not
+    run, and says the refusal under it with its code."""
+    ready(ctx, tmp_path / "boards")
+    win, guide, screen = home(qtbot, ctx)
+    screen.revision.setText("R2")
+    reached, held, real = threading.Event(), threading.Event(), ctx.lock_validation_set
+
+    def locked(uuid: str, seed: int | None = None) -> dict[str, Any]:
+        out = real(uuid, seed)
+        reached.set()
+        held.wait(60)  # Train held after part 1, until the test lets it go on
+        return out
+
+    monkeypatch.setattr(ctx, "lock_validation_set", locked)
+    screen.btn_train.click()
+    training = cast(TrainingPage, win.pages["Training"])
+    assert training.worker is not None and training.btn_stop.isEnabled() and not training.btn_train.isEnabled()
+    qtbot.waitUntil(reached.is_set, timeout=60000)
+    win.navigate("Training")
+    win.navigate("Home")
+    assert screen.run_row.isVisible() and not screen.btn_train.isEnabled()
+    win.activateWindow()
+    qtbot.waitUntil(lambda: QApplication.activeWindow() is win)
+    qtbot.keyClick(QApplication.focusWidget() or win, Qt.Key.Key_Escape)
+    assert screen.run_line.text() == "Stopping Train after the step in hand…"
+    held.set()
+    qtbot.waitUntil(lambda: screen.worker is None and training.worker is None, timeout=60000)
+    assert screen.said.isVisible() and screen.said.text() == CANCELLED
+    assert training.log.toPlainText().endswith(CANCELLED) and not training.btn_stop.isEnabled()
+    assert [v["revision"] for v in ctx.db.datasets(ONE)] == ["R2"] and ctx.active_model(ONE) is None
+    monkeypatch.undo()
+
+    def not_tested(*args: Any, **kw: Any) -> Any:
+        raise AoiError("AOI-TST-003", name="ONE-1 R2", reason="the images kept apart cannot be read")
+
+    monkeypatch.setattr(ctx, "test_dataset", not_tested)
+    assert screen.revision.text() == "R2"
+    trained(qtbot, screen)
+    assert [v["revision"] for v in ctx.db.datasets(ONE)] == ["R2"]  # the version kept, not frozen again
+    assert screen.result.isVisible() and guide.steps.text() == TRAINED and screen.untested.isVisible()
+    assert screen.said.isVisible() and screen.said.text().startswith("AOI-TST-003 ") and dialogs == []
+
+
+def test_req_trn_021_train_ends_while_another_board_model_is_shown(
+    qtbot: QtBot, ctx: AppContext, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, dialogs: list[Any]
+) -> None:
+    """A Train that ends while another board model is in the header says so on the status bar; what it says is said on
+    its own board model's screen 3 only, there again when that board model is picked."""
+    ready(ctx, tmp_path / "boards")
+    as_admin(ctx, ctx.create_customer_board_model, "TWO-1", "Acme")
+    win, guide, screen = home(qtbot, ctx)
+    held = threading.Event()
+
+    def refused(*args: Any, **kw: Any) -> Any:
+        held.wait(60)
+        raise AoiError("AOI-TRN-045", name="v1.0", reason="too few OK images")
+
+    monkeypatch.setattr(ctx, "guide_train", refused)
+    screen.btn_train.click()
+    win.select_board_model("TWO-1")
+    assert guide.images.isVisible() and not screen.isVisible()
+    held.set()
+    qtbot.waitUntil(lambda: screen.worker is None, timeout=60000)
+    assert win.statusBar().currentMessage() == ("Train for ONE-1 has ended: pick it in the header to see what it made.")
+    assert guide.images.isVisible() and not screen.said.isVisible()
+    screen.show_for("TWO-1")  # as screen 3 of another board model: the refusal is ONE-1's
+    assert screen.said.isHidden()
+    win.select_board_model(ONE)
+    assert screen.isVisible() and screen.said.isVisible() and screen.said.text().startswith("AOI-TRN-045 ")
+    assert screen.before.isVisible() and dialogs == []

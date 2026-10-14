@@ -883,14 +883,17 @@ class AppContext:
         first-run-guide.md, Q76): 1 with none; for one in a customer's store, from its making until its first board is
         inspected, 2 while a line of its images is not met (GUIDE_IMAGES, a Trial What is missing's first three), then
         3. None for a board model in no store or a shredded one, whose images are not frozen until an Admin moves them
-        in, for one with a board inspected, and for one a Validated AI model judges, which the guide's Train never
-        replaces (AOI-TRN-057). Writes nothing."""
+        in, for one with a board inspected, for one a Validated AI model judges, which the guide's Train never replaces
+        (AOI-TRN-057), and for one judged by an AI model the guide's Train did not make (`guide_result`), as one trained
+        and made active on Training, which Train would put aside. Writes nothing."""
         if board_model is None:
             return 1
         store = self.store_of(board_model)
         if store is None or store["shredded_at"] or self.db.inspection_counts(board_model)[0]:
             return None
         if self.validated_live(board_model) is not None:
+            return None
+        if self.db.active_model(board_model) is not None and self.guide_result(board_model) is None:
             return None
         needs = {n.key: n for n in self.missing(board_model, trial=True).needs}
         return 2 if any(not needs[k].done for k in GUIDE_IMAGES) else 3

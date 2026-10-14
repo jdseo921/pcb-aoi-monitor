@@ -897,7 +897,7 @@
     </message>
     <message>
         <location line="+8"/>
-        <location line="+52"/>
+        <location line="+55"/>
         <location line="+17"/>
         <location line="+198"/>
         <source>Training an AI model</source>
@@ -1157,14 +1157,14 @@
         <translation>검증 세트 잠금</translation>
     </message>
     <message>
-        <location line="-2986"/>
-        <location line="+3000"/>
+        <location line="-2989"/>
+        <location line="+3003"/>
         <location line="+39"/>
         <source>the workspace holds no such dataset version</source>
         <translation>작업 공간에 그런 데이터셋 버전이 없습니다</translation>
     </message>
     <message>
-        <location line="-3089"/>
+        <location line="-3092"/>
         <source>Drift on {board} ({view}): {count} of the last {of} boards called NG; {before} % of the {baseline} before</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1264,7 +1264,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1193"/>
+        <location line="+1196"/>
         <source>Setting the comparison&apos;s thresholds from labelled boards</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1491,7 +1491,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-3751"/>
+        <location line="-3754"/>
         <source>no earlier version of this board model was active</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1516,7 +1516,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1117"/>
+        <location line="+1120"/>
         <source>its UUID {found} is not {uuid}, as in the AI model registry</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1623,7 +1623,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-3979"/>
+        <location line="-3982"/>
         <source>unhandled</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3945,7 +3945,7 @@
     </message>
     <message>
         <location line="+1"/>
-        <location filename="../core/services.py" line="+3242"/>
+        <location filename="../core/services.py" line="+3245"/>
         <source>a file of it could not be read: {reason}</source>
         <translation>그 파일 하나를 읽을 수 없습니다: {reason}</translation>
     </message>
@@ -4582,7 +4582,7 @@
 <context>
     <name>GuideTrain</name>
     <message>
-        <location filename="../ui/pages/guide_train.py" line="+81"/>
+        <location filename="../ui/pages/guide_train.py" line="+88"/>
         <source>Board revision</source>
         <translation type="unfinished">보드 리비전</translation>
     </message>
@@ -4592,7 +4592,7 @@
         <translation type="unfinished">보드에 인쇄된 대로, 없으면 R1 그대로</translation>
     </message>
     <message>
-        <location line="+13"/>
+        <location line="+9"/>
         <source>Train  Enter</source>
         <translation type="unfinished">학습  Enter</translation>
     </message>
@@ -4602,7 +4602,7 @@
         <translation type="unfinished">학습</translation>
     </message>
     <message>
-        <location line="+14"/>
+        <location line="+15"/>
         <source>Cancel  Esc</source>
         <translation type="unfinished">취소  Esc</translation>
     </message>
@@ -4632,7 +4632,7 @@
         <translation type="unfinished">보드 검사…</translation>
     </message>
     <message>
-        <location line="+4"/>
+        <location line="+5"/>
         <source>Open Logs &amp; Export ›</source>
         <translation type="unfinished">로그 및 내보내기 열기 ›</translation>
     </message>
@@ -4642,7 +4642,7 @@
         <translation type="unfinished">점검 시작 ›</translation>
     </message>
     <message>
-        <location line="+59"/>
+        <location line="+65"/>
         <source>{ok} OK and {ng} NG images of the {view} view are ready, every defect boxed.</source>
         <translation type="unfinished">{view} 뷰의 OK 이미지 {ok}장과 NG 이미지 {ng}장이 준비되었고, 모든 불량에 박스가 있습니다.</translation>
     </message>
@@ -4718,24 +4718,29 @@
         <translation type="unfinished">진행 중인 학습이 끝난 뒤 학습을 다시 누르십시오.</translation>
     </message>
     <message>
-        <location line="+19"/>
+        <location line="+21"/>
         <source>Starting Train…</source>
         <translation type="unfinished">학습 시작 중…</translation>
     </message>
     <message>
-        <location line="+13"/>
+        <location line="+19"/>
         <source>{phase} · {percent} % · {left}</source>
         <translation type="unfinished">{phase} · {percent} % · {left}</translation>
     </message>
     <message>
-        <location line="+8"/>
+        <location line="+9"/>
         <source>Stopping Train after the step in hand…</source>
         <translation type="unfinished">진행 중인 단계를 마친 뒤 학습을 멈추는 중…</translation>
     </message>
     <message>
-        <location line="+5"/>
+        <location line="+7"/>
         <source>Train was cancelled. What it had done is kept, and the next Train goes on from there.</source>
         <translation type="unfinished">학습이 취소되었습니다. 그때까지 한 작업은 유지되며, 다음 학습은 거기서부터 이어집니다.</translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>Train for {board_model} has ended: pick it in the header to see what it made.</source>
+        <translation type="unfinished">{board_model}의 학습이 끝났습니다. 헤더에서 선택하면 만든 결과를 볼 수 있습니다.</translation>
     </message>
 </context>
 <context>
@@ -8702,7 +8707,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/services.py" line="-3326"/>
+        <location filename="../core/services.py" line="-3329"/>
         <source>Aligning {count} images to the reference board</source>
         <translation type="unfinished"></translation>
     </message>
@@ -8883,7 +8888,7 @@
         <translation type="unfinished">취소</translation>
     </message>
     <message>
-        <location line="+699"/>
+        <location line="+714"/>
         <source>{phase} · {percent} % · {left}</source>
         <translation>{phase} · {percent} % · {left}</translation>
     </message>
@@ -8903,12 +8908,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+11"/>
+        <location line="+16"/>
         <source>Cancelled: no AI model was saved; the active AI model is unchanged.</source>
         <translation>취소됨: AI 모델을 저장하지 않았으며 활성 AI 모델은 바뀌지 않았습니다.</translation>
     </message>
     <message>
-        <location line="-725"/>
+        <location line="-745"/>
         <source>AI model versions</source>
         <translation type="unfinished"></translation>
     </message>
@@ -8999,13 +9004,13 @@
     </message>
     <message>
         <location line="+1"/>
-        <location line="+855"/>
+        <location line="+875"/>
         <location line="+42"/>
         <source>Roll Back</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-893"/>
+        <location line="-913"/>
         <source>AI Model Card</source>
         <translation type="unfinished"></translation>
     </message>
@@ -9200,7 +9205,7 @@
         <translation>{type} ×{count}</translation>
     </message>
     <message>
-        <location line="+72"/>
+        <location line="+87"/>
         <source>AI model {version} trained and active: the first AI model of {board_model} judges its boards from now on. Each later version installs inactive until you activate it.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -9210,7 +9215,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+94"/>
+        <location line="+17"/>
+        <source>Train was cancelled. What it had done is kept, and the next Train goes on from there.</source>
+        <translation type="unfinished">학습이 취소되었습니다. 그때까지 한 작업은 유지되며, 다음 학습은 거기서부터 이어집니다.</translation>
+    </message>
+    <message>
+        <location line="+82"/>
         <source>No frozen dataset version of {board_model} yet; training reads only a frozen version&apos;s training set, once its validation set is locked.</source>
         <translation>{board_model}의 고정된 데이터셋 버전이 아직 없습니다. 학습은 검증 세트가 잠긴 고정 버전의 학습 세트만 읽습니다.</translation>
     </message>
@@ -9276,12 +9286,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-525"/>
+        <location line="-545"/>
         <source>No samples for {board_model} yet</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+349"/>
+        <location line="+369"/>
         <source>Rolled back to AI model {version}</source>
         <translation type="unfinished"></translation>
     </message>
