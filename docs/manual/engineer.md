@@ -163,9 +163,9 @@ is no recipe for a threshold to differ from; another action that needs one shows
 Engineer or Admin creates the first with **+ New**).
 
 **The first-run guide.** With no board model yet, Home opens on the first-run guide in place of its cards, its steps 1
-Board model, 2 Images and 3 Train along the top; this build has the first. Type the board model's name, as on the board
-or its drawing, and its customer, whose boards these are (your company's name for your own boards). The line under the
-name says as you type whether a new board model may have it, with the code of the rule it breaks (Names, above); the
+Board model, 2 Images and 3 Train along the top; this build has the first two. Type the board model's name, as on the
+board or its drawing, and its customer, whose boards these are (your company's name for your own boards). The line under
+the name says as you type whether a new board model may have it, with the code of the rule it breaks (Names, above); the
 customer field offers the customers with a dataset store, and Enter in its list picks one. **Create** (Enter in either
 field) needs the Admin role: an Engineer sees the step greyed, saying so. While Create is off, a press on it or Enter
 says on the status bar what is still to type. For a customer's first board model, Create makes the customer's encrypted
@@ -175,9 +175,26 @@ it went; then **I Have Saved the Key** (Enter), which until then says to save or
 shows, the sidebar, the top bar, the page keys and the window's close do nothing, and a press on them says why on the
 status bar. F1 lists the step's keys. A refusal, such as a folder under `images` that holds files already (AOI-TRN-044)
 or a key saved into the workspace (AOI-LOG-002), is said under the button that met it, with its code, and opens no
-dialog. The board model made is then chosen in the top bar, and Home shows its cards. **Show All Steps ›** leaves the
-guide for Home without it, which with no board model yet is the empty state with **+ New board model**, and **Show the
-Guide ›** brings it back, until the next sign-in.
+dialog. The board model made is then chosen in the top bar, and the guide goes on to its images. **Show All Steps ›**
+leaves the guide for Home without it, which with no board model yet is the empty state with **+ New board model**, and
+**Show the Guide ›** brings it back, until the next sign-in.
+
+**The guide's images.** Screen 2 takes the board model's images, for a board model in a customer's store that has
+not inspected a board yet. Put them in one folder with two folders in it: `ok`, with the good boards' images, and
+`ng`, with a folder for each defect named after it, such as `ng\Missing Component`. Pick the view, then **Pick
+Folder…** (Ctrl+O): the images are copied as soon as the folder is picked, with a line saying how far the copy is and
+**Cancel** (Esc), which keeps the images copied before it. The view stays as you picked it until another board model is
+chosen or another user signs in. Images straight in `ng` wait for you to pick their defect type from the list that
+shows, with a click, or with Enter to open the list and Enter again to pick; then the copy starts. The line under the
+button names the folder and counts the images not taken and those already in, which are skipped, not copied twice;
+**Show Why** lists each with its code. Three lines count the OK images, the NG images and the NG images with every defect
+boxed against what the board model needs; with too few OK images, add more to the `ok` folder and pick it again. Then
+the box area shows each NG image in turn: drag across the defect, and the box is kept with the type of the image's
+folder, and the next NG image with no box opens. Drag a box to move it. An image that cannot be read is skipped and
+named under the box area with its code. **← Back** (PgUp) opens the one before, **Undo** (Ctrl+Z) takes the last box
+away again, and **Zoom In**, **Zoom Out** and **Fit** (+, -, 0) help with small parts. A press on a greyed button, or its
+key, says why, and F1 lists the keys. Once every NG image has a box, Home shows its cards until the guide's Train
+arrives. An Operator's Home says the board model is still being set up until an AI model judges its boards.
 
 **Scale.** A board model's scale, in px per mm of the board, lets its recipe give sizes in mm, so that a recipe can
 survive a camera change (REQ-RCP-006). The scale does not follow the images by itself: after a camera change, or any

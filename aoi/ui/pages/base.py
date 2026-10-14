@@ -161,6 +161,21 @@ class RoleGates(QObject):
         return False
 
 
+class PressSays(QObject):
+    """A press on `control` while it is off says `why()` on the status bar, as a touch screen shows no tooltip: for a
+    control off for a reason of its own, where RoleGates says a role's (the first-run guide)."""
+
+    def __init__(self, control: QWidget, why: Callable[[], str], status: Callable[[str], object]) -> None:
+        super().__init__(control)
+        self.control, self.why, self.status = control, why, status
+        control.installEventFilter(self)
+
+    def eventFilter(self, watched: QObject, e: QEvent) -> bool:  # noqa: N802 (Qt's name)
+        if e.type() == QEvent.Type.MouseButtonPress and not self.control.isEnabled():
+            self.status(self.why())
+        return False
+
+
 class WrappedLine(QLabel):
     """A wrapped line that never sets the page's minimum width, however long a name in it (REQ-SET-004, #251): the
     layout gives it its width, and hovering shows its whole text, for a name the line has to cut. Inspection's summary

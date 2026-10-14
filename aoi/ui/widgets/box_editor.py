@@ -78,7 +78,8 @@ class Boxes(ImageView, Generic[B]):
     with them moves its bottom right corner. Each gesture that changes the boxes ends in one `edited`, at its release,
     so a drag is stored once, not at every move, and a burst of arrow keys half a second after its last key; `settled`
     follows the end of every gesture. While `locked` (the image read or a change stored) a press or a key that would
-    change a box only says `refused`."""
+    change a box only says `refused`. With `moves_while_drawing`, as the first-run guide's box area always draws (Q70),
+    a drag on a box or on a handle of the selected one moves or resizes it in Draw mode too; a drag elsewhere draws."""
 
     edited = Signal()  # the boxes changed: the page stores them
     picked = Signal(int)  # the selected box, -1 for none
@@ -93,6 +94,7 @@ class Boxes(ImageView, Generic[B]):
         self.chosen = -1
         self._grab: tuple[int, Grip | None, QPointF, B] | None = None  # box, handle (None: the box), start, box before
         self.locked = False
+        self.moves_while_drawing = False
         self._keyed: tuple[int, B] | None = None  # the box the arrows move, as it was before them
         self._burst = QTimer(self)
         self._burst.setSingleShot(True)
@@ -215,7 +217,8 @@ class Boxes(ImageView, Generic[B]):
     def mousePressEvent(self, e: QMouseEvent) -> None:
         self._keys_done()  # the arrows' change, stored before the mouse makes another
         left = e.button() == Qt.MouseButton.LeftButton
-        idle = not left or self._draw_mode or self._pick_mode or self._pans(e)  # a press here picks or pans
+        drawing = self._draw_mode and not self.moves_while_drawing  # a press there draws, wherever it is
+        idle = not left or drawing or self._pick_mode or self._pans(e)  # a press here picks or pans
         hit = None if idle else self._hit(e.position().toPoint())
         if left and self.locked and (self._draw_mode or hit is not None):
             self.refused.emit()
@@ -228,7 +231,7 @@ class Boxes(ImageView, Generic[B]):
 
     def mouseDoubleClickEvent(self, e: QMouseEvent) -> None:
         """A second press soon after a tap, on a box: a press, so a tap then a drag moves it; elsewhere a fit."""
-        if self._draw_mode or self._hit(e.position().toPoint()) is None:
+        if (self._draw_mode and not self.moves_while_drawing) or self._hit(e.position().toPoint()) is None:
             super().mouseDoubleClickEvent(e)
             return
         self.mousePressEvent(e)

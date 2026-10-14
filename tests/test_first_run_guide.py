@@ -47,7 +47,7 @@ def test_req_trn_021_an_empty_workspace_opens_on_the_guide(
     with its code when refused, and Create waits for a name a new board model may have and a customer. Create, by
     Enter in a field, makes the board model in the customer's new store and shows the store's key on the screen: until
     I Have Saved the Key, which waits for the key to be saved, the sidebar, the header, the page keys and the window's
-    close do nothing and say why. The key kept, the header selects the board model and Home shows its cards."""
+    close do nothing and say why. The key kept, the header selects the board model and the guide goes on to screen 2."""
     win = shell(qtbot, ctx)
     win.navigate("Home")
     guide = guide_of(win)
@@ -80,7 +80,8 @@ def test_req_trn_021_an_empty_workspace_opens_on_the_guide(
     assert [e["action"] for e in ctx.audit_entries()][0] == "store.sheet_saved"
     qtbot.keyClick(guide.key_step, Qt.Key.Key_Return)
     assert frame_free(win) and not guide.holding() and guide.recovery.made is None
-    assert win.board_model == "TBOX-A1" and cast(HomePage, win.pages["Home"]).cards.isVisible()
+    assert win.board_model == "TBOX-A1" and guide.images.isVisible()  # on to screen 2, its images
+    assert guide.steps.text() == "✓ 1 Board model  ───  ● 2 Images  ───  ○ 3 Train"
     said = "Board model TBOX-A1 is set up for Hanil Electronics."
     assert win.statusBar().currentMessage() == said and win.navigate("Training")
 

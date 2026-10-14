@@ -10,11 +10,13 @@ with Save to File… and Print…; until I Have Saved the Key, which waits for t
 holds still: the sidebar, the header's controls, Switch User and the window's close do nothing (`holding`; Q67, in
 place of the New board model dialog's modal key step, its tick and Done). A refusal is said under the control that
 raised it, with its code; the guide shows no dialog of its own. An Engineer sees the screen greyed with the role it
-needs, as a customer's store is an Admin's; an Operator, who sets nothing up, gets Home's empty state instead."""
+needs, as a customer's store is an Admin's; an Operator, who sets nothing up, gets Home's empty state instead.
+
+Screen 2, the board model's images, is `GuideImages` (guide_images.py): it shows for a board model in a customer's store
+until its images are in and every NG image has a box (`AppContext.guide_step`)."""
 
 from __future__ import annotations
 
-from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
 from PySide6.QtCore import QEvent, QObject, QStringListModel, Qt, Signal
@@ -35,7 +37,8 @@ from ...core.services import REQUIRED_ROLE
 from ...errors import AoiError
 from .. import theme
 from ..errors import phrase_text
-from .base import QT_TRANSLATE_NOOP, button, role_text, size_class
+from .base import QT_TRANSLATE_NOOP, PressSays, button, role_text, size_class
+from .guide_images import GuideImages
 from .recovery_key import RecoveryKey
 
 if TYPE_CHECKING:
@@ -69,20 +72,6 @@ class _PickOnly(QObject):
         return False
 
 
-class _PressSays(QObject):
-    """A press on `control` while it is off says `why()` on the status bar: a touch screen shows no tooltip."""
-
-    def __init__(self, control: QWidget, why: Callable[[], str], status: Callable[[str], object]) -> None:
-        super().__init__(control)
-        self.control, self.why, self.status = control, why, status
-        control.installEventFilter(self)
-
-    def eventFilter(self, watched: QObject, e: QEvent) -> bool:  # noqa: N802 (Qt's name)
-        if e.type() == QEvent.Type.MouseButtonPress and not self.control.isEnabled():
-            self.status(self.why())
-        return False
-
-
 class FirstRunGuide(QFrame):
     """The guide for the board model in the header, or for none yet (`show_for`). `holding_changed` follows the
     recovery key on screen 1, `made` names a board model made, or found as it was, for the header to select, and
@@ -106,7 +95,7 @@ class FirstRunGuide(QFrame):
         self.heading.setWordWrap(True)
         top.addWidget(self.heading, 1)
         self.btn_cards = button(self.tr("Show All Steps ›"), slot=self.cards_wanted.emit)
-        _PressSays(self.btn_cards, page.shell.held_text, self.status)  # off only while the frame is held
+        PressSays(self.btn_cards, page.shell.held_text, self.status)  # off only while the frame is held
         top.addWidget(self.btn_cards, 0, Qt.AlignmentFlag.AlignTop)
         lay.addLayout(top)
         self.steps = QLabel()  # ● the screen shown, ✓ a screen done, ○ one to come
@@ -116,6 +105,9 @@ class FirstRunGuide(QFrame):
         self._key_step()
         lay.addWidget(self.form)
         lay.addWidget(self.key_step)
+        self.images = GuideImages(page, self.status)  # screen 2
+        self.images.hide()
+        lay.addWidget(self.images)
 
     # --- screen 1: the board model and its customer --------------------------------------------------------------
     def _form_step(self) -> None:
@@ -170,7 +162,7 @@ class FirstRunGuide(QFrame):
         self.refused.hide()
         lay.addWidget(self.refused)
         self.btn_create = size_class(button(self.tr("Create  Enter"), "primary", self.make_board_model), "T")
-        _PressSays(self.btn_create, self._not_ready, self.status)  # a role's refusal is RoleGates' to say
+        PressSays(self.btn_create, self._not_ready, self.status)  # a role's refusal is RoleGates' to say
         row = QHBoxLayout()
         row.addStretch(1)
         row.addWidget(self.btn_create)
@@ -213,7 +205,7 @@ class FirstRunGuide(QFrame):
         kept.triggered.connect(self.key_kept)
         self.key_step.addAction(kept)
         self.btn_kept = size_class(button(self.tr("I Have Saved the Key  Enter"), "primary", self.key_kept), "T")
-        _PressSays(self.btn_kept, self.recovery.unsaved, self.status)
+        PressSays(self.btn_kept, self.recovery.unsaved, self.status)
         for w in (self.made_line, self.key_title, self.key_note, self.recovery, away, self.key_refused):
             lay.addWidget(w)
         row = QHBoxLayout()
@@ -224,6 +216,8 @@ class FirstRunGuide(QFrame):
 
     def keys(self) -> list[QAction]:
         """The keys of the screen shown, for F1's list of Home's keys."""
+        if not self.images.isHidden():
+            return self.images.keys()
         return self.key_step.actions() if not self.key_step.isHidden() else []
 
     def holding(self) -> bool:
@@ -231,22 +225,28 @@ class FirstRunGuide(QFrame):
         return self.recovery.holding()
 
     def show_for(self, board_model: str | None) -> None:
-        """Screen 1 for a workspace with no board model, or with the recovery key of the one just made."""
-        self.shown = 1
+        """Screen 1 for a workspace with no board model, or with the recovery key of the one just made; screen 2 for
+        a board model in a customer's store whose images are not all in and boxed (`AppContext.guide_step`)."""
         holding = self.holding()
+        self.shown = 1 if board_model is None or holding else self.ctx.guide_step(board_model) or 1
         if board_model is None or holding:
             self.heading.setText(self.tr("Set up your first board model"))
         else:
             self.heading.setText(self.tr("Set up {board_model}").format(board_model=board_model))
         marks = ["✓" if holding else "●", "○", "○"]
+        if self.shown > 1:
+            marks = ["✓"] * (self.shown - 1) + ["●"] + ["○"] * (3 - self.shown)
         self.steps.setText(
             "  ───  ".join(
                 f"{mark} {n} {self.tr(name)}" for n, (mark, name) in enumerate(zip(marks, STEP_NAMES, strict=True), 1)
             )
         )
         self.btn_cards.setEnabled(not holding)
-        self.form.setVisible(not holding)
+        self.form.setVisible(self.shown == 1 and not holding)
         self.key_step.setVisible(holding)
+        self.images.setVisible(self.shown == 2)
+        if self.shown == 2 and board_model is not None:
+            self.images.show_for(board_model)
         if not holding:
             self.customer_names.setStringList([s["customer"] for s in self.ctx.stores() if not s["shredded_at"]])
         self._sync()
@@ -367,7 +367,8 @@ class FirstRunGuide(QFrame):
 
     def reset(self) -> None:
         """Screen 1's fields empty again, for the next board model or the next user signed in, with no refusal left from
-        what was typed or saved before."""
+        what was typed or saved before, and screen 2 afresh (`GuideImages.forget`)."""
+        self.images.forget()
         for field in (self.name, self.customer):
             field.blockSignals(True)
             field.clear()

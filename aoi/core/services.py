@@ -123,6 +123,7 @@ ACTIVATING = QT_TRANSLATE_NOOP("Training", "Making AI model {version} active")
 VALIDATING = QT_TRANSLATE_NOOP("Training", "Validating AI model {version}: image {n} of {count}")
 SHIFT_CHECKING = QT_TRANSLATE_NOOP("Training", "Shift check: master sample {n} of {count}")
 GUIDE_PARTS = ("keep", "train", "activate", "validate", "shift_check")  # Train's parts, in order
+GUIDE_IMAGES = ("ok", "ng", "ng_boxed")  # the lines of What is missing the guide's screen 2 counts, before Train
 # Why an AI model version was not made active (AOI-TRN-048, REQ-TRN-010), as phrases shown translated (#198)
 NO_EARLIER = QT_TRANSLATE_NOOP("Errors", "no earlier version of this board model was active")
 NO_GOLDEN = QT_TRANSLATE_NOOP("Errors", "its Golden board {file} cannot be read ({error})")
@@ -875,6 +876,23 @@ class AppContext:
             listen(job)
         self.training, self.training_progress = job, None
         return self.jobs.submit(job)
+
+    def guide_step(self, board_model: str | None) -> int | None:
+        """The first-run guide's screen for the board model in the header (REQ-TRN-021; B5, docs/sketches/
+        first-run-guide.md, Q76): 1 with none; for one in a customer's store, from its making until its first board is
+        inspected, 2 while a line of its images is not met (GUIDE_IMAGES, a Trial What is missing's first three), then
+        3. None for a board model in no store or a shredded one, whose images are not frozen until an Admin moves them
+        in, for one with a board inspected, and for one a Validated AI model judges, which the guide's Train never
+        replaces (AOI-TRN-057). Writes nothing."""
+        if board_model is None:
+            return 1
+        store = self.store_of(board_model)
+        if store is None or store["shredded_at"] or self.db.inspection_counts(board_model)[0]:
+            return None
+        if self.validated_live(board_model) is not None:
+            return None
+        needs = {n.key: n for n in self.missing(board_model, trial=True).needs}
+        return 2 if any(not needs[k].done for k in GUIDE_IMAGES) else 3
 
     @requires("Engineer", QT_TRANSLATE_NOOP("Errors", "Training an AI model"))
     def start_guide_train(

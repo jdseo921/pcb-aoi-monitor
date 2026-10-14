@@ -290,6 +290,7 @@ UNCHECKED = {
     "missing", "train_ok_after_split",  # What is missing and the Split sheet read, writing nothing (REQ-TRN-021)
     "board_model_name_refusal",  # the refusal a new board model's name meets, read as it is typed (ADR 0023)
     "is_trial", "validated_live",  # whether a Trial AI model may go live, read (ADR 0020, decision 4)
+    "guide_step",  # the first-run guide's screen for a board model, read (B5)
 }  # fmt: skip
 CALLS = {**{name: call for name, (_, call) in WRITES.items()}, **CHECKED_READS}
 # The lowest role allowed each call, copied from the write table of docs/ARCHITECTURE.md §5 and REQ-CMP-005, never read
