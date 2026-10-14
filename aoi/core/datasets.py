@@ -38,12 +38,19 @@ NEEDS = QT_TRANSLATE_NOOP(
     " more NG images with every defect boxed; a Validated version also needs {calibration} images labelled OK or NG"
     " for the agreement check.",
 )
+NEEDS_TRIAL = QT_TRANSLATE_NOOP(  # NEEDS for a Trial version, which takes no agreement check (ADR 0020)
+    "Datasets",
+    "A board model needs at least {ok} OK images of one view ({train} to train, {held} held out to test) and {ng} or"
+    " more NG images with every defect boxed.",
+)
 
 
-def needs() -> Phrase:
+def needs(trial: bool = False) -> Phrase:
     """The one sentence that says how many images a board model needs (REQ-TRN-021), filled from the constants above
-    and labels.CALIBRATION_IMAGES, so no screen or document states a count of its own."""
-    return NEEDS.fill(ok=OK_NEEDED, train=TRAIN_OK, held=VALIDATION_OK, ng=NG_NEEDED, calibration=CALIBRATION_IMAGES)
+    and labels.CALIBRATION_IMAGES, so no screen or document states a count of its own; for a Trial version (`trial`,
+    the first-run guide's screen 2), the same sentence without the agreement check's clause."""
+    phrase = NEEDS_TRIAL if trial else NEEDS
+    return phrase.fill(ok=OK_NEEDED, train=TRAIN_OK, held=VALIDATION_OK, ng=NG_NEEDED, calibration=CALIBRATION_IMAGES)
 
 
 def model_file_stem(version: str) -> str:

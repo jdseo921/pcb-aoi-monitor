@@ -84,6 +84,7 @@ NAV_W, HEADER_H, FIELD_W, CARD_W = 250, 64, 240, 720
 CELL_PAD = 6  # px of space each side of a table cell's and its heading's text, so no two cells' text runs together
 NAV_TEXT_X = 18  # a sidebar entry's text from its left edge, as QListWidget#nav::item's padding sets it
 IMAGE_MIN_W, IMAGE_MIN_H, PROGRESS_W = 320, 240, 360
+GUIDE_IMAGE_H = 420  # the first-run guide's box area: an NG image drawn on, whole in a 1366 x 768 window (B5)
 SIDE_W = 520  # Inspection's verdict panel beside the board; the board gives way in a narrower window (#104)
 # Compare's decision table with every column whole, as the demo's NG board fills it (893 px at 14 pt): the pair goes
 # beside it only where both fit, a width the window decides, not the record shown (#104, review of A7)

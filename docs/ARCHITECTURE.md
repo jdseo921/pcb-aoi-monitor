@@ -716,9 +716,9 @@ NG synthetic images, which proves the code path only.
 **The first-run guide on Home** (REQ-TRN-021, B5; docs/sketches/first-run-guide.md, Q66, Q67, Q76). With no board model
 in the header, `HomePage` shows `FirstRunGuide` (`aoi/ui/pages/guide.py`) in place of its cards, its empty state and
 What is missing, for a role that may `ensure_board_model`; an Operator gets Home's empty state, which says to ask an
-Admin. Its steps line reads "● 1 Board model ─── ○ 2 Images ─── ○ 3 Train"; screen 1 is built, and screens 2 and 3
-follow. Screen 1 takes the board model's name, checked as it is typed by `board_model_name_refusal` (the New board model
-dialog's line), and its customer, offered from the stores by a completer whose Enter picks and makes nothing
+Admin. Its steps line reads "● 1 Board model ─── ○ 2 Images ─── ○ 3 Train"; screens 1 and 2 are built, and screen 3
+follows. Screen 1 takes the board model's name, checked as it is typed by `board_model_name_refusal` (the New board
+model dialog's line), and its customer, offered from the stores by a completer whose Enter picks and makes nothing
 (`_PickOnly`; with no row picked, as when the whole name was typed, Enter is Create's). Create, by Enter in either
 field, calls `create_customer_board_model` (an Admin's; for an Engineer the screen is greyed, `RoleGates.gate` taking
 the guide's own role line, "Setting up a board model for a customer needs the Admin role."). While Create is off, a
@@ -734,6 +734,24 @@ save or print that works, and a sign-in, take it away. F1 lists the key step's k
 model while there is no board model, for the board model shown, kept in `cards_for` until the next sign-in. The name
 field takes the focus at a start too, before the window is shown. `tests/test_first_run_guide.py` drives screen 1 for
 each role.
+
+**The guide's screen 2, the images** (REQ-TRN-021, B5; Q69 to Q71). `AppContext.guide_step(board_model)` gives the
+guide's screen: 1 for no board model; 2 while a board model in a customer's store, not shredded, with no board inspected
+and no Validated AI model live, lacks one of What is missing's first three Trial lines (`GUIDE_IMAGES`: OK images, NG
+images, NG images with every defect boxed); 3 once it has them; None for any other board model, which Home shows its
+cards for. `HomePage.guided` takes screen 2 for a role that may `import_samples`; an Operator gets Home's empty state,
+"<board model> is still being set up", while the guide is at 2 or 3. Screen 2 is `GuideImages`
+(`aoi/ui/pages/guide_images.py`). Before any image it gives the sentence `datasets.needs(trial=True)` says (the Trial
+counts, without the agreement check's) and how the folder is laid out. Pick Folder… (Ctrl+O) copies the folder's `ok`
+and `ng/<defect type>` images (`folder_files`) in the view picked, as soon as the folder is picked: `import_files` on a
+pool thread, with the progress pattern's line and Cancel (Esc), which keeps the images before it. Images straight in
+`ng` wait for a type picked from a list, and the copy starts on the pick (Q71). The line under it names the folder and
+the view and counts the images not taken, and Show Why lists each with its code; the three lines count against What is
+missing's. The box area (`BoxEditor`, always drawing; Q70) shows the view's NG images in turn: a box drawn is stored at
+once with its folder's type (`set_boxes`), then the next NG image with no box opens. ← Back (PgUp), Undo (Ctrl+Z) and
+Zoom In, Zoom Out and Fit (+, -, 0) sit beside it. A press on an off control says why (`PressSays`), and F1 lists the
+keys of the parts shown. With every NG image boxed `guide_step` is 3, and until screen 3 is built Home shows its cards.
+`tests/test_guide_images.py` drives screen 2.
 
 **Next AI step (not in this draft):** once enough labelled NG crops exist per type, add a small supervised
 classifier that names the defect (Solder Bridge, Tombstone, …) for each flagged region. Today a region is named by

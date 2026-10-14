@@ -199,6 +199,7 @@ class HomePage(Page):
         self.guide.holding_changed.connect(shell.hold_frame)
         self.guide.made.connect(shell.select_board_model)
         self.guide.cards_wanted.connect(lambda: self._show_cards(True))
+        self.guide.images.changed.connect(self._guide_moved)
         self.cards_for: set[str | None] = set()  # the board models Show All Steps › was pressed for, until a sign-in
         lay.addWidget(self.guide)
         self.btn_guide = button(self.tr("Show the Guide ›"), slot=lambda: self._show_cards(False))
@@ -214,8 +215,18 @@ class HomePage(Page):
 
     def guided(self, board_model: str | None) -> bool:
         """Whether the first-run guide is for `board_model`: a workspace with no board model, for a role that sets one
-        up, or the one whose store's recovery key the guide shows."""
-        return (board_model is None and self.gates.may("ensure_board_model")) or self.guide.holding()
+        up; the one whose store's recovery key the guide shows; or a board model whose images the guide's screen 2
+        still takes (`AppContext.guide_step`), for a role that copies images."""
+        if self.guide.holding():
+            return True
+        if board_model is None:
+            return self.gates.may("ensure_board_model")
+        return self.gates.may("import_samples") and self.ctx.guide_step(board_model) == 2
+
+    def _guide_moved(self) -> None:
+        """A copy or a box on the guide's screen 2: once its images are in and boxed, Home shows what comes next."""
+        if self.isVisible() and not self.guided(self.board_model):
+            self.on_show()
 
     def on_user_changed(self) -> None:
         """A sign-in: what the user before typed on the guide goes, unless its recovery key shows, and the guide is back
@@ -298,6 +309,11 @@ class HomePage(Page):
             if not self.guide.form.isHidden() and (focus is None or not self.guide.isAncestorOf(focus)):
                 self.guide.name.setFocus()  # screen 1 opens on the name, typed at once (sketch), at a start too, when
                 # the window is not shown yet: Qt gives the focus to the name as the window opens
+            return
+        if bm and not self.gates.may("import_samples") and self.ctx.guide_step(bm) in (2, 3):
+            self.cards.hide()  # an Operator, who sets nothing up, while the guide sets the board model up (sketch)
+            self.missing_list.show_for(None)
+            self.show_empty(self.empty, self.tr("{board_model} is still being set up").format(board_model=bm), "")
             return
         self.cards.setVisible(bool(bm))
         self.missing_list.show_for(bm or None)

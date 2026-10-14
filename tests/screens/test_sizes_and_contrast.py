@@ -671,36 +671,6 @@ def test_req_trn_017_new_board_model_dialog_sizes_and_contrast(
     assert not findings, f"{len(findings)} findings:\n" + "\n".join(sorted(set(findings)))
 
 
-def test_req_trn_021_first_run_guide_sizes_and_contrast(
-    screens: tuple[AppContext, Path], qtbot: QtBot, qapp: QApplication
-) -> None:
-    """Home's first-run guide (B5), which the page walk never reaches, as its workspace has board models: screen 1 as
-    the Admin types in it, its recovery key step and screen 1 greyed for the Engineer, in the screenshots' states
-    (`render_screens.guide_steps`). Every visible widget of the guide passes the font, size and contrast rules above,
-    and every control marked T is held to its size class."""
-    ctx, _ = screens
-    findings: list[str] = []
-    seen: Counter = Counter()
-    need = {"T": theme.TARGET_H, "T+": theme.RUN_CONTROL_H, "F": theme.FIELD_H}  # size_class() in pages/base.py
-    with _shell(ctx, qtbot, qapp) as win:
-        guide = cast(HomePage, win.pages["Home"]).guide
-        for name in render_screens.guide_steps(win):
-            assert guide.isVisible(), name
-            seen["steps"] += 1
-            shot = _pixels(win.grab().toImage())
-            for w in guide.findChildren(QWidget):
-                if w.isVisible() and w.width() > 0:
-                    findings += _check_widget(name, win, shot, w, seen)
-                    if (cls := w.property("sizeClass")) in need:
-                        seen["targets"] += 1
-                        if w.height() < need[cls]:
-                            findings.append(f"{name}: {type(w).__name__} '{_text(w)}' is {w.height()} px tall")
-        win.set_user("admin")
-    enough = {"steps": 3, "text": 25, "buttons": 8, "targets": 5}
-    assert all(seen[k] >= n for k, n in enough.items()), seen
-    assert not findings, f"{len(findings)} findings:\n" + "\n".join(sorted(set(findings)))
-
-
 def test_req_insp_014_compare_notice_costs_the_decision_table_no_row(
     screens: tuple[AppContext, Path], qtbot: QtBot, qapp: QApplication, tmp_path: Path
 ) -> None:
@@ -1059,3 +1029,34 @@ def test_req_set_004_text_on_an_image_is_measured_against_the_pixels_behind_it(
     assert not missed, missed
     assert any(f"on {theme.WARN_COLOR} reads at 1.2:1" in f for f in found["flat, past the edge", False]), found
     assert [f for f in unseen if f"'No image': {theme.BG_IMAGE} on {theme.BG_IMAGE} reads at 1.0:1" in f], unseen
+
+
+def test_req_trn_021_first_run_guide_sizes_and_contrast(
+    screens: tuple[AppContext, Path], qtbot: QtBot, qapp: QApplication
+) -> None:
+    """Home's first-run guide (B5), which the page walk never reaches, as its workspace has board models: screen 1 as
+    the Admin types in it, its recovery key step and screen 1 greyed for the Engineer, then screen 2 before any image
+    and with its box area open, in the screenshots' states (`render_screens.guide_steps`). Every visible widget of the
+    guide passes the font, size and contrast rules above, and every control marked T is held to its size class. Last in
+    the module, as screen 2's board model stays in its workspace."""
+    ctx, dataset = screens
+    findings: list[str] = []
+    seen: Counter = Counter()
+    need = {"T": theme.TARGET_H, "T+": theme.RUN_CONTROL_H, "F": theme.FIELD_H}  # size_class() in pages/base.py
+    with _shell(ctx, qtbot, qapp) as win:
+        guide = cast(HomePage, win.pages["Home"]).guide
+        for name in render_screens.guide_steps(win, dataset):
+            assert guide.isVisible(), name
+            seen["steps"] += 1
+            shot = _pixels(win.grab().toImage())
+            for w in guide.findChildren(QWidget):
+                if w.isVisible() and w.width() > 0:
+                    findings += _check_widget(name, win, shot, w, seen)
+                    if (cls := w.property("sizeClass")) in need:
+                        seen["targets"] += 1
+                        if w.height() < need[cls]:
+                            findings.append(f"{name}: {type(w).__name__} '{_text(w)}' is {w.height()} px tall")
+        win.set_user("admin")
+    enough = {"steps": 5, "text": 50, "buttons": 18, "targets": 12}
+    assert all(seen[k] >= n for k, n in enough.items()), seen
+    assert not findings, f"{len(findings)} findings:\n" + "\n".join(sorted(set(findings)))

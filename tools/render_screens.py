@@ -88,10 +88,13 @@ PRESENTER_SMALL_SHOTS = {  # every page the demo scripts open (tools/screen_size
     "presenter-1366-settings-admin": ("Settings", "admin"),
 }
 NEW_BOARD_MODEL_SHOTS = {"new-board-model-admin": "form", "new-board-model-key-admin": "key"}  # dialogs (ADR 0021)
-GUIDE_SHOTS = {  # Home's first-run guide (B5): screen 1 as the Admin types, the key Create shows, and the Engineer's
+GUIDE_SHOTS = {  # Home's first-run guide (B5): screen 1 as the Admin types, the key Create shows, and the Engineer's;
+    # screen 2 for a board model with no image yet, then with GUIDE_OK and GUIDE_NG images in and the box area open
     "home-guide-admin": ("admin", "form"),
     "home-guide-key-admin": ("admin", "key"),
     "home-guide-engineer": ("engineer", "form"),
+    "home-guide-images-admin": ("admin", "images"),
+    "home-guide-boxes-admin": ("admin", "boxes"),
 }
 FIXED_WORKSPACE = "C:/AOI_Workspace"  # what the Settings page shows instead of the temporary folder
 TEST_FONT = '"DejaVu Sans"'  # the font the approved images are drawn with (Linux)
@@ -116,10 +119,11 @@ def slug(title: str) -> str:
     return re.sub(r"[^a-z0-9]+", "-", title.lower()).strip("-")
 
 
-def counted_uuids() -> Iterator[uuid.UUID]:
+def counted_uuids(start: int = 1) -> Iterator[uuid.UUID]:
     """What uuid4() returns while the workspace is built: 000001…, 000002…, so the UUID that names each sample's file
-    and the record's evidence files (#245), and every record id, are the same in every run."""
-    for n in itertools.count(1):
+    and the record's evidence files (#245), and every record id, are the same in every run; from `start`, for what a
+    render adds after (GUIDE_UUIDS)."""
+    for n in itertools.count(start):
         yield uuid.UUID(int=(n << 104) | n, version=4)
 
 
@@ -480,6 +484,9 @@ def render_stored(win: Any, ctx: AppContext, out: Path) -> dict[str, Path]:
 
 NEW_BOARD_MODEL = "TBOX-A2"  # the board model the New board model dialog's screenshots type, made by none of them
 NEW_CUSTOMER = "Beta Boards"
+GUIDE_BOARD_MODEL, GUIDE_CUSTOMER = "TBOX-C1", "Cedar Circuits"  # screen 2's, made last, after every other screenshot
+GUIDE_OK, GUIDE_NG = 10, 3  # the images screen 2's box area shows copied in: too few OK images, the NG ones enough
+GUIDE_UUIDS = 1_000_000  # where screen 2's ids count from, past every one the workspace was built with
 # A name the line under the name field refuses (no Latin letter or digit, AOI-TRN-054; ADR 0023): the size walk's, in
 # no screenshot, as the pinned DejaVu Sans draws no Korean and another font would draw it on each machine its own way
 REFUSED_BOARD_MODEL = "보드"
@@ -555,25 +562,44 @@ def render_dialogs(win: Any, out: Path) -> dict[str, Path]:
     return files
 
 
-def guide_steps(win: Any) -> Iterator[str]:
-    """Home's first-run guide (B5) with no board model in the header, as a workspace with none shows it, in each state
-    of GUIDE_SHOTS in turn, its name yielded with the window laid out: screen 1 with NEW_BOARD_MODEL and NEW_CUSTOMER
-    typed by the Admin, the recovery key Create would show for `pinned_store`, and screen 1 greyed for the Engineer;
-    then the header's board model back. For the screenshots and the size walk alike."""
+def guide_steps(win: Any, dataset: Path) -> Iterator[str]:
+    """Home's first-run guide (B5) in each state of GUIDE_SHOTS in turn, its name yielded with the window laid out:
+    with no board model in the header, as a workspace with none shows it, screen 1 with NEW_BOARD_MODEL and NEW_CUSTOMER
+    typed by the Admin, the recovery key Create would show for `pinned_store` and screen 1 greyed for the Engineer;
+    then screen 2 for GUIDE_BOARD_MODEL, made in GUIDE_CUSTOMER's store, with no image, and with GUIDE_OK OK and
+    GUIDE_NG NG images of `dataset` in, the box area on the first NG image. Then the header's board model back. For the
+    screenshots and the size walk alike; screen 2's board model stays, so it comes after every other screenshot."""
+    from PySide6.QtTest import QTest
     from PySide6.QtWidgets import QApplication
 
-    guide = win.pages["Home"].guide
+    from aoi.core.imaging import list_images
+    from tools.make_synthetic_dataset import ng_type
+
+    ctx, guide = win.ctx, win.pages["Home"].guide
+    ids = counted_uuids(GUIDE_UUIDS)
     win.bm_combo.setCurrentIndex(-1)
     try:
         for name, (role, step) in GUIDE_SHOTS.items():
             win.set_user(role)
             win.statusBar().clearMessage()
+            with mock.patch("uuid.uuid4", side_effect=ids), mock.patch("aoi.core.crypto.new_key", pinned_key):
+                if step == "images":
+                    ctx.create_customer_board_model(GUIDE_BOARD_MODEL, GUIDE_CUSTOMER)
+                    win.select_board_model(GUIDE_BOARD_MODEL)
+                if step == "boxes":
+                    ok = list_images(dataset / "train" / "ok")[:GUIDE_OK]
+                    ctx.import_samples(GUIDE_BOARD_MODEL, [str(p) for p in ok], "OK")
+                    for p in list_images(dataset / "train" / "ng")[:GUIDE_NG]:
+                        ctx.import_samples(GUIDE_BOARD_MODEL, [str(p)], "NG", ng_type(p))
             assert win.navigate("Home")
+            win.pages["Home"].on_show()  # what was made or copied above shown, as a page shown again shows it
             if role == "admin" and step == "form":
                 guide.name.setText(NEW_BOARD_MODEL)
                 guide.customer.setText(NEW_CUSTOMER)
             if step == "key":
                 guide.show_key(NEW_BOARD_MODEL, pinned_store())
+            while guide.images.reading is not None:  # the box area's NG image, read on a pool thread
+                QTest.qWait(20)
             settle()
             if (focus := QApplication.focusWidget()) is not None:
                 focus.clearFocus()  # no caret, which blinks, in the image
@@ -587,10 +613,10 @@ def guide_steps(win: Any) -> Iterator[str]:
         win.bm_combo.setCurrentText(BOARD_MODEL)
 
 
-def render_guide(win: Any, out: Path) -> dict[str, Path]:
+def render_guide(win: Any, dataset: Path, out: Path) -> dict[str, Path]:
     """The first-run guide's screenshots (GUIDE_SHOTS), in the states `guide_steps` leaves it in."""
     files = {}
-    for name in guide_steps(win):
+    for name in guide_steps(win, dataset):
         files[name] = out / f"{name}.png"
         assert win.grab().save(str(files[name])), files[name]
     return files
@@ -665,7 +691,7 @@ def render_pages(
     files.update(render_stored(win, ctx, out))
     files.update(render_presenter(win, dataset, out))
     files.update(render_dialogs(win, out))
-    files.update(render_guide(win, out))  # last: a board model selected again leaves every page as it opens
+    files.update(render_guide(win, dataset, out))  # last: it makes a board model, and selects the one before again
     win.close()
     return files
 

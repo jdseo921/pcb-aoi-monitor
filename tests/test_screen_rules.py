@@ -268,7 +268,11 @@ def test_req_set_018_one_primary_button(qtbot: QtBot, trained_ctx: AppContext) -
         assert not any(b.isCheckable() for b in primaries), title
         primaries = [b for b in primaries if not guide.isAncestorOf(b)]
         assert len(primaries) == 1, (title, [b.text() for b in primaries])
-    for step, press in ((guide.form, guide.btn_create), (guide.key_step, guide.btn_kept)):
+    for step, press in (
+        (guide.form, guide.btn_create),
+        (guide.key_step, guide.btn_kept),
+        (guide.images, guide.images.btn_pick),
+    ):
         assert [b for b in step.findChildren(QPushButton) if b.objectName() == "primary"] == [press]
     assert f"QPushButton#primary {{ background: {theme.ACCENT};" in theme.QSS
 
