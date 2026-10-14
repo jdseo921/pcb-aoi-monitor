@@ -977,8 +977,7 @@ class AppContext:
         previous = self.db.active_model(board_model)
         # the board model's first AI model, for the line's own use, goes live once registered (D3, ADR 0018): the first
         # with no AI model live before it, of either kind, and so the first after Trial ones that did not go live too
-        models = self.db.models(board_model)
-        first = use == "own" and previous is None and all(self.trial_version(m) is not None for m in models)
+        first = use == "own" and previous is None and all(self.is_trial(m) for m in self.db.models(board_model))
         out.mkdir(parents=True, exist_ok=True)
 
         def files(v: str) -> list[Path]:
@@ -1035,7 +1034,7 @@ class AppContext:
             raise
         self._model_cache.pop(board_model, None)
         not_live = self._first_live(board_model, model_id) if first else None
-        live = first and not_live is None
+        live = first and not_live is None and (self.db.active_model(board_model) or {}).get("id") == model_id
         self.log.info("training.finished", extra={"board_model": board_model, "model_version": version, "live": live})
         return {**model.meta, "activated": live, "not_live": not_live}
 
@@ -1733,7 +1732,7 @@ class AppContext:
         if self.db.active_model(board_model) is not None:
             return None
         models = self.db.models(board_model)  # newest first
-        return next((m for m in models if self.trial_version(m) is None), next(iter(models), None))
+        return next((m for m in models if not self.is_trial(m)), next(iter(models), None))
 
     def calibrated_threshold(
         self, board_model: str, model_uuid: str | None = None, version: str | None = None
@@ -3559,8 +3558,9 @@ class AppContext:
         logged and returned, for Training to show, and which Inspection then offers to activate (`inactive_model`).
         None once it is live."""
         try:
-            with self.db.transaction():
-                self._switch_to(self.db.model(model_id), "model.activate", FIRST_LIVE)
+            with self.db.transaction():  # one made active meanwhile, as by Inspection's Activate, is kept (ADR 0020)
+                if self.db.active_model(board_model) is None:
+                    self._switch_to(self.db.model(model_id), "model.activate", FIRST_LIVE)
         except Exception as e:
             self.log.warning("training.first_not_live", exc_info=True, extra={"board_model": board_model})
             return e
@@ -3576,13 +3576,22 @@ class AppContext:
         found = self.db.datasets("", str(meta.get("dataset_uuid") or ""))
         return found[0] if found else {"name": meta.get("dataset"), "board_model": model["board_model"], "view": None}
 
+    def is_trial(self, model: dict[str, Any]) -> bool:
+        """Whether an AI model version (a registry row) was trained from a Trial version (`trial_version`); False for
+        one whose registry row cannot be read (AOI-TRN-012 on Training), which is taken for a Validated one, as is one
+        trained before a version had an assurance."""
+        try:
+            return self.trial_version(model) is not None
+        except (ValueError, AttributeError):  # metrics not JSON, or not an object
+            return False
+
     def validated_live(self, board_model: str) -> dict[str, Any] | None:
-        """The board model's active AI model (a registry row) when it is not a Trial one, which no Trial AI model
-        replaces (ADR 0020, decision 4: "Live until Validated", Jay, 2026-10-14); None while none is active or a Trial
-        one is. The go-live gate refuses every switch to a Trial AI model while one is, so once a Validated AI model has
-        gone live the active one stays Validated."""
+        """The board model's active AI model (a registry row) when it is not a Trial one (`is_trial`), which no Trial
+        AI model replaces (ADR 0020, decision 4: "Live until Validated", Jay, 2026-10-14); None while none is active or
+        a Trial one is. The go-live gate refuses every switch to a Trial AI model while one is, so once a Validated AI
+        model has gone live the active one stays Validated."""
         active = self.db.active_model(board_model)
-        return active if active is not None and self.trial_version(active) is None else None
+        return active if active is not None and not self.is_trial(active) else None
 
     def _switch_to(self, target: dict[str, Any], action: str, reason: str | None = None) -> None:
         """Make `target` its board model's active version and its Golden board the board model's, together, with an

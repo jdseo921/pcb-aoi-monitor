@@ -987,9 +987,10 @@ CODES: dict[str, ErrorCode] = {
             QT_TRANSLATE_NOOP("Errors", "A Trial AI model does not replace a Validated one"),
             QT_TRANSLATE_NOOP(
                 "Errors",
-                "AI model {version} of board model {board} was not made active: it was trained from {dataset}, a Trial"
-                " version that one person froze without a second person checking its labels or an agreement check,"
-                " and a Validated AI model already judges the boards of {board}.",
+                "AI model {version} of board model {board} was not made active: a Validated AI model already judges"
+                " the boards of {board}, and a Trial AI model never replaces one. It was trained from {dataset}, a"
+                " Trial version that one person froze without a second person checking its labels or an agreement"
+                " check.",
             ),
             QT_TRANSLATE_NOOP(
                 "Errors",

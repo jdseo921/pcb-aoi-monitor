@@ -897,7 +897,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+191"/>
+        <location line="+190"/>
         <location line="+2471"/>
         <source>(none)</source>
         <translation type="unfinished"></translation>
@@ -1150,14 +1150,14 @@
         <translation>검증 세트 잠금</translation>
     </message>
     <message>
-        <location line="-2747"/>
-        <location line="+2761"/>
+        <location line="-2746"/>
+        <location line="+2760"/>
         <location line="+39"/>
         <source>the workspace holds no such dataset version</source>
         <translation>작업 공간에 그런 데이터셋 버전이 없습니다</translation>
     </message>
     <message>
-        <location line="-2843"/>
+        <location line="-2842"/>
         <source>Drift on {board} ({view}): {count} of the last {of} boards called NG; {before} % of the {baseline} before</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1257,7 +1257,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+954"/>
+        <location line="+953"/>
         <source>Setting the comparison&apos;s thresholds from labelled boards</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1469,7 +1469,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+236"/>
+        <location line="+246"/>
         <source>Exporting an AI model</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1484,7 +1484,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-3502"/>
+        <location line="-3511"/>
         <source>no earlier version of this board model was active</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1509,7 +1509,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+878"/>
+        <location line="+877"/>
         <source>its UUID {found} is not {uuid}, as in the AI model registry</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1579,7 +1579,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+118"/>
+        <location line="+128"/>
         <source>Changing settings</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1616,7 +1616,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-3730"/>
+        <location line="-3739"/>
         <source>unhandled</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2850,7 +2850,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+24"/>
+        <location line="+9"/>
+        <source>AI model {version} of board model {board} was not made active: a Validated AI model already judges the boards of {board}, and a Trial AI model never replaces one. It was trained from {dataset}, a Trial version that one person froze without a second person checking its labels or an agreement check.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+16"/>
         <source>No dataset store on this system</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3461,7 +3466,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1339"/>
+        <location line="-1340"/>
         <source>Board judged NG</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3576,12 +3581,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1"/>
-        <source>AI model {version} of board model {board} was not made active: it was trained from {dataset}, a Trial version that one person froze without a second person checking its labels or an agreement check, and a Validated AI model already judges the boards of {board}.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+6"/>
+        <location line="+8"/>
         <source>Start the Checks on Training: a second person checks the labels and two people run an agreement check; then freeze a Validated version and train from it. The active AI model and Golden board stay as they are.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3923,7 +3923,7 @@
     </message>
     <message>
         <location line="+1"/>
-        <location filename="../core/services.py" line="+3003"/>
+        <location filename="../core/services.py" line="+3002"/>
         <source>a file of it could not be read: {reason}</source>
         <translation>그 파일 하나를 읽을 수 없습니다: {reason}</translation>
     </message>
@@ -4125,7 +4125,7 @@
     </message>
     <message>
         <location line="+21"/>
-        <source>A Trial version and every AI model trained from it are marked Trial: such an AI model judges boards only until a Validated one does, and never backs a customer validation report.</source>
+        <source>A Trial version and every AI model trained from it are marked Trial: such an AI model can judge boards only while no Validated AI model has gone live, and never backs a customer validation report.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -5842,12 +5842,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+30"/>
-        <source>Nothing a Trial version needs is missing: {board_model} has an active AI model. Pick Validated to see what a Validated one needs.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="-27"/>
+        <location line="+3"/>
         <source>{board_model}, {view} view: an AI model is active; {left} of {lines} still missing for a next version</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5867,7 +5862,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+14"/>
+        <location line="+10"/>
+        <source>Nothing a Trial version needs is missing: {board_model} has an active AI model. Pick Validated to see what a Validated version needs.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+4"/>
         <source>Nothing is missing: {board_model} has an active AI model.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -8174,7 +8174,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/services.py" line="-3080"/>
+        <location filename="../core/services.py" line="-3079"/>
         <source>Aligning {count} images to the reference board</source>
         <translation type="unfinished"></translation>
     </message>
@@ -8345,7 +8345,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+23"/>
+        <location line="+13"/>
+        <source>AI model {version} trained from a Trial version: Validated AI model {active} still judges the boards of {board_model}, because a Trial AI model never replaces a Validated one. Start the Checks to freeze a Validated version and train from it.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+10"/>
         <source>AI model {version} trained: select it and press Activate Selected to judge boards with it</source>
         <translation type="unfinished"></translation>
     </message>
@@ -8652,12 +8657,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+5"/>
-        <source>AI model {version} trained from a Trial version: Validated AI model {active} still judges the boards of {board_model}, as a Trial one never replaces it. Start the Checks to freeze a Validated version and train from it.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+6"/>
+        <location line="+11"/>
         <source>AI model {version} trained, but not made active, so {board_model} is still judged by the Golden board comparison alone: {code}. Activate it with Activate Selected once the cause is fixed.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -8677,7 +8677,12 @@
         <translation>검증 세트 잠김 ✓ {val_ok} OK / {val_ng} NG · 학습 세트 {ok} OK, {ng} NG · NG는 보정에만 사용</translation>
     </message>
     <message>
-        <location line="+51"/>
+        <location line="+8"/>
+        <source>Trial version: an AI model trained from it is marked Trial and can judge boards only while no Validated AI model has gone live. {line}</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+43"/>
         <source>Export AI model</source>
         <translation type="unfinished"></translation>
     </message>
@@ -8687,7 +8692,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+75"/>
+        <location line="+58"/>
+        <source>A Trial AI model never replaces a Validated one: Start the Checks for a Validated version.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+21"/>
         <source>Blind labelling is open: Stop it, then press the button again</source>
         <translation type="unfinished"></translation>
     </message>
@@ -8717,17 +8727,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-511"/>
+        <location line="-515"/>
         <source>No samples for {board_model} yet</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+326"/>
-        <source>Trial version: an AI model trained from it is marked Trial and judges boards only until a Validated one does. {line}</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+23"/>
+        <location line="+349"/>
         <source>Rolled back to AI model {version}</source>
         <translation type="unfinished"></translation>
     </message>
@@ -8752,7 +8757,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+11"/>
+        <location line="+15"/>
         <source>No AI model yet</source>
         <translation type="unfinished"></translation>
     </message>

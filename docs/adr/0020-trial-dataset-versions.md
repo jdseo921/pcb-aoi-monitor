@@ -44,9 +44,9 @@ AI model of the customer's own boards (F1, F2).
    record's and the CSV's `model_version` name for a board it judged (decision 4); its files are `v1.0-trial`. It takes
    the next number, as any version does (a Trial v1.0 and a Validated v1.0 never both exist). Its card's first line
    starts with a plain sentence: "Trial: one person froze <version> without a second person checking its labels or an
-   agreement check, so this AI model judges boards only until a Validated one does, and cannot back a customer
-   validation report", and its known limits add that a wrong label may have taught it. The `dataset.freeze` and
-   `model.train` entries carry `assurance`.
+   agreement check, so this AI model can judge boards only while no Validated AI model of its board model has gone live,
+   and cannot back a customer validation report", and its known limits add that a wrong label may have taught it. The
+   `dataset.freeze` and `model.train` entries carry `assurance`.
 4. **A Trial AI model goes live only while no Validated one has, and never replaces one** ("Live until Validated",
    decided by Jay on 2026-10-14 00:03 UTC, as Q63 of `docs/sketches/first-run-guide.md` recommends). A board model's
    first AI model, a Trial one included, goes live when trained (ADR 0018): one trained with none active and no
@@ -55,10 +55,10 @@ AI model of the customer's own boards (F1, F2).
    (Trial); a Validated version that waits is offered before a Trial one. A Validated AI model trained while a Trial one
    is live installs inactive, as every later version does (REQ-TRN-010), and What is missing's Validated list offers to
    activate it. Once a Validated AI model is live (`validated_live`), the go-live gate refuses every Trial AI model,
-   activated or rolled back to, with AOI-TRN-052 (in `_switch_to`), so the active one stays Validated, and Training
-   says so when one is trained. The refusal is a step taken as approved, so it shows as information with Start the
+   activated or rolled back to, with AOI-TRN-052 (in `_switch_to`), so the active one stays Validated; Training greys
+   Roll Back when it would go to one, and says so when one is trained. The refusal is a step taken as approved, so it shows as information with Start the
    Checks and is stored as no ERROR alarm. This decision first read "The go-live gate refuses a Trial AI model, first
-   or later" ("Never live", recommended on the card of 2026-10-13 06:15 UTC and built that way); the third option,
+   or later" ("Never live", recommended on the card of 2026-10-13 06:15 UTC and built that way); the other option,
    "Live, marked Trial" (only the report refuses), was not chosen. That a Validated AI model does not take a live Trial
    one's place by itself is how this is built, not a decision of Jay's: it keeps "a new version installs inactive"
    (REQ-TRN-012) wherever an AI model is live.
@@ -89,7 +89,8 @@ AI model of the customer's own boards (F1, F2).
   Trial version never becomes Validated: the checks are made on the samples, and a new version is frozen. A Trial AI
   model trained with a build made before "Live until Validated" (none was released) stays inactive at the upgrade;
   with none active, Inspection, Home and Training offer Activate for it. Its card, written when it was trained, still
-  says it cannot go live.
+  says it cannot go live. An AI model trained before a version had an assurance counts as Validated, those of 0.2.0
+  trained from the sample table with no checks included, so a board model with one live takes no Trial AI model.
 - Not done: a check that a Trial version's AI model left the workspace only as a Trial one (an exported `.pt` keeps
   `assurance` in its metadata, which no import reads yet).
 
@@ -101,7 +102,8 @@ AI model of the customer's own boards (F1, F2).
 > train an AI model from it. When that is a board model's first AI model, it judges that board model's boards as soon
 > as training ends, together with the Golden board comparison, and boards are compared with the Golden board that
 > training built. Verdicts of that board model can change from then on: the AI check can add NG and WARN calls, and
-> the new Golden board can change what the comparison finds.
+> the new Golden board can change what the comparison finds. Your engineer can also activate a later Trial AI model,
+> or roll back to one, until a Validated AI model judges that board model's boards.
 >
 > What does not change: a Trial AI model is named with "(Trial)" on every screen, record, CSV export and audit entry;
 > it never replaces a Validated AI model, and once a Validated one judges a board model's boards, no Trial one does

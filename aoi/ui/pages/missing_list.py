@@ -182,7 +182,7 @@ class MissingList(WrappedGroup):
             self.done_line.setText(
                 self.tr(
                     "Nothing a Trial version needs is missing: {board_model} has an active AI model. Pick Validated to"
-                    " see what a Validated one needs."
+                    " see what a Validated version needs."
                 ).format(board_model=board_model)
                 if m.trial
                 else self.tr("Nothing is missing: {board_model} has an active AI model.").format(

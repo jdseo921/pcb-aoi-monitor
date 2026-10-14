@@ -539,7 +539,8 @@ holds. Every other version, and every version frozen before the migration, is **
 metadata, its card (whose first line says what Trial means, `model_card.TRIAL_LINE`) and its `model.train` entry;
 `trial_version` gives the Trial version an AI model was trained from. Such an AI model goes live as any other while no
 Validated one has ("Live until Validated", Jay, 2026-10-14); once one has (`validated_live`, the active AI model when it
-is not a Trial one), the go-live gate (`_switch_to`) refuses it with AOI-TRN-052, activated or rolled back to, and
+is not a Trial one; `is_trial` takes a registry row it cannot read for a Validated one), the go-live gate
+(`_switch_to`) refuses it with AOI-TRN-052, activated or rolled back to (Training greys Roll Back then), and
 `validation_report_data` refuses a run on a Trial version's validation set
 or of an AI model trained from one with AOI-TST-009; both name the board model and view, which the dialog's Start the
 Checks opens on Training (`Page.error_act`, `MainWindow.start_checks`). Then, holding the database lock, one transaction finds N, checks the

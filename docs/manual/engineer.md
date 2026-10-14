@@ -407,11 +407,11 @@ still holds. A Trial version is named so wherever it is listed (the Versions tab
 list on Training, the Split sheet's title, AI Model Test's sources and history, Export Manifest…'s question and file
 name), and so is every AI model trained from it: v1.0 (Trial), in the AI models list, on Inspection, in the audit trail
 and in the files' names (v1.0-trial). Its AI model card starts with a plain sentence that says what Trial means. A Trial
-AI model judges boards only until a Validated one does: as a board model's first AI model it goes live when its training
-ends (section 6), and you may activate or roll back to a Trial AI model while no Validated one has gone live. A Validated
-AI model you train while a Trial one is live installs inactive, as any later version; once you activate it, Activate
-Selected and Roll Back refuse every Trial AI model of that board model with AOI-TRN-052, and Training says so when one
-is trained. A run on a Trial version's validation set, or of a Trial AI
+AI model can judge boards only while no Validated one has gone live: as a board model's first AI model it goes live
+when its training ends (section 6), and you may activate or roll back to a Trial AI model until then. A Validated AI
+model you train while a Trial one is live installs inactive, as any later version; once you activate it, Activate
+Selected and Roll Back refuse every Trial AI model of that board model with AOI-TRN-052 (Roll Back is greyed), and
+Training says so when one is trained. A run on a Trial version's validation set, or of a Trial AI
 model, makes no customer validation report (AOI-TST-009). Both messages are information, not errors (no ERROR alarm),
 and have **Start the Checks**,
 which opens Training on the board model's Samples tab with Show › Unchecked, or the Datasets tab's labeller agreement
@@ -542,7 +542,8 @@ before this release, or whose activation failed) is named on Home, on AI Model T
 Activate <version> and whose alarm log says AOI-TRN-051, where they said there was no AI model yet. An AI model of a
 Trial version (section 3), named with (Trial), goes live as any other while no Validated AI model of its board model has,
 its board model's first included; a Validated version waiting beside it is the one Inspection offers. Once a Validated
-one is live, Activate Selected and Roll Back refuse a Trial AI model with AOI-TRN-052 and Start the Checks. Activating a
+one is live, Activate Selected refuses a Trial AI model with AOI-TRN-052 and Start the Checks, and Roll Back to one is
+greyed. Activating a
 version makes its own Golden board the one boards are compared with, in the same step. Roll Back goes back, in
 one click, to the
 version that was active before the active one, with its Golden board; its label names that version ("Roll Back to v1.0")

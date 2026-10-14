@@ -1009,8 +1009,8 @@ class TrainingPage(Page):
         elif kept is not None:  # a Trial AI model never replaces a Validated one (ADR 0020, decision 4)
             done = self.tr(
                 "AI model {version} trained from a Trial version: Validated AI model {active} still judges the boards"
-                " of {board_model}, as a Trial one never replaces it. Start the Checks to freeze a Validated version"
-                " and train from it."
+                " of {board_model}, because a Trial AI model never replaces a Validated one. Start the Checks to freeze"
+                " a Validated version and train from it."
             )
         elif report is not None:  # logged, and stored as an alarm with its code
             done = self.tr(
@@ -1125,8 +1125,8 @@ class TrainingPage(Page):
             )
         if uuid in self._trial:
             trial = self.tr(
-                "Trial version: an AI model trained from it is marked Trial and judges boards only until a Validated"
-                " one does. {line}"
+                "Trial version: an AI model trained from it is marked Trial and can judge boards only while no"
+                " Validated AI model has gone live. {line}"
             )
             text = trial.format(line=text)
         self.version_line.setText(text)
@@ -1223,7 +1223,11 @@ class TrainingPage(Page):
         back = self.ctx.previous_model(self.board_model)  # Roll Back names the version it goes to (Q41)
         label = self.tr("Roll Back to {version}").format(version=back["version"]) if back else self.tr("Roll Back")
         self.btn_rollback.setText(label)
-        self.btn_rollback.setEnabled(back is not None)
+        # never back to a Trial AI model once a Validated one is live, which the go-live gate refuses (ADR 0020)
+        blocked = back is not None and self.ctx.is_trial(back) and self.ctx.validated_live(self.board_model) is not None
+        self.btn_rollback.setEnabled(back is not None and not blocked)
+        why = self.tr("A Trial AI model never replaces a Validated one: Start the Checks for a Validated version.")
+        self.btn_rollback.setToolTip(why if blocked else "")
         # each row's AOI-TRN-012, with what happened and what to do, under the table
         said = [tip for tip in tips if tip]
         self.models_note.setText("\n".join(said))
