@@ -7,9 +7,13 @@ The copy is `AppContext.import_files` on a pool thread (REQ-SET-021): the progre
 Cancel (Esc), which keeps the images copied before it. Images straight in ng/ take the defect type picked from the list
 that shows then, and the copy starts on the pick (Q71). Each image not taken is counted, and Show Why lists it with its
 code. The box area is always drawing (Q70): a drag stores the box, of the type its folder gave and that type's severity
-(`AppContext.set_boxes`), then opens the next NG image with no box; ← Back (PgUp) opens the one before, for a second
-box or one to move, and Undo (Ctrl+Z) takes the last box drawn away again. A refusal is said under the control that
-raised it, with its code; the screen shows no dialog of its own."""
+(`AppContext.set_boxes`), then opens the next NG image with no box, passing over one that cannot be read, which is named
+under it; a drag on a box moves it. ← Back (PgUp) opens the one before, for a second box or one to move, and Undo
+(Ctrl+Z) takes the last box drawn away again. A refusal is said under the control that raised it, with its code, and a
+press on an off control, or its key, says why on the status bar; the screen shows no dialog of its own.
+
+What the screen holds is of the board model shown: another board model, or another user signed in, starts it afresh
+(`forget`), and a copy running goes on, its line naming its board model while another one is shown."""
 
 from __future__ import annotations
 
@@ -17,8 +21,8 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import numpy as np
-from PySide6.QtCore import QCoreApplication, Signal
-from PySide6.QtGui import QAction, QKeySequence
+from PySide6.QtCore import QCoreApplication, QEvent, QObject, Qt, Signal
+from PySide6.QtGui import QAction, QKeyEvent, QKeySequence
 from PySide6.QtWidgets import (
     QButtonGroup,
     QComboBox,
@@ -52,6 +56,8 @@ if TYPE_CHECKING:
     from .base import Page
 
 ZOOM_STEP = 1.25  # one Zoom In, as the label editor's
+OPENS = (Qt.Key.Key_Return, Qt.Key.Key_Enter, Qt.Key.Key_Space)  # keys that open the closed type list
+PASSES = (Qt.Key.Key_Tab, Qt.Key.Key_Backtab, Qt.Key.Key_Escape, Qt.Key.Key_F4)  # keys the closed type list keeps
 
 
 def _read(ctx: AppContext, path: str) -> np.ndarray | AoiError:
@@ -60,6 +66,28 @@ def _read(ctx: AppContext, path: str) -> np.ndarray | AoiError:
         return ctx.load_image(path)
     except AoiError as e:  # gone or damaged since it was copied: said under the box area
         return e
+
+
+class _ListOnly(QObject):
+    """The type of the images straight in ng is picked in the list, as the copy starts on the pick (Q71): on the closed
+    box, the arrows, a letter typed and the wheel, which would move it onto a type, do nothing, and Enter or Space opens
+    the list, where a click or Enter picks."""
+
+    def __init__(self, box: QComboBox) -> None:
+        super().__init__(box)
+        self.box = box
+        box.installEventFilter(self)
+
+    def eventFilter(self, watched: QObject, e: QEvent) -> bool:  # noqa: N802 (Qt's name)
+        if e.type() == QEvent.Type.Wheel:
+            return True
+        if isinstance(e, QKeyEvent) and e.type() == QEvent.Type.KeyPress:
+            if e.key() in OPENS:
+                self.box.showPopup()
+                return True
+            alt_down = e.key() == Qt.Key.Key_Down and e.modifiers() & Qt.KeyboardModifier.AltModifier
+            return not (e.key() in PASSES or alt_down)
+        return False
 
 
 class GuideImages(QWidget):
@@ -73,11 +101,16 @@ class GuideImages(QWidget):
         self.page, self.ctx, self.status = page, page.ctx, status
         self.board_model: str | None = None
         self.folder = ""  # the folder picked last, as the line under Pick Folder names it
+        self.view_picked = False  # a view button pressed for this board model: kept, never set from its images again
         self.waiting: list[ImportFile] = []  # a pick's files while the type of the images straight in ng is asked
         self.copying: Worker | None = None
+        self.copy_for = ""  # the board model the copy running copies into
         self.reading: Worker | None = None
         self.ng: list[dict[str, Any]] = []  # the NG images of the view, oldest first: the box area's order
-        self.at = -1  # the one the box area shows
+        self.at = -1  # the one the box area shows, by its place in `ng`
+        self.open_uuid: str | None = None  # and by its sample, which a list read again finds by
+        self.loaded: dict[str, Any] | None = None  # the sample whose picture the box area holds: a box goes on it
+        self.unreadable: dict[str, str] = {}  # NG images that could not be read, passed over: what refused each
         self.undo: list[tuple[str, list[DefectBox]]] = []  # each box drawn: its image and the boxes it had before
         lay = QVBoxLayout(self)
         lay.setContentsMargins(0, 0, 0, 0)
@@ -114,9 +147,11 @@ class GuideImages(QWidget):
         row = QHBoxLayout()
         row.addWidget(QLabel(self.tr("View")))
         self.views = QButtonGroup(self)
+        self.views.buttonClicked.connect(self._view_picked)
         self.view_buttons: dict[str, QRadioButton] = {}
         for v in VIEWS:
             b = size_class(QRadioButton(view_text(v)), "T")
+            PressSays(b, self._pick_off, self.status)  # off while a copy runs, as Pick Folder… is
             self.views.addButton(b)
             self.view_buttons[v] = b
             row.addWidget(b)
@@ -139,6 +174,7 @@ class GuideImages(QWidget):
         self.ng_type.addItems(names())
         self.ng_type.setCurrentIndex(-1)
         self.ng_type.activated.connect(self._typed)
+        _ListOnly(self.ng_type)
         typing.addWidget(self.ng_type)
         typing.addStretch(1)
         self.typing.hide()
@@ -192,6 +228,7 @@ class GuideImages(QWidget):
         grid.setColumnStretch(0, 1)
         self.editor = BoxEditor(placeholder=self.tr("NG image: drag across the defect"))
         self.editor.setMinimumHeight(theme.GUIDE_IMAGE_H)
+        self.editor.moves_while_drawing = True  # always drawing (Q70), and a box still moved by a drag on it
         self.editor.edited.connect(self._edited)
         grid.addWidget(self.editor, 0, 0, 2, 1)
         side = QVBoxLayout()
@@ -204,10 +241,13 @@ class GuideImages(QWidget):
         nxt = QLabel(self.tr("The next image opens after each box."))
         nxt.setWordWrap(True)
         nxt.setObjectName("muted")
-        self.box_refused = QLabel()  # a box not kept, or an image that cannot be read: its code
+        self.box_refused = QLabel()  # a box not kept, or the image shown that cannot be read: its code
         self.box_refused.setWordWrap(True)
         self.box_refused.hide()
-        for w in (self.what, self.where, self.kind, nxt, self.box_refused):
+        self.passed = QLabel()  # the NG images passed over, as they cannot be read: each with its code
+        self.passed.setWordWrap(True)
+        self.passed.hide()
+        for w in (self.what, self.where, self.kind, nxt, self.box_refused, self.passed):
             side.addWidget(w)
         side.addStretch(1)
         keys = QGridLayout()
@@ -228,8 +268,8 @@ class GuideImages(QWidget):
             act.triggered.connect(slot)
             self.boxes.addAction(act)  # while the box area shows
         self.btn_back, self.btn_undo, self.btn_in, self.btn_out, self.btn_fit = made
-        PressSays(self.btn_back, lambda: self.tr("This is the first NG image."), self.status)
-        PressSays(self.btn_undo, lambda: self.tr("No box drawn on this screen to undo."), self.status)
+        PressSays(self.btn_back, self._back_off, self.status)
+        PressSays(self.btn_undo, self._undo_off, self.status)
         side.addLayout(keys)
         grid.addLayout(side, 0, 1)
         self.boxes.hide()
@@ -237,18 +277,29 @@ class GuideImages(QWidget):
 
     # --- what shows --------------------------------------------------------------------------------------------
     def show_for(self, board_model: str) -> None:
-        """Screen 2 for `board_model`: its counts read again, and the box area on the first NG image with no box."""
+        """Screen 2 for `board_model`: its counts read again, and the box area on the image it showed, or the first NG
+        image with no box; afresh for another board model (`forget`)."""
         if board_model != self.board_model:
-            self.folder, self.undo, self.at = "", [], -1
-            self.from_line.hide()
-            self.btn_why.hide()
-            self.why.hide()
-            self.picked.hide()
+            self.forget()
         self.board_model = board_model
         self.refresh()
 
+    def forget(self) -> None:
+        """What the screen held of the board model shown, gone, for another board model or the next user signed in: the
+        folder picked and what its copy did, a type still asked for, the view pressed, the image open, the images
+        passed over and the boxes Undo would take away. A copy running goes on."""
+        self.folder, self.view_picked, self.waiting, self.undo = "", False, [], []
+        self.at, self.open_uuid, self.loaded, self.reading = -1, None, None, None
+        self.unreadable.clear()
+        for w in (self.from_line, self.btn_why, self.why, self.picked, self.typing, self.box_refused, self.passed):
+            w.hide()
+        self.btn_why.setText(self.tr("Show Why"))
+        self.editor.set_image(None)
+        self.editor.show_boxes([])
+
     def refresh(self) -> None:
-        """The counts, the help before any image, the lines, Pick Folder for a role that may copy, and the box area."""
+        """The counts, the help before any image, the lines, Pick Folder for a role that may copy, and the box area: on
+        the image it shows, found again by its sample in the list read again, or else the first NG image with no box."""
         bm = self.board_model
         if bm is None:
             return
@@ -257,7 +308,7 @@ class GuideImages(QWidget):
         any_image = needs["ok"].have + needs["ng"].have > 0
         self.first.setVisible(not any_image)
         self.none.setText(self.tr("No images of {board_model} yet").format(board_model=bm))
-        if any_image:
+        if any_image and not self.view_picked:
             self.view_buttons[missing.view].setChecked(True)
         for key, line in self.need_lines.items():
             n = needs[key]
@@ -269,13 +320,18 @@ class GuideImages(QWidget):
                 more = self.tr("Add {more} more to the ok folder and pick it again; images already in are skipped.")
                 said = f"{said}. {more.format(more=n.need - n.have)}"
             line.setText(said)
-        self._gate()
         self.ng = [s for s in self.ctx.samples(bm, "NG") if s["side"] == missing.view]
-        boxed = needs["ng_boxed"]
-        drawing = bool(self.ng) and not boxed.done and self.copying is None
+        self.at = next((i for i, s in enumerate(self.ng) if s["uuid"] == self.open_uuid), -1)
+        if self.at < 0:
+            self.loaded = None  # gone from the list, as when labelled OK on Training: no box goes on it
+        self._show_passed()
+        drawing = bool(self.ng) and not needs["ng_boxed"].done and self.copying is None
         self.boxes.setVisible(drawing)
-        if drawing and not (0 <= self.at < len(self.ng)):
+        if drawing and self.at < 0:
             self.open_image(self._next_unboxed(-1))
+        elif self.at >= 0:
+            self._where()
+        self._gate()
 
     def _gate(self) -> None:
         """Pick Folder, the view and the type list for a role that may copy images, off while a copy runs; the box
@@ -286,7 +342,7 @@ class GuideImages(QWidget):
         for radio in self.view_buttons.values():
             gates.gate(radio, "import_samples", not busy)
         gates.gate(self.ng_type, "import_samples", not busy)
-        gates.gate(self.btn_back, "set_boxes", self.at > 0)
+        gates.gate(self.btn_back, "set_boxes", self._before(self.at) >= 0)
         gates.gate(self.btn_undo, "set_boxes", bool(self.undo))
         self.editor.locked = not gates.may("set_boxes")
 
@@ -296,8 +352,24 @@ class GuideImages(QWidget):
         return [a for part in parts if not part.isHidden() for a in part.actions()]
 
     def _pick_off(self) -> str:
-        """Why Pick Folder… is off, said on a press: the role it needs, or a copy running."""
-        return self.page.gates.why.get(self.btn_pick) or self.tr("A copy is running: Cancel (Esc) stops it.")
+        """Why Pick Folder… and the view are off, said on a press or on Ctrl+O: the role needed, or a copy running."""
+        why = self.page.gates.why.get(self.btn_pick)
+        if why:
+            return why
+        if self.copy_for and self.copy_for != self.board_model:
+            return self.tr("A copy into {board_model} is running: Cancel (Esc) stops it.").format(
+                board_model=self.copy_for
+            )
+        return self.tr("A copy is running: Cancel (Esc) stops it.")
+
+    def _back_off(self) -> str:
+        return self.page.gates.why.get(self.btn_back) or self.tr("This is the first NG image.")
+
+    def _undo_off(self) -> str:
+        return self.page.gates.why.get(self.btn_undo) or self.tr("No box drawn on this screen to undo.")
+
+    def _view_picked(self) -> None:
+        self.view_picked = True
 
     def view(self) -> str:
         return next(v for v, b in self.view_buttons.items() if b.isChecked())
@@ -306,12 +378,18 @@ class GuideImages(QWidget):
     def pick_folder(self) -> None:
         """Pick Folder… (Ctrl+O): the folder's images, each labelled and typed by its folders, copied in the view
         picked as soon as it is picked (Q69); a folder with none in ok or ng copies nothing and says how to lay it out.
-        Images straight in ng wait for their type (Q71)."""
-        if self.board_model is None or self.copying is not None or not self.btn_pick.isEnabled():
+        Images straight in ng wait for their type (Q71); a folder picked after drops a type still asked for. While a
+        copy runs, or for a role that may not copy, the status bar says why and nothing opens."""
+        if self.board_model is None:
+            return
+        if self.copying is not None or not self.btn_pick.isEnabled():
+            self.status(self._pick_off())
             return
         folder = QFileDialog.getExistingDirectory(self, self.tr("Pick the folder with ok and ng in it"))
         if not folder:
             return
+        self.waiting = []
+        self.typing.hide()
         self.folder = folder
         self.picked.hide()
         files = folder_files(folder)
@@ -340,7 +418,7 @@ class GuideImages(QWidget):
         return f.label == "NG" and f.defect_type is None and Path(f.path).parent.name.lower() in NG_FOLDERS
 
     def _typed(self, index: int) -> None:
-        """The type of the images straight in ng picked: they take it, and the copy starts (Q71)."""
+        """The type of the images straight in ng picked in the list: they take it, and the copy starts (Q71)."""
         if index < 0 or not self.waiting:
             return
         for f in self.waiting:
@@ -352,14 +430,17 @@ class GuideImages(QWidget):
 
     def copy(self, files: list[ImportFile]) -> None:
         """Copy `files` into the board model on a pool thread, one `import_samples` call each, so Cancel keeps what
-        went in (#194); the line says the image it is at, the percent and the time left."""
+        went in (#194); the line says the image it is at, the percent and the time left. The copy keeps its board
+        model, folder and view: what it did is said on the screen of that board model only."""
         bm = self.board_model
-        if bm is None:
+        if bm is None or not files:
             return
+        folder, view = self.folder, files[0].side
         w = self.copying = Worker(self.ctx.import_files, bm, files, with_progress=True)
+        self.copy_for = bm
         w.signals.progress.connect(lambda _done: self._copy_progress(w))
-        w.signals.result.connect(lambda report: self._copied(report, len(files)))
-        w.signals.error.connect(self._copy_failed)
+        w.signals.result.connect(lambda report: self._copied(report, len(files), bm, folder, view))
+        w.signals.error.connect(lambda e: self._copy_failed(e, bm))
         w.signals.finished.connect(lambda: self._copy_ended(w))
         self.copy_line.setText(self.tr("Copying the images…"))
         self.copy_row.show()
@@ -373,46 +454,68 @@ class GuideImages(QWidget):
             return
         line = self.tr("Copying image {n} of {count} · {percent} % · {left}")
         percent = 100 * info.done // info.total
-        self.copy_line.setText(
-            line.format(n=info.done, count=info.total, percent=percent, left=time_left_text(info.left_s))
-        )
+        said = line.format(n=info.done, count=info.total, percent=percent, left=time_left_text(info.left_s))
+        if self.copy_for != self.board_model:  # another board model shown: the line names the copy's
+            said = self.tr("{board_model}: {line}").format(board_model=self.copy_for, line=said)
+        self.copy_line.setText(said)
 
     def cancel(self) -> None:
         """Cancel (Esc): the copy stops after the image in hand, the images copied before it kept."""
         if self.copying is not None:
             self.copying.stop()
 
-    def _copied(self, report: ImportReport, total: int) -> None:
-        """What the copy did: the line under Pick Folder names the folder and the view and counts the images not
-        taken, which Show Why lists with their codes; an error that stopped it is said there too."""
-        view = view_text(self.view())
-        not_taken = len(report.refused)
-        self.from_line.setText(
-            self.tr("From {folder}, {view} view. Not taken: {count}.").format(
-                folder=self.folder, view=view, count=not_taken
-            )
-        )
-        self.from_line.show()
-        self.btn_why.setVisible(bool(not_taken))
-        self.why.setText("\n".join(f"{Path(f.path).name}: {self.page.coded_text(e)}" for f, e in report.refused))
-        self.why.hide()
-        self.btn_why.setText(self.tr("Show Why"))
-        if report.stopped is not None:
+    def _copied(self, report: ImportReport, total: int, board_model: str, folder: str, view: str) -> None:
+        """What the copy did: the line under Pick Folder names the folder and the view and counts the images not taken
+        and those already in, which Show Why lists with their codes, with the boxes an annotation file gave; an error
+        that stopped it is said there too, logged and alarmed. With another board model shown, the status bar says the
+        copy ended."""
+        stopped = ""
+        if report.stopped is not None:  # an error stopped it at that image
             f, e = report.stopped
-            self._refuse(self._coded(e), Path(f.path).name)
-        elif report.left:
-            stopped = self.tr("Copying stopped at image {at} of {total}; the ones before it are kept.")
-            self._refuse(stopped.format(at=total - len(report.left) + 1, total=total))
+            at = self.tr("Copying stopped at image {at} of {total}; the ones before it are kept.")
+            stopped = f"{at.format(at=total - len(report.left), total=total)} {Path(f.path).name}: {self._coded(e)}"
+        elif report.left:  # Cancel
+            at = self.tr("Copying stopped at image {at} of {total}; the ones before it are kept.")
+            stopped = at.format(at=total - len(report.left) + 1, total=total)
+        already = [(f, e) for f, e in report.refused if e.code == "AOI-TRN-015"]
+        not_taken = [(f, e) for f, e in report.refused if e.code != "AOI-TRN-015"]
+        if board_model != self.board_model:
+            said = self.tr("The copy into {board_model} ended: {added} copied, {count} not taken.")
+            self.status(said.format(board_model=board_model, added=len(report.added), count=len(not_taken)))
+            return
+        line = self.tr("From {folder}, {view} view. Not taken: {count}.").format(
+            folder=folder, view=view_text(view), count=len(not_taken)
+        )
+        already_in = self.tr("Already in: {count}.")
+        if already:
+            line = f"{line} {already_in.format(count=len(already))}"
+        boxed = sum(count for _f, count, _why in report.boxes)
+        from_files = self.tr("Boxes from annotation files: {count}.")
+        if boxed:
+            line = f"{line} {from_files.format(count=boxed)}"
+        self.from_line.setText(line)
+        self.from_line.show()
+        why = [f"{Path(f.path).name}: {self.page.coded_text(e)}" for f, e in [*not_taken, *already]]
+        partly = self.tr("copied, but not every box of its annotation file was stored: {why}.")
+        why += [f"{Path(f.path).name}: {partly.format(why=phrase_text(w))}" for f, _n, w in report.boxes if w]
+        self.why.setText("\n".join(why))
+        self.why.hide()
+        self.btn_why.setVisible(bool(why))
+        self.btn_why.setText(self.tr("Show Why"))
+        if stopped:
+            self._refuse(stopped)
 
-    def _copy_failed(self, e: BaseException) -> None:
-        self._refuse(self._coded(e))
+    def _copy_failed(self, e: BaseException, board_model: str) -> None:
+        said = self._coded(e)  # logged and alarmed whichever board model is shown
+        if board_model == self.board_model:
+            self._refuse(said)
 
     def _copy_ended(self, w: Worker) -> None:
         if w is not self.copying:
             return
-        self.copying = None
+        self.copying, self.copy_for = None, ""
         self.copy_row.hide()
-        self.at = -1
+        self.at, self.open_uuid = -1, None
         self.refresh()
         self.changed.emit()
 
@@ -421,8 +524,8 @@ class GuideImages(QWidget):
         report = self.ctx.report_error(e, "Home")
         return " ".join([report.code, phrase_text(report.what), phrase_text(report.action)])
 
-    def _refuse(self, said: str, name: str = "") -> None:
-        self.picked.setText(f"{name}: {said}" if name else said)
+    def _refuse(self, said: str) -> None:
+        self.picked.setText(said)
         self.picked.show()
 
     def _toggle_why(self) -> None:
@@ -435,49 +538,77 @@ class GuideImages(QWidget):
         return [DefectBox(r["x"], r["y"], r["w"], r["h"], r["dct_type"]) for r in self.ctx.boxes(sample["uuid"])]
 
     def _next_unboxed(self, after: int) -> int:
-        """The first NG image with no box after `after`, round to the start; -1 when every one has a box."""
+        """The first NG image with no box after `after`, round to the start, passing over those that cannot be read;
+        -1 when there is none."""
         count = len(self.ng)
         for step in range(1, count + 1):
             i = (after + step) % count
-            if not self.ctx.boxes(self.ng[i]["uuid"]):
+            if self.ng[i]["uuid"] not in self.unreadable and not self.ctx.boxes(self.ng[i]["uuid"]):
                 return i
         return -1
 
+    def _before(self, at: int) -> int:
+        """The NG image before `at` that can be read, or -1."""
+        return next((i for i in range(at - 1, -1, -1) if self.ng[i]["uuid"] not in self.unreadable), -1)
+
+    def _where(self) -> None:
+        """Where the image shown is in the list, and the type a box drawn on it takes."""
+        sample = self.ng[self.at]
+        where = self.tr("Image {n} of {count} · {file}")
+        self.where.setText(where.format(n=self.at + 1, count=len(self.ng), file=Path(sample["path"]).name))
+        self.kind.setText(self.tr("{type} (its folder)").format(type=self.editor.new_type))
+
     def open_image(self, at: int) -> None:
-        """The NG image `at` in the box area, read on a pool thread, with its boxes; one drawn takes its type."""
+        """The NG image `at` in the box area, read on a pool thread, with its boxes; one drawn takes its type. Until it
+        is read, a drag draws nothing."""
         if not (0 <= at < len(self.ng)):
             return
         self.at = at
         sample = self.ng[at]
+        self.open_uuid, self.loaded = sample["uuid"], None
         self.box_refused.hide()
         self.editor.set_image(None)
         self.editor.show_boxes([])
         self.editor.new_type = sample["defect_type"] or names()[0]
-        where = self.tr("Image {n} of {count} · {file}")
-        self.where.setText(where.format(n=at + 1, count=len(self.ng), file=Path(sample["path"]).name))
-        self.kind.setText(self.tr("{type} (its folder)").format(type=self.editor.new_type))
+        self._where()
         self._gate()
         w = self.reading = Worker(_read, self.ctx, str(sample["path"]))
         w.signals.result.connect(lambda image: self._read(w, sample, image))
+        w.signals.error.connect(lambda e: self._read(w, sample, e))
         start(w, self.ctx.jobs)
 
-    def _read(self, w: Worker, sample: dict[str, Any], image: np.ndarray | AoiError) -> None:
+    def _read(self, w: Worker, sample: dict[str, Any], image: np.ndarray | BaseException) -> None:
+        """The image read: shown, always drawing, a drag on a box moving it; one that cannot be read is passed over,
+        named with its code under the box area, and the next NG image with no box opens."""
         if w is not self.reading:
             return  # another image was asked for since
         self.reading = None
-        if isinstance(image, AoiError):
-            self.box_refused.setText(self._coded(image))
-            self.box_refused.show()
+        if isinstance(image, BaseException):
+            self.unreadable[sample["uuid"]] = f"{Path(sample['path']).name}: {self._coded(image)}"
+            self._show_passed()
+            self._gate()
+            nxt = self._next_unboxed(self.at)
+            if nxt >= 0:
+                self.open_image(nxt)
             return
+        self.loaded = sample
         self.editor.set_image(image)
         self.editor.show_boxes(self._boxes_of(sample))
         self.editor.set_draw_mode(True)
 
+    def _show_passed(self) -> None:
+        """The NG images passed over in the list shown, as they cannot be read, each with its code."""
+        names_ = [self.unreadable[s["uuid"]] for s in self.ng if s["uuid"] in self.unreadable]
+        head = self.tr("Passed over, as they cannot be read:")
+        self.passed.setText("\n".join([head, *names_]))
+        self.passed.setVisible(bool(names_))
+
     def _edited(self) -> None:
-        """A box drawn, moved or resized: stored at once; after a box drawn, the next NG image with no box opens."""
-        if not (0 <= self.at < len(self.ng)):
+        """A box drawn, moved or resized on the image shown: stored at once; after a box drawn, the next NG image with
+        no box opens."""
+        sample = self.loaded
+        if sample is None:
             return
-        sample = self.ng[self.at]
         before = self._boxes_of(sample)
         boxes = list(self.editor.boxes)
         try:
@@ -500,13 +631,18 @@ class GuideImages(QWidget):
             self.open_image(nxt)
 
     def back(self) -> None:
-        """← Back (PgUp): the NG image before the one shown."""
-        if self.at > 0 and self.boxes.isVisible():
-            self.open_image(self.at - 1)
+        """← Back (PgUp): the NG image before the one shown; on the first, the status bar says so."""
+        if not self.boxes.isVisible():
+            return
+        if not self.btn_back.isEnabled():
+            self.status(self._back_off())
+            return
+        self.open_image(self._before(self.at))
 
     def undo_box(self) -> None:
-        """Undo (Ctrl+Z): the last box drawn taken away again, its image shown."""
-        if not self.undo or not self.page.gates.may("set_boxes"):
+        """Undo (Ctrl+Z): the last box drawn taken away again, its image shown; with none, the status bar says so."""
+        if not self.btn_undo.isEnabled():
+            self.status(self._undo_off())
             return
         uuid, before = self.undo.pop()
         try:

@@ -180,7 +180,7 @@
 <context>
     <name>BoxEditor</name>
     <message>
-        <location filename="../ui/widgets/box_editor.py" line="+336"/>
+        <location filename="../ui/widgets/box_editor.py" line="+339"/>
         <source>{number} {type} ◆ {severity}</source>
         <translation>{number} {type} ◆ {severity}</translation>
     </message>
@@ -1630,7 +1630,7 @@
     <message>
         <location filename="../ui/demo_workspace.py" line="+31"/>
         <location filename="../ui/errors.py" line="+163"/>
-        <location filename="../ui/main_window.py" line="+1125"/>
+        <location filename="../ui/main_window.py" line="+1127"/>
         <source>start-up</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4380,7 +4380,7 @@
 <context>
     <name>GuideImages</name>
     <message>
-        <location filename="../ui/pages/guide_images.py" line="+102"/>
+        <location filename="../ui/pages/guide_images.py" line="+135"/>
         <source>Pick one folder with two folders in it: ok, with the good boards&apos; images, and ng, with a folder for each defect named after it, such as {example}.</source>
         <translation type="unfinished">두 폴더가 든 폴더 하나를 고르십시오. ok에는 양품 보드 이미지를, ng에는 불량마다 그 이름을 붙인 폴더(예: {example})를 둡니다.</translation>
     </message>
@@ -4390,7 +4390,7 @@
         <translation type="unfinished">뷰</translation>
     </message>
     <message>
-        <location line="+10"/>
+        <location line="+12"/>
         <source>Pick Folder…  Ctrl+O</source>
         <translation type="unfinished">폴더 선택…  Ctrl+O</translation>
     </message>
@@ -4405,7 +4405,7 @@
         <translation type="unfinished">ng 폴더에 바로 있는 이미지의 불량 유형</translation>
     </message>
     <message>
-        <location line="+15"/>
+        <location line="+16"/>
         <source>Cancel  Esc</source>
         <translation type="unfinished">취소  Esc</translation>
     </message>
@@ -4416,18 +4416,19 @@
     </message>
     <message>
         <location line="+14"/>
-        <location line="+232"/>
-        <location line="+32"/>
+        <location line="+93"/>
+        <location line="+208"/>
+        <location line="+30"/>
         <source>Show Why</source>
         <translation type="unfinished">이유 보기</translation>
     </message>
     <message>
-        <location line="-238"/>
+        <location line="-305"/>
         <source>NG image: drag across the defect</source>
         <translation type="unfinished">NG 이미지: 불량 위로 드래그하십시오</translation>
     </message>
     <message>
-        <location line="+5"/>
+        <location line="+6"/>
         <source>Draw a box around the defect.</source>
         <translation type="unfinished">불량 둘레에 박스를 그리십시오.</translation>
     </message>
@@ -4437,7 +4438,7 @@
         <translation type="unfinished">박스를 그릴 때마다 다음 이미지가 열립니다.</translation>
     </message>
     <message>
-        <location line="+11"/>
+        <location line="+14"/>
         <source>← Back</source>
         <translation type="unfinished">← 이전</translation>
     </message>
@@ -4467,17 +4468,27 @@
         <translation type="unfinished">{action}  {key}</translation>
     </message>
     <message>
-        <location line="+8"/>
+        <location line="+97"/>
+        <source>A copy into {board_model} is running: Cancel (Esc) stops it.</source>
+        <translation type="unfinished">{board_model}(으)로 복사하는 중입니다. 취소(Esc)로 멈출 수 있습니다.</translation>
+    </message>
+    <message>
+        <location line="+6"/>
         <source>This is the first NG image.</source>
         <translation type="unfinished">첫 번째 NG 이미지입니다.</translation>
     </message>
     <message>
-        <location line="+1"/>
+        <location line="+3"/>
         <source>No box drawn on this screen to undo.</source>
         <translation type="unfinished">이 화면에서 그린 박스가 없어 실행 취소할 것이 없습니다.</translation>
     </message>
     <message>
-        <location line="+27"/>
+        <location line="+233"/>
+        <source>Passed over, as they cannot be read:</source>
+        <translation type="unfinished">읽을 수 없어 건너뛴 이미지:</translation>
+    </message>
+    <message>
+        <location line="-292"/>
         <source>No images of {board_model} yet</source>
         <translation type="unfinished">아직 {board_model}의 이미지가 없습니다</translation>
     </message>
@@ -4492,22 +4503,22 @@
         <translation type="unfinished">ok 폴더에 {more}장을 더 넣고 다시 선택하십시오. 이미 들어간 이미지는 건너뜁니다.</translation>
     </message>
     <message>
-        <location line="+31"/>
+        <location line="+43"/>
         <source>A copy is running: Cancel (Esc) stops it.</source>
         <translation type="unfinished">복사가 진행 중입니다. 취소(Esc)로 멈출 수 있습니다.</translation>
     </message>
     <message>
-        <location line="+12"/>
+        <location line="+25"/>
         <source>Pick the folder with ok and ng in it</source>
         <translation type="unfinished">ok와 ng가 든 폴더 선택</translation>
     </message>
     <message>
-        <location line="+9"/>
+        <location line="+11"/>
         <source>No images in ok or ng folders in {folder}. Put the good boards&apos; images in ok and the defective ones in ng, in a folder named after the defect, then pick the folder again.</source>
         <translation type="unfinished">{folder}의 ok 또는 ng 폴더에 이미지가 없습니다. 양품 보드 이미지는 ok에, 불량 보드 이미지는 ng 안의 불량 이름 폴더에 넣은 뒤 폴더를 다시 선택하십시오.</translation>
     </message>
     <message>
-        <location line="+43"/>
+        <location line="+46"/>
         <source>Copying the images…</source>
         <translation type="unfinished">이미지 복사 중…</translation>
     </message>
@@ -4517,22 +4528,48 @@
         <translation type="unfinished">이미지 {count}장 중 {n}장째 복사 중 · {percent} % · {left}</translation>
     </message>
     <message>
-        <location line="+17"/>
+        <location line="+4"/>
+        <source>{board_model}: {line}</source>
+        <translation type="unfinished">{board_model}: {line}</translation>
+    </message>
+    <message>
+        <location line="+24"/>
+        <source>The copy into {board_model} ended: {added} copied, {count} not taken.</source>
+        <translation type="unfinished">{board_model}(으)로 복사를 마쳤습니다: {added}개 복사, {count}개 가져오지 않음.</translation>
+    </message>
+    <message>
+        <location line="+3"/>
         <source>From {folder}, {view} view. Not taken: {count}.</source>
         <translation type="unfinished">{folder}에서, {view} 뷰. 가져오지 않음: {count}장.</translation>
     </message>
     <message>
-        <location line="+13"/>
+        <location line="-11"/>
+        <location line="+3"/>
         <source>Copying stopped at image {at} of {total}; the ones before it are kept.</source>
         <translation type="unfinished">이미지 {total}장 중 {at}번째에서 복사가 멈췄습니다. 그 전 이미지는 유지됩니다.</translation>
     </message>
     <message>
-        <location line="+27"/>
+        <location line="+11"/>
+        <source>Already in: {count}.</source>
+        <translation type="unfinished">이미 있음: {count}개.</translation>
+    </message>
+    <message>
+        <location line="+4"/>
+        <source>Boxes from annotation files: {count}.</source>
+        <translation type="unfinished">주석 파일에서 가져온 박스: {count}개.</translation>
+    </message>
+    <message>
+        <location line="+6"/>
+        <source>copied, but not every box of its annotation file was stored: {why}.</source>
+        <translation type="unfinished">복사했지만 주석 파일의 박스 중 일부는 저장되지 않았습니다: {why}.</translation>
+    </message>
+    <message>
+        <location line="+35"/>
         <source>Hide Why</source>
         <translation type="unfinished">이유 숨기기</translation>
     </message>
     <message>
-        <location line="+25"/>
+        <location line="+23"/>
         <source>Image {n} of {count} · {file}</source>
         <translation type="unfinished">이미지 {count}장 중 {n}번째 · {file}</translation>
     </message>
@@ -4545,7 +4582,7 @@
 <context>
     <name>HomePage</name>
     <message>
-        <location filename="../ui/main_window.py" line="-985"/>
+        <location filename="../ui/main_window.py" line="-987"/>
         <source>Upload samples</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4630,7 +4667,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+24"/>
+        <location line="+26"/>
         <source>{board_model} is still being set up</source>
         <translation type="unfinished">{board_model}은(는) 아직 설정 중입니다</translation>
     </message>
@@ -4655,7 +4692,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-232"/>
+        <location line="-234"/>
         <source>Inspect</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4685,7 +4722,7 @@
         <translation>학습 중 {percent} % · {left}</translation>
     </message>
     <message>
-        <location line="+53"/>
+        <location line="+55"/>
         <source>{ok} OK · {ng} NG uploaded</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6820,7 +6857,7 @@
 <context>
     <name>Page</name>
     <message>
-        <location filename="../ui/main_window.py" line="-942"/>
+        <location filename="../ui/main_window.py" line="-944"/>
         <source>Home</source>
         <translation type="unfinished"></translation>
     </message>

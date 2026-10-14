@@ -1036,27 +1036,47 @@ def test_req_trn_021_first_run_guide_sizes_and_contrast(
 ) -> None:
     """Home's first-run guide (B5), which the page walk never reaches, as its workspace has board models: screen 1 as
     the Admin types in it, its recovery key step and screen 1 greyed for the Engineer, then screen 2 before any image
-    and with its box area open, in the screenshots' states (`render_screens.guide_steps`). Every visible widget of the
-    guide passes the font, size and contrast rules above, and every control marked T is held to its size class. Last in
-    the module, as screen 2's board model stays in its workspace."""
+    and with its box area open, in the screenshots' states (`render_screens.guide_steps`); then screen 2's parts that
+    no screenshot shows, each with a line of its own: the type list for images straight in ng, the copy's line with
+    Cancel, Show Why's list and the lines of a refusal. Every visible widget of the guide passes the font, size and
+    contrast rules above, and every control marked T is held to its size class. Last in the module, as screen 2's
+    board model stays in its workspace."""
     ctx, dataset = screens
     findings: list[str] = []
     seen: Counter = Counter()
     need = {"T": theme.TARGET_H, "T+": theme.RUN_CONTROL_H, "F": theme.FIELD_H}  # size_class() in pages/base.py
+
+    def walk(name: str, win: MainWindow, guide: QWidget) -> None:
+        assert guide.isVisible(), name
+        seen["steps"] += 1
+        shot = _pixels(win.grab().toImage())
+        for w in guide.findChildren(QWidget):
+            if w.isVisible() and w.width() > 0:
+                findings.extend(_check_widget(name, win, shot, w, seen))
+                if (cls := w.property("sizeClass")) in need:
+                    seen["targets"] += 1
+                    if w.height() < need[cls]:
+                        findings.append(f"{name}: {type(w).__name__} '{_text(w)}' is {w.height()} px tall")
+
     with _shell(ctx, qtbot, qapp) as win:
         guide = cast(HomePage, win.pages["Home"]).guide
         for name in render_screens.guide_steps(win, dataset):
-            assert guide.isVisible(), name
-            seen["steps"] += 1
-            shot = _pixels(win.grab().toImage())
-            for w in guide.findChildren(QWidget):
-                if w.isVisible() and w.width() > 0:
-                    findings += _check_widget(name, win, shot, w, seen)
-                    if (cls := w.property("sizeClass")) in need:
-                        seen["targets"] += 1
-                        if w.height() < need[cls]:
-                            findings.append(f"{name}: {type(w).__name__} '{_text(w)}' is {w.height()} px tall")
+            walk(name, win, guide)
+        images = guide.images
+        for line, said in (
+            (images.copy_line, "Copying image 12 of 78 · 15 % · about 1 min left"),
+            (images.picked, "Copying stopped at image 3 of 78; the ones before it are kept."),
+            (images.why, "stray.png: AOI-TRN-016 Image has no label. Put it in ok or ng, then pick the folder again."),
+            (images.box_refused, "AOI-TRN-032 The workspace holds no sample n02, so nothing was changed."),
+            (images.passed, "Passed over, as they cannot be read:\nn02.png: AOI-INSP-001 The image cannot be read."),
+        ):
+            line.setText(said)
+        parts = (images.typing, images.copy_row, images.picked, images.btn_why, images.why)
+        for part in (*parts, images.box_refused, images.passed):
+            part.show()
+        QApplication.processEvents()
+        walk("home-guide-images-parts", win, guide)
         win.set_user("admin")
-    enough = {"steps": 5, "text": 50, "buttons": 18, "targets": 12}
+    enough = {"steps": 6, "text": 55, "buttons": 20, "targets": 13}
     assert all(seen[k] >= n for k, n in enough.items()), seen
     assert not findings, f"{len(findings)} findings:\n" + "\n".join(sorted(set(findings)))

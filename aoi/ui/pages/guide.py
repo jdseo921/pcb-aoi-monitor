@@ -367,7 +367,8 @@ class FirstRunGuide(QFrame):
 
     def reset(self) -> None:
         """Screen 1's fields empty again, for the next board model or the next user signed in, with no refusal left from
-        what was typed or saved before."""
+        what was typed or saved before, and screen 2 afresh (`GuideImages.forget`)."""
+        self.images.forget()
         for field in (self.name, self.customer):
             field.blockSignals(True)
             field.clear()

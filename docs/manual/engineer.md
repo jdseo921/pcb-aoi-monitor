@@ -183,15 +183,18 @@ leaves the guide for Home without it, which with no board model yet is the empty
 not inspected a board yet. Put them in one folder with two folders in it: `ok`, with the good boards' images, and
 `ng`, with a folder for each defect named after it, such as `ng\Missing Component`. Pick the view, then **Pick
 Folder…** (Ctrl+O): the images are copied as soon as the folder is picked, with a line saying how far the copy is and
-**Cancel** (Esc), which keeps the images copied before it. Images straight in `ng` wait for you to pick their defect
-type from the list that shows, then the copy starts. The line under the button names the folder and counts the images
-not taken; **Show Why** lists each with its code. Three lines count the OK images, the NG images and the NG images with
-every defect boxed against what the board model needs; with too few OK images, add more to the `ok` folder and pick it
-again: the images already in are skipped. Then the box area shows each NG image in turn: drag across the defect, and
-the box is kept with the type of the image's folder, and the next NG image with no box opens. **← Back** (PgUp) opens
-the one before, **Undo** (Ctrl+Z) takes the last box away again, and **Zoom In**, **Zoom Out** and **Fit** (+, -, 0)
-help with small parts. A press on a greyed button says why, and F1 lists the keys. Once every NG image has a box, Home
-shows its cards until the guide's Train arrives. An Operator's Home says the board model is still being set up.
+**Cancel** (Esc), which keeps the images copied before it. The view stays as you picked it until another board model is
+chosen or another user signs in. Images straight in `ng` wait for you to pick their defect type from the list that
+shows, with a click, or with Enter to open the list and Enter again to pick; then the copy starts. The line under the
+button names the folder and counts the images not taken and those already in, which are skipped, not copied twice;
+**Show Why** lists each with its code. Three lines count the OK images, the NG images and the NG images with every defect
+boxed against what the board model needs; with too few OK images, add more to the `ok` folder and pick it again. Then
+the box area shows each NG image in turn: drag across the defect, and the box is kept with the type of the image's
+folder, and the next NG image with no box opens. Drag a box to move it. An image that cannot be read is passed over and
+named under the box area with its code. **← Back** (PgUp) opens the one before, **Undo** (Ctrl+Z) takes the last box
+away again, and **Zoom In**, **Zoom Out** and **Fit** (+, -, 0) help with small parts. A press on a greyed button, or its
+key, says why, and F1 lists the keys. Once every NG image has a box, Home shows its cards until the guide's Train
+arrives. An Operator's Home says the board model is still being set up until an AI model judges its boards.
 
 **Scale.** A board model's scale, in px per mm of the board, lets its recipe give sizes in mm, so that a recipe can
 survive a camera change (REQ-RCP-006). The scale does not follow the images by itself: after a camera change, or any

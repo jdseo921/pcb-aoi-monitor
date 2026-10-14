@@ -310,8 +310,10 @@ class HomePage(Page):
                 self.guide.name.setFocus()  # screen 1 opens on the name, typed at once (sketch), at a start too, when
                 # the window is not shown yet: Qt gives the focus to the name as the window opens
             return
-        if bm and not self.gates.may("import_samples") and self.ctx.guide_step(bm) in (2, 3):
-            self.cards.hide()  # an Operator, who sets nothing up, while the guide sets the board model up (sketch)
+        setting_up = bm and self.ctx.guide_step(bm) in (2, 3) and self.ctx.board_status(bm).model_version is None
+        if setting_up and not self.gates.may("import_samples"):
+            self.cards.hide()  # an Operator, who sets nothing up, while the guide sets the board model up and no AI
+            # model judges its boards yet (sketch); once one does, the cards, Inspection's among them
             self.missing_list.show_for(None)
             self.show_empty(self.empty, self.tr("{board_model} is still being set up").format(board_model=bm), "")
             return
