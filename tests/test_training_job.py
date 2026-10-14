@@ -220,8 +220,8 @@ def test_req_trn_008_survives_page_change(
     qtbot: QtBot, ctx: AppContext, synthetic_dataset: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """A run started on Training goes on while another page is shown: the header shows it on every page, and Home's
-    Train AI model card too, and the header opens Training; once it ends, the header and the card hide it and Training
-    shows the AI model saved."""
+    Train AI model card too, once Show All Steps › leaves the first-run guide for the cards, and the header opens
+    Training; once it ends, the header and the card hide it and Training shows the AI model saved."""
     boards(ctx, synthetic_dataset, 20)
     trainable(ctx, BOARD)
     go = threading.Event()
@@ -245,6 +245,8 @@ def test_req_trn_008_survives_page_change(
         )
         win.navigate("Home")
         home = cast(HomePage, win.pages["Home"])
+        assert home.guide.isVisible()  # a board model in a store, before its first board: Home's first-run guide (B5)
+        home.guide.btn_cards.click()  # Show All Steps › shows the cards
         qtbot.waitUntil(lambda: home.training_line.isVisible(), timeout=10000)
         assert re.fullmatch(r"Training running \d+ % · .+", home.training_line.text())
         win.training_link.click()

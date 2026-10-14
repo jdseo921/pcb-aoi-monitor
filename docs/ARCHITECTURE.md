@@ -752,7 +752,7 @@ view and counts the images not taken, those already in and the boxes annotation 
 with its code, and an error that stopped the copy is said with the image it stopped at. The three lines count against
 What is missing's. The box area (`BoxEditor`, always drawing, `moves_while_drawing`; Q70) shows the view's NG images in
 turn: a box drawn is stored at once with its folder's type (`set_boxes`) on the image whose picture shows (`loaded`),
-then the next NG image with no box opens; a drag on a box moves it. An NG image that cannot be read is passed over and
+then the next NG image with no box opens; a drag on a box moves it. An NG image that cannot be read is skipped and
 named under the box area with its code. ← Back (PgUp), Undo (Ctrl+Z) and Zoom In, Zoom Out and Fit (+, -, 0) sit beside
 it. A press on an off control, or its key, says why on the status bar (`PressSays`), and F1 lists the keys of the parts
 shown. What the screen holds is of the board model shown: another board model, or a sign-in, starts it afresh

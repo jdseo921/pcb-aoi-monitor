@@ -171,6 +171,11 @@ def pinned_key() -> tuple[bytes, bytes]:
     return os.urandom(32), bytes.fromhex("5ca1ab1e") + bytes(12)
 
 
+def guide_key() -> tuple[bytes, bytes]:
+    """GUIDE_CUSTOMER's store key as `pinned_key` draws one, under a key id of its own: no two stores share one."""
+    return os.urandom(32), bytes.fromhex("ced0a201") + bytes(12)
+
+
 def build_workspace(root: Path) -> AppContext:
     """The synthetic workspace the pages are rendered on; see the module docstring."""
     from aoi.config import Settings
@@ -582,7 +587,7 @@ def guide_steps(win: Any, dataset: Path) -> Iterator[str]:
         for name, (role, step) in GUIDE_SHOTS.items():
             win.set_user(role)
             win.statusBar().clearMessage()
-            with mock.patch("uuid.uuid4", side_effect=ids), mock.patch("aoi.core.crypto.new_key", pinned_key):
+            with mock.patch("uuid.uuid4", side_effect=ids), mock.patch("aoi.core.crypto.new_key", guide_key):
                 if step == "images":
                     ctx.create_customer_board_model(GUIDE_BOARD_MODEL, GUIDE_CUSTOMER)
                     win.select_board_model(GUIDE_BOARD_MODEL)

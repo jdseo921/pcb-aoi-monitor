@@ -1062,20 +1062,23 @@ def test_req_trn_021_first_run_guide_sizes_and_contrast(
         guide = cast(HomePage, win.pages["Home"]).guide
         for name in render_screens.guide_steps(win, dataset):
             walk(name, win, guide)
-        images = guide.images
-        for line, said in (
-            (images.copy_line, "Copying image 12 of 78 · 15 % · about 1 min left"),
-            (images.picked, "Copying stopped at image 3 of 78; the ones before it are kept."),
-            (images.why, "stray.png: AOI-TRN-016 Image has no label. Put it in ok or ng, then pick the folder again."),
-            (images.box_refused, "AOI-TRN-032 The workspace holds no sample n02, so nothing was changed."),
-            (images.passed, "Passed over, as they cannot be read:\nn02.png: AOI-INSP-001 The image cannot be read."),
-        ):
-            line.setText(said)
-        parts = (images.typing, images.copy_row, images.picked, images.btn_why, images.why)
-        for part in (*parts, images.box_refused, images.passed):
-            part.show()
-        QApplication.processEvents()
-        walk("home-guide-images-parts", win, guide)
+            if name == "home-guide-boxes-admin":  # screen 2's parts no screenshot shows, then hidden again
+                images = guide.images
+                for line, said in (
+                    (images.copy_line, "Copying image 12 of 78 · 15 % · about 1 min left"),
+                    (images.picked, "Copying stopped at image 3 of 78; the ones before it are kept."),
+                    (images.why, "stray.png: AOI-TRN-016 Image has no label. Put it in ok or ng, then pick it again."),
+                    (images.box_refused, "AOI-TRN-032 The workspace holds no sample n02, so nothing was changed."),
+                    (images.skipped, "Skipped, as they cannot be read:\nn02.png: AOI-INSP-001 Cannot be read."),
+                ):
+                    line.setText(said)
+                parts = (images.typing, images.copy_row, images.picked, images.btn_why, images.why)
+                for part in (*parts, images.box_refused, images.skipped):
+                    part.show()
+                QApplication.processEvents()
+                walk("home-guide-images-parts", win, guide)
+                for part in (*parts, images.box_refused, images.skipped):
+                    part.hide()
         win.set_user("admin")
     enough = {"steps": 6, "text": 55, "buttons": 20, "targets": 13}
     assert all(seen[k] >= n for k, n in enough.items()), seen

@@ -389,8 +389,8 @@ def test_req_trn_021_a_box_goes_on_the_image_shown(
 def test_req_trn_021_an_image_that_cannot_be_read_and_a_box_refused(
     qtbot: QtBot, ctx: AppContext, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, dialogs: list[Any]
 ) -> None:
-    """An NG image that cannot be read is passed over and named under the box area with its code, and the next NG image
-    with no box opens; ← Back passes over it too. A box the workspace refuses is said under the box area with its code,
+    """An NG image that cannot be read is skipped and named under the box area with its code, and the next NG image
+    with no box opens; ← Back skips it too. A box the workspace refuses is said under the box area with its code,
     and the image keeps the boxes it had. No dialog."""
     win, guide, images = home(qtbot, ctx)
     picked(qtbot, monkeypatch, images, boards(tmp_path / "TBOX-A1", 70, {"Solder Bridge": 3}))
@@ -398,8 +398,8 @@ def test_req_trn_021_an_image_that_cannot_be_read_and_a_box_refused(
     Path(ng[1]["path"]).unlink()
     drawn(qtbot, images)
     qtbot.waitUntil(lambda: images.at == 2 and images.reading is None)
-    assert images.passed.isVisible() and images.passed.text().startswith("Passed over, as they cannot be read:\n")
-    assert f"{Path(ng[1]['path']).name}: AOI-" in images.passed.text()
+    assert images.skipped.isVisible() and images.skipped.text().startswith("Skipped, as they cannot be read:\n")
+    assert f"{Path(ng[1]['path']).name}: AOI-" in images.skipped.text()
     images.back()
     qtbot.waitUntil(lambda: images.at == 0 and images.reading is None)
 

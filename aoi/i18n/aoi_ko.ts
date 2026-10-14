@@ -4484,7 +4484,7 @@
     </message>
     <message>
         <location line="+233"/>
-        <source>Passed over, as they cannot be read:</source>
+        <source>Skipped, as they cannot be read:</source>
         <translation type="unfinished">읽을 수 없어 건너뛴 이미지:</translation>
     </message>
     <message>

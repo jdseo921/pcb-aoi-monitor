@@ -110,7 +110,7 @@ class GuideImages(QWidget):
         self.at = -1  # the one the box area shows, by its place in `ng`
         self.open_uuid: str | None = None  # and by its sample, which a list read again finds by
         self.loaded: dict[str, Any] | None = None  # the sample whose picture the box area holds: a box goes on it
-        self.unreadable: dict[str, str] = {}  # NG images that could not be read, passed over: what refused each
+        self.unreadable: dict[str, str] = {}  # NG images that could not be read, skipped: what refused each
         self.undo: list[tuple[str, list[DefectBox]]] = []  # each box drawn: its image and the boxes it had before
         lay = QVBoxLayout(self)
         lay.setContentsMargins(0, 0, 0, 0)
@@ -244,10 +244,10 @@ class GuideImages(QWidget):
         self.box_refused = QLabel()  # a box not kept, or the image shown that cannot be read: its code
         self.box_refused.setWordWrap(True)
         self.box_refused.hide()
-        self.passed = QLabel()  # the NG images passed over, as they cannot be read: each with its code
-        self.passed.setWordWrap(True)
-        self.passed.hide()
-        for w in (self.what, self.where, self.kind, nxt, self.box_refused, self.passed):
+        self.skipped = QLabel()  # the NG images skipped, as they cannot be read: each with its code
+        self.skipped.setWordWrap(True)
+        self.skipped.hide()
+        for w in (self.what, self.where, self.kind, nxt, self.box_refused, self.skipped):
             side.addWidget(w)
         side.addStretch(1)
         keys = QGridLayout()
@@ -287,11 +287,11 @@ class GuideImages(QWidget):
     def forget(self) -> None:
         """What the screen held of the board model shown, gone, for another board model or the next user signed in: the
         folder picked and what its copy did, a type still asked for, the view pressed, the image open, the images
-        passed over and the boxes Undo would take away. A copy running goes on."""
+        skipped and the boxes Undo would take away. A copy running goes on."""
         self.folder, self.view_picked, self.waiting, self.undo = "", False, [], []
         self.at, self.open_uuid, self.loaded, self.reading = -1, None, None, None
         self.unreadable.clear()
-        for w in (self.from_line, self.btn_why, self.why, self.picked, self.typing, self.box_refused, self.passed):
+        for w in (self.from_line, self.btn_why, self.why, self.picked, self.typing, self.box_refused, self.skipped):
             w.hide()
         self.btn_why.setText(self.tr("Show Why"))
         self.editor.set_image(None)
@@ -324,7 +324,7 @@ class GuideImages(QWidget):
         self.at = next((i for i, s in enumerate(self.ng) if s["uuid"] == self.open_uuid), -1)
         if self.at < 0:
             self.loaded = None  # gone from the list, as when labelled OK on Training: no box goes on it
-        self._show_passed()
+        self._show_skipped()
         drawing = bool(self.ng) and not needs["ng_boxed"].done and self.copying is None
         self.boxes.setVisible(drawing)
         if drawing and self.at < 0:
@@ -578,14 +578,14 @@ class GuideImages(QWidget):
         start(w, self.ctx.jobs)
 
     def _read(self, w: Worker, sample: dict[str, Any], image: np.ndarray | BaseException) -> None:
-        """The image read: shown, always drawing, a drag on a box moving it; one that cannot be read is passed over,
+        """The image read: shown, always drawing, a drag on a box moving it; one that cannot be read is skipped,
         named with its code under the box area, and the next NG image with no box opens."""
         if w is not self.reading:
             return  # another image was asked for since
         self.reading = None
         if isinstance(image, BaseException):
             self.unreadable[sample["uuid"]] = f"{Path(sample['path']).name}: {self._coded(image)}"
-            self._show_passed()
+            self._show_skipped()
             self._gate()
             nxt = self._next_unboxed(self.at)
             if nxt >= 0:
@@ -596,12 +596,12 @@ class GuideImages(QWidget):
         self.editor.show_boxes(self._boxes_of(sample))
         self.editor.set_draw_mode(True)
 
-    def _show_passed(self) -> None:
-        """The NG images passed over in the list shown, as they cannot be read, each with its code."""
+    def _show_skipped(self) -> None:
+        """The NG images skipped in the list shown, as they cannot be read, each with its code."""
         names_ = [self.unreadable[s["uuid"]] for s in self.ng if s["uuid"] in self.unreadable]
-        head = self.tr("Passed over, as they cannot be read:")
-        self.passed.setText("\n".join([head, *names_]))
-        self.passed.setVisible(bool(names_))
+        head = self.tr("Skipped, as they cannot be read:")
+        self.skipped.setText("\n".join([head, *names_]))
+        self.skipped.setVisible(bool(names_))
 
     def _edited(self) -> None:
         """A box drawn, moved or resized on the image shown: stored at once; after a box drawn, the next NG image with

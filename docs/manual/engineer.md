@@ -190,7 +190,7 @@ button names the folder and counts the images not taken and those already in, wh
 **Show Why** lists each with its code. Three lines count the OK images, the NG images and the NG images with every defect
 boxed against what the board model needs; with too few OK images, add more to the `ok` folder and pick it again. Then
 the box area shows each NG image in turn: drag across the defect, and the box is kept with the type of the image's
-folder, and the next NG image with no box opens. Drag a box to move it. An image that cannot be read is passed over and
+folder, and the next NG image with no box opens. Drag a box to move it. An image that cannot be read is skipped and
 named under the box area with its code. **← Back** (PgUp) opens the one before, **Undo** (Ctrl+Z) takes the last box
 away again, and **Zoom In**, **Zoom Out** and **Fit** (+, -, 0) help with small parts. A press on a greyed button, or its
 key, says why, and F1 lists the keys. Once every NG image has a box, Home shows its cards until the guide's Train
