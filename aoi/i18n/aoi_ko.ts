@@ -840,7 +840,7 @@
 <context>
     <name>Errors</name>
     <message>
-        <location filename="../core/services.py" line="+179"/>
+        <location filename="../core/services.py" line="+185"/>
         <source>a length of {length} px over {distance} mm gives no scale: both must be numbers above 0, and the scale from {least} to {most} px per mm</source>
         <translation type="unfinished"></translation>
     </message>
@@ -892,7 +892,9 @@
     </message>
     <message>
         <location line="+8"/>
-        <location line="+28"/>
+        <location line="+35"/>
+        <location line="+9"/>
+        <location line="+135"/>
         <source>Training an AI model</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1150,14 +1152,14 @@
         <translation>검증 세트 잠금</translation>
     </message>
     <message>
-        <location line="-2746"/>
-        <location line="+2760"/>
+        <location line="-2897"/>
+        <location line="+2911"/>
         <location line="+39"/>
         <source>the workspace holds no such dataset version</source>
         <translation>작업 공간에 그런 데이터셋 버전이 없습니다</translation>
     </message>
     <message>
-        <location line="-2842"/>
+        <location line="-2999"/>
         <source>Drift on {board} ({view}): {count} of the last {of} boards called NG; {before} % of the {baseline} before</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1182,7 +1184,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+27"/>
+        <location line="+33"/>
         <source>the run used a folder, not a frozen dataset version&apos;s locked validation set</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1257,7 +1259,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+953"/>
+        <location line="+1104"/>
         <source>Setting the comparison&apos;s thresholds from labelled boards</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1484,7 +1486,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-3511"/>
+        <location line="-3662"/>
         <source>no earlier version of this board model was active</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1509,7 +1511,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+877"/>
+        <location line="+1028"/>
         <source>its UUID {found} is not {uuid}, as in the AI model registry</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1616,7 +1618,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-3739"/>
+        <location line="-3890"/>
         <source>unhandled</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3923,7 +3925,7 @@
     </message>
     <message>
         <location line="+1"/>
-        <location filename="../core/services.py" line="+3002"/>
+        <location filename="../core/services.py" line="+3153"/>
         <source>a file of it could not be read: {reason}</source>
         <translation>그 파일 하나를 읽을 수 없습니다: {reason}</translation>
     </message>
@@ -8174,7 +8176,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/services.py" line="-3079"/>
+        <location filename="../core/services.py" line="-3236"/>
         <source>Aligning {count} images to the reference board</source>
         <translation type="unfinished"></translation>
     </message>
@@ -8195,16 +8197,36 @@
     </message>
     <message>
         <location line="+1"/>
-        <source>Training epoch {epoch} of {epochs}</source>
-        <translation>학습 에포크 {epoch}/{epochs}</translation>
+        <source>Training the AI model: round {epoch} of {epochs}</source>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location line="+1"/>
-        <source>Calibrating: map {n} of {count}</source>
-        <translation>보정 중: 맵 {n}/{count}</translation>
+        <source>Setting the threshold: image {n} of {count}</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>Keeping {ok} OK and {ng} NG images apart for validation</source>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location line="+1"/>
+        <source>Making AI model {version} active</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Validating AI model {version}: image {n} of {count}</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Shift check: master sample {n} of {count}</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="-5"/>
         <source>Saving AI model {version}</source>
         <translation>AI 모델 {version} 저장 중</translation>
     </message>

@@ -31,7 +31,8 @@ from tests.test_train_from_version import BOARD, boards
 from tools.trainable import trainable
 
 COST = {"read": 4.0, "median": 2.0, "step": 0.5, "map": 1.5}  # the fake seconds each kind of step takes
-PHASES = ("Aligning", "Building", "Golden board", "Training epoch", "Calibrating", "Saving")  # each line's start
+# each line's start
+PHASES = ("Aligning", "Building", "Golden board", "Training the AI model", "Setting the threshold", "Saving")
 Reports = list[tuple[float, RunProgress | str]]
 
 

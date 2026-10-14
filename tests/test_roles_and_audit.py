@@ -260,12 +260,15 @@ WRITES: dict[str, tuple[str, Callable[[AppContext, Path, Path], Any]]] = {
         lambda ctx, data, tmp: ctx.set_validation_targets("TINY", 0, 0.05, 1.0, "Acme Electronics, quality lead"),
     ),
 }
-# what only an Engineer does that writes no audit entry itself: re-evaluating a result (REQ-CMP-005, since S28a), and
-# starting a training run, whose job writes model.train once it ends (REQ-TRN-008, S40)
+# what only an Engineer does that writes no audit entry itself: re-evaluating a result (REQ-CMP-005, since S28a),
+# starting a training run, whose job writes model.train once it ends (REQ-TRN-008, S40), and the first-run guide's
+# Train, whose parts write the entries of the calls they make (REQ-TRN-021, B5)
 CHECKED_READS: dict[str, Callable[[AppContext, Path, Path], Any]] = {
     "re_evaluate": lambda ctx, data, tmp: ctx.re_evaluate("a-result-uuid", Recipe(board_model="TINY")),
     "start_training": lambda ctx, data, tmp: ctx.start_training(ctx.training_version("TINY")["uuid"], 5, 32).wait(60),
     "learn_comparison": lambda ctx, data, tmp: ctx.learn_comparison("TINY", seed=0),  # REQ-TRN-018: stores nothing
+    "guide_train": lambda ctx, data, tmp: ctx.guide_train("TINY", "Top", "R1", 1, 32),
+    "start_guide_train": lambda ctx, data, tmp: ctx.start_guide_train("TINY", "Top", "R1").wait(60),
 }
 # every public AppContext call that is not role-checked: reads, what an Operator does, and the lifecycle, signing in
 # among it (sign_in, audited as user.sign_in or user.start: anyone may sign in; last_signed_in reads who did last)
