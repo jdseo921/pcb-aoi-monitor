@@ -2,7 +2,7 @@
 list Home and Training show for the board model in the header. It opens with the one sentence that says how many
 images a board model needs (`datasets.needs`), then a line for each thing `AppContext.missing` counts, its count against
 what it needs and the one button that fixes it. Validated or Trial picks the list: a Trial version needs no second-user
-check and no agreement check, and its AI model never goes live (ADR 0020)."""
+check and no agreement check (ADR 0020)."""
 
 from __future__ import annotations
 
@@ -153,13 +153,9 @@ class MissingList(WrappedGroup):
         self.kinds.blockSignals(False)
         line = self.tr("{board_model}, {view} view: {left} of {lines} still missing")
         if m.left and m.needs[-1].done:  # the AI model is there; the lines left are those of a next version
-            line = (
-                self.tr("{board_model}, {view} view: a Trial AI model is trained; {left} of {lines} still missing for a"
-                        " next version")
-                if m.trial
-                else self.tr("{board_model}, {view} view: an AI model is active; {left} of {lines} still missing for a"
-                             " next version")
-            )  # fmt: skip
+            line = self.tr(
+                "{board_model}, {view} view: an AI model is active; {left} of {lines} still missing for a next version"
+            )
         self.view_line.setText(
             line.format(board_model=board_model, view=view_text(m.view), left=m.left, lines=len(m.needs))
         )
@@ -185,9 +181,9 @@ class MissingList(WrappedGroup):
         else:
             self.done_line.setText(
                 self.tr(
-                    "Nothing a Trial version needs is missing. A Trial AI model does not go live: pick Validated to see"
-                    " what going live needs."
-                )
+                    "Nothing a Trial version needs is missing: {board_model} has an active AI model. Pick Validated to"
+                    " see what a Validated one needs."
+                ).format(board_model=board_model)
                 if m.trial
                 else self.tr("Nothing is missing: {board_model} has an active AI model.").format(
                     board_model=board_model

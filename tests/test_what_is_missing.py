@@ -155,7 +155,7 @@ def test_req_trn_021_validated_stages(ctx: AppContext, tmp_path: Path) -> None:
     model = ctx.models(CAL)[0]
     assert trained.model_id == model["id"]
 
-    second = ctx.freeze_dataset(CAL, "Top", "R1", "Acme", trial=True) or {}  # a newer Trial AI model, never live
+    second = ctx.freeze_dataset(CAL, "Top", "R1", "Acme", trial=True) or {}  # a newer Trial AI model, not the first
     ctx.lock_validation_set(second["uuid"], seed=2)
     assert not ctx.train(second["uuid"], epochs=1, image_size=32)["activated"]
     assert ctx.missing(CAL).trial and ctx.missing(CAL, trial=False).model_id == model["id"]  # not the Trial one
@@ -173,16 +173,17 @@ def test_req_trn_021_validated_stages(ctx: AppContext, tmp_path: Path) -> None:
 
 
 def test_req_trn_021_trial_stages(ctx: AppContext, tmp_path: Path) -> None:
-    """A Trial version needs only the images, the boxes, a locked validation set and an AI model trained from it: no
-    second-user check, no agreement check and no active AI model, since a Trial AI model never goes live (ADR 0020).
-    With no choice given, the list is for the newest version's kind, a Validated one before the first freeze; the
-    Validated list never counts a Trial version or the AI model trained from it."""
+    """A Trial version needs only the images, the boxes, a locked validation set, an AI model trained from it and an
+    active one, which a Trial AI model is while no Validated one has gone live: no second-user check and no agreement
+    check (ADR 0020). With no choice given, the list is for the newest version's kind, a Validated one before the
+    first freeze; the Validated list never counts a Trial version or the AI model trained from it."""
     assert lines(ctx.missing(ONE, trial=True)) == {
         "ok": (0, 70, "add_ok", None),
         "ng": (0, 1, "add_ng", None),
         "ng_boxed": (0, 1, "draw_boxes", "ng"),
         "locked": (0, 1, "freeze", "ok"),
         "trained": (0, 1, "train", "locked"),
+        "active": (0, 1, "activate", "trained"),
     }
     one_person(ctx, tmp_path / "boards")  # 80 OK and 20 NG, each NG one boxed, in Acme's store; nothing checked
     assert ctx.missing(ONE).trial is False
@@ -194,6 +195,7 @@ def test_req_trn_021_trial_stages(ctx: AppContext, tmp_path: Path) -> None:
         "ng_boxed": (20, 20, "draw_boxes", None),
         "locked": (0, 1, "freeze", None),
         "trained": (0, 1, "train", "locked"),
+        "active": (0, 1, "activate", "trained"),
     }
     validated = lines(ctx.missing(ONE, trial=False))
     assert validated["ng_checked"] == (0, 20, "show_unchecked", None) and validated["locked"][3] == "ng_checked"
@@ -210,9 +212,9 @@ def test_req_trn_021_trial_stages(ctx: AppContext, tmp_path: Path) -> None:
     assert added["ng_boxed"] == (20, 23, "draw_boxes", None) and added["trained"] == (0, 1, "train", None)
     meta = ctx.train(version["uuid"], epochs=1, image_size=32)
     done = ctx.missing(ONE)
-    assert not meta["activated"] and [n.key for n in done.needs if not n.done] == ["ng_boxed"]
-    assert "active" not in lines(done)
-    validated = lines(ctx.missing(ONE, trial=False))
+    assert meta["activated"] and [n.key for n in done.needs if not n.done] == ["ng_boxed"]
+    assert lines(done)["active"][:2] == (1, 1) and done.model_id is None
+    validated = lines(ctx.missing(ONE, trial=False))  # the Trial AI model live is no Validated one
     assert validated["locked"][:2] == validated["trained"][:2] == validated["active"][:2] == (0, 1)
 
 
@@ -343,6 +345,7 @@ def test_req_trn_021_home_and_training_show_what_is_missing(
         "ng_boxed": ("✓", "20 of 20", "", "", False),
         "locked": ("○", "0 of 1", "", "Freeze Dataset…", True),
         "trained": ("○", "0 of 1", "First: Locked validation set", "Start Training", False),
+        "active": ("○", "0 of 1", "First: Trained AI model", "Activate AI Model", False),
     }
     trial.lines["locked"].fix.click()
     sheet = page.working.sheet
@@ -367,7 +370,7 @@ def test_req_trn_021_home_and_training_show_what_is_missing(
     assert started == [version["uuid"]] and page.dataset_version.currentData() == version["uuid"]
 
     assert win.navigate("Home")
-    assert listed.trial.isChecked() and listed.view_line.text() == "ONE-1, Top view: 1 of 5 still missing"
+    assert listed.trial.isChecked() and listed.view_line.text() == "ONE-1, Top view: 2 of 6 still missing"
 
 
 def test_req_trn_021_the_other_buttons_and_roles(

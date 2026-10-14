@@ -17,7 +17,7 @@ TRIAL = "Trial"  # a version's assurance when one person froze it without the ch
 # The plain words a Trial AI model's card starts with (B1 of the 2026-10 business-readiness brief, D1; ADR 0020)
 TRIAL_LINE = (
     "Trial: one person froze {dataset} without a second person checking its labels or an agreement check, so this AI"
-    " model cannot go live or back a customer validation report."
+    " model judges boards only until a Validated one does, and cannot back a customer validation report."
 )
 # What every card says it was not made for; a card adds its own lines from what it knows (`limits`)
 LIMITS = (

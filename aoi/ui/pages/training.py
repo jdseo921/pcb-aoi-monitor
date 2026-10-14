@@ -999,15 +999,18 @@ class TrainingPage(Page):
         self.log.appendPlainText(saved.format(version=meta["version"], seconds=meta["train_seconds"]))
         not_live = meta.get("not_live")  # the error that kept a board model's first AI model inactive (ADR 0018)
         report = self.error_report(not_live) if isinstance(not_live, BaseException) else None
+        trial = meta.get("assurance") == TRIAL
+        kept = self.ctx.validated_live(meta["board_model"]) if trial and not meta.get("activated") else None
         if meta.get("activated"):  # a board model's first AI model goes live when trained (decision D3), audited
             done = self.tr(
                 "AI model {version} trained and active: the first AI model of {board_model} judges its boards from now"
                 " on. Each later version installs inactive until you activate it."
             )
-        elif meta.get("assurance") == TRIAL:  # a Trial AI model, first or later, never goes live (ADR 0020)
+        elif kept is not None:  # a Trial AI model never replaces a Validated one (ADR 0020, decision 4)
             done = self.tr(
-                "AI model {version} trained from a Trial version: it does not go live, so {board_model} is judged as"
-                " before. Start the Checks to freeze a Validated version and train from it."
+                "AI model {version} trained from a Trial version: Validated AI model {active} still judges the boards"
+                " of {board_model}, as a Trial one never replaces it. Start the Checks to freeze a Validated version"
+                " and train from it."
             )
         elif report is not None:  # logged, and stored as an alarm with its code
             done = self.tr(
@@ -1016,7 +1019,8 @@ class TrainingPage(Page):
             )
         else:  # a later version installs inactive (REQ-TRN-010)
             done = self.tr("AI model {version} trained: select it and press Activate Selected to judge boards with it")
-        said = done.format(version=meta["version"], board_model=meta["board_model"], code=report.code if report else "")
+        code, active = report.code if report else "", kept["version"] if kept else ""
+        said = done.format(version=meta["version"], board_model=meta["board_model"], code=code, active=active)
         self.log.appendPlainText(said)
         self.shell.status(said)
         self.refresh()
@@ -1120,7 +1124,10 @@ class TrainingPage(Page):
                 val_ok=n["validation", "OK"], val_ng=n["validation", "NG"], ok=n["train", "OK"], ng=n["train", "NG"]
             )
         if uuid in self._trial:
-            trial = self.tr("Trial version: an AI model trained from it is marked Trial and does not go live. {line}")
+            trial = self.tr(
+                "Trial version: an AI model trained from it is marked Trial and judges boards only until a Validated"
+                " one does. {line}"
+            )
             text = trial.format(line=text)
         self.version_line.setText(text)
         self.update_actions()

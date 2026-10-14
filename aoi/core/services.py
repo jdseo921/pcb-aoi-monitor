@@ -288,11 +288,11 @@ class BoardStatus:
 
 
 # What is missing (REQ-TRN-021): each line's key in the order the list shows them. A Trial version needs no second-user
-# check and no agreement check, and its AI model never goes live (ADR 0020), so a Trial list holds only TRIAL_NEEDS.
+# check and no agreement check (ADR 0020), so a Trial list holds only TRIAL_NEEDS.
 NEEDS_ORDER = (
     "ok", "ng", "ng_boxed", "ng_checked", "ok_checked", "calibration", "agreement", "locked", "trained", "active",
 )  # fmt: skip
-TRIAL_NEEDS = ("ok", "ng", "ng_boxed", "locked", "trained")
+TRIAL_NEEDS = ("ok", "ng", "ng_boxed", "locked", "trained", "active")
 FIXES = (  # the one action each line's button takes, `Need.fix`
     "add_ok", "add_ng", "draw_boxes", "show_unchecked", "draw_ok_checks", "agreement", "freeze", "split", "train",
     "activate",
@@ -975,9 +975,10 @@ class AppContext:
         model = anomaly.train(ok_in, ng_in, cfg, engine, should_stop)
         check()
         previous = self.db.active_model(board_model)
-        # the board model's first AI model, for the line's own use, goes live once registered (D3, ADR 0018): the
-        # first with no AI model live before it, so the first Validated one after Trial ones, which never go live, too
-        first = use == "own" and all(self.trial_version(m) is not None for m in self.db.models(board_model))
+        # the board model's first AI model, for the line's own use, goes live once registered (D3, ADR 0018): the first
+        # with no AI model live before it, of either kind, and so the first after Trial ones that did not go live too
+        models = self.db.models(board_model)
+        first = use == "own" and previous is None and all(self.trial_version(m) is not None for m in models)
         out.mkdir(parents=True, exist_ok=True)
 
         def files(v: str) -> list[Path]:
@@ -1726,8 +1727,9 @@ class AppContext:
         """The newest trained version of a board model while none is active, which an Engineer activates (Inspection
         offers it, as Activate Selected on Training does); None while one is active or none is trained. A board model's
         first version for its own use goes live when trained (`train`), so this is one trained before that, one trained
-        for another use, or one whose activation was refused. A version of a Trial dataset version, which the go-live
-        gate refuses (ADR 0020), only when no other is trained: Inspection then offers Start the Checks for it."""
+        for another use, or one whose activation was refused. A version of a Trial dataset version only when no other
+        is trained: a Validated one is offered first (ADR 0020). With none active, no Validated one has gone live, so
+        the go-live gate takes either."""
         if self.db.active_model(board_model) is not None:
             return None
         models = self.db.models(board_model)  # newest first
@@ -2256,17 +2258,17 @@ class AppContext:
 
     def missing(self, board_model: str, trial: bool | None = None) -> Missing:
         """What is missing (REQ-TRN-021): each thing a board model needs for an AI model, counted against the
-        requirement `datasets.needs` states, with the action that fixes it; writes nothing. A Validated version
-        (`trial` False) needs, in one view: OK images, NG images, every NG image with a box, every NG label and 10 % of
-        the OK labels checked by a second user, enough images labelled OK or NG for a calibration set and an agreement
-        check that reached its targets; then a locked validation set Training trains from, an AI model trained from a
-        Validated version and an active one. A Trial version (`trial` True) needs only the first three, the locked set
-        and an AI model trained from either kind (TRIAL_NEEDS). An AI model whose registry row cannot be read is not
-        counted: Training says to train again (AOI-TRN-012). With None, the newest version's kind, Validated before
-        the first. The view is that of the newest version of the kind whose validation set is locked and that Training
-        trains from (`_train_refusal`), else of the newest version of the kind, else the one with the most images
-        labelled OK or NG, Top first when equal. The counts of a line not reached yet are those the requirement names:
-        10 % of 70 OK labels is 7 checks to come.
+        requirement `datasets.needs` states, with the action that fixes it; writes nothing. A Validated version (`trial`
+        False) needs, in one view: OK images, NG images, every NG image with a box, every NG label and 10 % of the OK
+        labels checked by a second user, enough images labelled OK or NG for a calibration set and an agreement check
+        that reached its targets; then a locked validation set Training trains from, an AI model trained from a
+        Validated version and an active one. A Trial version (`trial` True) needs only the first three, the locked set,
+        an AI model trained from either kind and an active one of either kind (TRIAL_NEEDS). An AI model whose registry
+        row cannot be read is not counted: Training says to train again (AOI-TRN-012). With None, the newest version's
+        kind, Validated before the first. The view is that of the newest version of the kind whose validation set is
+        locked and that Training trains from (`_train_refusal`), else of the newest version of the kind, else the one
+        with the most images labelled OK or NG, Top first when equal. The counts of a line not reached yet are those the
+        requirement names: 10 % of 70 OK labels is 7 checks to come.
 
         Each line's `after` is the first line not met that its step waits for, as the step's own refusal does: Freeze
         Dataset… waits for the images and, for a Validated version, the checks and the agreement check, and for 70 OK
@@ -2334,7 +2336,7 @@ class AppContext:
         models = [m for m, v in kinds if v is not None and (trial or v)]  # one to train again is not counted
         found["trained"] = (len(models), 1, "train")
         active = self.db.active_model(board_model)
-        live = active is not None and validated(active) is True  # a Trial AI model never goes live
+        live = active is not None and (trial or validated(active) is True)  # a Validated list: a Validated one
         found["active"] = (int(live), 1, "activate")
         first: dict[str, tuple[str, ...]] = {"ng_boxed": ("ng",), "ng_checked": ("ng_boxed",), "ok_checked": ("ok",)}
         first["agreement"] = ("ng", "calibration")
@@ -3560,10 +3562,7 @@ class AppContext:
             with self.db.transaction():
                 self._switch_to(self.db.model(model_id), "model.activate", FIRST_LIVE)
         except Exception as e:
-            if isinstance(e, AoiError) and e.code == "AOI-TRN-052":  # a Trial AI model, as approved (ADR 0020)
-                self.log.info("training.trial_not_live", extra={"board_model": board_model})
-            else:
-                self.log.warning("training.first_not_live", exc_info=True, extra={"board_model": board_model})
+            self.log.warning("training.first_not_live", exc_info=True, extra={"board_model": board_model})
             return e
         return None
 
@@ -3577,20 +3576,29 @@ class AppContext:
         found = self.db.datasets("", str(meta.get("dataset_uuid") or ""))
         return found[0] if found else {"name": meta.get("dataset"), "board_model": model["board_model"], "view": None}
 
+    def validated_live(self, board_model: str) -> dict[str, Any] | None:
+        """The board model's active AI model (a registry row) when it is not a Trial one, which no Trial AI model
+        replaces (ADR 0020, decision 4: "Live until Validated", Jay, 2026-10-14); None while none is active or a Trial
+        one is. The go-live gate refuses every switch to a Trial AI model while one is, so once a Validated AI model has
+        gone live the active one stays Validated."""
+        active = self.db.active_model(board_model)
+        return active if active is not None and self.trial_version(active) is None else None
+
     def _switch_to(self, target: dict[str, Any], action: str, reason: str | None = None) -> None:
         """Make `target` its board model's active version and its Golden board the board model's, together, with an
-        audit entry naming both before and after, and `reason` (REQ-TRN-010). The go-live gate refuses an AI model of a
-        Trial version with AOI-TRN-052, naming that version's board model and view for Start the Checks (B1, decision
-        D1; ADR 0020). A version that records no Golden board (trained before it was recorded) keeps the board model's.
-        A recorded Golden board that cannot be read is refused with AOI-TRN-048 before anything changes: inspections
-        would otherwise judge with another version's board."""
+        audit entry naming both before and after, and `reason` (REQ-TRN-010). An AI model of a Trial version goes live
+        only while no Validated one has (`validated_live`); after that the go-live gate refuses it with AOI-TRN-052,
+        naming that version's board model and view for Start the Checks (ADR 0020, decision 4). A version that records
+        no Golden board (trained before it was recorded) keeps the board model's. A recorded Golden board that cannot be
+        read is refused with AOI-TRN-048 before anything changes: inspections would otherwise judge with another
+        version's board."""
         board_model = target["board_model"]
-        if (trial := self.trial_version(target)) is not None:  # the go-live gate refuses a Trial AI model (ADR 0020)
+        previous = self.db.active_model(board_model)
+        if (trial := self.trial_version(target)) is not None and self.validated_live(board_model) is not None:
             name, view = trial["name"], trial["view"]
             raise AoiError("AOI-TRN-052", version=target["version"], board=board_model, dataset=name, view=view)
         if not self.card_files(int(target["id"]))[1].is_file():  # no AI model goes live without its card (REQ-TRN-011)
             raise AoiError("AOI-TRN-049", version=target["version"], board=board_model)
-        previous = self.db.active_model(board_model)
         before_ref = self.db.reference(board_model)
         stored = json.loads(target["metrics"] or "{}").get("golden_image")
         ref = before_ref

@@ -984,11 +984,12 @@ CODES: dict[str, ErrorCode] = {
         ),
         ErrorCode(
             "AOI-TRN-052",
-            QT_TRANSLATE_NOOP("Errors", "A Trial AI model does not go live"),
+            QT_TRANSLATE_NOOP("Errors", "A Trial AI model does not replace a Validated one"),
             QT_TRANSLATE_NOOP(
                 "Errors",
                 "AI model {version} of board model {board} was not made active: it was trained from {dataset}, a Trial"
-                " version that one person froze without a second person checking its labels or an agreement check.",
+                " version that one person froze without a second person checking its labels or an agreement check,"
+                " and a Validated AI model already judges the boards of {board}.",
             ),
             QT_TRANSLATE_NOOP(
                 "Errors",

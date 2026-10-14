@@ -246,9 +246,8 @@ queue, a board model change or a revisit drops the engine (a generation counter,
 meanwhile is never kept), and one worker runs at a time per page (#120). A board model with no AI model gets its WARN
 alarm AOI-TRN-003 once per page visit and board model, not for each engine a new queue builds; one with a version
 trained but none active (`AppContext.inactive_model`) gets AOI-TRN-051 naming that version instead, and a line under
-the shift check's names it with Activate <version>, an Engineer's, greyed for an Operator (decision D3); for an AI model
-of a Trial dataset version, the alarm is AOI-TRN-052, the line calls it a Trial that does not go live and the button is
-Start the Checks (`InspectionPage.waiting_trial`, ADR 0020). The line is read again after each board judged with no AI
+the shift check's names it with Activate <version>, an Engineer's, greyed for an Operator (decision D3), a Trial AI
+model too, which goes live while no Validated one has (ADR 0020, decision 4). The line is read again after each board judged with no AI
 model, so a version trained meanwhile is named at once; a database that cannot be
 read hides the line, logged, and the alarm falls back to AOI-TRN-003 (#179). AI Model Test asks
 `engine_is_current` the same of the `JudgedBy` that `AppContext.batch_test` returns with a run (the recipe revision,
@@ -538,8 +537,10 @@ holds. Every other version, and every version frozen before the migration, is **
 `train` take a Trial version as any other, with the same minimums; `train` names its AI model `v1.0 (Trial)`
 (`datasets.TRIAL_MODEL`, its files `v1.0-trial` by `datasets.model_file_stem`) and records the assurance in the model's
 metadata, its card (whose first line says what Trial means, `model_card.TRIAL_LINE`) and its `model.train` entry;
-`trial_version` gives the Trial version an AI model was trained from. The go-live gate (`_switch_to`) refuses such an AI
-model with AOI-TRN-052, first or later, and `validation_report_data` refuses a run on a Trial version's validation set
+`trial_version` gives the Trial version an AI model was trained from. Such an AI model goes live as any other while no
+Validated one has ("Live until Validated", Jay, 2026-10-14); once one has (`validated_live`, the active AI model when it
+is not a Trial one), the go-live gate (`_switch_to`) refuses it with AOI-TRN-052, activated or rolled back to, and
+`validation_report_data` refuses a run on a Trial version's validation set
 or of an AI model trained from one with AOI-TST-009; both name the board model and view, which the dialog's Start the
 Checks opens on Training (`Page.error_act`, `MainWindow.start_checks`). Then, holding the database lock, one transaction finds N, checks the
 gate again, reads the labels and, in one query, the boxes, stores the version and its files with the manifest's SHA-256
@@ -643,21 +644,22 @@ An AI model the loader would refuse, such as one with an image threshold of 0 fr
 photo, is refused at step 5 with AOI-TRN-004: nothing is saved, registered or audited, and the active version stays.
 Step 6 writes the version's model card (`aoi/core/model_card.py`, REQ-TRN-011) and registers the version inactive with
 `model.train` in one transaction: if it fails, the run's four files are removed. A board model's first version, trained
-for the customer's own AI models (`use` "own", which Training always passes), the first after Trial ones too, which never
-go live (ADR 0020), is then made active with its Golden board
+for the customer's own AI models (`use` "own", which Training always passes), with none active and no Validated one
+before it, a Trial one included (ADR 0020, decision 4), is then made active with its Golden board
 in a transaction of its own (`_first_live`; decision D3 of the 2026-10 business-readiness brief, ADR 0018: there is no
 version in use to keep), audited as `model.activate` by the Engineer who trained it with the reason `FIRST_LIVE`; an
 activation that fails leaves it registered and inactive, logged as `training.first_not_live`, and `train` returns
 `activated` and, in `not_live`, the error, which Training reports as any error (`report_error`: an alarm with its code
-and the dialog) and names in its status line; but the go-live gate's AOI-TRN-052 for a Trial AI model, a step taken as
-approved, is logged as information (`training.trial_not_live`) and shown with Start the Checks and no alarm
-(`Page.error_report`, which does the same for AOI-TST-009). Home's Train AI model card is read again when a run ends while Home is
+and the dialog) and names in its status line. A Trial AI model trained while a Validated one is live installs inactive,
+and Training's status line says the Validated one still judges the boards, with Start the Checks; the go-live gate's
+AOI-TRN-052, a step taken as approved, is shown with Start the Checks and no alarm (`Page.error_report`, which does the
+same for AOI-TST-009). Home's Train AI model card is read again when a run ends while Home is
 shown. On Compare, a board just judged with no AI model while a version waits is explained by `INACTIVE_AI_NOTE`
 (`aoi/core/explain.py`), naming the version, not "No AI model is trained"; a stored result keeps the past tense of
 `STORED_NOTES`, and AOI-INSP-010 says "no AI model is active". The Engineer activates a later version
 (`activate_model`), or rolls back to the version active before (`rollback_model`): either switches the AI model and its
-Golden board together, audited, and refuses an AI model of a Trial dataset version (AOI-TRN-052, ADR 0020), a version
-without a card (AOI-TRN-049) or one whose Golden board cannot be read (AOI-TRN-048) (REQ-TRN-010); `inactive_model`
+Golden board together, audited, and refuses an AI model of a Trial dataset version once a Validated one is live
+(AOI-TRN-052, ADR 0020), a version without a card (AOI-TRN-049) or one whose Golden board cannot be read (AOI-TRN-048) (REQ-TRN-010); `inactive_model`
 names a Validated version before a Trial one. A version
 never takes a name whose `.pt` or `_golden.png` is on disk, so a golden board a result names is never written over (#178).
 The reference image an Engineer sets (Set Reference) must be an OK sample (AOI-TRN-006): inspections compare against it
