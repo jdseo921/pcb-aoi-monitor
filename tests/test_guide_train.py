@@ -9,9 +9,11 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+import numpy as np
 import pytest
 
 from aoi.core import run_progress
+from aoi.core.imaging import save_image
 from aoi.core.jobs import JobCancelled
 from aoi.core.labels import DefectBox
 from aoi.core.recipe import Recipe
@@ -208,6 +210,30 @@ def test_req_trn_021_with_the_shift_check_off_train_runs_four_parts(ctx: AppCont
     assert done["shift"]["state"] == "off" and done["not_run"] == [] and done["run"] is not None
     assert not any(str(p.phase).startswith("Shift check") for p in said)
     assert entries(ctx)["inspection.shift_check"] == 0
+
+
+def test_req_trn_021_a_refused_part_keeps_the_parts_before_it(ctx: AppContext, tmp_path: Path) -> None:
+    """60 OK images: the press freezes a Trial version and locks 50 OK images apart, and training refuses the 10 left
+    with AOI-TRN-045 (it takes 20), saving no AI model. With 10 OK images more, the next press freezes a version of the
+    images now held, and runs every part."""
+    one_person(ctx, tmp_path / "boards", n_ok=60)
+    ctx.set_user("engineer")
+    ctx.settings.shift_check_hours = 12
+    with pytest.raises(AoiError) as e:
+        press(ctx)
+    assert e.value.code == "AOI-TRN-045"
+    [refused] = ctx.datasets(ONE)
+    assert ctx.validation_split(refused["uuid"]) is not None and ctx.db.models(ONE) == []
+    assert entries(ctx) == dict.fromkeys(ACTIONS, 0) | {"dataset.freeze": 1, "dataset.lock": 1}
+    more = tmp_path / "more"
+    more.mkdir()
+    rng = np.random.default_rng(21)
+    for i in range(10):
+        save_image(more / f"ok_{i}.png", rng.integers(0, 256, (32, 32, 3), dtype=np.uint8))
+    ctx.import_samples(ONE, [str(p) for p in sorted(more.glob("*.png"))], "OK")
+    out, _ = press(ctx)
+    assert out["dataset"]["uuid"] != refused["uuid"] and out["not_run"] == []
+    assert entries(ctx) == dict.fromkeys(ACTIONS, 1) | {"dataset.freeze": 2, "dataset.lock": 2}
 
 
 def test_req_trn_021_train_is_an_engineers_and_one_run_at_a_time(ctx: AppContext, tmp_path: Path) -> None:
