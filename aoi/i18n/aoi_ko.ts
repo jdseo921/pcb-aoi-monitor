@@ -840,7 +840,7 @@
 <context>
     <name>Errors</name>
     <message>
-        <location filename="../core/services.py" line="+178"/>
+        <location filename="../core/services.py" line="+179"/>
         <source>a length of {length} px over {distance} mm gives no scale: both must be numbers above 0, and the scale from {least} to {most} px per mm</source>
         <translation type="unfinished"></translation>
     </message>
@@ -870,7 +870,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+261"/>
+        <location line="+279"/>
         <location line="+137"/>
         <source>Importing samples</source>
         <translation type="unfinished"></translation>
@@ -898,12 +898,12 @@
     </message>
     <message>
         <location line="+190"/>
-        <location line="+2446"/>
+        <location line="+2470"/>
         <source>(none)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-2415"/>
+        <location line="-2439"/>
         <source>Saving a recipe</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1025,12 +1025,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+194"/>
+        <location line="+205"/>
         <source>Creating a board model</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+44"/>
+        <location line="+54"/>
         <source>Setting a board model&apos;s scale</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1150,14 +1150,14 @@
         <translation>검증 세트 잠금</translation>
     </message>
     <message>
-        <location line="-2706"/>
-        <location line="+2720"/>
+        <location line="-2745"/>
+        <location line="+2759"/>
         <location line="+39"/>
         <source>the workspace holds no such dataset version</source>
         <translation>작업 공간에 그런 데이터셋 버전이 없습니다</translation>
     </message>
     <message>
-        <location line="-2802"/>
+        <location line="-2841"/>
         <source>Drift on {board} ({view}): {count} of the last {of} boards called NG; {before} % of the {baseline} before</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1257,7 +1257,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+935"/>
+        <location line="+953"/>
         <source>Setting the comparison&apos;s thresholds from labelled boards</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1272,7 +1272,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+460"/>
+        <location line="+481"/>
         <source>a blind label is OK, or NG with one of the 37 defect types</source>
         <translation>블라인드 라벨은 OK이거나, 37개 결함 유형 중 하나를 지정한 NG입니다</translation>
     </message>
@@ -1313,28 +1313,28 @@
     </message>
     <message>
         <location line="+12"/>
-        <location line="+37"/>
+        <location line="+39"/>
         <source>no customer is given</source>
         <translation>고객이 지정되지 않았습니다</translation>
     </message>
     <message>
-        <location line="-35"/>
+        <location line="-37"/>
         <source>the customer has a store already, and has one at a time</source>
         <translation>고객에게 이미 저장소가 있으며, 고객당 한 번에 하나만 둘 수 있습니다</translation>
     </message>
     <message>
         <location line="+2"/>
-        <location line="+47"/>
+        <location line="+49"/>
         <source>a new customer</source>
         <translation>새 고객</translation>
     </message>
     <message>
-        <location line="-36"/>
+        <location line="-38"/>
         <source>Creating a board model in a customer&apos;s dataset store</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+24"/>
+        <location line="+26"/>
         <source>board model {board} exists already; an Admin moves it in on Settings</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1436,7 +1436,7 @@
         <translation>허용 용도는 own, shared, demos 중 하나 이상입니다</translation>
     </message>
     <message>
-        <location line="+34"/>
+        <location line="+35"/>
         <source>a dataset version of that name is in the workspace already</source>
         <translation>같은 이름의 데이터셋 버전이 이미 작업 공간에 있습니다</translation>
     </message>
@@ -1446,20 +1446,20 @@
         <translation>이 뷰에 OK 또는 NG로 라벨링된 이미지가 없습니다</translation>
     </message>
     <message>
-        <location line="-503"/>
-        <location line="+514"/>
+        <location line="-506"/>
+        <location line="+517"/>
         <source>its images are in no customer&apos;s dataset store; an Admin moves them in</source>
         <translation>이미지가 어느 고객의 데이터셋 저장소에도 없습니다. 관리자가 옮겨 넣습니다</translation>
     </message>
     <message>
-        <location line="-512"/>
-        <location line="+514"/>
+        <location line="-515"/>
+        <location line="+517"/>
         <source>its dataset store was shredded on {date}</source>
         <translation>이 데이터셋 저장소는 {date}에 파기되었습니다</translation>
     </message>
     <message>
-        <location line="-511"/>
-        <location line="+514"/>
+        <location line="-514"/>
+        <location line="+517"/>
         <source>its images are in the dataset store of {store}, not of {customer}</source>
         <translation>이미지가 {customer}이(가) 아니라 {store}의 데이터셋 저장소에 있습니다</translation>
     </message>
@@ -1484,7 +1484,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-3452"/>
+        <location line="-3494"/>
         <source>no earlier version of this board model was active</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1509,12 +1509,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+859"/>
+        <location line="+877"/>
         <source>its UUID {found} is not {uuid}, as in the AI model registry</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1419"/>
+        <location line="+1440"/>
         <source>Labelling an image</source>
         <translation>이미지 라벨링</translation>
     </message>
@@ -1534,7 +1534,7 @@
         <translation>{file}이(가) 버전이 동결된 뒤에 바뀌었습니다</translation>
     </message>
     <message>
-        <location line="+123"/>
+        <location line="+125"/>
         <source>Printing a dataset store&apos;s recovery key</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1564,7 +1564,7 @@
         <translation>{file}을(를) 쓴 그대로 다시 읽을 수 없어 암호화하지 않은 채로 두었습니다</translation>
     </message>
     <message>
-        <location line="+127"/>
+        <location line="+128"/>
         <source>no agreement check of the board model holds images of this view</source>
         <translation>이 보드 모델의 일치도 검사 중 이 뷰의 이미지를 담은 것이 없습니다</translation>
     </message>
@@ -1616,14 +1616,14 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-3680"/>
+        <location line="-3722"/>
         <source>unhandled</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../ui/demo_workspace.py" line="+31"/>
         <location filename="../ui/errors.py" line="+163"/>
-        <location filename="../ui/main_window.py" line="+1009"/>
+        <location filename="../ui/main_window.py" line="+1017"/>
         <source>start-up</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2890,7 +2890,12 @@
         <translation type="unfinished">라틴 문자나 숫자가 하나 이상 든 이름을 보드 모델에 지정하십시오(예: TBOX-A1). 한글 같은 다른 문자는 함께 쓸 수 있습니다(예: &quot;TBOX-A1 메인보드&quot;). 아무것도 만들어지지 않았습니다.</translation>
     </message>
     <message>
-        <location line="+8"/>
+        <location line="+23"/>
+        <source>Board model name not allowed: version names would mix</source>
+        <translation type="unfinished">보드 모델 이름 사용 불가: 버전 이름이 섞임</translation>
+    </message>
+    <message>
+        <location line="+16"/>
         <source>AI model, recipe, scale or Golden board changed since the run</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3466,7 +3471,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1307"/>
+        <location line="-1338"/>
         <source>Board judged NG</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3581,7 +3586,32 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+85"/>
+        <location line="+38"/>
+        <source>Board model name not allowed: reads as another</source>
+        <translation type="unfinished">보드 모델 이름 사용 불가: 다른 이름과 똑같이 읽힘</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>The board model name &quot;{name}&quot; reads the same as board model &quot;{existing}&quot;, which exists already, once upper and lower case, full-width and other forms of the same letter or digit, the kind of space and characters that show nothing are set aside.</source>
+        <translation type="unfinished">대소문자, 같은 문자나 숫자의 전각 및 기타 형태, 공백의 종류, 보이지 않는 문자를 빼고 보면 보드 모델 이름 &quot;{name}&quot;은(는) 이미 있는 보드 모델 &quot;{existing}&quot;과(와) 똑같이 읽힙니다.</translation>
+    </message>
+    <message>
+        <location line="+6"/>
+        <source>Select &quot;{existing}&quot; in the top bar to work on that board model, or type a name that differs from it in a letter A to Z or a digit 0 to 9, typed on an English keyboard. Nothing was made.</source>
+        <translation type="unfinished">그 보드 모델로 작업하려면 상단 바에서 &quot;{existing}&quot;을(를) 선택하고, 아니면 영문 키보드로 입력한 A~Z 문자나 0~9 숫자가 다른 이름을 입력하십시오. 아무것도 만들지 않았습니다.</translation>
+    </message>
+    <message>
+        <location line="+9"/>
+        <source>The board model name &quot;{name}&quot; has the same letters A to Z and digits 0 to 9 as board model &quot;{existing}&quot;, case aside, so the dataset versions of both would be named DS-{token}-…, and their names would mix.</source>
+        <translation type="unfinished">보드 모델 이름 &quot;{name}&quot;의 A~Z 문자와 0~9 숫자가 대소문자를 빼면 보드 모델 &quot;{existing}&quot;과(와) 같아, 두 보드 모델의 데이터셋 버전 이름이 모두 DS-{token}-…이 되어 섞이게 됩니다.</translation>
+    </message>
+    <message>
+        <location line="+6"/>
+        <source>Select &quot;{existing}&quot; in the top bar if it is the same board, or give the new board model a name whose letters A to Z or digits 0 to 9 differ from those of &quot;{existing}&quot;, such as one with another digit added. Nothing was made.</source>
+        <translation type="unfinished">같은 보드라면 상단 바에서 &quot;{existing}&quot;을(를) 선택하고, 아니라면 새 보드 모델에 A~Z 문자나 0~9 숫자가 &quot;{existing}&quot;과(와) 다른 이름(예: 숫자를 하나 더 붙인 이름)을 지정하십시오. 아무것도 만들지 않았습니다.</translation>
+    </message>
+    <message>
+        <location line="+56"/>
         <source>Start the Checks on Training: a second person checks the labels and two people run an agreement check, then freeze a Validated version, train from it and test again. The run and its CSV are kept.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3867,7 +3897,7 @@
         <translation>{file}이(가) 기록된 뒤 변경, 이동 또는 손상되었습니다</translation>
     </message>
     <message>
-        <location filename="../core/datasets.py" line="+47"/>
+        <location filename="../core/datasets.py" line="+49"/>
         <source>{changed} file(s) changed and {missing} missing since the freeze</source>
         <translation>동결 이후 파일 {changed}개가 변경되고 {missing}개가 없습니다</translation>
     </message>
@@ -3893,7 +3923,7 @@
     </message>
     <message>
         <location line="+1"/>
-        <location filename="../core/services.py" line="+2960"/>
+        <location filename="../core/services.py" line="+3001"/>
         <source>a file of it could not be read: {reason}</source>
         <translation>그 파일 하나를 읽을 수 없습니다: {reason}</translation>
     </message>
@@ -4218,7 +4248,7 @@
 <context>
     <name>HomePage</name>
     <message>
-        <location filename="../ui/main_window.py" line="-870"/>
+        <location filename="../ui/main_window.py" line="-878"/>
         <source>Upload samples</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4283,7 +4313,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+60"/>
+        <location line="+68"/>
         <source>Open to every role.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4318,7 +4348,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-164"/>
+        <location line="-172"/>
         <source>Inspect</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4338,7 +4368,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+111"/>
+        <location line="+119"/>
         <source>Open {page} ›</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5837,7 +5867,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+49"/>
+        <location line="+53"/>
         <source>{board_model}, {view} view: {left} of {lines} still missing</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6460,7 +6490,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+10"/>
+        <location line="+9"/>
         <source>Customer</source>
         <translation type="unfinished">고객</translation>
     </message>
@@ -6470,7 +6500,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+10"/>
+        <location line="+9"/>
         <source>Create</source>
         <translation type="unfinished">만들기</translation>
     </message>
@@ -6505,7 +6535,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+46"/>
+        <location line="+49"/>
         <source>Board model {board} is made, in the new encrypted dataset store of {customer}. Its recovery key opens the store on another PC: this station keeps the key, but a new PC or a reinstalled Windows needs this copy.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6513,7 +6543,7 @@
 <context>
     <name>Page</name>
     <message>
-        <location filename="../ui/main_window.py" line="-827"/>
+        <location filename="../ui/main_window.py" line="-835"/>
         <source>Home</source>
         <translation type="unfinished"></translation>
     </message>
@@ -8189,7 +8219,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/services.py" line="-3037"/>
+        <location filename="../core/services.py" line="-3078"/>
         <source>Aligning {count} images to the reference board</source>
         <translation type="unfinished"></translation>
     </message>

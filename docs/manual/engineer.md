@@ -146,6 +146,15 @@ letters or another alphabet only, is refused with AOI-TRN-054. Other letters may
 A board model made before this rule under such a name keeps it and works as before, but cannot be frozen (AOI-TRN-039,
 section 3); import its images under a name with a Latin letter or digit.
 
+A new name must also be told apart from every existing one. One that reads the same on the screen once upper and
+lower case, full-width letters or digits, the kind of space and characters that show nothing are set aside is refused
+with AOI-TRN-055: `TBOX-A１` next to `TBOX-A1`. One whose letters A to Z and digits 0 to 9 are an existing name's is
+refused with AOI-TRN-056, since the dataset versions of both would be named DS-TBOXA1-…: `tbox a1`, `TBOX_A1` or
+`TBOX-A1 메인보드` next to `TBOX-A1`, or `기판 1` next to `보드 1`. If it is the same board, select the existing board
+model in the top bar; if not, add or change a letter A to Z or a digit, as in `TBOX-A2`. Two board models made before
+this rule under such names keep them and work as before; freeze refuses the second once the first has a version
+(AOI-TRN-040).
+
 Until a board model exists, Home, Inspection, Training, AI Model Test and Recipe Editor say so and offer
 **+ New board model**, which an Engineer or Admin uses; an Operator is told to ask an Engineer. Start and Next Board
 on Inspection stay grey until a board model is chosen in the top bar, and so does Compare's Save to Recipe, since there
@@ -380,11 +389,11 @@ manifest's SHA-256. It waits for every NG label (AOI-TRN-020) and the drawn OK l
 customer (AOI-TRN-024) and an agreement check that reached its targets (AOI-TRN-027): the newest one of the board model
 whose set holds images of the view decides, so a newer check short of the targets stops freezing until a newer one
 reaches them. A board model whose name has no Latin letter or digit (AOI-TRN-039; only one made before such a name was
-refused at + New, AOI-TRN-054), or whose letters and digits name another board model's versions (AOI-TRN-040), cannot
-be frozen; import its images under another name. A manifest that
-cannot be written is AOI-TRN-041, or AOI-TRN-042 when its path is too long, and nothing of the version is kept. A
-freeze refused by its checks reads no image file first. A datasets/<name> folder whose manifest no version lists was
-left by a freeze that stopped before storing its version; the next freeze of that name replaces it. The version's record
+refused at + New, AOI-TRN-054), or whose letters and digits name another board model's versions (AOI-TRN-040; only
+one made before such a name was refused at + New, AOI-TRN-056), cannot be frozen; import its images under another
+name. A manifest that cannot be written is AOI-TRN-041, or AOI-TRN-042 when its path is too long, and nothing of
+the version is kept. A freeze refused by its checks reads no image file first. A datasets/<name> folder whose
+manifest no version lists was left by a freeze that stopped before storing its version; the next freeze of that name replaces it. The version's record
 and manifest never change, and a later label change goes into the next version. The version names the workspace's image
 files rather than copying them; the app changes one only to encrypt it in its customer's store, and removes one only
 when that store is shredded, but a file changed or removed outside the app cannot be recovered from the workspace, so

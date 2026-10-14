@@ -22,6 +22,7 @@ import secrets
 import shutil
 import sqlite3
 import threading
+import unicodedata
 from collections import Counter
 from collections.abc import Callable, Iterable, Iterator, Sequence
 from dataclasses import dataclass
@@ -430,6 +431,24 @@ def _one_drive_roots() -> list[str]:
     personal one and a work or school one; none elsewhere."""
     names = ("OneDrive", "OneDriveConsumer", "OneDriveCommercial")
     return [root for name in names if (root := os.environ.get(name, "").strip())]
+
+
+SHOWS_NOTHING = {"\u034f", "\u115f", "\u1160", "\u3164", "\uffa0"}  # a grapheme joiner and the Hangul fillers
+SHOWS_NOTHING |= {"\u17b4", "\u17b5", "\u2800"}  # two Khmer vowels written as nothing, the Braille blank
+SHOWS_NOTHING |= {chr(c) for c in (*range(0xFE00, 0xFE10), *range(0xE0100, 0xE01F0))}  # variation selectors
+
+
+def looks(name: str) -> str:
+    """`name` as it reads on a screen, the same for two names that read alike there (ADR 0023, decision 6): in NFKC,
+    case folded (full-width letters and digits as A to Z and 0 to 9, a decomposed Hangul syllable as one, a ligature or
+    a superscript digit as its letters or digit, ß as ss), the characters that show nothing dropped (a zero-width space
+    or joiner, a soft hyphen, a direction mark or override, a byte order mark, a Hangul filler, a variation selector,
+    the Braille blank), and every run of spaces of any kind, a no-break or ideographic space, one space, none at the
+    ends. Letters of another alphabet that look like Latin ones (Cyrillic А for A) and look-alike Latin letters and
+    digits (O and 0, l and 1) are not mapped: Unicode's list of them runs to thousands."""
+    folded = unicodedata.normalize("NFKC", unicodedata.normalize("NFKC", name).casefold())
+    shown = "".join(c for c in folded if c not in SHOWS_NOTHING and unicodedata.category(c) != "Cf")
+    return " ".join(shown.split())
 
 
 def _stem(path: str | Path) -> str:
@@ -2355,18 +2374,28 @@ class AppContext:
         only, such as 보드, or in symbols, full-width letters or another alphabet only), the rule freeze applies with
         AOI-TRN-039, which before met such a name only after the work of labelling it (B4 of the 2026-10
         business-readiness brief, D4 part, F9; ADR 0023); AOI-TRN-005 for one that differs from an existing name only
-        in case: on Windows, where file names ignore case, both would write the same AI model and golden board files.
-        Every call that makes a board model raises it (`_refuse_new_name`), and the New board model dialog shows it
-        while the name is typed."""
+        in case: on Windows, where file names ignore case, both would write the same AI model and golden board files;
+        AOI-TRN-055 for one that reads the same as an existing name on a screen (`looks`: full-width letters, a no-break
+        or zero-width space, a decomposed Hangul syllable); AOI-TRN-056 for one whose letters A to Z and digits are an
+        existing name's, so its dataset versions would take that board model's names (DS-TBOXA1-… for TBOX-A1 and
+        `tbox a1`, or for CAL-1 and CAL_1), the rule freeze applies with AOI-TRN-040, which before met such a name only
+        once the other board model had a version (Jay's decision of 2026-10-13, ADR 0023, decisions 6 and 7). Every
+        call that makes a board model raises it (`_refuse_new_name`), and the New board model dialog shows it while the
+        name is typed."""
         names = self.db.board_models()
         if name in names:
             return None
         if not one_folder_name(name):
             return AoiError("AOI-TRN-019", name=name)
-        if not datasets.token(name):
+        if not (token := datasets.token(name)):
             return AoiError("AOI-TRN-054", name=name)
-        same = next((n for n in names if n.casefold() == name.casefold()), None)
-        return None if same is None else AoiError("AOI-TRN-005", name=name, existing=same)
+        if (same := next((n for n in names if n.casefold() == name.casefold()), None)) is not None:
+            return AoiError("AOI-TRN-005", name=name, existing=same)
+        seen = looks(name)  # once, not per name: the dialog asks on every key
+        if (alike := next((n for n in names if looks(n) == seen), None)) is not None:
+            return AoiError("AOI-TRN-055", name=name, existing=alike)
+        mixed = next((n for n in names if datasets.token(n) == token), None)
+        return None if mixed is None else AoiError("AOI-TRN-056", name=name, existing=mixed, token=token)
 
     def _refuse_new_name(self, name: str) -> None:
         """Raise the refusal `board_model_name_refusal` gives `name`, if any, before anything is written."""
@@ -2412,7 +2441,7 @@ class AppContext:
         """Make a stored OK sample the reference image: inspections compare against it from now on, and the next
         training run aligns its boards to it before it learns the golden template. An NG sample is refused
         (AOI-TRN-006), and a board model it would create meets the rule a first import's does
-        (`board_model_name_refusal`: AOI-TRN-019, AOI-TRN-054, AOI-TRN-005)."""
+        (`board_model_name_refusal`: AOI-TRN-019, AOI-TRN-054, AOI-TRN-005, AOI-TRN-055, AOI-TRN-056)."""
         self._refuse_new_name(board_model)
         sample = self.db.sample(sample_id)
         if sample["label"] != "OK":
@@ -3016,10 +3045,10 @@ class AppContext:
         commit included. Returns `board_model`, `store` (as `stores` lists it) and `sheet`. A board model of that name
         in that customer's store already is returned as it is, as `ensure_board_model` leaves one that exists. Refused,
         writing nothing: first a name the rule for a new board model refuses (`board_model_name_refusal`: AOI-TRN-019,
-        AOI-TRN-054, AOI-TRN-005), as the dialog says it; then no customer, a board model of that name in no store or in
-        another customer's, and a new one whose folder under images/ holds files already, which Move Board Model In… on
-        Settings encrypts with its progress (AOI-TRN-044); and a new store on a station that keeps keys in memory only
-        (AOI-TRN-053)."""
+        AOI-TRN-054, AOI-TRN-005, AOI-TRN-055, AOI-TRN-056), as the dialog says it; then no customer, a board model of
+        that name in no store or in another customer's, and a new one whose folder under images/ holds files already,
+        which Move Board Model In… on Settings encrypts with its progress (AOI-TRN-044); and a new store on a station
+        that keeps keys in memory only (AOI-TRN-053)."""
         board_model, customer = board_model.strip(), customer.strip()
         self._refuse_new_name(board_model)  # first, as the dialog says it while the name is typed (ADR 0023)
         found = next(
@@ -3411,12 +3440,13 @@ class AppContext:
     ) -> dict[str, Any] | None:
         """The agreement check a version is frozen with, None for a Trial version; else, read in the freeze's
         transaction, the first reason not to freeze: another board model whose name gives the same letters and digits
-        has frozen versions (AOI-TRN-040), a version of that name exists or the view holds no OK or NG image
-        (AOI-TRN-027), an NG label not checked (AOI-TRN-020), too few drawn OK labels checked (AOI-TRN-021), the newest
-        agreement check missing or short of its targets, and the board model in no customer's dataset store, in a
-        shredded one or in another customer's than `customer` (AOI-TRN-027; REQ-TRN-017). A Trial version needs no
-        label check and no agreement check (`trial`; ADR 0020); every other refusal holds for it. `status`, the view's
-        `label_check_status` when the caller read it already (`freeze_gate`), else read here."""
+        has frozen versions (AOI-TRN-040; a board model made before Jay's decision of 2026-10-13, a new one of such a
+        name being refused where it is entered, AOI-TRN-056, ADR 0023), a version of that name exists or the view holds
+        no OK or NG image (AOI-TRN-027), an NG label not checked (AOI-TRN-020), too few drawn OK labels checked
+        (AOI-TRN-021), the newest agreement check missing or short of its targets, and the board model in no customer's
+        dataset store, in a shredded one or in another customer's than `customer` (AOI-TRN-027; REQ-TRN-017). A Trial
+        version needs no label check and no agreement check (`trial`; ADR 0020); every other refusal holds for it.
+        `status`, the view's `label_check_status` when the caller read it already (`freeze_gate`), else read here."""
         frozen = self.db.dataset_names()
         token = datasets.token(board_model)
         other = next((d for d in frozen if d != board_model and datasets.token(d) == token), None)

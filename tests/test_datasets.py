@@ -310,6 +310,7 @@ def test_req_trn_005_refused_freeze_reads_no_image(
     samples, cal = ready(ctx, tmp_path / "boards")
     agree(ctx, cal, samples)
     ctx.freeze_dataset(CAL, "Top", "R3", "Acme")
+    ctx.db.ensure_board_model("CAL_1")  # made before such a name was refused where it is entered (AOI-TRN-056)
     ctx.import_samples("CAL_1", [str(p) for p in sorted((tmp_path / "boards").glob("*.png"))[:3]], "OK")
     hashed, real, decrypt = [], datasets.sha256, crypto.decrypt
     monkeypatch.setattr(datasets, "sha256", lambda path: hashed.append(path) or real(path))  # a plain file

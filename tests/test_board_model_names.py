@@ -2,7 +2,11 @@
 the rule freeze applies (AOI-TRN-039, `datasets.token`) where it is entered, not after its images are labelled. A name
 with no Latin letter or digit, which its dataset versions are named with, is refused with AOI-TRN-054 by every call
 that makes a board model, writing nothing, and the New board model dialog says so as the name is typed, Create off. A
-board model a workspace already holds under such a name, made before, is kept as it was, and freeze still refuses it."""
+board model a workspace already holds under such a name, made before, is kept as it was, and freeze still refuses it.
+
+Jay's decision of 2026-10-13 (ADR 0023, decisions 6 and 7) adds two refusals at entry: a name that reads the same as an
+existing one on a screen (AOI-TRN-055) and one whose letters A to Z and digits are an existing name's, so its versions
+would take that board model's names (AOI-TRN-056, the rule freeze applies with AOI-TRN-040)."""
 
 from __future__ import annotations
 
@@ -18,7 +22,7 @@ from pytestqt.qtbot import QtBot
 
 from aoi.core import datasets
 from aoi.core.imaging import list_images
-from aoi.core.services import AppContext
+from aoi.core.services import AppContext, looks
 from aoi.data import credentials
 from aoi.errors import AoiError
 from tests.test_dataset_stores import as_admin
@@ -29,7 +33,26 @@ from tests.test_first_board_model_store import opened, shell
 # and Greek capitals that look like Latin ones, an emoji, and a single accented or German letter.
 SLIPPED = ["보드", "기판 이호", "---", "___", "ＴＢＯＸ", "１２３", "АБВ", "ΑΒΓ", "😀", "é", "ß"]
 # Names with a Latin letter or digit: taken, other letters and spaces kept. 기판 2호's digit names its versions DS-2-…
-TAKEN = ["TBOX-A1", "tbox a1", "TBOX-A1 메인보드", "7", "기판 2호"]
+TAKEN = ["TBOX-A1", "tbox c3", "TBOX-A4 메인보드", "7", "기판 2호"]
+# Names + New board model and a first import took beside the first, which freeze then refused once the first had a
+# version (AOI-TRN-040), or which a person cannot tell from the first on a screen: each is refused at entry now.
+MIXED = [  # the same letters A to Z and digits, so the same DS-<BOARDMODEL>-…: AOI-TRN-056
+    ("TBOX-A1", "tbox a1"),
+    ("TBOX-A1", "TBOX_A1"),
+    ("CAL-1", "CAL_1"),
+    ("TBOX-A1", "TBOX–A1"),  # an en dash
+    ("TBOX-A1", "TBOX-A1 메인보드"),
+    ("보드 1", "기판 1"),  # Korean names with the same digit: DS-1-…
+]
+ALIKE = [  # the same on a screen: AOI-TRN-055
+    ("TBOX-A1", "TBOX-A１"),  # a full-width digit
+    ("TBOX-A1", "ＴＢＯＸ-A1"),  # full-width letters
+    ("보드 1", "\u1107\u1169\u1103\u1173 1"),  # 보드 decomposed, as a macOS file name gives it
+    ("TBOX A1", "TBOX\u00a0A1"),  # a no-break space
+    ("TBOX A1", "TBOX  A1"),  # two spaces
+    ("TBOX-A1", "TBOX\u200b-A1"),  # a zero-width space
+    ("TBOX-A1", "TBOX-A1\u00ad"),  # a soft hyphen
+]
 BETA = "Beta Boards"  # a customer with a dataset store already
 
 
@@ -119,12 +142,15 @@ def test_req_trn_005_a_name_with_a_latin_letter_or_digit_is_taken(ctx: AppContex
 
 def test_req_trn_005_the_rules_for_a_new_name_keep_their_order(ctx: AppContext) -> None:
     """The folder rule first (AOI-TRN-019: an empty name, one ending with a dot, a device name), then the Latin letter
-    or digit (AOI-TRN-054), then the case of an existing name (AOI-TRN-005); a name that differs only in case from one
-    with no Latin letter or digit is refused for its letters."""
+    or digit (AOI-TRN-054), then the case of an existing name (AOI-TRN-005), then how it looks (AOI-TRN-055), then its
+    letters A to Z and digits (AOI-TRN-056); a name that differs only in case from one with no Latin letter or digit is
+    refused for its letters, and one that looks like an existing name is said to, not that its versions would mix."""
     ctx.ensure_board_model("TBOX-A1")
     ctx.db.ensure_board_model("Ωμέγα")  # made before names were checked
     for name, code in (("", "AOI-TRN-019"), ("...", "AOI-TRN-019"), ("보드.", "AOI-TRN-019"), ("CON", "AOI-TRN-019"),
-                       ("ΩΜΈΓΑ", "AOI-TRN-054"), ("tbox-a1", "AOI-TRN-005")):  # fmt: skip
+                       ("ΩΜΈΓΑ", "AOI-TRN-054"), ("ＴＢＯＸ－Ａ１", "AOI-TRN-054"), ("tbox-a1", "AOI-TRN-005"),
+                       ("tbox-a１", "AOI-TRN-055"), ("TBOX-A1\u200b", "AOI-TRN-055"),
+                       ("TBOX A1", "AOI-TRN-056")):  # fmt: skip
         refusal = ctx.board_model_name_refusal(name)
         assert refusal is not None and refusal.code == code, (name, refusal)
         with pytest.raises(AoiError) as refused:
@@ -249,3 +275,126 @@ def test_req_trn_005_a_padded_name_is_refused_by_every_entry_point(
         expected = {"AOI-TRN-054"} if call.startswith("create_customer") else {"AOI-TRN-054", "AOI-TRN-019"}
         assert refused.value.code in expected, (call, refused.value)
         assert written(ctx, keys) == before, call
+
+
+@pytest.mark.parametrize(("existing", "name"), MIXED + ALIKE)
+def test_req_trn_005_a_name_like_an_existing_one_is_refused_where_it_is_entered(
+    ctx: AppContext, keys: credentials.MemoryCredentials, synthetic_dataset: Path, existing: str, name: str
+) -> None:
+    """A name whose letters A to Z and digits are an existing board model's gives its versions that board model's names,
+    which freeze refused only once that board model had a version (AOI-TRN-040), and one that reads the same as an
+    existing name on a screen is told from it by no one; both were taken by + New and a first import. Now every call
+    that makes a board model refuses each first, writing nothing: no board model, audit entry, recipe, file, store or
+    key; with AOI-TRN-055 for a look-alike and AOI-TRN-056 for the rest, naming the existing board model, and for
+    AOI-TRN-056 the DS-<BOARDMODEL> both would share."""
+    ctx.ensure_board_model(existing)
+    code = "AOI-TRN-055" if (existing, name) in ALIKE else "AOI-TRN-056"
+    token = datasets.token(name)
+    assert name != existing and name.casefold() != existing.casefold()
+    assert (code == "AOI-TRN-055") == (looks(name) == looks(existing))
+    assert code == "AOI-TRN-055" or token == datasets.token(existing) != ""
+    ok_image = str(list_images(synthetic_dataset / "train" / "ok")[0])
+    ctx.import_samples("HELD", [ok_image], "OK")
+    held = ctx.samples("HELD", "OK")[0]["id"]
+    as_admin(ctx, ctx.create_store, BETA)
+    before = written(ctx, keys)
+    params = {"name": name, "existing": existing} | ({"token": token} if code == "AOI-TRN-056" else {})
+    refusal = ctx.board_model_name_refusal(name)
+    assert refusal is not None and (refusal.code, refusal.params) == (code, params)
+    for call, make in _entry_points(ctx, ok_image, held).items():
+        with pytest.raises(AoiError) as refused:
+            make(name)
+        assert (refused.value.code, refused.value.params) == (code, params), call
+        assert written(ctx, keys) == before, call
+
+
+def test_req_trn_005_the_messages_say_what_to_type_instead(ctx: AppContext) -> None:
+    """AOI-TRN-055 names the board model the name reads as and what was set aside to compare them; AOI-TRN-056 the one
+    whose versions it would share, and their DS-<BOARDMODEL>; each says to select that board model, or what a name
+    that differs needs (a letter A to Z or a digit, which AOI-TRN-056 compares), and that nothing was made."""
+    ctx.ensure_board_model("TBOX-A1")
+    alike, mixed = ctx.board_model_name_refusal("TBOX-A１"), ctx.board_model_name_refusal("tbox a1")
+    assert alike is not None and alike.message == (
+        'The board model name "TBOX-A１" reads the same as board model "TBOX-A1", which exists already, once upper and'
+        " lower case, full-width and other forms of the same letter or digit, the kind of space and characters that"
+        ' show nothing are set aside. Select "TBOX-A1" in the top bar to work on that board model, or type a name that'
+        " differs from it in a letter A to Z or a digit 0 to 9, typed on an English keyboard. Nothing was made."
+    )
+    assert mixed is not None and mixed.message == (
+        'The board model name "tbox a1" has the same letters A to Z and digits 0 to 9 as board model "TBOX-A1", case'
+        " aside, so the dataset versions of both would be named DS-TBOXA1-…, and their names would mix. Select"
+        ' "TBOX-A1" in the top bar if it is the same board, or give the new board model a name whose letters A to Z or'
+        ' digits 0 to 9 differ from those of "TBOX-A1", such as one with another digit added. Nothing was made.'
+    )
+
+
+def test_req_trn_005_a_name_that_differs_in_a_letter_or_digit_is_taken(ctx: AppContext) -> None:
+    """The rule refuses no more than it says: beside TBOX-A1, a name with another digit, a word added, or a digit 0 for
+    the letter O, is taken as typed, as are the names AOI-TRN-055 and -056 send the Engineer to type."""
+    ctx.ensure_board_model("TBOX-A1")
+    for name in ("TBOX-A12", "TBOX-A1 Rev2", "TB0X-A1", "TBOX-A2", "TBOX-B1 메인보드"):
+        assert ctx.board_model_name_refusal(name) is None, name
+        ctx.ensure_board_model(name)
+    assert sorted(ctx.board_models()) == sorted(["TBOX-A1", "TBOX-A12", "TBOX-A1 Rev2", "TB0X-A1", "TBOX-A2",
+                                                 "TBOX-B1 메인보드"])  # fmt: skip
+
+
+def test_req_trn_005_a_name_with_a_hidden_character_is_kept_as_typed(ctx: AppContext) -> None:
+    """A name holding a no-break or zero-width space, or a full-width digit, with no existing name like it, is taken
+    and stored as typed, never in its normal form; the plain name typed later reads the same and is refused with
+    AOI-TRN-055, naming the one stored (ADR 0023, Consequences)."""
+    for typed, plain in (("TBOX\u00a0A1", "TBOX A1"), ("CAL\u200b-7", "CAL-7"), ("TBOX-B１", "TBOX-B1")):
+        assert ctx.board_model_name_refusal(typed) is None
+        ctx.ensure_board_model(typed)
+        assert typed in ctx.board_models() and plain not in ctx.board_models()
+        assert typed in [e["object_uuid"] for e in ctx.audit_entries(action="board_model.create")]
+        refusal = ctx.board_model_name_refusal(plain)
+        assert refusal is not None and (refusal.code, refusal.params["existing"]) == ("AOI-TRN-055", typed)
+
+
+def test_req_trn_005_a_look_alike_names_the_board_model_it_reads_as(ctx: AppContext) -> None:
+    """Where two board models made before share the letters and digits a new name has, and the new name reads the same
+    as the second, AOI-TRN-055 names the second, the one the Engineer sees as theirs, not the first AOI-TRN-056 would
+    name."""
+    ctx.db.ensure_board_model("TBOX A1")
+    ctx.db.ensure_board_model("TBOX-A1")
+    refusal = ctx.board_model_name_refusal("TBOX-A1\u200b")
+    assert refusal is not None and (refusal.code, refusal.params["existing"]) == ("AOI-TRN-055", "TBOX-A1")
+    mixed = ctx.board_model_name_refusal("TBOX_A1")
+    assert mixed is not None and (mixed.code, mixed.params["existing"]) == ("AOI-TRN-056", "TBOX A1")
+
+
+def test_req_trn_005_board_models_made_before_that_mix_keep_working(ctx: AppContext, synthetic_dataset: Path) -> None:
+    """Board models made before this rule under names it now refuses beside each other (CAL-1 and CAL_1, or a name and
+    its look-alike) are kept: + New with either name, typed exactly, creates nothing and refuses nothing, and each
+    imports and takes a reference as before; freeze still refuses the second once the first has a version
+    (AOI-TRN-040, tests/test_datasets.py)."""
+    oks = [str(p) for p in list_images(synthetic_dataset / "train" / "ok")[:2]]
+    made = ["CAL-1", "CAL_1", "TBOX A1", "TBOX\u00a0A1"]
+    for name in made:
+        ctx.db.ensure_board_model(name)
+    before = ctx.audit_entries()
+    for name in made:
+        assert ctx.board_model_name_refusal(name) is None
+        ctx.ensure_board_model(name)
+    assert ctx.audit_entries() == before and sorted(ctx.board_models()) == sorted(made)
+    for name in made:
+        assert ctx.import_samples(name, oks, "OK") == 2
+        ctx.set_reference(name, ctx.samples(name, "OK")[1]["id"])
+        assert ctx.reference_image(name) == ctx.samples(name, "OK")[1]["path"]
+
+
+def test_req_trn_005_the_dialog_says_a_name_looks_like_or_mixes_with_another(qtbot: QtBot, ctx: AppContext) -> None:
+    """New board model: a name that looks like an existing one, or whose versions would take another's names, is said
+    under the name as it is typed, with its code, and Create is off; a name that differs turns Create on."""
+    ctx.ensure_board_model("TBOX-A1")
+    dialog = opened(qtbot, shell(qtbot, ctx))
+    committed(dialog.board, "TBOX-A１")
+    assert not dialog.btn_create.isEnabled() and dialog.name_refusal.isVisible()
+    assert dialog.name_refusal.text().startswith('AOI-TRN-055 The board model name "TBOX-A１" reads the same as')
+    dialog.board.setText("TBOX_A1")
+    assert not dialog.btn_create.isEnabled() and dialog.name_refusal.isVisible()
+    assert dialog.name_refusal.text().startswith('AOI-TRN-056 The board model name "TBOX_A1" has the same letters')
+    assert "DS-TBOXA1-…" in dialog.name_refusal.text()
+    dialog.board.setText("TBOX_A2")
+    assert dialog.btn_create.isEnabled() and not dialog.name_refusal.isVisible()

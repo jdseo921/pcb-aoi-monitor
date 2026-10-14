@@ -1026,6 +1026,37 @@ CODES: dict[str, ErrorCode] = {
                 ' such as Korean ones, may be added to it, as in "TBOX-A1 메인보드". Nothing was made.',
             ),
         ),
+        ErrorCode(  # a new board model's name that looks like an existing one (Jay, 2026-10-13; ADR 0023, decision 6)
+            "AOI-TRN-055",
+            QT_TRANSLATE_NOOP("Errors", "Board model name not allowed: reads as another"),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                'The board model name "{name}" reads the same as board model "{existing}", which exists already, once'
+                " upper and lower case, full-width and other forms of the same letter or digit, the kind of space and"
+                " characters that show nothing are set aside.",
+            ),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                'Select "{existing}" in the top bar to work on that board model, or type a name that differs from it in'
+                " a letter A to Z or a digit 0 to 9, typed on an English keyboard. Nothing was made.",
+            ),
+        ),
+        ErrorCode(  # a new board model's name whose versions would mix with another's (Jay, 2026-10-13; ADR 0023, 7)
+            "AOI-TRN-056",
+            QT_TRANSLATE_NOOP("Errors", "Board model name not allowed: version names would mix"),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                'The board model name "{name}" has the same letters A to Z and digits 0 to 9 as board model'
+                ' "{existing}", case aside, so the dataset versions of both would be named DS-{token}-…, and their'
+                " names would mix.",
+            ),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                'Select "{existing}" in the top bar if it is the same board, or give the new board model a name whose'
+                ' letters A to Z or digits 0 to 9 differ from those of "{existing}", such as one with another digit'
+                " added. Nothing was made.",
+            ),
+        ),
         ErrorCode(
             "AOI-TST-001",
             QT_TRANSLATE_NOOP("Errors", "AI model, recipe, scale or Golden board changed since the run"),
