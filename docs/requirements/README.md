@@ -44,8 +44,25 @@ states yet.
 |---|---|---|
 | G1 | The build that runs the customer validation and passes gate G1, the end of Stage 1 | Proposed as 0.3 at the end of November 2026, 8 weeks from 2026-10-01 (RM Stage 1); the schedule itself is still an open Charter decision |
 | 1.0 | The first commercial release, assumed here to cover Stages 1 and 2 | 1Q 2027 (RM §3) |
+| G3 | The handover of Stage 1 to the company (handover plan, gate G3): every box of the plan's section 2a checked | After G1 and production plan Stages 2 and 3; tag to be decided (ADR 0024) |
+
+**Two meanings of G1, to settle in ADR 0024.** The Charter's gate G1 is the customer's signed validation report; the
+handover plan of 2026-11 (`docs/plans/2026-11-handover-plan.md`, the plan of record) calls that gate G2 and uses G1 for
+"safe to run" (tag `v0.4.0`). The 71 rows marked MUST G1 before 2026-10-31 were written for the Charter's meaning; all
+of them passed on CI's last run of `main` (2026-10-14; locally on 2026-10-31 the timing test of REQ-INSP-007 failed, see
+`docs/reviews/2026-11-diagnosis.md` §1.7), so the gate is unchanged by the rename, but Jay decides which name the register keeps.
 
 Performance budgets are measured on the reference PC, which is also still open in the Charter.
+
+## A MUST row that is not built yet
+
+The trace gate (`tools/trace_matrix.py --gate G1`, run by CI on every pull request) fails when a row whose priority is
+exactly `MUST G1` has no passing test. A row whose priority still waits on a decision, or that is not built yet, carries that in brackets, as
+`MUST 1.0 (proposed; open in the Charter)` did first: `MUST G1 (provisional: ADR 0024 D3; gated once built)` or `MUST G1 (not built yet; gated once built)`. The
+gate matches the priority word for word, so such a row is listed in the matrix with "no test" but does not stop the
+run. The pull request that builds the row deletes the brackets in the same change as its first passing test, and from
+then on the gate holds it. A bracket is never removed without a passing test, and never added to a row that has one. No
+bracketed MUST G1 row may remain when `v0.4.0` is tagged (the progress file's G1 exit line).
 
 ## Ready before work
 
