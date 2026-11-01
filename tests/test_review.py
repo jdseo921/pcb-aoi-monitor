@@ -150,6 +150,6 @@ def test_req_insp_013_logs_review_column_summary_and_csv(
     with out.open(encoding="utf-8-sig", newline="") as fh:
         reader = csv.DictReader(fh)
         assert reader.fieldnames is not None
-        assert reader.fieldnames[-5:] == ["ai_check", "review", "review_reason", "review_by", "review_time"]
+        assert reader.fieldnames[-6:-1] == ["ai_check", "review", "review_reason", "review_by", "review_time"]
         (row,) = list(reader)
     assert (int(row["id"]), row["review"], row["review_reason"]) == (iid, FALSE_CALL, "Glare or lighting in the image")
