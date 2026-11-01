@@ -394,6 +394,7 @@ ENGINE_ALLOWED = {  # (file, literal): why it is not a phrase; a stale entry fai
     ("aoi/core/imaging.py", "0 MP (0 × 0)"): "numbers and a unit symbol, written the same in every language",
     # what a function returns (#198): names the same in every language, and keys a screen words itself
     ("aoi/config.py", "cpu"): "a torch device name",
+    ("aoi/core/support.py", "file:0?mode=ro"): "the SQLite URI the support bundle reads the database by, never shown",
     ("aoi/core/inspector.py", "RAN"): "an ai_check key the CSV exports write as it is, as pass_fail's (#246)",
     ("aoi/core/inspector.py", "OFF"): "an ai_check key the CSV exports write as it is, as pass_fail's (#246)",
     ("aoi/core/inspector.py", "NO_AI_MODEL"): "an ai_check key the CSV exports write as it is, as pass_fail's (#246)",

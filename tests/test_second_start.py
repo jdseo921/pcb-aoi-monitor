@@ -18,7 +18,7 @@ from PySide6.QtWidgets import QFileDialog, QMessageBox
 from pytestqt.qtbot import QtBot
 
 from aoi.config import Settings
-from aoi.core import demo
+from aoi.core import demo, heartbeat
 from aoi.core.services import AppContext, RunningCopy, running_copy, workspace_in_use
 from aoi.data import credentials
 from aoi.data.workspace_lock import LOCK_NAME
@@ -125,11 +125,15 @@ def test_req_set_019_a_second_start_brings_the_open_copy_to_the_front(
     first, boxes, pickers, errors = second_start
     system = FakeSystem({WINDOW: os.getpid()})
     monkeypatch.setattr(front, "this_system", lambda: system)
-    before = sorted(p.name for p in first.settings.root.iterdir())
+
+    def names() -> list[str]:  # but heartbeat.json, which the first copy's own timer rewrites (REQ-SET-024)
+        return sorted(p.name for p in first.settings.root.iterdir() if heartbeat.HEARTBEAT not in p.name)
+
+    before = names()
     assert ui_errors.open_workspace() is None
     assert system.asked == [(call, WINDOW) for call in BROUGHT]
     assert boxes == [] and pickers == [] and errors == []
-    assert sorted(p.name for p in first.settings.root.iterdir()) == before
+    assert names() == before
     first.audit("probe", "workspace", None, None, None)  # the first copy still works on its workspace
 
 
