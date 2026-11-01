@@ -55,6 +55,7 @@ NOT_ATOMIC = {  # (file, call as the scan shows it): why it may write outside at
     ("aoi/errors.py", "DOC_PATH.write_text()"): "a developer tool writing docs/error-codes.md in the repository",
     ("aoi/logging_setup.py", "open(..., 'a')"): "the log appends line by line; a cut can shorten only its last line",
     ("aoi/data/migrate.py", "os.replace()"): "the schema backup: SQLite's backup API writes a temp copy, renamed whole",
+    ("aoi/logging_setup.py", "os.replace()"): "keeps the last run's crash record under a new name: a rename",
     ("aoi/core/heartbeat.py", "open(..., 'a')"): "alerts.jsonl appends line by line, as the log; a cut shortens one",
     ("aoi/core/retention.py", "os.replace()"): "moves a whole gzipped log into logs/archive/: a rename writes nothing",
     ("aoi/core/services.py", "model.save()"): "AnomalyModel.save writes the .pt through atomic.write_with",

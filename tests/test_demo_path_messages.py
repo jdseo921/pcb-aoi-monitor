@@ -22,7 +22,7 @@ from PySide6.QtWidgets import QMessageBox
 from pytestqt.qtbot import QtBot
 
 from aoi import errors as catalogue
-from aoi.config import Settings, default_workspace
+from aoi.config import BUILD_LINE, Settings, default_workspace
 from aoi.core import demo
 from aoi.core.anomaly import AnomalyModel, ModelFileError
 from aoi.core.maps import read_map
@@ -433,7 +433,7 @@ def test_req_set_019_an_unexpected_error_shows_its_class_only_behind_details(qtb
         assert title == "AOI-SET-007 Unexpected error"
         assert text.startswith(f"An unexpected error stopped the last action{where}\n\n"), text
         assert banned(text) == [] and "secret detail" not in text
-        assert details == "RuntimeError: secret detail"
+        assert details == f"RuntimeError: secret detail\n\n{BUILD_LINE}"
 
 
 def test_req_set_019_an_unexpected_refusal_of_the_system_says_what_it_means(qtbot: QtBot) -> None:
@@ -443,7 +443,7 @@ def test_req_set_019_an_unexpected_refusal_of_the_system_says_what_it_means(qtbo
     full = _os_error(errno.ENOSPC, "No space left on device")
     _title, text, details = _shown(ErrorReport.of(full, "Training"))
     assert text.startswith("An unexpected error stopped the last action (Training): the drive is full.\n\n"), text
-    assert banned(text) == [] and details == f"OSError: {full}"
+    assert banned(text) == [] and details == f"OSError: {full}\n\n{BUILD_LINE}"
     _title, text, _details = _shown(ErrorReport.of(sqlite3.OperationalError("disk I/O error"), UNHANDLED))
     assert text.startswith("An unexpected error stopped the last action: the drive could not be read or written."), text
 
@@ -454,7 +454,7 @@ def test_req_set_019_a_full_drive_reads_as_a_full_drive(qtbot: QtBot, tmp_path: 
     error = _not_written(_os_error(errno.ENOSPC, "No space left on device"), target)
     _title, text, details = _shown(ErrorReport.of(error))
     assert f"The export {target} could not be written: the drive is full." in text and banned(text) == []
-    assert details == "OSError: [Errno 28] No space left on device: 'E:/report.csv'"
+    assert details == f"OSError: [Errno 28] No space left on device: 'E:/report.csv'\n\n{BUILD_LINE}"
 
 
 def test_req_set_019_a_database_another_app_holds_says_so(qtbot: QtBot, ctx: AppContext) -> None:
@@ -465,7 +465,7 @@ def test_req_set_019_a_database_another_app_holds_says_so(qtbot: QtBot, ctx: App
     report = ctx.report_error(held, "Settings")
     title, text, details = _shown(report)
     assert title == "AOI-SET-013 Workspace database busy" and banned(text) == []
-    assert details == "OperationalError: database is locked"
+    assert details == f"OperationalError: database is locked\n\n{BUILD_LINE}"
 
 
 def test_req_set_019_a_settings_file_that_is_not_json_says_where(tmp_path: Path) -> None:
@@ -588,13 +588,14 @@ def test_req_set_019_a_demo_load_stopped_part_way_leaves_no_half_demo(
 
 
 def test_req_set_019_the_dialog_shows_a_coded_errors_detail(qtbot: QtBot) -> None:
-    """A coded error's detail, or the system error that caused it, is behind Show Details…; none, no Details."""
+    """A coded error's detail, or the system error that caused it, is behind Show Details…, then the build
+    (REQ-SET-026); with neither, the build alone."""
     with_detail = AoiError("AOI-LOG-002", "OSError: [Errno 28] No space left", path="E:/a.csv", reason=catalogue.FULL)
-    assert _shown(ErrorReport.of(with_detail))[2] == "OSError: [Errno 28] No space left"
+    assert _shown(ErrorReport.of(with_detail))[2] == f"OSError: [Errno 28] No space left\n\n{BUILD_LINE}"
     caused = AoiError("AOI-SET-014", page="Inspection")
     caused.__cause__ = sqlite3.OperationalError("disk I/O error")
-    assert _shown(ErrorReport.of(caused))[2] == "OperationalError: disk I/O error"
-    assert _shown(ErrorReport.of(AoiError("AOI-SET-014", page="Inspection")))[2] == ""
+    assert _shown(ErrorReport.of(caused))[2] == f"OperationalError: disk I/O error\n\n{BUILD_LINE}"
+    assert _shown(ErrorReport.of(AoiError("AOI-SET-014", page="Inspection")))[2] == BUILD_LINE
 
 
 def test_req_set_019_show_error_is_the_error_box(qtbot: QtBot, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -602,7 +603,7 @@ def test_req_set_019_show_error_is_the_error_box(qtbot: QtBot, monkeypatch: pyte
     built: list[ErrorBox] = []
     monkeypatch.setattr(ErrorBox, "exec", lambda self: built.append(self) or 0)
     ui_errors.show_error(None, ErrorReport.of(RuntimeError("x")))
-    assert len(built) == 1 and built[0].detailedText() == "RuntimeError: x"
+    assert len(built) == 1 and built[0].detailedText() == f"RuntimeError: x\n\n{BUILD_LINE}"
     built[0].deleteLater()
 
 

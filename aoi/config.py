@@ -23,17 +23,28 @@ APP_NAME = "AOI PoC Inspector"
 APP_VERSION = "0.4.0.dev0"
 
 
-def build_number(folder: Path | None = None) -> int | None:
-    """CI's run number of the Windows build this process runs from (REQ-SET-023): the BUILD file installer/aoi.spec
-    puts beside the app's own files; None from source or in a build made without one."""
+def _bundled(name: str, folder: Path | None) -> str | None:
+    """A file installer/aoi.spec puts beside the app's own files, stripped; None from source or without it."""
     if folder is None:
         if not getattr(sys, "frozen", False):
             return None
         folder = Path(getattr(sys, "_MEIPASS", ""))
     try:
-        return int((folder / "BUILD").read_text(encoding="ascii").strip())
+        return (folder / name).read_text(encoding="ascii").strip() or None
     except (OSError, ValueError):
         return None
+
+
+def build_number(folder: Path | None = None) -> int | None:
+    """CI's run number of the Windows build this process runs from (REQ-SET-023): the BUILD file installer/aoi.spec
+    puts beside the app's own files; None from source or in a build made without one."""
+    found = _bundled("BUILD", folder)
+    return int(found) if found and found.isdigit() else None
+
+
+def build_commit(folder: Path | None = None) -> str | None:
+    """The commit the Windows build was made from, as installer/aoi.spec's COMMIT file holds it (REQ-SET-026)."""
+    return _bundled("COMMIT", folder)
 
 
 def version_label(build: int | None) -> str:
@@ -42,6 +53,7 @@ def version_label(build: int | None) -> str:
 
 
 APP_LABEL = version_label(build_number())
+BUILD_LINE = f"{APP_NAME} {APP_LABEL}, commit {build_commit() or 'none (from source)'}"  # in every error's Details
 
 
 # Why settings.json is refused (AOI-SET-010, AOI-SET-008), as phrases shown translated (#198)

@@ -20,7 +20,7 @@ from PySide6.QtCore import QCoreApplication
 from PySide6.QtWidgets import QFileDialog, QMessageBox, QWidget
 
 from .. import logging_setup
-from ..config import Settings, default_workspace
+from ..config import BUILD_LINE, Settings, default_workspace
 from ..core.services import UNHANDLED, AppContext, ErrorReport, RunningCopy, running_copy, workspace_in_use
 from ..errors import QT_TRANSLATE_NOOP, AoiError, Phrase, system_detail
 from . import front
@@ -78,8 +78,7 @@ class ErrorBox(QMessageBox):
         title, text = dialog_text(report)
         icon = QMessageBox.Icon.Information if report.code in START_CHECKS else QMessageBox.Icon.Critical
         super().__init__(icon, title, text, QMessageBox.StandardButton.Ok, parent)
-        if report.detail:
-            self.setDetailedText(report.detail)
+        self.setDetailedText("\n\n".join(filter(None, (report.detail, BUILD_LINE))))  # version, build, commit
         self.act = self.addButton(act, QMessageBox.ButtonRole.ActionRole) if act else None
         if self.act is not None:
             self.act.setProperty("sizeClass", "T")  # the 48 px operator target, as pages.base.size_class marks one
