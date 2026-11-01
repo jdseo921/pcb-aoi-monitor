@@ -4112,8 +4112,7 @@ class AppContext:
         return len(swept)
 
     def _retain(self) -> None:
-        """The retention timer: a sweep at once, then every SWEEP_EVERY_S until the context closes; one that fails is
-        logged and the next tried an interval later."""
+        """The retention timer: a sweep at once, then every SWEEP_EVERY_S till close; a failed one is logged."""
         while True:  # the first at once: at start, off the UI thread, so no sweep error refuses the workspace
             try:
                 self.sweep_retention()

@@ -1476,7 +1476,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+308"/>
+        <location line="+307"/>
         <source>Exporting an AI model</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1486,7 +1486,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-368"/>
+        <location line="-367"/>
         <source>Changing users</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1601,7 +1601,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+74"/>
+        <location line="+73"/>
         <source>Confirming the retention policy</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1628,7 +1628,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-4167"/>
+        <location line="-4166"/>
         <source>unhandled</source>
         <translation type="unfinished"></translation>
     </message>

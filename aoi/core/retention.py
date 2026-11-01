@@ -11,8 +11,9 @@ import shutil
 from collections.abc import Callable, Iterable
 from datetime import date
 from pathlib import Path
+from typing import BinaryIO
 
-from ..data.atomic import temp_path
+from ..data import atomic
 
 SWEEP_EVERY_S = 3600
 LOG_GZIP_DAYS, LOG_ARCHIVE_DAYS, LOG_DELETE_DAYS = 7, 30, 90  # D21: gzipped after 7 days, archived at 30, gone at 90
@@ -45,10 +46,11 @@ def _each(paths: Iterable[Path], act: Callable[[Path], object], counts: dict[str
 
 
 def _gzip(p: Path) -> None:
-    packed = p.with_name(p.name + ".gz")
-    with p.open("rb") as src, gzip.open(tmp := temp_path(packed), "wb") as dst:  # a crash leaves a temp file swept
-        shutil.copyfileobj(src, dst)
-    os.replace(tmp, packed)
+    def pack(dst: BinaryIO) -> None:
+        with p.open("rb") as src, gzip.GzipFile(fileobj=dst, mode="wb") as packed:
+            shutil.copyfileobj(src, packed)
+
+    atomic.write_with(p.with_name(p.name + ".gz"), pack)
     p.unlink()
 
 
@@ -71,16 +73,14 @@ def sweep_backups(database: Path, counts: dict[str, int]) -> None:
 
 
 def sweep_test_runs(folder: Path, kept: set[str], now: float, counts: dict[str, int]) -> None:
-    """Delete each validation run's overlay folder under `folder` whose run is not in `kept` (stored runs newer than
-    their days), once ORPHAN_AGE_S old: a run still being judged has not been stored yet."""
+    """Delete each run's overlay folder not in `kept` (runs within their days), once ORPHAN_AGE_S old (still judged)."""
     old = [p for p in folder.glob("*") if p.is_dir() and p.name not in kept and now - p.stat().st_mtime >= ORPHAN_AGE_S]
     _each(old, shutil.rmtree, counts, "test_runs")
 
 
 def sweep_orphans(results: Path, named: set[Path], now: float, counts: dict[str, int]) -> None:
-    """Delete the OK boards' files under `results` that no record names, ORPHAN_AGE_S old or more: a save writes its
-    files before its record, so a younger one may still get it. An NG or WARN board's file, or any other, is never
-    deleted here: after a database restored from a copy, records saved since are gone but their evidence is kept."""
+    """Delete the OK boards' files no record names, ORPHAN_AGE_S old (a save writes its files before its record). An NG
+    or WARN file is never one: after a database restored from a copy, the evidence of records gone since is kept."""
     files = (p for p in results.glob("*/*") if p.parent.name != TEST_RUNS and _OK_FILE.fullmatch(p.name))
     old = [p for p in files if p.resolve() not in named and now - p.stat().st_mtime >= ORPHAN_AGE_S]
     _each(old, Path.unlink, counts, "orphans")

@@ -118,7 +118,7 @@ class SettingsPage(Page):
         left = QVBoxLayout()
         left.addWidget(g)
         left.addWidget(self.sweep)  # under the group: a wrapped label in a form row is cut to one row's height
-        left.addWidget(button(self.tr("Confirm Retention Policy"), "danger", self.confirm_retention))
+        left.addWidget(button(self.tr("Confirm Retention Policy"), slot=self.confirm_retention))
         self.stores = StoresPanel(self)  # the customers' encrypted dataset stores (REQ-TRN-017), under System
         left.addWidget(self.stores, 1)
         body.addLayout(left, 1)
