@@ -54,7 +54,8 @@ These hold until `v0.5.0` is tagged; the full text and the reasons are in
 `docs/plans/2026-11-handover-progress.md` ("Working rules") and `docs/plans/2026-11-production-plan.md` (section 1).
 
 - **One pull-request train per working day, at most**, each PR at most 400 changed lines (generated files not
-  counted: `aoi/i18n/aoi_ko.ts`, `docs/error-codes.md`, screenshots) and one concern.
+  counted: `aoi/i18n/aoi_ko.ts`, `docs/error-codes.md`, screenshots, and the exported text of `docs/standards/`,
+  whose hand-made lines count) and one concern.
 - **Feature freeze** until Stage 3 is tagged: no new register row of kind "feature", only the rows the handover and
   production plans name (ADR 0024, D2, provisional until Jay confirms it).
 - **Every stage ends on a tag** (`v0.4.0`, `v0.4.1`, `v0.5.0`, …) with CI green, the register's status column updated,

@@ -12,7 +12,7 @@ The review's conclusion was: refactor in place, do not restart; the constraint f
 
 | Rule | Why |
 |---|---|
-| **One pull-request train per working day, at most.** Each PR ≤ 400 changed lines excluding generated files (`aoi_ko.ts`, `docs/error-codes.md`, screenshots) and one concern. | You must be able to read every PR in under 30 minutes. 879 commits in 14 days is what made the codebase un-reviewable. |
+| **One pull-request train per working day, at most.** Each PR ≤ 400 changed lines excluding generated files (`aoi_ko.ts`, `docs/error-codes.md`, screenshots, and the exported text of `docs/standards/`, whose hand-made lines count; Jay, 2026-11-01) and one concern. | You must be able to read every PR in under 30 minutes. 879 commits in 14 days is what made the codebase un-reviewable. |
 | **Feature freeze until Stage 3 is tagged.** No new register row of kind "feature"; only rows this plan names. | Every feature added widens what Stages 2 and 3 must carry. The last three weeks added five unplanned features. |
 | **Every stage ends on a tag** (`v0.4.0`, `v0.4.1`, `v0.5.0`, …) with all CI green, the register's status column updated, the release note cut, the release-gate record written honestly. | A solo maintainer needs known-good points to roll back to. |
 | **Fresh-eyes review is a subagent, not you.** Claude Code spawns a reviewer that has not seen the diff for every PR, against the CLAUDE.md checklist; you read the diff and the review, and merge. | The Charter's "a person approves" stands; the second engineer the Charter assumed is replaced by an agent that cannot be anchored on its own work. |
