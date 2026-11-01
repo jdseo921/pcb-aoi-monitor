@@ -845,7 +845,7 @@
 <context>
     <name>Errors</name>
     <message>
-        <location filename="../core/services.py" line="+189"/>
+        <location filename="../core/services.py" line="+191"/>
         <source>a length of {length} px over {distance} mm gives no scale: both must be numbers above 0, and the scale from {least} to {most} px per mm</source>
         <translation type="unfinished"></translation>
     </message>
@@ -875,7 +875,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+367"/>
+        <location line="+376"/>
         <location line="+137"/>
         <source>Importing samples</source>
         <translation type="unfinished"></translation>
@@ -905,12 +905,12 @@
     </message>
     <message>
         <location line="+190"/>
-        <location line="+2484"/>
+        <location line="+2488"/>
         <source>(none)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-2453"/>
+        <location line="-2457"/>
         <source>Saving a recipe</source>
         <translation type="unfinished"></translation>
     </message>
@@ -940,7 +940,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+165"/>
+        <location line="+169"/>
         <location line="+24"/>
         <source>Running an AI model test</source>
         <translation type="unfinished"></translation>
@@ -1157,14 +1157,14 @@
         <translation>검증 세트 잠금</translation>
     </message>
     <message>
-        <location line="-3112"/>
-        <location line="+3126"/>
+        <location line="-3125"/>
+        <location line="+3139"/>
         <location line="+39"/>
         <source>the workspace holds no such dataset version</source>
         <translation>작업 공간에 그런 데이터셋 버전이 없습니다</translation>
     </message>
     <message>
-        <location line="-3215"/>
+        <location line="-3228"/>
         <source>Drift on {board} ({view}): {count} of the last {of} boards called NG; {before} % of the {baseline} before</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1264,7 +1264,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1306"/>
+        <location line="+1315"/>
         <source>Setting the comparison&apos;s thresholds from labelled boards</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1274,7 +1274,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1036"/>
+        <location line="+1040"/>
         <source>Shift check of {board_model}: {wrong} of {count} master samples judged wrongly</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1476,7 +1476,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+307"/>
+        <location line="+375"/>
         <source>Exporting an AI model</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1486,12 +1486,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-367"/>
+        <location line="-435"/>
         <source>Changing users</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-3877"/>
+        <location line="-3890"/>
         <source>no earlier version of this board model was active</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1516,12 +1516,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1230"/>
+        <location line="+1239"/>
         <source>its UUID {found} is not {uuid}, as in the AI model registry</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1454"/>
+        <location line="+1458"/>
         <source>Labelling an image</source>
         <translation>이미지 라벨링</translation>
     </message>
@@ -1601,7 +1601,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+73"/>
+        <location line="+141"/>
         <source>Confirming the retention policy</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1628,7 +1628,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-4166"/>
+        <location line="-4247"/>
         <source>unhandled</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3378,7 +3378,67 @@
         <translation>작업 표시줄에서 열려 있는 앱으로 전환하십시오. 다른 계정이나 다른 PC에서 열려 있으면 그곳에서 닫게 한 뒤 앱을 다시 시작하십시오. 이번 시작은 작업 공간에서 아무것도 바꾸지 않았습니다.</translation>
     </message>
     <message>
-        <location line="+19"/>
+        <location line="+8"/>
+        <source>Workspace database damaged</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>At start, SQLite&apos;s check of the workspace database aoi.sqlite found {problems} problems in it.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+4"/>
+        <source>Have an Admin close the app and restore the newest backup aoi.sqlite.bak-… (engineer manual, chapter 1), then send a support bundle. Results saved meanwhile may not be kept.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+8"/>
+        <source>Dataset store key missing</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>This station&apos;s key store holds no key for the dataset store of {store}, or another key, so its board models cannot be trained or tested here.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>An Admin restores the key from the store&apos;s recovery sheet: Settings, Advanced, Restore Key….</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+6"/>
+        <source>Evidence files missing</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>{count} overlay or map files that inspection records name are not in the workspace folder.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>If they were moved or deleted by hand, put them back from a backup; those records show no overlay or map until then. Verdicts and checks are kept in the database.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+8"/>
+        <source>Files left by a crash</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>{count} temporary files that a crash left in the workspace could not be removed at start.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>Close any program that holds files in the workspace open, or restart the PC, then the app.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+17"/>
         <source>Leave out / : * ? &quot; &lt; &gt; \ | and control characters, end with no dot or space, and use no device name such as CON or NUL.</source>
         <translation type="unfinished">/ : * ? &quot; &lt; &gt; \ | 와 제어 문자를 빼고, 점이나 공백으로 끝내지 말고, CON이나 NUL 같은 장치 이름은 쓰지 마십시오.</translation>
     </message>
@@ -3538,7 +3598,7 @@
         <translation type="unfinished">테스트하지 않았습니다: {reason}. AI 모델은 보드를 판정하며, AI 모델 테스트에서 다시 테스트합니다.</translation>
     </message>
     <message>
-        <location line="-268"/>
+        <location line="-315"/>
         <source>Try again; if it happens again, restart the app and send the log file (the workspace&apos;s logs folder) to support.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4144,7 +4204,7 @@
     </message>
     <message>
         <location line="+1"/>
-        <location filename="../core/services.py" line="+3368"/>
+        <location filename="../core/services.py" line="+3381"/>
         <source>a file of it could not be read: {reason}</source>
         <translation>그 파일 하나를 읽을 수 없습니다: {reason}</translation>
     </message>
@@ -9005,7 +9065,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/services.py" line="-3452"/>
+        <location filename="../core/services.py" line="-3465"/>
         <source>Aligning {count} images to the reference board</source>
         <translation type="unfinished"></translation>
     </message>
