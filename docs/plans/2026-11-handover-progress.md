@@ -1,0 +1,122 @@
+# 2026-11 handover: progress
+
+Read this file right after `docs/plans/2026-11-handover-plan.md`, the plan of record. One line per planned pull
+request; a session updates its line in the same pull request that changes the state. States: **planned**, **in
+progress** (branch named), **in review** (PR number), **merged** (date), **dropped** (reason and decision).
+
+## Working rules (production plan, section 1; they hold until `v0.5.0` is tagged)
+
+1. **One pull-request train per working day, at most.** Each PR is at most **400 changed lines**, not counting
+   generated files (`aoi/i18n/aoi_ko.ts`, `docs/error-codes.md`, screenshots), and carries one concern.
+2. **Feature freeze until Stage 3 is tagged.** No new register row of kind "feature"; only the rows the handover
+   plan (section 5) and the production plan (section 4) name. Decision D2 in ADR 0024 (provisional).
+3. **Every stage ends on a tag** (`v0.4.0`, `v0.4.1`, `v0.5.0`, …) with all CI green, the register's status column
+   updated, the release note cut and the release-gate record written honestly.
+4. **Fresh-eyes review is a subagent.** Every PR gets a review by a subagent that has not seen the diff, against the
+   CLAUDE.md checklist; Jay reads the diff and the review, and merges. Claude never approves or merges its own change.
+5. **The regression set stays byte-identical** through Stages 0 to 3: `tests/regression/expected.json` unchanged
+   since `b5bf413`. Any PR that would alter it stops and asks.
+6. **The plan of record lives in the repository**: the handover plan, the production plan, this file, ADR 0024 and
+   (from PR 0.2) the Standards in `docs/standards/`. Chat is for instructions, not for the record.
+7. **Decisions are written before code.** A new MUST conflict becomes a numbered decision in ADR 0024 before the PR
+   that needs it.
+
+## G0: Scope (no tag)
+
+| PR | Scope | Register | State |
+|---|---|---|---|
+| 0.1 + 0.3 | Plan of record committed, this file, the diagnosis, ADR 0024 (D1 to D19 provisional, D20 to D23 found by the diagnosis), the register rows and priority moves | REQ-SET-023 to -027, REQ-LOG-010, REQ-INSP-020, -021, REQ-TST-009, -010 added | in review (branch `docs/handover-pack`) |
+| 0.2 | The four Standards exported to `docs/standards/`, CLAUDE.md and citations re-pointed, a check that every cited Standard is in the repo | — (cite #5) | planned |
+| 0.4 | Version discipline: `APP_VERSION` 0.4.0.dev0, CI fails a migration or status change without a bump, build number, VERSIONINFO, signed-build naming | REQ-SET-023 | planned |
+| 0.5 | "Working rules until v0.5.0" in CLAUDE.md, the PR template with the change-note checklist | — (cite #5) | planned |
+| G0 doc | The scope document signed by Jay, the company and the factory (not software) | — | planned |
+
+## G1: Safe to run (tag `v0.4.0`)
+
+| PR | Scope | Register | State |
+|---|---|---|---|
+| 1.1 | Disk guard: alarm at 80 %, NG-only evidence at 95 %, start-up no longer refuses the workspace on a full disk | REQ-LOG-006 | planned |
+| 1.2 | Evidence policy (D1) | REQ-INSP-012 | planned |
+| 1.3 | Retention on a timer | REQ-LOG-010 | planned |
+| 1.4 | Heartbeat, `alerts.jsonl`, start-up self-check, clean-exit marker | REQ-SET-024 | planned |
+| 1.5 | Crash record (`faulthandler`, WER LocalDumps documented) | REQ-SET-026 | planned |
+| 1.6 | Support bundle and About | REQ-LOG-007, REQ-SET-011 | planned |
+| 1.7 | Workspace guards: remote drive and OneDrive root refused | REQ-SET-025 | planned |
+| 1.8 | Signing hygiene and installer wording | REQ-SET-012 | planned |
+| 1.9 | Release kit, `verify.ps1`, `inventory.ps1`, release runbook | REQ-SET-027 | planned |
+| D.1 | Accounts: Argon2id passwords, the users migration, sign-in dialog | REQ-USR-002, REQ-USR-007 | planned |
+| D.2 | Accounts: Operator shift start with optional PIN, lockout, idle end | REQ-USR-003, REQ-USR-004 | planned |
+| D.3 | Accounts: first Admin with a recovery code, user administration | REQ-USR-005, REQ-USR-006 | planned |
+| E.1 | `InspectionCycle` in `aoi/core/cycle.py` (production plan 3.1, pulled into G1) | issue (to open) | planned |
+| E.2 | Watched input folder (`FolderWatch`) and the file-naming contract | REQ-INSP-020 | planned |
+| E.3 | Result file per board, end-of-shift CSV, `docs/schemas/result-file.schema.json` | REQ-INSP-021 | planned |
+| F.1 | Korean for the operator: `QTranslator`, `.qm` shipped, operator path translated | REQ-SET-006 (operator scope) | planned |
+| F.2 | Offline licence key and the EULA page | REQ-SET-010, REQ-SET-022 | planned |
+| F.3 | Station hardening: autostart with restart on failure, kiosk guidance, self-check alarms | REQ-SET-024 | planned |
+| R.1 | Nightly 72-hour synthetic line run through the input folder | REQ-INSP-011 | planned |
+| R.2 (1.10) | Release 0.4.0: notes in both files, gate record, threat model, register status, tag | — | planned |
+
+G1 exit, besides the plan's criteria: no row in `docs/requirements/stage1.md` still carries a bracketed MUST G1
+priority when `v0.4.0` is tagged; each bracket goes with its row's first passing test.
+
+## Stage 2: Human-sized (tag `v0.4.1`, no behaviour change)
+
+| PR | Scope | Register | State |
+|---|---|---|---|
+| 2.1 | Test layout (`tests/unit`, `service`, `ui`, `policy`, `tools`, `slow`), `tests/support/`, markers | issue | planned |
+| 2.2 | Lint extraction: the AST scanners and regenerate-and-compare checks as `tools/lint_*.py` under pre-commit | issue | planned |
+| 2.3 | CI speed: caches, `xdist` for UI, timing as artifacts, perf job required, nightly workflow, UI coverage measured | issue | planned |
+| 2.4 | Screenshots in Git LFS, one per page per theme, approval from a CI workflow | issue | planned |
+| 2.5 | Trace gate on the PR title only (D6) | issue | planned |
+| 2.6 | `Makefile`, `tests/README.md`, `CONTRIBUTING.md`, `docs/MAP.md`, architecture document restructured with diagrams | issue | planned |
+| 2.7 | Release 0.4.1 | — | planned |
+
+## Stage 3: Service boundary, in process (tag `v0.5.0`)
+
+| PR | Scope | Register | State |
+|---|---|---|---|
+| 3.2 | Service split into `aoi/core/services/` (eight modules behind the same facade) | issue | planned |
+| 3.3a | Typed results, pages `training_versions.py` and `training.py` | issue | planned |
+| 3.3b | Typed results, pages `model_test.py` and `logs.py` | issue | planned |
+| 3.3c | Typed results, `compare.py`, settings and recipe pages | issue | planned |
+| 3.3d | Typed results, the rest; `ANN401` on for the services; `docs/API.md` generated | issue | planned |
+| 3.4 | Workers absorbed into `Page.run_named` | issue | planned |
+| 3.5 | Inversions: `VIEWS` out of `aoi/hal`, `sqlite3` out of services and errors, `test_layers` extended | issue | planned |
+| 3.6 | Settings schema version and machine profile | REQ-SET-014 | planned |
+| 3.7 | Upgrade rehearsal from real installers and one-step rollback | REQ-SET-015 | planned |
+| 3.8 | Migration matrix with populated fixture databases from each shipped baseline | REQ-SET-016 | planned |
+| 3.10 | Korean for the rest of the UI (Engineer and Admin screens), if D7 puts it here | REQ-SET-028 | planned |
+| 3.11 | Release 0.5.0, the box-by-box evidence sheet started | — | planned |
+
+Production plan PRs 3.1 (cycle) and 3.9 (sign-in) moved into G1 as E.1 and D.1 to D.3.
+
+## G2: Validated on the factory's boards (no new software)
+
+| Item | Scope | Register | State |
+|---|---|---|---|
+| G2 prep | `docs/handover/g2-validation-procedure.md`, dry run on a synthetic set of the factory's size | REQ-TST-008, REQ-INSP-014 | planned |
+| G2 run | The validation on the factory's locked set, signed by the factory's quality lead and Jay | REQ-TST-008 | planned (waits on the factory's images) |
+
+## G3: Handover package (tag to be decided: the plan says `v0.4.1`, which Stage 2 already uses)
+
+| PR | Scope | Register | State |
+|---|---|---|---|
+| H.1 | Commissioning checklist per station | — | planned |
+| H.2 | Manuals (operator, engineer, administrator) in English and Korean, each section followed by a reviewer agent | — | planned |
+| H.3 | Support runbook (symptom or code, meaning, action, what to collect; escalation) | — | planned |
+| H.4 | Acceptance protocol the company runs on its own PC, with a sign-off template | — | planned |
+| H.5 | Training agenda and the demo kit for the factory's boards | — | planned |
+| H.6 | `docs/API.md`, `docs/schemas/`, `docs/operations/metrics.md` checked complete; box-by-box evidence sheet completed | — | planned |
+| H.7 | Release of the handover package and its tag | — | planned |
+
+## After G3 (the factory's steps; listed so the rows have a home)
+
+| PR | Scope | Register | State |
+|---|---|---|---|
+| S.1 | Shadow comparison: human verdict beside the machine's, report per shift and week | REQ-TST-009 | planned |
+| S.2 | Sampled audits of OK boards | REQ-TST-010 | planned |
+
+## Log
+
+- 2026-10-31: branch `docs/handover-pack` (e723fd5) holds the four plan files; this file, the diagnosis, ADR 0024 and
+  the register changes added in the same docs-only PR.
