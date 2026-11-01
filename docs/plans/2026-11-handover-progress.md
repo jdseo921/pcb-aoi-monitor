@@ -27,8 +27,8 @@ progress** (branch named), **in review** (PR number), **merged** (date), **dropp
 |---|---|---|---|
 | 0.1 + 0.3 | Plan of record committed, this file, the diagnosis, ADR 0024 (D1 to D19 provisional, D20 to D23 found by the diagnosis), the register rows and priority moves | REQ-SET-023 to -027, REQ-LOG-010, REQ-INSP-020, -021, REQ-TST-009, -010 added | in review (branch `docs/handover-pack`) |
 | 0.2 | The four Standards exported to `docs/standards/`, CLAUDE.md and citations re-pointed, a check that every cited Standard is in the repo | — (cite #5) | in review (#422, stacked on 0.1 + 0.3) |
-| 0.4 | Version discipline: `APP_VERSION` 0.4.0.dev0, CI fails a migration or status change without a bump, build number, VERSIONINFO, signed-build naming | REQ-SET-023 | in progress in two PRs under the 400-line rule: 0.4a, the version and its CI check (branch `feat/REQ-SET-023-version-discipline`, stacked on 0.2); 0.4b, the build number, VERSIONINFO and signed naming (branch `feat/REQ-SET-023-build-identity`, stacked on 0.4a) |
-| 0.5 | "Working rules until v0.5.0" in CLAUDE.md, the PR template with the change-note checklist | — (cite #5) | in review (branch `docs/working-rules-and-pr-template`, stacked on 0.4b) |
+| 0.4 | Version discipline: `APP_VERSION` 0.4.0.dev0, CI fails a migration or status change without a bump, build number, VERSIONINFO, signed-build naming | REQ-SET-023 | in review: 0.4a #423 (the version and its CI check), 0.4b #424 (build number, VERSIONINFO, signed naming) |
+| 0.5 | "Working rules until v0.5.0" in CLAUDE.md, the PR template with the change-note checklist | — (cite #5) | in review (#425, stacked on 0.4b) |
 | G0 doc | The scope document signed by Jay, the company and the factory (not software) | — | planned |
 
 ## G1: Safe to run (tag `v0.4.0`)
