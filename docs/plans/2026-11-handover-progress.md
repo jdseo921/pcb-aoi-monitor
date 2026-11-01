@@ -36,7 +36,7 @@ progress** (branch named), **in review** (PR number), **merged** (date), **dropp
 
 | PR | Scope | Register | State |
 |---|---|---|---|
-| 1.1 | Disk guard: alarm at 80 %, NG-only evidence at 95 %, start-up no longer refuses the workspace on a full disk | REQ-LOG-006 | planned |
+| 1.1 | Disk guard: alarm at 80 %, NG-only evidence at 95 %, start-up no longer refuses the workspace on a full disk | REQ-LOG-006 | in review: 1.1a (engine, stacked on 0.5), 1.1b (status bar and CSV) |
 | 1.2 | Evidence policy (D1) | REQ-INSP-012 | planned |
 | 1.3 | Retention on a timer | REQ-LOG-010 | planned |
 | 1.4 | Heartbeat, `alerts.jsonl`, start-up self-check, clean-exit marker | REQ-SET-024 | planned |
@@ -137,3 +137,7 @@ Production plan PRs 3.1 (cycle) and 3.9 (sign-in) moved into G1 as E.1 and D.1 t
 - 2026-11-01: Jay's decisions on the Stage 0 report: keep "AOI PoC Inspector" on the pilot certificate; count the
   exported Standards' text as generated (rule 1); make "Version moves with what ships" a required check, which is
   added to main's branch protection once #423 has merged (before then no pull request into main runs it).
+- 2026-11-01: Jay said "Keep going": Prompt 2 started, stacked on #425; D1 put to Jay for confirmation before PR 1.2.
+  PR 1.1 came to about 510 lines, so it is two: 1.1a the engine (`feat/REQ-LOG-006-disk-guard`), 1.1b the status
+  bar's free space and the CSV's `evidence` column (`feat/REQ-LOG-006-disk-status`). Tests fill a 128 MB tmpfs where
+  they may mount one (root on Linux), else a folder counted against 128 MB, as on CI; all others pin it at 60 %.

@@ -432,6 +432,10 @@ AOI_Workspace/                 (default ~/AOI_Workspace, set in Settings, used f
                                as its uuid column and the CSV export give it, so no two records share a file. A save
                                never replaces a file (a name already taken refuses it), and a path the system still
                                refuses as too long is AOI-INSP-014 (#245; before: 6 random hex digits, whole stem)
+                               An OK board saved while the drive is 95 % used or more has none of these; its
+                               record notes why (`disk.SKIPPED_NOTE`, REQ-LOG-006); `AppContext.check_disk` measures
+                               the drive before each save, at start and each minute for the status bar, and alarms
+                               AOI-LOG-005 at 80 % and AOI-LOG-006 at 95 %, once per crossing
   exports/                     CSV / PDF / overlay exports
   datasets/<name>/manifest.json  a frozen dataset version's manifest (REQ-TRN-005): each file's path, relative to
                                the workspace, SHA-256, label and boxes; the files stay where images/ holds them.

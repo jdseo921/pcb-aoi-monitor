@@ -233,7 +233,7 @@ class Worker:
         self.err, self.killed = err, False
         with open(err, "w", encoding="utf-8") as stderr:
             self.proc = subprocess.Popen(
-                [sys.executable, "-m", "tests.power_cut_worker", str(ws), str(boards)],
+                [sys.executable, "-m", "tests.run_pinned", "tests.power_cut_worker", str(ws), str(boards)],
                 cwd=ROOT,
                 stdout=subprocess.PIPE,
                 stderr=stderr,

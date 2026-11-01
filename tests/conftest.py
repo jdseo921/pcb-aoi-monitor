@@ -17,6 +17,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+from unittest import mock
 
 import numpy as np
 import pytest
@@ -32,7 +33,7 @@ from pytestqt.qtbot import QtBot  # noqa: E402
 
 from aoi import config  # noqa: E402
 from aoi.config import Settings  # noqa: E402
-from aoi.core import anomaly, crypto, model_card  # noqa: E402
+from aoi.core import anomaly, crypto, disk, model_card  # noqa: E402
 from aoi.core.imaging import list_images, load_image  # noqa: E402
 from aoi.core.services import AppContext  # noqa: E402
 from aoi.data import credentials  # noqa: E402
@@ -42,6 +43,7 @@ from aoi.ui import theme, workers  # noqa: E402
 from aoi.ui.board_model_dialog import NewBoardModelDialog  # noqa: E402
 from aoi.ui.errors import AlreadyOpenBox, ErrorBox  # noqa: E402
 from aoi.ui.theme import QSS  # noqa: E402
+from tests.run_pinned import PINNED_DRIVE  # noqa: E402
 from tools.make_synthetic_dataset import ng_type, write_dataset  # noqa: E402
 from tools.trainable import trainable  # noqa: E402
 
@@ -247,6 +249,13 @@ def keys(monkeypatch: pytest.MonkeyPatch) -> credentials.MemoryCredentials:
     held = credentials.MemoryCredentials()
     monkeypatch.setattr(credentials, "default", lambda: held)
     return held
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _pinned_drive() -> Iterator[None]:
+    """No test sees the machine's own free space (REQ-LOG-006); tests/test_disk_guard.py sets each threshold."""
+    with mock.patch.object(disk, "usage", lambda folder: PINNED_DRIVE):
+        yield
 
 
 @pytest.fixture(autouse=True)

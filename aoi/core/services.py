@@ -41,7 +41,7 @@ from ..data.db import Database, DbError, is_busy, new_uuid
 from ..data.errors import WorkspaceError
 from ..data.paths import inside, one_folder_name, resolve, to_stored
 from ..data.workspace_lock import WorkspaceLock, holder, in_use
-from ..errors import QT_TRANSLATE_NOOP, AoiError, Phrase, joined, system_detail, system_reason
+from ..errors import FULL, QT_TRANSLATE_NOOP, AoiError, Phrase, joined, system_detail, system_reason
 from ..hal import VIEWS, drives
 from ..times import local_date, now_utc
 from . import (
@@ -50,6 +50,7 @@ from . import (
     crypto,
     datasets,
     demo,
+    disk,
     drift,
     golden,
     imaging,
@@ -527,6 +528,9 @@ class AppContext:
             logging_setup.close(self.log)  # nor is the refused workspace's log file (REQ-SET-016)
             self._lock.release()
             raise
+        self.disk: disk.Usage | None = None  # the drive as last measured (REQ-LOG-006), for the status bar
+        self._disk_alarmed = disk.OK  # the highest level alarmed since the drive was last below LOW
+        self._disk_lock = threading.Lock()  # measured on the pool thread before a save, and by the status bar
         try:  # the first writes: the drive may refuse them, or another program hold the database (#171, #204)
             self.device = resolve_device(self.settings.device)
             swept, skipped = atomic.sweep_temp_files(self.settings.root)  # a crash mid-write leaves only a temp file
@@ -536,11 +540,11 @@ class AppContext:
             extra = {"workspace": str(self.settings.root), "device": self.device, "swept": swept}
             self.log.info("app.start", extra=extra)
             self.set_user(self.start_user())  # the role the users table holds, never one written here (#197)
-            archived = self.db.archive_old(self.settings.log_retention_days)  # retention is a system action
-            self.log.info("retention.archived", extra={"days": self.settings.log_retention_days, "archived": archived})
-            self._sweep_ok_maps()  # the map files of OK results past their retention go too (REQ-INSP-012, S25c)
-            for board_model in self.db.board_models():
-                self._ensure_recipe(board_model)  # a workspace from before S25: its results name a stored revision too
+            # the system's own start-up writes: on a drive too full for them they wait for the next start (REQ-LOG-006)
+            self._unless_full("retention.not_archived", self._archive_old)
+            self._unless_full("maps.not_swept", self._sweep_ok_maps)  # OK maps past their retention (REQ-INSP-012)
+            for board_model in self.db.board_models():  # before S25 a workspace's results named no stored revision
+                self._unless_full("recipe.not_stored", functools.partial(self._ensure_recipe, board_model))
         except BaseException as e:
             self.db.close()  # a refused workspace holds no file open while another folder is chosen (REQ-SET-016)
             logging_setup.close(self.log)
@@ -548,6 +552,7 @@ class AppContext:
             if isinstance(e, DbError):  # a coded refusal the folder picker follows, not AOI-SET-007
                 raise self.db.refusal(e) from e
             raise
+        self.check_disk()  # after the start-up writes: a drive filled since the last run alarms at once
         # board model -> (device, (version, model, uuid)): the weights of the active version, on the device they sit on
         self._model_cache: dict[str, tuple[str, tuple[str, anomaly.AnomalyModel, str]]] = {}
         # background work (REQ-SET-021): screens submit through aoi/ui/workers, tests directly; a job acts as the user
@@ -561,6 +566,48 @@ class AppContext:
         self._closed = False
 
     # --- dataset -------------------------------------------------------------
+
+    def _unless_full(self, event: str, step: Callable[[], object]) -> None:
+        """Run a start-up step that writes; one the drive is too full for (SQLite's SQLITE_FULL, the system's ENOSPC)
+        is logged as `event` and waits for the next start, so a full drive no longer refuses the workspace and
+        `check_disk` alarms once it opens (REQ-LOG-006). Any other refusal still refuses."""
+        try:
+            step()
+        except (DbError, OSError) as e:
+            if system_reason(e) != FULL:
+                raise
+            self.log.warning(event, extra={"reason": str(e)})
+
+    def _archive_old(self) -> None:
+        """Archive the records past their retention, a system action at each start."""
+        days = self.settings.log_retention_days
+        archived = self.db.archive_old(days)
+        self.log.info("retention.archived", extra={"days": days, "archived": archived})
+
+    def check_disk(self) -> disk.Usage | None:
+        """Measure the workspace's drive (REQ-LOG-006) and alarm once each time it crosses a level upward: WARN
+        AOI-LOG-005 at 80 % used, ERROR AOI-LOG-006 at 95 %; below 80 % the next crossing alarms again. Never raises: an
+        alarm the database refuses (the drive may be that full) is logged and tried at the next measure."""
+        space = disk.measure(self.settings.root)
+        with self._disk_lock:
+            self.disk = space
+            level = space.level if space is not None else self._disk_alarmed
+            if disk.LEVELS.index(level) <= disk.LEVELS.index(self._disk_alarmed):
+                if level == disk.OK:
+                    self._disk_alarmed = disk.OK
+                return space
+            before, self._disk_alarmed = self._disk_alarmed, level
+        assert space is not None  # a level above the one alarmed comes only from a measure
+        code, alarm_level = ("AOI-LOG-006", "ERROR") if level == disk.FULL_LEVEL else ("AOI-LOG-005", "WARN")
+        try:
+            what = AoiError(code, used=space.percent, free=space.free_gb).what
+            self.alarm(alarm_level, what, code, BUSY_ALARM_WAIT_MS)  # the status bar measures on the UI thread
+        except Exception:
+            with self._disk_lock:
+                if self._disk_alarmed == level:  # not a later level another thread has alarmed since
+                    self._disk_alarmed = before
+            self.log.warning("alarm.not_stored", exc_info=True, extra={"code": code})
+        return space
 
     def close(self) -> None:
         """Release the database and the log file, as a restart or a change of workspace does; a workspace folder
@@ -1685,20 +1732,27 @@ class AppContext:
         day = local_date()  # the folder is named for the operator's shift date; the stored time is UTC
         uid = new_uuid()  # the record's, as the uuid column and the CSV export give it
         overlay = self.settings.results_dir / day / f"{_stem(path)}_{uid}_{res.verdict}.png"
-        files = [overlay, *map_paths(overlay.with_suffix(""))]  # every file this save may write
+        space = self.check_disk()  # at 95 % an OK board keeps its record but not its overlay and maps (REQ-LOG-006)
+        skip = res.verdict == OK and space is not None and space.level == disk.FULL_LEVEL
+        files = [] if skip else [overlay, *map_paths(overlay.with_suffix(""))]  # every file this save may write
         taken = [f for f in files if os.path.lexists(f)]
         if taken:  # only a defect gets here; the workspace lock keeps out a second copy of the app (#204)
             raise FileExistsError(errno.EEXIST, os.strerror(errno.EEXIST), str(taken[0]))
         pixel_threshold = insp.model.pixel_threshold if insp.model is not None else None  # the AI map's, kept (S28a)
         try:  # until the row commits, a failure takes back what this save wrote (#246)
+            diff_map_path = ai_map_path = None
             try:
-                save_image(overlay, draw_overlay(res))
-                diff_map_path, ai_map_path = save_maps(res, overlay.with_suffix(""), pixel_threshold=pixel_threshold)
+                if not skip:
+                    save_image(overlay, draw_overlay(res))
+                    stem = overlay.with_suffix("")
+                    diff_map_path, ai_map_path = save_maps(res, stem, pixel_threshold=pixel_threshold)
             except OSError as e:
                 if not _too_long(e):
                     raise
                 raise AoiError("AOI-INSP-014", str(e), file=Path(path).name, workspace=str(self.settings.root)) from e
             doc = res.to_dict()
+            if skip:  # the record and the CSV say why its evidence is missing; the result shown is not changed
+                doc["notes"] = [*doc["notes"], disk.SKIPPED_NOTE]
             alarm = None
             if res.verdict == NG:  # a phrase: the alarm list shows it in the UI language, its message stays English
                 text = QT_TRANSLATE_NOOP("Errors", "{file}: {defects} defect(s)").fill(
@@ -1713,7 +1767,7 @@ class AppContext:
                     "recipe_rev": insp.recipe_rev,
                     "recipe_uuid": insp.recipe_uuid,
                     "image_path": path,
-                    "overlay_path": str(overlay),
+                    "overlay_path": None if skip else str(overlay),
                     "diff_map_path": diff_map_path,
                     "ai_map_path": ai_map_path,
                     "reference_path": insp.reference_path,

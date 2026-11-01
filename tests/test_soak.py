@@ -64,7 +64,8 @@ def soaked(tmp_path_factory: pytest.TempPathFactory) -> tuple[Path, str]:
     """The folder of a run of 72 s at a board every 0.25 s on the synthetic set-up, with an AI model trained for 2
     epochs at 64 px, and what the tool printed."""
     out = tmp_path_factory.mktemp("soak") / "run"
-    cmd = [sys.executable, "-m", "tools.soak", "--out", str(out), "--hours", "0.02", "--pace", "0.25"]
+    cmd = [sys.executable, "-m", "tests.run_pinned", "tools.soak"]  # on a drive at 60 %, as every test's (REQ-LOG-006)
+    cmd += ["--out", str(out), "--hours", "0.02", "--pace", "0.25"]
     cmd += ["--warm-up", "0.1", "--device", "cpu", "--epochs", "2", "--image-size", "64"]
     done = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True, timeout=600)
     print(done.stdout)

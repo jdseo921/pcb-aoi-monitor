@@ -845,7 +845,7 @@
 <context>
     <name>Errors</name>
     <message>
-        <location filename="../core/services.py" line="+186"/>
+        <location filename="../core/services.py" line="+187"/>
         <source>a length of {length} px over {distance} mm gives no scale: both must be numbers above 0, and the scale from {least} to {most} px per mm</source>
         <translation type="unfinished"></translation>
     </message>
@@ -875,7 +875,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+314"/>
+        <location line="+360"/>
         <location line="+137"/>
         <source>Importing samples</source>
         <translation type="unfinished"></translation>
@@ -905,12 +905,12 @@
     </message>
     <message>
         <location line="+190"/>
-        <location line="+2471"/>
+        <location line="+2478"/>
         <source>(none)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-2440"/>
+        <location line="-2447"/>
         <source>Saving a recipe</source>
         <translation type="unfinished"></translation>
     </message>
@@ -935,7 +935,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+71"/>
+        <location line="+78"/>
         <source>{file}: {defects} defect(s)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1157,14 +1157,14 @@
         <translation>검증 세트 잠금</translation>
     </message>
     <message>
-        <location line="-3046"/>
-        <location line="+3060"/>
+        <location line="-3099"/>
+        <location line="+3113"/>
         <location line="+39"/>
         <source>the workspace holds no such dataset version</source>
         <translation>작업 공간에 그런 데이터셋 버전이 없습니다</translation>
     </message>
     <message>
-        <location line="-3149"/>
+        <location line="-3202"/>
         <source>Drift on {board} ({view}): {count} of the last {of} boards called NG; {before} % of the {baseline} before</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1264,7 +1264,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1253"/>
+        <location line="+1299"/>
         <source>Setting the comparison&apos;s thresholds from labelled boards</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1274,7 +1274,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1023"/>
+        <location line="+1030"/>
         <source>Shift check of {board_model}: {wrong} of {count} master samples judged wrongly</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1491,7 +1491,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-3811"/>
+        <location line="-3864"/>
         <source>no earlier version of this board model was active</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1516,12 +1516,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1177"/>
+        <location line="+1223"/>
         <source>its UUID {found} is not {uuid}, as in the AI model registry</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1441"/>
+        <location line="+1448"/>
         <source>Labelling an image</source>
         <translation>이미지 라벨링</translation>
     </message>
@@ -1623,7 +1623,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-4039"/>
+        <location line="-4092"/>
         <source>unhandled</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2016,12 +2016,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+5"/>
-        <source>Its stored verdict and decision table still stand. Inspect the board again on Inspection, then try the thresholds on the new result. The maps of OK results are deleted {days} days after inspection; NG and WARN maps are kept.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+9"/>
+        <location line="+14"/>
         <source>Thresholds of another board model</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2346,7 +2341,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+86"/>
+        <location line="+49"/>
+        <source>Its stored verdict and decision table still stand. Inspect the board again on Inspection, then try the thresholds on the new result. The maps of OK results are deleted {days} days after inspection, and not saved at all while the drive is 95 % full; NG and WARN maps are kept.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+37"/>
         <source>AI model file refused: {path} could not be loaded as an AI model file this app wrote ({reason}).</source>
         <translation>AI 모델 파일 거부: {path}을(를) 이 앱이 쓴 AI 모델 파일로 불러올 수 없습니다({reason}).</translation>
     </message>
@@ -3179,6 +3179,26 @@
     </message>
     <message>
         <location line="+8"/>
+        <source>Drive nearly full</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+6"/>
+        <source>Ask an Admin to free space on the drive: move exports and old results to an archive drive, or move the workspace to a larger drive (installation guide, Backup and restore).</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+8"/>
+        <source>Drive full: OK evidence not kept</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+6"/>
+        <source>Free space on the drive now, as an Admin: when it is full no result can be saved. Move exports and old results to an archive drive, or move the workspace to a larger drive.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+8"/>
         <source>Not allowed for this role</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3648,7 +3668,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1354"/>
+        <location line="-1382"/>
         <source>Board judged NG</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3823,7 +3843,17 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+227"/>
+        <location line="+85"/>
+        <source>The drive that holds the workspace is {used} % full, with {free} GB free. Inspection goes on; at 95 % the app stops keeping the overlay and maps of OK boards.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+14"/>
+        <source>The drive that holds the workspace is {used} % full, with {free} GB free. OK boards are saved without their overlay and maps, and their record says so; NG and WARN boards keep all their evidence.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+156"/>
         <source>Workspace in use</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3843,7 +3873,7 @@
         <translation>다른 프로그램이 작업 공간 데이터베이스 {path}을(를) 사용하고 있어 앱이 쓸 수 없었습니다.</translation>
     </message>
     <message>
-        <location filename="../config.py" line="+24"/>
+        <location filename="../config.py" line="+48"/>
         <source>it is not valid JSON (line {line}, column {column})</source>
         <translation>올바른 JSON이 아닙니다({line}행 {column}열)</translation>
     </message>
@@ -4104,7 +4134,7 @@
     </message>
     <message>
         <location line="+1"/>
-        <location filename="../core/services.py" line="+3302"/>
+        <location filename="../core/services.py" line="+3355"/>
         <source>a file of it could not be read: {reason}</source>
         <translation>그 파일 하나를 읽을 수 없습니다: {reason}</translation>
     </message>
@@ -4132,7 +4162,7 @@
 <context>
     <name>Explain</name>
     <message>
-        <location filename="../core/explain.py" line="+32"/>
+        <location filename="../core/explain.py" line="+33"/>
         <source>Similarity to the Golden board is {value}, below its threshold of {threshold}.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4242,7 +4272,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+16"/>
+        <location line="+15"/>
+        <source>The drive was at least 95 % full when the board was saved, so its overlay and maps were not kept, only its verdict and checks: an Admin frees space on the drive.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+6"/>
         <source>AI model {version} is trained for this board model but not active, so the AI check did not run: an Engineer activates it on Inspection or Training.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -8904,7 +8939,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/services.py" line="-3386"/>
+        <location filename="../core/services.py" line="-3439"/>
         <source>Aligning {count} images to the reference board</source>
         <translation type="unfinished"></translation>
     </message>
