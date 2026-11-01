@@ -112,9 +112,12 @@ def engineer(ctx: AppContext) -> AppContext:
 
 
 @pytest.fixture
-def ctx(workspace: Settings) -> AppContext:
-    """An AppContext on the temporary workspace: the layer the screens call, with an empty database."""
-    return engineer(AppContext(workspace))
+def ctx(workspace: Settings) -> Iterator[AppContext]:
+    """An AppContext on the temporary workspace: the layer the screens call, with an empty database. Closed after the
+    test (again, if the test closed it), so its heartbeat and retention threads never outlive it (REQ-SET-024)."""
+    context = engineer(AppContext(workspace))
+    yield context
+    context.close()
 
 
 @pytest.fixture(scope="session")
@@ -235,11 +238,13 @@ def restored(tiny_model: TrainedModel, ws: Path, ignore: Callable[..., Any] | No
 
 
 @pytest.fixture
-def trained_ctx(tmp_path: Path, tiny_model: TrainedModel) -> AppContext:
+def trained_ctx(tmp_path: Path, tiny_model: TrainedModel) -> Iterator[AppContext]:
     """A writable copy of the tiny model's workspace: samples, golden board and the active model are registered,
-    no inspection has run yet. Tests that inspect, save recipes or log results use this one."""
+    no inspection has run yet. Tests that inspect, save recipes or log results use this one. Closed after the test."""
     ws = restored(tiny_model, tmp_path / "trained_workspace")
-    return engineer(AppContext(Settings(workspace=str(ws), device="cpu")))
+    context = engineer(AppContext(Settings(workspace=str(ws), device="cpu")))
+    yield context
+    context.close()
 
 
 @pytest.fixture(autouse=True)
