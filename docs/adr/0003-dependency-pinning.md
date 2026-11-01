@@ -69,7 +69,7 @@ PyPI's Linux wheel pulls in NVIDIA CUDA packages that neither needs in that form
      since S07.
    - scikit-image 0.26.0 (BSD-3-Clause): a runtime package in v0.1, moved to development in S08, when OpenCV took
      over the compare step; v0.1's SSIM stays the oracle the tests compare against (`tests/compare_v01_oracle.py`).
-   - pillow 12.3.0 (MIT-CMU, an exception pending J8) and tifffile 2026.3.3 (BSD-3-Clause):
+   - pillow 13.0.0 (MIT-CMU, an exception pending J8; 12.3.0 until #420) and tifffile 2026.3.3 (BSD-3-Clause):
      `tests/test_image_input.py` crafts image files with them (a JPEG with EXIF, a BMP, a big-endian TIFF and a
      BigTIFF); they came only through scikit-image until #17 pinned them directly.
 
