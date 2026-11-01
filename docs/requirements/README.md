@@ -1,7 +1,7 @@
 # Requirements
 
-This folder holds the product requirements of the AOI PoC Inspector. The rules come from the Engineering
-standard (Workflow section); this page says how they are applied in this repository.
+This folder holds the product requirements of the AOI PoC Inspector. The rules come from the [Engineering
+standard](../standards/engineering.md) (Workflow section); this page says how they are applied in this repository.
 
 | File | Holds |
 |---|---|

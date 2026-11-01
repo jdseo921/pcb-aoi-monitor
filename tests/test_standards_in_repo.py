@@ -46,25 +46,41 @@ def test_the_four_standards_have_a_copy_each() -> None:
         assert source_of(copy) in readme, f"docs/standards/README.md does not give {copy.name}'s source"
 
 
+def read_first_rows() -> list[list[str]]:
+    """The cells of each row of CLAUDE.md's Read first table, the one place it cites the Standards."""
+    text = (ROOT / "CLAUDE.md").read_text(encoding="utf-8")
+    section = text.split("## Read first", 1)[1].split("\n## ", 1)[0]
+    table = [line for line in section.splitlines() if line.startswith("|")]
+    assert len(table) > 2, "CLAUDE.md has no Read first table"
+    return [[cell.strip() for cell in row.strip("|").split("|")] for row in table[2:]]
+
+
 def test_every_standard_claude_md_cites_is_in_docs_standards() -> None:
-    claude_md = (ROOT / "CLAUDE.md").read_text(encoding="utf-8")
-    for path in re.findall(r"docs/standards/[\w./-]+\.md", claude_md):
-        assert (ROOT / path).is_file(), f"CLAUDE.md cites {path}, which is not in the repository"
-    sources = {source_of(copy): copy.name for copy in copies()}
-    for link in SOURCE_LINK.findall(claude_md):
-        assert link in sources, f"CLAUDE.md cites the Standard at {link}, which has no copy in docs/standards/"
-    for copy in copies():
-        assert f"docs/standards/{copy.name}" in claude_md, f"CLAUDE.md's Read first table does not cite {copy.name}"
+    sources = {copy.name: source_of(copy) for copy in copies()}
+    cited = []
+    for name, *_, source in read_first_rows():
+        linked = re.fullmatch(r"\[[^\]]+\]\(docs/standards/([\w.-]+\.md)\)", name)
+        assert linked, f"CLAUDE.md cites the Standard {name!r} without linking its copy in docs/standards/"
+        copy = linked.group(1)
+        assert copy in sources, f"CLAUDE.md cites docs/standards/{copy}, which is not in the repository"
+        assert source == sources[copy], f"CLAUDE.md gives {copy} the source {source}, its copy says {sources[copy]}"
+        cited.append(copy)
+    assert sorted(cited) == sorted(sources), "CLAUDE.md's Read first table should cite each copy once"
 
 
 @pytest.mark.parametrize(
     "doc", sorted((ROOT / "docs" / "adr").glob("*.md")), ids=lambda p: p.name if isinstance(p, Path) else str(p)
 )
 def test_an_adr_that_names_a_standard_links_its_copy(doc: Path) -> None:
+    """The first mention of each Standard in an ADR is the link to its copy."""
     text = doc.read_text(encoding="utf-8")
     for copy, name in NAMES.items():
-        if name.search(text):
-            assert f"](../standards/{copy}" in text, f"{doc.name} names a Standard, never links docs/standards/{copy}"
+        first = name.search(text)
+        if first:
+            links = re.finditer(r"\[[^\]]*\]\(\.\./standards/" + re.escape(copy) + r"[^)]*\)", text)
+            assert any(link.start() < first.start() < link.end() for link in links), (
+                f"{doc.name}: the first mention of {copy[:-3]} is not a link to docs/standards/{copy}"
+            )
 
 
 def test_the_register_resolves_every_standard_it_cites() -> None:

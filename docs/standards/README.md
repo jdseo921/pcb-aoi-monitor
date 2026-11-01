@@ -1,9 +1,10 @@
 # AOI Standards in the repository
 
 The four AOI Standards bind every change to this repository (`CLAUDE.md`, "Read first"). Jay keeps editing them as
-Claude Docs; these files are copies of record, so that a session, a reviewer or the company reads exactly the
-text a change was held to, at the commit it was made. A change to a source is re-exported here in a pull request
-whose title cites the Standard and its new revision; if a copy and its source differ, the source wins until then.
+Claude Docs; these files are copies, so that a session, a reviewer or the company reads exactly the text a change
+was held to, at the commit it was made. The Claude Docs source governs: a change is held to the copy at its commit,
+and when a source moves it is re-exported here, in a pull request whose title cites the Standard and its new
+revision, before a change relies on the new text.
 
 | File | Source (Claude Docs) | Revision exported | Exported |
 |---|---|---|---|
@@ -28,8 +29,9 @@ others (`diff` against the raw export shows only these lines):
    Each placeholder is replaced by the drawing's title, subtitle, every label and its footnote, as a table, marked as
    transcribed: the stage gates in the Charter ("Stage gates"), the engine layers in Engineering ("Architecture and
    code") and the launch phases in Customers & Launch ("Launch"). Arrows become words ("Gate before the next
-   stage", "calls only go down"); colour, the highlighted box (shown in bold) and the dashed boxes (named *later*)
-   carry no rule of their own.
+   stage", "calls only go down", and one sentence in italics in Engineering that says what the arrows connect); colour, the highlighted box (shown in bold) and the dashed boxes (named *later*)
+   carry no rule of their own. The Charter's table names its middle columns by the line they hold under each
+stage's name in the drawing.
 
 Kept as the export writes them: the date and author line under each title (date and mention chips in the source),
 the source's own wording where it is out of date in this repository (the Charter's "`docs/ARCHITECTURE.md` in the
@@ -38,5 +40,6 @@ shared `pcb-aoi-app` folder" and its open question about moving the code to GitH
 and not part of the text.
 
 Checked on export: every text run of the Charter, Engineering and Customers & Launch sources (read as the document's
-structure, not its export) appears in its file, 0 missing; for Legal & Compliance, which has no drawing, the export's
+structure, not its export) appears in its file, 0 missing (the check and its output are in the description of the
+pull request that added this folder); for Legal & Compliance, which has no drawing, the export's
 own report lists only the date, author and link changes above.

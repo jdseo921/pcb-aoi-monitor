@@ -13,9 +13,10 @@ would not survive that review is not done.
 | [Customers & Launch](docs/standards/customers-and-launch.md) | Demos, validation and accuracy claims, launch, pricing, support, customer documents | https://claude.ai/code/artifact/af8143f9-f8c3-4f2f-bb40-9646d588c860 |
 | [Legal & Compliance](docs/standards/legal-and-compliance.md) | Contracts, ownership, privacy, licenses, IP, regulations | https://claude.ai/code/artifact/e99c8a5f-ee90-4fdf-a308-745d4c4edd87 |
 
-Read the copies in `docs/standards/`; the Source column is where Jay edits each one, re-exported into the repository
-in a pull request ([README](docs/standards/README.md)). If this file and a standard disagree, the standard wins. The
-technical reference for this build is `docs/ARCHITECTURE.md`.
+Read the copies in `docs/standards/`. The Source column is where Jay edits each one, and the source governs: a change
+is held to the copy at its commit, and a source that moves is re-exported into the repository in a pull request
+before a change relies on it ([README](docs/standards/README.md)). If this file and a standard disagree, the standard
+wins. The technical reference for this build is `docs/ARCHITECTURE.md`.
 
 ## Rules for every change
 

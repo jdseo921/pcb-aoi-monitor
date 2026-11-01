@@ -1,6 +1,6 @@
 # AOI Standards – Customers & Launch
 
-> **Copy of record.** Exported whole from [AOI Standards – Customers & Launch](https://claude.ai/code/artifact/af8143f9-f8c3-4f2f-bb40-9646d588c860) (Claude Docs, revision 11) on 2026-11-01. The source stays where Jay edits it; a change there is re-exported here in a pull request; if the two differ, the source wins until it is. What the export changed: [README](README.md#what-the-export-changed).
+> **Copy.** Exported whole from [AOI Standards – Customers & Launch](https://claude.ai/code/artifact/af8143f9-f8c3-4f2f-bb40-9646d588c860) (Claude Docs, revision 11) on 2026-11-01. The source stays where Jay edits it; a change there is re-exported here in a pull request; if the two differ, the source wins until it is. What the export changed: [README](README.md#what-the-export-changed).
 
 Oct 1, 2026 · @Jay Dongha Seo
 

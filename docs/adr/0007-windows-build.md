@@ -3,8 +3,8 @@
 - Status: Proposed. Jay's merge of this record accepts it.
 - Date: 2026-10-08
 - Decides: the product owner (Jay), until a tech lead joins
-- Related: REQ-SET-012 (its build part, and since S57 an internal installer; signing is still open); Engineering
-  standard "Build", "Signing", "Scans and SBOM" and "Release 1.0 polish"; [Legal & Compliance](../standards/legal-and-compliance.md) "Open-source and
+- Related: REQ-SET-012 (its build part, and since S57 an internal installer; signing is still open); [Engineering
+  standard](../standards/engineering.md) "Build", "Signing", "Scans and SBOM" and "Release 1.0 polish"; [Legal & Compliance](../standards/legal-and-compliance.md) "Open-source and
   third-party licenses"; [Customers & Launch](../standards/customers-and-launch.md) "Demos"; [ADR 0003](0003-dependency-pinning.md); threat model, Spoofing
   row; plan items J6 (code-signing certificate) and J8 (license exceptions, two-person release approval)
 

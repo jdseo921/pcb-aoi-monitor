@@ -1,6 +1,6 @@
 # AOI Standards – Legal & Compliance
 
-> **Copy of record.** Exported whole from [AOI Standards – Legal & Compliance](https://claude.ai/code/artifact/e99c8a5f-ee90-4fdf-a308-745d4c4edd87) (Claude Docs, revision 11) on 2026-11-01. The source stays where Jay edits it; a change there is re-exported here in a pull request; if the two differ, the source wins until it is. What the export changed: [README](README.md#what-the-export-changed).
+> **Copy.** Exported whole from [AOI Standards – Legal & Compliance](https://claude.ai/code/artifact/e99c8a5f-ee90-4fdf-a308-745d4c4edd87) (Claude Docs, revision 11) on 2026-11-01. The source stays where Jay edits it; a change there is re-exported here in a pull request; if the two differ, the source wins until it is. What the export changed: [README](README.md#what-the-export-changed).
 
 Oct 1, 2026 · @Jay Dongha Seo
 

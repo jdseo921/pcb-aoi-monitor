@@ -1,6 +1,6 @@
 # AOI Standards – Charter
 
-> **Copy of record.** Exported whole from [AOI Standards – Charter](https://claude.ai/code/artifact/cdb76b42-fd68-42e9-8c59-25abdf86b114) (Claude Docs, revision 24) on 2026-11-01. The source stays where Jay edits it; a change there is re-exported here in a pull request; if the two differ, the source wins until it is. What the export changed: [README](README.md#what-the-export-changed).
+> **Copy.** Exported whole from [AOI Standards – Charter](https://claude.ai/code/artifact/cdb76b42-fd68-42e9-8c59-25abdf86b114) (Claude Docs, revision 24) on 2026-11-01. The source stays where Jay edits it; a change there is re-exported here in a pull request; if the two differ, the source wins until it is. What the export changed: [README](README.md#what-the-export-changed).
 
 Oct 1, 2026 · @Jay Dongha Seo
 
@@ -82,7 +82,7 @@ No stage starts until the previous gate passes.
 
 **Each stage must pass its gate before the next one starts.** Stages and dates from the roadmap plan; gate criteria set by these standards.
 
-| Stage | Time | Note | Gate before the next stage |
+| Stage | Second line | Third line | Gate before the next stage |
 | --- | --- | --- | --- |
 | **Stage 1: Image AI** (current) | 8 weeks (plan) | Now: v0.1 | G1: Customer signs validation report |
 | Stage 2: Live cameras | 8 weeks (plan) | 2D/3D, lighting | G2: 8-hour live run under 1 s per board |

@@ -1,6 +1,6 @@
 # AOI Standards – Engineering
 
-> **Copy of record.** Exported whole from [AOI Standards – Engineering](https://claude.ai/code/artifact/346f0966-33e4-4134-9fa6-c0ddad0758db) (Claude Docs, revision 11) on 2026-11-01. The source stays where Jay edits it; a change there is re-exported here in a pull request; if the two differ, the source wins until it is. What the export changed: [README](README.md#what-the-export-changed).
+> **Copy.** Exported whole from [AOI Standards – Engineering](https://claude.ai/code/artifact/346f0966-33e4-4134-9fa6-c0ddad0758db) (Claude Docs, revision 11) on 2026-11-01. The source stays where Jay edits it; a change there is re-exported here in a pull request; if the two differ, the source wins until it is. What the export changed: [README](README.md#what-the-export-changed).
 
 Oct 1, 2026 · @Jay Dongha Seo
 
@@ -24,8 +24,10 @@ callers marked *later* arrive in later stages (dashed in the drawing).
 | Inspection engine (no Qt imports) | Imaging (I/O, alignment); Anomaly model (self-training); Compare (golden board); Inspector (checks, verdict); Recipe (ROIs, thresholds) |
 | Data and hardware | Data store: SQLite + workspace folder (images, models); Hardware adapters: camera, lighting, robot, MES + simulators |
 
-Each caller calls AppContext, AppContext calls the engine, and the engine calls the data store and the hardware
-adapters. Arrows are the only allowed calls; nothing below calls upward.
+*The arrows, in words: each caller calls AppContext, AppContext calls the engine, and the engine calls the data store
+and the hardware adapters.*
+
+Arrows are the only allowed calls; nothing below calls upward.
 
 - **Layers (MUST).** UI, then `AppContext`, then the engine, then data and hardware adapters. `aoi/core` and `aoi/data` never import PySide6, and a test fails the build if they do.
 - **One service API (MUST).** `AppContext` methods are typed and documented. A breaking change bumps the minor version before 1.0 and the major version after.
