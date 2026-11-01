@@ -398,6 +398,8 @@ ENGINE_ALLOWED = {  # (file, literal): why it is not a phrase; a stale entry fai
     ("aoi/core/inspector.py", "OFF"): "an ai_check key the CSV exports write as it is, as pass_fail's (#246)",
     ("aoi/core/inspector.py", "NO_AI_MODEL"): "an ai_check key the CSV exports write as it is, as pass_fail's (#246)",
     ("aoi/config.py", "cuda"): "a torch device name",
+    ("aoi/core/disk.py", "none"): "an evidence key the CSV export writes as it is, as ai_check's (REQ-LOG-006)",
+    ("aoi/core/disk.py", "none: drive full"): "an evidence key the CSV export writes as it is (REQ-LOG-006)",
     ("aoi/core/imaging.py", "PNG"): "an image format's name (AOI-INSP-006's {kind}), the same in every language",
     ("aoi/core/imaging.py", "BMP"): "an image format's name (AOI-INSP-006's {kind}), the same in every language",
     ("aoi/core/imaging.py", "JPEG"): "an image format's name (AOI-INSP-006's {kind}), the same in every language",

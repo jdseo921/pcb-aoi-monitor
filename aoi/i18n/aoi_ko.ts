@@ -1630,7 +1630,7 @@
     <message>
         <location filename="../ui/demo_workspace.py" line="+31"/>
         <location filename="../ui/errors.py" line="+163"/>
-        <location filename="../ui/main_window.py" line="+1148"/>
+        <location filename="../ui/main_window.py" line="+1174"/>
         <source>start-up</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4949,7 +4949,7 @@
 <context>
     <name>HomePage</name>
     <message>
-        <location filename="../ui/main_window.py" line="-1008"/>
+        <location filename="../ui/main_window.py" line="-1034"/>
         <source>Upload samples</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5889,7 +5889,7 @@
 <context>
     <name>LogsPage</name>
     <message>
-        <location filename="../ui/pages/logs.py" line="+147"/>
+        <location filename="../ui/pages/logs.py" line="+148"/>
         <source>Include archived</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6035,7 +6035,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+467"/>
+        <location line="+471"/>
         <source>Record {record}&apos;s board is now an OK sample of {board} ({view}) on Training.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6045,7 +6045,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-470"/>
+        <location line="-474"/>
         <source>False calls</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6131,7 +6131,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+114"/>
+        <location line="+118"/>
         <source>Export CSV stopped: no file was written.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6167,7 +6167,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-308"/>
+        <location line="-312"/>
         <location line="+140"/>
         <source>No records</source>
         <translation type="unfinished"></translation>
@@ -6219,17 +6219,17 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+81"/>
+        <location line="+85"/>
         <source>Exported {count} records and {checks} check rows to {folder}: {file}, {checks_file}</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-87"/>
+        <location line="-91"/>
         <source>CSV (*.csv)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+93"/>
+        <location line="+97"/>
         <source>Export overlay images for {count} record(s)?</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6249,9 +6249,9 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-497"/>
+        <location line="-501"/>
         <location line="+6"/>
-        <location line="+585"/>
+        <location line="+589"/>
         <source>All</source>
         <translation>전체</translation>
     </message>
@@ -6279,12 +6279,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+123"/>
+        <location line="+126"/>
         <source>{title} · Demo</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+109"/>
+        <location line="+116"/>
         <source>Signed in as {user} ({role}), who started setting up {board_model}. Not you? Press Switch User.</source>
         <translation type="unfinished">{board_model} 설정을 시작한 {user}({role})(으)로 로그인했습니다. 본인이 아니면 사용자 전환을 누르십시오.</translation>
     </message>
@@ -6420,12 +6420,22 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+62"/>
+        <location line="+50"/>
+        <source>Drive: free space unknown</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>Drive: {free} GB free · {used} % used</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+24"/>
         <source>close the app</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+16"/>
+        <location line="+17"/>
         <source>Work is still running: training, an AI model test, an inspection, an export or an image import. Stop it and {then}? Training stops without saving an AI model, so the active one stays; an AI model test finishes its folder first; an export or import keeps the files copied so far.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7234,7 +7244,7 @@
 <context>
     <name>Page</name>
     <message>
-        <location filename="../ui/main_window.py" line="-965"/>
+        <location filename="../ui/main_window.py" line="-991"/>
         <source>Home</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7354,7 +7364,7 @@
         <translation type="unfinished">{action}  {key}</translation>
     </message>
     <message>
-        <location filename="../ui/pages/logs.py" line="-621"/>
+        <location filename="../ui/pages/logs.py" line="-625"/>
         <source>Logs &amp; Export</source>
         <translation type="unfinished"></translation>
     </message>

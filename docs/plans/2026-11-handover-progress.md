@@ -36,7 +36,7 @@ progress** (branch named), **in review** (PR number), **merged** (date), **dropp
 
 | PR | Scope | Register | State |
 |---|---|---|---|
-| 1.1 | Disk guard: alarm at 80 %, NG-only evidence at 95 %, start-up no longer refuses the workspace on a full disk | REQ-LOG-006 | in review: 1.1a (engine, stacked on 0.5), 1.1b (status bar and CSV) |
+| 1.1 | Disk guard: alarm at 80 %, NG-only evidence at 95 %, start-up no longer refuses the workspace on a full disk | REQ-LOG-006 | in review: 1.1a #426 (engine, stacked on 0.5), 1.1b (status bar and CSV, stacked on 1.1a) |
 | 1.2 | Evidence policy (D1) | REQ-INSP-012 | planned |
 | 1.3 | Retention on a timer | REQ-LOG-010 | planned |
 | 1.4 | Heartbeat, `alerts.jsonl`, start-up self-check, clean-exit marker | REQ-SET-024 | planned |

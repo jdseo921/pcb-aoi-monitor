@@ -492,6 +492,9 @@ class _PageStack(QStackedWidget):
         return max(layout.totalMinimumHeightForWidth(width), page.minimumHeight())
 
 
+DRIVE_CHECK_MS = 60_000  # the status bar measures the drive's free space each minute (REQ-LOG-006)
+
+
 class MainWindow(QMainWindow):
     def __init__(self, ctx: AppContext, carried: str | None = None, screen: QScreen | None = None) -> None:
         """The window on `ctx`'s workspace. `carried`: the role of the user signed in in the window before, when a
@@ -589,6 +592,13 @@ class MainWindow(QMainWindow):
         self._training_timer = QTimer(self)  # the header and Home follow a training run on every page (REQ-TRN-008)
         self._training_timer.timeout.connect(self.show_training)
         self._training_timer.start(1000)
+        self.drive = QLabel()  # the workspace drive's free space, right of the status bar's messages (REQ-LOG-006)
+        self.drive.setObjectName("drive")
+        self.statusBar().addPermanentWidget(self.drive)
+        self._drive_timer = QTimer(self)  # each minute; a save's measure alarms at once, the line follows
+        self._drive_timer.timeout.connect(self.show_drive)
+        self._drive_timer.start(DRIVE_CHECK_MS)
+        self.show_drive()
         ctx.usb_drive()  # the USB drives there as the window opens: one plugged in after is the last (Q68)
         # the demo, and a station with no board model yet to set up, start with an Admin; while the first-run guide sets
         # the station up, with the user who started it, its board model in the header and Home shown (Q75); any other
@@ -1006,6 +1016,21 @@ class MainWindow(QMainWindow):
         self.navigate("Compare")
         compare.show_stored(inspection_id)
 
+    def show_drive(self) -> None:
+        """The status bar's line of the workspace drive's free space and share used, on amber from 80 % and on red
+        from 95 % (`theme.drive_style`); measuring alarms as the drive crosses each (`AppContext.check_disk`)."""
+        if self.switched:  # the context is closed; the window that replaced this one measures its own
+            return
+        space = self.ctx.check_disk()
+        self.drive.setToolTip(str(self.ctx.settings.root))
+        if space is None:
+            self.drive.setText(self.tr("Drive: free space unknown"))
+            self.drive.setStyleSheet(theme.drive_style("ok"))
+            return
+        text = self.tr("Drive: {free} GB free · {used} % used")
+        self.drive.setText(text.format(free=space.free_gb, used=space.percent))
+        self.drive.setStyleSheet(theme.drive_style(space.level))
+
     def status(self, msg: str, ms: int = 8000) -> None:
         """A message in the status bar, for 8 s by default; `ms=0` keeps it until the next message replaces it."""
         self.statusBar().showMessage(msg, ms)
@@ -1031,6 +1056,7 @@ class MainWindow(QMainWindow):
             return
         if self.in_demo and not self.switched:  # closed, the demo opens at Home next, where its scripts begin; after a
             self._save_page("Home")  # crash, on the page it showed, so the presenter carries on (REQ-LOG-005)
+        self._drive_timer.stop()  # no measure, nor alarm, on a closed context
         self.ctx.close()  # every job asked to stop and waited for, then the database and the log file closed
         drop_queued(self.ctx.jobs)  # slots the jobs queued before they stopped would meet the closed context
         event.accept()
