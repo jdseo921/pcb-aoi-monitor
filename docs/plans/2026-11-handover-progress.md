@@ -41,7 +41,7 @@ progress** (branch named), **in review** (PR number), **merged** (date), **dropp
 | 1.3 | Retention on a timer | REQ-LOG-010 | merged 2026-11-01 (#429); its deletions wait for an Admin's in-app confirmation, D20 and D21 still provisional in ADR 0024 |
 | 1.4 | Heartbeat, `alerts.jsonl`, start-up self-check, clean-exit marker | REQ-SET-024 | in review: 1.4a heartbeat, alerts and clean exit (`feat/REQ-SET-024-heartbeat`); 1.4b the self-check (`feat/REQ-SET-024-self-check`) |
 | 1.5 | Crash record (`faulthandler`, WER LocalDumps documented) | REQ-SET-026 | in review (`feat/REQ-SET-026-crash-record`) |
-| 1.6 | Support bundle and About | REQ-LOG-007, REQ-SET-011 | planned |
+| 1.6 | Support bundle and About | REQ-LOG-007, REQ-SET-011 | in review: 1.6a the bundle and its command line (`feat/REQ-LOG-007-support-bundle`); 1.6b the Admin button and About |
 | 1.7 | Workspace guards: remote drive and OneDrive root refused | REQ-SET-025 | planned |
 | 1.8 | Signing hygiene and installer wording | REQ-SET-012 | planned |
 | 1.9 | Release kit, `verify.ps1`, `inventory.ps1`, release runbook | REQ-SET-027 | planned |

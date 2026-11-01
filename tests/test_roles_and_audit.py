@@ -240,6 +240,7 @@ WRITES: dict[str, tuple[str, Callable[[AppContext, Path, Path], Any]]] = {
     "add_user": ("user.change", lambda ctx, data, tmp: ctx.add_user("kim", "Engineer")),
     "save_settings": ("settings.change", lambda ctx, data, tmp: ctx.save_settings({"default_epochs": 7})),
     "confirm_retention": ("retention.confirm", lambda ctx, data, tmp: ctx.confirm_retention()),
+    "support_bundle": ("support.bundle", lambda ctx, data, tmp: ctx.support_bundle(tmp / "support.zip")),
     "delete_inspections": (  # Delete Records… on the record inspected first, archived above (REQ-LOG-003, S51)
         "inspection.delete",
         lambda ctx, data, tmp: ctx.delete_inspections(
@@ -307,6 +308,7 @@ CALLS = {**{name: call for name, (_, call) in WRITES.items()}, **CHECKED_READS}
 # from the decorators under test (#181): built from REQUIRED_ROLE, a lowered @requires refused fewer roles and passed.
 EXPECTED_ROLE = {name: "Engineer" for name in CALLS} | {"add_user": "Admin", "save_settings": "Admin"}
 EXPECTED_ROLE["confirm_retention"] = "Admin"  # the policy every sweep deletes under (ADR 0024 D20)
+EXPECTED_ROLE["support_bundle"] = "Admin"  # the station's logs and audit leave it (REQ-LOG-007)
 EXPECTED_ROLE |= {"create_store": "Admin", "restore_store_key": "Admin", "move_in": "Admin", "shred_store": "Admin"}
 # B2 (ADR 0021): a customer's board model and its store, and the copies of its recovery key
 EXPECTED_ROLE |= {f: "Admin" for f in ("create_customer_board_model", "save_recovery_sheet", "print_recovery_sheet")}

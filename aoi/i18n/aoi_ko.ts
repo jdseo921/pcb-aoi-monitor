@@ -845,7 +845,7 @@
 <context>
     <name>Errors</name>
     <message>
-        <location filename="../core/services.py" line="+191"/>
+        <location filename="../core/services.py" line="+192"/>
         <source>a length of {length} px over {distance} mm gives no scale: both must be numbers above 0, and the scale from {least} to {most} px per mm</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1476,7 +1476,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+375"/>
+        <location line="+387"/>
         <source>Exporting an AI model</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1486,7 +1486,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-435"/>
+        <location line="-447"/>
         <source>Changing users</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1601,12 +1601,17 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+141"/>
+        <location line="+142"/>
         <source>Confirming the retention policy</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+91"/>
+        <location line="+9"/>
+        <source>Building a support bundle</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+93"/>
         <location line="+47"/>
         <source>Exporting overlay images</source>
         <translation type="unfinished"></translation>
@@ -1628,13 +1633,13 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-4247"/>
+        <location line="-4259"/>
         <source>unhandled</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../ui/demo_workspace.py" line="+31"/>
-        <location filename="../ui/errors.py" line="+163"/>
+        <location filename="../ui/errors.py" line="+162"/>
         <location filename="../ui/main_window.py" line="+1174"/>
         <source>start-up</source>
         <translation type="unfinished"></translation>
@@ -3938,7 +3943,7 @@
         <translation>다른 프로그램이 작업 공간 데이터베이스 {path}을(를) 사용하고 있어 앱이 쓸 수 없었습니다.</translation>
     </message>
     <message>
-        <location filename="../config.py" line="+48"/>
+        <location filename="../config.py" line="+60"/>
         <source>it is not valid JSON (line {line}, column {column})</source>
         <translation>올바른 JSON이 아닙니다({line}행 {column}열)</translation>
     </message>
