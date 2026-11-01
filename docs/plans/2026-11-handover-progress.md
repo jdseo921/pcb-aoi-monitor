@@ -129,4 +129,4 @@ Production plan PRs 3.1 (cycle) and 3.9 (sign-in) moved into G1 as E.1 and D.1 t
   came to about 550 changed lines in one.
 - 2026-11-01: PR 0.4b on `feat/REQ-SET-023-build-identity`: CI's run number in BUILD-INFO.txt, the log's app_version and
   the .exe's VERSIONINFO; one `SIGNED` value for signing and naming. The pilot certificate's owner in the signed
-  installer's text is taken from `installer/pilot-ca.cer` ("AOI PoC Inspector"), pending Jay's choice of a name.
+  installer's text is taken from `installer/pilot-ca.cer` ("AOI PoC Inspector"); Jay kept that name on 2026-11-01.
