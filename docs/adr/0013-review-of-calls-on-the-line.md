@@ -5,7 +5,7 @@
   record accepts it.
 - Date: 2026-10-11
 - Decides: the product owner (Jay), until a tech lead joins
-- Related: REQ-INSP-013 (MUST 1.0, brought forward to G1), Engineering standard "On the line" and "Watch and retrain",
+- Related: REQ-INSP-013 (MUST 1.0, brought forward to G1), [Engineering standard](../standards/engineering.md) "On the line" and "Watch and retrain",
   REQ-LOG-001, REQ-LOG-002, migration 0023, AOI-INSP-015
 
 ## Context

@@ -4,8 +4,8 @@
 - Date: 2026-10-01; revised 2026-10-02 for hashed lock files, PySide6-Essentials and the license gate's record
   (#17, S04 follow-up)
 - Decides: the product owner (Jay), until a tech lead joins
-- Related: #5, stage S04 of the Stage 1 plan; Engineering standard "Code style" and "Scans and SBOM";
-  Legal & Compliance standard "Licenses"; Charter checklist line 8
+- Related: #5, stage S04 of the Stage 1 plan; [Engineering standard](../standards/engineering.md) "Code style" and "Scans and SBOM";
+  [Legal & Compliance](../standards/legal-and-compliance.md) standard "Licenses"; [Charter](../standards/charter.md) checklist line 8
 
 ## Context
 

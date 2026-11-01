@@ -1,6 +1,6 @@
 # Stage 1 requirements
 
-Draft 1, 2026-10-01, proposed by Claude from the three source specs and the AOI standards for Jay's review
+Draft 1, 2026-10-01, proposed by Claude from the three source specs and the [AOI standards](../standards/README.md) for Jay's review
 against the 1.0 scope agreed with the customer. Format and abbreviations: [README](README.md).
 
 Every row in this file is **Stage 1**: it runs on image files and needs no camera, robot or MES.

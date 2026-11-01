@@ -1,7 +1,7 @@
 # ADR 0019: The demo's pages fit a 1366 × 768 window, the presenter theme at 16 pt in a small one
 
 - Status: Proposed under Jay's instruction of 2026-10-12 12:53 UTC, item A7 of the business-readiness brief (#104,
-  Charter principle 1): "every page the three demo scripts visit fits the presenter theme at 1366×768 with no
+  [Charter](../standards/charter.md) principle 1): "every page the three demo scripts visit fits the presenter theme at 1366×768 with no
   scrolling in the verdict area (verdict, defect boxes, the Compare pair and its table, the Logs summary line);
   scrolling is allowed only in secondary panels below the fold". The 16 pt size of decision 2 was put to Jay as a
   choice on 2026-10-12 and is not yet answered; Jay's merge of this record accepts it, and "Keep 18 pt" instead

@@ -3,7 +3,7 @@
 - Status: Proposed. Jay's merge of this record accepts it.
 - Date: 2026-10-02
 - Decides: the product owner (Jay), until a tech lead joins
-- Related: stage S28a of the Stage 1 plan; REQ-CMP-005, REQ-INSP-012; Engineering standard "Data and storage";
+- Related: stage S28a of the Stage 1 plan; REQ-CMP-005, REQ-INSP-012; [Engineering standard](../standards/engineering.md) "Data and storage";
   `aoi/core/maps.py`; [ADR 0004](0004-schema-v1.md) (records and writes)
 
 ## Context

@@ -1,7 +1,7 @@
 # Requirements
 
-This folder holds the product requirements of the AOI PoC Inspector. The rules come from the Engineering
-standard (Workflow section); this page says how they are applied in this repository.
+This folder holds the product requirements of the AOI PoC Inspector. The rules come from the [Engineering
+standard](../standards/engineering.md) (Workflow section); this page says how they are applied in this repository.
 
 | File | Holds |
 |---|---|
@@ -24,8 +24,10 @@ camera shortlist are back.
 
 Each register file states its stage at the top, and every row in it has that stage. Source abbreviations:
 GUI §n is the AOI PoC Software GUI Concept & Functional Specification, RM the Development Roadmap &
-Commercialization Plan, DCT §n the PCBA Defect Classification Table, ENG, C&L and LEG the Engineering, Customers &
-Launch and Legal & Compliance standards with the section name, Charter the AOI Standards Charter, ADR n a design
+Commercialization Plan, DCT §n the PCBA Defect Classification Table, ENG, C&L and LEG the
+[Engineering](../standards/engineering.md), [Customers & Launch](../standards/customers-and-launch.md) and
+[Legal & Compliance](../standards/legal-and-compliance.md) standards with the section name, Charter the AOI Standards
+[Charter](../standards/charter.md) (the four in [`docs/standards/`](../standards/README.md)), ADR n a design
 record in `docs/adr/`, `#n` a GitHub issue, "resolution test" the
 [test record of 2026-10-01](../tests/2026-10-01-resolution-test.md), NIST SP 800-63B-4 the US digital identity
 guideline, Jay a product owner request listed below, and "proposed" a rule we suggest that no outside source
