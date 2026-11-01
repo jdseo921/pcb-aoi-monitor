@@ -2,8 +2,10 @@
 # (REQ-SET-012; Engineering standard "Build"; Legal & Compliance "Packaging" and "Notices shipped"; ADR 0007). Then
 # Inno Setup wraps the folder in an installer, which is installed silently, self-tested and uninstalled on the runner
 # (stage S57). The folder and the installer are kept as the run's artifacts for 30 days, named for the tag when a v*
-# tag was pushed. Both are internal test builds: unsigned and not a release, since a release comes only as a signed
-# installer from a tagged commit after two approvals (Engineering, "Signing"); a tag's build is the unsigned part.
+# tag was pushed. Neither is a release, since a release comes only as an installer signed with a certificate Windows
+# trusts, from a tagged commit after two approvals (Engineering, "Signing"). A pull request's build is unsigned and
+# internal; a build of main or a tag is signed with the pilot certificate once it exists, and named and labelled so
+# (REQ-SET-023). Each build carries CI's run number: in BUILD-INFO.txt, the .exe's VERSIONINFO and the log.
 name: Windows build
 
 on:
@@ -55,6 +57,12 @@ jobs:
     env:  # the Stage 1 pilot's signing certificate (tools/new_pilot_signing.ps1); empty until it is made
       PILOT_SIGNING_PFX: ${{ secrets.PILOT_SIGNING_PFX }}
       PILOT_SIGNING_PASSWORD: ${{ secrets.PILOT_SIGNING_PASSWORD }}
+      # Whether this build is signed: on main and tags, once the certificate exists. The steps that sign, name and
+      # label the build all read this one value, so a build is called signed only when it is (REQ-SET-023).
+      SIGNED: ${{ github.event_name != 'pull_request' && secrets.PILOT_SIGNING_PFX != '' && 'true' || 'false' }}
+      # Whose pilot certificate signs it, as installer/pilot-ca.cer names it ("<name> pilot root CA")
+      PILOT_SIGNER: AOI PoC Inspector
+      AOI_BUILD_NUMBER: ${{ github.run_number }}  # REQ-SET-023: installer/aoi.spec puts it in the .exe
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
@@ -73,8 +81,15 @@ jobs:
       - name: Build; stops on a file no license check covers, and writes THIRD_PARTY_NOTICES.txt and sbom.cdx.json
         id: build
         run: pyinstaller --noconfirm --clean installer/aoi.spec
+      - name: Check the .exe's VERSIONINFO carries the version and this run's build number (REQ-SET-023)
+        id: versioninfo
+        run: |
+          $label = python -c "from aoi.config import version_label; import os; print(version_label(int(os.environ['AOI_BUILD_NUMBER'])))"
+          $found = (Get-Item dist/AOI-PoC-Inspector/AOI-PoC-Inspector.exe).VersionInfo.ProductVersion
+          if ($found -ne $label) { throw "The .exe's ProductVersion is '$found', not $label" }
+          "VERSIONINFO ProductVersion: $found"
       - name: Sign the app's executable with the pilot certificate, on main and tags once it exists (ADR 0011)
-        if: github.event_name != 'pull_request' && env.PILOT_SIGNING_PFX != ''
+        if: env.SIGNED == 'true'
         run: tools/pilot_sign.ps1 dist/AOI-PoC-Inspector/AOI-PoC-Inspector.exe
       - name: Start the built app on an empty workspace, check that it opens, and inspect a board with --self-test
         id: smoke
@@ -101,20 +116,30 @@ jobs:
           from pathlib import Path
 
           sys.path.insert(0, ".")
-          from aoi.config import APP_NAME, APP_VERSION
+          from aoi.config import APP_NAME, APP_VERSION, version_label
 
           env, short = os.environ, os.environ["HEAD_SHA"][:7]
+          signed, build = env["SIGNED"] == "true", int(env["AOI_BUILD_NUMBER"])
           tag = env["TAG"]  # a v* tag names the version the app says it is: v0.2.0, or v0.2.0-rc.1
           if tag and tag != f"v{APP_VERSION}" and not tag.startswith(f"v{APP_VERSION}-"):
               sys.exit(f"The tag {tag} does not name version {APP_VERSION}, the one in aoi/config.py")
           folder = Path("dist", APP_NAME.replace(" ", "-"))
           (folder / "BUILD-INFO.txt").write_text(
-              f"{APP_NAME} {APP_VERSION}, internal test build {tag + ' ' if tag else ''}g{short}\n"
+              f"{APP_NAME} {version_label(build)}, {'pilot' if signed else 'internal test'} build"
+              f" {tag + ' ' if tag else ''}g{short}\n"
               f"Built by GitHub Actions on {datetime.now(UTC).isoformat(timespec='seconds')} from commit {env['COMMIT']}"
               f" ({env['REF']}, head {env['HEAD_SHA']}): {env['RUN_URL']}\n\n"
-              "Not a release. Neither it nor its installer is signed, so Windows may warn that the publisher is\n"
-              "unknown, and it must not go to a customer or into a demo: a release is a signed installer built from a\n"
-              "tagged commit after two approvals (Engineering standard, \"Signing\"; Customers & Launch, \"Demos\").\n\n"
+              + (
+                  f"Pilot build, signed with the {env['PILOT_SIGNER']} pilot certificate, which only stations that\n"
+                  "trust the pilot CA trust (docs/install/pilot-signing.md). Not a release: a release is an installer\n"
+                  "signed with a certificate Windows trusts, built from a tagged commit after two approvals\n"
+                  "(Engineering standard, \"Signing\").\n\n"
+                  if signed
+                  else "Not a release. Neither it nor its installer is signed, so Windows may warn that the publisher is\n"
+                  "unknown, and it must not go to a customer or into a demo: a release is a signed installer built from a\n"
+                  "tagged commit after two approvals (Engineering standard, \"Signing\"; Customers & Launch, \"Demos\").\n\n"
+              )
+              + 
               "Start AOI-PoC-Inspector.exe. The workspace is %USERPROFILE%\\AOI_Workspace, or the folder AOI_WORKSPACE\n"
               "names. Third-party licenses: THIRD_PARTY_NOTICES.txt. The bill of materials (CycloneDX):\n"
               "sbom.cdx.json. The hash of every file: SHA256SUMS.txt.\n",
@@ -126,7 +151,8 @@ jobs:
               with path.open("rb") as f:
                   sums.append(f"{hashlib.file_digest(f, 'sha256').hexdigest()}  {path.relative_to(folder).as_posix()}")
           (folder / "SHA256SUMS.txt").write_text("\n".join(sums) + "\n", encoding="utf-8", newline="\r\n")
-          name = f"{folder.name}-{tag or APP_VERSION}-g{short}-windows-x64-unsigned"
+          kind = "pilot-signed" if signed else "unsigned"
+          name = f"{folder.name}-{tag or APP_VERSION}-g{short}-windows-x64-{kind}"
           with open(env["GITHUB_OUTPUT"], "a", encoding="utf-8") as out:
               out.write(f"name={name}\n")
           print(f"{name}: {len(sums)} files, {sum(p.stat().st_size for p in folder.rglob('*') if p.is_file()) / 1e6:.0f} MB")
@@ -160,13 +186,16 @@ jobs:
         run: |
           $version = python -c "from aoi.config import APP_VERSION; print(APP_VERSION)"
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          & $env:ISCC "/DAppVersion=$version" installer\aoi.iss
+          $iscc = @("/DAppVersion=$version")
+          $kind = "unsigned"
+          if ($env:SIGNED -eq "true") { $iscc += "/DSigned", "/DSigner=$env:PILOT_SIGNER"; $kind = "pilot-signed" }
+          & $env:ISCC @iscc installer\aoi.iss
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          $setup = "dist\installer\AOI-PoC-Inspector-$version-setup-x64-unsigned.exe"
+          $setup = "dist\installer\AOI-PoC-Inspector-$version-setup-x64-$kind.exe"
           if (-not (Test-Path $setup)) { throw "The compiler made no $setup" }
           "setup=$setup" >> $env:GITHUB_OUTPUT
       - name: Sign the installer with the pilot certificate, on main and tags once it exists (ADR 0011)
-        if: github.event_name != 'pull_request' && env.PILOT_SIGNING_PFX != ''
+        if: env.SIGNED == 'true'
         env:
           SETUP: ${{ steps.installer.outputs.setup }}
         run: tools/pilot_sign.ps1 $env:SETUP

@@ -24,7 +24,7 @@ import pytest
 import yaml
 
 from aoi import selftest
-from aoi.config import APP_VERSION
+from aoi.config import APP_VERSION, version_label
 from tools import make_selftest_data
 from tools.smoke_test_build import CONSOLE, GUI, log_lines, subsystem
 
@@ -116,13 +116,15 @@ def test_req_set_012_the_windows_build_runs_on_v_tags_too() -> None:
     assert WORKFLOW["jobs"]["windows"]["runs-on"] == "windows-latest"
 
 
-def info_step(tmp_path: Path, tag: str) -> subprocess.CompletedProcess[str]:
-    """The workflow's step that writes BUILD-INFO.txt and names the artifact, run on a stand-in build folder."""
+def info_step(tmp_path: Path, tag: str, signed: bool = False) -> subprocess.CompletedProcess[str]:
+    """The workflow's step that writes BUILD-INFO.txt and names the artifact, run on a stand-in build folder, as
+    build 57; `signed` as on main once the pilot certificate exists."""
     (step,) = [s for s in WORKFLOW["jobs"]["windows"]["steps"] if s.get("id") == "info"]
     (tmp_path / "dist" / "AOI-PoC-Inspector").mkdir(parents=True, exist_ok=True)
     (tmp_path / "dist" / "AOI-PoC-Inspector" / "AOI-PoC-Inspector.exe").write_bytes(b"MZ")
     env = {**os.environ, "PYTHONPATH": str(ROOT), "GITHUB_OUTPUT": str(tmp_path / "output"), "TAG": tag}
     env |= {"COMMIT": "a" * 40, "HEAD_SHA": "a" * 40, "REF": f"refs/tags/{tag}", "RUN_URL": "https://example.invalid/1"}
+    env |= {"SIGNED": "true" if signed else "false", "AOI_BUILD_NUMBER": "57", "PILOT_SIGNER": "AOI PoC Inspector"}
     return subprocess.run([sys.executable, "-c", step["run"]], cwd=tmp_path, env=env, capture_output=True, text=True)
 
 
@@ -133,14 +135,25 @@ def test_req_set_012_a_tag_s_build_is_named_for_the_tag(tmp_path: Path) -> None:
     output = (tmp_path / "output").read_text(encoding="utf-8")
     assert output == f"name=AOI-PoC-Inspector-{tag}-gaaaaaaa-windows-x64-unsigned\n"
     info = (tmp_path / "dist" / "AOI-PoC-Inspector" / "BUILD-INFO.txt").read_text(encoding="utf-8")
-    assert info.startswith(f"AOI PoC Inspector {APP_VERSION}, internal test build {tag} gaaaaaaa\n")
-    assert "Not a release." in info
+    assert info.startswith(f"AOI PoC Inspector {APP_VERSION}+build.57, internal test build {tag} gaaaaaaa\n")
+    assert "Not a release." in info and "must not go to a customer" in info
     assert info_step(tmp_path / "main", "").returncode == 0  # a push to main, as before: named for the version
     untagged = (tmp_path / "main" / "output").read_text(encoding="utf-8")
     assert untagged == f"name=AOI-PoC-Inspector-{APP_VERSION}-gaaaaaaa-windows-x64-unsigned\n"
     refused = info_step(tmp_path, "v99.0.0")
     assert refused.returncode == 1
     assert f"The tag v99.0.0 does not name version {APP_VERSION}" in refused.stderr
+
+
+def test_req_set_023_a_pilot_signed_build_is_named_and_labelled_so(tmp_path: Path) -> None:
+    """Signed: "pilot-signed" in place of "unsigned", the certificate named, and no customer sentence."""
+    assert info_step(tmp_path, "", signed=True).returncode == 0
+    output = (tmp_path / "output").read_text(encoding="utf-8")
+    assert output == f"name=AOI-PoC-Inspector-{APP_VERSION}-gaaaaaaa-windows-x64-pilot-signed\n"
+    info = (tmp_path / "dist" / "AOI-PoC-Inspector" / "BUILD-INFO.txt").read_text(encoding="utf-8")
+    assert info.startswith(f"AOI PoC Inspector {version_label(57)}, pilot build gaaaaaaa\n")
+    assert "Pilot build, signed with the AOI PoC Inspector pilot certificate" in info
+    assert "customer" not in info and "unsigned" not in info and "Not a release:" in info
 
 
 def test_req_set_012_the_smoke_test_tells_a_windowed_exe_from_a_console_one() -> None:
