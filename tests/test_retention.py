@@ -59,7 +59,7 @@ def thirty_days(ctx: AppContext, synthetic_dataset: Path, ng_board: Path) -> dic
         with sqlite3.connect(ctx.settings.db_path) as db:  # the two just saved, the newest
             db.execute("UPDATE inspections SET time=? WHERE id > (SELECT max(id) - 2 FROM inspections)", [ago(n)])
     for n in range(1, DAYS + 1):
-        (root / "logs" / f"aoi-{day(n):%Y-%m-%d}.jsonl").write_text('{"event": "app.start"}\n', encoding="utf-8")
+        (root / "logs" / f"aoi-{day(n):%Y-%m-%d}.jsonl").write_bytes(b'{"event": "app.start"}\n')  # no \r\n
     (root / "logs" / retention.ARCHIVE).mkdir(exist_ok=True)  # made by the sweep at start
     gone_log = root / "logs" / retention.ARCHIVE / f"aoi-{day(95):%Y-%m-%d}.jsonl.gz"
     gone_log.write_bytes(gzip.compress(b"{}\n"))
