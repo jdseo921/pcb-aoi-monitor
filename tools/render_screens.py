@@ -37,6 +37,7 @@ import os
 import re
 import sys
 import tempfile
+import threading
 import time
 import uuid
 from collections import Counter
@@ -122,12 +123,20 @@ def slug(title: str) -> str:
     return re.sub(r"[^a-z0-9]+", "-", title.lower()).strip("-")
 
 
-def counted_uuids(start: int = 1) -> Iterator[uuid.UUID]:
+def counted_uuids(start: int = 1) -> Callable[[], uuid.UUID]:
     """What uuid4() returns while the workspace is built: 000001…, 000002…, so the UUID that names each sample's file
     and the record's evidence files (#245), and every record id, are the same in every run; from `start`, for what a
-    render adds after (GUIDE_UUIDS)."""
-    for n in itertools.count(start):
-        yield uuid.UUID(int=(n << 104) | n, version=4)
+    render adds after (GUIDE_UUIDS). Counted on the main thread only: the context's timers (the heartbeat's temp file)
+    run when they will, so a uuid4() of theirs is a real one and moves no count."""
+    count, real, main = itertools.count(start), uuid.uuid4, threading.main_thread()
+
+    def next_uuid() -> uuid.UUID:
+        if threading.current_thread() is not main:
+            return real()
+        n = next(count)
+        return uuid.UUID(int=(n << 104) | n, version=4)
+
+    return next_uuid
 
 
 class PinnedModel:
