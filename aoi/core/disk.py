@@ -51,3 +51,20 @@ def measure(folder: Path) -> Usage | None:
         return usage(folder)
     except OSError:
         return None
+
+
+def evidence(row: dict[str, object], notes: list[str]) -> str:
+    """What a record kept of its evidence, as the CSV export's `evidence` column writes it: overlay+maps; overlay (maps
+    gone by retention, or none made); maps (the overlay deleted by hand); none: drive full (SKIPPED_NOTE in `notes`); or
+    none. A file counts while it is there."""
+
+    def there(key: str) -> bool:  # a path stored and its file still in place (one deleted by hand is not kept)
+        value = row.get(key)
+        return bool(value) and Path(str(value)).is_file()
+
+    kept = ["overlay"] if there("overlay_path") else []
+    if there("diff_map_path") or there("ai_map_path"):
+        kept.append("maps")
+    if kept:
+        return "+".join(kept)
+    return "none: drive full" if SKIPPED_NOTE in notes else "none"

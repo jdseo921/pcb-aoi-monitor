@@ -8,6 +8,7 @@ the test may mount one (root on Linux), else a folder whose files count against 
 from __future__ import annotations
 
 import contextlib
+import csv
 import os
 import sqlite3
 import subprocess
@@ -17,6 +18,8 @@ from pathlib import Path
 from unittest import mock
 
 import pytest
+from PySide6.QtWidgets import QFileDialog, QMessageBox
+from pytestqt.qtbot import QtBot
 
 from aoi.config import Settings
 from aoi.core import disk
@@ -24,8 +27,9 @@ from aoi.core.imaging import list_images
 from aoi.core.inspector import InspectionResult, Inspector
 from aoi.core.services import AppContext
 from aoi.data.db import Database
-from tests.conftest import TrainedModel, engineer, log_rows, restored
-from tests.test_req_done_in_v01 import BOARD
+from aoi.ui import theme
+from tests.conftest import TrainedModel, engineer, listed, log_rows, restored
+from tests.test_req_done_in_v01 import BOARD, _window
 
 CAPACITY = 128 * 2**20
 SYSTEM_USAGE = disk.usage  # the system's own count, before conftest pins every test's drive
@@ -172,3 +176,50 @@ def test_req_log_006_a_start_on_a_drive_with_no_byte_free_opens(
         assert ctx.disk is not None and ctx.disk.level == disk.FULL_LEVEL
     finally:
         ctx.close()
+
+
+def test_req_log_006_the_status_bar_shows_the_free_space_on_amber_from_80_percent(
+    qtbot: QtBot, ctx: AppContext, drive: Path
+) -> None:
+    win = _window(qtbot, ctx, "Operator")
+    assert win.drive.text().startswith("Drive: ") and win.drive.styleSheet() == theme.drive_style(disk.OK)
+    fill(drive, 0.81)
+    win.show_drive()  # what the timer does each minute
+    assert win.drive.styleSheet() == theme.drive_style(disk.LOW_LEVEL) and theme.WARN_COLOR in win.drive.styleSheet()
+    fill(drive, 0.96)
+    win.show_drive()
+    space = ctx.disk
+    assert space is not None and theme.NG_COLOR in win.drive.styleSheet()
+    assert win.drive.text() == f"Drive: {space.free_gb} GB free · {space.percent} % used"
+
+
+def test_req_log_006_the_csv_export_names_the_evidence_each_record_kept(
+    qtbot: QtBot,
+    ctx: AppContext,
+    drive: Path,
+    ng_board: Path,
+    synthetic_dataset: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    insp = ctx.inspector(BOARD)
+    path, ok = ok_board(ctx, insp, synthetic_dataset)
+    fill(drive, 0.96)
+    ctx.log_result(BOARD, path, ok, insp)
+    ctx.log_result(BOARD, str(ng_board), insp.inspect(ctx.load_image(str(ng_board))), insp)
+    win = _window(qtbot, ctx, "Admin")  # only an Admin exports (Q58)
+    logs = win.pages["Logs & Export"]
+    win.navigate("Logs & Export")
+    listed(qtbot, logs)
+    out = tmp_path / "inspections.csv"
+    monkeypatch.setattr(QFileDialog, "getSaveFileName", staticmethod(lambda *a, **k: (str(out), "CSV (*.csv)")))
+    monkeypatch.setattr(QMessageBox, "question", staticmethod(lambda *a, **k: QMessageBox.StandardButton.Yes))
+    logs.export_csv()
+    qtbot.waitUntil(lambda: win.statusBar().currentMessage().startswith("Exported"), timeout=30000)
+    with out.open(encoding="utf-8-sig", newline="") as f:
+        exported = {r["result"]: r for r in csv.DictReader(f)}
+    assert list(exported["OK"])[-1] == "evidence"  # last, so the columns before it keep their places
+    assert exported["OK"]["evidence"] == "none: drive full" and exported["NG"]["evidence"] == "overlay+maps"
+    (ng,) = [r for r in ctx.inspections() if r["result"] == "NG"]
+    Path(ng["overlay_path"]).unlink()  # gone by hand: no longer kept
+    assert disk.evidence(ng, []) == "maps"

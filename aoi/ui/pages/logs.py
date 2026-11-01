@@ -6,7 +6,7 @@ import dataclasses
 import weakref
 from collections.abc import Callable
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal
 
 from PySide6.QtCore import QCoreApplication, QDate, QModelIndex, QPersistentModelIndex, QRect, QSize, Qt
 from PySide6.QtGui import QColor, QPainter, QTextCharFormat
@@ -27,7 +27,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from ...core.inspector import ai_check
+from ...core.disk import evidence as kept_evidence
+from ...core.inspector import InspectionResult, ai_check
 from ...core.services import FALSE_CALL, NOT_REVIEWED, REVIEW_FILTERS, AppContext, CsvFile, HistoryFilter
 from ...errors import AoiError
 from ...times import to_local
@@ -553,7 +554,9 @@ class LogsPage(Page):
             if should_stop():
                 return None
             ds = self.ctx.defects_for(r["id"])
-            ai = self._ai_check(r["id"])
+            res = self._stored_result(r["id"])
+            ai = "" if res is False else ai_check(res)
+            notes = res.notes if isinstance(res, InspectionResult) else []
             out.append(
                 {
                     "id": r["id"],
@@ -577,6 +580,7 @@ class LogsPage(Page):
                     "review_reason": r["review_reason"] or "",
                     "review_by": r["review_by"] or "",
                     "review_time": r["review_time"] or "",
+                    "evidence": kept_evidence(r, notes),  # what was kept (REQ-LOG-006), last
                 }
             )
             record = {k: r[k] for k in ("time", "board_model", "view", "model_version", "model_uuid", "recipe_rev")}
@@ -592,14 +596,15 @@ class LogsPage(Page):
         self.ctx.export_csv_files(files, listed)  # each entry holds the filter and the count (REQ-LOG-002)
         return len(out), len(check_rows)
 
-    def _ai_check(self, inspection_id: int) -> str:
-        """`inspector.ai_check` of a record's stored result, or "" when the record does not tell: none is stored, or the
-        stored one cannot be read (damaged), which is logged by the record's id and stops no export (#246)."""
+    def _stored_result(self, inspection_id: int) -> InspectionResult | Literal[False] | None:
+        """A record's stored result, for its ai_check (#246) and evidence columns; None for a record from before
+        migration 0006, False for one that cannot be read (damaged), which is logged by the record's id and stops no
+        export: its ai_check is then "" (`inspector.ai_check`)."""
         try:
-            return ai_check(self.ctx.inspection_result(inspection_id))
+            return self.ctx.inspection_result(inspection_id)
         except AoiError:  # AOI-CMP-002: not JSON, or JSON that is no stored result
             self.ctx.log.warning("export.result_not_read", exc_info=True, extra={"inspection_id": inspection_id})
-            return ""
+            return False
 
     def _csv_written(self, counts: tuple[int, int] | None, f: Path, checks_file: Path) -> None:
         if counts is None:

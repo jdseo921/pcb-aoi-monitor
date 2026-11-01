@@ -31,6 +31,8 @@ from collections.abc import Callable
 from functools import partial
 from string import Template
 
+from ..core import disk
+
 # Verdicts and severities (Engineering standard, "Look"); the shapes pair with the words (REQ-INSP-002)
 OK_COLOR = "#43a047"
 NG_COLOR = "#e53935"
@@ -289,6 +291,17 @@ def on_color(fill: str) -> str:
     if fill in (WARN_COLOR, INFO_COLOR, MAJOR_COLOR):
         return ON_LIGHT
     return ON_FILL if fill in (OK_COLOR, NG_COLOR, ACCENT) else ON_DARK
+
+
+DRIVE_COLORS = {disk.LOW_LEVEL: WARN_COLOR, disk.FULL_LEVEL: NG_COLOR}  # 80 % and 95 % used
+
+
+def drive_style(level: str) -> str:
+    """Stylesheet of the status bar's free-space line (REQ-LOG-006): plain while the drive is below 80 % used, then on
+    amber, and on red from 95 %, with the text colour that reads on each."""
+    fill = DRIVE_COLORS.get(level)
+    pad = f"padding: 0 {SPACE_S}px;"  # the text size is the theme's, presenter or not
+    return f"background: {fill}; color: {on_color(fill)}; {pad}" if fill else pad
 
 
 def verdict_mark_style(verdict: str) -> str:

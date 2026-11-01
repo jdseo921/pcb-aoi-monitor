@@ -929,6 +929,14 @@ on the record: `RAN`, `OFF` (turned off in the recipe; the AI model version is t
 the board) or `NO_AI_MODEL` (none trained), and is empty for a record stored without its result or one whose stored
 result cannot be read (damaged), which the log names (`export.result_not_read`) without stopping the export. Records
 from before the checks were stored have no rows in the second file.
+The last column, `evidence`, names what the record still has on disk: `overlay+maps`, `overlay` (its maps gone by
+retention, or none made), `maps` (the overlay deleted by hand), `none: drive full` (an OK board saved while the drive
+was 95 % full) or `none`.
+
+**Free disk space** shows on the right of the status bar. From 80 % used it turns amber and an alarm (AOI-LOG-005)
+says so once; from 95 % it turns red, another alarm (AOI-LOG-006) says so, and OK boards are saved with their record,
+verdict and checks but without their overlay and maps, their record noting why; NG and WARN boards keep everything.
+Free space before the drive fills: a full drive saves no result at all.
 Each export is confirmed first, naming the number of records, and written whole or not at all, the two CSV files
 together. The audit trail records it with the filter that listed the records (From, To, board model, operator, result,
 review and Include archived, as **Filter** applied them, not a box changed since) and their count, and the destination: a file
