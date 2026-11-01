@@ -47,6 +47,7 @@ from ..core.run_progress import RunProgress
 from ..core.services import REQUIRED_ROLE, ROLES_FROM, AppContext, Missing, Need, workspace_in_use
 from ..errors import AoiError
 from . import theme
+from .about import AboutDialog
 from .board_model_dialog import NewBoardModelDialog
 from .demo_workspace import boards
 from .errors import install_excepthook, open_workspace, phrase_text, show_already_open, show_error
@@ -673,11 +674,17 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.exit_presenter)
         self.user_label = QLabel("")
         layout.addWidget(self.user_label)
+        about = button(self.tr("About"), slot=self.show_about)  # for every role (REQ-SET-011)
+        layout.addWidget(about)
         switch = button(self.tr("Switch User"), slot=self.switch_user)
         layout.addWidget(switch)
-        for control in (self.bm_combo, self.btn_new, self.training_link, self.exit_presenter, switch):
+        for control in (self.bm_combo, self.btn_new, self.training_link, self.exit_presenter, about, switch):
             size_class(control, "T")  # header controls are operator targets (frame sketch, size class T)
         return h
+
+    def show_about(self) -> None:
+        """About for the board model the header selects (REQ-SET-011)."""
+        AboutDialog(self, self.ctx.about(self.bm_combo.currentText() or None)).exec()
 
     def show_training(self) -> None:
         """The header's training indicator and Home's line, read each second from the context's run, whichever page

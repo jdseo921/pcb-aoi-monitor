@@ -300,6 +300,7 @@ UNCHECKED = {
     "usb_drive",  # the USB drive plugged in last, where the guide's dialogs open, read (B5, Q68)
     "check_disk",  # the drive's free space, measured; a system alarm at 80 % and 95 % (REQ-LOG-006)
     "sweep_retention",  # the retention sweep, a system action on the context's timer (REQ-LOG-010)
+    "about",  # what About shows, read, for every role (REQ-SET-011)
     "heartbeat", "self_check",  # heartbeat.json and the start-up self-check, on its own thread (REQ-SET-024)
     "retention_confirmed",  # the Admin's confirmation the sweep deletes under, read (D20)
 }  # fmt: skip

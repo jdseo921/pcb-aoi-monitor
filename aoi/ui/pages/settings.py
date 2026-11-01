@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
 from PySide6.QtWidgets import (
@@ -118,7 +119,14 @@ class SettingsPage(Page):
         left = QVBoxLayout()
         left.addWidget(g)
         left.addWidget(self.sweep)  # under the group: a wrapped label in a form row is cut to one row's height
-        left.addWidget(button(self.tr("Confirm Retention Policy"), slot=self.confirm_retention))
+        tools = QHBoxLayout()
+        tools.addWidget(button(self.tr("Confirm Retention Policy"), slot=self.confirm_retention))
+        self.bundle = button(self.tr("Support Bundle…"), slot=self.support_bundle)  # REQ-LOG-007, an Admin's
+        tools.addWidget(self.bundle)
+        tools.addStretch(1)
+        left.addLayout(tools)
+        self.with_images = size_class(QCheckBox(self.tr("Support bundle with board images")), "T")
+        left.addWidget(self.with_images)
         self.stores = StoresPanel(self)  # the customers' encrypted dataset stores (REQ-TRN-017), under System
         left.addWidget(self.stores, 1)
         body.addLayout(left, 1)
@@ -236,6 +244,17 @@ class SettingsPage(Page):
             return
         self.show_sweep()
 
+    def support_bundle(self) -> None:
+        """The support bundle written where the Admin chooses, on a pool thread (`AppContext.support_bundle`)."""
+        name = f"support-{datetime.now(UTC):%Y%m%dT%H%M%SZ}.zip"
+        start = self.ctx.usb_drive() or self.ctx.settings.exports_dir
+        f, _ = QFileDialog.getSaveFileName(self, self.tr("Support Bundle"), str(start / name), self.tr("Zip (*.zip)"))
+        if f:
+            done = self.tr("Support bundle written: {file}").format(file=f)
+            self.run_in_background(
+                self.ctx.support_bundle, f, self.with_images.isChecked(), on_result=lambda _: self.shell.status(done)
+            )
+
     def _switch_presenter(self, on: bool) -> None:
         """The tick saves and applies the presenter theme at once (MainWindow.save_presenter_theme); on a refusal it
         goes back to what is in effect."""
@@ -266,6 +285,7 @@ class SettingsPage(Page):
 
     def update_actions(self) -> None:
         self.stores.sync()
+        self.role_gate(self.bundle, "support_bundle", self._bg is None)
 
     def on_user_changed(self) -> None:
         self.stores.close_sheet()  # a key half typed never stays for the next user

@@ -1060,6 +1060,15 @@ class Database:
         r = self.query("SELECT uuid FROM users WHERE name=?", (name,))
         return str(r[0]["uuid"]) if r else None
 
+    def station_id(self) -> str | None:
+        """The station's UUID (migration 0028, REQ-SET-011)."""
+        r = self.query("SELECT uuid FROM station LIMIT 1")
+        return str(r[0]["uuid"]) if r else None
+
+    def schema_number(self) -> int:
+        """The number of the newest migration applied."""
+        return int(self.query("SELECT max(number) AS n FROM schema_version")[0]["n"] or 0)
+
     def last_sign_in(self) -> str | None:
         """The UUID of the user who signed in last on this station, from the newest `user.sign_in` audit entry (found
         by the index of migration 0026); None while no one has."""

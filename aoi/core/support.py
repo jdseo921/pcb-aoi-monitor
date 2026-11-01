@@ -143,6 +143,7 @@ def build(root: Path, dest: Path, images: bool = False) -> dict[str, Any]:
     problems: dict[str, str] = {}
     queries = {
         "schema_version.csv": "SELECT number, name, applied_at FROM schema_version ORDER BY number",
+        "station.csv": "SELECT uuid, created_at FROM station",
         "alarms.csv": "SELECT * FROM alarms WHERE time >= ? ORDER BY id",
         "audit.csv": "SELECT * FROM audit WHERE at_utc >= ? ORDER BY id",
     }

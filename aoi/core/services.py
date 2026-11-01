@@ -35,7 +35,7 @@ import numpy as np
 
 from .. import defects as taxonomy
 from .. import logging_setup
-from ..config import APP_LABEL, Settings, resolve_device
+from ..config import APP_LABEL, APP_NAME, Settings, build_commit, resolve_device
 from ..data import atomic, credentials
 from ..data.db import NOT_REVIEWED as NOT_REVIEWED  # screens name it through here (REQ-LOG-009)
 from ..data.db import Database, DbError, is_busy, new_uuid
@@ -4210,6 +4210,25 @@ class AppContext:
 
     def _check_alarm(self, level: str, code: str, **values: Any) -> None:
         self.alarm(level, AoiError(code, **values).what, code)
+
+    def about(self, board_model: str | None) -> dict[str, Any]:
+        """What About shows (REQ-SET-011): the build, the AI model and recipe revision of `board_model`, the schema, the
+        station's ID, the licence (none until F.2) and the third-party notices of a build (None from source)."""
+        model = self.active_model(board_model) if board_model else None
+        recipe = self.db.latest_recipe(board_model) if board_model else None
+        folder = support.app_folder()
+        notices = folder / "THIRD_PARTY_NOTICES.txt" if folder else None
+        return {
+            "app": f"{APP_NAME} {APP_LABEL}",
+            "commit": build_commit(),
+            "board_model": board_model,
+            "ai_model": model["version"] if model else None,
+            "recipe_rev": recipe[0] if recipe else None,
+            "schema": self.db.schema_number(),
+            "station": self.db.station_id(),
+            "licence": None,
+            "notices": notices if notices and notices.is_file() else None,
+        }
 
     def heartbeat(self) -> dict[str, Any]:
         """Rewrite heartbeat.json with the fields docs/operations/metrics.md names, and return them (REQ-SET-024)."""
