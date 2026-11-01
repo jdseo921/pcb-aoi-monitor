@@ -219,7 +219,8 @@ def test_req_insp_008_results_and_the_golden_board_go_through_atomic(
     trained_ctx.train(trainable(trained_ctx, "TINY"), epochs=1, image_size=64)
     changed = {p for p, s in stamps().items() if before.get(p) != s}
     files = {p for p in changed if not p.name.startswith("aoi.sqlite") and p.parent != root / "logs"}
-    assert len([p for p in files if p.is_relative_to(root / "results")]) == 3, files  # overlay, difference and AI map
+    results = [p for p in files if p.is_relative_to(root / "results")]  # an OK board's JPEG, preview and maps (D1)
+    assert len(results) == 4, files
     models = {p.suffix for p in files if p.is_relative_to(root / "models")}
     assert models == {".pt", ".png", ".md", ".json"}, files  # the AI model, its Golden board and its model card
     assert files <= written, f"written outside atomic.write_with: {sorted(files - written)}"

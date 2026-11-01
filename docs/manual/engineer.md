@@ -102,7 +102,8 @@ see below), **Default epochs** 5 to 1000 (60) and **Log retention (days)** 1 to 
 archived, at each start and with the archive button on Logs & Export (section 8). **Largest image (megapixels)** (50)
 and **Largest image file (MB)** (200), `max_image_megapixels` and `max_image_megabytes` in `settings.json`, are the most
 an image may hold before it is refused, undecoded, on Inspection and in an import (AOI-INSP-005), each a whole number of
-1 or more; **Keep OK results' maps (days)** (7), `map_retention_days_ok`, is 0 or more (section 8, Evidence files). An
+1 or more; **Keep OK results' maps (days)** (7), `map_retention_days_ok`, is 0 or more, and **OK boards keep** a JPEG
+overlay and a preview or a full-resolution overlay (section 8, Evidence files). An
 Admin sets them on Settings (#153). AOI-SET-008 refuses any other value, on Settings and at start-up, naming the
 setting, the value and what it takes.
 
@@ -929,9 +930,9 @@ on the record: `RAN`, `OFF` (turned off in the recipe; the AI model version is t
 the board) or `NO_AI_MODEL` (none trained), and is empty for a record stored without its result or one whose stored
 result cannot be read (damaged), which the log names (`export.result_not_read`) without stopping the export. Records
 from before the checks were stored have no rows in the second file.
-The last column, `evidence`, names what the record still has on disk: `overlay+maps`, `overlay` (its maps gone by
-retention, or none made), `maps` (the overlay deleted by hand), `none: drive full` (an OK board saved while the drive
-was 95 % full) or `none`.
+The last column, `evidence`, names what the record still has on disk: `overlay+maps`, `jpeg+preview+maps` (an OK
+board under the evidence policy), each without `+maps` once its maps have gone by retention (or none were made), and
+without a part deleted by hand (`maps`, `preview+maps`), `none: drive full` (an OK board saved while the drive was 95 % full) or `none`.
 
 **Free disk space** shows on the right of the status bar. From 80 % used it turns amber and an alarm (AOI-LOG-005)
 says so once; from 95 % it turns red, another alarm (AOI-LOG-006) says so, and OK boards are saved with their record,
@@ -992,7 +993,11 @@ delete those files by hand (REQ-LOG-003).
 **Evidence files.** Each record's overlay picture is in the results folder, by day, named
 `<stem>_<record UUID>_<verdict>.png`: `<stem>` is the first 40 characters of the board's image file name without its
 extension, and the UUID is the record's own, as the `uuid` column of the CSV export gives it, so two boards with the
-same file name never share a picture. A training sample's copy is named `<stem>_<sample UUID>.<extension>` the same way.
+same file name never share a picture. An OK board's picture is a JPEG at quality 90, `<...>_OK.jpg`, with a smaller
+copy beside it for Logs & Export's preview, `<...>_OK_prev.jpg`, at most 1600 px a side; NG and WARN pictures are PNG
+at full resolution (the evidence policy, decision D1). Where the factory requires full resolution for every board, an
+Admin sets **OK boards keep** on Settings to **Full PNG, as NG** (`ok_evidence`: `full`; `jpeg` is
+the default), for the boards saved from then on. A training sample's copy is named `<stem>_<sample UUID>.<extension>` the same way.
 Records and samples stored before this version keep their names. If the system still refuses an evidence file's path as
 too long (a workspace folder with a long path, on Windows with long paths off), the run stops with AOI-INSP-014: an
 Admin saves a workspace folder with a shorter path on Settings and then, with the app closed, copies everything in the

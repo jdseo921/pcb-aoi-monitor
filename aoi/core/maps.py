@@ -78,6 +78,10 @@ def decode_ai(img: np.ndarray) -> np.ndarray:
     return np.take(AI_VALUES, np.asarray(img, dtype=np.uint16))
 
 
+JPEG_SETTINGS = (cv2.IMWRITE_JPEG_QUALITY, 90)  # D1: an OK board's overlay and preview
+HEADER_BYTES = 65536  # a JPEG's frame header follows its tables; OpenCV writes it within the first kilobyte
+
+
 def map_paths(base: Path) -> tuple[Path, Path]:
     """The names `save_maps` gives the difference map and the AI map of `base` (the overlay path, no suffix)."""
     return base.with_name(base.name + "_diff.png"), base.with_name(base.name + AI_FILE)
@@ -118,14 +122,14 @@ def read_map(path: str | Path) -> np.ndarray | None:
 
 
 def picture_shape(path: str | Path | None) -> tuple[int, int] | None:
-    """(height, width) of the stored board picture (the overlay PNG) from its header, without decoding a pixel: the size
-    the board was judged at, which both maps have. None when there is no path, its file is gone or cannot be read, or
-    its header gives no size."""
+    """(height, width) of the stored board picture (the overlay, PNG or JPEG) from its header, without decoding a pixel:
+    the size the board was judged at, which both maps have. None when there is no path, its file is gone or cannot be
+    read, or its header gives no size."""
     if not path:
         return None
     try:
         with Path(path).open("rb") as f:
-            found = image_header(f.read(24))  # a PNG's signature and IHDR hold its size
+            found = image_header(f.read(HEADER_BYTES))  # a PNG's IHDR, or a JPEG's frame header (D1)
     except OSError:
         return None
     return (found[2], found[1]) if found and found[1] > 0 and found[2] > 0 else None

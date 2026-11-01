@@ -28,6 +28,7 @@ from PySide6.QtWidgets import (
 )
 
 from ...core.disk import evidence as kept_evidence
+from ...core.imaging import preview_path
 from ...core.inspector import InspectionResult, ai_check
 from ...core.services import FALSE_CALL, NOT_REVIEWED, REVIEW_FILTERS, AppContext, CsvFile, HistoryFilter
 from ...errors import AoiError
@@ -398,11 +399,13 @@ class LogsPage(Page):
         self.refresh()
 
     def _preview(self) -> None:
-        """The selected record's overlay, or the placeholder: never another record's board (#174)."""
+        """The selected record's overlay, or its preview where the evidence policy kept one (D1), or the placeholder:
+        never another record's board (#174)."""
         iid = self._selected_id()
         r = next((x for x in self.rows if x["id"] == iid), None)  # None: a row no longer listed
         overlay = r["overlay_path"] if r else None
-        self.view.set_image(self.ctx.load_image(overlay) if overlay and Path(overlay).exists() else None)
+        shown = [p for p in ((preview_path(Path(overlay)), Path(overlay)) if overlay else ()) if p.is_file()]
+        self.view.set_image(self.ctx.load_image(str(shown[0])) if shown else None)
         self.btn_compare.setEnabled(r is not None)
         self.review.show_record(r)
         self.update_actions()  # Add to Training as OK follows the selected record's review

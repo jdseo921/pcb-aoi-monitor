@@ -425,13 +425,15 @@ AOI_Workspace/                 (default ~/AOI_Workspace, set in Settings, used f
                                             holds another AI model than the UUID its registry row names is refused,
                                             AOI-TRN-001 (REQ-TRN-014)
   models/<board>/<board>_vX.Y_golden.png    learned golden template
-  results/<date>/*.png         overlay per inspected board, <stem>_<record UUID>_<verdict>.png, with its
+  results/<date>/*.png|.jpg    overlay per inspected board, <stem>_<record UUID>_<verdict>.png, with its
                                *_diff.png and *_ai2.png maps (REQ-INSP-012; *_ai.png before S28a). <stem> is the
                                first 40 characters (STEM_CHARS) of the board's file name without its extension, so
                                every name, the temporary one included, is at most 225 bytes; the UUID is the record's,
                                as its uuid column and the CSV export give it, so no two records share a file. A save
                                never replaces a file (a name already taken refuses it), and a path the system still
-                               refuses as too long is AOI-INSP-014 (#245; before: 6 random hex digits, whole stem)
+                               refuses as too long is AOI-INSP-014 (#245; before: 6 random hex digits, whole stem).
+                               An OK board's overlay is `.jpg` (quality 90) with `_prev.jpg` beside it (PREVIEW_PX)
+                               unless `ok_evidence` is `full` (D1, `imaging.preview_path`); readers take either
                                An OK board saved while the drive is 95 % used or more has none of these; its
                                record notes why (`disk.SKIPPED_NOTE`, REQ-LOG-006); `AppContext.check_disk` measures
                                the drive before each save, at start and each minute for the status bar, and alarms
@@ -957,7 +959,7 @@ holds that evidence in its record and its two map files (`aoi/core/maps.py`, for
 S28a, [ADR 0005](adr/0005-stored-ai-map-format-2.md)): the difference map exactly, and the AI map within one step (0.001
 σ up to 32.767 σ, then 1/8192 of the value, up to 1789 σ) with each pixel on the side of the AI model's pixel threshold
 it was judged on; a map file that is there but cannot be read raises AOI-CMP-003, and so does one that decodes but is
-not the map written (not one channel of its bit depth at the size of the board picture, whose PNG header `load_maps`
+not the map written (not one channel of its bit depth at the size of the board picture, whose PNG or JPEG header `load_maps`
 reads), as damaged, for `re_evaluate` and for Compare alike (#249). So a stored result is judged again as
 the live one would be, but for what is read from its AI map, within one step over the AI threshold: an AI defect's
 score, so two AI defects of equal area whose peaks are that close may swap numbers or, where they overlap, keep the

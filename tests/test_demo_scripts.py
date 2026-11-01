@@ -78,6 +78,11 @@ def bundle(demo_bundle: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     return demo_bundle
 
 
+def overlays(usb: Path) -> list[Path]:
+    """The overlays an image export copied: NG and WARN boards' PNGs and OK boards' JPEGs (D1, REQ-INSP-012)."""
+    return [*usb.glob("*.png"), *usb.glob("*.jpg")]
+
+
 def ui_strings() -> set[str]:
     """Every text the app shows, as the translation file holds it, without the symbols a button draws before its
     word (▶, ■), and every page's title."""
@@ -313,7 +318,7 @@ def test_req_set_007_the_five_minute_script_runs_in_the_presenter_theme(
         with (usb / "demo.csv").open(encoding="utf-8-sig", newline="") as f:
             assert sorted(r["result"] for r in csv.DictReader(f)) == sorted(VERDICTS)
         press(qtbot, win, logs.btn_img)
-        qtbot.waitUntil(lambda: len(list(usb.glob("*.png"))) == 10 and logs._bg is None, timeout=30000)
+        qtbot.waitUntil(lambda: len(overlays(usb)) == 10 and logs._bg is None, timeout=30000)
 
         resets: list[float] = []
         for _ in range(LONG_TRIES):  # judged by tests/budgets.py; the first puts back the run just played, the next
@@ -670,7 +675,7 @@ def test_req_set_007_the_forty_five_minute_script_clicked_through(
         press(qtbot, win, logs.btn_csv)
         qtbot.waitUntil(lambda: (usb / "demo_checks.csv").is_file() and logs._bg is None, timeout=30000)
         press(qtbot, win, logs.btn_img)
-        qtbot.waitUntil(lambda: len(list(usb.glob("*.png"))) == 10 and logs._bg is None, timeout=30000)
+        qtbot.waitUntil(lambda: len(overlays(usb)) == 10 and logs._bg is None, timeout=30000)
 
         # After they leave
         sidebar(qtbot, win, "Settings")
