@@ -42,7 +42,8 @@ WORKSPACE = "workspace"
 BOARDS = "demo-boards"  # in the workspace: the boards a scripted run plays (REQ-SET-009)
 MARKER = "demo.json"
 KEEP = frozenset({"settings.json", MARKER})  # what a reset leaves in the demo folder
-BUILD_ONLY = frozenset({"logs", ".aoi.lock"})  # what a workspace holds while it is open, left out of a bundle
+# What a workspace holds while it is open, left out of a bundle (the heartbeat's files: REQ-SET-024)
+BUILD_ONLY = frozenset({"logs", ".aoi.lock", "heartbeat.json", "aoi.running"})
 
 
 def bundle_dir() -> Path:

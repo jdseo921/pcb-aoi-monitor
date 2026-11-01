@@ -17,6 +17,7 @@ from PySide6.QtWidgets import QFileDialog
 from pytestqt.qtbot import QtBot
 
 from aoi.config import Settings
+from aoi.core.heartbeat import HEARTBEAT
 from aoi.core.imaging import list_images, load_image, save_image
 from aoi.core.services import AppContext
 from aoi.data import atomic
@@ -53,8 +54,9 @@ def _fail_audit(monkeypatch: pytest.MonkeyPatch, ctx: AppContext, action: str) -
 
 
 def _state(ctx: AppContext, out: Path) -> set[str]:
-    """Every row of the database, and every file in the workspace (logs and the database aside) and in `out`."""
-    files = [p for root in (ctx.settings.root, out) for p in root.rglob("*") if p.is_file()]
+    """Every row of the database, and every file in the workspace (logs, the database and heartbeat.json, which the
+    context's own timer rewrites, aside) and in `out`."""
+    files = [p for root in (ctx.settings.root, out) for p in root.rglob("*") if p.is_file() and HEARTBEAT not in p.name]
     kept = {str(p) for p in files if "logs" not in p.parts and not p.name.startswith("aoi.sqlite")}
     return set(ctx.db._conn.iterdump()) | kept
 

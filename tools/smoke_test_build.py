@@ -40,9 +40,9 @@ GUI, CONSOLE = 2, 3  # the subsystem in a Windows executable's header: Windows o
 
 
 def log_lines(workspace: Path) -> list[dict[str, object]]:
-    """The app's log so far; a line still being written is left for the next read."""
+    """The app's log so far (its day files, not alerts.jsonl); a line still being written is left for the next read."""
     lines = []
-    for path in sorted((workspace / "logs").glob("*.jsonl")):
+    for path in sorted((workspace / "logs").glob("aoi-*.jsonl")):
         for raw in path.read_text(encoding="utf-8").splitlines():
             try:
                 lines.append(json.loads(raw))
