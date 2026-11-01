@@ -4,9 +4,10 @@
 ;   iscc /DAppVersion=0.x.y installer\aoi.iss  ->  dist\installer\AOI-PoC-Inspector-0.x.y-setup-x64-unsigned.exe
 ;
 ; CI compiles it with Inno Setup at the version build.yml pins, passing the version in aoi/config.py, then installs,
-; self-tests and uninstalls it (tools/check_installer.py). It is unsigned and internal: it must never go to a customer
-; or into a demo, since a release is a signed installer built from a tagged commit after two approvals (Engineering
-; standard, "Signing"). The uninstaller removes the program files and shortcuts only: the workspace (AOI_Workspace in
+; self-tests and uninstalls it (tools/check_installer.py). Unsigned, it is internal: it must never go to a customer or
+; into a demo, since a release is a signed installer built from a tagged commit after two approvals (Engineering
+; standard, "Signing"). CI's builds of main and tags, which it signs with the pilot certificate, pass /DSigned
+; and /DSigner=<whose certificate>: the installer is then named and labelled a pilot build (REQ-SET-023). The uninstaller removes the program files and shortcuts only: the workspace (AOI_Workspace in
 ; the user's folder, with settings.json), the demo workspace beside it and the keys in Credential Manager stay.
 
 #ifndef AppVersion
@@ -21,9 +22,22 @@
   #error No build with its THIRD_PARTY_NOTICES.txt: run pyinstaller --noconfirm --clean installer\aoi.spec first
 #endif
 ; What the wizard and the uninstaller say ([Messages] below): %n is a new line, %1 the app's name.
-#define Welcome "This will install [name/ver] on this computer.%n%nINTERNAL TEST BUILD, NOT SIGNED. It is for " + \
-  "our own tests only and must never go to a customer or into a customer demo: it is not a release. Windows " + \
-  "SmartScreen and the User Account Control prompt name no publisher, because the installer is not signed.%n%n" + \
+#ifdef Signed
+  #ifndef Signer
+    #error Pass whose pilot certificate signs it: iscc /DSigned /DSigner=<name> installer\aoi.iss
+  #endif
+  #define Kind "pilot, signed"
+  #define Suffix "pilot-signed"
+  #define Notice "Pilot build, signed with the " + Signer + " pilot certificate. Windows trusts it only on " + \
+    "stations whose IT trusts the pilot CA; it is not a release."
+#else
+  #define Kind "internal, unsigned"
+  #define Suffix "unsigned"
+  #define Notice "INTERNAL TEST BUILD, NOT SIGNED. It is for our own tests only and must never go to a " + \
+    "customer or into a customer demo: it is not a release. Windows SmartScreen and the User Account Control " + \
+    "prompt name no publisher, because the installer is not signed."
+#endif
+#define Welcome "This will install [name/ver] on this computer.%n%n" + Notice + "%n%n" + \
   "Uninstalling removes the program files only, never your workspace (AOI_Workspace in your user folder)."
 #define Confirm "Remove %1 from this computer?%n%nOnly the program files are removed. Your workspace " + \
   "(AOI_Workspace in your user folder, or the folder you chose), the demo workspace beside it " + \
@@ -36,7 +50,7 @@
 AppId={{7D122A0A-06CC-4538-A441-BD5D560E2255}
 AppName={#AppName}
 AppVersion={#AppVersion}
-AppVerName={#AppName} {#AppVersion} (internal, unsigned)
+AppVerName={#AppName} {#AppVersion} ({#Kind})
 ; Per machine, into Program Files: only the installer needs admin rights, and the app runs as a standard user
 ; (Engineering standard, "Offline and least privilege"). Each user's workspace stays in their own folder.
 PrivilegesRequired=admin
@@ -52,7 +66,7 @@ WizardStyle=modern
 DisableWelcomePage=no
 SetupLogging=yes
 OutputDir=..\dist\installer
-OutputBaseFilename=AOI-PoC-Inspector-{#AppVersion}-setup-x64-unsigned
+OutputBaseFilename=AOI-PoC-Inspector-{#AppVersion}-setup-x64-{#Suffix}
 
 [Languages]
 Name: "en"; MessagesFile: "compiler:Default.isl"

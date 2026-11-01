@@ -120,6 +120,9 @@ def self_test(exe: Path, workspace: Path) -> str | None:
     verdicts = [line for line in lines if line.get("event") == "selftest.verdict"]
     if code != 0 or errors or len(verdicts) != 1 or verdicts[0].get("verdict") != verdicts[0].get("expected"):
         return f"the self-test exited with code {code}, logged {len(errors)} error(s) and {len(verdicts)} verdict(s)"
+    build = os.environ.get("AOI_BUILD_NUMBER")  # CI's: the log names the build (REQ-SET-023)
+    if build and not all(str(line.get("app_version")).endswith(f"+build.{build}") for line in lines):
+        return f"the log's app_version is not the build's: {lines[0].get('app_version') if lines else None}"
     return None
 
 

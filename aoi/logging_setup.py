@@ -17,7 +17,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import IO, Any
 
-from .config import APP_VERSION
+from .config import APP_LABEL
 
 LOGGER = "aoi"
 SECRET_KEYS = ("password", "passwd", "secret", "token", "api_key")
@@ -49,7 +49,7 @@ class JsonLinesHandler(logging.Handler):
                 "level": record.levelname,
                 "module": record.name,
                 "event": record.getMessage(),
-                "app_version": APP_VERSION,
+                "app_version": APP_LABEL,  # with the build number in a CI build (REQ-SET-023)
             }
             extras = scrub({k: v for k, v in record.__dict__.items() if k not in _RECORD_FIELDS})
             line.update({f"extra_{k}" if k in FIXED_FIELDS else k: v for k, v in extras.items()})  # #171

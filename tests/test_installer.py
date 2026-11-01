@@ -1,4 +1,4 @@
-"""The internal Windows installer, unsigned (REQ-SET-012, stage S57; ADR 0007).
+"""The Windows installer, unsigned and internal, or pilot-signed (REQ-SET-012, stage S57; ADR 0007; REQ-SET-023).
 
 installer/aoi.iss wraps the PyInstaller one-folder build in an Inno Setup installer. Inno Setup's compiler runs on
 Windows only, so CI compiles it (.github/workflows/build.yml) and installs, self-tests and uninstalls the result; these
@@ -62,19 +62,50 @@ def entry(line: str) -> dict[str, str]:
     return found
 
 
-def defines() -> dict[str, str]:
-    """ISPP's #define lines: the text of a string or of strings joined by +, else the expression as written."""
-    found = {}
-    for name, expr in re.findall(r"^\s*#define (\w+) (.+)$", script(), re.MULTILINE):
-        strings = re.fullmatch(r'"[^"]*"(?:\s*\+\s*"[^"]*")*', expr)
-        found[name] = "".join(re.findall(r'"([^"]*)"', expr)) if strings else expr
-    return found
+def preprocess(given: dict[str, str]) -> tuple[str, dict[str, str]]:
+    """The script as ISPP passes it on, compiled with `given` (/DName=value), and its defines: #ifdef, #ifndef and
+    #else choose lines; an #if (the build-folder check) is taken as false; a #define is the text of strings and names
+    joined by +, else the expression as written."""
+    names, kept, active = dict(given), [], [True]
+    for line in script().splitlines():
+        directive = line.strip().split(" ", 1)
+        if directive[0] in ("#ifdef", "#ifndef", "#if"):
+            test = directive[1] in names if directive[0] == "#ifdef" else directive[1] not in names
+            active.append(active[-1] and directive[0] != "#if" and test)
+        elif directive[0] == "#else":
+            active[-1] = active[-2] and not active[-1]
+        elif directive[0] == "#endif":
+            active.pop()
+        elif active[-1]:
+            found = re.fullmatch(r"\s*#define (\w+) (.+)", line)
+            if found:
+                parts = re.findall(r'"([^"]*)"|(\w+)', found[2])
+                joined = re.fullmatch(r'(?:"[^"]*"|\w+)(?:\s*\+\s*(?:"[^"]*"|\w+))*', found[2])
+                names[found[1]] = "".join(s or names[n] for s, n in parts) if joined else found[2]
+            kept.append(line)
+    return "\n".join(kept), names
 
 
-def messages() -> dict[str, str]:
+def defines(given: dict[str, str] | None = None) -> dict[str, str]:
+    return preprocess(given or {})[1]
+
+
+def messages(given: dict[str, str] | None = None) -> dict[str, str]:
     """[Messages], with the {#Name} of each #define replaced by its text, as the preprocessor does."""
-    names, said = defines(), directives(sections(script())["Messages"])
-    return {key: re.sub(r"\{#(\w+)\}", lambda m: names[m[1]], text) for key, text in said.items()}
+    text, names = preprocess(given or {})
+    return {
+        key: re.sub(r"\{#(\w+)\}", lambda m: names[m[1]], said)
+        for key, said in directives(sections(text)["Messages"]).items()
+    }
+
+
+def setup_names(given: dict[str, str] | None = None) -> dict[str, str]:
+    """[Setup], with each {#Name} replaced, as a compile with `given` sees it."""
+    text, names = preprocess(given or {})
+    return {
+        key: re.sub(r"\{#(\w+)\}", lambda m: names.get(m[1], m[0]), value)
+        for key, value in directives(sections(text)["Setup"]).items()
+    }
 
 
 def test_req_set_012_the_installer_installs_per_machine_on_64_bit_windows_10_or_later() -> None:
@@ -95,7 +126,7 @@ def test_req_set_012_the_installer_takes_the_version_the_build_passes_in() -> No
     assert re.search(r"^#ifndef AppVersion\n\s*#error .+\n#endif$", text, re.MULTILINE)
     setup = directives(sections(text)["Setup"])
     assert setup["AppVersion"] == "{#AppVersion}"
-    assert setup["OutputBaseFilename"] == "AOI-PoC-Inspector-{#AppVersion}-setup-x64-unsigned"
+    assert setup_names()["OutputBaseFilename"] == "AOI-PoC-Inspector-{#AppVersion}-setup-x64-unsigned"
     assert APP_VERSION not in text
 
 
@@ -151,8 +182,22 @@ def test_req_set_012_the_installer_says_it_is_unsigned_and_for_internal_use_only
     internal = ("INTERNAL TEST BUILD, NOT SIGNED", "must never go to a customer", "not a release")
     assert all(words in welcome for words in internal) and "never your workspace" in welcome
     assert "Windows SmartScreen and the User Account Control prompt name no publisher" in welcome
-    assert setup["AppVerName"] == "{#AppName} {#AppVersion} (internal, unsigned)"
-    assert setup["OutputBaseFilename"].endswith("-unsigned")
+    named = setup_names()
+    assert named["AppVerName"] == f"{APP_NAME} {{#AppVersion}} (internal, unsigned)"
+    assert named["OutputBaseFilename"].endswith("-unsigned")
+
+
+def test_req_set_023_a_pilot_signed_installer_says_so_and_drops_the_customer_sentence() -> None:
+    """Compiled with /DSigned /DSigner=<name> (build.yml, on main and tags once the certificate exists): named
+    and labelled a pilot build, never "unsigned"; the welcome names the certificate and keeps the workspace line."""
+    given = {"Signed": "", "Signer": "AOI PoC Inspector"}
+    welcome, named = messages(given)["WelcomeLabel2"], setup_names(given)
+    assert "Pilot build, signed with the AOI PoC Inspector pilot certificate." in welcome
+    assert "customer" not in welcome and "NOT SIGNED" not in welcome and "never your workspace" in welcome
+    assert named["AppVerName"] == f"{APP_NAME} {{#AppVersion}} (pilot, signed)"
+    assert named["OutputBaseFilename"] == "AOI-PoC-Inspector-{#AppVersion}-setup-x64-pilot-signed"
+    assert "unsigned" not in welcome + named["AppVerName"] + named["OutputBaseFilename"]
+    assert re.search(r"#ifdef Signed\n\s*#ifndef Signer\n\s*#error ", script())  # no signed build without its signer
 
 
 def workflow() -> dict[Any, Any]:
@@ -183,8 +228,9 @@ def test_req_set_012_ci_compiles_the_installer_with_the_app_s_version_at_a_pinne
     assert "$iscc).VersionInfo" not in inno
     compiled = by_id("installer")["run"]
     assert '$version = python -c "from aoi.config import APP_VERSION; print(APP_VERSION)"' in compiled
-    assert '& $env:ISCC "/DAppVersion=$version" installer\\aoi.iss' in compiled
-    assert '"dist\\installer\\AOI-PoC-Inspector-$version-setup-x64-unsigned.exe"' in compiled
+    assert '$iscc = @("/DAppVersion=$version")' in compiled and "& $env:ISCC @iscc installer\\aoi.iss" in compiled
+    assert '$iscc += "/DSigned", "/DSigner=$env:PILOT_SIGNER"; $kind = "pilot-signed"' in compiled
+    assert '"dist\\installer\\AOI-PoC-Inspector-$version-setup-x64-$kind.exe"' in compiled
     ids = [step.get("id") for step in steps()]
     assert ids.index("build") < ids.index("smoke") < ids.index("info") < ids.index("inno") < ids.index("installer")
     assert {"installer/aoi.iss", "tools/check_installer.py"} <= set(build[True]["pull_request"]["paths"])  # "on"

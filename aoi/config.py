@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import os
+import sys
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
@@ -20,6 +21,27 @@ APP_NAME = "AOI PoC Inspector"
 # Moves with every shipped change: CI fails a migration or a register status change since the last v* tag without it
 # (REQ-SET-023, tools/check_version_bump.py). A .devN version is the one between two tags.
 APP_VERSION = "0.4.0.dev0"
+
+
+def build_number(folder: Path | None = None) -> int | None:
+    """CI's run number of the Windows build this process runs from (REQ-SET-023): the BUILD file installer/aoi.spec
+    puts beside the app's own files; None from source or in a build made without one."""
+    if folder is None:
+        if not getattr(sys, "frozen", False):
+            return None
+        folder = Path(getattr(sys, "_MEIPASS", ""))
+    try:
+        return int((folder / "BUILD").read_text(encoding="ascii").strip())
+    except (OSError, ValueError):
+        return None
+
+
+def version_label(build: int | None) -> str:
+    """The version with the build number, as the log and the .exe's VERSIONINFO carry it: 0.4.0.dev0+build.57."""
+    return APP_VERSION if build is None else f"{APP_VERSION}+build.{build}"
+
+
+APP_LABEL = version_label(build_number())
 
 
 # Why settings.json is refused (AOI-SET-010, AOI-SET-008), as phrases shown translated (#198)

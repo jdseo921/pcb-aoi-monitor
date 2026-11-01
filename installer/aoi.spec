@@ -20,8 +20,8 @@ from pathlib import Path
 ROOT = Path(SPECPATH).parent
 sys.path.insert(0, str(ROOT))
 
-from aoi.config import APP_NAME, APP_VERSION
-from tools import sbom
+from aoi.config import APP_NAME, APP_VERSION, version_label
+from tools import sbom, version_info
 from tools import third_party_notices as tpn
 
 NAME = APP_NAME.replace(" ", "-")
@@ -39,6 +39,11 @@ if sys.platform == "win32":
     WINDOWS = os.environ["SystemRoot"]
     os.environ["PATH"] = os.pathsep.join([sys.base_prefix, os.path.join(WINDOWS, "System32"), WINDOWS])
 
+# CI's run number (build.yml, AOI_BUILD_NUMBER), in the .exe's VERSIONINFO and in a BUILD file the app reads for its
+# log's app_version (REQ-SET-023, aoi/config.py build_number()); a build made by hand has none.
+BUILD = int(os.environ["AOI_BUILD_NUMBER"]) if os.environ.get("AOI_BUILD_NUMBER") else None
+(Path(workpath) / "BUILD").write_text("" if BUILD is None else f"{BUILD}\n", encoding="ascii")
+
 DEMO = ROOT / "demo-bundle"  # the demo workspace Settings loads in one click (REQ-SET-007), built by its tool
 if not (DEMO / "bundle.json").is_file():
     raise SystemExit("No demo bundle: run python tools/make_demo_bundle.py first, then the build again.")
@@ -50,6 +55,7 @@ a = Analysis(
         (str(ROOT / "aoi" / "data" / "migrations" / "*.sql"), "aoi/data/migrations"),  # applied at start-up
         (str(SELFTEST / "*"), "selftest"),  # two synthetic boards and selftest.json, never a photograph
         (str(DEMO), "demo-bundle"),  # where aoi/core/demo.py bundle_dir() finds it in a build
+        (str(Path(workpath) / "BUILD"), "."),  # beside the app's own files, where build_number() reads it
     ],
     # Never used by the app. Tk has no window here. setuptools comes only through torch.utils.cpp_extension, which
     # builds C++ extensions, and would pull in build tools outside the shipped set. The QtNetwork module comes only
@@ -71,7 +77,8 @@ print(f"Bundled packages ({len(used)}): {', '.join(sorted(used))}")
 
 pyz = PYZ(a.pure)
 console = os.environ.get("AOI_BUILD_CONSOLE") == "1"  # only CI's rebuild after a failed start, to print the error
-exe = EXE(pyz, a.scripts, [], exclude_binaries=True, name=NAME, console=console, upx=False)
+version = version_info.resource(APP_NAME, version_label(BUILD), APP_VERSION, BUILD)  # REQ-SET-023
+exe = EXE(pyz, a.scripts, [], exclude_binaries=True, name=NAME, console=console, upx=False, version=version)
 coll = COLLECT(exe, a.binaries, a.datas, name=NAME, upx=False)
 
 notices = tpn.notices(used | {"pyinstaller"}, f"{APP_NAME} {APP_VERSION}")  # its bootloader is in every .exe

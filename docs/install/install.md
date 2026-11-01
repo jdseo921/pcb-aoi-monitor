@@ -5,6 +5,8 @@ customer, onto a customer's station or into a customer demo (Engineering standar
 "Demos"). A release is a signed installer built by CI from a tagged commit after two approvals, and it does not exist
 yet (REQ-SET-012 stays Partial; the certificate is plan item J6). Because the installer is unsigned, Windows
 SmartScreen warns about it and the User Account Control prompt names no publisher. See ADR 0007 for how it is built.
+Builds of main and of `v*` tags signed with the pilot certificate are named `…-pilot-signed` instead of `…-unsigned`
+and installed as [Trusting the pilot build](pilot-signing.md) says (REQ-SET-023).
 
 ## What you need
 

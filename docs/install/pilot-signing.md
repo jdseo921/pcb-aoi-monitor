@@ -7,15 +7,16 @@ authority (CA). Do this on the pilot stations only, and undo it when the pilot e
 ## What you receive
 
 - `pilot-ca.cer`: the pilot CA's public certificate (from the repository's `installer/` folder). It holds no key.
-- The installer, `AOI-PoC-Inspector-<version>-setup-x64-unsigned.exe` (the file name keeps "unsigned": it has no
-  public signature), and the build's `SHA256SUMS.txt`.
+- The installer, `AOI-PoC-Inspector-<version>-setup-x64-pilot-signed.exe` (signed with the pilot certificate only,
+  not a public one; its welcome page says "Pilot build, signed with the … pilot certificate"), and the build's
+  `SHA256SUMS.txt`. A file named `…-unsigned.exe` is an internal test build: it must not reach a station.
 
 ## 1. Check the installer is ours before trusting anything
 
 On any machine with the GitHub CLI:
 
 ```
-gh attestation verify AOI-PoC-Inspector-<version>-setup-x64-unsigned.exe -R jdseo921/pcb-aoi-monitor
+gh attestation verify AOI-PoC-Inspector-<version>-setup-x64-pilot-signed.exe -R jdseo921/pcb-aoi-monitor
 ```
 
 It must report a verified build of `jdseo921/pcb-aoi-monitor` from `.github/workflows/build.yml`. Without the CLI,
