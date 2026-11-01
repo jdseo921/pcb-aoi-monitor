@@ -17,7 +17,9 @@ from typing import Any
 from .errors import QT_TRANSLATE_NOOP, AoiError, system_detail, system_reason
 
 APP_NAME = "AOI PoC Inspector"
-APP_VERSION = "0.3.0"
+# Moves with every shipped change: CI fails a migration or a register status change since the last v* tag without it
+# (REQ-SET-023, tools/check_version_bump.py). A .devN version is the one between two tags.
+APP_VERSION = "0.4.0.dev0"
 
 
 # Why settings.json is refused (AOI-SET-010, AOI-SET-008), as phrases shown translated (#198)
