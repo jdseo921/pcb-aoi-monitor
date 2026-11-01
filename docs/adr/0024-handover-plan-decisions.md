@@ -7,7 +7,7 @@
   recommended default, treat the default as my provisional answer and mark it 'provisional' until I confirm."
 - Source: `docs/plans/2026-11-handover-plan.md` section 3 (D1 to D19). Where the production plan
   (`docs/plans/2026-11-production-plan.md` section 3) words D1, D3 or D7 differently, the handover plan's wording is
-  used and the difference is noted. D20 to D22 are new: MUST conflicts with the Engineering standard found by the
+  used and the difference is noted. D20 to D22 are new: MUST conflicts with the [Engineering standard](../standards/engineering.md) found by the
   diagnosis (`docs/reviews/2026-11-diagnosis.md`, section 1.8), which CLAUDE.md rule 2 says need Jay's explicit approval
   before any code relies on them. D23 settles the name G1.
 - Rows: priorities that wait on a decision carry it in brackets in `docs/requirements/stage1.md`, for example
@@ -17,7 +17,7 @@
 
 The production-readiness review of 2026-11-01 found a well-built Stage 1 tool that cannot yet run unattended in a
 factory. The handover plan turns that into gates G0 to G6 and nineteen decisions to take at G0. The decisions bind
-what is built, in what order, and what the company and the factory are told; the Charter ("Who decides") makes them
+what is built, in what order, and what the company and the factory are told; the [Charter](../standards/charter.md) ("Who decides") makes them
 the product owner's.
 
 ## Decisions
@@ -35,10 +35,10 @@ the product owner's.
 | D9 | How images reach the station | (a) A watched input folder fed by the factory's existing imaging station, with a file-naming contract (board ID, view, time). (b) Stage 2 cameras integrated by the company; (c) an operator loads folders by hand, which does not replace anyone. Default: (a) now, (b) as the company's Stage 2 project. **provisional** | REQ-INSP-020 | The naming contract itself is still to be agreed with the factory |
 | D10 | How results leave the station | A result file per board in an output folder (JSON and a one-line CSV: board ID, verdict, time, model version, recipe revision, defect list) within 1 s of the verdict, plus the end-of-shift CSV. PLC or light tower in Stage 3; MES in Stage 4. **provisional** | REQ-INSP-021, REQ-LOG-002 | |
 | D11 | Who looks at WARN, and what happens to NG | A review station with the Review function (Real defect, False call); NG boards go to the factory's rework flow with the overlay printed or shown. **provisional** | REQ-INSP-013, REQ-LOG-009 | |
-| D12 | Acceptance targets | Per defect type, as counts: missed-defect rate at most X % with an upper 95 % bound at most Y %, false-call rate at most Z %, on at least N locked boards; the factory names X, Y, Z and N. Without numbers signed at G0, G2 cannot be passed or failed. **provisional** | REQ-TST-008, REQ-INSP-014, REQ-TRN-019 | Claude recommends opening with the Customers & Launch proposal (no missed Critical defect, false calls 5 % or less, 1 s or less per image) |
+| D12 | Acceptance targets | Per defect type, as counts: missed-defect rate at most X % with an upper 95 % bound at most Y %, false-call rate at most Z %, on at least N locked boards; the factory names X, Y, Z and N. Without numbers signed at G0, G2 cannot be passed or failed. **provisional** | REQ-TST-008, REQ-INSP-014, REQ-TRN-019 | Claude recommends opening with the [Customers & Launch](../standards/customers-and-launch.md) proposal (no missed Critical defect, false calls 5 % or less, 1 s or less per image) |
 | D13 | Shadow period | Four weeks or 2,000 boards, whichever is later; exit when escapes are under the G0 target with its bound and false calls are under target after tuning. **provisional** | REQ-TST-009 | |
 | D14 | Sampled audit rate | One OK board in 50 to a person at G5, one in 200 at G6, adjusted by the drift monitor. **provisional** | REQ-TST-010, REQ-INSP-019 | |
-| D15 | What the company receives | Signed binaries, the release kit, documentation, training and a support contract; source in escrow. If source is handed over, production plan Stages 2 and 3 become gates for the handover. **provisional** | REQ-SET-027, REQ-SET-012 | Legal & Compliance: escrow SHOULD be offered |
+| D15 | What the company receives | Signed binaries, the release kit, documentation, training and a support contract; source in escrow. If source is handed over, production plan Stages 2 and 3 become gates for the handover. **provisional** | REQ-SET-027, REQ-SET-012 | [Legal & Compliance](../standards/legal-and-compliance.md): escrow SHOULD be offered |
 | D16 | Licence and term | REQ-SET-010 (offline licence key bound to the station) and REQ-SET-022 (EULA in the installer) before G3; perpetual per station plus maintenance, or subscription, per the Charter's open business decision. **provisional** | REQ-SET-010, REQ-SET-022 | The plan's G1 table builds both in G1 (train F); the rows are moved to G1 accordingly |
 | D17 | Who owns the trained AI model and the factory's images | Licensed to the factory for their own boards; images stay on their station; the Legal & Compliance clause; written into the G0 document. **provisional** | REQ-TRN-017 | Legal & Compliance proposes the same default |
 | D18 | Support model | The company is first line with the support bundle and the runbook; Jay is second line; response times named; what the company may change (thresholds, recipes, users) and may not (model files, migrations). **provisional** | REQ-LOG-007, REQ-SET-011, REQ-SET-024, REQ-SET-025, REQ-SET-026 | |

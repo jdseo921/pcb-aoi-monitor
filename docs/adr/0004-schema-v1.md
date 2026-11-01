@@ -4,7 +4,7 @@
 - Date: 2026-10-01
 - Decides: the product owner (Jay), until a tech lead joins
 - Related: #2, stages S09 to S11 of the Stage 1 plan; REQ-SET-016, REQ-SET-017, REQ-SET-001, REQ-INSP-008;
-  Engineering standard "Data and storage"; [ADR 0001](0001-build-on-v0.1.md) (v0.1 workspaces are not upgraded)
+  [Engineering standard](../standards/engineering.md) "Data and storage"; [ADR 0001](0001-build-on-v0.1.md) (v0.1 workspaces are not upgraded)
 
 ## Context
 

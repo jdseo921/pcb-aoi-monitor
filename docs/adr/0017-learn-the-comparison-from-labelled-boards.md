@@ -44,7 +44,7 @@ for this reason.
    a little unlike the ones counted is judged alike.
 4. **Counts, never a promise.** The sheet shows the chosen setting beside the recipe's own on the held-out boards:
    missed defects, false calls per 512 px square that holds no boxed defect, and OK boards called NG, each a count
-   over its 95 % upper bound (Customers & Launch, "Claims carry counts").
+   over its 95 % upper bound ([Customers & Launch](../standards/customers-and-launch.md), "Claims carry counts").
 5. **Nothing is stored by learning.** Use Learned Values fills the fields; Save Recipe stores them as a revision after
    its before → after list, with the counts offered as the reason, so the audit entry carries the evidence
    (REQ-RCP-004). A recipe decides verdicts, so an Engineer always sees and confirms the change.

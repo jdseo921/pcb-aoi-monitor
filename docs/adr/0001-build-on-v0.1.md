@@ -11,7 +11,7 @@
 v0.1 was delivered on 2026-10-01: 3,454 lines of Python, with 1,890 in the screens and 1,361 in the engine, data
 layer and hardware interfaces. It has all nine pages of [ARCHITECTURE.md](../ARCHITECTURE.md) §5, self-training
 from good boards, the Compare page, recipes, the AI Model Test and log export. Its modules follow the layers the
-Engineering standard asks for (screens, then `AppContext`, then the engine, then data and hardware), and the
+[Engineering standard](../standards/engineering.md) asks for (screens, then `AppContext`, then the engine, then data and hardware), and the
 engine and data layer import no Qt. The screens do not keep to those layers, though: pages run SQL, write through
 `ctx.db`, build their own `Inspector`, and inspect or import images on the UI thread (#11).
 
@@ -26,7 +26,7 @@ The GUI spec (§6) also allows .NET and C#, so a rewrite was a real option.
 
 Release 1.0 grows out of v0.1. We keep:
 
-- the stack: Python, PySide6, PyTorch and SQLite as the Charter decided, Python 3.11 as the Engineering standard
+- the stack: Python, PySide6, PyTorch and SQLite as the [Charter](../standards/charter.md) decided, Python 3.11 as the Engineering standard
   pins it, and OpenCV as v0.1 uses it;
 - the layers: screens, then `AppContext`, then the engine, then the data and hardware adapters;
 - the pages and navigation of ARCHITECTURE.md §5;

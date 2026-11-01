@@ -9,7 +9,7 @@
 
 The GUI spec (§8) gives Operators, Engineers and Admins different rights. In v0.1 anyone picks any user from a
 list, with no password, and only the screens hide pages. So an audit entry such as "Engineer Kim raised the
-threshold" proves nothing, and the Engineering standard requires the service layer to check the role on every
+threshold" proves nothing, and the [Engineering standard](../standards/engineering.md) requires the service layer to check the role on every
 write and local passwords to be hashed with Argon2 or bcrypt. Stage 4 adds sign-in through the customer's MES
 (GUI §5), and a station must keep working when the MES or network is down. Operators change often, may wear
 gloves, and must never be stopped from inspecting by a sign-in screen.

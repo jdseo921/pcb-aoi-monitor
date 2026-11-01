@@ -5,7 +5,7 @@
   accepts it.
 - Date: 2026-10-11
 - Decides: the product owner (Jay), until a tech lead joins
-- Related: REQ-INSP-017 (new, MUST G1), Engineering standard "On the line" (MUST), ADR 0013, migration 0024,
+- Related: REQ-INSP-017 (new, MUST G1), [Engineering standard](../standards/engineering.md) "On the line" (MUST), ADR 0013, migration 0024,
   AOI-INSP-016, AOI-INSP-017, setting `shift_check_hours`
 
 ## Context

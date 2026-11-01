@@ -75,7 +75,7 @@ AI model of the customer's own boards (F1, F2).
 
 - **A departure from two MUSTs, approved.** REQ-TRN-004 and REQ-TRN-016 now hold for Validated versions only. Jay
   approved it in the message quoted above, citing the brief and Jay's ADR "Stage 1 for one person" as the approval. The
-  register's rows say so; the Engineering standard's text about the checks needs the same exception, which this change
+  register's rows say so; the [Engineering standard](../standards/engineering.md)'s text about the checks needs the same exception, which this change
   does not edit.
 - **Verdicts change, approved.** A Trial AI model judges boards while no Validated one has gone live: the AI check
   adds NG and WARN calls to the Golden board comparison, and a first AI model's Golden board replaces the one set with

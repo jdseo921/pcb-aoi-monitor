@@ -4,8 +4,8 @@
 - Date: 2026-10-08
 - Decides: the product owner (Jay), until a tech lead joins
 - Related: REQ-SET-012 (its build part, and since S57 an internal installer; signing is still open); Engineering
-  standard "Build", "Signing", "Scans and SBOM" and "Release 1.0 polish"; Legal & Compliance "Open-source and
-  third-party licenses"; Customers & Launch "Demos"; [ADR 0003](0003-dependency-pinning.md); threat model, Spoofing
+  standard "Build", "Signing", "Scans and SBOM" and "Release 1.0 polish"; [Legal & Compliance](../standards/legal-and-compliance.md) "Open-source and
+  third-party licenses"; [Customers & Launch](../standards/customers-and-launch.md) "Demos"; [ADR 0003](0003-dependency-pinning.md); threat model, Spoofing
   row; plan items J6 (code-signing certificate) and J8 (license exceptions, two-person release approval)
 
 ## Context
@@ -23,7 +23,7 @@ notice shipped. The installer, the certificate (J6) and a second approver (J8) d
    (LGPL). The migrations go in as data. No UPX, which antivirus software often flags. setuptools, pkg_resources,
    distutils and tkinter stay out: only `torch.utils.cpp_extension`, which builds C++ extensions, imports setuptools.
    The QtNetwork module stays out too: only PySide6's own `__init__` imports it, and the app makes no network call
-   (Engineering standard, "Offline and least privilege"), so PyInstaller looks for no OpenSSL and none ships. The
+   ([Engineering standard](../standards/engineering.md), "Offline and least privilege"), so PyInstaller looks for no OpenSSL and none ships. The
    Universal C Runtime is left out, because Windows 10 and 11 include it and always use their own copy.
 2. **Pinned and hashed like everything else.** `requirements-build.txt` pins PyInstaller 6.22.3,
    pyinstaller-hooks-contrib 2026.8, and pefile and pywin32-ctypes with their Windows marker; `tools/make_lock.py`
@@ -109,7 +109,7 @@ bootloader go into any program without the GPL's terms reaching it, and the Lega
 PyInstaller); Qt stays as separate files a user can replace (decision 1); windowed with no console (item 3 checks
 it); Python 3.11 and PyTorch's CPU build (`build.yml`, `requirements-torch-cpu.lock`); third-party license texts
 (decision 4). **Not done: Noto Sans KR.** The app has no Korean UI yet (REQ-SET-006; when it ships is open in
-the Charter) and no font file is in the repository; bundling one adds a third-party file (OFL-1.1, which the Legal
+the [Charter](../standards/charter.md)) and no font file is in the repository; bundling one adds a third-party file (OFL-1.1, which the Legal
 standard allows), so it is left to Jay to say whether it ships now or with the Korean UI, with its OFL text in the
 notices.
 

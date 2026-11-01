@@ -5,7 +5,7 @@
   line that says so; later models install inactive as today". Jay's merge of this record accepts it.
 - Date: 2026-10-11
 - Decides: the product owner (Jay), until a tech lead joins
-- Related: REQ-TRN-010, REQ-TRN-012, REQ-TRN-011, ADR 0014 (shift check), Engineering standard "Go-live gate" and
+- Related: REQ-TRN-010, REQ-TRN-012, REQ-TRN-011, ADR 0014 (shift check), [Engineering standard](../standards/engineering.md) "Go-live gate" and
   "Change control", `AppContext.train`, `_first_live`, `inactive_model`, AOI-TRN-051 (new), `INACTIVE_AI_NOTE`
 
 ## Context

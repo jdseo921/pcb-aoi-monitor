@@ -6,15 +6,16 @@ would not survive that review is not done.
 
 ## Read first
 
-| Standard | Covers | Link |
+| Standard | Covers | Source |
 |---|---|---|
-| Charter | Review rules, the checklist for every change, who decides, open decisions, glossary | https://claude.ai/code/artifact/cdb76b42-fd68-42e9-8c59-25abdf86b114 |
-| Engineering | Architecture, screens, data, AI models, performance, security, testing, release, workflow | https://claude.ai/code/artifact/346f0966-33e4-4134-9fa6-c0ddad0758db |
-| Customers & Launch | Demos, validation and accuracy claims, launch, pricing, support, customer documents | https://claude.ai/code/artifact/af8143f9-f8c3-4f2f-bb40-9646d588c860 |
-| Legal & Compliance | Contracts, ownership, privacy, licenses, IP, regulations | https://claude.ai/code/artifact/e99c8a5f-ee90-4fdf-a308-745d4c4edd87 |
+| [Charter](docs/standards/charter.md) | Review rules, the checklist for every change, who decides, open decisions, glossary | https://claude.ai/code/artifact/cdb76b42-fd68-42e9-8c59-25abdf86b114 |
+| [Engineering](docs/standards/engineering.md) | Architecture, screens, data, AI models, performance, security, testing, release, workflow | https://claude.ai/code/artifact/346f0966-33e4-4134-9fa6-c0ddad0758db |
+| [Customers & Launch](docs/standards/customers-and-launch.md) | Demos, validation and accuracy claims, launch, pricing, support, customer documents | https://claude.ai/code/artifact/af8143f9-f8c3-4f2f-bb40-9646d588c860 |
+| [Legal & Compliance](docs/standards/legal-and-compliance.md) | Contracts, ownership, privacy, licenses, IP, regulations | https://claude.ai/code/artifact/e99c8a5f-ee90-4fdf-a308-745d4c4edd87 |
 
-If this file and a standard disagree, the standard wins. The technical reference for this build is
-`docs/ARCHITECTURE.md`.
+Read the copies in `docs/standards/`; the Source column is where Jay edits each one, re-exported into the repository
+in a pull request ([README](docs/standards/README.md)). If this file and a standard disagree, the standard wins. The
+technical reference for this build is `docs/ARCHITECTURE.md`.
 
 ## Rules for every change
 
@@ -74,7 +75,8 @@ State the result of each line in the change note; mark a line that does not appl
 - A change that alters a verdict on the synthetic regression set (`tests/regression/`) is re-baselined only
   with an entry in the first section of the release note and Jay's approval of the new `expected.json`.
 
-The full list of v0.1 gaps against these rules is in the Engineering standard, under "Known v0.1 gaps".
+The full list of v0.1 gaps against these rules is in the [Engineering standard](docs/standards/engineering.md), under
+"Known v0.1 gaps".
 
 ## Commands
 

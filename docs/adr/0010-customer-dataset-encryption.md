@@ -23,7 +23,7 @@ chooses". The rules that bind the method:
   are deleted from our machines within 30 days (proposed), and we confirm it in writing. What runs on their own
   stations stays theirs"; Privacy, "Data on a station belongs to the customer"; Licenses, MIT, BSD and Apache 2.0 are
   allowed ("Keep copyright notices and license texts, plus Apache NOTICE files"), and "CI builds the third-party list
-  from the SBOM and fails on a forbidden or unknown license". The Charter's checklist: "Every new dependency has an
+  from the SBOM and fails on a forbidden or unknown license". The [Charter](../standards/charter.md)'s checklist: "Every new dependency has an
   allowed license and a pinned version."
 
 Stations run Windows 11 IoT Enterprise LTSC 2024 or Windows 11 Pro 25H2, offline, with one workspace folder; people

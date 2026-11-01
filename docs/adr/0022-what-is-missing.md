@@ -10,7 +10,7 @@
 - Date: 2026-10-13
 - Decides: the product owner (Jay), until a tech lead joins
 - Related: REQ-TRN-021 (new), REQ-TRN-004, REQ-TRN-005, REQ-TRN-006, REQ-TRN-007, REQ-TRN-016, ADR 0018 (the first AI
-  model goes live), ADR 0020 (Trial versions, B1), Customers & Launch, "Validation"
+  model goes live), ADR 0020 (Trial versions, B1), [Customers & Launch](../standards/customers-and-launch.md), "Validation"
 
 **Numbering.** As for ADR 0020: Jay's decision record is not in the repository, and this record says how B3 is built.
 Where Jay's record decides otherwise, Jay's record wins and this one is changed to match.
