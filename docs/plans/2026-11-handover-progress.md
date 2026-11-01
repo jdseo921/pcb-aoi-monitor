@@ -26,8 +26,8 @@ progress** (branch named), **in review** (PR number), **merged** (date), **dropp
 | PR | Scope | Register | State |
 |---|---|---|---|
 | 0.1 + 0.3 | Plan of record committed, this file, the diagnosis, ADR 0024 (D1 to D19 provisional, D20 to D23 found by the diagnosis), the register rows and priority moves | REQ-SET-023 to -027, REQ-LOG-010, REQ-INSP-020, -021, REQ-TST-009, -010 added | in review (branch `docs/handover-pack`) |
-| 0.2 | The four Standards exported to `docs/standards/`, CLAUDE.md and citations re-pointed, a check that every cited Standard is in the repo | — (cite #5) | in review (branch `docs/standards-in-repo`, stacked on 0.1 + 0.3) |
-| 0.4 | Version discipline: `APP_VERSION` 0.4.0.dev0, CI fails a migration or status change without a bump, build number, VERSIONINFO, signed-build naming | REQ-SET-023 | planned |
+| 0.2 | The four Standards exported to `docs/standards/`, CLAUDE.md and citations re-pointed, a check that every cited Standard is in the repo | — (cite #5) | in review (#422, stacked on 0.1 + 0.3) |
+| 0.4 | Version discipline: `APP_VERSION` 0.4.0.dev0, CI fails a migration or status change without a bump, build number, VERSIONINFO, signed-build naming | REQ-SET-023 | in progress in two PRs under the 400-line rule: 0.4a, the version and its CI check (branch `feat/REQ-SET-023-version-discipline`, stacked on 0.2); 0.4b, the build number, VERSIONINFO and signed naming (branch `feat/REQ-SET-023-build-identity`, stacked on 0.4a) |
 | 0.5 | "Working rules until v0.5.0" in CLAUDE.md, the PR template with the change-note checklist | — (cite #5) | planned |
 | G0 doc | The scope document signed by Jay, the company and the factory (not software) | — | planned |
 
@@ -123,3 +123,7 @@ Production plan PRs 3.1 (cycle) and 3.9 (sign-in) moved into G1 as E.1 and D.1 t
 - 2026-11-01: #421 (dependency advisories, #420) opened against `main` to clear the Security scans job; 0.1 + 0.3 is
   rebased on it once it is green. PR 0.2 on `docs/standards-in-repo`: the four Standards exported (Charter revision 24,
   the others revision 11).
+- 2026-11-01: PR 0.2 opened as #422 after its review (8 findings, all fixed or answered in the PR). PR 0.4 on
+  `feat/REQ-SET-023-version-discipline` (0.4a): `APP_VERSION` 0.4.0.dev0 and `tools/check_version_bump.py` in CI; the
+  seven Settings screenshots, which show the version, re-approved; the regression set unchanged. 0.4 is two PRs, as it
+  came to about 550 changed lines in one.

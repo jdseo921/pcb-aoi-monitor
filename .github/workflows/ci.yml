@@ -58,6 +58,19 @@ jobs:
           pip-licenses --with-system --format=json > licenses.json
           python tools/check_licenses.py --packages requirements.lock requirements-torch-cpu.lock < licenses.json
 
+  version:
+    name: Version moves with what ships
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # the tags: a new migration or register status since the last v* tag needs a new APP_VERSION
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - run: python tools/check_version_bump.py # REQ-SET-023; standard library and git only
+
   test:
     name: Tests (${{ matrix.os }})
     strategy:
