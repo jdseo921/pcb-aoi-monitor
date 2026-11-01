@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+from .disk import SKIPPED_NOTE
 from .inspector import (
     AI_OFF_NOTE,
     NG,
@@ -114,6 +115,11 @@ NOTES = {
         "Explain",
         "The AI check did not run when the board was inspected, so it is not judged again here: inspect the board again"
         " with the AI model in use.",
+    ),
+    SKIPPED_NOTE: QT_TRANSLATE_NOOP(  # REQ-LOG-006: the verdict stands; only its pictures were not kept
+        "Explain",
+        "The drive was at least 95 % full when the board was saved, so its overlay and maps were not kept, only its"
+        " verdict and checks: an Admin frees space on the drive.",
     ),
 }
 INACTIVE_AI_NOTE = QT_TRANSLATE_NOOP(  # NO_AI_NOTE on a board just inspected while a version waits (ADR 0018)

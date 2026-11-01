@@ -296,6 +296,7 @@ UNCHECKED = {
     "guide_trained",  # the AI model the guide's Train would make active with no training, read (B5)
     "guide_starter",  # who a start signs in while the guide sets the station up, read (B5, Q75)
     "usb_drive",  # the USB drive plugged in last, where the guide's dialogs open, read (B5, Q68)
+    "check_disk",  # the drive's free space, measured; a system alarm at 80 % and 95 % (REQ-LOG-006)
 }  # fmt: skip
 CALLS = {**{name: call for name, (_, call) in WRITES.items()}, **CHECKED_READS}
 # The lowest role allowed each call, copied from the write table of docs/ARCHITECTURE.md §5 and REQ-CMP-005, never read

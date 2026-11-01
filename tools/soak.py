@@ -59,6 +59,7 @@ from PySide6.QtCore import QTimer  # noqa: E402
 from PySide6.QtWidgets import QApplication  # noqa: E402
 
 from aoi.config import Settings  # noqa: E402
+from aoi.core import disk  # noqa: E402
 from aoi.core.imaging import list_images, load_image  # noqa: E402
 from aoi.core.services import AppContext  # noqa: E402
 from aoi.data import credentials  # noqa: E402
@@ -262,7 +263,10 @@ def check(out: Path, workspace: Path) -> tuple[int, int, list[str]]:
                 problems.append(f"record {r['id']}: its checks or its result are missing")
             if r["defect_count"] != len(ctx.defects_for(r["id"])):
                 problems.append(f"record {r['id']}: {r['defect_count']} defect(s) counted, others stored")
+            stored = ctx.inspection_result(r["id"])
             for key in ("overlay_path", "diff_map_path", "ai_map_path"):
+                if r[key] is None and r["result"] == "OK" and stored and disk.SKIPPED_NOTE in stored.notes:
+                    continue  # saved on a drive 95 % full: no OK evidence, by design (REQ-LOG-006)
                 try:
                     load_image(r[key])
                 except Exception as e:  # missing, cut short or damaged: each is a loss

@@ -9,6 +9,7 @@ look like secrets are dropped.
 
 from __future__ import annotations
 
+import contextlib
 import json
 import logging
 import traceback
@@ -70,7 +71,8 @@ class JsonLinesHandler(logging.Handler):
 
     def close(self) -> None:
         if self._file is not None:
-            self._file.close()
+            with contextlib.suppress(OSError):  # lines a full drive refused are lost; the file closes (REQ-LOG-006)
+                self._file.close()
             self._file = None
         super().close()
 

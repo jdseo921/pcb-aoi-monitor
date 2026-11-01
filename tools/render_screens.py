@@ -266,7 +266,11 @@ def pinned_rendering(app: QApplication, font: str) -> Iterator[None]:
     if font:
         pinned.setFamily(font.strip('"'))  # text drawn on the image (QGraphics items) takes the application font
     app.setFont(pinned)
-    with mock.patch.object(theme, "FONT_FAMILY", font or theme.FONT_FAMILY):  # a theme switched on meanwhile keeps it
+    from aoi.core import disk
+
+    pinned_drive = disk.Usage(500 * 10**9, 300 * 10**9, 200 * 10**9)  # 60 %, as every test's (REQ-LOG-006)
+    drive = mock.patch.object(disk, "usage", lambda folder: pinned_drive)  # never this machine's
+    with mock.patch.object(theme, "FONT_FAMILY", font or theme.FONT_FAMILY), drive:  # a theme switched on keeps it
         app.setStyleSheet(theme.stylesheet())
         try:
             yield

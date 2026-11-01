@@ -423,8 +423,8 @@ CODES: dict[str, ErrorCode] = {
             QT_TRANSLATE_NOOP(
                 "Errors",
                 "Its stored verdict and decision table still stand. Inspect the board again on Inspection, then try the"
-                " thresholds on the new result. The maps of OK results are deleted {days} days after inspection; NG and"
-                " WARN maps are kept.",
+                " thresholds on the new result. The maps of OK results are deleted {days} days after inspection, and"
+                " not saved at all while the drive is 95 % full; NG and WARN maps are kept.",
             ),
         ),
         ErrorCode(
@@ -1316,6 +1316,34 @@ CODES: dict[str, ErrorCode] = {
                 "Errors",
                 "Close the image viewer or other app that has the file open, then delete the files the log names"
                 " (records.evidence_left) from the results folder.",
+            ),
+        ),
+        ErrorCode(
+            "AOI-LOG-005",
+            QT_TRANSLATE_NOOP("Errors", "Drive nearly full"),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "The drive that holds the workspace is {used} % full, with {free} GB free. Inspection goes on; at 95 %"
+                " the app stops keeping the overlay and maps of OK boards.",
+            ),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Ask an Admin to free space on the drive: move exports and old results to an archive drive, or move the"
+                " workspace to a larger drive (installation guide, Backup and restore).",
+            ),
+        ),
+        ErrorCode(
+            "AOI-LOG-006",
+            QT_TRANSLATE_NOOP("Errors", "Drive full: OK evidence not kept"),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "The drive that holds the workspace is {used} % full, with {free} GB free. OK boards are saved without"
+                " their overlay and maps, and their record says so; NG and WARN boards keep all their evidence.",
+            ),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Free space on the drive now, as an Admin: when it is full no result can be saved. Move exports and old"
+                " results to an archive drive, or move the workspace to a larger drive.",
             ),
         ),
         ErrorCode(
