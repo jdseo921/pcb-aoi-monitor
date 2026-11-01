@@ -7,6 +7,9 @@ is the one the tag carries. CI runs it on every pull request and push to main (.
     python tools/check_version_bump.py
 
 It needs the tags in the checkout (`fetch-depth: 0`). With no `v*` tag there is nothing to compare, and it passes.
+After a release candidate (`v0.4.0-rc.1` while `APP_VERSION` is still 0.4.0) it passes too: the fixes on the way to
+`v0.4.0` ship under that version, which the final tag must name. Only what ships is checked: a migration removed or
+edited, or a register row removed, is left to review.
 """
 
 from __future__ import annotations
@@ -20,6 +23,7 @@ ROOT = Path(__file__).resolve().parents[1]
 CONFIG = "aoi/config.py"
 MIGRATIONS = "aoi/data/migrations"
 REGISTERS = "docs/requirements"
+REQ_ID = re.compile(r"REQ-[A-Z0-9]+-\d{3}")  # as tools/trace_matrix.py reads them
 VERSION = re.compile(r'^APP_VERSION = "([^"]+)"$', re.MULTILINE)
 
 
@@ -49,15 +53,18 @@ def statuses(register: str) -> dict[str, str]:
         cells = [cell.strip() for cell in re.split(r"(?<!\\)\|", line.strip())[1:-1]]
         if cells[:1] == ["ID"]:
             column = cells.index("v0.1") if "v0.1" in cells else None
-        elif column is not None and cells and re.fullmatch(r"REQ-[A-Z]+-\d+", cells[0]) and len(cells) > column:
+        elif column is not None and cells and re.fullmatch(REQ_ID, cells[0]) and len(cells) > column:
             found[cells[0]] = re.split(r"[\s:]", cells[column], maxsplit=1)[0]
     return found
 
 
 def at_tag(repo: Path, tag: str) -> tuple[str, set[str], dict[str, str]]:
     """The version, the migration files and the register statuses at the tag."""
-    files = set(git(repo, "ls-tree", "--name-only", f"{tag}:{MIGRATIONS}").split())
-    registers = [p for p in git(repo, "ls-tree", "--name-only", f"{tag}:{REGISTERS}").split() if p != "README.md"]
+    where = ["git", "ls-tree", "--name-only", f"{tag}:{MIGRATIONS}"]
+    listed = subprocess.run(where, cwd=repo, capture_output=True, text=True)
+    files = set(listed.stdout.split())  # none when the tag has no migrations folder
+    names = git(repo, "ls-tree", "--name-only", f"{tag}:{REGISTERS}").split()
+    registers = [p for p in names if p.endswith(".md") and p != "README.md"]
     found: dict[str, str] = {}
     for name in registers:
         found |= statuses(git(repo, "show", f"{tag}:{REGISTERS}/{name}"))
@@ -93,6 +100,9 @@ def main(repo: Path = ROOT) -> int:
     tag, tagged, version, moved = changes(repo)
     if tag is None:
         print("No v* tag yet: nothing to compare.")
+        return 0
+    if tag.startswith(f"v{version}-"):
+        print(f"{tag} is a pre-release of {version}: fixes on the way to v{version} keep that version.")
         return 0
     if moved and version == tagged:
         print(f"APP_VERSION is {version}, as at {tag}, but since {tag}:", file=sys.stderr)

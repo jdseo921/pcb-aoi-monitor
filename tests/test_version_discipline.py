@@ -65,8 +65,16 @@ def test_req_set_023_ci_fails_a_migration_or_status_change_without_a_new_version
     assert "aoi/data/migrations/0002_b.sql is new" in said and "REQ-SET-001 went from Partial to Done" in said
     write(tmp_path, "0.3.0", ["0001_a.sql"], {"REQ-SET-001": "Partial", "REQ-SET-002": "No", "REQ-SET-004": "Done"})
     assert check_version_bump.main(tmp_path) == 1 and "REQ-SET-004 went from No to Done" in capsys.readouterr().err
-    write(tmp_path, "0.4.0.dev0", ["0001_a.sql", "0002_b.sql"], {"REQ-SET-001": "Done", "REQ-SET-002": "No"})
+    write(tmp_path, "0.3.0", ["0001_a.sql"], {"REQ-SET-001": "Partial", "REQ-SET-002": "No", "REQ-P3D-001": "Done"})
+    assert check_version_bump.main(tmp_path) == 1 and "REQ-P3D-001 went from No to Done" in capsys.readouterr().err
+    write(tmp_path, "0.4.0", ["0001_a.sql", "0002_b.sql"], {"REQ-SET-001": "Done", "REQ-SET-002": "No"})
     assert check_version_bump.main(tmp_path) == 0  # the version moved
+    git(tmp_path, "add", "-A")
+    git(tmp_path, "commit", "-qm", "0.4.0")
+    git(tmp_path, "tag", "v0.4.0-rc.1")
+    write(tmp_path, "0.4.0", ["0001_a.sql", "0002_b.sql", "0003_c.sql"], {"REQ-SET-001": "Done", "REQ-SET-002": "Done"})
+    assert check_version_bump.main(tmp_path) == 0  # a fix after a release candidate ships as the version it names
+    assert "v0.4.0-rc.1 is a pre-release of 0.4.0" in capsys.readouterr().out
 
 
 def test_req_set_023_the_check_runs_in_ci_with_the_tags_and_passes_here() -> None:
