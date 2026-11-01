@@ -4179,7 +4179,7 @@ class AppContext:
             root, found["missing_files"] = str(self.settings.root), 0
             for n, name in enumerate(self.db.evidence_stored()):  # 100,000 records: seconds, so the UI gets turns
                 found["missing_files"] += not os.path.isfile(os.path.join(root, name))
-                if n % 500 == 499:
+                if n % 100 == 99:
                     time.sleep(0.002)
             if found["missing_files"]:
                 self._check_alarm("WARN", "AOI-SET-022", count=found["missing_files"])
