@@ -81,6 +81,10 @@ class SettingsPage(Page):
         self.map_ret = QSpinBox()  # the map retention and the two image limits, kept in Settings.check's bounds (Q56)
         self.map_ret.setRange(0, 3650)
         self.map_ret.setValue(s.map_retention_days_ok)
+        self.ok_evidence = QComboBox()  # the evidence policy for OK boards (D1, REQ-INSP-012)
+        self.ok_evidence.addItem(self.tr("JPEG and preview"), "jpeg")
+        self.ok_evidence.addItem(self.tr("Full PNG, as NG"), "full")
+        self.ok_evidence.setCurrentIndex(max(0, self.ok_evidence.findData(s.ok_evidence)))
         self.max_mp = QSpinBox()
         self.max_mp.setRange(1, 1000)
         self.max_mp.setValue(s.max_image_megapixels)
@@ -100,6 +104,7 @@ class SettingsPage(Page):
         f.addRow(self.tr("Default epochs"), self.epochs)
         f.addRow(self.tr("Log retention (days)"), self.ret)
         f.addRow(self.tr("Keep OK results' maps (days)"), self.map_ret)
+        f.addRow(self.tr("OK boards keep"), self.ok_evidence)
         f.addRow(self.tr("Largest image (megapixels)"), self.max_mp)
         f.addRow(self.tr("Largest image file (MB)"), self.max_mb)
         f.addRow(self.tr("Shift check counts for (hours, 0 off)"), self.shift_hours)
@@ -174,6 +179,7 @@ class SettingsPage(Page):
             "default_epochs": self.epochs.value(),
             "log_retention_days": self.ret.value(),
             "language": self.lang.currentData(),
+            "ok_evidence": self.ok_evidence.currentData(),
         }
         s = self.ctx.settings
         limits = {"map_retention_days_ok": self.map_ret, "max_image_megapixels": self.max_mp}

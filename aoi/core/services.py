@@ -70,6 +70,7 @@ from .imaging import (
     list_images,
     load_image,
     load_image_sha256,
+    preview_path,
     preview_size,
     registration,
     save_image,
@@ -78,7 +79,7 @@ from .imaging import (
 from .inspector import NG, OK, WARN, AiEvidence, InspectionResult, Inspector, JudgedBy, ai_check, draw_overlay, re_grade
 from .jobs import Job, JobCancelled, Jobs
 from .labels import DefectBox
-from .maps import load_maps, map_paths, picture_shape, save_maps
+from .maps import JPEG_SETTINGS, load_maps, map_paths, picture_shape, save_maps
 from .recipe import Recipe, changes
 from .sample_import import LABELS, REFUSED, ImportFile, ImportReport
 
@@ -1725,16 +1726,19 @@ class AppContext:
         one transaction with the row, the whole result as JSON, its checks, its defects and an NG board's alarm
         (REQ-INSP-006), naming the AI model version active when the board was judged and the recipe revision that judged
         it, which says whether the AI check ran, as the result's notes do (REQ-INSP-012, #246), and the golden board it
-        was judged against (REQ-CMP-003). The overlay is `<stem>_<record UUID>_<verdict>.png`, the stem cut by
+        was judged against (REQ-CMP-003). The overlay is `<stem>_<record UUID>_<verdict>.png`, or `.jpg` with its
+        `_prev.jpg` for an OK board under the evidence policy (D1, `Settings.ok_evidence`), the stem cut by
         `_stem`, and never replaces a file: a name already taken refuses the save with FileExistsError, and a path the
         system refuses as too long with AOI-INSP-014 (#245). A save that fails before its row commits removes the files
         it wrote, so none is left that no record names (#246). Called on the pool thread by the Inspection page."""
         day = local_date()  # the folder is named for the operator's shift date; the stored time is UTC
         uid = new_uuid()  # the record's, as the uuid column and the CSV export give it
-        overlay = self.settings.results_dir / day / f"{_stem(path)}_{uid}_{res.verdict}.png"
+        light = res.verdict == OK and self.settings.ok_evidence == "jpeg"  # D1: a JPEG overlay and its preview
+        overlay = self.settings.results_dir / day / f"{_stem(path)}_{uid}_{res.verdict}.{'jpg' if light else 'png'}"
         space = self.check_disk()  # at 95 % an OK board keeps its record but not its overlay and maps (REQ-LOG-006)
         skip = res.verdict == OK and space is not None and space.level == disk.FULL_LEVEL
-        files = [] if skip else [overlay, *map_paths(overlay.with_suffix(""))]  # every file this save may write
+        files = [overlay, *([preview_path(overlay)] if light else []), *map_paths(overlay.with_suffix(""))]
+        files = [] if skip else files  # every file this save may write
         taken = [f for f in files if os.path.lexists(f)]
         if taken:  # only a defect gets here; the workspace lock keeps out a second copy of the app (#204)
             raise FileExistsError(errno.EEXIST, os.strerror(errno.EEXIST), str(taken[0]))
@@ -1743,7 +1747,10 @@ class AppContext:
             diff_map_path = ai_map_path = None
             try:
                 if not skip:
-                    save_image(overlay, draw_overlay(res))
+                    picture = draw_overlay(res)
+                    save_image(overlay, picture, JPEG_SETTINGS if light else ())
+                    if light:
+                        save_image(preview_path(overlay), preview_size(picture), JPEG_SETTINGS)
                     stem = overlay.with_suffix("")
                     diff_map_path, ai_map_path = save_maps(res, stem, pixel_threshold=pixel_threshold)
             except OSError as e:
@@ -4054,6 +4061,7 @@ class AppContext:
         rows = self.db.inspection_files(inspection_ids)
         results, root = self.settings.results_dir.resolve(), self.settings.root
         paths = [Path(r[k]).resolve() for r in rows for k in ("overlay_path", "diff_map_path", "ai_map_path") if r[k]]
+        paths += [preview_path(p) for p in paths if p.suffix == ".jpg"]  # an OK board's preview beside its JPEG (D1)
         files = [p for p in paths if p.is_relative_to(results) and p.is_file()]  # a swept OK map is gone already
         with self.db.transaction():
             self.db.delete_inspections([r["id"] for r in rows])

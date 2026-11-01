@@ -36,8 +36,8 @@ progress** (branch named), **in review** (PR number), **merged** (date), **dropp
 
 | PR | Scope | Register | State |
 |---|---|---|---|
-| 1.1 | Disk guard: alarm at 80 %, NG-only evidence at 95 %, start-up no longer refuses the workspace on a full disk | REQ-LOG-006 | in review: 1.1a #426 (engine, stacked on 0.5), 1.1b (status bar and CSV, stacked on 1.1a) |
-| 1.2 | Evidence policy (D1) | REQ-INSP-012 | planned |
+| 1.1 | Disk guard: alarm at 80 %, NG-only evidence at 95 %, start-up no longer refuses the workspace on a full disk | REQ-LOG-006 | merged 2026-11-01: 1.1a #426 (engine), 1.1b #427 (status bar and CSV) |
+| 1.2 | Evidence policy (D1) | REQ-INSP-012 | in review: `feat/REQ-INSP-012-evidence-policy` |
 | 1.3 | Retention on a timer | REQ-LOG-010 | planned |
 | 1.4 | Heartbeat, `alerts.jsonl`, start-up self-check, clean-exit marker | REQ-SET-024 | planned |
 | 1.5 | Crash record (`faulthandler`, WER LocalDumps documented) | REQ-SET-026 | planned |
@@ -141,3 +141,7 @@ Production plan PRs 3.1 (cycle) and 3.9 (sign-in) moved into G1 as E.1 and D.1 t
   PR 1.1 came to about 510 lines, so it is two: 1.1a the engine (`feat/REQ-LOG-006-disk-guard`), 1.1b the status
   bar's free space and the CSV's `evidence` column (`feat/REQ-LOG-006-disk-status`). Tests fill a 128 MB tmpfs where
   they may mount one (root on Linux), else a folder counted against 128 MB, as on CI; all others pin it at 60 %.
+- 2026-11-01: Jay confirmed D1 as written. PR 1.2 on `feat/REQ-INSP-012-evidence-policy`: an OK board's overlay as
+  JPEG (quality 90) with a `_prev.jpg` preview, `ok_evidence` on Settings (`full` for full resolution on every board).
+  Measured on 8 synthetic boards at 5 MP: 7.32 MB written per board before; after, 3.82 MB per OK board at save and
+  0.68 MB kept once its maps go, NG unchanged at 7.32 MB.

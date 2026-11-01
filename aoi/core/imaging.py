@@ -579,6 +579,12 @@ def save_image(path: str | Path, img: np.ndarray, params: Sequence[int] = ()) ->
 PREVIEW_PX = 1600  # the longest side of an overlay kept for a preview: sharp on a 1080 p pane, quick to load
 
 
+def preview_path(overlay: Path) -> Path:
+    """The preview beside an OK board's JPEG overlay (D1), at most PREVIEW_PX a side: its name with `_prev.jpg`, as long
+    as `_diff.png`, so no name grows past the 225 bytes `_stem` keeps to (#245)."""
+    return overlay.with_name(overlay.stem + "_prev.jpg")
+
+
 def preview_size(img: np.ndarray, longest: int = PREVIEW_PX) -> np.ndarray:
     """`img` scaled down so its longest side is at most `longest` pixels; a smaller image as it is."""
     h, w = img.shape[:2]

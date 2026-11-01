@@ -58,6 +58,8 @@ EXPECTED = {  # what a setting must be, by its type and _LEAST
 }
 RANGE = QT_TRANSLATE_NOOP("Errors", "a whole number from {least} to {most}")
 SAME_KIND = QT_TRANSLATE_NOOP("Errors", "a value of the kind its default has")  # a setting of a kind not listed above
+ONE_OF = QT_TRANSLATE_NOOP("Errors", "one of {values}")
+OK_EVIDENCE = ("jpeg", "full")  # D1 (ADR 0024): what an OK board keeps; NG and WARN always keep full resolution
 _LEAST = {  # the smallest whole number a count setting takes; a map retention of 0 deletes OK maps at the next start
     "max_image_megapixels": 1,
     "max_image_megabytes": 1,
@@ -102,6 +104,7 @@ class Settings:
     default_epochs: int = 60
     log_retention_days: int = 30  # spec 4.4: inspection records older than this are archived at start-up (REQ-LOG-003)
     map_retention_days_ok: int = 7  # REQ-INSP-012: the map files of OK results older than this go at start-up (0: next)
+    ok_evidence: str = "jpeg"  # D1: an OK board's overlay as JPEG (quality 90) with a preview; "full": PNG, as NG
     max_image_megapixels: int = 50  # REQ-INSP-001: an image over either limit is refused before it is decoded
     max_image_megabytes: int = 200  # (the register's proposed values; an Admin sets them on Settings, Q56)
     language: str = "en"  # en | ko (localization planned for 2H 2027)
@@ -185,8 +188,9 @@ class Settings:
     @classmethod
     def check(cls, name: str, value: object) -> None:
         """Refuse a value of the wrong JSON type for a known setting, an image limit, a log retention, an image size or
-        an epoch count below 1, a map retention below 0, a demo pace outside 1 to 10 s, and a workspace that is not an
-        absolute path (empty, spaces only or relative: Path("") is the folder the app was started in), with
+        an epoch count below 1, a map retention below 0, a demo pace outside 1 to 10 s, an `ok_evidence` other than jpeg
+        or full (D1), and a workspace that is not an absolute path (empty, spaces only or relative: Path("") is the
+        folder the app was started in), with
         AOI-SET-008: at start-up, and on the Settings page before it saves (REQ-INSP-001, S23c: a typo there used to
         fail every image load with AOI-SET-007; #170: a log retention of 0 or below archived every record at start-up).
         An unknown key is still ignored, so an old or a newer settings.json loads."""
@@ -195,6 +199,9 @@ class Settings:
         typed = isinstance(value, want) and not (want is int and isinstance(value, bool))
         if name == "workspace" and typed and not Path(str(value)).is_absolute():
             raise AoiError("AOI-SET-008", name=name, value=json.dumps(value), expected=FULL_PATH)
+        if name == "ok_evidence" and value not in OK_EVIDENCE:
+            expected = ONE_OF.fill(values=", ".join(OK_EVIDENCE))
+            raise AoiError("AOI-SET-008", name=name, value=json.dumps(value), expected=expected)
         most = _MOST.get(name)
         if most is not None and least is not None and not (typed and isinstance(value, int) and least <= value <= most):
             raise AoiError(

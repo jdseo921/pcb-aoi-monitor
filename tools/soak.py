@@ -60,7 +60,7 @@ from PySide6.QtWidgets import QApplication  # noqa: E402
 
 from aoi.config import Settings  # noqa: E402
 from aoi.core import disk  # noqa: E402
-from aoi.core.imaging import list_images, load_image  # noqa: E402
+from aoi.core.imaging import list_images, load_image, preview_path  # noqa: E402
 from aoi.core.services import AppContext  # noqa: E402
 from aoi.data import credentials  # noqa: E402
 from aoi.ui.main_window import build_window  # noqa: E402
@@ -264,11 +264,14 @@ def check(out: Path, workspace: Path) -> tuple[int, int, list[str]]:
             if r["defect_count"] != len(ctx.defects_for(r["id"])):
                 problems.append(f"record {r['id']}: {r['defect_count']} defect(s) counted, others stored")
             stored = ctx.inspection_result(r["id"])
-            for key in ("overlay_path", "diff_map_path", "ai_map_path"):
-                if r[key] is None and r["result"] == "OK" and stored and disk.SKIPPED_NOTE in stored.notes:
+            files = {key: r[key] for key in ("overlay_path", "diff_map_path", "ai_map_path")}
+            if (r["overlay_path"] or "").endswith(".jpg"):  # an OK board's JPEG has its preview beside it (D1)
+                files["preview"] = str(preview_path(Path(r["overlay_path"])))
+            for key, path in files.items():
+                if path is None and r["result"] == "OK" and stored and disk.SKIPPED_NOTE in stored.notes:
                     continue  # saved on a drive 95 % full: no OK evidence, by design (REQ-LOG-006)
                 try:
-                    load_image(r[key])
+                    load_image(path)
                 except Exception as e:  # missing, cut short or damaged: each is a loss
                     problems.append(f"record {r['id']}, {key}: {e}")  # the error names the file
     finally:
