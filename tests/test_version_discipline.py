@@ -11,6 +11,7 @@ from __future__ import annotations
 import re
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -89,8 +90,17 @@ def test_req_set_023_the_check_runs_in_ci_with_the_tags_and_passes_here() -> Non
     assert check_version_bump.main() == 0
 
 
-def test_req_set_023_the_log_carries_the_build_number_of_a_ci_build(tmp_path: Path) -> None:
+def test_req_set_023_the_log_carries_the_build_number_of_a_ci_build(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     assert build_number() is None and config.APP_LABEL == config.APP_VERSION  # from source
+    (tmp_path / "_internal").mkdir()  # a one-folder build: the app's files in _internal beside the .exe, _MEIPASS
+    (tmp_path / "_internal" / "BUILD").write_text("57\n", encoding="ascii")
+    monkeypatch.setattr(sys, "frozen", True, raising=False)
+    monkeypatch.setattr(sys, "_MEIPASS", str(tmp_path / "_internal"), raising=False)
+    monkeypatch.setattr(sys, "executable", str(tmp_path / "AOI-PoC-Inspector.exe"))
+    assert build_number() == 57
+    monkeypatch.undo()
     (tmp_path / "BUILD").write_text("57\n", encoding="ascii")
     assert build_number(tmp_path) == 57 and version_label(57) == f"{config.APP_VERSION}+build.57"
     (tmp_path / "BUILD").write_text("", encoding="ascii")  # a build made by hand
@@ -99,6 +109,8 @@ def test_req_set_023_the_log_carries_the_build_number_of_a_ci_build(tmp_path: Pa
     assert logging_setup.APP_LABEL is config.APP_LABEL
     spec = (ROOT / "installer" / "aoi.spec").read_text(encoding="utf-8")
     assert '(str(Path(workpath) / "BUILD"), "."),' in spec and 'os.environ["AOI_BUILD_NUMBER"]' in spec
+    smoke = (ROOT / "tools" / "smoke_test_build.py").read_text(encoding="utf-8")  # the built app's log, on Windows CI
+    assert 'endswith(f"+build.{build}")' in smoke
     assert workflow("build.yml")["jobs"]["windows"]["env"]["AOI_BUILD_NUMBER"] == "${{ github.run_number }}"
 
 
@@ -127,8 +139,9 @@ def test_req_set_023_the_exe_carries_a_versioninfo_resource() -> None:
 
 def test_req_set_023_one_value_says_whether_a_build_is_signed_and_by_whose_certificate() -> None:
     job = workflow("build.yml")["jobs"]["windows"]
-    signed = "${{ github.event_name != 'pull_request' && secrets.PILOT_SIGNING_PFX != '' && 'true' || 'false' }}"
-    assert job["env"]["SIGNED"] == signed
+    signed = " ".join(job["env"]["SIGNED"].split())
+    assert signed.startswith("${{ github.event_name != 'pull_request' && secrets.PILOT_SIGNING_PFX != ''")
+    assert "(github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))" in signed  # not any branch
     signing = [step for step in job["steps"] if "pilot_sign.ps1" in str(step.get("run"))]
     assert len(signing) == 2 and all(step["if"] == "env.SIGNED == 'true'" for step in signing)
     # The name the installer and BUILD-INFO.txt give is the one in the committed pilot CA: "CN=<name> pilot root CA"

@@ -6,8 +6,8 @@
 ; CI compiles it with Inno Setup at the version build.yml pins, passing the version in aoi/config.py, then installs,
 ; self-tests and uninstalls it (tools/check_installer.py). Unsigned, it is internal: it must never go to a customer or
 ; into a demo, since a release is a signed installer built from a tagged commit after two approvals (Engineering
-; standard, "Signing"). CI's builds of main and tags, which it signs with the pilot certificate, pass /DSigned and
-; /DSigner=<whose certificate>: the installer is then named and labelled a pilot build (REQ-SET-023). The uninstaller removes the program files and shortcuts only: the workspace (AOI_Workspace in
+; standard, "Signing"). CI's builds of main and tags, which it signs with the pilot certificate, pass /DSigned
+; and /DSigner=<whose certificate>: the installer is then named and labelled a pilot build (REQ-SET-023). The uninstaller removes the program files and shortcuts only: the workspace (AOI_Workspace in
 ; the user's folder, with settings.json), the demo workspace beside it and the keys in Credential Manager stay.
 
 #ifndef AppVersion
