@@ -30,7 +30,10 @@ wins. The technical reference for this build is `docs/ARCHITECTURE.md`.
 
 ## Checklist for every change
 
-State the result of each line in the change note; mark a line that does not apply n/a, with a reason.
+State the result of each line in the change note; mark a line that does not apply n/a, with a reason. The change
+note is the pull request's description, which Claude writes from `.github/pull_request_template.md` (it starts with
+this list); a commit message needs no checklist, but its subject still cites the requirement or issue (`[REQ-…]` or
+`[#n]`), which the trace gate reads until PR 2.5 (ADR 0024, D6).
 
 - [ ] The requirement or bug ID is in the title, and the change traces to a passing test
 - [ ] The engine still imports no Qt, and any service API change is typed and documented
@@ -44,6 +47,28 @@ State the result of each line in the change note; mark a line that does not appl
 - [ ] Every new dependency has an allowed license and a pinned version
 - [ ] Docs, the release note and the demo script are updated wherever the change shows
 - [ ] A customer notice is drafted if the change can alter a verdict
+
+## Working rules until v0.5.0
+
+These hold until `v0.5.0` is tagged; the full text and the reasons are in
+`docs/plans/2026-11-handover-progress.md` ("Working rules") and `docs/plans/2026-11-production-plan.md` (section 1).
+
+- **One pull-request train per working day, at most**, each PR at most 400 changed lines (generated files not
+  counted: `aoi/i18n/aoi_ko.ts`, `docs/error-codes.md`, screenshots, and the exported text of `docs/standards/`,
+  whose hand-made lines count) and one concern.
+- **Feature freeze** until Stage 3 is tagged: no new register row of kind "feature", only the rows the handover and
+  production plans name (ADR 0024, D2, provisional until Jay confirms it).
+- **Every stage ends on a tag** (`v0.4.0`, `v0.4.1`, `v0.5.0`, …) with CI green, the register's status column updated,
+  the release note cut and the release-gate record written honestly.
+- **Fresh-eyes review is a subagent** that has not seen the diff, against the checklist above, for every PR; every
+  finding is fixed or answered in the PR. Jay reads the diff and the review, and merges.
+- **The regression set stays byte-identical** through Stages 0 to 3: `tests/regression/expected.json` unchanged since
+  `b5bf413`; a PR that would change it stops and asks.
+- **The plan of record lives in the repository**: the handover plan, the production plan, the progress file, ADR
+  0024 and `docs/standards/`. Chat is for instructions, not for the record. (The progress file's header adds: a PR
+  that changes the state of a planned PR updates its line there.)
+- **Decisions are written before code**: a new MUST conflict becomes a numbered decision in ADR 0024 before the PR
+  that needs it.
 
 ## Rules that are easy to break in this code
 

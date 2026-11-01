@@ -7,7 +7,8 @@ progress** (branch named), **in review** (PR number), **merged** (date), **dropp
 ## Working rules (production plan, section 1; they hold until `v0.5.0` is tagged)
 
 1. **One pull-request train per working day, at most.** Each PR is at most **400 changed lines**, not counting
-   generated files (`aoi/i18n/aoi_ko.ts`, `docs/error-codes.md`, screenshots), and carries one concern.
+   generated files (`aoi/i18n/aoi_ko.ts`, `docs/error-codes.md`, screenshots, and the exported text of
+   `docs/standards/`, Jay's decision of 2026-11-01; the lines changed by hand in a copy count), and carries one concern.
 2. **Feature freeze until Stage 3 is tagged.** No new register row of kind "feature"; only the rows the handover
    plan (section 5) and the production plan (section 4) name. Decision D2 in ADR 0024 (provisional).
 3. **Every stage ends on a tag** (`v0.4.0`, `v0.4.1`, `v0.5.0`, …) with all CI green, the register's status column
@@ -27,8 +28,8 @@ progress** (branch named), **in review** (PR number), **merged** (date), **dropp
 |---|---|---|---|
 | 0.1 + 0.3 | Plan of record committed, this file, the diagnosis, ADR 0024 (D1 to D19 provisional, D20 to D23 found by the diagnosis), the register rows and priority moves | REQ-SET-023 to -027, REQ-LOG-010, REQ-INSP-020, -021, REQ-TST-009, -010 added | in review (branch `docs/handover-pack`) |
 | 0.2 | The four Standards exported to `docs/standards/`, CLAUDE.md and citations re-pointed, a check that every cited Standard is in the repo | — (cite #5) | in review (#422, stacked on 0.1 + 0.3) |
-| 0.4 | Version discipline: `APP_VERSION` 0.4.0.dev0, CI fails a migration or status change without a bump, build number, VERSIONINFO, signed-build naming | REQ-SET-023 | in progress in two PRs under the 400-line rule: 0.4a, the version and its CI check (branch `feat/REQ-SET-023-version-discipline`, stacked on 0.2); 0.4b, the build number, VERSIONINFO and signed naming (branch `feat/REQ-SET-023-build-identity`, stacked on 0.4a) |
-| 0.5 | "Working rules until v0.5.0" in CLAUDE.md, the PR template with the change-note checklist | — (cite #5) | planned |
+| 0.4 | Version discipline: `APP_VERSION` 0.4.0.dev0, CI fails a migration or status change without a bump, build number, VERSIONINFO, signed-build naming | REQ-SET-023 | in review: 0.4a #423 (the version and its CI check), 0.4b #424 (build number, VERSIONINFO, signed naming) |
+| 0.5 | "Working rules until v0.5.0" in CLAUDE.md, the PR template with the change-note checklist | — (cite #5) | in review (#425, stacked on 0.4b) |
 | G0 doc | The scope document signed by Jay, the company and the factory (not software) | — | planned |
 
 ## G1: Safe to run (tag `v0.4.0`)
@@ -130,3 +131,9 @@ Production plan PRs 3.1 (cycle) and 3.9 (sign-in) moved into G1 as E.1 and D.1 t
 - 2026-11-01: PR 0.4b on `feat/REQ-SET-023-build-identity`: CI's run number in BUILD-INFO.txt, the log's app_version and
   the .exe's VERSIONINFO; one `SIGNED` value for signing and naming. The pilot certificate's owner in the signed
   installer's text is taken from `installer/pilot-ca.cer` ("AOI PoC Inspector"); Jay kept that name on 2026-11-01.
+- 2026-11-01: PR 0.5 on `docs/working-rules-and-pr-template`: CLAUDE.md "Working rules until v0.5.0" and
+  `.github/pull_request_template.md`, whose checklist a test keeps equal to CLAUDE.md's and the Charter's. On
+  2026-11-01 Jay decided the exported Standards' text counts as generated (rule 1), so #422 is about 316 lines.
+- 2026-11-01: Jay's decisions on the Stage 0 report: keep "AOI PoC Inspector" on the pilot certificate; count the
+  exported Standards' text as generated (rule 1); make "Version moves with what ships" a required check, which is
+  added to main's branch protection once #423 has merged (before then no pull request into main runs it).
