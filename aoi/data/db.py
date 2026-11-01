@@ -838,6 +838,15 @@ class Database:
         )
         return [self._resolved(r, "diff_map_path", "ai_map_path") for r in rows]
 
+    def evidence_paths(self) -> set[Path]:
+        """Every overlay and map file a record names, archived ones too, absolute (REQ-LOG-010's orphan sweep)."""
+        rows = self.query("SELECT overlay_path, diff_map_path, ai_map_path FROM inspections")
+        return {Path(self.workspace, v).resolve() for r in rows for v in r.values() if v}  # one outside is no orphan
+
+    def test_runs_since(self, cutoff: str) -> set[str]:
+        """The UUIDs of the validation runs stored at or after `cutoff` (UTC, ISO 8601)."""
+        return {r["uuid"] for r in self.query("SELECT uuid FROM test_runs WHERE time >= ?", (cutoff,))}
+
     def clear_map_paths(self, inspection_ids: list[int]) -> None:
         """Forget the map files of these inspections (deleted by the retention sweep), IN_CHUNK ids at a time."""
         for start in range(0, len(inspection_ids), IN_CHUNK):

@@ -845,7 +845,7 @@
 <context>
     <name>Errors</name>
     <message>
-        <location filename="../core/services.py" line="+188"/>
+        <location filename="../core/services.py" line="+189"/>
         <source>a length of {length} px over {distance} mm gives no scale: both must be numbers above 0, and the scale from {least} to {most} px per mm</source>
         <translation type="unfinished"></translation>
     </message>
@@ -875,7 +875,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+360"/>
+        <location line="+367"/>
         <location line="+137"/>
         <source>Importing samples</source>
         <translation type="unfinished"></translation>
@@ -1157,14 +1157,14 @@
         <translation>검증 세트 잠금</translation>
     </message>
     <message>
-        <location line="-3105"/>
-        <location line="+3119"/>
+        <location line="-3112"/>
+        <location line="+3126"/>
         <location line="+39"/>
         <source>the workspace holds no such dataset version</source>
         <translation>작업 공간에 그런 데이터셋 버전이 없습니다</translation>
     </message>
     <message>
-        <location line="-3208"/>
+        <location line="-3215"/>
         <source>Drift on {board} ({view}): {count} of the last {of} boards called NG; {before} % of the {baseline} before</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1264,7 +1264,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1299"/>
+        <location line="+1306"/>
         <source>Setting the comparison&apos;s thresholds from labelled boards</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1476,7 +1476,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+247"/>
+        <location line="+308"/>
         <source>Exporting an AI model</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1486,12 +1486,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-307"/>
+        <location line="-368"/>
         <source>Changing users</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-3870"/>
+        <location line="-3877"/>
         <source>no earlier version of this board model was active</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1516,7 +1516,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1223"/>
+        <location line="+1230"/>
         <source>its UUID {found} is not {uuid}, as in the AI model registry</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1601,7 +1601,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+104"/>
+        <location line="+74"/>
+        <source>Confirming the retention policy</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+91"/>
         <location line="+47"/>
         <source>Exporting overlay images</source>
         <translation type="unfinished"></translation>
@@ -1623,7 +1628,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-4099"/>
+        <location line="-4167"/>
         <source>unhandled</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4139,7 +4144,7 @@
     </message>
     <message>
         <location line="+1"/>
-        <location filename="../core/services.py" line="+3361"/>
+        <location filename="../core/services.py" line="+3368"/>
         <source>a file of it could not be read: {reason}</source>
         <translation>그 파일 하나를 읽을 수 없습니다: {reason}</translation>
     </message>
@@ -7420,7 +7425,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/settings.py" line="+50"/>
+        <location filename="../ui/pages/settings.py" line="+52"/>
         <source>Settings</source>
         <translation type="unfinished"></translation>
     </message>
@@ -8527,7 +8532,13 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+10"/>
+        <location line="+7"/>
+        <location line="+109"/>
+        <source>Confirm Retention Policy</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="-101"/>
         <location line="+2"/>
         <source>Presenter theme</source>
         <translation type="unfinished"></translation>
@@ -8549,12 +8560,12 @@
     </message>
     <message>
         <location line="+0"/>
-        <location line="+70"/>
+        <location line="+103"/>
         <source>Role</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-68"/>
+        <location line="-101"/>
         <source>Add / Change User</source>
         <translation type="unfinished"></translation>
     </message>
@@ -8599,7 +8610,32 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+9"/>
+        <location line="+6"/>
+        <source>No retention sweep yet.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>Last retention sweep: {time}, {n} items.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>Policy confirmed {time}: logs go after {days} days, backups but the last {kept}, test-run overlays and OK files no record names.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+8"/>
+        <source>From now on the hourly sweep deletes log files after {logs} days, migration backups but the newest {kept}, validation runs&apos; overlays after {days} days and OK boards&apos; files no record names. Confirm?</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="-11"/>
+        <source>Policy not confirmed: only OK maps are deleted; logs are gzipped and archived.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+31"/>
         <source>User</source>
         <translation type="unfinished"></translation>
     </message>
@@ -8969,7 +9005,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/services.py" line="-3445"/>
+        <location filename="../core/services.py" line="-3452"/>
         <source>Aligning {count} images to the reference board</source>
         <translation type="unfinished"></translation>
     </message>

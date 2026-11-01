@@ -633,7 +633,7 @@ class ModelTestPage(Page):
         path = cell_item(self.table, rows[0].row(), 0).toolTip()
         self._clear_preview()  # the row before never stands beside this one, even when it cannot be inspected (#182)
         row = next((r for r in self.rows if r["image"] == path), None)
-        if row is not None and row.get("overlay"):  # the overlay stored as it was judged: shown, never judged again
+        if row is not None and row.get("overlay") and Path(row["overlay"]).is_file():  # stored as judged: shown as is
             self._drop_preview()
             self.run_in_background(
                 self.ctx.load_image, row["overlay"],

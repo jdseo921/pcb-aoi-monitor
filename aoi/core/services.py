@@ -58,6 +58,7 @@ from . import (
     lineage,
     model_card,
     report,
+    retention,
     run_progress,
     stats,
     stores,
@@ -134,7 +135,7 @@ SWITCHES = ("model.train", "model.activate", "model.rollback")
 # training ends, as no version is in use to keep (business-readiness decision D3); each later one installs inactive
 # (REQ-TRN-010, REQ-TRN-012)
 FIRST_LIVE = "the first AI model of its board model, which goes live when its training ends"
-TEST_RUNS = "test_runs"  # under results/: a validation run's overlays, one per row (REQ-TST-003)
+TEST_RUNS = retention.TEST_RUNS  # under results/: a validation run's overlays, one per row (REQ-TST-003)
 # Why a dataset version was not tested (AOI-TST-003, REQ-TST-001)
 NO_SUCH_VERSION = QT_TRANSLATE_NOOP("Errors", "the workspace holds no such dataset version")
 # Why a customer validation report was not made (AOI-TST-007, REQ-TST-008)
@@ -532,6 +533,8 @@ class AppContext:
         self.disk: disk.Usage | None = None  # the drive as last measured (REQ-LOG-006), for the status bar
         self._disk_alarmed = disk.OK  # the highest level alarmed since the drive was last below LOW
         self._disk_lock = threading.Lock()  # measured on the pool thread before a save, and by the status bar
+        self.last_sweep: dict[str, Any] | None = None  # the last retention sweep's time and counts (REQ-LOG-010)
+        self._sweeping = threading.Lock()  # one sweep at a time: the timer's, or a test's
         try:  # the first writes: the drive may refuse them, or another program hold the database (#171, #204)
             self.device = resolve_device(self.settings.device)
             swept, skipped = atomic.sweep_temp_files(self.settings.root)  # a crash mid-write leaves only a temp file
@@ -565,6 +568,9 @@ class AppContext:
         self._golden_alarmed: set[tuple[str, str | None, str]] = set()  # each (board model, file, code) alarmed (#195)
         self._golden_lock = threading.Lock()  # the Recipe Editor reads on the UI thread, Compare on the pool's
         self._closed = False
+        self._retention_stop = threading.Event()  # the timer: a thread of the context's own, not Qt's (REQ-LOG-010)
+        self._retention = threading.Thread(target=self._retain, name="retention", daemon=True)
+        self._retention.start()
 
     # --- dataset -------------------------------------------------------------
 
@@ -616,6 +622,8 @@ class AppContext:
         if self._closed:  # the window closes it, and main.py again after the event loop (#171)
             return
         self._closed = True
+        self._retention_stop.set()
+        self._retention.join()  # a sweep under way ends before the database closes
         self.jobs.shutdown()  # a running job may still read the database or write a file
         self.db.close()
         logging_setup.close(self.log)
@@ -4102,6 +4110,67 @@ class AppContext:
                 self.db.add_audit(None, None, "maps.sweep", "inspections", None, None, after, "OK maps past retention")
         self.log.info("maps.swept", extra={"days": days, "swept": len(swept), "skipped": skipped})
         return len(swept)
+
+    def _retain(self) -> None:
+        """The retention timer: a sweep at once, then every SWEEP_EVERY_S until the context closes; one that fails is
+        logged and the next tried an interval later."""
+        while True:  # the first at once: at start, off the UI thread, so no sweep error refuses the workspace
+            try:
+                self.sweep_retention()
+            except Exception:
+                self.log.warning("retention.failed", exc_info=True)
+            if self._retention_stop.wait(retention.SWEEP_EVERY_S):
+                return
+
+    def retention_confirmed(self) -> dict[str, Any] | None:
+        """The last `retention.confirm` entry: the Admin action every deleting step of a sweep acts under (ADR 0024
+        D20), or None while no Admin has confirmed the policy."""
+        entries = self.db.audit_entries(action="retention.confirm", limit=1)
+        return entries[0] if entries else None
+
+    @requires("Admin", QT_TRANSLATE_NOOP("Errors", "Confirming the retention policy"))
+    @transactional
+    def confirm_retention(self) -> None:
+        """Confirm the station's retention policy (D1, D21) as an Admin, audited with it, so sweeps may delete (D20)."""
+        s = self.settings
+        policy: dict[str, Any] = {"ok_map_days": s.map_retention_days_ok, "test_run_days": s.test_run_days}
+        policy |= {"log_days": [retention.LOG_GZIP_DAYS, retention.LOG_ARCHIVE_DAYS, retention.LOG_DELETE_DAYS]}
+        self.audit("retention.confirm", "settings", None, None, policy | {"backups_kept": retention.BACKUPS_KEPT})
+
+    def sweep_retention(self) -> dict[str, int]:
+        """One retention sweep (REQ-LOG-010; `retention`'s steps): OK maps past their days and logs packed always; the
+        other deletions only under the policy an Admin confirmed, with its days (D20). Audited `retention.sweep` with
+        the counts when anything went; kept in `last_sweep` for Settings."""
+        with self._sweeping:
+            confirmed, now, results = self.retention_confirmed(), datetime.now(UTC), self.settings.results_dir
+            counts = dict.fromkeys(retention.COUNTS, 0)
+
+            def step(sweep: Callable[[], object]) -> None:  # a step refused as a whole waits for the next sweep
+                try:
+                    if not self._retention_stop.is_set():  # a closing context waits for no more steps
+                        sweep()
+                except (OSError, DbError) as e:
+                    counts["skipped"] += 1
+                    self.log.warning("retention.skipped", extra={"reason": str(e)})
+
+            step(lambda: counts.update(ok_maps=self._sweep_ok_maps()))
+            step(lambda: retention.sweep_logs(self.settings.root / "logs", now.date(), confirmed is not None, counts))
+            if (
+                confirmed is not None
+            ):  # its days, never the settings' since: a policy no Admin confirmed deletes nothing
+                cutoff = (now - timedelta(days=confirmed["after"]["test_run_days"])).isoformat(timespec="seconds")
+                kept = self.db.test_runs_since(cutoff)
+                step(lambda: retention.sweep_test_runs(results / TEST_RUNS, kept, now.timestamp(), counts))
+                step(lambda: retention.sweep_backups(self.settings.db_path, counts))
+                named = self.db.evidence_paths()
+                named |= {preview_path(p) for p in named if p.suffix == ".jpg"}  # an OK board's preview (D1)
+                step(lambda: retention.sweep_orphans(results, named, now.timestamp(), counts))
+            if any(v for k, v in counts.items() if k != "skipped"):
+                why = f"retention.confirm {confirmed['uuid']}" if confirmed else None  # the policy deleted under
+                self.db.add_audit(None, None, "retention.sweep", "workspace", None, None, counts, why)
+            self.last_sweep = {"time": now_utc(), **counts}
+            self.log.info("retention.swept", extra=counts)
+            return counts
 
     def card_files(self, model_id: int) -> tuple[Path, Path]:
         """The model card files of a model version, Markdown and JSON, beside its AI model file (REQ-TRN-011); a
