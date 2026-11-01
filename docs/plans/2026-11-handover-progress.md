@@ -7,8 +7,7 @@ progress** (branch named), **in review** (PR number), **merged** (date), **dropp
 ## Working rules (production plan, section 1; they hold until `v0.5.0` is tagged)
 
 1. **One pull-request train per working day, at most.** Each PR is at most **400 changed lines**, not counting
-   generated files (`aoi/i18n/aoi_ko.ts`, `docs/error-codes.md`, screenshots, and the export's own text in
-   `docs/standards/`, whose hand-made lines count), and carries one concern.
+   generated files (`aoi/i18n/aoi_ko.ts`, `docs/error-codes.md`, screenshots), and carries one concern.
 2. **Feature freeze until Stage 3 is tagged.** No new register row of kind "feature"; only the rows the handover
    plan (section 5) and the production plan (section 4) name. Decision D2 in ADR 0024 (provisional).
 3. **Every stage ends on a tag** (`v0.4.0`, `v0.4.1`, `v0.5.0`, …) with all CI green, the register's status column
@@ -132,5 +131,5 @@ Production plan PRs 3.1 (cycle) and 3.9 (sign-in) moved into G1 as E.1 and D.1 t
   the .exe's VERSIONINFO; one `SIGNED` value for signing and naming. The pilot certificate's owner in the signed
   installer's text is taken from `installer/pilot-ca.cer` ("AOI PoC Inspector"); Jay kept that name on 2026-11-01.
 - 2026-11-01: PR 0.5 on `docs/working-rules-and-pr-template`: CLAUDE.md "Working rules until v0.5.0" and
-  `.github/pull_request_template.md`, whose checklist a test keeps equal to CLAUDE.md's and the Charter's; rule 1's
-  list of generated files now names the export's own text in `docs/standards/`.
+  `.github/pull_request_template.md`, whose checklist a test keeps equal to CLAUDE.md's and the Charter's. Whether
+  the exported Standards' own text counts toward rule 1's 400 lines (it makes #422 866 lines) is Jay's call.

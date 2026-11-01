@@ -26,7 +26,10 @@ def test_the_pr_template_carries_the_checklist_claude_md_and_the_charter_give() 
     charter = (ROOT / "docs" / "standards" / "charter.md").read_text(encoding="utf-8")
     assert len(checklist(claude_md)) == 10
     assert checklist(template) == checklist(claude_md) == checklist(charter)
-    assert "pull_request_template.md" in claude_md and "a commit\nmessage needs no checklist" in claude_md
+    said = " ".join(claude_md.split())
+    assert "pull_request_template.md" in said and "a commit message needs no checklist" in said
+    assert "its subject still cites the requirement or issue" in said
+    assert "## Working rules until v0.5.0" in template and "expected.json` unchanged" in template
 
 
 def test_claude_md_summarises_the_working_rules_until_v0_5_0() -> None:
@@ -35,5 +38,13 @@ def test_claude_md_summarises_the_working_rules_until_v0_5_0() -> None:
     progress = (ROOT / "docs" / "plans" / "2026-11-handover-progress.md").read_text(encoding="utf-8")
     held = progress.split("## Working rules", 1)[1].split("\n## ", 1)[0]
     assert len(re.findall(r"^\d+\. \*\*", held, re.MULTILINE)) == len(re.findall(r"^- \*\*", rules, re.MULTILINE)) == 7
-    for words in ("400 changed lines", "Feature freeze", "ends on a tag", "subagent", "byte-identical", "ADR 0024"):
+    rules = " ".join(rules.split())
+    held = (
+        "400 changed lines",
+        "Feature freeze",
+        "ends on a tag",
+        "subagent",
+        "Jay reads the diff and the review, and merges",
+    )
+    for words in (*held, "byte-identical", "stops and asks", "Chat is for instructions", "ADR 0024"):
         assert words in rules, words
