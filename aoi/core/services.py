@@ -777,15 +777,18 @@ class AppContext:
         elif user.get("failed_attempts") or user.get("locked_until"):
             self.db.unlock_user(uuid)
 
-    def end_idle(self) -> str:
+    def end_idle(self) -> str | None:
         """End an Engineer's or Admin's session left idle (REQ-USR-004): sign in the shift's operator again, the
-        Operator signed in last on this station (else the user a start would sign in), with no PIN, as the Operator
-        view never asks its own operator again; audited `user.idle_end` with the user before. Returns who it is."""
+        Operator signed in last on this station (else the first Operator), with no PIN, as the Operator view never asks
+        its own operator again; audited `user.idle_end` with the user before. Never anyone but an Operator: with none,
+        the session stays and None is returned; else who is signed in now."""
         uuid = self.db.last_operator()
-        users = self.db.users()
-        name = next((str(u["name"]) for u in users if u["uuid"] == uuid and u["role"] == "Operator"), None)
+        operators = [u for u in self.db.users() if u["role"] == "Operator" and u["status"] != "disabled"]
+        name = next((str(u["name"]) for u in operators if u["uuid"] == uuid), None)
+        if name is None and not operators:
+            return None
         previous = self._actor
-        self.set_user(name or self.start_user())
+        self.set_user(name or str(operators[0]["name"]))
         try:
             before = {"user": previous.name, "role": previous.role}
             self.audit("user.idle_end", "user", self.user_uuid, before, {"user": self.user, "role": self.role})

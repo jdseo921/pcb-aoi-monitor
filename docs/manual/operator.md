@@ -16,7 +16,7 @@ then on is recorded under your name, which the Operator column of Logs & Export 
 not in the list, ask an Admin to add it (Settings › Users & roles). Where the station asks for a PIN, the first time you
 choose 4 to 6 digits and type them twice, and after that you type your PIN; five wrong PINs in a row lock your name for
 5 minutes (AOI-USR-006). An Engineer or Admin left without input for 15 minutes is signed out back to you, the operator
-of the shift, but never while a run is under way. The sidebar greys the pages your
+of the shift, but never while a board is being inspected. The sidebar greys the pages your
 role cannot open, and pointing at one names the role it needs: an Operator opens Home, Inspection, Compare and Logs &
 Export. The app opens on the page shown when it was last closed, or on Home when your role cannot open that page.
 

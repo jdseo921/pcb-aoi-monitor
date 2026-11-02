@@ -963,7 +963,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+423"/>
+        <location line="+426"/>
         <source>Unlocking a user</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1250,14 +1250,14 @@
         <translation>검증 세트 잠금</translation>
     </message>
     <message>
-        <location line="-3215"/>
-        <location line="+3229"/>
+        <location line="-3218"/>
+        <location line="+3232"/>
         <location line="+39"/>
         <source>the workspace holds no such dataset version</source>
         <translation>작업 공간에 그런 데이터셋 버전이 없습니다</translation>
     </message>
     <message>
-        <location line="-3318"/>
+        <location line="-3321"/>
         <source>Drift on {board} ({view}): {count} of the last {of} boards called NG; {before} % of the {baseline} before</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1357,7 +1357,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1404"/>
+        <location line="+1407"/>
         <source>Setting the comparison&apos;s thresholds from labelled boards</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1584,7 +1584,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-3980"/>
+        <location line="-3983"/>
         <source>no earlier version of this board model was active</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1609,7 +1609,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1328"/>
+        <location line="+1331"/>
         <source>its UUID {found} is not {uuid}, as in the AI model registry</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1726,14 +1726,14 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-4404"/>
+        <location line="-4407"/>
         <source>unhandled</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../ui/demo_workspace.py" line="+31"/>
         <location filename="../ui/errors.py" line="+163"/>
-        <location filename="../ui/main_window.py" line="+1237"/>
+        <location filename="../ui/main_window.py" line="+1246"/>
         <source>start-up</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4392,7 +4392,7 @@
     </message>
     <message>
         <location line="+1"/>
-        <location filename="../core/services.py" line="+3471"/>
+        <location filename="../core/services.py" line="+3474"/>
         <source>a file of it could not be read: {reason}</source>
         <translation>그 파일 하나를 읽을 수 없습니다: {reason}</translation>
     </message>
@@ -5237,7 +5237,7 @@
 <context>
     <name>HomePage</name>
     <message>
-        <location filename="../ui/main_window.py" line="-1093"/>
+        <location filename="../ui/main_window.py" line="-1102"/>
         <source>Upload samples</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6642,7 +6642,7 @@
         <translation type="unfinished">복구 키를 파일로 저장하거나 인쇄한 다음 키를 저장했습니다를 누르십시오.</translation>
     </message>
     <message>
-        <location line="+32"/>
+        <location line="+41"/>
         <source>The session of {user} ended after {minutes} minutes without input; {operator} is signed in.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7527,7 +7527,7 @@
 <context>
     <name>Page</name>
     <message>
-        <location filename="../ui/main_window.py" line="-1050"/>
+        <location filename="../ui/main_window.py" line="-1059"/>
         <source>Home</source>
         <translation type="unfinished"></translation>
     </message>
@@ -9414,7 +9414,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/services.py" line="-3555"/>
+        <location filename="../core/services.py" line="-3558"/>
         <source>Aligning {count} images to the reference board</source>
         <translation type="unfinished"></translation>
     </message>

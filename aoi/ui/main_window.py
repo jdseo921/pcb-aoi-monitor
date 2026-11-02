@@ -814,15 +814,24 @@ class MainWindow(QMainWindow):
 
     def check_idle(self) -> bool:
         """End an Engineer's or Admin's session after `idle_minutes` without input, back to the shift's operator
-        (`AppContext.end_idle`, REQ-USR-004): never mid-inspection, when it waits for the run to end, and never in the
-        demo, where the presenter talks. Returns whether it ended one."""
-        page = self.pages["Inspection"]
-        busy = getattr(page, "running", False) or getattr(page, "worker", None) is not None
+        (`AppContext.end_idle`, REQ-USR-004). Never while a board is being inspected: the next check, 30 s on, ends it,
+        and a run under way then stops after its board as at any sign-in (#177). Never in the demo, where the presenter
+        talks. A dialog left open is closed first, as Cancel would; one that will not close (a recovery key waiting to
+        be kept) keeps the session. Returns whether it ended one."""
+        busy = getattr(self.pages["Inspection"], "worker", None) is not None
         idle = time.monotonic() - self.input.last >= self.ctx.settings.idle_minutes * 60
         if self.ctx.role == "Operator" or self.in_demo or busy or not idle:
             return False
-        before = self.ctx.user
-        self.set_user(self.ctx.end_idle())
+        for _ in range(5):  # a dialog over a dialog, the top one first
+            modal = QApplication.activeModalWidget()
+            if isinstance(modal, QDialog):
+                modal.reject()
+        if QApplication.activeModalWidget() is not None:
+            return False
+        before, operator = self.ctx.user, self.ctx.end_idle()
+        if operator is None:
+            return False
+        self.set_user(operator)
         said = self.tr("The session of {user} ended after {minutes} minutes without input; {operator} is signed in.")
         self.status(said.format(user=before, minutes=self.ctx.settings.idle_minutes, operator=self.ctx.user))
         return True
