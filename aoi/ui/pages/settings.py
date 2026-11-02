@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from PySide6.QtWidgets import (
     QCheckBox,
@@ -153,9 +153,13 @@ class SettingsPage(Page):
         right.addWidget(pg)
         ug = QGroupBox(self.tr("Users & roles").replace("&", "&&"))  # a lone & would be a mnemonic, not shown
         ul = QVBoxLayout(ug)
-        self.users = make_table([self.tr("Name"), self.tr("Role")])
+        self.users = make_table([self.tr("Name"), self.tr("Role"), self.tr("Status")])
         ul.addWidget(self.users)
-        ul.addWidget(button(self.tr("Add / Change User"), slot=self.add_user))
+        row = QHBoxLayout()
+        row.addWidget(button(self.tr("Add / Change User"), slot=self.add_user))
+        self.btn_unlock = button(self.tr("Unlock User"), slot=self.unlock_user)
+        row.addWidget(self.btn_unlock)
+        ul.addLayout(row)
         right.addWidget(ug, 1)
         self.hardware = QGroupBox(self.tr("Hardware interfaces"))
         hl = QVBoxLayout(self.hardware)
@@ -279,6 +283,23 @@ class SettingsPage(Page):
                 if name == self.ctx.user and chosen != current:  # the signed-in user's own role changed
                     self.shell.set_user(name)  # the header and the pages follow the role add_user stored
 
+    def unlock_user(self) -> None:
+        """An Admin ends a lock before its time (REQ-USR-004): pick one of the locked users."""
+        locked = [str(u["name"]) for u in self.ctx.users() if u["locked_minutes"]]
+        name, ok = QInputDialog.getItem(self, self.tr("Unlock User"), self.tr("User"), locked, 0, False)
+        if ok and name:
+            try:
+                self.ctx.unlock_user(name)
+            except AoiError as e:
+                self.error(e)
+            self.on_show()
+
+    def status_text(self, user: dict[str, Any]) -> str:
+        if minutes := user["locked_minutes"]:
+            return self.tr("Locked, {minutes} min").format(minutes=minutes)
+        statuses = {"setup": self.tr("No password yet"), "disabled": self.tr("Disabled")}
+        return statuses.get(str(user["status"]), self.tr("Active"))
+
     def idle(self) -> bool:
         """No move or shred of a dataset store runs: the panel's steps wait for it."""
         return self._bg is None
@@ -293,7 +314,9 @@ class SettingsPage(Page):
 
     def on_show(self) -> None:
         self.presenter.setChecked(self.ctx.settings.presenter_theme)
-        fill_table(self.users, [[u["name"], role_text(u["role"])] for u in self.ctx.users()])
+        users = self.ctx.users()
+        fill_table(self.users, [[u["name"], role_text(u["role"]), self.status_text(u)] for u in users])
+        self.btn_unlock.setEnabled(any(u["locked_minutes"] for u in users))
         self.stores.refresh()
         self.show_sweep()
         fill_table(self.hw, [[self.tr(cell) for cell in row] for row in HARDWARE])

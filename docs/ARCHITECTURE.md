@@ -43,7 +43,7 @@ interfaces that Stages 2–4 (cameras, robot, MES/ERP) plug into without changin
 │  reads   board_models · samples · models · recipe · inspections · users      │
 │          recipe_revisions (each with its changes and its reason)             │
 │  writes  import_samples · train · save_recipe · set_reference · set_scale    │
-│          add_user                                                            │
+│          add_user · unlock_user                                              │
 │          set_label · set_boxes (a label and its defect boxes, with history)  │
 │          check_label · draw_ok_checks (a second user's check of labels)      │
 │          make_calibration_set · label_blind · run_agreement_check            │
@@ -1090,6 +1090,7 @@ The writes, their roles and entries:
 | `heartbeat` | system, at start and every 60 s on the context's own thread (`aoi/core/heartbeat.py`, REQ-SET-024) | not audited: `heartbeat.json` rewritten whole (docs/operations/metrics.md); each alarm is appended to `logs/alerts.jsonl`, and `aoi.running` marks a run not yet closed |
 | `_sweep_ok_maps` | system, in each retention sweep; no page calls it | `maps.sweep` (days, swept, skipped): the map files of OK results past `map_retention_days_ok` are deleted and forgotten, NG and WARN maps stay; audited, unlike the start-up archive, because it deletes evidence. A file that cannot be deleted, or lies outside results/, is skipped with a warning and kept for the next start |
 | `add_user` | Admin | `user.change` (role); object = user UUID. The last Admin keeps the role: `AOI-USR-002`, nothing written |
+| `unlock_user` | Admin | `user.unlock` (the lock ended and the count); object = user UUID (REQ-USR-004) |
 | `sign_in` | anyone | `user.sign_in` (the user signed in before → the user signed in now, each with the role); object = user UUID. Switch User; the newest entry names the user the next start signs in (`last_signed_in`, REQ-USR-003). With `start`, `user.start` (before: none; after: the user and role a window opens with: at a start, or at a workspace switch the first user of the role carried, the demo's Admin say), which no later start reads |
 | `save_settings` | Admin | `settings.change` (the Settings page's values: what settings.json held before → what it holds now); object type `settings`, no object UUID (#197). Two system writes to settings.json go past the check, unaudited, since no user asks for them: the page in use (`last_page`, `MainWindow._on_nav`) and the folder chosen after a refused workspace at start-up (`workspace`, `aoi/ui/errors.py`) |
 

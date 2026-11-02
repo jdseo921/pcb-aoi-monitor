@@ -1391,6 +1391,15 @@ CODES: dict[str, ErrorCode] = {
             personal=("name",),
         ),
         ErrorCode(
+            "AOI-USR-006",
+            QT_TRANSLATE_NOOP("Errors", "Account locked"),
+            QT_TRANSLATE_NOOP("Errors", "{name} is locked for {minutes} more minutes after too many wrong passwords."),
+            QT_TRANSLATE_NOOP(
+                "Errors", "Wait, or ask an Admin to unlock it on Settings; the Operator view still works."
+            ),
+            personal=("name",),
+        ),
+        ErrorCode(
             "AOI-SET-001",
             QT_TRANSLATE_NOOP("Errors", "Workspace from version 0.1"),
             QT_TRANSLATE_NOOP("Errors", "This workspace was created by AOI PoC Inspector 0.1 and cannot be upgraded."),

@@ -10,8 +10,10 @@ Not yet (ADR 0002, decision 3): the bundled list of common passwords, which wait
 
 from __future__ import annotations
 
+import math
 import unicodedata
 from collections.abc import Iterable
+from datetime import UTC, datetime
 from functools import cache
 
 from argon2 import PasswordHasher, profiles
@@ -84,3 +86,9 @@ def pin_refusal(pin: str) -> Phrase | None:
     """Why `pin` cannot be an Operator's PIN, or None when it can."""
     text = normal(pin)
     return None if text.isascii() and text.isdigit() and len(text) in PIN_DIGITS else NOT_A_PIN
+
+
+def locked_minutes(until: str | None) -> int:
+    """The whole minutes left, rounded up, of a lock ending at `until` (UTC ISO 8601); 0 with none or once it ended."""
+    left = (datetime.fromisoformat(until) - datetime.now(UTC)).total_seconds() if until else 0
+    return max(0, math.ceil(left / 60))

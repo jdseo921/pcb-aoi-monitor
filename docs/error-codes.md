@@ -136,6 +136,7 @@ register; `{braces}` are filled in when the error is raised.
 | AOI-USR-003 | Unknown user | There is no user named {name} in this workspace, so no role to sign in with. | Pick a user from the list under Switch User; an Admin adds users on the Settings page. |
 | AOI-USR-004 | Password not accepted | {name} was not signed in: the password typed is not theirs. | Type the password again, checking Caps Lock and the input language; an Admin can reset it. |
 | AOI-USR-005 | Password not allowed | The password chosen for {name} {reason}. | Choose a passphrase of 15 to 64 characters, such as a few words you remember; any language is fine. |
+| AOI-USR-006 | Account locked | {name} is locked for {minutes} more minutes after too many wrong passwords. | Wait, or ask an Admin to unlock it on Settings; the Operator view still works. |
 
 ## The first-run guide's lines
 

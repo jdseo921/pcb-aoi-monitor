@@ -238,6 +238,7 @@ WRITES: dict[str, tuple[str, Callable[[AppContext, Path, Path], Any]]] = {
     ),
     "archive_old": ("inspection.archive", lambda ctx, data, tmp: ctx.archive_old(-1)),
     "add_user": ("user.change", lambda ctx, data, tmp: ctx.add_user("kim", "Engineer")),
+    "unlock_user": ("user.unlock", lambda ctx, data, tmp: ctx.unlock_user("engineer")),
     "save_settings": ("settings.change", lambda ctx, data, tmp: ctx.save_settings({"default_epochs": 7})),
     "confirm_retention": ("retention.confirm", lambda ctx, data, tmp: ctx.confirm_retention()),
     "support_bundle": ("support.bundle", lambda ctx, data, tmp: ctx.support_bundle(tmp / "support.zip")),
@@ -308,6 +309,7 @@ CALLS = {**{name: call for name, (_, call) in WRITES.items()}, **CHECKED_READS}
 # The lowest role allowed each call, copied from the write table of docs/ARCHITECTURE.md §5 and REQ-CMP-005, never read
 # from the decorators under test (#181): built from REQUIRED_ROLE, a lowered @requires refused fewer roles and passed.
 EXPECTED_ROLE = {name: "Engineer" for name in CALLS} | {"add_user": "Admin", "save_settings": "Admin"}
+EXPECTED_ROLE["unlock_user"] = "Admin"  # users are the Admin's (REQ-USR-004, REQ-USR-006)
 EXPECTED_ROLE["confirm_retention"] = "Admin"  # the policy every sweep deletes under (ADR 0024 D20)
 EXPECTED_ROLE["support_bundle"] = "Admin"  # the station's logs and audit leave it (REQ-LOG-007)
 EXPECTED_ROLE |= {"create_store": "Admin", "restore_store_key": "Admin", "move_in": "Admin", "shred_store": "Admin"}

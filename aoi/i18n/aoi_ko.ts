@@ -963,7 +963,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+407"/>
+        <location line="+390"/>
+        <source>Unlocking a user</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+42"/>
         <location line="+137"/>
         <source>Importing samples</source>
         <translation type="unfinished"></translation>
@@ -993,12 +998,12 @@
     </message>
     <message>
         <location line="+190"/>
-        <location line="+2488"/>
+        <location line="+2489"/>
         <source>(none)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-2457"/>
+        <location line="-2458"/>
         <source>Saving a recipe</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1120,7 +1125,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+205"/>
+        <location line="+206"/>
         <source>Creating a board model</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1245,14 +1250,14 @@
         <translation>검증 세트 잠금</translation>
     </message>
     <message>
-        <location line="-3156"/>
-        <location line="+3170"/>
+        <location line="-3182"/>
+        <location line="+3196"/>
         <location line="+39"/>
         <source>the workspace holds no such dataset version</source>
         <translation>작업 공간에 그런 데이터셋 버전이 없습니다</translation>
     </message>
     <message>
-        <location line="-3259"/>
+        <location line="-3285"/>
         <source>Drift on {board} ({view}): {count} of the last {of} boards called NG; {before} % of the {baseline} before</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1352,7 +1357,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1346"/>
+        <location line="+1371"/>
         <source>Setting the comparison&apos;s thresholds from labelled boards</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1367,7 +1372,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+481"/>
+        <location line="+482"/>
         <source>a blind label is OK, or NG with one of the 37 defect types</source>
         <translation>블라인드 라벨은 OK이거나, 37개 결함 유형 중 하나를 지정한 NG입니다</translation>
     </message>
@@ -1579,7 +1584,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-3921"/>
+        <location line="-3947"/>
         <source>no earlier version of this board model was active</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1604,12 +1609,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1270"/>
+        <location line="+1295"/>
         <source>its UUID {found} is not {uuid}, as in the AI model registry</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1458"/>
+        <location line="+1459"/>
         <source>Labelling an image</source>
         <translation>이미지 라벨링</translation>
     </message>
@@ -1721,7 +1726,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-4345"/>
+        <location line="-4371"/>
         <source>unhandled</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3372,6 +3377,21 @@
     </message>
     <message>
         <location line="+8"/>
+        <source>Account locked</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>{name} is locked for {minutes} more minutes after too many wrong passwords.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Wait, or ask an Admin to unlock it on Settings; the Operator view still works.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+7"/>
         <source>Workspace from version 0.1</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3871,7 +3891,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1401"/>
+        <location line="-1410"/>
         <source>Board judged NG</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4056,7 +4076,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+175"/>
+        <location line="+184"/>
         <source>Workspace in use</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4342,7 +4362,7 @@
     </message>
     <message>
         <location line="+1"/>
-        <location filename="../core/services.py" line="+3412"/>
+        <location filename="../core/services.py" line="+3438"/>
         <source>a file of it could not be read: {reason}</source>
         <translation>그 파일 하나를 읽을 수 없습니다: {reason}</translation>
     </message>
@@ -4377,7 +4397,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/passwords.py" line="+27"/>
+        <location filename="../core/passwords.py" line="+29"/>
         <source>is shorter than {length} characters</source>
         <translation type="unfinished"></translation>
     </message>
@@ -8751,12 +8771,12 @@
     </message>
     <message>
         <location line="+8"/>
-        <location line="+115"/>
+        <location line="+119"/>
         <source>Confirm Retention Policy</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-114"/>
+        <location line="-118"/>
         <source>Support Bundle…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -8788,17 +8808,23 @@
     </message>
     <message>
         <location line="+0"/>
-        <location line="+114"/>
+        <location line="+118"/>
         <source>Role</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-112"/>
+        <location line="-115"/>
         <source>Add / Change User</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+2"/>
+        <location line="+1"/>
+        <location line="+129"/>
+        <source>Unlock User</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="-125"/>
         <source>Hardware interfaces</source>
         <translation type="unfinished"></translation>
     </message>
@@ -8813,7 +8839,28 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <location line="+133"/>
+        <source>Locked, {minutes} min</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>No password yet</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <location line="+0"/>
+        <source>Disabled</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Active</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="-145"/>
+        <location line="+10"/>
         <source>Status</source>
         <translation>상태</translation>
     </message>
@@ -8879,11 +8926,12 @@
     </message>
     <message>
         <location line="+12"/>
+        <location line="+20"/>
         <source>User</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+0"/>
+        <location line="-20"/>
         <source>User name</source>
         <translation type="unfinished"></translation>
     </message>
@@ -9301,7 +9349,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/services.py" line="-3496"/>
+        <location filename="../core/services.py" line="-3522"/>
         <source>Aligning {count} images to the reference board</source>
         <translation type="unfinished"></translation>
     </message>
