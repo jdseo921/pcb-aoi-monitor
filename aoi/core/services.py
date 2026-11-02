@@ -64,6 +64,7 @@ from . import (
     run_progress,
     stats,
     stores,
+    support,
     tuning,
 )
 from .compare import Region, changed_regions
@@ -4223,6 +4224,7 @@ class AppContext:
         fields["last_hour"] = self.pulse.hour(now) | {"false_calls": self.db.false_calls_since(since)}
         fields |= {"free_bytes": space.free if space else None, "wal_bytes": wal.stat().st_size if wal.exists() else 0}
         heartbeat.write(self.settings.root, fields)
+        self.log.info("heartbeat", extra=fields)  # the history, which the support bundle draws from the log
         return fields
 
     def _alert(self, level: str, code: str | None, text: object) -> None:
@@ -4256,6 +4258,15 @@ class AppContext:
         policy: dict[str, Any] = {"ok_map_days": s.map_retention_days_ok, "test_run_days": s.test_run_days}
         policy |= {"log_days": [retention.LOG_GZIP_DAYS, retention.LOG_ARCHIVE_DAYS, retention.LOG_DELETE_DAYS]}
         self.audit("retention.confirm", "settings", None, None, policy | {"backups_kept": retention.BACKUPS_KEPT})
+
+    @requires("Admin", QT_TRANSLATE_NOOP("Errors", "Building a support bundle"))
+    def support_bundle(self, dest: str | Path, images: bool = False) -> dict[str, Any]:
+        """Write the support bundle (REQ-LOG-007; `support`) to `dest`, where the Admin chose; audited `support.bundle`
+        with what it holds. Returns its manifest."""
+        with _export_write(dest):
+            manifest = support.build(self.settings.root, Path(dest), images)
+        self._audit_files([Path(dest)], "support.bundle", "workspace", None, support.held(Path(dest), images, manifest))
+        return manifest
 
     def sweep_retention(self) -> dict[str, int]:
         """One retention sweep (REQ-LOG-010; `retention`'s steps): OK maps past their days and logs packed always; the

@@ -6,7 +6,8 @@ name or a secret. Times are UTC, ISO 8601 with an offset.
 ## `heartbeat.json` (workspace folder)
 
 Rewritten whole every 60 s (`aoi/core/heartbeat.py`, `AppContext.heartbeat`), through a temporary file and a rename,
-so a reader never sees half of it. A file older than about two minutes means the app is not running, or hangs.
+so a reader never sees half of it. A file older than about two minutes means the app is not running, or hangs. Each
+beat is also a `heartbeat` line in the day's log, the history the support bundle gathers (REQ-LOG-007).
 
 | Field | Meaning |
 |---|---|
