@@ -239,6 +239,7 @@ WRITES: dict[str, tuple[str, Callable[[AppContext, Path, Path], Any]]] = {
     "archive_old": ("inspection.archive", lambda ctx, data, tmp: ctx.archive_old(-1)),
     "add_user": ("user.change", lambda ctx, data, tmp: ctx.add_user("kim", "Engineer")),
     "save_settings": ("settings.change", lambda ctx, data, tmp: ctx.save_settings({"default_epochs": 7})),
+    "confirm_retention": ("retention.confirm", lambda ctx, data, tmp: ctx.confirm_retention()),
     "delete_inspections": (  # Delete Records… on the record inspected first, archived above (REQ-LOG-003, S51)
         "inspection.delete",
         lambda ctx, data, tmp: ctx.delete_inspections(
@@ -297,11 +298,14 @@ UNCHECKED = {
     "guide_starter",  # who a start signs in while the guide sets the station up, read (B5, Q75)
     "usb_drive",  # the USB drive plugged in last, where the guide's dialogs open, read (B5, Q68)
     "check_disk",  # the drive's free space, measured; a system alarm at 80 % and 95 % (REQ-LOG-006)
+    "sweep_retention",  # the retention sweep, a system action on the context's timer (REQ-LOG-010)
+    "retention_confirmed",  # the Admin's confirmation the sweep deletes under, read (D20)
 }  # fmt: skip
 CALLS = {**{name: call for name, (_, call) in WRITES.items()}, **CHECKED_READS}
 # The lowest role allowed each call, copied from the write table of docs/ARCHITECTURE.md §5 and REQ-CMP-005, never read
 # from the decorators under test (#181): built from REQUIRED_ROLE, a lowered @requires refused fewer roles and passed.
 EXPECTED_ROLE = {name: "Engineer" for name in CALLS} | {"add_user": "Admin", "save_settings": "Admin"}
+EXPECTED_ROLE["confirm_retention"] = "Admin"  # the policy every sweep deletes under (ADR 0024 D20)
 EXPECTED_ROLE |= {"create_store": "Admin", "restore_store_key": "Admin", "move_in": "Admin", "shred_store": "Admin"}
 # B2 (ADR 0021): a customer's board model and its store, and the copies of its recovery key
 EXPECTED_ROLE |= {f: "Admin" for f in ("create_customer_board_model", "save_recovery_sheet", "print_recovery_sheet")}

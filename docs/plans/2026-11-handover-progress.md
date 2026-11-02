@@ -38,7 +38,7 @@ progress** (branch named), **in review** (PR number), **merged** (date), **dropp
 |---|---|---|---|
 | 1.1 | Disk guard: alarm at 80 %, NG-only evidence at 95 %, start-up no longer refuses the workspace on a full disk | REQ-LOG-006 | merged 2026-11-01: 1.1a #426 (engine), 1.1b #427 (status bar and CSV) |
 | 1.2 | Evidence policy (D1) | REQ-INSP-012 | in review: `feat/REQ-INSP-012-evidence-policy` |
-| 1.3 | Retention on a timer | REQ-LOG-010 | planned |
+| 1.3 | Retention on a timer | REQ-LOG-010 | in review: `feat/REQ-LOG-010-retention` (stacked on 1.2; merges once Jay confirms D20 and D21) |
 | 1.4 | Heartbeat, `alerts.jsonl`, start-up self-check, clean-exit marker | REQ-SET-024 | planned |
 | 1.5 | Crash record (`faulthandler`, WER LocalDumps documented) | REQ-SET-026 | planned |
 | 1.6 | Support bundle and About | REQ-LOG-007, REQ-SET-011 | planned |
@@ -145,3 +145,5 @@ Production plan PRs 3.1 (cycle) and 3.9 (sign-in) moved into G1 as E.1 and D.1 t
   JPEG (quality 90) with a `_prev.jpg` preview, `ok_evidence` on Settings (`full` for full resolution on every board).
   Measured on 8 synthetic boards at 5 MP: 7.32 MB written per board before; after, 3.82 MB per OK board at save and
   0.68 MB kept once its maps go, NG unchanged at 7.32 MB.
+- 2026-11-01: PR 1.3 (`feat/REQ-LOG-010-retention`): retention at start and hourly; its deletions but OK maps wait for an
+  Admin's Confirm Retention Policy (D20 as proposed). D20 and D21 are on a decision card to Jay.

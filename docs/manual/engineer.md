@@ -1009,10 +1009,19 @@ value above (`<overlay name>_ai.png` for results stored before this version, in 
 file another program holds open, or a damaged one, shows error AOI-CMP-003 on Compare, and such an overlay picture
 AOI-CMP-006; the stored verdict and decision table still stand. A map an image editor saved again (in colour, or at
 another size or bit depth) counts as damaged, so edit copies of these files, never the files themselves. The maps of
-OK results are deleted at start-up once older than `map_retention_days_ok` days (7, set in `settings.json` in the
-default workspace folder; 0 deletes them at the next start); NG and WARN maps, and every record, overlay and check, are
-kept until an Admin deletes the record (Delete Records…, above). Each sweep is in the audit trail as `maps.sweep`; a
-file the app cannot delete (open in another program) is tried again at the next start.
+OK results are deleted by the retention sweep once older than `map_retention_days_ok` days (7, set in `settings.json`
+in the default workspace folder; 0 deletes them at the next sweep); NG and WARN maps, and every record, overlay and
+check, are kept until an Admin deletes the record (Delete Records…, above). Each sweep that deletes maps is in the audit
+trail as `maps.sweep`; a file the app cannot delete (open in another program) is tried again at the next sweep.
+
+**Retention sweep (REQ-LOG-010).** The app sweeps the workspace at start and then every hour while it runs. It always
+deletes OK maps past their days, gzips each day's log file once 7 days old and moves it to `logs/archive/` at 30 days.
+Once an Admin has pressed **Confirm Retention Policy** on Settings (audited as `retention.confirm`; ADR 0024 D20) it also
+deletes archived log files 90 days old, migration backups `aoi.sqlite.bak-…` but the newest 3, the overlays of
+validation runs older than `test_run_days` (90, in `settings.json`, as confirmed; the run's results and report stay)
+and an OK board's files that no record names, once an hour old (an NG or WARN file is kept, as after a restored
+database). A file another program holds is skipped and tried at the next sweep. A sweep that removed or packed anything is in the audit trail as
+`retention.sweep` with a count per kind; Settings shows the last sweep and whether the policy is confirmed.
 
 **History.** Logs & Export reads the records in the background when it opens, with "Loading records…" over the table
 after a second, and the exports and Delete Records… wait until they are listed. Its **Operator** box lists every user

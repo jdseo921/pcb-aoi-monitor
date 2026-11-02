@@ -270,7 +270,9 @@ def pinned_rendering(app: QApplication, font: str) -> Iterator[None]:
 
     pinned_drive = disk.Usage(500 * 10**9, 300 * 10**9, 200 * 10**9)  # 60 %, as every test's (REQ-LOG-006)
     drive = mock.patch.object(disk, "usage", lambda folder: pinned_drive)  # never this machine's
-    with mock.patch.object(theme, "FONT_FAMILY", font or theme.FONT_FAMILY), drive:  # a theme switched on keeps it
+    swept = mock.patch("aoi.ui.pages.settings.to_local", lambda t: "2026-10-09 00:00:00")  # the sweep's, not now's
+    family = mock.patch.object(theme, "FONT_FAMILY", font or theme.FONT_FAMILY)  # a theme switched on keeps it
+    with family, drive, swept:
         app.setStyleSheet(theme.stylesheet())
         try:
             yield

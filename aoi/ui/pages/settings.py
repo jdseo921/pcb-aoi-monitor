@@ -21,8 +21,10 @@ from PySide6.QtWidgets import (
 )
 
 from ...config import APP_VERSION
+from ...core import retention
 from ...core.services import AppContext
 from ...errors import AoiError
+from ...times import to_local
 from .. import theme
 from .base import QT_TRANSLATE_NOOP, ROLES, Page, button, fill_table, make_table, role_text, size_class
 from .settings_demo import DemoPanel
@@ -110,8 +112,13 @@ class SettingsPage(Page):
         f.addRow(self.tr("Shift check counts for (hours, 0 off)"), self.shift_hours)
         f.addRow(self.tr("Language"), self.lang)
         f.addRow(button(self.tr("Save Settings"), "primary", self.save))
+        self.sweep = QLabel()  # the last retention sweep and the policy it deletes under (REQ-LOG-010, D20)
+        self.sweep.setObjectName("muted")
+        self.sweep.setWordWrap(True)
         left = QVBoxLayout()
         left.addWidget(g)
+        left.addWidget(self.sweep)  # under the group: a wrapped label in a form row is cut to one row's height
+        left.addWidget(button(self.tr("Confirm Retention Policy"), slot=self.confirm_retention))
         self.stores = StoresPanel(self)  # the customers' encrypted dataset stores (REQ-TRN-017), under System
         left.addWidget(self.stores, 1)
         body.addLayout(left, 1)
@@ -196,6 +203,39 @@ class SettingsPage(Page):
         saved = self.tr("Saved. Restart the app to switch the workspace.") if moved else self.tr("Saved.")
         QMessageBox.information(self, self.tr("Settings"), saved)
 
+    def show_sweep(self) -> None:
+        """The last retention sweep, and whether an Admin confirmed the policy its deleting steps act under (D20)."""
+        last, confirmed = self.ctx.last_sweep, self.ctx.retention_confirmed()
+        if last is None:
+            swept = self.tr("No retention sweep yet.")
+        else:
+            n = sum(v for k, v in last.items() if k not in ("time", "skipped"))
+            swept = self.tr("Last retention sweep: {time}, {n} items.").format(time=to_local(last["time"]), n=n)
+        if confirmed is None:
+            policy = self.tr("Policy not confirmed: only OK maps are deleted; logs are gzipped and archived.")
+        else:
+            policy = self.tr(
+                "Policy confirmed {time}: logs go after {days} days, backups but the last {kept}, test-run overlays and"
+                " OK files no record names."
+            ).format(time=to_local(confirmed["at_utc"]), days=retention.LOG_DELETE_DAYS, kept=retention.BACKUPS_KEPT)
+        self.sweep.setText(" ".join((swept, policy)))
+
+    def confirm_retention(self) -> None:
+        """An Admin confirms the retention policy, audited (`AppContext.confirm_retention`), after a question."""
+        ask = self.tr(
+            "From now on the hourly sweep deletes log files after {logs} days, migration backups but the newest {kept},"
+            " validation runs' overlays after {days} days and OK boards' files no record names. Confirm?"
+        ).format(logs=retention.LOG_DELETE_DAYS, kept=retention.BACKUPS_KEPT, days=self.ctx.settings.test_run_days)
+        yes = QMessageBox.StandardButton.Yes
+        if QMessageBox.question(self, self.tr("Confirm Retention Policy"), ask) != yes:
+            return
+        try:
+            self.ctx.confirm_retention()
+        except AoiError as e:  # AOI-USR-001 below the Admin role
+            self.error(e)
+            return
+        self.show_sweep()
+
     def _switch_presenter(self, on: bool) -> None:
         """The tick saves and applies the presenter theme at once (MainWindow.save_presenter_theme); on a refusal it
         goes back to what is in effect."""
@@ -235,4 +275,5 @@ class SettingsPage(Page):
         self.presenter.setChecked(self.ctx.settings.presenter_theme)
         fill_table(self.users, [[u["name"], role_text(u["role"])] for u in self.ctx.users()])
         self.stores.refresh()
+        self.show_sweep()
         fill_table(self.hw, [[self.tr(cell) for cell in row] for row in HARDWARE])

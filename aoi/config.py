@@ -67,6 +67,7 @@ _LEAST = {  # the smallest whole number a count setting takes; a map retention o
     "image_size": 1,
     "default_epochs": 1,
     "map_retention_days_ok": 0,
+    "test_run_days": 1,
     "demo_pace_s": 1,
     "shift_check_hours": 0,  # 0: no shift check is asked for (REQ-INSP-017)
 }
@@ -104,6 +105,7 @@ class Settings:
     default_epochs: int = 60
     log_retention_days: int = 30  # spec 4.4: inspection records older than this are archived at start-up (REQ-LOG-003)
     map_retention_days_ok: int = 7  # REQ-INSP-012: the map files of OK results older than this go at start-up (0: next)
+    test_run_days: int = 90  # REQ-LOG-010: a validation run's overlays older than this go, its results and report kept
     ok_evidence: str = "jpeg"  # D1: an OK board's overlay as JPEG (quality 90) with a preview; "full": PNG, as NG
     max_image_megapixels: int = 50  # REQ-INSP-001: an image over either limit is refused before it is decoded
     max_image_megabytes: int = 200  # (the register's proposed values; an Admin sets them on Settings, Q56)
