@@ -1,7 +1,6 @@
-"""The first Admin's recovery code, shown once (REQ-USR-005; ADR 0002, decision 6), as a store's recovery key is: the
-code, Save to File… and Print…, and Done, which waits until it was saved or printed. Esc, the window's close and a
-sign-in do nothing until then. The code is in a label that cannot be selected, so never on the clipboard, and is
-forgotten as the dialog closes. With it, the Admin signs in with Use Recovery Code… after losing their password."""
+"""The first Admin's recovery code, shown once as a store's key is (REQ-USR-005; ADR 0002, decision 6): Save to File…,
+Print…, and Done, which (with Esc and the window's close) waits until it was saved or printed. The code's label cannot
+be selected, so it never reaches the clipboard, and the code is forgotten as the dialog closes."""
 
 from __future__ import annotations
 
@@ -44,32 +43,22 @@ class RecoveryCodeDialog(QDialog):
         row = QHBoxLayout()
         self.btn_save = size_class(button(self.tr("Save to File…"), slot=self.save_file), "T")
         self.btn_print = size_class(button(self.tr("Print…"), slot=self.print_sheet), "T")
-        self.saved_line = QLabel()
+        self.saved_line = QLabel()  # where the code went; wraps
         self.saved_line.setWordWrap(True)
-        for w in (self.btn_save, self.btn_print):
-            row.addWidget(w)
-        row.addWidget(self.saved_line, 1)
         self.btn_done = size_class(button(self.tr("Done"), "primary", self.accept), "T")
         self.btn_done.setEnabled(False)
-        row.addWidget(self.btn_done)
+        for w, stretch in ((self.btn_save, 0), (self.btn_print, 0), (self.saved_line, 1), (self.btn_done, 0)):
+            row.addWidget(w, stretch)
         lay.addLayout(row)
         self.btn_save.setFocus()
 
     def text(self) -> str:
         """The sheet as Save to File… writes it and Print… prints it."""
-        return "\n".join(
-            [
-                self.windowTitle(),
-                "",
-                self.code,
-                "",
-                self.tr(
-                    "Keep this sheet locked away, apart from the station. At Switch User, {user} presses Use Recovery"
-                    " Code…, types it and chooses a new password. It works once."
-                ).format(user=self.ctx.user),
-                "",
-            ]
-        )
+        keep = self.tr(
+            "Keep this sheet locked away, apart from the station. At Switch User, {user} presses Use Recovery Code…,"
+            " types it and chooses a new password. It works once."
+        ).format(user=self.ctx.user)
+        return "\n\n".join([self.windowTitle(), self.code, keep]) + "\n"
 
     def _kept(self, said: str) -> None:
         self.saved_line.setText(said)
@@ -78,8 +67,9 @@ class RecoveryCodeDialog(QDialog):
     def save_file(self) -> None:
         """The sheet as UTF-8 text, offered on the USB drive plugged in last, else in the home folder; written and
         audited by `AppContext.save_code_sheet`, whose refusal (AOI-LOG-002) is shown."""
-        home = Path(QStandardPaths.writableLocation(QStandardPaths.StandardLocation.HomeLocation))
-        start = self.ctx.usb_drive() or home
+        start = self.ctx.usb_drive() or Path(
+            QStandardPaths.writableLocation(QStandardPaths.StandardLocation.HomeLocation)
+        )
         f, _ = QFileDialog.getSaveFileName(
             self, self.tr("Save Recovery Code"), str(start / "recovery-code-admin.txt"), self.tr("Text (*.txt)")
         )

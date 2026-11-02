@@ -241,8 +241,7 @@ def answer_sign_in(monkeypatch: pytest.MonkeyPatch, name: str) -> list[str]:
     def kept(dialog: RecoveryCodeDialog) -> int:  # the first Admin's recovery code, as if saved, then Done
         titles.append(dialog.windowTitle())
         dialog.btn_done.setEnabled(True)
-        dialog.accept()
-        return dialog.result()
+        return int(dialog.accept() or dialog.result())
 
     monkeypatch.setattr(SignInDialog, "exec", exec_)
     monkeypatch.setattr(RecoveryCodeDialog, "exec", kept)

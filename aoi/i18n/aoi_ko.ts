@@ -1758,7 +1758,7 @@
     <message>
         <location filename="../ui/demo_workspace.py" line="+31"/>
         <location filename="../ui/errors.py" line="+163"/>
-        <location filename="../ui/main_window.py" line="+1264"/>
+        <location filename="../ui/main_window.py" line="+1262"/>
         <source>start-up</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5362,7 +5362,7 @@
 <context>
     <name>HomePage</name>
     <message>
-        <location filename="../ui/main_window.py" line="-1119"/>
+        <location filename="../ui/main_window.py" line="-1117"/>
         <source>Upload samples</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6767,7 +6767,7 @@
         <translation type="unfinished">복구 키를 파일로 저장하거나 인쇄한 다음 키를 저장했습니다를 누르십시오.</translation>
     </message>
     <message>
-        <location line="+47"/>
+        <location line="+45"/>
         <source>The session of {user} ended after {minutes} minutes without input; {operator} is signed in.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7652,7 +7652,7 @@
 <context>
     <name>Page</name>
     <message>
-        <location filename="../ui/main_window.py" line="-1076"/>
+        <location filename="../ui/main_window.py" line="-1074"/>
         <source>Home</source>
         <translation type="unfinished"></translation>
     </message>
@@ -8364,7 +8364,7 @@
 <context>
     <name>RecoveryCodeDialog</name>
     <message>
-        <location filename="../ui/recovery_code_dialog.py" line="+30"/>
+        <location filename="../ui/recovery_code_dialog.py" line="+29"/>
         <source>Recovery code for {user}</source>
         <translation type="unfinished"></translation>
     </message>
@@ -8384,17 +8384,17 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+6"/>
+        <location line="+3"/>
         <source>Done</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+15"/>
+        <location line="+10"/>
         <source>Keep this sheet locked away, apart from the station. At Switch User, {user} presses Use Recovery Code…, types it and chooses a new password. It works once.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+17"/>
+        <location line="+16"/>
         <source>Save Recovery Code</source>
         <translation type="unfinished"></translation>
     </message>

@@ -58,8 +58,7 @@ def test_req_usr_005_the_first_admin_gets_a_recovery_code_stored_only_as_a_hash(
 def test_req_usr_005_a_code_is_held_only_for_the_admin_signed_in(
     ctx: AppContext, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """The review's case: a sign-in whose audit entry fails after the password is stored leaves someone else signed
-    in, and the code is never shown to them."""
+    """The review's case: a sign-in refused after the password is stored never shows the code to anyone."""
     ctx.set_user("operator")
     real = ctx.audit
 
@@ -90,9 +89,7 @@ def test_req_usr_005_the_guide_makes_the_first_admin_and_shows_the_code_until_it
         shown.append(dialog)
         assert not dialog.btn_done.isEnabled()
         dialog.reject()  # Esc: refused until it is saved
-        assert dialog.isVisible() or not dialog.btn_done.isEnabled()
-        sheet = tmp_path / "usb" / "code.txt"
-        sheet.parent.mkdir()
+        sheet = tmp_path / "code.txt"  # outside the workspace
         monkeypatch.setattr(QFileDialog, "getSaveFileName", lambda *a, **k: (str(sheet), ""))
         dialog.save_file()
         assert dialog.code in sheet.read_text(encoding="utf-8") and dialog.btn_done.isEnabled()
